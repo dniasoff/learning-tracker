@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/curriculum_content_fetcher.dart';
+import 'package:learning_tracker/features/content_browsing/domain/strategies/composite_curriculum_strategy.dart';
 
 import 'package:mocktail/mocktail.dart';
 
@@ -16,6 +17,8 @@ import '../../../../tool/lib/sefaria/chumash_fetcher.dart';
 import '../../../../tool/lib/sefaria/mishna_berurah_fetcher.dart';
 // ignore: avoid_relative_lib_imports
 import '../../../../tool/lib/sefaria/mishna_fetcher.dart';
+// ignore: avoid_relative_lib_imports
+import '../../../../tool/lib/sefaria/mishneh_torah_fetcher.dart';
 // ignore: avoid_relative_lib_imports
 import '../../../../tool/lib/sefaria/mussar_fetcher.dart';
 // ignore: avoid_relative_lib_imports
@@ -815,8 +818,170 @@ void main() {
     });
   });
 
-  group('All fetchers cover all 7 curricula', () {
-    test('each CurriculumId has a corresponding fetcher', () {
+  group('MishnehTorahFetcher', () {
+    late MishnehTorahFetcher fetcher;
+
+    setUp(() {
+      fetcher = MishnehTorahFetcher(dio: mockDio);
+    });
+
+    /// Canonical Sefer order (Introduction + the 14 Sefarim) as emitted by the
+    /// Python curator's `sefer_order`. Pins the taxonomy against drift.
+    const seferOrder = [
+      'Introduction',
+      'Sefer Madda',
+      'Sefer Ahavah',
+      'Sefer Zemanim',
+      'Sefer Nashim',
+      'Sefer Kedushah',
+      'Sefer Haflaah',
+      'Sefer Zeraim',
+      'Sefer Avodah',
+      'Sefer Korbanot',
+      'Sefer Taharah',
+      'Sefer Nezikim',
+      'Sefer Kinyan',
+      'Sefer Mishpatim',
+      'Sefer Shoftim',
+    ];
+
+    /// Stubs every `/api/shape/...` book request with a small nested shape
+    /// (2 chapters of 2 + 3 halakhot), then overrides two books: the flat
+    /// Introduction (`chapters` is an int, not a list) and Blessings (a
+    /// distinctive Hebrew title, to prove `heTitle` flows through).
+    void stubAllBookShapes() {
+      when(() => mockDio.get<dynamic>(any())).thenAnswer(
+        (invocation) async => Response(
+          data: [
+            {
+              'title': invocation.positionalArguments.first,
+              'heTitle': 'הלכות',
+              'chapters': [2, 3],
+            },
+          ],
+          statusCode: 200,
+          requestOptions: RequestOptions(path: ''),
+        ),
+      );
+      // Introduction is a flat book: `chapters` is a segment count (int).
+      mockShapeResponse(
+        '/api/shape/${Uri.encodeComponent('Mishneh Torah, Transmission of the Oral Law')}',
+        [
+          {
+            'title': 'Mishneh Torah, Transmission of the Oral Law',
+            'heTitle': 'משנה תורה, מסירת תורה שבעל פה',
+            'chapters': 4,
+          },
+        ],
+      );
+      mockShapeResponse(
+        '/api/shape/${Uri.encodeComponent('Mishneh Torah, Blessings')}',
+        [
+          {
+            'title': 'Mishneh Torah, Blessings',
+            'heTitle': 'משנה תורה, הלכות ברכות',
+            'chapters': [3],
+          },
+        ],
+      );
+    }
+
+    test('curriculumId uses CurriculumId.storageKey', () {
+      expect(fetcher.curriculumId, CurriculumId.mishnehTorah.storageKey);
+    });
+
+    test(
+      'fetchAllContent emits Sefer-Hilchot-Chapter-Halakhah hierarchy',
+      () async {
+        stubAllBookShapes();
+
+        final result = await fetcher.fetchAllContent();
+
+        expect(result.hierarchyConfig.curriculumId, 'mishneh_torah');
+        expect(result.hierarchyConfig.depth, 4);
+        expect(result.hierarchyConfig.levelLabels, [
+          'Sefer',
+          'Hilchot',
+          'Chapter',
+          'Halakhah',
+        ]);
+
+        // Sefer containers (level1 only) appear in the canonical order.
+        final sefarim = result.items
+            .where((i) => i.level2 == null && !i.isLeaf)
+            .map((i) => i.level1)
+            .toList();
+        expect(sefarim, seferOrder);
+
+        // 84 Hilchot sub-books + the Introduction volume = 85 Hilchot
+        // containers (level2 set, level3 null, not a leaf).
+        final hilchot = result.items
+            .where((i) => i.level2 != null && i.level3 == null && !i.isLeaf)
+            .toList();
+        expect(hilchot.length, 85);
+
+        // totalItems equals the number of leaf items produced.
+        final leaves = result.items.where((i) => i.isLeaf).toList();
+        expect(leaves, isNotEmpty);
+        expect(result.hierarchyConfig.totalItems, leaves.length);
+      },
+    );
+
+    test('standard books nest halakhot at level4; the flat book stops at '
+        'level3', () async {
+      stubAllBookShapes();
+
+      final result = await fetcher.fetchAllContent();
+
+      // Standard Hilchot books emit 4-level halakhah leaves.
+      final nestedLeaves = result.items.where(
+        (i) => i.isLeaf && i.level4 != null,
+      );
+      expect(nestedLeaves, isNotEmpty);
+      for (final leaf in nestedLeaves) {
+        expect(leaf.level3, isNotNull);
+        expect(leaf.sefariaRef, contains(':'));
+      }
+
+      // The flat Introduction volume emits leaves at level3 (no chapter split).
+      final introLeaves = result.items
+          .where((i) => i.level1 == 'Introduction' && i.isLeaf)
+          .toList();
+      expect(introLeaves.length, 4);
+      for (final leaf in introLeaves) {
+        expect(leaf.level3, isNotNull);
+        expect(leaf.level4, isNull);
+      }
+    });
+
+    test(
+      'groups a book under its Sefer and excludes index-only titles',
+      () async {
+        stubAllBookShapes();
+
+        final result = await fetcher.fetchAllContent();
+
+        // Blessings is grouped under Sefer Ahavah and carries its Hebrew title.
+        final blessings = result.items.firstWhere(
+          (i) => i.level2 == 'Mishneh Torah, Blessings' && i.level3 == null,
+        );
+        expect(blessings.level1, 'Sefer Ahavah');
+        expect(blessings.displayNameHe, 'משנה תורה, הלכות ברכות');
+
+        // The three index-only titles the Python curator excludes never appear.
+        const excluded = {
+          'Mishneh Torah, Negative Mitzvot',
+          'Mishneh Torah, Positive Mitzvot',
+          'Mishneh Torah, Overview of Mishneh Torah Contents',
+        };
+        final level2Titles = result.items.map((i) => i.level2).toSet();
+        expect(level2Titles.intersection(excluded), isEmpty);
+      },
+    );
+  });
+
+  group('All fetchers cover every non-composite curriculum', () {
+    test('fetcher registry equals the non-composite CurriculumId.values', () {
       final fetchers = {
         CurriculumId.mishnayos: MishnaFetcher(dio: mockDio),
         CurriculumId.bavli: BavliFetcher(dio: mockDio),
@@ -825,10 +990,20 @@ void main() {
         CurriculumId.chumash: ChumashFetcher(dio: mockDio),
         CurriculumId.nach: NachFetcher(dio: mockDio),
         CurriculumId.mussar: MussarFetcher(dio: mockDio),
+        CurriculumId.mishnehTorah: MishnehTorahFetcher(dio: mockDio),
       };
 
-      // All 7 curricula with dedicated fetchers.
-      expect(fetchers.length, 7);
+      // The expectation is DERIVED from CurriculumId.values, not a
+      // hand-maintained literal: every curriculum that is not a composite
+      // must have a dedicated fetcher. `tanach` is the only composite
+      // (assembled from chumash + nach) and legitimately has no fetcher.
+      final expected = CurriculumId.values
+          .where(
+            (id) => !CompositeCurriculumStrategy.isComposite(id.storageKey),
+          )
+          .toSet();
+
+      expect(fetchers.keys.toSet(), expected);
 
       // Each fetcher's curriculumId matches its CurriculumId.storageKey.
       for (final entry in fetchers.entries) {
