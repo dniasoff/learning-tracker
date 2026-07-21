@@ -99,7 +99,9 @@ String _buildMermaid(
     kept[outbound.first.key] = outbound.first.value;
   }
 
-  final buffer = StringBuffer()..writeln('```mermaid')..writeln('graph TD');
+  final buffer = StringBuffer()
+    ..writeln('```mermaid')
+    ..writeln('graph TD');
   for (final node in nodes) {
     buffer.writeln('    $node["$node"]');
   }
@@ -117,7 +119,10 @@ String _buildMermaid(
   return buffer.toString();
 }
 
-final _mermaidNodePattern = RegExp(r'^\s{4}(\w+)\["\w+"\]\s*$', multiLine: true);
+final _mermaidNodePattern = RegExp(
+  r'^\s{4}(\w+)\["\w+"\]\s*$',
+  multiLine: true,
+);
 
 void main(List<String> args) {
   final check = args.contains('--check');
@@ -132,7 +137,9 @@ void main(List<String> args) {
 
   final libFeatures = Directory('lib/features');
   if (!libFeatures.existsSync()) {
-    stderr.writeln('ERROR: lib/features not found — run from learning_tracker/');
+    stderr.writeln(
+      'ERROR: lib/features not found — run from learning_tracker/',
+    );
     exit(2);
   }
   final nodes = _listFeatureNodes();
@@ -160,10 +167,14 @@ void main(List<String> args) {
         'Feature Dependency Graph node set has drifted from `ls lib/features/`.',
       );
       if (missing.isNotEmpty) {
-        stderr.writeln('  Missing from the doc (real features, no node): ${missing.join(", ")}');
+        stderr.writeln(
+          '  Missing from the doc (real features, no node): ${missing.join(", ")}',
+        );
       }
       if (extra.isNotEmpty) {
-        stderr.writeln('  Stale in the doc (no longer a real feature): ${extra.join(", ")}');
+        stderr.writeln(
+          '  Stale in the doc (no longer a real feature): ${extra.join(", ")}',
+        );
       }
       stderr.writeln(
         '\nRun `dart run tool/gen_feature_graph.dart` and update the mermaid '

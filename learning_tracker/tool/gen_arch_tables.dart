@@ -64,10 +64,7 @@ final _dbSpecs = [
   ),
 ];
 
-final _tablesListPattern = RegExp(
-  r'tables:\s*\[([^\]]*)\]',
-  dotAll: true,
-);
+final _tablesListPattern = RegExp(r'tables:\s*\[([^\]]*)\]', dotAll: true);
 final _daosListPattern = RegExp(r'daos:\s*\[([^\]]*)\]', dotAll: true);
 final _identifierPattern = RegExp(r'^[A-Z][A-Za-z0-9_]*$');
 final _columnGetterPattern = RegExp(
@@ -101,9 +98,7 @@ List<String> _extractIdentifierList(String source, RegExp listPattern) {
 /// counts `*Column get` declarations within that class body (brace-depth
 /// scan from the opening `{` to its matching close).
 int? _countColumns(String tableName, List<String> searchDirs) {
-  final classPattern = RegExp(
-    'class\\s+$tableName\\s+extends\\s+Table\\s*\\{',
-  );
+  final classPattern = RegExp('class\\s+$tableName\\s+extends\\s+Table\\s*\\{');
   for (final dirPath in searchDirs) {
     final dir = Directory(dirPath);
     if (!dir.existsSync()) continue;
@@ -168,7 +163,9 @@ void main(List<String> args) {
   for (final spec in _dbSpecs) {
     final file = File(spec.databaseFile);
     if (!file.existsSync()) {
-      stderr.writeln('ERROR: ${spec.databaseFile} not found — run from learning_tracker/');
+      stderr.writeln(
+        'ERROR: ${spec.databaseFile} not found — run from learning_tracker/',
+      );
       exit(2);
     }
     final content = file.readAsStringSync();
@@ -247,7 +244,9 @@ void main(List<String> args) {
       );
       exit(1);
     }
-    stdout.writeln('gen-arch-tables check OK: docs/architecture.md matches freshly-generated counts.');
+    stdout.writeln(
+      'gen-arch-tables check OK: docs/architecture.md matches freshly-generated counts.',
+    );
     return;
   }
 

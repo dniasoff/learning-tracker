@@ -97,6 +97,10 @@ jobs:
         uses: ./.github/actions/flutter-bootstrap
         with:
           cache-custom-lints: 'true'
+          prepare-asset: 'true'
+          decode-secrets: 'true'
+          google-services-json-base64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
+          firebase-options-dart: ${{ secrets.FIREBASE_OPTIONS_DART }}
 
       - name: Run audit (skip gracefully if target absent)
         working-directory: learning_tracker

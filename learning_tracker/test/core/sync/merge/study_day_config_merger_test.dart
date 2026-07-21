@@ -287,7 +287,10 @@ void main() {
       await db.close();
     });
 
-    Map<String, dynamic> row({required DateTime updatedAt, DateTime? syncedAt}) => {
+    Map<String, dynamic> row({
+      required DateTime updatedAt,
+      DateTime? syncedAt,
+    }) => {
       'profile_id': profileId,
       'curriculum_id': _curriculumId,
       'track_id': seededTrackId,
@@ -376,50 +379,47 @@ void main() {
     // fallback whatsoever, so it could not see that the server (the only
     // trustworthy clock) recorded the remote push as happening BEFORE the
     // local one.
-    test(
-      'D15: a fast-clocked remote must not win via raw isAfter — the '
-      'server timestamp says it was pushed before the local edit',
-      () async {
-        // Local: edited AND pushed; server recorded synced_at = 12:00:05.
-        final localUpdatedAt = DateTime.utc(2026, 5, 21, 12, 0, 0);
-        final localSyncedAt = DateTime.utc(2026, 5, 21, 12, 0, 5);
-        await store.persistUpdatedAt(
-          kind: EntityKind.studyDayConfig,
-          profileId: profileId,
-          naturalKey: naturalKey(),
-          updatedAt: localUpdatedAt,
-          syncedAt: localSyncedAt,
-        );
+    test('D15: a fast-clocked remote must not win via raw isAfter — the '
+        'server timestamp says it was pushed before the local edit', () async {
+      // Local: edited AND pushed; server recorded synced_at = 12:00:05.
+      final localUpdatedAt = DateTime.utc(2026, 5, 21, 12, 0, 0);
+      final localSyncedAt = DateTime.utc(2026, 5, 21, 12, 0, 5);
+      await store.persistUpdatedAt(
+        kind: EntityKind.studyDayConfig,
+        profileId: profileId,
+        naturalKey: naturalKey(),
+        updatedAt: localUpdatedAt,
+        syncedAt: localSyncedAt,
+      );
 
-        // Remote: a device whose clock runs ~2 s fast. Its own updated_at
-        // (12:00:02) LOOKS newer than local's raw updated_at (12:00:00),
-        // but the Firestore server timestamp (synced_at = 11:59:50) proves
-        // it was actually pushed BEFORE the local edit synced.
-        final remoteUpdatedAt = DateTime.utc(2026, 5, 21, 12, 0, 2);
-        final remoteSyncedAt = DateTime.utc(2026, 5, 21, 11, 59, 50);
+      // Remote: a device whose clock runs ~2 s fast. Its own updated_at
+      // (12:00:02) LOOKS newer than local's raw updated_at (12:00:00),
+      // but the Firestore server timestamp (synced_at = 11:59:50) proves
+      // it was actually pushed BEFORE the local edit synced.
+      final remoteUpdatedAt = DateTime.utc(2026, 5, 21, 12, 0, 2);
+      final remoteSyncedAt = DateTime.utc(2026, 5, 21, 11, 59, 50);
 
-        // Sanity check: a naive isAfter comparison alone would say remote
-        // wins — this is precisely the pre-fix bug.
-        expect(remoteUpdatedAt.isAfter(localUpdatedAt), isTrue);
+      // Sanity check: a naive isAfter comparison alone would say remote
+      // wins — this is precisely the pre-fix bug.
+      expect(remoteUpdatedAt.isAfter(localUpdatedAt), isTrue);
 
-        await merger.merge(
-          profileId: profileId,
-          rows: [row(updatedAt: remoteUpdatedAt, syncedAt: remoteSyncedAt)],
-        );
+      await merger.merge(
+        profileId: profileId,
+        rows: [row(updatedAt: remoteUpdatedAt, syncedAt: remoteSyncedAt)],
+      );
 
-        final after = await store.currentUpdatedAt(
-          kind: EntityKind.studyDayConfig,
-          profileId: profileId,
-          naturalKey: naturalKey(),
-        );
-        expect(
-          after,
-          localUpdatedAt,
-          reason:
-              'a fast-clocked remote must not win via raw isAfter — the '
-              'server timestamp says it was pushed before the local edit',
-        );
-      },
-    );
+      final after = await store.currentUpdatedAt(
+        kind: EntityKind.studyDayConfig,
+        profileId: profileId,
+        naturalKey: naturalKey(),
+      );
+      expect(
+        after,
+        localUpdatedAt,
+        reason:
+            'a fast-clocked remote must not win via raw isAfter — the '
+            'server timestamp says it was pushed before the local edit',
+      );
+    });
   });
 }

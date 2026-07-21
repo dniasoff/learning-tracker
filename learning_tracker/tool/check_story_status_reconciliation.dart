@@ -57,12 +57,14 @@ const _unstartedStatuses = {'ready-for-dev', 'backlog', 'todo', 'in-progress'};
 final _statusHeaderPattern = RegExp(r'^Status:\s*(.+?)\s*$', multiLine: true);
 // Matches `  <key>: <value>` (two-space-indented story/epic rows), capturing
 // the key and the value up to an optional trailing `#` comment.
-final _yamlRowPattern = RegExp(
-  r'^  ([a-zA-Z0-9][\w.-]*):\s*([a-zA-Z][\w-]*)',
-);
+final _yamlRowPattern = RegExp(r'^  ([a-zA-Z0-9][\w.-]*):\s*([a-zA-Z][\w-]*)');
 
 class _Mismatch {
-  _Mismatch({required this.storyKey, required this.yamlStatus, required this.fileStatus});
+  _Mismatch({
+    required this.storyKey,
+    required this.yamlStatus,
+    required this.fileStatus,
+  });
 
   final String storyKey;
   final String yamlStatus;
@@ -105,9 +107,15 @@ Set<String> _readBaseline() {
 void _writeBaseline(List<_Mismatch> mismatches) {
   final buffer = StringBuffer()
     ..writeln('# AUD-docs-06 story-status-reconciliation baseline — generated')
-    ..writeln('# by tool/check_story_status_reconciliation.dart --update-baseline.')
-    ..writeln('# Pre-existing backlog only. A NEW mismatch not listed here fails')
-    ..writeln('# `make audit`. Burn this list down over time — do NOT add fresh')
+    ..writeln(
+      '# by tool/check_story_status_reconciliation.dart --update-baseline.',
+    )
+    ..writeln(
+      '# Pre-existing backlog only. A NEW mismatch not listed here fails',
+    )
+    ..writeln(
+      '# `make audit`. Burn this list down over time — do NOT add fresh',
+    )
     ..writeln('# entries to paper over a new mismatch.');
   for (final m in mismatches) {
     buffer.writeln(m.key);
@@ -141,7 +149,11 @@ void main(List<String> args) {
     if (fileStatus == null) continue;
     if (_unstartedStatuses.contains(fileStatus)) {
       allMismatches.add(
-        _Mismatch(storyKey: entry.key, yamlStatus: entry.value, fileStatus: fileStatus),
+        _Mismatch(
+          storyKey: entry.key,
+          yamlStatus: entry.value,
+          fileStatus: fileStatus,
+        ),
       );
     }
   }
@@ -168,7 +180,9 @@ void main(List<String> args) {
   }
 
   final baseline = _readBaseline();
-  final newMismatches = allMismatches.where((m) => !baseline.contains(m.key)).toList();
+  final newMismatches = allMismatches
+      .where((m) => !baseline.contains(m.key))
+      .toList();
 
   if (newMismatches.isNotEmpty) {
     stderr.writeln(

@@ -10,6 +10,15 @@ part of 'text_display_providers.dart';
 // ignore_for_file: type=lint, type=warning
 /// Provider for the text cache repository.
 ///
+/// **Composition-root carve-out (AUD-content_browsing-04):** this file's
+/// `data/repositories/text_cache_repository.dart` import constructs the
+/// concrete [TextCacheRepository] — the DI wiring step, not an entity
+/// leak (TextContent/TextSegment live in domain/entities/text_content.dart
+/// and are re-exported from here, not defined here). See
+/// "Composition-root carve-out" in docs/coding-standards.md; the same
+/// pattern is used by ~11 other feature `presentation/providers/` files
+/// repo-wide.
+///
 /// Awaits [contentDatabaseProvider] so the repository is only created once
 /// the content DB is ready (extraction completes on first launch).
 // keepAlive: singleton repository wrapping the content-DB DAOs must survive rebuilds for the app's lifetime.
@@ -18,6 +27,15 @@ part of 'text_display_providers.dart';
 final textCacheRepositoryProvider = TextCacheRepositoryProvider._();
 
 /// Provider for the text cache repository.
+///
+/// **Composition-root carve-out (AUD-content_browsing-04):** this file's
+/// `data/repositories/text_cache_repository.dart` import constructs the
+/// concrete [TextCacheRepository] — the DI wiring step, not an entity
+/// leak (TextContent/TextSegment live in domain/entities/text_content.dart
+/// and are re-exported from here, not defined here). See
+/// "Composition-root carve-out" in docs/coding-standards.md; the same
+/// pattern is used by ~11 other feature `presentation/providers/` files
+/// repo-wide.
 ///
 /// Awaits [contentDatabaseProvider] so the repository is only created once
 /// the content DB is ready (extraction completes on first launch).
@@ -34,6 +52,15 @@ final class TextCacheRepositoryProvider
         $FutureModifier<TextCacheRepository>,
         $FutureProvider<TextCacheRepository> {
   /// Provider for the text cache repository.
+  ///
+  /// **Composition-root carve-out (AUD-content_browsing-04):** this file's
+  /// `data/repositories/text_cache_repository.dart` import constructs the
+  /// concrete [TextCacheRepository] — the DI wiring step, not an entity
+  /// leak (TextContent/TextSegment live in domain/entities/text_content.dart
+  /// and are re-exported from here, not defined here). See
+  /// "Composition-root carve-out" in docs/coding-standards.md; the same
+  /// pattern is used by ~11 other feature `presentation/providers/` files
+  /// repo-wide.
   ///
   /// Awaits [contentDatabaseProvider] so the repository is only created once
   /// the content DB is ready (extraction completes on first launch).
