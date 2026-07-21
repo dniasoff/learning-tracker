@@ -165,7 +165,18 @@ jobs:
   test:
     name: test
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # 2026-07-21: this job runs the FULL `make ci` (analyze + lint-rules-test +
+    # the whole flutter test suite with --coverage + test-serial-tools +
+    # test-rules + test-functions) on a standard (much slower than a typical
+    # local dev box) GitHub-hosted runner. Confirmed via a live run that it was
+    # still actively running (spawning new flutter_tester processes) when the
+    # prior 30-minute budget expired and GitHub Actions cancelled it — not a
+    # hang, just genuinely not enough wall-clock for this runner. Bumped
+    # generously rather than trimmed narrowly; a tighter fix would be removing
+    # the redundant analyze/test-rules/test-functions re-run here since
+    # `analyze`, `firestore-rules`, and `functions` already have their own
+    # dedicated (faster) jobs above — worth doing later, not changed now.
+    timeout-minutes: 60
 
     steps:
       # See the format-check job above: local composite actions require the
