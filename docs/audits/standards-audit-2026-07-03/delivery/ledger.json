@@ -380,11 +380,12 @@
       "severity": "P1",
       "title": "Fix unverifiable Android App Link intent-filters for sign-in/invite deep links (AndroidManifest.xml)",
       "commits": [
-        "8cf5ba7c"
+        "8cf5ba7c",
+        "1296cb25"
       ],
       "reviewRounds": 0,
-      "acVerified": false,
-      "notes": "merged (recovery 2026-07-20): static deliverable recovered from stray c9022519 and cherry-picked to dev (8cf5ba7c) with Makefile conflict resolved (platform-01 check renumbered 92/92 alongside guardrails-34=90, platform-02=91). DELIVERED + GREEN: firebase.json hosting block (auto-serves assetlinks.json), check_platform_deep_link_hosting.dart wired into make audit (92/92, passes), check_assetlinks_live.sh + deploy-firebase-hosting.yml for post-deploy CI, hosting/ scaffold. EXTERNALLY BLOCKED (acVerified=false): AC1 live curl-200 needs a firebase deploy (creds absent) and AC2 device-tap needs Play Console SHA-256 + an Android device — neither available in this environment. The live check is wired to fire in the deploy pipeline. Static half fully verified."
+      "acVerified": true,
+      "notes": "merged (recovery 2026-07-20): static deliverable recovered from stray c9022519 and cherry-picked to dev (8cf5ba7c) with Makefile conflict resolved (platform-01 check renumbered 92/92 alongside guardrails-34=90, platform-02=91). DELIVERED + GREEN: firebase.json hosting block (auto-serves assetlinks.json), check_platform_deep_link_hosting.dart wired into make audit (92/92, passes), check_assetlinks_live.sh + deploy-firebase-hosting.yml for post-deploy CI, hosting/ scaffold. EXTERNALLY BLOCKED (acVerified=false): AC1 live curl-200 needs a firebase deploy (creds absent) and AC2 device-tap needs Play Console SHA-256 + an Android device — neither available in this environment. The live check is wired to fire in the deploy pipeline. Static half fully verified. | LIVE-VERIFIED 2026-07-21 (PO logged into firebase): registered debug SHA-1+SHA-256 on the Firebase Android app; AUTO assetlinks verified to serve [] (needs a console app<->site link CLI cannot set) so committed a static hosting/public/.well-known/assetlinks.json. AC1 MET: firebase deploy --only hosting -> check_assetlinks_live.sh PASSES (HTTP 200 + correct package_name/sha256). AC2 MET: Android-34 emulator, both /sign-in and /invite open .MainActivity directly (unverified->Chrome, verified->app). acVerified=true. PRODUCTION follow-up (documented in hosting/README.md): add the Play App Signing SHA-256 to assetlinks for release builds."
     },
     {
       "id": "AUD-guardrails-01",
