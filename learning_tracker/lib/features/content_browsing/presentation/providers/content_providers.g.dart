@@ -10,6 +10,13 @@ part of 'content_providers.dart';
 // ignore_for_file: type=lint, type=warning
 /// Provides the content repository (singleton).
 ///
+/// **Composition-root carve-out (AUD-content_browsing-04):** this file's
+/// `data/repositories/content_repository_impl.dart` import constructs the
+/// concrete repository to bind it to [ContentRepository] — the DI wiring
+/// step, not an entity leak. See "Composition-root carve-out" in
+/// docs/coding-standards.md; the same pattern is used by ~11 other
+/// feature `presentation/providers/` files repo-wide.
+///
 /// keepAlive: true ensures the in-memory content cache persists for the
 /// lifetime of the app — rebuilding this provider would discard cached data.
 /// Loads hierarchy content from bundled assets.
@@ -19,6 +26,13 @@ part of 'content_providers.dart';
 final contentRepositoryProvider = ContentRepositoryProvider._();
 
 /// Provides the content repository (singleton).
+///
+/// **Composition-root carve-out (AUD-content_browsing-04):** this file's
+/// `data/repositories/content_repository_impl.dart` import constructs the
+/// concrete repository to bind it to [ContentRepository] — the DI wiring
+/// step, not an entity leak. See "Composition-root carve-out" in
+/// docs/coding-standards.md; the same pattern is used by ~11 other
+/// feature `presentation/providers/` files repo-wide.
 ///
 /// keepAlive: true ensures the in-memory content cache persists for the
 /// lifetime of the app — rebuilding this provider would discard cached data.
@@ -34,6 +48,13 @@ final class ContentRepositoryProvider
         >
     with $Provider<ContentRepository> {
   /// Provides the content repository (singleton).
+  ///
+  /// **Composition-root carve-out (AUD-content_browsing-04):** this file's
+  /// `data/repositories/content_repository_impl.dart` import constructs the
+  /// concrete repository to bind it to [ContentRepository] — the DI wiring
+  /// step, not an entity leak. See "Composition-root carve-out" in
+  /// docs/coding-standards.md; the same pattern is used by ~11 other
+  /// feature `presentation/providers/` files repo-wide.
   ///
   /// keepAlive: true ensures the in-memory content cache persists for the
   /// lifetime of the app — rebuilding this provider would discard cached data.
