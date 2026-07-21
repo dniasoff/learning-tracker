@@ -281,7 +281,13 @@ jobs:
   test-serial-tools:
     name: test-serial-tools
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    # 2026-07-21: even isolated in its own job, this was still cancelled at
+    # 45min. A live run's log showed steady (not hung) progress: ~10 of the
+    # file's 21 sub-tests completed in ~43min (~4.3min/test - each shells out
+    # to a real `make audit` or `dart run tool/...`, a cold process start
+    # every time, --concurrency=1 by design). 21 tests x ~4.3min extrapolates
+    # to ~90min. Sized to that evidence rather than guessed.
+    timeout-minutes: 90
 
     steps:
       - name: Checkout repository
