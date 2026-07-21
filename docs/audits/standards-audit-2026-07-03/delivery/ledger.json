@@ -4521,13 +4521,15 @@
     {
       "id": "AUD-t-cross-32",
       "wave": 4,
-      "status": "blocked",
+      "status": "merged",
       "severity": "P2",
       "title": "Make the 'All fetchers cover all 7 curricula' test verify against CurriculumId.values instead of a hand-maintained map",
-      "commits": [],
+      "commits": [
+        "79a18e5d"
+      ],
       "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "blocked (merge-lane w4r1c6, 2026-07-14). Re-verified accurate; AC1 proven red-first (fails: mishnehTorah lacks fetcher, isn't composite). AC2 unclosable: 'composite' false (not merged); 'real fetcher' = unverifiable code for dead Story-15.13 framework, already PO-parked for deletion (AUD-guardrails-09). Reverted probe; no commit."
+      "acVerified": true,
+      "notes": "merged 2026-07-21 (do-it-right close): the coverage test was a tautology (expect(fetchers.length, 7) over 7 hardcoded entries) that silently omitted mishnehTorah - a genuine standalone curriculum (15,342 items, bundled asset, fully served; the cancelled Story-15.13/DNI-121 was the CLOUD upload pipeline, not the content). AC1 met: added a real MishnehTorahFetcher (tool/lib/sefaria/mishneh_torah_fetcher.dart, ports the Python _strategy_mishneh_torah taxonomy: Sefer->Hilchot->Chapter->Halakhah, 3 index-only titles excluded, canonical sefer order; sources the deduplicated book list from Sefaria live TOC to avoid the asset data bug) and rewrote the assertion to DERIVE from CurriculumId.values non-composite (fetchers.keys.toSet() == {non-composite CurriculumId.values}, isComposite predicate; tanach is the only composite). Count is now honestly 8. fetcher_test 48/48 green + analyze clean on dev."
     },
     {
       "id": "AUD-t-cross-15",
