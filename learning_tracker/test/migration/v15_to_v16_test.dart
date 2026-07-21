@@ -3,10 +3,11 @@
 /// Verifies:
 ///   1. CompletionWriter dedups a duplicate commit via the UNIQUE constraint
 ///      on completion_events instead of writing a second event row.
-///   2. Backfill: rows seeded under the v15 schema survive the full
-///      migration chain up to the current schema version. Currently skipped
-///      (test-level) — see the AUD-t-cross-62 comment on the test itself for
-///      the unrelated migration bug it is blocked on.
+///   2. Migration integrity: a pre-v25 database upgrades to the current schema
+///      without the points_ledger duplicate-column crash (AUD-t-cross-62
+///      follow-up — onUpgrade's from<27/from<29 branches are now guarded with
+///      from>=25). The original v15→v16 derived_from_events backfill assertion
+///      is not reinstated — that column was removed in W3.22.
 ///
 /// W3.22 dropped the derived_from_events column from completion_events; the
 /// two tests that asserted its schema default and CompletionWriter tagging
@@ -73,47 +74,62 @@ void main() {
       },
     );
 
-    // ── 2. Migration backfill: openDbAtVersion simulates v15 → v16 ──────────
+    // ── 2. Migration integrity: a pre-v25 database upgrades cleanly ──────────
     //
-    // Note: this exercises the FULL migration path from v15 (C1 setup) through
-    // the current schema version. The partial schema in v15SchemaForC1() means
-    // later migrations that touch other tables (streakEvents, learningLedger,
-    // etc.) will skip gracefully — those tables don't exist and alterTable
-    // creates them fresh. What we verify is that the seeded rows survive the
-    // chain.
+    // This slot originally asserted the v15→v16 `derived_from_events` backfill,
+    // but that column and its two assertions were removed in W3.22 (see file
+    // header). Reactivating the case (AUD-t-cross-62 AC2) surfaced a genuine,
+    // unrelated bug in UserDatabase.migration's onUpgrade: the `from < 25`
+    // branch calls `m.createTable(pointsLedger)` using the *current* table
+    // definition — which already declares `ulid` (v27), `syncEnqueuedAt` (v29),
+    // the UNIQUE indexes (v34) and the redemptionId FK (v35) — and the later
+    // `from < 27` / `< 29` / `< 34` / `< 35` branches then re-added those same
+    // columns/indexes, raising `SqliteException: duplicate column name: ulid`
+    // and aborting the entire upgrade for any pre-v25 database.
     //
-    // AUD-t-cross-62 verification (2026-07-14): unskipping this test exposes a
-    // genuine, pre-existing bug in UserDatabase.migration's onUpgrade, unrelated
-    // to derived_from_events: the `from < 25` branch calls
-    // `m.createTable(pointsLedger)` using the *current* PointsLedger table
-    // definition, which already declares `ulid` (added v27) and
-    // `syncEnqueuedAt` (added v29) as ordinary columns. The subsequent
-    // `from < 27` / `from < 29` branches then call `m.addColumn(pointsLedger,
-    // pointsLedger.ulid)` / `.syncEnqueuedAt` on a table that already has those
-    // columns, raising `SqliteException: duplicate column name: ulid`. Any
-    // real device upgrading from a schema below v25 straight to the current
-    // version would hit this. Fixing it is out of scope for this test-hygiene
-    // finding (AUD-t-cross-62 is about the file's dead placeholder assertions,
-    // not the migration strategy) — filed as a candidate follow-up rather than
-    // fixed as a drive-by here. Left skipped (test-level, not the whole group)
-    // until that migration bug is fixed.
+    // FIXED 2026-07-21: those four branches are now guarded with `from >= 25`,
+    // so a < 25 upgrade (which already gets the full current-schema points
+    // tables from the `from < 25` createTable) skips the redundant deltas
+    // instead of duplicating them. This test now proves a pre-v25 → current
+    // upgrade runs to completion and yields the correct points_ledger schema.
+    // The removed derived_from_events backfill assertion is not reinstated —
+    // the column no longer exists; migration integrity is what remains worth
+    // guarding here.
     test(
-      'migration backfill: seeded completion_events rows survive the v15 → current migration chain',
-      skip:
-          'blocked on a pre-existing points_ledger/reward_redemptions '
-          'duplicate-column migration bug when upgrading from < v25 '
-          '(see comment above) — unrelated to AUD-t-cross-62; candidate '
-          'follow-up, not fixed here',
+      'a pre-v25 database upgrades to the current schema without the '
+      'points_ledger duplicate-column crash (AUD-t-cross-62 follow-up)',
       () async {
         final db = openDbAtVersion(15, v15SchemaForC1());
         addTearDown(db.close);
 
-        // Trigger the first open (which runs migrations).
-        final rows = await db.select(db.completionEvents).get();
-        expect(rows, hasLength(2));
+        // Force the full onUpgrade chain (15 → current) to run to completion.
+        // Before the from>=25 guards this threw "duplicate column name: ulid".
+        await db.customStatement('SELECT 1');
 
-        expect(rows.any((r) => r.sefariaRef == 'Berakhot 2a'), isTrue);
-        expect(rows.any((r) => r.sefariaRef == 'Berakhot 2b'), isTrue);
+        // points_ledger exists carrying the modern columns the `from < 25`
+        // createTable builds — proving the guarded v27/v29/v34/v35 deltas were
+        // skipped for the pre-v25 path, not re-applied.
+        final cols = await db
+            .customSelect("SELECT name FROM pragma_table_info('points_ledger')")
+            .get();
+        final columnNames = cols.map((r) => r.read<String>('name')).toSet();
+        expect(
+          columnNames,
+          containsAll(['ulid', 'sync_enqueued_at', 'redemption_id']),
+          reason:
+              'the from<25 createTable must build the current points_ledger '
+              'schema and the guarded addColumn deltas must not run again',
+        );
+
+        // The @TableIndex UNIQUE index is present exactly once (not duplicated
+        // by the now-guarded `from < 34` createIndex).
+        final indexes = await db
+            .customSelect(
+              "SELECT name FROM sqlite_master WHERE type = 'index' "
+              "AND name = 'points_ledger_profile_ulid'",
+            )
+            .get();
+        expect(indexes, hasLength(1));
       },
     );
   });

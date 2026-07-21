@@ -302,16 +302,30 @@ class UserDatabase extends _$UserDatabase {
 
           await customStatement('PRAGMA foreign_keys = ON');
         }
-        if (from < 27) {
+        if (from >= 25 && from < 27) {
           // WS9 Wave-B prep: additive nullable columns for points cloud sync.
           // Safe on existing rows (NULL default); Wave-B backfills/populates.
+          //
+          // Guard `from >= 25`: a database upgrading from < 25 already received
+          // points_ledger/reward_redemptions from the `from < 25` createTable
+          // block above, which builds them from the CURRENT Dart table
+          // definition — `ulid` INCLUDED. Re-adding it here would throw
+          // "duplicate column name: ulid" and abort the whole upgrade (the
+          // AUD-t-cross-62 follow-up bug). Only a database created at exactly
+          // v25/v26 (the pre-ulid schema) still needs this addColumn. Same
+          // reasoning as the `from >= 26 && from < 28` tutor-column block below.
           await m.addColumn(pointsLedger, pointsLedger.ulid);
           await m.addColumn(rewardRedemptions, rewardRedemptions.ulid);
         }
-        if (from < 29) {
+        if (from >= 25 && from < 29) {
           // D14: additive nullable marker so the points-ledger sync
           // reconciliation knows which rows have never been queued for push.
           // Safe on existing rows (NULL default).
+          //
+          // Guard `from >= 25`: as with the ulid block above, a < 25 upgrade
+          // already has `sync_enqueued_at` from the current-schema createTable,
+          // so re-adding it would throw "duplicate column name" (AUD-t-cross-62
+          // follow-up). Only v25–v28 databases (pre-sync_enqueued_at) need it.
           await m.addColumn(pointsLedger, pointsLedger.syncEnqueuedAt);
           // Backfill the marker for rows that were ALREADY pushed under
           // v27/v28 (they carry a non-NULL `ulid`, which is stamped on insert
@@ -343,8 +357,14 @@ class UserDatabase extends _$UserDatabase {
           // Guard: partial-schema migration paths (e.g. older upgrade tests)
           // may not have created learning_ledger yet, so only run when present.
           final hasLedger = await customSelect(
-            'SELECT 1 FROM sqlite_master '
-            "WHERE type = 'table' AND name = 'learning_ledger'",
+            // Guard on the entry_scope COLUMN, not merely the table: these are
+            // legacy-bare-row cleanups keyed on entry_scope. A schema old enough
+            // to lack that column (a pre-rename learning_ledger, or a partial
+            // upgrade-test fixture) predates the bare-row problem entirely — so
+            // there is nothing to clean and the DELETE must be skipped rather
+            // than crash with "no such column: entry_scope".
+            "SELECT 1 FROM pragma_table_info('learning_ledger') "
+            "WHERE name = 'entry_scope'",
           ).get();
           if (hasLedger.isNotEmpty) {
             await customStatement(
@@ -369,8 +389,14 @@ class UserDatabase extends _$UserDatabase {
           // bare level2 rows are unrecoverable (the parent sefer/seder was never
           // persisted), so drop them — same treatment v30 gave bare level3/4.
           final hasLedger = await customSelect(
-            'SELECT 1 FROM sqlite_master '
-            "WHERE type = 'table' AND name = 'learning_ledger'",
+            // Guard on the entry_scope COLUMN, not merely the table: these are
+            // legacy-bare-row cleanups keyed on entry_scope. A schema old enough
+            // to lack that column (a pre-rename learning_ledger, or a partial
+            // upgrade-test fixture) predates the bare-row problem entirely — so
+            // there is nothing to clean and the DELETE must be skipped rather
+            // than crash with "no such column: entry_scope".
+            "SELECT 1 FROM pragma_table_info('learning_ledger') "
+            "WHERE name = 'entry_scope'",
           ).get();
           if (hasLedger.isNotEmpty) {
             // Only the current numeric 'level2' scope: legacy named level2
@@ -407,8 +433,14 @@ class UserDatabase extends _$UserDatabase {
           // Guard: only run when learning_ledger exists (partial-schema upgrade
           // paths in older tests may not have created it yet).
           final hasLedger = await customSelect(
-            'SELECT 1 FROM sqlite_master '
-            "WHERE type = 'table' AND name = 'learning_ledger'",
+            // Guard on the entry_scope COLUMN, not merely the table: these are
+            // legacy-bare-row cleanups keyed on entry_scope. A schema old enough
+            // to lack that column (a pre-rename learning_ledger, or a partial
+            // upgrade-test fixture) predates the bare-row problem entirely — so
+            // there is nothing to clean and the DELETE must be skipped rather
+            // than crash with "no such column: entry_scope".
+            "SELECT 1 FROM pragma_table_info('learning_ledger') "
+            "WHERE name = 'entry_scope'",
           ).get();
           if (hasLedger.isNotEmpty) {
             await customStatement(
@@ -452,6 +484,14 @@ class UserDatabase extends _$UserDatabase {
           }
         }
         if (from < 34) {
+          // NB (AUD-t-cross-62 follow-up): unlike the ulid/sync_enqueued_at
+          // COLUMNS, the points_ledger_profile_ulid @TableIndex is NOT created
+          // by the `from < 25` createTable in this Drift version, so a pre-v25
+          // upgrade genuinely needs the createIndex below — this block stays
+          // ungated on `from` (only the addColumn branches above needed the
+          // `from >= 25` guard). A freshly-created pre-v25 table simply has no
+          // duplicate (profile_id, ulid) rows, so the dedup is a harmless no-op.
+          //
           // AUD-core-database-03: points_ledger / reward_redemptions lacked
           // the UNIQUE(profileId, ulid) companion index every other
           // sync-able entity has (learning_ledger), leaving a
