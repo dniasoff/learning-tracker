@@ -165,18 +165,21 @@ jobs:
   test:
     name: test
     runs-on: ubuntu-latest
-    # 2026-07-21: this job runs the FULL `make ci` (analyze + lint-rules-test +
-    # the whole flutter test suite with --coverage + test-serial-tools +
-    # test-rules + test-functions) on a standard (much slower than a typical
-    # local dev box) GitHub-hosted runner. Confirmed via a live run that it was
-    # still actively running (spawning new flutter_tester processes) when the
-    # prior 30-minute budget expired and GitHub Actions cancelled it — not a
-    # hang, just genuinely not enough wall-clock for this runner. Bumped
-    # generously rather than trimmed narrowly; a tighter fix would be removing
-    # the redundant analyze/test-rules/test-functions re-run here since
-    # `analyze`, `firestore-rules`, and `functions` already have their own
-    # dedicated (faster) jobs above — worth doing later, not changed now.
-    timeout-minutes: 60
+    # 2026-07-21: this job originally ran the FULL `make ci` (analyze +
+    # lint-rules-test + the whole flutter test suite with --coverage +
+    # test-serial-tools + test-rules + test-functions) on a standard
+    # (much slower than a typical local dev box) GitHub-hosted runner, and was
+    # repeatedly cancelled at its timeout — first 30min, then 60min even after
+    # trimming the 4 targets already covered by other dedicated jobs
+    # (analyze/lint-rules-test/test-rules/test-functions). A live run's log
+    # showed the actual bottleneck: `test-serial-tools` (audit_and_arb_parity_
+    # test.dart, which shells out to a real `make audit` per sub-test, ~90s+
+    # each, ~15 of them, --concurrency=1 by design) running SEQUENTIALLY after
+    # the ~10k-test main suite in the same job/timeout budget. Split into its
+    # own parallel job below (`test-serial-tools`) — GitHub Actions runs jobs
+    # concurrently by default, so this REDUCES wall-clock instead of costing
+    # more, since the two no longer share one timeout.
+    timeout-minutes: 45
 
     steps:
       # See the format-check job above: local composite actions require the
@@ -201,19 +204,14 @@ jobs:
       - name: Install lcov
         run: sudo apt-get install -y lcov
 
-      # 2026-07-21: was `make ci` (analyze + validate-calendar + lint-rules-test
-      # + test + test-serial-tools + test-rules + test-functions), which
-      # redundantly re-ran 4 of those 7 targets that already have their own
-      # dedicated, faster jobs in this workflow: `analyze` (the `analyze` job),
-      # `lint-rules-test` (already covered by the `audit` job's `make audit`,
-      # per this file's own comment above), `test-rules`/`test-functions`
-      # (their own emulator-spinning-up jobs below). That redundancy is why
-      # this job needed 60+ minutes on a standard runner. Trimmed to only the
-      # 3 targets genuinely unique to this job; lcov.info (needed by the
-      # coverage-floor/Codecov steps below) is produced by `test` either way.
+      # `test-serial-tools` now runs as its own parallel job below (see
+      # comment on this job's `timeout-minutes`) — this step covers only
+      # `validate-calendar` + `test`, the 2 targets unique to this job.
+      # lcov.info (needed by the coverage-floor/Codecov steps below) is
+      # produced by `test`.
       - name: Run tests with coverage
         working-directory: learning_tracker
-        run: make validate-calendar test test-serial-tools
+        run: make validate-calendar test
 
       - name: Upload golden failure artifacts
         if: failure()
@@ -271,6 +269,37 @@ jobs:
           name: codecov-umbrella
           fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }}
+
+  # ── 6b. test-serial-tools ────────────────────────────────────────────────
+  # Split out of the `test` job (2026-07-21) — see the comment on that job's
+  # `timeout-minutes`. audit_and_arb_parity_test.dart shells out to a real
+  # `make audit` per sub-test (~90s+ each, ~15 of them), tagged serial-tools
+  # and run with --concurrency=1 by design (contends with the parallel suite
+  # otherwise). Runs concurrently with `test` as its own GitHub Actions job
+  # rather than sequentially inside it, so the split reduces wall-clock
+  # instead of adding to it.
+  test-serial-tools:
+    name: test-serial-tools
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Flutter bootstrap (codegen + asset + secrets)
+        uses: ./.github/actions/flutter-bootstrap
+        with:
+          cache-custom-lints: 'true'
+          run-codegen: 'true'
+          prepare-asset: 'true'
+          decode-secrets: 'true'
+          google-services-json-base64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
+          firebase-options-dart: ${{ secrets.FIREBASE_OPTIONS_DART }}
+
+      - name: Run serial-tagged tool tests
+        working-directory: learning_tracker
+        run: make test-serial-tools
 
   # ── 7. firestore-rules ──────────────────────────────────────────────────────
   firestore-rules:
