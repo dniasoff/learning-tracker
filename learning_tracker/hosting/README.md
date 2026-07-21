@@ -14,20 +14,43 @@ flows — see `lib/features/account/data/repositories/auth_repository_impl.dart`
 Until this resolves, both flows dead-end: the OS falls back to the system
 browser, which also 404s.
 
-## `.well-known/assetlinks.json` is intentionally NOT a static file here
+## `.well-known/assetlinks.json` is a committed static file
 
-Firebase Hosting auto-serves `/.well-known/assetlinks.json` (and
-`apple-app-site-association`) itself, derived from the SHA-256 certificate
-fingerprints registered against this project's Android app
-(`1:346569574648:android:3519edaeb5ce5df9d6130d`, package
-`com.jcom.torah.learning_tracker`) — this is the `appAssociation` hosting
-feature (default `AUTO`; would need `"appAssociation": "NONE"` in
-`firebase.json` to disable, which this config deliberately does not set).
-Hand-authoring a static `.well-known/assetlinks.json` in `hosting/public/`
-would fight that mechanism and risk drifting out of sync with whatever
-fingerprints are actually registered. **Do not add one here.**
+**History:** this was originally left to Firebase Hosting's `appAssociation`
+`AUTO` feature, which is *documented* to auto-serve `/.well-known/assetlinks.json`
+derived from the SHA-256 fingerprints registered against this project's Android
+app (`1:346569574648:android:3519edaeb5ce5df9d6130d`, package
+`com.jcom.torah.learning_tracker`). **In practice, verified live on 2026-07-21,
+AUTO serves an empty `[]`** even with a SHA-256 fingerprint registered on the app
+(`cache-control: private, no-store`, so the empty body is live, not stale). The
+AUTO generator only includes an app once it is *linked to this specific Hosting
+site*, a console-side association that the `firebase` CLI cannot set — so relying
+on AUTO dead-ends the App Links verifier exactly as a missing file would.
 
-## What still has to happen before this is live (cannot be done from a code change alone)
+We therefore serve a **static** `hosting/public/.well-known/assetlinks.json`
+(Firebase's default `ignore: ["**/.*"]` does NOT exclude it — the glob only
+matches a leaf segment starting with `.`, and `assetlinks.json` does not — so it
+deploys and is served with precedence over AUTO). The array holds the SHA-256 of
+every signing certificate whose builds must verify App Links.
+
+**The fingerprint currently committed is this repo's Android *debug* keystore
+SHA-256** (`53:A8:90:…:46:38`), which is what local/`flutter build apk --debug`
+builds are signed with — sufficient to verify the flow end-to-end on a device
+(done 2026-07-21: `/sign-in` and `/invite` open `.MainActivity` directly, not the
+browser). **For production you MUST add the Play App Signing key's SHA-256** to
+the `sha256_cert_fingerprints` array (see step 1 below) and redeploy — a
+Play-distributed build is re-signed by Google and will otherwise not verify.
+Multiple fingerprints are allowed; keep the debug one for local testing and add
+the release one alongside it.
+
+## Status: verified live for debug (2026-07-21); production needs the release SHA
+
+The hosting block, the static `assetlinks.json` (debug SHA), and the deploy were
+done and verified on 2026-07-21: `firebase deploy --only hosting` →
+`tool/check_assetlinks_live.sh` PASSES (HTTP 200, valid entry) → on an Android-34
+emulator, `/sign-in` and `/invite` open the app directly once the domain is
+verified against the live file. The **only** remaining step for production is
+adding the Play App Signing SHA-256:
 
 1. **Register the release signing certificate's SHA-256 fingerprint.**
    Because `deploy-play-store.yml` uploads an App Bundle, Google Play App

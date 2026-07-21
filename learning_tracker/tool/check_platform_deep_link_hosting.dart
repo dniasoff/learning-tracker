@@ -21,7 +21,7 @@
 ///      `.well-known/assetlinks.json` (derived from the SHA-256
 ///      fingerprints registered against the Firebase Android app), which
 ///      is the mechanism this fix relies on (see `hosting/README.md`;
-///      deliberately no static assetlinks.json file is committed).
+///      a static hosting/public/.well-known/assetlinks.json IS committed because AUTO was verified to serve [] for this project — 2026-07-21).
 ///   3. `AndroidManifest.xml` no longer declares
 ///      `android:autoVerify="true"` intent-filters for `/sign-in` and
 ///      `/invite` against the same host `AuthRepositoryImpl._linkDomain`
