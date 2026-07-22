@@ -670,9 +670,24 @@ adb -s emulator-5560 shell getprop sys.boot_completed    # == 1 when fully boote
 
 ### Gotchas
 
-- **Use the Windows adb, not the Linux one.** If `adb devices` is empty while the
-  emulators are clearly up, you are talking to the wrong ADB server — put the
-  shim (or `adb.exe`) first on `PATH`.
+- **adb is now the NATIVE Linux binary** at
+  `/home/daniel/Android/Sdk/platform-tools/adb`. (Superseded: this guide used to
+  say "use the Windows adb / the shim". That was true only under the old
+  WSL→Windows interop; Android Studio installed a full Linux SDK and the emulators
+  are native + KVM. `driver.py` works unmodified.) If `adb devices` is empty while
+  emulators are clearly up, check you are not still putting an `adb.exe` shim on
+  `PATH`.
+- **Emulator launches must be detached with `setsid`, not `nohup`.** A
+  `nohup … &` launch issued from an agent's shell gets killed with that shell
+  (exit 144) and silently never starts — no log file is even created. Use
+  `setsid "$EMU" … </dev/null >/tmp/emu_<port>.log 2>&1 & disown`, then **confirm
+  the log file exists** before believing the emulator launched.
+- **A killed emulator leaves a lock behind.** Both a live
+  `qemu-system-…-headless` process and
+  `~/.android/avd/<avd>.avd/multiinstance.lock` survive; the next launch then
+  dies with *"Another emulator instance is running."* Kill the stale pid, remove
+  the lock, relaunch. (Launching an AVD that is genuinely already running instead
+  needs `-read-only`.)
 - `-no-snapshot-save` leaves each device with **whatever app state it had last
   run**, which drifts between devices. Normalize before a session with
   `adb -s <serial> shell am force-stop <pkg>` (keeps data) or `pm clear <pkg>`
@@ -684,6 +699,41 @@ adb -s emulator-5560 shell getprop sys.boot_completed    # == 1 when fully boote
   default seeded Parent PIN is `2580`.
 - Cloud (Firestore) verification additionally needs the install's **App Check
   debug token** registered — see `tool/device_e2e/README.md`.
+
+### ⚠️ Never attribute a crash from the host — use guest logcat
+
+This cost the reassurance campaign two wrongly-escalated findings (run-8's
+"Learn OOM P0" and two run-9 P1s, all later re-classified ENVIRONMENT). Read this
+before filing any crash.
+
+- The fleet is stuck on **`-gpu swiftshader_indirect`**. It is the only renderer
+  that starts headless on this host: `-gpu host` *and* `-gpu swangle_indirect`
+  both fail with `Failed to get EGL display` →
+  `Can't initialize RenderLib … sRendererUsesSubWindow=1` →
+  `Could not start renderer! (Error: -2)` — **and Xvfb does not help**, because the
+  emulator ships its own EGL/GLES stack. Don't spend time re-trying this.
+  - Trap: the log prints a *successful* Vulkan probe first
+    (`Found physical GPU 'Intel(R) UHD Graphics 770'`, `requirements … are passed`)
+    and only then fails. Those lines are **not** proof the renderer works — always
+    grep for `Could not start renderer`.
+- SwiftShader emits **host-side RenderThread SEGFAULT storms** (199 in one run-8
+  session) that look exactly like app crashes if you judge by the emulator process
+  dying. They never reach guest logcat; real app failures always do.
+- ⇒ Attribute from **inside the guest**, with `tool/device_e2e/crash_attribution.sh`:
+
+  ```bash
+  ./tool/device_e2e/crash_attribution.sh clear 5556          # before a scenario
+  # ...drive the scenario...
+  ./tool/device_e2e/crash_attribution.sh check 5556 my-case  # exit 1 = REAL app failure
+  ```
+
+  A finding counts as an app crash **only** if that check exits 1. Emulator-process
+  death, a hung driver, or a blank screenshot is **ENVIRONMENT** — report it as such.
+- Keep the patterns **package-scoped**. An unscoped first draft of that script
+  reported "REAL APP FAILURE" on a completely idle device, matching benign
+  `lowmemorykiller: Error writing /proc/<pid>/oom_score_adj; errno=22` (a kernel
+  quirk, not a kill) and `tombstoned` ANR-dump plumbing for unrelated processes.
+  Match kills, not chatter.
 
 ## Known Gotchas
 
