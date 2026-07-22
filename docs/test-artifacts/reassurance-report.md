@@ -7,9 +7,16 @@
 
 ## Still open at time of writing
 
-1. **2nd P0 — false "Chumash complete" siyum** (below): root-caused and specified, fix in
-   progress. Carries an **open product decision for the repo owner** (should a Chumash
-   chapter be its own siyum tier?), with the conservative default applied meanwhile.
+1. ~~2nd P0 — false "Chumash complete" siyum~~ — **FIXED** (`13c9cd6b`, merged). Conservative
+   option taken: chapters of Chumash/Nach/Tanach/Mussar get no siyum tier, only the sefer.
+   The fix corrected the false assumption in **both** places that held it
+   (`completion_detection_service` and `journey_providers`' denominator), fixed the stale
+   comment that was the bug's origin, and additionally fixed a **broader** duplicate-dispatch
+   bug that also affected whole-seder Mishnayos marks. Red-demoed by forcing the false
+   assumption back (fails) and reverting (passes), verified independently. **The open product
+   decision remains for the repo owner:** should a Chumash chapter be its own siyum tier? If
+   yes, that is an additive feature built on the `scopeUnitIdentifier()` ancestor-qualified
+   pattern; the conservative default holds until then.
 2. ~~Chevron fix has no on-device confirmation~~ — **CLOSED.** Spot-checked live on 5564's
    sibling device (5558, build `77977737`) through the **real** add-track wizard, in an
    English session with **Hebrew Terms left at its default-on state** — i.e. the exact
