@@ -245,6 +245,16 @@ void main() {
       activeDb = dbB;
       container.invalidate(userDatabaseProvider);
 
+      // Quiesce before seeding. The periodic drain fires every 100ms, so a
+      // drain started just BEFORE the swap can still be in flight here; if it
+      // lands after the next line it consumes dbA's row and the final
+      // assertion fails for a reason that has nothing to do with the fix under
+      // test. That made this test flaky under host load (observed 2 failures
+      // in 5 runs at load ~66, passing consistently when idle). Waiting a full
+      // interval lets any pre-swap drain settle so the post-swap window below
+      // measures only post-swap behaviour.
+      await Future<void>.delayed(const Duration(milliseconds: 250));
+
       // Seed a row in BOTH databases: dbA's post-swap row is the one a
       // stale-captured processor (the pre-fix bug) would still drain; dbB's
       // row is the one that MUST drain if the fix works.
