@@ -1,12 +1,12 @@
 /// Story acceptance tests for Epic 27, Story 27.4 — Widget + golden test
 /// suite (canonical screens) with Hebrew variants.
 ///
-/// Each `goldenTest()` registers two `testWidgets` entries (en + he) via the
-/// helper from DNI-377. `skipGolden: true` is used while the canonical-screen
-/// rebuild (Epic 26) is in flight — the structural assertions (the widget
-/// pumps, both directionalities render, no `MissingPluginException`) still
-/// catch regressions, and PNG baselining is a follow-up once the widgets
-/// stabilize.
+/// Each `goldenTest()` registers FOUR `testWidgets` entries — one per
+/// `(locale, brightness)` pair — via the helper from DNI-377 (brightness
+/// axis added for R2, the golden matrix). Every site below now baselines
+/// real pixels (`skipGolden` omitted/false) — `track_card_*` needed the
+/// shared `perTrackOverrides` provider stubs (see that call site) to avoid
+/// tripping the real completion/chazara/sync/auth provider chain.
 @Tags(['epic_27'])
 library;
 
@@ -19,6 +19,7 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
+import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/gamification/presentation/widgets/streak_widget.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/bulk_mark_screen.dart';
@@ -34,6 +35,10 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:test/test.dart';
 
+import '../features/tracks/setup/helpers/track_hub_test_helpers.dart'
+    show perTrackOverrides;
+import '../helpers/drift_memory.dart';
+import '../helpers/golden_font_loader.dart' show loadFonts;
 import '../helpers/golden_runner.dart';
 
 // ─── Test scaffolding ────────────────────────────────────────────────────────
@@ -47,20 +52,18 @@ import '../helpers/golden_runner.dart';
 Widget _pumpHarness({
   required Widget child,
   required Locale locale,
+  Brightness brightness = Brightness.light,
   List<Override> overrides = const [],
 }) {
   return ProviderScope(
     overrides: overrides,
     child: MaterialApp(
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme(),
+      theme: AppTheme.themeFor(brightness: brightness),
       locale: locale,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      home: Scaffold(
-        backgroundColor: Colors.white,
-        body: SafeArea(child: child),
-      ),
+      home: Scaffold(body: SafeArea(child: child)),
     ),
   );
 }
@@ -87,11 +90,12 @@ CurriculumTrack _track({
 // ─── Tests ───────────────────────────────────────────────────────────────────
 
 void main() {
-  setUpAll(() {
+  setUpAll(() async {
     // Several widgets in the tree read SharedPreferences via
     // ProfileScopedPreference; without an in-memory mock the platform
     // channel throws MissingPluginException before the harness can pump.
     SharedPreferences.setMockInitialValues(<String, Object>{});
+    await loadFonts();
   });
 
   group(
@@ -111,21 +115,39 @@ void main() {
         _TrackShape(name: 'advanced_with_progress', trackType: 'advanced'),
         _TrackShape(name: 'program_with_progress', trackType: 'personal'),
       ]) {
+        final trackForShape = _track(
+          id: 1,
+          curriculumId: 'mishnayos',
+          trackType: shape.trackType,
+        );
         goldenTest(
           'track_card_${shape.name}',
-          // Skip the PNG assertion: TrackCard depends on
-          // `dashboardTrackCompletionPercentageProvider` and
-          // `globalLifetimeCurriculaProvider`, which need a UserDatabase
-          // override. Structural pump still verifies LTR + RTL render.
-          skipGolden: true,
-          builder: (locale) => _pumpHarness(
+          // Two override layers, both needed:
+          //  - `perTrackOverrides` (the same helper the track-management hub
+          //    L1 suite uses) stubs completion/chazara/program-enrollment
+          //    directly, because the REAL providers chain through
+          //    trackProgressServiceProvider -> syncWriteFacadeProvider ->
+          //    AuthStateNotifier -> FirebaseAuth.instance, which throws
+          //    "No Firebase App" in a widget-test sandbox.
+          //  - `userDatabaseProvider` still needs a real (unseeded)
+          //    in-memory DB: `trackDisplayTitle`'s `trackCustomNameProvider`
+          //    reads it directly (no auth/sync chain involved there), and
+          //    without an override it opens the real drift_flutter-backed
+          //    file DB, which throws `MissingPluginException` for
+          //    `path_provider` outside a real app.
+          builder: (locale, brightness) => _pumpHarness(
             locale: locale,
+            brightness: brightness,
+            overrides: [
+              ...perTrackOverrides([trackForShape]),
+              userDatabaseProvider.overrideWith((ref) {
+                final db = inMemoryDb();
+                addTearDown(db.close);
+                return db;
+              }),
+            ],
             child: LearningTrackCard(
-              track: _track(
-                id: 1,
-                curriculumId: 'mishnayos',
-                trackType: shape.trackType,
-              ),
+              track: trackForShape,
               showProgress: shape.name.contains('progress'),
             ),
           ),
@@ -136,11 +158,9 @@ void main() {
 
       goldenTest(
         'stat_card',
-        // PNG baselining is a follow-up; the AC requires the tests exist
-        // with en + he variants. See doc DNI-380.
-        skipGolden: true,
-        builder: (locale) => _pumpHarness(
+        builder: (locale, brightness) => _pumpHarness(
           locale: locale,
+          brightness: brightness,
           child: const Padding(
             padding: EdgeInsets.all(12),
             child: OverallStatsCard(
@@ -159,9 +179,9 @@ void main() {
 
       goldenTest(
         'streak_hero_child',
-        skipGolden: true,
-        builder: (locale) => _pumpHarness(
+        builder: (locale, brightness) => _pumpHarness(
           locale: locale,
+          brightness: brightness,
           child: const Padding(
             padding: EdgeInsets.all(16),
             child: StreakWidget(
@@ -175,9 +195,9 @@ void main() {
 
       goldenTest(
         'streak_hero_adult',
-        skipGolden: true,
-        builder: (locale) => _pumpHarness(
+        builder: (locale, brightness) => _pumpHarness(
           locale: locale,
+          brightness: brightness,
           child: const Padding(
             padding: EdgeInsets.all(16),
             child: StreakWidget(
@@ -196,9 +216,9 @@ void main() {
         // CurriculumPickerStep is `StatelessWidget` but child tiles are
         // `ConsumerWidget` reading `useHebrewTermsProvider`; mocked
         // SharedPreferences (set in setUpAll) gives the default value.
-        skipGolden: true,
-        builder: (locale) => _pumpHarness(
+        builder: (locale, brightness) => _pumpHarness(
           locale: locale,
+          brightness: brightness,
           child: CurriculumPickerStep(onSelected: (_) {}),
         ),
       );
@@ -207,9 +227,9 @@ void main() {
 
       goldenTest(
         'progress_overview',
-        skipGolden: true,
-        builder: (locale) => _pumpHarness(
+        builder: (locale, brightness) => _pumpHarness(
           locale: locale,
+          brightness: brightness,
           child: const Padding(
             padding: EdgeInsets.all(12),
             child: HierarchyProgressCard(

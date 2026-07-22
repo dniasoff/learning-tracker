@@ -116,7 +116,7 @@ void main() {
       // structural change to the harness itself.
       goldenTest(
         'records both locale variants — sanity check',
-        builder: (locale) {
+        builder: (locale, brightness) {
           exercised.add(locale);
           return const SizedBox(width: 10, height: 10);
         },

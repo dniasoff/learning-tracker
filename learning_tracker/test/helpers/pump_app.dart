@@ -29,6 +29,13 @@
 // [debugShowCheckedModeBanner] were added below (both optional, both
 // preserving every pre-existing call site's behavior via their defaults).
 //
+// R2 (golden matrix, brightness axis): [theme] was added so golden-test
+// harnesses can pump the real `AppTheme.themeFor(brightness: …)` and
+// exercise both light and dark renderings through this same shared rig,
+// instead of a parallel hand-rolled `MaterialApp`. `null` (the default)
+// preserves every pre-existing call site's behavior — `MaterialApp` falls
+// back to its own default `ThemeData.light()` exactly as before.
+//
 // Usage:
 // ```dart
 //   await tester.pumpWidget(
@@ -86,10 +93,16 @@ Widget pumpApp({
   // to `true`, matching `MaterialApp`'s own default and every pre-existing
   // `pumpApp` call site's behavior.
   bool debugShowCheckedModeBanner = true,
+  // Forwarded straight to `MaterialApp.theme`. `null` (the default) matches
+  // every pre-existing `pumpApp` call site's behavior (MaterialApp's own
+  // default light theme). Golden-matrix tests pass
+  // `AppTheme.themeFor(brightness: brightness)` to sweep light + dark.
+  ThemeData? theme,
 }) {
   final app = MaterialApp(
     locale: locale,
     debugShowCheckedModeBanner: debugShowCheckedModeBanner,
+    theme: theme,
     localizationsDelegates: const [
       AppLocalizations.delegate,
       GlobalMaterialLocalizations.delegate,
