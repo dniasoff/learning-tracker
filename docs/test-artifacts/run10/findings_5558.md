@@ -49,6 +49,24 @@ contradicts a documented promise.
 **Severity P1, not P0:** no data loss, no permanently wrong value, self-heals on restart —
 but it hits most primary screens simultaneously and tells the user their work vanished.
 
+### ✅ FIXED AND DEVICE-CONFIRMED (build `77977737`)
+
+Re-verified on 5558 by the same auditor who characterised it. Strongest evidence: **Track
+Detail — the exact screen that was stuck stale — landed on "Track progress: 0.1% Lifetime:
+10.3%" live, same session, zero restart.** Manage Tracks went 2.9% → 4.7% immediately after
+a bulk-mark. Siyumim & Milestones no longer reads "No siyumim yet" and populated 1 → 6.
+Monotonic sequences across six masechtot (Lifetime 74→127→204→293→394→434) confirm no data
+loss despite three further environment-class device deaths mid-run.
+
+Also confirmed on the same build: all six siyumim render **"Previously learned"** rather
+than "Jan 1, 2000" (the sentinel-date fix), independently corroborated on 5554 for a
+different data set.
+
+**Live single-mark path:** the 5558 auditor could not re-exercise it on this build and
+honestly labelled it *inferred, not observed*. Closed directly by the 5554 auditor on the
+**same build** — a reader mark auto-advanced correctly with Daily Tasks 5→4 and Dashboard
+"Today Due" 5→4, guest-clean. Two devices, complementary coverage.
+
 **Independently corroborated by code analysis** (see the coordinator's separate finding):
 the live path calls `ref.read(completionCommittedProvider.notifier).increment()`
 (`text_display_screen.dart:704`) — the single signal these providers watch — and the bulk
