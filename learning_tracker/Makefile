@@ -1253,6 +1253,14 @@ audit: lint-rules-test ## Run all 67 enforcement greps (NFR19) — exits non-zer
 	else \
 	  rm -f /tmp/arb_duplicate_keys_check.$$$$.log; \
 	fi; \
+	echo "95/95 — R7/TEA-009 (docs/test-artifacts/reassurance-plan.md A1.1): no NEW test/ file reads lib/ source text at runtime (via test/helpers/lib_source.dart or File(...).readAsStringSync()/.readAsLinesSync() on a lib/ path) and asserts on the source string instead of on observable behavior — RATCHET, only growth above the tracked baseline fails the gate"; \
+	if ! dart run tool/check_r7_source_text_assertion_ratchet.dart > /tmp/r7_source_text_assertion_check.$$$$.log 2>&1; then \
+	  cat /tmp/r7_source_text_assertion_check.$$$$.log; \
+	  rm -f /tmp/r7_source_text_assertion_check.$$$$.log; \
+	  FAIL=1; \
+	else \
+	  rm -f /tmp/r7_source_text_assertion_check.$$$$.log; \
+	fi; \
 	if [ "$$FAIL" -eq 1 ]; then \
 	  echo "=== audit FAILED — fix violations above ==="; \
 	  exit 1; \
