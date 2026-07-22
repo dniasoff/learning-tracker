@@ -10,7 +10,7 @@
 // Replaces the unconditional forward push to AddTrackFlow.
 
 import 'package:flutter/material.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Which path the user chose at the onboarding fork.
@@ -49,21 +49,21 @@ class OnboardingIntentStep extends StatelessWidget {
               l10n.onboardingIntentHeading,
               style: theme.textTheme.headlineMedium?.copyWith(
                 fontWeight: FontWeight.w800,
-                color: AppTheme.brandInk,
+                color: context.colors.brandInk,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               l10n.onboardingIntentSubtitle,
               style: theme.textTheme.bodyLarge?.copyWith(
-                color: AppTheme.brandInkMuted,
+                color: context.colors.brandInkMuted,
               ),
             ),
             const SizedBox(height: 32),
             _IntentCard(
               icon: Icons.menu_book_rounded,
               iconBgColor: const Color(0xFFE4E7EF),
-              iconColor: AppTheme.brandBlueDeep,
+              iconColor: context.colors.brandBlueDeep,
               title: l10n.onboardingIntentTrackTitle,
               subtitle: l10n.onboardingIntentTrackSubtitle,
               onTap: () => onChosen(OnboardingIntent.trackMyLearning),
@@ -134,23 +134,23 @@ class _IntentCard extends StatelessWidget {
                       title,
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w800,
-                        color: AppTheme.brandInk,
+                        color: context.colors.brandInk,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       subtitle,
                       style: theme.textTheme.bodyMedium?.copyWith(
-                        color: AppTheme.brandInkMuted,
+                        color: context.colors.brandInkMuted,
                       ),
                     ),
                   ],
                 ),
               ),
               const SizedBox(width: 8),
-              const Icon(
+              Icon(
                 Icons.chevron_right_rounded,
-                color: AppTheme.brandInkMuted,
+                color: context.colors.brandInkMuted,
               ),
             ],
           ),

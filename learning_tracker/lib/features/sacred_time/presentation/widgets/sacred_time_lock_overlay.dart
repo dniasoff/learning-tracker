@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/scrollable_fill_body.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/sacred_window.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart';
@@ -55,7 +55,7 @@ class _LockScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final spec = _specFor(window.kind);
+    final spec = _specFor(context, window.kind);
     final (greeting, subtitle) = _stringsFor(window.kind, l10n, shabbos);
     return PopScope(
       canPop: false,
@@ -107,27 +107,27 @@ class _LockScreen extends StatelessWidget {
     );
   }
 
-  static _LockSpec _specFor(SacredWindowKind kind) {
+  static _LockSpec _specFor(BuildContext context, SacredWindowKind kind) {
     switch (kind) {
       case SacredWindowKind.shabbos:
-        return const _LockSpec(
+        return _LockSpec(
           icon: Icons.local_fire_department_outlined,
-          background: AppColors.sacredTimeLockShabbosBg,
+          background: context.colors.sacredTimeLockShabbosBg,
         );
       case SacredWindowKind.yomTov:
-        return const _LockSpec(
+        return _LockSpec(
           icon: Icons.celebration_outlined,
-          background: AppColors.accentPurpleDeep,
+          background: context.colors.accentPurpleDeep,
         );
       case SacredWindowKind.shabbosYomTov:
-        return const _LockSpec(
+        return _LockSpec(
           icon: Icons.celebration_outlined,
-          background: AppColors.sacredTimeLockShabbosYomTovBg,
+          background: context.colors.sacredTimeLockShabbosYomTovBg,
         );
       case SacredWindowKind.yomKippur:
-        return const _LockSpec(
+        return _LockSpec(
           icon: Icons.menu_book_outlined,
-          background: AppColors.sacredTimeLockYomKippurBg,
+          background: context.colors.sacredTimeLockYomKippurBg,
         );
     }
   }

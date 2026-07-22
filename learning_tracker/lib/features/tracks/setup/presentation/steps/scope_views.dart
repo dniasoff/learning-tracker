@@ -4,8 +4,7 @@ import 'package:learning_tracker/core/content/content_grouping.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/steps/scope_tiles.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -97,8 +96,11 @@ class ScopeTopLevelView extends ConsumerWidget {
         // "Learn All" hero card
         DecoratedBox(
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [AppTheme.brandBlueDeep, AppTheme.brandBlueBright],
+            gradient: LinearGradient(
+              colors: [
+                context.colors.brandBlueDeep,
+                context.colors.brandBlueBright,
+              ],
             ),
             borderRadius: BorderRadius.circular(28),
             boxShadow: const [
@@ -161,7 +163,7 @@ class ScopeTopLevelView extends ConsumerWidget {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: AppColors.surfaceE9),
+            border: Border.all(color: context.colors.surfaceE9),
           ),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
@@ -176,16 +178,16 @@ class ScopeTopLevelView extends ConsumerWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.titleSmall?.copyWith(
-                      color: AppTheme.brandBlueDeep,
+                      color: context.colors.brandBlueDeep,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
                 const SizedBox(width: 8),
-                const Icon(
+                Icon(
                   Icons.chevron_right_rounded,
                   size: 16,
-                  color: AppTheme.brandInkMuted,
+                  color: context.colors.brandInkMuted,
                 ),
                 const SizedBox(width: 8),
                 // R1-(6): show only the level prompt (e.g. "Choose a Sefer").
@@ -203,7 +205,7 @@ class ScopeTopLevelView extends ConsumerWidget {
                         ? TextDirection.rtl
                         : TextDirection.ltr,
                     style: theme.textTheme.titleSmall?.copyWith(
-                      color: AppTheme.brandInk,
+                      color: context.colors.brandInk,
                     ),
                   ),
                 ),

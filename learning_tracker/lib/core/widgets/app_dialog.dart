@@ -21,8 +21,7 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Maximum dialog width on large screens / tablets.
@@ -215,17 +214,23 @@ class _ConfirmDialogBody extends StatelessWidget {
     final isDark = theme.brightness == Brightness.dark;
 
     final badgeColor = destructive
-        ? AppColors.statusErrorSoft
-        : (isDark ? AppTheme.brandBlueDarkContainer : AppTheme.brandBlueSoft);
+        ? context.colors.statusErrorSoft
+        : (isDark
+              ? context.colors.brandBlueSoft
+              : context.colors.brandBlueSoft);
     final iconColor = destructive
-        ? AppColors.chartRed
-        : (isDark ? AppTheme.brandBlueDark : AppTheme.brandBlue);
-    final confirmColor = destructive ? AppColors.chartRed : AppTheme.brandBlue;
+        ? context.colors.chartRed
+        : (isDark ? context.colors.brandBlue : context.colors.brandBlue);
+    final confirmColor = destructive
+        ? context.colors.chartRed
+        : context.colors.brandBlue;
 
-    final titleColor = isDark ? AppTheme.darkInk : AppTheme.brandBlueDeep;
+    final titleColor = isDark
+        ? context.colors.brandInk
+        : context.colors.brandBlueDeep;
     final messageColor = isDark
-        ? AppTheme.darkInkMuted
-        : AppTheme.brandInkMuted;
+        ? context.colors.brandInkMuted
+        : context.colors.brandInkMuted;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -283,11 +288,11 @@ class _ConfirmDialogBody extends StatelessWidget {
             onPressed: () => Navigator.pop(context, false),
             style: TextButton.styleFrom(
               foregroundColor: isDark
-                  ? AppTheme.darkInkMuted
-                  : AppTheme.brandInkMuted,
+                  ? context.colors.brandInkMuted
+                  : context.colors.brandInkMuted,
               backgroundColor: isDark
-                  ? AppTheme.darkSurfaceSoft
-                  : AppColors.dialogCancelButtonBg,
+                  ? context.colors.brandCreamSoft
+                  : context.colors.dialogCancelButtonBg,
               padding: const EdgeInsets.symmetric(vertical: 15),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(999),

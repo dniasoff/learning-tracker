@@ -12,8 +12,7 @@ import 'package:learning_tracker/core/database/registry/device_registry_database
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/utils/firebase_error_code.dart';
 import 'package:learning_tracker/core/utils/text_input_formatters.dart';
 import 'package:learning_tracker/features/account/domain/services/local_auth_service.dart';
@@ -514,7 +513,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: AppTheme.brandCoralDeep,
+        backgroundColor: context.colors.brandCoralDeep,
       ),
     );
   }
@@ -535,7 +534,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     );
 
     return Scaffold(
-      backgroundColor: AppColors.surfaceF3,
+      backgroundColor: context.colors.surfaceF3,
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) => SingleChildScrollView(
@@ -572,7 +571,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                             width: double.infinity,
                             padding: const EdgeInsets.fromLTRB(24, 26, 24, 26),
                             decoration: BoxDecoration(
-                              color: AppTheme.brandCreamCard,
+                              color: context.colors.brandCreamCard,
                               borderRadius: BorderRadius.circular(34),
                             ),
                             child: Form(
@@ -589,7 +588,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                                   Text(
                                     l10n.signUpSubtitle,
                                     style: theme.textTheme.bodyLarge?.copyWith(
-                                      color: AppTheme.brandInkMuted,
+                                      color: context.colors.brandInkMuted,
                                     ),
                                   ),
                                   const SizedBox(height: 16),
@@ -604,9 +603,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                                     _buildAuthField(
                                       controller: _nameController,
                                       hintText: l10n.signUpScholarNameHint,
-                                      suffixIcon: const Icon(
+                                      suffixIcon: Icon(
                                         Icons.face_outlined,
-                                        color: AppTheme.brandInkMuted,
+                                        color: context.colors.brandInkMuted,
                                       ),
                                       textInputAction: TextInputAction.next,
                                       validator: (v) =>
@@ -618,9 +617,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                                     _buildAuthField(
                                       controller: _emailController,
                                       hintText: 'you@quest.com',
-                                      suffixIcon: const Icon(
+                                      suffixIcon: Icon(
                                         Icons.email_rounded,
-                                        color: AppTheme.brandInkMuted,
+                                        color: context.colors.brandInkMuted,
                                       ),
                                       keyboardType: TextInputType.emailAddress,
                                       textInputAction: TextInputAction.next,
@@ -646,7 +645,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                                           _obscurePassword
                                               ? Icons.lock_rounded
                                               : Icons.visibility_rounded,
-                                          color: AppTheme.brandInkMuted,
+                                          color: context.colors.brandInkMuted,
                                         ),
                                         onPressed: () => setState(
                                           () => _obscurePassword =
@@ -659,10 +658,10 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                                       height: 58,
                                       child: DecoratedBox(
                                         decoration: BoxDecoration(
-                                          gradient: const LinearGradient(
+                                          gradient: LinearGradient(
                                             colors: [
-                                              AppTheme.brandBlue,
-                                              AppTheme.brandBlueBright,
+                                              context.colors.brandBlue,
+                                              context.colors.brandBlueBright,
                                             ],
                                           ),
                                           borderRadius: BorderRadius.circular(
@@ -670,7 +669,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                                           ),
                                           boxShadow: [
                                             BoxShadow(
-                                              color: AppTheme.brandBlueBright
+                                              color: context
+                                                  .colors
+                                                  .brandBlueBright
                                                   .withValues(alpha: 0.32),
                                               blurRadius: 18,
                                               offset: const Offset(0, 8),
@@ -683,8 +684,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                                               : _signUpWithEmail,
                                           style: FilledButton.styleFrom(
                                             backgroundColor:
-                                                AppTheme.transparent,
-                                            shadowColor: AppTheme.transparent,
+                                                context.colors.transparent,
+                                            shadowColor:
+                                                context.colors.transparent,
                                             foregroundColor: Colors.white,
                                           ),
                                           child: _isLoading
@@ -716,7 +718,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                                       l10n.signUpOfflineExplain,
                                       style: theme.textTheme.bodyMedium
                                           ?.copyWith(
-                                            color: AppTheme.brandInkMuted,
+                                            color: context.colors.brandInkMuted,
                                           ),
                                     ),
                                     const SizedBox(height: 20),
@@ -727,7 +729,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                                             ? null
                                             : _createOfflineAccount,
                                         style: FilledButton.styleFrom(
-                                          backgroundColor: AppTheme.brandBlue,
+                                          backgroundColor:
+                                              context.colors.brandBlue,
                                           shape: RoundedRectangleBorder(
                                             borderRadius: BorderRadius.circular(
                                               30,
@@ -735,13 +738,14 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                                           ),
                                         ),
                                         child: _isLoading
-                                            ? const SizedBox(
+                                            ? SizedBox(
                                                 height: 20,
                                                 width: 20,
                                                 child:
                                                     CircularProgressIndicator(
                                                       strokeWidth: 2,
-                                                      color: AppTheme
+                                                      color: context
+                                                          .colors
                                                           .brandCreamCard,
                                                     ),
                                               )
@@ -777,7 +781,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                                             l10n.signUpOrDivider,
                                             style: theme.textTheme.bodyMedium
                                                 ?.copyWith(
-                                                  color: AppTheme.brandInkMuted,
+                                                  color: context
+                                                      .colors
+                                                      .brandInkMuted,
                                                   fontWeight: FontWeight.w700,
                                                   letterSpacing: 0.8,
                                                 ),
@@ -792,9 +798,10 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                                           ? null
                                           : _signUpWithGoogle,
                                       style: OutlinedButton.styleFrom(
-                                        foregroundColor: AppTheme.brandInk,
-                                        side: const BorderSide(
-                                          color: AppTheme.brandInkSoft,
+                                        foregroundColor:
+                                            context.colors.brandInk,
+                                        side: BorderSide(
+                                          color: context.colors.brandInkSoft,
                                         ),
                                         shape: RoundedRectangleBorder(
                                           borderRadius: BorderRadius.circular(
@@ -832,7 +839,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                                       text: TextSpan(
                                         style: theme.textTheme.bodyLarge
                                             ?.copyWith(
-                                              color: AppTheme.brandInkMuted,
+                                              color:
+                                                  context.colors.brandInkMuted,
                                             ),
                                         children: [
                                           TextSpan(
@@ -840,8 +848,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                                           ),
                                           TextSpan(
                                             text: l10n.signUpLogIn,
-                                            style: const TextStyle(
-                                              color: AppTheme.brandBlue,
+                                            style: TextStyle(
+                                              color: context.colors.brandBlue,
                                               fontWeight: FontWeight.w700,
                                             ),
                                             recognizer: TapGestureRecognizer()
@@ -877,8 +885,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   Widget _buildLabel(String text) {
     return Text(
       text,
-      style: const TextStyle(
-        color: AppTheme.brandInk,
+      style: TextStyle(
+        color: context.colors.brandInk,
         fontSize: 17,
         fontWeight: FontWeight.w700,
       ),
@@ -894,22 +902,22 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       return Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: AppTheme.brandBlueBright.withValues(alpha: 0.1),
+          color: context.colors.brandBlueBright.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: AppTheme.brandBlueBright.withValues(alpha: 0.35),
+            color: context.colors.brandBlueBright.withValues(alpha: 0.35),
           ),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(Icons.cloud_done_rounded, color: AppTheme.brandBlue),
+            Icon(Icons.cloud_done_rounded, color: context.colors.brandBlue),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
                 l10n.authModeCloud,
                 style: theme.textTheme.bodyMedium?.copyWith(
-                  color: AppTheme.brandInk,
+                  color: context.colors.brandInk,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -925,25 +933,25 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppTheme.brandCoralSoft.withValues(alpha: 0.45),
+        color: context.colors.brandCoralSoft.withValues(alpha: 0.45),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: AppTheme.brandCoralDeep.withValues(alpha: 0.55),
+          color: context.colors.brandCoralDeep.withValues(alpha: 0.55),
         ),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(
+          Icon(
             Icons.warning_amber_rounded,
-            color: AppTheme.brandCoralDeep,
+            color: context.colors.brandCoralDeep,
           ),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
               l10n.authModeLocalTitle,
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: AppTheme.brandInk,
+                color: context.colors.brandInk,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -980,8 +988,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       ],
       decoration: InputDecoration(
         hintText: hintText,
-        hintStyle: const TextStyle(
-          color: AppTheme.brandInkMuted,
+        hintStyle: TextStyle(
+          color: context.colors.brandInkMuted,
           fontWeight: FontWeight.w500,
         ),
         suffixIcon: suffixIcon,
@@ -999,7 +1007,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(28),
-          borderSide: const BorderSide(color: AppTheme.brandBlueBright),
+          borderSide: BorderSide(color: context.colors.brandBlueBright),
         ),
       ),
     );

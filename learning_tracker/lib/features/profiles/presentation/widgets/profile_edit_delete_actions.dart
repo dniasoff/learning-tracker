@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/utils/text_input_formatters.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
@@ -115,7 +115,9 @@ Future<void> deleteProfileFlow(
         ),
         TextButton(
           onPressed: () => Navigator.of(ctx).pop(true),
-          style: TextButton.styleFrom(foregroundColor: AppTheme.brandCoralDeep),
+          style: TextButton.styleFrom(
+            foregroundColor: context.colors.brandCoralDeep,
+          ),
           child: Text(
             isLast ? l10n.deleteProfileLastConfirm : l10n.actionDelete,
           ),

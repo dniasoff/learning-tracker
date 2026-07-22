@@ -1,6 +1,6 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Action buttons for the sign-in screen:
@@ -64,13 +64,16 @@ class _SignInActionsState extends State<SignInActions> {
           height: 58,
           child: DecoratedBox(
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [AppTheme.brandBlue, AppTheme.brandBlueBright],
+              gradient: LinearGradient(
+                colors: [
+                  context.colors.brandBlue,
+                  context.colors.brandBlueBright,
+                ],
               ),
               borderRadius: BorderRadius.circular(30),
               boxShadow: [
                 BoxShadow(
-                  color: AppTheme.brandBlueBright.withValues(alpha: 0.32),
+                  color: context.colors.brandBlueBright.withValues(alpha: 0.32),
                   blurRadius: 18,
                   offset: const Offset(0, 8),
                 ),
@@ -79,8 +82,8 @@ class _SignInActionsState extends State<SignInActions> {
             child: FilledButton(
               onPressed: widget.isLoading ? null : widget.onSignIn,
               style: FilledButton.styleFrom(
-                backgroundColor: AppTheme.transparent,
-                shadowColor: AppTheme.transparent,
+                backgroundColor: context.colors.transparent,
+                shadowColor: context.colors.transparent,
                 foregroundColor: Colors.white,
               ),
               child: widget.isLoading
@@ -109,8 +112,8 @@ class _SignInActionsState extends State<SignInActions> {
             icon: const Icon(Icons.g_mobiledata_rounded),
             label: Text(widget.l10n.signInWithGoogleCta),
             style: OutlinedButton.styleFrom(
-              foregroundColor: AppTheme.brandInk,
-              side: const BorderSide(color: AppTheme.brandInkSoft),
+              foregroundColor: context.colors.brandInk,
+              side: BorderSide(color: context.colors.brandInkSoft),
             ),
           ),
           const SizedBox(height: 20),
@@ -120,14 +123,14 @@ class _SignInActionsState extends State<SignInActions> {
           child: RichText(
             text: TextSpan(
               style: theme.textTheme.bodyLarge?.copyWith(
-                color: AppTheme.brandInkMuted,
+                color: context.colors.brandInkMuted,
               ),
               children: [
                 TextSpan(text: widget.l10n.signInNewToQuest),
                 TextSpan(
                   text: widget.l10n.signInRegisterHere,
-                  style: const TextStyle(
-                    color: AppTheme.brandBlue,
+                  style: TextStyle(
+                    color: context.colors.brandBlue,
                     fontWeight: FontWeight.w700,
                   ),
                   recognizer: _registerTapRecognizer,

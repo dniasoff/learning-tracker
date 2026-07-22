@@ -4,7 +4,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/item_review_breakdown.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/review_count_badge.dart';
@@ -258,7 +258,7 @@ class _StageBreakdownSheet extends ConsumerWidget {
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: AppTheme.brandOutline,
+                    color: context.colors.brandOutline,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -266,18 +266,18 @@ class _StageBreakdownSheet extends ConsumerWidget {
               const SizedBox(height: 16),
               CurriculumLabel.item(
                 item,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
-                  color: AppTheme.brandInk,
+                  color: context.colors.brandInk,
                 ),
               ),
               const SizedBox(height: 4),
               Text(
                 l10n.stageBreakdownReviewHistoryTitle,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13,
-                  color: AppTheme.brandInkMuted,
+                  color: context.colors.brandInkMuted,
                 ),
               ),
               const SizedBox(height: 16),
@@ -286,7 +286,7 @@ class _StageBreakdownSheet extends ConsumerWidget {
                   if (breakdown.isEmpty) {
                     return Text(
                       l10n.noCompletionsYet,
-                      style: const TextStyle(color: AppTheme.brandInkMuted),
+                      style: TextStyle(color: context.colors.brandInkMuted),
                     );
                   }
                   return FutureBuilder<Map<int, String>>(

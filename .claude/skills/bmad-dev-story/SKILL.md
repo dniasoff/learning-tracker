@@ -273,33 +273,16 @@ Activation is complete. If `activation_steps_prepend` or `activation_steps_appen
       <action>Set {{current_status}} to the story file Status section value</action>
     </check>
 
-    <check if="{workflow.tracking_system}=='file-system'">
-      <!-- bmad-linear-patch v0.2.0 -->
-      <check if="{{current_status}} == 'ready-for-dev' AND story file YAML frontmatter does NOT contain baseline_commit">
-        <action>Run `git rev-parse HEAD` to capture current commit into {{baseline_commit}}; if git/version control is unavailable, set {{baseline_commit}} = `NO_VCS`</action>
-        <action>If story file YAML frontmatter exists, add `baseline_commit: {{baseline_commit}}` to the frontmatter</action>
-        <action>If story file has no YAML frontmatter, create frontmatter at the top containing only `baseline_commit: {{baseline_commit}}`</action>
-      </check>
-    </check>
-    <check if="{workflow.tracking_system}!='file-system'">
-      <!-- bmad-linear-patch v0.2.0 -->
-      <check if="{{current_status}} == 'ready-for-dev'">
-        <action>Run `git rev-parse HEAD` to capture current commit into {{baseline_commit}}; if git/version control is unavailable, set {{baseline_commit}} = `NO_VCS`</action>
-        <action>Call {workflow.tracking_adapter}.set_baseline_commit(issue_id={{story_key}}, sha={{baseline_commit}}) — posts a discussion comment to the Linear issue.</action>
-      </check>
+    <check if="{{current_status}} == 'ready-for-dev' AND story file YAML frontmatter does NOT contain baseline_commit">
+      <action>Run `git rev-parse HEAD` to capture current commit into {{baseline_commit}}; if git/version control is unavailable, set {{baseline_commit}} = `NO_VCS`</action>
+      <action>If story file YAML frontmatter exists, add `baseline_commit: {{baseline_commit}}` to the frontmatter</action>
+      <action>If story file has no YAML frontmatter, create frontmatter at the top containing only `baseline_commit: {{baseline_commit}}`</action>
     </check>
 
     <check if="{{sprint_status}} file exists">
       <check if="{{current_status}} == 'ready-for-dev' OR (review_continuation == true AND {{current_status}} != 'in-progress')">
-        <check if="{workflow.tracking_system}=='file-system'">
-          <!-- bmad-linear-patch v0.2.0 -->
-          <action>Update the story in the sprint status report to = "in-progress"</action>
-          <action>Update last_updated field to current date</action>
-        </check>
-        <check if="{workflow.tracking_system}!='file-system'">
-          <!-- bmad-linear-patch v0.2.0 -->
-          <action>Defer to {workflow.tracking_adapter} for this operation. Update story status to in-progress via the tracking adapter.</action>
-        </check>
+        <action>Update the story in the sprint status report to = "in-progress"</action>
+        <action>Update last_updated field to current date</action>
         <output>🚀 Starting work on story {{story_key}}
           Status updated: {{current_status}} → in-progress
         </output>
@@ -415,14 +398,7 @@ Activation is complete. If `activation_steps_prepend` or `activation_steps_appen
       <action>Add Change Log entry: "Addressed code review findings - {{resolved_count}} items resolved (Date: {{date}})"</action>
     </check>
 
-    <check if="{workflow.tracking_system}=='file-system'">
-      <!-- bmad-linear-patch v0.2.0 -->
-      <action>Save the story file</action>
-    </check>
-    <check if="{workflow.tracking_system}!='file-system'">
-      <!-- bmad-linear-patch v0.2.0 -->
-      <action>Defer to {workflow.tracking_adapter} for this operation. Do not write a local file.</action>
-    </check>
+    <action>Save the story file</action>
     <action>Determine if more incomplete tasks remain</action>
     <action if="more tasks remain">
       <goto step="5">Next task</goto>
@@ -455,21 +431,14 @@ Activation is complete. If `activation_steps_prepend` or `activation_steps_appen
     </action>
 
     <!-- Mark story ready for review - sprint status conditional -->
-    <check if="{workflow.tracking_system}=='file-system'">
-      <!-- bmad-linear-patch v0.2.0 -->
-      <check if="{sprint_status} file exists AND {{current_sprint_status}} != 'no-sprint-tracking'">
-        <action>Load the FULL file: {sprint_status}</action>
-        <action>Find development_status key matching {{story_key}}</action>
-        <action>Verify current status is "in-progress" (expected previous state)</action>
-        <action>Update development_status[{{story_key}}] = "review"</action>
-        <action>Update last_updated field to current date</action>
-        <action>Save file, preserving ALL comments and structure including STATUS DEFINITIONS</action>
-        <output>✅ Story status updated to "review" in sprint-status.yaml</output>
-      </check>
-    </check>
-    <check if="{workflow.tracking_system}!='file-system'">
-      <!-- bmad-linear-patch v0.2.0 -->
-      <action>Defer to {workflow.tracking_adapter} for this operation. Update story status to review via the tracking adapter.</action>
+    <check if="{sprint_status} file exists AND {{current_sprint_status}} != 'no-sprint-tracking'">
+      <action>Load the FULL file: {sprint_status}</action>
+      <action>Find development_status key matching {{story_key}}</action>
+      <action>Verify current status is "in-progress" (expected previous state)</action>
+      <action>Update development_status[{{story_key}}] = "review"</action>
+      <action>Update last_updated field to current date</action>
+      <action>Save file, preserving ALL comments and structure including STATUS DEFINITIONS</action>
+      <output>✅ Story status updated to "review" in sprint-status.yaml</output>
     </check>
 
     <check if="{sprint_status} file does NOT exist OR {{current_sprint_status}} == 'no-sprint-tracking'">
@@ -529,5 +498,3 @@ Activation is complete. If `activation_steps_prepend` or `activation_steps_appen
   </step>
 
 </workflow>
-
-<!-- bmad-linear-patch:applied:v0.2.0 -->

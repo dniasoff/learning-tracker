@@ -12,8 +12,7 @@ import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/providers/calendar_providers.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/core/utils/text_input_formatters.dart';
 import 'package:learning_tracker/core/widgets/learning_date_picker_theme.dart';
@@ -448,15 +447,15 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
     }
 
     return Scaffold(
-      backgroundColor: AppColors.surfaceF5,
+      backgroundColor: context.colors.surfaceF5,
       appBar: AppBar(
-        backgroundColor: AppColors.surfaceF5,
+        backgroundColor: context.colors.surfaceF5,
         elevation: 0,
         title: Text(
           l10n.trackEditTitle,
           style: theme.textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.w800,
-            color: AppTheme.brandBlueDeep,
+            color: context.colors.brandBlueDeep,
           ),
         ),
         actions: [
@@ -502,13 +501,13 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
               },
               decoration: InputDecoration(
                 errorText: _nameError,
-                border: const OutlineInputBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(12)),
-                  borderSide: BorderSide(color: AppColors.surfaceGreyBlue),
+                border: OutlineInputBorder(
+                  borderRadius: const BorderRadius.all(Radius.circular(12)),
+                  borderSide: BorderSide(color: context.colors.surfaceGreyBlue),
                 ),
-                enabledBorder: const OutlineInputBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(12)),
-                  borderSide: BorderSide(color: AppColors.surfaceGreyBlue),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: const BorderRadius.all(Radius.circular(12)),
+                  borderSide: BorderSide(color: context.colors.surfaceGreyBlue),
                 ),
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 14,
@@ -575,13 +574,13 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
           decoration: BoxDecoration(
-            color: AppColors.surfaceBlueNeutral,
+            color: context.colors.surfaceBlueNeutral,
             borderRadius: BorderRadius.circular(8),
           ),
           child: Text(
             _goalTypeLabel(goal.goalType, l10n),
             style: theme.textTheme.labelSmall?.copyWith(
-              color: AppTheme.brandInkMuted,
+              color: context.colors.brandInkMuted,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -590,7 +589,7 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
         Text(
           l10n.trackEditGoalTypeLocked,
           style: theme.textTheme.bodySmall?.copyWith(
-            color: AppTheme.brandInkMuted,
+            color: context.colors.brandInkMuted,
           ),
         ),
         const SizedBox(height: 14),
@@ -623,7 +622,7 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
               '$_paceValue',
               style: theme.textTheme.headlineMedium?.copyWith(
                 fontWeight: FontWeight.w800,
-                color: AppTheme.brandBlueDeep,
+                color: context.colors.brandBlueDeep,
               ),
             ),
             const SizedBox(width: 16),
@@ -636,7 +635,7 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
             Text(
               periodLabel,
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: AppTheme.brandInkMuted,
+                color: context.colors.brandInkMuted,
               ),
             ),
           ],
@@ -674,7 +673,7 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         decoration: BoxDecoration(
-          border: Border.all(color: AppColors.surfaceGreyBlue),
+          border: Border.all(color: context.colors.surfaceGreyBlue),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -730,8 +729,8 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
             ),
             title: _dayName(kStepStudyDayNumbers[i]),
             subtitle: '',
-            subtitleColor: AppTheme.brandInkMuted,
-            activeColor: AppColors.surfaceE9,
+            subtitleColor: context.colors.brandInkMuted,
+            activeColor: context.colors.surfaceE9,
             isShabbos: kStepStudyDayNumbers[i] == 6,
             isOn: _editedStudyDays[kStepStudyDayNumbers[i]] == 'study',
             onChanged: (v) => setState(
@@ -765,7 +764,7 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
                 summary,
                 style: theme.textTheme.bodyLarge?.copyWith(
                   fontWeight: FontWeight.w600,
-                  color: AppTheme.brandInk,
+                  color: context.colors.brandInk,
                 ),
               ),
             ],
@@ -807,7 +806,7 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppColors.surfaceF5,
+      backgroundColor: context.colors.surfaceF5,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
@@ -944,7 +943,7 @@ class _SectionCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: AppColors.blueDeepNavy.withValues(alpha: 0.06),
+            color: context.colors.blueDeepNavy.withValues(alpha: 0.06),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -956,7 +955,7 @@ class _SectionCard extends StatelessWidget {
           Text(
             title,
             style: theme.textTheme.labelLarge?.copyWith(
-              color: AppTheme.brandInkMuted,
+              color: context.colors.brandInkMuted,
               fontWeight: FontWeight.w700,
               letterSpacing: 0.4,
             ),
@@ -991,7 +990,7 @@ class _StepperButton extends StatelessWidget {
       enabled: onPressed != null,
       excludeSemantics: true,
       child: Material(
-        color: AppColors.surfaceBlueNeutral,
+        color: context.colors.surfaceBlueNeutral,
         borderRadius: BorderRadius.circular(10),
         child: InkWell(
           borderRadius: BorderRadius.circular(10),
@@ -1002,8 +1001,8 @@ class _StepperButton extends StatelessWidget {
               icon,
               size: 20,
               color: onPressed != null
-                  ? AppTheme.brandBlueDeep
-                  : AppTheme.brandInkMuted,
+                  ? context.colors.brandBlueDeep
+                  : context.colors.brandInkMuted,
             ),
           ),
         ),
@@ -1031,14 +1030,14 @@ class _PeriodChip extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
           color: isSelected
-              ? AppTheme.brandBlueBright
-              : AppColors.surfaceBlueNeutral,
+              ? context.colors.brandBlueBright
+              : context.colors.surfaceBlueNeutral,
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: isSelected ? Colors.white : AppTheme.brandInkMuted,
+            color: isSelected ? Colors.white : context.colors.brandInkMuted,
             fontWeight: FontWeight.w700,
             fontSize: 13,
           ),

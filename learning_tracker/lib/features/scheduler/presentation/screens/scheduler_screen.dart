@@ -4,8 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:learning_tracker/core/content/content_index.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/empty_state.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/daily_schedule_composer.dart';
@@ -49,7 +48,7 @@ class SchedulerScreen extends ConsumerWidget {
     }
 
     return Scaffold(
-      backgroundColor: AppColors.surfaceF5,
+      backgroundColor: context.colors.surfaceF5,
       body: SafeArea(
         child: asyncTasks.when(
           data: (rawTasks) {
@@ -80,7 +79,7 @@ class SchedulerScreen extends ConsumerWidget {
                   padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
                   child: _HeaderRow(
                     titleStyle: theme.textTheme.headlineSmall?.copyWith(
-                      color: AppTheme.brandBlueDeep,
+                      color: context.colors.brandBlueDeep,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -258,7 +257,7 @@ class _GoalCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.brandBlue.withValues(alpha: 0.24),
+            color: context.colors.brandBlue.withValues(alpha: 0.24),
             blurRadius: 16,
             offset: const Offset(0, 8),
           ),

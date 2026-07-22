@@ -3,8 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart';
@@ -65,12 +64,12 @@ class LearningTrackCard extends ConsumerWidget {
               false)
         : false;
 
-    final curriculumBarColor = AppTheme.getCurriculumColorByKey(
+    final curriculumBarColor = context.colors.curriculumForKey(
       track.curriculumId,
     );
 
     // W3.22: trackType column dropped — all tracks are now 'personal'.
-    const accent = AppColors.blueMedium;
+    final accent = context.colors.blueMedium;
     const icon = Icons.menu_book_rounded;
 
     final cardTitle = trackDisplayTitle(ref, track);
@@ -95,7 +94,7 @@ class LearningTrackCard extends ConsumerWidget {
               borderRadius: BorderRadius.circular(30),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.blueDeepNavy.withValues(alpha: 0.07),
+                  color: context.colors.blueDeepNavy.withValues(alpha: 0.07),
                   blurRadius: 14,
                   offset: const Offset(0, 6),
                 ),
@@ -133,7 +132,7 @@ class LearningTrackCard extends ConsumerWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: theme.textTheme.titleLarge?.copyWith(
-                          color: AppTheme.brandBlueDeep,
+                          color: context.colors.brandBlueDeep,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
@@ -147,7 +146,7 @@ class LearningTrackCard extends ConsumerWidget {
                                     ? l10n.carouselCompletion(chazaraTerm)
                                     : l10n.trackProgress,
                                 style: theme.textTheme.labelSmall?.copyWith(
-                                  color: AppTheme.brandInkMuted,
+                                  color: context.colors.brandInkMuted,
                                   fontWeight: FontWeight.w700,
                                 ),
                               ),
@@ -155,7 +154,7 @@ class LearningTrackCard extends ConsumerWidget {
                               Text(
                                 cyclePercentDisplay,
                                 style: theme.textTheme.labelMedium?.copyWith(
-                                  color: AppTheme.brandInk,
+                                  color: context.colors.brandInk,
                                   fontWeight: FontWeight.w700,
                                 ),
                               ),
@@ -168,7 +167,7 @@ class LearningTrackCard extends ConsumerWidget {
                               child: LinearProgressIndicator(
                                 value: cycleFraction,
                                 minHeight: 10,
-                                backgroundColor: AppTheme.brandCreamSoft,
+                                backgroundColor: context.colors.brandCreamSoft,
                                 valueColor: AlwaysStoppedAnimation<Color>(
                                   curriculumBarColor,
                                 ),
@@ -181,10 +180,10 @@ class LearningTrackCard extends ConsumerWidget {
                     ],
                   ),
                 ),
-                const Icon(
+                Icon(
                   Icons.chevron_right_rounded,
                   size: 30,
-                  color: AppTheme.brandBlueDeep,
+                  color: context.colors.brandBlueDeep,
                 ),
               ],
             ),

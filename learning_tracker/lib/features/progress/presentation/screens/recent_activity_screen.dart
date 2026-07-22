@@ -5,8 +5,7 @@ import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/core/widgets/error_display.dart';
 import 'package:learning_tracker/core/widgets/loading_indicator.dart';
@@ -96,7 +95,7 @@ class _RecentActivityScreenState extends ConsumerState<RecentActivityScreen> {
     final window = _window;
 
     return Scaffold(
-      backgroundColor: AppColors.surfaceF4b,
+      backgroundColor: context.colors.surfaceF4b,
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
@@ -194,7 +193,7 @@ class _RecentActivityScreenState extends ConsumerState<RecentActivityScreen> {
                 duration: const Duration(milliseconds: 180),
                 padding: const EdgeInsets.symmetric(vertical: 9),
                 decoration: BoxDecoration(
-                  color: selected ? AppColors.blueMid : Colors.transparent,
+                  color: selected ? context.colors.blueMid : Colors.transparent,
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
@@ -706,7 +705,7 @@ class _Card extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: AppColors.blueNavy.withValues(alpha: 0.05),
+            color: context.colors.blueNavy.withValues(alpha: 0.05),
             blurRadius: 12,
             offset: const Offset(0, 6),
           ),
@@ -794,8 +793,8 @@ class _FilterPill extends StatelessWidget {
       onSelected: onSelected,
       showCheckmark: false,
       side: BorderSide.none,
-      backgroundColor: AppTheme.brandCreamSoft,
-      selectedColor: AppColors.blueMid,
+      backgroundColor: context.colors.brandCreamSoft,
+      selectedColor: context.colors.blueMid,
       labelStyle: Theme.of(context).textTheme.labelMedium?.copyWith(
         color: selected ? Colors.white : const Color(0xFF4D5668),
         fontWeight: FontWeight.w700,

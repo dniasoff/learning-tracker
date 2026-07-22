@@ -6,8 +6,7 @@ import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/curriculum_label_renderer.dart';
 import 'package:learning_tracker/core/labels/curriculum_level_name.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/progress/domain/models/journey_view_model.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/siyum_milestone_label.dart';
@@ -75,7 +74,7 @@ class _CurriculumSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final color = AppTheme.getCurriculumColor(journey.curriculumId);
+    final color = context.colors.curriculumFor(journey.curriculumId);
     final terms = domainTermLabels(ref);
 
     // ── Partition milestones by level ─────────────────────────────────────
@@ -161,7 +160,7 @@ class _CurriculumCompleteHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const gold = AppColors.gamifTierGoldMutedIcon;
+    final gold = context.colors.gamifTierGoldMutedIcon;
     final label = curriculumCompleteSiyumLabel(
       curriculumId: milestone.curriculumId,
       terms: terms,
@@ -182,7 +181,7 @@ class _CurriculumCompleteHero extends StatelessWidget {
         ),
         child: Row(
           children: [
-            const Icon(Icons.emoji_events, color: gold, size: 32),
+            Icon(Icons.emoji_events, color: gold, size: 32),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -190,10 +189,10 @@ class _CurriculumCompleteHero extends StatelessWidget {
                 children: [
                   Text(
                     label,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 17,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.progressSiyumHeroText,
+                      color: context.colors.progressSiyumHeroText,
                     ),
                   ),
                   const SizedBox(height: 2),

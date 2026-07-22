@@ -9,7 +9,7 @@ import 'package:learning_tracker/core/navigation/pin_scope.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/sync/providers/tutored_pull_providers.dart';
 import 'package:learning_tracker/core/sync/tutored_pull_service.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
@@ -80,7 +80,7 @@ class TutoredChildrenSection extends ConsumerWidget {
               child: Text(
                 l10n.profilePickerTalmidProfiles,
                 style: theme.textTheme.labelMedium?.copyWith(
-                  color: AppTheme.brandInkMuted,
+                  color: context.colors.brandInkMuted,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.6,
                 ),
@@ -290,7 +290,7 @@ class _ManageGrantsRow extends ConsumerWidget {
         subtitle: Text(
           l10n.tutoredChildrenManageGrantsSubtitle,
           style: theme.textTheme.bodySmall?.copyWith(
-            color: AppTheme.brandInkMuted,
+            color: context.colors.brandInkMuted,
           ),
         ),
         trailing: const Icon(
@@ -370,9 +370,9 @@ class _TutoredChildRow extends ConsumerWidget {
             color: const Color(0xFFE8F4FD),
             borderRadius: BorderRadius.circular(12),
           ),
-          child: const Icon(
+          child: Icon(
             Icons.school_rounded,
-            color: AppTheme.brandBlue,
+            color: context.colors.brandBlue,
             size: 24,
           ),
         ),

@@ -5,7 +5,7 @@
 // instead of the semantic tokens in AppColors/AppTheme, blocking a future
 // systematic dark-mode/theme change from reaching these surfaces
 // consistently and matching decline_invite_screen.dart's own inconsistency
-// (AppColors.statusWarningSoft next to a raw Color(0xFFB07A00) for the same
+// (context.colors.statusWarningSoft next to a raw Color(0xFFB07A00) for the same
 // icon).
 //
 // The custom_lint `no_color_literal_outside_theme` rule only flags
@@ -56,7 +56,7 @@ void main() {
       violations,
       isEmpty,
       reason:
-          'Found hardcoded Color/Colors literals outside AppColors/AppTheme '
+          'Found hardcoded Color/Colors literals outside the theme layer '
           'under lib/features/tutoring/presentation/screens/ '
           '(AUD-tutoring-18):\n${violations.join('\n')}',
     );

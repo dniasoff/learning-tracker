@@ -6,8 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/account/presentation/notifiers/sign_in_controller.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
     show authRepositoryProvider;
@@ -193,7 +192,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       ..showSnackBar(
         SnackBar(
           content: Text(message),
-          backgroundColor: AppTheme.brandWarningDeep,
+          backgroundColor: context.colors.brandWarningDeep,
           duration: const Duration(seconds: 5),
           behavior: SnackBarBehavior.floating,
         ),
@@ -266,7 +265,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     final registrySubtitle = _registrySubtitle(isOnline: isOnline, l10n: l10n);
 
     return Scaffold(
-      backgroundColor: AppColors.surfaceF3,
+      backgroundColor: context.colors.surfaceF3,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -306,7 +305,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                           width: double.infinity,
                           padding: const EdgeInsets.fromLTRB(24, 26, 24, 28),
                           decoration: BoxDecoration(
-                            color: AppTheme.brandCreamCard,
+                            color: context.colors.brandCreamCard,
                             borderRadius: BorderRadius.circular(34),
                           ),
                           child: Column(
@@ -332,7 +331,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                                 l10n.signInReady,
                                 style: Theme.of(context).textTheme.bodyLarge
                                     ?.copyWith(
-                                      color: AppTheme.brandInkMuted,
+                                      color: context.colors.brandInkMuted,
                                       height: 1.4,
                                     ),
                                 textAlign: TextAlign.center,
@@ -348,23 +347,21 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                                 Container(
                                   padding: const EdgeInsets.all(12),
                                   decoration: BoxDecoration(
-                                    color: AppTheme.brandCoralSoft.withValues(
-                                      alpha: 0.45,
-                                    ),
+                                    color: context.colors.brandCoralSoft
+                                        .withValues(alpha: 0.45),
                                     borderRadius: BorderRadius.circular(12),
                                     border: Border.all(
-                                      color: AppTheme.brandCoralDeep.withValues(
-                                        alpha: 0.55,
-                                      ),
+                                      color: context.colors.brandCoralDeep
+                                          .withValues(alpha: 0.55),
                                     ),
                                   ),
                                   child: Row(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      const Icon(
+                                      Icon(
                                         Icons.wifi_off_rounded,
-                                        color: AppTheme.brandCoralDeep,
+                                        color: context.colors.brandCoralDeep,
                                       ),
                                       const SizedBox(width: 10),
                                       Expanded(
@@ -374,7 +371,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                                               .textTheme
                                               .bodyMedium
                                               ?.copyWith(
-                                                color: AppTheme.brandInk,
+                                                color: context.colors.brandInk,
                                                 fontWeight: FontWeight.w600,
                                               ),
                                         ),

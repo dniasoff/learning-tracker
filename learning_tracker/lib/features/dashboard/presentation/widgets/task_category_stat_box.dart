@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/stat_card.dart';
 
 /// Reusable stat box for [TrackStatGrid]. Becomes a no-op (greyed-out) when
@@ -29,7 +29,7 @@ class TaskCategoryStatBox extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final displayColor = countMutedWhenZero && count == 0
-        ? AppTheme.brandInk
+        ? context.colors.brandInk
         : valueColor;
 
     // Forward to the StatCard compact variant (no icon).
@@ -39,7 +39,7 @@ class TaskCategoryStatBox extends StatelessWidget {
       label: label,
       cardColor: valueBg,
       valueColor: displayColor,
-      labelColor: AppTheme.brandInkMuted,
+      labelColor: context.colors.brandInkMuted,
       borderRadius: 14,
       padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 4),
       onTap: onTap,

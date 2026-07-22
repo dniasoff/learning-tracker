@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 
 /// Design tokens (keep in sync with [parent_pin_keypad_dialog.dart]).
-const Color kParentModeDialogNavy = AppTheme.brandInk;
-const Color kParentModeDialogMuted = AppTheme.brandInkMuted;
+Color kParentModeDialogNavy(BuildContext context) => context.colors.brandInk;
+Color kParentModeDialogMuted(BuildContext context) =>
+    context.colors.brandInkMuted;
 
 /// White rounded dialog used for parent-mode PIN flows and the add-profile
 /// picker — matches the “Enter parent PIN” modal chrome.
@@ -31,7 +32,7 @@ class ParentModeDialogFrame extends StatelessWidget {
     final maxH = MediaQuery.sizeOf(context).height * 0.88;
 
     return Dialog(
-      backgroundColor: AppTheme.brandCreamCard,
+      backgroundColor: context.colors.brandCreamCard,
       surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
@@ -49,9 +50,9 @@ class ParentModeDialogFrame extends StatelessWidget {
                     alignment: AlignmentDirectional.centerEnd,
                     child: IconButton(
                       onPressed: onClose,
-                      icon: const Icon(
+                      icon: Icon(
                         Icons.close,
-                        color: kParentModeDialogMuted,
+                        color: kParentModeDialogMuted(context),
                         size: 22,
                       ),
                       tooltip: MaterialLocalizations.of(
@@ -64,8 +65,8 @@ class ParentModeDialogFrame extends StatelessWidget {
                 Text(
                   title,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: kParentModeDialogNavy,
+                  style: TextStyle(
+                    color: kParentModeDialogNavy(context),
                     fontSize: 22,
                     fontWeight: FontWeight.w700,
                   ),
@@ -75,8 +76,8 @@ class ParentModeDialogFrame extends StatelessWidget {
                   Text(
                     subtitle!,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: kParentModeDialogMuted,
+                    style: TextStyle(
+                      color: kParentModeDialogMuted(context),
                       fontSize: 15,
                       height: 1.35,
                     ),

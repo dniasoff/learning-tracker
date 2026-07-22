@@ -5,7 +5,7 @@ import 'package:learning_tracker/app/restore/restore_providers.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/app/router/router_provider.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/sync/domain/models/restore_phase.dart';
 import 'package:learning_tracker/features/sync/domain/models/restore_status.dart';
@@ -210,10 +210,10 @@ class _DeviceRestoreScreenState extends ConsumerState<DeviceRestoreScreen> {
             complete: (collectionsRestored) => Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(
+                Icon(
                   Icons.check_circle,
                   size: 64,
-                  color: AppTheme.brandGold,
+                  color: context.colors.brandGold,
                 ),
                 const SizedBox(height: 24),
                 Text(
@@ -225,10 +225,10 @@ class _DeviceRestoreScreenState extends ConsumerState<DeviceRestoreScreen> {
             error: (code, debugDetail) => Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(
+                Icon(
                   Icons.error_outline,
                   size: 64,
-                  color: AppTheme.brandCoralDeep,
+                  color: context.colors.brandCoralDeep,
                 ),
                 const SizedBox(height: 24),
                 Text(

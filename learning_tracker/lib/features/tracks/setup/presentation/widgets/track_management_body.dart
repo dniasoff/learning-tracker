@@ -4,8 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/settings/domain/exceptions/last_active_curriculum_exception.dart';
@@ -79,9 +78,9 @@ class _TrackManagementBodyState extends ConsumerState<TrackManagementBody> {
     final activeAsync = ref.watch(activeTracksProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.surfaceF5,
+      backgroundColor: context.colors.surfaceF5,
       appBar: AppBar(
-        backgroundColor: AppColors.surfaceF5,
+        backgroundColor: context.colors.surfaceF5,
         elevation: 0,
         centerTitle: false,
         automaticallyImplyLeading: false,
@@ -116,7 +115,7 @@ class _TrackManagementBodyState extends ConsumerState<TrackManagementBody> {
           l10n.manageTracks,
           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
             fontWeight: FontWeight.w800,
-            color: AppTheme.brandBlueDeep,
+            color: context.colors.brandBlueDeep,
           ),
         ),
       ),
@@ -180,7 +179,7 @@ class _TrackManagementBodyState extends ConsumerState<TrackManagementBody> {
         child: const Icon(Icons.add, color: Colors.white),
       ),
       label: Text(AppLocalizations.of(context)!.trackAddLabel),
-      backgroundColor: AppTheme.brandBlue,
+      backgroundColor: context.colors.brandBlue,
       foregroundColor: Colors.white,
       extendedPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
@@ -197,20 +196,20 @@ class _TrackManagementBodyState extends ConsumerState<TrackManagementBody> {
               AppLocalizations.of(context)!.activeTracksLabel,
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.w800,
-                color: AppTheme.brandInk,
+                color: context.colors.brandInk,
               ),
             ),
           ),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
             decoration: BoxDecoration(
-              color: AppColors.warnYellow,
+              color: context.colors.warnYellow,
               borderRadius: BorderRadius.circular(999),
             ),
             child: Text(
               AppLocalizations.of(context)!.activeTracksRunning(activeCount),
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: AppColors.goldAmber,
+                color: context.colors.goldAmber,
                 fontWeight: FontWeight.w800,
                 letterSpacing: 0.6,
               ),

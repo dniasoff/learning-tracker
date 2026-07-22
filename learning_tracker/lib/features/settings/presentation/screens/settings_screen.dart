@@ -7,8 +7,7 @@ import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/providers/talker_provider.dart';
 import 'package:learning_tracker/core/sync/providers/outbox_providers.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/preference_list_tile.dart';
 import 'package:learning_tracker/core/widgets/preference_segmented_tile.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
@@ -161,8 +160,8 @@ class SettingsScreen extends ConsumerWidget {
               _SurfaceCard(
                 child: PreferenceListTile.withIcon(
                   icon: Icons.admin_panel_settings_outlined,
-                  iconColor: AppTheme.brandBlueBright,
-                  iconBackground: AppTheme.brandBlueSoft,
+                  iconColor: context.colors.brandBlueBright,
+                  iconBackground: context.colors.brandBlueSoft,
                   title: l10n.parentSettingsTitle,
                   // Bug 10: a tutor has full parent-equivalent powers — the hub
                   // surfaces tracks, points, rewards and goals (each re-gated by
@@ -184,8 +183,8 @@ class SettingsScreen extends ConsumerWidget {
                   children: [
                     PreferenceListTile.withIcon(
                       icon: Icons.route_rounded,
-                      iconColor: AppTheme.brandBlueBright,
-                      iconBackground: AppTheme.brandBlueSoft,
+                      iconColor: context.colors.brandBlueBright,
+                      iconBackground: context.colors.brandBlueSoft,
                       title: l10n.manageTracks,
                       subtitle: l10n.manageTracksDetail,
                       onTap: () => context.pushRoute(TrackManagementHubRoute()),
@@ -193,8 +192,8 @@ class SettingsScreen extends ConsumerWidget {
                     _tileDivider(theme),
                     PreferenceListTile.withIcon(
                       icon: Icons.people_alt_rounded,
-                      iconColor: AppTheme.brandBlueBright,
-                      iconBackground: AppTheme.brandBlueSoft,
+                      iconColor: context.colors.brandBlueBright,
+                      iconBackground: context.colors.brandBlueSoft,
                       title: l10n.manageProfiles,
                       subtitle: l10n.manageProfilesSubtitle,
                       onTap: () =>
@@ -221,8 +220,8 @@ class SettingsScreen extends ConsumerWidget {
                     _tileDivider(theme),
                     PreferenceListTile.withIcon(
                       icon: Icons.menu_book_rounded,
-                      iconColor: AppTheme.brandGoldDeep,
-                      iconBackground: AppTheme.brandGoldSoft,
+                      iconColor: context.colors.brandGoldDeep,
+                      iconBackground: context.colors.brandGoldSoft,
                       title: l10n.addWhatYouLearned,
                       subtitle: l10n.addWhatYouLearnedSettingsSubtitle,
                       onTap: () => Navigator.of(context).push(
@@ -239,7 +238,7 @@ class SettingsScreen extends ConsumerWidget {
             _SurfaceCard(
               child: PreferenceListTile.withIcon(
                 icon: Icons.notifications_active_outlined,
-                iconColor: AppTheme.brandCoralDeep,
+                iconColor: context.colors.brandCoralDeep,
                 iconBackground: theme.colorScheme.errorContainer,
                 title: l10n.notificationSettings,
                 subtitle: l10n.notificationSettingsSubtitle,
@@ -273,7 +272,7 @@ class SettingsScreen extends ConsumerWidget {
               _SurfaceCard(
                 child: PreferenceListTile.withIcon(
                   icon: Icons.bug_report_outlined,
-                  iconColor: AppTheme.brandInkMuted,
+                  iconColor: context.colors.brandInkMuted,
                   iconBackground: const Color(0xFFF0F1F5),
                   title: l10n.settingsSendDiagnosticLogs,
                   subtitle: l10n.settingsSendDiagnosticLogsSubtitle,
@@ -375,8 +374,8 @@ class _HebrewDateTile extends ConsumerWidget {
     final useHebrew = ref.watch(useHebrewDateProvider);
     return PreferenceSegmentedTile<bool>(
       icon: Icons.calendar_month_rounded,
-      iconColor: AppTheme.brandBlueBright,
-      iconBackground: AppTheme.brandBlueSoft,
+      iconColor: context.colors.brandBlueBright,
+      iconBackground: context.colors.brandBlueSoft,
       title: l10n.calendarPreference,
       subtitle: l10n.calendarPreferenceSubtitle,
       options: [
@@ -404,10 +403,10 @@ class _HebrewTermsTile extends ConsumerWidget {
     return PreferenceListTile(
       title: l10n.hebrewTermsPreference,
       subtitle: l10n.hebrewTermsPreferenceSubtitle,
-      leading: const PreferenceIconPill(
+      leading: PreferenceIconPill(
         icon: Icons.translate_rounded,
-        iconColor: AppTheme.brandBlueBright,
-        iconBackground: AppTheme.brandBlueSoft,
+        iconColor: context.colors.brandBlueBright,
+        iconBackground: context.colors.brandBlueSoft,
       ),
       // ST-3 fix: wrap Switch in Semantics so assistive tech announces
       // "Hebrew Terms, Switch, on/off" instead of an unlabeled toggle.
@@ -513,7 +512,7 @@ class _SectionHeader extends StatelessWidget {
       child: Text(
         title,
         style: theme.textTheme.labelMedium?.copyWith(
-          color: AppColors.inkMidGrey,
+          color: context.colors.inkMidGrey,
           fontSize: 13,
           fontWeight: FontWeight.w700,
           letterSpacing: 2,
@@ -534,7 +533,7 @@ class _SurfaceCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.surfaceE9),
+        border: Border.all(color: context.colors.surfaceE9),
         boxShadow: const [
           BoxShadow(
             color: Color(0x121D2939),
@@ -631,7 +630,7 @@ class _ParentalControlsSectionState
         _SurfaceCard(
           child: PreferenceListTile.withIcon(
             icon: Icons.admin_panel_settings_outlined,
-            iconColor: AppTheme.brandCoralDeep,
+            iconColor: context.colors.brandCoralDeep,
             iconBackground: const Color(0xFFF8E3E7),
             title: l10n.parentMode,
             subtitle: inParentMode
@@ -663,8 +662,8 @@ class _ParentalControlsSectionState
           _SurfaceCard(
             child: PreferenceListTile.withIcon(
               icon: Icons.pin_outlined,
-              iconColor: AppTheme.brandInkMuted,
-              iconBackground: AppTheme.brandCreamSoft,
+              iconColor: context.colors.brandInkMuted,
+              iconBackground: context.colors.brandCreamSoft,
               title: l10n.parentPin,
               subtitle: l10n.parentPinSubtitle,
               onTap: () async {
@@ -755,7 +754,7 @@ class _PendingInvitesSection extends ConsumerWidget {
           child: Text(
             l10n.profilePickerTalmidProfiles,
             style: theme.textTheme.labelSmall?.copyWith(
-              color: AppTheme.brandInkMuted,
+              color: context.colors.brandInkMuted,
               fontWeight: FontWeight.w700,
               letterSpacing: 0.6,
             ),
@@ -775,9 +774,9 @@ class _PendingInvitesSection extends ConsumerWidget {
             child: OutlinedButton(
               onPressed: () => context.pushRoute(const ManageGrantsRoute()),
               style: OutlinedButton.styleFrom(
-                foregroundColor: AppTheme.brandBlue,
+                foregroundColor: context.colors.brandBlue,
                 side: BorderSide(
-                  color: AppTheme.brandBlue.withValues(alpha: 0.5),
+                  color: context.colors.brandBlue.withValues(alpha: 0.5),
                 ),
                 minimumSize: const Size(double.infinity, 40),
               ),

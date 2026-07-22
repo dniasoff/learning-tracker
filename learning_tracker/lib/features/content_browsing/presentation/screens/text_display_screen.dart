@@ -14,8 +14,7 @@ import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/preferences/text_display_preferences.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/theme/text_styles.dart';
 import 'package:learning_tracker/core/utils/gematriya.dart';
 import 'package:learning_tracker/core/utils/hebrew_utils.dart';
@@ -87,9 +86,9 @@ class TextDisplayScreen extends ConsumerWidget {
         : null;
 
     return Scaffold(
-      backgroundColor: AppColors.surfaceF5,
+      backgroundColor: context.colors.surfaceF5,
       appBar: AppBar(
-        backgroundColor: AppColors.surfaceF5,
+        backgroundColor: context.colors.surfaceF5,
         elevation: 0,
         automaticallyImplyLeading: false,
         toolbarHeight: 72,
@@ -105,7 +104,7 @@ class TextDisplayScreen extends ConsumerWidget {
           softWrap: true,
           overflow: TextOverflow.ellipsis,
           style: theme.textTheme.titleMedium?.copyWith(
-            color: AppTheme.brandInk,
+            color: context.colors.brandInk,
             fontWeight: FontWeight.w800,
             height: 1.3,
           ),
@@ -290,7 +289,7 @@ class _TextContentView extends StatelessWidget {
                 if (textContent.hebrewText.isNotEmpty) ...[
                   _ReaderSectionCard(
                     label: AppLocalizations.of(context)!.textReaderHebrewTab,
-                    labelBackground: AppColors.statusDanger,
+                    labelBackground: context.colors.statusDanger,
                     alignLabelRight: false,
                     child: _NumberedSegmentColumn(
                       segments: segments,
@@ -300,7 +299,7 @@ class _TextContentView extends StatelessWidget {
                       baseStyle: AppTextStyles.hebrewBodyLarge.copyWith(
                         fontSize: 26 * fontSize.multiplier,
                         height: 1.65,
-                        color: AppTheme.brandInk,
+                        color: context.colors.brandInk,
                       ),
                     ),
                   ),
@@ -311,19 +310,23 @@ class _TextContentView extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Divider(
-                        color: AppTheme.brandOutline.withValues(alpha: 0.65),
+                        color: context.colors.brandOutline.withValues(
+                          alpha: 0.65,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 10),
-                    const Icon(
+                    Icon(
                       Icons.menu_book_rounded,
                       size: 22,
-                      color: AppTheme.brandBlue,
+                      color: context.colors.brandBlue,
                     ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Divider(
-                        color: AppTheme.brandOutline.withValues(alpha: 0.65),
+                        color: context.colors.brandOutline.withValues(
+                          alpha: 0.65,
+                        ),
                       ),
                     ),
                   ],
@@ -333,7 +336,7 @@ class _TextContentView extends StatelessWidget {
                 if (textContent.englishText.isNotEmpty) ...[
                   _ReaderSectionCard(
                     label: AppLocalizations.of(context)!.textReaderEnglishTab,
-                    labelBackground: AppTheme.brandBlue,
+                    labelBackground: context.colors.brandBlue,
                     alignLabelRight: true,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -346,7 +349,7 @@ class _TextContentView extends StatelessWidget {
                           baseStyle: AppTextStyles.bodyLarge.copyWith(
                             fontSize: 16 * fontSize.multiplier,
                             height: 1.55,
-                            color: AppTheme.brandInk,
+                            color: context.colors.brandInk,
                           ),
                         ),
                       ],
@@ -361,10 +364,10 @@ class _TextContentView extends StatelessWidget {
         Container(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
           decoration: BoxDecoration(
-            color: AppColors.surfaceF5,
+            color: context.colors.surfaceF5,
             border: Border(
               top: BorderSide(
-                color: AppTheme.brandOutline.withValues(alpha: 0.4),
+                color: context.colors.brandOutline.withValues(alpha: 0.4),
               ),
             ),
           ),
@@ -487,13 +490,13 @@ class _VerseNumberBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
       decoration: BoxDecoration(
-        color: AppTheme.brandBlueSoft.withValues(alpha: 0.55),
+        color: context.colors.brandBlueSoft.withValues(alpha: 0.55),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
         marker,
-        style: const TextStyle(
-          color: AppTheme.brandBlueDeep,
+        style: TextStyle(
+          color: context.colors.brandBlueDeep,
           fontWeight: FontWeight.w800,
           fontSize: 13,
           height: 1.0,
@@ -529,13 +532,13 @@ class _ReaderSectionCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(28),
             boxShadow: [
               BoxShadow(
-                color: AppTheme.brandInk.withValues(alpha: 0.04),
+                color: context.colors.brandInk.withValues(alpha: 0.04),
                 blurRadius: 11,
                 offset: const Offset(0, 4),
               ),
             ],
             border: Border.all(
-              color: AppTheme.brandOutline.withValues(alpha: 0.45),
+              color: context.colors.brandOutline.withValues(alpha: 0.45),
             ),
           ),
           child: child,
@@ -740,9 +743,9 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
           builder: (ctx) {
             final l10n = AppLocalizations.of(ctx)!;
             return AlertDialog(
-              icon: const Icon(
+              icon: Icon(
                 Icons.school_rounded,
-                color: AppColors.goldAmber, // tutor accent
+                color: context.colors.goldAmber, // tutor accent
                 size: 32,
               ),
               title: Text(l10n.tutorWriteForbiddenTitle),
@@ -775,7 +778,7 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
             content: Text(
               AppLocalizations.of(context)!.couldNotSave(e.toString()),
             ),
-            backgroundColor: AppTheme.brandWarningDeep,
+            backgroundColor: context.colors.brandWarningDeep,
           ),
         );
       }
@@ -842,9 +845,9 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
       ),
       error: (e, _) => Row(
         children: [
-          const Icon(
+          Icon(
             Icons.error_outline,
-            color: AppTheme.brandWarning,
+            color: context.colors.brandWarning,
             size: 20,
           ),
           const SizedBox(width: 12),
@@ -853,9 +856,9 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
               AppLocalizations.of(
                 context,
               )!.unableToLoadCompletionContext(e.toString()),
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
-                color: AppTheme.brandInkMuted,
+                color: context.colors.brandInkMuted,
               ),
             ),
           ),
@@ -940,10 +943,10 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
                         // W6.17: When in tutor mode, show a muted amber
                         // colour to visually communicate the disabled state.
                         backgroundColor: isTutor
-                            ? AppColors.goldAmber.withValues(alpha: 0.3)
+                            ? context.colors.goldAmber.withValues(alpha: 0.3)
                             : isDone
-                            ? AppTheme.brandGoldDeep
-                            : AppTheme.brandBlue,
+                            ? context.colors.brandGoldDeep
+                            : context.colors.brandBlue,
                         // AUD-content_browsing-08: theme's onPrimary token
                         // (matches error_display.dart / app_error_view.dart)
                         // instead of a raw Colors.white literal — onPrimary
@@ -958,22 +961,22 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
                         ),
                         elevation: isTutor ? 0 : 2,
                         disabledBackgroundColor: isTutor
-                            ? AppColors.goldAmber.withValues(alpha: 0.2)
+                            ? context.colors.goldAmber.withValues(alpha: 0.2)
                             : null,
                         disabledForegroundColor: isTutor
-                            ? AppColors.goldAmber.withValues(alpha: 0.7)
+                            ? context.colors.goldAmber.withValues(alpha: 0.7)
                             : null,
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           if (_saving)
-                            const SizedBox(
+                            SizedBox(
                               width: 18,
                               height: 18,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                color: AppTheme.brandCreamCard,
+                                color: context.colors.brandCreamCard,
                               ),
                             )
                           else
@@ -1023,13 +1026,15 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
                         ),
                       ),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: AppTheme.brandBlue,
+                        foregroundColor: context.colors.brandBlue,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(999),
                         ),
                         side: BorderSide(
-                          color: AppTheme.brandBlue.withValues(alpha: 0.45),
+                          color: context.colors.brandBlue.withValues(
+                            alpha: 0.45,
+                          ),
                         ),
                       ),
                     ),

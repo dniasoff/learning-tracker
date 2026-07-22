@@ -4,8 +4,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/utils/text_input_formatters.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
 import 'package:learning_tracker/features/gamification/domain/reward_milestone_icons.dart';
@@ -17,11 +16,11 @@ import 'package:learning_tracker/features/gamification/presentation/widgets/rewa
 import 'package:learning_tracker/features/tutoring/tutoring.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
-const Color _kNavy = AppTheme.brandBlueDeep;
-const Color _kOrange = AppTheme.brandWarning;
-const Color _kPageBg = AppColors.surfaceF4b;
-const Color _kPreviewBg = AppColors.gamifSoftBlueCardBg;
-const Color _kMutedLabel = AppTheme.brandInkMuted;
+Color _kNavy(BuildContext context) => context.colors.brandBlueDeep;
+Color _kOrange(BuildContext context) => context.colors.brandWarning;
+Color _kPageBg(BuildContext context) => context.colors.surfaceF4b;
+Color _kPreviewBg(BuildContext context) => context.colors.gamifSoftBlueCardBg;
+Color _kMutedLabel(BuildContext context) => context.colors.brandInkMuted;
 
 @RoutePage()
 class RewardConfigurationScreen extends ConsumerStatefulWidget {
@@ -122,7 +121,7 @@ class _RewardConfigurationScreenState
                   l10n.rewardConfigMenuManageRewards,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w800,
-                    color: _kNavy,
+                    color: _kNavy(context),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -275,9 +274,9 @@ class _RewardConfigurationScreenState
     _syncControllersFromState(form);
 
     if (form.loading) {
-      return const Scaffold(
-        backgroundColor: _kPageBg,
-        body: Center(child: CircularProgressIndicator()),
+      return Scaffold(
+        backgroundColor: _kPageBg(context),
+        body: const Center(child: CircularProgressIndicator()),
       );
     }
 
@@ -287,7 +286,7 @@ class _RewardConfigurationScreenState
       // elsewhere in this feature (point_config_screen.dart,
       // child_redemption_screen.dart, parent_pending_redemptions_screen.dart).
       return Scaffold(
-        backgroundColor: _kPageBg,
+        backgroundColor: _kPageBg(context),
         appBar: AppBar(title: Text(l10n.rewardConfigurationTitle)),
         body: Center(child: Text(l10n.errorGeneric(form.error!))),
       );
@@ -299,7 +298,7 @@ class _RewardConfigurationScreenState
         : form.name.trim();
 
     return Scaffold(
-      backgroundColor: _kPageBg,
+      backgroundColor: _kPageBg(context),
       body: Column(
         children: [
           RewardConfigHeader(
@@ -348,11 +347,11 @@ class _RewardConfigurationScreenState
                     decoration: BoxDecoration(
                       color: Theme.of(context).colorScheme.surface,
                       borderRadius: BorderRadius.circular(22),
-                      boxShadow: const [
+                      boxShadow: [
                         BoxShadow(
-                          color: AppColors.gamifCardShadowNavySoft,
+                          color: context.colors.gamifCardShadowNavySoft,
                           blurRadius: 20,
-                          offset: Offset(0, 8),
+                          offset: const Offset(0, 8),
                         ),
                       ],
                     ),
@@ -380,13 +379,16 @@ class _RewardConfigurationScreenState
                                 ? l10n.rewardConfigEditModeSubtitle
                                 : l10n.rewardConfigConfigureNewSubtitle,
                             style: Theme.of(context).textTheme.bodyMedium
-                                ?.copyWith(color: _kMutedLabel, height: 1.35),
+                                ?.copyWith(
+                                  color: _kMutedLabel(context),
+                                  height: 1.35,
+                                ),
                           ),
                           const SizedBox(height: 22),
                           Text(
                             l10n.rewardConfigChooseAvatarStep,
-                            style: const TextStyle(
-                              color: _kNavy,
+                            style: TextStyle(
+                              color: _kNavy(context),
                               fontWeight: FontWeight.w800,
                               fontSize: 12,
                               letterSpacing: 0.6,
@@ -402,7 +404,7 @@ class _RewardConfigurationScreenState
                             l10n.rewardConfigRewardNameLabel,
                             style: Theme.of(context).textTheme.bodySmall
                                 ?.copyWith(
-                                  color: _kMutedLabel,
+                                  color: _kMutedLabel(context),
                                   fontWeight: FontWeight.w600,
                                 ),
                           ),
@@ -421,7 +423,9 @@ class _RewardConfigurationScreenState
                               ),
                               suffixIcon: Icon(
                                 Icons.edit_outlined,
-                                color: _kMutedLabel.withValues(alpha: 0.7),
+                                color: _kMutedLabel(
+                                  context,
+                                ).withValues(alpha: 0.7),
                               ),
                             ),
                           ),
@@ -435,7 +439,7 @@ class _RewardConfigurationScreenState
                             l10n.rewardConfigPointsThresholdLabel,
                             style: Theme.of(context).textTheme.bodySmall
                                 ?.copyWith(
-                                  color: _kMutedLabel,
+                                  color: _kMutedLabel(context),
                                   fontWeight: FontWeight.w600,
                                 ),
                           ),
@@ -452,9 +456,9 @@ class _RewardConfigurationScreenState
                                 horizontal: 16,
                                 vertical: 14,
                               ),
-                              suffixIcon: const Icon(
+                              suffixIcon: Icon(
                                 Icons.star_rounded,
-                                color: _kOrange,
+                                color: _kOrange(context),
                               ),
                             ),
                           ),
@@ -472,8 +476,8 @@ class _RewardConfigurationScreenState
                               onPressed: notifier.clearForm,
                               child: Text(
                                 l10n.rewardConfigCancel,
-                                style: const TextStyle(
-                                  color: _kMutedLabel,
+                                style: TextStyle(
+                                  color: _kMutedLabel(context),
                                   fontWeight: FontWeight.w600,
                                   fontSize: 15,
                                 ),
@@ -501,7 +505,7 @@ class _RewardConfigurationScreenState
                                           ),
                                         ),
                               style: FilledButton.styleFrom(
-                                backgroundColor: _kNavy,
+                                backgroundColor: _kNavy(context),
                                 foregroundColor: Colors.white,
                                 elevation: 0,
                                 shape: RoundedRectangleBorder(
@@ -555,7 +559,7 @@ class _RewardPreview extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _kPreviewBg,
+        color: _kPreviewBg(context),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
@@ -563,8 +567,8 @@ class _RewardPreview extends StatelessWidget {
         children: [
           Text(
             l10n.rewardConfigPreviewLabel,
-            style: const TextStyle(
-              color: _kNavy,
+            style: TextStyle(
+              color: _kNavy(context),
               fontWeight: FontWeight.w800,
               fontSize: 11,
               letterSpacing: 1,
@@ -583,7 +587,7 @@ class _RewardPreview extends StatelessWidget {
                 ),
                 child: Icon(
                   RewardMilestoneIcons.iconForIndex(iconIndex),
-                  color: _kNavy,
+                  color: _kNavy(context),
                   size: 30,
                 ),
               ),
@@ -601,8 +605,8 @@ class _RewardPreview extends StatelessWidget {
                               fontStyle: FontStyle.italic,
                               fontSize: 16,
                             )
-                          : const TextStyle(
-                              color: _kNavy,
+                          : TextStyle(
+                              color: _kNavy(context),
                               fontWeight: FontWeight.w800,
                               fontSize: 16,
                             ),
@@ -613,16 +617,16 @@ class _RewardPreview extends StatelessWidget {
                         Container(
                           width: 8,
                           height: 8,
-                          decoration: const BoxDecoration(
-                            color: _kOrange,
+                          decoration: BoxDecoration(
+                            color: _kOrange(context),
                             shape: BoxShape.circle,
                           ),
                         ),
                         const SizedBox(width: 6),
                         Text(
                           l10n.rewardConfigPointsPreview(previewPoints),
-                          style: const TextStyle(
-                            color: _kOrange,
+                          style: TextStyle(
+                            color: _kOrange(context),
                             fontWeight: FontWeight.w800,
                             fontSize: 15,
                           ),
@@ -693,8 +697,8 @@ class _InlineRewardsSectionState extends State<_InlineRewardsSection> {
               padding: const EdgeInsets.fromLTRB(4, 0, 0, 8),
               child: Text(
                 widget.l10n.rewardConfigMenuManageRewards,
-                style: const TextStyle(
-                  color: _kNavy,
+                style: TextStyle(
+                  color: _kNavy(context),
                   fontWeight: FontWeight.w800,
                   fontSize: 13,
                   letterSpacing: 0.4,

@@ -11,7 +11,7 @@ import 'package:learning_tracker/core/labels/curriculum_label_renderer.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/breadcrumb_navigation.dart';
@@ -85,10 +85,10 @@ class _ContentHierarchyScreenState
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(
+              Icon(
                 Icons.error_outline,
                 size: 48,
-                color: AppTheme.brandCoralDeep,
+                color: context.colors.brandCoralDeep,
               ),
               const SizedBox(height: 16),
               Text(
@@ -101,7 +101,7 @@ class _ContentHierarchyScreenState
       );
     }
 
-    final curriculumColor = AppTheme.getCurriculumColor(curriculum);
+    final curriculumColor = context.colors.curriculumFor(curriculum);
     final configAsync = ref.watch(
       curriculumHierarchyConfigProvider(curriculum),
     );
@@ -330,10 +330,10 @@ class _ContentHierarchyScreenState
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.error,
                         size: 48,
-                        color: AppTheme.brandCoralDeep,
+                        color: context.colors.brandCoralDeep,
                       ),
                       const SizedBox(height: 16),
                       Text(

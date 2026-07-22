@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/journey_providers.dart';
@@ -101,7 +100,7 @@ class ProgressTierCounterRow extends ConsumerWidget {
         value: streakValue,
         label: l10n.tierTileLabelStreak,
         semanticLabel: l10n.tierCounterStreakDays(currentStreak),
-        accent: AppColors.progressTierStreakAccent,
+        accent: context.colors.progressTierStreakAccent,
       ),
       _Counter(
         emoji: '🏆',
@@ -111,14 +110,14 @@ class ProgressTierCounterRow extends ConsumerWidget {
           totalSiyumim,
           terms.siyumim,
         ),
-        accent: AppColors.chartAmber,
+        accent: context.colors.chartAmber,
       ),
       _Counter(
         emoji: '📚',
         value: lifetimeValue,
         label: l10n.tierTileLabelLifetime,
         semanticLabel: l10n.tierCounterLifetimeItems(lifetimeItems),
-        accent: AppTheme.brandBlue,
+        accent: context.colors.brandBlue,
       ),
       if (showPoints)
         _Counter(
@@ -126,7 +125,7 @@ class ProgressTierCounterRow extends ConsumerWidget {
           value: pointsValue,
           label: l10n.tierTileLabelPoints,
           semanticLabel: l10n.tierCounterPoints(points),
-          accent: AppColors.progressTierPointsAccent,
+          accent: context.colors.progressTierPointsAccent,
         ),
     ];
 
@@ -182,7 +181,7 @@ class _Counter extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: AppColors.blueNavy.withValues(alpha: 0.05),
+              color: context.colors.blueNavy.withValues(alpha: 0.05),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -216,7 +215,7 @@ class _Counter extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: theme.textTheme.labelSmall?.copyWith(
-                color: AppTheme.brandInkMuted,
+                color: context.colors.brandInkMuted,
                 fontWeight: FontWeight.w600,
                 height: 1.15,
               ),

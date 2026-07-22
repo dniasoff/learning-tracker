@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 
 /// Dot-row page indicator for the intro screen.
 ///
@@ -30,8 +30,8 @@ class IntroPageIndicator extends StatelessWidget {
           height: 8,
           decoration: BoxDecoration(
             color: isActive
-                ? AppColors.introNavy
-                : AppColors.introIndicatorInactive,
+                ? context.colors.introNavy
+                : context.colors.introIndicatorInactive,
             borderRadius: BorderRadius.circular(4),
           ),
         );

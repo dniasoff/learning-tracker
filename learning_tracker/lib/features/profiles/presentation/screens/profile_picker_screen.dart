@@ -4,7 +4,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/account/presentation/widgets/no_backup_badge.dart';
@@ -53,9 +53,9 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              AppTheme.brandCreamCard,
-              AppTheme.brandBlueSoft.withValues(alpha: 0.22),
-              AppTheme.brandCream,
+              context.colors.brandCreamCard,
+              context.colors.brandBlueSoft.withValues(alpha: 0.22),
+              context.colors.brandCream,
             ],
           ),
         ),
@@ -108,7 +108,7 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
               style: theme.textTheme.headlineMedium?.copyWith(
                 fontSize: 48,
                 fontWeight: FontWeight.w800,
-                color: AppTheme.brandBlueDeep,
+                color: context.colors.brandBlueDeep,
                 letterSpacing: -0.8,
                 height: 1.03,
               ),
@@ -118,7 +118,7 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
               l10n.profilePickerSubtitle,
               textAlign: TextAlign.center,
               style: theme.textTheme.titleMedium?.copyWith(
-                color: AppTheme.brandInkMuted,
+                color: context.colors.brandInkMuted,
                 fontWeight: FontWeight.w500,
                 height: 1.35,
               ),
@@ -279,7 +279,7 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
         icon: const Icon(Icons.settings_rounded, size: 20),
         label: Text(l10n.profilePickerSkipToSettings),
         style: TextButton.styleFrom(
-          foregroundColor: AppTheme.brandBlueDeep,
+          foregroundColor: context.colors.brandBlueDeep,
           padding: const EdgeInsets.symmetric(vertical: 12),
         ),
         onPressed: () => unawaited(context.router.push(const SettingsRoute())),
@@ -350,10 +350,10 @@ class _PendingInviteCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppTheme.brandCreamCard,
+        color: context.colors.brandCreamCard,
         borderRadius: BorderRadius.circular(22),
         border: Border.all(
-          color: AppTheme.brandBlueBright.withValues(alpha: 0.35),
+          color: context.colors.brandBlueBright.withValues(alpha: 0.35),
         ),
       ),
       child: Column(
@@ -361,10 +361,13 @@ class _PendingInviteCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const CircleAvatar(
+              CircleAvatar(
                 radius: 22,
-                backgroundColor: AppTheme.brandBlueSoft,
-                child: Icon(Icons.school_rounded, color: AppTheme.brandBlue),
+                backgroundColor: context.colors.brandBlueSoft,
+                child: Icon(
+                  Icons.school_rounded,
+                  color: context.colors.brandBlue,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -372,7 +375,7 @@ class _PendingInviteCard extends StatelessWidget {
                   l10n.acceptInviteHeading,
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w800,
-                    color: AppTheme.brandBlueDeep,
+                    color: context.colors.brandBlueDeep,
                   ),
                 ),
               ),
@@ -382,7 +385,7 @@ class _PendingInviteCard extends StatelessWidget {
           Text(
             bodyText,
             style: theme.textTheme.bodyMedium?.copyWith(
-              color: AppTheme.brandInkMuted,
+              color: context.colors.brandInkMuted,
               height: 1.35,
             ),
           ),
@@ -390,7 +393,7 @@ class _PendingInviteCard extends StatelessWidget {
           FilledButton(
             onPressed: onAccept,
             style: FilledButton.styleFrom(
-              backgroundColor: AppTheme.brandBlue,
+              backgroundColor: context.colors.brandBlue,
               minimumSize: const Size(double.infinity, 48),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(26),

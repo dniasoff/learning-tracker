@@ -10,8 +10,7 @@ import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/app_dialog.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/models/wizard_result_wrapper.dart';
@@ -755,7 +754,7 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
                               displayTotal,
                             ),
                             style: theme.textTheme.labelLarge?.copyWith(
-                              color: AppTheme.brandInkMuted,
+                              color: context.colors.brandInkMuted,
                               letterSpacing: 1.2,
                               fontWeight: FontWeight.w700,
                             ),
@@ -764,7 +763,7 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
                           Text(
                             '${(progress * 100).round()}%',
                             style: theme.textTheme.titleLarge?.copyWith(
-                              color: AppTheme.brandBlueDeep,
+                              color: context.colors.brandBlueDeep,
                               fontWeight: FontWeight.w800,
                             ),
                           ),
@@ -777,8 +776,8 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
                           value: progress,
                           minHeight: 10,
                           backgroundColor: const Color(0xFFE1E4EB),
-                          valueColor: const AlwaysStoppedAnimation<Color>(
-                            AppTheme.brandBlueBright,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            context.colors.brandBlueBright,
                           ),
                         ),
                       ),
@@ -797,17 +796,17 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
                       vertical: 12,
                     ),
                     decoration: BoxDecoration(
-                      color: AppColors.statusErrorSoft,
+                      color: context.colors.statusErrorSoft,
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
-                        color: AppColors.chartRed.withValues(alpha: 0.4),
+                        color: context.colors.chartRed.withValues(alpha: 0.4),
                       ),
                     ),
                     child: Row(
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.error_outline_rounded,
-                          color: AppColors.chartRed,
+                          color: context.colors.chartRed,
                           size: 20,
                         ),
                         const SizedBox(width: 10),
@@ -815,7 +814,7 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
                           child: Text(
                             _errorMessage!,
                             style: theme.textTheme.bodyMedium?.copyWith(
-                              color: AppColors.chartRed,
+                              color: context.colors.chartRed,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -827,7 +826,7 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
                             unawaited(_finishFlow());
                           },
                           style: TextButton.styleFrom(
-                            foregroundColor: AppColors.chartRed,
+                            foregroundColor: context.colors.chartRed,
                             padding: const EdgeInsets.symmetric(horizontal: 8),
                             minimumSize: Size.zero,
                             tapTargetSize: MaterialTapTargetSize.shrinkWrap,

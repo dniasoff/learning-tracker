@@ -6,7 +6,7 @@ import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/core/widgets/error_display.dart';
 import 'package:learning_tracker/core/widgets/loading_indicator.dart';
@@ -46,7 +46,7 @@ class CurriculumProgressScreen extends ConsumerWidget {
               curriculumId: curriculum,
             )),
           );
-    final curriculumColor = AppTheme.getCurriculumColorByKey(curriculumId);
+    final curriculumColor = context.colors.curriculumForKey(curriculumId);
     final baseTheme = Theme.of(context);
     final plusJakartaTheme = baseTheme.copyWith(
       textTheme: GoogleFonts.plusJakartaSansTextTheme(baseTheme.textTheme),
@@ -61,7 +61,7 @@ class CurriculumProgressScreen extends ConsumerWidget {
         elevation: 0,
         scrolledUnderElevation: 0,
         surfaceTintColor: Colors.transparent,
-        foregroundColor: AppTheme.brandInk,
+        foregroundColor: context.colors.brandInk,
         actions: [
           if (curriculum != null)
             IconButton(
@@ -81,7 +81,7 @@ class CurriculumProgressScreen extends ConsumerWidget {
                   curriculum,
                   style: plusJakartaTheme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w800,
-                    color: AppTheme.brandInk,
+                    color: context.colors.brandInk,
                   ),
                 )
               else
@@ -92,14 +92,14 @@ class CurriculumProgressScreen extends ConsumerWidget {
                   l10n.errorUnknownCurriculum(curriculumId),
                   style: plusJakartaTheme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w800,
-                    color: AppTheme.brandInk,
+                    color: context.colors.brandInk,
                   ),
                 ),
               if (curriculum != null && !terms.isHebrew)
                 Text(
                   curriculumHebrewName(curriculum),
                   style: plusJakartaTheme.textTheme.labelSmall?.copyWith(
-                    color: AppTheme.brandInkMuted,
+                    color: context.colors.brandInkMuted,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -113,9 +113,9 @@ class CurriculumProgressScreen extends ConsumerWidget {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              AppTheme.brandCreamCard,
-              AppTheme.brandBlueSoft.withValues(alpha: 0.22),
-              AppTheme.brandCream,
+              context.colors.brandCreamCard,
+              context.colors.brandBlueSoft.withValues(alpha: 0.22),
+              context.colors.brandCream,
             ],
           ),
         ),
@@ -167,7 +167,7 @@ class CurriculumProgressScreen extends ConsumerWidget {
                       style: plusJakartaTheme.textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.w700,
                         fontSize: 28,
-                        color: AppTheme.brandInk,
+                        color: context.colors.brandInk,
                       ),
                     ),
                     const SizedBox(height: 12),

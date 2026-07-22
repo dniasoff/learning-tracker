@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// A single row in the hierarchy: checkbox + title + optional drill arrow.
@@ -76,7 +75,7 @@ class ScopeLevelTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppColors.surfaceE9),
+        border: Border.all(color: context.colors.surfaceE9),
       ),
       child: Material(
         color: Colors.transparent,
@@ -89,8 +88,12 @@ class ScopeLevelTile extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 20,
-                  backgroundColor: AppColors.surfaceF3,
-                  child: Icon(icon, size: 19, color: AppTheme.brandBlueDeep),
+                  backgroundColor: context.colors.surfaceF3,
+                  child: Icon(
+                    icon,
+                    size: 19,
+                    color: context.colors.brandBlueDeep,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -114,13 +117,13 @@ class ScopeLevelTile extends StatelessWidget {
                                 vertical: 2,
                               ),
                               decoration: BoxDecoration(
-                                color: AppColors.peachMid,
+                                color: context.colors.peachMid,
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Text(
                                 badgeText!,
-                                style: const TextStyle(
-                                  color: AppColors.peachDark,
+                                style: TextStyle(
+                                  color: context.colors.peachDark,
                                   fontSize: 9.5,
                                   fontWeight: FontWeight.w700,
                                 ),
@@ -138,7 +141,7 @@ class ScopeLevelTile extends StatelessWidget {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: theme.textTheme.bodyMedium?.copyWith(
-                          color: AppTheme.brandInkMuted,
+                          color: context.colors.brandInkMuted,
                         ),
                       ),
                     ],
@@ -150,9 +153,9 @@ class ScopeLevelTile extends StatelessWidget {
                     if (canDrill)
                       IconButton(
                         onPressed: onDrill,
-                        icon: const Icon(
+                        icon: Icon(
                           Icons.chevron_right_rounded,
-                          color: AppTheme.brandInkMuted,
+                          color: context.colors.brandInkMuted,
                         ),
                         tooltip: AppLocalizations.of(
                           context,

@@ -7,7 +7,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
@@ -51,13 +51,13 @@ class CurriculumListScreen extends ConsumerWidget {
             decoration: BoxDecoration(
               color: theme.colorScheme.surface,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppTheme.brandOutline),
+              border: Border.all(color: context.colors.brandOutline),
             ),
             child: Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.search,
-                  color: AppTheme.brandInkMuted,
+                  color: context.colors.brandInkMuted,
                   size: 20,
                 ),
                 const SizedBox(width: 12),
@@ -66,8 +66,8 @@ class CurriculumListScreen extends ConsumerWidget {
                     l10n.curriculumListSearchHint,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: AppTheme.brandInkMuted,
+                    style: TextStyle(
+                      color: context.colors.brandInkMuted,
                       fontSize: 15,
                     ),
                   ),
@@ -80,10 +80,10 @@ class CurriculumListScreen extends ConsumerWidget {
           // Section header
           Text(
             l10n.curriculumListSectionCurricula,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: AppTheme.brandInkMuted,
+              color: context.colors.brandInkMuted,
               letterSpacing: 1.5,
             ),
           ),
@@ -102,10 +102,10 @@ class CurriculumListScreen extends ConsumerWidget {
           // Recent Activity section
           Text(
             l10n.curriculumListSectionRecentActivity,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: AppTheme.brandInkMuted,
+              color: context.colors.brandInkMuted,
               letterSpacing: 1.5,
             ),
           ),
@@ -128,7 +128,7 @@ class _CurriculumCard extends ConsumerWidget {
     final completionAsync = ref.watch(
       dashboardCompletionPercentageProvider(curriculum),
     );
-    final curriculumColor = AppTheme.getCurriculumColor(curriculum);
+    final curriculumColor = context.colors.curriculumFor(curriculum);
     final percentage = completionAsync.asData?.value ?? 0.0;
     final pctDisplay = formatFractionAsPercent(percentage);
 
@@ -208,20 +208,20 @@ class _CurriculumCard extends ConsumerWidget {
                     children: [
                       CurriculumLabel.curriculum(
                         curriculum,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
-                          color: AppTheme.brandInk,
+                          color: context.colors.brandInk,
                         ),
                       ),
                       if (!domainTermLabels(ref).isHebrew) ...[
                         const SizedBox(height: 4),
                         Text(
                           curriculumHebrewName(curriculum),
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w500,
-                            color: AppTheme.brandInkMuted,
+                            color: context.colors.brandInkMuted,
                           ),
                         ),
                       ],
@@ -235,7 +235,7 @@ class _CurriculumCard extends ConsumerWidget {
                       vertical: 5,
                     ),
                     decoration: BoxDecoration(
-                      color: AppTheme.brandCreamSoft,
+                      color: context.colors.brandCreamSoft,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(
@@ -249,10 +249,10 @@ class _CurriculumCard extends ConsumerWidget {
                         const SizedBox(width: 4),
                         Text(
                           l10n.curriculumListPercentDone(pctDisplay),
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            color: AppTheme.brandInk,
+                            color: context.colors.brandInk,
                           ),
                         ),
                       ],
@@ -271,15 +271,15 @@ class _CurriculumCard extends ConsumerWidget {
                       vertical: 5,
                     ),
                     decoration: BoxDecoration(
-                      color: AppTheme.brandGoldSoft,
+                      color: context.colors.brandGoldSoft,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
                       l10n.curriculumListNewBadge,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: AppTheme.brandGoldDeep,
+                        color: context.colors.brandGoldDeep,
                       ),
                     ),
                   ),
@@ -292,7 +292,9 @@ class _CurriculumCard extends ConsumerWidget {
                 child: LinearProgressIndicator(
                   value: percentage,
                   minHeight: 4,
-                  backgroundColor: AppTheme.brandOutline.withValues(alpha: 0.5),
+                  backgroundColor: context.colors.brandOutline.withValues(
+                    alpha: 0.5,
+                  ),
                   valueColor: AlwaysStoppedAnimation<Color>(curriculumColor),
                 ),
               ),
@@ -303,9 +305,9 @@ class _CurriculumCard extends ConsumerWidget {
                 if (containerCount > 0) ...[
                   Text(
                     '$containerCount ${CurriculumLabels.containerCountLabel(curriculum, useHebrew: domainTermLabels(ref).isHebrew, variant: ref.watch(currentTransliterationVariantProvider))}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
-                      color: AppTheme.brandInkMuted,
+                      color: context.colors.brandInkMuted,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -314,9 +316,9 @@ class _CurriculumCard extends ConsumerWidget {
                 if (leafCount > 0)
                   Text(
                     '$leafCount ${CurriculumLabels.primaryUnitLabel(curriculum, useHebrew: domainTermLabels(ref).isHebrew, variant: ref.watch(currentTransliterationVariantProvider))}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
-                      color: AppTheme.brandInkMuted,
+                      color: context.colors.brandInkMuted,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -340,7 +342,7 @@ class _RecentActivityPlaceholder extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.brandOutline),
+        border: Border.all(color: context.colors.brandOutline),
       ),
       child: Row(
         children: [
@@ -348,12 +350,12 @@ class _RecentActivityPlaceholder extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: AppTheme.brandGoldSoft,
+              color: context.colors.brandGoldSoft,
               borderRadius: BorderRadius.circular(10),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.history,
-              color: AppTheme.brandGoldDeep,
+              color: context.colors.brandGoldDeep,
               size: 20,
             ),
           ),
@@ -364,18 +366,18 @@ class _RecentActivityPlaceholder extends StatelessWidget {
               children: [
                 Text(
                   l10n.curriculumListActivityEmptyTitle,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
-                    color: AppTheme.brandInk,
+                    color: context.colors.brandInk,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   l10n.curriculumListActivityEmptySubtitle,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
-                    color: AppTheme.brandInkMuted,
+                    color: context.colors.brandInkMuted,
                   ),
                 ),
               ],

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 
 /// Full-width CTA button with a navy glow shadow.
 ///
@@ -26,10 +25,10 @@ class GlowingCtaButton extends StatelessWidget {
       child: DecoratedBox(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(27),
-          color: AppColors.introNavy,
+          color: context.colors.introNavy,
           boxShadow: [
             BoxShadow(
-              color: AppColors.introNavy.withValues(alpha: 0.28),
+              color: context.colors.introNavy.withValues(alpha: 0.28),
               blurRadius: 12,
               offset: const Offset(0, 3),
             ),
@@ -55,16 +54,16 @@ class GlowingCtaButton extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.plusJakartaSans(
-                          color: AppTheme.brandCreamCard,
+                          color: context.colors.brandCreamCard,
                           fontSize: 17,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
                       if (showArrow) ...[
                         const SizedBox(width: 6),
-                        const Icon(
+                        Icon(
                           Icons.arrow_forward_rounded,
-                          color: AppTheme.brandCreamCard,
+                          color: context.colors.brandCreamCard,
                           size: 22,
                         ),
                       ],

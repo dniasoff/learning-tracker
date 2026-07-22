@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Animated illustration for the second intro page ("Never Forget a Mishna").
@@ -35,13 +34,13 @@ class IntroMishnaIllustration extends StatelessWidget {
                     vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: AppColors.introPillBlue,
+                    color: context.colors.introPillBlue,
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(
                     AppLocalizations.of(context)!.introMishnaReviewChip,
                     style: GoogleFonts.plusJakartaSans(
-                      color: AppColors.introNavy,
+                      color: context.colors.introNavy,
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                     ),
@@ -60,13 +59,13 @@ class IntroMishnaIllustration extends StatelessWidget {
                     vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: AppColors.introPeach.withValues(alpha: 0.7),
+                    color: context.colors.introPeach.withValues(alpha: 0.7),
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(
                     AppLocalizations.of(context)!.introMishnaWordFragmentChip,
                     style: GoogleFonts.plusJakartaSans(
-                      color: AppTheme.brandInk,
+                      color: context.colors.brandInk,
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                     ),
@@ -79,11 +78,11 @@ class IntroMishnaIllustration extends StatelessWidget {
                 width: 188,
                 height: 200,
                 decoration: BoxDecoration(
-                  color: AppColors.introNavy,
+                  color: context.colors.introNavy,
                   borderRadius: BorderRadius.circular(32),
                   boxShadow: [
                     BoxShadow(
-                      color: AppColors.introNavy.withValues(alpha: 0.28),
+                      color: context.colors.introNavy.withValues(alpha: 0.28),
                       blurRadius: 22,
                       offset: const Offset(0, 14),
                     ),
@@ -91,10 +90,10 @@ class IntroMishnaIllustration extends StatelessWidget {
                 ),
                 child: Stack(
                   children: [
-                    const Center(
+                    Center(
                       child: Icon(
                         Icons.psychology_rounded,
-                        color: AppTheme.brandCreamCard,
+                        color: context.colors.brandCreamCard,
                         size: 96,
                       ),
                     ),
@@ -104,13 +103,13 @@ class IntroMishnaIllustration extends StatelessWidget {
                       child: Container(
                         width: 36,
                         height: 36,
-                        decoration: const BoxDecoration(
+                        decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: AppColors.accentCoral,
+                          color: context.colors.accentCoral,
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.sync,
-                          color: AppTheme.brandCreamCard,
+                          color: context.colors.brandCreamCard,
                           size: 20,
                         ),
                       ),
@@ -122,12 +121,12 @@ class IntroMishnaIllustration extends StatelessWidget {
                         width: 44,
                         height: 44,
                         decoration: BoxDecoration(
-                          color: AppTheme.brandCreamCard,
+                          color: context.colors.brandCreamCard,
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.lightbulb_outline,
-                          color: AppColors.introNavy,
+                          color: context.colors.introNavy,
                           size: 26,
                         ),
                       ),
@@ -165,14 +164,14 @@ class IntroMishnaProgressBar extends StatelessWidget {
                     Container(
                       width: c.maxWidth,
                       height: 5,
-                      color: AppColors.introProgressTrackBg,
+                      color: context.colors.introProgressTrackBg,
                     ),
                     Align(
                       alignment: AlignmentDirectional.centerStart,
                       child: Container(
                         width: c.maxWidth * t,
                         height: 5,
-                        color: AppColors.introProgressFillGreen,
+                        color: context.colors.introProgressFillGreen,
                       ),
                     ),
                   ],

@@ -27,6 +27,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 // points_summary_widget.dart was deleted (dead-code purge, AUD-dashboard-04).
@@ -38,6 +39,10 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../test/helpers/golden_font_loader.dart';
+
+/// Brightness the current screenshot group renders at. Set by the group's
+/// `setUp`, so the SAME widget trees are captured in both themes.
+Brightness _brightness = Brightness.light;
 
 /// Wraps content in a phone-sized Material app with the real theme.
 Widget phoneApp({required Widget child}) {
@@ -52,15 +57,29 @@ Widget phoneApp({required Widget child}) {
         debugShowCheckedModeBanner: false,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        theme: AppTheme.lightTheme(),
+        theme: _brightness == Brightness.dark
+            ? AppTheme.darkTheme()
+            : AppTheme.lightTheme(),
         home: child,
       ),
     ),
   );
 }
 
-/// Golden file path helper - files go into tool/screenshots/goldens/
-String _golden(String name) => 'goldens/$name';
+/// The palette matching the brightness currently being rendered.
+AppPalette _palette() =>
+    _brightness == Brightness.dark ? AppPalette.dark : AppPalette.light;
+
+/// The ThemeData matching the brightness currently being rendered.
+ThemeData _activeTheme() => _brightness == Brightness.dark
+    ? AppTheme.darkTheme()
+    : AppTheme.lightTheme();
+
+/// Golden file path helper - files go into tool/screenshots/goldens/.
+/// Dark-mode captures get a `_dark` suffix so both themes are kept.
+String _golden(String name) => _brightness == Brightness.dark
+    ? 'goldens/${name.replaceFirst('.png', '_dark.png')}'
+    : 'goldens/$name';
 
 void main() {
   setUpAll(() async {
@@ -85,720 +104,724 @@ void main() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
   });
 
-  group('Play Store Screenshots', () {
-    testWidgets('Screenshot 1: Dashboard (child mode)', (tester) async {
-      // Set phone-sized surface
-      tester.view.physicalSize = const Size(1080, 1920);
-      tester.view.devicePixelRatio = 2.625;
-      addTearDown(() {
-        tester.view.resetPhysicalSize();
-        tester.view.resetDevicePixelRatio();
+  for (final brightness in const [Brightness.light, Brightness.dark]) {
+    group('Play Store Screenshots (${brightness.name})', () {
+      setUp(() => _brightness = brightness);
+      testWidgets('Screenshot 1: Dashboard (child mode)', (tester) async {
+        // Set phone-sized surface
+        tester.view.physicalSize = const Size(1080, 1920);
+        tester.view.devicePixelRatio = 2.625;
+        addTearDown(() {
+          tester.view.resetPhysicalSize();
+          tester.view.resetDevicePixelRatio();
+        });
+
+        await tester.pumpWidget(
+          phoneApp(
+            child: Scaffold(
+              appBar: AppBar(
+                title: const AppBarTitle(text: "Dani's Dashboard"),
+                actions: [
+                  IconButton(
+                    onPressed: () {},
+                    icon: const ProfileAvatar(avatarIndex: 3, radius: 16),
+                    tooltip: 'Switch profile',
+                  ),
+                ],
+              ),
+              body: SafeArea(
+                top: false,
+                child: ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    const StreakWidget(
+                      currentStreak: 14,
+                      maxStreak: 42,
+                      userMode: ProfileMode.child,
+                    ),
+                    // PointsSummaryWidget removed (dead code, AUD-dashboard-04).
+                    // TodaysTasksWidget removed (widget deleted W1.21)
+                    const SizedBox(height: 12),
+                    FilledButton.icon(
+                      onPressed: () {},
+                      icon: const Icon(Icons.play_arrow),
+                      label: const Text('Continue learning Mishnayos'),
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size(double.infinity, 48),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Card(
+                      child: ListTile(
+                        leading: const Icon(
+                          Icons.auto_stories,
+                          color: Colors.deepPurple,
+                        ),
+                        title: const Text('My Learning Journey'),
+                        subtitle: const Text('See your lifetime achievements'),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () {},
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+
+        // Let animations run a bit then capture
+        await tester.pump(const Duration(seconds: 1));
+
+        await expectLater(
+          find.byType(MaterialApp),
+          matchesGoldenFile(_golden('phone_1_dashboard.png')),
+        );
       });
 
-      await tester.pumpWidget(
-        phoneApp(
-          child: Scaffold(
-            appBar: AppBar(
-              title: const AppBarTitle(text: "Dani's Dashboard"),
-              actions: [
-                IconButton(
-                  onPressed: () {},
-                  icon: const ProfileAvatar(avatarIndex: 3, radius: 16),
-                  tooltip: 'Switch profile',
-                ),
-              ],
+      testWidgets('Screenshot 2: Learning - Add Track', (tester) async {
+        tester.view.physicalSize = const Size(1080, 1920);
+        tester.view.devicePixelRatio = 2.625;
+        addTearDown(() {
+          tester.view.resetPhysicalSize();
+          tester.view.resetDevicePixelRatio();
+        });
+
+        final masechtos = [
+          ('Berachot', '9 chapters • 57 mishnayos', 1.0, true),
+          ('Peah', '8 chapters • 69 mishnayos', 0.75, false),
+          ('Demai', '7 chapters • 53 mishnayos', 0.45, false),
+          ('Kilayim', '9 chapters • 75 mishnayos', 0.12, false),
+          ('Sheviit', '10 chapters • 81 mishnayos', 0.0, false),
+          ('Terumot', '11 chapters • 100 mishnayos', 0.0, false),
+          ('Maasrot', '5 chapters • 41 mishnayos', 0.0, false),
+          ('Maaser Sheni', '5 chapters • 55 mishnayos', 0.0, false),
+        ];
+
+        await tester.pumpWidget(
+          phoneApp(
+            child: Scaffold(
+              appBar: AppBar(
+                leading: const BackButton(),
+                title: const AppBarTitle(text: 'Seder Zeraim'),
+              ),
+              body: ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: masechtos.length,
+                itemBuilder: (context, index) {
+                  final (name, detail, progress, completed) = masechtos[index];
+                  final theme = Theme.of(context);
+                  const color = Color(0xFF4A90E2);
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    clipBehavior: Clip.antiAlias,
+                    child: InkWell(
+                      onTap: () {},
+                      child: Row(
+                        children: [
+                          Container(width: 6, height: 80, color: color),
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          name,
+                                          style: theme.textTheme.titleMedium
+                                              ?.copyWith(
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                        ),
+                                      ),
+                                      if (completed)
+                                        const Icon(
+                                          Icons.check_circle,
+                                          color: Color(0xFF6B9080),
+                                          size: 24,
+                                        )
+                                      else if (progress > 0)
+                                        Text(
+                                          '${(progress * 100).round()}%',
+                                          style: theme.textTheme.bodySmall
+                                              ?.copyWith(
+                                                color: color,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                        ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    detail,
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      color: theme.colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                  if (progress > 0 && !completed) ...[
+                                    const SizedBox(height: 8),
+                                    LinearProgressIndicator(
+                                      value: progress,
+                                      backgroundColor: theme
+                                          .colorScheme
+                                          .surfaceContainerHighest,
+                                      valueColor: const AlwaysStoppedAnimation(
+                                        color,
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ),
+                          if (!completed)
+                            const Padding(
+                              padding: EdgeInsets.only(right: 8),
+                              child: Icon(Icons.chevron_right),
+                            ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
             ),
-            body: SafeArea(
-              top: false,
-              child: ListView(
+          ),
+        );
+
+        await tester.pump(const Duration(milliseconds: 500));
+
+        await expectLater(
+          find.byType(MaterialApp),
+          matchesGoldenFile(_golden('phone_2_learning.png')),
+        );
+      });
+
+      testWidgets('Screenshot 3: Progress Overview', (tester) async {
+        tester.view.physicalSize = const Size(1080, 1920);
+        tester.view.devicePixelRatio = 2.625;
+        addTearDown(() {
+          tester.view.resetPhysicalSize();
+          tester.view.resetDevicePixelRatio();
+        });
+
+        await tester.pumpWidget(
+          phoneApp(
+            child: Scaffold(
+              appBar: AppBar(title: const AppBarTitle(text: 'Progress')),
+              body: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
-                  const StreakWidget(
-                    currentStreak: 14,
-                    maxStreak: 42,
-                    userMode: ProfileMode.child,
+                  // Stats row
+                  Row(
+                    children: [
+                      _StatCard(
+                        'Total Learned',
+                        '2,847',
+                        _activeTheme().colorScheme.tertiary,
+                      ),
+                      const SizedBox(width: 8),
+                      _StatCard(
+                        'This Week',
+                        '142',
+                        _activeTheme().colorScheme.secondary,
+                      ),
+                      const SizedBox(width: 8),
+                      _StatCard(
+                        'Avg/Day',
+                        '23',
+                        _activeTheme().colorScheme.primary,
+                      ),
+                    ],
                   ),
-                  // PointsSummaryWidget removed (dead code, AUD-dashboard-04).
-                  // TodaysTasksWidget removed (widget deleted W1.21)
-                  const SizedBox(height: 12),
-                  FilledButton.icon(
-                    onPressed: () {},
-                    icon: const Icon(Icons.play_arrow),
-                    label: const Text('Continue learning Mishnayos'),
-                    style: FilledButton.styleFrom(
-                      minimumSize: const Size(double.infinity, 48),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                  const SizedBox(height: 16),
+
+                  // Weekly activity chart
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Weekly Activity',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          SizedBox(height: 200, child: _WeeklyChart()),
+                        ],
                       ),
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 16),
+
+                  // Curriculum breakdown
                   Card(
-                    child: ListTile(
-                      leading: const Icon(
-                        Icons.auto_stories,
-                        color: Colors.deepPurple,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Curriculum Breakdown',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          _CurriculumProgress(
+                            'Mishnayos',
+                            0.42,
+                            _palette().curriculumMishna,
+                          ),
+                          _CurriculumProgress(
+                            'Talmud Bavli',
+                            0.18,
+                            _palette().curriculumBavli,
+                          ),
+                          _CurriculumProgress(
+                            'Chumash',
+                            0.65,
+                            _palette().curriculumChumash,
+                          ),
+                          _CurriculumProgress(
+                            'Mishna Berurah',
+                            0.33,
+                            _palette().curriculumMishnaBerurah,
+                          ),
+                          _CurriculumProgress(
+                            'Nach',
+                            0.28,
+                            _palette().curriculumNach,
+                          ),
+                          _CurriculumProgress(
+                            'Mussar',
+                            0.12,
+                            _palette().curriculumMussar,
+                          ),
+                        ],
                       ),
-                      title: const Text('My Learning Journey'),
-                      subtitle: const Text('See your lifetime achievements'),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () {},
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Milestones
+                  const Card(
+                    child: Padding(
+                      padding: EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Recent Milestones',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          SizedBox(height: 12),
+                          _MilestoneItem(
+                            'Completed Masechet Berachot',
+                            'Mishnayos • 2 days ago',
+                            Icons.emoji_events,
+                            Colors.amber,
+                          ),
+                          _MilestoneItem(
+                            '1000 Units Learned',
+                            'Lifetime achievement',
+                            Icons.star,
+                            Color(0xFF6B9080),
+                          ),
+                          _MilestoneItem(
+                            '14-Day Streak',
+                            'Personal best!',
+                            Icons.local_fire_department,
+                            Colors.orange,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
           ),
-        ),
-      );
+        );
 
-      // Let animations run a bit then capture
-      await tester.pump(const Duration(seconds: 1));
+        await tester.pump(const Duration(milliseconds: 500));
 
-      await expectLater(
-        find.byType(MaterialApp),
-        matchesGoldenFile(_golden('phone_1_dashboard.png')),
-      );
-    });
-
-    testWidgets('Screenshot 2: Learning - Add Track', (tester) async {
-      tester.view.physicalSize = const Size(1080, 1920);
-      tester.view.devicePixelRatio = 2.625;
-      addTearDown(() {
-        tester.view.resetPhysicalSize();
-        tester.view.resetDevicePixelRatio();
+        await expectLater(
+          find.byType(MaterialApp),
+          matchesGoldenFile(_golden('phone_3_progress.png')),
+        );
       });
 
-      final masechtos = [
-        ('Berachot', '9 chapters • 57 mishnayos', 1.0, true),
-        ('Peah', '8 chapters • 69 mishnayos', 0.75, false),
-        ('Demai', '7 chapters • 53 mishnayos', 0.45, false),
-        ('Kilayim', '9 chapters • 75 mishnayos', 0.12, false),
-        ('Sheviit', '10 chapters • 81 mishnayos', 0.0, false),
-        ('Terumot', '11 chapters • 100 mishnayos', 0.0, false),
-        ('Maasrot', '5 chapters • 41 mishnayos', 0.0, false),
-        ('Maaser Sheni', '5 chapters • 55 mishnayos', 0.0, false),
-      ];
+      testWidgets('Screenshot 4: Scheduler', (tester) async {
+        tester.view.physicalSize = const Size(1080, 1920);
+        tester.view.devicePixelRatio = 2.625;
+        addTearDown(() {
+          tester.view.resetPhysicalSize();
+          tester.view.resetDevicePixelRatio();
+        });
 
-      await tester.pumpWidget(
-        phoneApp(
-          child: Scaffold(
-            appBar: AppBar(
-              leading: const BackButton(),
-              title: const AppBarTitle(text: 'Seder Zeraim'),
-            ),
-            body: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: masechtos.length,
-              itemBuilder: (context, index) {
-                final (name, detail, progress, completed) = masechtos[index];
-                final theme = Theme.of(context);
-                const color = Color(0xFF4A90E2);
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  clipBehavior: Clip.antiAlias,
-                  child: InkWell(
-                    onTap: () {},
-                    child: Row(
-                      children: [
-                        Container(width: 6, height: 80, color: color),
-                        Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 12,
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        name,
-                                        style: theme.textTheme.titleMedium
-                                            ?.copyWith(
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                      ),
+        await tester.pumpWidget(
+          phoneApp(
+            child: Scaffold(
+              appBar: AppBar(
+                title: const AppBarTitle(text: 'Today\'s Schedule'),
+              ),
+              body: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  // Goal card
+                  Card(
+                    color: _activeTheme().colorScheme.primaryContainer,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.flag,
+                                color: _activeTheme().colorScheme.primary,
+                              ),
+                              const SizedBox(width: 8),
+                              const Expanded(
+                                child: Text(
+                                  'Complete Seder Zeraim',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    '47',
+                                    style: TextStyle(
+                                      fontSize: 28,
+                                      fontWeight: FontWeight.bold,
+                                      color:
+                                          _activeTheme().colorScheme.secondary,
                                     ),
-                                    if (completed)
-                                      const Icon(
-                                        Icons.check_circle,
-                                        color: Color(0xFF6B9080),
-                                        size: 24,
-                                      )
-                                    else if (progress > 0)
-                                      Text(
-                                        '${(progress * 100).round()}%',
-                                        style: theme.textTheme.bodySmall
-                                            ?.copyWith(
-                                              color: color,
-                                              fontWeight: FontWeight.bold,
+                                  ),
+                                  const Text(
+                                    'days left',
+                                    style: TextStyle(fontSize: 12),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          LinearProgressIndicator(
+                            value: 0.42,
+                            backgroundColor: _activeTheme()
+                                .colorScheme
+                                .surfaceContainerHighest,
+                            minHeight: 8,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            '42% complete',
+                            style: TextStyle(fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  const Text(
+                    'Today\'s Tasks',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+
+                  _TaskItem(
+                    'Mishnayos',
+                    'Berachot 3:5–3:8',
+                    '~15 min',
+                    _palette().curriculumMishna,
+                    done: true,
+                  ),
+                  _TaskItem(
+                    'Talmud Bavli',
+                    'Brachot 24a',
+                    '~30 min',
+                    _palette().curriculumBavli,
+                    done: true,
+                  ),
+                  _TaskItem(
+                    'Chumash',
+                    'Bereishit 12:1–12:10',
+                    '~10 min',
+                    _palette().curriculumChumash,
+                    done: false,
+                  ),
+                  _TaskItem(
+                    'Mishna Berurah',
+                    'Siman 91:1–91:3',
+                    '~20 min',
+                    _palette().curriculumMishnaBerurah,
+                    done: false,
+                  ),
+                  _TaskItem(
+                    'Nach',
+                    'Yehoshua 5:1–5:12',
+                    '~10 min',
+                    _palette().curriculumNach,
+                    done: false,
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // Summary
+                  const Card(
+                    child: Padding(
+                      padding: EdgeInsets.all(16),
+                      child: Column(
+                        children: [
+                          _SummaryRow('Daily target', '~85 min'),
+                          Divider(),
+                          _SummaryRow('Completed', '2 of 5'),
+                          Divider(),
+                          _SummaryRow('Pace', 'On track ✓'),
+                          Divider(),
+                          _SummaryRow('Tracks', 'Personal, School'),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+
+        await tester.pump(const Duration(milliseconds: 500));
+
+        await expectLater(
+          find.byType(MaterialApp),
+          matchesGoldenFile(_golden('phone_4_scheduler.png')),
+        );
+      });
+
+      testWidgets('Screenshot 5: Achievements / Gamification', (tester) async {
+        tester.view.physicalSize = const Size(1080, 1920);
+        tester.view.devicePixelRatio = 2.625;
+        addTearDown(() {
+          tester.view.resetPhysicalSize();
+          tester.view.resetDevicePixelRatio();
+        });
+
+        await tester.pumpWidget(
+          phoneApp(
+            child: Scaffold(
+              appBar: AppBar(title: const AppBarTitle(text: 'Achievements')),
+              body: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  // Streak showcase
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        children: [
+                          const Icon(
+                            Icons.local_fire_department,
+                            color: Colors.orange,
+                            size: 48,
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            '14',
+                            style: TextStyle(
+                              fontSize: 64,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            'Day Streak!',
+                            style: TextStyle(
+                              fontSize: 20,
+                              color: _palette().brandInkMuted,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          // Week dots
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              for (final (day, done) in [
+                                ('S', true),
+                                ('M', true),
+                                ('T', true),
+                                ('W', true),
+                                ('T', true),
+                                ('F', true),
+                                ('S', false),
+                              ])
+                                Column(
+                                  children: [
+                                    CircleAvatar(
+                                      radius: 14,
+                                      backgroundColor: done
+                                          ? const Color(0xFFF4A261)
+                                          : _palette().brandCreamSoft,
+                                      child: done
+                                          ? const Icon(
+                                              Icons.check,
+                                              size: 14,
+                                              color: Colors.white,
+                                            )
+                                          : Text(
+                                              day,
+                                              style: TextStyle(
+                                                fontSize: 10,
+                                                color: _palette().brandInkMuted,
+                                              ),
                                             ),
-                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      day,
+                                      style: const TextStyle(fontSize: 10),
+                                    ),
                                   ],
                                 ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  detail,
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color: theme.colorScheme.onSurfaceVariant,
-                                  ),
-                                ),
-                                if (progress > 0 && !completed) ...[
-                                  const SizedBox(height: 8),
-                                  LinearProgressIndicator(
-                                    value: progress,
-                                    backgroundColor: theme
-                                        .colorScheme
-                                        .surfaceContainerHighest,
-                                    valueColor: const AlwaysStoppedAnimation(
-                                      color,
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
+                            ],
                           ),
-                        ),
-                        if (!completed)
-                          const Padding(
-                            padding: EdgeInsets.only(right: 8),
-                            child: Icon(Icons.chevron_right),
-                          ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
-                );
-              },
-            ),
-          ),
-        ),
-      );
+                  const SizedBox(height: 12),
 
-      await tester.pump(const Duration(milliseconds: 500));
-
-      await expectLater(
-        find.byType(MaterialApp),
-        matchesGoldenFile(_golden('phone_2_learning.png')),
-      );
-    });
-
-    testWidgets('Screenshot 3: Progress Overview', (tester) async {
-      tester.view.physicalSize = const Size(1080, 1920);
-      tester.view.devicePixelRatio = 2.625;
-      addTearDown(() {
-        tester.view.resetPhysicalSize();
-        tester.view.resetDevicePixelRatio();
-      });
-
-      await tester.pumpWidget(
-        phoneApp(
-          child: Scaffold(
-            appBar: AppBar(title: const AppBarTitle(text: 'Progress')),
-            body: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                // Stats row
-                Row(
-                  children: [
-                    _StatCard(
-                      'Total Learned',
-                      '2,847',
-                      AppTheme.lightTheme().colorScheme.tertiary,
-                    ),
-                    const SizedBox(width: 8),
-                    _StatCard(
-                      'This Week',
-                      '142',
-                      AppTheme.lightTheme().colorScheme.secondary,
-                    ),
-                    const SizedBox(width: 8),
-                    _StatCard(
-                      'Avg/Day',
-                      '23',
-                      AppTheme.lightTheme().colorScheme.primary,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-
-                // Weekly activity chart
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Weekly Activity',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
+                  // Points
+                  Card(
+                    color: const Color(0xFF6B9080).withValues(alpha: 0.15),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.star,
+                            color: Color(0xFF6B9080),
+                            size: 28,
                           ),
-                        ),
-                        const SizedBox(height: 16),
-                        SizedBox(height: 200, child: _WeeklyChart()),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Curriculum breakdown
-                const Card(
-                  child: Padding(
-                    padding: EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Curriculum Breakdown',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        SizedBox(height: 16),
-                        _CurriculumProgress(
-                          'Mishnayos',
-                          0.42,
-                          AppTheme.curriculumMishna,
-                        ),
-                        _CurriculumProgress(
-                          'Talmud Bavli',
-                          0.18,
-                          AppTheme.curriculumBavli,
-                        ),
-                        _CurriculumProgress(
-                          'Chumash',
-                          0.65,
-                          AppTheme.curriculumChumash,
-                        ),
-                        _CurriculumProgress(
-                          'Mishna Berurah',
-                          0.33,
-                          AppTheme.curriculumMishnaBerurah,
-                        ),
-                        _CurriculumProgress(
-                          'Nach',
-                          0.28,
-                          AppTheme.curriculumNach,
-                        ),
-                        _CurriculumProgress(
-                          'Mussar',
-                          0.12,
-                          AppTheme.curriculumMussar,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Milestones
-                const Card(
-                  child: Padding(
-                    padding: EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Recent Milestones',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        SizedBox(height: 12),
-                        _MilestoneItem(
-                          'Completed Masechet Berachot',
-                          'Mishnayos • 2 days ago',
-                          Icons.emoji_events,
-                          Colors.amber,
-                        ),
-                        _MilestoneItem(
-                          '1000 Units Learned',
-                          'Lifetime achievement',
-                          Icons.star,
-                          Color(0xFF6B9080),
-                        ),
-                        _MilestoneItem(
-                          '14-Day Streak',
-                          'Personal best!',
-                          Icons.local_fire_department,
-                          Colors.orange,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-
-      await tester.pump(const Duration(milliseconds: 500));
-
-      await expectLater(
-        find.byType(MaterialApp),
-        matchesGoldenFile(_golden('phone_3_progress.png')),
-      );
-    });
-
-    testWidgets('Screenshot 4: Scheduler', (tester) async {
-      tester.view.physicalSize = const Size(1080, 1920);
-      tester.view.devicePixelRatio = 2.625;
-      addTearDown(() {
-        tester.view.resetPhysicalSize();
-        tester.view.resetDevicePixelRatio();
-      });
-
-      await tester.pumpWidget(
-        phoneApp(
-          child: Scaffold(
-            appBar: AppBar(title: const AppBarTitle(text: 'Today\'s Schedule')),
-            body: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                // Goal card
-                Card(
-                  color: AppTheme.lightTheme().colorScheme.primaryContainer,
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.flag,
-                              color: AppTheme.lightTheme().colorScheme.primary,
-                            ),
-                            const SizedBox(width: 8),
-                            const Expanded(
-                              child: Text(
-                                'Complete Seder Zeraim',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                          const SizedBox(width: 8),
+                          const Expanded(
+                            child: Text(
+                              '1,247 Points',
+                              style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF6B9080),
                               ),
                             ),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Text(
-                                  '47',
-                                  style: TextStyle(
-                                    fontSize: 28,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppTheme.lightTheme()
-                                        .colorScheme
-                                        .secondary,
-                                  ),
-                                ),
-                                const Text(
-                                  'days left',
-                                  style: TextStyle(fontSize: 12),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        LinearProgressIndicator(
-                          value: 0.42,
-                          backgroundColor: AppTheme.lightTheme()
-                              .colorScheme
-                              .surfaceContainerHighest,
-                          minHeight: 8,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        const SizedBox(height: 4),
-                        const Text(
-                          '42% complete',
-                          style: TextStyle(fontSize: 12),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                const Text(
-                  'Today\'s Tasks',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-
-                const _TaskItem(
-                  'Mishnayos',
-                  'Berachot 3:5–3:8',
-                  '~15 min',
-                  AppTheme.curriculumMishna,
-                  done: true,
-                ),
-                const _TaskItem(
-                  'Talmud Bavli',
-                  'Brachot 24a',
-                  '~30 min',
-                  AppTheme.curriculumBavli,
-                  done: true,
-                ),
-                const _TaskItem(
-                  'Chumash',
-                  'Bereishit 12:1–12:10',
-                  '~10 min',
-                  AppTheme.curriculumChumash,
-                  done: false,
-                ),
-                const _TaskItem(
-                  'Mishna Berurah',
-                  'Siman 91:1–91:3',
-                  '~20 min',
-                  AppTheme.curriculumMishnaBerurah,
-                  done: false,
-                ),
-                const _TaskItem(
-                  'Nach',
-                  'Yehoshua 5:1–5:12',
-                  '~10 min',
-                  AppTheme.curriculumNach,
-                  done: false,
-                ),
-
-                const SizedBox(height: 16),
-
-                // Summary
-                const Card(
-                  child: Padding(
-                    padding: EdgeInsets.all(16),
-                    child: Column(
-                      children: [
-                        _SummaryRow('Daily target', '~85 min'),
-                        Divider(),
-                        _SummaryRow('Completed', '2 of 5'),
-                        Divider(),
-                        _SummaryRow('Pace', 'On track ✓'),
-                        Divider(),
-                        _SummaryRow('Tracks', 'Personal, School'),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-
-      await tester.pump(const Duration(milliseconds: 500));
-
-      await expectLater(
-        find.byType(MaterialApp),
-        matchesGoldenFile(_golden('phone_4_scheduler.png')),
-      );
-    });
-
-    testWidgets('Screenshot 5: Achievements / Gamification', (tester) async {
-      tester.view.physicalSize = const Size(1080, 1920);
-      tester.view.devicePixelRatio = 2.625;
-      addTearDown(() {
-        tester.view.resetPhysicalSize();
-        tester.view.resetDevicePixelRatio();
-      });
-
-      await tester.pumpWidget(
-        phoneApp(
-          child: Scaffold(
-            appBar: AppBar(title: const AppBarTitle(text: 'Achievements')),
-            body: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                // Streak showcase
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      children: [
-                        const Icon(
-                          Icons.local_fire_department,
-                          color: Colors.orange,
-                          size: 48,
-                        ),
-                        const SizedBox(height: 8),
-                        const Text(
-                          '14',
-                          style: TextStyle(
-                            fontSize: 64,
-                            fontWeight: FontWeight.bold,
                           ),
-                        ),
-                        Text(
-                          'Day Streak!',
-                          style: TextStyle(
-                            fontSize: 20,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        // Week dots
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            for (final (day, done) in [
-                              ('S', true),
-                              ('M', true),
-                              ('T', true),
-                              ('W', true),
-                              ('T', true),
-                              ('F', true),
-                              ('S', false),
-                            ])
-                              Column(
-                                children: [
-                                  CircleAvatar(
-                                    radius: 14,
-                                    backgroundColor: done
-                                        ? const Color(0xFFF4A261)
-                                        : Colors.grey[300],
-                                    child: done
-                                        ? const Icon(
-                                            Icons.check,
-                                            size: 14,
-                                            color: Colors.white,
-                                          )
-                                        : Text(
-                                            day,
-                                            style: TextStyle(
-                                              fontSize: 10,
-                                              color: Colors.grey[600],
-                                            ),
-                                          ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    day,
-                                    style: const TextStyle(fontSize: 10),
-                                  ),
-                                ],
-                              ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-
-                // Points
-                Card(
-                  color: const Color(0xFF6B9080).withValues(alpha: 0.15),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.star,
-                          color: Color(0xFF6B9080),
-                          size: 28,
-                        ),
-                        const SizedBox(width: 8),
-                        const Expanded(
-                          child: Text(
-                            '1,247 Points',
+                          Text(
+                            '+23 today',
                             style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF6B9080),
+                              color: _palette().brandInkMuted,
+                              fontSize: 14,
                             ),
                           ),
-                        ),
-                        Text(
-                          '+23 today',
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: 14,
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 16),
+                  const SizedBox(height: 16),
 
-                const Text(
-                  'Achievements',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
+                  const Text(
+                    'Achievements',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
 
-                const _AchievementTile(
-                  'First Steps',
-                  'Complete your first lesson',
-                  Icons.spa,
-                  Colors.green,
-                  true,
-                ),
-                const _AchievementTile(
-                  'Week Warrior',
-                  '7-day streak',
-                  Icons.shield,
-                  Colors.blue,
-                  true,
-                ),
-                const _AchievementTile(
-                  'Seder Master',
-                  'Complete a full Seder',
-                  Icons.menu_book,
-                  Colors.purple,
-                  true,
-                ),
-                const _AchievementTile(
-                  'Torah Scholar',
-                  'Learn 1000 units',
-                  Icons.school,
-                  Color(0xFFF4A261),
-                  true,
-                ),
-                const _AchievementTile(
-                  'Consistency King',
-                  '30-day streak',
-                  Icons.diamond,
-                  Colors.amber,
-                  false,
-                ),
-                const _AchievementTile(
-                  'Shas Journey',
-                  'Start Talmud Bavli',
-                  Icons.account_balance,
-                  Colors.indigo,
-                  true,
-                ),
-                const _AchievementTile(
-                  'Full Review',
-                  'Complete all chazara stages',
-                  Icons.replay,
-                  Colors.teal,
-                  false,
-                ),
-              ],
+                  const _AchievementTile(
+                    'First Steps',
+                    'Complete your first lesson',
+                    Icons.spa,
+                    Colors.green,
+                    true,
+                  ),
+                  const _AchievementTile(
+                    'Week Warrior',
+                    '7-day streak',
+                    Icons.shield,
+                    Colors.blue,
+                    true,
+                  ),
+                  const _AchievementTile(
+                    'Seder Master',
+                    'Complete a full Seder',
+                    Icons.menu_book,
+                    Colors.purple,
+                    true,
+                  ),
+                  const _AchievementTile(
+                    'Torah Scholar',
+                    'Learn 1000 units',
+                    Icons.school,
+                    Color(0xFFF4A261),
+                    true,
+                  ),
+                  const _AchievementTile(
+                    'Consistency King',
+                    '30-day streak',
+                    Icons.diamond,
+                    Colors.amber,
+                    false,
+                  ),
+                  const _AchievementTile(
+                    'Shas Journey',
+                    'Start Talmud Bavli',
+                    Icons.account_balance,
+                    Colors.indigo,
+                    true,
+                  ),
+                  const _AchievementTile(
+                    'Full Review',
+                    'Complete all chazara stages',
+                    Icons.replay,
+                    Colors.teal,
+                    false,
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
-      );
+        );
 
-      await tester.pump(const Duration(milliseconds: 500));
+        await tester.pump(const Duration(milliseconds: 500));
 
-      await expectLater(
-        find.byType(MaterialApp),
-        matchesGoldenFile(_golden('phone_5_gamification.png')),
-      );
+        await expectLater(
+          find.byType(MaterialApp),
+          matchesGoldenFile(_golden('phone_5_gamification.png')),
+        );
+      });
     });
-  });
+  }
 }
 
 // ─── Helper Widgets ───────────────────────────────────────────────────────
@@ -907,7 +930,7 @@ class _CurriculumProgress extends StatelessWidget {
           Expanded(
             child: LinearProgressIndicator(
               value: progress,
-              backgroundColor: Colors.grey[200],
+              backgroundColor: _palette().brandCreamSoft,
               valueColor: AlwaysStoppedAnimation(color),
               minHeight: 10,
               borderRadius: BorderRadius.circular(5),
@@ -1005,7 +1028,7 @@ class _TaskItem extends StatelessWidget {
         ),
         trailing: Text(
           duration,
-          style: TextStyle(color: Colors.grey[600], fontSize: 12),
+          style: TextStyle(color: _palette().brandInkMuted, fontSize: 12),
         ),
       ),
     );
@@ -1072,7 +1095,7 @@ class _AchievementTile extends StatelessWidget {
         ),
         subtitle: Text(
           subtitle,
-          style: TextStyle(color: unlocked ? null : Colors.grey),
+          style: TextStyle(color: unlocked ? null : _palette().brandInkSoft),
         ),
       ),
     );

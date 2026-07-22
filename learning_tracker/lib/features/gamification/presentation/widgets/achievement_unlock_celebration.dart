@@ -8,8 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
 import 'package:learning_tracker/features/gamification/presentation/providers/achievements_overview_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
@@ -166,14 +165,14 @@ class AchievementUnlockCelebration {
   }
 }
 
-const _partyColors = <Color>[
-  AppColors.gamifPartyColorCoral,
-  AppColors.gamifPartyColorYellow,
-  AppColors.chartGreen,
-  AppColors.chartBlue,
-  AppColors.gamifPartyColorPink,
-  AppColors.gamifPartyColorOrange,
-  AppColors.gamifPartyColorPurple,
+List<Color> _partyColors(BuildContext context) => <Color>[
+  context.colors.gamifPartyColorCoral,
+  context.colors.gamifPartyColorYellow,
+  context.colors.chartGreen,
+  context.colors.chartBlue,
+  context.colors.gamifPartyColorPink,
+  context.colors.gamifPartyColorOrange,
+  context.colors.gamifPartyColorPurple,
 ];
 
 class _UnlockPartyDialog extends StatefulWidget {
@@ -242,7 +241,7 @@ class _UnlockPartyDialogState extends State<_UnlockPartyDialog> {
                 maxBlastForce: 28,
                 minBlastForce: 8,
                 gravity: 0.2,
-                colors: _partyColors,
+                colors: _partyColors(context),
                 emissionFrequency: 0.04,
                 shouldLoop: true,
                 minimumSize: const Size(12, 6),
@@ -262,7 +261,7 @@ class _UnlockPartyDialogState extends State<_UnlockPartyDialog> {
                   maxBlastForce: 52,
                   minBlastForce: 18,
                   gravity: 0.22,
-                  colors: _partyColors,
+                  colors: _partyColors(context),
                   emissionFrequency: 0.06,
                   shouldLoop: true,
                   minimumSize: const Size(10, 7),
@@ -329,20 +328,20 @@ class AchievementUnlockCard extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(28),
-          gradient: const LinearGradient(
+          gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              AppColors.gamifUnlockCardGradientCream,
-              AppColors.gamifUnlockCardGradientPink,
-              AppColors.accentTealSoft,
+              context.colors.gamifUnlockCardGradientCream,
+              context.colors.gamifUnlockCardGradientPink,
+              context.colors.accentTealSoft,
             ],
           ),
-          boxShadow: const [
+          boxShadow: [
             BoxShadow(
-              color: AppColors.gamifUnlockCardShadow,
+              color: context.colors.gamifUnlockCardShadow,
               blurRadius: 32,
-              offset: Offset(0, 12),
+              offset: const Offset(0, 12),
             ),
           ],
           border: Border.all(
@@ -361,7 +360,7 @@ class AchievementUnlockCard extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: theme.textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.w900,
-                  color: AppColors.accentBurntOrange,
+                  color: context.colors.accentBurntOrange,
                   letterSpacing: 0.3,
                   height: 1.1,
                 ),
@@ -377,14 +376,14 @@ class AchievementUnlockCard extends StatelessWidget {
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w600,
                   height: 1.4,
-                  color: AppColors.gamifInkCharcoal,
+                  color: context.colors.gamifInkCharcoal,
                 ),
               ),
               const SizedBox(height: 20),
               FilledButton(
                 onPressed: onContinue,
                 style: FilledButton.styleFrom(
-                  backgroundColor: AppTheme.brandBlue,
+                  backgroundColor: context.colors.brandBlue,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 32,
                     vertical: 14,

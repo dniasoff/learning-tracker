@@ -7,8 +7,7 @@ import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/steps/scope_views.dart';
@@ -305,7 +304,7 @@ class _ScopeStepContentState extends ConsumerState<ScopeStepContent> {
             alignment: AlignmentDirectional.centerStart,
             child: DecoratedBox(
               decoration: BoxDecoration(
-                color: AppColors.surfaceBlueLight,
+                color: context.colors.surfaceBlueLight,
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Padding(
@@ -316,16 +315,16 @@ class _ScopeStepContentState extends ConsumerState<ScopeStepContent> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.menu_book_rounded,
                       size: 15,
-                      color: AppTheme.brandBlueDeep,
+                      color: context.colors.brandBlueDeep,
                     ),
                     const SizedBox(width: 6),
                     CurriculumLabel.curriculum(
                       widget.curriculumId,
                       style: theme.textTheme.titleSmall?.copyWith(
-                        color: AppTheme.brandBlueDeep,
+                        color: context.colors.brandBlueDeep,
                         fontWeight: FontWeight.w700,
                       ),
                     ),

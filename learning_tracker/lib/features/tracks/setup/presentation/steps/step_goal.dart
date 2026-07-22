@@ -8,7 +8,7 @@ import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/core/utils/hebrew_calendar_utils.dart';
 import 'package:learning_tracker/core/widgets/learning_date_picker_theme.dart';
@@ -449,7 +449,7 @@ class _SelfPacedGoalStepState extends ConsumerState<SelfPacedGoalStep> {
           Text(
             l10n.goalPaceOrDeadlineSubtitle,
             style: theme.textTheme.titleMedium?.copyWith(
-              color: AppTheme.brandInkMuted,
+              color: context.colors.brandInkMuted,
             ),
           ),
           const SizedBox(height: 18),

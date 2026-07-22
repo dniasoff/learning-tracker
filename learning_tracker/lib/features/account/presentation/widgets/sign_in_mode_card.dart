@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// The connectivity/account-type hint card shown above the sign-in form.
@@ -23,22 +23,22 @@ class SignInModeCard extends StatelessWidget {
         return Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: AppTheme.brandBlueBright.withValues(alpha: 0.1),
+            color: context.colors.brandBlueBright.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: AppTheme.brandBlueBright.withValues(alpha: 0.35),
+              color: context.colors.brandBlueBright.withValues(alpha: 0.35),
             ),
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(Icons.cloud_done_rounded, color: AppTheme.brandBlue),
+              Icon(Icons.cloud_done_rounded, color: context.colors.brandBlue),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   l10n.authModeCloud,
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: AppTheme.brandInk,
+                    color: context.colors.brandInk,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -51,25 +51,25 @@ class SignInModeCard extends StatelessWidget {
         return Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: AppTheme.brandCoralSoft.withValues(alpha: 0.28),
+            color: context.colors.brandCoralSoft.withValues(alpha: 0.28),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: AppTheme.brandCoralDeep.withValues(alpha: 0.45),
+              color: context.colors.brandCoralDeep.withValues(alpha: 0.45),
             ),
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(
+              Icon(
                 Icons.cloud_off_rounded,
-                color: AppTheme.brandCoralDeep,
+                color: context.colors.brandCoralDeep,
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   l10n.authModeCloudOffline,
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: AppTheme.brandInk,
+                    color: context.colors.brandInk,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -85,25 +85,25 @@ class SignInModeCard extends StatelessWidget {
         return Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: AppTheme.brandCoralSoft.withValues(alpha: 0.45),
+            color: context.colors.brandCoralSoft.withValues(alpha: 0.45),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: AppTheme.brandCoralDeep.withValues(alpha: 0.55),
+              color: context.colors.brandCoralDeep.withValues(alpha: 0.55),
             ),
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(
+              Icon(
                 Icons.warning_amber_rounded,
-                color: AppTheme.brandCoralDeep,
+                color: context.colors.brandCoralDeep,
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   l10n.authModeLocalTitle,
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: AppTheme.brandInk,
+                    color: context.colors.brandInk,
                     fontWeight: FontWeight.w700,
                   ),
                 ),

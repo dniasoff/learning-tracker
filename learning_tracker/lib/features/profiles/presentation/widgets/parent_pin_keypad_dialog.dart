@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_entry_machine.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/parent_mode_dialog_frame.dart';
@@ -61,8 +61,8 @@ Future<bool> showParentPinChangeDialog(
 
 // --- Design tokens (match product spec: navy, gray, light surfaces) ---------
 
-const Color _pinNavy = AppTheme.brandInk;
-const Color _pinKeyFill = AppTheme.brandCreamSoft;
+Color _pinNavy(BuildContext context) => context.colors.brandInk;
+Color _pinKeyFill(BuildContext context) => context.colors.brandCreamSoft;
 const Color _pinDotEmpty = Color(0xFFE8EBF0);
 const Color _pinDotInner = Color(0xFFC9D0DA);
 
@@ -310,9 +310,11 @@ class _PinDotsRow extends StatelessWidget {
             height: 18,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: filled ? _pinNavy : _pinDotEmpty,
+              color: filled ? _pinNavy(context) : _pinDotEmpty,
               border: Border.all(
-                color: filled ? _pinNavy : _pinDotInner.withValues(alpha: 0.35),
+                color: filled
+                    ? _pinNavy(context)
+                    : _pinDotInner.withValues(alpha: 0.35),
               ),
             ),
             child: filled
@@ -401,8 +403,8 @@ class _PinKeypad extends StatelessWidget {
         onTap: busy ? null : () => onDigit(d),
         child: Text(
           d,
-          style: const TextStyle(
-            color: _pinNavy,
+          style: TextStyle(
+            color: _pinNavy(context),
             fontSize: 24,
             fontWeight: FontWeight.w600,
           ),
@@ -452,7 +454,7 @@ class _PinKeypad extends StatelessWidget {
                   child: TextButton(
                     onPressed: busy ? null : onCancel,
                     style: TextButton.styleFrom(
-                      foregroundColor: _pinNavy,
+                      foregroundColor: _pinNavy(context),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
                     child: Text(
@@ -497,7 +499,7 @@ class _KeypadChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: _pinKeyFill,
+      color: _pinKeyFill(context),
       borderRadius: BorderRadius.circular(999),
       clipBehavior: Clip.antiAlias,
       child: InkWell(

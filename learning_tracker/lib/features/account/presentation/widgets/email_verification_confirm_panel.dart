@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -29,7 +29,10 @@ class _DashedIllustrationFrame extends StatelessWidget {
   Widget build(BuildContext context) {
     const size = 96.0;
     return CustomPaint(
-      painter: _DashedRRectPainter(color: AppTheme.brandOutline, radius: 18),
+      painter: _DashedRRectPainter(
+        color: context.colors.brandOutline,
+        radius: 18,
+      ),
       child: SizedBox(
         width: size,
         height: size,
@@ -89,15 +92,19 @@ class _MailIllustration extends StatelessWidget {
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: AppTheme.brandBlueSoft.withValues(alpha: 0.95),
+                color: context.colors.brandBlueSoft.withValues(alpha: 0.95),
                 blurRadius: 28,
                 spreadRadius: 2,
               ),
             ],
           ),
         ),
-        const _DashedIllustrationFrame(
-          child: Icon(Icons.mail_rounded, size: 44, color: AppTheme.brandBlue),
+        _DashedIllustrationFrame(
+          child: Icon(
+            Icons.mail_rounded,
+            size: 44,
+            color: context.colors.brandBlue,
+          ),
         ),
         Positioned(
           top: -4,
@@ -106,11 +113,11 @@ class _MailIllustration extends StatelessWidget {
             width: 28,
             height: 28,
             decoration: BoxDecoration(
-              color: AppTheme.brandBlue,
+              color: context.colors.brandBlue,
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: AppTheme.brandBlue.withValues(alpha: 0.35),
+                  color: context.colors.brandBlue.withValues(alpha: 0.35),
                   blurRadius: 6,
                   offset: const Offset(0, 2),
                 ),
@@ -216,7 +223,7 @@ class _EmailVerificationConfirmPanelState
     final busy = _sendingAgain || _checkingVerified || widget.actionsLocked;
 
     return Material(
-      color: AppTheme.brandCreamCard,
+      color: context.colors.brandCreamCard,
       elevation: 12,
       shadowColor: Colors.black26,
       borderRadius: BorderRadius.circular(28),
@@ -237,7 +244,7 @@ class _EmailVerificationConfirmPanelState
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.w800,
-                color: AppTheme.brandInk,
+                color: context.colors.brandInk,
                 letterSpacing: -0.3,
               ),
             ),
@@ -246,7 +253,7 @@ class _EmailVerificationConfirmPanelState
               widget.bodyText,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppTheme.brandInkMuted,
+                color: context.colors.brandInkMuted,
                 height: 1.45,
               ),
             ),
@@ -258,14 +265,14 @@ class _EmailVerificationConfirmPanelState
                     ? null
                     : () => openEmailApp(email: widget.email),
                 style: FilledButton.styleFrom(
-                  backgroundColor: AppTheme.brandBlue,
+                  backgroundColor: context.colors.brandBlue,
                   foregroundColor: Colors.white,
-                  disabledBackgroundColor: AppTheme.brandBlue.withValues(
+                  disabledBackgroundColor: context.colors.brandBlue.withValues(
                     alpha: 0.5,
                   ),
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   elevation: 4,
-                  shadowColor: AppTheme.brandBlue.withValues(alpha: 0.45),
+                  shadowColor: context.colors.brandBlue.withValues(alpha: 0.45),
                   shape: const StadiumBorder(),
                 ),
                 child: Row(
@@ -297,7 +304,7 @@ class _EmailVerificationConfirmPanelState
                     onPressed: busy ? null : _wrapSendAgain,
                     style: FilledButton.styleFrom(
                       backgroundColor: _sendAgainPeach,
-                      foregroundColor: AppTheme.brandInk,
+                      foregroundColor: context.colors.brandInk,
                       disabledBackgroundColor: _sendAgainPeach.withValues(
                         alpha: 0.6,
                       ),
@@ -311,17 +318,19 @@ class _EmailVerificationConfirmPanelState
                             width: 20,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              color: AppTheme.brandInk.withValues(alpha: 0.7),
+                              color: context.colors.brandInk.withValues(
+                                alpha: 0.7,
+                              ),
                             ),
                           )
                         : Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(
+                              Icon(
                                 Icons.refresh_rounded,
                                 size: 20,
-                                color: AppTheme.brandInk,
+                                color: context.colors.brandInk,
                               ),
                               const SizedBox(width: 6),
                               Flexible(
@@ -332,7 +341,7 @@ class _EmailVerificationConfirmPanelState
                                   style: Theme.of(context).textTheme.labelLarge
                                       ?.copyWith(
                                         fontWeight: FontWeight.w700,
-                                        color: AppTheme.brandInk,
+                                        color: context.colors.brandInk,
                                       ),
                                 ),
                               ),
@@ -345,9 +354,9 @@ class _EmailVerificationConfirmPanelState
                   child: OutlinedButton(
                     onPressed: busy ? null : widget.onCancel,
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: AppTheme.brandInk,
-                      side: const BorderSide(
-                        color: AppTheme.brandOutline,
+                      foregroundColor: context.colors.brandInk,
+                      side: BorderSide(
+                        color: context.colors.brandOutline,
                         width: 1.2,
                       ),
                       padding: const EdgeInsets.symmetric(vertical: 14),
@@ -357,10 +366,10 @@ class _EmailVerificationConfirmPanelState
                       mainAxisAlignment: MainAxisAlignment.center,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.close_rounded,
                           size: 20,
-                          color: AppTheme.brandInk,
+                          color: context.colors.brandInk,
                         ),
                         const SizedBox(width: 4),
                         Flexible(
@@ -389,9 +398,9 @@ class _EmailVerificationConfirmPanelState
                     )
                   : Text(
                       widget.verifiedLinkLabel,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.w600,
-                        color: AppTheme.brandBlue,
+                        color: context.colors.brandBlue,
                       ),
                     ),
             ),

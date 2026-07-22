@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 
 class ArrowButton extends StatelessWidget {
   const ArrowButton({
@@ -34,14 +34,16 @@ class ArrowButton extends StatelessWidget {
           height: 44,
           decoration: BoxDecoration(
             color: isEnabled
-                ? AppTheme.brandCreamSoft
-                : AppTheme.brandCreamSoft.withValues(alpha: 0.6),
+                ? context.colors.brandCreamSoft
+                : context.colors.brandCreamSoft.withValues(alpha: 0.6),
             borderRadius: BorderRadius.circular(999),
           ),
           child: Icon(
             icon,
             size: 32,
-            color: isEnabled ? AppTheme.brandInk : AppTheme.brandInkMuted,
+            color: isEnabled
+                ? context.colors.brandInk
+                : context.colors.brandInkMuted,
           ),
         ),
       ),

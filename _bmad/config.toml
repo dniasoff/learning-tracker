@@ -45,15 +45,6 @@ methodology_version = "wds-v6"
 product_languages = "[\"en\"]"
 design_experience = "intermediate"
 
-[modules.lnr]
-tracking_system = "linear"
-linear_tenant = "orvexai"
-linear_initiative = "Learning Tracker"
-team_key = "DNI"
-
-[modules.doc]
-docmost_url = "https://docs.eu-central-1.myidp.cloud"
-
 [agents.bmad-agent-analyst]
 module = "bmm"
 team = "software-development"

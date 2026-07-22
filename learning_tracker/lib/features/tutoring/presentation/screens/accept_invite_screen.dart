@@ -26,8 +26,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
@@ -278,9 +277,9 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      backgroundColor: AppTheme.brandCream,
+      backgroundColor: context.colors.brandCream,
       appBar: AppBar(
-        backgroundColor: AppTheme.brandCream,
+        backgroundColor: context.colors.brandCream,
         elevation: 0,
         title: Text(l10n.acceptInviteAppBarTitle),
       ),
@@ -337,13 +336,13 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 const SizedBox(height: 16),
-                const CircleAvatar(
+                CircleAvatar(
                   radius: 36,
-                  backgroundColor: AppColors.tutorPinBadgeBg,
+                  backgroundColor: context.colors.tutorPinBadgeBg,
                   child: Icon(
                     Icons.handshake_rounded,
                     size: 36,
-                    color: AppColors.tutorPinBadgeIcon,
+                    color: context.colors.tutorPinBadgeIcon,
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -352,7 +351,7 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
                   textAlign: TextAlign.center,
                   style: theme.textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.w800,
-                    color: AppTheme.brandInk,
+                    color: context.colors.brandInk,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -360,7 +359,7 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
                   l10n.acceptInviteBody,
                   textAlign: TextAlign.center,
                   style: theme.textTheme.bodyLarge?.copyWith(
-                    color: AppTheme.brandInkMuted,
+                    color: context.colors.brandInkMuted,
                     height: 1.4,
                   ),
                 ),
@@ -383,7 +382,7 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
                 ),
                 _PermissionRow(
                   icon: Icons.cancel_rounded,
-                  color: AppColors.statusErrorCardText,
+                  color: context.colors.statusErrorCardText,
                   text: l10n.acceptInvitePermissionNoLive,
                 ),
                 const SizedBox(height: 24),
@@ -404,7 +403,7 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
                   onPressed: () => unawaited(_openDecline(context)),
                   child: Text(
                     l10n.acceptInviteDecline,
-                    style: const TextStyle(color: AppTheme.brandInkMuted),
+                    style: TextStyle(color: context.colors.brandInkMuted),
                   ),
                 ),
               ],
@@ -442,13 +441,13 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const CircleAvatar(
+                  CircleAvatar(
                     radius: 40,
-                    backgroundColor: AppColors.statusSuccessSoftBg,
+                    backgroundColor: context.colors.statusSuccessSoftBg,
                     child: Icon(
                       Icons.check_circle_rounded,
                       size: 48,
-                      color: AppColors.statusSuccessSoftText,
+                      color: context.colors.statusSuccessSoftText,
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -457,7 +456,7 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
                     textAlign: TextAlign.center,
                     style: theme.textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.w800,
-                      color: AppTheme.brandInk,
+                      color: context.colors.brandInk,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -465,7 +464,7 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
                     l10n.acceptInviteSuccessBody,
                     textAlign: TextAlign.center,
                     style: theme.textTheme.bodyLarge?.copyWith(
-                      color: AppTheme.brandInkMuted,
+                      color: context.colors.brandInkMuted,
                       height: 1.4,
                     ),
                   ),
@@ -509,13 +508,13 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const CircleAvatar(
+                  CircleAvatar(
                     radius: 40,
-                    backgroundColor: AppColors.statusErrorCardBg,
+                    backgroundColor: context.colors.statusErrorCardBg,
                     child: Icon(
                       Icons.error_rounded,
                       size: 48,
-                      color: AppColors.statusErrorCardText,
+                      color: context.colors.statusErrorCardText,
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -524,7 +523,7 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
                     textAlign: TextAlign.center,
                     style: theme.textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.w800,
-                      color: AppTheme.brandInk,
+                      color: context.colors.brandInk,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -532,7 +531,7 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
                     _errorMessage ?? l10n.unexpectedError,
                     textAlign: TextAlign.center,
                     style: theme.textTheme.bodyLarge?.copyWith(
-                      color: AppTheme.brandInkMuted,
+                      color: context.colors.brandInkMuted,
                       height: 1.4,
                     ),
                   ),
@@ -562,7 +561,7 @@ class _PermissionRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final iconColor = color ?? AppColors.statusActiveBadge;
+    final iconColor = color ?? context.colors.statusActiveBadge;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
@@ -573,7 +572,7 @@ class _PermissionRow extends StatelessWidget {
             child: Text(
               text,
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: AppTheme.brandInk,
+                color: context.colors.brandInk,
               ),
             ),
           ),

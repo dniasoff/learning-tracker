@@ -93,9 +93,9 @@ void main() {
       violations,
       isEmpty,
       reason:
-          'Found hardcoded Color(0x...) hex literals outside AppColors '
+          'Found hardcoded Color(0x...) hex literals outside the theme layer '
           'somewhere under $dirPath/ — extract them into '
-          'lib/core/theme/app_colors.dart instead:\n${violations.join('\n')}',
+          'lib/core/theme/app_palette.dart instead:\n${violations.join('\n')}',
     );
   });
 }

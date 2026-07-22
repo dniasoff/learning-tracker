@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/empty_state.dart';
 import 'package:learning_tracker/core/widgets/error_display.dart';
 import 'package:learning_tracker/core/widgets/loading_indicator.dart';
@@ -72,12 +72,12 @@ class _LifetimeKnowledgeScreenState
         elevation: 0,
         scrolledUnderElevation: 0,
         surfaceTintColor: Colors.transparent,
-        foregroundColor: AppTheme.brandInk,
+        foregroundColor: context.colors.brandInk,
         title: Text(
           l10n.tierLensLifetimeKnowledge,
           style: textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.w800,
-            color: AppTheme.brandInk,
+            color: context.colors.brandInk,
           ),
         ),
       ),
@@ -184,10 +184,10 @@ class _LifetimeHeaderCard extends ConsumerWidget {
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTheme.brandCreamCard,
+        color: context.colors.brandCreamCard,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: AppTheme.brandOutline.withValues(alpha: 0.35),
+          color: context.colors.brandOutline.withValues(alpha: 0.35),
         ),
         boxShadow: [
           BoxShadow(
@@ -202,9 +202,9 @@ class _LifetimeHeaderCard extends ConsumerWidget {
         child: headerAsync.when(
           data: (counters) => Row(
             children: [
-              const Icon(
+              Icon(
                 Icons.menu_book_outlined,
-                color: AppTheme.brandBlue,
+                color: context.colors.brandBlue,
                 size: 28,
               ),
               const SizedBox(width: 12),
@@ -216,14 +216,14 @@ class _LifetimeHeaderCard extends ConsumerWidget {
                       terms.itemsLearnedCount(counters.itemsLearned),
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w800,
-                        color: AppTheme.brandInk,
+                        color: context.colors.brandInk,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       terms.totalChazaros(counters.totalChazaros),
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: AppTheme.brandInkMuted,
+                        color: context.colors.brandInkMuted,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -298,7 +298,7 @@ class _LifetimeMarkingCta extends StatelessWidget {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
     return Material(
-      color: AppTheme.brandCreamCard,
+      color: context.colors.brandCreamCard,
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
@@ -307,9 +307,9 @@ class _LifetimeMarkingCta extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           child: Row(
             children: [
-              const Icon(
+              Icon(
                 Icons.add_circle_outline_rounded,
-                color: AppTheme.brandBlue,
+                color: context.colors.brandBlue,
                 size: 24,
               ),
               const SizedBox(width: 12),
@@ -321,22 +321,22 @@ class _LifetimeMarkingCta extends StatelessWidget {
                       l10n.lifetimeKnowledgeAddCta,
                       style: theme.textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w700,
-                        color: AppTheme.brandInk,
+                        color: context.colors.brandInk,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       l10n.lifetimeKnowledgeAddCtaSubtitle,
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: AppTheme.brandInkMuted,
+                        color: context.colors.brandInkMuted,
                       ),
                     ),
                   ],
                 ),
               ),
-              const Icon(
+              Icon(
                 Icons.chevron_right_rounded,
-                color: AppTheme.brandInkMuted,
+                color: context.colors.brandInkMuted,
               ),
             ],
           ),

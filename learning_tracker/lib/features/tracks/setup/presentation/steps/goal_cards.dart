@@ -1,8 +1,7 @@
 import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// A tappable overlay that blurs and dims [child] when the goal option it
@@ -59,7 +58,7 @@ class BlurInactiveGoalOption extends StatelessWidget {
                         textAlign: TextAlign.center,
                         style: theme.textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.w700,
-                          color: AppTheme.brandBlueDeep,
+                          color: context.colors.brandBlueDeep,
                           height: 1.3,
                         ),
                       ),
@@ -123,7 +122,9 @@ class PaceGoalCard extends StatelessWidget {
         color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: isActive ? AppTheme.brandBlueBright : AppColors.surfaceE9,
+          color: isActive
+              ? context.colors.brandBlueBright
+              : context.colors.surfaceE9,
           width: isActive ? 2 : 1,
         ),
       ),
@@ -134,13 +135,13 @@ class PaceGoalCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                const CircleAvatar(
+                CircleAvatar(
                   radius: 14,
-                  backgroundColor: AppColors.surfaceBlueLight,
+                  backgroundColor: context.colors.surfaceBlueLight,
                   child: Icon(
                     Icons.speed_rounded,
                     size: 16,
-                    color: AppTheme.brandBlueDeep,
+                    color: context.colors.brandBlueDeep,
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -159,7 +160,7 @@ class PaceGoalCard extends StatelessWidget {
                 pacePeriod == 'per_day' ? l10n.pacePerDay : l10n.pacePerWeek,
               ),
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: AppTheme.brandInkMuted,
+                color: context.colors.brandInkMuted,
               ),
             ),
             if (hasUnitChoice && fineKey != null && fineLabel != null) ...[
@@ -208,7 +209,7 @@ class PaceGoalCard extends StatelessWidget {
             Text(
               l10n.goalEstimatedFinish(projectedFinishLabel),
               style: theme.textTheme.bodySmall?.copyWith(
-                color: AppTheme.brandInkMuted,
+                color: context.colors.brandInkMuted,
                 fontStyle: FontStyle.italic,
               ),
             ),
@@ -256,7 +257,9 @@ class DeadlineGoalCard extends StatelessWidget {
         color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: isActive ? AppTheme.brandBlueBright : AppColors.surfaceE9,
+          color: isActive
+              ? context.colors.brandBlueBright
+              : context.colors.surfaceE9,
           width: isActive ? 2 : 1,
         ),
       ),
@@ -267,13 +270,13 @@ class DeadlineGoalCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                const CircleAvatar(
+                CircleAvatar(
                   radius: 14,
-                  backgroundColor: AppColors.peachTint,
+                  backgroundColor: context.colors.peachTint,
                   child: Icon(
                     Icons.calendar_month_rounded,
                     size: 16,
-                    color: AppColors.goldDark,
+                    color: context.colors.goldDark,
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -295,7 +298,7 @@ class DeadlineGoalCard extends StatelessWidget {
                   vertical: 12,
                 ),
                 decoration: BoxDecoration(
-                  color: AppColors.surfaceF4,
+                  color: context.colors.surfaceF4,
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Row(
@@ -304,15 +307,15 @@ class DeadlineGoalCard extends StatelessWidget {
                       dateLabel,
                       style: theme.textTheme.titleMedium?.copyWith(
                         color: isActive
-                            ? AppTheme.brandInk
-                            : AppTheme.brandInkMuted,
+                            ? context.colors.brandInk
+                            : context.colors.brandInkMuted,
                       ),
                     ),
                     const Spacer(),
-                    const Icon(
+                    Icon(
                       Icons.calendar_today_rounded,
                       size: 17,
-                      color: AppTheme.brandInkMuted,
+                      color: context.colors.brandInkMuted,
                     ),
                   ],
                 ),
@@ -324,7 +327,7 @@ class DeadlineGoalCard extends StatelessWidget {
                 Text(
                   l10n.addTrackGoalDeadlinePaceLineLoading,
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: AppTheme.brandInkMuted,
+                    color: context.colors.brandInkMuted,
                     fontStyle: FontStyle.italic,
                   ),
                 )
@@ -356,7 +359,7 @@ class DeadlineGoalCard extends StatelessWidget {
                           studyDaysInWindow,
                         ),
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: AppTheme.brandInkMuted,
+                    color: context.colors.brandInkMuted,
                     fontStyle: FontStyle.italic,
                     height: 1.35,
                   ),

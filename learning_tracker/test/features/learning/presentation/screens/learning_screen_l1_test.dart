@@ -885,88 +885,81 @@ void main() {
   // and chevron_left_rounded never appears (its presence would signal the
   // reintroduced double-flip).
 
-  testWidgets(
-    'Hebrew locale (RTL): task-card and browse-card chevrons stay '
-    'chevron_right_rounded and auto-mirror (no manual chevron_left swap)',
-    (tester) async {
-      await tester.pumpWidget(
-        _buildScreen(
-          curricula: [CurriculumId.mishnayos],
-          tasks: [_task()],
-          locale: const Locale('he'),
-        ),
-      );
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 1));
+  testWidgets('Hebrew locale (RTL): task-card and browse-card chevrons stay '
+      'chevron_right_rounded and auto-mirror (no manual chevron_left swap)', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _buildScreen(
+        curricula: [CurriculumId.mishnayos],
+        tasks: [_task()],
+        locale: const Locale('he'),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
 
-      // Ambient direction really is RTL for the Hebrew locale.
-      final ctx = tester.element(find.byType(LearningScreen));
-      expect(Directionality.of(ctx), TextDirection.rtl);
+    // Ambient direction really is RTL for the Hebrew locale.
+    final ctx = tester.element(find.byType(LearningScreen));
+    expect(Directionality.of(ctx), TextDirection.rtl);
 
-      // The disclosure chevrons are the auto-mirroring glyph, which the Icon
-      // widget flips to point left under RTL (matchTextDirection).
-      expect(
-        find.byWidgetPredicate(
-          (widget) =>
-              widget is Icon && widget.icon == Icons.chevron_right_rounded,
-        ),
-        findsWidgets,
-        reason:
-            'RTL disclosure chevrons must remain chevron_right_rounded; the '
-            'Icon widget mirrors it (matchTextDirection) so it points left.',
-      );
-      expect(Icons.chevron_right_rounded.matchTextDirection, isTrue);
-      expect(
-        find.byWidgetPredicate(
-          (widget) =>
-              widget is Icon && widget.icon == Icons.chevron_left_rounded,
-        ),
-        findsNothing,
-        reason:
-            'chevron_left_rounded must NOT appear in RTL — it also auto-mirrors, '
-            'so a manual rtl→chevron_left swap double-flips and points the '
-            'arrow right again (the R8 device-audit RTL defect, 5564).',
-      );
+    // The disclosure chevrons are the auto-mirroring glyph, which the Icon
+    // widget flips to point left under RTL (matchTextDirection).
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Icon && widget.icon == Icons.chevron_right_rounded,
+      ),
+      findsWidgets,
+      reason:
+          'RTL disclosure chevrons must remain chevron_right_rounded; the '
+          'Icon widget mirrors it (matchTextDirection) so it points left.',
+    );
+    expect(Icons.chevron_right_rounded.matchTextDirection, isTrue);
+    expect(
+      find.byWidgetPredicate(
+        (widget) => widget is Icon && widget.icon == Icons.chevron_left_rounded,
+      ),
+      findsNothing,
+      reason:
+          'chevron_left_rounded must NOT appear in RTL — it also auto-mirrors, '
+          'so a manual rtl→chevron_left swap double-flips and points the '
+          'arrow right again (the R8 device-audit RTL defect, 5564).',
+    );
 
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump(Duration.zero);
-    },
-  );
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(Duration.zero);
+  });
 
-  testWidgets(
-    'English locale (LTR): task-card and browse-card chevrons are '
-    'chevron_right_rounded',
-    (tester) async {
-      await tester.pumpWidget(
-        _buildScreen(curricula: [CurriculumId.mishnayos], tasks: [_task()]),
-      );
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 1));
+  testWidgets('English locale (LTR): task-card and browse-card chevrons are '
+      'chevron_right_rounded', (tester) async {
+    await tester.pumpWidget(
+      _buildScreen(curricula: [CurriculumId.mishnayos], tasks: [_task()]),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
 
-      expect(
-        find.byWidgetPredicate(
-          (widget) =>
-              widget is Icon && widget.icon == Icons.chevron_right_rounded,
-        ),
-        findsWidgets,
-        reason:
-            'In LTR the disclosure chevrons point right via '
-            'chevron_right_rounded (unmirrored).',
-      );
-      expect(
-        find.byWidgetPredicate(
-          (widget) =>
-              widget is Icon && widget.icon == Icons.chevron_left_rounded,
-        ),
-        findsNothing,
-        reason:
-            'chevron_left_rounded is never used for these disclosure rows.',
-      );
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Icon && widget.icon == Icons.chevron_right_rounded,
+      ),
+      findsWidgets,
+      reason:
+          'In LTR the disclosure chevrons point right via '
+          'chevron_right_rounded (unmirrored).',
+    );
+    expect(
+      find.byWidgetPredicate(
+        (widget) => widget is Icon && widget.icon == Icons.chevron_left_rounded,
+      ),
+      findsNothing,
+      reason: 'chevron_left_rounded is never used for these disclosure rows.',
+    );
 
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump(Duration.zero);
-    },
-  );
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(Duration.zero);
+  });
 
   // ── 18. R6-4 regression: streak provider loading/error states ───────────────
   //

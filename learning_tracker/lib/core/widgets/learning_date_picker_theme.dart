@@ -1,70 +1,70 @@
 import 'package:flutter/material.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 
 /// Theme + builder for [showDatePicker] to match app surfaces (white card,
 /// Techelet primary, no M3 surface tint haze).
-ThemeData _learningDatePickerTheme(ThemeData base) {
+ThemeData _learningDatePickerTheme(BuildContext context, ThemeData base) {
   final scheme = base.colorScheme;
   return base.copyWith(
     colorScheme: scheme.copyWith(
-      primary: AppTheme.brandBlue,
+      primary: context.colors.brandBlue,
       onPrimary: Colors.white,
-      surface: AppTheme.brandCreamCard,
-      onSurface: AppTheme.brandInk,
+      surface: context.colors.brandCreamCard,
+      onSurface: context.colors.brandInk,
     ),
     datePickerTheme: DatePickerThemeData(
-      backgroundColor: AppTheme.brandCreamCard,
+      backgroundColor: context.colors.brandCreamCard,
       surfaceTintColor: Colors.transparent,
       shadowColor: Colors.black26,
       elevation: 3,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-      dayStyle: const TextStyle(
-        color: AppTheme.brandInk,
+      dayStyle: TextStyle(
+        color: context.colors.brandInk,
         fontWeight: FontWeight.w500,
         fontSize: 14,
       ),
-      yearStyle: const TextStyle(
-        color: AppTheme.brandBlueDeep,
+      yearStyle: TextStyle(
+        color: context.colors.brandBlueDeep,
         fontWeight: FontWeight.w800,
         fontSize: 16,
       ),
-      headerForegroundColor: AppTheme.brandInk,
-      headerHeadlineStyle: const TextStyle(
-        color: AppTheme.brandInk,
+      headerForegroundColor: context.colors.brandInk,
+      headerHeadlineStyle: TextStyle(
+        color: context.colors.brandInk,
         fontSize: 32,
         fontWeight: FontWeight.w800,
         height: 1.05,
         letterSpacing: -0.5,
       ),
-      headerHelpStyle: const TextStyle(
-        color: AppTheme.brandInkMuted,
+      headerHelpStyle: TextStyle(
+        color: context.colors.brandInkMuted,
         fontSize: 13,
         fontWeight: FontWeight.w500,
       ),
-      weekdayStyle: const TextStyle(
-        color: AppTheme.brandInkMuted,
+      weekdayStyle: TextStyle(
+        color: context.colors.brandInkMuted,
         fontSize: 12,
         fontWeight: FontWeight.w700,
       ),
       dayForegroundColor: WidgetStateProperty.resolveWith((states) {
         if (states.contains(WidgetState.disabled)) {
-          return AppTheme.brandInkSoft;
+          return context.colors.brandInkSoft;
         }
         if (states.contains(WidgetState.selected)) {
           return Colors.white;
         }
-        return AppTheme.brandInk;
+        return context.colors.brandInk;
       }),
       dayBackgroundColor: WidgetStateProperty.resolveWith((states) {
         if (states.contains(WidgetState.selected)) {
-          return AppTheme.brandBlue;
+          return context.colors.brandBlue;
         }
         return null;
       }),
-      todayBorder: const BorderSide(color: AppTheme.brandBlue, width: 1.2),
+      todayBorder: BorderSide(color: context.colors.brandBlue, width: 1.2),
       todayBackgroundColor: WidgetStateProperty.all(Colors.transparent),
-      todayForegroundColor: WidgetStateProperty.all(AppTheme.brandBlue),
-      rangeSelectionBackgroundColor: AppTheme.brandBlueSoft,
+      todayForegroundColor: WidgetStateProperty.all(context.colors.brandBlue),
+      rangeSelectionBackgroundColor: context.colors.brandBlueSoft,
     ),
   );
 }
@@ -72,7 +72,10 @@ ThemeData _learningDatePickerTheme(ThemeData base) {
 /// Use as [showDatePicker] `builder` to apply [learning date picker] styling.
 Widget learningDatePickerThemeBuilder(BuildContext context, Widget? child) {
   if (child == null) return const SizedBox.shrink();
-  return Theme(data: _learningDatePickerTheme(Theme.of(context)), child: child);
+  return Theme(
+    data: _learningDatePickerTheme(context, Theme.of(context)),
+    child: child,
+  );
 }
 
 /// Same visual treatment as the add-track / parent-mode modals, for Gregorian.

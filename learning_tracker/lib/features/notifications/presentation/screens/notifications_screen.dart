@@ -1,8 +1,7 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/notifications/presentation/providers/notification_providers.dart';
 import 'package:learning_tracker/features/notifications/presentation/widgets/device_notification_toggle.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -43,9 +42,9 @@ class NotificationsScreen extends ConsumerWidget {
     ref.watch(streakAlertSyncEffectProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.surfaceF3,
+      backgroundColor: context.colors.surfaceF3,
       appBar: AppBar(
-        backgroundColor: AppColors.surfaceF3,
+        backgroundColor: context.colors.surfaceF3,
         elevation: 0,
         titleSpacing: 0,
         title: Text(
@@ -66,8 +65,8 @@ class NotificationsScreen extends ConsumerWidget {
               _NotificationSwitchRow(
                 key: const Key('reminder_toggle'),
                 icon: Icons.event_note_outlined,
-                iconTint: AppColors.notifReminderIconTint,
-                iconBg: AppColors.notifReminderIconBg,
+                iconTint: context.colors.notifReminderIconTint,
+                iconBg: context.colors.notifReminderIconBg,
                 title: l10n.notifDailyReminder,
                 subtitle: l10n.notifDailyReminderSubtitle,
                 value: reminderEnabled,
@@ -110,8 +109,8 @@ class NotificationsScreen extends ConsumerWidget {
               _NotificationSwitchRow(
                 key: const Key('streak_alert_toggle'),
                 icon: Icons.local_fire_department_rounded,
-                iconTint: AppColors.notifStreakIconTint,
-                iconBg: AppColors.notifStreakIconBg,
+                iconTint: context.colors.notifStreakIconTint,
+                iconBg: context.colors.notifStreakIconBg,
                 title: l10n.notifStreakAlert,
                 subtitle: l10n.notifStreakAlertSubtitle,
                 value: streakAlertEnabled,
@@ -155,8 +154,8 @@ class NotificationsScreen extends ConsumerWidget {
               _NotificationSwitchRow(
                 key: const Key('reward_notification_toggle'),
                 icon: Icons.auto_awesome_rounded,
-                iconTint: AppColors.notifRewardIconTint,
-                iconBg: AppColors.notifRewardIconBg,
+                iconTint: context.colors.notifRewardIconTint,
+                iconBg: context.colors.notifRewardIconBg,
                 title: l10n.notifRewardMilestones,
                 subtitle: l10n.notifRewardMilestonesSubtitle,
                 value: rewardEnabled,
@@ -187,13 +186,13 @@ class _SettingsGroupCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTheme.brandCreamCard,
+        color: context.colors.brandCreamCard,
         borderRadius: BorderRadius.circular(22),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
-            color: AppColors.notifCardShadow,
+            color: context.colors.notifCardShadow,
             blurRadius: 16,
-            offset: Offset(0, 6),
+            offset: const Offset(0, 6),
           ),
         ],
       ),
@@ -251,19 +250,19 @@ class _NotificationSwitchRow extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 21,
                     fontWeight: FontWeight.w700,
-                    color: AppColors.notifTitleText,
+                    color: context.colors.notifTitleText,
                     height: 1,
                   ),
                 ),
                 const SizedBox(height: 3),
                 Text(
                   subtitle,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
-                    color: AppColors.notifSubtitleText,
+                    color: context.colors.notifSubtitleText,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -286,9 +285,9 @@ class _NotificationSwitchRow extends StatelessWidget {
                 child: Switch(
                   value: value,
                   activeThumbColor: Colors.white,
-                  activeTrackColor: AppColors.blueMid,
+                  activeTrackColor: context.colors.blueMid,
                   inactiveThumbColor: Colors.white,
-                  inactiveTrackColor: AppColors.surfaceE9,
+                  inactiveTrackColor: context.colors.surfaceE9,
                   onChanged: onChanged,
                 ),
               ),
@@ -319,13 +318,13 @@ class _SettingsTimeRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textColor = enabled
-        ? AppColors.notifTimeTextEnabled
-        : AppColors.notifTimeTextDisabled;
+        ? context.colors.notifTimeTextEnabled
+        : context.colors.notifTimeTextDisabled;
     return ListTile(
       key: key,
       enabled: enabled,
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
-      leading: Icon(icon, size: 18, color: AppColors.blueLight),
+      leading: Icon(icon, size: 18, color: context.colors.blueLight),
       title: Text(
         title,
         style: TextStyle(
@@ -368,7 +367,7 @@ class _TopBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
       decoration: BoxDecoration(
-        color: AppColors.notifHotStreakBadge,
+        color: context.colors.notifHotStreakBadge,
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(

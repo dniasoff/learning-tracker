@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Amber tip card shown below the achievements list with a pro-tip about
@@ -13,14 +13,14 @@ class ProTipCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppColors.gamifProTipCardBg,
+        color: context.colors.gamifProTipCardBg,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.gamifProTipBorder),
-        boxShadow: const [
+        border: Border.all(color: context.colors.gamifProTipBorder),
+        boxShadow: [
           BoxShadow(
-            color: AppColors.gamifProTipShadow,
+            color: context.colors.gamifProTipShadow,
             blurRadius: 8,
-            offset: Offset(0, 2),
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -29,12 +29,12 @@ class ProTipCard extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Padding(
-              padding: EdgeInsets.only(top: 1),
+            Padding(
+              padding: const EdgeInsets.only(top: 1),
               child: Icon(
                 Icons.lightbulb_rounded,
                 size: 26,
-                color: AppColors.gamifProTipTitleText,
+                color: context.colors.gamifProTipTitleText,
               ),
             ),
             const SizedBox(width: 12),
@@ -42,15 +42,15 @@ class ProTipCard extends StatelessWidget {
               child: Text.rich(
                 TextSpan(
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.gamifTierBronzeTitle,
+                    color: context.colors.gamifTierBronzeTitle,
                     height: 1.4,
                   ),
                   children: [
                     TextSpan(
                       text: '${l10n.achievementsProTipTitle} ',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.w800,
-                        color: AppColors.gamifTierBronzeTagFg,
+                        color: context.colors.gamifTierBronzeTagFg,
                       ),
                     ),
                     TextSpan(text: l10n.achievementsProTipBody),

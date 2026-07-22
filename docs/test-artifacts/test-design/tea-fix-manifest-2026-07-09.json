@@ -1,0 +1,344 @@
+{
+  "engine": "tea-fix",
+  "base": "audit-fix/2026-07-03",
+  "baseSha": "4cf217ec",
+  "branch": "tea-fix/2026-07-09",
+  "maxParallel": 6,
+  "maxParallelWhileStandardsFleetActive": 3,
+  "plan": "docs/test-artifacts/test-design/test-turnaround-plan-2026-07-09.md",
+  "amendment_1": "2026-07-09 audit supplement folded in (see plan Amendment 1 section). Item deltas: TEA-FIX-013 device-state precondition (TEA-S05); NEW item TEA-FIX-011b Add-Track wizard verifiers (TEA-S07); TEA-FIX-009 PIN-keypad RTL assertion (TEA-S11); TEA-FIX-010 reference-exemplar conversion (TEA-S12); TEA-FIX-012 locale seam + artifact collection + offline-seam prerequisite (TEA-S06/S13/S14); TEA-FIX-014 non-overflow Hebrew assertions (TEA-S16); TEA-FIX-015 sync pre-flight/provisioning/teardown (TEA-S08); TEA-FIX-018 dead-gate set (TEA-S03/S02/S09). Frozen and UNCHANGED: T0 items TEA-FIX-001..005 (mid-execution). Operational note: baseline-repair TEA-FIX-000 in flight (red DL1 scheduler test + flaky sink-close in audit_and_arb_parity_test at baseSha 4cf217ec); the standards wave-1 relaunch hits the same red baseline.",
+  "rules": {
+    "never_commit_to": ["audit-fix/2026-07-03", "dev"],
+    "merge_model": "serialized merges onto tea-fix/2026-07-09; sonnet builders in isolated worktrees; opus adversarial reviewers; bounce cap 3",
+    "wave_exit_gate": "cd learning_tracker && make ci green, plus wave-specific acceptance",
+    "new_gate_rule": "every new quality gate ships a proven red demonstration (introduce defect class, watch gate fire, revert) recorded in acceptance evidence",
+    "interruption": "journal-harvest completed worktree commits then fresh-relaunch remaining items; never resume a killed run; no orphan-worktree cleanup before TEA-FIX-008 lands",
+    "wave_boundary": "rebase tea-fix onto audit-fix HEAD; expect Makefile/ci.yml conflicts; human review of wave summary"
+  },
+  "waves": [
+    {
+      "id": "T0",
+      "title": "Signature test artifacts (host-only, additive, new files only, zero wave-4 contention)",
+      "concurrency_note": "5 builders staggered, <=3 concurrent while standards wave 1 runs; all items file-disjoint",
+      "exit": "make ci green on tea-fix; all five red demonstrations recorded; no active wave-4 batch file edited",
+      "items": [
+        {
+          "id": "TEA-FIX-001",
+          "refs": ["TEA-002", "TEA-007"],
+          "title": "Collision fixtures + lifetime property invariant + READ-TIME migration assertions",
+          "builder_model": "sonnet",
+          "reviewer_model": "opus",
+          "effort": "L",
+          "instructions": "Work in learning_tracker/. (1) Create test/fixtures/collision_fixtures.dart: a shared fixture module seeding two curricula that share BARE level2/3/4 unit identifiers — Bereishis and Shemos both containing 'perek 1', Berakhos and Shabbos both containing 'daf 2' — mirroring the real Torah content shape that caused escapes e22fb126/bf92cde9. (2) Create test/core/content/lifetime_collision_property_test.dart: add glados as a dev-dependency in pubspec.yaml (SCOPED usage: this layer only); property test asserting sum(per-leaf credits) == count(distinctly-marked leaves) across randomized id assignments over the collision fixtures, driven through the real scope-id/aggregation code (content_grouping.dart scopeUnitIdentifier + lifetime tree builder). If glados conflicts with the pinned analyzer, fall back to a hand-rolled seeded random generator implementing the same invariant and note it in the PR. (3) Create test/core/database/user/migration_readtime_test.dart: seed a REAL per-account Drift DB (in-memory, PRAGMA foreign_keys=ON) at schema v29 with the corrupt ledger rows from the 98d5e64b escape (stray level1 synthetic-container ledger row), run migrations v30/v31/v32, then assert the READ-TIME aggregate (drop-then-aggregate query, the same path production reads) equals the correct total — NOT merely that the migration statements ran. Also add drift schema snapshots for the migration steps and a verifySelfMigration call. (4) HARD CONSTRAINT: do NOT modify lib/core/content/content_grouping.dart or lib/features/progress/presentation/providers/items_learned_providers.dart — wave-1 AUD-progress-01 owns that production code; this item adds only test-side artifacts that pass against the current fixed code and fail if it regresses.",
+          "acceptance": [
+            "cd learning_tracker && flutter test test/core/content/lifetime_collision_property_test.dart test/core/database/user/migration_readtime_test.dart",
+            "RED DEMO: git stash apply a temporary revert of content_grouping.dart's ancestor-qualified scope id (restore bare unitIdentifier for level2) -> flutter test test/core/content/lifetime_collision_property_test.dart FAILS -> git checkout -- lib/core/content/content_grouping.dart; attach failing output to review evidence",
+            "cd learning_tracker && make ci"
+          ],
+          "files_hint": [
+            "learning_tracker/test/fixtures/collision_fixtures.dart",
+            "learning_tracker/test/core/content/lifetime_collision_property_test.dart",
+            "learning_tracker/test/core/database/user/migration_readtime_test.dart",
+            "learning_tracker/pubspec.yaml"
+          ]
+        },
+        {
+          "id": "TEA-FIX-002",
+          "refs": ["TEA-004"],
+          "title": "Provider-reactivity contract with fail-closed derivedProviderRegistry manifest",
+          "builder_model": "sonnet",
+          "reviewer_model": "opus",
+          "effort": "M",
+          "instructions": "Work in learning_tracker/. Create test/core/providers/reactivity_contract_test.dart containing: (1) a const derivedProviderRegistry — a table of {provider, upstreamMutation} entries; for each entry the harness spins a fresh ProviderContainer with seeded fakes, reads the provider's initial value, applies the upstream mutation (bump the completionCommittedProvider tick, or invalidate/mutate the named source), pumps the container, and asserts the provider re-emits a new value (not the stale snapshot). (2) A MANIFEST CHECK: enumerate every @riverpod derived provider in the covered feature dirs (features/progress, features/gamification, features/tracks, features/dashboard sync-badge providers) via the generated provider list, and FAIL the test if any enumerated derived provider is absent from derivedProviderRegistry — new providers must opt in; omission is a red build, which is what makes the 63-escape fix durable rather than a one-time sweep. (3) Seed the registry from the escaped set: itemsLearnedDataProvider, lifetimeViewDataProvider, curriculumProgressProvider (d5b53992), points/redemption/achievement balance providers (0699e9b9/237fd876 class), goal-after-EditTrack (fc9073a6), sync badge (66a3e0b0). Do not modify any production provider code.",
+          "acceptance": [
+            "cd learning_tracker && flutter test test/core/providers/reactivity_contract_test.dart",
+            "RED DEMO: temporarily revert one ref.watch(completionCommittedProvider) in a seeded provider (e.g. items_learned_providers.dart line ~182) -> contract test FAILS on that registry entry -> restore file; attach failing output",
+            "MANIFEST DEMO: add a dummy @riverpod derived provider in a covered dir without registering it -> manifest check FAILS -> remove dummy",
+            "cd learning_tracker && make ci"
+          ],
+          "files_hint": [
+            "learning_tracker/test/core/providers/reactivity_contract_test.dart"
+          ]
+        },
+        {
+          "id": "TEA-FIX-003",
+          "refs": ["TEA-014", "TEA-015"],
+          "title": "Merge-router VALUE-binding test (real provider) + malformed-payload codec fixtures",
+          "builder_model": "sonnet",
+          "reviewer_model": "opus",
+          "effort": "M",
+          "instructions": "Work in learning_tracker/. (1) Create test/core/sync/merge_router_binding_test.dart that INSTANTIATES the real mergeRouterProvider (lib/core/sync/providers/merge_router_provider.dart) inside a ProviderContainer — NOT a hand-wired clone like the existing two_device_sync_test/pull_on_launch_test _buildRouter() copies — and asserts every registered EntityKind resolves to its expected CONCRETE merger type by VALUE (expect(router.mergerFor(EntityKind.goal), isA<GoalMerger>()) style, full table over all ~24 kinds). The existing epic_25_story_13_merge_router_test only greps the source for key presence and misses wrong-value mis-bindings (goal -> StageDefinitionMerger ships green today); this test closes exactly that class. (2) Create test/core/sync/codec/malformed_payload_test.dart: for EVERY codec in lib/core/sync/codec/, feed decode() a payload with a null, garbage, and type-mismatched value in every column, asserting decode() returns null per the entity_codec.dart contract (lines 48-52) instead of throwing. Explicitly cover goal_codec.dart:77 (target_percent as num?) and track_codec.dart:85,89 (profile_id as int?) with String/bool/double mismatches. (3) Do NOT fix the unsafe casts in production code — that is register item AUD-core-sync-05 (wave 2); mark the currently-throwing cases as expected-failure entries with a reference to AUD-core-sync-05 so the test flips to hard-green when wave 2 lands.",
+          "acceptance": [
+            "cd learning_tracker && flutter test test/core/sync/merge_router_binding_test.dart test/core/sync/codec/malformed_payload_test.dart",
+            "RED DEMO A: temporarily rebind one EntityKind to a wrong merger in merge_router_provider.dart -> binding test FAILS -> restore; attach output",
+            "RED DEMO B: run the target_percent String-payload case against current code -> demonstrates the throw AUD-core-sync-05 will fix (expected-failure entry) -> attach output",
+            "cd learning_tracker && make ci"
+          ],
+          "files_hint": [
+            "learning_tracker/test/core/sync/merge_router_binding_test.dart",
+            "learning_tracker/test/core/sync/codec/malformed_payload_test.dart"
+          ]
+        },
+        {
+          "id": "TEA-FIX-004",
+          "refs": ["TEA-031", "TEA-008", "TEA-005", "TEA-011"],
+          "title": "Live en+he goldens on bundled NotoSansHebrew; delete /home/daniel font path; make golden-update",
+          "builder_model": "sonnet",
+          "reviewer_model": "opus",
+          "effort": "M",
+          "instructions": "Work in learning_tracker/. (1) In the EXISTING test/flutter_test_config.dart, add a golden-tag-scoped loadAppFonts() that loads the ALREADY-BUNDLED assets/fonts/NotoSansHebrew-Regular.ttf (plus a bundled Latin fallback, e.g. Inter-Regular.ttf) via FontLoader from rootBundle — deterministic across machines and CI; no new asset. (2) Delete the machine-locked '/home/daniel/fvm/...' material_fonts path at test/golden/store_screenshots_test.dart:25 and route it through the same bundled-font loader. (3) Flip skipGolden:false in test/helpers/golden_runner.dart:39 (change the default/call sites so goldens actually assert). (4) Baseline en + he for 4 canonical surfaces — dashboard, learning, profile-switcher, active-tracks card — at ONE fixed profile: 411x891 logical, DPR 2.0 -> ~8 baseline PNGs committed under test/golden/goldens/. (5) Regenerate baselines with 'flutter test --update-goldens --tags golden' directly — the 'make golden-update' wrapper target is owned by TEA-FIX-005 (sole Makefile owner in T0, keeps T0 items file-disjoint). Diff PNGs on failure upload via the existing ci.yml artifact steps; do not add new CI jobs.",
+          "acceptance": [
+            "cd learning_tracker && flutter test --update-goldens --tags golden && flutter test --tags golden",
+            "RED DEMO: nudge one directional padding in a baselined surface from EdgeInsetsDirectional to physical left: -> he golden diffs RED with diff PNG produced -> revert; attach diff artifact",
+            "git status shows ~8 committed baseline PNGs and no /home/daniel string under test/ (grep -r '/home/daniel' test/ returns nothing)",
+            "cd learning_tracker && make ci"
+          ],
+          "files_hint": [
+            "learning_tracker/test/flutter_test_config.dart",
+            "learning_tracker/test/golden/store_screenshots_test.dart",
+            "learning_tracker/test/helpers/golden_runner.dart",
+            "learning_tracker/test/golden/goldens/"
+          ]
+        },
+        {
+          "id": "TEA-FIX-005",
+          "refs": ["TEA-037", "AUD-guardrails-29"],
+          "title": "make ci format-check parity + golden-update target + stale ci.yml floor comment (sole Makefile owner in T0)",
+          "builder_model": "sonnet",
+          "reviewer_model": "opus",
+          "effort": "S",
+          "instructions": "Work in learning_tracker/ and repo root. This item is the SOLE Makefile owner in T0 (keeps T0 items file-disjoint). (1) Add the EXISTING format-check target (learning_tracker/Makefile:263, dart format --set-exit-if-changed .) as a prerequisite of the ci target in learning_tracker/Makefile so local make ci matches CLAUDE.md's documented workflow and the remote CI format-check job. (2) Add a 'golden-update' target wrapping 'flutter test --update-goldens --tags golden' (companion to TEA-FIX-004's golden work; the target is a pure wrapper and works regardless of merge order). (3) Fix the stale '50%'/floor comment in .github/workflows/ci.yml near the coverage block. (4) Change NOTHING else in the pipeline — the coverage-gate replacement is TEA-FIX-006 (wave T1); keep this item's diff minimal to reduce Makefile/ci.yml rebase conflict surface with the standards engine.",
+          "acceptance": [
+            "RED DEMO: intentionally mis-format one dart file -> cd learning_tracker && make ci FAILS at format-check -> revert file; attach output",
+            "make -n golden-update prints the flutter test --update-goldens --tags golden command",
+            "cd learning_tracker && make ci (green on clean tree)"
+          ],
+          "files_hint": [
+            "learning_tracker/Makefile",
+            ".github/workflows/ci.yml"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "T0G",
+      "title": "Early device gate: parent-PIN AutoRoute nav-guard journey on @5556 (judge-mandated pull-forward from T3)",
+      "concurrency_note": "STRICTLY SERIAL: 1 builder, 1 reviewer; standards fleet must be DOWN; boot @5556 only",
+      "exit": "PIN journey green on @5556; red demo vs reverted b8464ccc completer fix recorded; @5556 seeded data (Parent PIN 2580) intact; make ci unchanged and green",
+      "items": [
+        {
+          "id": "TEA-FIX-013",
+          "refs": ["TEA-006", "TEA-S05"],
+          "title": "integration_test parent-PIN nav-guard journey: real AutoRoute guard push-and-await + keepAlive race",
+          "builder_model": "sonnet",
+          "reviewer_model": "opus",
+          "effort": "M",
+          "instructions": "Work in learning_tracker/. Create integration_test/parent_pin_nav_guard_test.dart driving the REAL AutoRoute guard + PinFlowSetupRoute push-and-await on-device (the b8464ccc seam widget tests structurally cannot reach): (1) first-time-setup journey — assert the guard's resolver.next fires after PIN setup, the Parent hub opens, and no infinite re-push loop occurs; (2) keepAlive race case — dispatch digit gestures synchronously before any microtask drains (a0c85409/24acaf78 classes) and assert the flow neither freezes at 4 dots nor routes digits to _handleVerify during setup. Run manually on emulator-5556 (API36 tablet: seeded child data, Parent PIN 2580) — do NOT wipe the device; a wipe invalidates the App Check debug token and Firestore denies writes (re-register per the documented runbook if it ever happens). AMENDMENT 1 (TEA-S05, BLOCKING device-state precondition): @5556 already holds Parent PIN 2580, so pin_guard.dart:101-113 takes the VERIFY path and the b8464ccc first-time-setup completer seam is never reached -- the mandated red demo cannot fire (green-but-wrong). Resolve one of two ways: (preferred) a targeted setUp deleting ONLY the parent-PIN key from FlutterSecureStorage (NO wipe -- child Drift data and the App Check debug token survive) with a tearDown restoring PIN 2580; OR run the no-PIN setup case on clean @5554 and keep @5556 for a seeded verify-path case. Make the state precondition explicit in acceptance and confirm the red demo ACTUALLY fires (a green-but-wrong verify-path run does not count). Boot the assigned device ALONE and only while the standards fleet is down (15GB host). This journey is later absorbed unchanged into the T3 run_lane.sh harness; do not build the lane script here.",
+          "acceptance": [
+            "PRECONDITION (Amendment 1, TEA-S05): first-time-setup seam reached -- parent-PIN key cleared in setUp / restored in tearDown on @5556 (no wipe), OR the no-PIN case run on clean @5554; state precondition asserted before the journey body",
+            "cd learning_tracker && flutter test integration_test/parent_pin_nav_guard_test.dart -d emulator-5556 (green)",
+            "RED DEMO: in a scratch build, revert the b8464ccc push-result-completer fix -> CONFIRM the journey actually hangs/fails on-device (a green-but-wrong verify-path run does not count) -> restore; attach logcat evidence",
+            "@5556 seeded data verified intact post-run (Parent PIN 2580 still set)",
+            "cd learning_tracker && make ci (unchanged, green)"
+          ],
+          "files_hint": [
+            "learning_tracker/integration_test/parent_pin_nav_guard_test.dart"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "T1",
+      "title": "Gate hardening: risk-tiered coverage gate, burn-in/quarantine flake policy, stranded-fix harvest",
+      "concurrency_note": "3 builders + 2 reviewers; floors calibrated on measured post-T0 lcov numbers",
+      "exit": "make ci green; coverage + burn-in gates each demonstrated red-then-green; quarantine lane exists with DNI-ticketed expected-failures; c13e6623 harvested",
+      "items": [
+        {
+          "id": "TEA-FIX-006",
+          "refs": ["TEA-013"],
+          "title": "tool/coverage_gate.dart: every-file-in-lcov hard-fail + risk-tiered per-directory floors (core/sync|auth|database >=85%, core/ids|sync/providers >=70%, UI/l10n >=50%), replacing the flat 60% awk block; visible ticketed allowlist only for genuinely un-instrumentable abstract files",
+          "builder_model": "sonnet",
+          "reviewer_model": "opus",
+          "effort": "M",
+          "acceptance": [
+            "dart run tool/coverage_gate.dart green in CI test job",
+            "RED DEMO A: add empty untested lib/foo.dart -> absence gate fires",
+            "RED DEMO B: delete a core/sync test dropping the dir below 85% -> tier gate fires"
+          ]
+        },
+        {
+          "id": "TEA-FIX-007",
+          "refs": ["TEA-038", "TEA-036", "TEA-016"],
+          "title": "CI burn-in job (changed *_test.dart vs merge-base, 20x with --test-randomize-ordering-seed random), audit greps rejecting bare pumpAndSettle() and DNI-less skips (extends AG-6), convert infra_p1_test.dart R-IC11/BUG-NEW skips to @Tags(['quarantine']) ticketed expected-failures; auto-retry-on-fail rejected",
+          "builder_model": "sonnet",
+          "reviewer_model": "opus",
+          "effort": "M",
+          "acceptance": [
+            "burn-in job green on clean changeset",
+            "RED DEMO: order-dependent flaky test -> 20x run red; bare pumpAndSettle() -> audit fires"
+          ]
+        },
+        {
+          "id": "TEA-FIX-008",
+          "refs": ["TEA-017", "TEA-037"],
+          "title": "Harvest verified AUD-firebase-04 fix (c13e6623) from unlocked worktree .claude/worktrees/wf_911a9826-c9a-3 BEFORE any orphan-worktree cleanup (Cloud Functions CI gate); install pre-commit hook per CLAUDE.md",
+          "builder_model": "sonnet",
+          "reviewer_model": "opus",
+          "effort": "S",
+          "acceptance": [
+            "Cloud Functions test job present and green in ci.yml; git log shows harvested commit",
+            "installed hook runs on commit"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "T2",
+      "title": "Screen-integration + RTL harness variant for 3 canonical screens + Add-Track wizard; kill the tautological PIN-guard test; convert the reference exemplar journey",
+      "concurrency_note": "4 builders + 2 reviewers; DO NOT START until wave-4 batch ownership for the exact target files is confirmed clear (human decision point 3); carry aud_overlap: TQ-8",
+      "exit": "make ci green; three canonical screens assert domain content in en+he; Add-Track wizard step denominator stable; reference exemplar asserts router.currentPath over seeded data; an2 PIN-guard test proven able to fail on a real provider regression",
+      "items": [
+        {
+          "id": "TEA-FIX-009",
+          "refs": ["TEA-011", "TEA-029", "TEA-S11"],
+          "title": "test/helpers/pump_both_directions.dart: shared en/LTR + he/RTL dual-render harness with key-based finders and TextDirection assertions (harness only; migrates just the T2 canonical set). [Amendment 1, TEA-S11] ADD a PIN-keypad LTR digit-order assertion under Locale('he') -- the one headless-reachable run-6 escape (mirrored 3-2-1 keypad); assert the failing property (digit order) not presence. Do NOT otherwise expand headless journeys for RTL/IME/overflow classes (orthogonal per TEA-S11)",
+          "builder_model": "sonnet",
+          "reviewer_model": "opus",
+          "effort": "M",
+          "acceptance": [
+            "flutter test test/helpers/ green; harness renders he/RTL without the overflow_harness en default",
+            "PIN-keypad digit order asserted LTR under Locale('he') (fails on a mirrored keypad)"
+          ]
+        },
+        {
+          "id": "TEA-FIX-010",
+          "refs": ["TEA-010", "TEA-030", "TEA-S12"],
+          "title": "Dashboard/learning/profile-switcher screens: replace 100%-provider overrides with drift_memory/firestore_fake seeded seam; assert rendered domain content + one error-state and one loading-state case each, via pump_both_directions. [Amendment 1, TEA-S12] ALSO convert test/e2e/journeys/reference_onboarding_to_dashboard_journey_test.dart (the template other journeys copy): drop dashboardSilenceOverrides, seed real dashboard data and assert the derived numbers render, and assert navigation via the existing-but-unused router.currentPath getter (e2e_harness.dart:411) or a route-unique widget, not persistent bottom-nav labels",
+          "builder_model": "sonnet",
+          "reviewer_model": "opus",
+          "effort": "L",
+          "acceptance": [
+            "flutter test test/features/dashboard test/features/learning test/features/profiles green",
+            "grep confirms the three screens no longer assert only find.byType(Scaffold); error+loading cases present",
+            "reference journey asserts router.currentPath (not bottom-nav labels) over seeded dashboard data"
+          ]
+        },
+        {
+          "id": "TEA-FIX-011",
+          "refs": ["TEA-009"],
+          "title": "Rewrite an2_switcher_pin_guard_test.dart to drive the REAL switcherSheetPinGuardRequiredProvider with a fake secure-storage seam; tester.tap; destructive callback blocked until correct PIN, wrong PIN stays blocked; delete the hand-copied decision",
+          "builder_model": "sonnet",
+          "reviewer_model": "opus",
+          "effort": "M",
+          "acceptance": [
+            "flutter test test/features/profiles/presentation/an2_switcher_pin_guard_test.dart green",
+            "RED DEMO: break the child-mode check in the provider -> test red (previously green)"
+          ]
+        },
+        {
+          "id": "TEA-FIX-011b",
+          "refs": ["TEA-S07"],
+          "title": "[Amendment 1] Add-Track wizard host-side state-logic verifiers: the recurring TS-11 step-count no-op (run-7 H1-H3, identical on all 3 devices; plus H7 snackbar/hub name mismatch) is host-catchable state logic that verifiers re-attributed from the device lane and was owned by no wave. Drive the wizard through the drift_memory/firestore_fake seam (reuse pump_both_directions); assert a stable step denominator across the wizard (no 6->7 drift) and the correct post-create hub landing + snackbar label. Confirm target files are NOT in an in-flight wave-4 batch; carry aud_overlap: TQ-8",
+          "builder_model": "sonnet",
+          "reviewer_model": "opus",
+          "effort": "M",
+          "acceptance": [
+            "flutter test for the Add-Track wizard tests green; step denominator stable across the wizard",
+            "RED DEMO: reintroduce the TS-11 step-count no-op -> the denominator assertion fails"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "T3",
+      "title": "Device e2e lane completion (local/manual, plain integration_test, NOT in make ci; patrol rejected)",
+      "concurrency_note": "SERIAL: 2 builders max, 1 reviewer; MAX 2 concurrent emulators; never co-run with standards fleet; @5556 seeded data protected; App Check token re-register is scripted pre-flight",
+      "exit": "All journeys (incl. absorbed T0G PIN journey) pass on assigned devices; run_lane.sh pre-flight re-registers App Check token, lands the locale-override seam (both sources) before TEA-FIX-014, and emits durable per-journey artifacts (logcat + screenshots + JUnit/exit); make ci unchanged and green",
+      "amendment_1_journey_set_decision": "Routed to human decision point 5 (TEA-S07/S14): the 3-journey lane maps to 0/18 run-7 escapes. RECOMMENDED addition -- one tutoring invite->accept->enter-session journey (worst-passing suite both runs, catalog P0-highest-risk, covered by nothing); do not add silently, get Daniel's ruling. BLOCKED -- the offline device journey depends on a net-new debug connectivity-override seam (static InternetConnectionChecker.instance singleton, TEA-019/040) not overridable from an integration_test driving app.main(); log as a prerequisite and FORBID the airplane-mode shortcut (it kills App Check, conflating offline with auth-denied).",
+      "items": [
+        {
+          "id": "TEA-FIX-012",
+          "refs": ["TEA-006", "TEA-S06", "TEA-S13", "TEA-S14"],
+          "title": "tool/device_e2e/run_lane.sh lane harness: boots <=2 emulators, App Check token re-register pre-flight, shards journeys by tag; absorbs parent_pin_nav_guard journey unchanged. [Amendment 1, TEA-S06 -- LAND THE LOCALE SEAM FIRST] the he locale-override entrypoint names a seam that does not exist (learning_tracker_app.dart:84 hardcodes locale:null; LearningTrackerApp has no locale param); pick the mechanism explicitly (tester.platformDispatcher.localeTestValue = zero app-code change, an emulator device-locale set, or a debug locale param through bootstrap()), cover BOTH locale sources (MaterialApp resolution + resolveDeviceUiLocale/currentAppLocale), and land it BEFORE TEA-FIX-014 dispatches. [Amendment 1, TEA-S13 -- ARTIFACT COLLECTION] run_lane.sh must capture adb logcat to a per-journey file + grep it for RenderFlex/overflow, provide a screenshot mechanism (test_driver/ + flutter drive integrationDriver(onScreenshot:), or reuse the proven tool/device_e2e screencap path), and emit a per-journey JUnit/exit artifact -- the universal red-demo rule is otherwise uncheckable. [Amendment 1, TEA-S14] log the offline connectivity-override seam (static InternetConnectionChecker singleton, TEA-019/040) as a prerequisite for any future offline journey and forbid the airplane-mode shortcut",
+          "builder_model": "sonnet",
+          "reviewer_model": "opus",
+          "effort": "M",
+          "acceptance": [
+            "bash tool/device_e2e/run_lane.sh --devices 5554,5558 boots, re-registers token, runs smoke journey on both, exits non-zero on any failure",
+            "PIN journey runs under the lane on @5556",
+            "locale-override seam lands and covers both locale sources before TEA-FIX-014 dispatches",
+            "each journey emits logcat capture + screenshots + a JUnit/exit artifact"
+          ]
+        },
+        {
+          "id": "TEA-FIX-014",
+          "refs": ["TEA-011", "TEA-005", "TEA-S16"],
+          "title": "integration_test/hebrew_smoke_test.dart on @5558 via he locale-override entrypoint: core surfaces, zero RenderFlex overflow, directional chrome mirrors (thin smoke; pixel verification lives in T0 goldens). [Amendment 1, TEA-S16] overflow-only assertions miss the real run-7 Hebrew defects (H4 9px ShaderMask clip, H11 invisible Taharos/6th seder, H8 'daf bet' word-break -- none throw RenderFlex overflow); add visibility/hit-test assertions on the last item of scrollable lists (Friday row, 6th seder) + an NBSP/word-integrity check on breadcrumbs, and state this journey's device delta (real Noto shaping + real DPR) vs the headless overflow_sweep_p2_test.dart so scope is not duplicated",
+          "builder_model": "sonnet",
+          "reviewer_model": "opus",
+          "effort": "M",
+          "acceptance": [
+            "journey green on @5558 in Hebrew; logcat shows zero RenderFlex overflow on walked screens",
+            "last-item visibility/hit-test + breadcrumb word-integrity assertions present and pass; device delta vs overflow_sweep_p2_test.dart stated"
+          ]
+        },
+        {
+          "id": "TEA-FIX-015",
+          "refs": ["TEA-014", "TEA-S08"],
+          "title": "integration_test/sync_entity_roundtrip_test.dart: push+pull one row of each entity type end-to-end through real sync_orchestrator_providers against cloud test accounts (test-loop-a/c@orvex.test, active tutor grant), @5554<->@5558 two-device pairing. [Amendment 1, TEA-S08] add a scripted positive pre-flight that performs one known authorized write and asserts it lands (App Check activate() failures are silently swallowed with a 10s timeout -- firebase_bootstrap.dart:39-41 -- so a stale token surfaces as a confusing merge failure not an auth error); provision/verify the test accounts idempotently (gcloud admin email-verify step per tool/device_e2e/README.md:24); namespace or tear down each run's docs on the shared accounts; consider the Firestore emulator for the full matrix and reserve prod for a thin smoke",
+          "builder_model": "sonnet",
+          "reviewer_model": "opus",
+          "effort": "L",
+          "acceptance": [
+            "two-device round-trip green",
+            "positive pre-flight write asserted to land before the journey runs; per-run docs namespaced/torn down",
+            "RED DEMO: mis-bind one entity's merger -> corresponding row corrupts/drops and journey fails"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "T4",
+      "title": "Parked coverage holes + deploy gate (safe non-overlapping targets, all ledger-verified parked)",
+      "concurrency_note": "3 builders + 2 reviewers; TEA-FIX-018 deploy gating requires human decision point 2 sign-off before dispatch",
+      "exit": "make ci green; parked items closed; deploy proven blocked on red CI; coverage tiers hold at calibrated floors",
+      "items": [
+        {
+          "id": "TEA-FIX-016",
+          "refs": ["TEA-021", "AUD-guardrails-04", "AUD-guardrails-06", "AUD-guardrails-16", "AUD-guardrails-36", "AUD-guardrails-37", "AUD-scheduler-04"],
+          "title": "Parked test-quality bundle: sefaria_mongo ref-parsing unit tests; no_e_to_string_in_ui/no_raw_logevent lint-rule coverage through the real rules; real AG-6 TODO/FIXME check; GoalRepositoryImpl not-found/delete-sync regression tests",
+          "builder_model": "sonnet",
+          "reviewer_model": "opus",
+          "effort": "M",
+          "acceptance": [
+            "flutter test green for each new file; make audit green with real AG-6 check demonstrated firing on a DNI-less TODO"
+          ]
+        },
+        {
+          "id": "TEA-FIX-017",
+          "refs": ["TEA-034", "TEA-032", "TEA-027", "TEA-026", "TEA-024", "TEA-023"],
+          "title": "P2 coverage-gap closures: upgrade_to_cloud_screen scenarios (success/mid-migration rollback/per-profile scoping); google_sign_in_gateway_impl error mapping; study_day_config remoteIsNewer tie-break; completion_dao profile-scoping negatives exercising the predicate; content-search seeded from real ancestor-qualified shape; navigation-reachability + FK-order on real DB",
+          "builder_model": "sonnet",
+          "reviewer_model": "opus",
+          "effort": "L",
+          "acceptance": [
+            "flutter test green per target; tool/coverage_gate.dart shows core/auth and upgrade_to_cloud_screen above tier",
+            "RED DEMO: leaf-name fixture against the search-shape test fails"
+          ]
+        },
+        {
+          "id": "TEA-FIX-018",
+          "refs": ["TEA-018", "AUD-guardrails-14", "TEA-046", "TEA-049", "TEA-S03", "TEA-S02", "TEA-S09"],
+          "title": "Gate deploy-play-store.yml on green CI for the exact deployed SHA (re-promote parked deploy gate); delete two dead 100%-skipped placeholder test files; consolidate copy-pasted skip-if-absent soft-gate into one reusable step. [Amendment 1, dead-gate set -- all S-effort] fix/remove the dead gates test-story-6.5 / test-story-10.5 (Makefile:41/:65 -- --name matches zero tests, TEA-S03); delete or repoint test-story-13.1/13.2 + the epic_13 skipped placeholder groups + invariant N1 at the live sync suites that replaced them (TEA-S02); add a zero-tests-ran guard to the test-story-% pattern so a --name filter matching nothing FAILS instead of passing green; optionally rename test/e2e/ -> test/widget_journeys/ or add a README disclaimer (TEA-S09)",
+          "builder_model": "sonnet",
+          "reviewer_model": "opus",
+          "effort": "M",
+          "acceptance": [
+            "tag-push dry-run shows deploy blocked without green CI for the SHA; placeholder files gone; make ci green",
+            "the two dead story gates fixed/removed and the test-story-% pattern fails on zero tests run; retired 13.1/13.2 gates + N1 repointed or deleted"
+          ]
+        }
+      ]
+    }
+  ]
+}

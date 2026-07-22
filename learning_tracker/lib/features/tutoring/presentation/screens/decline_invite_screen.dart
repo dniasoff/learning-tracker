@@ -19,8 +19,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
@@ -183,9 +182,9 @@ class _DeclineInviteScreenState extends ConsumerState<DeclineInviteScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: AppTheme.brandCream,
+      backgroundColor: context.colors.brandCream,
       appBar: AppBar(
-        backgroundColor: AppTheme.brandCream,
+        backgroundColor: context.colors.brandCream,
         elevation: 0,
         title: Text(AppLocalizations.of(context)!.declineInviteAppBarTitle),
       ),
@@ -233,13 +232,13 @@ class _DeclineInviteScreenState extends ConsumerState<DeclineInviteScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const SizedBox(height: 16),
-                  const CircleAvatar(
+                  CircleAvatar(
                     radius: 36,
-                    backgroundColor: AppColors.statusWarningSoft,
+                    backgroundColor: context.colors.statusWarningSoft,
                     child: Icon(
                       Icons.do_not_disturb_on_rounded,
                       size: 36,
-                      color: AppColors.statusWarningSoftText,
+                      color: context.colors.statusWarningSoftText,
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -248,7 +247,7 @@ class _DeclineInviteScreenState extends ConsumerState<DeclineInviteScreen> {
                     textAlign: TextAlign.center,
                     style: theme.textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.w800,
-                      color: AppTheme.brandInk,
+                      color: context.colors.brandInk,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -256,7 +255,7 @@ class _DeclineInviteScreenState extends ConsumerState<DeclineInviteScreen> {
                     l10n.declineInviteConfirmBody,
                     textAlign: TextAlign.center,
                     style: theme.textTheme.bodyLarge?.copyWith(
-                      color: AppTheme.brandInkMuted,
+                      color: context.colors.brandInkMuted,
                       height: 1.4,
                     ),
                   ),
@@ -274,7 +273,7 @@ class _DeclineInviteScreenState extends ConsumerState<DeclineInviteScreen> {
                   OutlinedButton(
                     onPressed: () => context.router.pop(),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: AppTheme.brandInk,
+                      foregroundColor: context.colors.brandInk,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: const StadiumBorder(),
                     ),
@@ -322,13 +321,13 @@ class _DeclineInviteScreenState extends ConsumerState<DeclineInviteScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const CircleAvatar(
+                  CircleAvatar(
                     radius: 40,
-                    backgroundColor: AppColors.statusSuccessSoftBg,
+                    backgroundColor: context.colors.statusSuccessSoftBg,
                     child: Icon(
                       Icons.check_circle_rounded,
                       size: 48,
-                      color: AppColors.statusSuccessSoftText,
+                      color: context.colors.statusSuccessSoftText,
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -337,7 +336,7 @@ class _DeclineInviteScreenState extends ConsumerState<DeclineInviteScreen> {
                     textAlign: TextAlign.center,
                     style: theme.textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.w800,
-                      color: AppTheme.brandInk,
+                      color: context.colors.brandInk,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -345,7 +344,7 @@ class _DeclineInviteScreenState extends ConsumerState<DeclineInviteScreen> {
                     l10n.declineInviteSuccessBody,
                     textAlign: TextAlign.center,
                     style: theme.textTheme.bodyLarge?.copyWith(
-                      color: AppTheme.brandInkMuted,
+                      color: context.colors.brandInkMuted,
                       height: 1.4,
                     ),
                   ),
@@ -388,13 +387,13 @@ class _DeclineInviteScreenState extends ConsumerState<DeclineInviteScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const CircleAvatar(
+                  CircleAvatar(
                     radius: 40,
-                    backgroundColor: AppColors.statusErrorCardBg,
+                    backgroundColor: context.colors.statusErrorCardBg,
                     child: Icon(
                       Icons.error_rounded,
                       size: 48,
-                      color: AppColors.statusErrorCardText,
+                      color: context.colors.statusErrorCardText,
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -403,7 +402,7 @@ class _DeclineInviteScreenState extends ConsumerState<DeclineInviteScreen> {
                     textAlign: TextAlign.center,
                     style: theme.textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.w800,
-                      color: AppTheme.brandInk,
+                      color: context.colors.brandInk,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -411,7 +410,7 @@ class _DeclineInviteScreenState extends ConsumerState<DeclineInviteScreen> {
                     _errorMessage ?? l10n.unexpectedError,
                     textAlign: TextAlign.center,
                     style: theme.textTheme.bodyLarge?.copyWith(
-                      color: AppTheme.brandInkMuted,
+                      color: context.colors.brandInkMuted,
                       height: 1.4,
                     ),
                   ),

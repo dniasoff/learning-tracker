@@ -6,8 +6,7 @@ import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/curriculum_visuals.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
 import 'package:learning_tracker/core/widgets/empty_state.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
@@ -56,7 +55,7 @@ class ProgressScreen extends ConsumerWidget {
 
     final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      backgroundColor: AppColors.surfaceF4b,
+      backgroundColor: context.colors.surfaceF4b,
       body: Theme(
         data: baseTheme.copyWith(
           textTheme: interTextTheme,
@@ -162,7 +161,7 @@ class _LensTile extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: AppColors.blueNavy.withValues(alpha: 0.06),
+              color: context.colors.blueNavy.withValues(alpha: 0.06),
               blurRadius: 12,
               offset: const Offset(0, 5),
             ),
@@ -194,15 +193,15 @@ class _LensTile extends StatelessWidget {
                   Text(
                     subtitle,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppTheme.brandInkMuted,
+                      color: context.colors.brandInkMuted,
                     ),
                   ),
                 ],
               ),
             ),
-            const Icon(
+            Icon(
               Icons.chevron_right_rounded,
-              color: AppTheme.brandInkMuted,
+              color: context.colors.brandInkMuted,
             ),
           ],
         ),
@@ -237,7 +236,7 @@ class _SiyumimMilestonesLensTile extends ConsumerWidget {
     return _LensTile(
       icon: Icons.emoji_events_outlined,
       iconBgColor: const Color(0xFFFFF4E0),
-      iconColor: AppColors.chartAmber,
+      iconColor: context.colors.chartAmber,
       title: l10n.tierLensSiyumimMilestones,
       subtitle: l10n.myLearningJourneySubtitle,
       onTap: () => context.router.push(SiyumimMilestonesRoute()),
@@ -254,7 +253,7 @@ class _LifetimeKnowledgeLensTile extends ConsumerWidget {
     return _LensTile(
       icon: Icons.menu_book_outlined,
       iconBgColor: const Color(0xFFEEF3FF),
-      iconColor: AppTheme.brandBlue,
+      iconColor: context.colors.brandBlue,
       title: l10n.tierLensLifetimeKnowledge,
       subtitle: l10n.itemsLearnedSubtitle,
       onTap: () => context.router.push(const LifetimeKnowledgeRoute()),
@@ -301,7 +300,7 @@ class _PerTrackSection extends ConsumerWidget {
                 style: theme.textTheme.labelMedium?.copyWith(
                   letterSpacing: 0.8,
                   fontWeight: FontWeight.w800,
-                  color: AppTheme.brandInkMuted,
+                  color: context.colors.brandInkMuted,
                 ),
               ),
             ),
@@ -344,7 +343,7 @@ class _PerTrackRow extends ConsumerWidget {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: AppColors.blueNavy.withValues(alpha: 0.05),
+              color: context.colors.blueNavy.withValues(alpha: 0.05),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -362,7 +361,7 @@ class _PerTrackRow extends ConsumerWidget {
               ),
               child: Icon(
                 curriculumIcon(curriculum),
-                color: AppTheme.brandBlue,
+                color: context.colors.brandBlue,
                 size: 20,
               ),
             ),
@@ -387,14 +386,14 @@ class _PerTrackRow extends ConsumerWidget {
                       Text(
                         '${l10n.trackProgress}: $trackPct',
                         style: theme.textTheme.bodySmall?.copyWith(
-                          color: AppTheme.brandInkMuted,
+                          color: context.colors.brandInkMuted,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                       Text(
                         '${l10n.lifetimeLabel}: $lifetimePct',
                         style: theme.textTheme.bodySmall?.copyWith(
-                          color: AppTheme.brandInkMuted,
+                          color: context.colors.brandInkMuted,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -403,9 +402,9 @@ class _PerTrackRow extends ConsumerWidget {
                 ],
               ),
             ),
-            const Icon(
+            Icon(
               Icons.chevron_right_rounded,
-              color: AppTheme.brandInkMuted,
+              color: context.colors.brandInkMuted,
             ),
           ],
         ),

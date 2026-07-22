@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Animated hero illustration for the third intro page ("Earn While You Learn").
@@ -35,20 +34,20 @@ class IntroRewardsHeroIllustration extends StatelessWidget {
             Container(
               width: 132,
               height: 132,
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: AppColors.introNavy,
+                color: context.colors.introNavy,
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.scrimDark,
+                    color: context.colors.scrimDark,
                     blurRadius: 18,
-                    offset: Offset(0, 10),
+                    offset: const Offset(0, 10),
                   ),
                 ],
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.emoji_events_rounded,
-                color: AppColors.goldTrophy,
+                color: context.colors.goldTrophy,
                 size: 68,
               ),
             ),
@@ -58,13 +57,13 @@ class IntroRewardsHeroIllustration extends StatelessWidget {
               child: Container(
                 width: 44,
                 height: 44,
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: AppColors.introPeach,
+                  color: context.colors.introPeach,
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.star,
-                  color: AppTheme.brandInk,
+                  color: context.colors.brandInk,
                   size: 24,
                 ),
               ),
@@ -80,13 +79,13 @@ class IntroRewardsHeroIllustration extends StatelessWidget {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: AppColors.accentCoral,
+                    color: context.colors.accentCoral,
                     borderRadius: BorderRadius.circular(6),
-                    boxShadow: const [
+                    boxShadow: [
                       BoxShadow(
-                        color: AppColors.introCardShadow,
+                        color: context.colors.introCardShadow,
                         blurRadius: 6,
-                        offset: Offset(0, 3),
+                        offset: const Offset(0, 3),
                       ),
                     ],
                   ),
@@ -95,16 +94,16 @@ class IntroRewardsHeroIllustration extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.local_fire_department,
                         size: 14,
-                        color: AppTheme.brandCreamCard,
+                        color: context.colors.brandCreamCard,
                       ),
                       const SizedBox(width: 4),
                       Text(
                         AppLocalizations.of(context)!.streak,
                         style: GoogleFonts.plusJakartaSans(
-                          color: AppTheme.brandCreamCard,
+                          color: context.colors.brandCreamCard,
                           fontSize: 9,
                           fontWeight: FontWeight.w800,
                         ),
@@ -134,10 +133,10 @@ class IntroFeatureCardsRow extends StatelessWidget {
           child: _FeatureCard(
             icon: Icons.military_tech_outlined,
             label: l10n.introBadgeCollection,
-            bottomBorder: AppColors.introNavy,
-            circleColor: AppColors.introBadgeBg,
-            textColor: AppColors.introNavy,
-            iconColor: AppColors.introNavy,
+            bottomBorder: context.colors.introNavy,
+            circleColor: context.colors.introBadgeBg,
+            textColor: context.colors.introNavy,
+            iconColor: context.colors.introNavy,
           ),
         ),
         const SizedBox(width: 12),
@@ -145,10 +144,10 @@ class IntroFeatureCardsRow extends StatelessWidget {
           child: _FeatureCard(
             icon: Icons.card_giftcard_rounded,
             label: l10n.introMysteryPrizes,
-            bottomBorder: AppColors.introMysteryBorder,
-            circleColor: AppColors.introMysteryBg,
-            textColor: AppColors.introMysteryText,
-            iconColor: AppColors.introMysteryIcon,
+            bottomBorder: context.colors.introMysteryBorder,
+            circleColor: context.colors.introMysteryBg,
+            textColor: context.colors.introMysteryText,
+            iconColor: context.colors.introMysteryIcon,
           ),
         ),
       ],
@@ -178,12 +177,12 @@ class _FeatureCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 16, 12, 0),
       decoration: BoxDecoration(
-        color: AppTheme.brandCreamCard,
+        color: context.colors.brandCreamCard,
         borderRadius: BorderRadius.circular(20),
         border: Border(bottom: BorderSide(color: bottomBorder, width: 3)),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.brandInk.withValues(alpha: 0.07),
+            color: context.colors.brandInk.withValues(alpha: 0.07),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -230,9 +229,11 @@ class IntroChildModeTag extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
       decoration: BoxDecoration(
-        color: AppColors.introBadgeBg,
+        color: context.colors.introBadgeBg,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.introNavy.withValues(alpha: 0.18)),
+        border: Border.all(
+          color: context.colors.introNavy.withValues(alpha: 0.18),
+        ),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -241,14 +242,14 @@ class IntroChildModeTag extends StatelessWidget {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: AppColors.introNavy.withValues(alpha: 0.12),
+              color: context.colors.introNavy.withValues(alpha: 0.12),
               shape: BoxShape.circle,
             ),
             alignment: Alignment.center,
-            child: const Icon(
+            child: Icon(
               Icons.child_care_rounded,
               size: 22,
-              color: AppColors.introNavy,
+              color: context.colors.introNavy,
             ),
           ),
           const SizedBox(width: 12),
@@ -259,7 +260,7 @@ class IntroChildModeTag extends StatelessWidget {
                 Text(
                   AppLocalizations.of(context)!.introChildModeTagTitle,
                   style: GoogleFonts.plusJakartaSans(
-                    color: AppColors.introNavy,
+                    color: context.colors.introNavy,
                     fontSize: 14,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 0.2,
@@ -269,7 +270,7 @@ class IntroChildModeTag extends StatelessWidget {
                 Text(
                   AppLocalizations.of(context)!.introChildModeTagBody,
                   style: GoogleFonts.plusJakartaSans(
-                    color: AppColors.introNavy.withValues(alpha: 0.75),
+                    color: context.colors.introNavy.withValues(alpha: 0.75),
                     fontSize: 12.5,
                     height: 1.35,
                     fontWeight: FontWeight.w500,
@@ -303,11 +304,11 @@ class IntroScholarLevelCard extends ConsumerWidget {
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
       decoration: BoxDecoration(
-        color: AppTheme.brandCreamCard,
+        color: context.colors.brandCreamCard,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.brandInk.withValues(alpha: 0.06),
+            color: context.colors.brandInk.withValues(alpha: 0.06),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -322,7 +323,7 @@ class IntroScholarLevelCard extends ConsumerWidget {
                 // Generic label — avoids implying the user is at "Level 4".
                 l10n.introScholarProgress,
                 style: GoogleFonts.plusJakartaSans(
-                  color: AppTheme.brandInk,
+                  color: context.colors.brandInk,
                   fontSize: 15,
                   fontWeight: FontWeight.w800,
                 ),
@@ -332,13 +333,13 @@ class IntroScholarLevelCard extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                 decoration: BoxDecoration(
-                  color: AppColors.introNavy.withValues(alpha: 0.1),
+                  color: context.colors.introNavy.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
                   l10n.introScholarExample,
                   style: GoogleFonts.plusJakartaSans(
-                    color: AppColors.introNavy,
+                    color: context.colors.introNavy,
                     fontSize: 9,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 0.4,
@@ -356,7 +357,7 @@ class IntroScholarLevelCard extends ConsumerWidget {
                     width: c.maxWidth,
                     height: 8,
                     decoration: BoxDecoration(
-                      color: AppColors.introScholarTrackBg,
+                      color: context.colors.introScholarTrackBg,
                       borderRadius: BorderRadius.circular(999),
                     ),
                   ),
@@ -366,9 +367,9 @@ class IntroScholarLevelCard extends ConsumerWidget {
                       // Decorative fill — not tied to any real value.
                       width: c.maxWidth * 0.6,
                       height: 8,
-                      decoration: const BoxDecoration(
-                        color: AppColors.introProgressFillGreen,
-                        borderRadius: BorderRadius.horizontal(
+                      decoration: BoxDecoration(
+                        color: context.colors.introProgressFillGreen,
+                        borderRadius: const BorderRadius.horizontal(
                           left: Radius.circular(999),
                         ),
                       ),
@@ -385,7 +386,7 @@ class IntroScholarLevelCard extends ConsumerWidget {
               Text(
                 l10n.introScholarNovice,
                 style: GoogleFonts.plusJakartaSans(
-                  color: AppTheme.brandInkSoft,
+                  color: context.colors.brandInkSoft,
                   fontSize: 9,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.3,
@@ -394,7 +395,7 @@ class IntroScholarLevelCard extends ConsumerWidget {
               Text(
                 talmidChochomCapsLabel,
                 style: GoogleFonts.plusJakartaSans(
-                  color: AppTheme.brandInkSoft,
+                  color: context.colors.brandInkSoft,
                   fontSize: useHebrew ? 11 : 9,
                   fontWeight: FontWeight.w700,
                   letterSpacing: useHebrew ? 0 : 0.3,

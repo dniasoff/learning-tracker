@@ -10,6 +10,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart'
     show RewardTier;
 import 'package:learning_tracker/features/gamification/presentation/widgets/tier_icon_box.dart';
@@ -39,7 +40,11 @@ void main() {
           _wrap(
             locale: const Locale('he'),
             child: TierIconBox(
-              scheme: TierStyle.forTier(RewardTier.bronze, false),
+              scheme: TierStyle.forTier(
+                AppPalette.light,
+                RewardTier.bronze,
+                false,
+              ),
               unlocked: false,
               comingSoon: true,
               rewardIconIndex: 0,
@@ -77,7 +82,11 @@ void main() {
           _wrap(
             locale: const Locale('en'),
             child: TierIconBox(
-              scheme: TierStyle.forTier(RewardTier.bronze, false),
+              scheme: TierStyle.forTier(
+                AppPalette.light,
+                RewardTier.bronze,
+                false,
+              ),
               unlocked: false,
               comingSoon: true,
               rewardIconIndex: 0,

@@ -14,8 +14,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/tutoring/domain/services/tutor_pin_service.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_pin_providers.dart';
 import 'package:learning_tracker/features/tutoring/presentation/screens/tutor_pin_reset_screen.dart';
@@ -215,9 +214,9 @@ class _TutorPinEntryGateState extends ConsumerState<TutorPinEntryGate> {
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      backgroundColor: AppTheme.brandCream,
+      backgroundColor: context.colors.brandCream,
       appBar: AppBar(
-        backgroundColor: AppTheme.brandCream,
+        backgroundColor: context.colors.brandCream,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.close_rounded),
@@ -233,13 +232,13 @@ class _TutorPinEntryGateState extends ConsumerState<TutorPinEntryGate> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: 16),
-              const CircleAvatar(
+              CircleAvatar(
                 radius: 36,
-                backgroundColor: AppColors.tutorPinBadgeBg,
+                backgroundColor: context.colors.tutorPinBadgeBg,
                 child: Icon(
                   Icons.lock_person_rounded,
                   size: 36,
-                  color: AppColors.tutorPinBadgeIcon,
+                  color: context.colors.tutorPinBadgeIcon,
                 ),
               ),
               const SizedBox(height: 20),
@@ -248,7 +247,7 @@ class _TutorPinEntryGateState extends ConsumerState<TutorPinEntryGate> {
                 textAlign: TextAlign.center,
                 style: theme.textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.w800,
-                  color: AppTheme.brandInk,
+                  color: context.colors.brandInk,
                 ),
               ),
               const SizedBox(height: 8),
@@ -256,7 +255,7 @@ class _TutorPinEntryGateState extends ConsumerState<TutorPinEntryGate> {
                 l10n.tutorPinEntryBody,
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodyLarge?.copyWith(
-                  color: AppTheme.brandInkMuted,
+                  color: context.colors.brandInkMuted,
                 ),
               ),
               const SizedBox(height: 32),
@@ -301,7 +300,7 @@ class _TutorPinEntryGateState extends ConsumerState<TutorPinEntryGate> {
                 onPressed: _openResetFlow,
                 child: Text(
                   l10n.tutorPinForgot,
-                  style: const TextStyle(color: AppTheme.brandInkMuted),
+                  style: TextStyle(color: context.colors.brandInkMuted),
                 ),
               ),
             ],
@@ -352,11 +351,15 @@ class _TutorPinDotsRow extends StatelessWidget {
             height: 18,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: filled ? AppTheme.brandInk : AppTheme.brandOutlineMuted,
+              color: filled
+                  ? context.colors.brandInk
+                  : context.colors.brandOutlineMuted,
               border: Border.all(
                 color: filled
-                    ? AppTheme.brandInk
-                    : AppColors.tutorPinKeyDisabled.withValues(alpha: 0.35),
+                    ? context.colors.brandInk
+                    : context.colors.tutorPinKeyDisabled.withValues(
+                        alpha: 0.35,
+                      ),
               ),
             ),
           ),
@@ -384,8 +387,8 @@ class _TutorPinNumpad extends StatelessWidget {
         onTap: () => onDigit(d),
         child: Text(
           d,
-          style: const TextStyle(
-            color: AppTheme.brandInk,
+          style: TextStyle(
+            color: context.colors.brandInk,
             fontSize: 24,
             fontWeight: FontWeight.w600,
           ),
@@ -459,7 +462,7 @@ class _TutorPinKey extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: AppTheme.brandCreamSoft,
+      color: context.colors.brandCreamSoft,
       borderRadius: BorderRadius.circular(999),
       clipBehavior: Clip.antiAlias,
       child: InkWell(

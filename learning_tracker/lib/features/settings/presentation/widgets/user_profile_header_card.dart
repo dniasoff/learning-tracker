@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 // AUD-settings-09: route cross-feature references through the account/
 // profiles barrels (Rule 2) instead of 6 deep imports into their domain
 // models and presentation providers.
@@ -110,13 +110,13 @@ class UserProfileHeaderCard extends ConsumerWidget {
     final (badgeLabel, badgeColor, badgeTextColor) = switch (contextRole) {
       UserProfileContextRole.parent => (
         l10n.parentContextBadge,
-        AppColors.settingsProfileBadgeParentBg,
-        AppColors.settingsProfileBadgeParentText,
+        context.colors.settingsProfileBadgeParentBg,
+        context.colors.settingsProfileBadgeParentText,
       ),
       UserProfileContextRole.tutor => (
         l10n.tutorContextBadge,
-        AppColors.settingsProfileBadgeTutorBg,
-        AppColors.accentBurntOrange,
+        context.colors.settingsProfileBadgeTutorBg,
+        context.colors.accentBurntOrange,
       ),
       UserProfileContextRole.selfLearner => (
         l10n.selfLearnerBadge,
@@ -145,7 +145,7 @@ class UserProfileHeaderCard extends ConsumerWidget {
               height: 58,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: AppColors.settingsProfileAvatarRing,
+                color: context.colors.settingsProfileAvatarRing,
                 border: Border.all(color: Colors.white, width: 2),
               ),
               child: Container(
@@ -205,7 +205,7 @@ class UserProfileHeaderCard extends ConsumerWidget {
                     Text(
                       user.email!,
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: AppColors.inkMidGrey,
+                        color: context.colors.inkMidGrey,
                         fontSize: 16,
                       ),
                     ),
@@ -251,12 +251,12 @@ class _SettingsProfileSurface extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.surfaceE9),
-        boxShadow: const [
+        border: Border.all(color: context.colors.surfaceE9),
+        boxShadow: [
           BoxShadow(
-            color: AppColors.settingsProfileCardShadow,
+            color: context.colors.settingsProfileCardShadow,
             blurRadius: 16,
-            offset: Offset(0, 5),
+            offset: const Offset(0, 5),
           ),
         ],
       ),
@@ -286,11 +286,11 @@ class _ParentProfileSurface extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
-            color: AppColors.settingsProfileParentCardShadow,
+            color: context.colors.settingsProfileParentCardShadow,
             blurRadius: 16,
-            offset: Offset(0, 6),
+            offset: const Offset(0, 6),
           ),
         ],
       ),
@@ -405,10 +405,10 @@ class _NoBackupInlineText extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Icon(
+        Icon(
           Icons.cloud_off,
           size: 12,
-          color: AppColors.settingsProfileNoBackupAccent,
+          color: context.colors.settingsProfileNoBackupAccent,
         ),
         const SizedBox(width: 4),
         Flexible(
@@ -417,7 +417,7 @@ class _NoBackupInlineText extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: theme.textTheme.labelSmall?.copyWith(
-              color: AppColors.settingsProfileNoBackupAccent,
+              color: context.colors.settingsProfileNoBackupAccent,
               fontWeight: FontWeight.w600,
               fontSize: 14,
             ),

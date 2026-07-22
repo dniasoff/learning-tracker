@@ -6,7 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:learning_tracker/core/domain/value_objects/program_starting_position.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/providers/calendar_providers.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/scheduler/scheduler.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -174,7 +174,7 @@ class _StartingPositionCalendarModeState
           Text(
             l10n.startingPositionHint,
             style: theme.textTheme.titleMedium?.copyWith(
-              color: AppTheme.brandInkMuted,
+              color: context.colors.brandInkMuted,
             ),
           ),
           const SizedBox(height: 18),
@@ -193,7 +193,7 @@ class _StartingPositionCalendarModeState
                 borderRadius: BorderRadius.circular(28),
               ),
               backgroundColor: const Color(0xFFE9EBF1),
-              foregroundColor: AppTheme.brandInk,
+              foregroundColor: context.colors.brandInk,
             ),
             child: Text(l10n.actionUseToday),
           ),
@@ -257,13 +257,13 @@ class _StartingPositionCalendarModeState
             padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
             child: Column(
               children: [
-                const CircleAvatar(
+                CircleAvatar(
                   radius: 34,
-                  backgroundColor: Color(0xFFE6E8FF),
+                  backgroundColor: const Color(0xFFE6E8FF),
                   child: Icon(
                     Icons.calendar_today_rounded,
                     size: 28,
-                    color: AppTheme.brandBlueDeep,
+                    color: context.colors.brandBlueDeep,
                   ),
                 ),
                 const SizedBox(height: 14),
@@ -271,7 +271,7 @@ class _StartingPositionCalendarModeState
                   l10n.startingPositionTargetDate,
                   style: theme.textTheme.titleSmall?.copyWith(
                     letterSpacing: 1.1,
-                    color: AppTheme.brandInkMuted,
+                    color: context.colors.brandInkMuted,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -280,7 +280,7 @@ class _StartingPositionCalendarModeState
                   dateLabel,
                   textAlign: TextAlign.center,
                   style: theme.textTheme.headlineMedium?.copyWith(
-                    color: AppTheme.brandBlueDeep,
+                    color: context.colors.brandBlueDeep,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -369,7 +369,7 @@ class _StartingPositionCalendarModeState
                       _directionLabel(l10n),
                       style: theme.textTheme.titleSmall?.copyWith(
                         letterSpacing: 1.1,
-                        color: AppTheme.brandInkMuted,
+                        color: context.colors.brandInkMuted,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -450,7 +450,7 @@ class _StartingPositionCalendarModeState
                 refLabel,
                 textAlign: TextAlign.center,
                 style: theme.textTheme.titleLarge?.copyWith(
-                  color: AppTheme.brandInk,
+                  color: context.colors.brandInk,
                   fontWeight: FontWeight.w800,
                 ),
               );
@@ -519,8 +519,8 @@ class _OffsetButton extends StatelessWidget {
           icon,
           size: 30,
           color: enabled
-              ? AppTheme.brandBlueDeep
-              : AppTheme.brandInkMuted.withValues(alpha: 0.45),
+              ? context.colors.brandBlueDeep
+              : context.colors.brandInkMuted.withValues(alpha: 0.45),
         ),
       ),
     );

@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 
-const Color _kNavy = AppTheme.brandBlueDeep;
-const Color _kFieldFill = AppColors.gamifFieldFillLight;
-const Color _kMutedLabel = AppColors.gamifMutedLabelGrey;
+Color _kNavy(BuildContext context) => context.colors.brandBlueDeep;
+Color _kFieldFill(BuildContext context) => context.colors.gamifFieldFillLight;
+Color _kMutedLabel(BuildContext context) => context.colors.gamifMutedLabelGrey;
 
 /// Two-segment toggle for choosing between per-track and total-points reward
 /// ladders.
@@ -29,7 +28,7 @@ class RewardTypeSegmented extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: _kFieldFill,
+        color: _kFieldFill(context),
         borderRadius: BorderRadius.circular(24),
       ),
       child: Row(
@@ -71,7 +70,7 @@ class _Seg extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const baseMuted = _kMutedLabel;
+    final baseMuted = _kMutedLabel(context);
     final labelColor = !enabled
         ? baseMuted.withValues(alpha: 0.35)
         : (selected ? Colors.white : baseMuted);
@@ -86,7 +85,7 @@ class _Seg extends StatelessWidget {
           alignment: Alignment.center,
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            color: selected ? _kNavy : Colors.transparent,
+            color: selected ? _kNavy(context) : Colors.transparent,
             borderRadius: BorderRadius.circular(20),
           ),
           child: Text(

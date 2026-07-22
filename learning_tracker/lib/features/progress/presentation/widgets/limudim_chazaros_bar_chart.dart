@@ -3,15 +3,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/progress/domain/models/chart_data.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Limud (stage-1 / initial learning) segment colour.
-const Color _kLimudColor = AppColors.blueMid;
+Color _kLimudColor(BuildContext context) => context.colors.blueMid;
 
 /// Chazara (stage ≥ 2 / review) segment colour.
-const Color _kChazaraColor = AppColors.progressChazaraSegment;
+Color _kChazaraColor(BuildContext context) =>
+    context.colors.progressChazaraSegment;
 
 /// Two-colour stacked bar chart for the Recent Activity screen.
 ///
@@ -107,9 +108,9 @@ class LimudimChazarosBarChart extends ConsumerWidget {
                           padding: const EdgeInsets.only(top: 6),
                           child: Text(
                             weekdayLabel[d.weekday] ?? '',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 9,
-                              color: AppColors.progressBarAxisLabel,
+                              color: context.colors.progressBarAxisLabel,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -149,19 +150,19 @@ class LimudimChazarosBarChart extends ConsumerWidget {
                                   BarChartRodStackItem(
                                     0,
                                     data[i].limudCount.toDouble(),
-                                    _kLimudColor,
+                                    _kLimudColor(context),
                                   ),
                                   BarChartRodStackItem(
                                     data[i].limudCount.toDouble(),
                                     data[i].total.toDouble(),
-                                    _kChazaraColor,
+                                    _kChazaraColor(context),
                                   ),
                                 ]
                               : [
                                   BarChartRodStackItem(
                                     0,
                                     data[i].total.toDouble(),
-                                    _kLimudColor,
+                                    _kLimudColor(context),
                                   ),
                                 ],
                         ),
@@ -197,10 +198,10 @@ class _Legend extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        _LegendDot(color: _kLimudColor, label: limudLabel),
+        _LegendDot(color: _kLimudColor(context), label: limudLabel),
         if (chazarosLabel != null) ...[
           const SizedBox(width: 16),
-          _LegendDot(color: _kChazaraColor, label: chazarosLabel!),
+          _LegendDot(color: _kChazaraColor(context), label: chazarosLabel!),
         ],
       ],
     );
@@ -227,7 +228,7 @@ class _LegendDot extends StatelessWidget {
         Text(
           label,
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
-            color: AppColors.progressBarLegendLabel,
+            color: context.colors.progressBarLegendLabel,
             fontWeight: FontWeight.w700,
           ),
         ),

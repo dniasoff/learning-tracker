@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Blue summary card at the top of the achievements list showing
@@ -17,19 +16,19 @@ class ProgressSummaryCard extends StatelessWidget {
   final int unlocked;
   final int total;
 
-  static const Color _kBrandBlue = AppTheme.brandBlue;
+  static Color _kBrandBlue(BuildContext context) => context.colors.brandBlue;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: _kBrandBlue,
+        color: _kBrandBlue(context),
         borderRadius: BorderRadius.circular(20),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
-            color: AppColors.navItemSelectedShadow,
+            color: context.colors.navItemSelectedShadow,
             blurRadius: 16,
-            offset: Offset(0, 8),
+            offset: const Offset(0, 8),
           ),
         ],
       ),
@@ -46,8 +45,8 @@ class ProgressSummaryCard extends StatelessWidget {
             top: -8,
             child: Container(
               padding: const EdgeInsets.all(6),
-              decoration: const BoxDecoration(
-                color: AppColors.statusErrorCardText,
+              decoration: BoxDecoration(
+                color: context.colors.statusErrorCardText,
                 shape: BoxShape.circle,
               ),
               child: const Icon(

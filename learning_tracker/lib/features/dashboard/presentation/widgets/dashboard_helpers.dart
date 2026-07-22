@@ -1,27 +1,33 @@
 import 'package:flutter/material.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/scheduler/scheduler.dart';
 
 /// Color constants shared across dashboard widgets.
 
 /// Primary blue for active-track CTA (design spec).
-const Color kActiveTrackPrimaryBlue = AppTheme.brandBlue;
+Color kActiveTrackPrimaryBlue(BuildContext context) => context.colors.brandBlue;
 
 /// Green completion bar (self-paced card).
-const Color kActiveTrackCompletionGreen = AppColors.statusSuccess;
+Color kActiveTrackCompletionGreen(BuildContext context) =>
+    context.colors.statusSuccess;
 
 /// Grey pill behind next-task / current-focus content.
-const Color kActiveTrackFocusPillBg = AppTheme.brandCreamSoft;
+Color kActiveTrackFocusPillBg(BuildContext context) =>
+    context.colors.brandCreamSoft;
 
 /// Lifetime bar on the "all caught up" dashboard stats card (design spec).
-const Color kAllCaughtUpProgressFill = AppColors.goldTrophy;
+Color kAllCaughtUpProgressFill(BuildContext context) =>
+    context.colors.goldTrophy;
 
 /// Child dashboard — points & rewards hero (design spec).
-const Color kChildRewardsCardBlueTop = AppColors.blueMedium;
-const Color kChildRewardsCardBlueDeep = AppColors.blueDeepNavy;
-const Color kChildRewardsProgressTrack = AppColors.blueNavy;
-const Color kChildRewardsProgressFill = AppColors.statusSuccess;
+Color kChildRewardsCardBlueTop(BuildContext context) =>
+    context.colors.blueMedium;
+Color kChildRewardsCardBlueDeep(BuildContext context) =>
+    context.colors.blueDeepNavy;
+Color kChildRewardsProgressTrack(BuildContext context) =>
+    context.colors.blueNavy;
+Color kChildRewardsProgressFill(BuildContext context) =>
+    context.colors.statusSuccess;
 
 class DashboardTaskGroups {
   const DashboardTaskGroups({

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
-const Color _kNavy = AppTheme.brandBlueDeep;
+Color _kNavy(BuildContext context) => context.colors.brandBlueDeep;
 
 /// App-bar-style header for [RewardConfigurationScreen] with a back button,
 /// centred title, and a three-dot menu that opens the "Manage rewards" sheet.
@@ -51,7 +51,7 @@ class RewardConfigHeader extends StatelessWidget {
                     context,
                   ).backButtonTooltip,
                 ),
-                color: _kNavy,
+                color: _kNavy(context),
                 onPressed: onBack,
               ),
             ),
@@ -59,8 +59,8 @@ class RewardConfigHeader extends StatelessWidget {
               child: Text(
                 title,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: _kNavy,
+                style: TextStyle(
+                  color: _kNavy(context),
                   fontWeight: FontWeight.w800,
                   fontSize: 18,
                 ),
@@ -70,7 +70,7 @@ class RewardConfigHeader extends StatelessWidget {
               width: 48,
               child: PopupMenuButton<String>(
                 padding: EdgeInsets.zero,
-                icon: const Icon(Icons.more_vert_rounded, color: _kNavy),
+                icon: Icon(Icons.more_vert_rounded, color: _kNavy(context)),
                 onSelected: onMenuSelected,
                 itemBuilder: (ctx) => [
                   PopupMenuItem(

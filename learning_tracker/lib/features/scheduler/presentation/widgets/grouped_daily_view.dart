@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/daily_schedule_composer.dart';
 import 'package:learning_tracker/features/scheduler/presentation/widgets/daily_task_card.dart';
@@ -70,7 +70,7 @@ class _GroupedDailyViewState extends ConsumerState<GroupedDailyView> {
     List<DailyTask> tasks,
   ) {
     final expanded = !_collapsed.contains(curriculum);
-    final color = AppTheme.getCurriculumColor(curriculum);
+    final color = context.colors.curriculumFor(curriculum);
     final label =
         '${curriculumLabelText(ref, curriculum: curriculum)} '
         '(${tasks.length})';

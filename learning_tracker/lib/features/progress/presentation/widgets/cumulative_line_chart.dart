@@ -1,6 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/progress/domain/models/chart_data.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
@@ -38,14 +38,14 @@ class CumulativeLineChart extends StatelessWidget {
         ],
         isCurved: true,
         preventCurveOverShooting: true,
-        color: AppColors.blueMid,
+        color: context.colors.blueMid,
         barWidth: 3,
         dotData: FlDotData(
           show: true,
           checkToShowDot: (spot, barData) => spot.x == data.length - 1,
           getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
             radius: 3.5,
-            color: AppColors.blueMid,
+            color: context.colors.blueMid,
             strokeWidth: 2,
             strokeColor: Colors.white,
           ),
@@ -56,8 +56,8 @@ class CumulativeLineChart extends StatelessWidget {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              AppColors.blueMid.withValues(alpha: 0.2),
-              AppColors.blueMid.withValues(alpha: 0),
+              context.colors.blueMid.withValues(alpha: 0.2),
+              context.colors.blueMid.withValues(alpha: 0),
             ],
           ),
         ),

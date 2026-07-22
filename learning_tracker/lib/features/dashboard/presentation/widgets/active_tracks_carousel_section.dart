@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/active_track_card.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/arrow_button.dart';
 import 'package:learning_tracker/features/scheduler/scheduler.dart';
@@ -67,7 +67,7 @@ class _ActiveTracksCarouselSectionState
                   Text(
                     widget.subtitle,
                     style: theme.textTheme.bodySmall?.copyWith(
-                      color: AppTheme.brandInkMuted,
+                      color: context.colors.brandInkMuted,
                       fontWeight: FontWeight.w500,
                       height: 1.25,
                     ),

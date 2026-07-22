@@ -1,8 +1,7 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/dashboard_helpers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/task_category_stat_box.dart';
 import 'package:learning_tracker/features/scheduler/scheduler.dart';
@@ -47,9 +46,9 @@ class TrackStatGrid extends StatelessWidget {
               count: buckets.review.length,
               label: chazaraLabel!,
               valueColor: buckets.review.isNotEmpty
-                  ? AppColors.goldAmber
-                  : AppTheme.brandInk,
-              valueBg: AppTheme.brandWarningSoft,
+                  ? context.colors.goldAmber
+                  : context.colors.brandInk,
+              valueBg: context.colors.brandWarningSoft,
               onTap: buckets.review.isNotEmpty
                   ? () => _openFirst(context, buckets.review)
                   : null,
@@ -62,9 +61,9 @@ class TrackStatGrid extends StatelessWidget {
             count: buckets.dueTodayLane.length,
             label: l10n.activeTrackMetricDueToday,
             valueColor: buckets.dueTodayLane.isNotEmpty
-                ? kActiveTrackPrimaryBlue
-                : AppTheme.brandInk,
-            valueBg: AppTheme.brandBlueSoft,
+                ? kActiveTrackPrimaryBlue(context)
+                : context.colors.brandInk,
+            valueBg: context.colors.brandBlueSoft,
             onTap: buckets.dueTodayLane.isNotEmpty
                 ? () => _openFirst(context, buckets.dueTodayLane)
                 : null,
@@ -75,8 +74,8 @@ class TrackStatGrid extends StatelessWidget {
           child: TaskCategoryStatBox(
             count: buckets.missedProgram.length,
             label: l10n.activeTrackMetricOverdue,
-            valueColor: AppColors.statusError,
-            valueBg: AppColors.statusErrorSoft,
+            valueColor: context.colors.statusError,
+            valueBg: context.colors.statusErrorSoft,
             countMutedWhenZero: true,
             onTap: buckets.missedProgram.isNotEmpty
                 ? () => _openFirst(context, buckets.missedProgram)

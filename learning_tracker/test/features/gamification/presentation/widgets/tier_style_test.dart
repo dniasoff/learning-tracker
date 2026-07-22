@@ -26,6 +26,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
 import 'package:learning_tracker/features/gamification/presentation/widgets/tier_style.dart';
 
@@ -93,7 +94,7 @@ void main() {
     test('all 7 named tiers produce pairwise-distinct card colors', () {
       final cardColors = <Color>{};
       for (final tier in namedTiers) {
-        final style = TierStyle.forTier(tier, false);
+        final style = TierStyle.forTier(AppPalette.light, tier, false);
         cardColors.add(style.cardBg);
       }
       expect(
@@ -108,7 +109,7 @@ void main() {
     test('all 7 named tiers produce pairwise-distinct title colors', () {
       final titleColors = <Color>{};
       for (final tier in namedTiers) {
-        final style = TierStyle.forTier(tier, false);
+        final style = TierStyle.forTier(AppPalette.light, tier, false);
         titleColors.add(style.titleColor);
       }
       expect(titleColors.length, namedTiers.length);
@@ -117,7 +118,11 @@ void main() {
     test(
       'RewardTier.custom (isLegend: false) renders the neutral default style',
       () {
-        final style = TierStyle.forTier(RewardTier.custom, false);
+        final style = TierStyle.forTier(
+          AppPalette.light,
+          RewardTier.custom,
+          false,
+        );
         expect(style.cardBg, Colors.white);
         expect(style.borderColor, const Color(0xFFE0E0E0));
       },
@@ -131,9 +136,13 @@ void main() {
       // overlap pre-dates this fix and is not something this finding
       // touches. barFill (the progress-bar accent) is the field that is
       // actually distinct for every named tier vs. the default.
-      final defaultStyle = TierStyle.forTier(RewardTier.custom, false);
+      final defaultStyle = TierStyle.forTier(
+        AppPalette.light,
+        RewardTier.custom,
+        false,
+      );
       for (final tier in namedTiers) {
-        final style = TierStyle.forTier(tier, false);
+        final style = TierStyle.forTier(AppPalette.light, tier, false);
         expect(
           style.barFill,
           isNot(defaultStyle.barFill),
@@ -146,8 +155,16 @@ void main() {
         'default style as RewardTier.custom (unreachable in practice: the '
         'legend override always intercepts a real Legend Star milestone '
         'first, see achievements_overview_provider.dart)', () {
-      final legendFallback = TierStyle.forTier(RewardTier.legend, false);
-      final customStyle = TierStyle.forTier(RewardTier.custom, false);
+      final legendFallback = TierStyle.forTier(
+        AppPalette.light,
+        RewardTier.legend,
+        false,
+      );
+      final customStyle = TierStyle.forTier(
+        AppPalette.light,
+        RewardTier.custom,
+        false,
+      );
       expect(legendFallback.cardBg, customStyle.cardBg);
       expect(legendFallback.titleColor, customStyle.titleColor);
     });
@@ -156,7 +173,7 @@ void main() {
   group('TierStyle.forTier — isLegend override', () {
     test('isLegend:true wins regardless of tier', () {
       for (final tier in RewardTier.values) {
-        final style = TierStyle.forTier(tier, true);
+        final style = TierStyle.forTier(AppPalette.light, tier, true);
         expect(
           style.cardBg,
           Colors.transparent,

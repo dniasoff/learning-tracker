@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/scheduler/scheduler.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
@@ -86,7 +85,7 @@ class _ProgramSelectionStepState extends ConsumerState<ProgramSelectionStep> {
           Text(
             l10n.programStepSubtitle,
             style: theme.textTheme.titleMedium?.copyWith(
-              color: AppTheme.brandInkMuted,
+              color: context.colors.brandInkMuted,
             ),
           ),
           const SizedBox(height: 22),
@@ -107,10 +106,10 @@ class _ProgramSelectionStepState extends ConsumerState<ProgramSelectionStep> {
                     program: _programs[i],
                     accentColor: i.isEven
                         ? const Color(0xFFDDE4FF)
-                        : AppColors.peachTint,
+                        : context.colors.peachTint,
                     iconColor: i.isEven
                         ? const Color(0xFF2F4CB5)
-                        : AppColors.goldDark,
+                        : context.colors.goldDark,
                     onTap: () => widget.onSelected(
                       _programs[i].id,
                       learningProgramLabelText(ref, program: _programs[i]),
@@ -123,7 +122,7 @@ class _ProgramSelectionStepState extends ConsumerState<ProgramSelectionStep> {
                   child: Text(
                     l10n.programStepOrChooseFreedom,
                     style: theme.textTheme.labelLarge?.copyWith(
-                      color: AppTheme.brandInkMuted,
+                      color: context.colors.brandInkMuted,
                       letterSpacing: 2,
                       fontWeight: FontWeight.w700,
                     ),
@@ -133,7 +132,7 @@ class _ProgramSelectionStepState extends ConsumerState<ProgramSelectionStep> {
                 FilledButton.icon(
                   onPressed: () => widget.onSelected(null, null, null),
                   style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.peachMid,
+                    backgroundColor: context.colors.peachMid,
                     foregroundColor: const Color(0xFF2E271E),
                     elevation: 0,
                     minimumSize: const Size.fromHeight(60),
@@ -155,7 +154,7 @@ class _ProgramSelectionStepState extends ConsumerState<ProgramSelectionStep> {
                 Text(
                   l10n.programStepSelfPacedCaption,
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: AppTheme.brandInkMuted,
+                    color: context.colors.brandInkMuted,
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -182,7 +181,7 @@ class _FeaturedProgramCard extends ConsumerWidget {
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: AppColors.surfaceE9),
+        border: Border.all(color: context.colors.surfaceE9),
         boxShadow: const [
           BoxShadow(
             color: Color(0x0F1D2939),
@@ -204,9 +203,9 @@ class _FeaturedProgramCard extends ConsumerWidget {
                 Container(
                   width: 52,
                   height: 52,
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: AppColors.surfaceBlueLight,
+                    color: context.colors.surfaceBlueLight,
                   ),
                   child: const Icon(
                     Icons.menu_book_rounded,
@@ -228,16 +227,16 @@ class _FeaturedProgramCard extends ConsumerWidget {
                     program: program,
                   ),
                   style: theme.textTheme.bodyLarge?.copyWith(
-                    color: AppTheme.brandInkMuted,
+                    color: context.colors.brandInkMuted,
                   ),
                 ),
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.calendar_month_rounded,
                       size: 15,
-                      color: AppTheme.brandBlueDeep,
+                      color: context.colors.brandBlueDeep,
                     ),
                     const SizedBox(width: 6),
                     // TS-1 fix: use programStartsLabel so the row shows
@@ -254,7 +253,7 @@ class _FeaturedProgramCard extends ConsumerWidget {
                             program,
                           ),
                           style: theme.textTheme.titleSmall?.copyWith(
-                            color: AppTheme.brandBlueDeep,
+                            color: context.colors.brandBlueDeep,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -274,14 +273,18 @@ class _CompactProgramCard extends ConsumerWidget {
   const _CompactProgramCard({
     required this.program,
     required this.onTap,
-    this.accentColor = AppColors.peachTint,
-    this.iconColor = AppColors.goldDark,
+    this.accentColor,
+    this.iconColor,
   });
 
   final LearningProgramData program;
   final VoidCallback onTap;
-  final Color accentColor;
-  final Color iconColor;
+
+  /// Defaults to the warm peach tint when omitted.
+  final Color? accentColor;
+
+  /// Defaults to the deep gold accent when omitted.
+  final Color? iconColor;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -291,7 +294,7 @@ class _CompactProgramCard extends ConsumerWidget {
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppColors.surfaceE9),
+        border: Border.all(color: context.colors.surfaceE9),
       ),
       child: Material(
         color: Colors.transparent,
@@ -308,11 +311,11 @@ class _CompactProgramCard extends ConsumerWidget {
                   height: 44,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: accentColor,
+                    color: accentColor ?? context.colors.peachTint,
                   ),
                   child: Icon(
                     Icons.verified_rounded,
-                    color: iconColor,
+                    color: iconColor ?? context.colors.goldDark,
                     size: 22,
                   ),
                 ),
@@ -333,23 +336,23 @@ class _CompactProgramCard extends ConsumerWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: AppTheme.brandInkMuted,
+                    color: context.colors.brandInkMuted,
                   ),
                 ),
                 const SizedBox(height: 10),
                 Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.calendar_month_rounded,
                       size: 14,
-                      color: AppTheme.brandBlueDeep,
+                      color: context.colors.brandBlueDeep,
                     ),
                     const SizedBox(width: 5),
                     Expanded(
                       child: Text(
                         AppLocalizations.of(context)!.programDailyCalendarBadge,
                         style: theme.textTheme.labelMedium?.copyWith(
-                          color: AppTheme.brandBlueDeep,
+                          color: context.colors.brandBlueDeep,
                           fontWeight: FontWeight.w800,
                           letterSpacing: 0.4,
                         ),

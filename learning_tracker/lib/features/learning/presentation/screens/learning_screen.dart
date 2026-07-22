@@ -10,8 +10,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/curriculum_label_providers.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/core/widgets/empty_state.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
@@ -63,7 +62,7 @@ class LearningScreen extends ConsumerWidget {
     final maxStreak = streakAsync.asData?.value.maxStreak ?? 0;
 
     return Scaffold(
-      backgroundColor: AppColors.surfaceF4,
+      backgroundColor: context.colors.surfaceF4,
       body: Theme(
         data: plusJakartaTheme,
         child: SafeArea(
@@ -245,7 +244,7 @@ class _StreakHeroCard extends StatelessWidget {
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: AppColors.peachMid,
+                  color: context.colors.peachMid,
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
@@ -259,7 +258,7 @@ class _StreakHeroCard extends StatelessWidget {
                   // RTL-safe: no emoji; localised via ARB.
                   l10n.learnStreakKeepItUp,
                   style: theme.textTheme.labelMedium?.copyWith(
-                    color: AppColors.peachDark,
+                    color: context.colors.peachDark,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -363,7 +362,7 @@ class _LearnTaskCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final curriculumColor = AppTheme.getCurriculumColor(task.curriculumId);
+    final curriculumColor = context.colors.curriculumFor(task.curriculumId);
     final rendered =
         ref
             .watch(renderedDisplayForRefProvider(task.contentItemSefariaRef))
@@ -402,7 +401,7 @@ class _LearnTaskCard extends ConsumerWidget {
         child: Ink(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: AppTheme.brandCreamCard,
+            color: context.colors.brandCreamCard,
             borderRadius: BorderRadius.circular(22),
             boxShadow: [
               BoxShadow(
@@ -452,7 +451,7 @@ class _LearnTaskCard extends ConsumerWidget {
                               vertical: 2,
                             ),
                             decoration: BoxDecoration(
-                              color: AppColors.statusErrorSoft,
+                              color: context.colors.statusErrorSoft,
                               borderRadius: BorderRadius.circular(999),
                             ),
                             child: Text(
@@ -470,7 +469,7 @@ class _LearnTaskCard extends ConsumerWidget {
                             vertical: 2,
                           ),
                           decoration: BoxDecoration(
-                            color: AppTheme.brandCreamSoft,
+                            color: context.colors.brandCreamSoft,
                             borderRadius: BorderRadius.circular(999),
                           ),
                           child: Text(
@@ -478,7 +477,7 @@ class _LearnTaskCard extends ConsumerWidget {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: theme.textTheme.labelSmall?.copyWith(
-                              color: AppTheme.brandInkMuted,
+                              color: context.colors.brandInkMuted,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
@@ -492,7 +491,7 @@ class _LearnTaskCard extends ConsumerWidget {
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w700,
-                        color: AppTheme.brandInk,
+                        color: context.colors.brandInk,
                         fontSize: 22,
                       ),
                     ),
@@ -573,7 +572,7 @@ class _CurriculumBrowseCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final color = AppTheme.getCurriculumColor(curriculum);
+    final color = context.colors.curriculumFor(curriculum);
 
     return Material(
       color: Colors.transparent,
@@ -585,7 +584,7 @@ class _CurriculumBrowseCard extends StatelessWidget {
         child: Ink(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
-            color: AppTheme.brandCreamCard,
+            color: context.colors.brandCreamCard,
             borderRadius: BorderRadius.circular(18),
             boxShadow: [
               BoxShadow(
@@ -613,7 +612,7 @@ class _CurriculumBrowseCard extends StatelessWidget {
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w700,
                     fontSize: 20,
-                    color: AppTheme.brandInk,
+                    color: context.colors.brandInk,
                   ),
                 ),
               ),
@@ -650,12 +649,12 @@ class _InfoCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.brandCreamCard,
+        color: context.colors.brandCreamCard,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
         children: [
-          Icon(icon, color: AppTheme.brandBlue, size: 24),
+          Icon(icon, color: context.colors.brandBlue, size: 24),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -666,7 +665,7 @@ class _InfoCard extends StatelessWidget {
                 Text(
                   subtitle,
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: AppTheme.brandInkMuted,
+                    color: context.colors.brandInkMuted,
                   ),
                 ),
               ],

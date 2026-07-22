@@ -14,8 +14,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/sync/providers/tutored_pull_providers.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
@@ -56,10 +55,10 @@ class _ManageGrantsScreenState extends ConsumerState<ManageGrantsScreen> {
         if (didPop) _clearTutoredSelection();
       },
       child: Scaffold(
-        backgroundColor: AppTheme.brandCream,
+        backgroundColor: context.colors.brandCream,
         appBar: AppBar(
           title: Text(l10n.manageGrantsAppBarTitle),
-          backgroundColor: AppTheme.brandCream,
+          backgroundColor: context.colors.brandCream,
           elevation: 0,
         ),
         body: grantsAsync.when(
@@ -352,15 +351,15 @@ class _GrantRowState extends ConsumerState<_GrantRow> {
     final l10n = AppLocalizations.of(context)!;
     final isActive = widget.grant.grantState is ActiveGrant;
     final statusColor = isActive
-        ? AppColors.statusActiveBadge
-        : AppColors.statusPendingBadge;
+        ? context.colors.statusActiveBadge
+        : context.colors.statusPendingBadge;
 
     return ListTile(
       leading: CircleAvatar(
-        backgroundColor: AppTheme.brandBlue.withValues(alpha: 0.12),
-        child: const Icon(
+        backgroundColor: context.colors.brandBlue.withValues(alpha: 0.12),
+        child: Icon(
           Icons.child_care_rounded,
-          color: AppTheme.brandBlue,
+          color: context.colors.brandBlue,
           size: 20,
         ),
       ),

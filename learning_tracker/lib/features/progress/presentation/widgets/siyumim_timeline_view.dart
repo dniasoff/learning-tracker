@@ -4,7 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/progress/domain/models/journey_view_model.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/siyum_milestone_label.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/siyumim_grouped_view.dart'
@@ -109,7 +109,7 @@ class _TimelineCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final color = AppTheme.getCurriculumColor(entry.curriculumId);
+    final color = context.colors.curriculumFor(entry.curriculumId);
     final terms = domainTermLabels(ref);
     final m = entry.milestone;
 

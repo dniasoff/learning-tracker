@@ -1027,19 +1027,15 @@ void main() {
       },
     );
 
-    testWidgets(
-      'LTR: time-row trailing chevron is chevron_right_rounded',
-      (tester) async {
-        await _pump(
-          tester,
-          _buildApp(gateway: _gateway, reminderEnabled: true),
-        );
+    testWidgets('LTR: time-row trailing chevron is chevron_right_rounded', (
+      tester,
+    ) async {
+      await _pump(tester, _buildApp(gateway: _gateway, reminderEnabled: true));
 
-        expect(find.byIcon(Icons.chevron_right_rounded), findsWidgets);
-        expect(find.byIcon(Icons.chevron_left_rounded), findsNothing);
+      expect(find.byIcon(Icons.chevron_right_rounded), findsWidgets);
+      expect(find.byIcon(Icons.chevron_left_rounded), findsNothing);
 
-        await _tearDown(tester);
-      },
-    );
+      await _tearDown(tester);
+    });
   });
 }

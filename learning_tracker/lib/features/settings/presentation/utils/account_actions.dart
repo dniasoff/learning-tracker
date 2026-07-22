@@ -12,8 +12,7 @@ import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/network_providers.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/core/sync/tutored_mirror_wipe_service.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/services/account_lifecycle_service.dart';
 import 'package:learning_tracker/features/account/domain/services/session_persistence_service.dart';
@@ -66,13 +65,13 @@ Future<void> showSignOutConfirmation(
                     Container(
                       width: 88,
                       height: 88,
-                      decoration: const BoxDecoration(
-                        color: AppColors.statusErrorSoft,
+                      decoration: BoxDecoration(
+                        color: context.colors.statusErrorSoft,
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.logout_rounded,
-                        color: AppColors.chartRed,
+                        color: context.colors.chartRed,
                         size: 40,
                       ),
                     ),
@@ -83,10 +82,10 @@ Future<void> showSignOutConfirmation(
                         width: 23,
                         height: 23,
                         decoration: BoxDecoration(
-                          color: AppTheme.brandBlue,
+                          color: context.colors.brandBlue,
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: AppTheme.brandCreamCard,
+                            color: context.colors.brandCreamCard,
                             width: 2,
                           ),
                         ),
@@ -103,7 +102,7 @@ Future<void> showSignOutConfirmation(
                 Text(
                   AppLocalizations.of(context)!.signOutConfirmTitle,
                   style: theme.textTheme.headlineMedium?.copyWith(
-                    color: AppTheme.brandBlueDeep,
+                    color: context.colors.brandBlueDeep,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -111,7 +110,7 @@ Future<void> showSignOutConfirmation(
                 Text(
                   AppLocalizations.of(context)!.signOutConfirmBody,
                   style: theme.textTheme.bodyLarge?.copyWith(
-                    color: AppTheme.brandInkMuted,
+                    color: context.colors.brandInkMuted,
                     height: 1.45,
                     fontWeight: FontWeight.w500,
                   ),
@@ -123,7 +122,7 @@ Future<void> showSignOutConfirmation(
                   child: FilledButton(
                     onPressed: () => Navigator.pop(context, true),
                     style: FilledButton.styleFrom(
-                      backgroundColor: AppTheme.brandBlue,
+                      backgroundColor: context.colors.brandBlue,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
@@ -140,7 +139,7 @@ Future<void> showSignOutConfirmation(
                   child: TextButton(
                     onPressed: () => Navigator.pop(context, false),
                     style: TextButton.styleFrom(
-                      foregroundColor: AppTheme.brandInkMuted,
+                      foregroundColor: context.colors.brandInkMuted,
                       backgroundColor: const Color(0xFFF0F1F5),
                       padding: const EdgeInsets.symmetric(vertical: 15),
                       shape: RoundedRectangleBorder(
@@ -206,7 +205,7 @@ Future<void> showSignOutConfirmation(
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(AppLocalizations.of(context)!.errorSignOutFailed),
-          backgroundColor: AppTheme.brandCoralDeep,
+          backgroundColor: context.colors.brandCoralDeep,
         ),
       );
     }
