@@ -67,8 +67,10 @@ confirm nor refute it. Run-10 settled it as **REFUTED**, on three independent li
 - **Measurement.** Native heap (the arena holding materialized `ContentItem`s):
   48–62 MB fresh → ~76 MB on Learn → ~82 MB with the reader → **~90 MB peak** with
   search. Under the deepest drill available (Bava Batra, a 176-daf tractate, 34 dapim
-  paged across 68 taps): **~123 MB peak, 24% of the 512 MB limit**, growth-then-plateau
-  with GC recovery. Java/Dalvik heap flat at 3–7 MB throughout.
+  paged across 68 taps) the session-wide peak was **125,566 KB — ~24% of the 512 MB
+  limit** — growth-then-plateau with GC recovery back to ~110 MB. Java/Dalvik heap flat
+  at 3–7 MB throughout. (Raw KB quoted deliberately: ~123 MB and ~125 MB both appear in
+  source notes, being the MiB and decimal readings of the same sample.)
 - **Attribution.** Guest logcat checked after *every* scenario across multiple app
   launches — clean every time. No `FATAL EXCEPTION`, `am_crash`, ANR, or `lmkd` kill
   naming our package, ever.
