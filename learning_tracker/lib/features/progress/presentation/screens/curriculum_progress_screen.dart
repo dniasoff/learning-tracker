@@ -46,6 +46,27 @@ class CurriculumProgressScreen extends ConsumerWidget {
               curriculumId: curriculum,
             )),
           );
+    // Data-consistency fix (run-9 audit): this screen used to compute its own
+    // "Track progress" fraction as `completedAllStages / totalItems` — an
+    // all-time, multi-stage-gate metric — while the Progress hub's per-track
+    // row (`_PerTrackRow` in progress_screen.dart) and Track Detail both label
+    // `TrackDualProgressMetric.currentCyclePercentage` (time-gated, since
+    // `track.activatedAt`) as "Track progress". Tapping a Progress-hub row
+    // navigates straight into this screen for the SAME track, so the two
+    // screens showed different numbers under the identical label (e.g. 0.1%
+    // vs 3%). `currentCyclePercentage` is the deliberate, documented metric for
+    // this label (see `trackDualProgressMetricsProvider`'s doc comment); the
+    // all-time completedAllStages figure is not discarded — it remains
+    // correctly labeled "Completed all stages" in the stat rows below. Source
+    // the SAME provider/metric here so the two surfaces agree byte-for-byte.
+    final dualMetricsAsync = ref.watch(
+      trackDualProgressMetricsProvider(profileId),
+    );
+    final dualMetric = curriculum == null
+        ? null
+        : dualMetricsAsync.asData?.value
+              .where((m) => m.curriculumId == curriculum)
+              .firstOrNull;
     final curriculumColor = context.colors.curriculumForKey(curriculumId);
     final baseTheme = Theme.of(context);
     final plusJakartaTheme = baseTheme.copyWith(
@@ -123,14 +144,15 @@ class CurriculumProgressScreen extends ConsumerWidget {
           top: false,
           child: progressAsync.when(
             data: (progressData) {
-              // Track progress = current-cycle achievement: % of items that
-              // have completed every stage (the existing "completedAllStages"
-              // bucket). Lifetime = % of items ever touched (live + bulk +
-              // lifetimeOnly), sourced from lifetimeDataProvider.
-              final totalItems = progressData.overallStats.totalItems;
-              final trackProgressFraction = totalItems == 0
-                  ? 0.0
-                  : progressData.overallStats.completedAllStages / totalItems;
+              // Track progress = the time-gated currentCyclePercentage from
+              // trackDualProgressMetricsProvider — the SAME metric the
+              // Progress hub and Track Detail label "Track progress" (see the
+              // comment above dualMetricsAsync). Null while loading / when
+              // there's no matching track so the dual-stats row falls back to
+              // an em-dash rather than a stale/wrong figure. Lifetime = %
+              // of items ever touched (live + bulk + lifetimeOnly), sourced
+              // from lifetimeDataProvider.
+              final trackProgressFraction = dualMetric?.currentCyclePercentage;
               final lifetimeFraction = lifetimeAsync.asData?.value == null
                   ? null
                   : (lifetimeAsync.asData!.value!.totalLeafCount == 0

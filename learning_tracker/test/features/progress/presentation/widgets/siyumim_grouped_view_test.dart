@@ -16,6 +16,7 @@ import 'package:intl/intl.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart'
     show TransliterationVariant;
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/learning/completion_constants.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
@@ -440,4 +441,121 @@ void main() {
     // No raw Latin key in Hebrew mode.
     expect(find.textContaining('Tahorot'), findsNothing);
   });
+
+  // ── Data-consistency fix (run-9 audit) ──────────────────────────────────
+  //
+  // Sections bulk-marked "previously learned" are stamped with the
+  // bulk-prior sentinel date (kBulkPriorSentinelDate, 2000-01-01 UTC) rather
+  // than a real completion moment. Formatting that sentinel through
+  // DateFormat surfaced the nonsensical "Jan 1, 2000" on a Siyumim &
+  // Milestones row as if it were a genuine achievement date. These tests pin
+  // that a sentinel-dated milestone instead shows the localized
+  // "Previously learned" string — the stored sentinel itself is untouched,
+  // only its presentation.
+
+  JourneyViewModel sentinelUnitViewModelWithDate(DateTime achievedAt) =>
+      JourneyViewModel(
+        curricula: [
+          CurriculumJourney(
+            curriculumId: CurriculumId.bavli,
+            completions: const [],
+            uniqueUnitsCompleted: 1,
+            totalUnitsAvailable: 63,
+            milestones: [
+              MilestoneAchievement(
+                type: 'unit_complete',
+                level: MilestoneLevel.unit,
+                curriculumId: CurriculumId.bavli,
+                displayName: 'Shabbat',
+                unitKey: 'Shabbat',
+                unitScope: 'masechta',
+                achievedAt: achievedAt,
+              ),
+            ],
+          ),
+        ],
+        totalCompletions: 0,
+        totalUniqueUnits: 1,
+        unitLevelSiyumimCount: 1,
+        aggregateLevelSiyumimCount: 0,
+        curriculumLevelSiyumimCount: 0,
+      );
+
+  testWidgets(
+    'a sentinel-dated (bulk-mark-prior) unit milestone shows "Previously '
+    'learned" instead of the bogus "Jan 1, 2000" date',
+    (tester) async {
+      await tester.pumpWidget(
+        _host(viewModel: sentinelUnitViewModelWithDate(kBulkPriorSentinelDate)),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Previously learned'),
+        findsOneWidget,
+        reason:
+            'A milestone whose achievedAt is the bulk-prior sentinel must '
+            'render the localized "Previously learned" string instead of '
+            'formatting the sentinel as a real calendar date.',
+      );
+      expect(
+        find.textContaining('2000'),
+        findsNothing,
+        reason:
+            'The sentinel year must never leak into the UI as a bogus '
+            'completion date (the run-9 audit finding).',
+      );
+    },
+  );
+
+  testWidgets(
+    'a sentinel-dated unit milestone renders the Hebrew "נלמד בעבר" under '
+    'the Hebrew locale',
+    (tester) async {
+      await tester.pumpWidget(
+        _host(
+          viewModel: sentinelUnitViewModelWithDate(kBulkPriorSentinelDate),
+          locale: const Locale('he'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('נלמד בעבר'), findsOneWidget);
+      expect(find.textContaining('2000'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'a REAL (non-sentinel) achievedAt still renders its actual calendar '
+    'date, not "Previously learned"',
+    (tester) async {
+      final real = DateTime(2026, 5, 11);
+      await tester.pumpWidget(
+        _host(viewModel: sentinelUnitViewModelWithDate(real)),
+      );
+      await tester.pumpAndSettle();
+
+      final expectedDate = DateFormat.yMMMd('en').format(real.toLocal());
+      expect(find.text(expectedDate), findsOneWidget);
+      expect(find.text('Previously learned'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'a sentinel-dated aggregate milestone substitutes "Previously learned" '
+    'into the "All {count} complete · {date}" subtitle template',
+    (tester) async {
+      await tester.pumpWidget(
+        _host(
+          viewModel: _viewModelWithCompletedAggregate(
+            achievedAt: kBulkPriorSentinelDate,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('All 11 complete · Previously learned'), findsOneWidget);
+      expect(find.textContaining('2000'), findsNothing);
+    },
+  );
 }
