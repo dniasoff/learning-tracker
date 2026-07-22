@@ -82,6 +82,17 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen> {
     ) {
       if (previous != next) {
         ref.read(activeTutoredProfileSelectionProvider.notifier).exit();
+        // SECURITY (run-10 follow-up, same class as the P0 fixed in
+        // profile_switcher_sheet.dart): also drop any parent-mode elevation.
+        // `PinScope.parent(profileId)` is keyed on the bare LOCAL numeric
+        // profile id with no account/uid component, so an account switch whose
+        // new local profile reuses a numeric id that was elevated under the
+        // PREVIOUS account would hit PinGuard's cached scope and skip the
+        // prompt. Same-device id collisions are unlikely (ids auto-increment),
+        // but a sync/restore or multi-device flow can reintroduce them — and a
+        // uid change is exactly the point at which no prior elevation should
+        // survive regardless. Cheap, and it fails closed.
+        ref.read(routerProvider).pinGuard.lock();
       }
     });
 
