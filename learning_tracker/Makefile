@@ -1,4 +1,4 @@
-.PHONY: help test test-invariants test-rules test-functions emit-fixtures test-story-4.1 test-story-5.2 test-story-6.1 test-story-6.3 test-story-6.4 test-story-6.5 test-story-7.1 test-story-7.2 test-story-7.3 test-epic-8 test-story-9.4 test-epic-9 test-story-10.4 test-story-10.5 test-epic-10 test-story-12.4 test-epic-12 test-story-13.1 test-story-13.2 test-epic-13 test-story-14.1 test-story-14.2 test-story-14.3 test-epic-14 test-story-15.5 test-story-15.6 test-story-15.8 test-epic-15 test-epic-21 test-story-24.1 test-story-24.4 test-story-24.7 test-epic-24 test-story-25.3 test-story-25.5 test-story-25.8 test-story-25.9 test-story-25.10 test-story-25.11 test-story-25.12 test-story-25.13 test-story-25.14 test-story-25.15 test-story-25.19 test-story-25.20 test-story-25.21 test-story-25.22 test-epic-25 test-story-26.7 test-story-26.11 test-story-26.13 test-story-26.15 test-story-26.16 test-epic-26 test-story-27.1 test-story-27.3 test-story-27.4 test-story-27.6 test-story-27.7 test-story-27.8 test-story-27.9 test-story-F5 test-epic-27 test-story-i4 test-epic-28 ci analyze format format-check validate-calendar seed seed-mongo-up seed-restore seed-down audit lint lint-rules-test gen-arch-tables check-arch-tables check-feature-graph gen-dart-test-tags check-dart-test-tags
+.PHONY: help test test-invariants test-rules test-functions emit-fixtures test-story-4.1 test-story-5.2 test-story-6.1 test-story-6.3 test-story-6.4 test-story-6.5 test-story-7.1 test-story-7.2 test-story-7.3 test-epic-8 test-story-9.4 test-epic-9 test-story-10.4 test-story-10.5 test-epic-10 test-story-12.4 test-epic-12 test-story-13.1 test-story-13.2 test-epic-13 test-story-14.1 test-story-14.2 test-story-14.3 test-epic-14 test-story-15.5 test-story-15.6 test-story-15.8 test-epic-15 test-epic-21 test-story-24.1 test-story-24.4 test-story-24.7 test-epic-24 test-story-25.3 test-story-25.5 test-story-25.8 test-story-25.9 test-story-25.10 test-story-25.11 test-story-25.12 test-story-25.13 test-story-25.14 test-story-25.15 test-story-25.19 test-story-25.20 test-story-25.21 test-story-25.22 test-epic-25 test-story-26.7 test-story-26.11 test-story-26.13 test-story-26.15 test-story-26.16 test-epic-26 test-story-27.1 test-story-27.3 test-story-27.4 test-story-27.6 test-story-27.7 test-story-27.8 test-story-27.9 test-story-F5 test-epic-27 test-story-i4 test-epic-28 ci analyze format format-check validate-calendar seed seed-mongo-up seed-restore seed-down audit lint lint-rules-test gen-arch-tables check-arch-tables check-feature-graph gen-dart-test-tags check-dart-test-tags check-coverage-denominator test-quarantine
 
 help: ## Show this help message
 	@echo 'Usage: make [target]'
@@ -7,7 +7,31 @@ help: ## Show this help message
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-20s %s\n", $$1, $$2}'
 
 test: ## Run all tests with coverage instrumentation
-	flutter test --coverage --exclude-tags serial-tools
+	@# R6 (flake & CI-trust gate, docs/test-artifacts/reassurance-plan.md):
+	@#   --exclude-tags "serial-tools || quarantine" — ONE flag with a boolean
+	@#     selector expression, not two repeated --exclude-tags flags: unlike
+	@#     `dart test` (whose underlying package:test parses --exclude-tags as
+	@#     an addMultiOption that unions repeated occurrences), `flutter test`
+	@#     registers --exclude-tags as a single-value addOption
+	@#     (packages/flutter_tools/lib/src/commands/test.dart) — a second
+	@#     occurrence silently OVERWRITES the first instead of adding to it.
+	@#     Passing --exclude-tags serial-tools --exclude-tags quarantine here
+	@#     would have silently dropped the serial-tools exclusion (verified:
+	@#     it re-admitted the make-audit-shelling test/tool/
+	@#     audit_and_arb_parity_test.dart into this parallel lane — the exact
+	@#     30->60min job-blowup this tag split was created to prevent). The
+	@#     quoted boolean-OR expression is the one form that actually excludes
+	@#     both under `flutter test`.
+	@#   --test-randomize-ordering-seed=random — catches order-dependent test
+	@#     pollution (shared global/static state leaking between tests) that a
+	@#     fixed declaration order can hide indefinitely. package:test prints
+	@#     the seed it picked on every run; re-run with
+	@#     --test-randomize-ordering-seed=<that seed> to reproduce a failure.
+	@#   quarantine tag: the flake-isolation lane — a test tagged `quarantine`
+	@#     (dart_test.yaml reserves the tag even before anything uses it — see
+	@#     tool/check_dart_test_tags.dart) is excluded from the main lane
+	@#     without being silently disabled/deleted.
+	flutter test --coverage --exclude-tags "serial-tools || quarantine" --test-randomize-ordering-seed=random
 	@# AUD-t-cross-16: generated Drift/Freezed code inflates line-coverage
 	@# numbers without protecting any hand-written behavior (nothing in lib/
 	@# calls db.managers.*) — strip it from the report so coverage reflects
@@ -34,6 +58,9 @@ test-invariants: ## Run the N1–N7 quality-crisis invariant net
 test-serial-tools: ## Run tool tests that shell out to `make audit` (serially; they contend under the parallel suite)
 	flutter test --tags serial-tools --concurrency=1
 
+test-quarantine: ## Run only tests tagged quarantine (R6 flake-isolation lane — excluded from the main `test:` lane, not disabled; run this to triage them)
+	flutter test --tags quarantine
+
 test-rules: ## Run Firestore security-rules tests + TQ-9 rule-coverage gate under the emulator (L5)
 	firebase emulators:exec --only firestore --project demo-rules "node --test functions/test/firestore_rules.test.mjs && node functions/tool/check_rule_coverage.mjs demo-rules firestore.rules"
 
@@ -52,11 +79,14 @@ gen-feature-graph: ## Print the mermaid Feature Dependency Graph derived from ls
 check-feature-graph: ## Fail if docs/architecture.md's Feature Dependency Graph node set doesn't match ls lib/features/ (AUD-docs-15)
 	dart run tool/gen_feature_graph.dart --check
 
-gen-dart-test-tags: ## Print dart_test.yaml's tags: block regenerated from @Tags([...])/tags: [...] usage under test/
+gen-dart-test-tags: ## Print dart_test.yaml regenerated (tags: block from @Tags([...])/tags: [...] usage under test/, plus the R6 global timeout + reserved tags)
 	dart run tool/check_dart_test_tags.dart
 
-check-dart-test-tags: ## Fail if dart_test.yaml's tags: block is missing any tag used under test/ (AUD-guardrails-34)
+check-dart-test-tags: ## Fail if dart_test.yaml's tags: block is missing any tag used under test/, or the R6 global timeout default is missing/altered (AUD-guardrails-34 / R6)
 	dart run tool/check_dart_test_tags.dart --check
+
+check-coverage-denominator: ## Fail if any lib/**.dart file has zero SF: entries in coverage/lcov.info (R6, ratchet) — requires coverage/lcov.info (run `make test` first); --strict since this is the CI/manual hard-gate entry point
+	dart run tool/check_lcov_denominator.dart --strict
 
 test-functions: ## Run Cloud Functions tests (real handlers vs firestore emulator) (L5)
 	npm --prefix functions run build
@@ -1260,6 +1290,30 @@ audit: lint-rules-test ## Run all 67 enforcement greps (NFR19) — exits non-zer
 	  FAIL=1; \
 	else \
 	  rm -f /tmp/r7_source_text_assertion_check.$$$$.log; \
+	fi; \
+	echo "96/96 — R6b (docs/test-artifacts/reassurance-plan.md Surface 6): the main test lane's RESOLVED recipe (via 'make -n test', filtered to the actual 'flutter test' command line — not this target's own rationale comments, which name the same flag in prose) still passes --test-randomize-ordering-seed=random — order-dependent test pollution (shared global/static state leaking between tests) must stay caught, not silently reverted to a fixed declaration order"; \
+	if ! make -n test 2>/dev/null | grep "^flutter test" | grep -q -- "--test-randomize-ordering-seed=random"; then \
+	  echo "  Makefile's test: target no longer runs flutter test with --test-randomize-ordering-seed=random (R6b) — order-dependent test pollution can hide again. Restore the flag."; \
+	  FAIL=1; \
+	fi; \
+	echo "97/97 — R6c (docs/test-artifacts/reassurance-plan.md Surface 6): the main test lane's RESOLVED recipe (via 'make -n test', filtered to the actual 'flutter test' command line) still excludes the quarantine tag — a known-flaky test tagged quarantine must be isolatable from the main lane without silently disabling/deleting it. MUST be one quoted --exclude-tags \"serial-tools || quarantine\" boolean-selector expression, not two repeated --exclude-tags flags — flutter test's --exclude-tags is a single-value option (unlike dart test's), so a second occurrence silently overwrites the first instead of adding to it (verified: that shape re-admitted the make-audit-shelling audit_and_arb_parity_test.dart into this parallel lane)"; \
+	RESOLVED_TEST_RECIPE=$$(make -n test 2>/dev/null | grep "^flutter test"); \
+	if ! echo "$$RESOLVED_TEST_RECIPE" | grep -q -- "--exclude-tags quarantine" && ! echo "$$RESOLVED_TEST_RECIPE" | grep -Eq -- '--exclude-tags "?[^"]*quarantine[^"]*"?'; then \
+	  echo "  Makefile's test: target no longer excludes the quarantine tag (R6c) — the flake-quarantine lane is not wired. Restore --exclude-tags \"serial-tools || quarantine\" (or equivalent)."; \
+	  FAIL=1; \
+	fi; \
+	if echo "$$RESOLVED_TEST_RECIPE" | grep -oE -- '--exclude-tags' | wc -l | grep -q "^[2-9]"; then \
+	  echo "  Makefile's test: target passes --exclude-tags more than once (R6c) — flutter test's --exclude-tags is a single-value option, so only the LAST occurrence takes effect and earlier ones (e.g. serial-tools) are silently dropped. Combine them into one quoted boolean-selector expression instead, e.g. --exclude-tags \"serial-tools || quarantine\"."; \
+	  FAIL=1; \
+	fi; \
+	echo "98/98 — R6d (docs/test-artifacts/reassurance-plan.md Surface 6): no lib/**.dart file is absent from coverage/lcov.info's SF: denominator beyond the tracked baseline — RATCHET, soft-skips if coverage/lcov.info doesn't exist (run 'make test' or 'make check-coverage-denominator' for the hard-gated version), only growth above the tracked baseline fails when it does"; \
+	if ! dart run tool/check_lcov_denominator.dart > /tmp/lcov_denominator_check.$$$$.log 2>&1; then \
+	  cat /tmp/lcov_denominator_check.$$$$.log; \
+	  rm -f /tmp/lcov_denominator_check.$$$$.log; \
+	  FAIL=1; \
+	else \
+	  cat /tmp/lcov_denominator_check.$$$$.log; \
+	  rm -f /tmp/lcov_denominator_check.$$$$.log; \
 	fi; \
 	if [ "$$FAIL" -eq 1 ]; then \
 	  echo "=== audit FAILED — fix violations above ==="; \

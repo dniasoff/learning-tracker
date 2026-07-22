@@ -105,8 +105,6 @@ void main() {
 
     group('golden_runner helper', tags: ['story_27_1_golden'], () {
       // `goldenTest` registers TWO underlying tests — one per locale.
-      // We assert this by counting the locales actually exercised.
-      final exercised = <Locale>{};
       // skipGolden: false (AUD-t-cross-51) — flutter_test_config.dart now
       // loads real fonts before any test runs (TQ-5), so the pixel
       // assertion is meaningful. This particular golden has no font
@@ -114,17 +112,35 @@ void main() {
       // suite's call sites to baseline first, since its captured PNG can
       // never regress for font-loading reasons, only for a genuine
       // structural change to the harness itself.
+      const goldenName = 'records both locale variants — sanity check';
       goldenTest(
-        'records both locale variants — sanity check',
-        builder: (locale) {
-          exercised.add(locale);
-          return const SizedBox(width: 10, height: 10);
-        },
+        goldenName,
+        builder: (locale) => const SizedBox(width: 10, height: 10),
       );
 
+      // R6 fix (docs/test-artifacts/reassurance-plan.md Surface 6):
+      // previously asserted against a local `exercised` set mutated INSIDE
+      // the widget builder above — i.e. only populated once each golden
+      // sub-test actually RAN. package:test/flutter_test declare the full
+      // test tree synchronously before any test body executes, but they do
+      // NOT guarantee sibling tests within a group execute in declaration
+      // order once `--test-randomize-ordering-seed` shuffles it — so this
+      // assertion test could (and, randomized, did: caught live by this
+      // very change) run before one or both golden sub-tests had executed,
+      // failing with only a partial (or empty) `exercised` set despite the
+      // helper being perfectly correct. Fixed the same way
+      // epic_27_story_4_widget_golden_test.dart's "Hebrew variant ships for
+      // every golden widget" test already does (AUD-t-story-acceptance-16):
+      // assert against `registeredGoldenTests`, which golden_runner.dart's
+      // `goldenTest()` populates at REGISTRATION time (synchronously, while
+      // main() builds the tree) — order-independent by construction.
       test('goldenTest exercises both English and Hebrew locales', () {
+        final locales = registeredGoldenTests
+            .where((registration) => registration.name == goldenName)
+            .map((registration) => registration.locale)
+            .toSet();
         expect(
-          exercised,
+          locales,
           {const Locale('en'), const Locale('he')},
           reason:
               'goldenTest(name, builder) must register one sub-test '

@@ -6,6 +6,15 @@
 # after adding/removing an @Tags([...])/tags: [...] literal under test/, and
 # commit the result. `dart run tool/check_dart_test_tags.dart --check` (part
 # of `make audit`) fails if this file drifts from actual usage again.
+#
+# R6 (flake & CI-trust gate, docs/test-artifacts/reassurance-plan.md):
+# `timeout:` below is the file-level default test timeout — see
+# tool/check_dart_test_tags.dart's `_globalTimeout` doc comment for the
+# 2-minute rationale. `quarantine:` is a reserved tag (see
+# `_reservedTags`) for isolating a known-flaky test out of the main
+# `make test` lane (Makefile `test:` target) without disabling it.
+
+timeout: 2m
 
 tags:
   TRK-EDIT-STALE-01:
@@ -194,6 +203,7 @@ tags:
   profiles:
   progress:
   progress_hub:
+  quarantine:
   r2:
   r3_10:
   r3_revocation:
