@@ -343,10 +343,20 @@ class HierarchySelectionPanelState
                   Expanded(
                     child: OutlinedButton(
                       onPressed: widget.onSkip,
-                      child: Text(
-                        widget.skipLabel ?? l10n.actionSkipForNow,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                      // R2/overflow (device 5558): both buttons share the row
+                      // via equal Expanded cells, so a multi-word CTA
+                      // ("Mark Completed") only gets ~half the width and was
+                      // ellipsis-clipped to "Mark Complet…". FittedBox sizes the
+                      // label to its content, scaling it down to stay on one
+                      // line instead of clipping — matching the repo CTA idiom
+                      // (main_focus_mission_card) — so the full label shows at
+                      // default and larger text scales, and in RTL.
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          widget.skipLabel ?? l10n.actionSkipForNow,
+                          maxLines: 1,
+                        ),
                       ),
                     ),
                   ),
@@ -358,10 +368,12 @@ class HierarchySelectionPanelState
                       onPressed: _selections.isNotEmpty
                           ? () => widget.onConfirmed!(Set.of(_selections))
                           : null,
-                      child: Text(
-                        widget.confirmLabel ?? l10n.actionNext,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          widget.confirmLabel ?? l10n.actionNext,
+                          maxLines: 1,
+                        ),
                       ),
                     ),
                   ),
