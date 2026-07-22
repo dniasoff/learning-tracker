@@ -213,6 +213,27 @@ Some churn was self-inflicted (my APK deployment force-stopping apps mid-audit; 
 relaunches counted repeatedly). Two auditors independently diagnosed the deployment from
 `installPackageLI` in guest logcat rather than filing it as a crash.
 
+## Deliberately NOT merged
+
+**`reassurance/run9-learn-eager-load`** — bounds `contentIndexProvider` to the curricula
+backing a profile's coarse-paced tracks, instead of materialising all 9. It is well built
+(a 260-line test, a clear correctness argument that every ref `collapseDafTasks` looks up
+comes from those tracks' own daily tasks). It is held anyway, for three reasons:
+
+1. **Its justification was refuted.** It was written to fix run-8's Learn OOM P0. Run-10
+   measured that path at ~24% of the heap limit at its worst — so this is a memory
+   optimisation for a problem that does not exist on the tested devices.
+2. **It changes behaviour on the app's core surface.** The bound rests on an invariant
+   ("the bound never misses"); if it is ever wrong, daf grouping silently degrades on the
+   Learn tab. That is a poor trade for a saving we have measured as unnecessary.
+3. **It would invalidate fresh evidence.** Run-10's Learn validation — including the
+   176-daf Bava Batra drill — was performed on the *unbounded* path. Merging without
+   re-testing would leave the campaign's strongest device evidence describing code that no
+   longer ships.
+
+It should be revisited on its own merits as a performance change, with its own device
+validation — not carried in on a crash-fix rationale that no longer holds.
+
 ## Residual risk — what this campaign does NOT cover
 
 Stated plainly, because a reassurance report that hides its gaps is worthless:
