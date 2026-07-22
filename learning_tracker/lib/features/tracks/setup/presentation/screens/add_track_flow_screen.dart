@@ -737,7 +737,11 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
         if (!didPop) _goToPreviousStep();
       },
       child: ColoredBox(
-        color: const Color(0xFFF4F5F7),
+        // brandCream (not the old fixed 0xFFF4F5F7): run-9 audit — this was
+        // the wizard's ENTIRE canvas hardcoded to a fixed light grey, so
+        // every heading on it (already theme-aware ink, going light in
+        // dark) rendered near-white-on-light-grey in dark mode.
+        color: context.colors.brandCream,
         child: SafeArea(
           child: Column(
             children: [
@@ -775,7 +779,7 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
                         child: LinearProgressIndicator(
                           value: progress,
                           minHeight: 10,
-                          backgroundColor: const Color(0xFFE1E4EB),
+                          backgroundColor: context.colors.surfaceE9,
                           valueColor: AlwaysStoppedAnimation<Color>(
                             context.colors.brandBlueBright,
                           ),

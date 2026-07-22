@@ -161,7 +161,7 @@ class TrackInfoCard extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.colors.brandCreamCard,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(

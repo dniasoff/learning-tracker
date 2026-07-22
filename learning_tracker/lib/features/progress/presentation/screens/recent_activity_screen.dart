@@ -205,7 +205,9 @@ class _RecentActivityScreenState extends ConsumerState<RecentActivityScreen> {
                   textAlign: TextAlign.center,
                   maxLines: 1,
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: selected ? Colors.white : const Color(0xFF5E6678),
+                    color: selected
+                        ? Colors.white
+                        : context.colors.brandInkMuted,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -275,7 +277,7 @@ class _StreakHeaderCard extends ConsumerWidget {
               Text(
                 l10n.streakLabel.toUpperCase(),
                 style: theme.textTheme.labelSmall?.copyWith(
-                  color: const Color(0xFF778099),
+                  color: context.colors.brandInkMuted,
                   letterSpacing: 0.6,
                   fontWeight: FontWeight.w800,
                 ),
@@ -317,7 +319,7 @@ class _StreakHeaderCard extends ConsumerWidget {
                   '${s.currentStreak}',
                   style: theme.textTheme.displaySmall?.copyWith(
                     fontWeight: FontWeight.w800,
-                    color: const Color(0xFF1A1F2F),
+                    color: context.colors.brandInk,
                   ),
                 ),
                 const SizedBox(width: 6),
@@ -329,7 +331,7 @@ class _StreakHeaderCard extends ConsumerWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.bodyMedium?.copyWith(
-                        color: const Color(0xFF5E6678),
+                        color: context.colors.brandInkMuted,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -344,7 +346,7 @@ class _StreakHeaderCard extends ConsumerWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: const Color(0xFF778099),
+                        color: context.colors.brandInkMuted,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -367,7 +369,7 @@ class _StreakHeaderCard extends ConsumerWidget {
             Text(
               l10n.labelStreakAcrossAllCurricula,
               style: theme.textTheme.bodySmall?.copyWith(
-                color: const Color(0xFF778099),
+                color: context.colors.brandInkMuted,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -448,7 +450,7 @@ class _AllTimeSummaryCard extends ConsumerWidget {
         Text(
           l10n.allTimeActivityTitle,
           style: theme.textTheme.labelSmall?.copyWith(
-            color: const Color(0xFF778099),
+            color: context.colors.brandInkMuted,
             letterSpacing: 0.4,
             fontWeight: FontWeight.w700,
           ),
@@ -510,7 +512,7 @@ class _AllTimeStat extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           style: theme.textTheme.headlineMedium?.copyWith(
             fontWeight: FontWeight.w800,
-            color: const Color(0xFF1A1F2F),
+            color: context.colors.brandInk,
           ),
         ),
         const SizedBox(height: 4),
@@ -520,7 +522,7 @@ class _AllTimeStat extends StatelessWidget {
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
           style: theme.textTheme.labelSmall?.copyWith(
-            color: const Color(0xFF778099),
+            color: context.colors.brandInkMuted,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -549,7 +551,7 @@ class _AllTimeStatPhrase extends StatelessWidget {
         overflow: TextOverflow.ellipsis,
         style: theme.textTheme.titleMedium?.copyWith(
           fontWeight: FontWeight.w800,
-          color: const Color(0xFF1A1F2F),
+          color: context.colors.brandInk,
         ),
       ),
     );
@@ -607,7 +609,7 @@ class _ChartEmptyState extends StatelessWidget {
           l10n.recentActivityEmptyState,
           textAlign: TextAlign.center,
           style: theme.textTheme.bodyMedium?.copyWith(
-            color: const Color(0xFF778099),
+            color: context.colors.brandInkMuted,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -682,7 +684,7 @@ class _PointsTotalLabel extends ConsumerWidget {
       total == null ? '--' : l10n.tierCounterPoints(total),
       style: Theme.of(context).textTheme.headlineSmall?.copyWith(
         fontWeight: FontWeight.w800,
-        color: const Color(0xFF1A1F2F),
+        color: context.colors.brandInk,
       ),
     );
   }
@@ -755,7 +757,7 @@ class _ChartSection extends StatelessWidget {
                           subtitle!,
                           style: Theme.of(context).textTheme.bodySmall
                               ?.copyWith(
-                                color: const Color(0xFF778099),
+                                color: context.colors.brandInkMuted,
                                 fontWeight: FontWeight.w600,
                               ),
                         ),
@@ -796,7 +798,7 @@ class _FilterPill extends StatelessWidget {
       backgroundColor: context.colors.brandCreamSoft,
       selectedColor: context.colors.blueMid,
       labelStyle: Theme.of(context).textTheme.labelMedium?.copyWith(
-        color: selected ? Colors.white : const Color(0xFF4D5668),
+        color: selected ? Colors.white : context.colors.brandInkMuted,
         fontWeight: FontWeight.w700,
       ),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),

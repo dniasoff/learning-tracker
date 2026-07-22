@@ -93,7 +93,7 @@ class _AccountActionsSheet extends ConsumerWidget {
     // Material ancestor with no intervening coloured box — otherwise their ink
     // splashes are hidden and Flutter asserts "ink splashes may be invisible".
     return Material(
-      color: Colors.white,
+      color: context.colors.brandCreamCard,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),

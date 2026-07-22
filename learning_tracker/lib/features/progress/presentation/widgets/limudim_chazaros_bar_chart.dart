@@ -8,7 +8,12 @@ import 'package:learning_tracker/features/progress/domain/models/chart_data.dart
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Limud (stage-1 / initial learning) segment colour.
-Color _kLimudColor(BuildContext context) => context.colors.blueMid;
+///
+/// Uses [AppPaletteContext.colors]'s `chartLimudBlue` (not `blueMid`) — this
+/// bar is drawn directly on the card surface, so it needs the token that
+/// stays visible against the card in dark mode, not the hero-fill token that
+/// stays deep for white content painted over it (run-9 audit).
+Color _kLimudColor(BuildContext context) => context.colors.chartLimudBlue;
 
 /// Chazara (stage ≥ 2 / review) segment colour.
 Color _kChazaraColor(BuildContext context) =>

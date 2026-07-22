@@ -355,7 +355,12 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen> {
           ];
           return DecoratedBox(
             decoration: BoxDecoration(
-              color: Colors.white,
+              // brandCreamCard (not Colors.white): run-9 audit — this bar
+              // was hardcoded white while its siblings (navBarShadow,
+              // navSelectedBlue, navUnselectedText) were already migrated to
+              // brightness-aware tokens, leaving a stubbornly light bar under
+              // every dark screen (5554, 5562, 5564).
+              color: context.colors.brandCreamCard,
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(28),
               ),

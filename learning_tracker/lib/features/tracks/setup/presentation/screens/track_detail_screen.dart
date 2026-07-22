@@ -383,7 +383,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.colors.brandCreamCard,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
@@ -630,7 +630,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     // controls is misleading.
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.colors.brandCreamCard,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
@@ -659,23 +659,29 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
                   borderRadius: const BorderRadius.vertical(
                     top: Radius.circular(24),
                   ),
+                  // brandBlueDeep (not blueMedium): this border/tile-tint/
+                  // icon/text sits directly on the card, so it needs the ink
+                  // token that lightens in dark to stay visible — blueMedium
+                  // is now a hero-FILL token pinned deep for white content
+                  // painted over it, which would go near-invisible here
+                  // (run-9 audit).
                   side: BorderSide(
-                    color: context.colors.blueMedium.withValues(alpha: 0.4),
+                    color: context.colors.brandBlueDeep.withValues(alpha: 0.4),
                     width: 1,
                   ),
                 ),
-                tileColor: context.colors.blueMedium.withValues(alpha: 0.06),
+                tileColor: context.colors.brandBlueDeep.withValues(alpha: 0.06),
                 leading: Icon(
                   Icons.history_edu_outlined,
-                  color: context.colors.blueMedium,
+                  color: context.colors.brandBlueDeep,
                 ),
                 title: Text(
                   AppLocalizations.of(context)!.trackMarkPreviouslyLearned,
-                  style: TextStyle(color: context.colors.blueMedium),
+                  style: TextStyle(color: context.colors.brandBlueDeep),
                 ),
                 trailing: Icon(
                   Icons.chevron_right_rounded,
-                  color: context.colors.blueMedium,
+                  color: context.colors.brandBlueDeep,
                 ),
                 onTap: curriculum != null
                     ? () => _openBulkMark(track, curriculum)
@@ -685,7 +691,10 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
               ListTile(
                 leading: Icon(
                   Icons.swap_vert_rounded,
-                  color: context.colors.blueMedium,
+                  // brandBlueDeep: bare icon on the card — see the
+                  // bulkPriorTile comment above for why blueMedium
+                  // (hero-fill role) is wrong here.
+                  color: context.colors.brandBlueDeep,
                 ),
                 title: Text(AppLocalizations.of(context)!.trackReorderContent),
                 trailing: const Icon(Icons.chevron_right_rounded),
@@ -723,7 +732,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
                     enabled: canEditGoals,
                     leading: Icon(
                       Icons.flag_outlined,
-                      color: context.colors.blueMedium,
+                      color: context.colors.brandBlueDeep,
                     ),
                     title: Text(
                       hasGoal
@@ -744,7 +753,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
                 key: const ValueKey('trackDetail.studyDaysTile'),
                 leading: Icon(
                   Icons.calendar_today_outlined,
-                  color: context.colors.blueMedium,
+                  color: context.colors.brandBlueDeep,
                 ),
                 title: Text(AppLocalizations.of(context)!.studyDaysTitle),
                 trailing: const Icon(Icons.chevron_right_rounded),
@@ -757,7 +766,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
             ListTile(
               leading: Icon(
                 Icons.edit_outlined,
-                color: context.colors.blueMedium,
+                color: context.colors.brandBlueDeep,
               ),
               title: Text(AppLocalizations.of(context)!.trackEditLabel),
               trailing: const Icon(Icons.chevron_right_rounded),

@@ -324,7 +324,16 @@ class _SettingsTimeRow extends StatelessWidget {
       key: key,
       enabled: enabled,
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
-      leading: Icon(icon, size: 18, color: context.colors.blueLight),
+      // notifReminderIconTint (not blueLight): bare icon on the card — needs
+      // the ink token that lightens in dark, not the hero-fill token now
+      // pinned deep for white content painted over it (run-9 audit). Same
+      // exact colour as the reminder row's icon above (identical dark-mode
+      // hex), just reached through the purpose-built token.
+      leading: Icon(
+        icon,
+        size: 18,
+        color: context.colors.notifReminderIconTint,
+      ),
       title: Text(
         title,
         style: TextStyle(

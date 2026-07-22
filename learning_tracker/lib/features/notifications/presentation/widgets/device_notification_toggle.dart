@@ -102,7 +102,7 @@ class _DeviceNotificationToggleState
     return Card(
       key: const Key('device_notification_toggle'),
       elevation: 0,
-      color: Colors.white,
+      color: context.colors.brandCreamCard,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: SwitchListTile(
         title: Text(

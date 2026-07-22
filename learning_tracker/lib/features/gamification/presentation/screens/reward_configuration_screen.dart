@@ -368,7 +368,7 @@ class _RewardConfigurationScreenState
                             style: Theme.of(context).textTheme.headlineSmall
                                 ?.copyWith(
                                   fontWeight: FontWeight.w800,
-                                  color: Colors.black,
+                                  color: context.colors.brandInk,
                                   fontSize: 22,
                                 ),
                           ),

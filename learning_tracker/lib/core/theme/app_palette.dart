@@ -271,15 +271,43 @@ class AppPalette extends ThemeExtension<AppPalette> {
       _dark ? const Color(0xFF071843) : const Color(0xFF0A2056);
 
   /// Bright medium blue (selected-tab highlight, step indicator active).
+  ///
+  /// Run-9 audit (device-audit-run9): this is a HERO-FILL role — the
+  /// Dashboard stats card and the learning-track-card icon square both paint
+  /// it as a solid fill with white content on top. It was missed by
+  /// `a68c97d5`'s "keep deep hero fills deep in dark mode" sweep, so it was
+  /// still LIGHTENING in dark (`0xFFAFBEE8`), washing the hero card out to
+  /// pale lavender and dropping its white numerals to 1.70:1. Pinned deep
+  /// like the 17 siblings that sweep already fixed: 10.36:1 with white text.
   Color get blueMedium =>
-      _dark ? const Color(0xFFAFBEE8) : const Color(0xFF1C47C4);
+      _dark ? const Color(0xFF163797) : const Color(0xFF1C47C4);
 
   /// Slightly lighter mid-blue (button tints, tile borders).
+  ///
+  /// Same hero-fill role/fix as [blueMedium] (see its doc) — 12.34:1 with
+  /// white text in dark once pinned deep.
   Color get blueLight =>
-      _dark ? const Color(0xFFAFBDE8) : const Color(0xFF1639A8);
+      _dark ? const Color(0xFF112C81) : const Color(0xFF1639A8);
 
   /// Another mid-blue shade used in tracks-setup components.
+  ///
+  /// Same hero-fill role/fix as [blueMedium] (see its doc) — 11.87:1 with
+  /// white text in dark once pinned deep. The two call sites that used this
+  /// token as a CHART series colour (ink-on-card, not a fill) were moved to
+  /// the new [chartLimudBlue] token, which keeps the old lightening
+  /// derivation that role actually needs.
   Color get blueMid =>
+      _dark ? const Color(0xFF0E2F86) : const Color(0xFF123DAE);
+
+  /// Limud (stage-1) bar-chart / line-chart series colour — split out of
+  /// [blueMid] (run-9 audit) once that token was pinned deep for its
+  /// hero-fill role. This one keeps the ORIGINAL lightens-in-dark values
+  /// (identical to blueMid's pre-fix numbers) because a chart bar/line/dot
+  /// is drawn directly on the card surface and needs to stay visible
+  /// against it, not stay saturated for white text painted over it — the
+  /// opposite requirement from the hero-fill role. 9.11:1 (light) / 9.47:1
+  /// (dark) against the card surface.
+  Color get chartLimudBlue =>
       _dark ? const Color(0xFFAFBFE8) : const Color(0xFF123DAE);
 
   /// Trophy gold (streak flame icon, milestone badge fill).
@@ -497,8 +525,15 @@ class AppPalette extends ThemeExtension<AppPalette> {
       _dark ? const Color(0xFF131C33) : const Color(0xFFD7DEF0);
 
   /// Bottom-nav selected item background / active tab fill.
+  ///
+  /// Run-9 audit: this is another hero-fill token missed by `a68c97d5` —
+  /// paired with the bottom nav's hardcoded `Colors.white` bar background
+  /// (app_shell.dart, fixed in the same pass), the selected pill was ALSO
+  /// lightening in dark (`0xFFAFC2E8`), dropping its white icon/label to
+  /// 1.79:1. Pinned deep like [blueMedium]/[blueLight]/[blueMid]: 12.63:1
+  /// with white content in dark.
   Color get navSelectedBlue =>
-      _dark ? const Color(0xFFAFC2E8) : const Color(0xFF0038A8);
+      _dark ? const Color(0xFF002B81) : const Color(0xFF0038A8);
 
   /// Bottom-nav bar drop shadow — [navSelectedBlue] at ~8% alpha.
   Color get navBarShadow =>

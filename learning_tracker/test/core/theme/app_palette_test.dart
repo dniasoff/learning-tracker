@@ -123,6 +123,65 @@ final List<_Pair> _textRoles = [
     bg: (p) => p.brandWarningSoft,
     min: 4.5,
   ),
+  // Run-9 audit: blueMedium/blueLight/blueMid were used as bare ink (icon/
+  // text colour painted directly on the card) at a few call sites even
+  // though they are now hero-FILL tokens pinned deep in dark. Those call
+  // sites were moved to brandBlueDeep — verify it actually holds up as ink
+  // on the card in both modes.
+  (
+    name: 'brandBlueDeep on card (bare icon/text ink role)',
+    fg: (p) => p.brandBlueDeep,
+    bg: (p) => p.brandCreamCard,
+    min: 4.5,
+  ),
+  // The Limud/Chazara bar+line chart draws its series colour directly on the
+  // card, so it needs the same "stay visible against the card" contract as
+  // any other ink role, not blueMid's hero-fill contract.
+  (
+    name: 'chartLimudBlue on card (chart series ink role)',
+    fg: (p) => p.chartLimudBlue,
+    bg: (p) => p.brandCreamCard,
+    min: 4.5,
+  ),
+];
+
+/// Run-9 audit: hero-fill tokens must hold white (or another explicit
+/// foreground) content painted OVER them as a solid fill — the opposite
+/// contract from [_textRoles], where the FOREGROUND is the token. All of
+/// these were confirmed-P1 dark-mode findings (device-audit-run9): each was
+/// still LIGHTENING in dark before this fix, washing the fill out to a pale
+/// pastel and dropping its white content below 2:1.
+final List<_Pair> _heroFillRoles = [
+  (
+    name: 'white numerals on blueMedium (Dashboard stats hero)',
+    fg: (_) => Colors.white,
+    bg: (p) => p.blueMedium,
+    min: 4.5,
+  ),
+  (
+    name: 'white content on blueLight (hero gradients)',
+    fg: (_) => Colors.white,
+    bg: (p) => p.blueLight,
+    min: 4.5,
+  ),
+  (
+    name: 'white content on blueMid (Switch track / selected pill)',
+    fg: (_) => Colors.white,
+    bg: (p) => p.blueMid,
+    min: 4.5,
+  ),
+  (
+    name: 'white icon/label on navSelectedBlue (bottom-nav selected pill)',
+    fg: (_) => Colors.white,
+    bg: (p) => p.navSelectedBlue,
+    min: 4.5,
+  ),
+  (
+    name: 'peachDark text on peachMid (Upgrade-to-Cloud CTA)',
+    fg: (p) => p.peachDark,
+    bg: (p) => p.peachMid,
+    min: 4.5,
+  ),
 ];
 
 /// Non-text roles only need the 3:1 UI-component threshold.
@@ -196,6 +255,22 @@ void main() {
             reason:
                 '$modeName: ${role.name} is ${ratio.toStringAsFixed(2)}:1, '
                 'below the ${role.min}:1 minimum.',
+          );
+        });
+      }
+
+      for (final role in _heroFillRoles) {
+        test('${role.name} clears ${role.min}:1', () {
+          final ratio = _contrast(role.fg(palette), role.bg(palette));
+          expect(
+            ratio,
+            greaterThanOrEqualTo(role.min),
+            reason:
+                '$modeName: ${role.name} is ${ratio.toStringAsFixed(2)}:1, '
+                'below the ${role.min}:1 minimum. A hero-fill token must stay '
+                'deep/saturated enough in both modes to hold its painted-over '
+                'content — see AppPalette doc comments for the run-9 audit '
+                'context.',
           );
         });
       }
