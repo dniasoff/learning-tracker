@@ -127,14 +127,86 @@ would destroy a real distinction. Related: bulk-marked siyumim rendered the raw 
 `2000-01-01` as a milestone date; the sentinel is load-bearing, so only its *presentation*
 changed ("Previously learned").
 
-## Device findings ⏳
+## Device findings — run-10 (5 of 6 devices reported ⏳)
 
-Run-10 covered six emulators (API 28/29/31/33/34/36-tablet). Reports pending for five.
+Six emulators: API 28 / 29 / 31 / 33 / 34 / 36-tablet. Every verdict below is
+**guest-attributed** — the first run in this campaign for which that is true.
 
-Confirmed so far:
-- **Reader input loss (P2)** — measured across two rounds: 5 taps → 1 advance, and
-  68 taps → 34 advances (~2 taps eaten per page) on the app's primary *reading* surface.
-- **Reader memory retention** — grows then plateaus under sustained paging; perf item, not a risk.
+| Device | Surface | Result |
+|---|---|---|
+| 5560 (API 34) | Settings, parent mode, PIN boundary | **1 × P0** (fixed), 1 × P2, 1 × P3 |
+| 5558 (API 31) | Dashboard, progress, charts | **1 × P1** |
+| 5556 (API 29) | Learn, reader, hierarchy, search | 1 × P2, run-8 P0 **refuted** |
+| 5554 (API 28) | Onboarding, account, PIN entry | **none** (4 pre-existing P3s reconfirmed) |
+| 5564 (API 36) | Hebrew/RTL, tablet layout | **none** |
+| 5562 (API 33) | Tracks, data consistency | ⏳ pending |
+
+### P0 — Parent-PIN bypass after a profile-switch round trip *(fixed, `e45449ee`)*
+
+A child who watched a parent unlock Parent Mode once could re-enter **full admin
+controls with no PIN** later in the same session — while the UI still showed a lock
+icon, a "PIN-guarded" subtitle and a CHILD MODE badge. Reproduced twice, including from
+a cold start.
+
+Cause: `_switchProfile()` cleared the banner's reactive flag but not the guard's cached
+scope, on the reasoning (stated in its own comment) that "the scope id changes". True
+switching *to another* profile; false on a **round trip back** to the previously-elevated
+child, where the scope id is identical and `PinGuard` waved the navigation through.
+
+⚠️ **Fixed but not yet regression-proofed.** The accompanying test pins the `PinGuard`
+contract and does **not** fail when the production fix is reverted — verified, not
+assumed. A caller-level test that can go red is in flight. This is recorded rather than
+glossed because shipping a green test that cannot fail for its own bug is the exact
+pattern this report criticises elsewhere.
+
+### P1 — bulk-mark does not invalidate the summary/header aggregates
+
+After bulk-marking a full masechta, Dashboard / Progress / per-track / Lifetime-header
+showed pre-bulk numbers, while the per-curriculum rows **below the stale header on the
+same screen** were already correct; a restart fixed everything. That isolates it to
+reactivity, not data. The live single-mark path *does* invalidate the same providers, and
+the confirm dialog explicitly promises immediate effect — so the asymmetry contradicts a
+documented promise.
+
+Root cause found independently by code trace: the live path calls
+`completionCommittedProvider.increment()`; the bulk path never does, invalidating only a
+hand-picked list that omits three aggregates. **Both existing tests were structurally
+blind to it** — one increments the signal manually, the other only cold-builds providers.
+Fix in flight.
+
+### Lower severity
+
+- **Reader input loss (P2)** — 5 taps → 1 advance, and 68 taps → 34 advances (~2 eaten
+  per page) on the primary *reading* surface.
+- **PIN dialog in landscape (P2)** — taller than the viewport, keys and title scroll out
+  of view with no scroll affordance. Makes entry harder, not bypassable.
+- **P3s**: 1-frame blank Settings after profile select; chevron direction inconsistency in
+  the LTR wizard (**third occurrence across runs**); stale "Torah Study Tracker" footer
+  branding; intro-carousel chip clipping.
+
+### What the clean runs are worth
+
+5554 and 5564 returned **no findings**, and that is a load-bearing result rather than an
+empty one, because both demonstrated they *would* have reported one:
+- 5564 investigated five suspicious-looking RTL behaviours (Row child-order reversal,
+  `Switch` thumb positions, right-to-left progress fill, date-stepper arrow semantics,
+  RTL-start icon placement) and confirmed each correct instead of filing it;
+- both correctly declined to report the intentionally-hidden Hebrew Terms toggle;
+- 5554 checked "STEP X OF 6" against `computeWizardStepTotal()`'s doc comment before
+  considering it a defect, and declined to reproduce a CTA truncation, correctly scoping
+  it back to API 31 rather than assuming it was fleet-wide.
+
+### Environment, not defects
+
+Emulators died repeatedly (5558 ×7, 5556 ×6, others less). **All classified ENVIRONMENT
+on evidence**, via the host-side logcat mirror that survives device death: package-scoped
+failure patterns across whole sessions returned zero matches. One genuine guest-level
+SIGKILL was traced and *excluded* — a post-cold-boot mass reap of ~40 unrelated processes,
+with our app on Dashboard providers at 53 MB and `contentIndex` never touched.
+
+Some churn was self-inflicted (my APK deployment force-stopping apps mid-audit; failed
+relaunches counted repeatedly). Two auditors independently diagnosed the deployment from
+`installPackageLI` in guest logcat rather than filing it as a crash.
 
 ## Residual risk — what this campaign does NOT cover
 
