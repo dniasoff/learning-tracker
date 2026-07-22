@@ -89,7 +89,7 @@ export LD_LIBRARY_PATH="$HOME/.local/lib/sqliteshim:$LD_LIBRARY_PATH"   # Drift 
 
 | Surface | State | Owner / branch | Evidence when GREEN |
 |---|:--:|---|---|
-| R1 Child-data integrity | 🔴→(building) | wf `wf_3055001f-e0f` → `reassurance/r1-*` | property/collision fixture sweep + red-demo + factory consolidation |
+| R1 Child-data integrity | 🟠→(ci gating) | merged to dev; red-demo ✅ recorded | property/collision fixture sweep (20 tests, all 9 curricula) + factory consolidation — **built, red-demoed, committed; awaiting `make ci` green to push → 🟢** |
 | R2 Device-reality (RTL/overflow, API 9–16) | 🔴 | run-8 (baseline) → then A1.4/A1.5 | en+he golden matrix + RTL harness + multi-device on-device run |
 | R3 Parent-PIN / privacy | 🔴 | Phase 3 (not started) | on-device nav-guard timing + de-tautologized guards + invariants |
 | R4 Sync / cloud / rules | 🟠 | Phase 2 (not started) | rules matrix + on-device real-Firestore round-trip + convert path |
@@ -111,7 +111,7 @@ Phases 2–5 NOT STARTED.
 | Run ID | Task ID | What | Output / branch | Status | Verify complete via |
 |---|---|---|---|---|---|
 | `wf_200850b5-faa` | wczsy20x3 | Run-8 on-device 6-device audit (Phase 0/A0.1) | `docs/test-artifacts/device-audit-run8/_REPORT.md` + `findings_<port>.md` | IN FLIGHT | `_REPORT.md` exists |
-| `wf_3055001f-e0f` | w9va7ojn4 | Phase 1/R1 collision fixture + factory consolidation | branches `reassurance/r1-collision-fixture`, `reassurance/r1-factory-consolidation` | IN FLIGHT | `git branch \| grep reassurance/r1` |
+| `wf_3055001f-e0f` | w9va7ojn4 | Phase 1/R1 collision fixture + factory consolidation | branches merged to dev; red-demo `docs/test-artifacts/red-demos/R1-collision-scope-id.md` | ✅ DONE (verified) | committed on dev; `make ci` gate `b2um978z3` in flight |
 
 Workflow scripts (for relaunch) are auto-persisted under
 `~/.claude/projects/<proj>/*/workflows/scripts/` (name-matched: `ondevice-audit-run8-*.js`,
@@ -152,8 +152,15 @@ Workflow scripts (for relaunch) are auto-persisted under
   run-8 (`wf_200850b5-faa`, Phase 0/A0.1) + R1 fixture (`wf_3055001f-e0f`, Phase 1).
 - **2026-07-22 ~04:50** — Created this mission-control log. run-8 at 1/6 device
   results; R1 in design phase (no branches yet). 6 devices online. dev HEAD f8b42240.
-- *(next entries appended as waves land — record: what completed, evidence path,
-  Scorecard cell moved, any branch merged + make-ci result.)*
+- **2026-07-22 ~05:10** — **R1 (child-data integrity) built + red-demoed.** Workflow
+  `wf_3055001f-e0f` delivered 2 worktree branches, both adversarially verified MERGE.
+  Integrated: merged `r1-factory-consolidation` (canonical `ContentItemFixtures.leaf`
+  + new `LedgerFixtures`, 8 consumers migrated, 79 tests green) + brought A's 2 new
+  files (`collision_fixtures.dart` + property sweep, 20 tests). Ran red-demo ON dev:
+  naive bare keying → 18/20 fail with authentic over-count (`bavli|B|2` wrongly
+  credited); fix restored → 20/20 green. Recorded `red-demos/R1-collision-scope-id.md`.
+  Committed. `make ci` gate `b2um978z3` running (bg) — on green, push + R1 → 🟢.
+- *(next entries appended as waves land.)*
 
 ---
 
