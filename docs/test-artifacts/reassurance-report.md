@@ -164,6 +164,44 @@ on a real `AppRouter`'s `PinGuard.onSessionLocked`. Red-demoed twice independent
 author, and again by the coordinator against the pre-fix file): `Expected: <1> Actual: <0>`
 → restore → green.
 
+### P0 (2nd) — a FALSE "Chumash complete!" siyum can fire at 61.6% actual completion
+
+Found by pulling on a loose thread: an auditor noticed a bulk-mark of 3 Chumash sefarim
+produced **zero** siyum entries, was told not to assume a bug, and traced it through the
+real production path instead of reading code.
+
+**A stale comment turned out to be load-bearing.** `completion_detection_service.dart:44-48`
+asserts that Chumash / Nach / Tanach / Mussar "have no level-2 in their content data". The
+shipped assets say otherwise: **5,844 of 5,846** Chumash items carry a `level2` (the chapter
+— the real shape is sefer → chapter → verse). So the level-2 branch *does* fire, calls
+`unitScopeFor(chumash, level: 2)`, and gets back scope `'masechta'` with a **bare chapter
+number** (`'1'`) as the unit identifier.
+
+Two consequences, the second serious:
+1. **Duplicate aggregate entries** — the sefer-level siyum fires once per dispatched
+   (sefer, chapter) pair rather than once per bulk-mark.
+2. **Collisions corrupt the denominator.** `journey_providers.dart` dedupes unit entries by
+   bare identifier and counts distinct level-2 strings, so for Chumash the total becomes
+   `{'1'…'50'}` = **50** (Genesis's chapter count, every other sefer's numbers being a
+   subset) instead of **5** sefarim. Worked through for a real 3-of-5-sefarim mark:
+   `completedUnits` = 50 chapter strings + 3 sefer names = **53**, against a corrupted
+   `totalUnits` = **50** → `53 >= 50` fires a **curriculum-completion milestone at 61.6%
+   actual progress**.
+
+In a Torah-study tracker a siyum is a meaningful milestone; inventing one a child has not
+earned is a correctness failure with real weight — worse than the missing-siyum symptom
+that led here. Mishnayos is unaffected (its level-2 genuinely names the masechta, so no
+numeric collision).
+
+**Why the suite could not catch it:** `bulk_prior_completion_siyum_detection_test.dart` only
+ever used a **2-tier Mishnayos-shaped fixture**. No test had a fixture whose *shape* could
+expose a 3-tier curriculum's level-2 collision. The gap was in the fixture, not the assertions.
+
+**Open product decision, deliberately not made unilaterally:** should a Chumash *chapter*
+have its own siyum tier? The conservative default applied meanwhile is to skip the level-2
+branch for these curricula (restoring what the code always documented as intent), because
+emitting per-perek siyumim would be a new feature shipped as a side effect of a bug fix.
+
 ### P1 — bulk-mark does not invalidate the summary/header aggregates
 
 After bulk-marking a full masechta, Dashboard / Progress / per-track / Lifetime-header
