@@ -251,6 +251,19 @@ jobs:
           fi
           echo "Coverage check passed: ${PCT}% >= ${FLOOR}%"
 
+      # ── R6d (docs/test-artifacts/reassurance-plan.md Surface 6) ──
+      # The 60% floor above is a fraction of the lines lcov actually SAW —
+      # a lib/**.dart file that's never imported by any test-reachable code
+      # path has NO `SF:` entry in lcov.info at all, so it vanishes from
+      # both the numerator and the denominator instead of dragging the
+      # percentage down. --strict hard-fails if coverage/lcov.info is
+      # missing (unlike `make audit`'s own soft-skipping copy of this same
+      # check, appropriate for a dev who hasn't run `make test` locally) —
+      # here, its absence would mean the gate silently never ran.
+      - name: Assert every lib/ file appears in the coverage denominator (R6d)
+        working-directory: learning_tracker
+        run: dart run tool/check_lcov_denominator.dart --strict
+
       - name: Upload golden test failures (diffs)
         if: failure()
         uses: actions/upload-artifact@v7
