@@ -114,6 +114,8 @@ Phases 2–5 NOT STARTED.
 | `wf_200850b5-faa` | wczsy20x3 | Run-8 on-device 6-device audit (Phase 0/A0.1) | `docs/test-artifacts/device-audit-run8/_REPORT.md` + `findings_<port>.md` | IN FLIGHT | `_REPORT.md` exists |
 | `wf_3055001f-e0f` | w9va7ojn4 | Phase 1/R1 collision fixture + factory consolidation | branches merged to dev; red-demo `docs/test-artifacts/red-demos/R1-collision-scope-id.md` | ✅ DONE (verified) | committed on dev; `make ci` gate `b2um978z3` in flight |
 
+| `wf_47388ca2-54d` | wnk1k4la0 | Run-8 findings fix wave: R2 (Hebrew-Terms toggle, wizard CTA truncation, RTL chevron) + R3 (PIN keypad taps) + bulk-mark rollup gap | branches `reassurance/f-*` | IN FLIGHT | `git branch \| grep reassurance/f-` |
+
 Workflow scripts (for relaunch) are auto-persisted under
 `~/.claude/projects/<proj>/*/workflows/scripts/` (name-matched: `ondevice-audit-run8-*.js`,
 `reassurance-p1-r1-childdata-*.js`).
