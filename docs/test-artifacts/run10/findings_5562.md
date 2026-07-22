@@ -41,6 +41,42 @@ count on the screen a parent checks first.
 
 Not data loss — three other screens read the ledger correctly.
 
+### ✅ ROOT CAUSE FOUND — and it is NOT the 5558 staleness P1
+
+The auditor established the decisive fact: this was observed **after a full app/emulator
+restart**, at a moment when the Dashboard *had* already refreshed to 5,847 / 8.3%. So
+"needs a restart" does not explain it — the per-track row stayed wrong while the
+header-level surfaces were already correct. That makes it **restart-resistant**, i.e. a
+computation bug, not the self-healing invalidation gap filed on 5558.
+
+Confirmed in code (`lifetime_knowledge_providers.dart:548-556`):
+
+```dart
+final trackLedger = ledgerEntriesByTrack[track.id] ?? const <LearningLedgerData>[];
+final lifetimeRefs = builder.computeLearnedLeafRefs(
+  leaves: leaves,
+  completedRefs: allTrackCompletions.map((c) => c.sefariaRef).toSet(),
+  ledgerEntries: trackLedger,
+);
+final lifetimePct = lifetimeRefs.length / denominator;
+```
+
+Both inputs are keyed by **`trackId`** — `allTrackCompletions` is the by-track grouping,
+and `trackLedger` is `ledgerEntriesByTrack[track.id]`. Settings → "Add Lifetime Learning"
+writes **`lifetimeOnly`** rows that carry **no track association**, so they are excluded
+from the numerator entirely → the row reads 0% for a curriculum the user has fully learned.
+
+**This contradicts the provider's own documented contract**, which states
+`lifetimePercentage` is *"the fraction of items the user has ever encountered, computed by
+`LifetimeTreeBuilder` across all completion sources (live + bulk-prior + **lifetime
+imports**)"*. Lifetime imports are precisely what it drops.
+
+⚠️ Not fixed here, deliberately: correcting it means deciding whether a track's "Lifetime"
+figure should count knowledge acquired **outside** that track. The doc comment says yes and
+the user-visible expectation (a Chumash track showing 100% when you know all of Chumash)
+agrees — but that is a product decision touching child-progress numbers, so it wants intent
+confirmed against `git log`/blame and existing tests before the numerator changes.
+
 ## Finding 2 — P2: Curriculum Progress undercounts Chumash ~7× and drops 4 of 5 books
 
 Same screen: *"Total items: 859"*, breakdown lists only ויקרא; the true total is 5,846.
