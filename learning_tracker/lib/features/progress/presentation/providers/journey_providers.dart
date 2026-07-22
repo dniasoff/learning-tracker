@@ -5,6 +5,7 @@ import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
+import 'package:learning_tracker/features/learning/domain/services/completion_detection_service.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
@@ -50,8 +51,16 @@ String? _parentL1Key(LearningLedgerData e, List<ContentItem> content) {
 ///
 /// The decision is made from the loaded content rather than hardcoded so
 /// the screen stays correct if a curriculum's hierarchy changes.
+///
+/// P0 follow-up: gate on [hasNamedLevel2Unit] (not just a Mussar special
+/// case) for the same reason [_countTotalUnits] does — Chumash / Nach also
+/// carry a level2 (a bare chapter number), so the group-counting heuristic
+/// below would otherwise read `groups.length > 1` as true for them (one
+/// group per sefer) and treat a bare chapter-number set as a real aggregate
+/// tier, the same collision class that caused the false curriculum-complete
+/// milestone this fix addresses.
 bool _hasAggregateLevel(List<ContentItem> content, CurriculumId curriculum) {
-  if (curriculum == CurriculumId.mussar) return false;
+  if (!hasNamedLevel2Unit(curriculum)) return false;
   // If at least one content item has a non-null level2 AND more than one
   // distinct level1 grouping that contains level2 children, the curriculum
   // has a meaningful aggregate tier.
@@ -194,25 +203,34 @@ Future<JourneyViewModel> journeyViewModel(Ref ref, int profileId) async {
 /// Count total available units for a curriculum.
 ///
 /// For most curricula, units are level2 (masechtos / simanim / hilchos).
-/// For curricula with no level2 in their content data (Mussar / Chumash /
-/// Nach / Tanach), the unit IS the level-1 sefer.
+/// For Chumash / Nach / Tanach / Mussar, the unit IS the level-1 sefer —
+/// see [hasNamedLevel2Unit].
 ///
-/// F22 (W7-A): the previous implementation only special-cased Mussar and
-/// otherwise counted distinct level2 values. Chumash / Nach / Tanach all
-/// have `level2 == null` everywhere, so the count was 0 and the
-/// curriculum-level siyum was unreachable.
+/// F22 (W7-A) special-cased only Mussar here and otherwise counted distinct
+/// level2 values, on the assumption that "Chumash / Nach / Tanach all have
+/// `level2 == null` everywhere". **P0 (false "Chumash complete!" siyum at
+/// 61.6% actual completion):** that assumption is false for the shipped
+/// content assets — `assets/content/hierarchy/{chumash,nach}.json` carry a
+/// level2 on ~97-99% of leaves (the chapter/perek number). So this used to
+/// fall through to `level2Count`, counting *chapter numbers* (Chumash's
+/// highest is 50, Genesis's own count) instead of *sefarim* (5) as the
+/// denominator for curriculum-completion detection — a bulk-mark of 3 of 5
+/// sefarim could read `completedUnits.length >= totalUnits` as true.
+/// [hasNamedLevel2Unit] (`completion_detection_service.dart`) is the single
+/// source of truth for which curricula have a real, uniquely-named level2
+/// unit (Mishnayos / Bavli / Yerushalmi / Mishna Berurah / Mishneh Torah)
+/// versus a bare positional one that must never be used as a unit
+/// identifier (Chumash / Nach / Tanach / Mussar) — branch on that instead
+/// of re-deriving the same classification from a `level2Count` heuristic.
 int _countTotalUnits(List<ContentItem> content, CurriculumId curriculum) {
-  if (curriculum == CurriculumId.mussar) {
+  if (!hasNamedLevel2Unit(curriculum)) {
     return content.map((c) => c.level1).toSet().length;
   }
-  final level2Count = content
+  return content
       .where((c) => c.level2 != null)
       .map((c) => c.level2!)
       .toSet()
       .length;
-  if (level2Count > 0) return level2Count;
-  // Level-1-only curriculum (Chumash / Nach / Tanach) — count sefarim.
-  return content.map((c) => c.level1).toSet().length;
 }
 
 /// Detect milestone achievements from ledger entries.

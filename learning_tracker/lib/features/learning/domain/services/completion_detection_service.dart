@@ -17,11 +17,11 @@ import 'package:learning_tracker/features/tracks/stages/domain/repositories/stag
 /// 2 detection, and the aggregate-scope set (`{'seder', 'chelek', 'sefer'}`)
 /// for level 1.
 ///
-///   - `level == 2` (used when the content has a non-null `level2`):
+///   - `level == 2` (used when the content has a non-null `level2` AND
+///     [hasNamedLevel2Unit] says that value names a real unit — see below):
 ///       * `mishnayos`, `bavli`, `yerushalmi` → `'masechta'`
 ///       * `mishnaBerurah`                    → `'siman'`
 ///       * `mishnehTorah`                     → `'hilchos'`
-///       * other curricula                    → `'masechta'` (defensive)
 ///   - `level == 1` (level-1-only curricula, or aggregate fallback):
 ///       * `mishnayos`, `bavli`, `yerushalmi` → `'seder'`
 ///       * `mishnaBerurah`                    → `'chelek'`
@@ -41,10 +41,30 @@ String unitScopeFor(CurriculumId curriculum, {required int level}) {
       case CurriculumId.nach:
       case CurriculumId.tanach:
       case CurriculumId.mussar:
-        // These curricula have no level-2 in their content data — the level-2
-        // branch should never fire for them. Default defensively to 'masechta'
-        // so any future content-data change still produces a recognisable
-        // scope string.
+        // P0 (false "Chumash complete!" siyum at 61.6% actual completion):
+        // this branch used to be reached with the comment "these curricula
+        // have no level-2 in their content data" — that was false. The
+        // shipped assets (assets/content/hierarchy/{chumash,nach,mussar}
+        // .json) DO carry a level-2 on ~97-99% of leaves: it is the chapter/
+        // perek number (e.g. '1'), a bare POSITIONAL label, not a uniquely-
+        // named unit like a masechta. Two different sefarim both have a
+        // chapter '1', so recording it as `unitIdentifier` without
+        // ancestor-qualifying it first collided across sefarim once
+        // aggregated in `_detectMilestones` (journey_providers.dart),
+        // corrupting the total-units denominator and firing a curriculum-
+        // complete milestone after only 3 of 5 sefarim were done.
+        //
+        // Per product decision, a Chumash/Nach/Tanach/Mussar chapter is NOT
+        // its own siyum tier — only the sefer (checked at level 1 below) is.
+        // [CompletionDetectionService.checkAndRecordCompletions] gates the
+        // level-2 branch on [hasNamedLevel2Unit], which is false for these
+        // four curricula, so this case is never actually reached; it is
+        // kept only so the switch stays exhaustive. If a future change
+        // wants real per-chapter siyumim, do NOT return a bare chapter
+        // number here — ancestor-qualify it first (e.g. `'$level1:$level2'`
+        // or similar), mirroring `scopeUnitIdentifier()` in
+        // `core/content/content_grouping.dart`, the codebase's existing
+        // pattern for this exact sibling-id-collision class.
         return 'masechta';
     }
   }
@@ -62,6 +82,39 @@ String unitScopeFor(CurriculumId curriculum, {required int level}) {
     case CurriculumId.tanach:
     case CurriculumId.mussar:
       return 'sefer';
+  }
+}
+
+/// Whether [curriculum]'s level-2 hierarchy value names a real, uniquely-
+/// identified siyum unit (a masechta / siman / hilchos) rather than a bare
+/// positional label (a chapter/perek number that repeats across sefarim).
+///
+/// - Mishnayos / Bavli / Yerushalmi / Mishna Berurah / Mishneh Torah: `true`
+///   — level-2 IS the masechta/siman/hilchos name, already unique within the
+///   curriculum.
+/// - Chumash / Nach / Tanach / Mussar: `false` — level-2 is a bare chapter
+///   number (e.g. `'1'`), NOT unique across sefarim (Genesis ch. 1 and
+///   Shemos ch. 1 both read `'1'`). See [unitScopeFor]'s level-2 doc comment
+///   for the P0 this caused when it was treated as a unit identifier.
+///
+/// [CompletionDetectionService.checkAndRecordCompletions] uses this to skip
+/// the level-2 (chapter) check entirely for these four curricula — a
+/// chapter is not its own siyum tier here by product decision, so the
+/// collision is avoided by never producing the identifier, rather than by
+/// trying to qualify it after the fact.
+bool hasNamedLevel2Unit(CurriculumId curriculum) {
+  switch (curriculum) {
+    case CurriculumId.mishnayos:
+    case CurriculumId.bavli:
+    case CurriculumId.yerushalmi:
+    case CurriculumId.mishnaBerurah:
+    case CurriculumId.mishnehTorah:
+      return true;
+    case CurriculumId.chumash:
+    case CurriculumId.nach:
+    case CurriculumId.tanach:
+    case CurriculumId.mussar:
+      return false;
   }
 }
 
@@ -87,9 +140,18 @@ class CompletionDetectionService {
 
   /// Check if completing this leaf item completes a parent unit.
   ///
-  /// Checks unit-level (level2 when present) first, then cascades to
-  /// aggregate-level (level1). The `entryScope` string written to the ledger
-  /// is curriculum-aware — see [unitScopeFor].
+  /// Checks unit-level (level2 — only when [hasNamedLevel2Unit] says the
+  /// curriculum's level2 is a real, uniquely-named unit) first, then
+  /// cascades to aggregate-level (level1). The `entryScope` string written
+  /// to the ledger is curriculum-aware — see [unitScopeFor].
+  ///
+  /// [includeUnitLevelCheck] / [includeAggregateLevelCheck] let a caller
+  /// that dispatches this once per distinct (level1, level2) pair AND once
+  /// per distinct level1 — as the bulk-mark path does, to avoid firing the
+  /// always-on aggregate check once per unit touched instead of once per
+  /// bulk-mark batch (the P0 duplicate-siyum bug) — run only the half it
+  /// needs on each dispatch. Both default to `true` so the single-item live
+  /// path (one call per completion) is unaffected and still runs both.
   Future<void> checkAndRecordCompletions({
     required String curriculumId,
     required String sefariaRef,
@@ -98,6 +160,8 @@ class CompletionDetectionService {
     required int profileId,
     required int markedBy,
     CompletionSource source = CompletionSource.live,
+    bool includeUnitLevelCheck = true,
+    bool includeAggregateLevelCheck = true,
   }) async {
     final curriculum = CurriculumId.values.firstWhere(
       (c) => c.storageKey == curriculumId,
@@ -112,8 +176,13 @@ class CompletionDetectionService {
     if (item == null) return;
 
     // Check unit-level (level2) completion — uses curriculum-specific scope
-    // string (masechta / siman / hilchos) per F2.
-    if (item.level2 != null) {
+    // string (masechta / siman / hilchos) per F2. Gated on
+    // [hasNamedLevel2Unit]: Chumash/Nach/Tanach/Mussar's level2 is a bare
+    // chapter number, not a real unit — see [unitScopeFor]'s doc comment for
+    // the P0 this caused when the branch fired for them regardless.
+    if (includeUnitLevelCheck &&
+        item.level2 != null &&
+        hasNamedLevel2Unit(curriculum)) {
       await _checkUnitCompletion(
         curriculum: curriculum,
         curriculumId: curriculumId,
@@ -134,19 +203,21 @@ class CompletionDetectionService {
     // curricula (Chumash / Nach / Tanach / Mussar) this is the ONLY check
     // that fires, so its scope MUST be a recognised unit scope ('sefer') for
     // the journey provider's whitelist to count it as a unit-level siyum.
-    await _checkUnitCompletion(
-      curriculum: curriculum,
-      curriculumId: curriculumId,
-      entryScope: unitScopeFor(curriculum, level: 1),
-      unitIdentifier: item.level1,
-      level1: item.level1,
-      level2: null,
-      trackType: trackType,
-      trackId: trackId,
-      profileId: profileId,
-      markedBy: markedBy,
-      source: source,
-    );
+    if (includeAggregateLevelCheck) {
+      await _checkUnitCompletion(
+        curriculum: curriculum,
+        curriculumId: curriculumId,
+        entryScope: unitScopeFor(curriculum, level: 1),
+        unitIdentifier: item.level1,
+        level1: item.level1,
+        level2: null,
+        trackType: trackType,
+        trackId: trackId,
+        profileId: profileId,
+        markedBy: markedBy,
+        source: source,
+      );
+    }
   }
 
   Future<void> _checkUnitCompletion({
