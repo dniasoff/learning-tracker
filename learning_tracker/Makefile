@@ -1315,6 +1315,14 @@ audit: lint-rules-test ## Run all 67 enforcement greps (NFR19) — exits non-zer
 	  cat /tmp/lcov_denominator_check.$$$$.log; \
 	  rm -f /tmp/lcov_denominator_check.$$$$.log; \
 	fi; \
+	echo "99/99 — device-audit-run9 systemic guard: raw Colors.white/Colors.black (+ numbered-opacity siblings) and Color(0xFFFFFFFF)/Color(0xFF000000) hex twins under lib/app/, lib/core/widgets/, lib/features/**/presentation/ — RATCHET, only growth above the tracked baseline fails the gate (device-audit-run9 white-surface cluster)"; \
+	if ! dart run tool/check_raw_color_literal_ratchet.dart > /tmp/raw_color_literal_ratchet_check.$$$$.log 2>&1; then \
+	  cat /tmp/raw_color_literal_ratchet_check.$$$$.log; \
+	  rm -f /tmp/raw_color_literal_ratchet_check.$$$$.log; \
+	  FAIL=1; \
+	else \
+	  rm -f /tmp/raw_color_literal_ratchet_check.$$$$.log; \
+	fi; \
 	if [ "$$FAIL" -eq 1 ]; then \
 	  echo "=== audit FAILED — fix violations above ==="; \
 	  exit 1; \
