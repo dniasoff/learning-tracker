@@ -13,13 +13,11 @@ import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/hierarchy_selection_panel.dart';
-import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/bulk_prior_completion_service.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
-import 'package:learning_tracker/features/progress/presentation/providers/progress_providers.dart';
-import 'package:learning_tracker/features/scheduler/scheduler.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
@@ -312,13 +310,12 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
     final profileId = ref.read(activeProfileIdProvider);
 
     // AUD-onboarding-07: await every expunge write (each ref individually —
-    // service API is per-ref) BEFORE invalidating the dependent providers
-    // below. dashboardCompletionPercentageProvider et al. are manually
-    // invalidated rather than reactively derived from these writes, so
-    // invalidating first let a listener refetch before the write landed,
-    // showing a stale (pre-expunge) value with nothing to correct it once
-    // the write actually completed. A failed ref is logged and does not
-    // block the others.
+    // service API is per-ref) BEFORE signalling the dependent providers
+    // below. completionCommittedProvider watchers are reactively derived,
+    // not directly written here, so signalling first let a listener refetch
+    // before the write landed, showing a stale (pre-expunge) value with
+    // nothing to correct it once the write actually completed. A failed ref
+    // is logged and does not block the others.
     await Future.wait(
       refs.map((ref_) async {
         try {
@@ -342,10 +339,17 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
     // after them throws once this State is disposed.
     if (!mounted) return;
 
-    // Refresh progress surfaces after expunge.
-    ref.invalidate(dashboardCompletionPercentageProvider(widget.curriculumId));
-    ref.invalidate(dashboardLastCompletionProvider(widget.curriculumId));
-    ref.invalidate(progressOverviewStatsProvider);
+    // Signal completion-aware providers to rebuild — mirrors the live mark
+    // path (text_display_screen.dart, Story 26.13/DNI-356) instead of
+    // hand-picking providers to invalidate. The previous hand-picked list
+    // here (dashboardCompletionPercentageProvider, dashboardLastCompletionProvider,
+    // progressOverviewStatsProvider) never fired this shared signal, so
+    // persistently-mounted Dashboard/Progress "Lifetime" tiles
+    // (lifetimeTotalsAcrossAllCurriculaProvider, trackDualProgressMetricsProvider,
+    // journeyViewModelProvider) kept showing stale numbers after an
+    // un-mark — those tiles all watch completionCommittedProvider, and
+    // nothing else was refreshing them once mounted.
+    ref.read(completionCommittedProvider.notifier).increment();
   }
 
   @override
@@ -439,13 +443,9 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
         );
       }
 
-      // Refresh progress surfaces immediately after bulk mark.
-      ref.invalidate(
-        dashboardCompletionPercentageProvider(widget.curriculumId),
-      );
-      ref.invalidate(dashboardLastCompletionProvider(widget.curriculumId));
-      ref.invalidate(progressOverviewStatsProvider);
-      ref.invalidate(allDailyTasksProvider);
+      // Signal all completion-aware providers to rebuild immediately after
+      // bulk mark — same fix and rationale as _expungeRefs above.
+      ref.read(completionCommittedProvider.notifier).increment();
     } catch (e) {
       // AUD-onboarding-01 (SM-4): the try block above awaits execute(); if
       // this screen was popped while that write was in flight and it then

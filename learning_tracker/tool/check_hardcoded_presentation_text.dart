@@ -86,7 +86,12 @@ const _baseline = <String>{
   // Theme migration (AppPalette): as above — the colour-token rewrite
   // moved this SAME pre-existing, still-unaddressed AX-2 hit up by 1
   // line. No content at this site changed.
-  'lib/features/tracks/setup/presentation/screens/add_track_flow_screen.dart:554',
+  // R5 bulk-mark-staleness fix: adding the completion_writer_providers.dart
+  // import (so _applySelfPacedPriorCompletions can fire
+  // completionCommittedProvider alongside onTrackChanged()) pushed this
+  // SAME pre-existing, still-unaddressed AX-2 hit down by 1 line, :554 ->
+  // :555. No content at this site changed.
+  'lib/features/tracks/setup/presentation/screens/add_track_flow_screen.dart:555',
   'lib/features/tracks/setup/presentation/screens/track_management_hub_screen.dart:119',
   'lib/features/tracks/setup/presentation/steps/step_starting_position_calendar.dart:425',
 };
