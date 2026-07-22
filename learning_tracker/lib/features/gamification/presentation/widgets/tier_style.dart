@@ -75,7 +75,7 @@ class TierStyle {
         );
       case RewardTier.silver:
         return TierStyle(
-          cardBg: Colors.white,
+          cardBg: c.brandCreamCard,
           borderColor: c.gamifTierSilverBorder,
           iconBg: c.streakEmpty,
           iconFg: Colors.white,
@@ -166,7 +166,7 @@ class TierStyle {
       case RewardTier.legend:
       case RewardTier.custom:
         return TierStyle(
-          cardBg: Colors.white,
+          cardBg: c.brandCreamCard,
           borderColor: c.gamifTierCustomBorder,
           iconBg: c.gamifTierCustomIconBg,
           iconFg: c.iconBlueGrey,

@@ -264,11 +264,11 @@ class AppPalette extends ThemeExtension<AppPalette> {
 
   /// Deep brand-navy (gradient bottom, heavy chip backgrounds).
   Color get blueNavy =>
-      _dark ? const Color(0xFFAFBFE8) : const Color(0xFF03174C);
+      _dark ? const Color(0xFF02113B) : const Color(0xFF03174C);
 
   /// Dark navy variant used in deep screen gradients.
   Color get blueDeepNavy =>
-      _dark ? const Color(0xFFAFC0E8) : const Color(0xFF0A2056);
+      _dark ? const Color(0xFF071843) : const Color(0xFF0A2056);
 
   /// Bright medium blue (selected-tab highlight, step indicator active).
   Color get blueMedium =>
@@ -515,7 +515,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
   /// Deep navy used for the intro carousel's hero card fill, chip text, and
   /// accent text (was duplicated as `_kNavy` in 5 files).
   Color get introNavy =>
-      _dark ? const Color(0xFFAFBBE8) : const Color(0xFF1A36A5);
+      _dark ? const Color(0xFF142A80) : const Color(0xFF1A36A5);
 
   /// Soft peach used for the Mishna/Rewards illustration accent chips.
   Color get introPeach =>
@@ -645,14 +645,14 @@ class AppPalette extends ThemeExtension<AppPalette> {
 
   /// Device-level OS toggle active track colour.
   Color get notifDeviceToggleActiveTrack =>
-      _dark ? const Color(0xFFAFBFE8) : const Color(0xFF123CA5);
+      _dark ? const Color(0xFF0E2E80) : const Color(0xFF123CA5);
 
   /// Device-level OS toggle inactive track colour.
   Color get notifDeviceToggleInactiveTrack =>
       _dark ? const Color(0xFF263041) : const Color(0xFFE0E4ED);
 
   Color get gamifChildRewardsCardBlueTop =>
-      _dark ? const Color(0xFFAFBFE8) : const Color(0xFF1E52D4);
+      _dark ? const Color(0xFF173FA5) : const Color(0xFF1E52D4);
 
   Color get gamifSoftBlueCardBg =>
       _dark ? const Color(0xFF132133) : const Color(0xFFEEF3FA);
@@ -670,7 +670,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
       _dark ? const Color(0xFF98A2B3) : const Color(0xFFB0BEC5);
 
   Color get gamifLegendGradientEnd =>
-      _dark ? const Color(0xFFC9AFE8) : const Color(0xFF4A148C);
+      _dark ? const Color(0xFF390F6D) : const Color(0xFF4A148C);
 
   Color get gamifInkSlateDark =>
       _dark ? const Color(0xFFEAEEF5) : const Color(0xFF455A64);
@@ -691,10 +691,10 @@ class AppPalette extends ThemeExtension<AppPalette> {
       _dark ? const Color(0xFF7BAAD5) : const Color(0xFF5B9BD5);
 
   Color get gamifPointConfigHeroBlueTop =>
-      _dark ? const Color(0xFFAFC0E8) : const Color(0xFF002D9C);
+      _dark ? const Color(0xFF002379) : const Color(0xFF002D9C);
 
   Color get gamifPointConfigHeroBlueBottom =>
-      _dark ? const Color(0xFFAFBFE8) : const Color(0xFF001F6E);
+      _dark ? const Color(0xFF001855) : const Color(0xFF001F6E);
 
   Color get gamifPointConfigChipUnselectedBg =>
       _dark ? const Color(0xFF263041) : const Color(0xFFE8EBF0);
@@ -703,7 +703,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
       _dark ? const Color(0x19000000) : const Color(0x1200218D);
 
   Color get gamifLegendGradientStart =>
-      _dark ? const Color(0xFFAFB4E8) : const Color(0xFF1A237E);
+      _dark ? const Color(0xFF141B62) : const Color(0xFF1A237E);
 
   Color get gamifLegendCardShadow =>
       _dark ? const Color(0x5F000000) : const Color(0x441A237E);
@@ -940,7 +940,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
   /// retyped as `const activeColor = Color(0xFF103BAC)` in both
   /// streak_calendar.dart and monthly_activity_sliver_calendar.dart).
   Color get progressStreakActiveDay =>
-      _dark ? const Color(0xFFAFBFE8) : const Color(0xFF103BAC);
+      _dark ? const Color(0xFF0C2E86) : const Color(0xFF103BAC);
 
   /// Streak-calendar "today" ring colour drawn on an inactive day cell.
   Color get progressStreakTodayRing =>
@@ -988,7 +988,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
 
   /// Lifetime-folder card gradient — top-left stop (deep blue).
   Color get progressLifetimeCardGradientStart =>
-      _dark ? const Color(0xFFAFC3E8) : const Color(0xFF153E8C);
+      _dark ? const Color(0xFF10306D) : const Color(0xFF153E8C);
 
   /// Lifetime-folder card gradient — bottom-right stop (bright blue).
   Color get progressLifetimeCardGradientEnd =>
@@ -1026,11 +1026,11 @@ class AppPalette extends ThemeExtension<AppPalette> {
   /// Lifetime-folder Settings card gradient — top-left stop (forest/sage,
   /// matches the growth metaphor, no blue).
   Color get progressSettingsCardGradientStart =>
-      _dark ? const Color(0xFFEAEEF5) : const Color(0xFF263529);
+      _dark ? const Color(0xFF1D291F) : const Color(0xFF263529);
 
   /// Lifetime-folder Settings card gradient — middle stop.
   Color get progressSettingsCardGradientMid =>
-      _dark ? const Color(0xFFEAEEF5) : const Color(0xFF3A5240);
+      _dark ? const Color(0xFF2D3F31) : const Color(0xFF3A5240);
 
   /// Lifetime-folder Settings card gradient — bottom-right stop.
   Color get progressSettingsCardGradientEnd =>
@@ -1068,19 +1068,19 @@ class AppPalette extends ThemeExtension<AppPalette> {
 
   /// Lock-overlay background — plain Shabbos window.
   Color get sacredTimeLockShabbosBg =>
-      _dark ? const Color(0xFFAFBBE8) : const Color(0xFF11215C);
+      _dark ? const Color(0xFF0D1947) : const Color(0xFF11215C);
 
   /// Lock-overlay background — Shabbos + Yom Tov combined window.
   Color get sacredTimeLockShabbosYomTovBg =>
-      _dark ? const Color(0xFFBBB2E5) : const Color(0xFF31246C);
+      _dark ? const Color(0xFF261C54) : const Color(0xFF31246C);
 
   /// Lock-overlay background — Yom Kippur window.
   Color get sacredTimeLockYomKippurBg =>
-      _dark ? const Color(0xFFBBC7DC) : const Color(0xFF1A2333);
+      _dark ? const Color(0xFF141B27) : const Color(0xFF1A2333);
 
   /// Settings-card header background, paired with the lock-badge icon.
   Color get sacredTimeHeaderBg =>
-      _dark ? const Color(0xFFAFBFE8) : const Color(0xFF11389F);
+      _dark ? const Color(0xFF0D2B7C) : const Color(0xFF11389F);
 
   /// "PARENT" role-context badge background (pale blue).
   Color get settingsProfileBadgeParentBg =>
