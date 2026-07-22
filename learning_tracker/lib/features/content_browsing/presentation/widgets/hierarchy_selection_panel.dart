@@ -190,11 +190,37 @@ class HierarchySelectionPanelState
                 fontWeight: FontWeight.w700,
               ),
             ),
-            // AUD-content_browsing-02: this drill-in disclosure chevron must
-            // also point the reading-forward direction, so reuse the shared
-            // direction-aware helper instead of a bare hardcoded chevron.
+            // P3-wizard-chevron: below, this tile gets re-wrapped in its OWN
+            // inner RTL Directionality when terms.isHebrew, purely to
+            // reposition the leading checkbox next to a right-to-left label.
+            // But Icon.matchTextDirection resolves against the NEAREST
+            // ambient Directionality at paint time — the inner wrap, not the
+            // app's real Directionality read here. AUD-content_browsing-02
+            // pre-selected chevron_left/right via the shared
+            // breadcrumbSeparatorIcon(Directionality.of(context)) helper
+            // using THIS (outer) ambient, so whenever the inner wrap applies,
+            // the icon's own auto-mirroring flips it a SECOND time — a
+            // double-flip, the same bug class fixed for Learn/Notifications
+            // in 144452f0. Concretely: an English-UI user with the Hebrew
+            // Terms display preference on saw this row's chevron point left
+            // while step 3's identical-looking rows pointed right (the P3
+            // reported across three runs); a native RTL (Hebrew UI) user saw
+            // it backwards too (pointing right, not left) — both go
+            // unnoticed by AUD-content_browsing-02's own tests, which assert
+            // only which IconData was selected, never the transform actually
+            // applied at paint time. Fix: capture the app's real ambient
+            // Directionality ONCE, here, before any inner wrap can exist, and
+            // pin it explicitly via Icon.textDirection — matchTextDirection
+            // then mirrors exactly once, against the direction the app is
+            // actually laid out in, immune to the checkbox-repositioning
+            // wrap below. This matches HierarchyTile's convention in
+            // scope_tiles.dart (step 3) and BulkMarkScreen's custom tile
+            // builder, neither of which ever had this bug.
             trailing: onDrill != null
-                ? Icon(breadcrumbSeparatorIcon(Directionality.of(context)))
+                ? Icon(
+                    Icons.chevron_right,
+                    textDirection: Directionality.of(context),
+                  )
                 : null,
             onTap: onDrill ?? () => _toggleItem(item, currentPath.length),
           );
