@@ -95,7 +95,7 @@ class DashboardLevelPointsCard extends ConsumerWidget {
         (
           chazaraLabel!,
           reviewDisplay,
-          context.colors.goldTrophy,
+          context.colors.goldOnColouredSurface,
           SchedulerTaskSection.review,
         ),
     ];
@@ -214,7 +214,7 @@ class DashboardLevelPointsCard extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(999),
                 child: AnimatedProgressBar(
                   value: cumulativeLifetime,
-                  color: context.colors.goldTrophy,
+                  color: context.colors.goldOnColouredSurface,
                   backgroundColor: Colors.white.withValues(alpha: 0.22),
                   height: 12,
                   duration: const Duration(milliseconds: 700),

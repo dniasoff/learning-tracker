@@ -311,8 +311,30 @@ class AppPalette extends ThemeExtension<AppPalette> {
       _dark ? const Color(0xFFAFBFE8) : const Color(0xFF123DAE);
 
   /// Trophy gold (streak flame icon, milestone badge fill).
+  ///
+  /// Darkens in dark mode because its call sites paint it as INK ON A FIXED
+  /// WHITE surface (e.g. `child_points_rewards_tab_card.dart`'s white circle),
+  /// where dark ink is exactly right. Do NOT use it on a surface that stays
+  /// coloured in dark mode — use [goldOnColouredSurface] for that.
   Color get goldTrophy =>
       _dark ? const Color(0xFF332A13) : const Color(0xFFFFC94A);
+
+  /// Gold for ink/fills painted on a surface that STAYS COLOURED in dark mode
+  /// — split out of [goldTrophy] (run-10 device audit), exactly as
+  /// [chartLimudBlue] was split out of [blueMid] for the same reason.
+  ///
+  /// [goldTrophy] darkens to a near-brown in dark mode, which is correct for
+  /// ink on a fixed-white circle but fails badly on the Dashboard hero card's
+  /// own medium-blue circle and translucent-white progress track: measured on
+  /// device at **1.75:1** for the Review digit (WCAG large text needs ≥3:1)
+  /// and **2.26:1** for the lifetime progress-bar fill (non-text needs ≥3:1).
+  /// The same digit measured 4.15:1 in light mode, i.e. the failure was
+  /// dark-mode-only.
+  ///
+  /// This token therefore KEEPS the light amber in both themes, so gold ink
+  /// stays legible against a coloured card rather than sinking into it — the
+  /// opposite requirement from the ink-on-white role above.
+  Color get goldOnColouredSurface => const Color(0xFFFFC94A);
 
   /// Warm amber (point bubbles, reward-card header).
   Color get goldAmber =>
