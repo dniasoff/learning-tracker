@@ -1,5 +1,19 @@
 // Golden/screenshot coverage for AUD-onboarding-12.
 //
+// PARALLEL-UNSAFE (run-10). These two pixel goldens fail non-deterministically
+// when run inside the parallel `make test` lane -- run-10's CI saw page2/en +
+// page3/he fail on one attempt and page2/en + page3/en on the next, while the
+// file passes 5/5 uncontended. They are therefore tagged `serial-tools`, which
+// `make ci` runs separately at --concurrency=1, rather than `quarantine`, which
+// is excluded from the gate entirely: these assertions still gate every CI run,
+// they just do not race.
+//
+// The underlying question -- WHY these particular pixel goldens are sensitive
+// to parallel execution when the rest of the golden suite is not -- is
+// unresolved and pre-existing (the R6 verifier flagged them as flaky before any
+// run-10 work; no run-10 commit touches this file or its PNGs). Recorded as
+// known debt, not fixed.
+//
 // Finding: the floating illustration badges on the intro carousel's pages
 // 2-3 (IntroMishnaIllustration, IntroRewardsHeroIllustration) are positioned
 // with `Positioned(left:/right:)` rather than `PositionedDirectional(start:/
@@ -40,7 +54,15 @@
 // intentional layout regression-visible in both locales, closing the gap
 // the RTL smoke test left open.
 
-@Tags(['l1', 'onboarding', 'intro', 'layout', 'golden', 'aud_onboarding_12'])
+@Tags([
+  'l1',
+  'onboarding',
+  'intro',
+  'layout',
+  'golden',
+  'aud_onboarding_12',
+  'serial-tools',
+])
 library;
 
 import 'package:auto_route/auto_route.dart';
