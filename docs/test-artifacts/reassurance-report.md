@@ -10,9 +10,12 @@
 1. **2nd P0 — false "Chumash complete" siyum** (below): root-caused and specified, fix in
    progress. Carries an **open product decision for the repo owner** (should a Chumash
    chapter be its own siyum tier?), with the conservative default applied meanwhile.
-2. **Chevron fix has no on-device confirmation** — it rests on unit evidence alone
-   (6/6 green, red-demoed at 3/6 on revert, verified twice independently). A live
-   spot-check of wizard step 7 was requested.
+2. ~~Chevron fix has no on-device confirmation~~ — **CLOSED.** Spot-checked live on 5564's
+   sibling device (5558, build `77977737`) through the **real** add-track wizard, in an
+   English session with **Hebrew Terms left at its default-on state** — i.e. the exact
+   combination that was broken. Step 3 and step 7 chevrons now both point right, verified
+   by pixel-level zoomed crops compared side by side, plus one level deeper for the inline
+   breadcrumb separator. Every fix in this campaign now has device confirmation.
 3. **`run9-learn-eager-load` deliberately not merged** — see the section below for why.
 4. Nothing has been pushed. `dev` holds the campaign's work locally, pending a green
    `make ci` on the fully integrated tree.
