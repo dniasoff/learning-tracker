@@ -374,6 +374,35 @@ final trackLedgerEntriesByProfileProvider = FutureProvider.autoDispose
       },
     );
 
+/// Profile-wide learning-ledger load for [trackDualProgressMetricsProvider]'s
+/// `lifetimePercentage`, partitioned by curriculumId (not trackId).
+///
+/// [trackLedgerEntriesByProfileProvider] (above) partitions by trackId and
+/// drops every `null`-trackId row by design — correct for
+/// `currentCyclePercentage`'s `trackAchievement` tier, but wrong for
+/// `lifetimePercentage`, whose own doc comment on
+/// [trackDualProgressMetricsProvider] promises "all completion sources (live
+/// + bulk-prior + lifetime imports)". Settings → "Add Lifetime Learning"
+/// (`CompletionSource.lifetimeOnly`) deliberately writes `trackId: null` (see
+/// `lifetime_marking_screen.dart`'s `LedgerManualBatchItem(trackId: null,
+/// ...)`) because it supports marking a curriculum with no active track at
+/// all — so those rows can never appear in the trackId-keyed map above.
+/// [_computeTrackDualProgressMetric] unions this curriculum-keyed superset,
+/// restricted to `trackId == null`, into the trackId-keyed rows so a
+/// lifetime-only import for a track's own curriculum is counted (P1 —
+/// run-10/5562: Progress-tab row read "Lifetime: 0%" for a curriculum the
+/// Lifetime Knowledge / Add Lifetime Learning / Dashboard screens all
+/// correctly read as 100%, one tap away, after a full app restart).
+final ledgerEntriesByCurriculumForProfileProvider = FutureProvider.autoDispose
+    .family<Map<String, List<LearningLedgerData>>, int>(
+      name: 'ledgerEntriesByCurriculumForProfileProvider',
+      (ref, profileId) async {
+        ref.watch<int>(completionCommittedProvider);
+        final db = ref.watch(userDatabaseProvider);
+        return db.learningLedgerDao.getEntriesGroupedByCurriculum(profileId);
+      },
+    );
+
 /// Profile-wide program-enrollment load for [trackDualProgressMetricsProvider],
 /// partitioned by curriculumType.
 ///
@@ -461,6 +490,17 @@ final trackDualProgressMetricsProvider = FutureProvider.autoDispose
       final programsByCurriculumFuture = ref.watch(
         profileProgramsByProfileProvider(profileId).future,
       );
+      // P1 fix (run-10/5562): curriculum-keyed supersets so lifetimePercentage
+      // can pick up trackId-less lifetime-only rows for the track's own
+      // curriculum. completionsByProfileForLifetimeProvider already exists
+      // (F13, shared with lifetimeDataProvider) and is unfiltered by trackId;
+      // ledgerEntriesByCurriculumForProfileProvider is the new sibling.
+      final completionsByCurriculumFuture = ref.watch(
+        completionsByProfileForLifetimeProvider(profileId).future,
+      );
+      final ledgerEntriesByCurriculumFuture = ref.watch(
+        ledgerEntriesByCurriculumForProfileProvider(profileId).future,
+      );
       final tracks = await db.trackDao.getAllForProfile(profileId);
 
       // The remaining per-track work (leaf loading, completion-percent,
@@ -479,6 +519,8 @@ final trackDualProgressMetricsProvider = FutureProvider.autoDispose
             track: track,
             completionsByTrackFuture: completionsByTrackFuture,
             ledgerEntriesByTrackFuture: ledgerEntriesByTrackFuture,
+            completionsByCurriculumFuture: completionsByCurriculumFuture,
+            ledgerEntriesByCurriculumFuture: ledgerEntriesByCurriculumFuture,
             programsByCurriculumFuture: programsByCurriculumFuture,
           ),
         ),
@@ -504,6 +546,9 @@ Future<TrackDualProgressMetric?> _computeTrackDualProgressMetric({
   required Future<Map<int, List<Completion>>> completionsByTrackFuture,
   required Future<Map<int, List<LearningLedgerData>>>
   ledgerEntriesByTrackFuture,
+  required Future<Map<String, List<Completion>>> completionsByCurriculumFuture,
+  required Future<Map<String, List<LearningLedgerData>>>
+  ledgerEntriesByCurriculumFuture,
   required Future<Map<String, ProfileProgram>> programsByCurriculumFuture,
 }) async {
   final curriculum = CurriculumId.values
@@ -548,11 +593,55 @@ Future<TrackDualProgressMetric?> _computeTrackDualProgressMetric({
   final trackLedger =
       ledgerEntriesByTrack[track.id] ?? const <LearningLedgerData>[];
 
+  // P1 fix (run-10/5562): lifetimePercentage's own doc comment (above, on
+  // trackDualProgressMetricsProvider) promises "all completion sources (live
+  // + bulk-prior + lifetime imports)", and BulkMarkCompletionUseCase's B1
+  // three-tier table explicitly credits lifetimeOnly rows toward "Lifetime
+  // data". But a lifetime-only import can be written with NO track
+  // association at all (Settings → "Add Lifetime Learning" supports marking
+  // a curriculum the profile has no active track for), so those rows are
+  // invisible to the trackId-keyed maps above by construction:
+  // `Completion.trackId == 0` is this codebase's existing "no track" sentinel
+  // for completions (see completion_dao.dart:146 and its several other
+  // readers), and `LearningLedgerData.trackId == null` is the ledger
+  // equivalent (lifetime_marking_screen.dart's `LedgerManualBatchItem
+  // (trackId: null, ...)`). Union those rows in here, scoped to this track's
+  // own curriculum — W3.22 guarantees one track per {profileId,
+  // curriculumId}, so a non-null/non-zero trackId for this curriculum can
+  // only ever be THIS track's id, meaning the `== 0` / `== null` filters
+  // below can never double-count a row already present in
+  // allTrackCompletions/trackLedger.
+  //
+  // computeLearnedLeafRefs's final step restricts its result to refs present
+  // in `leaves` (the track's own scope), so unioning in curriculum-wide rows
+  // cannot over-credit refs outside that scope even though the curriculum
+  // itself may span far more content than this one track.
+  final completionsByCurriculum = await completionsByCurriculumFuture;
+  final lifetimeOnlyCurriculumCompletions =
+      (completionsByCurriculum[track.curriculumId] ?? const <Completion>[])
+          .where((c) => c.trackId == 0);
+  final ledgerEntriesByCurriculum = await ledgerEntriesByCurriculumFuture;
+  final lifetimeOnlyCurriculumLedger =
+      (ledgerEntriesByCurriculum[track.curriculumId] ??
+              const <LearningLedgerData>[])
+          .where((e) => e.trackId == null);
+
+  // computeLearnedLeafRefs requires ledgerEntries ordered newest-first by
+  // completedAt (first-write-wins tie-break) — trackLedger and
+  // lifetimeOnlyCurriculumLedger are each independently ordered that way at
+  // the DAO layer, but concatenating two independently-sorted lists does not
+  // preserve a single combined newest-first order, so re-sort explicitly.
+  final combinedLedger = [...trackLedger, ...lifetimeOnlyCurriculumLedger]
+    ..sort((a, b) => b.completedAt.compareTo(a.completedAt));
+
   const builder = LifetimeTreeBuilder();
   final lifetimeRefs = builder.computeLearnedLeafRefs(
     leaves: leaves,
-    completedRefs: allTrackCompletions.map((c) => c.sefariaRef).toSet(),
-    ledgerEntries: trackLedger,
+    completedRefs: {
+      ...allTrackCompletions.map((c) => c.sefariaRef),
+      ...lifetimeOnlyCurriculumCompletions.map((c) => c.sefariaRef),
+    },
+    ledgerEntries: combinedLedger,
   );
   final lifetimePct = lifetimeRefs.length / denominator;
 
