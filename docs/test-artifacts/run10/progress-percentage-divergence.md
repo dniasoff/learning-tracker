@@ -54,6 +54,33 @@ in seconds. The action is to disambiguate the labels (and ideally converge the f
 aggregators onto `TrackProgressService` as its own doc comment intends) — NOT to force
 the numbers equal, which would break a real distinction.
 
+## ⚠️ AMENDMENT — this framing does NOT cover every case (run-10, 5562)
+
+The 5562 auditor found a case the paragraph above would wrongly excuse, and was right to
+push back on it. On the Progress tab the ACTIVE TRACKS row for חומש reads
+**"Lifetime 0%"**; tapping that very row opens Curriculum Progress, which reads
+**"Lifetime 100%"** — same label, same curriculum, one tap apart, reproduced twice, with
+three other screens independently confirming 100% as ground truth.
+
+There is **no different question being answered** there. It is not a denominator serving a
+distinct purpose, and it is not a labelling ambiguity: it is simply a **wrong count**, on
+the screen a parent is most likely to check first.
+
+So the rule stands only in this narrower form:
+
+- Where two surfaces answer genuinely different questions (track-scoped vs whole-curriculum),
+  **relabel — do not equalise.**
+- Where two surfaces carry the **identical** label and disagree, **that is a bug**, and the
+  "labelling not arithmetic" argument must not be used to wave it through.
+
+Recorded because the original wording was broad enough to be quoted as a reason not to fix
+a real defect — precisely the kind of plausible-sounding framing this campaign exists to
+catch.
+
+Related, same screen (P2): Curriculum Progress showed "Total items: 859" listing only
+ויקרא against a true 5,846 — the active track's **scope** rendered unlabelled next to an
+**unscoped** "Lifetime 100%" headline on the same card, so the card contradicts itself.
+
 ⚠️ Do not "fix" this by making the denominators identical. Confirm intent against
 `git log`/blame and the existing tests first; this campaign has already wasted a cycle
 "fixing" a deliberate design.
