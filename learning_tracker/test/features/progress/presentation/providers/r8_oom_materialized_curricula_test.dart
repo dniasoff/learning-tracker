@@ -117,9 +117,8 @@ void main() {
 
   setUp(() async {
     final database = inMemoryDb();
-    addTearDown(
-      database.close,
-    ); // TQ-6: close in the same scope as the factory call
+    // TQ-6: close in the same scope as the factory call.
+    addTearDown(database.close);
     db = database;
     await seedProfile(db); // profile id 1
     final trackId = await seedTrack(
