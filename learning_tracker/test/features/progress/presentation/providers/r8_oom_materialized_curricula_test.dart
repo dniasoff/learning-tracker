@@ -116,7 +116,9 @@ void main() {
   const mussarLeafRef = 'Mesillat Yesharim 1:1';
 
   setUp(() async {
-    db = inMemoryDb();
+    final database = inMemoryDb();
+    addTearDown(database.close); // TQ-6: close in the same scope as the factory call
+    db = database;
     await seedProfile(db); // profile id 1
     final trackId = await seedTrack(
       db,
@@ -149,7 +151,6 @@ void main() {
     repo = _CountingContentRepository(_DiskContentRepository());
   });
 
-  tearDown(() async => db.close());
 
   test('precondition: exactly Mussar has track completions', () async {
     final mussar = await db.completionDao.getCompletionsByTier(
