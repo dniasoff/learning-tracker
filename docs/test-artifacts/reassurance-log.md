@@ -68,6 +68,23 @@ export PATH="/home/daniel/flutter/bin:$PATH"
 export LD_LIBRARY_PATH="$HOME/.local/lib/sqliteshim:$LD_LIBRARY_PATH"   # Drift tests
 ```
 
+**⚠️ GPU / crash-attribution (learned in run-8 AND run-9 — cost two false P0s):**
+- The fleet has been running \`-gpu swiftshader_indirect\` (software). This produces **host-side RenderThread segfault storms** (199 in one run-8 session) that look exactly like app crashes. Run-8's "Learn OOM P0" and two run-9 P1s were all re-classified **ENVIRONMENT** because of it. **Do not trust any crash finding produced on swiftshader.**
+- **DEAD END — do not retry (tested 2026-07-22):** \`-gpu host\` AND \`-gpu swangle_indirect\` both fail on this box, headless *and* under Xvfb:
+  \`Failed to get EGL display\` → \`Can't initialize RenderLib … sRendererUsesSubWindow=1\` → \`Could not start renderer! (Error: -2)\`.
+  Xvfb (\`Xvfb :99 -screen 0 1920x1080x24\`) does **not** help — the emulator ships its own EGL/GLES stack that cannot bind a display headlessly here.
+  ⚠️ Trap that cost a cycle: the log shows a **successful Vulkan probe first** — \`Found physical GPU 'Intel(R) UHD Graphics 770'\`, \`Hardware GPU requirements … are passed\` — and only *then* fails to start the renderer. **Those probe lines are NOT proof the renderer works.** Always grep for \`Could not start renderer\`.
+  ⇒ **\`-gpu swiftshader_indirect\` is the only working mode on this machine.** Stop fighting the GPU; fix attribution instead (next bullet).
+- **✅ THE ACTUAL FIX — attribute crashes from the GUEST, not the host.** SwiftShader's RenderThread segfaults are *host-side* and never reach guest logcat; real app failures always do. So classify from inside the device:
+  \`\`\`bash
+  adb -s emulator-<port> logcat -b crash,main -d \\
+    | grep -E "FATAL EXCEPTION|am_crash|lowmemorykiller|lmkd|tombstoned|ANR in"
+  \`\`\`
+  A finding counts as a real app crash **only if it appears here**. Host emulator-process death alone = ENVIRONMENT. This is exactly what run-8/run-9 lacked, and why two findings were wrongly escalated. Clear with \`logcat -c\` before each scenario so attribution is per-scenario.
+- GOTCHA: a killed emulator leaves \`~/.android/avd/<avd>.avd/multiinstance.lock\` **and** a live \`qemu-system-…-headless\` process; the next launch dies with *"Another emulator instance is running."* → kill the stale pid, \`rm\` the lock, relaunch.
+- GOTCHA: launching an AVD that is genuinely already running needs \`-read-only\`.
+- GOTCHA: emulator launches issued from a Bash tool call get killed along with the shell (exit 144). Use \`setsid … </dev/null >log 2>&1 & disown\` plus a short in-call \`sleep\`, and **verify the log file exists** before believing it launched.
+
 **Known operational facts (learned this campaign):**
 - 6 concurrent emulators driven through one adb server **flap** under load (not
   OOM — box has 123 GB, ~100 free). Tolerate transient `get-state` blips; retry.
