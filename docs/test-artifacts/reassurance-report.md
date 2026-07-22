@@ -1,9 +1,21 @@
 # Release Reassurance — final report
 
-> **STATUS: IN PROGRESS.** Sections marked ⏳ are awaiting run-10 device reports and
-> the final fix wave. Everything else is settled and evidenced. This document is the
-> campaign's deliverable: an honest account of what is now trustworthy, what is not,
-> and what remains unknown.
+> **STATUS: all six run-10 device reports are in; the fix wave is complete.** Remaining
+> open items are named explicitly in *Still open* and *Residual risk* below — they are
+> stated, not hidden. This document is the campaign's deliverable: an honest account of
+> what is now trustworthy, what is not, and what remains unknown.
+
+## Still open at time of writing
+
+1. **2nd P0 — false "Chumash complete" siyum** (below): root-caused and specified, fix in
+   progress. Carries an **open product decision for the repo owner** (should a Chumash
+   chapter be its own siyum tier?), with the conservative default applied meanwhile.
+2. **Chevron fix has no on-device confirmation** — it rests on unit evidence alone
+   (6/6 green, red-demoed at 3/6 on revert, verified twice independently). A live
+   spot-check of wizard step 7 was requested.
+3. **`run9-learn-eager-load` deliberately not merged** — see the section below for why.
+4. Nothing has been pushed. `dev` holds the campaign's work locally, pending a green
+   `make ci` on the fully integrated tree.
 
 ## What was asked
 
@@ -127,7 +139,7 @@ would destroy a real distinction. Related: bulk-marked siyumim rendered the raw 
 `2000-01-01` as a milestone date; the sentinel is load-bearing, so only its *presentation*
 changed ("Previously learned").
 
-## Device findings — run-10 (5 of 6 devices reported ⏳)
+## Device findings — run-10 (all 6 devices reported)
 
 Six emulators: API 28 / 29 / 31 / 33 / 34 / 36-tablet. Every verdict below is
 **guest-attributed** — the first run in this campaign for which that is true.
@@ -139,7 +151,7 @@ Six emulators: API 28 / 29 / 31 / 33 / 34 / 36-tablet. Every verdict below is
 | 5556 (API 29) | Learn, reader, hierarchy, search | 1 × P2, run-8 P0 **refuted** |
 | 5554 (API 28) | Onboarding, account, PIN entry | **none** (4 pre-existing P3s reconfirmed) |
 | 5564 (API 36) | Hebrew/RTL, tablet layout | **none** |
-| 5562 (API 33) | Tracks, data consistency | ⏳ pending |
+| 5562 (API 33) | Tracks, data consistency | **2 × P1**, 3 × P2 |
 
 ### P0 — Parent-PIN bypass after a profile-switch round trip *(fixed, `e45449ee`)*
 
