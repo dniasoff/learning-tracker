@@ -52,7 +52,7 @@ watching the guard fail to notice:
 | **R1** Child-data integrity | 🟢 | Property sweep over all 9 curricula × collision levels 2/3/4. Red-demo: naive keying → 18/20 fail with authentic over-counting. |
 | **R2** Device reality (RTL/overflow/goldens) | 🟠 | Golden matrix now en+he × light/dark with real pixel assertions; brightness axis proven to discriminate, plus a structural guard that it stays registered. Device sweep ⏳. |
 | **R3** Parent-PIN / privacy | 🟢 | Live PII leak closed; substring rule; real tests for 14 previously-uncovered events; de-tautologized PIN guard; route-wiring + guard-chain tests. Red-demo: reintroducing `child_profile_id` fails the sweep. |
-| **R4** Sync / cloud / rules | 🔴 | **Not started.** See Residual Risk. |
+| **R4** Sync / cloud / rules | 🟢 | **Correction — this was already covered and the campaign failed to credit it.** See below. |
 | **R5** Reactivity / staleness | 🟢 | `expectRebuildsOn()` contract + 7 adoptions — first systemic guard for a class with 63 prior escapes. Red-demo: all 7 go red when the invalidation watch is removed. |
 | **R6** Gate & flake trust | 🟢 | 2m global timeout, randomized ordering, quarantine lane, coverage-denominator ratchet. Found two real bugs en route. |
 | **R7** Full-journey acceptance | 🟠 | Ratchet pins source-assert growth (baseline 43); 4 exemplar conversions. The remaining 43 still need burning down. |
@@ -153,11 +153,16 @@ scope, on the reasoning (stated in its own comment) that "the scope id changes".
 switching *to another* profile; false on a **round trip back** to the previously-elevated
 child, where the scope id is identical and `PinGuard` waved the navigation through.
 
-⚠️ **Fixed but not yet regression-proofed.** The accompanying test pins the `PinGuard`
-contract and does **not** fail when the production fix is reverted — verified, not
-assumed. A caller-level test that can go red is in flight. This is recorded rather than
-glossed because shipping a green test that cannot fail for its own bug is the exact
-pattern this report criticises elsewhere.
+**Fixed AND regression-proofed** — but only after catching a bad guard on the way.
+
+The first test written for it pinned the `PinGuard` contract and did **not** fail when the
+production fix was reverted (verified, not assumed) — because the bug lived in the caller.
+Rather than ship a green test that cannot fail for its own bug — the exact pattern this
+report criticises elsewhere — it was labelled as insufficient and a **caller-level** test
+was written: it pumps the real `ProfileSwitcherSheet`, taps a real profile row, and spies
+on a real `AppRouter`'s `PinGuard.onSessionLocked`. Red-demoed twice independently (by its
+author, and again by the coordinator against the pre-fix file): `Expected: <1> Actual: <0>`
+→ restore → green.
 
 ### P1 — bulk-mark does not invalidate the summary/header aggregates
 
@@ -212,9 +217,28 @@ relaunches counted repeatedly). Two auditors independently diagnosed the deploym
 
 Stated plainly, because a reassurance report that hides its gaps is worthless:
 
-1. **R4 (sync / cloud / Firestore rules) was never started.** No rules matrix, no
-   on-device real-Firestore round-trip, no account-convert path verification. This is the
-   largest untested surface and it touches data durability.
+1. ~~**R4 (sync / cloud / Firestore rules) was never started.**~~ **RETRACTED — this claim
+   was wrong, and it was the headline gap in earlier drafts of this report.** A
+   comprehensive rules matrix already exists at
+   `learning_tracker/functions/test/firestore_rules.test.mjs` (48 KB, ~94 cases): owner-write
+   / tutor-read / stranger-and-anon-deny per collection across **24/24 match paths** in
+   `firestore.rules`, SR-1..SR-5 boundary tests, a zero-denial oracle, and a cross-device
+   round-trip. It runs against the **real Firestore emulator**, is gated by a TQ-9
+   rule-coverage check (`functions/tool/check_rule_coverage.mjs`) asserting every
+   conditional allow rule is evaluated, and **is wired into `make ci`** via `test-rules`.
+   It predates this campaign (first committed 2026-05-29). Independently re-verified this
+   run: 104/104 pass, and red-demoed by widening the completions tutor-write block, which
+   failed exactly one test, then reverted clean.
+   **The failure here was the campaign's tracking, not the codebase** — the scorecard
+   carried "Phase 2 not started" and never checked. A reassurance exercise that
+   under-credits existing coverage is making the same class of error as one that
+   over-credits it: both mean the stated risk picture does not match reality.
+   *Genuinely still open on this surface:* an on-device real-Firestore round-trip and the
+   offline→cloud account-convert path.
+   ⚠️ Note also that my own `make ci` run never executed these tests: `ci` runs
+   `… test test-serial-tools test-rules test-functions`, and it aborted at the failing
+   `test` target, so `test-rules` never ran. A green `test` is a precondition for the rules
+   matrix being exercised at all.
 2. **R7 is a ratchet, not a cure.** 43 source-text assertion files remain; growth is
    blocked, the existing debt is not paid.
 3. **Emulator-only.** Nothing here was verified on physical hardware, by explicit
