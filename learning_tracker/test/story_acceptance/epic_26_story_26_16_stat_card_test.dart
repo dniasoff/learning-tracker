@@ -13,10 +13,12 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart'
     hide expect, group, setUp, setUpAll, test;
+import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/stat_card.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/task_category_stat_box.dart';
 import 'package:test/test.dart';
 
+import '../helpers/golden_font_loader.dart' show loadFonts;
 import '../helpers/golden_runner.dart';
 import '../helpers/lib_source.dart';
 import '../helpers/pump_app.dart';
@@ -38,17 +40,23 @@ import '../helpers/pump_app.dart';
 /// `AppLocalizations.supportedLocales` (which includes `he`), so the
 /// requested locale now actually resolves and `Directionality` flips to
 /// RTL for `Locale('he')`.
-Widget _harness({required Widget child, required Locale locale}) {
+Widget _harness({
+  required Widget child,
+  required Locale locale,
+  Brightness brightness = Brightness.light,
+}) {
   return pumpApp(
     locale: locale,
-    child: Scaffold(
-      backgroundColor: const Color(0xFFF4F6FB),
-      body: SafeArea(child: child),
-    ),
+    theme: AppTheme.themeFor(brightness: brightness),
+    child: Scaffold(body: SafeArea(child: child)),
   );
 }
 
 void main() {
+  setUpAll(() async {
+    await loadFonts();
+  });
+
   // ── AC1: StatCard class exists ───────────────────────────────────────────────
   group(
     'Story 26.16 AC1 — StatCard exists under core/widgets/',
@@ -351,10 +359,16 @@ void main() {
     },
   );
 
-  // ── AC6: Golden tests — 3 variants × 2 locales ──────────────────────────────
+  // ── AC6: Golden tests — 3 variants × 2 locales × 2 brightnesses ─────────────
   //
-  // PNG baselining deferred; the structural pump (en + he) catches RTL
-  // rendering regressions per the golden_runner contract.
+  // R2 (golden matrix): PNG baselining is now live (`skipGolden: false`) —
+  // StatCard is a `core/widgets/` primitive reused on both the Dashboard
+  // (TaskCategoryStatBox) and the Progress overview, making it one of the
+  // highest-traffic canonical widgets in the app, and it is fully
+  // self-contained (no Riverpod provider deps beyond locale/theme), so it
+  // baselines cleanly with no additional wiring. The brightness axis
+  // exercises `context.colors.*` token resolution under the
+  // `theme/royal-blue-brightness-aware-palette` migration.
 
   group(
     'Story 26.16 AC6 — golden tests for StatCard in 3 visual variants',
@@ -363,9 +377,9 @@ void main() {
       // Variant 1: Default (with icon, not highlighted)
       goldenTest(
         'stat_card_default',
-        skipGolden: true,
-        builder: (locale) => _harness(
+        builder: (locale, brightness) => _harness(
           locale: locale,
+          brightness: brightness,
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: SizedBox(
@@ -386,9 +400,9 @@ void main() {
       // Variant 2: Highlighted (streak accent)
       goldenTest(
         'stat_card_highlighted',
-        skipGolden: true,
-        builder: (locale) => _harness(
+        builder: (locale, brightness) => _harness(
           locale: locale,
+          brightness: brightness,
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: SizedBox(
@@ -410,9 +424,9 @@ void main() {
       // Variant 3: Compact (no icon — TaskCategoryStatBox mode)
       goldenTest(
         'stat_card_compact',
-        skipGolden: true,
-        builder: (locale) => _harness(
+        builder: (locale, brightness) => _harness(
           locale: locale,
+          brightness: brightness,
           child: const Padding(
             padding: EdgeInsets.all(16),
             child: SizedBox(

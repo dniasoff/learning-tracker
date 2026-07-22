@@ -115,7 +115,10 @@ void main() {
       const goldenName = 'records both locale variants — sanity check';
       goldenTest(
         goldenName,
-        builder: (locale) => const SizedBox(width: 10, height: 10),
+        // R2 widened the builder to (locale, brightness). The body stays a
+        // bare SizedBox: this call site's job is to prove the RUNNER
+        // registers every variant, so it must not depend on either axis.
+        builder: (locale, brightness) => const SizedBox(width: 10, height: 10),
       );
 
       // R6 fix (docs/test-artifacts/reassurance-plan.md Surface 6):
@@ -146,6 +149,28 @@ void main() {
               'goldenTest(name, builder) must register one sub-test '
               'per locale so visual regressions in either rendering '
               'are caught (NFR13)',
+        );
+      });
+
+      // R2 (golden matrix) added a light/dark axis alongside the locale
+      // axis. Without a structural guard the brightness axis could silently
+      // stop being registered — every golden would still pass, just with
+      // half the coverage, which is exactly the inert-golden failure mode
+      // this campaign exists to catch. Asserted at registration time for
+      // the same order-independence reason as the locale guard above.
+      test('goldenTest exercises both light and dark brightness', () {
+        final brightnesses = registeredGoldenTests
+            .where((registration) => registration.name == goldenName)
+            .map((registration) => registration.brightness)
+            .toSet();
+        expect(
+          brightnesses,
+          {Brightness.light, Brightness.dark},
+          reason:
+              'goldenTest(name, builder) must register one sub-test per '
+              'brightness so dark-mode regressions are caught — the run-9 '
+              'dark-mode legibility cluster shipped because nothing '
+              'asserted on dark renderings',
         );
       });
     });

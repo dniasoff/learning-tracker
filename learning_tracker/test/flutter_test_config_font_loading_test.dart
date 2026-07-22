@@ -27,6 +27,10 @@
 /// glyphs exercise [golden_font_loader.loadFonts]'s Roboto, and the `he`
 /// glyphs exercise [golden_font_loader.loadHebrewFont]'s Noto Sans Hebrew
 /// — the only family declared under pubspec's `flutter: fonts:` section.
+/// `goldenTest()` also sweeps light/dark brightness (R2, golden matrix);
+/// this probe ignores the brightness parameter (hardcoded black-on-white)
+/// since it exists to prove font loading, not theme resolution, so its
+/// light/dark baselines are intentionally identical.
 ///
 /// Both baseline PNGs were captured with `--update-goldens` and eyeballed
 /// (see AUD-t-cross-51's `evidence`/`why` fields for the failure modes
@@ -43,7 +47,7 @@ import 'helpers/golden_runner.dart';
 void main() {
   goldenTest(
     'font_loading_probe',
-    builder: (locale) {
+    builder: (locale, brightness) {
       final isHebrew = locale.languageCode == 'he';
       return Center(
         child: ColoredBox(
