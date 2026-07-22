@@ -469,6 +469,29 @@ class CompletionRepositoryImpl implements CompletionRepository {
   /// once per `(curriculumId, level1)` and once per `(curriculumId, level2)`,
   /// not once per leaf.
   ///
+  /// P0 fix: the unit-level (level2) check and the aggregate-level (level1)
+  /// check are dispatched in two INDEPENDENT deduped passes, each calling
+  /// [CompletionDetectionService.checkAndRecordCompletions] with only the
+  /// half it needs (`includeUnitLevelCheck` / `includeAggregateLevelCheck`).
+  /// Previously a single pass, deduped only by `(level1, level2)`, dispatched
+  /// the ALWAYS-RUN aggregate check once per distinct level2 touched under a
+  /// level1 — so bulk-marking 3 sefarim of Chumash (which have no real level2
+  /// unit; see [hasNamedLevel2Unit]) fired the sefer-level check once per
+  /// chapter instead of once per sefer, and a whole-seder Mishnayos bulk-mark
+  /// would have fired the seder-level check once per masechta. The aggregate
+  /// check now dispatches exactly once per distinct level1 in the batch.
+  ///
+  /// The unit-level pass is also skipped entirely for curricula whose level2
+  /// is a bare positional chapter number rather than a real named unit
+  /// (Chumash / Nach / Tanach / Mussar) — dispatching it there previously
+  /// recorded a `masechta`-scoped ledger entry keyed by a bare chapter
+  /// number (e.g. `'1'`), which collides across sefarim (Genesis ch. 1 and
+  /// Shemos ch. 1 both read `'1'`) once aggregated in
+  /// `journey_providers.dart`'s `_detectMilestones` — corrupting the total-
+  /// units denominator and, in the case this fix addresses, firing a false
+  /// "Chumash complete!" curriculum-level milestone after only 3 of 5
+  /// sefarim (61.6%) were actually done.
+  ///
   /// Each call is awaited so test code (and the live UI's invalidation) sees
   /// a synchronous "bulk insert + siyum ledger update" boundary.
   Future<void> _dispatchSiyumDetectionForRefs({
@@ -485,26 +508,34 @@ class CompletionRepositoryImpl implements CompletionRepository {
       (c) => c.storageKey == curriculumId,
       orElse: () => throw ArgumentError('Unknown curriculumId: $curriculumId'),
     );
+    final hasUnitLevel = hasNamedLevel2Unit(curriculum);
 
-    // Resolve each ref into its content item and dedupe by parent unit so we
-    // call the detection service once per distinct (level1, level2) pair.
+    // Resolve each ref into its content item once, feeding two independent
+    // dedupe sets: one keyed by (level1, level2) for the unit-level check
+    // (only populated when the curriculum has a real, named level2 unit),
+    // one keyed by level1 alone for the aggregate-level check.
     final seenUnitKeys = <String>{};
-    final representativeRefs = <String>[];
+    final unitLevelRefs = <String>[];
+    final seenAggregateKeys = <String>{};
+    final aggregateLevelRefs = <String>[];
     for (final ref in sefariaRefs) {
       final item = await _contentRepository.getContentByRef(
         curriculumId: curriculum,
         sefariaRef: ref,
       );
       if (item == null) continue;
-      // The detection service inspects both level1 and level2 — using
-      // (level1, level2) as the dedupe key covers both checks at once.
-      final unitKey = '${item.level1}::${item.level2 ?? ''}';
-      if (seenUnitKeys.add(unitKey)) {
-        representativeRefs.add(ref);
+      if (hasUnitLevel && item.level2 != null) {
+        final unitKey = '${item.level1}::${item.level2}';
+        if (seenUnitKeys.add(unitKey)) {
+          unitLevelRefs.add(ref);
+        }
+      }
+      if (seenAggregateKeys.add(item.level1)) {
+        aggregateLevelRefs.add(ref);
       }
     }
 
-    for (final ref in representativeRefs) {
+    for (final ref in unitLevelRefs) {
       await svc.checkAndRecordCompletions(
         curriculumId: curriculumId,
         sefariaRef: ref,
@@ -512,6 +543,18 @@ class CompletionRepositoryImpl implements CompletionRepository {
         profileId: profileId,
         markedBy: profileId,
         source: source,
+        includeAggregateLevelCheck: false,
+      );
+    }
+    for (final ref in aggregateLevelRefs) {
+      await svc.checkAndRecordCompletions(
+        curriculumId: curriculumId,
+        sefariaRef: ref,
+        trackType: trackType,
+        profileId: profileId,
+        markedBy: profileId,
+        source: source,
+        includeUnitLevelCheck: false,
       );
     }
   }
