@@ -501,7 +501,14 @@ final trackDualProgressMetricsProvider = FutureProvider.autoDispose
       final ledgerEntriesByCurriculumFuture = ref.watch(
         ledgerEntriesByCurriculumForProfileProvider(profileId).future,
       );
-      final tracks = await db.trackDao.getAllForProfile(profileId);
+      // Run-10 acceptance sweep (5562): use the ACTIVE-only query, not
+      // getAllForProfile(). getAllForProfile returns active + archived +
+      // deleted (it exists for the sync engine), so a track the user had
+      // DELETED still appeared under the Progress tab's "ACTIVE TRACKS" list —
+      // contradicting this provider's own "one per active track" contract and
+      // disagreeing with Manage Tracks, which uses watchActiveTracksForProfile.
+      // getActiveTracksForProfile filters to state = 'active', matching it.
+      final tracks = await db.trackDao.getActiveTracksForProfile(profileId);
 
       // The remaining per-track work (leaf loading, completion-percent,
       // calendar position) is independent across tracks — run it

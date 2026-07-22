@@ -301,4 +301,56 @@ void main() {
       });
     },
   );
+
+  group('run-10 acceptance sweep (5562) — the Progress-tab metrics list is '
+      'ACTIVE-only (a deleted track must not appear)', () {
+    test('a track the user deleted is excluded from '
+        'trackDualProgressMetricsProvider', () async {
+      final db = inMemoryDb();
+      addTearDown(db.close);
+      await seedProfile(db);
+
+      // One ACTIVE track (chumash) …
+      await seedTrack(
+        db,
+        profileId: _profileId,
+        curriculumId: _curriculumId,
+        activatedAt: _trackActivatedAt,
+      );
+      // … and one DELETED track (mishnayos) for the same profile. The user
+      // removed this via Manage Tracks; it stays in the table (state='deleted')
+      // for the sync engine, but it must never surface in the UI's ACTIVE list.
+      await db
+          .into(db.curriculumTracks)
+          .insert(
+            CurriculumTracksCompanion.insert(
+              profileId: _profileId,
+              curriculumId: 'mishnayos',
+              stateChangedAt: _trackActivatedAt,
+              activatedAt: _trackActivatedAt,
+              state: const Value('deleted'),
+            ),
+          );
+
+      final container = _makeContainer(db);
+      addTearDown(container.dispose);
+
+      final metrics = await container.read(
+        trackDualProgressMetricsProvider(_profileId).future,
+      );
+
+      // Only the active chumash track — pre-fix this used getAllForProfile()
+      // and returned BOTH, so the deleted mishnayos track showed under the
+      // Progress tab's "ACTIVE TRACKS" header at 0%/0%.
+      expect(
+        metrics.map((m) => m.curriculumId).toList(),
+        [CurriculumId.chumash],
+        reason:
+            'trackDualProgressMetricsProvider must use the active-only query '
+            '(getActiveTracksForProfile), matching Manage Tracks and its own '
+            '"one per active track" doc comment — a deleted track must not '
+            'appear in the Progress-tab list',
+      );
+    });
+  });
 }
