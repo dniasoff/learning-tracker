@@ -1025,6 +1025,21 @@ class AppPalette extends ThemeExtension<AppPalette> {
   Color get progressTierPointsAccent =>
       _dark ? const Color(0xFFE6C269) : const Color(0xFFE4A100);
 
+  /// Amber accent for the **Siyumim** tier counter's NUMBER, rendered on
+  /// [brandCreamCard]. Split from [chartAmber] (run-10 acceptance sweep).
+  ///
+  /// `chartAmber` DARKENS to `0xFF332913` in dark mode — correct for its
+  /// ink-on-a-fixed-LIGHT-background role (e.g. the trophy icon on the
+  /// `0xFFFFF4E0` lens-tile chip, which does not change with brightness) — but
+  /// on `brandCreamCard` (which darkens to `0xFF151A26`) it measured **1.22:1**,
+  /// illegible. Its sibling tier accents ([progressTierStreakAccent],
+  /// [progressTierPointsAccent], [brandBlue]) all LIGHTEN in dark so the number
+  /// reads on the card; this one was the lone exception, still pointing at the
+  /// chart token. Same fix class as [goldOnColouredSurface]. Keeps the original
+  /// amber in light mode; lightens in dark to clear WCAG on the dark card.
+  Color get progressTierSiyumimAccent =>
+      _dark ? const Color(0xFFEBC15A) : const Color(0xFFF8C146);
+
   /// Siyumim "curriculum complete" hero card — dark-amber text, paired with
   /// [gamifTierGoldMutedIcon] (same gold reused for the hero card's
   /// fill/border/icon — see siyumim_grouped_view.dart).

@@ -110,7 +110,7 @@ class ProgressTierCounterRow extends ConsumerWidget {
           totalSiyumim,
           terms.siyumim,
         ),
-        accent: context.colors.chartAmber,
+        accent: context.colors.progressTierSiyumimAccent,
       ),
       _Counter(
         emoji: '📚',
