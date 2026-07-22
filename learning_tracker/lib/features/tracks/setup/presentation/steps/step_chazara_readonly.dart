@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Read-only review schedule display for program tracks that have
@@ -52,7 +52,7 @@ class ChazaraReadOnlyStep extends StatelessWidget {
           Text(
             l10n.reviewScheduleSetByProgram(programName),
             style: theme.textTheme.titleMedium?.copyWith(
-              color: AppTheme.brandInkMuted,
+              color: context.colors.brandInkMuted,
             ),
           ),
           const SizedBox(height: 16),
@@ -64,17 +64,17 @@ class ChazaraReadOnlyStep extends StatelessWidget {
             ),
             child: Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.lock_outline_rounded,
                   size: 16,
-                  color: AppTheme.brandBlueDeep,
+                  color: context.colors.brandBlueDeep,
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     l10n.reviewScheduleFixedHint,
                     style: theme.textTheme.bodySmall?.copyWith(
-                      color: AppTheme.brandBlueDeep,
+                      color: context.colors.brandBlueDeep,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -90,7 +90,7 @@ class ChazaraReadOnlyStep extends StatelessWidget {
                       l10n.reviewScheduleNoStages,
                       textAlign: TextAlign.center,
                       style: theme.textTheme.bodyMedium?.copyWith(
-                        color: AppTheme.brandInkMuted,
+                        color: context.colors.brandInkMuted,
                       ),
                     ),
                   )
@@ -140,7 +140,7 @@ class ChazaraReadOnlyStep extends StatelessWidget {
                                 child: Text(
                                   '${index + 1}',
                                   style: theme.textTheme.labelLarge?.copyWith(
-                                    color: AppTheme.brandBlueDeep,
+                                    color: context.colors.brandBlueDeep,
                                     fontWeight: FontWeight.w700,
                                   ),
                                 ),
@@ -162,17 +162,17 @@ class ChazaraReadOnlyStep extends StatelessWidget {
                                       delayLabel,
                                       style: theme.textTheme.bodySmall
                                           ?.copyWith(
-                                            color: AppTheme.brandInkMuted,
+                                            color: context.colors.brandInkMuted,
                                           ),
                                     ),
                                   ],
                                 ),
                               ),
                               const SizedBox(width: 8),
-                              const Icon(
+                              Icon(
                                 Icons.lock_rounded,
                                 size: 18,
-                                color: AppTheme.brandInkMuted,
+                                color: context.colors.brandInkMuted,
                               ),
                             ],
                           ),

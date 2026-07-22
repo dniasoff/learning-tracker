@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/utils/text_input_formatters.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
@@ -57,9 +57,10 @@ class SignInForm extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _buildLabel(l10n.signInYourEmail),
+          _buildLabel(context, l10n.signInYourEmail),
           const SizedBox(height: 8),
           _buildAuthField(
+            context,
             controller: emailController,
             hintText: l10n.signInEmailHint,
             prefixIcon: Icons.mail_rounded,
@@ -74,14 +75,15 @@ class SignInForm extends StatelessWidget {
               child: Text(
                 registrySubtitle!,
                 style: theme.textTheme.bodySmall?.copyWith(
-                  color: AppTheme.brandInkMuted,
+                  color: context.colors.brandInkMuted,
                 ),
               ),
             ),
           const SizedBox(height: 20),
-          _buildLabel(l10n.signInPasswordLabel),
+          _buildLabel(context, l10n.signInPasswordLabel),
           const SizedBox(height: 8),
           _buildAuthField(
+            context,
             controller: passwordController,
             hintText: l10n.signInPasswordHint,
             prefixIcon: Icons.lock_rounded,
@@ -95,7 +97,7 @@ class SignInForm extends StatelessWidget {
                 obscurePassword
                     ? Icons.visibility_off_rounded
                     : Icons.visibility_rounded,
-                color: AppTheme.brandInkMuted,
+                color: context.colors.brandInkMuted,
               ),
               onPressed: onPasswordToggle,
             ),
@@ -109,7 +111,7 @@ class SignInForm extends StatelessWidget {
               child: TextButton(
                 onPressed: onForgotPassword,
                 style: TextButton.styleFrom(
-                  foregroundColor: AppTheme.brandBlue,
+                  foregroundColor: context.colors.brandBlue,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 4,
                     vertical: 4,
@@ -137,8 +139,8 @@ class SignInForm extends StatelessWidget {
                 ),
                 Text(
                   l10n.signInKeepMeSignedIn,
-                  style: const TextStyle(
-                    color: AppTheme.brandInkMuted,
+                  style: TextStyle(
+                    color: context.colors.brandInkMuted,
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
                   ),
@@ -151,18 +153,19 @@ class SignInForm extends StatelessWidget {
     );
   }
 
-  static Widget _buildLabel(String text) {
+  static Widget _buildLabel(BuildContext context, String text) {
     return Text(
       text,
-      style: const TextStyle(
-        color: AppTheme.brandInk,
+      style: TextStyle(
+        color: context.colors.brandInk,
         fontSize: 17,
         fontWeight: FontWeight.w700,
       ),
     );
   }
 
-  static Widget _buildAuthField({
+  static Widget _buildAuthField(
+    BuildContext context, {
     required TextEditingController controller,
     required String hintText,
     required IconData prefixIcon,
@@ -193,11 +196,11 @@ class SignInForm extends StatelessWidget {
       ],
       decoration: InputDecoration(
         hintText: hintText,
-        hintStyle: const TextStyle(
-          color: AppTheme.brandInkMuted,
+        hintStyle: TextStyle(
+          color: context.colors.brandInkMuted,
           fontWeight: FontWeight.w500,
         ),
-        prefixIcon: Icon(prefixIcon, color: AppTheme.brandInkMuted),
+        prefixIcon: Icon(prefixIcon, color: context.colors.brandInkMuted),
         suffixIcon: suffixIcon,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 14,
@@ -205,15 +208,15 @@ class SignInForm extends StatelessWidget {
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: AppTheme.brandOutline),
+          borderSide: BorderSide(color: context.colors.brandOutline),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: AppTheme.brandOutline),
+          borderSide: BorderSide(color: context.colors.brandOutline),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: AppTheme.brandBlueBright),
+          borderSide: BorderSide(color: context.colors.brandBlueBright),
         ),
       ),
     );

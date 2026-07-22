@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/notifications/presentation/providers/notification_providers.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/location_fetch_result.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_location_provider.dart';
@@ -155,11 +155,11 @@ class _PermissionPromptScreenState
               const Spacer(),
               FilledButton(
                 style: FilledButton.styleFrom(
-                  backgroundColor: AppTheme.brandBlue,
+                  backgroundColor: context.colors.brandBlue,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: const StadiumBorder(),
                   elevation: 3,
-                  shadowColor: AppTheme.brandBlue.withValues(alpha: 0.35),
+                  shadowColor: context.colors.brandBlue.withValues(alpha: 0.35),
                 ),
                 onPressed: _finish,
                 child: Text(

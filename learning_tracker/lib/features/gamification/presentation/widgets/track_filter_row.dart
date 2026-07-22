@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/gamification/presentation/providers/achievements_overview_provider.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
@@ -34,7 +33,7 @@ class TrackFilterRow extends StatelessWidget {
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
             fontWeight: FontWeight.w800,
             letterSpacing: 1.4,
-            color: AppTheme.brandCoral,
+            color: context.colors.brandCoral,
           ),
         ),
         const SizedBox(height: 10),
@@ -76,7 +75,7 @@ class AchievementFilterChip extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
 
-  static const Color _kBrandBlue = AppTheme.brandBlue;
+  static Color _kBrandBlue(BuildContext context) => context.colors.brandBlue;
 
   @override
   Widget build(BuildContext context) {
@@ -90,19 +89,19 @@ class AchievementFilterChip extends StatelessWidget {
           curve: Curves.easeOutCubic,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           decoration: BoxDecoration(
-            color: selected ? _kBrandBlue : Colors.white,
+            color: selected ? _kBrandBlue(context) : Colors.white,
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
               color: selected
-                  ? _kBrandBlue
-                  : AppColors.gamifTrackFilterChipUnselected,
+                  ? _kBrandBlue(context)
+                  : context.colors.gamifTrackFilterChipUnselected,
             ),
             boxShadow: selected
-                ? const [
+                ? [
                     BoxShadow(
-                      color: AppColors.gamifTrackFilterChipShadow,
+                      color: context.colors.gamifTrackFilterChipShadow,
                       blurRadius: 8,
-                      offset: Offset(0, 3),
+                      offset: const Offset(0, 3),
                     ),
                   ]
                 : null,
@@ -110,7 +109,7 @@ class AchievementFilterChip extends StatelessWidget {
           child: Text(
             label,
             style: TextStyle(
-              color: selected ? Colors.white : AppColors.inkSlate,
+              color: selected ? Colors.white : context.colors.inkSlate,
               fontWeight: FontWeight.w700,
               fontSize: 13,
             ),

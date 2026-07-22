@@ -5,7 +5,7 @@
 // instead of the semantic tokens in AppColors/AppTheme, blocking a future
 // systematic dark-mode/theme change from reaching these surfaces
 // consistently and matching decline_invite_screen.dart's own inconsistency
-// (AppColors.statusWarningSoft next to a raw Color(0xFFB07A00) for the same
+// (context.colors.statusWarningSoft next to a raw Color(0xFFB07A00) for the same
 // icon).
 //
 // The custom_lint `no_color_literal_outside_theme` rule only flags

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/preference_list_tile.dart';
 
 /// A preference tile that combines a header row (icon pill + title + subtitle)
@@ -16,7 +15,7 @@ class PreferenceSegmentedTile<T> extends StatelessWidget {
     this.subtitle,
     this.icon,
     this.iconColor,
-    this.iconBackground = AppTheme.brandBlueSoft,
+    this.iconBackground,
     required this.options,
     required this.value,
     required this.onChanged,
@@ -38,7 +37,7 @@ class PreferenceSegmentedTile<T> extends StatelessWidget {
   final Color? iconColor;
 
   /// Background colour of the icon pill.
-  final Color iconBackground;
+  final Color? iconBackground;
 
   /// Ordered list of (value, label) pairs that become [SegmentedButton] segments.
   final List<({T value, String label})> options;
@@ -80,7 +79,7 @@ class PreferenceSegmentedTile<T> extends StatelessWidget {
                       style: theme.textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w600,
                         fontSize: 19,
-                        color: AppColors.preferenceTitleInk,
+                        color: context.colors.preferenceTitleInk,
                       ),
                     ),
                     if (subtitle != null) ...[
@@ -88,7 +87,7 @@ class PreferenceSegmentedTile<T> extends StatelessWidget {
                       Text(
                         subtitle!,
                         style: theme.textTheme.bodySmall?.copyWith(
-                          color: AppColors.preferenceSubtitleGrey,
+                          color: context.colors.preferenceSubtitleGrey,
                           fontSize: 15,
                         ),
                       ),
@@ -113,11 +112,9 @@ class PreferenceSegmentedTile<T> extends StatelessWidget {
               onChanged(selected.first);
             },
             style: SegmentedButton.styleFrom(
-              selectedBackgroundColor: AppTheme.brandBlueBright,
+              selectedBackgroundColor: context.colors.brandBlueBright,
               selectedForegroundColor: Colors.white,
-              side: const BorderSide(
-                color: AppColors.preferenceSegmentedBorder,
-              ),
+              side: BorderSide(color: context.colors.preferenceSegmentedBorder),
             ),
           ),
         ],

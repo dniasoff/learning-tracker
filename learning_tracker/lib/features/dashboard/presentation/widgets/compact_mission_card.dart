@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/dashed_rounded_border_painter.dart';
 
 class CompactMissionCard extends StatelessWidget {
@@ -34,14 +34,14 @@ class CompactMissionCard extends StatelessWidget {
     Widget content = Ink(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
       decoration: BoxDecoration(
-        color: backgroundColor ?? AppTheme.brandCreamCard,
+        color: backgroundColor ?? context.colors.brandCreamCard,
         borderRadius: BorderRadius.circular(20),
         border: dashedBorder
             ? null
             : Border.all(
                 color:
                     borderColor ??
-                    AppTheme.brandOutline.withValues(alpha: 0.45),
+                    context.colors.brandOutline.withValues(alpha: 0.45),
               ),
       ),
       child: Row(
@@ -53,7 +53,7 @@ class CompactMissionCard extends StatelessWidget {
                 Text(
                   label,
                   style: theme.textTheme.labelSmall?.copyWith(
-                    color: labelColor ?? AppTheme.brandInkMuted,
+                    color: labelColor ?? context.colors.brandInkMuted,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 0.8,
                   ),

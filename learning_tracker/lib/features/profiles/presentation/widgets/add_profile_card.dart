@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// "Add new profile" card shown as the last item in the profile grid.
@@ -24,14 +24,14 @@ class AddProfileCard extends StatelessWidget {
         onTap: isDisabled ? null : onTap,
         child: Ink(
           decoration: BoxDecoration(
-            color: AppTheme.brandCreamCard.withValues(alpha: 0.45),
+            color: context.colors.brandCreamCard.withValues(alpha: 0.45),
             borderRadius: BorderRadius.circular(30),
           ),
           child: CustomPaint(
             painter: _DashedRoundedRectPainter(
               color: isDisabled
-                  ? AppTheme.brandOutline.withValues(alpha: 0.6)
-                  : AppTheme.brandOutline,
+                  ? context.colors.brandOutline.withValues(alpha: 0.6)
+                  : context.colors.brandOutline,
               strokeWidth: 1.6,
               dashLength: 6,
               gapLength: 5,
@@ -50,8 +50,8 @@ class AddProfileCard extends StatelessWidget {
                     CustomPaint(
                       painter: _DashedCirclePainter(
                         color: isDisabled
-                            ? AppTheme.brandOutline.withValues(alpha: 0.6)
-                            : AppTheme.brandInkMuted,
+                            ? context.colors.brandOutline.withValues(alpha: 0.6)
+                            : context.colors.brandInkMuted,
                       ),
                       child: SizedBox(
                         width: 96,
@@ -61,8 +61,8 @@ class AddProfileCard extends StatelessWidget {
                             Icons.add_rounded,
                             size: 44,
                             color: isDisabled
-                                ? AppTheme.brandInkSoft
-                                : AppTheme.brandBlue,
+                                ? context.colors.brandInkSoft
+                                : context.colors.brandBlue,
                           ),
                         ),
                       ),
@@ -73,7 +73,7 @@ class AddProfileCard extends StatelessWidget {
                           ? l10n.maxProfilesLabel
                           : l10n.addProfileCardTitle,
                       style: theme.textTheme.headlineSmall?.copyWith(
-                        color: AppTheme.brandInk,
+                        color: context.colors.brandInk,
                         fontWeight: FontWeight.w700,
                         height: 1.08,
                       ),
@@ -85,7 +85,7 @@ class AddProfileCard extends StatelessWidget {
                           ? l10n.maxProfilesSubtitle
                           : l10n.createNewLearner,
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: AppTheme.brandInkMuted,
+                        color: context.colors.brandInkMuted,
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                         height: 1.25,

@@ -25,7 +25,7 @@
 // custom_lint run is never a trustworthy signal here). This test is the
 // live, in-repo checker that actually exercises the finding's real claim
 // ("every other color reference in this batch routes through
-// AppTheme.brand*/Theme.of(context).colorScheme.*"; these 2 files no
+// context.colors.brand*/Theme.of(context).colorScheme.*"; these 2 files no
 // longer contain a bare `Colors.<name>` reference) rather than relying on a
 // rule that was never going to fire for this violation class.
 //

@@ -8,8 +8,7 @@ import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/content_browsing/domain/strategies/composite_curriculum_strategy.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
@@ -39,10 +38,10 @@ class LifetimeMarkingScreen extends ConsumerWidget {
     );
 
     return Scaffold(
-      backgroundColor: AppTheme.brandCreamCard,
+      backgroundColor: context.colors.brandCreamCard,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
-        foregroundColor: AppTheme.brandInk,
+        foregroundColor: context.colors.brandInk,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         toolbarHeight: 56,
@@ -60,7 +59,7 @@ class LifetimeMarkingScreen extends ConsumerWidget {
               fontWeight: FontWeight.w800,
               fontSize: 26,
               height: 1.15,
-              color: AppTheme.brandInk,
+              color: context.colors.brandInk,
               letterSpacing: -0.3,
             ),
           ),
@@ -73,9 +72,9 @@ class LifetimeMarkingScreen extends ConsumerWidget {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              AppTheme.brandCreamCard,
-              AppTheme.brandBlueSoft.withValues(alpha: 0.22),
-              AppTheme.brandCream,
+              context.colors.brandCreamCard,
+              context.colors.brandBlueSoft.withValues(alpha: 0.22),
+              context.colors.brandCream,
             ],
           ),
         ),
@@ -90,7 +89,7 @@ class LifetimeMarkingScreen extends ConsumerWidget {
                 child: Text(
                   l10n.lifetimeMarkingSubtitle,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppTheme.brandInkMuted,
+                    color: context.colors.brandInkMuted,
                     height: 1.35,
                     fontWeight: FontWeight.w500,
                   ),
@@ -169,7 +168,7 @@ class _LifetimeLibraryCategoryCard extends ConsumerWidget {
           tree: const [],
         );
 
-    final color = AppTheme.getCurriculumColor(curriculum);
+    final color = context.colors.curriculumFor(curriculum);
     final notStarted = summary.learnedLeafCount == 0;
     final pctText = percentTextForCurriculum(summary);
 
@@ -183,7 +182,7 @@ class _LifetimeLibraryCategoryCard extends ConsumerWidget {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: AppColors.surfaceE9),
+            border: Border.all(color: context.colors.surfaceE9),
             boxShadow: const [
               BoxShadow(
                 color: Color(0x121D2939),
@@ -220,7 +219,7 @@ class _LifetimeLibraryCategoryCard extends ConsumerWidget {
                           curriculum,
                           style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w800,
-                            color: AppTheme.brandInk,
+                            color: context.colors.brandInk,
                           ),
                         ),
                         if (!useHebrew) ...[
@@ -228,7 +227,7 @@ class _LifetimeLibraryCategoryCard extends ConsumerWidget {
                           Text(
                             curriculumHebrewName(curriculum),
                             style: theme.textTheme.bodySmall?.copyWith(
-                              color: AppTheme.brandInkMuted,
+                              color: context.colors.brandInkMuted,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -241,15 +240,15 @@ class _LifetimeLibraryCategoryCard extends ConsumerWidget {
                       pctText,
                       style: theme.textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w800,
-                        color: AppTheme.brandInk,
+                        color: context.colors.brandInk,
                       ),
                     ),
                     const SizedBox(width: 6),
                   ],
-                  const Icon(
+                  Icon(
                     Icons.chevron_right_rounded,
                     size: 34,
-                    color: AppTheme.brandInkMuted,
+                    color: context.colors.brandInkMuted,
                   ),
                 ],
               ),
@@ -261,14 +260,14 @@ class _LifetimeLibraryCategoryCard extends ConsumerWidget {
                     Text(
                       l10n.lifetimeNotStarted,
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: AppTheme.brandInkMuted,
+                        color: context.colors.brandInkMuted,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                     Text(
                       '—',
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: AppTheme.brandInkMuted,
+                        color: context.colors.brandInkMuted,
                       ),
                     ),
                   ],
@@ -683,16 +682,16 @@ class _LifetimeCurriculumMarkingScreenState
     final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: AppTheme.brandCreamCard,
+      backgroundColor: context.colors.brandCreamCard,
       appBar: AppBar(
         backgroundColor: Colors.white,
-        foregroundColor: AppTheme.brandInk,
+        foregroundColor: context.colors.brandInk,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         leading: _hasNavStack
             ? IconButton(
                 icon: const Icon(Icons.arrow_back_ios_new_rounded),
-                color: AppTheme.brandBlueDeep,
+                color: context.colors.brandBlueDeep,
                 onPressed: () => _panelKey.currentState?.navigateBack(),
               )
             : null,
@@ -706,9 +705,9 @@ class _LifetimeCurriculumMarkingScreenState
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              AppTheme.brandCreamCard,
-              AppTheme.brandBlueSoft.withValues(alpha: 0.22),
-              AppTheme.brandCream,
+              context.colors.brandCreamCard,
+              context.colors.brandBlueSoft.withValues(alpha: 0.22),
+              context.colors.brandCream,
             ],
           ),
         ),
@@ -723,7 +722,7 @@ class _LifetimeCurriculumMarkingScreenState
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: AppColors.surfaceE9),
+                      border: Border.all(color: context.colors.surfaceE9),
                       boxShadow: const [
                         BoxShadow(
                           color: Color(0x121D2939),
@@ -738,9 +737,9 @@ class _LifetimeCurriculumMarkingScreenState
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Icon(
+                            Icon(
                               Icons.playlist_add_check_outlined,
-                              color: AppTheme.brandBlue,
+                              color: context.colors.brandBlue,
                               size: 26,
                             ),
                             const SizedBox(width: 10),
@@ -752,14 +751,14 @@ class _LifetimeCurriculumMarkingScreenState
                                     l10n.lifetimeSelectScreenTitle,
                                     style: theme.textTheme.titleLarge?.copyWith(
                                       fontWeight: FontWeight.w800,
-                                      color: AppTheme.brandInk,
+                                      color: context.colors.brandInk,
                                     ),
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
                                     l10n.lifetimeSelectScreenSubtitle,
                                     style: theme.textTheme.bodySmall?.copyWith(
-                                      color: AppTheme.brandInkMuted,
+                                      color: context.colors.brandInkMuted,
                                       height: 1.35,
                                     ),
                                   ),
@@ -775,18 +774,18 @@ class _LifetimeCurriculumMarkingScreenState
                             vertical: 10,
                           ),
                           decoration: BoxDecoration(
-                            color: AppTheme.brandBlueSoft.withValues(
+                            color: context.colors.brandBlueSoft.withValues(
                               alpha: 0.45,
                             ),
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: AppColors.surfaceE9),
+                            border: Border.all(color: context.colors.surfaceE9),
                           ),
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Icon(
+                              Icon(
                                 Icons.draw_outlined,
-                                color: AppTheme.brandBlue,
+                                color: context.colors.brandBlue,
                                 size: 20,
                               ),
                               const SizedBox(width: 10),
@@ -799,7 +798,7 @@ class _LifetimeCurriculumMarkingScreenState
                                       style: theme.textTheme.titleSmall
                                           ?.copyWith(
                                             fontWeight: FontWeight.w700,
-                                            color: AppTheme.brandInk,
+                                            color: context.colors.brandInk,
                                           ),
                                     ),
                                     const SizedBox(height: 4),
@@ -812,7 +811,7 @@ class _LifetimeCurriculumMarkingScreenState
                                       ),
                                       style: theme.textTheme.bodySmall
                                           ?.copyWith(
-                                            color: AppTheme.brandInkMuted,
+                                            color: context.colors.brandInkMuted,
                                             height: 1.35,
                                           ),
                                     ),
@@ -833,9 +832,11 @@ class _LifetimeCurriculumMarkingScreenState
                               ? _deselectAllCurrentLevel
                               : _markAllCurrentLevel,
                           style: OutlinedButton.styleFrom(
-                            foregroundColor: AppTheme.brandBlue,
+                            foregroundColor: context.colors.brandBlue,
                             side: BorderSide(
-                              color: AppTheme.brandBlue.withValues(alpha: 0.45),
+                              color: context.colors.brandBlue.withValues(
+                                alpha: 0.45,
+                              ),
                             ),
                           ),
                           icon: Icon(
@@ -945,7 +946,8 @@ class _LifetimeCurriculumMarkingScreenState
                                               setState(_selections.clear);
                                             },
                                       style: OutlinedButton.styleFrom(
-                                        foregroundColor: AppTheme.brandInkMuted,
+                                        foregroundColor:
+                                            context.colors.brandInkMuted,
                                         side: const BorderSide(
                                           color: Color(0xFFD7DEEA),
                                         ),
@@ -957,7 +959,8 @@ class _LifetimeCurriculumMarkingScreenState
                                   Expanded(
                                     child: FilledButton(
                                       style: FilledButton.styleFrom(
-                                        backgroundColor: AppTheme.brandBlue,
+                                        backgroundColor:
+                                            context.colors.brandBlue,
                                         foregroundColor: Colors.white,
                                       ),
                                       onPressed: _saving || _selections.isEmpty

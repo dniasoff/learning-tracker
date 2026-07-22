@@ -4,11 +4,11 @@
 // Finding: stat_card.dart, preference_list_tile.dart,
 // preference_segmented_tile.dart, and app_dialog.dart mix AppColors/AppTheme
 // tokens with raw `Color(0xFF...)` hex literals — most notably
-// stat_card.dart:89,104 duplicating AppColors.blueNavy's exact hex
+// stat_card.dart:89,104 duplicating context.colors.blueNavy's exact hex
 // (0xFF03174C) instead of referencing it, and preference_list_tile.dart:79 /
 // preference_segmented_tile.dart:90 independently hardcoding the identical
 // 0xFF929BAA. All 10 raw-literal sites across the 4 files were extracted
-// into either the existing AppColors.blueNavy constant or new named
+// into either the existing context.colors.blueNavy constant or new named
 // constants in the "Core widgets (AUD-core-widgets-03)" section of
 // lib/core/theme/app_colors.dart.
 //

@@ -18,8 +18,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/logging/log_events.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_pin_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -137,9 +136,9 @@ class _TutorPinResetScreenState extends ConsumerState<TutorPinResetScreen> {
     final email = _currentEmail ?? l10n.tutorPinResetFallbackEmail;
 
     return Scaffold(
-      backgroundColor: AppTheme.brandCream,
+      backgroundColor: context.colors.brandCream,
       appBar: AppBar(
-        backgroundColor: AppTheme.brandCream,
+        backgroundColor: context.colors.brandCream,
         elevation: 0,
         title: Text(l10n.tutorPinResetAppBarTitle),
       ),
@@ -161,13 +160,13 @@ class _TutorPinResetScreenState extends ConsumerState<TutorPinResetScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const SizedBox(height: 16),
-        const CircleAvatar(
+        CircleAvatar(
           radius: 36,
-          backgroundColor: AppColors.statusWarningSoft,
+          backgroundColor: context.colors.statusWarningSoft,
           child: Icon(
             Icons.lock_reset_rounded,
             size: 36,
-            color: AppColors.statusWarningSoftText,
+            color: context.colors.statusWarningSoftText,
           ),
         ),
         const SizedBox(height: 20),
@@ -176,7 +175,7 @@ class _TutorPinResetScreenState extends ConsumerState<TutorPinResetScreen> {
           textAlign: TextAlign.center,
           style: theme.textTheme.headlineSmall?.copyWith(
             fontWeight: FontWeight.w800,
-            color: AppTheme.brandInk,
+            color: context.colors.brandInk,
           ),
         ),
         const SizedBox(height: 8),
@@ -184,7 +183,7 @@ class _TutorPinResetScreenState extends ConsumerState<TutorPinResetScreen> {
           l10n.tutorPinResetSendingTo,
           textAlign: TextAlign.center,
           style: theme.textTheme.bodyLarge?.copyWith(
-            color: AppTheme.brandInkMuted,
+            color: context.colors.brandInkMuted,
           ),
         ),
         const SizedBox(height: 8),
@@ -192,7 +191,7 @@ class _TutorPinResetScreenState extends ConsumerState<TutorPinResetScreen> {
           email,
           textAlign: TextAlign.center,
           style: theme.textTheme.bodyLarge?.copyWith(
-            color: AppTheme.brandInk,
+            color: context.colors.brandInk,
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -201,7 +200,7 @@ class _TutorPinResetScreenState extends ConsumerState<TutorPinResetScreen> {
           l10n.tutorPinResetReturnHint,
           textAlign: TextAlign.center,
           style: theme.textTheme.bodyMedium?.copyWith(
-            color: AppTheme.brandInkMuted,
+            color: context.colors.brandInkMuted,
           ),
         ),
         if (_errorMessage != null) ...[
@@ -242,13 +241,13 @@ class _TutorPinResetScreenState extends ConsumerState<TutorPinResetScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const SizedBox(height: 16),
-        const CircleAvatar(
+        CircleAvatar(
           radius: 36,
-          backgroundColor: AppColors.statusSuccessSoftBg,
+          backgroundColor: context.colors.statusSuccessSoftBg,
           child: Icon(
             Icons.mark_email_read_rounded,
             size: 36,
-            color: AppColors.statusSuccessSoftText,
+            color: context.colors.statusSuccessSoftText,
           ),
         ),
         const SizedBox(height: 20),
@@ -257,7 +256,7 @@ class _TutorPinResetScreenState extends ConsumerState<TutorPinResetScreen> {
           textAlign: TextAlign.center,
           style: theme.textTheme.headlineSmall?.copyWith(
             fontWeight: FontWeight.w800,
-            color: AppTheme.brandInk,
+            color: context.colors.brandInk,
           ),
         ),
         const SizedBox(height: 8),
@@ -265,7 +264,7 @@ class _TutorPinResetScreenState extends ConsumerState<TutorPinResetScreen> {
           l10n.tutorPinResetCheckEmailBody(email),
           textAlign: TextAlign.center,
           style: theme.textTheme.bodyLarge?.copyWith(
-            color: AppTheme.brandInkMuted,
+            color: context.colors.brandInkMuted,
             height: 1.4,
           ),
         ),

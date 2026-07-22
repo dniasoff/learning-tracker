@@ -12,8 +12,7 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_audit_log_entry.dart';
@@ -116,7 +115,7 @@ class _TutorAuditLogScreenState extends ConsumerState<TutorAuditLogScreen> {
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      backgroundColor: AppTheme.brandCream,
+      backgroundColor: context.colors.brandCream,
       appBar: AppBar(
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -128,7 +127,7 @@ class _TutorAuditLogScreenState extends ConsumerState<TutorAuditLogScreen> {
             ),
           ],
         ),
-        backgroundColor: AppTheme.brandCream,
+        backgroundColor: context.colors.brandCream,
         elevation: 0,
         actions: [
           if (_hasActiveFilters)
@@ -234,16 +233,16 @@ class _FilterBar extends StatelessWidget {
                 selected: selectedAction == action,
                 onSelected: (selected) =>
                     onActionChanged(selected ? action : null),
-                selectedColor: AppTheme.brandBlue.withValues(alpha: 0.2),
-                checkmarkColor: AppTheme.brandBlue,
+                selectedColor: context.colors.brandBlue.withValues(alpha: 0.2),
+                checkmarkColor: context.colors.brandBlue,
                 labelStyle: TextStyle(
                   color: selectedAction == action
-                      ? AppTheme.brandBlue
+                      ? context.colors.brandBlue
                       : theme.colorScheme.onSurface,
                 ),
                 side: BorderSide(
                   color: selectedAction == action
-                      ? AppTheme.brandBlue
+                      ? context.colors.brandBlue
                       : theme.colorScheme.outline.withValues(alpha: 0.4),
                 ),
                 padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -262,7 +261,7 @@ class _FilterBar extends StatelessWidget {
             ),
             onPressed: onPickFrom,
             backgroundColor: filterFrom != null
-                ? AppTheme.brandBlue.withValues(alpha: 0.1)
+                ? context.colors.brandBlue.withValues(alpha: 0.1)
                 : null,
           ),
           const SizedBox(width: 6),
@@ -276,7 +275,7 @@ class _FilterBar extends StatelessWidget {
             ),
             onPressed: onPickTo,
             backgroundColor: filterTo != null
-                ? AppTheme.brandBlue.withValues(alpha: 0.1)
+                ? context.colors.brandBlue.withValues(alpha: 0.1)
                 : null,
           ),
         ],
@@ -355,7 +354,7 @@ class _AuditEntryTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
-    final actionColor = _actionColor(entry.action);
+    final actionColor = _actionColor(context, entry.action);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -451,16 +450,20 @@ class _AuditEntryTile extends StatelessWidget {
     );
   }
 
-  Color _actionColor(TutorAuditAction action) => switch (action) {
-    TutorAuditAction.configChanged => AppColors.auditActionConfig,
-    TutorAuditAction.completionBulkPrior => AppColors.auditActionBulkPrior,
-    TutorAuditAction.completionReset => AppColors.auditActionReset,
-    TutorAuditAction.bookmarkAdvanced => AppColors.auditActionBookmark,
-    TutorAuditAction.profileEdited => AppColors.auditActionProfileEdited,
-    TutorAuditAction.goalChanged => AppColors.auditActionGoalChanged,
-    TutorAuditAction.stageChanged => AppColors.auditActionStageChanged,
-    TutorAuditAction.rewardChanged => AppColors.auditActionRewardChanged,
-    TutorAuditAction.studyDayChanged => AppColors.auditActionStudyDayChanged,
+  Color _actionColor(
+    BuildContext context,
+    TutorAuditAction action,
+  ) => switch (action) {
+    TutorAuditAction.configChanged => context.colors.auditActionConfig,
+    TutorAuditAction.completionBulkPrior => context.colors.auditActionBulkPrior,
+    TutorAuditAction.completionReset => context.colors.auditActionReset,
+    TutorAuditAction.bookmarkAdvanced => context.colors.auditActionBookmark,
+    TutorAuditAction.profileEdited => context.colors.auditActionProfileEdited,
+    TutorAuditAction.goalChanged => context.colors.auditActionGoalChanged,
+    TutorAuditAction.stageChanged => context.colors.auditActionStageChanged,
+    TutorAuditAction.rewardChanged => context.colors.auditActionRewardChanged,
+    TutorAuditAction.studyDayChanged =>
+      context.colors.auditActionStudyDayChanged,
   };
 
   IconData _actionIcon(TutorAuditAction action) => switch (action) {
@@ -547,14 +550,14 @@ class _BeforeAfterRow extends StatelessWidget {
                 TextSpan(
                   text: l10n.auditLogAfter,
                   style: style?.copyWith(
-                    color: AppColors.statusSuccessSnackbar,
+                    color: context.colors.statusSuccessSnackbar,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
                 TextSpan(
                   text: after,
                   style: style?.copyWith(
-                    color: AppColors.statusSuccessSnackbar,
+                    color: context.colors.statusSuccessSnackbar,
                   ),
                 ),
               ],

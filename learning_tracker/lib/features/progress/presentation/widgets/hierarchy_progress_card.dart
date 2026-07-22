@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/labels/curriculum_level_name.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
 import 'package:learning_tracker/features/progress/domain/models/curriculum_progress_data.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/stage_breakdown_row.dart';
@@ -51,10 +51,10 @@ class _HierarchySurfaceCard extends StatelessWidget {
       width: double.infinity,
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: AppTheme.brandCreamCard,
+        color: context.colors.brandCreamCard,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: AppTheme.brandOutline.withValues(alpha: 0.35),
+          color: context.colors.brandOutline.withValues(alpha: 0.35),
         ),
         boxShadow: [
           BoxShadow(
@@ -82,7 +82,7 @@ class _ExpandableHierarchyCard extends ConsumerWidget {
       child: Theme(
         data: theme.copyWith(
           dividerTheme: DividerThemeData(
-            color: AppTheme.brandOutline.withValues(alpha: 0.4),
+            color: context.colors.brandOutline.withValues(alpha: 0.4),
           ),
         ),
         child: Material(
@@ -104,7 +104,7 @@ class _ExpandableHierarchyCard extends ConsumerWidget {
               ),
               style: theme.textTheme.titleSmall?.copyWith(
                 fontWeight: FontWeight.w700,
-                color: AppTheme.brandInk,
+                color: context.colors.brandInk,
               ),
             ),
             subtitle: _ProgressSummaryLine(level: level),
@@ -122,7 +122,9 @@ class _ExpandableHierarchyCard extends ConsumerWidget {
                     if (level.subLevels != null) ...[
                       Divider(
                         height: 20,
-                        color: AppTheme.brandOutline.withValues(alpha: 0.45),
+                        color: context.colors.brandOutline.withValues(
+                          alpha: 0.45,
+                        ),
                       ),
                       ...level.subLevels!.map(
                         (sub) => Padding(
@@ -174,7 +176,7 @@ class _LevelContent extends ConsumerWidget {
                     ),
                     style: theme.textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w700,
-                      color: AppTheme.brandInk,
+                      color: context.colors.brandInk,
                     ),
                   ),
                   _ProgressSummaryLine(level: level),
@@ -188,7 +190,7 @@ class _LevelContent extends ConsumerWidget {
           borderRadius: BorderRadius.circular(999),
           child: LinearProgressIndicator(
             value: level.completionPercentage,
-            backgroundColor: AppTheme.brandCreamSoft,
+            backgroundColor: context.colors.brandCreamSoft,
             valueColor: AlwaysStoppedAnimation<Color>(color),
             minHeight: 8,
           ),
@@ -233,7 +235,7 @@ class _ProgressSummaryLine extends ConsumerWidget {
                 '${terms.chazarosFor(variant: variant).toLowerCase()}'
           : baseText,
       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-        color: AppTheme.brandInkMuted,
+        color: context.colors.brandInkMuted,
         fontWeight: FontWeight.w600,
       ),
     );
@@ -254,7 +256,7 @@ class _ProgressCircle extends StatelessWidget {
       fontWeight: FontWeight.w800,
       height: 1.0,
       letterSpacing: -0.15,
-      color: AppTheme.brandInk,
+      color: context.colors.brandInk,
     );
 
     return SizedBox(

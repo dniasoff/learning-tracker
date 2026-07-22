@@ -5,8 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
@@ -34,7 +33,7 @@ Future<Set<DateTime>> streakCalendar(Ref ref) async {
   return streakService.getStreakCalendar(startUtc: thirtyDaysAgo, endUtc: now);
 }
 
-const Color _kPageBg = AppColors.surfaceF5;
+Color _kPageBg(BuildContext context) => context.colors.surfaceF5;
 
 String _curriculumLabel(
   BuildContext context,
@@ -114,7 +113,7 @@ class _GamificationScreenState extends ConsumerState<GamificationScreen> {
     final maxStreak = streakData?.maxStreak ?? 0;
 
     return Scaffold(
-      backgroundColor: _kPageBg,
+      backgroundColor: _kPageBg(context),
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -196,7 +195,9 @@ class _GamificationScreenState extends ConsumerState<GamificationScreen> {
                                 l10n.noRewardsYet,
                                 textAlign: TextAlign.center,
                                 style: Theme.of(context).textTheme.bodyLarge
-                                    ?.copyWith(color: AppTheme.brandCoral),
+                                    ?.copyWith(
+                                      color: context.colors.brandCoral,
+                                    ),
                               ),
                             ),
                           )

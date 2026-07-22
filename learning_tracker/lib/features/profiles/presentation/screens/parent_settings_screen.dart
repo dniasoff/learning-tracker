@@ -7,8 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
@@ -53,12 +52,15 @@ final activeProfilePointsBalanceProvider = StreamProvider.autoDispose<int>((
 class ParentSettingsScreen extends ConsumerWidget {
   const ParentSettingsScreen({super.key});
 
-  static const Color _pageBg = AppColors.surfaceF3;
+  static Color _pageBg(BuildContext context) => context.colors.surfaceF3;
   static const Color _managePurple = Color(0xFF7B5FD9);
-  static const Color _iconCircleMuted = AppColors.surfaceE9;
-  static const Color _iconMutedFg = AppTheme.brandInkMuted;
+  static Color _iconCircleMuted(BuildContext context) =>
+      context.colors.surfaceE9;
+  static Color _iconMutedFg(BuildContext context) =>
+      context.colors.brandInkMuted;
   static const Color _chevronMuted = Color(0xFFC2C9D3);
-  static const Color _dangerIconBg = AppColors.statusErrorSoft;
+  static Color _dangerIconBg(BuildContext context) =>
+      context.colors.statusErrorSoft;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -114,21 +116,21 @@ class ParentSettingsScreen extends ConsumerWidget {
         canEditTracks || canEditGoals || canEditPoints || canEditRewards;
 
     return Scaffold(
-      backgroundColor: _pageBg,
+      backgroundColor: _pageBg(context),
       appBar: AppBar(
         elevation: 0,
         scrolledUnderElevation: 0,
-        backgroundColor: _pageBg,
+        backgroundColor: _pageBg(context),
         surfaceTintColor: Colors.transparent,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
-          color: AppTheme.brandBlueDeep,
+          color: context.colors.brandBlueDeep,
           onPressed: () => context.router.maybePop(),
         ),
         title: Text(
           l10n.parentSettingsTitle,
           style: theme.textTheme.titleLarge?.copyWith(
-            color: AppTheme.brandBlueDeep,
+            color: context.colors.brandBlueDeep,
             fontWeight: FontWeight.w800,
             fontSize: 22,
           ),
@@ -176,7 +178,7 @@ class ParentSettingsScreen extends ConsumerWidget {
                   // track list. Gated on canEditGoals (default true for tutors),
                   // distinct from canEditStages above.
                   if (canEditGoals) ...[
-                    if (canEditTracks) _rowDivider(),
+                    if (canEditTracks) _rowDivider(context),
                     _ManageRow(
                       iconBackground: const Color(0xFFE7F0FF),
                       icon: Icons.flag_rounded,
@@ -194,11 +196,11 @@ class ParentSettingsScreen extends ConsumerWidget {
                   ],
                   // WS3.3d: canEditPoints gates "Point Configuration" for tutors.
                   if (canEditPoints) ...[
-                    if (canEditTracks || canEditGoals) _rowDivider(),
+                    if (canEditTracks || canEditGoals) _rowDivider(context),
                     _ManageRow(
-                      iconBackground: _iconCircleMuted,
+                      iconBackground: _iconCircleMuted(context),
                       icon: Icons.tune_rounded,
-                      iconColor: _iconMutedFg,
+                      iconColor: _iconMutedFg(context),
                       title: l10n.pointSettingsTitle,
                       subtitle: l10n.pointConfigurationSubtitle,
                       trailing: const Icon(
@@ -209,7 +211,7 @@ class ParentSettingsScreen extends ConsumerWidget {
                       onTap: () => context.pushRoute(const PointConfigRoute()),
                     ),
                     // WS7.adjust: parent manual add/deduct (DEC-17).
-                    _rowDivider(),
+                    _rowDivider(context),
                     _ManageRow(
                       iconBackground: const Color(0xFFE0EAFF),
                       icon: Icons.add_circle_outline_rounded,
@@ -229,9 +231,9 @@ class ParentSettingsScreen extends ConsumerWidget {
                   // WS3.3d: canEditRewards gates "Reward Configuration" for tutors.
                   if (canEditRewards) ...[
                     if (canEditTracks || canEditGoals || canEditPoints)
-                      _rowDivider(),
+                      _rowDivider(context),
                     _ManageRow(
-                      iconBackground: AppColors.peachTint,
+                      iconBackground: context.colors.peachTint,
                       icon: Icons.card_giftcard_rounded,
                       iconColor: const Color(0xFFB45309),
                       title: l10n.rewardConfigurationTitle,
@@ -245,7 +247,7 @@ class ParentSettingsScreen extends ConsumerWidget {
                           context.pushRoute(const RewardConfigurationRoute()),
                     ),
                     // WS7.redeem: pending prize requests from child.
-                    _rowDivider(),
+                    _rowDivider(context),
                     _ManageRow(
                       iconBackground: const Color(0xFFE8F5E9),
                       icon: Icons.redeem_rounded,
@@ -295,7 +297,7 @@ class ParentSettingsScreen extends ConsumerWidget {
               child: _ManageRow(
                 iconBackground: const Color(0xFFE8F4FD),
                 icon: Icons.school_rounded,
-                iconColor: AppTheme.brandBlue,
+                iconColor: context.colors.brandBlue,
                 leadingSquare: false,
                 title: l10n.manageTutors,
                 subtitle: l10n.manageTutorsSubtitle,
@@ -315,7 +317,7 @@ class ParentSettingsScreen extends ConsumerWidget {
               child: Text(
                 l10n.sectionAccountSafety,
                 style: theme.textTheme.labelSmall?.copyWith(
-                  color: AppColors.inkMidGrey,
+                  color: context.colors.inkMidGrey,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 1.4,
                   fontSize: 11,
@@ -324,11 +326,11 @@ class ParentSettingsScreen extends ConsumerWidget {
             ),
             _WhitePanel(
               child: _ManageRow(
-                iconBackground: _dangerIconBg,
+                iconBackground: _dangerIconBg(context),
                 icon: Icons.logout_rounded,
-                iconColor: AppColors.chartRed,
+                iconColor: context.colors.chartRed,
                 title: l10n.signOut,
-                titleColor: AppColors.chartRed,
+                titleColor: context.colors.chartRed,
                 subtitle: null,
                 leadingSquare: true,
                 trailing: const SizedBox.shrink(),
@@ -339,7 +341,7 @@ class ParentSettingsScreen extends ConsumerWidget {
               const SizedBox(height: 12),
               _WhitePanel(
                 child: _ManageRow(
-                  iconBackground: _dangerIconBg,
+                  iconBackground: _dangerIconBg(context),
                   icon: Icons.delete_forever_rounded,
                   iconColor: const Color(0xFFB00020),
                   title: l10n.deleteAccountTitle,
@@ -366,13 +368,13 @@ class ParentSettingsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _rowDivider() {
-    return const Divider(
+  Widget _rowDivider(BuildContext context) {
+    return Divider(
       height: 1,
       thickness: 1,
       indent: 72,
       endIndent: 16,
-      color: AppColors.surfaceE9,
+      color: context.colors.surfaceE9,
     );
   }
 }
@@ -509,7 +511,7 @@ class _WhitePanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTheme.brandCreamCard,
+        color: context.colors.brandCreamCard,
         borderRadius: BorderRadius.circular(20),
         boxShadow: const [
           BoxShadow(
@@ -582,7 +584,7 @@ class _ManageRow extends StatelessWidget {
                     Text(
                       title,
                       style: theme.textTheme.titleMedium?.copyWith(
-                        color: titleColor ?? AppTheme.brandInk,
+                        color: titleColor ?? context.colors.brandInk,
                         fontWeight: FontWeight.w700,
                         fontSize: 17,
                       ),
@@ -592,7 +594,7 @@ class _ManageRow extends StatelessWidget {
                       Text(
                         subtitle!,
                         style: theme.textTheme.bodySmall?.copyWith(
-                          color: subtitleColor ?? AppColors.inkMidGrey,
+                          color: subtitleColor ?? context.colors.inkMidGrey,
                           fontSize: 14,
                           height: 1.25,
                         ),

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 
 /// Mode card for the add-profile dialog (child vs adult).
 ///
@@ -39,7 +39,7 @@ class AddProfileModePickCard extends StatelessWidget {
             color: selected ? Colors.white : _surfaceGrey,
             borderRadius: BorderRadius.circular(20),
             border: selected
-                ? Border.all(color: AppTheme.brandBlue, width: 1.5)
+                ? Border.all(color: context.colors.brandBlue, width: 1.5)
                 : null,
           ),
           child: Stack(
@@ -52,12 +52,16 @@ class AddProfileModePickCard extends StatelessWidget {
                     width: 44,
                     height: 44,
                     decoration: BoxDecoration(
-                      color: selected ? AppTheme.brandBlue : _iconCircleMuted,
+                      color: selected
+                          ? context.colors.brandBlue
+                          : _iconCircleMuted,
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
                       icon,
-                      color: selected ? Colors.white : AppTheme.brandInkMuted,
+                      color: selected
+                          ? Colors.white
+                          : context.colors.brandInkMuted,
                       size: 24,
                     ),
                   ),
@@ -67,8 +71,8 @@ class AddProfileModePickCard extends StatelessWidget {
                     style: theme.textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w700,
                       color: selected
-                          ? AppTheme.brandBlueDeep
-                          : AppTheme.brandInk,
+                          ? context.colors.brandBlueDeep
+                          : context.colors.brandInk,
                       fontSize: 15,
                     ),
                   ),
@@ -80,8 +84,8 @@ class AddProfileModePickCard extends StatelessWidget {
                     style: theme.textTheme.bodySmall?.copyWith(
                       fontWeight: FontWeight.w500,
                       color: selected
-                          ? AppTheme.brandBlue
-                          : AppTheme.brandInkMuted,
+                          ? context.colors.brandBlue
+                          : context.colors.brandInkMuted,
                       fontSize: 12,
                       height: 1.25,
                     ),
@@ -95,8 +99,8 @@ class AddProfileModePickCard extends StatelessWidget {
                   child: Container(
                     width: 22,
                     height: 22,
-                    decoration: const BoxDecoration(
-                      color: AppTheme.brandBlue,
+                    decoration: BoxDecoration(
+                      color: context.colors.brandBlue,
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
 import 'package:learning_tracker/features/progress/domain/models/curriculum_progress_data.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -42,19 +42,19 @@ class OverallStatsCard extends ConsumerWidget {
       padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            AppTheme.brandBlueDeep,
-            AppTheme.brandBlue,
-            AppTheme.brandBlueBright,
+            context.colors.brandBlueDeep,
+            context.colors.brandBlue,
+            context.colors.brandBlueBright,
           ],
         ),
         border: Border.all(color: Colors.white.withValues(alpha: 0.22)),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.brandBlue.withValues(alpha: 0.35),
+            color: context.colors.brandBlue.withValues(alpha: 0.35),
             blurRadius: 16,
             offset: const Offset(0, 8),
           ),

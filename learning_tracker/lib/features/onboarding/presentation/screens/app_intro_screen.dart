@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_resume_store.dart'
     show kPermissionsPrompted;
 import 'package:learning_tracker/features/onboarding/presentation/widgets/glowing_cta_button.dart';
@@ -132,7 +132,7 @@ class _AppIntroScreenState extends State<AppIntroScreen>
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      backgroundColor: AppTheme.brandCream,
+      backgroundColor: context.colors.brandCream,
       resizeToAvoidBottomInset: false,
       body: SafeArea(
         // Non-overlapping layout: the PageView (Expanded) sits above the pinned
@@ -192,13 +192,15 @@ class _IntroHeader extends StatelessWidget {
         alignment: AlignmentDirectional.centerEnd,
         child: TextButton(
           onPressed: onSkip,
-          style: TextButton.styleFrom(foregroundColor: AppTheme.brandInkSoft),
+          style: TextButton.styleFrom(
+            foregroundColor: context.colors.brandInkSoft,
+          ),
           child: Text(
             AppLocalizations.of(context)!.skip,
             style: GoogleFonts.plusJakartaSans(
               fontSize: 15,
               fontWeight: FontWeight.w500,
-              color: AppTheme.brandInkSoft,
+              color: context.colors.brandInkSoft,
             ),
           ),
         ),
@@ -225,15 +227,15 @@ class _IntroPage extends ConsumerWidget {
   final _IntroPageData data;
   final Animation<double> iconAnimation;
 
-  TextStyle get _headStyle => GoogleFonts.plusJakartaSans(
-    color: AppTheme.brandInk,
+  TextStyle _headStyle(BuildContext context) => GoogleFonts.plusJakartaSans(
+    color: context.colors.brandInk,
     fontSize: 32,
     fontWeight: FontWeight.w800,
     height: 1.15,
   );
 
-  TextStyle get _subStyle => GoogleFonts.plusJakartaSans(
-    color: AppTheme.brandInkMuted,
+  TextStyle _subStyle(BuildContext context) => GoogleFonts.plusJakartaSans(
+    color: context.colors.brandInkMuted,
     fontSize: 15,
     height: 1.55,
     fontWeight: FontWeight.w400,
@@ -378,13 +380,14 @@ class _IntroPage extends ConsumerWidget {
         ).value;
         return Opacity(
           opacity: fade,
-          child: _titleRich(l10n: l10n, mishnaLabel: mishnaLabel),
+          child: _titleRich(context, l10n: l10n, mishnaLabel: mishnaLabel),
         );
       },
     );
   }
 
-  Widget _titleRich({
+  Widget _titleRich(
+    BuildContext context, {
     required AppLocalizations l10n,
     required String mishnaLabel,
   }) {
@@ -396,7 +399,7 @@ class _IntroPage extends ConsumerWidget {
       case _IntroPageVariant.dailyPlan:
         return Text.rich(
           TextSpan(
-            style: _headStyle.copyWith(fontSize: 28, height: 1.1),
+            style: _headStyle(context).copyWith(fontSize: 28, height: 1.1),
             children: [
               TextSpan(text: '${l10n.introDailyPlanTitleLine1}\n'),
               TextSpan(
@@ -410,7 +413,7 @@ class _IntroPage extends ConsumerWidget {
       case _IntroPageVariant.mishna:
         return Text.rich(
           TextSpan(
-            style: _headStyle,
+            style: _headStyle(context),
             children: [
               TextSpan(text: l10n.introMishnaTitlePrefix),
               TextSpan(text: mishnaLabel, style: highlightStyle),
@@ -422,7 +425,7 @@ class _IntroPage extends ConsumerWidget {
         return Text(
           l10n.introRewardsTitle,
           textAlign: TextAlign.center,
-          style: _headStyle,
+          style: _headStyle(context),
         );
     }
   }
@@ -441,6 +444,7 @@ class _IntroPage extends ConsumerWidget {
         return Opacity(
           opacity: fade,
           child: _subtitleRich(
+            context,
             l10n: l10n,
             talmidChochomLabel: talmidChochomLabel,
             isHebrewLocale:
@@ -451,13 +455,14 @@ class _IntroPage extends ConsumerWidget {
     );
   }
 
-  Widget _subtitleRich({
+  Widget _subtitleRich(
+    BuildContext context, {
     required AppLocalizations l10n,
     required bool isHebrewLocale,
     required String talmidChochomLabel,
   }) {
-    const highlightStyle = TextStyle(
-      color: AppTheme.brandInk,
+    final highlightStyle = TextStyle(
+      color: context.colors.brandInk,
       fontWeight: FontWeight.w700,
     );
     switch (data.variant) {
@@ -469,7 +474,7 @@ class _IntroPage extends ConsumerWidget {
             highlightStyle: highlightStyle,
           ),
           textAlign: TextAlign.center,
-          style: _subStyle.copyWith(fontSize: 14, height: 1.45),
+          style: _subStyle(context).copyWith(fontSize: 14, height: 1.45),
         );
       case _IntroPageVariant.mishna:
         return Text.rich(
@@ -479,7 +484,7 @@ class _IntroPage extends ConsumerWidget {
             highlightStyle: highlightStyle,
           ),
           textAlign: TextAlign.center,
-          style: _subStyle,
+          style: _subStyle(context),
         );
       case _IntroPageVariant.rewards:
         // Force the subtitle's base direction to match the APP locale (not the
@@ -491,7 +496,7 @@ class _IntroPage extends ConsumerWidget {
           child: Text(
             l10n.introRewardsSubtitle(talmidChochomLabel),
             textAlign: TextAlign.center,
-            style: _subStyle,
+            style: _subStyle(context),
           ),
         );
     }

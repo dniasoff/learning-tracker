@@ -4,8 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/services/track_creation_service.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
@@ -116,7 +115,7 @@ class _StudyDaysEditableState extends ConsumerState<StudyDaysEditable> {
           Text(
             l10n.studyDaysSubtitle,
             style: theme.textTheme.titleMedium?.copyWith(
-              color: AppTheme.brandInkMuted,
+              color: context.colors.brandInkMuted,
             ),
           ),
           const SizedBox(height: 18),
@@ -162,8 +161,8 @@ class _StudyDaysEditableState extends ConsumerState<StudyDaysEditable> {
                       initial: initial,
                       title: title,
                       subtitle: '',
-                      subtitleColor: AppTheme.brandInkMuted,
-                      activeColor: AppColors.surfaceE9,
+                      subtitleColor: context.colors.brandInkMuted,
+                      activeColor: context.colors.surfaceE9,
                       isShabbos: dayNum == 6,
                       isOn: isActive,
                       onChanged: (v) => setState(
@@ -273,7 +272,7 @@ class StudyDayCard extends StatelessWidget {
               child: Text(
                 initial,
                 style: theme.textTheme.titleMedium?.copyWith(
-                  color: AppTheme.brandInkMuted,
+                  color: context.colors.brandInkMuted,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -305,7 +304,7 @@ class StudyDayCard extends StatelessWidget {
               value: isOn,
               onChanged: onChanged,
               activeThumbColor: Colors.white,
-              activeTrackColor: AppTheme.brandBlueBright,
+              activeTrackColor: context.colors.brandBlueBright,
             ),
           ],
         ),

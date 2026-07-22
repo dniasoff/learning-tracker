@@ -5,7 +5,7 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/sync/providers/sync_status_providers.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/dashboard_body.dart';
@@ -100,9 +100,9 @@ class DashboardScreen extends ConsumerWidget {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              AppTheme.brandCreamCard,
-              AppTheme.brandBlueSoft.withValues(alpha: 0.22),
-              AppTheme.brandCream,
+              context.colors.brandCreamCard,
+              context.colors.brandBlueSoft.withValues(alpha: 0.22),
+              context.colors.brandCream,
             ],
           ),
         ),

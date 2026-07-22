@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/dashboard_helpers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
@@ -27,7 +27,7 @@ class ChildPointsRewardsTabCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
-            color: AppColors.blueMedium.withValues(alpha: 0.28),
+            color: context.colors.blueMedium.withValues(alpha: 0.28),
             blurRadius: 18,
             offset: const Offset(0, 10),
           ),
@@ -38,16 +38,16 @@ class ChildPointsRewardsTabCard extends StatelessWidget {
         child: Stack(
           clipBehavior: Clip.none,
           children: [
-            const Positioned.fill(
+            Positioned.fill(
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      kChildRewardsCardBlueTop,
-                      AppColors.blueLight,
-                      kChildRewardsCardBlueDeep,
+                      kChildRewardsCardBlueTop(context),
+                      context.colors.blueLight,
+                      kChildRewardsCardBlueDeep(context),
                     ],
                   ),
                 ),
@@ -77,9 +77,9 @@ class ChildPointsRewardsTabCard extends StatelessWidget {
                           color: Colors.white,
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.emoji_events_rounded,
-                          color: AppColors.goldTrophy,
+                          color: context.colors.goldTrophy,
                           size: 30,
                         ),
                       ),
@@ -125,7 +125,7 @@ class ChildPointsRewardsTabCard extends StatelessWidget {
                       onPressed: onOpenRewards,
                       style: FilledButton.styleFrom(
                         backgroundColor: Colors.white,
-                        foregroundColor: AppColors.blueLight,
+                        foregroundColor: context.colors.blueLight,
                         elevation: 0,
                         padding: const EdgeInsets.symmetric(
                           horizontal: 28,
@@ -143,7 +143,7 @@ class ChildPointsRewardsTabCard extends StatelessWidget {
                             l10n.dashboardRedeemPrizes,
                             style: theme.textTheme.titleSmall?.copyWith(
                               fontWeight: FontWeight.w800,
-                              color: AppColors.blueLight,
+                              color: context.colors.blueLight,
                             ),
                           ),
                           const SizedBox(width: 8),

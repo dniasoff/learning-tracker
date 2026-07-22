@@ -605,7 +605,7 @@ packages:
     source: hosted
     version: "0.4.4+1"
   firebase_app_check_platform_interface:
-    dependency: transitive
+    dependency: "direct dev"
     description:
       name: firebase_app_check_platform_interface
       sha256: b85215143f36cf622cfb4bcf79bd35f18edc376f42c3230f01137909c85866cf

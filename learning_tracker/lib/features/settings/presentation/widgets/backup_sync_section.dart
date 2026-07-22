@@ -7,7 +7,7 @@ import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/sync/providers/outbox_providers.dart';
 import 'package:learning_tracker/core/sync/providers/sync_orchestrator_providers.dart';
 import 'package:learning_tracker/core/sync/providers/sync_status_providers.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
@@ -259,7 +259,7 @@ class _BackupSyncSectionState extends ConsumerState<BackupSyncSection> {
                   width: double.infinity,
                   child: FilledButton(
                     style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.peachMid,
+                      backgroundColor: context.colors.peachMid,
                       foregroundColor: const Color(0xFF2C2A26),
                       minimumSize: const Size.fromHeight(48),
                       shape: RoundedRectangleBorder(
@@ -344,7 +344,7 @@ class _BackupSyncSectionState extends ConsumerState<BackupSyncSection> {
                 width: double.infinity,
                 child: FilledButton(
                   style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.peachMid,
+                    backgroundColor: context.colors.peachMid,
                     foregroundColor: const Color(0xFF2C2A26),
                     minimumSize: const Size.fromHeight(42),
                     shape: RoundedRectangleBorder(
@@ -369,9 +369,9 @@ class _BackupSyncSectionState extends ConsumerState<BackupSyncSection> {
                           shape: BoxShape.circle,
                         ),
                         alignment: Alignment.center,
-                        child: const Icon(
+                        child: Icon(
                           Icons.arrow_upward_rounded,
-                          color: AppColors.peachMid,
+                          color: context.colors.peachMid,
                           size: 12,
                         ),
                       ),
@@ -458,7 +458,7 @@ class _BackupSyncSectionState extends ConsumerState<BackupSyncSection> {
                 width: double.infinity,
                 child: FilledButton(
                   style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.peachMid,
+                    backgroundColor: context.colors.peachMid,
                     foregroundColor: const Color(0xFF2C2A26),
                     minimumSize: const Size.fromHeight(44),
                     shape: RoundedRectangleBorder(

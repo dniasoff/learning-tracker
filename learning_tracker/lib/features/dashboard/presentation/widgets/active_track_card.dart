@@ -8,7 +8,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/curriculum_label_providers.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/active_track_focus_pill.dart';
@@ -47,9 +47,9 @@ class ActiveTrackCard extends ConsumerWidget {
     final displayNameSecondary = terms.isHebrew
         ? null
         : curriculumHebrewName(curriculum);
-    final curriculumColor = AppTheme.getCurriculumColor(curriculum);
+    final curriculumColor = context.colors.curriculumFor(curriculum);
     final bookIconBg = Color.lerp(
-      kActiveTrackPrimaryBlue.withValues(alpha: 0.2),
+      kActiveTrackPrimaryBlue(context).withValues(alpha: 0.2),
       curriculumColor.withValues(alpha: 0.2),
       0.45,
     )!;
@@ -216,7 +216,7 @@ class ActiveTrackCard extends ConsumerWidget {
                           overflow: TextOverflow.ellipsis,
                           style: theme.textTheme.labelLarge?.copyWith(
                             fontWeight: FontWeight.w800,
-                            color: AppTheme.brandInk,
+                            color: context.colors.brandInk,
                             letterSpacing: -0.1,
                           ),
                         ),
@@ -226,7 +226,7 @@ class ActiveTrackCard extends ConsumerWidget {
                             displayNameSecondary,
                             style: theme.textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.w800,
-                              color: AppTheme.brandInk,
+                              color: context.colors.brandInk,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -244,9 +244,9 @@ class ActiveTrackCard extends ConsumerWidget {
                       color: bookIconBg,
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.menu_book_rounded,
-                      color: kActiveTrackPrimaryBlue,
+                      color: kActiveTrackPrimaryBlue(context),
                       size: 24,
                     ),
                   ),
@@ -317,7 +317,7 @@ class ActiveTrackCard extends ConsumerWidget {
                             l10n.nothingDueInQueue,
                             maxLines: 2,
                             style: theme.textTheme.labelSmall?.copyWith(
-                              color: AppTheme.brandInkMuted,
+                              color: context.colors.brandInkMuted,
                               height: 1.2,
                             ),
                           ),
@@ -342,14 +342,14 @@ class ActiveTrackCard extends ConsumerWidget {
                       Text(
                         '${l10n.trackProgress}: $currentCycleDisplay',
                         style: theme.textTheme.labelSmall?.copyWith(
-                          color: AppTheme.brandInkMuted,
+                          color: context.colors.brandInkMuted,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                       Text(
                         '${l10n.lifetimeLabel}: $lifetimeDisplay',
                         style: theme.textTheme.labelSmall?.copyWith(
-                          color: AppTheme.brandInkMuted,
+                          color: context.colors.brandInkMuted,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -372,7 +372,7 @@ class ActiveTrackCard extends ConsumerWidget {
                       }
                     },
                     style: FilledButton.styleFrom(
-                      backgroundColor: kActiveTrackPrimaryBlue,
+                      backgroundColor: kActiveTrackPrimaryBlue(context),
                       foregroundColor: Colors.white,
                       minimumSize: const Size(double.infinity, 48),
                       padding: EdgeInsets.zero,

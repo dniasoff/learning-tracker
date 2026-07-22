@@ -18,8 +18,7 @@ import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/sync/providers/tutored_pull_providers.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
@@ -40,10 +39,10 @@ class ManageTutorsScreen extends ConsumerWidget {
     final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: AppTheme.brandCream,
+      backgroundColor: context.colors.brandCream,
       appBar: AppBar(
         title: Text(AppLocalizations.of(context)!.manageTutors),
-        backgroundColor: AppTheme.brandCream,
+        backgroundColor: context.colors.brandCream,
         elevation: 0,
       ),
       body: profilesAsync.when(
@@ -216,7 +215,7 @@ class _ChildGrantsSection extends ConsumerWidget {
             profile.displayName,
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w700,
-              color: AppTheme.brandBlue,
+              color: context.colors.brandBlue,
             ),
           ),
         ),
@@ -315,9 +314,9 @@ class _ChildGrantsSection extends ConsumerWidget {
             icon: const Icon(Icons.person_add_rounded, size: 18),
             label: Text(l10n.manageTutorsInviteButton),
             style: OutlinedButton.styleFrom(
-              foregroundColor: AppTheme.brandBlue,
+              foregroundColor: context.colors.brandBlue,
               side: BorderSide(
-                color: AppTheme.brandBlue.withValues(alpha: 0.5),
+                color: context.colors.brandBlue.withValues(alpha: 0.5),
               ),
               minimumSize: const Size(double.infinity, 40),
             ),
@@ -546,8 +545,8 @@ class _TutorGrantRowState extends ConsumerState<_TutorGrantRow> {
     final grantState = widget.grant.grantState;
 
     final statusColor = grantState is ActiveGrant
-        ? AppColors.statusActiveBadge
-        : AppColors.statusPendingBadge;
+        ? context.colors.statusActiveBadge
+        : context.colors.statusPendingBadge;
     final statusLabel = grantState is ActiveGrant
         ? l10n.statusActive
         : l10n.statusPending;
@@ -581,7 +580,7 @@ class _TutorGrantRowState extends ConsumerState<_TutorGrantRow> {
               icon: const Icon(Icons.history_rounded),
               tooltip: l10n.manageTutorsViewAuditLog,
               onPressed: _openAuditLog,
-              color: AppTheme.brandBlue,
+              color: context.colors.brandBlue,
               iconSize: 20,
             ),
           if (_acting)

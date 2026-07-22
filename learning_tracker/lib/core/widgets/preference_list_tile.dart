@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 
 /// A reusable list-tile for preference/settings screens.
 ///
@@ -77,7 +76,7 @@ class PreferenceListTile extends StatelessWidget {
           : Text(
               subtitle!,
               style: theme.textTheme.bodySmall?.copyWith(
-                color: AppColors.preferenceSubtitleGrey,
+                color: context.colors.preferenceSubtitleGrey,
                 fontSize: 15,
               ),
             ),
@@ -126,7 +125,9 @@ class _IconPill extends StatelessWidget {
 
   final IconData icon;
   final Color iconColor;
-  final Color iconBackground;
+
+  /// Defaults to the primary tint when omitted.
+  final Color? iconBackground;
 
   @override
   Widget build(BuildContext context) {
@@ -134,7 +135,7 @@ class _IconPill extends StatelessWidget {
       width: 32,
       height: 32,
       decoration: BoxDecoration(
-        color: iconBackground,
+        color: iconBackground ?? context.colors.brandBlueSoft,
         borderRadius: BorderRadius.circular(16),
       ),
       alignment: AlignmentDirectional.center,
@@ -150,12 +151,14 @@ class PreferenceIconPill extends StatelessWidget {
     super.key,
     required this.icon,
     required this.iconColor,
-    this.iconBackground = AppTheme.brandBlueSoft,
+    this.iconBackground,
   });
 
   final IconData icon;
   final Color iconColor;
-  final Color iconBackground;
+
+  /// Defaults to the primary tint when omitted.
+  final Color? iconBackground;
 
   @override
   Widget build(BuildContext context) {
@@ -163,7 +166,7 @@ class PreferenceIconPill extends StatelessWidget {
       width: 32,
       height: 32,
       decoration: BoxDecoration(
-        color: iconBackground,
+        color: iconBackground ?? context.colors.brandBlueSoft,
         borderRadius: BorderRadius.circular(16),
       ),
       alignment: AlignmentDirectional.center,

@@ -8,8 +8,7 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
@@ -271,7 +270,7 @@ class DashboardBody extends ConsumerWidget {
                         context,
                         size: 28,
                         weight: FontWeight.w800,
-                        color: AppTheme.brandInk,
+                        color: context.colors.brandInk,
                       ),
                       maxLines: 1,
                       softWrap: false,
@@ -281,7 +280,7 @@ class DashboardBody extends ConsumerWidget {
                   Text(
                     _formatDashboardDate(context, now),
                     style: theme.textTheme.bodySmall?.copyWith(
-                      color: AppTheme.brandInkMuted,
+                      color: context.colors.brandInkMuted,
                     ),
                   ),
                 ],
@@ -334,11 +333,13 @@ class DashboardBody extends ConsumerWidget {
                     vertical: 8,
                   ),
                   decoration: BoxDecoration(
-                    color: AppColors.statusDanger,
+                    color: context.colors.statusDanger,
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.statusDanger.withValues(alpha: 0.28),
+                        color: context.colors.statusDanger.withValues(
+                          alpha: 0.28,
+                        ),
                         blurRadius: 12,
                         offset: const Offset(0, 6),
                       ),
@@ -431,7 +432,7 @@ class DashboardBody extends ConsumerWidget {
                       context,
                       size: 28,
                       weight: FontWeight.w800,
-                      color: AppTheme.brandInk,
+                      color: context.colors.brandInk,
                     ),
                     maxLines: 2,
                     softWrap: true,
@@ -443,13 +444,13 @@ class DashboardBody extends ConsumerWidget {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: AppColors.statusDanger.withValues(alpha: 0.14),
+                    color: context.colors.statusDanger.withValues(alpha: 0.14),
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(
                     l10n.remaining(totalRemaining),
                     style: theme.textTheme.labelMedium?.copyWith(
-                      color: AppColors.statusDanger,
+                      color: context.colors.statusDanger,
                       fontWeight: FontWeight.w700,
                     ),
                     maxLines: 1,
@@ -478,10 +479,10 @@ class DashboardBody extends ConsumerWidget {
             label: reviewSectionLabel,
             title: chazaraReviewLabel,
             count: reviewCount,
-            color: AppTheme.brandGold,
-            labelColor: AppTheme.brandGoldDeep,
-            backgroundColor: AppTheme.brandCreamSoft,
-            borderColor: AppTheme.brandOutline,
+            color: context.colors.brandGold,
+            labelColor: context.colors.brandGoldDeep,
+            backgroundColor: context.colors.brandCreamSoft,
+            borderColor: context.colors.brandOutline,
             onTap: () {
               ref
                   .read(schedulerTaskSectionProvider.notifier)
@@ -495,10 +496,10 @@ class DashboardBody extends ConsumerWidget {
           label: l10n.urgent,
           title: l10n.missedOverdue,
           count: overdueCount,
-          color: AppColors.statusError,
-          labelColor: AppColors.statusError,
-          titleColor: AppColors.statusError,
-          borderColor: AppColors.statusError,
+          color: context.colors.statusError,
+          labelColor: context.colors.statusError,
+          titleColor: context.colors.statusError,
+          borderColor: context.colors.statusError,
           dashedBorder: true,
           onTap: () {
             ref
@@ -519,7 +520,7 @@ class DashboardBody extends ConsumerWidget {
               context,
               size: 28,
               weight: FontWeight.w800,
-              color: AppTheme.brandInk,
+              color: context.colors.brandInk,
             ),
           ),
         ),

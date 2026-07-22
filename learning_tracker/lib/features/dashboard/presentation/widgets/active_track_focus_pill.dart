@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/dashboard_helpers.dart';
 
 /// Pill that surfaces a track's unit label (next task / today's unit).
@@ -35,8 +35,8 @@ class ActiveTrackFocusPill extends StatelessWidget {
     final theme = Theme.of(context);
     final labelColor = prominent
         ? Colors.white.withValues(alpha: 0.85)
-        : kActiveTrackPrimaryBlue;
-    final valueColor = prominent ? Colors.white : AppTheme.brandInk;
+        : kActiveTrackPrimaryBlue(context);
+    final valueColor = prominent ? Colors.white : context.colors.brandInk;
     final valueStyle =
         (prominent ? theme.textTheme.titleMedium : theme.textTheme.titleSmall)
             ?.copyWith(
@@ -49,7 +49,9 @@ class ActiveTrackFocusPill extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: prominent ? kActiveTrackPrimaryBlue : kActiveTrackFocusPillBg,
+        color: prominent
+            ? kActiveTrackPrimaryBlue(context)
+            : kActiveTrackFocusPillBg(context),
         borderRadius: BorderRadius.circular(22),
       ),
       child: Column(

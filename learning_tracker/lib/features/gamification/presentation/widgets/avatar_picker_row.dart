@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/gamification/domain/reward_milestone_icons.dart';
 
-const Color _kNavy = AppTheme.brandBlueDeep;
-const Color _kFieldFill = AppColors.gamifFieldFillLight;
-const Color _kMutedLabel = AppColors.gamifMutedLabelGrey;
+Color _kNavy(BuildContext context) => context.colors.brandBlueDeep;
+Color _kFieldFill(BuildContext context) => context.colors.gamifFieldFillLight;
+Color _kMutedLabel(BuildContext context) => context.colors.gamifMutedLabelGrey;
 
 /// Horizontal scrollable row of icon tiles used to select a reward icon.
 ///
@@ -121,16 +120,18 @@ class AvatarTile extends StatelessWidget {
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(vertical: 16),
           decoration: BoxDecoration(
-            color: _kFieldFill,
+            color: _kFieldFill(context),
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: selected ? _kNavy : Colors.transparent,
+              color: selected ? _kNavy(context) : Colors.transparent,
               width: selected ? 3 : 0,
             ),
           ),
           child: Icon(
             icon,
-            color: selected ? _kNavy : _kMutedLabel.withValues(alpha: 0.45),
+            color: selected
+                ? _kNavy(context)
+                : _kMutedLabel(context).withValues(alpha: 0.45),
             size: 32,
           ),
         ),

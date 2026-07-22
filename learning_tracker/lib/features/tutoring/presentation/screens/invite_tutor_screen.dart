@@ -19,8 +19,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/utils/text_input_formatters.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
@@ -142,7 +141,7 @@ class _InviteTutorScreenState extends ConsumerState<InviteTutorScreen> {
               content: Text(
                 AppLocalizations.of(context)!.inviteTutorSentSnackbar(email),
               ),
-              backgroundColor: AppColors.statusSuccessSnackbar,
+              backgroundColor: context.colors.statusSuccessSnackbar,
             ),
           );
           await Navigator.of(context).maybePop();
@@ -216,9 +215,9 @@ class _InviteTutorScreenState extends ConsumerState<InviteTutorScreen> {
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      backgroundColor: AppTheme.brandCream,
+      backgroundColor: context.colors.brandCream,
       appBar: AppBar(
-        backgroundColor: AppTheme.brandCream,
+        backgroundColor: context.colors.brandCream,
         elevation: 0,
         title: Text(l10n.inviteTutorAppBarTitle),
       ),
@@ -229,13 +228,13 @@ class _InviteTutorScreenState extends ConsumerState<InviteTutorScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: 8),
-              const CircleAvatar(
+              CircleAvatar(
                 radius: 36,
-                backgroundColor: AppColors.tutorPinBadgeBg,
+                backgroundColor: context.colors.tutorPinBadgeBg,
                 child: Icon(
                   Icons.person_add_rounded,
                   size: 36,
-                  color: AppColors.tutorPinBadgeIcon,
+                  color: context.colors.tutorPinBadgeIcon,
                 ),
               ),
               const SizedBox(height: 20),
@@ -244,7 +243,7 @@ class _InviteTutorScreenState extends ConsumerState<InviteTutorScreen> {
                 textAlign: TextAlign.center,
                 style: theme.textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.w800,
-                  color: AppTheme.brandInk,
+                  color: context.colors.brandInk,
                 ),
               ),
               const SizedBox(height: 8),
@@ -252,7 +251,7 @@ class _InviteTutorScreenState extends ConsumerState<InviteTutorScreen> {
                 l10n.inviteTutorBody,
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodyLarge?.copyWith(
-                  color: AppTheme.brandInkMuted,
+                  color: context.colors.brandInkMuted,
                   height: 1.4,
                 ),
               ),

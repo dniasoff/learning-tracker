@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Animated illustration for the first intro page ("Your Daily Torah Plan").
@@ -31,9 +30,9 @@ class IntroDailyPlanIllustration extends StatelessWidget {
             child: Container(
               width: 52,
               height: 52,
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: AppColors.introPeach,
+                color: context.colors.introPeach,
               ),
             ),
           ),
@@ -47,11 +46,11 @@ class IntroDailyPlanIllustration extends StatelessWidget {
                 width: 248,
                 padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
                 decoration: BoxDecoration(
-                  color: AppTheme.brandCreamCard,
+                  color: context.colors.brandCreamCard,
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: AppColors.introNavy.withValues(alpha: 0.12),
+                      color: context.colors.introNavy.withValues(alpha: 0.12),
                       blurRadius: 16,
                       offset: const Offset(0, 8),
                     ),
@@ -60,32 +59,32 @@ class IntroDailyPlanIllustration extends StatelessWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Row(
+                    Row(
                       children: [
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            _WindowDot(c: AppColors.accentCoral),
-                            _WindowDot(c: AppColors.goldTrophy),
-                            _WindowDot(c: AppColors.introWindowDotBlue),
+                            _WindowDot(c: context.colors.accentCoral),
+                            _WindowDot(c: context.colors.goldTrophy),
+                            _WindowDot(c: context.colors.introWindowDotBlue),
                           ],
                         ),
-                        Spacer(),
+                        const Spacer(),
                         Icon(
                           Icons.calendar_today_outlined,
                           size: 14,
-                          color: AppTheme.brandInkMuted,
+                          color: context.colors.brandInkMuted,
                         ),
                       ],
                     ),
                     const SizedBox(height: 6),
-                    _dailyListRow1Checked(),
+                    _dailyListRow1Checked(context),
                     const SizedBox(height: 4),
-                    _dailyListRow2Highlight(),
+                    _dailyListRow2Highlight(context),
                     const SizedBox(height: 4),
-                    _dailyListRowEmpty(filled: true),
+                    _dailyListRowEmpty(context, filled: true),
                     const SizedBox(height: 4),
-                    _dailyListRowEmpty(filled: false),
+                    _dailyListRowEmpty(context, filled: false),
                   ],
                 ),
               ),
@@ -97,14 +96,14 @@ class IntroDailyPlanIllustration extends StatelessWidget {
             child: Container(
               width: 36,
               height: 36,
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: AppColors.introNavy,
+                color: context.colors.introNavy,
               ),
-              child: const Center(
+              child: Center(
                 child: Icon(
                   Icons.auto_awesome,
-                  color: AppColors.goldTrophy,
+                  color: context.colors.goldTrophy,
                   size: 16,
                 ),
               ),
@@ -116,11 +115,11 @@ class IntroDailyPlanIllustration extends StatelessWidget {
   }
 }
 
-Widget _dailyListRow1Checked() {
+Widget _dailyListRow1Checked(BuildContext context) {
   return Container(
     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
     decoration: BoxDecoration(
-      color: AppColors.introDailyRowPillBg,
+      color: context.colors.introDailyRowPillBg,
       borderRadius: BorderRadius.circular(999),
     ),
     child: Row(
@@ -128,14 +127,14 @@ Widget _dailyListRow1Checked() {
         Container(
           width: 22,
           height: 22,
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: AppColors.introNavy,
+            color: context.colors.introNavy,
           ),
-          child: const Icon(
+          child: Icon(
             Icons.check,
             size: 14,
-            color: AppTheme.brandCreamCard,
+            color: context.colors.brandCreamCard,
           ),
         ),
         const SizedBox(width: 10),
@@ -143,7 +142,7 @@ Widget _dailyListRow1Checked() {
           child: Container(
             height: 7,
             decoration: BoxDecoration(
-              color: AppColors.introDailyRowTrackFilled,
+              color: context.colors.introDailyRowTrackFilled,
               borderRadius: BorderRadius.circular(3),
             ),
           ),
@@ -153,15 +152,15 @@ Widget _dailyListRow1Checked() {
   );
 }
 
-Widget _dailyListRow2Highlight() {
+Widget _dailyListRow2Highlight(BuildContext context) {
   return Container(
     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
     decoration: BoxDecoration(
-      color: AppColors.introNavy,
+      color: context.colors.introNavy,
       borderRadius: BorderRadius.circular(999),
       boxShadow: [
         BoxShadow(
-          color: AppColors.introNavy.withValues(alpha: 0.2),
+          color: context.colors.introNavy.withValues(alpha: 0.2),
           blurRadius: 8,
           offset: const Offset(0, 3),
         ),
@@ -172,13 +171,13 @@ Widget _dailyListRow2Highlight() {
         Container(
           width: 24,
           height: 24,
-          decoration: const BoxDecoration(
-            color: AppTheme.brandCreamCard,
+          decoration: BoxDecoration(
+            color: context.colors.brandCreamCard,
             shape: BoxShape.circle,
           ),
-          child: const Icon(
+          child: Icon(
             Icons.play_arrow_rounded,
-            color: AppColors.introNavy,
+            color: context.colors.introNavy,
             size: 16,
           ),
         ),
@@ -187,7 +186,7 @@ Widget _dailyListRow2Highlight() {
           child: Container(
             height: 8,
             decoration: BoxDecoration(
-              color: AppTheme.brandCreamCard.withValues(alpha: 0.9),
+              color: context.colors.brandCreamCard.withValues(alpha: 0.9),
               borderRadius: BorderRadius.circular(4),
             ),
           ),
@@ -197,11 +196,11 @@ Widget _dailyListRow2Highlight() {
   );
 }
 
-Widget _dailyListRowEmpty({required bool filled}) {
+Widget _dailyListRowEmpty(BuildContext context, {required bool filled}) {
   return Container(
     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
     decoration: BoxDecoration(
-      color: AppColors.introDailyRowPillBg,
+      color: context.colors.introDailyRowPillBg,
       borderRadius: BorderRadius.circular(999),
     ),
     child: Row(
@@ -211,7 +210,7 @@ Widget _dailyListRowEmpty({required bool filled}) {
           height: 20,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            border: Border.all(color: AppColors.introDailyCheckboxBorder),
+            border: Border.all(color: context.colors.introDailyCheckboxBorder),
           ),
         ),
         const SizedBox(width: 10),
@@ -220,8 +219,8 @@ Widget _dailyListRowEmpty({required bool filled}) {
             height: 7,
             decoration: BoxDecoration(
               color: filled
-                  ? AppColors.introDailyRowTrackFilled
-                  : AppColors.introDailyRowTrackEmpty,
+                  ? context.colors.introDailyRowTrackFilled
+                  : context.colors.introDailyRowTrackEmpty,
               borderRadius: BorderRadius.circular(3),
             ),
           ),
@@ -256,7 +255,7 @@ class IntroDailyPlanProgressBar extends StatelessWidget {
                           width: c.maxWidth,
                           height: 6,
                           decoration: BoxDecoration(
-                            color: AppColors.introProgressTrackBg,
+                            color: context.colors.introProgressTrackBg,
                             borderRadius: BorderRadius.circular(999),
                           ),
                         ),
@@ -265,9 +264,9 @@ class IntroDailyPlanProgressBar extends StatelessWidget {
                           child: Container(
                             width: c.maxWidth * t,
                             height: 6,
-                            decoration: const BoxDecoration(
-                              color: AppColors.introProgressFillGreen,
-                              borderRadius: BorderRadius.horizontal(
+                            decoration: BoxDecoration(
+                              color: context.colors.introProgressFillGreen,
+                              borderRadius: const BorderRadius.horizontal(
                                 left: Radius.circular(999),
                               ),
                             ),
@@ -285,7 +284,7 @@ class IntroDailyPlanProgressBar extends StatelessWidget {
         Text(
           AppLocalizations.of(context)!.introSetupProgress,
           style: GoogleFonts.plusJakartaSans(
-            color: AppTheme.brandInkSoft,
+            color: context.colors.brandInkSoft,
             fontSize: 10,
             fontWeight: FontWeight.w700,
             letterSpacing: 0.6,

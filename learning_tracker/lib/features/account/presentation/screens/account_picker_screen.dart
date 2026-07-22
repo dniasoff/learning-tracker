@@ -12,8 +12,7 @@ import 'package:learning_tracker/core/database/registry/device_registry_database
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/core/sync/providers/sync_orchestrator_providers.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/account/domain/services/account_lifecycle_service.dart';
 import 'package:learning_tracker/features/account/domain/services/session_persistence_service.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart';
@@ -77,7 +76,7 @@ class _AccountPickerScreenState extends ConsumerState<AccountPickerScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: AppColors.surfaceF5,
+      backgroundColor: context.colors.surfaceF5,
       body: SafeArea(
         child: FutureBuilder<List<DeviceAccount>>(
           future: _accountsFuture,
@@ -112,7 +111,7 @@ class _AccountPickerScreenState extends ConsumerState<AccountPickerScreen> {
                 Text(
                   l10n.accountPickerTitle,
                   style: theme.textTheme.displaySmall?.copyWith(
-                    color: AppTheme.brandInk,
+                    color: context.colors.brandInk,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -120,7 +119,7 @@ class _AccountPickerScreenState extends ConsumerState<AccountPickerScreen> {
                 Text(
                   l10n.accountPickerSubtitle,
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: AppTheme.brandInkMuted,
+                    color: context.colors.brandInkMuted,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -167,7 +166,7 @@ class _BottomAddAccountSection extends StatelessWidget {
                 l10n.accountPickerAddAnother(kMaxDeviceAccounts - accountCount),
                 textAlign: TextAlign.center,
                 style: theme.textTheme.titleMedium?.copyWith(
-                  color: AppTheme.brandBlueDeep,
+                  color: context.colors.brandBlueDeep,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -179,7 +178,7 @@ class _BottomAddAccountSection extends StatelessWidget {
                 l10n.accountPickerMaxAccountsShort(kMaxDeviceAccounts),
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodySmall?.copyWith(
-                  color: AppTheme.brandInkMuted,
+                  color: context.colors.brandInkMuted,
                 ),
               ),
             ),
@@ -187,7 +186,7 @@ class _BottomAddAccountSection extends StatelessWidget {
           Text(
             l10n.accountPickerPrivacyFooter,
             style: theme.textTheme.bodySmall?.copyWith(
-              color: AppTheme.brandInkMuted,
+              color: context.colors.brandInkMuted,
             ),
           ),
         ],
@@ -208,8 +207,8 @@ class _DashedOutlineButton extends StatelessWidget {
     return Semantics(
       button: true,
       child: CustomPaint(
-        painter: const _DashedRRectPainter(
-          color: AppTheme.brandBlueDeep,
+        painter: _DashedRRectPainter(
+          color: context.colors.brandBlueDeep,
           strokeWidth: 1.4,
           radius: radius,
         ),
@@ -310,15 +309,15 @@ class _AccountTileState extends ConsumerState<_AccountTile> {
         alignment: AlignmentDirectional.centerEnd,
         padding: const EdgeInsetsDirectional.only(end: 20),
         decoration: BoxDecoration(
-          color: AppColors.statusErrorSoft,
+          color: context.colors.statusErrorSoft,
           borderRadius: BorderRadius.circular(22),
         ),
         child: Text(
           isCloud
               ? l10n.accountRemoveFromDevice
               : l10n.accountDeleteAccountAction,
-          style: const TextStyle(
-            color: AppTheme.brandCoralDeep,
+          style: TextStyle(
+            color: context.colors.brandCoralDeep,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -338,7 +337,7 @@ class _AccountTileState extends ConsumerState<_AccountTile> {
               color: theme.colorScheme.surface,
               borderRadius: BorderRadius.circular(24),
               border: Border.all(
-                color: AppTheme.brandOutline.withValues(alpha: 0.4),
+                color: context.colors.brandOutline.withValues(alpha: 0.4),
               ),
             ),
             child: Row(
@@ -362,7 +361,7 @@ class _AccountTileState extends ConsumerState<_AccountTile> {
                             : account.displayName,
                         style: theme.textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.w700,
-                          color: AppTheme.brandInk,
+                          color: context.colors.brandInk,
                         ),
                       ),
                       // Credential-less offline accounts carry a synthetic
@@ -373,7 +372,7 @@ class _AccountTileState extends ConsumerState<_AccountTile> {
                         Text(
                           account.email,
                           style: theme.textTheme.bodyMedium?.copyWith(
-                            color: AppTheme.brandInkMuted,
+                            color: context.colors.brandInkMuted,
                           ),
                         ),
                       const SizedBox(height: 4),
@@ -410,8 +409,8 @@ class _AccountTileState extends ConsumerState<_AccountTile> {
                       // wrongly implied a password was required.)
                       : Icons.chevron_right_rounded,
                   color: isCloud && !hasValidSession
-                      ? AppColors.statusError
-                      : AppTheme.brandInkMuted,
+                      ? context.colors.statusError
+                      : context.colors.brandInkMuted,
                   size: 22,
                 ),
               ],
@@ -425,25 +424,25 @@ class _AccountTileState extends ConsumerState<_AccountTile> {
   Color _avatarBg(bool isCloud, bool hasValidSession) {
     if (!isCloud) return const Color(0xFFFEE6C5);
     if (!hasValidSession) return const Color(0xFFF8DDE2);
-    return AppTheme.brandBlueSoft;
+    return context.colors.brandBlueSoft;
   }
 
   Color _avatarFg(bool isCloud, bool hasValidSession) {
     if (!isCloud) return const Color(0xFF6A4926);
-    if (!hasValidSession) return AppColors.chartRed;
-    return AppTheme.brandBlue;
+    if (!hasValidSession) return context.colors.chartRed;
+    return context.colors.brandBlue;
   }
 
   Color _pillBg(bool isCloud, bool hasValidSession) {
     if (!isCloud) return const Color(0xFFE8EBF0);
-    if (!hasValidSession) return AppColors.statusErrorSoft;
+    if (!hasValidSession) return context.colors.statusErrorSoft;
     return const Color(0xFFE8EEFF);
   }
 
   Color _pillFg(bool isCloud, bool hasValidSession) {
-    if (!isCloud) return AppTheme.brandInkMuted;
-    if (!hasValidSession) return AppColors.statusError;
-    return AppTheme.brandBlueDeep;
+    if (!isCloud) return context.colors.brandInkMuted;
+    if (!hasValidSession) return context.colors.statusError;
+    return context.colors.brandBlueDeep;
   }
 
   String _pillText(AppLocalizations l10n, bool isCloud, bool hasValidSession) {

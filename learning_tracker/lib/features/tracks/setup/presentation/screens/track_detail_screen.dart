@@ -9,8 +9,7 @@ import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/learning/completion_constants.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/core/utils/hebrew_calendar_utils.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
@@ -224,11 +223,11 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
               false)
         : false;
 
-    final curriculumBarColor = AppTheme.getCurriculumColorByKey(
+    final curriculumBarColor = context.colors.curriculumForKey(
       track.curriculumId,
     );
     // W3.22: trackType column dropped — all tracks are now 'personal'.
-    const accent = AppColors.blueMedium;
+    final accent = context.colors.blueMedium;
     const icon = Icons.menu_book_rounded;
     final locale = Localizations.localeOf(context).toString();
 
@@ -293,15 +292,15 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     final paceCalc = ref.watch(_trackPaceCalcProvider(track)).asData?.value;
 
     return Scaffold(
-      backgroundColor: AppColors.surfaceF5,
+      backgroundColor: context.colors.surfaceF5,
       appBar: AppBar(
-        backgroundColor: AppColors.surfaceF5,
+        backgroundColor: context.colors.surfaceF5,
         elevation: 0,
         title: Text(
           titleText,
           style: theme.textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.w800,
-            color: AppTheme.brandBlueDeep,
+            color: context.colors.brandBlueDeep,
           ),
         ),
       ),
@@ -388,7 +387,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: AppColors.blueDeepNavy.withValues(alpha: 0.07),
+            color: context.colors.blueDeepNavy.withValues(alpha: 0.07),
             blurRadius: 14,
             offset: const Offset(0, 6),
           ),
@@ -416,7 +415,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
                     Text(
                       AppLocalizations.of(context)!.trackSince(activatedDate),
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: AppTheme.brandInkMuted,
+                        color: context.colors.brandInkMuted,
                       ),
                     ),
                   ],
@@ -436,14 +435,14 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
               Text(
                 '$trackProgressLabel: $trackProgressDisplay',
                 style: theme.textTheme.labelMedium?.copyWith(
-                  color: AppTheme.brandInk,
+                  color: context.colors.brandInk,
                   fontWeight: FontWeight.w700,
                 ),
               ),
               Text(
                 '$lifetimeLabel: $lifetimeDisplay',
                 style: theme.textTheme.labelMedium?.copyWith(
-                  color: AppTheme.brandInk,
+                  color: context.colors.brandInk,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -471,7 +470,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
                       ? l10n.carouselCompletion(chazaraTerm)
                       : l10n.trackCompletionLabel,
                   style: theme.textTheme.labelSmall?.copyWith(
-                    color: AppTheme.brandInkMuted,
+                    color: context.colors.brandInkMuted,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -479,7 +478,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
                 Text(
                   cyclePercentDisplay,
                   style: theme.textTheme.labelMedium?.copyWith(
-                    color: AppTheme.brandInk,
+                    color: context.colors.brandInk,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -492,7 +491,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
                 child: LinearProgressIndicator(
                   value: cycleFraction,
                   minHeight: 10,
-                  backgroundColor: AppTheme.brandCreamSoft,
+                  backgroundColor: context.colors.brandCreamSoft,
                   valueColor: AlwaysStoppedAnimation<Color>(curriculumBarColor),
                 ),
               ),
@@ -537,7 +536,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
           Text(
             label,
             style: theme.textTheme.labelSmall?.copyWith(
-              color: AppTheme.brandInkMuted,
+              color: context.colors.brandInkMuted,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -545,7 +544,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
           Text(
             value ?? '—',
             style: theme.textTheme.labelSmall?.copyWith(
-              color: AppTheme.brandInk,
+              color: context.colors.brandInk,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -635,7 +634,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: AppColors.blueDeepNavy.withValues(alpha: 0.07),
+            color: context.colors.blueDeepNavy.withValues(alpha: 0.07),
             blurRadius: 14,
             offset: const Offset(0, 6),
           ),
@@ -661,22 +660,22 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
                     top: Radius.circular(24),
                   ),
                   side: BorderSide(
-                    color: AppColors.blueMedium.withValues(alpha: 0.4),
+                    color: context.colors.blueMedium.withValues(alpha: 0.4),
                     width: 1,
                   ),
                 ),
-                tileColor: AppColors.blueMedium.withValues(alpha: 0.06),
-                leading: const Icon(
+                tileColor: context.colors.blueMedium.withValues(alpha: 0.06),
+                leading: Icon(
                   Icons.history_edu_outlined,
-                  color: AppColors.blueMedium,
+                  color: context.colors.blueMedium,
                 ),
                 title: Text(
                   AppLocalizations.of(context)!.trackMarkPreviouslyLearned,
-                  style: const TextStyle(color: AppColors.blueMedium),
+                  style: TextStyle(color: context.colors.blueMedium),
                 ),
-                trailing: const Icon(
+                trailing: Icon(
                   Icons.chevron_right_rounded,
-                  color: AppColors.blueMedium,
+                  color: context.colors.blueMedium,
                 ),
                 onTap: curriculum != null
                     ? () => _openBulkMark(track, curriculum)
@@ -684,9 +683,9 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
               ),
               const Divider(height: 1, indent: 56),
               ListTile(
-                leading: const Icon(
+                leading: Icon(
                   Icons.swap_vert_rounded,
-                  color: AppColors.blueMedium,
+                  color: context.colors.blueMedium,
                 ),
                 title: Text(AppLocalizations.of(context)!.trackReorderContent),
                 trailing: const Icon(Icons.chevron_right_rounded),
@@ -722,9 +721,9 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
                           )
                         : null,
                     enabled: canEditGoals,
-                    leading: const Icon(
+                    leading: Icon(
                       Icons.flag_outlined,
-                      color: AppColors.blueMedium,
+                      color: context.colors.blueMedium,
                     ),
                     title: Text(
                       hasGoal
@@ -743,9 +742,9 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
             if (!hasProgramEnrollment && curriculum != null) ...[
               ListTile(
                 key: const ValueKey('trackDetail.studyDaysTile'),
-                leading: const Icon(
+                leading: Icon(
                   Icons.calendar_today_outlined,
-                  color: AppColors.blueMedium,
+                  color: context.colors.blueMedium,
                 ),
                 title: Text(AppLocalizations.of(context)!.studyDaysTitle),
                 trailing: const Icon(Icons.chevron_right_rounded),
@@ -756,9 +755,9 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
               const Divider(height: 1, indent: 56),
             ],
             ListTile(
-              leading: const Icon(
+              leading: Icon(
                 Icons.edit_outlined,
-                color: AppColors.blueMedium,
+                color: context.colors.blueMedium,
               ),
               title: Text(AppLocalizations.of(context)!.trackEditLabel),
               trailing: const Icon(Icons.chevron_right_rounded),

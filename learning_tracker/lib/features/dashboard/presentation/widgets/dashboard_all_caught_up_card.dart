@@ -1,8 +1,7 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/animated_progress_bar.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/dashboard_helpers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -28,7 +27,7 @@ class DashboardAllCaughtUpCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.brandBlue.withValues(alpha: 0.24),
+            color: context.colors.brandBlue.withValues(alpha: 0.24),
             blurRadius: 18,
             offset: const Offset(0, 10),
           ),
@@ -38,16 +37,16 @@ class DashboardAllCaughtUpCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(28),
         child: Stack(
           children: [
-            const Positioned.fill(
+            Positioned.fill(
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      AppColors.blueMedium,
-                      AppColors.blueLight,
-                      AppColors.blueDeepNavy,
+                      context.colors.blueMedium,
+                      context.colors.blueLight,
+                      context.colors.blueDeepNavy,
                     ],
                   ),
                 ),
@@ -75,10 +74,10 @@ class DashboardAllCaughtUpCard extends StatelessWidget {
                         color: Colors.white,
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.check_rounded,
                         size: 34,
-                        color: AppColors.blueLight,
+                        color: context.colors.blueLight,
                       ),
                     ),
                   ),
@@ -135,8 +134,8 @@ class DashboardAllCaughtUpCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(999),
                         child: AnimatedProgressBar(
                           value: cumulativeLifetime,
-                          color: kAllCaughtUpProgressFill,
-                          backgroundColor: AppColors.blueNavy.withValues(
+                          color: kAllCaughtUpProgressFill(context),
+                          backgroundColor: context.colors.blueNavy.withValues(
                             alpha: 0.55,
                           ),
                           height: 12,

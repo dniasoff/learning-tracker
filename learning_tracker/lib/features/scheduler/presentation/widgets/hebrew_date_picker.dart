@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:kosher_dart/kosher_dart.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/core/utils/hebrew_calendar_utils.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -78,8 +78,8 @@ class _HebrewDatePickerState extends State<HebrewDatePicker> {
   InputDecoration _fieldDecoration(String label) {
     return InputDecoration(
       labelText: label,
-      labelStyle: const TextStyle(
-        color: AppTheme.brandInkMuted,
+      labelStyle: TextStyle(
+        color: context.colors.brandInkMuted,
         fontWeight: FontWeight.w600,
         fontSize: 14,
       ),
@@ -95,7 +95,7 @@ class _HebrewDatePickerState extends State<HebrewDatePicker> {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: AppTheme.brandBlue, width: 2),
+        borderSide: BorderSide(color: context.colors.brandBlue, width: 2),
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
     );
@@ -151,7 +151,7 @@ class _HebrewDatePickerState extends State<HebrewDatePicker> {
                         l10n.schedulerHebrewDatePickerTitle,
                         textAlign: TextAlign.center,
                         style: theme.textTheme.titleLarge?.copyWith(
-                          color: AppTheme.brandInk,
+                          color: context.colors.brandInk,
                           fontSize: 22,
                           fontWeight: FontWeight.w800,
                           height: 1.2,
@@ -160,9 +160,9 @@ class _HebrewDatePickerState extends State<HebrewDatePicker> {
                     ),
                     IconButton(
                       onPressed: () => Navigator.of(context).pop(),
-                      icon: const Icon(
+                      icon: Icon(
                         Icons.close,
-                        color: AppTheme.brandInkMuted,
+                        color: context.colors.brandInkMuted,
                         size: 22,
                       ),
                       tooltip: MaterialLocalizations.of(
@@ -176,7 +176,7 @@ class _HebrewDatePickerState extends State<HebrewDatePicker> {
                 Text(
                   l10n.schedulerHebrewYearLabel,
                   style: theme.textTheme.labelSmall?.copyWith(
-                    color: AppTheme.brandInkMuted,
+                    color: context.colors.brandInkMuted,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 0.2,
                   ),
@@ -200,9 +200,9 @@ class _HebrewDatePickerState extends State<HebrewDatePicker> {
                             _hebrewYear--;
                             _clampDayToMonth();
                           }),
-                          icon: const Icon(
+                          icon: Icon(
                             Icons.remove_rounded,
-                            color: AppTheme.brandBlue,
+                            color: context.colors.brandBlue,
                           ),
                         ),
                       ),
@@ -212,7 +212,7 @@ class _HebrewDatePickerState extends State<HebrewDatePicker> {
                           textAlign: TextAlign.center,
                           style: theme.textTheme.titleLarge?.copyWith(
                             fontWeight: FontWeight.w800,
-                            color: AppTheme.brandBlueDeep,
+                            color: context.colors.brandBlueDeep,
                           ),
                         ),
                       ),
@@ -223,9 +223,9 @@ class _HebrewDatePickerState extends State<HebrewDatePicker> {
                             _hebrewYear++;
                             _clampDayToMonth();
                           }),
-                          icon: const Icon(
+                          icon: Icon(
                             Icons.add_rounded,
-                            color: AppTheme.brandBlue,
+                            color: context.colors.brandBlue,
                           ),
                         ),
                       ),
@@ -257,8 +257,8 @@ class _HebrewDatePickerState extends State<HebrewDatePicker> {
                             child: Text(
                               name,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: AppTheme.brandInk,
+                              style: TextStyle(
+                                color: context.colors.brandInk,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -285,8 +285,8 @@ class _HebrewDatePickerState extends State<HebrewDatePicker> {
                             value: i + 1,
                             child: Text(
                               '${i + 1}',
-                              style: const TextStyle(
-                                color: AppTheme.brandInk,
+                              style: TextStyle(
+                                color: context.colors.brandInk,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -307,18 +307,20 @@ class _HebrewDatePickerState extends State<HebrewDatePicker> {
                     vertical: 12,
                   ),
                   decoration: BoxDecoration(
-                    color: AppTheme.brandCreamSoft,
+                    color: context.colors.brandCreamSoft,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: AppTheme.brandOutline.withValues(alpha: 0.45),
+                      color: context.colors.brandOutline.withValues(
+                        alpha: 0.45,
+                      ),
                     ),
                   ),
                   child: Row(
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.event_rounded,
                         size: 20,
-                        color: AppTheme.brandInkMuted,
+                        color: context.colors.brandInkMuted,
                       ),
                       const SizedBox(width: 10),
                       Expanded(
@@ -332,7 +334,7 @@ class _HebrewDatePickerState extends State<HebrewDatePicker> {
                             ),
                           ),
                           style: theme.textTheme.bodyMedium?.copyWith(
-                            color: AppTheme.brandInk,
+                            color: context.colors.brandInk,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -347,7 +349,7 @@ class _HebrewDatePickerState extends State<HebrewDatePicker> {
                       child: TextButton(
                         onPressed: () => Navigator.of(context).pop(),
                         style: TextButton.styleFrom(
-                          foregroundColor: AppTheme.brandInkMuted,
+                          foregroundColor: context.colors.brandInkMuted,
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           textStyle: theme.textTheme.titleSmall?.copyWith(
                             fontWeight: FontWeight.w600,
@@ -370,7 +372,7 @@ class _HebrewDatePickerState extends State<HebrewDatePicker> {
                           );
                         },
                         style: FilledButton.styleFrom(
-                          backgroundColor: AppTheme.brandBlue,
+                          backgroundColor: context.colors.brandBlue,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(

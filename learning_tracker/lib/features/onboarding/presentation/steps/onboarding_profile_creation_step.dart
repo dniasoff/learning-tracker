@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/utils/text_input_formatters.dart';
 import 'package:learning_tracker/features/account/domain/services/pending_local_signup.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/text_display_providers.dart';
@@ -155,7 +155,7 @@ class _OnboardingProfileCreationStepState
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     const cardRadius = 20.0;
-    const prefsBg = AppTheme.brandCreamSoft;
+    final prefsBg = context.colors.brandCreamSoft;
 
     Widget pillPair({
       required String leftLabel,
@@ -167,7 +167,9 @@ class _OnboardingProfileCreationStepState
       Widget pill(String label, bool selected, VoidCallback onTap) {
         return Expanded(
           child: Material(
-            color: selected ? AppTheme.brandBlue : AppTheme.brandOutline,
+            color: selected
+                ? context.colors.brandBlue
+                : context.colors.brandOutline,
             borderRadius: BorderRadius.circular(22),
             child: InkWell(
               onTap: onTap,
@@ -179,7 +181,7 @@ class _OnboardingProfileCreationStepState
                   textAlign: TextAlign.center,
                   style: theme.textTheme.labelLarge?.copyWith(
                     fontWeight: FontWeight.w700,
-                    color: selected ? Colors.white : AppTheme.brandInk,
+                    color: selected ? Colors.white : context.colors.brandInk,
                   ),
                 ),
               ),
@@ -191,7 +193,7 @@ class _OnboardingProfileCreationStepState
       return Container(
         padding: const EdgeInsets.all(4),
         decoration: BoxDecoration(
-          color: AppTheme.brandOutline,
+          color: context.colors.brandOutline,
           borderRadius: BorderRadius.circular(26),
         ),
         child: Row(
@@ -212,9 +214,11 @@ class _OnboardingProfileCreationStepState
       required String subtitle,
     }) {
       final selected = _profileMode == (isChild ? 'child' : 'adult');
-      final iconColor = selected ? AppTheme.brandBlue : AppTheme.brandInkMuted;
+      final iconColor = selected
+          ? context.colors.brandBlue
+          : context.colors.brandInkMuted;
       final circleBg = selected
-          ? AppTheme.brandBlueSoft.withValues(alpha: 0.85)
+          ? context.colors.brandBlueSoft.withValues(alpha: 0.85)
           : iconBgMuted;
       return Expanded(
         child: Stack(
@@ -235,7 +239,9 @@ class _OnboardingProfileCreationStepState
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(cardRadius),
                     border: Border.all(
-                      color: selected ? AppTheme.brandBlue : Colors.transparent,
+                      color: selected
+                          ? context.colors.brandBlue
+                          : Colors.transparent,
                       width: selected ? 2.5 : 1,
                     ),
                   ),
@@ -254,8 +260,8 @@ class _OnboardingProfileCreationStepState
                         style: theme.textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.w800,
                           color: selected
-                              ? AppTheme.brandBlue
-                              : AppTheme.brandInk,
+                              ? context.colors.brandBlue
+                              : context.colors.brandInk,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -263,7 +269,7 @@ class _OnboardingProfileCreationStepState
                         subtitle,
                         textAlign: TextAlign.center,
                         style: theme.textTheme.bodySmall?.copyWith(
-                          color: AppTheme.brandInkMuted,
+                          color: context.colors.brandInkMuted,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -313,7 +319,7 @@ class _OnboardingProfileCreationStepState
                 fontWeight: FontWeight.w700,
                 fontSize: 22,
                 height: 1.25,
-                color: AppTheme.brandInk,
+                color: context.colors.brandInk,
               ),
             ),
             const SizedBox(height: 8),
@@ -325,13 +331,13 @@ class _OnboardingProfileCreationStepState
               autocorrect: false,
               enableSuggestions: false,
               inputFormatters: const [TrimLeadingSpaceFormatter()],
-              style: const TextStyle(color: AppTheme.brandInk),
+              style: TextStyle(color: context.colors.brandInk),
               decoration: InputDecoration(
                 hintText: AppLocalizations.of(context)!.enterNameHint,
                 errorText: _nameError,
-                suffixIcon: const Icon(
+                suffixIcon: Icon(
                   Icons.edit_outlined,
-                  color: AppTheme.brandBlue,
+                  color: context.colors.brandBlue,
                 ),
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 16,
@@ -348,7 +354,7 @@ class _OnboardingProfileCreationStepState
                 fontWeight: FontWeight.w800,
                 fontSize: 22,
                 height: 1.25,
-                color: AppTheme.brandInk,
+                color: context.colors.brandInk,
               ),
             ),
             const SizedBox(height: 12),
@@ -368,7 +374,7 @@ class _OnboardingProfileCreationStepState
                 modeCard(
                   isChild: false,
                   icon: Icons.menu_book_rounded,
-                  iconBgMuted: AppTheme.brandOutline,
+                  iconBgMuted: context.colors.brandOutline,
                   title: AppLocalizations.of(context)!.adultModeCardTitle,
                   subtitle: AppLocalizations.of(
                     context,
@@ -388,10 +394,10 @@ class _OnboardingProfileCreationStepState
                 children: [
                   Row(
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.text_fields_rounded,
                         size: 22,
-                        color: AppTheme.brandInk,
+                        color: context.colors.brandInk,
                       ),
                       const SizedBox(width: 8),
                       Flexible(
@@ -399,7 +405,7 @@ class _OnboardingProfileCreationStepState
                           AppLocalizations.of(context)!.settingsNikud,
                           style: theme.textTheme.titleSmall?.copyWith(
                             fontWeight: FontWeight.w800,
-                            color: AppTheme.brandInk,
+                            color: context.colors.brandInk,
                           ),
                         ),
                       ),
@@ -418,10 +424,10 @@ class _OnboardingProfileCreationStepState
                   const SizedBox(height: 14),
                   Row(
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.calendar_month_rounded,
                         size: 22,
-                        color: AppTheme.brandInk,
+                        color: context.colors.brandInk,
                       ),
                       const SizedBox(width: 8),
                       Flexible(
@@ -429,7 +435,7 @@ class _OnboardingProfileCreationStepState
                           AppLocalizations.of(context)!.onboardingCalendarLabel,
                           style: theme.textTheme.titleSmall?.copyWith(
                             fontWeight: FontWeight.w800,
-                            color: AppTheme.brandInk,
+                            color: context.colors.brandInk,
                           ),
                         ),
                       ),
@@ -447,10 +453,10 @@ class _OnboardingProfileCreationStepState
                     const SizedBox(height: 14),
                     Row(
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.translate_rounded,
                           size: 22,
-                          color: AppTheme.brandInk,
+                          color: context.colors.brandInk,
                         ),
                         const SizedBox(width: 8),
                         Flexible(
@@ -458,7 +464,7 @@ class _OnboardingProfileCreationStepState
                             AppLocalizations.of(context)!.hebrewTermsPreference,
                             style: theme.textTheme.titleSmall?.copyWith(
                               fontWeight: FontWeight.w800,
-                              color: AppTheme.brandInk,
+                              color: context.colors.brandInk,
                             ),
                           ),
                         ),
@@ -483,11 +489,11 @@ class _OnboardingProfileCreationStepState
             const SizedBox(height: 28),
             FilledButton(
               style: FilledButton.styleFrom(
-                backgroundColor: AppTheme.brandBlue,
+                backgroundColor: context.colors.brandBlue,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: const StadiumBorder(),
                 elevation: 3,
-                shadowColor: AppTheme.brandBlue.withValues(alpha: 0.35),
+                shadowColor: context.colors.brandBlue.withValues(alpha: 0.35),
               ),
               onPressed:
                   _nameController.text.trim().isNotEmpty &&
@@ -532,7 +538,7 @@ class _OnboardingProfileCreationStepState
               AppLocalizations.of(context)!.onboardingSettingsChangeableLater,
               textAlign: TextAlign.center,
               style: theme.textTheme.bodySmall?.copyWith(
-                color: AppTheme.brandInkMuted,
+                color: context.colors.brandInkMuted,
               ),
             ),
             // WS2.skip: skip affordance — only shown when a callback is wired.
@@ -543,7 +549,7 @@ class _OnboardingProfileCreationStepState
                 child: Text(
                   AppLocalizations.of(context)!.actionSkipForNow,
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: AppTheme.brandInkMuted,
+                    color: context.colors.brandInkMuted,
                   ),
                 ),
               ),

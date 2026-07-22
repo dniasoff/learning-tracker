@@ -7,7 +7,7 @@ import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/app/router/router_provider.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/navigation/root_scaffold_messenger.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart';
@@ -354,14 +354,16 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen> {
             (icon: Icons.settings_rounded, label: l10n.tabBarSettings),
           ];
           return DecoratedBox(
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(28),
+              ),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.navBarShadow,
+                  color: context.colors.navBarShadow,
                   blurRadius: 18,
-                  offset: Offset(0, -4),
+                  offset: const Offset(0, -4),
                 ),
               ],
             ),
@@ -406,7 +408,9 @@ class _ShellNavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final foreground = selected ? Colors.white : AppColors.navUnselectedText;
+    final foreground = selected
+        ? Colors.white
+        : context.colors.navUnselectedText;
     final fontWeight = selected ? FontWeight.w700 : FontWeight.w600;
     return InkWell(
       onTap: onTap,
@@ -417,14 +421,14 @@ class _ShellNavItem extends StatelessWidget {
         margin: const EdgeInsets.symmetric(horizontal: 2),
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
         decoration: BoxDecoration(
-          color: selected ? AppColors.navSelectedBlue : Colors.transparent,
+          color: selected ? context.colors.navSelectedBlue : Colors.transparent,
           borderRadius: BorderRadius.circular(14),
           boxShadow: selected
-              ? const [
+              ? [
                   BoxShadow(
-                    color: AppColors.navItemSelectedShadow,
+                    color: context.colors.navItemSelectedShadow,
                     blurRadius: 10,
-                    offset: Offset(0, 5),
+                    offset: const Offset(0, 5),
                   ),
                 ]
               : null,
@@ -486,10 +490,11 @@ class ProfileSwitcherBar extends ConsumerWidget {
     // route, independent of whatever renders behind it.
     //   bg  = primary @6% composited over white  → opaque pale blue
     //   fg  = brandBlueDeep (0xFF002A80) on pale blue ≈ 11:1 (AA/AAA)
-    const barBackground = AppColors.switcherBarBackground; // opaque pale blue
-    const barBorder = AppColors.switcherBarBorder;
-    const barForeground = AppTheme.brandBlueDeep;
-    const barInk = AppTheme.brandInk;
+    final barBackground =
+        context.colors.switcherBarBackground; // opaque pale blue
+    final barBorder = context.colors.switcherBarBorder;
+    final barForeground = context.colors.brandBlueDeep;
+    final barInk = context.colors.brandInk;
 
     final activeProfileId = ref.watch(activeProfileIdProvider);
     final profiles =
@@ -592,7 +597,7 @@ class ProfileSwitcherBar extends ConsumerWidget {
       // could clip scaled text.
       child: DecoratedBox(
         key: const Key('appShellProfileSwitcherBarBackground'),
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           color: barBackground,
           border: Border(bottom: BorderSide(color: barBorder)),
         ),
@@ -652,7 +657,7 @@ class ProfileSwitcherBar extends ConsumerWidget {
                           ),
                           child: Text(
                             initial,
-                            style: const TextStyle(
+                            style: TextStyle(
                               color: barForeground,
                               fontSize: 14,
                               fontWeight: FontWeight.w800,
@@ -683,7 +688,7 @@ class ProfileSwitcherBar extends ConsumerWidget {
                           ),
                           child: Text(
                             roleBadge,
-                            style: const TextStyle(
+                            style: TextStyle(
                               color: barForeground,
                               fontSize: 11,
                               fontWeight: FontWeight.w700,
@@ -692,7 +697,7 @@ class ProfileSwitcherBar extends ConsumerWidget {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        const Icon(
+                        Icon(
                           Icons.unfold_more_rounded,
                           size: 20,
                           color: barForeground,
@@ -747,7 +752,7 @@ class ChildViewBanner extends ConsumerWidget {
       // at kMinInteractiveDimension via ConstrainedBox, so this Container
       // (no explicit height) sizes to that content instead of a fixed 28dp
       // that could clip scaled text or undersize the Exit tap target.
-      color: AppColors.childViewAccent,
+      color: context.colors.childViewAccent,
       padding: const EdgeInsets.symmetric(horizontal: 12),
       child: Row(
         children: [
@@ -864,7 +869,7 @@ class TutorModeIndicatorBar extends ConsumerWidget {
       // at kMinInteractiveDimension via ConstrainedBox, so this Container
       // (no explicit height) sizes to that content instead of a fixed 24dp
       // that could clip scaled text or undersize the Exit tap target.
-      color: AppColors.tutorModeAccent,
+      color: context.colors.tutorModeAccent,
       padding: const EdgeInsets.symmetric(horizontal: 12),
       child: Row(
         children: [

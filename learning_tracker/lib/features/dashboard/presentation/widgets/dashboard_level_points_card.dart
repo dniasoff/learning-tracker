@@ -3,8 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/animated_progress_bar.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/dashboard_stat_bubble.dart';
 import 'package:learning_tracker/features/scheduler/scheduler.dart';
@@ -96,7 +95,7 @@ class DashboardLevelPointsCard extends ConsumerWidget {
         (
           chazaraLabel!,
           reviewDisplay,
-          AppColors.goldTrophy,
+          context.colors.goldTrophy,
           SchedulerTaskSection.review,
         ),
     ];
@@ -104,19 +103,19 @@ class DashboardLevelPointsCard extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            AppColors.blueMedium,
-            AppColors.blueLight,
-            AppColors.blueMid,
+            context.colors.blueMedium,
+            context.colors.blueLight,
+            context.colors.blueMid,
           ],
         ),
         borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.brandBlue.withValues(alpha: 0.24),
+            color: context.colors.brandBlue.withValues(alpha: 0.24),
             blurRadius: 18,
             offset: const Offset(0, 10),
           ),
@@ -215,7 +214,7 @@ class DashboardLevelPointsCard extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(999),
                 child: AnimatedProgressBar(
                   value: cumulativeLifetime,
-                  color: AppColors.goldTrophy,
+                  color: context.colors.goldTrophy,
                   backgroundColor: Colors.white.withValues(alpha: 0.22),
                   height: 12,
                   duration: const Duration(milliseconds: 700),

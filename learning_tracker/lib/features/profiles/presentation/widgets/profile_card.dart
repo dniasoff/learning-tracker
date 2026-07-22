@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
@@ -21,7 +21,7 @@ class ProfileCard extends StatelessWidget {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
     final isChild = profile.profileMode.isChild;
-    const modeColor = AppTheme.brandBlue;
+    final modeColor = context.colors.brandBlue;
     final trimmedName = profile.displayName.trim();
     final firstLetter = trimmedName.isEmpty
         ? '?'
@@ -34,14 +34,14 @@ class ProfileCard extends StatelessWidget {
         onLongPress: onLongPress,
         child: Ink(
           decoration: BoxDecoration(
-            color: AppTheme.brandCreamCard,
+            color: context.colors.brandCreamCard,
             borderRadius: BorderRadius.circular(30),
             border: Border.all(
-              color: AppTheme.brandOutline.withValues(alpha: 0.35),
+              color: context.colors.brandOutline.withValues(alpha: 0.35),
             ),
             boxShadow: [
               BoxShadow(
-                color: AppTheme.brandInk.withValues(alpha: 0.05),
+                color: context.colors.brandInk.withValues(alpha: 0.05),
                 blurRadius: 15,
                 offset: const Offset(0, 8),
               ),
@@ -77,10 +77,10 @@ class ProfileCard extends StatelessWidget {
                     ),
                   ),
                   const Spacer(),
-                  const Icon(
+                  Icon(
                     Icons.chevron_right_rounded,
                     size: 20,
-                    color: AppTheme.brandInkMuted,
+                    color: context.colors.brandInkMuted,
                   ),
                 ],
               ),
@@ -100,7 +100,9 @@ class ProfileCard extends StatelessWidget {
                         ),
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: AppTheme.brandBlue.withValues(alpha: 0.14),
+                          color: context.colors.brandBlue.withValues(
+                            alpha: 0.14,
+                          ),
                           width: 2,
                         ),
                       ),
@@ -108,7 +110,7 @@ class ProfileCard extends StatelessWidget {
                         child: Text(
                           firstLetter,
                           style: theme.textTheme.headlineMedium?.copyWith(
-                            color: AppTheme.brandBlueDeep,
+                            color: context.colors.brandBlueDeep,
                             fontWeight: FontWeight.w800,
                           ),
                         ),
@@ -130,7 +132,7 @@ class ProfileCard extends StatelessWidget {
                               color: const Color(0xFFF96B82),
                               shape: BoxShape.circle,
                               border: Border.all(
-                                color: AppTheme.brandCreamCard,
+                                color: context.colors.brandCreamCard,
                                 width: 2,
                               ),
                             ),
@@ -154,7 +156,7 @@ class ProfileCard extends StatelessWidget {
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w700,
                         fontSize: 22,
-                        color: AppTheme.brandInk,
+                        color: context.colors.brandInk,
                       ),
                       textAlign: TextAlign.center,
                       maxLines: 1,
@@ -165,7 +167,7 @@ class ProfileCard extends StatelessWidget {
                       l10n.tapToContinue,
                       textAlign: TextAlign.center,
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: AppTheme.brandInkMuted,
+                        color: context.colors.brandInkMuted,
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
                         height: 1.2,

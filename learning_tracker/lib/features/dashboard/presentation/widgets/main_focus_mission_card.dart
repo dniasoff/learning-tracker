@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 class MainFocusMissionCard extends StatelessWidget {
@@ -24,14 +24,14 @@ class MainFocusMissionCard extends StatelessWidget {
         child: Ink(
           padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
           decoration: BoxDecoration(
-            color: AppTheme.brandCreamCard,
+            color: context.colors.brandCreamCard,
             borderRadius: BorderRadius.circular(28),
             border: Border.all(
-              color: AppTheme.brandOutline.withValues(alpha: 0.65),
+              color: context.colors.brandOutline.withValues(alpha: 0.65),
             ),
             boxShadow: [
               BoxShadow(
-                color: AppTheme.brandInk.withValues(alpha: 0.04),
+                color: context.colors.brandInk.withValues(alpha: 0.04),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -45,7 +45,7 @@ class MainFocusMissionCard extends StatelessWidget {
                   Text(
                     l10n.dueToday,
                     style: theme.textTheme.labelSmall?.copyWith(
-                      color: AppTheme.brandBlue,
+                      color: context.colors.brandBlue,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 0.8,
                     ),
@@ -57,7 +57,7 @@ class MainFocusMissionCard extends StatelessWidget {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: AppTheme.brandBlue,
+                      color: context.colors.brandBlue,
                       borderRadius: BorderRadius.circular(999),
                     ),
                     child: Text(
@@ -74,7 +74,7 @@ class MainFocusMissionCard extends StatelessWidget {
               FilledButton(
                 onPressed: onTap,
                 style: FilledButton.styleFrom(
-                  backgroundColor: AppTheme.brandBlue,
+                  backgroundColor: context.colors.brandBlue,
                   foregroundColor: Colors.white,
                   minimumSize: const Size(double.infinity, 52),
                   shape: RoundedRectangleBorder(

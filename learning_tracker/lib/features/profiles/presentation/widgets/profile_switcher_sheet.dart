@@ -5,8 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
@@ -62,9 +61,9 @@ class ProfileSwitcherSheet extends ConsumerWidget {
         ref.watch(switcherSheetPinGuardRequiredProvider).asData?.value ?? false;
 
     return DecoratedBox(
-      decoration: const BoxDecoration(
-        color: AppTheme.brandCreamCard,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      decoration: BoxDecoration(
+        color: context.colors.brandCreamCard,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       // Bound the sheet height, then scroll the WHOLE body inside that bound.
       // In an `isScrollControlled` sheet the parent imposes no height limit, so
@@ -106,7 +105,7 @@ class ProfileSwitcherSheet extends ConsumerWidget {
                 Text(
                   l10n.sectionAccount,
                   style: theme.textTheme.labelSmall?.copyWith(
-                    color: AppTheme.brandInkMuted,
+                    color: context.colors.brandInkMuted,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 0.8,
                   ),
@@ -115,11 +114,11 @@ class ProfileSwitcherSheet extends ConsumerWidget {
                 Material(
                   color: Colors.transparent,
                   child: ListTile(
-                    leading: const CircleAvatar(
-                      backgroundColor: AppTheme.brandBlueSoft,
+                    leading: CircleAvatar(
+                      backgroundColor: context.colors.brandBlueSoft,
                       child: Icon(
                         Icons.swap_horiz_rounded,
-                        color: AppTheme.brandBlueDeep,
+                        color: context.colors.brandBlueDeep,
                       ),
                     ),
                     title: Text(
@@ -132,16 +131,16 @@ class ProfileSwitcherSheet extends ConsumerWidget {
                         ? null
                         : Text(
                             accountEmail,
-                            style: const TextStyle(
-                              color: AppTheme.brandInkMuted,
+                            style: TextStyle(
+                              color: context.colors.brandInkMuted,
                               fontSize: 12,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
-                    trailing: const Icon(
+                    trailing: Icon(
                       Icons.chevron_right_rounded,
-                      color: AppColors.inkMidGrey,
+                      color: context.colors.inkMidGrey,
                     ),
                     // AN-2: switching account is an escalating action from child context.
                     onTap: () => _guardEscalating(
@@ -164,7 +163,7 @@ class ProfileSwitcherSheet extends ConsumerWidget {
                 Text(
                   l10n.switcherSheetProfiles,
                   style: theme.textTheme.labelSmall?.copyWith(
-                    color: AppTheme.brandInkMuted,
+                    color: context.colors.brandInkMuted,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 0.8,
                   ),
@@ -219,21 +218,21 @@ class ProfileSwitcherSheet extends ConsumerWidget {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: AppTheme.brandOutline,
+                          color: context.colors.brandOutline,
                           style: BorderStyle.solid,
                         ),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.add_rounded,
-                        color: AppTheme.brandBlueDeep,
+                        color: context.colors.brandBlueDeep,
                         size: 20,
                       ),
                     ),
                     title: Text(
                       l10n.addProfile,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.w600,
-                        color: AppTheme.brandBlueDeep,
+                        color: context.colors.brandBlueDeep,
                       ),
                     ),
                     // AN-2: adding a profile is an escalating action from child context.
@@ -271,26 +270,26 @@ class ProfileSwitcherSheet extends ConsumerWidget {
                     leading: Container(
                       width: 40,
                       height: 40,
-                      decoration: const BoxDecoration(
+                      decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: AppTheme.brandBlueSoft,
+                        color: context.colors.brandBlueSoft,
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.settings_rounded,
-                        color: AppTheme.brandBlueDeep,
+                        color: context.colors.brandBlueDeep,
                         size: 20,
                       ),
                     ),
                     title: Text(
                       l10n.profilePickerSkipToSettings,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.w600,
-                        color: AppTheme.brandBlueDeep,
+                        color: context.colors.brandBlueDeep,
                       ),
                     ),
-                    trailing: const Icon(
+                    trailing: Icon(
                       Icons.chevron_right_rounded,
-                      color: AppColors.inkMidGrey,
+                      color: context.colors.inkMidGrey,
                     ),
                     onTap: () {
                       Navigator.of(context).pop();
@@ -390,14 +389,14 @@ class _SwitcherProfileTile extends StatelessWidget {
       child: ListTile(
         leading: CircleAvatar(
           backgroundColor: isActive
-              ? AppTheme.brandBlueBright.withValues(alpha: 0.15)
-              : AppTheme.brandBlueSoft,
+              ? context.colors.brandBlueBright.withValues(alpha: 0.15)
+              : context.colors.brandBlueSoft,
           child: Text(
             initial,
             style: TextStyle(
               color: isActive
-                  ? AppTheme.brandBlueBright
-                  : AppTheme.brandBlueDeep,
+                  ? context.colors.brandBlueBright
+                  : context.colors.brandBlueDeep,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -408,28 +407,28 @@ class _SwitcherProfileTile extends StatelessWidget {
         ),
         subtitle: Text(
           typeLabel,
-          style: const TextStyle(color: AppTheme.brandInkMuted, fontSize: 12),
+          style: TextStyle(color: context.colors.brandInkMuted, fontSize: 12),
         ),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             if (isActive)
-              const Padding(
-                padding: EdgeInsetsDirectional.only(end: 4),
+              Padding(
+                padding: const EdgeInsetsDirectional.only(end: 4),
                 child: Icon(
                   Icons.check_circle_rounded,
-                  color: AppTheme.brandBlueBright,
+                  color: context.colors.brandBlueBright,
                 ),
               ),
             IconButton(
               icon: const Icon(Icons.edit_outlined, size: 20),
-              color: AppTheme.brandInkMuted,
+              color: context.colors.brandInkMuted,
               tooltip: l10n.profilesEditLabel,
               onPressed: onEdit,
             ),
             IconButton(
               icon: const Icon(Icons.delete_outline_rounded, size: 20),
-              color: AppTheme.brandCoralDeep,
+              color: context.colors.brandCoralDeep,
               tooltip: l10n.profilesDeleteLabel,
               onPressed: onDelete,
             ),

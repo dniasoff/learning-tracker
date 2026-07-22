@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 class ReviewPresetCard extends StatelessWidget {
@@ -22,8 +21,8 @@ class ReviewPresetCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    const selectedGradient = LinearGradient(
-      colors: [AppTheme.brandBlueDeep, AppTheme.brandBlueBright],
+    final selectedGradient = LinearGradient(
+      colors: [context.colors.brandBlueDeep, context.colors.brandBlueBright],
     );
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -31,7 +30,9 @@ class ReviewPresetCard extends StatelessWidget {
         color: isSelected ? null : Colors.white,
         borderRadius: BorderRadius.circular(22),
         border: Border.all(
-          color: isSelected ? AppTheme.brandBlueDeep : AppColors.surfaceE9,
+          color: isSelected
+              ? context.colors.brandBlueDeep
+              : context.colors.surfaceE9,
           width: isSelected ? 2 : 1,
         ),
       ),
@@ -48,19 +49,21 @@ class ReviewPresetCard extends StatelessWidget {
                 CircleAvatar(
                   radius: 16,
                   backgroundColor: isSelected
-                      ? AppColors.scrimLight
-                      : AppColors.surfaceE9,
+                      ? context.colors.scrimLight
+                      : context.colors.surfaceE9,
                   child: Icon(
                     icon,
                     size: 17,
-                    color: isSelected ? Colors.white : AppTheme.brandBlueDeep,
+                    color: isSelected
+                        ? Colors.white
+                        : context.colors.brandBlueDeep,
                   ),
                 ),
                 const SizedBox(height: 12),
                 Text(
                   title,
                   style: theme.textTheme.titleLarge?.copyWith(
-                    color: isSelected ? Colors.white : AppTheme.brandInk,
+                    color: isSelected ? Colors.white : context.colors.brandInk,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -70,7 +73,7 @@ class ReviewPresetCard extends StatelessWidget {
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: isSelected
                         ? Colors.white.withValues(alpha: 0.85)
-                        : AppTheme.brandInkMuted,
+                        : context.colors.brandInkMuted,
                     height: 1.25,
                   ),
                 ),
@@ -129,7 +132,7 @@ class CustomDayEditorChip extends StatelessWidget {
                   // otherwise "DAYS" (was always "DAYS", so "1 DAYS").
                   l10n.chazaraDayUnitLabel(day).toUpperCase(),
                   style: theme.textTheme.labelSmall?.copyWith(
-                    color: AppTheme.brandInkMuted,
+                    color: context.colors.brandInkMuted,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -201,11 +204,11 @@ class AddRoundChip extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.add, color: AppTheme.brandInkMuted),
+                  Icon(Icons.add, color: context.colors.brandInkMuted),
                   Text(
                     l10n.chazaraAddNew,
                     style: theme.textTheme.labelSmall?.copyWith(
-                      color: AppTheme.brandInkMuted,
+                      color: context.colors.brandInkMuted,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -252,7 +255,7 @@ class TinyCircleButton extends StatelessWidget {
             color: const Color(0xFFF1F3F7),
             border: Border.all(color: const Color(0xFFDDE2EB)),
           ),
-          child: Icon(icon, size: 14, color: AppTheme.brandInkMuted),
+          child: Icon(icon, size: 14, color: context.colors.brandInkMuted),
         ),
       ),
     );

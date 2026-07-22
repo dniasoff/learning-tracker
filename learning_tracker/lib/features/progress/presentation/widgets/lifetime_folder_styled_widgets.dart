@@ -3,65 +3,65 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Gradients for Learning lifetime on Progress (blue) and Settings (warm, no blue).
 class LifetimeFolderGradients {
-  static LinearGradient get card {
-    return const LinearGradient(
+  static LinearGradient card(BuildContext context) {
+    return LinearGradient(
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
       colors: [
-        AppColors.progressLifetimeCardGradientStart,
-        AppTheme.brandBlue,
-        AppColors.progressLifetimeCardGradientEnd,
+        context.colors.progressLifetimeCardGradientStart,
+        context.colors.brandBlue,
+        context.colors.progressLifetimeCardGradientEnd,
       ],
       stops: [0.0, 0.45, 1.0],
     );
   }
 
   /// Full-screen soft background behind lifetime panels on Progress.
-  static LinearGradient get pageBackground {
-    return const LinearGradient(
+  static LinearGradient pageBackground(BuildContext context) {
+    return LinearGradient(
       begin: Alignment.topCenter,
       end: Alignment.bottomCenter,
       colors: [
-        AppColors.progressLifetimePageBgTop,
-        AppColors.progressLifetimePageBgMid,
-        AppColors.progressLifetimePageBgBottom,
+        context.colors.progressLifetimePageBgTop,
+        context.colors.progressLifetimePageBgMid,
+        context.colors.progressLifetimePageBgBottom,
       ],
     );
   }
 
   /// App bar on Settings lifetime screens (forest charcoal, no blue).
-  static const Color settingsAppBar = AppColors.progressSettingsAppBar;
+  static Color settingsAppBar(BuildContext context) =>
+      context.colors.progressSettingsAppBar;
 
   /// Settings → Add what you've learned: warm paper tone, no blue.
-  static LinearGradient get settingsPageBackground {
-    return const LinearGradient(
+  static LinearGradient settingsPageBackground(BuildContext context) {
+    return LinearGradient(
       begin: Alignment.topCenter,
       end: Alignment.bottomCenter,
       colors: [
-        AppColors.progressSettingsPageBgTop,
-        AppColors.progressSettingsPageBgMid,
-        AppColors.progressSettingsPageBgBottom,
+        context.colors.progressSettingsPageBgTop,
+        context.colors.progressSettingsPageBgMid,
+        context.colors.progressSettingsPageBgBottom,
       ],
     );
   }
 
   /// Settings lifetime card: forest / sage (matches growth metaphor, no blue).
-  static LinearGradient get settingsCard {
-    return const LinearGradient(
+  static LinearGradient settingsCard(BuildContext context) {
+    return LinearGradient(
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
       colors: [
-        AppColors.progressSettingsCardGradientStart,
-        AppColors.progressSettingsCardGradientMid,
-        AppColors.progressSettingsCardGradientEnd,
+        context.colors.progressSettingsCardGradientStart,
+        context.colors.progressSettingsCardGradientMid,
+        context.colors.progressSettingsCardGradientEnd,
       ],
       stops: [0.0, 0.48, 1.0],
     );
@@ -91,7 +91,7 @@ class LifetimeFolderSurface extends StatelessWidget {
       child: DecoratedBox(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
-          gradient: gradient ?? LifetimeFolderGradients.card,
+          gradient: gradient ?? LifetimeFolderGradients.card(context),
         ),
         child: Padding(
           padding: padding ?? const EdgeInsets.all(16),
@@ -289,10 +289,10 @@ class LifetimeCurriculumFolderRow extends ConsumerWidget {
                   ),
                 ),
                 if (showLearnedBadge) ...[
-                  const Icon(
+                  Icon(
                     Icons.check_circle_rounded,
                     size: 20,
-                    color: AppColors.statusSuccessMuted,
+                    color: context.colors.statusSuccessMuted,
                   ),
                   const SizedBox(width: 6),
                 ],
@@ -392,8 +392,8 @@ class _LifetimeFolderTreeNodeState
   @override
   Widget build(BuildContext context) {
     final color = switch (widget.node.state) {
-      LifetimeNodeState.full => AppColors.statusSuccessMuted,
-      LifetimeNodeState.partial => AppColors.progressLifetimePartial,
+      LifetimeNodeState.full => context.colors.statusSuccessMuted,
+      LifetimeNodeState.partial => context.colors.progressLifetimePartial,
       LifetimeNodeState.none => Colors.white.withValues(alpha: 0.5),
     };
     final indent = widget.depth * 20.0;
@@ -527,14 +527,14 @@ class LifetimeMarkingScopeRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = isPersisted
-        ? AppColors.statusSuccessMuted
+        ? context.colors.statusSuccessMuted
         : switch (visual) {
-            MarkingRowVisual.direct => AppColors.statusSuccessMuted,
+            MarkingRowVisual.direct => context.colors.statusSuccessMuted,
             MarkingRowVisual.implicit ||
-            MarkingRowVisual.partial => AppColors.progressLifetimePartial,
+            MarkingRowVisual.partial => context.colors.progressLifetimePartial,
             MarkingRowVisual.none =>
               lightSurface
-                  ? AppColors.progressLifetimeNoneOnLight
+                  ? context.colors.progressLifetimeNoneOnLight
                   : Colors.white.withValues(alpha: 0.5),
           };
     // Indeterminate: some-but-not-all descendants selected. Drives the
@@ -620,7 +620,7 @@ class LifetimeMarkingScopeRow extends StatelessWidget {
                       maxLines: 2,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: lightSurface
-                            ? AppTheme.brandInk
+                            ? context.colors.brandInk
                             : Colors.white.withValues(alpha: 0.95),
                         fontWeight: FontWeight.w600,
                       ),
@@ -633,7 +633,7 @@ class LifetimeMarkingScopeRow extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
                           color: lightSurface
-                              ? AppTheme.brandInkMuted
+                              ? context.colors.brandInkMuted
                               : Colors.white.withValues(alpha: 0.7),
                           fontStyle: isImplicit ? FontStyle.italic : null,
                         ),

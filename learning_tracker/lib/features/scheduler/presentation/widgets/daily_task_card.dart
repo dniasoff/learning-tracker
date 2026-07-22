@@ -6,8 +6,7 @@ import 'package:learning_tracker/core/content/content_grouping.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/curriculum_label_providers.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -27,7 +26,7 @@ class DailyTaskCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final curriculumColor = AppTheme.getCurriculumColor(task.curriculumId);
+    final curriculumColor = context.colors.curriculumFor(task.curriculumId);
     final stageLabel = domainTermLabels(
       ref,
     ).resolveStoredStageName(task.stageName);
@@ -62,7 +61,7 @@ class DailyTaskCard extends ConsumerWidget {
               borderRadius: BorderRadius.circular(28),
               boxShadow: [
                 BoxShadow(
-                  color: AppTheme.brandInk.withValues(alpha: 0.04),
+                  color: context.colors.brandInk.withValues(alpha: 0.04),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
@@ -129,7 +128,7 @@ class DailyTaskCard extends ConsumerWidget {
                                   style: theme.textTheme.headlineSmall
                                       ?.copyWith(
                                         fontWeight: FontWeight.w800,
-                                        color: AppTheme.brandInk,
+                                        color: context.colors.brandInk,
                                       ),
                                   overflow: TextOverflow.ellipsis,
                                 );
@@ -143,7 +142,7 @@ class DailyTaskCard extends ConsumerWidget {
                                 vertical: 4,
                               ),
                               decoration: BoxDecoration(
-                                color: AppColors.statusDanger,
+                                color: context.colors.statusDanger,
                                 borderRadius: BorderRadius.circular(999),
                               ),
                               child: Text(
@@ -182,7 +181,7 @@ class DailyTaskCard extends ConsumerWidget {
                               stageLabel,
                               overflow: TextOverflow.ellipsis,
                               style: theme.textTheme.bodySmall?.copyWith(
-                                color: AppTheme.brandInkMuted,
+                                color: context.colors.brandInkMuted,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),

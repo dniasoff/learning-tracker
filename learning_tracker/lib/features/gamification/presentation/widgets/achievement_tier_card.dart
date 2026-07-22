@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart'
     show RewardTier;
 import 'package:learning_tracker/features/gamification/presentation/providers/achievements_overview_provider.dart';
@@ -26,7 +25,7 @@ class AchievementTierCard extends StatelessWidget {
   final AchievementRowVm row;
   final String trackTag;
 
-  static const Color _kBrandBlue = AppTheme.brandBlue;
+  static Color _kBrandBlue(BuildContext context) => context.colors.brandBlue;
 
   double get _progressFraction {
     if (row.isUnlocked) return 1;
@@ -56,20 +55,21 @@ class AchievementTierCard extends StatelessWidget {
     );
   }
 
-  Color _statusTextColor(TierStyle scheme) {
+  Color _statusTextColor(BuildContext context, TierStyle scheme) {
     if (row.isLegendTier) {
-      if (row.isUnlocked) return AppColors.streakActive;
+      if (row.isUnlocked) return context.colors.streakActive;
       if (row.isNextUp) return Colors.white;
       return Colors.white70;
     }
-    if (row.isUnlocked) return AppColors.statusSuccessDeep;
-    if (row.isNextUp) return _kBrandBlue;
-    return AppColors.streakEmpty;
+    if (row.isUnlocked) return context.colors.statusSuccessDeep;
+    if (row.isNextUp) return _kBrandBlue(context);
+    return context.colors.streakEmpty;
   }
 
   @override
   Widget build(BuildContext context) {
     final scheme = TierStyle.forTier(
+      context.colors,
       RewardTier.classify(row.milestone.title),
       row.isLegendTier,
     );
@@ -129,7 +129,7 @@ class AchievementTierCard extends StatelessWidget {
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
                     fontWeight: FontWeight.w600,
                     fontStyle: FontStyle.italic,
-                    color: _statusTextColor(scheme),
+                    color: _statusTextColor(context, scheme),
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -140,7 +140,7 @@ class AchievementTierCard extends StatelessWidget {
                     minHeight: 7,
                     backgroundColor: scheme.barBg,
                     color: row.isLegendTier && row.isUnlocked
-                        ? AppColors.streakActive
+                        ? context.colors.streakActive
                         : scheme.barFill,
                   ),
                 ),
@@ -155,7 +155,7 @@ class AchievementTierCard extends StatelessWidget {
                           letterSpacing: 0.3,
                           color: row.isLegendTier
                               ? Colors.white.withValues(alpha: 0.9)
-                              : AppColors.inkSlate,
+                              : context.colors.inkSlate,
                         ),
                       ),
                     ),
@@ -165,7 +165,7 @@ class AchievementTierCard extends StatelessWidget {
                         fontWeight: FontWeight.w800,
                         color: row.isLegendTier
                             ? Colors.white.withValues(alpha: 0.9)
-                            : AppColors.inkSlate,
+                            : context.colors.inkSlate,
                       ),
                     ),
                   ],
@@ -192,19 +192,19 @@ class AchievementTierCard extends StatelessWidget {
       card = DecoratedBox(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(18),
-          gradient: const LinearGradient(
+          gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              AppColors.gamifLegendGradientStart,
-              AppColors.gamifLegendGradientEnd,
+              context.colors.gamifLegendGradientStart,
+              context.colors.gamifLegendGradientEnd,
             ],
           ),
-          boxShadow: const [
+          boxShadow: [
             BoxShadow(
-              color: AppColors.gamifLegendCardShadow,
+              color: context.colors.gamifLegendCardShadow,
               blurRadius: 14,
-              offset: Offset(0, 6),
+              offset: const Offset(0, 6),
             ),
           ],
         ),

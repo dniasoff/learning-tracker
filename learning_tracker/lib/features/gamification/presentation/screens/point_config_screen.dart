@@ -11,8 +11,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/empty_state.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
@@ -24,13 +23,20 @@ import 'package:learning_tracker/features/tutoring/tutoring.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 // Design tokens aligned with Point Settings mock (deep blue + orange accents).
-const Color _kScreenBg = AppColors.gamifPointConfigScreenBg;
-const Color _kOrangeAccent = AppColors.gamifPointConfigOrangeAccent;
-const Color _kActiveBadgeBg = AppColors.gamifPointConfigActiveBadgeBg;
-const Color _kActiveBadgeInk = AppColors.gamifPointConfigActiveBadgeInk;
-const Color _kHebrewSubtitleBlue = AppColors.gamifPointConfigHebrewSubtitleBlue;
-const Color _kHeroBlueTop = AppColors.gamifPointConfigHeroBlueTop;
-const Color _kHeroBlueBottom = AppColors.gamifPointConfigHeroBlueBottom;
+Color _kScreenBg(BuildContext context) =>
+    context.colors.gamifPointConfigScreenBg;
+Color _kOrangeAccent(BuildContext context) =>
+    context.colors.gamifPointConfigOrangeAccent;
+Color _kActiveBadgeBg(BuildContext context) =>
+    context.colors.gamifPointConfigActiveBadgeBg;
+Color _kActiveBadgeInk(BuildContext context) =>
+    context.colors.gamifPointConfigActiveBadgeInk;
+Color _kHebrewSubtitleBlue(BuildContext context) =>
+    context.colors.gamifPointConfigHebrewSubtitleBlue;
+Color _kHeroBlueTop(BuildContext context) =>
+    context.colors.gamifPointConfigHeroBlueTop;
+Color _kHeroBlueBottom(BuildContext context) =>
+    context.colors.gamifPointConfigHeroBlueBottom;
 
 /// Matches [PointConfigDao.seedDefaults] descending defaults per stage order.
 int _defaultPointsForStageOrder(int stageOrder) {
@@ -328,20 +334,20 @@ class _PointConfigScreenState extends ConsumerState<PointConfigScreen> {
     final canEdit = tutorPerms == null || tutorPerms.canEditPoints;
 
     return Scaffold(
-      backgroundColor: _kScreenBg,
+      backgroundColor: _kScreenBg(context),
       appBar: AppBar(
         elevation: 0,
         scrolledUnderElevation: 0,
         surfaceTintColor: Colors.transparent,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
-          color: AppTheme.brandBlueDeep,
+          color: context.colors.brandBlueDeep,
           onPressed: () => context.maybePop(),
         ),
         title: Text(
           l10n.pointSettingsTitle,
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            color: AppTheme.brandBlueDeep,
+            color: context.colors.brandBlueDeep,
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -379,9 +385,9 @@ class _PointConfigScreenState extends ConsumerState<PointConfigScreen> {
                         padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
                         child: Row(
                           children: [
-                            const Icon(
+                            Icon(
                               Icons.menu_book_rounded,
-                              color: _kOrangeAccent,
+                              color: _kOrangeAccent(context),
                               size: 26,
                             ),
                             const SizedBox(width: 10),
@@ -390,7 +396,7 @@ class _PointConfigScreenState extends ConsumerState<PointConfigScreen> {
                               style: Theme.of(context).textTheme.titleMedium
                                   ?.copyWith(
                                     fontWeight: FontWeight.w700,
-                                    color: AppTheme.brandInk,
+                                    color: context.colors.brandInk,
                                   ),
                             ),
                           ],
@@ -473,11 +479,11 @@ class _HeroHeader extends StatelessWidget {
               width: double.infinity,
               constraints: const BoxConstraints(minHeight: 148),
               padding: const EdgeInsets.fromLTRB(22, 22, 22, 26),
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [_kHeroBlueTop, _kHeroBlueBottom],
+                  colors: [_kHeroBlueTop(context), _kHeroBlueBottom(context)],
                 ),
               ),
               child: Column(
@@ -603,7 +609,7 @@ class _CurriculumPointsCard extends ConsumerWidget {
                         data.curriculum,
                         style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w800,
-                          color: AppTheme.brandInk,
+                          color: context.colors.brandInk,
                         ),
                       ),
                       if (!terms.isHebrew) ...[
@@ -611,7 +617,7 @@ class _CurriculumPointsCard extends ConsumerWidget {
                         Text(
                           curriculumHebrewName(data.curriculum),
                           style: theme.textTheme.bodyMedium?.copyWith(
-                            color: _kHebrewSubtitleBlue,
+                            color: _kHebrewSubtitleBlue(context),
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -625,13 +631,13 @@ class _CurriculumPointsCard extends ConsumerWidget {
                     vertical: 5,
                   ),
                   decoration: BoxDecoration(
-                    color: _kActiveBadgeBg,
+                    color: _kActiveBadgeBg(context),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
                     l10n.pointSettingsActiveBadge,
                     style: theme.textTheme.labelSmall?.copyWith(
-                      color: _kActiveBadgeInk,
+                      color: _kActiveBadgeInk(context),
                       fontWeight: FontWeight.w800,
                       letterSpacing: 0.6,
                     ),
@@ -644,11 +650,14 @@ class _CurriculumPointsCard extends ConsumerWidget {
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               decoration: BoxDecoration(
-                color: AppTheme.brandCreamSoft,
+                color: context.colors.brandCreamSoft,
                 borderRadius: BorderRadius.circular(18),
                 border: showAccentStripe
-                    ? const Border(
-                        left: BorderSide(color: AppTheme.brandBlue, width: 4),
+                    ? Border(
+                        left: BorderSide(
+                          color: context.colors.brandBlue,
+                          width: 4,
+                        ),
                       )
                     : null,
               ),
@@ -661,23 +670,23 @@ class _CurriculumPointsCard extends ConsumerWidget {
                         Text(
                           l10n.pointSettingsPointsPerTask,
                           style: theme.textTheme.labelSmall?.copyWith(
-                            color: AppTheme.brandInkMuted,
+                            color: context.colors.brandInkMuted,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
                         const SizedBox(height: 6),
                         Row(
                           children: [
-                            const Icon(
+                            Icon(
                               Icons.star_rounded,
-                              color: _kOrangeAccent,
+                              color: _kOrangeAccent(context),
                               size: 22,
                             ),
                             const SizedBox(width: 4),
                             Text(
                               '$primaryPoints',
                               style: theme.textTheme.titleLarge?.copyWith(
-                                color: _kOrangeAccent,
+                                color: _kOrangeAccent(context),
                                 fontWeight: FontWeight.w800,
                               ),
                             ),
@@ -685,7 +694,9 @@ class _CurriculumPointsCard extends ConsumerWidget {
                             Text(
                               l10n.pointSettingsPts,
                               style: theme.textTheme.titleSmall?.copyWith(
-                                color: _kOrangeAccent.withValues(alpha: 0.9),
+                                color: _kOrangeAccent(
+                                  context,
+                                ).withValues(alpha: 0.9),
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
@@ -695,7 +706,7 @@ class _CurriculumPointsCard extends ConsumerWidget {
                         Text(
                           '$resolvedStageName · ${l10n.pointSettingsPrimaryStageLabel}',
                           style: theme.textTheme.labelSmall?.copyWith(
-                            color: AppTheme.brandInkSoft,
+                            color: context.colors.brandInkSoft,
                           ),
                         ),
                       ],
@@ -757,7 +768,7 @@ class _StepperControl extends StatelessWidget {
               '$value',
               style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w800,
-                color: AppTheme.brandInk,
+                color: context.colors.brandInk,
               ),
             ),
           ),
@@ -786,9 +797,9 @@ class _RoundStepButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bg = filled
-        ? AppTheme.brandBlue
-        : AppColors.gamifPointConfigChipUnselectedBg;
-    final fg = filled ? Colors.white : AppTheme.brandInkMuted;
+        ? context.colors.brandBlue
+        : context.colors.gamifPointConfigChipUnselectedBg;
+    final fg = filled ? Colors.white : context.colors.brandInkMuted;
     final child = Icon(icon, size: 20, color: fg);
     return Opacity(
       opacity: onPressed == null ? 0.45 : 1,
@@ -834,7 +845,7 @@ class _SaveBar extends StatelessWidget {
               height: 52,
               child: FilledButton.icon(
                 style: FilledButton.styleFrom(
-                  backgroundColor: AppTheme.brandBlue,
+                  backgroundColor: context.colors.brandBlue,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
@@ -873,7 +884,7 @@ class _SaveBar extends StatelessWidget {
               l10n.pointSettingsSaveFooter,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppTheme.brandInkMuted,
+                color: context.colors.brandInkMuted,
                 height: 1.3,
               ),
             ),

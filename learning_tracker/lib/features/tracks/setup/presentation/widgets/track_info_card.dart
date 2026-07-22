@@ -7,8 +7,7 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/core/utils/hebrew_calendar_utils.dart';
 import 'package:learning_tracker/features/progress/domain/services/pace_calculator.dart';
@@ -166,7 +165,7 @@ class TrackInfoCard extends ConsumerWidget {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: AppColors.blueDeepNavy.withValues(alpha: 0.07),
+            color: context.colors.blueDeepNavy.withValues(alpha: 0.07),
             blurRadius: 14,
             offset: const Offset(0, 6),
           ),
@@ -177,6 +176,7 @@ class TrackInfoCard extends ConsumerWidget {
         children: [
           // ── Started ─────────────────────────────────────────────────────
           _infoRow(
+            context,
             theme,
             label: l10n.trackInfoStarted,
             value: _formatDate(track.activatedAt, locale),
@@ -185,6 +185,7 @@ class TrackInfoCard extends ConsumerWidget {
           // ── Goal date (deadline goals only) ──────────────────────────────
           if (goal != null && goal!.targetDate != null)
             _infoRow(
+              context,
               theme,
               label: l10n.trackInfoGoal,
               value: _formatDate(goal!.targetDate!, locale),
@@ -193,6 +194,7 @@ class TrackInfoCard extends ConsumerWidget {
           // ── Required pace ─────────────────────────────────────────────────
           if (goal != null)
             _infoRow(
+              context,
               theme,
               label: l10n.trackInfoRequiredPace,
               value: _requiredPaceLabel(
@@ -208,6 +210,7 @@ class TrackInfoCard extends ConsumerWidget {
 
           // ── Actual pace ───────────────────────────────────────────────────
           _infoRowWithCaption(
+            context,
             theme,
             label: l10n.trackInfoActualPace,
             value: _actualPaceLabel(
@@ -221,6 +224,7 @@ class TrackInfoCard extends ConsumerWidget {
 
           // ── Elapsed / Remaining ───────────────────────────────────────────
           _infoRow(
+            context,
             theme,
             label: l10n.trackInfoElapsed,
             value: _elapsedRemainingLabel(l10n, elapsedDays, remainingDays),
@@ -296,6 +300,7 @@ class TrackInfoCard extends ConsumerWidget {
   // ---------------------------------------------------------------------------
 
   Widget _infoRow(
+    BuildContext context,
     ThemeData theme, {
     required String label,
     required String value,
@@ -307,7 +312,7 @@ class TrackInfoCard extends ConsumerWidget {
           Text(
             label,
             style: theme.textTheme.labelSmall?.copyWith(
-              color: AppTheme.brandInkMuted,
+              color: context.colors.brandInkMuted,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -315,7 +320,7 @@ class TrackInfoCard extends ConsumerWidget {
           Text(
             value,
             style: theme.textTheme.labelSmall?.copyWith(
-              color: AppTheme.brandInk,
+              color: context.colors.brandInk,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -325,6 +330,7 @@ class TrackInfoCard extends ConsumerWidget {
   }
 
   Widget _infoRowWithCaption(
+    BuildContext context,
     ThemeData theme, {
     required String label,
     required String value,
@@ -341,14 +347,14 @@ class TrackInfoCard extends ConsumerWidget {
               Text(
                 label,
                 style: theme.textTheme.labelSmall?.copyWith(
-                  color: AppTheme.brandInkMuted,
+                  color: context.colors.brandInkMuted,
                   fontWeight: FontWeight.w600,
                 ),
               ),
               Text(
                 caption,
                 style: theme.textTheme.labelSmall?.copyWith(
-                  color: AppTheme.brandInkMuted,
+                  color: context.colors.brandInkMuted,
                   fontWeight: FontWeight.w400,
                   fontSize: 10,
                 ),
@@ -359,7 +365,7 @@ class TrackInfoCard extends ConsumerWidget {
           Text(
             value,
             style: theme.textTheme.labelSmall?.copyWith(
-              color: AppTheme.brandInk,
+              color: context.colors.brandInk,
               fontWeight: FontWeight.w700,
             ),
           ),

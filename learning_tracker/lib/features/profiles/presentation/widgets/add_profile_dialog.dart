@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/utils/text_input_formatters.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
@@ -65,7 +65,7 @@ Future<ProfileModel?> showAddProfileDialog(
         }
 
         final theme = Theme.of(ctx);
-        const surfaceGrey = AppTheme.brandCreamSoft;
+        final surfaceGrey = context.colors.brandCreamSoft;
         const labelGrey = Color(0xFF333333);
         final canSubmit = ctrl.text.trim().isNotEmpty && err == null;
         final createProfileButton = SizedBox(
@@ -75,7 +75,7 @@ Future<ProfileModel?> showAddProfileDialog(
                 ? () => Navigator.pop(ctx, (n: ctrl.text.trim(), m: mode))
                 : null,
             style: FilledButton.styleFrom(
-              backgroundColor: AppTheme.brandBlue,
+              backgroundColor: context.colors.brandBlue,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
@@ -97,7 +97,7 @@ Future<ProfileModel?> showAddProfileDialog(
                   borderRadius: BorderRadius.circular(999),
                   boxShadow: [
                     BoxShadow(
-                      color: AppTheme.brandBlue.withValues(alpha: 0.35),
+                      color: context.colors.brandBlue.withValues(alpha: 0.35),
                       blurRadius: 12,
                       offset: const Offset(0, 6),
                     ),
@@ -136,13 +136,13 @@ Future<ProfileModel?> showAddProfileDialog(
                   textCapitalization: TextCapitalization.words,
                   inputFormatters: const [TrimLeadingSpaceFormatter()],
                   style: theme.textTheme.bodyLarge?.copyWith(
-                    color: AppTheme.brandInk,
+                    color: context.colors.brandInk,
                     fontWeight: FontWeight.w500,
                   ),
                   decoration: InputDecoration(
                     hintText: l10n.enterNameHint,
                     hintStyle: theme.textTheme.bodyLarge?.copyWith(
-                      color: AppTheme.brandInkSoft,
+                      color: context.colors.brandInkSoft,
                       fontWeight: FontWeight.w400,
                     ),
                     filled: true,
@@ -157,8 +157,8 @@ Future<ProfileModel?> showAddProfileDialog(
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(999),
-                      borderSide: const BorderSide(
-                        color: AppTheme.brandBlue,
+                      borderSide: BorderSide(
+                        color: context.colors.brandBlue,
                         width: 2,
                       ),
                     ),
@@ -222,7 +222,7 @@ Future<ProfileModel?> showAddProfileDialog(
                 TextButton(
                   onPressed: () => Navigator.pop(ctx),
                   style: TextButton.styleFrom(
-                    foregroundColor: AppTheme.brandInkMuted,
+                    foregroundColor: context.colors.brandInkMuted,
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     textStyle: theme.textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w600,

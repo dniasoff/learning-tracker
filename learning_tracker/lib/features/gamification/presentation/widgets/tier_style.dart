@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart'
     show RewardTier;
 
@@ -41,7 +40,7 @@ class TierStyle {
   /// callers derive it via [RewardTier.classify] rather than passing the
   /// milestone's raw display title directly. [isLegend] overrides the
   /// tier-based lookup for the legend tier.
-  static TierStyle forTier(RewardTier tier, bool isLegend) {
+  static TierStyle forTier(AppPalette c, RewardTier tier, bool isLegend) {
     if (isLegend) {
       return TierStyle(
         cardBg: Colors.transparent,
@@ -51,8 +50,8 @@ class TierStyle {
         iconBorder: Colors.white30,
         titleColor: Colors.white,
         mutedIconColor: Colors.white70,
-        barBg: AppColors.chartBarBg,
-        barFill: AppColors.chartBarFillMuted,
+        barBg: c.chartBarBg,
+        barFill: c.chartBarFillMuted,
         tagBg: Colors.white.withValues(alpha: 0.2),
         tagFg: Colors.white,
         lockIconColor: Colors.white70,
@@ -60,125 +59,125 @@ class TierStyle {
     }
     switch (tier) {
       case RewardTier.bronze:
-        return const TierStyle(
-          cardBg: AppColors.gamifTierBronzeCardBg,
-          borderColor: AppColors.gamifTierBronzeBorder,
-          iconBg: AppColors.gamifTierBronzeIconAccent,
+        return TierStyle(
+          cardBg: c.gamifTierBronzeCardBg,
+          borderColor: c.gamifTierBronzeBorder,
+          iconBg: c.gamifTierBronzeIconAccent,
           iconFg: Colors.white,
-          iconBorder: AppColors.gamifTierBronzeDeepAccent,
-          titleColor: AppColors.gamifTierBronzeTitle,
-          mutedIconColor: AppColors.gamifTierBronzeIconAccent,
-          barBg: AppColors.gamifTierBronzeSoftAccent,
-          barFill: AppColors.gamifTierBronzeDeepAccent,
-          tagBg: AppColors.gamifTierBronzeSoftAccent,
-          tagFg: AppColors.gamifTierBronzeTagFg,
-          lockIconColor: AppColors.gamifTierBronzeLockIcon,
+          iconBorder: c.gamifTierBronzeDeepAccent,
+          titleColor: c.gamifTierBronzeTitle,
+          mutedIconColor: c.gamifTierBronzeIconAccent,
+          barBg: c.gamifTierBronzeSoftAccent,
+          barFill: c.gamifTierBronzeDeepAccent,
+          tagBg: c.gamifTierBronzeSoftAccent,
+          tagFg: c.gamifTierBronzeTagFg,
+          lockIconColor: c.gamifTierBronzeLockIcon,
         );
       case RewardTier.silver:
-        return const TierStyle(
+        return TierStyle(
           cardBg: Colors.white,
-          borderColor: AppColors.gamifTierSilverBorder,
-          iconBg: AppColors.streakEmpty,
+          borderColor: c.gamifTierSilverBorder,
+          iconBg: c.streakEmpty,
           iconFg: Colors.white,
-          iconBorder: AppColors.iconBlueGrey,
-          titleColor: AppColors.gamifInkCharcoal,
-          mutedIconColor: AppColors.streakEmpty,
-          barBg: AppColors.gamifTierSilverBarBg,
-          barFill: AppColors.gamifTierSilverBarFill,
-          tagBg: AppColors.gamifTierSilverTagBg,
-          tagFg: AppColors.gamifInkSlateDark,
-          lockIconColor: AppColors.gamifTierSilverLockIcon,
+          iconBorder: c.iconBlueGrey,
+          titleColor: c.gamifInkCharcoal,
+          mutedIconColor: c.streakEmpty,
+          barBg: c.gamifTierSilverBarBg,
+          barFill: c.gamifTierSilverBarFill,
+          tagBg: c.gamifTierSilverTagBg,
+          tagFg: c.gamifInkSlateDark,
+          lockIconColor: c.gamifTierSilverLockIcon,
         );
       case RewardTier.gold:
-        return const TierStyle(
-          cardBg: AppColors.gamifTierGoldCardBg,
-          borderColor: AppColors.gamifTierGoldBorder,
-          iconBg: AppColors.gamifTierGoldIconBg,
+        return TierStyle(
+          cardBg: c.gamifTierGoldCardBg,
+          borderColor: c.gamifTierGoldBorder,
+          iconBg: c.gamifTierGoldIconBg,
           iconFg: Colors.white,
-          iconBorder: AppColors.auditActionRewardChanged,
-          titleColor: AppColors.gamifTierGoldTitle,
-          mutedIconColor: AppColors.gamifTierGoldMutedIcon,
-          barBg: AppColors.gamifTierGoldBarBg,
-          barFill: AppColors.gamifTierGoldBarFill,
-          tagBg: AppColors.gamifTierGoldTagBg,
-          tagFg: AppColors.accentBurntOrange,
-          lockIconColor: AppColors.gamifTierGoldLockIcon,
+          iconBorder: c.auditActionRewardChanged,
+          titleColor: c.gamifTierGoldTitle,
+          mutedIconColor: c.gamifTierGoldMutedIcon,
+          barBg: c.gamifTierGoldBarBg,
+          barFill: c.gamifTierGoldBarFill,
+          tagBg: c.gamifTierGoldTagBg,
+          tagFg: c.accentBurntOrange,
+          lockIconColor: c.gamifTierGoldLockIcon,
         );
       case RewardTier.platinum:
-        return const TierStyle(
-          cardBg: AppColors.gamifTierPlatinumCardBg,
-          borderColor: AppColors.gamifTierPlatinumSoftAccent,
-          iconBg: AppColors.gamifTierPlatinumIconBg,
-          iconFg: AppColors.gamifTierPlatinumIconFg,
-          iconBorder: AppColors.gamifTierPlatinumMidAccent,
-          titleColor: AppColors.gamifTierPlatinumTitle,
-          mutedIconColor: AppColors.gamifTierPlatinumMidAccent,
-          barBg: AppColors.gamifTierPlatinumSoftAccent,
-          barFill: AppColors.gamifTierPlatinumBarFill,
-          tagBg: AppColors.gamifTierPlatinumTagBg,
-          tagFg: AppColors.gamifTierPlatinumTagFg,
-          lockIconColor: AppColors.gamifTierPlatinumLockIcon,
+        return TierStyle(
+          cardBg: c.gamifTierPlatinumCardBg,
+          borderColor: c.gamifTierPlatinumSoftAccent,
+          iconBg: c.gamifTierPlatinumIconBg,
+          iconFg: c.gamifTierPlatinumIconFg,
+          iconBorder: c.gamifTierPlatinumMidAccent,
+          titleColor: c.gamifTierPlatinumTitle,
+          mutedIconColor: c.gamifTierPlatinumMidAccent,
+          barBg: c.gamifTierPlatinumSoftAccent,
+          barFill: c.gamifTierPlatinumBarFill,
+          tagBg: c.gamifTierPlatinumTagBg,
+          tagFg: c.gamifTierPlatinumTagFg,
+          lockIconColor: c.gamifTierPlatinumLockIcon,
         );
       case RewardTier.premium:
-        return const TierStyle(
-          cardBg: AppColors.gamifTierPremiumCardBg,
-          borderColor: AppColors.gamifTierPremiumSoftAccent,
-          iconBg: AppColors.gamifTierPremiumIconBg,
-          iconFg: AppColors.gamifTierPremiumIconFg,
-          iconBorder: AppColors.gamifTierPremiumIconBorder,
-          titleColor: AppColors.gamifTierPremiumTitle,
-          mutedIconColor: AppColors.gamifTierPremiumMutedIcon,
-          barBg: AppColors.gamifTierPremiumBarBg,
-          barFill: AppColors.gamifTierPremiumBarFill,
-          tagBg: AppColors.gamifTierPremiumSoftAccent,
-          tagFg: AppColors.gamifLegendGradientEnd,
-          lockIconColor: AppColors.gamifTierPremiumLockIcon,
+        return TierStyle(
+          cardBg: c.gamifTierPremiumCardBg,
+          borderColor: c.gamifTierPremiumSoftAccent,
+          iconBg: c.gamifTierPremiumIconBg,
+          iconFg: c.gamifTierPremiumIconFg,
+          iconBorder: c.gamifTierPremiumIconBorder,
+          titleColor: c.gamifTierPremiumTitle,
+          mutedIconColor: c.gamifTierPremiumMutedIcon,
+          barBg: c.gamifTierPremiumBarBg,
+          barFill: c.gamifTierPremiumBarFill,
+          tagBg: c.gamifTierPremiumSoftAccent,
+          tagFg: c.gamifLegendGradientEnd,
+          lockIconColor: c.gamifTierPremiumLockIcon,
         );
       case RewardTier.diamond:
-        return const TierStyle(
-          cardBg: AppColors.gamifTierDiamondCardBg,
-          borderColor: AppColors.gamifTierDiamondSoftAccent,
-          iconBg: AppColors.gamifTierDiamondIconBg,
-          iconFg: AppColors.gamifTierDiamondIconFg,
-          iconBorder: AppColors.gamifTierDiamondIconBorder,
-          titleColor: AppColors.gamifTierDiamondTitle,
-          mutedIconColor: AppColors.gamifTierDiamondAccent,
-          barBg: AppColors.gamifTierDiamondSoftAccent,
-          barFill: AppColors.gamifTierDiamondAccent,
-          tagBg: AppColors.gamifTierDiamondTagBg,
-          tagFg: AppColors.gamifTierDiamondTagFg,
-          lockIconColor: AppColors.chartTeal,
+        return TierStyle(
+          cardBg: c.gamifTierDiamondCardBg,
+          borderColor: c.gamifTierDiamondSoftAccent,
+          iconBg: c.gamifTierDiamondIconBg,
+          iconFg: c.gamifTierDiamondIconFg,
+          iconBorder: c.gamifTierDiamondIconBorder,
+          titleColor: c.gamifTierDiamondTitle,
+          mutedIconColor: c.gamifTierDiamondAccent,
+          barBg: c.gamifTierDiamondSoftAccent,
+          barFill: c.gamifTierDiamondAccent,
+          tagBg: c.gamifTierDiamondTagBg,
+          tagFg: c.gamifTierDiamondTagFg,
+          lockIconColor: c.chartTeal,
         );
       case RewardTier.elite:
-        return const TierStyle(
-          cardBg: AppColors.gamifTierEliteCardBg,
-          borderColor: AppColors.gamifTierEliteSoftAccent,
-          iconBg: AppColors.gamifTierEliteSoftAccent,
-          iconFg: AppColors.gamifTierEliteIconFg,
-          iconBorder: AppColors.gamifTierEliteIconBorder,
-          titleColor: AppColors.gamifTierEliteDeepAccent,
-          mutedIconColor: AppColors.gamifTierEliteMutedIcon,
-          barBg: AppColors.gamifTierEliteSoftAccent,
-          barFill: AppColors.gamifTierEliteBarFill,
-          tagBg: AppColors.gamifTierEliteSoftAccent,
-          tagFg: AppColors.gamifTierEliteDeepAccent,
-          lockIconColor: AppColors.gamifTierEliteLockIcon,
+        return TierStyle(
+          cardBg: c.gamifTierEliteCardBg,
+          borderColor: c.gamifTierEliteSoftAccent,
+          iconBg: c.gamifTierEliteSoftAccent,
+          iconFg: c.gamifTierEliteIconFg,
+          iconBorder: c.gamifTierEliteIconBorder,
+          titleColor: c.gamifTierEliteDeepAccent,
+          mutedIconColor: c.gamifTierEliteMutedIcon,
+          barBg: c.gamifTierEliteSoftAccent,
+          barFill: c.gamifTierEliteBarFill,
+          tagBg: c.gamifTierEliteSoftAccent,
+          tagFg: c.gamifTierEliteDeepAccent,
+          lockIconColor: c.gamifTierEliteLockIcon,
         );
       case RewardTier.legend:
       case RewardTier.custom:
-        return const TierStyle(
+        return TierStyle(
           cardBg: Colors.white,
-          borderColor: AppColors.gamifTierCustomBorder,
-          iconBg: AppColors.gamifTierCustomIconBg,
-          iconFg: AppColors.iconBlueGrey,
-          iconBorder: AppColors.gamifTierLockedIconGrey,
-          titleColor: AppColors.gamifInkCharcoal,
-          mutedIconColor: AppColors.streakEmpty,
-          barBg: AppColors.gamifTierSilverBorder,
-          barFill: AppTheme.brandBlue,
-          tagBg: AppColors.gamifTierSilverBorder,
-          tagFg: AppColors.gamifTierSilverBarFill,
-          lockIconColor: AppColors.iconBlueGrey,
+          borderColor: c.gamifTierCustomBorder,
+          iconBg: c.gamifTierCustomIconBg,
+          iconFg: c.iconBlueGrey,
+          iconBorder: c.gamifTierLockedIconGrey,
+          titleColor: c.gamifInkCharcoal,
+          mutedIconColor: c.streakEmpty,
+          barBg: c.gamifTierSilverBorder,
+          barFill: c.brandBlue,
+          tagBg: c.gamifTierSilverBorder,
+          tagFg: c.gamifTierSilverBarFill,
+          lockIconColor: c.iconBlueGrey,
         );
     }
   }

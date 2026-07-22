@@ -23,7 +23,7 @@ import 'package:learning_tracker/core/navigation/guards/restore_guard.dart';
 import 'package:learning_tracker/core/navigation/pin_scope.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
@@ -1243,16 +1243,19 @@ void main() {
 
       const barBg = Color(0xFFF1F3FA);
       // The profile name uses brandInk; the badge/affordance use brandBlueDeep.
-      expect(contrast(AppTheme.brandInk, barBg), greaterThanOrEqualTo(4.5));
       expect(
-        contrast(AppTheme.brandBlueDeep, barBg),
+        contrast(AppPalette.light.brandInk, barBg),
+        greaterThanOrEqualTo(4.5),
+      );
+      expect(
+        contrast(AppPalette.light.brandBlueDeep, barBg),
         greaterThanOrEqualTo(4.5),
       );
 
       // And the name actually renders with the fixed dark ink (not a theme
       // colour that could resolve light against the bar).
       final nameText = tester.widget<Text>(find.text('Talmid1'));
-      expect(nameText.style?.color, AppTheme.brandInk);
+      expect(nameText.style?.color, AppPalette.light.brandInk);
     });
   });
 

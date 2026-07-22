@@ -12,8 +12,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
 import 'package:learning_tracker/features/gamification/domain/reward_milestone_icons.dart';
 import 'package:learning_tracker/features/gamification/presentation/providers/achievements_overview_provider.dart';
@@ -81,7 +80,7 @@ class ChildRedemptionScreen extends ConsumerWidget {
         ref.watch(activeTutoredProfileSelectionProvider) != null;
 
     return Scaffold(
-      backgroundColor: AppColors.surfaceF4b,
+      backgroundColor: context.colors.surfaceF4b,
       appBar: AppBar(
         // #31: explicit back button wired to the router pop (the SAME nav the
         // hardware back uses). Without an explicit leading the auto-generated
@@ -93,7 +92,7 @@ class ChildRedemptionScreen extends ConsumerWidget {
           onPressed: () => context.router.maybePop(),
         ),
         title: Text(l10n.redeemScreenTitle),
-        backgroundColor: AppColors.surfaceF4b,
+        backgroundColor: context.colors.surfaceF4b,
         elevation: 0,
       ),
       body: Column(
@@ -115,7 +114,7 @@ class ChildRedemptionScreen extends ConsumerWidget {
                         l10n.redeemScreenNoRewards,
                         textAlign: TextAlign.center,
                         style: theme.textTheme.bodyMedium?.copyWith(
-                          color: AppTheme.brandInkMuted,
+                          color: context.colors.brandInkMuted,
                         ),
                       ),
                     ),
@@ -236,18 +235,20 @@ class _BalanceCard extends StatelessWidget {
       margin: const EdgeInsets.fromLTRB(16, 8, 16, 4),
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            AppColors.gamifChildRewardsCardBlueTop, // kChildRewardsCardBlueTop
-            AppColors.blueLight,
+            context
+                .colors
+                .gamifChildRewardsCardBlueTop, // kChildRewardsCardBlueTop(context)
+            context.colors.blueLight,
           ],
         ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: AppColors.gamifChildRewardsCardBlueTop.withValues(
+            color: context.colors.gamifChildRewardsCardBlueTop.withValues(
               alpha: 0.22,
             ),
             blurRadius: 14,
@@ -331,13 +332,13 @@ class _RewardCard extends StatelessWidget {
             Container(
               width: 52,
               height: 52,
-              decoration: const BoxDecoration(
-                color: AppColors.gamifSoftBlueCardBg,
+              decoration: BoxDecoration(
+                color: context.colors.gamifSoftBlueCardBg,
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 RewardMilestoneIcons.iconForIndex(reward.iconIndex),
-                color: AppTheme.brandBlueDeep,
+                color: context.colors.brandBlueDeep,
                 size: 28,
               ),
             ),
@@ -363,8 +364,8 @@ class _RewardCard extends StatelessWidget {
                     l10n.redeemScreenCostLabel(reward.pointsCost),
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: canAfford
-                          ? AppTheme.brandBlue
-                          : AppTheme.brandInkSoft,
+                          ? context.colors.brandBlue
+                          : context.colors.brandInkSoft,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -383,8 +384,8 @@ class _RewardCard extends StatelessWidget {
               child: FilledButton(
                 onPressed: buttonEnabled ? onRedeem : null,
                 style: FilledButton.styleFrom(
-                  backgroundColor: AppTheme.brandBlueDeep,
-                  disabledBackgroundColor: AppTheme.brandCreamSoft,
+                  backgroundColor: context.colors.brandBlueDeep,
+                  disabledBackgroundColor: context.colors.brandCreamSoft,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 14,
                     vertical: 10,
@@ -402,7 +403,7 @@ class _RewardCard extends StatelessWidget {
                   style: theme.textTheme.labelMedium?.copyWith(
                     color: buttonEnabled
                         ? Colors.white
-                        : AppTheme.brandInkMuted,
+                        : context.colors.brandInkMuted,
                     fontWeight: FontWeight.w700,
                     fontSize: 13,
                   ),

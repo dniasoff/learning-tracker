@@ -11,9 +11,9 @@
 // miss a call site. All 29 sites now reference either a new named constant
 // in the "Progress feature (AUD-progress-04)" section of
 // lib/core/theme/app_colors.dart, or an existing AppColors constant with the
-// identical value (AppColors.blueMid via .withValues(alpha:) for the two
+// identical value (context.colors.blueMid via .withValues(alpha:) for the two
 // cumulative_line_chart.dart gradient stops, and
-// AppColors.gamifTierGoldMutedIcon — already 0xFFFFB300 — reused for the
+// context.colors.gamifTierGoldMutedIcon — already 0xFFFFB300 — reused for the
 // siyumim_grouped_view.dart hero-card gold instead of minting a duplicate
 // token for the same value).
 //

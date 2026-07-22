@@ -6,7 +6,7 @@
 // The test deliberately checks the component values so any future accidental
 // revert back to the slate-gray values is caught immediately.
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 
 void main() {
   group('IL-4 — brandWarning* constants are true coral (not SlateGray)', () {
@@ -14,7 +14,7 @@ void main() {
       // The old mis-named brandCoral was 0xFF708090 (CSS SlateGray). A real
       // warning colour must have a red channel significantly higher than its
       // blue channel.
-      const color = AppTheme.brandWarning;
+      final color = AppPalette.light.brandWarning;
       expect(
         color.r,
         greaterThan(color.b),
@@ -30,7 +30,7 @@ void main() {
     test(
       'brandWarningSoft is a warm coral tint — NOT the slate 0xFFD8DEE3',
       () {
-        const color = AppTheme.brandWarningSoft;
+        final color = AppPalette.light.brandWarningSoft;
         expect(
           color.toARGB32(),
           isNot(0xFFD8DEE3),
@@ -45,7 +45,7 @@ void main() {
     );
 
     test('brandWarningDeep is a dark coral — NOT the slate 0xFF4E5E70', () {
-      const color = AppTheme.brandWarningDeep;
+      final color = AppPalette.light.brandWarningDeep;
       expect(
         color.toARGB32(),
         isNot(0xFF4E5E70),
@@ -62,7 +62,7 @@ void main() {
       // brandWarningDeep is used as a text/icon colour so it must be dark
       // enough. Luminance below 0.25 gives ≥4.5:1 contrast on white for
       // larger text (WCAG AA Large).
-      const color = AppTheme.brandWarningDeep;
+      final color = AppPalette.light.brandWarningDeep;
       expect(
         color.computeLuminance(),
         lessThan(0.25),
@@ -70,19 +70,23 @@ void main() {
       );
     });
 
-    test(
-      'brandCoral (neutral slate accent) is still present for nav/streak use',
-      () {
-        // brandCoral retains its original role as the neutral slate-gray accent
-        // used by the navigation bar and streak widgets.
-        const color = AppTheme.brandCoral;
-        // SlateGray R=112 G=128 B=144 — blue ≥ red (cool tone).
+    test('brandCoral is a WARM accent in both modes (not the Orvex grey)', () {
+      // Regression guard for the Orvex repalette, which redefined brandCoral
+      // as #6A6A76 warm grey. Every accent usage (streaks, highlights,
+      // badges) then rendered grey. It must lean red/warm in BOTH modes.
+      for (final palette in [AppPalette.light, AppPalette.dark]) {
+        final color = palette.brandCoral;
         expect(
-          color.b,
-          greaterThanOrEqualTo(color.r),
-          reason: 'brandCoral (neutral) should still be a cool/slate tone',
+          color.r,
+          greaterThan(color.b),
+          reason: 'brandCoral must be a warm accent, not a neutral grey',
         );
-      },
-    );
+        expect(
+          color.toARGB32(),
+          isNot(0xFF6A6A76),
+          reason: 'brandCoral must not be the Orvex grey (0xFF6A6A76)',
+        );
+      }
+    });
   });
 }

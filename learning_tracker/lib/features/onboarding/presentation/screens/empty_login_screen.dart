@@ -17,7 +17,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/skipped_onboarding_cta_banner.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
@@ -94,9 +94,9 @@ class _EmptyLoginScreenState extends ConsumerState<EmptyLoginScreen> {
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
-                        AppTheme.brandCreamCard,
-                        AppTheme.brandBlueSoft.withValues(alpha: 0.2),
-                        AppTheme.brandCream,
+                        context.colors.brandCreamCard,
+                        context.colors.brandBlueSoft.withValues(alpha: 0.2),
+                        context.colors.brandCream,
                       ],
                     ),
                   ),
@@ -120,8 +120,8 @@ class _EmptyLoginScreenState extends ConsumerState<EmptyLoginScreen> {
                       icon: const Icon(Icons.school_outlined),
                       label: Text(l10n.emptyLoginTutorEntry),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: AppTheme.brandBlueDeep,
-                        side: const BorderSide(color: AppTheme.brandBlue),
+                        foregroundColor: context.colors.brandBlueDeep,
+                        side: BorderSide(color: context.colors.brandBlue),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: const StadiumBorder(),
                       ),

@@ -3,8 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Stage 1: Pick ONE curriculum from all 9 available options.
@@ -59,7 +58,7 @@ class CurriculumPickerStep extends StatelessWidget {
           Text(
             AppLocalizations.of(context)!.curriculumPickerSubtitle,
             style: theme.textTheme.titleMedium?.copyWith(
-              color: AppTheme.brandInkMuted,
+              color: context.colors.brandInkMuted,
             ),
           ),
           const SizedBox(height: 22),
@@ -127,14 +126,14 @@ class _CurriculumTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final style = _curriculumStyle(curriculum);
+    final style = _curriculumStyle(context, curriculum);
     final terms = domainTermLabels(ref);
 
     return DecoratedBox(
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.surfaceE9),
+        border: Border.all(color: context.colors.surfaceE9),
         boxShadow: const [
           BoxShadow(
             color: Color(0x0F1D2939),
@@ -187,7 +186,7 @@ class _CurriculumTile extends ConsumerWidget {
                                 Text(
                                   curriculumHebrewName(curriculum),
                                   style: theme.textTheme.titleMedium?.copyWith(
-                                    color: AppTheme.brandInk,
+                                    color: context.colors.brandInk,
                                   ),
                                 ),
                               ],
@@ -232,17 +231,20 @@ class _CurriculumTile extends ConsumerWidget {
     );
   }
 
-  _CurriculumStyle _curriculumStyle(CurriculumId curriculum) {
+  _CurriculumStyle _curriculumStyle(
+    BuildContext context,
+    CurriculumId curriculum,
+  ) {
     return switch (curriculum) {
-      CurriculumId.mishnayos => const _CurriculumStyle(
+      CurriculumId.mishnayos => _CurriculumStyle(
         icon: Icons.menu_book_rounded,
-        iconColor: Color(0xFF3F53BF),
-        background: AppColors.surfaceBlueLight,
+        iconColor: const Color(0xFF3F53BF),
+        background: context.colors.surfaceBlueLight,
       ),
-      CurriculumId.bavli => const _CurriculumStyle(
+      CurriculumId.bavli => _CurriculumStyle(
         icon: Icons.gavel_rounded,
-        iconColor: AppColors.goldDark,
-        background: AppColors.peachTint,
+        iconColor: context.colors.goldDark,
+        background: context.colors.peachTint,
       ),
       CurriculumId.chumash => const _CurriculumStyle(
         icon: Icons.book_outlined,

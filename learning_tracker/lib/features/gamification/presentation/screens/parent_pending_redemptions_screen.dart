@@ -14,8 +14,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/gamification/domain/reward_milestone_icons.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
@@ -64,7 +63,7 @@ class ParentPendingRedemptionsScreen extends ConsumerWidget {
     final redemptionsAsync = ref.watch(pendingRedemptionsProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.surfaceF4b,
+      backgroundColor: context.colors.surfaceF4b,
       appBar: AppBar(
         // #32: explicit back button wired to the router pop (the SAME nav the
         // hardware back uses). Without an explicit leading the auto-generated
@@ -76,7 +75,7 @@ class ParentPendingRedemptionsScreen extends ConsumerWidget {
           onPressed: () => context.router.maybePop(),
         ),
         title: Text(l10n.pendingRedemptionsTitle),
-        backgroundColor: AppColors.surfaceF4b,
+        backgroundColor: context.colors.surfaceF4b,
         elevation: 0,
       ),
       body: redemptionsAsync.when(
@@ -229,13 +228,13 @@ class _RedemptionCardState extends State<_RedemptionCard> {
             Container(
               width: 52,
               height: 52,
-              decoration: const BoxDecoration(
-                color: AppColors.gamifSoftBlueCardBg,
+              decoration: BoxDecoration(
+                color: context.colors.gamifSoftBlueCardBg,
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 RewardMilestoneIcons.iconForIndex(redemption.iconIndex),
-                color: AppTheme.brandBlueDeep,
+                color: context.colors.brandBlueDeep,
                 size: 28,
               ),
             ),
@@ -254,7 +253,7 @@ class _RedemptionCardState extends State<_RedemptionCard> {
                   Text(
                     l10n.pendingRedemptionsCost(redemption.pointsCost),
                     style: theme.textTheme.bodySmall?.copyWith(
-                      color: AppTheme.brandBlue,
+                      color: context.colors.brandBlue,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -268,7 +267,7 @@ class _RedemptionCardState extends State<_RedemptionCard> {
                 FilledButton(
                   onPressed: _busy ? null : () => _run(widget.onFulfil),
                   style: FilledButton.styleFrom(
-                    backgroundColor: AppTheme.brandBlueDeep,
+                    backgroundColor: context.colors.brandBlueDeep,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 12,
                       vertical: 8,
@@ -291,7 +290,7 @@ class _RedemptionCardState extends State<_RedemptionCard> {
                 TextButton(
                   onPressed: _busy ? null : () => _run(widget.onDecline),
                   style: TextButton.styleFrom(
-                    foregroundColor: AppTheme.brandInkMuted,
+                    foregroundColor: context.colors.brandInkMuted,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 12,
                       vertical: 4,

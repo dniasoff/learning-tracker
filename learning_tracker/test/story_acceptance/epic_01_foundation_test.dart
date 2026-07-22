@@ -21,6 +21,7 @@ import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/navigation/guards/pin_guard.dart';
 import 'package:learning_tracker/core/network/sefaria/curriculum_content_fetcher.dart';
 import 'package:learning_tracker/core/sync/sync_orchestrator.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/core/utils/hebrew_calendar_utils.dart';
@@ -298,7 +299,7 @@ void main() {
     });
 
     test('curriculum colours are accessible', () {
-      final color = AppTheme.getCurriculumColor(CurriculumId.mishnayos);
+      final color = AppPalette.light.curriculumFor(CurriculumId.mishnayos);
       expect(color, isA<Color>());
     });
   });

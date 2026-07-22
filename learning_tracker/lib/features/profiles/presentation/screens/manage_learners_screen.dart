@@ -2,7 +2,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
@@ -135,7 +135,7 @@ class _ProfileInitialsAvatar extends StatelessWidget {
         ),
         shape: BoxShape.circle,
         border: Border.all(
-          color: AppTheme.brandBlue.withValues(alpha: 0.14),
+          color: context.colors.brandBlue.withValues(alpha: 0.14),
           width: 2,
         ),
       ),
@@ -143,7 +143,7 @@ class _ProfileInitialsAvatar extends StatelessWidget {
         child: Text(
           initial,
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            color: AppTheme.brandBlueDeep,
+            color: context.colors.brandBlueDeep,
             fontWeight: FontWeight.w800,
           ),
         ),

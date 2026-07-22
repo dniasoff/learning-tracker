@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/onboarding/domain/models/wizard_result_wrapper.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/steps/chazara_widgets.dart';
@@ -178,7 +177,7 @@ class _ChazaraInlineSetupState extends ConsumerState<ChazaraInlineSetup> {
           Text(
             widget.headerSubtitle,
             style: theme.textTheme.titleMedium?.copyWith(
-              color: AppTheme.brandInkMuted,
+              color: context.colors.brandInkMuted,
             ),
           ),
           const SizedBox(height: 18),
@@ -216,8 +215,8 @@ class _ChazaraInlineSetupState extends ConsumerState<ChazaraInlineSetup> {
                       borderRadius: BorderRadius.circular(24),
                       border: Border.all(
                         color: _selectedPresetIndex == -1
-                            ? AppTheme.brandBlueBright
-                            : AppColors.surfaceE9,
+                            ? context.colors.brandBlueBright
+                            : context.colors.surfaceE9,
                         width: _selectedPresetIndex == -1 ? 2 : 1,
                       ),
                     ),
@@ -231,13 +230,13 @@ class _ChazaraInlineSetupState extends ConsumerState<ChazaraInlineSetup> {
                           children: [
                             Row(
                               children: [
-                                const CircleAvatar(
+                                CircleAvatar(
                                   radius: 15,
-                                  backgroundColor: AppColors.peachTint,
+                                  backgroundColor: context.colors.peachTint,
                                   child: Icon(
                                     Icons.settings_suggest_rounded,
                                     size: 16,
-                                    color: AppColors.goldDark,
+                                    color: context.colors.goldDark,
                                   ),
                                 ),
                                 const SizedBox(width: 10),
@@ -254,7 +253,7 @@ class _ChazaraInlineSetupState extends ConsumerState<ChazaraInlineSetup> {
                                     vertical: 3,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: AppColors.surfaceBlueLight,
+                                    color: context.colors.surfaceBlueLight,
                                     borderRadius: BorderRadius.circular(10),
                                   ),
                                   child: Text(
@@ -263,7 +262,7 @@ class _ChazaraInlineSetupState extends ConsumerState<ChazaraInlineSetup> {
                                     ),
                                     style: theme.textTheme.labelMedium
                                         ?.copyWith(
-                                          color: AppTheme.brandBlueDeep,
+                                          color: context.colors.brandBlueDeep,
                                           fontWeight: FontWeight.w700,
                                         ),
                                   ),
@@ -368,7 +367,7 @@ class _ChazaraInlineSetupState extends ConsumerState<ChazaraInlineSetup> {
 
   Color _delayAccent(int index) {
     return switch (index % 3) {
-      0 => AppTheme.brandBlueBright,
+      0 => context.colors.brandBlueBright,
       1 => const Color(0xFFFF6C78),
       _ => const Color(0xFFAA7B36),
     };

@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/items_learned_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
@@ -100,7 +100,7 @@ class _CurriculumCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final terms = domainTermLabels(ref);
     final theme = Theme.of(context);
-    final curriculumColor = AppTheme.getCurriculumColorByKey(
+    final curriculumColor = context.colors.curriculumForKey(
       summary.curriculumId.storageKey,
     );
     final pct = summary.percentage;
@@ -108,10 +108,10 @@ class _CurriculumCard extends ConsumerWidget {
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTheme.brandCreamCard,
+        color: context.colors.brandCreamCard,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: AppTheme.brandOutline.withValues(alpha: 0.35),
+          color: context.colors.brandOutline.withValues(alpha: 0.35),
         ),
         boxShadow: [
           BoxShadow(
@@ -157,7 +157,7 @@ class _CurriculumCard extends ConsumerWidget {
                             style: theme.textTheme.labelSmall?.copyWith(
                               fontSize: 9,
                               fontWeight: FontWeight.w800,
-                              color: AppTheme.brandInk,
+                              color: context.colors.brandInk,
                             ),
                           ),
                         ],
@@ -172,14 +172,14 @@ class _CurriculumCard extends ConsumerWidget {
                             summary.curriculumId,
                             style: theme.textTheme.titleSmall?.copyWith(
                               fontWeight: FontWeight.w700,
-                              color: AppTheme.brandInk,
+                              color: context.colors.brandInk,
                             ),
                           ),
                           if (!terms.isHebrew)
                             Text(
                               curriculumHebrewName(summary.curriculumId),
                               style: theme.textTheme.labelSmall?.copyWith(
-                                color: AppTheme.brandInkMuted,
+                                color: context.colors.brandInkMuted,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -189,7 +189,7 @@ class _CurriculumCard extends ConsumerWidget {
                               summary.totalLeafCount,
                             ),
                             style: theme.textTheme.bodySmall?.copyWith(
-                              color: AppTheme.brandInkMuted,
+                              color: context.colors.brandInkMuted,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -200,7 +200,7 @@ class _CurriculumCard extends ConsumerWidget {
                       isExpanded
                           ? Icons.keyboard_arrow_up_rounded
                           : Icons.keyboard_arrow_down_rounded,
-                      color: AppTheme.brandInkMuted,
+                      color: context.colors.brandInkMuted,
                     ),
                   ],
                 ),
@@ -210,7 +210,7 @@ class _CurriculumCard extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(999),
                   child: LinearProgressIndicator(
                     value: pct,
-                    backgroundColor: AppTheme.brandCreamSoft,
+                    backgroundColor: context.colors.brandCreamSoft,
                     valueColor: AlwaysStoppedAnimation<Color>(curriculumColor),
                     minHeight: 6,
                   ),
@@ -278,7 +278,7 @@ class CurriculumBreakdownTreeNode extends ConsumerWidget {
     final theme = Theme.of(context);
     final isExpanded = expandedNodes[nodeKey] ?? false;
     final hasChildren = node.children.isNotEmpty;
-    final stateColor = _stateColor(node.state);
+    final stateColor = _stateColor(context, node.state);
     final l10n = AppLocalizations.of(context)!;
     final terms = domainTermLabels(ref);
 
@@ -290,7 +290,7 @@ class CurriculumBreakdownTreeNode extends ConsumerWidget {
       hebrewName: node.hebrewName,
       style: theme.textTheme.bodySmall?.copyWith(
         fontWeight: FontWeight.w600,
-        color: AppTheme.brandInk,
+        color: context.colors.brandInk,
       ),
     );
 
@@ -331,7 +331,7 @@ class CurriculumBreakdownTreeNode extends ConsumerWidget {
                   Text(
                     provenanceLabel,
                     style: theme.textTheme.labelSmall?.copyWith(
-                      color: AppTheme.brandInkMuted,
+                      color: context.colors.brandInkMuted,
                       fontWeight: FontWeight.w500,
                       fontStyle: FontStyle.italic,
                     ),
@@ -343,7 +343,7 @@ class CurriculumBreakdownTreeNode extends ConsumerWidget {
                         ? Icons.keyboard_arrow_up_rounded
                         : Icons.keyboard_arrow_down_rounded,
                     size: 16,
-                    color: AppTheme.brandInkMuted,
+                    color: context.colors.brandInkMuted,
                   ),
               ],
             ),
@@ -365,14 +365,14 @@ class CurriculumBreakdownTreeNode extends ConsumerWidget {
     );
   }
 
-  Color _stateColor(LifetimeNodeState state) {
+  Color _stateColor(BuildContext context, LifetimeNodeState state) {
     switch (state) {
       case LifetimeNodeState.full:
-        return AppTheme.brandGold;
+        return context.colors.brandGold;
       case LifetimeNodeState.partial:
-        return AppTheme.brandBlue.withValues(alpha: 0.5);
+        return context.colors.brandBlue.withValues(alpha: 0.5);
       case LifetimeNodeState.none:
-        return AppTheme.brandOutline;
+        return context.colors.brandOutline;
     }
   }
 

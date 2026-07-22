@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/progress/domain/services/pace_calculator.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
@@ -35,21 +35,21 @@ class ProgressPaceIndicator extends StatelessWidget {
     switch (pace.paceStatus) {
       case ProgressPaceStatus.graceWindow:
         label = l10n.paceOnTrack;
-        color = AppTheme.brandBlue;
+        color = context.colors.brandBlue;
         icon = Icons.check_circle_outline_rounded;
       case ProgressPaceStatus.onTrack:
         label = l10n.paceOnTrack;
-        color = AppTheme.brandBlue;
+        color = context.colors.brandBlue;
         icon = Icons.check_circle_outline_rounded;
       case ProgressPaceStatus.ahead:
         final days = pace.paceVarianceInDays.abs().round();
         label = l10n.paceAheadByDays(days);
-        color = AppTheme.brandGold;
+        color = context.colors.brandGold;
         icon = Icons.trending_up_rounded;
       case ProgressPaceStatus.behind:
         final days = pace.paceVarianceInDays.abs().round();
         label = l10n.paceBehindByDays(days);
-        color = AppTheme.brandCoralDeep;
+        color = context.colors.brandCoralDeep;
         icon = Icons.trending_down_rounded;
     }
 
@@ -57,10 +57,10 @@ class ProgressPaceIndicator extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
       decoration: BoxDecoration(
-        color: AppTheme.brandCreamCard,
+        color: context.colors.brandCreamCard,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: AppTheme.brandOutline.withValues(alpha: 0.35),
+          color: context.colors.brandOutline.withValues(alpha: 0.35),
         ),
         boxShadow: [
           BoxShadow(
@@ -89,7 +89,7 @@ class ProgressPaceIndicator extends StatelessWidget {
                 child: Text(
                   label,
                   style: theme.textTheme.titleSmall?.copyWith(
-                    color: AppTheme.brandInk,
+                    color: context.colors.brandInk,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -108,7 +108,7 @@ class ProgressPaceIndicator extends StatelessWidget {
               child: Text(
                 subtitleCaption!,
                 style: theme.textTheme.bodySmall?.copyWith(
-                  color: AppTheme.brandInkMuted,
+                  color: context.colors.brandInkMuted,
                   fontWeight: FontWeight.w500,
                 ),
               ),

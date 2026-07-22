@@ -5,8 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/app/router/router_provider.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
-import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
     show authRepositoryProvider;
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
@@ -51,9 +50,9 @@ class _AccountActionsSheet extends ConsumerWidget {
   final WidgetRef pageRef;
 
   @override
-  Widget build(BuildContext sheetContext, WidgetRef ref) {
-    final theme = Theme.of(sheetContext);
-    final l10n = AppLocalizations.of(sheetContext)!;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     final user = ref.watch(authRepositoryProvider).currentUser;
     final authState = ref.watch(authStateProvider);
@@ -83,7 +82,7 @@ class _AccountActionsSheet extends ConsumerWidget {
     final showAddAccount = !isChildProfile || inParentMode;
 
     void closeThen(Future<void> Function() action) {
-      Navigator.of(sheetContext).pop();
+      Navigator.of(context).pop();
       // Run the flow on the caller's context/ref after the sheet has popped.
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (pageContext.mounted) unawaited(action());
@@ -125,7 +124,7 @@ class _AccountActionsSheet extends ConsumerWidget {
                 child: Text(
                   l10n.sectionAccount,
                   style: theme.textTheme.labelSmall?.copyWith(
-                    color: AppTheme.brandInkMuted,
+                    color: context.colors.brandInkMuted,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 0.8,
                   ),
@@ -133,11 +132,11 @@ class _AccountActionsSheet extends ConsumerWidget {
               ),
               // Switch account — pick or add another login on this device.
               ListTile(
-                leading: const CircleAvatar(
-                  backgroundColor: AppTheme.brandBlueSoft,
+                leading: CircleAvatar(
+                  backgroundColor: context.colors.brandBlueSoft,
                   child: Icon(
                     Icons.swap_horiz_rounded,
-                    color: AppTheme.brandBlueDeep,
+                    color: context.colors.brandBlueDeep,
                   ),
                 ),
                 title: Text(
@@ -148,16 +147,16 @@ class _AccountActionsSheet extends ConsumerWidget {
                     ? null
                     : Text(
                         accountEmail,
-                        style: const TextStyle(
-                          color: AppTheme.brandInkMuted,
+                        style: TextStyle(
+                          color: context.colors.brandInkMuted,
                           fontSize: 12,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                trailing: const Icon(
+                trailing: Icon(
                   Icons.chevron_right_rounded,
-                  color: AppColors.inkMidGrey,
+                  color: context.colors.inkMidGrey,
                 ),
                 onTap: () => closeThen(() async {
                   // Use the ROOT router (not pageContext.pushRoute). AccountPicker
@@ -171,11 +170,11 @@ class _AccountActionsSheet extends ConsumerWidget {
               ),
               if (showAddAccount)
                 ListTile(
-                  leading: const CircleAvatar(
-                    backgroundColor: AppTheme.brandBlueSoft,
+                  leading: CircleAvatar(
+                    backgroundColor: context.colors.brandBlueSoft,
                     child: Icon(
                       Icons.person_add_alt_1_rounded,
-                      color: AppTheme.brandBlueBright,
+                      color: context.colors.brandBlueBright,
                     ),
                   ),
                   title: Text(
@@ -184,8 +183,8 @@ class _AccountActionsSheet extends ConsumerWidget {
                   ),
                   subtitle: Text(
                     l10n.addAnotherAccountSubtitle,
-                    style: const TextStyle(
-                      color: AppTheme.brandInkMuted,
+                    style: TextStyle(
+                      color: context.colors.brandInkMuted,
                       fontSize: 12,
                     ),
                   ),
@@ -199,9 +198,9 @@ class _AccountActionsSheet extends ConsumerWidget {
                 ListTile(
                   leading: CircleAvatar(
                     backgroundColor: theme.colorScheme.secondaryContainer,
-                    child: const Icon(
+                    child: Icon(
                       Icons.vpn_key_outlined,
-                      color: AppTheme.brandInkMuted,
+                      color: context.colors.brandInkMuted,
                     ),
                   ),
                   title: Text(
@@ -257,8 +256,8 @@ class _AccountActionsSheet extends ConsumerWidget {
                     authState.isLocalBorn
                         ? l10n.deleteLocalAccountSubtitle
                         : l10n.deleteAccountSubtitle,
-                    style: const TextStyle(
-                      color: AppTheme.brandInkMuted,
+                    style: TextStyle(
+                      color: context.colors.brandInkMuted,
                       fontSize: 12,
                     ),
                   ),
