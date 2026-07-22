@@ -58,6 +58,25 @@ has the full-size dataset loaded. It just does not push this device over its
 memory ceiling in practice. This is a clean, reproducible **REFUTE**, not an
 "couldn't confirm."
 
+### Why this refutation holds on the mechanism, not just the samples
+
+`contentIndexProvider` (`content_index.dart:111-116`) loops `CurriculumId.all`
+and awaits `curriculumContentProvider(c)` for **every one of the 9 curricula —
+Talmud Bavli included — on the very first Learn-tab open**, regardless of
+which curriculum the user then actually browses. It is a single `keepAlive`
+provider, not a per-curriculum lazy one. That matters for scoping this
+report: it means **every "Learn tab opened" measurement in the table below
+already included Bavli's content resident in memory**, not just the
+dedicated Bava Batra drill later in this document. The very first Learn-tab
+sample (Native Heap plateauing ~76 MB, round 2) already reflects all 9
+curricula — Bavli among them — being materialized into `ContentIndex`. The
+~90 MB and ~125 MB peaks recorded later are additional cost layered on top
+from the reader/hierarchy/search UI actually rendering and displaying that
+already-resident content — not from a second, curriculum-specific load. So
+the premise "Bavli is the largest curriculum, it's the one most likely to
+tip this over" was tested from the first Learn open onward, not left for a
+separate drill to discover.
+
 ## Memory table
 
 Native Heap in KB (`dumpsys meminfo` "Native Heap / Private" column, PSS
@@ -118,6 +137,9 @@ the route/page transition in the reader's next/prev handler that swallows
 taps landing mid-transition. On a reading surface, silently dropping half of
 a user's "next page" taps is a genuine, worth-fixing usability defect, not
 cosmetic — flagging as P2/P3 rather than a footnote per review feedback.
+
+### Other, minor observations (not defects)
+
 - **Search requires transliteration, silently (APP, cosmetic):** `adb shell
   input text` cannot send Hebrew (Android `Input` command throws
   `NullPointerException` on non-ASCII), so this was tested with ASCII
@@ -271,7 +293,18 @@ the same pattern as round 1: modest, flat, nowhere near the 512 MB limit.
 evidence** (a real guest-level kill was available to check, and checking it
 still didn't implicate Learn/contentIndex).
 
-## Talmud Bavli deep-drill (the gap from the first round — now closed)
+## Talmud Bavli deep-drill (residual gap, narrowed and closed)
+
+**Reframing the gap:** the first round's report flagged "Talmud Bavli
+untested" as if the biggest curriculum's memory cost was an open question.
+It wasn't, in the sense that matters most — per the mechanism note above,
+Bavli's content is materialized into `ContentIndex` on the *first* Learn
+open regardless of what the user browses, and that was already exercised in
+every "Learn tab opened" sample in round 1. The actually-residual gap was
+narrower: the **incremental UI/text-body cost of drilling into and paging
+through Bavli's own tractates and daf text** — real Talmud pages rendering,
+not just the curriculum being resident in the index — had not been
+measured. That's what this round closes.
 
 On Build B (`lastUpdateTime=2026-07-22 19:07:13`), with host load easing
 (~15-30), 5556 stayed up long enough to complete this. Full drill: Learn tab
@@ -304,6 +337,7 @@ and even at its single highest sample (125,566 KB ≈ 123 MB) that is only
 **~24% of the 512 MB limit** — nowhere near enough to threaten an OOM. The
 device never died during this drill, `crash_attribution.sh` reported guest
 clean at the end, and the app remained fully responsive throughout (modulo
-the chevron-debounce finding above). This closes the Talmud-Bavli gap left
-open after the first round: the largest curriculum, drilled deep and paged
-through at length, does not reproduce the P0 either.
+the chevron-debounce finding above). This closes the narrowed residual gap:
+the incremental cost of actually rendering and paging through Bavli's own
+tractates and daf text — on top of the curriculum-materialization cost
+already covered by round 1 — does not reproduce the P0 either.
