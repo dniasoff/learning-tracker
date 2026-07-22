@@ -5,7 +5,6 @@ import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/core/database/daos/completion_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/core/domain/value_objects/sefaria_ref.dart';
 import 'package:learning_tracker/core/sync/codec/completion_event_codec.dart';
 import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_command.dart';
@@ -309,7 +308,7 @@ class CompletionWriter {
       if (!firedKeys.add(key)) continue;
       unawaited(
         _analytics.logCompletionRecorded(
-          sefariaRef: SefariaRef.parse(c.sefariaRef),
+          curriculumId: c.curriculumId,
           trackType: c.trackType,
         ),
       );
@@ -729,7 +728,7 @@ class CompletionWriter {
     if (result.isNew) {
       unawaited(
         _analytics.logCompletionRecorded(
-          sefariaRef: SefariaRef.parse(result.completion.sefariaRef),
+          curriculumId: result.completion.curriculumId,
           trackType: result.completion.trackType,
         ),
       );

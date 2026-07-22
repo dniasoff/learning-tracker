@@ -37,8 +37,10 @@ Future<bool> showParentPinVerificationDialog(
   );
   final verified = result ?? false;
   if (verified && analytics != null) {
-    // Story 27.14 (DNI-390): fire parent_mode_entered on successful verification.
-    unawaited(analytics.logParentModeEntered(profileId: profileId));
+    // Story 27.14 (DNI-390): fire parent_mode_entered on successful
+    // verification. PV-1: no profileId parameter — never a per-child
+    // identifier in an analytics payload.
+    unawaited(analytics.logParentModeEntered());
   }
   return verified;
 }

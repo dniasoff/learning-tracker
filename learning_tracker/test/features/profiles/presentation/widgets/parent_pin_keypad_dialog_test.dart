@@ -401,11 +401,7 @@ void main() {
         when(
           () => svc.verifyProfilePin(any<int>(), any<String>()),
         ).thenAnswer((_) async => true);
-        when(
-          () => analytics.logParentModeEntered(
-            profileId: any(named: 'profileId'),
-          ),
-        ).thenAnswer((_) async {});
+        when(() => analytics.logParentModeEntered()).thenAnswer((_) async {});
 
         await tester.pumpWidget(
           _verificationHarness(
@@ -419,9 +415,7 @@ void main() {
         await _enterPin(tester, '5678');
         await tester.pump(const Duration(seconds: 1));
 
-        verify(
-          () => analytics.logParentModeEntered(profileId: _kProfileId),
-        ).called(1);
+        verify(() => analytics.logParentModeEntered()).called(1);
 
         await _teardown(tester);
       },
