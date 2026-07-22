@@ -202,6 +202,16 @@ Workflow scripts (for relaunch) are auto-persisted under
   findings must be checked against deliberate design/tests before fixing — added to the
   campaign's fix protocol. (Second near-miss avoided by READING THE CI LOG, not the
   wrapper exit code.) → make ci gating the 4; push only on green-in-log.
+- **2026-07-22 ~10:15** — **ALL reassurance work LANDED + CI GREEN on dev `a68c97d5`.**
+  My 10 held commits (4 run-8 device fixes + hygiene) went up as the parent of the
+  concurrent `theme/royal-blue-brightness-aware-palette` migration (another agent);
+  GitHub CI for `a68c97d5` = **success** (1h16m) — that combined-state run is the gate
+  I was holding for, and it's stronger than mine alone would have been.
+  **Cross-agent note:** the theme agent's `faef5006` fixed a subtle re-break of MY test —
+  `dart format` had split `addTearDown(database.close)` across lines, and the TQ-6 checker
+  only matches it on a SINGLE line, so `bulk_mark_all_time_rollup_test.dart:108` re-flagged.
+  **LESSON: keep `addTearDown(<var>.close)` on one line; `dart format` can split it and
+  re-trip TQ-6.** Also: app version bumped to 1.0.66; goldens regenerated for the palette.
 - *(next entries appended as waves land.)*
 
 ---
