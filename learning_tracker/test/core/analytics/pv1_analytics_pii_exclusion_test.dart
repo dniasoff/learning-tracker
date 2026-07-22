@@ -15,25 +15,72 @@
 ///   - `logPinLockedOut` / `logParentModeEntered` no longer take a
 ///     `profileId` parameter at all.
 ///
-/// This is a SYSTEMIC sweep, not a per-method regression test: it enumerates
-/// EVERY convenience method on [AnalyticsService] (the sole production
-/// surface for firing analytics — PV-5 / `tool/check_analytics_catalog.dart`
-/// already forces every `.logEvent()` call site in `lib/` through this
-/// catalog) and asserts, for a representative invocation of each, that the
-/// resulting parameter map contains none of [_bannedPiiKeys]. Adding a new
-/// convenience method to [AnalyticsService] without adding it to
-/// `_allConvenienceMethodEvents` below will fail
-/// `test('every catalog event above is exercised')` — so this sweep cannot
-/// be silently outgrown by a future event that reintroduces a banned key.
+/// Also historically a LIVE violation this sweep FAILED to catch on first
+/// landing (adversarial review, R3 follow-up): [InviteTutorUseCase] fired
+/// `tutor_invite_sent` with a `child_profile_id` parameter, which the
+/// original exact-match `_bannedPiiKeys` check let through because
+/// `child_profile_id` != `profile_id`. Fixed by (a) removing the identifier
+/// from the event (see `tutor_invite_use_cases.dart`) and (b) changing the
+/// check from exact-match to substring containment — see [_bannedPiiKeys]'s
+/// doc comment.
+///
+/// This is a SYSTEMIC sweep in two parts:
+///
+///   1. Every convenience method on [AnalyticsService] (the sole production
+///      surface for firing analytics — PV-5 / `tool/check_analytics_catalog.dart`
+///      already forces every `.logEvent()` call site in `lib/` through this
+///      catalog) is exercised below and asserted to exclude [_bannedPiiKeys].
+///      Adding a new convenience method without adding it to
+///      `allConvenienceMethodEvents` fails `test('every catalog event above
+///      is exercised')` — so this half cannot be silently outgrown.
+///
+///   2. Events fired via a RAW `.logEvent()` call site (not a typed
+///      convenience method — the W7.5–W7.11 events) are NOT exercisable
+///      through part 1's mechanism. Each such event is either (a) exercised
+///      directly in the "direct call-site sweep" group below by invoking
+///      its real production use case/service, (b) genuinely covered by an
+///      existing PV-1 assertion in another suite — cited by exact file path
+///      in `coveredByOtherSuites`, each verified by reading the referenced
+///      test — or (c) confirmed dead code with zero `lib/` emitters (see
+///      `deadCatalogEvents`). A prior version of this file parked ~12
+///      events in (b) that were never actually asserted anywhere (a false
+///      coverage claim caught by the same adversarial review); the set
+///      below is the corrected, verified list.
 library;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
+import 'package:learning_tracker/core/database/daos/completion_dao.dart';
+import 'package:learning_tracker/core/exceptions/permission_exception.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
+import 'package:learning_tracker/features/learning/domain/entities/mark_completion_result.dart';
+import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
+import 'package:learning_tracker/features/learning/domain/use_cases/mark_completion_use_case.dart';
+import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
+import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
+import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
+import 'package:learning_tracker/features/tutoring/domain/use_cases/mark_live_completion_use_case.dart';
+import 'package:learning_tracker/features/tutoring/domain/use_cases/tutor_grant_use_cases.dart';
+import 'package:learning_tracker/features/tutoring/domain/use_cases/tutor_invite_use_cases.dart';
 
 /// Keys that must never appear in an analytics event's parameter map
 /// (PV-1): per-child identifiers, content identifiers, and direct personal
 /// identifiers. Params must stay coarse, low-cardinality categories
 /// (`track_type`, `curriculum_id`, counts, booleans, reasons).
+///
+/// Checked as a case-insensitive SUBSTRING of each parameter key, not an
+/// exact match — `child_profile_id`/`parent_profile_id`/`tutor_profile_id`
+/// all contain the banned `profile_id` key without equalling it, and a
+/// pre-fix version of this sweep used exact match, which let
+/// `tutor_invite_sent`'s `child_profile_id` param through undetected (see
+/// this file's top doc comment). Verified against every parameter key
+/// actually fired in `lib/` (`attempts`, `channel`, `collection`,
+/// `curriculum_id`, `entity_kind`, `error_kind`, `fatal`, `grant_id`,
+/// `item_count`, `completion_count`, `milestone`, `notification_type`,
+/// `operation`, `reason`, `steps_restored`, `track_type`,
+/// `triggered_from_resume`) — none contains a banned substring, so no
+/// legitimate key needs a carve-out today.
 const _bannedPiiKeys = <String>{
   'profile_id',
   'profileId',
@@ -49,6 +96,24 @@ const _bannedPiiKeys = <String>{
   'lastName',
 };
 
+/// Shared PV-1 assertion: no [_bannedPiiKeys] substring (case-insensitive)
+/// appears in any key of [params].
+void _assertNoBannedPii(Map<String, Object?> params, String eventName) {
+  for (final key in params.keys) {
+    final lowerKey = key.toLowerCase();
+    for (final banned in _bannedPiiKeys) {
+      expect(
+        lowerKey.contains(banned.toLowerCase()),
+        isFalse,
+        reason:
+            'PV-1 VIOLATION: analytics event "$eventName" fired with '
+            'parameter key "$key", which contains the banned PII substring '
+            '"$banned" — params: $params. See docs/coding-standards.md PV-1.',
+      );
+    }
+  }
+}
+
 /// Records which events the group below has actually exercised — checked
 /// for real exhaustiveness by the final test in this file. `package:test`
 /// runs the `test()`/`group()` blocks in ONE file sequentially in
@@ -57,6 +122,13 @@ const _bannedPiiKeys = <String>{
 /// later-declared test is safe.
 final _exercisedEvents = <String>{};
 
+/// Same as [_exercisedEvents] but for the "direct call-site sweep" group
+/// (raw `.logEvent()` events exercised via their real production use
+/// case/service, rather than an [AnalyticsService] convenience method).
+/// Tracked separately so each half's exhaustiveness is checked independently
+/// (see `test('every direct call-site event above is exercised')`).
+final _exercisedDirectCallEvents = <String>{};
+
 void main() {
   late FakeAnalyticsService analytics;
 
@@ -64,22 +136,15 @@ void main() {
     analytics = FakeAnalyticsService();
   });
 
-  /// Asserts the LAST fired [eventName]'s parameter map contains none of
-  /// [_bannedPiiKeys], and records [eventName] as exercised (see
+  /// Asserts the LAST fired [eventName]'s parameter map contains no
+  /// [_bannedPiiKeys] substring, and records [eventName] as exercised (see
   /// [_exercisedEvents]).
   void expectNoPiiIn(String eventName) {
     _exercisedEvents.add(eventName);
-    final params = analytics.lastParamsOf(eventName) ?? const {};
-    for (final banned in _bannedPiiKeys) {
-      expect(
-        params.containsKey(banned),
-        isFalse,
-        reason:
-            'PV-1 VIOLATION: analytics event "$eventName" fired with a '
-            'banned per-child/content/personal identifier key "$banned" — '
-            'params: $params. See docs/coding-standards.md PV-1.',
-      );
-    }
+    _assertNoBannedPii(
+      analytics.lastParamsOf(eventName) ?? const {},
+      eventName,
+    );
   }
 
   group('PV-1 — every AnalyticsEvent convenience method excludes PII', () {
@@ -158,25 +223,166 @@ void main() {
     });
   });
 
-  test('every AnalyticsEvent catalog member is exercised above (sweep cannot '
-      'silently go stale)', () {
-    // AnalyticsEvent members that are NOT (yet) exposed via a typed
-    // convenience method on AnalyticsService — these route through raw
-    // .logEvent() call sites elsewhere and are out of THIS sweep's scope
-    // (each has its own dedicated PV-1 coverage — see
-    // analytics_pv1_redaction_test.dart and its doc comment for the full
-    // list of covered call sites).
-    const coveredByOtherSuites = <String>{
-      AnalyticsEvent.syncMergeRowSkipped,
-      AnalyticsEvent.syncMergeRouterHalt,
-      AnalyticsEvent.syncOutboxDeadLettered,
-      AnalyticsEvent.syncPullStarted,
-      AnalyticsEvent.syncPullCompleted,
-      AnalyticsEvent.syncPullFailed,
-      AnalyticsEvent.syncListenerError,
-      AnalyticsEvent.syncPermissionDenied,
-      AnalyticsEvent.tutorPinSet,
-      AnalyticsEvent.tutorActionRecorded,
+  /// Asserts the LAST fired [eventName]'s parameter map contains no
+  /// [_bannedPiiKeys] substring, and records [eventName] as exercised (see
+  /// [_exercisedDirectCallEvents]). Reuses the same [analytics] fake as the
+  /// convenience-method group above — `setUp()` resets it before every test
+  /// regardless of which group declared it.
+  void expectDirectCallNoPiiIn(String eventName) {
+    _exercisedDirectCallEvents.add(eventName);
+    _assertNoBannedPii(
+      analytics.lastParamsOf(eventName) ?? const {},
+      eventName,
+    );
+  }
+
+  group(
+    'PV-1 — direct call-site sweep (raw .logEvent(), no convenience method)',
+    () {
+      // Fixed-clock fixtures — a hermetic literal, never a live wall-clock read.
+      final invitedAt = DateTime.utc(2026, 5, 1);
+
+      TutorGrant pendingGrant() => TutorGrant.fromDoc(
+        TutorGrantDoc(
+          grantId: 'grant-1',
+          parentUid: 'parent-uid',
+          childProfileId: 'child-1',
+          tutorEmail: 'tutor@example.com',
+          state: TutorGrantState.pending,
+          invitedAt: invitedAt,
+          updatedAt: invitedAt,
+        ),
+      );
+
+      TutorGrant activeGrant() => TutorGrant.fromDoc(
+        TutorGrantDoc(
+          grantId: 'grant-1',
+          parentUid: 'parent-uid',
+          childProfileId: 'child-1',
+          tutorEmail: 'tutor@example.com',
+          state: TutorGrantState.active,
+          invitedAt: invitedAt,
+          updatedAt: invitedAt,
+        ),
+        permissions: TutorPermissions.defaults(),
+      );
+
+      test('tutor_invite_sent — no child_profile_id (the live PV-1 bug this '
+          'sweep failed to catch on first landing)', () async {
+        final useCase = InviteTutorUseCase(
+          _FakeTutorGrantRepository(),
+          analytics: analytics,
+        );
+        await useCase.call(
+          tutorEmail: 'tutor@example.com',
+          childProfileId: 'child-1',
+        );
+        expectDirectCallNoPiiIn(AnalyticsEvent.tutorInviteSent);
+      });
+
+      test('tutor_invite_accepted — no PII (grant_id only)', () async {
+        final useCase = AcceptTutorInviteUseCase(
+          _FakeTutorGrantRepository(),
+          analytics: analytics,
+        );
+        await useCase.call(grant: pendingGrant());
+        expectDirectCallNoPiiIn(AnalyticsEvent.tutorInviteAccepted);
+      });
+
+      test('tutor_invite_declined — no PII (grant_id only)', () async {
+        final useCase = DeclineTutorInviteUseCase(
+          _FakeTutorGrantRepository(),
+          analytics: analytics,
+        );
+        await useCase.call(grant: pendingGrant());
+        expectDirectCallNoPiiIn(AnalyticsEvent.tutorInviteDeclined);
+      });
+
+      test('tutor_grant_rescinded — no PII (grant_id only)', () async {
+        final useCase = RescindTutorInviteUseCase(
+          _FakeTutorGrantRepository(),
+          analytics: analytics,
+        );
+        await useCase.call(grant: pendingGrant());
+        expectDirectCallNoPiiIn(AnalyticsEvent.tutorGrantRescinded);
+      });
+
+      test('tutor_grant_revoked — no PII (grant_id only)', () async {
+        final useCase = RevokeTutorGrantUseCase(
+          _FakeTutorGrantRepository(),
+          analytics: analytics,
+        );
+        await useCase.call(grant: activeGrant());
+        expectDirectCallNoPiiIn(AnalyticsEvent.tutorGrantRevoked);
+      });
+
+      test('tutor_resigned — no PII (grant_id only)', () async {
+        final useCase = ResignTutorGrantUseCase(
+          _FakeTutorGrantRepository(),
+          analytics: analytics,
+        );
+        await useCase.call(grant: activeGrant());
+        expectDirectCallNoPiiIn(AnalyticsEvent.tutorResigned);
+      });
+
+      test('tutor_live_mark_blocked — no parameters at all', () async {
+        final useCase = MarkLiveCompletionUseCase<void>(
+          session: ResolvedSession.forTutor(
+            selection: const TutoredProfileSelection(
+              profileId: 'child-1',
+              ownerUid: 'parent-uid',
+              grantId: 'grant-1',
+              permissions: TutorPermissions(),
+            ),
+          ),
+          analytics: analytics,
+        );
+        await expectLater(
+          useCase.call(() async {}),
+          throwsA(isA<TutorWriteForbiddenException>()),
+        );
+        expectDirectCallNoPiiIn(AnalyticsEvent.tutorLiveMarkBlocked);
+      });
+
+      test('bulk_engagement_skipped — no parameters at all', () async {
+        final useCase = MarkCompletionUseCase(
+          _FakeCompletionRepository(),
+          analytics: analytics,
+        );
+        await useCase.call(
+          const CompletionRequest(
+            curriculumId: 'mishnayos',
+            sefariaRef: 'Berakhot.2a',
+            stageId: 1,
+            trackType: 'personal',
+          ),
+          source: CompletionSource.bulkInTrack,
+        );
+        expectDirectCallNoPiiIn(AnalyticsEvent.bulkEngagementSkipped);
+      });
+
+      test('lifetime_achievement_skipped — no parameters at all', () async {
+        final useCase = MarkCompletionUseCase(
+          _FakeCompletionRepository(),
+          analytics: analytics,
+        );
+        await useCase.call(
+          const CompletionRequest(
+            curriculumId: 'mishnayos',
+            sefariaRef: 'Berakhot.2a',
+            stageId: 1,
+            trackType: 'personal',
+          ),
+          source: CompletionSource.lifetimeOnly,
+        );
+        expectDirectCallNoPiiIn(AnalyticsEvent.lifetimeAchievementSkipped);
+      });
+    },
+  );
+
+  test('every direct call-site event above is exercised (sweep cannot silently '
+      'go stale)', () {
+    const directCallSiteEvents = <String>{
       AnalyticsEvent.tutorInviteSent,
       AnalyticsEvent.tutorInviteAccepted,
       AnalyticsEvent.tutorInviteDeclined,
@@ -186,6 +392,60 @@ void main() {
       AnalyticsEvent.tutorLiveMarkBlocked,
       AnalyticsEvent.bulkEngagementSkipped,
       AnalyticsEvent.lifetimeAchievementSkipped,
+    };
+    expect(
+      _exercisedDirectCallEvents,
+      directCallSiteEvents,
+      reason:
+          'a direct-call-site event was added to/removed from the group '
+          'above without updating this list',
+    );
+  });
+
+  test('every AnalyticsEvent catalog member is exercised above (sweep cannot '
+      'silently go stale)', () {
+    // AnalyticsEvent members exercised directly above via their real
+    // production use case/service (see the "direct call-site sweep" group).
+    const directCallSiteEvents = <String>{
+      AnalyticsEvent.tutorInviteSent,
+      AnalyticsEvent.tutorInviteAccepted,
+      AnalyticsEvent.tutorInviteDeclined,
+      AnalyticsEvent.tutorGrantRescinded,
+      AnalyticsEvent.tutorGrantRevoked,
+      AnalyticsEvent.tutorResigned,
+      AnalyticsEvent.tutorLiveMarkBlocked,
+      AnalyticsEvent.bulkEngagementSkipped,
+      AnalyticsEvent.lifetimeAchievementSkipped,
+    };
+    // AnalyticsEvent members with zero lib/ emitters — verified by grep,
+    // nothing to sweep. `AnalyticsEvent.tutorActionRecorded` was the sole
+    // emitter of `TutorAuditLogWriter`, deleted as dead code by
+    // AUD-tutoring-06 (see analytics_pv1_redaction_test.dart's doc comment);
+    // the catalog member is kept (Cloud Functions still write the
+    // server-side audit trail under the same name) but nothing in `lib/`
+    // fires it, so there is no live parameter shape to assert against.
+    const deadCatalogEvents = <String>{AnalyticsEvent.tutorActionRecorded};
+    // AnalyticsEvent members genuinely covered by a real PV-1 assertion in
+    // another suite — each verified by reading the cited test. A prior
+    // version of this list (~12 entries) claimed coverage that did not
+    // exist anywhere; this is the corrected, verified set.
+    const coveredByOtherSuites = <String>{
+      // test/features/tutoring/domain/services/analytics_pv1_redaction_test.dart
+      AnalyticsEvent.tutorPinSet,
+      // test/story_acceptance/epic_25_story_12_sync_decomp_part1_test.dart
+      AnalyticsEvent.syncMergeRouterHalt,
+      // test/core/sync/outbox/outbox_processor_test.dart
+      AnalyticsEvent.syncOutboxDeadLettered,
+      // test/core/sync/sync_orchestrator_test.dart
+      AnalyticsEvent.syncPullFailed,
+      AnalyticsEvent.syncListenerError,
+      AnalyticsEvent.syncPullStarted,
+      AnalyticsEvent.syncPullCompleted,
+      // test/core/sync/sync_orchestrator_test.dart (read path) +
+      // test/core/sync/outbox/outbox_processor_test.dart (write path)
+      AnalyticsEvent.syncPermissionDenied,
+      // test/core/sync/merge/drift_merge_store_test.dart
+      AnalyticsEvent.syncMergeRowSkipped,
     };
     const allConvenienceMethodEvents = <String>{
       AnalyticsEvent.appLaunch,
@@ -247,13 +507,117 @@ void main() {
       AnalyticsEvent.lifetimeAchievementSkipped,
     };
     expect(
-      {...allConvenienceMethodEvents, ...coveredByOtherSuites},
+      {
+        ...allConvenienceMethodEvents,
+        ...directCallSiteEvents,
+        ...coveredByOtherSuites,
+        ...deadCatalogEvents,
+      },
       fullCatalog,
       reason:
           'a NEW AnalyticsEvent catalog member exists that is neither '
-          'exercised by this PV-1 sweep nor accounted for in '
-          'coveredByOtherSuites — every event must have a documented PV-1 '
-          'review, not silently fall through both lists.',
+          'exercised by this PV-1 sweep (convenience-method or '
+          'direct-call-site), nor accounted for in coveredByOtherSuites or '
+          'deadCatalogEvents — every event must have a documented PV-1 '
+          'review, not silently fall through every list.',
     );
   });
+}
+
+// ── Fakes for the direct call-site sweep ─────────────────────────────────
+
+/// Minimal [TutorGrantRepository] stub — every mutation "succeeds" with a
+/// fixed grant id, regardless of input, so the use case's own precondition
+/// guards decide which path runs. List methods are unused by this sweep.
+class _FakeTutorGrantRepository implements TutorGrantRepository {
+  @override
+  Future<TutorGrantResult> inviteTutor({
+    required String tutorEmail,
+    required String childProfileId,
+    required TutorPermissions permissions,
+    String? childName,
+    String? parentName,
+  }) async => const TutorGrantSuccess(grantId: 'grant-1');
+
+  @override
+  Future<TutorGrantResult> acceptInvite({required String grantId}) async =>
+      const TutorGrantSuccess(grantId: 'grant-1');
+
+  @override
+  Future<TutorGrantResult> declineInvite({required String grantId}) async =>
+      const TutorGrantSuccess(grantId: 'grant-1');
+
+  @override
+  Future<TutorGrantResult> rescindInvite({required String grantId}) async =>
+      const TutorGrantSuccess(grantId: 'grant-1');
+
+  @override
+  Future<TutorGrantResult> revokeGrant({required String grantId}) async =>
+      const TutorGrantSuccess(grantId: 'grant-1');
+
+  @override
+  Future<TutorGrantResult> resignGrant({required String grantId}) async =>
+      const TutorGrantSuccess(grantId: 'grant-1');
+
+  @override
+  Future<List<TutorGrant>> listIncomingGrants() async => [];
+
+  @override
+  Future<({List<TutorGrant> grants, bool ok})>
+  listIncomingGrantsWithStatus() async => (grants: <TutorGrant>[], ok: true);
+
+  @override
+  Future<List<TutorGrant>> listOutgoingGrants({
+    required String childProfileId,
+  }) async => [];
+
+  @override
+  Future<List<TutorGrant>> listPendingInvitesForMe() async => [];
+}
+
+/// Minimal [CompletionRepository] stub — [MarkCompletionUseCase] fires its
+/// analytics BEFORE delegating here, so the returned result only needs to
+/// satisfy the return type.
+class _FakeCompletionRepository implements CompletionRepository {
+  @override
+  Future<MarkCompletionResult> markComplete(
+    CompletionRequest request, {
+    bool awardGamificationPoints = true,
+    bool creditsAchievement = true,
+  }) async => MarkCompletionResult(
+    completion: Completion(
+      id: 1,
+      profileId: 1,
+      curriculumId: request.curriculumId,
+      sefariaRef: request.sefariaRef,
+      stageId: request.stageId,
+      trackType: request.trackType,
+      trackId: 1,
+      completedAt: DateTime.utc(2026, 5, 1),
+      points: 0,
+    ),
+  );
+
+  @override
+  Future<List<Completion>> bulkMarkComplete(
+    BulkCompletionRequest request,
+  ) async => [];
+
+  @override
+  Future<List<Completion>> getCompletionsByCurriculum(
+    String curriculumId, {
+    int? profileId,
+  }) async => [];
+
+  @override
+  Future<List<Completion>> getCompletionsForContentItem(
+    String sefariaRef,
+  ) async => [];
+
+  @override
+  Future<bool> isStageCompleted({
+    required String sefariaRef,
+    required int stageId,
+    required String trackType,
+  }) async => false;
 }

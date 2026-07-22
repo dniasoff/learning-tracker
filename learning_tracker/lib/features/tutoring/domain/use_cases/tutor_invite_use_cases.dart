@@ -53,11 +53,12 @@ class InviteTutorUseCase {
       parentName: parentName,
     );
     // W7.11: fire tutor_invite_sent on success.
+    // AUD-core-analytics-01 (PV-1): no childProfileId — a per-child
+    // identifier has no place in an uncatalogued analytics event; this
+    // event may only signal THAT an invite was sent, never for WHICH child
+    // (mirrors AnalyticsService.logPinLockedOut / logParentModeEntered).
     if (result is TutorGrantSuccess) {
-      await _analytics?.logEvent(
-        AnalyticsEvent.tutorInviteSent,
-        parameters: {'child_profile_id': childProfileId},
-      );
+      await _analytics?.logEvent(AnalyticsEvent.tutorInviteSent);
     }
     return result;
   }
