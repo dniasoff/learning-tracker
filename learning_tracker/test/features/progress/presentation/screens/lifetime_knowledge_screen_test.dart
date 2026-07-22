@@ -37,6 +37,7 @@ import 'package:learning_tracker/features/progress/presentation/screens/lifetime
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 
+import '../../../../fixtures/content_fixtures.dart';
 import '../../../../helpers/drift_memory.dart';
 
 const _profileId = 1;
@@ -165,17 +166,14 @@ ContentItem _leaf(
   String level2 = 'Berakhot',
   int sortOrder = 0,
 }) {
-  return ContentItem(
+  return ContentItemFixtures.leaf(
     curriculumId: _curriculumKey,
-    sefariaRef: ref,
-    displayNameEn: ref,
-    displayNameHe: ref,
     level1: level1,
     level2: level2,
-    level3: null,
-    level4: null,
-    isLeaf: true,
+    sefariaRef: ref,
     sortOrder: sortOrder,
+    displayNameHe: ref,
+    displayNameEn: ref,
   );
 }
 
@@ -779,17 +777,17 @@ class _AllCurriculumFakeRepo extends Fake implements ContentRepository {
     // per-curriculum content, only on provider call-count behaviour.
     return _leaves
         .map(
-          (l) => ContentItem(
+          (l) => ContentItemFixtures.leaf(
             curriculumId: curriculumId.storageKey,
-            sefariaRef: l.sefariaRef,
-            displayNameEn: l.displayNameEn,
-            displayNameHe: l.displayNameHe,
             level1: l.level1,
             level2: l.level2,
             level3: l.level3,
             level4: l.level4,
-            isLeaf: l.isLeaf,
+            sefariaRef: l.sefariaRef,
             sortOrder: l.sortOrder,
+            displayNameHe: l.displayNameHe,
+            displayNameEn: l.displayNameEn,
+            isLeaf: l.isLeaf,
           ),
         )
         .toList();

@@ -4,6 +4,8 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/features/progress/domain/services/lifetime_tree_builder.dart';
 
+import '../../../../fixtures/content_fixtures.dart';
+
 /// Composite-curriculum (Tanach = Chumash + Nach) lifetime-credit invariant.
 ///
 /// Tanach is assembled at runtime: each Chumash book is re-parented under a
@@ -21,16 +23,13 @@ ContentItem _chumashLeaf(
   required String perek,
   required String pasuk,
   int sortOrder = 0,
-}) => ContentItem(
+}) => ContentItemFixtures.leaf(
   curriculumId: 'chumash',
   level1: sefer,
   level2: perek,
   level3: pasuk,
-  displayNameHe: '',
-  displayNameEn: '',
   sefariaRef: sefariaRef,
   sortOrder: sortOrder,
-  isLeaf: true,
 );
 
 // Tanach leaf (Chumash item remapped): level1 = 'Torah', level2 = sefer,
@@ -41,39 +40,25 @@ ContentItem _tanachTorahLeaf(
   required String perek,
   required String pasuk,
   int sortOrder = 0,
-}) => ContentItem(
+}) => ContentItemFixtures.leaf(
   curriculumId: 'tanach',
   level1: 'Torah',
   level2: sefer,
   level3: perek,
   level4: pasuk,
-  displayNameHe: '',
-  displayNameEn: '',
   sefariaRef: sefariaRef,
   sortOrder: sortOrder,
-  isLeaf: true,
 );
 
 LearningLedgerData _ledger({
   required String curriculumId,
   required String entryScope,
   required String unitIdentifier,
-}) => LearningLedgerData(
-  id: 0,
-  profileId: 1,
-  ulid: '',
+}) => LedgerFixtures.scopeMark(
   curriculumId: curriculumId,
   entryScope: entryScope,
   unitIdentifier: unitIdentifier,
-  unitDisplayNameHe: '',
-  unitDisplayNameEn: '',
-  trackType: 'personal',
-  trackId: null,
-  completedAt: DateTime.utc(2026, 1, 1),
-  completionNumber: 1,
-  markedBy: 1,
   isManual: true,
-  createdAt: DateTime.utc(2026, 1, 1),
 );
 
 void main() {

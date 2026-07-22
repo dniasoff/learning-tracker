@@ -16,21 +16,22 @@ import 'package:learning_tracker/core/content/content_grouping.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 
+import '../../fixtures/content_fixtures.dart';
+
 ContentItem _leaf({
   required String level3,
   required String level4,
   required int sortOrder,
-}) => ContentItem(
+}) => ContentItemFixtures.leaf(
   curriculumId: 'mishnayos',
   level1: 'Seder Zeraim',
   level2: 'Berachos',
   level3: level3,
   level4: level4,
-  displayNameHe: 'משנה $level3:$level4',
-  displayNameEn: 'Mishnah $level3:$level4',
   sefariaRef: 'Mishnah Berakhot $level3.$level4',
   sortOrder: sortOrder,
-  isLeaf: true,
+  displayNameHe: 'משנה $level3:$level4',
+  displayNameEn: 'Mishnah $level3:$level4',
 );
 
 void main() {

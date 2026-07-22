@@ -4,6 +4,8 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/features/progress/domain/services/lifetime_tree_builder.dart';
 
+import '../../../../fixtures/content_fixtures.dart';
+
 ContentItem _leaf(
   String sefariaRef, {
   required String level1,
@@ -11,38 +13,23 @@ ContentItem _leaf(
   required String level3,
   String? level4,
   int sortOrder = 0,
-}) => ContentItem(
+}) => ContentItemFixtures.leaf(
   curriculumId: 'bavli',
   level1: level1,
   level2: level2,
   level3: level3,
   level4: level4,
-  displayNameHe: '',
-  displayNameEn: '',
   sefariaRef: sefariaRef,
   sortOrder: sortOrder,
-  isLeaf: true,
 );
 
 LearningLedgerData _ledger({
   required String entryScope,
   required String unitIdentifier,
-}) => LearningLedgerData(
-  id: 0,
-  profileId: 1,
-  ulid: '',
+}) => LedgerFixtures.scopeMark(
   curriculumId: 'bavli',
   entryScope: entryScope,
   unitIdentifier: unitIdentifier,
-  unitDisplayNameHe: '',
-  unitDisplayNameEn: '',
-  trackType: 'personal',
-  trackId: null,
-  completedAt: DateTime.utc(2026, 1, 1),
-  completionNumber: 1,
-  markedBy: 1,
-  isManual: false,
-  createdAt: DateTime.utc(2026, 1, 1),
 );
 
 void main() {

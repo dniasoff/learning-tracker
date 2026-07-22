@@ -36,6 +36,7 @@ import 'package:learning_tracker/features/tracks/stages/domain/repositories/stag
 import 'package:learning_tracker/features/tracks/stages/presentation/providers/stage_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
+import '../../../../fixtures/content_fixtures.dart';
 import '../../../../helpers/drift_memory.dart';
 
 const _profileId = 1;
@@ -145,17 +146,14 @@ ContentItem _leaf(
   String level1 = 'Zeraim',
   String level2 = 'Berakhot',
   int sortOrder = 0,
-}) => ContentItem(
+}) => ContentItemFixtures.leaf(
   curriculumId: _curriculumKey,
-  sefariaRef: ref,
-  displayNameEn: ref,
-  displayNameHe: ref,
   level1: level1,
   level2: level2,
-  level3: null,
-  level4: null,
-  isLeaf: true,
+  sefariaRef: ref,
   sortOrder: sortOrder,
+  displayNameHe: ref,
+  displayNameEn: ref,
 );
 
 Future<void> _seedCompletion(

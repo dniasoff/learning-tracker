@@ -33,6 +33,7 @@ import 'package:learning_tracker/features/onboarding/domain/services/bulk_prior_
 import 'package:learning_tracker/features/tracks/stages/data/repositories/stage_definition_repository_impl.dart';
 import 'package:mocktail/mocktail.dart';
 
+import '../fixtures/content_fixtures.dart';
 import '../helpers/fake_clock.dart';
 
 // ── Minimal stubs ────────────────────────────────────────────────────────────
@@ -137,14 +138,13 @@ Future<void> _insertPriorMark(
       );
 }
 
-ContentItem _leaf(String ref, int sortOrder) => ContentItem(
+ContentItem _leaf(String ref, int sortOrder) => ContentItemFixtures.leaf(
   curriculumId: 'mishnayos',
   level1: 'Zeraim',
-  displayNameHe: ref,
-  displayNameEn: ref,
   sefariaRef: ref,
   sortOrder: sortOrder,
-  isLeaf: true,
+  displayNameHe: ref,
+  displayNameEn: ref,
 );
 
 /// Seeds a minimal account + learner profile + curriculum track.
@@ -746,14 +746,13 @@ void main() {
       String ref,
       int sortOrder,
       String curriculumId,
-    ) => ContentItem(
+    ) => ContentItemFixtures.leaf(
       curriculumId: curriculumId,
       level1: 'Zeraim',
-      displayNameHe: ref,
-      displayNameEn: ref,
       sefariaRef: ref,
       sortOrder: sortOrder,
-      isLeaf: true,
+      displayNameHe: ref,
+      displayNameEn: ref,
     );
 
     test(

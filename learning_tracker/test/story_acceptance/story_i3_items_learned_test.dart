@@ -25,6 +25,7 @@ import 'package:learning_tracker/features/content_browsing/domain/repositories/c
 import 'package:learning_tracker/features/progress/presentation/providers/items_learned_providers.dart';
 import 'package:mocktail/mocktail.dart';
 
+import '../fixtures/content_fixtures.dart';
 import '../helpers/drift_memory.dart';
 import '../helpers/test_database.dart';
 
@@ -85,17 +86,14 @@ ContentItem _leaf(
   String? level2 = 'Berakhot',
   int sortOrder = 0,
 }) {
-  return ContentItem(
+  return ContentItemFixtures.leaf(
     curriculumId: CurriculumId.mishnayos.storageKey,
-    sefariaRef: ref,
-    displayNameEn: ref,
-    displayNameHe: ref,
     level1: level1,
     level2: level2,
-    level3: null,
-    level4: null,
-    isLeaf: true,
+    sefariaRef: ref,
     sortOrder: sortOrder,
+    displayNameHe: ref,
+    displayNameEn: ref,
   );
 }
 
