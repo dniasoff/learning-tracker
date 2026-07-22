@@ -90,9 +90,9 @@ export LD_LIBRARY_PATH="$HOME/.local/lib/sqliteshim:$LD_LIBRARY_PATH"   # Drift 
 | Surface | State | Owner / branch | Evidence when GREEN |
 |---|:--:|---|---|
 | R1 Child-data integrity | 🟢 | dev `ca4bd912` (+merge); red-demo `red-demos/R1-collision-scope-id.md` | **REASSURED** — property/collision sweep (20 tests, all 9 curricula) + factory consolidation; red-demoed (naive keying → 18/20 fail w/ authentic over-count); `make ci` green (10,197 pass). |
-| R2 Device-reality (RTL/overflow, API 9–16) | 🔴 | run-8 baseline done → A1.4/A1.5 | en+he golden matrix + RTL harness + multi-device on-device run. **run-8 found:** Hebrew-Terms toggle vanishes in Hebrew UI; unmirrored chevrons (tablet); wizard CTA truncation "Mark Complet…". |
+| R2 Device-reality (RTL/overflow, API 9–16) | 🟠 (2 fixes merged, ci gating) | dev `487c46e8` | wizard CTA truncation (FittedBox) + RTL chevron double-flip — both merged + red-demoed, ci gating. **Hebrew-Terms toggle finding = FALSE POSITIVE** (hiding it under he-UI is INTENTIONAL — Daniel's commit c8569b6c "issue-7bcd: hide Hebrew Terms tile when locale is Hebrew", enforced by test E2E-922); fix reverted, branch `reassurance/f-hebrew-terms-toggle` kept unmerged. Remaining for 🟢: en+he golden matrix + RTL harness. |
 | **R8 Memory/perf on low-end devices (NEW, from run-8)** | 🟠 (Part A landed) | dev (merged, ci gating) | **Part A DONE + red-demoed:** items-learned aggregates now materialize ONLY curricula with completions (1-track user: 1 not 9) — fixes the common Learn-tab crash. Added `countLeavesForCurriculum` (transient, non-caching) + equivalence test. **Part B DEFERRED (correctly):** the header "X / 70,033" denominator = `\|union(all leaf refs)\|` (70,033) ≠ per-curriculum count-sum (93,395; Chumash/Nach ⊂ Tanach) — a naive count-sum would change the total, so the union-aware count path is a separate follow-up. Until Part B, the Dashboard/Lifetime-Knowledge denominator still loads all 9 → residual OOM risk there. |
-| R3 Parent-PIN / privacy | 🔴 | Phase 3 (not started) | on-device nav-guard timing + de-tautologized guards + invariants. **run-8 found:** PIN keypad drops fast taps → false "PINs do not match" (5560). |
+| R3 Parent-PIN / privacy | 🟠 (keypad fix merged, ci gating) | dev `487c46e8` | PIN keypad tap-drop FIXED + red-demoed (onTap→onTapDown, drift-immune; was dropping fast taps → false "PINs do not match"). Remaining for 🟢: on-device nav-guard timing + de-tautologized guards + privacy invariants (Phase 3). |
 | R4 Sync / cloud / rules | 🟠 | Phase 2 (not started) | rules matrix + on-device real-Firestore round-trip + convert path |
 | R5 Reactivity | 🔴 | Phase 1 A1.6 (not started) | `expectRebuildsOn` contract adopted, red-demoed |
 | R6 Gate & flake trust | 🟠 | Phase 4 (not started) | flake policy + risk-tier coverage + device-in-CI, red-demoed |
@@ -114,7 +114,7 @@ Phases 2–5 NOT STARTED.
 | `wf_200850b5-faa` | wczsy20x3 | Run-8 on-device 6-device audit (Phase 0/A0.1) | `docs/test-artifacts/device-audit-run8/_REPORT.md` + `findings_<port>.md` | IN FLIGHT | `_REPORT.md` exists |
 | `wf_3055001f-e0f` | w9va7ojn4 | Phase 1/R1 collision fixture + factory consolidation | branches merged to dev; red-demo `docs/test-artifacts/red-demos/R1-collision-scope-id.md` | ✅ DONE (verified) | committed on dev; `make ci` gate `b2um978z3` in flight |
 
-| `wf_47388ca2-54d` | wnk1k4la0 | Run-8 findings fix wave: R2 (Hebrew-Terms toggle, wizard CTA truncation, RTL chevron) + R3 (PIN keypad taps) + bulk-mark rollup gap | branches `reassurance/f-*` | IN FLIGHT | `git branch \| grep reassurance/f-` |
+| `wf_47388ca2-54d` | wnk1k4la0 | Run-8 findings fix wave (5 built) | 4 MERGED to dev `487c46e8` (wizard-cta, rtl-chevron, pin-keypad, bulk-mark-rollup); Hebrew-Terms DROPPED (false positive) | ✅ DONE; `make ci` gate in flight (READ LOG) | `git log --grep=run-8 --oneline` |
 
 Workflow scripts (for relaunch) are auto-persisted under
 `~/.claude/projects/<proj>/*/workflows/scripts/` (name-matched: `ondevice-audit-run8-*.js`,
@@ -190,6 +190,18 @@ Workflow scripts (for relaunch) are auto-persisted under
   green → pushed `a1b04eb5`. **LESSON (now standing rule): after any backgrounded
   `make ci`, READ THE LOG for "All tests passed"/"Some tests failed" — NEVER trust the
   task-notification exit code (it's the wrapper). Verify BEFORE pushing.**
+- **2026-07-22 ~06:20** — **Run-8 findings wave: 4 fixes merged, 1 dropped as false
+  positive.** Kept (dev `487c46e8`, red-demoed): wizard step-7 CTA truncation (FittedBox);
+  RTL chevron double-flip (both chevron icons already matchTextDirection → use plain
+  chevron_right at 3 sites); PIN keypad onTap→onTapDown (drift-immune); bulk-mark rollup
+  (Recent Activity All-Time UTC-vs-local-midnight clamp; PROVED Lifetime-Knowledge header
+  already rolls up → no risky change, R1 untouched). **DROPPED — Hebrew-Terms toggle: the
+  first `make ci` (5-merge) failed ONLY on E2E-922; investigation showed hiding the tile
+  under he-UI is INTENTIONAL (Daniel's c8569b6c, test E2E-922) — a run-8 auditor false
+  positive. Reset to last-green, re-merged the 4.** LESSON: on-device "common-sense"
+  findings must be checked against deliberate design/tests before fixing — added to the
+  campaign's fix protocol. (Second near-miss avoided by READING THE CI LOG, not the
+  wrapper exit code.) → make ci gating the 4; push only on green-in-log.
 - *(next entries appended as waves land.)*
 
 ---
