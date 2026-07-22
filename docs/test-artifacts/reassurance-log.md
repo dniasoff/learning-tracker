@@ -178,6 +178,16 @@ Workflow scripts (for relaunch) are auto-persisted under
   UNDER-count vs the over-count R1 guards).
 - **NEXT:** fix R8 P0 (bounded/lazy curricula load + constrained-heap red-demo), then
   Phase-1 remaining (R2 golden+RTL, R5 reactivity, R7 de-tautologize).
+- **2026-07-22 ~06:00** — **R8 Part A GREEN on dev (`a1b04eb5`).** Merged + red-demoed
+  + pushed. INCIDENT + fix (recorded honestly): first push (`ff08f438`) went RED — I
+  misread a backgrounded `make ci; echo EXIT=$?` wrapper's "exit 0" as ci passing; ci
+  had 6 failures. Root cause was NOT a bug: the new R8 red-demo test tripped the TQ-6
+  in-memory-db-close guardrail (used `late db; db = inMemoryDb()` + separate tearDown;
+  the checker only recognizes `final x = inMemoryDb()` + in-scope `addTearDown`).
+  Restructured to the sanctioned form → `make audit` clean (67/67) → audit self-tests
+  green → pushed `a1b04eb5`. **LESSON (now standing rule): after any backgrounded
+  `make ci`, READ THE LOG for "All tests passed"/"Some tests failed" — NEVER trust the
+  task-notification exit code (it's the wrapper). Verify BEFORE pushing.**
 - *(next entries appended as waves land.)*
 
 ---
