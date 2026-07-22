@@ -595,7 +595,23 @@ class ChartDataService {
       final d = _extractLocalDate(c.completedAt);
       if (d.isBefore(earliest)) earliest = d;
     }
-    return earliest.isBefore(requestedStart) ? requestedStart : earliest;
+    // Clamp the effective start to the requested floor as a LOCAL date.
+    //
+    // `earliest` is a local-midnight date (via [_extractLocalDate]) and the
+    // downstream bucketizers key every completion on its local-midnight date
+    // too. But the "All time" range's floor ([kChartAllTimeFloor]) is a
+    // UTC-midnight instant. In a positive-offset timezone a completion's
+    // local-midnight date is an instant slightly BEFORE UTC midnight, so
+    // clamping to the raw UTC `requestedStart` would push `effectiveStart`
+    // one notch past that date — and the weekly bucket loop
+    // (`!date.isBefore(bucketStart)`) then silently drops it. That erased
+    // sentinel-dated (2000-01-01) bulk-mark completions from the All-time
+    // limud/chazara and cumulative feeds even though the tier includes them.
+    // Normalizing the floor to its local date keeps both sides of the compare
+    // in one representation. (Finite windows return `requestedStart` verbatim
+    // above, before this line, so they are unaffected.)
+    final floor = _extractLocalDate(requestedStart);
+    return earliest.isBefore(floor) ? floor : earliest;
   }
 
   static DateTime _extractLocalDate(DateTime dt) {
