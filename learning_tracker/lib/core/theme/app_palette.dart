@@ -19,7 +19,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 ///   * give it a SEMANTIC name (what it means, not where it is used);
 ///   * supply BOTH a light and a dark value on the same line;
 ///   * foreground tokens must clear 4.5:1 against their paired surface in
-///     BOTH modes (`test/theme/palette_contrast_test.dart` enforces this).
+///     BOTH modes (`test/core/theme/app_palette_test.dart` enforces this).
 @immutable
 class AppPalette extends ThemeExtension<AppPalette> {
   const AppPalette({required this.brightness});

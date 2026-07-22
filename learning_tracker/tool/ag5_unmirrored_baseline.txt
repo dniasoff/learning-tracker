@@ -146,7 +146,6 @@ lib/core/sync/tutored_listener_source.dart
 lib/core/sync/tutored_listener_supervisor.dart
 lib/core/sync/tutored_mirror_wipe_service.dart
 lib/core/sync/tutored_pull_service.dart
-lib/core/theme/app_colors.dart
 lib/core/theme/app_theme.dart
 lib/core/time/local_day_clock.dart
 lib/core/time/ulid.dart
