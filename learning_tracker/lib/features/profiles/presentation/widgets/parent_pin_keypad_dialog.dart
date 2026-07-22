@@ -501,7 +501,20 @@ class _KeypadChip extends StatelessWidget {
       borderRadius: BorderRadius.circular(999),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: onTap,
+        // Register the key on tap-DOWN, not tap-up. `InkWell.onTap` only fires
+        // when the pointer lifts within `kTouchSlop` (~18 logical px) of where
+        // it landed; a fast keypad press on a real device routinely drifts past
+        // that, so `onTap` silently rejects it (the tap recognizer treats the
+        // drift as a drag) and the digit is dropped. On the Set/Confirm parent-
+        // PIN keypad that surfaced as a false "PINs do not match" — the user's
+        // first entry lost a digit, so the confirm entry could never match
+        // (device-audit run-8, R3/input, device 5560). Firing on tap-down makes
+        // each press drift-immune, the way a hardware/dialer keypad behaves,
+        // while `InkWell` still owns the splash + enabled lifecycle (its
+        // internal tap recognizer is wired whenever any tap callback — here
+        // `onTapDown` — is non-null). `onTapDown: null` when [onTap] is null
+        // keeps the busy/lockout disable behaviour identical.
+        onTapDown: onTap == null ? null : (_) => onTap!(),
         borderRadius: BorderRadius.circular(999),
         child: SizedBox(height: 52, child: Center(child: child)),
       ),
