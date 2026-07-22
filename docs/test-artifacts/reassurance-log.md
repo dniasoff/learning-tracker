@@ -87,6 +87,12 @@ export LD_LIBRARY_PATH="$HOME/.local/lib/sqliteshim:$LD_LIBRARY_PATH"   # Drift 
 - GOTCHA: a killed emulator leaves \`~/.android/avd/<avd>.avd/multiinstance.lock\` **and** a live \`qemu-system-…-headless\` process; the next launch dies with *"Another emulator instance is running."* → kill the stale pid, \`rm\` the lock, relaunch.
 - GOTCHA: launching an AVD that is genuinely already running needs \`-read-only\`.
 - GOTCHA: emulator launches issued from a Bash tool call get killed along with the shell (exit 144). Use \`setsid … </dev/null >log 2>&1 & disown\` plus a short in-call \`sleep\`, and **verify the log file exists** before believing it launched.
+- ⚠️ **Beware inflating the ENVIRONMENT count with your own recovery loop.** In run-10 the raw tally looked alarming (5556 ×4, 5558 ×2, 5562 ×2, 5564 repeatedly), but on inspection the causes were mixed and partly self-inflicted:
+  - genuine unattributed deaths while agents drove UI under load — the real signal;
+  - **failed relaunches** (exit-144) that silently never started, leaving a device "down" for several monitor cycles and counted repeatedly;
+  - **my own \`pkill\` landing on an instance that was mid-boot**, which produces a *graceful-shutdown* signature in the emulator log (\`Saving snapshot …\` → \`stop: Not implemented\` → \`removeAll\`) — clearly distinguishable from a crash;
+  - agents recovering their own device per protocol (shows as \`Failed to load snapshot\` → cold boot).
+  **Read the emulator log tail before counting a death**, and distinguish those four signatures. A restart you caused is not evidence about the app or the host. Also note deaths continued at load ~11-19, so "host contention" alone does not explain all of them — leave the unattributed ones honestly unattributed.
 
 **Known operational facts (learned this campaign):**
 - 6 concurrent emulators driven through one adb server **flap** under load (not
