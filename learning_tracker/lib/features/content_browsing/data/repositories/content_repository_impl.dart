@@ -17,7 +17,8 @@ import 'package:learning_tracker/features/content_browsing/domain/strategies/com
 /// and caches in memory. All operations are synchronous after initial load.
 ///
 /// Assets are at: assets/content/hierarchy/{curriculum_id}.json
-class ContentRepositoryImpl implements ContentRepository {
+class ContentRepositoryImpl
+    implements ContentRepository, LifetimeUnionLeafSource {
   /// Cache of loaded content, keyed by curriculum storage key.
   final _contentCache = <String, List<ContentItem>>{};
 
@@ -130,11 +131,13 @@ class ContentRepositoryImpl implements ContentRepository {
   ///   countLeavesForCurriculum(c)
   ///     == (await getContentForCurriculum(c)).where((i) => i.isLeaf).length
   ///
-  /// NOTE: intentionally NOT on the [ContentRepository] interface yet —
-  /// promoting it would force ~16 plain `implements ContentRepository` test
-  /// doubles to implement it. It is added here (and consumed via the concrete
-  /// type) pending the deferred Lifetime-header denominator rewiring; see the
-  /// note in lifetime_knowledge_providers.dart.
+  /// NOTE: intentionally NOT on the [ContentRepository] interface — promoting
+  /// it would force ~16 plain `implements ContentRepository` test doubles to
+  /// implement it. Not currently wired into a provider: the R8 Part B header
+  /// denominator needed leaf-level (`level1`-`level4`) data (for ledger
+  /// scope-mark matching), not just a count, so it uses the sibling
+  /// [loadLeavesTransient] (via the [LifetimeUnionLeafSource] capability)
+  /// instead. Kept for its own equivalence-tested count-only use case.
   Future<int> countLeavesForCurriculum(CurriculumId curriculumId) async {
     final key = curriculumId.storageKey;
 
@@ -180,6 +183,99 @@ class ContentRepositoryImpl implements ContentRepository {
       // Exceptions fold into ContentLoadException.
       throw ContentLoadException(
         'Failed to count leaves for ${curriculumId.displayNameEn}',
+        cause: e,
+      );
+    }
+  }
+
+  /// Returns the LEAF [ContentItem]s for [curriculumId] WITHOUT permanently
+  /// retaining them in [_contentCache] and WITHOUT constructing any
+  /// container (non-leaf) rows at all.
+  ///
+  /// R8 Part B: [lifetimeTotalsAcrossAllCurriculaProvider] (the Lifetime
+  /// Knowledge / Dashboard header "X / N sections" total) needs, for EVERY
+  /// curriculum, the leaf `sefariaRef`s (for the union total) plus the leaf
+  /// `level1`-`level4` fields (so ledger scope-marks can be matched via
+  /// [LifetimeTreeBuilder.computeLearnedLeafRefs]). Routing that through
+  /// [getContentForCurriculum] would force-load and PERMANENTLY cache every
+  /// curriculum's full (leaf + container) hierarchy — the R8 OOM driver, since
+  /// nothing ever evicts [_contentCache]. This method returns only the leaves,
+  /// and only ever reads from (never writes to) [_contentCache] — so, absent
+  /// some OTHER caller warming a curriculum, computing the header total does
+  /// not grow the permanent cache at all.
+  ///
+  /// INVARIANT: for every [CurriculumId] and cache state,
+  ///   `(await loadLeavesTransient(c)).map((i) => i.sefariaRef).toSet()`
+  ///   `== (await getContentForCurriculum(c)).where((i) => i.isLeaf)`
+  ///   `      .map((i) => i.sefariaRef).toSet()`
+  /// (asserted by the equivalence test alongside [countLeavesForCurriculum]'s).
+  @override
+  Future<List<ContentItem>> loadLeavesTransient(
+    CurriculumId curriculumId,
+  ) async {
+    final key = curriculumId.storageKey;
+
+    // Already materialized (by some other caller) → read straight from the
+    // cache; nothing new is retained.
+    final cached = _contentCache[key];
+    if (cached != null) {
+      return cached.where((i) => i.isLeaf).toList();
+    }
+
+    // Composite curricula: mirror getContentForCurriculum's assembly (same
+    // preamble + same remap), but recurse through THIS method for sources so
+    // the whole chain stays non-retaining.
+    final strategy = CompositeCurriculumStrategy.forKey(key);
+    if (strategy != null) {
+      final out = <ContentItem>[...strategy.preamble.where((i) => i.isLeaf)];
+      for (final source in strategy.sources) {
+        final sourceId = CurriculumId.values.firstWhere(
+          (c) => c.storageKey == source,
+        );
+        final sourceLeaves = await loadLeavesTransient(sourceId);
+        out.addAll(
+          sourceLeaves.map(
+            (item) =>
+                strategy.remap(item: item, source: source, offset: out.length),
+          ),
+        );
+      }
+      return out;
+    }
+
+    // Leaf-source curriculum: parse the asset JSON transiently, constructing
+    // a ContentItem ONLY for rows with isLeaf == true — container rows are
+    // never allocated at all. Nothing is written to _contentCache.
+    try {
+      final jsonString = await loadRawContentJson(key);
+      final json = jsonDecode(jsonString) as Map<String, dynamic>;
+      final itemsJson = json['items'] as List;
+      final out = <ContentItem>[];
+      for (final itemJson in itemsJson) {
+        final item = itemJson as Map<String, dynamic>;
+        if (!(item['isLeaf'] as bool)) continue;
+        out.add(
+          ContentItem(
+            curriculumId: item['curriculumId'] as String,
+            level1: item['level1'] as String,
+            level2: item['level2'] as String?,
+            level3: item['level3'] as String?,
+            level4: item['level4'] as String?,
+            displayNameHe: item['displayNameHe'] as String,
+            displayNameEn: item['displayNameEn'] as String,
+            sefariaRef: item['sefariaRef'] as String,
+            sortOrder: item['sortOrder'] as int,
+            isLeaf: true,
+          ),
+        );
+      }
+      return out;
+    } on Exception catch (e) {
+      // Mirror getContentForCurriculum's typed catch (AUD-content_browsing-09,
+      // EH-4): a logic-bug Error propagates raw; only genuine load/parse
+      // Exceptions fold into ContentLoadException.
+      throw ContentLoadException(
+        'Failed to load leaves for ${curriculumId.displayNameEn}',
         cause: e,
       );
     }

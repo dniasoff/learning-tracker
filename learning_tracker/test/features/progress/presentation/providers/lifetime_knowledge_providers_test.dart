@@ -3,11 +3,78 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
+import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
+import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 
 import '../../../../helpers/drift_memory.dart' as db_helper;
+
+/// R8 Part B — minimal controllable [ContentRepository] fixture also
+/// implementing [LifetimeUnionLeafSource], so
+/// `lifetimeTotalsAcrossAllCurriculaProvider` takes its real (bounded)
+/// content-loading branch instead of the `_safeLoadLeaves` fallback.
+class _FakeLeafRepo implements ContentRepository, LifetimeUnionLeafSource {
+  _FakeLeafRepo(this._leaves);
+
+  final Map<CurriculumId, List<ContentItem>> _leaves;
+
+  @override
+  Future<List<ContentItem>> loadLeavesTransient(CurriculumId c) async =>
+      _leaves[c] ?? const <ContentItem>[];
+
+  @override
+  Future<List<ContentItem>> getContentForCurriculum(CurriculumId c) async =>
+      _leaves[c] ?? const <ContentItem>[];
+
+  @override
+  Future<CurriculumHierarchyConfig> getHierarchyConfig(CurriculumId c) =>
+      throw UnimplementedError();
+
+  @override
+  Future<List<ContentItem>> filterByLevel({
+    required CurriculumId curriculumId,
+    String? level1,
+    String? level2,
+    String? level3,
+    String? level4,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<List<ContentItem>> getScopedContent({
+    required CurriculumId curriculumId,
+    required int scopeLevel,
+    required List<String> scopeValues,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<List<ContentItem>> search({
+    required CurriculumId curriculumId,
+    required String query,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<ContentItem?> getContentByRef({
+    required CurriculumId curriculumId,
+    required String sefariaRef,
+  }) => throw UnimplementedError();
+}
+
+/// Builds a leaf [ContentItem] for [curriculumId] with [sefariaRef], using a
+/// fixed `level1` — sufficient for tests that only need direct-completion
+/// matching (no ledger scope marks).
+ContentItem _fakeLeaf(String curriculumId, String sefariaRef) => ContentItem(
+  curriculumId: curriculumId,
+  level1: 'L1',
+  displayNameHe: '',
+  displayNameEn: sefariaRef,
+  sefariaRef: sefariaRef,
+  sortOrder: 0,
+  isLeaf: true,
+);
 
 void main() {
   group('lifetimeDataProvider', () {
@@ -306,48 +373,69 @@ void main() {
     });
 
     // ── Provider-level: drive lifetimeTotalsAcrossAllCurriculaProvider with
-    // two fake summaries whose learnedLeafRefs share the same sefariaRef. ─────
+    // real completions (seeded on [db]) + a controllable fake content repo
+    // whose leaves share a sefariaRef across two curricula. R8 Part B: the
+    // provider no longer reads an injectable lifetimeSummariesProvider — it
+    // computes learned/total refs itself from ContentRepository + completions
+    // + ledger, so the fixture must go through those real seams instead. ────
 
     test('provider: same sefariaRef in two curriculum summaries counts ONCE in '
         'lifetimeTotalsAcrossAllCurriculaProvider', () async {
-      // Build two CurriculumLifetimeSummary objects where 'Berakhot 1a'
-      // appears in BOTH learnedLeafRefs — exactly what happens after v22
-      // when the same ref is completed under mishnayos AND bavli.
+      // 'Berakhot 1a' is a leaf in BOTH mishnayos and bavli — exactly what
+      // happens after v22 when the same ref is completed under both.
       const sharedRef = 'Berakhot 1a';
       const exclusiveMishRef = 'Berakhot 2a';
       const exclusiveBavliRef = 'Shabbat 2a';
 
-      const mishSummary = CurriculumLifetimeSummary(
-        curriculumId: CurriculumId.mishnayos,
-        learnedLeafCount: 2,
-        totalLeafCount: 3,
-        percentage: 2 / 3,
-        tree: [],
-        learnedLeafRefs: {sharedRef, exclusiveMishRef},
-        allLeafRefs: {sharedRef, exclusiveMishRef, 'Berakhot 3a'},
-      );
+      final leaves = {
+        CurriculumId.mishnayos: [
+          _fakeLeaf('mishnayos', sharedRef),
+          _fakeLeaf('mishnayos', exclusiveMishRef),
+          _fakeLeaf('mishnayos', 'Berakhot 3a'),
+        ],
+        CurriculumId.bavli: [
+          _fakeLeaf('bavli', sharedRef),
+          _fakeLeaf('bavli', exclusiveBavliRef),
+          _fakeLeaf('bavli', 'Shabbat 3a'),
+        ],
+      };
 
-      const bavliSummary = CurriculumLifetimeSummary(
-        curriculumId: CurriculumId.bavli,
-        learnedLeafCount: 2,
-        totalLeafCount: 3,
-        percentage: 2 / 3,
-        tree: [],
-        learnedLeafRefs: {sharedRef, exclusiveBavliRef},
-        allLeafRefs: {sharedRef, exclusiveBavliRef, 'Shabbat 3a'},
-      );
+      final ts = DateTime.utc(2026, 5, 19, 10);
+      for (final ref in [sharedRef, exclusiveMishRef]) {
+        await db.completionEventDao.appendEvent(
+          CompletionEventsCompanion.insert(
+            profileId: 1,
+            curriculumId: 'mishnayos',
+            sefariaRef: ref,
+            stageId: 1,
+            trackType: 'personal',
+            eventTimestamp: ts,
+          ),
+        );
+      }
+      for (final ref in [sharedRef, exclusiveBavliRef]) {
+        await db.completionEventDao.appendEvent(
+          CompletionEventsCompanion.insert(
+            profileId: 1,
+            curriculumId: 'bavli',
+            sefariaRef: ref,
+            stageId: 1,
+            trackType: 'personal',
+            eventTimestamp: ts,
+          ),
+        );
+      }
 
       final container = ProviderContainer(
         overrides: [
-          lifetimeSummariesProvider(
-            10,
-          ).overrideWith((ref) => Future.value([mishSummary, bavliSummary])),
+          userDatabaseProvider.overrideWithValue(db),
+          contentRepositoryProvider.overrideWithValue(_FakeLeafRepo(leaves)),
         ],
       );
       addTearDown(container.dispose);
 
       final totals = await container.read(
-        lifetimeTotalsAcrossAllCurriculaProvider(10).future,
+        lifetimeTotalsAcrossAllCurriculaProvider(1).future,
       );
 
       // Naive (wrong) sum would be 2 + 2 = 4; correct union = 3 distinct refs.
@@ -356,7 +444,7 @@ void main() {
         3,
         reason:
             'learnedSections must be the cardinality of the UNION of all '
-            'learnedLeafRefs ({Berakhot 1a, Berakhot 2a, Shabbat 2a} = 3), '
+            'learned refs ({Berakhot 1a, Berakhot 2a, Shabbat 2a} = 3), '
             'not the naive sum (4) — regression guard for B9',
       );
       expect(
@@ -370,29 +458,40 @@ void main() {
         totals.totalSections,
         5,
         reason:
-            'totalSections is union of allLeafRefs '
+            'totalSections is union of all leaf refs '
             '({Berakhot 1a, Berakhot 2a, Berakhot 3a, Shabbat 2a, Shabbat 3a} = 5)',
       );
     });
   });
 
   group('lifetimeTotalsAcrossAllCurriculaProvider — deduplication', () {
-    // Helpers for constructing fake summaries with explicit ref sets.
-    CurriculumLifetimeSummary fakeSummary({
-      required CurriculumId id,
-      required Set<String> allRefs,
-      required Set<String> learnedRefs,
-    }) {
-      return CurriculumLifetimeSummary(
-        curriculumId: id,
-        learnedLeafCount: learnedRefs.length,
-        totalLeafCount: allRefs.length,
-        percentage: allRefs.isEmpty ? 0.0 : learnedRefs.length / allRefs.length,
-        tree: const [],
-        allLeafRefs: allRefs,
-        learnedLeafRefs: learnedRefs,
-      );
-    }
+    // R8 Part B: the provider computes learned/total refs itself from
+    // ContentRepository + real completions (it no longer reads an
+    // injectable lifetimeSummariesProvider) — each test below seeds real
+    // completion events against a controllable fake content repo instead of
+    // injecting fake summaries directly.
+    late UserDatabase db;
+
+    setUp(() async {
+      // TQ-6: addTearDown right at the factory call (not a separate
+      // tearDown()) — see test/helpers/drift_memory.dart's doc comment.
+      final database = db_helper.inMemoryDb();
+      addTearDown(database.close);
+      db = database;
+      await db_helper.seedProfile(db); // profileId = 1
+    });
+
+    Future<void> seedLive(String curriculumId, String sefariaRef) =>
+        db.completionEventDao.appendEvent(
+          CompletionEventsCompanion.insert(
+            profileId: 1,
+            curriculumId: curriculumId,
+            sefariaRef: sefariaRef,
+            stageId: 1,
+            trackType: 'personal',
+            eventTimestamp: DateTime.utc(2026, 5, 1),
+          ),
+        );
 
     test(
       'Chumash + Tanach overlap: totals equal Tanach alone, not the naive sum',
@@ -404,28 +503,30 @@ void main() {
         //
         // Naive sum would be: learnedTotal = 2+3=5, sectionTotal = 3+5=8 — WRONG.
         // Correct union: learnedDistinct = 3, allDistinct = 5.
-
         const chumashAll = {'ref_A', 'ref_B', 'ref_C'};
         const chumashLearned = {'ref_A', 'ref_B'};
         const tanachAll = {'ref_A', 'ref_B', 'ref_C', 'ref_D', 'ref_E'};
         const tanachLearned = {'ref_A', 'ref_B', 'ref_D'};
 
-        final chumashSummary = fakeSummary(
-          id: CurriculumId.chumash,
-          allRefs: chumashAll,
-          learnedRefs: chumashLearned,
-        );
-        final tanachSummary = fakeSummary(
-          id: CurriculumId.tanach,
-          allRefs: tanachAll,
-          learnedRefs: tanachLearned,
-        );
+        final leaves = {
+          CurriculumId.chumash: chumashAll
+              .map((r) => _fakeLeaf('chumash', r))
+              .toList(),
+          CurriculumId.tanach: tanachAll
+              .map((r) => _fakeLeaf('tanach', r))
+              .toList(),
+        };
+        for (final r in chumashLearned) {
+          await seedLive('chumash', r);
+        }
+        for (final r in tanachLearned) {
+          await seedLive('tanach', r);
+        }
 
         final container = ProviderContainer(
           overrides: [
-            lifetimeSummariesProvider(1).overrideWith(
-              (ref) => Future.value([chumashSummary, tanachSummary]),
-            ),
+            userDatabaseProvider.overrideWithValue(db),
+            contentRepositoryProvider.overrideWithValue(_FakeLeafRepo(leaves)),
           ],
         );
         addTearDown(container.dispose);
@@ -434,14 +535,14 @@ void main() {
           lifetimeTotalsAcrossAllCurriculaProvider(1).future,
         );
 
-        // Union of allLeafRefs: {ref_A, ref_B, ref_C, ref_D, ref_E} = 5
+        // Union of all leaf refs: {ref_A, ref_B, ref_C, ref_D, ref_E} = 5
         expect(
           totals.totalSections,
           5,
           reason:
               'Chumash sections are a subset of Tanach; union must not double-count them',
         );
-        // Union of learnedLeafRefs: {ref_A, ref_B, ref_D} = 3
+        // Union of learned refs: {ref_A, ref_B, ref_D} = 3
         expect(
           totals.learnedSections,
           3,
@@ -467,28 +568,29 @@ void main() {
       const bavliAll = {'b_1', 'b_2', 'b_3'};
       const bavliLearned = {'b_1', 'b_2'};
 
-      final mishSummary = fakeSummary(
-        id: CurriculumId.mishnayos,
-        allRefs: mishAll,
-        learnedRefs: mishLearned,
-      );
-      final bavliSummary = fakeSummary(
-        id: CurriculumId.bavli,
-        allRefs: bavliAll,
-        learnedRefs: bavliLearned,
-      );
+      final leaves = {
+        CurriculumId.mishnayos: mishAll
+            .map((r) => _fakeLeaf('mishnayos', r))
+            .toList(),
+        CurriculumId.bavli: bavliAll.map((r) => _fakeLeaf('bavli', r)).toList(),
+      };
+      for (final r in mishLearned) {
+        await seedLive('mishnayos', r);
+      }
+      for (final r in bavliLearned) {
+        await seedLive('bavli', r);
+      }
 
       final container = ProviderContainer(
         overrides: [
-          lifetimeSummariesProvider(
-            2,
-          ).overrideWith((ref) => Future.value([mishSummary, bavliSummary])),
+          userDatabaseProvider.overrideWithValue(db),
+          contentRepositoryProvider.overrideWithValue(_FakeLeafRepo(leaves)),
         ],
       );
       addTearDown(container.dispose);
 
       final totals = await container.read(
-        lifetimeTotalsAcrossAllCurriculaProvider(2).future,
+        lifetimeTotalsAcrossAllCurriculaProvider(1).future,
       );
 
       expect(totals.totalSections, mishAll.length + bavliAll.length);
@@ -498,13 +600,14 @@ void main() {
     test('empty summaries list returns zeros', () async {
       final container = ProviderContainer(
         overrides: [
-          lifetimeSummariesProvider(3).overrideWith((ref) => Future.value([])),
+          userDatabaseProvider.overrideWithValue(db),
+          contentRepositoryProvider.overrideWithValue(_FakeLeafRepo(const {})),
         ],
       );
       addTearDown(container.dispose);
 
       final totals = await container.read(
-        lifetimeTotalsAcrossAllCurriculaProvider(3).future,
+        lifetimeTotalsAcrossAllCurriculaProvider(1).future,
       );
 
       expect(totals.totalSections, 0);
@@ -513,23 +616,25 @@ void main() {
     });
 
     test('single curriculum with no refs carries through correctly', () async {
-      final summary = fakeSummary(
-        id: CurriculumId.mishnayos,
-        allRefs: {'x', 'y', 'z'},
-        learnedRefs: {'x'},
-      );
+      final leaves = {
+        CurriculumId.mishnayos: [
+          'x',
+          'y',
+          'z',
+        ].map((r) => _fakeLeaf('mishnayos', r)).toList(),
+      };
+      await seedLive('mishnayos', 'x');
 
       final container = ProviderContainer(
         overrides: [
-          lifetimeSummariesProvider(
-            4,
-          ).overrideWith((ref) => Future.value([summary])),
+          userDatabaseProvider.overrideWithValue(db),
+          contentRepositoryProvider.overrideWithValue(_FakeLeafRepo(leaves)),
         ],
       );
       addTearDown(container.dispose);
 
       final totals = await container.read(
-        lifetimeTotalsAcrossAllCurriculaProvider(4).future,
+        lifetimeTotalsAcrossAllCurriculaProvider(1).future,
       );
 
       expect(totals.totalSections, 3);

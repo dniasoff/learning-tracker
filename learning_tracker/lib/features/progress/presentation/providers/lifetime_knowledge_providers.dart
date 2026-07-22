@@ -177,20 +177,13 @@ final lifetimeDataProvider = FutureProvider.autoDispose
       // synthetic-container level1 (and its unmark_) row here so the builder
       // never credits it; the real per-book learning still flows in via the
       // subset-ledger union below (by canonical sefariaRef).
-      final ledger =
-          (await db.learningLedgerDao.getEntriesByCurriculum(
-            profileId,
-            curriculum.storageKey,
-          )).where((e) {
-            final scope = e.entryScope.startsWith('unmark_')
-                ? e.entryScope.substring('unmark_'.length)
-                : e.entryScope;
-            if (scope != 'level1') return true;
-            return !CompositeCurriculumStrategy.isSyntheticContainerLevel1(
-              curriculum.storageKey,
-              e.unitIdentifier,
-            );
-          }).toList();
+      final ledger = _dropSyntheticContainerMarks(
+        curriculum.storageKey,
+        await db.learningLedgerDao.getEntriesByCurriculum(
+          profileId,
+          curriculum.storageKey,
+        ),
+      );
 
       // I-4: Union in completions from subset curricula so that, e.g., a ref
       // completed via a Chumash track is also credited to Tanach. Deduplication
@@ -610,40 +603,84 @@ Future<TrackDualProgressMetric?> _computeTrackDualProgressMetric({
   );
 }
 
-// R8 (OOM) — DEFERRED denominator rewiring.
+// R8 Part B — memory-bounded header/denominator rewiring.
 //
-// This header total force-materializes ALL 9 curricula (via
-// lifetimeSummariesProvider → lifetimeDataProvider → getContentForCurriculum),
-// which is the second half of the R8 OOM. The safe fix (Part A) covers the
-// items-learned / lifetime-view body aggregates; this denominator was NOT
-// rewired, on purpose:
+// This header total used to force-materialize ALL 9 curricula (via
+// lifetimeSummariesProvider → lifetimeDataProvider → getContentForCurriculum,
+// PERMANENTLY caching every curriculum's full leaf+container hierarchy) —
+// the second half of the R8 OOM. Part A fixed the items-learned / lifetime-
+// view BODY aggregates; this provider is the header/denominator fix.
 //
-//   `totalSections` here is the CARDINALITY OF THE UNION of `allLeafRefs`
-//   across all curricula — NOT a sum. Overlapping curricula share sefariaRefs
-//   (Chumash ⊂ Tanach, Nach ⊂ Tanach), so the union DEDUPS them. Measured on
-//   the real bundled assets: union = 70,033, whereas summing each curriculum's
-//   leaf count = 93,395 (a 23,362-section overlap double-count).
+// `totalSections` is the CARDINALITY OF THE UNION of `allLeafRefs` across all
+// curricula — NOT a sum. Overlapping curricula share sefariaRefs (Chumash ⊂
+// Tanach, Nach ⊂ Tanach), so the union DEDUPS them. Measured on the real
+// bundled assets: union = 70,033, whereas summing each curriculum's leaf
+// count = 93,395 (a 23,362-section overlap double-count). This provider
+// therefore still unions SETS of sefariaRefs — it just builds those sets via
+// ContentRepositoryImpl.loadLeavesTransient (transient, non-retaining, one
+// curriculum at a time) instead of via lifetimeSummariesProvider's full
+// per-curriculum tree build, so no curriculum's full content is permanently
+// cached just to compute this total.
 //
-// Therefore a scalar `ContentRepositoryImpl.countLeavesForCurriculum(c)` summed
-// over all 9 would CHANGE the displayed total by 23,362 — violating the "totals
-// must stay byte-identical" invariant. A correct memory-cheap rewrite needs a
-// leaf-REF-SET accessor (to preserve dedup) plus touched-curricula-with-
-// supersets logic for the learned union (entangled with lifetimeDataProvider's
-// subset bridging). countLeavesForCurriculum + its equivalence test are landed
-// as the foundation; the union-preserving denominator rewiring is left for a
-// follow-up so this pass does not risk the total.
+// `learnedSections` is likewise a union, but of LEARNED refs. Each
+// curriculum's learned-ref set is computed here from ONLY that curriculum's
+// OWN completions + ledger (via LifetimeTreeBuilder.computeLearnedLeafRefs)
+// — deliberately WITHOUT lifetimeDataProvider's subset-bridging (I-4 / P0)
+// step. This is sound for a GLOBAL union specifically: bridging a subset's
+// (Chumash/Nach) marks into its superset (Tanach) only ever re-adds refs
+// that the subset's OWN entry in this SAME loop already contributes (Chumash
+// and Nach have no subsets of their own, so their bridged set == their own
+// set) — Tanach-exclusive direct marks are still captured by Tanach's own
+// entry. So the union of learned(c) over all 9, computed independently,
+// equals the union of learned_FULL(c) computed with bridging. See
+// r8_partb_lifetime_totals_equivalence_test.dart for a fixture-level proof
+// against the OLD (lifetimeSummariesProvider-based) computation.
 final lifetimeTotalsAcrossAllCurriculaProvider = FutureProvider.autoDispose
     .family<LifetimeTotals, int>((ref, profileId) async {
-      final summaries = await ref.watch(
-        lifetimeSummariesProvider(profileId).future,
+      final db = ref.watch(userDatabaseProvider);
+      final repo = ref.watch(contentRepositoryProvider);
+
+      // F13-style batching: one profile-wide query each for completions and
+      // ledger entries (grouped by curriculumId) instead of one query per
+      // curriculum.
+      final completionsByCurriculum = await ref.watch(
+        completionsByProfileForLifetimeProvider(profileId).future,
       );
-      // Build union sets so that a section appearing in N curricula counts once.
+      final ledgerByCurriculum = await db.learningLedgerDao
+          .getEntriesGroupedByCurriculum(profileId);
+
+      const builder = LifetimeTreeBuilder();
       final allDistinct = <String>{};
       final learnedDistinct = <String>{};
-      for (final s in summaries) {
-        allDistinct.addAll(s.allLeafRefs);
-        learnedDistinct.addAll(s.learnedLeafRefs);
+
+      // Process ONE curriculum at a time so at most one curriculum's leaves
+      // (two, transiently, for Tanach — the only composite — while its two
+      // sources are assembled) are ever held in memory, instead of all 9
+      // curricula being permanently cached at once.
+      for (final curriculum in CurriculumId.values) {
+        final leaves = await _boundedLeavesFor(repo, curriculum);
+        if (leaves == null || leaves.isEmpty) continue;
+
+        allDistinct.addAll(leaves.map((l) => l.sefariaRef));
+
+        final key = curriculum.storageKey;
+        final completedRefs =
+            (completionsByCurriculum[key] ?? const <Completion>[])
+                .map((c) => c.sefariaRef)
+                .toSet();
+        final ledgerEntries = _dropSyntheticContainerMarks(
+          key,
+          ledgerByCurriculum[key] ?? const <LearningLedgerData>[],
+        );
+
+        final learnedRefs = builder.computeLearnedLeafRefs(
+          leaves: leaves,
+          completedRefs: completedRefs,
+          ledgerEntries: ledgerEntries,
+        );
+        learnedDistinct.addAll(learnedRefs);
       }
+
       return LifetimeTotals(
         learnedSections: learnedDistinct.length,
         totalSections: allDistinct.length,
@@ -737,6 +774,60 @@ final trackOnlyHeaderCountersProvider = FutureProvider.autoDispose
 // ---------------------------------------------------------------------------
 // Private helpers
 // ---------------------------------------------------------------------------
+
+/// Drops any ledger entry marking the SYNTHETIC container `level1` value of a
+/// composite curriculum (Tanach's 'Torah'). A blanket mark on that synthetic
+/// container would over-credit every leaf beneath it (the whole Torah from a
+/// single-book mark) — see the P0 (composite over-credit) note on
+/// [lifetimeDataProvider]. Shared by [lifetimeDataProvider] and
+/// [lifetimeTotalsAcrossAllCurriculaProvider] so both apply the identical
+/// filter. A no-op for every non-composite curriculum (`isSyntheticContainerLevel1`
+/// returns `false` when there is no registered strategy for the key).
+List<LearningLedgerData> _dropSyntheticContainerMarks(
+  String curriculumStorageKey,
+  List<LearningLedgerData> entries,
+) {
+  return entries.where((e) {
+    final scope = e.entryScope.startsWith('unmark_')
+        ? e.entryScope.substring('unmark_'.length)
+        : e.entryScope;
+    if (scope != 'level1') return true;
+    return !CompositeCurriculumStrategy.isSyntheticContainerLevel1(
+      curriculumStorageKey,
+      e.unitIdentifier,
+    );
+  }).toList();
+}
+
+/// Loads [curriculum]'s LEAF items for [lifetimeTotalsAcrossAllCurriculaProvider]
+/// without permanently retaining them, when the injected [repo] supports the
+/// [LifetimeUnionLeafSource] capability (the real [ContentRepositoryImpl] in
+/// production). Falls back to [_safeLoadLeaves] (which goes through
+/// [ContentRepository.getContentForCurriculum], filtering `isLeaf`) for test
+/// doubles that only implement the base [ContentRepository] interface — those
+/// carry no real memory risk (synthetic, tiny fixture content).
+Future<List<ContentItem>?> _boundedLeavesFor(
+  ContentRepository repo,
+  CurriculumId curriculum,
+) async {
+  if (repo is LifetimeUnionLeafSource) {
+    final leafSource = repo as LifetimeUnionLeafSource;
+    try {
+      return await leafSource.loadLeavesTransient(curriculum);
+    } catch (e, st) {
+      // F20: mirror _safeLoadLeaves's failure handling below — log and skip
+      // rather than let a bad asset take down the whole totals computation.
+      AppLogger.instance.warning(
+        event: 'lifetime_totals_bounded_load_failed',
+        fields: {'curriculum': curriculum.storageKey},
+        exception: e,
+        stackTrace: st,
+      );
+      return null;
+    }
+  }
+  return _safeLoadLeaves(repo, curriculum);
+}
 
 Future<List<ContentItem>?> _safeLoadLeaves(
   ContentRepository repo,

@@ -73,3 +73,26 @@ abstract class ContentRepository {
 class ContentLoadException extends NetworkException {
   const ContentLoadException(super.message, {super.cause});
 }
+
+/// Optional, narrow capability for loading a curriculum's LEAF items
+/// WITHOUT permanently retaining them (R8 Part B).
+///
+/// Deliberately a SEPARATE interface from [ContentRepository] — not an
+/// additional method on it — so the ~60 existing `implements
+/// ContentRepository` test doubles across the suite do not need to be
+/// touched (Dart's `implements` requires every interface member to be
+/// reimplemented by the implementer, even ones with a default body on the
+/// implemented class). Callers holding a plain [ContentRepository] should
+/// `is`-check for this capability and fall back to
+/// [ContentRepository.getContentForCurriculum] (filtering `isLeaf`) when it
+/// is absent — see `_boundedLeavesFor` in `lifetime_knowledge_providers.dart`.
+abstract class LifetimeUnionLeafSource {
+  /// Returns the LEAF [ContentItem]s for [curriculumId] only (no container
+  /// rows are even constructed) and does not force a permanent cache entry
+  /// for a curriculum that was not already materialized.
+  ///
+  /// See `ContentRepositoryImpl.loadLeavesTransient` (in
+  /// `content_repository_impl.dart`) for the memory-bound rationale and the
+  /// invariant it must satisfy relative to [ContentRepository.getContentForCurriculum].
+  Future<List<ContentItem>> loadLeavesTransient(CurriculumId curriculumId);
+}
