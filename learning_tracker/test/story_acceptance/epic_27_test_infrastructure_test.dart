@@ -62,11 +62,18 @@ void main() {
       test('createFakeFirestore(strictRules: true) pre-loads the project '
           'firestore.rules and rejects unauthenticated writes', () async {
         // Strict mode + no auth — the deny-all default match should
-        // reject any write.
+        // reject any write. `unmatched_collection` is deliberately not a
+        // real path in firestore.rules: this test is exercising the
+        // blanket default-deny (`match /{document=**} { allow read, write:
+        // if false; }`), not any specific per-collection rule, so the
+        // collection name is named to make that explicit rather than
+        // inviting a reader to think it corresponds to a real rule.
         final fake = createFakeFirestore(strictRules: true);
 
         await expectLater(
-          () => fake.collection('accounts').doc('uid_1').set({'uid': 'x'}),
+          () => fake.collection('unmatched_collection').doc('uid_1').set({
+            'uid': 'x',
+          }),
           throwsA(isA<Exception>()),
           reason:
               'firestore_fake helper must mount the real firestore.rules '
@@ -74,29 +81,53 @@ void main() {
         );
       });
 
-      test('createFakeFirestore(strictRules: true) honours request.auth.uid '
-          'on uid-scoped collections', () async {
-        // Authenticated as uid_1; the accounts/{docId} rule matches
-        // `request.auth.uid == docId`, so a write to accounts/uid_1
-        // succeeds.
+      // AUD-t-cross (R4 follow-up, run-10): this test previously targeted a
+      // fictional `accounts/{docId}` collection and its comment claimed the
+      // throw came from an unsupported `request.resource.data.hasOnly()`
+      // clause on that rule. Neither was true — `accounts` was never a real
+      // path in firestore.rules, so the throw was actually the blanket
+      // default-deny (the SAME mechanism as the test above), not evidence
+      // that request.auth.uid was "honoured" or that hasOnly() was
+      // exercised. That is exactly the tautology class this campaign exists
+      // to catch: the assertion passed, but not for the reason its name and
+      // comment claimed. Rewritten to target a REAL rule and state the true
+      // (more interesting) finding instead.
+      test('createFakeFirestore(strictRules: true) still denies the '
+          'authenticated OWNER on the simplest real owner-only rule '
+          '(users/{uid}) — a Dart-fake ceiling, not a rules bug', () async {
+        // users/{uid} in the real firestore.rules is gated ONLY by
+        // `isOwner(uid)` — no request.resource.data, no hasOnly()
+        // whitelist, nothing else. In production the authenticated
+        // owner's write succeeds. Here it still throws:
+        // fake_firebase_security_rules does not register user-defined
+        // `function` declarations (isOwner/isSignedIn/
+        // hasActiveTutorAccess) with its CEL environment at all, so the
+        // call fails evaluation and the enclosing allow clause is denied
+        // for EVERY caller, including the true owner. See
+        // test/firestore_fake_custom_functions_test.dart for the full,
+        // isolated root-cause investigation (R4, run-10) — this test
+        // only pins the corrected, real-rule version of what this file
+        // used to (incorrectly) claim.
         final fake = createFakeFirestore(
           authenticatedUid: 'uid_1',
           strictRules: true,
         );
-        // accounts/{uid} also requires `request.resource.data.keys()
-        // .hasOnly(...)` which the underlying parser does NOT support
-        // and which therefore evaluates to deny; this confirms the
-        // documented limitation rather than smoke-testing every rule.
+
         await expectLater(
-          () => fake.collection('accounts').doc('uid_1').set({
-            'uid': 'uid_1',
-            'email': 'a@b.test',
+          () => fake.collection('users').doc('uid_1').set({
+            'displayName': 'Alice',
           }),
           throwsA(isA<Exception>()),
           reason:
-              'fake_firebase_security_rules does not yet evaluate '
-              'request.resource.data — see firestore_fake.dart header. '
-              'When strict mode is on, those clauses evaluate as deny.',
+              'users/{uid} is gated ONLY by isOwner(uid) in the real '
+              'firestore.rules — no request.resource.data reference at '
+              'all — yet the fake still denies the true owner, because '
+              'isOwner() is a custom function and this dependency '
+              'version does not support custom function declarations. '
+              'If this assertion ever starts failing (the write '
+              'succeeds), a future fake_firebase_security_rules upgrade '
+              'has added function support — revisit whether a dynamic '
+              'Dart-side rules matrix has become viable.',
         );
       });
     });
