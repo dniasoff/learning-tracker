@@ -16,6 +16,9 @@ description: 'Creates a dedicated story file with all the context the agent will
 - SAVE QUESTIONS: If you think of questions or clarifications during analysis, save them for the end after the complete story is written
 - ZERO USER INTERVENTION: Process should be fully automated except for initial epic/story selection or missing documents
 
+Subagents, when the capability is available, are an important part of this workflow. Use them as directed by the workflow steps.
+If you need an explicit user instruction to run them, ask once now for the whole workflow run.
+
 ## Conventions
 
 - Bare paths (e.g. `discover-inputs.md`) resolve from the skill root.
@@ -165,15 +168,8 @@ Activation is complete. If `activation_steps_prepend` or `activation_steps_appen
     <action>Check if this is the first story in epic {{epic_num}} by looking for {{epic_num}}-1-* pattern</action>
     <check if="this is first story in epic {{epic_num}}">
       <action>Load {{sprint_status}} and check epic-{{epic_num}} status</action>
-      <check if="{workflow.tracking_system}=='file-system'">
-        <!-- bmad-linear-patch v0.2.0 -->
-        <action>If epic status is "backlog" → update to "in-progress"</action>
-        <action>If epic status is "contexted" (legacy status) → update to "in-progress" (backward compatibility)</action>
-      </check>
-      <check if="{workflow.tracking_system}!='file-system'">
-        <!-- bmad-linear-patch v0.2.0 -->
-        <action>Defer to {workflow.tracking_adapter} for epic status updates.</action>
-      </check>
+      <action>If epic status is "backlog" → update to "in-progress"</action>
+      <action>If epic status is "contexted" (legacy status) → update to "in-progress" (backward compatibility)</action>
       <action>If epic status is "in-progress" → no change needed</action>
       <check if="epic status is 'done'">
         <output>🚫 ERROR: Cannot create story in completed epic</output>
@@ -229,15 +225,8 @@ Activation is complete. If `activation_steps_prepend` or `activation_steps_appen
   <action>Check if this is the first story in epic {{epic_num}} by looking for {{epic_num}}-1-* pattern</action>
   <check if="this is first story in epic {{epic_num}}">
     <action>Load {{sprint_status}} and check epic-{{epic_num}} status</action>
-    <check if="{workflow.tracking_system}=='file-system'">
-      <!-- bmad-linear-patch v0.2.0 -->
-      <action>If epic status is "backlog" → update to "in-progress"</action>
-      <action>If epic status is "contexted" (legacy status) → update to "in-progress" (backward compatibility)</action>
-    </check>
-    <check if="{workflow.tracking_system}!='file-system'">
-      <!-- bmad-linear-patch v0.2.0 -->
-      <action>Defer to {workflow.tracking_adapter} for epic status updates.</action>
-    </check>
+    <action>If epic status is "backlog" → update to "in-progress"</action>
+    <action>If epic status is "contexted" (legacy status) → update to "in-progress" (backward compatibility)</action>
     <action>If epic status is "in-progress" → no change needed</action>
     <check if="epic status is 'done'">
       <output>ERROR: Cannot create story in completed epic</output>
@@ -355,128 +344,69 @@ Activation is complete. If `activation_steps_prepend` or `activation_steps_appen
 <step n="5" goal="Create comprehensive story file">
   <critical>📝 CREATE ULTIMATE STORY FILE - The developer's master implementation guide!</critical>
 
-  <check if="{workflow.tracking_system}=='file-system'">
-    <!-- bmad-linear-patch v0.2.0 -->
-    <action>Initialize from template.md:
+  <action>Initialize from template.md:
   {default_output_file}</action>
-    <template-output file="{default_output_file}">story_header</template-output>
+  <template-output file="{default_output_file}">story_header</template-output>
 
-    <!-- Story foundation from epics analysis -->
-    <template-output
-      file="{default_output_file}">story_requirements</template-output>
+  <!-- Story foundation from epics analysis -->
+  <template-output
+    file="{default_output_file}">story_requirements</template-output>
 
-    <!-- Developer context section - MOST IMPORTANT PART -->
-    <template-output file="{default_output_file}">
+  <!-- Developer context section - MOST IMPORTANT PART -->
+  <template-output file="{default_output_file}">
   developer_context_section</template-output> **DEV AGENT GUARDRAILS:** <template-output file="{default_output_file}">
   technical_requirements</template-output>
-    <template-output file="{default_output_file}">architecture_compliance</template-output>
-    <template-output
-      file="{default_output_file}">library_framework_requirements</template-output>
-    <template-output file="{default_output_file}">
+  <template-output file="{default_output_file}">architecture_compliance</template-output>
+  <template-output
+    file="{default_output_file}">library_framework_requirements</template-output>
+  <template-output file="{default_output_file}">
   file_structure_requirements</template-output>
-    <template-output file="{default_output_file}">testing_requirements</template-output>
+  <template-output file="{default_output_file}">testing_requirements</template-output>
 
-    <!-- Previous story intelligence -->
-    <check
-      if="previous story learnings available">
-      <template-output file="{default_output_file}">previous_story_intelligence</template-output>
-    </check>
+  <!-- Previous story intelligence -->
+  <check
+    if="previous story learnings available">
+    <template-output file="{default_output_file}">previous_story_intelligence</template-output>
+  </check>
 
-    <!-- Git intelligence -->
-    <check
-      if="git analysis completed">
-      <template-output file="{default_output_file}">git_intelligence_summary</template-output>
-    </check>
+  <!-- Git intelligence -->
+  <check
+    if="git analysis completed">
+    <template-output file="{default_output_file}">git_intelligence_summary</template-output>
+  </check>
 
-    <!-- Latest technical specifics -->
-    <check if="web research completed">
-      <template-output file="{default_output_file}">latest_tech_information</template-output>
-    </check>
+  <!-- Latest technical specifics -->
+  <check if="web research completed">
+    <template-output file="{default_output_file}">latest_tech_information</template-output>
+  </check>
 
-    <!-- Project context reference -->
-    <template-output
-      file="{default_output_file}">project_context_reference</template-output>
+  <!-- Project context reference -->
+  <template-output
+    file="{default_output_file}">project_context_reference</template-output>
 
-    <!-- Final status update -->
-    <template-output file="{default_output_file}">
+  <!-- Final status update -->
+  <template-output file="{default_output_file}">
   story_completion_status</template-output>
 
-    <!-- bmad-docmost-patch v0.1.0 — WIKI-FIRST GATE (create-story only, PLAN C.3) -->
-    <!-- Record the spec as an intent node and CONFIRM with the human BEFORE the -->
-    <!-- story flips to ready-for-dev. A human is present here, so this is synchronous. -->
-    <check if="{workflow.wiki_first_enforcement} != 'off'">
-      <invoke-skill name="doc-spec-gate" mode="create-story">
-        <action>Record the spec/intent for this story as an intent node in the living manual via skill:doc-amend (find-before-create across drafts AND canonical, ASK on a fuzzy match, write at status: draft). Capture {page_slug, page_url}.</action>
-        <ask>Here is the intent recorded for this story in the manual: "{{intent_node_title}}" ({{page_url}}). In one line, this story will: {{one_line_intent_summary}}. Confirm this is the intent to build before the story becomes ready-for-dev? [y to confirm / n to revise]</ask>
-        <check if="user revises">
-          <action>Capture the correction, re-amend the intent node in place via skill:doc-amend, and re-ask. Stay in this loop until the human confirms or abandons.</action>
-        </check>
-        <check if="user confirms">
-          <action>Submit the human confirmation to the server so it sets spec_confirmed = true on the intent node and mints a fresh, work-item-scoped SPEC_CONFIRM_TOKEN. The confirmation MUST be human-attributed; an AI/service-account confirm is rejected server-side. Never fabricate a token.</action>
-        </check>
-        <check if="user abandons OR wiki_first_enforcement == 'block' AND not confirmed">
-          <output>🚫 Wiki-first gate not satisfied for this story. The intent node was recorded at status: draft but NOT confirmed. Under block mode the story should not proceed to ready-for-dev until intent is confirmed.</output>
-        </check>
-      </invoke-skill>
-    </check>
-    <!-- CRITICAL: Set status to ready-for-dev -->
-    <action>Set story Status to: "ready-for-dev"</action>
-    <action>Add completion note: "Ultimate
+  <!-- CRITICAL: Set status to ready-for-dev -->
+  <action>Set story Status to: "ready-for-dev"</action>
+  <action>Add completion note: "Ultimate
   context engine analysis completed - comprehensive developer guide created"</action>
-  </check>
-  <check if="{workflow.tracking_system}!='file-system'">
-    <!-- bmad-linear-patch v0.2.0 -->
-    <action>Defer to {workflow.tracking_adapter} for this operation. Do not write a local file. Compose story content in memory and write via the tracking adapter.</action>
-    <!-- bmad-docmost-patch v0.1.0 — WIKI-FIRST GATE (create-story only, PLAN C.3) -->
-    <!-- Same gate as the file-system branch, in the tracking-adapter (non-file-system) -->
-    <!-- branch — so the gate fires regardless of tracking_system. This is the branch -->
-    <!-- taken when tracking_system != 'file-system' (e.g. Linear, the shipped config). -->
-    <check if="{workflow.wiki_first_enforcement} != 'off'">
-      <invoke-skill name="doc-spec-gate" mode="create-story">
-        <action>Record the spec/intent for this story as an intent node in the living manual via skill:doc-amend (find-before-create across drafts AND canonical, ASK on a fuzzy match, write at status: draft). Capture {page_slug, page_url}.</action>
-        <ask>Here is the intent recorded for this story in the manual: "{{intent_node_title}}" ({{page_url}}). In one line, this story will: {{one_line_intent_summary}}. Confirm this is the intent to build before the story becomes ready-for-dev? [y to confirm / n to revise]</ask>
-        <check if="user revises">
-          <action>Capture the correction, re-amend the intent node in place via skill:doc-amend, and re-ask. Stay in this loop until the human confirms or abandons.</action>
-        </check>
-        <check if="user confirms">
-          <action>Submit the human confirmation to the server so it sets spec_confirmed = true on the intent node and mints a fresh, work-item-scoped SPEC_CONFIRM_TOKEN. The confirmation MUST be human-attributed; an AI/service-account confirm is rejected server-side. Never fabricate a token.</action>
-        </check>
-        <check if="user abandons OR wiki_first_enforcement == 'block' AND not confirmed">
-          <output>🚫 Wiki-first gate not satisfied for this story. The intent node was recorded at status: draft but NOT confirmed. Under block mode the story should not proceed to ready-for-dev until intent is confirmed.</output>
-        </check>
-      </invoke-skill>
-    </check>
-    <action>Set story Status to: "ready-for-dev"</action>
-  </check>
 </step>
 
 <step n="6" goal="Update sprint status and finalize">
   <action>Validate the newly created story file {default_output_file} against `./checklist.md` and apply any required fixes before finalizing</action>
-  <check if="{workflow.tracking_system}=='file-system'">
-    <!-- bmad-linear-patch v0.2.0 -->
-    <action>Save story document unconditionally</action>
-  </check>
-  <check if="{workflow.tracking_system}!='file-system'">
-    <!-- bmad-linear-patch v0.2.0 -->
-    <action>Defer to {workflow.tracking_adapter} for this operation. Do not write a local file.</action>
-  </check>
+  <action>Save story document unconditionally</action>
 
   <!-- Update sprint status -->
-  <check if="{workflow.tracking_system}=='file-system'">
-    <!-- bmad-linear-patch v0.2.0 -->
-    <check if="sprint status file exists">
-      <action>Update {{sprint_status}}</action>
-      <action>Load the FULL file and read all development_status entries</action>
-      <action>Find development_status key matching {{story_key}}</action>
-      <action>Verify current status is "backlog" (expected previous state)</action>
-      <action>Update development_status[{{story_key}}] = "ready-for-dev"</action>
-      <action>Update last_updated field to current date</action>
-      <action>Save file, preserving ALL comments and structure including STATUS DEFINITIONS</action>
-    </check>
-  </check>
-  <check if="{workflow.tracking_system}!='file-system'">
-    <!-- bmad-linear-patch v0.2.0 -->
-    <action>Defer to {workflow.tracking_adapter} for this operation. Update story status to ready-for-dev via the tracking adapter.</action>
+  <check if="sprint status file exists">
+    <action>Update {{sprint_status}}</action>
+    <action>Load the FULL file and read all development_status entries</action>
+    <action>Find development_status key matching {{story_key}}</action>
+    <action>Verify current status is "backlog" (expected previous state)</action>
+    <action>Update development_status[{{story_key}}] = "ready-for-dev"</action>
+    <action>Update last_updated field to current date</action>
+    <action>Save file, preserving ALL comments and structure including STATUS DEFINITIONS</action>
   </check>
 
   <action>Report completion</action>
@@ -500,7 +430,3 @@ Activation is complete. If `activation_steps_prepend` or `activation_steps_appen
 </step>
 
 </workflow>
-
-<!-- bmad-linear-patch:applied:v0.2.0 -->
-
-<!-- bmad-docmost-patch:applied:v0.1.0 -->
