@@ -13,6 +13,7 @@ import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/app_dialog.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/models/wizard_result_wrapper.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/bulk_prior_completion_service.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
@@ -701,6 +702,13 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
 
     // Refresh dashboard/progress/task views immediately.
     await onTrackChanged(ref, profileId);
+
+    // onTrackChanged() above hand-invalidates the track/dashboard surfaces
+    // but does not fire completionCommittedProvider, so any watcher of that
+    // shared signal (e.g. journeyViewModelProvider) is missed here — the
+    // same staleness class as BulkMarkScreen's entry point, which uses this
+    // identical service. Fire it too so both entry points stay in sync.
+    ref.read(completionCommittedProvider.notifier).increment();
 
     return (
       itemCount: completion.itemCount,

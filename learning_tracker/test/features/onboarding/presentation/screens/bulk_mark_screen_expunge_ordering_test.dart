@@ -32,6 +32,7 @@ import 'package:learning_tracker/features/content_browsing/presentation/provider
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/bulk_prior_completion_service.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/bulk_mark_screen.dart';
@@ -144,9 +145,20 @@ void main() {
             completionRepositoryProvider.overrideWithValue(completionRepo),
             bulkPriorCompletionServiceProvider.overrideWithValue(service),
             activeProfileIdProvider.overrideWithValue(1),
-            dashboardCompletionPercentageProvider.overrideWith(
-              (ref, curriculum) async => dashboardValue,
-            ),
+            // Mirrors the real dashboardCompletionPercentageProvider's own
+            // `ref.watch<int>(completionCommittedProvider)` (dashboard_providers
+            // .dart) — the bulk-mark staleness fix replaced this screen's
+            // hand-picked `ref.invalidate(...)` calls with a single
+            // `completionCommittedProvider.notifier.increment()` signal, so the
+            // fake override must react to that same signal to keep exercising
+            // the AUD-onboarding-07 await-before-signal ordering below.
+            dashboardCompletionPercentageProvider.overrideWith((
+              ref,
+              curriculum,
+            ) async {
+              ref.watch<int>(completionCommittedProvider);
+              return dashboardValue;
+            }),
           ],
           child: MaterialApp(
             localizationsDelegates: AppLocalizations.localizationsDelegates,
