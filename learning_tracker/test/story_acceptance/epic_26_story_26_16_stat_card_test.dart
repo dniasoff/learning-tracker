@@ -14,6 +14,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart'
     hide expect, group, setUp, setUpAll, test;
 import 'package:learning_tracker/core/widgets/stat_card.dart';
+import 'package:learning_tracker/features/dashboard/presentation/widgets/task_category_stat_box.dart';
 import 'package:test/test.dart';
 
 import '../helpers/golden_runner.dart';
@@ -270,32 +271,81 @@ void main() {
   // covered by AC1, AC2, AC3 (it remains the primitive for
   // TaskCategoryStatBox on the Dashboard, asserted by AC5 below).
 
-  // ── AC5: task_category_stat_box.dart delegates to StatCard ──────────────────
+  // ── AC5: task_category_stat_box.dart delegates to StatCard (behavioral) ─────
+  //
+  // AUD-t-story-acceptance R7: the old version of this group read
+  // task_category_stat_box.dart's source text and asserted it *contains*
+  // the substrings 'stat_card' (the import) and 'StatCard' (the class name)
+  // — true even if TaskCategoryStatBox merely imported StatCard without
+  // ever using it, or referenced it only in a comment. The tests below pump
+  // the real widget instead and assert the OBSERVABLE EFFECT: it renders
+  // AS a StatCard in the tree, forwards its count/label through, and wires
+  // its onTap straight to the underlying StatCard's hit target — strictly
+  // more than a source-text match, and it fails if delegation regresses
+  // (e.g. TaskCategoryStatBox reverts to hand-rolled rendering or drops the
+  // onTap forward).
   group(
     'Story 26.16 AC5 — TaskCategoryStatBox uses StatCard',
     tags: ['story_26_16'],
     () {
-      late String statBoxSource;
-
-      setUpAll(() {
-        statBoxSource = readLibSource(
-          'features/dashboard/presentation/widgets/task_category_stat_box.dart',
+      testWidgets('renders as a StatCard and forwards count/label through', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          _harness(
+            locale: const Locale('en'),
+            child: const SizedBox(
+              width: 100,
+              child: TaskCategoryStatBox(
+                count: 5,
+                label: 'Due today',
+                valueColor: Color(0xFF1A56DB),
+                valueBg: Color(0xFFDFE9FD),
+              ),
+            ),
+          ),
         );
-      });
+        await tester.pumpAndSettle();
 
-      test('imports stat_card.dart', () {
         expect(
-          statBoxSource.contains('stat_card'),
-          isTrue,
-          reason: 'task_category_stat_box.dart must import stat_card.dart.',
-        );
-      });
-
-      test('references StatCard', () {
-        expect(
-          statBoxSource.contains('StatCard'),
-          isTrue,
+          find.byType(StatCard),
+          findsOneWidget,
           reason: 'TaskCategoryStatBox must delegate to StatCard.',
+        );
+        expect(find.text('5'), findsOneWidget);
+        expect(find.text('Due today'), findsOneWidget);
+      });
+
+      testWidgets('onTap is forwarded to the underlying StatCard', (
+        tester,
+      ) async {
+        var tapped = false;
+        await tester.pumpWidget(
+          _harness(
+            locale: const Locale('en'),
+            child: SizedBox(
+              width: 100,
+              child: TaskCategoryStatBox(
+                count: 3,
+                label: 'Overdue',
+                valueColor: const Color(0xFFB00020),
+                valueBg: const Color(0xFFFBE3E6),
+                onTap: () => tapped = true,
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byType(StatCard));
+        await tester.pumpAndSettle();
+
+        expect(
+          tapped,
+          isTrue,
+          reason:
+              'TaskCategoryStatBox.onTap must be forwarded through to the '
+              'underlying StatCard, not swallowed by the delegation.',
         );
       });
     },

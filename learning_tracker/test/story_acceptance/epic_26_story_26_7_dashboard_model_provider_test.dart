@@ -25,9 +25,20 @@
 @Tags(['epic_26'])
 library;
 
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart'
+    hide expect, group, setUp, tearDown, test;
+import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
+import 'package:learning_tracker/features/scheduler/scheduler.dart'
+    show clockProvider;
+import 'package:learning_tracker/features/tracks/setup/presentation/providers/after_track_change_invalidation.dart';
 import 'package:test/test.dart';
 
+import '../helpers/drift_memory.dart';
 import '../helpers/lib_source.dart';
+import '../helpers/pump_app.dart';
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -59,17 +70,105 @@ void main() {
     'Story 26.7 AC2 — onTrackChanged is the canonical invalidation helper',
     tags: ['story_26_7'],
     () {
-      test('after_track_change_invalidation.dart declares onTrackChanged', () {
-        final src = _src(
-          'features/tracks/setup/presentation/providers/after_track_change_invalidation.dart',
+      // AUD-t-story-acceptance R7 (behavioral): the old version of this
+      // test asserted `src.contains('Future<void> onTrackChanged(')` — a
+      // string match that would still pass even if the function body were
+      // gutted to a no-op, or never actually wired into a real call site.
+      // This calls the REAL `onTrackChanged` — captured as a `WidgetRef`
+      // from a pumped widget, the same technique
+      // dashboard_screen_test.dart uses to prove its own re-read-on-sync
+      // invalidation effect — and asserts the OBSERVABLE EFFECT: a leaf
+      // provider it is documented to invalidate
+      // (`dashboardGlobalPointsProvider`) actually rebuilds. Strictly
+      // stronger — it fails if the invalidation call is deleted, commented
+      // out, or the provider name is typo'd, none of which the old
+      // text-match could catch as long as the literal substring
+      // `Future<void> onTrackChanged(` remained anywhere in the file. The
+      // second half proves the deprecated `invalidateAfterTrackDataChange`
+      // alias still forwards to the same live implementation, not a
+      // stripped-down or forgotten copy.
+      testWidgets('onTrackChanged (and its deprecated alias) invalidate '
+          'dashboardGlobalPointsProvider', (tester) async {
+        final db = inMemoryDb();
+        addTearDown(db.close);
+        await seedProfileZero(db);
+
+        var globalPointsBuilds = 0;
+        final container = ProviderContainer(
+          overrides: [
+            userDatabaseProvider.overrideWithValue(db),
+            clockProvider.overrideWith((ref) => DateTime.utc(2026, 1, 1)),
+            dashboardGlobalPointsProvider.overrideWith((ref) {
+              globalPointsBuilds++;
+              return Stream.value(0);
+            }),
+          ],
         );
+        addTearDown(container.dispose);
+
+        // Keep the provider alive + force the initial build — mirrors
+        // dashboard_screen_test.dart's `dailyTasksBuilds` re-read guard.
+        final sub = container.listen(
+          dashboardGlobalPointsProvider,
+          (previous, next) {},
+          fireImmediately: true,
+        );
+        addTearDown(sub.close);
+
+        late WidgetRef capturedRef;
+        await tester.pumpWidget(
+          pumpApp(
+            container: container,
+            child: Consumer(
+              builder: (context, ref, _) {
+                capturedRef = ref;
+                return const SizedBox.shrink();
+              },
+            ),
+          ),
+        );
+        await tester.pump();
+
+        final buildsAfterMount = globalPointsBuilds;
         expect(
-          src,
-          contains('Future<void> onTrackChanged('),
-          reason:
-              'onTrackChanged must be the primary public function in '
-              'after_track_change_invalidation.dart',
+          buildsAfterMount,
+          1,
+          reason: 'sanity: exactly one build before any invalidation',
         );
+
+        await onTrackChanged(capturedRef, 0);
+        // Force the now-invalidated provider to actually rebuild: Riverpod
+        // defers an invalidated-but-still-listened provider's recompute to
+        // its own scheduler rather than rebuilding synchronously inside
+        // invalidate() itself, so a bare `read` (not just a pump) is what
+        // flushes it deterministically.
+        container.read(dashboardGlobalPointsProvider);
+        await tester.pump();
+
+        expect(
+          globalPointsBuilds,
+          greaterThan(buildsAfterMount),
+          reason:
+              'onTrackChanged must invalidate dashboardGlobalPointsProvider '
+              'so the dashboard re-reads fresh points after a track change',
+        );
+
+        final buildsBeforeAlias = globalPointsBuilds;
+        // ignore: deprecated_member_use
+        await invalidateAfterTrackDataChange(capturedRef, 0);
+        container.read(dashboardGlobalPointsProvider);
+        await tester.pump();
+
+        expect(
+          globalPointsBuilds,
+          greaterThan(buildsBeforeAlias),
+          reason:
+              'invalidateAfterTrackDataChange must still forward to the '
+              'real onTrackChanged implementation, not a dead/no-op alias',
+        );
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(Duration.zero);
       });
 
       test(
