@@ -69,7 +69,11 @@ const _baseline = <String>{
   // top of this file's DEVICE section pushed this SAME pre-existing,
   // still-unaddressed AX-2 hit down by 16 lines. No content at this site
   // changed.
-  'lib/features/settings/presentation/screens/settings_screen.dart:318',
+  // Theme migration (AppPalette): routing this screen's colours through
+  // context.colors collapsed a two-line AppTheme reference above this
+  // site, moving this SAME pre-existing, still-unaddressed AX-2 hit up
+  // by 1 line. No content at this site changed.
+  'lib/features/settings/presentation/screens/settings_screen.dart:317',
   // AUD-t-track_setup-01: re-pinned from :513 — the testability-seam
   // extraction (smartDefaultTrackName + its imports, added near the top of
   // this file so _getSmartDefault can delegate to a ref-free pure function)
@@ -79,7 +83,10 @@ const _baseline = <String>{
   // features/scheduler/ imports into one features/scheduler/scheduler.dart
   // barrel import moved this SAME pre-existing, still-unaddressed AX-2 hit
   // up by 1 line. No content at this site changed.
-  'lib/features/tracks/setup/presentation/screens/add_track_flow_screen.dart:555',
+  // Theme migration (AppPalette): as above — the colour-token rewrite
+  // moved this SAME pre-existing, still-unaddressed AX-2 hit up by 1
+  // line. No content at this site changed.
+  'lib/features/tracks/setup/presentation/screens/add_track_flow_screen.dart:554',
   'lib/features/tracks/setup/presentation/screens/track_management_hub_screen.dart:119',
   'lib/features/tracks/setup/presentation/steps/step_starting_position_calendar.dart:425',
 };
