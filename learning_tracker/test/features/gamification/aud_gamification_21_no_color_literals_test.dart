@@ -34,7 +34,8 @@
 // directory so it cannot go stale/green again if a new file with a raw
 // literal is added later. It doubles as this finding's red-first
 // regression guard: scanning the pre-fix tree found all 126 literals across
-// 14 files; the tree is clean now that every one references AppColors.
+// 14 files; the tree is clean now that every one references the shared
+// theme layer (AppPalette, via `context.colors.*`).
 
 @Tags(['gamification', 'aud_gamification_21'])
 library;
@@ -91,9 +92,9 @@ void main() {
       violations,
       isEmpty,
       reason:
-          'Found hardcoded Color(0x...) hex literals outside AppColors '
+          'Found hardcoded Color(0x...) hex literals outside the theme layer '
           'somewhere under $dirPath/ -- extract them into '
-          'lib/core/theme/app_colors.dart instead:\n${violations.join('\n')}',
+          'lib/core/theme/app_palette.dart instead:\n${violations.join('\n')}',
     );
   });
 }

@@ -56,7 +56,7 @@ void main() {
       violations,
       isEmpty,
       reason:
-          'Found hardcoded Color/Colors literals outside AppColors/AppTheme '
+          'Found hardcoded Color/Colors literals outside the theme layer '
           'under lib/features/tutoring/presentation/screens/ '
           '(AUD-tutoring-18):\n${violations.join('\n')}',
     );

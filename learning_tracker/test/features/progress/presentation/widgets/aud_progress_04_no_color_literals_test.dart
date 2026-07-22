@@ -41,7 +41,7 @@
 //      raw literal is added later. It doubles as this finding's red-first
 //      regression guard: scanning the pre-fix tree found all 29 literals
 //      across 8 files; the tree is clean now that every one references
-//      AppColors.
+//      the shared theme layer (AppPalette, via `context.colors.*`).
 
 @Tags(['progress', 'aud_progress_04'])
 library;
@@ -98,9 +98,9 @@ void main() {
       violations,
       isEmpty,
       reason:
-          'Found hardcoded Color(0x...) hex literals outside AppColors '
+          'Found hardcoded Color(0x...) hex literals outside the theme layer '
           'somewhere under $dirPath/ — extract them into '
-          'lib/core/theme/app_colors.dart instead:\n${violations.join('\n')}',
+          'lib/core/theme/app_palette.dart instead:\n${violations.join('\n')}',
     );
   });
 }

@@ -48,7 +48,7 @@ void main() {
       'lib/features/content_browsing/presentation/screens/text_display_screen.dart',
     ];
 
-    // `\b` before `Colors` excludes `AppColors.*` (no word boundary
+    // `\b` before `Colors` excludes `context.colors.*` (no word boundary
     // between the 'p' and 'C' of "AppColors") while still matching a
     // bare `Colors.<name>` reference.
     final colorsLiteral = RegExp(r'\bColors\.\w+');
