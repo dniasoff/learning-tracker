@@ -14,13 +14,11 @@
 /// it lays out at its natural single-line width and is scaled down to fit rather
 /// than clipped — `didExceedMaxLines == false` — at default and larger text
 /// scales, in LTR and RTL.
-@Tags(['content_browsing', 'r2'])
+@Tags(['content_browsing'])
 library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
@@ -29,9 +27,9 @@ import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/hierarchy_selection_panel.dart';
-import 'package:learning_tracker/l10n/app_localizations.dart';
 
 import '../../../../helpers/overflow_harness.dart';
+import '../../../../helpers/pump_app.dart';
 
 // The two confirm labels the wizard actually renders (see app_en.arb /
 // app_he.arb `actionMarkCompleted`). Kept as literals so the regression is
@@ -93,31 +91,26 @@ Widget _harnessedPanel({
   required String confirmLabel,
 }) {
   final useHebrew = textDirection == TextDirection.rtl;
-  return ProviderScope(
-    retry: (_, __) => null,
+  // TQ-3: use the shared pumpApp() helper (it supplies the l10n delegates +
+  // supportedLocales) rather than a hand-rolled MaterialApp; its `builder` hook
+  // exists exactly for injecting a MediaQuery text-scaler override for an
+  // overflow-matrix sweep.
+  return pumpApp(
+    locale: useHebrew ? const Locale('he') : const Locale('en'),
     overrides: _overrides(useHebrew: useHebrew),
-    child: MaterialApp(
-      locale: useHebrew ? const Locale('he') : const Locale('en'),
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: AppLocalizations.supportedLocales,
-      builder: (context, child) => Directionality(
-        textDirection: textDirection,
-        child: MediaQuery.withClampedTextScaling(
-          minScaleFactor: textScale,
-          maxScaleFactor: textScale,
-          child: child!,
-        ),
+    retry: (_, __) => null,
+    builder: (context, child) => Directionality(
+      textDirection: textDirection,
+      child: MediaQuery.withClampedTextScaling(
+        minScaleFactor: textScale,
+        maxScaleFactor: textScale,
+        child: child!,
       ),
-      // Narrow phone width (device-5558 class) so the confirm label cannot
-      // simply fit at full size in its half-row Expanded cell.
-      home: Scaffold(
-        body: SizedBox(width: 320, child: _panel(confirmLabel: confirmLabel)),
-      ),
+    ),
+    // Narrow phone width (device-5558 class) so the confirm label cannot
+    // simply fit at full size in its half-row Expanded cell.
+    child: Scaffold(
+      body: SizedBox(width: 320, child: _panel(confirmLabel: confirmLabel)),
     ),
   );
 }

@@ -105,7 +105,11 @@ void main() {
     late int trackId;
 
     setUp(() async {
-      db = inMemoryDb();
+      final database = inMemoryDb();
+      addTearDown(
+        database.close,
+      ); // TQ-6: close in the same scope as the factory call
+      db = database;
       await seedProfile(db);
       trackId = await seedTrack(
         db,
@@ -115,16 +119,17 @@ void main() {
       service = ChartDataService(db, profileId: _profileId);
     });
 
-    tearDown(() => db.close());
-
     test('three bulk-marked mishnayot roll up into the All-time limud total '
         '(aggregate == detail count)', () async {
       await _seedBulkInTrack(db, trackId: trackId, ref: 'm1');
       await _seedBulkInTrack(db, trackId: trackId, ref: 'm2');
       await _seedBulkInTrack(db, trackId: trackId, ref: 'm3');
 
-      final now = DateTime.now();
-      final today = DateTime(now.year, now.month, now.day);
+      final today = DateTime(
+        2026,
+        3,
+        15,
+      ); // TQ-6: fixed clock (hermetic; no wall-clock read)
       final feed = await service.getDailyLimudimAndChazaros(
         startDate: kChartAllTimeFloor,
         endDate: today,
@@ -147,8 +152,11 @@ void main() {
       await _seedBulkInTrack(db, trackId: trackId, ref: 'm1');
       await _seedBulkInTrack(db, trackId: trackId, ref: 'm2');
 
-      final now = DateTime.now();
-      final today = DateTime(now.year, now.month, now.day);
+      final today = DateTime(
+        2026,
+        3,
+        15,
+      ); // TQ-6: fixed clock (hermetic; no wall-clock read)
       final points = await service.getCumulativeProgressLive(
         startDate: kChartAllTimeFloor,
         endDate: today,

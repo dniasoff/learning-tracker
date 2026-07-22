@@ -15,7 +15,7 @@
 ///
 /// These tests drive the keypad with real gestures that DRIFT past the tap slop
 /// and assert every digit registers.
-@Tags(['l1', 'profiles', 'pin_flow', 'reassurance'])
+@Tags(['l1', 'profiles', 'pin_flow'])
 library;
 
 import 'package:flutter/material.dart';
