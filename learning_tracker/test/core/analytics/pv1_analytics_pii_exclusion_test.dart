@@ -380,8 +380,15 @@ void main() {
     },
   );
 
-  test('every direct call-site event above is exercised (sweep cannot silently '
-      'go stale)', () {
+  // ORDER-INDEPENDENCE (R6): these exhaustiveness checks assert against
+  // `_exercisedEvents` / `_exercisedDirectCallEvents`, which are mutated by the
+  // sibling tests as they RUN. Declared as `test(...)` they could execute before
+  // the tests that populate those sets -- and did, once
+  // `--test-randomize-ordering-seed=random` landed, failing with `Actual: Set:[]`
+  // against a perfectly correct sweep. `tearDownAll` runs after every test in
+  // this group regardless of the shuffle, so the assertion is order-independent
+  // by construction. Same fix as epic_27's golden-runner check.
+  tearDownAll(() {
     const directCallSiteEvents = <String>{
       AnalyticsEvent.tutorInviteSent,
       AnalyticsEvent.tutorInviteAccepted,
@@ -402,8 +409,7 @@ void main() {
     );
   });
 
-  test('every AnalyticsEvent catalog member is exercised above (sweep cannot '
-      'silently go stale)', () {
+  tearDownAll(() {
     // AnalyticsEvent members exercised directly above via their real
     // production use case/service (see the "direct call-site sweep" group).
     const directCallSiteEvents = <String>{
