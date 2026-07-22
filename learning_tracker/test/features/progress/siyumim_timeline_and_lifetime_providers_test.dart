@@ -67,6 +67,7 @@ import 'package:learning_tracker/features/progress/presentation/widgets/siyumim_
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 
+import '../../fixtures/content_fixtures.dart';
 import '../../helpers/drift_memory.dart' as db_helper;
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
@@ -211,17 +212,16 @@ ContentItem _leaf({
   int sortOrder = 1,
   String displayNameHe = '',
   String displayNameEn = '',
-}) => ContentItem(
+}) => ContentItemFixtures.leaf(
   curriculumId: curriculumId,
   level1: level1,
   level2: level2,
   level3: level3,
   level4: level4,
-  displayNameHe: displayNameHe,
-  displayNameEn: displayNameEn,
   sefariaRef: sefariaRef,
   sortOrder: sortOrder,
-  isLeaf: true,
+  displayNameHe: displayNameHe,
+  displayNameEn: displayNameEn,
 );
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -1324,20 +1324,10 @@ LearningLedgerData _fakeLedgerData({
   required String unitIdentifier,
   required String entryScope,
   DateTime? completedAt,
-}) => LearningLedgerData(
-  id: 0,
+}) => LedgerFixtures.scopeMark(
   profileId: profileId,
-  ulid: '',
   curriculumId: curriculumId,
   entryScope: entryScope,
   unitIdentifier: unitIdentifier,
-  unitDisplayNameHe: '',
-  unitDisplayNameEn: '',
-  trackType: 'personal',
-  trackId: null,
-  completedAt: completedAt ?? DateTime.utc(2026, 1, 1),
-  completionNumber: 1,
-  markedBy: 1,
-  isManual: false,
-  createdAt: DateTime.utc(2026, 1, 1),
+  completedAt: completedAt,
 );
