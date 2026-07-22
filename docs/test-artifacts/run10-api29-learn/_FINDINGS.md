@@ -165,6 +165,70 @@ shared session force-restarts emulators) taking a look at separately.
 - `run10_20_search_results.png` — search "shabbat" results
 - `run10_21_search_ascii.png` — search "shabbat" input confirmation
 
+## Follow-up round: settled with the persistent host-side logcat recorder
+
+After the above was reported, the coordinator added a host-side logcat
+recorder (`/tmp/logcat_5556.log`) that survives the emulator dying — closing
+exactly the evidence gap that made the earlier deaths ambiguous. This let me
+inspect guest logcat *up to the literal last line before the device
+disappeared*, three more times:
+
+**Death #5 and #7 (clean ENVIRONMENT, confirmed):** in both cases the log
+ends on ordinary, healthy app/system activity — one ends mid-reader with a
+GC line (`Explicit concurrent copying GC freed ... 49% free, 3897KB/7795KB`)
+and normal Riverpod provider updates for `Mishnah Berakhot 1:1/1:2/1:3`; the
+other ends on a routine GC (`49% free, 3194KB/6388KB`) right after opening
+Learn. Both times the log **just stops** — no `FATAL EXCEPTION`, `am_crash`,
+`ANR`, or `lmkd`/`lowmemorykiller` line naming our package anywhere nearby.
+Per the recorder's own decision rule this is ENVIRONMENT. The emulator's own
+host log corroborates: it ends cleanly right after "Boot completed", no
+error, no segfault — consistent with the coordinator's independent finding
+that host load (`uptime` showed 27-37) is the cause, not the app.
+
+**Death #6 (the interesting one — investigated in full, still not the P0):**
+this one *did* produce a genuine guest-level kill: `Zygote: Process 3806
+exited due to signal 9 (Killed)`, and I independently confirmed PID 3806 was
+our app (via `pidof` moments earlier and `FirebaseSessions` debug lines
+tagged with that PID). This is a real, guest-side SIGKILL of our process —
+the kind of evidence that would normally confirm an app-level kill. I dug
+into it rather than taking the win at face value:
+
+- No `lmkd`/`lowmemorykiller` line anywhere in the log **names our package**
+  as a kill target (the pattern `crash_attribution.sh` requires for a
+  CONFIRMED verdict) — only the generic per-PID `Zygote` exit line, which
+  fires for every process death regardless of cause.
+- In the same ~45-second window, **~40 other, unrelated processes** (system
+  services, Google apps, none of them ours) were also killed with signal 9,
+  immediately after `lowmemorykiller`/`lmkd` freshly initialized post-cold-boot
+  (`lmkd data connection established` at 19:06:46, kill storm 19:07:00-19:07:43).
+  This is a mass reap, not a targeted kill of one memory-heavy app.
+- Guest total RAM on this AVD is only **~2 GB** (`MemTotal: 2,040,256 kB`),
+  and a burst of background/Google-service processes racing to start after
+  a cold boot is a well-known, ordinary source of this kind of churn —
+  independent of anything our app does.
+- Decisively: I traced our app's own Riverpod log lines up to the exact kill
+  timestamp. At time of death it was still showing **Dashboard** providers
+  (`dashboardUserModeProvider`, `dashboardStreakProvider`) — **the Learn tab
+  had not yet been opened in that session**, and `dumpsys meminfo` moments
+  before showed a modest 53 MB Native Heap / 5.5 MB Dalvik Heap. The
+  `contentIndex` code path named in the P0 was never touched before this
+  process died.
+
+So death #6 is real evidence that this app (like any app) is killable under
+genuine system-wide memory churn on a RAM-constrained AVD — but it happened
+on the Dashboard, before Learn was ever opened, amid a mass-kill sweeping
+~40 unrelated processes. It does not support the P0 hypothesis about
+Learn/`contentIndex` specifically; if anything it points at general AVD RAM
+headroom (2 GB total) as a post-boot noise source, separate from the
+per-app 512 MB Dalvik ceiling this whole investigation is about.
+
+Every other `dumpsys meminfo` sample taken this round (baseline ~75 MB → post
+Learn-tap ~66 MB Native Heap, Dalvik consistently 3-7 MB) continues to show
+the same pattern as round 1: modest, flat, nowhere near the 512 MB limit.
+**This does not change the verdict — REFUTED stands, now on stronger
+evidence** (a real guest-level kill was available to check, and checking it
+still didn't implicate Learn/contentIndex).
+
 ## What I did not get to
 
 I was not able to sustain a long, uninterrupted drill specifically into
