@@ -99,6 +99,19 @@ In run-10 an agent checked out `reassurance/r4-firestore-rules-matrix` **in the 
 - Symptom that exposed it: `git merge-base --is-ancestor <branch> dev` reported branches as UNMERGED that had just been merged — and a merge commit *I had authored* appeared in `dev..HEAD`.
 - Cheap guards: print the branch in the same command as the commit; after any merge, assert `git merge-base --is-ancestor <sha> dev`; and prefer giving agents **worktrees** (`isolation: worktree`) rather than letting them operate in the shared checkout.
 
+**⚠️ NEVER run two `make ci` invocations at once — golden tests will lie to you.**
+In run-10 I started a third CI without stopping the second; both shared `.dart_tool`/build
+artifacts and 24 cores. The contended run reported
+`aud_onboarding_12_intro_rtl_badge_golden_test.dart` failing on two pixel goldens. Run
+uncontended immediately afterwards: **3/3 pass**. The failure was my concurrency, not a
+defect — and it looked exactly like a real regression in the log.
+- Golden/pixel tests are the most load-sensitive things in this suite (the R6 verifier had
+  already flagged these two as pre-existing flakes under load).
+- Before diagnosing any golden failure from a CI log, **re-run that file alone** and see
+  whether it reproduces.
+- Kill the previous run before starting a new one (`pkill -f 'make ci'`), and check
+  `pgrep -cf 'flutter_tools.snapshot test'` is 0 first.
+
 **Known operational facts (learned this campaign):**
 - 6 concurrent emulators driven through one adb server **flap** under load (not
   OOM — box has 123 GB, ~100 free). Tolerate transient `get-state` blips; retry.
