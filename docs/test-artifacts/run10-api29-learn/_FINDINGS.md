@@ -3,8 +3,24 @@ title: "Run-10 — API 29 Learn-tab OOM baseline (device emulator-5556)"
 purpose: "Settle run-8's P0 (\"opening Learn OOM-kills the app on API 29\") with guest-side-attributed evidence, per the reassurance campaign's R9 crash-attribution methodology."
 date: 2026-07-22
 device: emulator-5556 (AVD lt_api29_pixel3, Android 10 / API 29, 512m heap)
-app: com.jcom.torah.learning_tracker, versionName 1.0.66
+app: com.jcom.torah.learning_tracker
 ---
+
+**Build note:** `versionName` (1.0.66) does not change between rebuilds — it
+comes from `pubspec.yaml` and is not a reliable build fingerprint. Two
+different APKs were measured across this session:
+- Build A: `firstInstallTime=2026-07-22 04:28:28` (the pre-existing install,
+  measured in the "first round" section below).
+- Build B: `lastUpdateTime=2026-07-22 19:07:13` (reinstalled by the
+  coordinator mid-session via `adb install -r -d`, data preserved; measured
+  in the "Talmud Bavli follow-up" section below).
+
+Both builds contain the identical, unfixed `content_index.dart:111-116` —
+confirmed by direct read on Build B after the reinstall — so this is not a
+confound for the verdict: the code under test is the same in both. Build B
+additionally contains R8 Part A (aggregates no longer materialize all 9
+curricula) and R8 Part B (the Lifetime Knowledge union denominator), neither
+of which touches the Learn-tab/`contentIndex` path this report is about.
 
 # Run-10 — API 29 Learn-tab OOM baseline
 
@@ -74,12 +90,34 @@ Dalvik Heap** — against a 512 MB limit.
 
 ## Other findings on these screens
 
-- **Reader chevron debounce (APP, minor, not a crash):** tapping the
-  next-item chevron 5x at ~1.2s intervals only advanced the reader by 1
-  mishnah, not 5. Likely input debounce/animation-lock during route
-  transition. Not memory-related, not a crash, but worth a follow-up look at
-  `text_display_screen.dart`'s next/prev handler if snappier paging is
-  wanted.
+### P2/P3 — Reader next-chevron swallows most taps (usability defect, reproducible)
+
+**Severity:** P2/P3 (usability, not a crash, not data-affecting). **Status:**
+reproducible, not memory-related.
+
+**Repro steps:**
+1. Open any text in the reader (`text_display_screen.dart`) — e.g. Learn tab
+   → Daily Tasks → any Mishnah, or Browse Content → Talmud Bavli → any
+   tractate → any daf → עמוד א.
+2. Tap the next-item chevron (top-right of the reader app bar) repeatedly at
+   a steady ~1.1-1.5s pace, `adb shell input tap 1013 296` (coordinates for a
+   1080-wide device).
+3. Compare tap count to breadcrumb advancement.
+
+**Observed:** Consistently swallows roughly half or more of the taps, not
+just an occasional dropped frame:
+- Round 1 (Mishnayos reader): 5 taps at ~1.2s → advanced **1** mishnah
+  (Berakhot 1:1 → 1:2).
+- Round 2 (Talmud Bavli, Bava Batra reader): 68 taps at ~1.1-1.3s over
+  several batches → advanced **34** dapim (2:2 → 36:1), i.e. consistently
+  ~2 taps consumed per 1 page advanced.
+
+Both times the app remained fully responsive and never crashed — this is
+purely a lost-input problem, most likely a debounce or an animation-lock on
+the route/page transition in the reader's next/prev handler that swallows
+taps landing mid-transition. On a reading surface, silently dropping half of
+a user's "next page" taps is a genuine, worth-fixing usability defect, not
+cosmetic — flagging as P2/P3 rather than a footnote per review feedback.
 - **Search requires transliteration, silently (APP, cosmetic):** `adb shell
   input text` cannot send Hebrew (Android `Input` command throws
   `NullPointerException` on non-ASCII), so this was tested with ASCII
@@ -164,6 +202,10 @@ shared session force-restarts emulators) taking a look at separately.
 - `run10_19_search2.png` — empty search screen with keyboard
 - `run10_20_search_results.png` — search "shabbat" results
 - `run10_21_search_ascii.png` — search "shabbat" input confirmation
+- `run10_50_bavabatra.png` — Talmud Bavli → Nezikin → Bava Batra daf list
+- `run10_51_daf.png` — Bava Batra daf 2, amud selector
+- `run10_52_reader_bb.png` — Bava Batra daf 2 amud א, real Talmud text
+- `run10_55_paged_far.png` — after 68 chevron taps, daf 36 amud א
 
 ## Follow-up round: settled with the persistent host-side logcat recorder
 
@@ -229,16 +271,39 @@ the same pattern as round 1: modest, flat, nowhere near the 512 MB limit.
 evidence** (a real guest-level kill was available to check, and checking it
 still didn't implicate Learn/contentIndex).
 
-## What I did not get to
+## Talmud Bavli deep-drill (the gap from the first round — now closed)
 
-I was not able to sustain a long, uninterrupted drill specifically into
-Talmud Bavli's deeper tractates (the largest single curriculum) — every
-attempt to navigate there was cut short within 1-2 minutes by the
-ENVIRONMENT-level emulator restarts above. I did reach Mishnayos → Zeraim →
-Berachot → chapter level (4 levels) repeatedly and exercised Learn/reader/
-search/background-foreground fully to completion multiple times, which
-covers the code path named in the P0 (`contentIndex`, shared across all 9
-curricula, not curriculum-specific). Given the consistent, low, sub-100MB
-memory ceiling observed every time that code path was exercised, I'm
-confident the REFUTED verdict holds, but flagging the gap for completeness
-rather than quietly omitting it.
+On Build B (`lastUpdateTime=2026-07-22 19:07:13`), with host load easing
+(~15-30), 5556 stayed up long enough to complete this. Full drill: Learn tab
+→ Browse Content → **תלמוד בבלי (Talmud Bavli)** → נזיקין (Nezikin) → בבא
+בתרא (Bava Batra, one of the largest tractates at 176 dapim) → דף ג (daf 3)
+→ עמוד א → reader opened on real Talmud text → paged forward **34 dapim**
+(daf 2 amud א through daf 36 amud א) across ~68 chevron taps in several
+batches.
+
+| Stage | Native Heap (KB) | Dalvik Heap (KB) |
+|---|--:|--:|
+| Dashboard, pre-Learn | 62,966 | 5,513 |
+| Talmud Bavli tractate list open | 57,089 | 4,201 |
+| Nezikin tractate list | 56,061 | 4,125 |
+| Bava Batra daf list (3 levels deep) | 74,061 | 4,109 |
+| Daf 3 amud list (4 levels deep) | 58,253 | 4,133 |
+| Reader opened, daf 2 amud א (5 levels deep) | 61,689 | 4,133 |
+| After paging to ~daf 10 | 73,441 | 4,309 |
+| After paging to ~daf 18 | 92,977 | 4,357 |
+| After paging to ~daf 27 | 119,698 | 4,481 |
+| After paging to ~daf 36 (68 taps total) | 109,850 → **125,566 peak**, oscillating down to 109,850 | 4,481-4,609 |
+
+Memory rises with sustained paging through Bavli — a real, mild
+growth-then-plateau/oscillate pattern (peaked ~125 MB, then a GC pass pulled
+it back to ~110 MB) — consistent with the reader retaining some rendered
+state per visited daf rather than fully releasing it. This is a genuine
+observation worth a look if it's not already known, but it is **not runaway**:
+it leveled off and partially reclaimed rather than climbing monotonically,
+and even at its single highest sample (125,566 KB ≈ 123 MB) that is only
+**~24% of the 512 MB limit** — nowhere near enough to threaten an OOM. The
+device never died during this drill, `crash_attribution.sh` reported guest
+clean at the end, and the app remained fully responsive throughout (modulo
+the chevron-debounce finding above). This closes the Talmud-Bavli gap left
+open after the first round: the largest curriculum, drilled deep and paged
+through at length, does not reproduce the P0 either.
