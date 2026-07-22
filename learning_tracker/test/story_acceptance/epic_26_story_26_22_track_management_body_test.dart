@@ -29,14 +29,26 @@ library;
 
 import 'dart:io';
 
+import 'package:auto_route/auto_route.dart';
 import 'package:drift/native.dart';
+import 'package:flutter_test/flutter_test.dart'
+    hide expect, expectLater, group, setUp, setUpAll, tearDown, test;
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
+import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/learning/data/repositories/track_repository_impl.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/settings/domain/exceptions/last_active_curriculum_exception.dart';
 import 'package:learning_tracker/features/tracks/domain/services/curriculum_activation_service.dart';
+import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart';
+import 'package:learning_tracker/features/tracks/setup/presentation/screens/track_management_hub_screen.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/widgets/track_management_body.dart';
 import 'package:test/test.dart';
+
+import '../features/tracks/setup/helpers/track_hub_test_helpers.dart';
+import '../helpers/drift_memory.dart';
+import '../helpers/pump_app.dart';
 
 /// Reads a source file, trying both repo-root-relative and
 /// learning_tracker/-relative candidate paths (tests may run from either
@@ -214,20 +226,51 @@ void main() {
         },
       );
 
-      // AC2 (finding): a story-acceptance test asserts
-      // track_management_hub_screen.dart's source contains
-      // 'TrackManagementBody(', the same way 26.20 AC4 checks
-      // settings_screen.dart.
-      test(
-        'track_management_hub_screen.dart references TrackManagementBody(',
-        () {
+      // AC2 (finding) — behavioral: the old version of this test asserted
+      // `hubSource.contains('TrackManagementBody(')` — a string match that
+      // would still pass even if the call were dead-code inside an
+      // `if (false)` branch, a comment, or a constructor that never actually
+      // reaches the render tree. This pumps the REAL
+      // TrackManagementHubScreen and asserts the OBSERVABLE EFFECT: a
+      // TrackManagementBody instance genuinely exists in the rendered
+      // widget tree. Strictly stronger — it fails if the hub screen ever
+      // stops instantiating the shared body (e.g. reverts to its own
+      // hand-rolled UI), which the source-text match could never catch.
+      testWidgets(
+        'TrackManagementHubScreen renders a TrackManagementBody in its tree',
+        (tester) async {
+          final db = inMemoryDb();
+          addTearDown(db.close);
+          final router = MockStackRouter();
+
+          await tester.pumpWidget(
+            pumpApp(
+              overrides: [
+                activeProfileIdProvider.overrideWithValue(1),
+                userDatabaseProvider.overrideWith((ref) => db),
+                activeTracksProvider.overrideWith(
+                  (ref) => Stream.value(const <CurriculumTrack>[]),
+                ),
+                useHebrewTermsProvider.overrideWith(() => HebrewTermsOff()),
+              ],
+              child: StackRouterScope(
+                controller: router,
+                stateHash: 0,
+                child: const TrackManagementHubScreen(),
+              ),
+            ),
+          );
+          await settle(tester);
+
           expect(
-            hubSource.contains('TrackManagementBody('),
-            isTrue,
+            find.byType(TrackManagementBody),
+            findsOneWidget,
             reason:
                 'TrackManagementHubScreen.build() must instantiate '
                 'TrackManagementBody( — the widget must not be dead code',
           );
+
+          await teardown(tester);
         },
       );
 
