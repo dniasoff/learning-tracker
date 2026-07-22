@@ -281,9 +281,9 @@ class PinService {
       await _secureStorage.write(key: timestampKey, value: lockoutTimestamp);
       await _secureStorage.write(key: countKey, value: '0');
       // Story 27.14 (DNI-390): fire analytics event when lockout triggers.
-      // profileId is not known at this layer — use 0 as sentinel (profileId=0
-      // convention per coding standards).
-      unawaited(_analytics.logPinLockedOut(profileId: 0));
+      // PV-1: no profileId parameter — the event signals only THAT a
+      // lockout occurred, never WHICH profile.
+      unawaited(_analytics.logPinLockedOut());
     }
   }
 

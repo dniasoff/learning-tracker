@@ -18,10 +18,11 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
+import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/switcher_sheet_pin_guard_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/profile_switcher_sheet.dart';
@@ -32,6 +33,20 @@ import '../../../helpers/pump_app.dart';
 class _MockStackRouter extends Mock implements StackRouter {}
 
 class _FakePageRouteInfo extends Fake implements PageRouteInfo {}
+
+/// Real [PinService] mock — used by the "real guard decision" group below so
+/// [switcherSheetPinGuardRequiredProvider] runs UNSTUBBED and its actual call
+/// into [PinService.hasProfilePin] can be observed.
+class _MockPinService extends Mock implements PinService {}
+
+/// Fixes [activeProfileIdProvider] to a constant id for the container —
+/// mirrors `switcher_sheet_pin_guard_provider_test.dart`'s identical helper.
+class _FixedActiveProfileId extends ActiveProfileId {
+  _FixedActiveProfileId(this._id);
+  final int _id;
+  @override
+  int build() => _id;
+}
 
 ProfileModel _profile({
   required int id,
@@ -307,49 +322,128 @@ void main() {
       },
     );
 
-    /// Pure unit: switcherSheetPinGuardRequiredProvider returns false when
-    /// active profile is adult (no child = no escalation guard needed).
-    test(
-      'unit: guard provider returns false when active profile is adult',
-      () async {
+    /// TEA-009 de-tautologization: the block below used to override
+    /// [switcherSheetPinGuardRequiredProvider] itself with a hand-copied
+    /// re-implementation of its own logic (including a bare `return true; //
+    /// would call hasProfilePin in real code` for the child branch) — a
+    /// tautology on a P0 child-privacy path. `container.read(...)` was only
+    /// ever proving the TEST'S copy-pasted `if` statement worked, never the
+    /// real provider body in
+    /// `lib/features/profiles/presentation/providers/switcher_sheet_pin_guard_provider.dart`,
+    /// so a real regression there (e.g. deleting the `hasProfilePin` call, or
+    /// flipping `!=` to `==`) could ship with this test still green.
+    ///
+    /// Rewritten to build a REAL [ProviderContainer] with ONLY the guard's
+    /// true upstream dependencies overridden ([profileListStreamProvider],
+    /// [activeProfileIdProvider], [pinServiceProvider]) and read
+    /// [switcherSheetPinGuardRequiredProvider] completely unstubbed — the
+    /// actual production function body runs and its actual decision is
+    /// asserted, including verifying [PinService.hasProfilePin] is (or is
+    /// not) consulted, exactly as
+    /// `switcher_sheet_pin_guard_provider_test.dart` does for the same
+    /// provider in isolation.
+    group('real guard decision (no test-side re-implementation)', () {
+      late _MockPinService pinService;
+
+      setUp(() {
+        pinService = _MockPinService();
+      });
+
+      Future<ProviderContainer> makeContainer({
+        required List<ProfileModel> profiles,
+        required int activeProfileId,
+      }) async {
         final container = ProviderContainer(
           overrides: [
             profileListStreamProvider.overrideWith(
-              (ref) => Stream.value([adultProfile]),
+              (ref) => Stream.value(profiles),
             ),
-            selectedProfileIdProvider.overrideWith(
-              () => _FixedSelectedProfileId(adultProfile.id),
+            activeProfileIdProvider.overrideWith(
+              () => _FixedActiveProfileId(activeProfileId),
             ),
-            // Override to skip FlutterSecureStorage (would always return false
-            // for adult regardless, but we verify the short-circuit logic).
-            switcherSheetPinGuardRequiredProvider.overrideWith((ref) async {
-              // Access the real implementation logic: adult → false.
-              final profiles =
-                  ref.watch(profileListStreamProvider).asData?.value ??
-                  <ProfileModel>[];
-              final activeId = ref.watch(selectedProfileIdProvider) ?? 0;
-              final active = profiles
-                  .where((p) => p.id == activeId)
-                  .firstOrNull;
-              if (active == null || active.profileMode != ProfileMode.child) {
-                return false;
-              }
-              return true; // would call hasProfilePin in real code
-            }),
+            pinServiceProvider.overrideWithValue(pinService),
           ],
         );
         addTearDown(container.dispose);
+        // Keep the autoDispose profileListStreamProvider alive across the
+        // await below, matching the identical workaround in
+        // switcher_sheet_pin_guard_provider_test.dart.
+        final sub = container.listen(profileListStreamProvider, (_, _) {});
+        addTearDown(sub.close);
+        await container.read(profileListStreamProvider.future);
+        return container;
+      }
+
+      test('returns false for an adult active profile — hasProfilePin never '
+          'consulted', () async {
+        final container = await makeContainer(
+          profiles: [adultProfile],
+          activeProfileId: adultProfile.id,
+        );
 
         final result = await container.read(
           switcherSheetPinGuardRequiredProvider.future,
         );
+
         expect(
           result,
           isFalse,
           reason:
-              'AN-2: guard provider must return false for an adult active profile.',
+              'AN-2: the REAL guard provider must return false for an '
+              'adult active profile.',
         );
-      },
-    );
+        verifyNever(() => pinService.hasProfilePin(any()));
+      });
+
+      test('returns true for a child active profile with a configured Parent '
+          'PIN', () async {
+        when(
+          () => pinService.hasProfilePin(childProfile.id),
+        ).thenAnswer((_) async => true);
+        final container = await makeContainer(
+          profiles: [childProfile],
+          activeProfileId: childProfile.id,
+        );
+
+        final result = await container.read(
+          switcherSheetPinGuardRequiredProvider.future,
+        );
+
+        expect(
+          result,
+          isTrue,
+          reason:
+              'AN-2: the REAL guard provider must return true for a child '
+              'active profile with a Parent PIN configured — this is the '
+              'exact condition the widget tests above rely on to show the '
+              'PIN dialog.',
+        );
+        verify(() => pinService.hasProfilePin(childProfile.id)).called(1);
+      });
+
+      test('returns false for a child active profile with no Parent PIN '
+          'configured', () async {
+        when(
+          () => pinService.hasProfilePin(childProfile.id),
+        ).thenAnswer((_) async => false);
+        final container = await makeContainer(
+          profiles: [childProfile],
+          activeProfileId: childProfile.id,
+        );
+
+        final result = await container.read(
+          switcherSheetPinGuardRequiredProvider.future,
+        );
+
+        expect(
+          result,
+          isFalse,
+          reason:
+              'AN-2: no PIN configured means no escalation guard — the '
+              'child can use the switcher sheet unimpeded.',
+        );
+        verify(() => pinService.hasProfilePin(childProfile.id)).called(1);
+      });
+    });
   });
 }

@@ -11,7 +11,6 @@
 /// [AppLogger] so the structured-log trail is preserved.
 library;
 
-import 'package:learning_tracker/core/domain/value_objects/sefaria_ref.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 
 /// Named analytics event constants (Story 27.14, DNI-390).
@@ -78,12 +77,18 @@ abstract class AnalyticsService {
 
   Future<void> logAppLaunch() => logEvent(AnalyticsEvent.appLaunch);
 
+  /// PV-1: parameters are a coarse, low-cardinality category
+  /// (`curriculum_id` + `track_type`) — NEVER the specific `sefaria_ref` a
+  /// child studied. "Which religious text a specific child studied" is
+  /// sensitive per-child content history (docs/coding-standards.md PV-1);
+  /// this event may only signal THAT a completion happened, in which
+  /// curriculum, never the precise ref within it.
   Future<void> logCompletionRecorded({
-    required SefariaRef sefariaRef,
+    required String curriculumId,
     required String trackType,
   }) => logEvent(
     AnalyticsEvent.completionRecorded,
-    parameters: {'sefaria_ref': sefariaRef.value, 'track_type': trackType},
+    parameters: {'curriculum_id': curriculumId, 'track_type': trackType},
   );
 
   Future<void> logBulkMarkPriorUsed({
@@ -107,15 +112,14 @@ abstract class AnalyticsService {
   Future<void> logSyncFailed({required String reason}) =>
       logEvent(AnalyticsEvent.syncFailed, parameters: {'reason': reason});
 
-  Future<void> logPinLockedOut({required int profileId}) => logEvent(
-    AnalyticsEvent.pinLockedOut,
-    parameters: {'profile_id': profileId},
-  );
+  /// PV-1: no per-child identifier — this event signals only THAT a lockout
+  /// occurred, never WHICH profile (docs/coding-standards.md PV-1).
+  Future<void> logPinLockedOut() => logEvent(AnalyticsEvent.pinLockedOut);
 
-  Future<void> logParentModeEntered({required int profileId}) => logEvent(
-    AnalyticsEvent.parentModeEntered,
-    parameters: {'profile_id': profileId},
-  );
+  /// PV-1: no per-child identifier — this event signals only THAT parent
+  /// mode was entered, never WHICH profile (docs/coding-standards.md PV-1).
+  Future<void> logParentModeEntered() =>
+      logEvent(AnalyticsEvent.parentModeEntered);
 
   Future<void> logNotificationFired({required String notificationType}) =>
       logEvent(

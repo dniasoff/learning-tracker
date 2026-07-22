@@ -24,6 +24,7 @@ library;
 
 import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:drift/native.dart';
+import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/sync/merge/drift_merge_store.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
@@ -1988,6 +1989,31 @@ void main() {
 
       final events = await db.completionEventDao.getEventsByProfile(profileId);
       expect(events, isEmpty);
+    });
+
+    test('AUD-core-analytics-01 (PV-1): sync_merge_row_skipped never carries a '
+        'profile_id — only the coarse entity_kind/reason pair', () async {
+      final analytics = FakeAnalyticsService();
+      final wired = DriftMergeStore(db, analytics: analytics);
+
+      await wired.insertIfAbsent(
+        kind: EntityKind.completion,
+        profileId: profileId,
+        naturalKey: 'bad-key-pv1',
+        fields: {
+          // curriculum_id absent — the malformed-skip path.
+          'sefaria_ref': 'Mishnah Berakhot 1.1',
+          'stage_id': 1,
+          'track_type': 'personal',
+          'completed_at': DateTime.utc(2026, 5, 10).toIso8601String(),
+        },
+      );
+
+      final params = analytics.lastParamsOf(AnalyticsEvent.syncMergeRowSkipped);
+      expect(params, isNotNull, reason: 'the skip must fire telemetry');
+      expect(params?.containsKey('profile_id'), isFalse);
+      expect(params?['entity_kind'], EntityKind.completion);
+      expect(params?['reason'], 'malformed_fields');
     });
 
     test('two distinct completions both inserted', () async {

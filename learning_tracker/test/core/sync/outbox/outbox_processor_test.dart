@@ -1042,6 +1042,9 @@ void main() {
             .$2;
         expect(params?['collection'], 'streak_events');
         expect(params?['operation'], 'write');
+        // AUD-core-analytics-01 (PV-1): only the coarse collection/operation
+        // pair reaches analytics — no per-child identifier.
+        expect(params?.containsKey('profile_id'), isFalse);
       });
 
       test(

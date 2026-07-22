@@ -831,6 +831,37 @@ void main() {
       expect(params?['error_kind'], 'other');
     });
 
+    test('AUD-core-analytics-01 (PV-1): sync_permission_denied (read path) '
+        'never carries a profile_id', () async {
+      final gw = _FakeGateway()
+        ..throwWith = const FirestorePermissionDeniedException(
+          'simulated PERMISSION_DENIED',
+          collection: 'completions',
+          operation: 'read',
+        );
+      final analytics = _RecordingAnalyticsService();
+      final orchestrator = _makeOrchestrator(gateway: gw, analytics: analytics);
+
+      await expectLater(orchestrator.pullOnLaunch(), throwsA(anything));
+
+      final permissionDeniedEvents = analytics.events.where(
+        (e) => e.name == AnalyticsEvent.syncPermissionDenied,
+      );
+      expect(
+        permissionDeniedEvents,
+        isNotEmpty,
+        reason:
+            'a FirestorePermissionDeniedException during the pull must '
+            'fire sync_permission_denied — this is the read-path sibling '
+            'of the outbox PUSH coverage in outbox_processor_test.dart '
+            '(AUD-core-sync-20)',
+      );
+      final params = permissionDeniedEvents.first.parameters;
+      expect(params?.containsKey('profile_id'), isFalse);
+      expect(params?['collection'], 'completions');
+      expect(params?['operation'], 'read');
+    });
+
     test('AUD-core-analytics-01 (PV-1): sync_listener_error analytics never '
         'carries a raw exception string', () async {
       // .start() attaches a WidgetsBinding lifecycle observer.
@@ -868,6 +899,39 @@ void main() {
       }
       expect(params?['error_kind'], 'other');
       orchestrator.dispose();
+    });
+  });
+
+  group('pullOnLaunch — success-path analytics', () {
+    // AUD-core-analytics-01 (PV-1): sync_pull_started/sync_pull_completed
+    // carry only the coarse `triggered_from_resume` flag — no profile_id or
+    // any other per-child identifier. Previously left as a false
+    // "coveredByOtherSuites" claim in pv1_analytics_pii_exclusion_test.dart
+    // (R3 privacy invariants follow-up) with no real assertion anywhere;
+    // this is that real coverage.
+    test('sync_pull_started and sync_pull_completed fire without a profile_id '
+        'on a successful pull', () async {
+      final analytics = _RecordingAnalyticsService();
+      final orchestrator = _makeOrchestrator(analytics: analytics);
+
+      await orchestrator.pullOnLaunch();
+
+      for (final name in [
+        AnalyticsEvent.syncPullStarted,
+        AnalyticsEvent.syncPullCompleted,
+      ]) {
+        final fired = analytics.events.where((e) => e.name == name);
+        expect(fired, isNotEmpty, reason: '$name must fire on success');
+        final params = fired.first.parameters;
+        expect(
+          params?.containsKey('profile_id'),
+          isFalse,
+          reason:
+              'profile_id is a per-child identifier and must never reach '
+              'an uncatalogued analytics event',
+        );
+        expect(params?['triggered_from_resume'], false);
+      }
     });
   });
 

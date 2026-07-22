@@ -151,9 +151,15 @@ void main() {
 
         expect(result.isNew, isTrue);
         expect(analytics.countOf(AnalyticsEvent.completionRecorded), 1);
+        // PV-1: coarse curriculum_id/track_type only — never the specific
+        // sefaria_ref a child studied (docs/coding-standards.md PV-1).
         expect(
           analytics.lastParamsOf(AnalyticsEvent.completionRecorded),
-          containsPair('sefaria_ref', 'Mishnah Berachot 1:1'),
+          containsPair('curriculum_id', 'mishnayos'),
+        );
+        expect(
+          analytics.lastParamsOf(AnalyticsEvent.completionRecorded),
+          isNot(contains('sefaria_ref')),
         );
       },
     );
@@ -276,9 +282,11 @@ void main() {
         await Future<void>.delayed(Duration.zero);
 
         expect(analytics.countOf(AnalyticsEvent.pinLockedOut), 1);
+        // PV-1: no profile_id — the event signals only THAT a lockout
+        // occurred, never WHICH profile (docs/coding-standards.md PV-1).
         expect(
           analytics.lastParamsOf(AnalyticsEvent.pinLockedOut),
-          containsPair('profile_id', 0),
+          isNot(contains('profile_id')),
         );
       },
     );
@@ -286,15 +294,18 @@ void main() {
 
   // ── 8. parent_mode_entered ─────────────────────────────────────────────────
   group('27.14 — parent_mode_entered', () {
-    test('logParentModeEntered fires with profile_id param', () async {
-      final analytics = FakeAnalyticsService();
-      await analytics.logParentModeEntered(profileId: 42);
-      expect(analytics.countOf(AnalyticsEvent.parentModeEntered), 1);
-      expect(
-        analytics.lastParamsOf(AnalyticsEvent.parentModeEntered),
-        containsPair('profile_id', 42),
-      );
-    });
+    test(
+      'logParentModeEntered fires without a profile_id param (PV-1)',
+      () async {
+        final analytics = FakeAnalyticsService();
+        await analytics.logParentModeEntered();
+        expect(analytics.countOf(AnalyticsEvent.parentModeEntered), 1);
+        expect(
+          analytics.lastParamsOf(AnalyticsEvent.parentModeEntered),
+          isNot(contains('profile_id')),
+        );
+      },
+    );
   });
 
   // ── 9. notification_fired (daily_reminder) ─────────────────────────────────
