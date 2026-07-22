@@ -49,6 +49,22 @@ Future<CurriculumCompletionSummary?> computeItemsLearnedSummary({
   required CurriculumId curriculum,
   required int profileId,
 }) async {
+  // Layer 3: use trackAchievement tier (excludes lifetimeOnly).
+  //
+  // R8 (OOM): fetch completions FIRST and bail before loading content. A
+  // curriculum with no track completions returned null anyway, so doing the
+  // cheap DB read first means the 8 untouched curricula in the aggregate never
+  // force-load (and PERMANENTLY cache) their full ~N-item content — the
+  // ContentRepository._contentCache growth that OOM-killed the process on a
+  // 512 MB heap. Output is provably identical: the only path removed is the
+  // wasted materialize-then-return-null on an empty-completions curriculum.
+  final trackCompletions = await db.completionDao.getCompletionsByTier(
+    profileId: profileId,
+    tier: CompletionTierFilter.trackAchievement,
+    curriculumId: curriculum,
+  );
+  if (trackCompletions.isEmpty) return null;
+
   // Load all leaves for this curriculum.
   List<ContentItem> leaves;
   try {
@@ -58,15 +74,6 @@ Future<CurriculumCompletionSummary?> computeItemsLearnedSummary({
     return null;
   }
   if (leaves.isEmpty) return null;
-
-  // Layer 3: use trackAchievement tier (excludes lifetimeOnly).
-  final trackCompletions = await db.completionDao.getCompletionsByTier(
-    profileId: profileId,
-    tier: CompletionTierFilter.trackAchievement,
-    curriculumId: curriculum,
-  );
-
-  if (trackCompletions.isEmpty) return null;
 
   final completedRefs = trackCompletions.map((c) => c.sefariaRef).toSet();
   final leafRefs = leaves.map((l) => l.sefariaRef).toSet();
@@ -116,15 +123,6 @@ Future<CurriculumCompletionSummary?> computeLifetimeViewSummary({
   required CurriculumId curriculum,
   required int profileId,
 }) async {
-  List<ContentItem> leaves;
-  try {
-    final content = await repo.getContentForCurriculum(curriculum);
-    leaves = content.where((item) => item.isLeaf).toList();
-  } catch (_) {
-    return null;
-  }
-  if (leaves.isEmpty) return null;
-
   final completions = await db.completionDao
       .getCompletionsByCurriculumAndProfile(curriculum.storageKey, profileId);
 
@@ -152,6 +150,27 @@ Future<CurriculumCompletionSummary?> computeLifetimeViewSummary({
       e.unitIdentifier,
     );
   }).toList();
+
+  // R8 (OOM): if the profile has NEITHER completions NOR ledger rows for this
+  // curriculum, computeLearnedLeafRefs below can only return an empty set (it
+  // seeds learnedRefs from completedRefs and only grows it via ledger actions),
+  // so the original `learnedRefs.isEmpty` guard would have returned null anyway.
+  // Bail here — a STRICT SUBSET of that guard — BEFORE force-loading (and
+  // PERMANENTLY caching) this curriculum's full content, so the untouched
+  // curricula in the aggregate no longer each materialize ~N items into
+  // ContentRepository._contentCache (the R8 OOM driver). The
+  // completions-nonempty-but-learnedRefs-empty case still falls through to the
+  // original guard below, unchanged.
+  if (completions.isEmpty && ledger.isEmpty) return null;
+
+  List<ContentItem> leaves;
+  try {
+    final content = await repo.getContentForCurriculum(curriculum);
+    leaves = content.where((item) => item.isLeaf).toList();
+  } catch (_) {
+    return null;
+  }
+  if (leaves.isEmpty) return null;
 
   const builder = LifetimeTreeBuilder();
   final learnedRefs = builder.computeLearnedLeafRefs(

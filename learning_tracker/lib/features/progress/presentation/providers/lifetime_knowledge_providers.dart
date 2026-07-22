@@ -610,6 +610,28 @@ Future<TrackDualProgressMetric?> _computeTrackDualProgressMetric({
   );
 }
 
+// R8 (OOM) — DEFERRED denominator rewiring.
+//
+// This header total force-materializes ALL 9 curricula (via
+// lifetimeSummariesProvider → lifetimeDataProvider → getContentForCurriculum),
+// which is the second half of the R8 OOM. The safe fix (Part A) covers the
+// items-learned / lifetime-view body aggregates; this denominator was NOT
+// rewired, on purpose:
+//
+//   `totalSections` here is the CARDINALITY OF THE UNION of `allLeafRefs`
+//   across all curricula — NOT a sum. Overlapping curricula share sefariaRefs
+//   (Chumash ⊂ Tanach, Nach ⊂ Tanach), so the union DEDUPS them. Measured on
+//   the real bundled assets: union = 70,033, whereas summing each curriculum's
+//   leaf count = 93,395 (a 23,362-section overlap double-count).
+//
+// Therefore a scalar `ContentRepositoryImpl.countLeavesForCurriculum(c)` summed
+// over all 9 would CHANGE the displayed total by 23,362 — violating the "totals
+// must stay byte-identical" invariant. A correct memory-cheap rewrite needs a
+// leaf-REF-SET accessor (to preserve dedup) plus touched-curricula-with-
+// supersets logic for the learned union (entangled with lifetimeDataProvider's
+// subset bridging). countLeavesForCurriculum + its equivalence test are landed
+// as the foundation; the union-preserving denominator rewiring is left for a
+// follow-up so this pass does not risk the total.
 final lifetimeTotalsAcrossAllCurriculaProvider = FutureProvider.autoDispose
     .family<LifetimeTotals, int>((ref, profileId) async {
       final summaries = await ref.watch(

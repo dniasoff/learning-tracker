@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
@@ -87,9 +88,7 @@ class ContentRepositoryImpl implements ContentRepository {
     }
 
     try {
-      final jsonString = await rootBundle.loadString(
-        'assets/content/hierarchy/$key.json',
-      );
+      final jsonString = await loadRawContentJson(key);
       final json = jsonDecode(jsonString) as Map<String, dynamic>;
       _parseAndCache(key, json);
       return _contentCache[key]!;
@@ -100,6 +99,87 @@ class ContentRepositoryImpl implements ContentRepository {
       // (AUD-content_browsing-09, EH-4).
       throw ContentLoadException(
         'Failed to load content for ${curriculumId.displayNameEn}',
+        cause: e,
+      );
+    }
+  }
+
+  /// Loads the raw JSON string for a leaf-source curriculum asset.
+  ///
+  /// Extracted as an overridable seam so [getContentForCurriculum] and
+  /// [countLeavesForCurriculum] load through ONE identical path, and so tests
+  /// (which have no asset bundle) can supply the on-disk JSON. Do not call
+  /// from outside this class in production code.
+  @visibleForTesting
+  Future<String> loadRawContentJson(String key) =>
+      rootBundle.loadString('assets/content/hierarchy/$key.json');
+
+  /// Counts the leaf [ContentItem]s for [curriculumId] WITHOUT retaining the
+  /// full materialized content list in [_contentCache].
+  ///
+  /// R8 (OOM): the header/denominator on the Lifetime Knowledge screen needs
+  /// each curriculum's total leaf count, but routing that through
+  /// [getContentForCurriculum] force-loads and PERMANENTLY caches every
+  /// curriculum's full ~N-item hierarchy — ~70k ContentItems across all 9,
+  /// which OOM-kills the process on a 512 MB heap. This method returns the
+  /// same number without that cost: on the cold path it parses the asset JSON
+  /// transiently and counts `isLeaf` flags (no ContentItem objects retained);
+  /// on an already-warm curriculum it counts from the existing cache.
+  ///
+  /// INVARIANT (asserted by the equivalence test for every [CurriculumId]):
+  ///   countLeavesForCurriculum(c)
+  ///     == (await getContentForCurriculum(c)).where((i) => i.isLeaf).length
+  ///
+  /// NOTE: intentionally NOT on the [ContentRepository] interface yet —
+  /// promoting it would force ~16 plain `implements ContentRepository` test
+  /// doubles to implement it. It is added here (and consumed via the concrete
+  /// type) pending the deferred Lifetime-header denominator rewiring; see the
+  /// note in lifetime_knowledge_providers.dart.
+  Future<int> countLeavesForCurriculum(CurriculumId curriculumId) async {
+    final key = curriculumId.storageKey;
+
+    // Already materialized → count from the cache (identical, no re-parse and
+    // no new allocation).
+    final cached = _contentCache[key];
+    if (cached != null) {
+      return cached.where((i) => i.isLeaf).length;
+    }
+
+    // Composite curricula: getContentForCurriculum prepends `strategy.preamble`
+    // verbatim then appends each source's items via `remap`, which preserves
+    // `isLeaf`. So the composite leaf count == (leaf rows in the preamble) +
+    // (sum of each source's leaf count). Recursing through this method — rather
+    // than getContentForCurriculum — keeps the transient, no-retain property.
+    final strategy = CompositeCurriculumStrategy.forKey(key);
+    if (strategy != null) {
+      var total = strategy.preamble.where((i) => i.isLeaf).length;
+      for (final source in strategy.sources) {
+        final sourceId = CurriculumId.values.firstWhere(
+          (c) => c.storageKey == source,
+        );
+        total += await countLeavesForCurriculum(sourceId);
+      }
+      return total;
+    }
+
+    // Leaf-source curriculum: parse the asset JSON transiently and count the
+    // `isLeaf` flags directly off the raw maps — no ContentItem construction,
+    // nothing written to _contentCache.
+    try {
+      final jsonString = await loadRawContentJson(key);
+      final json = jsonDecode(jsonString) as Map<String, dynamic>;
+      final itemsJson = json['items'] as List;
+      var count = 0;
+      for (final itemJson in itemsJson) {
+        if ((itemJson as Map<String, dynamic>)['isLeaf'] as bool) count++;
+      }
+      return count;
+    } on Exception catch (e) {
+      // Mirror getContentForCurriculum's typed catch (AUD-content_browsing-09,
+      // EH-4): a logic-bug Error propagates raw; only genuine load/parse
+      // Exceptions fold into ContentLoadException.
+      throw ContentLoadException(
+        'Failed to count leaves for ${curriculumId.displayNameEn}',
         cause: e,
       );
     }
