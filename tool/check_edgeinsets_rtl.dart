@@ -55,7 +55,12 @@ import 'dart:io';
 /// and has since been fixed by AUD-tracks-13 (replaced with
 /// `EdgeInsetsDirectional.only`), so it has been removed from this set.
 const _baseline = <String>{
-  'learning_tracker/lib/features/gamification/presentation/screens/reward_configuration_screen.dart:111',
+  // Re-pinned by the AppPalette theme migration: routing colours
+  // through context.colors shifted these PRE-EXISTING, still-
+  // unaddressed sites by a few lines. No content at any site
+  // changed, and the set of hit files is byte-identical to the
+  // last known-green commit (verified before re-pinning).
+  'learning_tracker/lib/features/gamification/presentation/screens/reward_configuration_screen.dart:110',
 };
 
 void main() {

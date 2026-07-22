@@ -64,7 +64,9 @@ void main() {
         );
         expect(
           result.stdout.toString(),
-          contains('reward_configuration_screen.dart:111'),
+          // Re-pinned :111 -> :110 by the AppPalette theme migration; the
+          // site itself is unchanged, only its line number moved.
+          contains('reward_configuration_screen.dart:110'),
           reason:
               'the pre-existing, out-of-scope baseline entry must still be '
               'suppressed (scope discipline — not this finding\'s site).',

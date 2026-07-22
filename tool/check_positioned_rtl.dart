@@ -65,25 +65,30 @@ import 'dart:io';
 /// (multi-line-aware) scan surfaces, none of them the AUD-profiles-23
 /// evidence site — out of scope here.
 const _baseline = <String>{
-  'learning_tracker/lib/features/account/onboarding/presentation/screens/signup_screen.dart:559',
-  'learning_tracker/lib/features/account/presentation/screens/sign_in_screen.dart:293',
-  'learning_tracker/lib/features/account/presentation/widgets/email_verification_confirm_panel.dart:102',
-  'learning_tracker/lib/features/content_browsing/presentation/screens/text_display_screen.dart:543',
+  // Re-pinned by the AppPalette theme migration: routing colours
+  // through context.colors shifted these PRE-EXISTING, still-
+  // unaddressed sites by a few lines. No content at any site
+  // changed, and the set of hit files is byte-identical to the
+  // last known-green commit (verified before re-pinning).
+  'learning_tracker/lib/features/account/onboarding/presentation/screens/signup_screen.dart:558',
+  'learning_tracker/lib/features/account/presentation/screens/sign_in_screen.dart:292',
+  'learning_tracker/lib/features/account/presentation/widgets/email_verification_confirm_panel.dart:109',
+  'learning_tracker/lib/features/content_browsing/presentation/screens/text_display_screen.dart:546',
   'learning_tracker/lib/features/dashboard/presentation/widgets/child_points_rewards_tab_card.dart:56',
-  'learning_tracker/lib/features/dashboard/presentation/widgets/dashboard_all_caught_up_card.dart:56',
-  'learning_tracker/lib/features/learning/presentation/screens/learning_screen.dart:237',
-  'learning_tracker/lib/features/onboarding/presentation/steps/onboarding_profile_creation_step.dart:276',
-  'learning_tracker/lib/features/onboarding/presentation/widgets/intro_daily_plan_page.dart:28',
-  'learning_tracker/lib/features/onboarding/presentation/widgets/intro_daily_plan_page.dart:94',
-  'learning_tracker/lib/features/onboarding/presentation/widgets/intro_mishna_page.dart:27',
-  'learning_tracker/lib/features/onboarding/presentation/widgets/intro_mishna_page.dart:52',
-  'learning_tracker/lib/features/onboarding/presentation/widgets/intro_mishna_page.dart:101',
-  'learning_tracker/lib/features/onboarding/presentation/widgets/intro_mishna_page.dart:118',
-  'learning_tracker/lib/features/onboarding/presentation/widgets/intro_rewards_page.dart:55',
-  'learning_tracker/lib/features/onboarding/presentation/widgets/intro_rewards_page.dart:72',
-  'learning_tracker/lib/features/profiles/presentation/widgets/add_profile_mode_pick_card.dart:92',
-  'learning_tracker/lib/features/profiles/presentation/widgets/profile_card.dart:122',
-  'learning_tracker/lib/features/settings/presentation/utils/account_actions.dart:79',
+  'learning_tracker/lib/features/dashboard/presentation/widgets/dashboard_all_caught_up_card.dart:55',
+  'learning_tracker/lib/features/learning/presentation/screens/learning_screen.dart:236',
+  'learning_tracker/lib/features/onboarding/presentation/steps/onboarding_profile_creation_step.dart:282',
+  'learning_tracker/lib/features/onboarding/presentation/widgets/intro_daily_plan_page.dart:27',
+  'learning_tracker/lib/features/onboarding/presentation/widgets/intro_daily_plan_page.dart:93',
+  'learning_tracker/lib/features/onboarding/presentation/widgets/intro_mishna_page.dart:100',
+  'learning_tracker/lib/features/onboarding/presentation/widgets/intro_mishna_page.dart:117',
+  'learning_tracker/lib/features/onboarding/presentation/widgets/intro_mishna_page.dart:26',
+  'learning_tracker/lib/features/onboarding/presentation/widgets/intro_mishna_page.dart:51',
+  'learning_tracker/lib/features/onboarding/presentation/widgets/intro_rewards_page.dart:54',
+  'learning_tracker/lib/features/onboarding/presentation/widgets/intro_rewards_page.dart:71',
+  'learning_tracker/lib/features/profiles/presentation/widgets/add_profile_mode_pick_card.dart:96',
+  'learning_tracker/lib/features/profiles/presentation/widgets/profile_card.dart:124',
+  'learning_tracker/lib/features/settings/presentation/utils/account_actions.dart:78',
   'learning_tracker/lib/features/tracks/setup/presentation/steps/step_starting_position_calendar.dart:293',
 };
 

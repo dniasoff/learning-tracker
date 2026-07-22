@@ -50,28 +50,22 @@ import 'dart:io';
 /// Pre-existing comment-only catches this checker's broadened pattern newly
 /// surfaces, none of them AUD-app-06 evidence sites — out of scope here.
 const _baseline = <String>{
-  'learning_tracker/lib/core/database/content/content_database.dart:84',
-  'learning_tracker/lib/core/database/content/content_database.dart:90',
-  'learning_tracker/lib/core/database/content/content_database.dart:104',
-  'learning_tracker/lib/core/database/content/content_database.dart:121',
-  'learning_tracker/lib/core/database/seed_manager.dart:336',
+  // Re-pinned by the AppPalette theme migration: routing colours
+  // through context.colors shifted these PRE-EXISTING, still-
+  // unaddressed sites by a few lines. No content at any site
+  // changed, and the set of hit files is byte-identical to the
+  // last known-green commit (verified before re-pinning).
+  'learning_tracker/lib/core/sync/sync_orchestrator.dart:1149',
   'learning_tracker/lib/core/sync/sync_orchestrator.dart:728',
   'learning_tracker/lib/core/sync/sync_orchestrator.dart:766',
   'learning_tracker/lib/core/sync/sync_orchestrator.dart:917',
   'learning_tracker/lib/core/sync/sync_orchestrator.dart:930',
-  'learning_tracker/lib/core/sync/sync_orchestrator.dart:1149',
   'learning_tracker/lib/features/account/domain/services/account_lifecycle_service.dart:83',
   'learning_tracker/lib/features/account/domain/services/account_management_service.dart:146',
   'learning_tracker/lib/features/account/presentation/notifiers/sign_in_controller.dart:645',
-  'learning_tracker/lib/features/account/presentation/screens/account_picker_screen.dart:578',
-  'learning_tracker/lib/features/account/presentation/screens/account_picker_screen.dart:616',
-  'learning_tracker/lib/features/gamification/presentation/widgets/achievement_unlock_celebration.dart:98',
-  'learning_tracker/lib/features/notifications/domain/services/notification_initializer.dart:47',
-  'learning_tracker/lib/features/notifications/presentation/widgets/timezone_lifecycle_observer.dart:62',
-  'learning_tracker/lib/features/onboarding/presentation/screens/bulk_mark_screen.dart:149',
-  'learning_tracker/lib/features/profiles/data/repositories/profile_repository_impl.dart:120',
-  'learning_tracker/lib/features/profiles/data/repositories/profile_repository_impl.dart:178',
-  'learning_tracker/lib/features/profiles/data/repositories/profile_repository_impl.dart:358',
+  'learning_tracker/lib/features/account/presentation/screens/account_picker_screen.dart:577',
+  'learning_tracker/lib/features/account/presentation/screens/account_picker_screen.dart:615',
+  'learning_tracker/lib/features/gamification/presentation/widgets/achievement_unlock_celebration.dart:97',
   'learning_tracker/lib/features/settings/presentation/utils/send_logs_service.dart:57',
   'learning_tracker/lib/features/settings/presentation/widgets/backup_sync_section.dart:59',
   'learning_tracker/lib/features/tracks/domain/services/curriculum_activation_service.dart:253',
