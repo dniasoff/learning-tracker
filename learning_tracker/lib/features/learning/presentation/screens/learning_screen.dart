@@ -504,19 +504,16 @@ class _LearnTaskCard extends ConsumerWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              // AUD-learning-05 (AX-3 / IL-7 defect class): swap the glyph for
-              // RTL so the "go to detail" chevron keeps pointing toward the
-              // forward-navigation edge instead of back into the card. Icon
-              // has no matchTextDirection parameter of its own (that field
-              // lives on IconData and chevron_right_rounded does not set
-              // it) — direction-aware icon selection is the established
-              // pattern in this codebase (see
-              // breadcrumb_navigation.dart's breadcrumbSeparatorIcon).
-              Icon(
-                Directionality.of(context) == TextDirection.rtl
-                    ? Icons.chevron_left_rounded
-                    : Icons.chevron_right_rounded,
-                color: const Color(0xFFA2A8B6),
+              // The "go to detail" chevron must point toward the forward-nav
+              // edge in both directions. Icons.chevron_right_rounded sets
+              // IconData.matchTextDirection: true, so the Icon widget
+              // auto-mirrors the glyph to point left under RTL (Hebrew). A
+              // manual rtl→chevron_left_rounded swap DOUBLE-flips (that glyph
+              // ALSO auto-mirrors), leaving the arrow pointing right in RTL —
+              // the R8 device-audit RTL defect (device 5564).
+              const Icon(
+                Icons.chevron_right_rounded,
+                color: Color(0xFFA2A8B6),
                 size: 22,
               ),
             ],
@@ -620,15 +617,12 @@ class _CurriculumBrowseCard extends StatelessWidget {
                   ),
                 ),
               ),
-              // AUD-learning-05 (AX-3 / IL-7 defect class): swap the glyph for
-              // RTL so the "go to detail" chevron keeps pointing toward the
-              // forward-navigation edge instead of back into the card. See
-              // the matching comment on _LearnTaskCard's chevron above.
-              Icon(
-                Directionality.of(context) == TextDirection.rtl
-                    ? Icons.chevron_left_rounded
-                    : Icons.chevron_right_rounded,
-                color: const Color(0xFFA2A8B6),
+              // Forward-nav chevron: chevron_right_rounded auto-mirrors under
+              // RTL via IconData.matchTextDirection. See the matching comment
+              // on _LearnTaskCard's chevron above (R8 RTL double-flip fix).
+              const Icon(
+                Icons.chevron_right_rounded,
+                color: Color(0xFFA2A8B6),
                 size: 22,
               ),
             ],

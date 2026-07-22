@@ -992,10 +992,19 @@ void main() {
       await _tearDown(tester);
     });
 
-    // ── R6-14 regression: chevron mirrors in RTL ──────────────────────────────
+    // ── R8 RTL regression: time-row chevron auto-mirrors via matchTextDirection ─
+    //
+    // Icons.chevron_right_rounded sets IconData.matchTextDirection: true, so the
+    // Icon widget flips the glyph to point left under RTL. The pre-R8 code
+    // manually swapped to chevron_left_rounded in RTL, but that glyph also
+    // auto-mirrors — a double-flip that pointed the chevron right again on the
+    // left edge (device-audit run-8, device 5564). The chevron must be
+    // chevron_right_rounded in both locales; chevron_left_rounded must never
+    // appear.
 
     testWidgets(
-      'RTL: time-row trailing chevron is chevron_left (forward = left in RTL)',
+      'RTL: time-row trailing chevron stays chevron_right_rounded and '
+      'auto-mirrors (no manual chevron_left swap)',
       (tester) async {
         await _pump(
           tester,
@@ -1006,16 +1015,20 @@ void main() {
           ),
         );
 
-        // In RTL the _SettingsTimeRow trailing icon must be chevron_left_rounded.
-        expect(find.byIcon(Icons.chevron_left_rounded), findsWidgets);
-        expect(find.byIcon(Icons.chevron_right_rounded), findsNothing);
+        // The _SettingsTimeRow disclosure chevron is the auto-mirroring glyph,
+        // which the Icon widget flips to point left under RTL.
+        expect(find.byIcon(Icons.chevron_right_rounded), findsWidgets);
+        expect(Icons.chevron_right_rounded.matchTextDirection, isTrue);
+        // A manual chevron_left_rounded swap would double-flip and point right
+        // again — it must never appear.
+        expect(find.byIcon(Icons.chevron_left_rounded), findsNothing);
 
         await _tearDown(tester);
       },
     );
 
     testWidgets(
-      'LTR: time-row trailing chevron is chevron_right (forward = right in LTR)',
+      'LTR: time-row trailing chevron is chevron_right_rounded',
       (tester) async {
         await _pump(
           tester,

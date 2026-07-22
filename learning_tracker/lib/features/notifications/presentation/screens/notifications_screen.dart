@@ -346,12 +346,11 @@ class _SettingsTimeRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 4),
-          Icon(
-            Directionality.of(context) == TextDirection.rtl
-                ? Icons.chevron_left_rounded
-                : Icons.chevron_right_rounded,
-            color: textColor,
-          ),
+          // chevron_right_rounded sets IconData.matchTextDirection: true, so
+          // the Icon widget auto-mirrors it to point left under RTL. A manual
+          // rtl→chevron_left_rounded swap double-flips (that glyph also
+          // auto-mirrors), pointing it right again in RTL — the R8 RTL defect.
+          Icon(Icons.chevron_right_rounded, color: textColor),
         ],
       ),
       onTap: onTap,
