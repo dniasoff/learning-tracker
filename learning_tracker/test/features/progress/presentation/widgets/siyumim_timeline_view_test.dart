@@ -13,7 +13,9 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/intl.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/learning/completion_constants.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
@@ -212,4 +214,127 @@ void main() {
     // The raw Sefaria storage key must NOT leak into the aggregate row.
     expect(find.textContaining('Tahorot'), findsNothing);
   });
+
+  // ── Data-consistency fix (run-9 audit) ──────────────────────────────────
+  //
+  // A section bulk-marked "previously learned" is stamped with the
+  // bulk-prior sentinel date (kBulkPriorSentinelDate, 2000-01-01 UTC). The
+  // timeline used to format that sentinel through DateFormat.yMMMd for the
+  // per-row date AND group it under a real-looking "Jan 2000" month header —
+  // both surfaced the bogus date to the user. These tests pin that both
+  // spots instead show the localized "Previously learned" string; the
+  // stored sentinel itself is untouched.
+
+  JourneyViewModel sentinelUnitViewModelWithDate(DateTime achievedAt) =>
+      JourneyViewModel(
+        curricula: [
+          CurriculumJourney(
+            curriculumId: CurriculumId.bavli,
+            completions: const [],
+            uniqueUnitsCompleted: 1,
+            totalUnitsAvailable: 63,
+            milestones: [
+              MilestoneAchievement(
+                type: 'unit_complete',
+                level: MilestoneLevel.unit,
+                curriculumId: CurriculumId.bavli,
+                displayName: 'Shabbat',
+                unitKey: 'Shabbat',
+                unitScope: 'masechta',
+                achievedAt: achievedAt,
+              ),
+            ],
+          ),
+        ],
+        totalCompletions: 0,
+        totalUniqueUnits: 1,
+        unitLevelSiyumimCount: 1,
+        aggregateLevelSiyumimCount: 0,
+        curriculumLevelSiyumimCount: 0,
+      );
+
+  testWidgets(
+    'a sentinel-dated milestone shows "Previously learned" as both the '
+    'row subtitle date and the month-group header — not "Jan 2000"',
+    (tester) async {
+      await tester.pumpWidget(
+        _host(
+          viewModel: sentinelUnitViewModelWithDate(kBulkPriorSentinelDate),
+          content: const {
+            CurriculumId.bavli: [_shabbosContent],
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Month-group header.
+      expect(
+        find.text('Previously learned'),
+        findsWidgets,
+        reason:
+            'The month-group header for a sentinel-dated milestone must read '
+            '"Previously learned", not a formatted "Jan 2000".',
+      );
+      expect(
+        find.textContaining('2000'),
+        findsNothing,
+        reason:
+            'The sentinel year must never leak into the timeline as a bogus '
+            'month header or row date (the run-9 audit finding).',
+      );
+      // Row subtitle date fragment (" · Previously learned").
+      expect(find.textContaining(' · Previously learned'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'sentinel-dated and real-dated milestones group under separate headers '
+    '— the sentinel does not merge into a real month bucket',
+    (tester) async {
+      final realDate = DateTime(2026, 3, 10);
+      final viewModel = JourneyViewModel(
+        curricula: [
+          CurriculumJourney(
+            curriculumId: CurriculumId.bavli,
+            completions: const [],
+            uniqueUnitsCompleted: 2,
+            totalUnitsAvailable: 63,
+            milestones: [
+              MilestoneAchievement(
+                type: 'unit_complete',
+                level: MilestoneLevel.unit,
+                curriculumId: CurriculumId.bavli,
+                displayName: 'Shabbat',
+                unitKey: 'Shabbat',
+                unitScope: 'masechta',
+                achievedAt: realDate,
+              ),
+              MilestoneAchievement(
+                type: 'unit_complete',
+                level: MilestoneLevel.unit,
+                curriculumId: CurriculumId.bavli,
+                displayName: 'Berakhot',
+                unitKey: 'Berakhot',
+                unitScope: 'masechta',
+                achievedAt: kBulkPriorSentinelDate,
+              ),
+            ],
+          ),
+        ],
+        totalCompletions: 0,
+        totalUniqueUnits: 2,
+        unitLevelSiyumimCount: 2,
+        aggregateLevelSiyumimCount: 0,
+        curriculumLevelSiyumimCount: 0,
+      );
+
+      await tester.pumpWidget(_host(viewModel: viewModel));
+      await tester.pumpAndSettle();
+
+      final realHeader = DateFormat.yMMM('en_US').format(realDate);
+      expect(find.text(realHeader), findsOneWidget);
+      expect(find.text('Previously learned'), findsOneWidget);
+      expect(find.textContaining('2000'), findsNothing);
+    },
+  );
 }

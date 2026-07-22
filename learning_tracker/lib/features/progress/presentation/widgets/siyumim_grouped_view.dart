@@ -6,6 +6,7 @@ import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/curriculum_label_renderer.dart';
 import 'package:learning_tracker/core/labels/curriculum_level_name.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
+import 'package:learning_tracker/core/learning/completion_constants.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/progress/domain/models/journey_view_model.dart';
@@ -424,6 +425,25 @@ String renderMilestoneName(
   rawValue: rawValue,
 );
 
+/// True when a milestone's [achievedAt] is the bulk-mark-prior sentinel
+/// (`kBulkPriorSentinelDate`, 2000-01-01 UTC) rather than a real completion
+/// moment.
+///
+/// Data-consistency fix (run-9 audit): sections bulk-marked as "previously
+/// learned" during onboarding are stamped with this sentinel so they're
+/// excluded from live-activity aggregations (see `completion_constants.dart`).
+/// Formatting the sentinel through [DateFormat] surfaced the nonsensical
+/// "Jan 1, 2000" on Siyumim & Milestones rows as if it were a genuine
+/// achievement date. [formatMilestoneDate] and the timeline's month-grouping
+/// key both check this first so the sentinel never reaches the date
+/// formatter. Compares via `isAtSameMomentAs` after `toUtc()` — the same
+/// flag-independent technique as
+/// `bulk_prior_completion_service.dart`'s `isBulkPriorSentinel` — because a
+/// sentinel that round-tripped through Firestore/Drift can carry a
+/// different `isUtc` flag than the literal `DateTime.utc(2000, 1, 1)`.
+bool isSentinelAchievement(DateTime achievedAt) =>
+    achievedAt.toUtc().isAtSameMomentAs(kBulkPriorSentinelDate);
+
 /// Format a milestone [date] using [DateFormat.yMMMd] for the active locale —
 /// US English renders "May 11, 2026" while UK/IL and Hebrew render
 /// "11 May 2026" (or the Hebrew equivalent). The bare `d/M/yyyy` numeric
@@ -431,7 +451,15 @@ String renderMilestoneName(
 /// project's standing date-format rule. Exposed (not `_`-prefixed) so the
 /// chronological timeline view can share the same formatter and the two
 /// surfaces stay visually consistent.
+///
+/// When [date] is the bulk-prior sentinel (see [isSentinelAchievement]) this
+/// returns the localized "Previously learned" string instead of formatting
+/// the sentinel as a real calendar date — the stored value is never changed,
+/// only its presentation.
 String formatMilestoneDate(BuildContext context, DateTime date) {
+  if (isSentinelAchievement(date)) {
+    return AppLocalizations.of(context)!.siyumimPreviouslyLearnedDate;
+  }
   final locale = Localizations.localeOf(context).toString();
   return DateFormat.yMMMd(locale).format(date.toLocal());
 }

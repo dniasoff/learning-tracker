@@ -7413,6 +7413,12 @@ abstract class AppLocalizations {
   /// **'All {count} complete · {date}'**
   String siyumimAggregateSubtitle(int count, String date);
 
+  /// Data-consistency fix (run-9 audit): replaces the achievement date on a Siyumim & Milestones row (and the timeline's month-group header) when the milestone's achievedAt is the bulk-mark-prior sentinel (kBulkPriorSentinelDate, 2000-01-01 UTC) rather than a real completion moment. Bulk-marked-as-previously-learned sections have no real completion date to show; formatting the sentinel through DateFormat rendered the nonsensical 'Jan 1, 2000' to the user. Do NOT change the stored sentinel — this only changes its presentation.
+  ///
+  /// In en, this message translates to:
+  /// **'Previously learned'**
+  String get siyumimPreviouslyLearnedDate;
+
   /// Caption shown under the PaceIndicator on the Curriculum Progress screen — disambiguates pace (engagement-tier track learning) from the lifetime tier so users don't conflate the two.
   ///
   /// In en, this message translates to:

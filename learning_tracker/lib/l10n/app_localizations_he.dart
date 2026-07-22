@@ -4361,6 +4361,9 @@ class AppLocalizationsHe extends AppLocalizations {
   }
 
   @override
+  String get siyumimPreviouslyLearnedDate => 'נלמד בעבר';
+
+  @override
   String get paceLiveLearningOnlyCaption =>
       'הקצב עוקב אחר לימוד במסלולים בלבד.';
 

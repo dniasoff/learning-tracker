@@ -28,8 +28,10 @@ import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/curriculum_progress_screen.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/overall_stats_card.dart';
+import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:learning_tracker/features/tracks/stages/domain/models/stage_definition.dart'
     as domain_stage;
 import 'package:learning_tracker/features/tracks/stages/domain/repositories/stage_definition_repository.dart';
@@ -202,12 +204,20 @@ Future<void> _seedLifetimeOnly(
   ]);
 }
 
+/// Default "Track progress" fixture used by every test in this file except
+/// the one that pins the dual-stats percentages explicitly. An empty list
+/// means `CurriculumProgressScreen`'s `dualMetric` lookup misses, so
+/// `trackProgressFraction` is null and the row shows an em-dash — fine for
+/// the tests below that don't assert on this value.
+const _noDualMetrics = <TrackDualProgressMetric>[];
+
 Widget _pump({
   required UserDatabase db,
   required ContentRepository repo,
   required StageDefinitionRepository stageRepo,
   required StackRouter router,
   bool useHebrew = false,
+  List<TrackDualProgressMetric> dualMetrics = _noDualMetrics,
 }) {
   return ProviderScope(
     overrides: [
@@ -220,6 +230,17 @@ Widget _pump({
         () => _UseHebrewTermsOverride(useHebrew: useHebrew),
       ),
       stageDefinitionRepositoryProvider.overrideWith((ref, c) => stageRepo),
+      // Data-consistency fix (run-9 audit): CurriculumProgressScreen now
+      // watches trackDualProgressMetricsProvider so its "Track progress" row
+      // agrees with the Progress hub / Track Detail. Overriding it directly
+      // (rather than seeding real stage_definitions rows to drive the real
+      // computation) mirrors the established pattern in
+      // track_detail_screen_test.dart and avoids the provider's dependency
+      // chain reaching FirebaseAuth (unavailable under `flutter test`).
+      trackDualProgressMetricsProvider(
+        _profileId,
+      ).overrideWith((ref) async => dualMetrics),
+      syncWriteFacadeProvider.overrideWith((ref) => null),
     ],
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -289,9 +310,9 @@ void main() {
   testWidgets(
     'OverallStatsCard shows both Track progress and Lifetime headline rows',
     (tester) async {
-      // 1 ref completed through both stages → counts as Track-progress (1/4
-      // fully done) → 25%. Same ref is "lifetime" too. Plus one lifetimeOnly
-      // ref that should bump Lifetime to 2/4 (50%) but not Track.
+      // Lifetime: 2 of 4 leaves touched (live ref + lifetimeOnly ref) → 50%.
+      // (These completions no longer drive "Track progress" — see below —
+      // but they still exercise the real lifetimeDataProvider computation.)
       await _seedCompletion(
         db,
         trackId: trackId,
@@ -317,20 +338,47 @@ void main() {
       final repo = _FakeContentRepository(leaves);
       final router = _RecordingRouter([]);
 
+      // Data-consistency fix (run-9 audit): "Track progress" is now sourced
+      // from trackDualProgressMetricsProvider's currentCyclePercentage — the
+      // SAME metric the Progress hub and Track Detail label "Track progress"
+      // — rather than this screen's own completedAllStages/totalItems (the
+      // pre-fix computation, which showed a DIFFERENT number under the
+      // identical label; see curriculum_progress_screen.dart). Overriding the
+      // provider directly (rather than driving the real time-gated
+      // computation through seeded completions + track.activatedAt) keeps
+      // the test deterministic and focused on what THIS test actually
+      // verifies: the screen renders whatever the shared metric provider
+      // says, under the shared label. The provider's own computation is
+      // covered by track_dual_progress_metrics_batch_test.dart.
       await tester.pumpWidget(
-        _pump(db: db, repo: repo, stageRepo: stageRepo, router: router),
+        _pump(
+          db: db,
+          repo: repo,
+          stageRepo: stageRepo,
+          router: router,
+          dualMetrics: [
+            TrackDualProgressMetric(
+              trackId: trackId,
+              trackLabel: 'Mishnayos',
+              curriculumId: CurriculumId.mishnayos,
+              currentCyclePercentage: 0.25,
+              lifetimePercentage: 0.9, // unused by this screen — see below
+              isProgramTrack: false,
+            ),
+          ],
+        ),
       );
       await tester.pumpAndSettle();
 
-      // Track-progress: 1 of 4 items has completed both stages → 25%. The
-      // dual-stats cell renders the label and the big percentage value as two
-      // separate lines (W5-A layout fix), so we assert each independently.
+      // The dual-stats cell renders the label and the big percentage value as
+      // two separate lines (W5-A layout fix), so we assert each independently.
       expect(
         find.text('Track progress'),
         findsOneWidget,
         reason:
-            'Track progress shows the % of items that have completed every '
-            'stage (the existing "completedAllStages" bucket)',
+            'Track progress shows the time-gated currentCyclePercentage from '
+            'trackDualProgressMetricsProvider — the same source Progress hub '
+            'and Track Detail use for the identical label.',
       );
       // The percentage is the headline value inside the OverallStatsCard — scope
       // the matcher there so it does not collide with a hierarchy progress
@@ -364,6 +412,99 @@ void main() {
       // The legacy breakdown rows remain — the dual-stats row is additive.
       expect(find.text('Total items'), findsOneWidget);
       expect(find.text('Completed all stages'), findsOneWidget);
+    },
+  );
+
+  // Data-consistency fix (run-9 audit) — dedicated regression pin.
+  //
+  // Run-9 found "Track progress: 0.1%" on the Progress hub / Track Detail
+  // but "Track progress: 3%" on THIS screen for the identical track — a
+  // ~30x discrepancy under one label. Root cause: this screen computed its
+  // own all-time `completedAllStages / totalItems` fraction instead of
+  // reading the same `trackDualProgressMetricsProvider.currentCyclePercentage`
+  // the other two surfaces use.
+  //
+  // This test seeds exactly ONE leaf fully complete (both stages, live). The
+  // pre-fix formula (completedAllStages/totalItems = 1/4) and the real
+  // lifetimeDataProvider computation (1 of 4 leaves ever touched = 1/4) both
+  // land on the SAME 25% — a deliberate coincidence that makes this a strong
+  // negative check: under the pre-fix code, BOTH "Track progress" and
+  // "Lifetime" would read 25% (two matches for "25%" in the card). The fixed
+  // metric is pinned via override to a different value (10%), so the fixed
+  // card must show "25%" exactly ONCE (under Lifetime only) and "10%" exactly
+  // once (under Track progress) — proving the screen no longer falls back to
+  // its own all-time recomputation under the shared label.
+  testWidgets(
+    'Track progress shows the time-gated currentCyclePercentage, NOT the '
+    'all-time completedAllStages/totalItems figure, when the two diverge',
+    (tester) async {
+      await _seedCompletion(
+        db,
+        trackId: trackId,
+        ref: leaves[0].sefariaRef,
+        stageId: learnStageId,
+        at: DateTime.utc(2026, 5, 1, 10),
+      );
+      await _seedCompletion(
+        db,
+        trackId: trackId,
+        ref: leaves[0].sefariaRef,
+        stageId: chazara1StageId,
+        at: DateTime.utc(2026, 5, 2, 10),
+      );
+
+      final repo = _FakeContentRepository(leaves);
+      final router = _RecordingRouter([]);
+
+      await tester.pumpWidget(
+        _pump(
+          db: db,
+          repo: repo,
+          stageRepo: stageRepo,
+          router: router,
+          dualMetrics: [
+            TrackDualProgressMetric(
+              trackId: trackId,
+              trackLabel: 'Mishnayos',
+              curriculumId: CurriculumId.mishnayos,
+              currentCyclePercentage: 0.10,
+              lifetimePercentage: 0.9, // unused by this screen — see above
+              isProgramTrack: false,
+            ),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // "25%" must appear exactly ONCE — under Lifetime only. Under the
+      // pre-fix code it would ALSO appear under Track progress (findsNWidgets
+      // would be 2), since completedAllStages/totalItems coincides with the
+      // real lifetime fraction for this fixture.
+      expect(
+        find.descendant(
+          of: find.byType(OverallStatsCard),
+          matching: find.text('25%'),
+        ),
+        findsOneWidget,
+        reason:
+            'The all-time completedAllStages/totalItems figure (25% here) '
+            'must not ALSO render under "Track progress" — that was the '
+            'run-9 mislabel. It should only appear once, under Lifetime.',
+      );
+      // The time-gated metric (sourced from the SAME provider the Progress
+      // hub / Track Detail use) must be what "Track progress" renders.
+      expect(
+        find.descendant(
+          of: find.byType(OverallStatsCard),
+          matching: find.text('10%'),
+        ),
+        findsOneWidget,
+        reason:
+            'Track progress must render trackDualProgressMetricsProvider'
+            '.currentCyclePercentage — the same source the Progress hub and '
+            "Track Detail use for the identical label — not this screen's "
+            'own all-time recomputation.',
+      );
     },
   );
 
@@ -575,6 +716,10 @@ void main() {
             stageDefinitionRepositoryProvider.overrideWith(
               (ref, c) => stageRepo,
             ),
+            trackDualProgressMetricsProvider(
+              _profileId,
+            ).overrideWith((ref) async => _noDualMetrics),
+            syncWriteFacadeProvider.overrideWith((ref) => null),
           ],
           child: MaterialApp(
             locale: const Locale('he'),
@@ -632,6 +777,10 @@ void main() {
             () => _UseHebrewTermsOverride(useHebrew: false),
           ),
           stageDefinitionRepositoryProvider.overrideWith((ref, c) => stageRepo),
+          trackDualProgressMetricsProvider(
+            _profileId,
+          ).overrideWith((ref) async => _noDualMetrics),
+          syncWriteFacadeProvider.overrideWith((ref) => null),
         ],
         child: MaterialApp(
           locale: const Locale('he'),

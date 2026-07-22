@@ -8,7 +8,11 @@ import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/progress/domain/models/journey_view_model.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/siyum_milestone_label.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/siyumim_grouped_view.dart'
-    show formatMilestoneDate, renderMilestoneName, unitScopeContentLevel;
+    show
+        formatMilestoneDate,
+        isSentinelAchievement,
+        renderMilestoneName,
+        unitScopeContentLevel;
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Chronological view of all siyumim (unit + aggregate + curriculum) across
@@ -58,11 +62,24 @@ class SiyumimTimelineView extends ConsumerWidget {
     // Group by month using a locale-aware formatter (TS-13: replaced the
     // hardcoded English month array with DateFormat.yMMM so month headers
     // adapt to the active locale instead of always rendering English).
+    //
+    // Data-consistency fix (run-9 audit): sentinel-dated (bulk-mark-prior)
+    // milestones share the literal 2000-01-01 moment, so the formatter used
+    // to group them under a real-looking "Jan 2000" header. They're collapsed
+    // under the same localized "Previously learned" header
+    // [formatMilestoneDate] uses for the per-row date instead — the sentinel
+    // still sorts to the end (oldest) so this doesn't change ordering, only
+    // the header text.
     final locale = Localizations.localeOf(context).toString();
     final monthFormatter = DateFormat.yMMM(locale);
+    final previouslyLearnedHeader = AppLocalizations.of(
+      context,
+    )!.siyumimPreviouslyLearnedDate;
     final byMonth = <String, List<_TimelineEntry>>{};
     for (final entry in entries) {
-      final key = monthFormatter.format(entry.milestone.achievedAt);
+      final key = isSentinelAchievement(entry.milestone.achievedAt)
+          ? previouslyLearnedHeader
+          : monthFormatter.format(entry.milestone.achievedAt);
       byMonth.putIfAbsent(key, () => []).add(entry);
     }
 
