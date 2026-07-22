@@ -4,13 +4,13 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
+import 'package:learning_tracker/app/router/router_provider.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/parent_pin_session_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/switcher_sheet_pin_guard_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/add_profile_dialog.dart';
@@ -317,11 +317,25 @@ class ProfileSwitcherSheet extends ConsumerWidget {
     // No UID change occurs on profile switch, so AppShell's auth-uid listener
     // does not fire — we must call exit() explicitly here to detach listeners.
     ref.read(activeTutoredProfileSelectionProvider.notifier).exit();
-    // Drop any parent-mode elevation so the freshly-selected profile starts
-    // in plain learning view (no banner). The PIN guard's per-(scope,profile)
-    // cache re-prompts on the new profile automatically since the scope id
-    // changes; we only need to clear the reactive flag the banner watches.
-    ref.read(parentPinAuthenticatedProfileIdProvider.notifier).clear();
+    // Drop any parent-mode elevation so the freshly-selected profile starts in
+    // plain learning view (no banner).
+    //
+    // SECURITY (run-10 P0): this MUST lock the PIN guard, not merely clear the
+    // banner's reactive flag. The previous code cleared only the flag, reasoning
+    // that "the guard's per-(scope,profile) cache re-prompts on the new profile
+    // automatically since the scope id changes". That holds when switching TO a
+    // different profile — but not on a ROUND TRIP back to the child who was
+    // elevated earlier: the scope id is then identical, so
+    // `_authenticatedScope == scope` and PinGuard waves the navigation through
+    // with no prompt. A child could hand the device back, switch to an adult
+    // profile and back to themselves, then re-enter Parent Mode with one tap —
+    // while the UI still showed a lock icon, a "PIN-guarded" subtitle and a
+    // CHILD MODE badge.
+    //
+    // `lock()` clears the guard's cached scope AND, via its onSessionLocked
+    // callback (router_provider.dart), the reactive flag — so it strictly
+    // supersedes the old clear() rather than duplicating it.
+    ref.read(routerProvider).pinGuard.lock();
     ref.read(selectedProfileIdProvider.notifier).select(profileId);
     unawaited(context.router.replaceAll([const AppShellRoute()]));
   }
