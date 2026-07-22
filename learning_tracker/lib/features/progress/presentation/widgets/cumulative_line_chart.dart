@@ -38,14 +38,18 @@ class CumulativeLineChart extends StatelessWidget {
         ],
         isCurved: true,
         preventCurveOverShooting: true,
-        color: context.colors.blueMid,
+        // chartLimudBlue (not blueMid): this line is drawn directly on the
+        // card surface and needs to stay visible against it in dark mode —
+        // the opposite requirement from blueMid's hero-fill role (run-9
+        // audit; see AppPalette.chartLimudBlue doc).
+        color: context.colors.chartLimudBlue,
         barWidth: 3,
         dotData: FlDotData(
           show: true,
           checkToShowDot: (spot, barData) => spot.x == data.length - 1,
           getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
             radius: 3.5,
-            color: context.colors.blueMid,
+            color: context.colors.chartLimudBlue,
             strokeWidth: 2,
             strokeColor: Colors.white,
           ),
@@ -56,8 +60,8 @@ class CumulativeLineChart extends StatelessWidget {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              context.colors.blueMid.withValues(alpha: 0.2),
-              context.colors.blueMid.withValues(alpha: 0),
+              context.colors.chartLimudBlue.withValues(alpha: 0.2),
+              context.colors.chartLimudBlue.withValues(alpha: 0),
             ],
           ),
         ),

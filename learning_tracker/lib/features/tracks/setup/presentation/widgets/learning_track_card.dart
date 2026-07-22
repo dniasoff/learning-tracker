@@ -90,7 +90,7 @@ class LearningTrackCard extends ConsumerWidget {
           child: Ink(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: context.colors.brandCreamCard,
               borderRadius: BorderRadius.circular(30),
               boxShadow: [
                 BoxShadow(

@@ -221,13 +221,13 @@ class _PermissionCard extends StatelessWidget {
     final theme = Theme.of(context);
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.colors.brandCreamCard,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
-            color: Color(0x12061D56),
+            color: context.colors.notifCardShadow,
             blurRadius: 14,
-            offset: Offset(0, 5),
+            offset: const Offset(0, 5),
           ),
         ],
       ),
@@ -251,17 +251,17 @@ class _PermissionCard extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF151B2D),
+                      color: context.colors.notifTitleText,
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     subtitle,
                     style: theme.textTheme.bodySmall?.copyWith(
-                      color: const Color(0xFF7A8293),
+                      color: context.colors.notifSubtitleText,
                       height: 1.35,
                     ),
                   ),
@@ -290,7 +290,10 @@ class _PermissionStatusWidget extends StatelessWidget {
       _PermissionStatus.idle => FilledButton(
         onPressed: onTap,
         style: FilledButton.styleFrom(
-          backgroundColor: const Color(0xFF123CA5),
+          // notifDeviceToggleActiveTrack: identical deep blue already used
+          // for the device-notification toggle's active track — reused here
+          // instead of a duplicate hardcoded literal (run-9 audit).
+          backgroundColor: context.colors.notifDeviceToggleActiveTrack,
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           shape: const StadiumBorder(),
         ),

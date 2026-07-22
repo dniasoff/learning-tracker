@@ -177,7 +177,7 @@ class _Counter extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: context.colors.brandCreamCard,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(

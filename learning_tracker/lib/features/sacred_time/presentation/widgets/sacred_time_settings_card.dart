@@ -74,7 +74,7 @@ class SacredTimeSettingsCard extends ConsumerWidget {
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.colors.brandCreamCard,
         borderRadius: BorderRadius.circular(22),
         boxShadow: [
           BoxShadow(

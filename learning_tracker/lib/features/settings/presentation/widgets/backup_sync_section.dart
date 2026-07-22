@@ -260,7 +260,7 @@ class _BackupSyncSectionState extends ConsumerState<BackupSyncSection> {
                   child: FilledButton(
                     style: FilledButton.styleFrom(
                       backgroundColor: context.colors.peachMid,
-                      foregroundColor: const Color(0xFF2C2A26),
+                      foregroundColor: context.colors.peachDark,
                       minimumSize: const Size.fromHeight(48),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(24),
@@ -268,7 +268,7 @@ class _BackupSyncSectionState extends ConsumerState<BackupSyncSection> {
                       textStyle: theme.textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w700,
                         fontSize: 18,
-                        color: const Color(0xFF2C2A26),
+                        color: context.colors.peachDark,
                       ),
                     ),
                     onPressed: () =>
@@ -345,7 +345,7 @@ class _BackupSyncSectionState extends ConsumerState<BackupSyncSection> {
                 child: FilledButton(
                   style: FilledButton.styleFrom(
                     backgroundColor: context.colors.peachMid,
-                    foregroundColor: const Color(0xFF2C2A26),
+                    foregroundColor: context.colors.peachDark,
                     minimumSize: const Size.fromHeight(42),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(24),
@@ -353,7 +353,7 @@ class _BackupSyncSectionState extends ConsumerState<BackupSyncSection> {
                     textStyle: theme.textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w700,
                       fontSize: 20,
-                      color: const Color(0xFF2C2A26),
+                      color: context.colors.peachDark,
                     ),
                   ),
                   onPressed: () =>
@@ -364,8 +364,16 @@ class _BackupSyncSectionState extends ConsumerState<BackupSyncSection> {
                       Container(
                         width: 16,
                         height: 16,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFF322A23),
+                        // peachDark/peachMid (not the old fixed
+                        // 0xFF322A23/peachMid pair): the badge circle was a
+                        // fixed dark brown so, once peachMid itself went dark
+                        // in dark mode, the peachMid icon on top of it became
+                        // dark-on-dark. peachDark/peachMid already invert
+                        // together (see the button foreground fix above),
+                        // so swapping the circle to peachDark keeps this
+                        // badge legible in both themes (run-9 audit).
+                        decoration: BoxDecoration(
+                          color: context.colors.peachDark,
                           shape: BoxShape.circle,
                         ),
                         alignment: Alignment.center,
@@ -459,7 +467,7 @@ class _BackupSyncSectionState extends ConsumerState<BackupSyncSection> {
                 child: FilledButton(
                   style: FilledButton.styleFrom(
                     backgroundColor: context.colors.peachMid,
-                    foregroundColor: const Color(0xFF2C2A26),
+                    foregroundColor: context.colors.peachDark,
                     minimumSize: const Size.fromHeight(44),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(24),
@@ -467,7 +475,7 @@ class _BackupSyncSectionState extends ConsumerState<BackupSyncSection> {
                     textStyle: theme.textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w700,
                       fontSize: 17,
-                      color: const Color(0xFF2C2A26),
+                      color: context.colors.peachDark,
                     ),
                   ),
                   onPressed: onTap,

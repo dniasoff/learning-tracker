@@ -157,7 +157,7 @@ class _LensTile extends StatelessWidget {
       child: Ink(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: context.colors.brandCreamCard,
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
@@ -339,7 +339,7 @@ class _PerTrackRow extends ConsumerWidget {
       child: Ink(
         padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: context.colors.brandCreamCard,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(

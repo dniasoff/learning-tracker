@@ -249,7 +249,7 @@ class _SettingsProfileSurface extends StatelessWidget {
     // tap-to-switch affordance that WS1.consolidate had removed.
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.colors.brandCreamCard,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: context.colors.surfaceE9),
         boxShadow: [
@@ -284,7 +284,7 @@ class _ParentProfileSurface extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.colors.brandCreamCard,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(

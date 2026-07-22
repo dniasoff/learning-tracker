@@ -72,7 +72,9 @@ class StatCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final effectiveCardColor =
         cardColor ??
-        (highlighted ? context.colors.statCardHighlightCoral : Colors.white);
+        (highlighted
+            ? context.colors.statCardHighlightCoral
+            : context.colors.brandCreamCard);
     final effectiveValueColor =
         valueColor ??
         (highlighted ? Colors.white : context.colors.statCardValueInk);
