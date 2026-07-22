@@ -89,9 +89,10 @@ export LD_LIBRARY_PATH="$HOME/.local/lib/sqliteshim:$LD_LIBRARY_PATH"   # Drift 
 
 | Surface | State | Owner / branch | Evidence when GREEN |
 |---|:--:|---|---|
-| R1 Child-data integrity | 🟠→(ci gating) | merged to dev; red-demo ✅ recorded | property/collision fixture sweep (20 tests, all 9 curricula) + factory consolidation — **built, red-demoed, committed; awaiting `make ci` green to push → 🟢** |
-| R2 Device-reality (RTL/overflow, API 9–16) | 🔴 | run-8 (baseline) → then A1.4/A1.5 | en+he golden matrix + RTL harness + multi-device on-device run |
-| R3 Parent-PIN / privacy | 🔴 | Phase 3 (not started) | on-device nav-guard timing + de-tautologized guards + invariants |
+| R1 Child-data integrity | 🟢 | dev `ca4bd912` (+merge); red-demo `red-demos/R1-collision-scope-id.md` | **REASSURED** — property/collision sweep (20 tests, all 9 curricula) + factory consolidation; red-demoed (naive keying → 18/20 fail w/ authentic over-count); `make ci` green (10,197 pass). |
+| R2 Device-reality (RTL/overflow, API 9–16) | 🔴 | run-8 baseline done → A1.4/A1.5 | en+he golden matrix + RTL harness + multi-device on-device run. **run-8 found:** Hebrew-Terms toggle vanishes in Hebrew UI; unmirrored chevrons (tablet); wizard CTA truncation "Mark Complet…". |
+| **R8 Memory/perf on low-end devices (NEW, from run-8)** | 🔴 **P0** | next fix target | **run-8 CONFIRMED P0:** entering Learn/aggregates eager-loads all 9 curricula (~70k sections) via `Future.wait(CurriculumId.values.map…)` in items_learned/lifetime providers → OOM on 512 MB heap (API 29); core learning pillar unreachable. Fix: bounded/lazy load + constrained-heap red-demo. |
+| R3 Parent-PIN / privacy | 🔴 | Phase 3 (not started) | on-device nav-guard timing + de-tautologized guards + invariants. **run-8 found:** PIN keypad drops fast taps → false "PINs do not match" (5560). |
 | R4 Sync / cloud / rules | 🟠 | Phase 2 (not started) | rules matrix + on-device real-Firestore round-trip + convert path |
 | R5 Reactivity | 🔴 | Phase 1 A1.6 (not started) | `expectRebuildsOn` contract adopted, red-demoed |
 | R6 Gate & flake trust | 🟠 | Phase 4 (not started) | flake policy + risk-tier coverage + device-in-CI, red-demoed |
@@ -160,6 +161,23 @@ Workflow scripts (for relaunch) are auto-persisted under
   naive bare keying → 18/20 fail with authentic over-count (`bavli|B|2` wrongly
   credited); fix restored → 20/20 green. Recorded `red-demos/R1-collision-scope-id.md`.
   Committed. `make ci` gate `b2um978z3` running (bg) — on green, push + R1 → 🟢.
+- **2026-07-22 ~05:30** — **R1 → 🟢 (first surface reassured).** `make ci` green
+  (10,197 pass / 128 skip) with the collision sweep + factory consolidation. Pushed.
+- **2026-07-22 ~05:30** — **Run-8 (Phase 0/A0.1) COMPLETE — on-device gate FAIL.**
+  6/6 devices seeded profile+track (offline recipe), **140 screens** audited (API
+  28→36). 23 raw → verify dropped 2 P1 false-positives → **P0=1, P2=8, P3=12**.
+  Report: `device-audit-run8/_REPORT.md`. **Headline: a CONFIRMED P0 the 10,370-test
+  suite never saw** — Learn/aggregates eager-load all 9 curricula → OOM on low-mem
+  (API 29). Verified in code (`items_learned_providers.dart:220/259` Future.wait over
+  CurriculumId.values). Logged as new surface **R8**. Confound: emulators ran
+  `-gpu swiftshader_indirect` (my ENV-RECOVERY default) → ~199 host RenderThread
+  segfaults muddied crash attribution; verify correctly split app-side (5556) from
+  host-GPU (5560). **ACTION for ENV-RECOVERY:** prefer `-gpu host` when a display is
+  available; swiftshader is crash-noisy. Other run-8 reals folded into R2/R3 rows +
+  a rollup-gap P2 (bulk-mark completions don't aggregate — touches R1's neighborhood,
+  UNDER-count vs the over-count R1 guards).
+- **NEXT:** fix R8 P0 (bounded/lazy curricula load + constrained-heap red-demo), then
+  Phase-1 remaining (R2 golden+RTL, R5 reactivity, R7 de-tautologize).
 - *(next entries appended as waves land.)*
 
 ---
