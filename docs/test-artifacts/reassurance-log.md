@@ -94,6 +94,11 @@ export LD_LIBRARY_PATH="$HOME/.local/lib/sqliteshim:$LD_LIBRARY_PATH"   # Drift 
   - agents recovering their own device per protocol (shows as \`Failed to load snapshot\` → cold boot).
   **Read the emulator log tail before counting a death**, and distinguish those four signatures. A restart you caused is not evidence about the app or the host. Also note deaths continued at load ~11-19, so "host contention" alone does not explain all of them — leave the unattributed ones honestly unattributed.
 
+**⚠️ A CONCURRENT AGENT CAN MOVE YOUR HEAD — check `git rev-parse --abbrev-ref HEAD` before every commit.**
+In run-10 an agent checked out `reassurance/r4-firestore-rules-matrix` **in the shared root checkout** to add a commit. That silently switched the coordinator's HEAD off `dev`, and the next **23 commits** — merges of the P0 fix, the chevron fix, dark-mode, data-consistency, bulk-mark, plus all the findings docs — landed on that feature branch instead. Nothing was lost (recovery was a clean `git checkout dev && git merge --ff-only <branch>`), but `dev` sat stale for a long stretch while looking fine from the inside, and *every* "merged into dev" claim in that window was wrong.
+- Symptom that exposed it: `git merge-base --is-ancestor <branch> dev` reported branches as UNMERGED that had just been merged — and a merge commit *I had authored* appeared in `dev..HEAD`.
+- Cheap guards: print the branch in the same command as the commit; after any merge, assert `git merge-base --is-ancestor <sha> dev`; and prefer giving agents **worktrees** (`isolation: worktree`) rather than letting them operate in the shared checkout.
+
 **Known operational facts (learned this campaign):**
 - 6 concurrent emulators driven through one adb server **flap** under load (not
   OOM — box has 123 GB, ~100 free). Tolerate transient `get-state` blips; retry.
