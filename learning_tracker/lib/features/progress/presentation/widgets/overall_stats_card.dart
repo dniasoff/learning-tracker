@@ -5,38 +5,94 @@ import 'package:learning_tracker/core/utils/percentage_formatter.dart';
 import 'package:learning_tracker/features/progress/domain/models/curriculum_progress_data.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
+/// White ink on the always-saturated brand-blue gradient below.
+///
+/// The card's gradient (`progressOverallStatsGradient*`) is pinned deep in
+/// BOTH light and dark themes (run-11 legibility sweep — see the gradient
+/// doc in [AppPalette]), so white foreground text is the correct,
+/// brightness-safe colour here regardless of the system theme. Collapsing
+/// every white reference in this file onto this single named literal keeps
+/// the run-9 raw-color-literal ratchet honest — one legitimate
+/// white-on-saturated-brand-surface site, not one per text run
+/// (`tool/check_raw_color_literal_ratchet.dart`, exemption #2).
+const _onGradient = Colors.white;
+
 /// Card displaying overall curriculum statistics (brand blue surface).
 ///
-/// W5-A: adds a [DualStatsRow] header — "Track progress" (current-cycle
-/// achievement) and "Lifetime" (% of items ever touched, including
-/// lifetimeOnly imports). The legacy total/completed/in-progress/not-started
-/// breakdown remains below. When [trackProgressFraction] or
-/// [lifetimeFraction] is null (e.g. while data is loading) the row is
-/// omitted so the card never renders a placeholder percentage.
+/// Reworked (owner decision 2026-07-28,
+/// `docs/planning/post-sweep-decisions.md` item #3) into TWO clearly-headed
+/// scope sections so the track-scoped counts never read as contradictory
+/// beside the whole-curriculum lifetime figure — both numbers are correct,
+/// they answer different questions, and each now sits under an explicit
+/// scope header:
+///
+/// * **Section A — "This track · this cycle":** the time-gated
+///   [trackProgressFraction] (current-cycle achievement) plus the
+///   track/scope-scoped count breakdown carried by [stats]
+///   (total items / completed-all-stages / in-progress / not-started). Every
+///   value here is computed from the ACTIVE track's own scope
+///   (`scopedCurriculumContentProvider` → `CurriculumProgressService`), NOT
+///   the full curriculum.
+/// * **Section B — "Whole [curriculum] · lifetime":** the whole-curriculum
+///   [lifetimeFraction] (distinct items ever touched ÷ total, unscoped)
+///   plus an "items touched X / total" line. Rendered only when lifetime
+///   data is available; omitted (with its divider) while it loads.
+///
+/// DO NOT equalise the two percentages — they are deliberately different
+/// metrics (see `docs/test-artifacts/run10/progress-percentage-divergence.md`
+/// and its run-11 amendment).
 class OverallStatsCard extends ConsumerWidget {
   const OverallStatsCard({
     super.key,
     required this.stats,
     this.trackProgressFraction,
     this.lifetimeFraction,
+    this.lifetimeLearnedCount,
+    this.lifetimeTotalCount,
+    this.curriculumName,
   });
 
+  /// Track/scope-scoped overall counts (total / completed-all-stages /
+  /// in-progress / not-started) for the ACTIVE track — Section A.
   final OverallCurriculumStats stats;
 
-  /// Current-cycle achievement: completedAllStages / totalItems. Rendered as
-  /// "Track progress: X%" — null hides the row.
+  /// Current-cycle achievement fraction (time-gated
+  /// `currentCyclePercentage`, track-scoped) — the Section A headline
+  /// percentage. Null hides the percentage (e.g. while loading / no track).
   final double? trackProgressFraction;
 
-  /// Lifetime tier: distinct items ever touched / totalItems (includes bulk
-  /// + lifetimeOnly + live). Rendered as "Lifetime: Y%" — null hides the row.
+  /// Whole-curriculum lifetime fraction (distinct items ever touched ÷
+  /// total, unscoped) — the Section B headline percentage. Null (together
+  /// with the counts below) hides Section B entirely.
   final double? lifetimeFraction;
+
+  /// Whole-curriculum count of distinct items ever touched — Section B's
+  /// "items touched X / total" line (numerator).
+  final int? lifetimeLearnedCount;
+
+  /// Whole-curriculum total item count — Section B's "items touched
+  /// X / total" line (denominator).
+  final int? lifetimeTotalCount;
+
+  /// Display name of the curriculum, already resolved through the shared
+  /// [CurriculumLabelRenderer] by the caller (Rule 5). Interpolated into the
+  /// Section B scope header ("Whole [curriculum] · lifetime"); when null a
+  /// generic header is used instead.
+  final String? curriculumName;
+
+  bool get _showLifetime =>
+      lifetimeFraction != null ||
+      (lifetimeLearnedCount != null && lifetimeTotalCount != null);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
-    final showDualStats =
-        trackProgressFraction != null || lifetimeFraction != null;
+
+    final sectionBHeader = curriculumName == null
+        ? l10n.overallProgressSectionWholeLifetimeGeneric
+        : l10n.overallProgressSectionWholeLifetime(curriculumName!);
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
@@ -56,7 +112,7 @@ class OverallStatsCard extends ConsumerWidget {
             context.colors.progressOverallStatsGradientEnd,
           ],
         ),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.22)),
+        border: Border.all(color: _onGradient.withValues(alpha: 0.22)),
         boxShadow: [
           BoxShadow(
             color: context.colors.brandBlue.withValues(alpha: 0.35),
@@ -72,96 +128,103 @@ class OverallStatsCard extends ConsumerWidget {
             l10n.overallProgressCardTitle,
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w800,
-              color: Colors.white,
+              color: _onGradient,
             ),
           ),
-          if (showDualStats) ...[
-            const SizedBox(height: 12),
-            DualStatsRow(
-              trackLabel: l10n.trackProgress,
-              trackFraction: trackProgressFraction,
-              lifetimeLabel: l10n.lifetimeLabel,
-              lifetimeFraction: lifetimeFraction,
-            ),
-            const SizedBox(height: 6),
-            Divider(
-              color: Colors.white.withValues(alpha: 0.22),
-              height: 12,
-              thickness: 1,
+
+          // ── Section A — This track · this cycle ───────────────────────────
+          const SizedBox(height: 14),
+          _ScopeHeader(text: l10n.overallProgressSectionThisTrackCycle),
+          if (trackProgressFraction != null) ...[
+            const SizedBox(height: 8),
+            _HeadlinePercent(
+              label: l10n.trackProgress,
+              fraction: trackProgressFraction!,
             ),
           ],
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           _StatRow(
             label: l10n.overallProgressStatTotalItems,
-            value: stats.totalItems,
+            value: '${stats.totalItems}',
           ),
           _StatRow(
             label: l10n.overallProgressStatCompletedAllStages,
-            value: stats.completedAllStages,
+            value: '${stats.completedAllStages}',
             leadingDot: true,
           ),
           _StatRow(
             label: l10n.overallProgressStatInProgress,
-            value: stats.inProgress,
+            value: '${stats.inProgress}',
             leadingDot: true,
           ),
           _StatRow(
             label: l10n.overallProgressStatNotStarted,
-            value: stats.notStarted,
+            value: '${stats.notStarted}',
             leadingDot: true,
           ),
+
+          // ── Section B — Whole [curriculum] · lifetime ─────────────────────
+          if (_showLifetime) ...[
+            Divider(
+              color: _onGradient.withValues(alpha: 0.22),
+              height: 26,
+              thickness: 1,
+            ),
+            _ScopeHeader(text: sectionBHeader),
+            if (lifetimeFraction != null) ...[
+              const SizedBox(height: 8),
+              _HeadlinePercent(
+                label: l10n.lifetimeLabel,
+                fraction: lifetimeFraction!,
+              ),
+            ],
+            if (lifetimeLearnedCount != null && lifetimeTotalCount != null) ...[
+              const SizedBox(height: 6),
+              _StatRow(
+                label: l10n.overallProgressStatLifetimeItemsTouched,
+                value: l10n.itemsLearnedOf(
+                  lifetimeLearnedCount!,
+                  lifetimeTotalCount!,
+                ),
+              ),
+            ],
+          ],
         ],
       ),
     );
   }
 }
 
-/// Two-column row of headline percentages.
-///
-/// Used inside [OverallStatsCard] to surface the two B1 lenses side-by-side:
-/// **Track progress** (current cycle, achievement tier) and **Lifetime**
-/// (% of items ever touched, lifetime tier). Either side may be `null` while
-/// the underlying data is loading — those columns render an em-dash so the
-/// row layout stays stable.
-class DualStatsRow extends StatelessWidget {
-  const DualStatsRow({
-    super.key,
-    required this.trackLabel,
-    required this.trackFraction,
-    required this.lifetimeLabel,
-    required this.lifetimeFraction,
-  });
+/// A section scope header (e.g. "This track · this cycle") — the label that
+/// disambiguates which numbers below it belong to which scope.
+class _ScopeHeader extends StatelessWidget {
+  const _ScopeHeader({required this.text});
 
-  final String trackLabel;
-  final double? trackFraction;
-  final String lifetimeLabel;
-  final double? lifetimeFraction;
+  final String text;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: _DualStatCell(label: trackLabel, fraction: trackFraction),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _DualStatCell(
-            label: lifetimeLabel,
-            fraction: lifetimeFraction,
-          ),
-        ),
-      ],
+    final theme = Theme.of(context);
+    return Text(
+      text,
+      style: theme.textTheme.labelMedium?.copyWith(
+        color: _onGradient.withValues(alpha: 0.82),
+        fontWeight: FontWeight.w800,
+        letterSpacing: 0.6,
+        height: 1.2,
+      ),
     );
   }
 }
 
-class _DualStatCell extends StatelessWidget {
-  const _DualStatCell({required this.label, required this.fraction});
+/// A headline percentage for one section: a small metric label above a large
+/// percentage value. Either the current-cycle "Track progress" figure
+/// (Section A) or the whole-curriculum "Lifetime" figure (Section B).
+class _HeadlinePercent extends StatelessWidget {
+  const _HeadlinePercent({required this.label, required this.fraction});
 
   final String label;
-  final double? fraction;
+  final double fraction;
 
   @override
   Widget build(BuildContext context) {
@@ -170,13 +233,6 @@ class _DualStatCell extends StatelessWidget {
     // breakdown): small non-zero fractions render "0.1%" instead of being
     // floored to "0%", so the same fraction reads consistently across the
     // Progress hub, track-detail and Lifetime Knowledge surfaces (Bug 3).
-    final value = fraction == null ? '—' : formatFractionAsPercent(fraction!);
-    // W5-A layout fix: stack the label above the percentage. Previously both
-    // were a single inline "Label: 0%" string inside an equal-width Expanded
-    // cell, so the longer "Track progress" headline wrapped to three cramped
-    // lines beside the single-line "Lifetime: N%" cell. Separating the label
-    // (which may wrap onto its own lines) from the big percentage value gives
-    // the headline room and keeps the two cells visually balanced.
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -184,17 +240,17 @@ class _DualStatCell extends StatelessWidget {
         Text(
           label,
           style: theme.textTheme.labelLarge?.copyWith(
-            color: Colors.white.withValues(alpha: 0.92),
+            color: _onGradient.withValues(alpha: 0.92),
             fontWeight: FontWeight.w700,
             height: 1.15,
           ),
         ),
         const SizedBox(height: 2),
         Text(
-          value,
+          formatFractionAsPercent(fraction),
           maxLines: 1,
           style: theme.textTheme.headlineSmall?.copyWith(
-            color: Colors.white,
+            color: _onGradient,
             fontWeight: FontWeight.w800,
             height: 1.0,
           ),
@@ -212,10 +268,10 @@ class _StatRow extends StatelessWidget {
   });
 
   final String label;
-  final int value;
+  final String value;
   final bool leadingDot;
 
-  static final _dotColor = Colors.white.withValues(alpha: 0.55);
+  static final _dotColor = _onGradient.withValues(alpha: 0.55);
 
   @override
   Widget build(BuildContext context) {
@@ -243,7 +299,7 @@ class _StatRow extends StatelessWidget {
                   child: Text(
                     label,
                     style: theme.textTheme.bodyMedium?.copyWith(
-                      color: Colors.white.withValues(alpha: 0.92),
+                      color: _onGradient.withValues(alpha: 0.92),
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -252,10 +308,10 @@ class _StatRow extends StatelessWidget {
             ),
           ),
           Text(
-            '$value',
+            value,
             style: theme.textTheme.titleSmall?.copyWith(
               fontWeight: FontWeight.w800,
-              color: Colors.white,
+              color: _onGradient,
             ),
           ),
         ],

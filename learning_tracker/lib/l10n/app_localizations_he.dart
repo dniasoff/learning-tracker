@@ -4062,6 +4062,21 @@ class AppLocalizationsHe extends AppLocalizations {
   String get overallProgressStatNotStarted => 'טרם הוחל';
 
   @override
+  String get overallProgressSectionThisTrackCycle => 'המסלול הזה · המחזור הזה';
+
+  @override
+  String overallProgressSectionWholeLifetime(String curriculum) {
+    return 'כל $curriculum · ידע כולל';
+  }
+
+  @override
+  String get overallProgressSectionWholeLifetimeGeneric =>
+      'כל התוכנית · ידע כולל';
+
+  @override
+  String get overallProgressStatLifetimeItemsTouched => 'פריטים שנלמדו';
+
+  @override
   String get curriculumProgressBreakdownByLevel => 'פירוט לפי רמה';
 
   @override

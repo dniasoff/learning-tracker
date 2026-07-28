@@ -173,12 +173,19 @@ class CurriculumProgressScreen extends ConsumerWidget {
               // of items ever touched (live + bulk + lifetimeOnly), sourced
               // from lifetimeDataProvider.
               final trackProgressFraction = dualMetric?.currentCyclePercentage;
-              final lifetimeFraction = lifetimeAsync.asData?.value == null
+              final lifetimeSummary = lifetimeAsync.asData?.value;
+              final lifetimeFraction = lifetimeSummary == null
                   ? null
-                  : (lifetimeAsync.asData!.value!.totalLeafCount == 0
+                  : (lifetimeSummary.totalLeafCount == 0
                         ? 0.0
-                        : lifetimeAsync.asData!.value!.learnedLeafCount /
-                              lifetimeAsync.asData!.value!.totalLeafCount);
+                        : lifetimeSummary.learnedLeafCount /
+                              lifetimeSummary.totalLeafCount);
+              // Section B header names the curriculum ("Whole [curriculum] ·
+              // lifetime"); resolve it through the shared label renderer
+              // (Rule 5) rather than reading displayName* directly.
+              final curriculumName = curriculum == null
+                  ? null
+                  : curriculumLabelText(ref, curriculum: curriculum);
 
               return bodyChild(
                 ListView(
@@ -202,6 +209,9 @@ class CurriculumProgressScreen extends ConsumerWidget {
                       stats: progressData.overallStats,
                       trackProgressFraction: trackProgressFraction,
                       lifetimeFraction: lifetimeFraction,
+                      lifetimeLearnedCount: lifetimeSummary?.learnedLeafCount,
+                      lifetimeTotalCount: lifetimeSummary?.totalLeafCount,
+                      curriculumName: curriculumName,
                     ),
                     const SizedBox(height: 24),
                     Text(

@@ -4111,6 +4111,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get overallProgressStatNotStarted => 'Not started';
 
   @override
+  String get overallProgressSectionThisTrackCycle => 'This track · this cycle';
+
+  @override
+  String overallProgressSectionWholeLifetime(String curriculum) {
+    return 'Whole $curriculum · lifetime';
+  }
+
+  @override
+  String get overallProgressSectionWholeLifetimeGeneric =>
+      'Whole curriculum · lifetime';
+
+  @override
+  String get overallProgressStatLifetimeItemsTouched => 'Items touched';
+
+  @override
   String get curriculumProgressBreakdownByLevel => 'Breakdown by Level';
 
   @override
