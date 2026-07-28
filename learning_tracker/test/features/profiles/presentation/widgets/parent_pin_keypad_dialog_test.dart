@@ -1002,4 +1002,86 @@ void main() {
       },
     );
   });
+
+  // ── Short (landscape-like) viewport — every key reachable, no overflow ────
+  //
+  // Sweep P2 (emulator-5560; also seen run-10): in landscape the dialog's
+  // natural content height (close button + title + subtitle + dot row +
+  // 4-row keypad) exceeds a short viewport. `ParentModeDialogFrame` bounds
+  // itself to 88% of `MediaQuery.sizeOf(context).height` and scrolls the
+  // content in a `SingleChildScrollView` (see parent_mode_dialog_frame.dart)
+  // — this proves that bound actually delivers every key (7,8,9,0,
+  // Cancel/Backspace) and the title reachable by scrolling in a short
+  // viewport, with NO RenderFlex overflow.
+  group('ParentPinKeypadDialog — short (landscape-like) viewport', () {
+    void setShortViewSize(WidgetTester tester) {
+      // A short, wide viewport approximating a phone in landscape
+      // (e.g. emulator-5560) — well under the keypad's natural content
+      // height, which is what previously pushed 7/8/9/0 and
+      // Cancel/Backspace off-screen with no scroll affordance.
+      tester.view.physicalSize = const Size(800, 360);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+    }
+
+    testWidgets(
+      'title, all 10 digits, and Cancel/Backspace are present with no '
+      'overflow, and the bottom row + title scroll into reach',
+      (tester) async {
+        setShortViewSize(tester);
+        final svc = _MockPinService();
+
+        await tester.pumpWidget(
+          _verificationHarness(pinService: svc, onResult: (_) {}),
+        );
+        await _openVerificationDialog(tester);
+
+        // A real RenderFlex/layout overflow throws during layout and would
+        // be captured here — assert none was thrown by the pump above.
+        expect(tester.takeException(), isNull);
+
+        // Title survives being scrolled to (not just laid out somewhere).
+        await tester.ensureVisible(find.text('Enter Parent PIN'));
+        await tester.pump();
+        expect(find.text('Enter Parent PIN'), findsAtLeastNWidgets(1));
+
+        // Every digit key, including the bottom row (7,8,9,0), plus
+        // Cancel/Backspace, is present in the tree...
+        for (final d in ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']) {
+          expect(find.text(d), findsAtLeastNWidgets(1));
+        }
+        expect(find.text('Cancel'), findsAtLeastNWidgets(1));
+        expect(find.byIcon(Icons.backspace_outlined), findsAtLeastNWidgets(1));
+
+        // ...and each is actually reachable/tappable — not merely laid out
+        // outside the scrollable's viewport. `ensureVisible` scrolls the
+        // nearest Scrollable until the target is on-screen; a clipped,
+        // non-scrolling dialog would leave the bottom row permanently
+        // off-screen and the taps below would hit nothing / time out.
+        await tester.ensureVisible(find.text('9'));
+        await tester.pump();
+        await tester.tap(find.text('9'));
+        await tester.pump();
+        expect(_filledDotCount(tester), 1);
+
+        await tester.ensureVisible(find.text('0'));
+        await tester.pump();
+        await tester.tap(find.text('0'));
+        await tester.pump();
+        expect(_filledDotCount(tester), 2);
+
+        await tester.ensureVisible(find.byIcon(Icons.backspace_outlined));
+        await tester.pump();
+        await tester.tap(find.byIcon(Icons.backspace_outlined));
+        await tester.pump();
+        expect(_filledDotCount(tester), 1);
+
+        await tester.ensureVisible(find.text('Cancel'));
+        await tester.pump();
+        expect(find.text('Cancel'), findsAtLeastNWidgets(1));
+
+        await _teardown(tester);
+      },
+    );
+  });
 }
