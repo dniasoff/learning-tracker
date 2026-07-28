@@ -60,25 +60,49 @@ set/enter/wrong/lockout-at-5 all correct. The run-8 Learn OOM P0 stays REFUTED (
    800×360 landscape viewport (no overflow, all keys reachable); red-demoed by stripping the
    scroll → 139px overflow matching the report. The device observation was stale/misread.
 
-### Real, but held for a dedicated follow-up (documented, not rushed)
-- **Reader next-item chevron swallows rapid taps** (P2) — source-confirmed:
-  `text_display_screen.dart:113-132` navigates each chevron via `context.router.replace(...)`
-  (a full route rebuild), and the adjacent-item computation is async, so rapid taps during
-  the transition are lost. **Load-sensitive**: 5556 saw ~80% drop under heavy contention;
-  5558 earlier saw 5/5 clean on a lighter load. The real fix is a navigation refactor
-  (drive the current ref from state and update in-place instead of `router.replace`) — a
-  medium-risk change to the reader's core navigation. Deferred to its own change rather than
-  rushed at session end; the mechanism is documented here so it isn't lost.
-- **Track rename does not propagate to Progress-tab screens** (P2) — `00048c68` wired
-  `trackDisplayTitle` into Track Detail + Learn, but `progress_screen.dart` /
-  `curriculum_progress_screen.dart` / `curriculum_settings_screen.dart` still render the
-  curriculum label. Whether Progress (a curriculum-organized view) should show the custom
-  track name is a genuine product-intent question — flagged for the repo owner, not
-  "fixed" unilaterally (this campaign has burned cycles fixing intentional behaviour).
+### Deferred items — now ADDRESSED (second fix pass, red-demoed + adversarially verified + merged)
+- **Reader next-item chevron swallows rapid taps** (P2) — **FIXED.** Confirmed a real bug
+  (not a host artifact) via a REAL auto_route router test: 5 rapid taps landed on item .1.4,
+  not .1.6 — taps genuinely dropped, because each chevron did `context.router.replace(...)`
+  (full route teardown) and the adjacent-ref lookup was async, so during the gap both
+  chevrons rendered `onPressed: null` and Flutter dropped taps on the disabled controls.
+  Fix: `TextDisplayScreen` → `ConsumerStatefulWidget` holding `_currentRef`; prev/next now
+  `setState` in place (no navigation) and read adjacency **synchronously** from the keepAlive
+  `ContentIndex.adjacent()` — closing the loading gap entirely. Deep-linking, breadcrumb,
+  RTL, and first/last disabling all preserved. New `text_display_chevron_tap_swallow_test.dart`
+  red-demoed (fails on reverted code). Verifier: MERGE, red-demo genuine, no router regression.
+- **Track rename does not propagate to Progress-tab screens** (P2) — **FIXED.** The product
+  question is resolved by the app's own established behaviour: Track Detail + Learn already
+  show the custom name (`00048c68`), and W3.22 guarantees one track per {profile, curriculum}
+  so all 3 Progress sites are per-track labels, not curriculum-group headers. Wired
+  `resolveTrackTitle(trackCustomNameProvider(...))` into `progress_screen.dart` (_PerTrackRow),
+  `curriculum_progress_screen.dart` + `curriculum_settings_screen.dart` (AppBar titles),
+  leaving genuine curriculum metadata (the Hebrew subtitle) alone. Red-demoed in all 3 files
+  (reverting shows the curriculum label). Completes established intent, not a unilateral
+  product change.
+- **Remaining dark-mode contrast (selected-state cards)** — **FIXED.** The 3 sites the
+  first pass flagged out of scope: chazara preset card SELECTED (1.63:1 → 11:1, new
+  pinned-deep gradient tokens), add-profile mode card SELECTED (1.63:1 → 10.65:1,
+  `brandCreamCard`), and the "Custom Cycle" card (1.16:1 → 14.94:1, `brandCreamCard`). Each
+  red-demoed; raw-color ratchet went 250 → 249. **Dark mode is now materially complete on
+  the surfaces exercised** (the campaign does not claim exhaustive coverage of every screen).
+- **Cold-start "Today's Missions: 0 remaining" flash** (P3) — **FIXED.** The pill read from
+  an empty placeholder list during load, showing a concrete "0"; now gated on the same
+  `tasksReady` flag its sibling counters use, showing "…" until data arrives. Red-demoed.
+- **Breadcrumb separator chevrons in content-hierarchy Browse** (P3) — **FALSE POSITIVE, no
+  change.** The screen already uses the shared `breadcrumbSeparatorIcon(Directionality.of(context))`
+  helper correctly in both spots (commit `120d476a`), with no intervening Directionality wrap
+  (no double-flip). Its existing RTL/LTR test catches a break (red-demoed). The 5564 device
+  observation did not reproduce in a fair test.
+
+### Still open (genuinely not fixed)
 - **Curriculum Progress card shows contradictory unlabeled numbers** (P2) — "Total items
   859 / Not started 858" (the track's own scope) beside "Lifetime 100%" (unscoped) on one
   card. Already analysed in `progress-percentage-divergence.md`; the defect is labelling,
-  and the arithmetic is defensible.
+  the arithmetic is defensible — left as a labelling-clarity follow-up.
+- **Chumash chapter siyum tier** — a product DECISION (should a chapter be its own siyum
+  tier), not a bug. The conservative default (no) is shipped and correct; awaiting the
+  repo owner's call.
 
 ### Low severity (documented, not fixed this pass)
 - Breadcrumb separator chevrons in Learn→Browse content hierarchy (P3, 5564) — a chevron
@@ -86,13 +110,7 @@ set/enter/wrong/lockout-at-5 all correct. The run-8 Learn OOM P0 stays REFUTED (
 - "Today's Missions: 0 remaining" flashes on cold start before data loads (P3, 5558) — a
   one-frame loading-state race.
 
-### Dark-mode: MORE remains (flagged by the fix agent, out of this pass's scope)
-The 3 fixed sites were the confirmed pixel-sampled findings. The fix agent flagged additional
-dark-mode weaknesses it did not touch, for a dedicated follow-up: the **selected-state**
-variants of the chazara preset card and the profile mode card (~1.6–2.5:1), and
-`step_chazara.dart`'s "Custom Cycle" card (same hardcoded-white pattern). Dark mode is
-materially better than the shipped build but is **not yet certified fully legible app-wide** —
-stated plainly.
+### Dark-mode selected-state cards — now FIXED (see "Deferred items — now ADDRESSED" above).
 
 ### Tooling gap found and fixed
 - `crash_attribution.sh` missed ANRs (they land in the `system` logcat buffer, not
