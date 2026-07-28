@@ -112,7 +112,13 @@ class PreferenceSegmentedTile<T> extends StatelessWidget {
               onChanged(selected.first);
             },
             style: SegmentedButton.styleFrom(
-              selectedBackgroundColor: context.colors.brandBlueBright,
+              // preferenceSegmentedSelectedFill (not brandBlueBright): this is
+              // a solid FILL under the hardcoded white label below.
+              // brandBlueBright lightens in dark mode for its normal
+              // ink-on-card role, which drops that white label to 1.85:1 —
+              // see the token's doc comment (AppPalette).
+              selectedBackgroundColor:
+                  context.colors.preferenceSegmentedSelectedFill,
               selectedForegroundColor: Colors.white,
               side: BorderSide(color: context.colors.preferenceSegmentedBorder),
             ),

@@ -1466,6 +1466,60 @@ class AppPalette extends ThemeExtension<AppPalette> {
   /// exact old accentPurpleDeep light literal in both themes, restoring
   /// 10.55:1.
   Color get sacredTimeLockYomTovBg => const Color(0xFF4A2A8A);
+  // ---------------------------------------------------------------------------
+  // core-widgets-app dark-mode burndown — hero-fill misuses of an
+  // ink-role token found under lib/core/widgets/ and lib/app/. Same class as
+  // blueMedium/blueLight/blueMid/navSelectedBlue/chazaraSelectedGradientStart/
+  // End above: a CONTRAST-role token that deliberately LIGHTENS in dark mode
+  // for its normal ink-on-dark-surface use, painted instead as a SOLID FILL
+  // under a hardcoded white foreground, which the lightened dark value cannot
+  // hold.
+  // ---------------------------------------------------------------------------
+
+  /// [brandBlue] pinned to its own light-mode hex in BOTH themes, for the two
+  /// call sites that paint it as a solid FILL under a fixed white foreground
+  /// rather than as ink on a card — the shared learning date-picker theme's
+  /// selected day/year chip (`learning_date_picker_theme.dart`) and the
+  /// shared confirm dialog's primary button (`app_dialog.dart`).
+  ///
+  /// [brandBlue] is a CONTRAST role that deliberately LIGHTENS in dark mode
+  /// for ink-on-dark-surface use (see its own doc comment); used as a FILL
+  /// instead, the lightened dark value (`0xFF7CA0FF`) dropped the hardcoded
+  /// white foreground to **2.52:1** against a 4.5:1 AA floor. Cannot reuse
+  /// [blueMedium]/[blueLight]/[blueMid] (the existing hero-fill tokens) —
+  /// their light-mode hexes differ from `brandBlue`'s, and these two call
+  /// sites must keep brandBlue's exact pre-fix light rendering. Pinned to the
+  /// same dark hex as [blueMedium] (a colour already proven to hold white
+  /// content): 10.36:1 with white text in dark.
+  Color get brandBlueDeepFill =>
+      _dark ? const Color(0xFF163797) : const Color(0xFF1442B8);
+
+  /// [chartRed] pinned to its own light-mode hex in BOTH themes, for the
+  /// destructive confirm dialog's primary button (`app_dialog.dart`), which
+  /// paints it as a solid FILL under a fixed white foreground rather than as
+  /// chart-series ink.
+  ///
+  /// [chartRed] is a chart-series CONTRAST role that deliberately lightens in
+  /// dark mode for ink-on-card use (chart lines/dots); used as a fill
+  /// instead, the lightened dark value (`0xFFD58F99`) dropped the hardcoded
+  /// white confirm-button label to **2.55:1** against a 4.5:1 AA floor. Same
+  /// fix class as [brandBlueDeepFill]: 5.76:1 with white text in both themes
+  /// (identical to the pre-fix light rendering).
+  Color get chartRedDeepFill => const Color(0xFFB43A4A);
+
+  /// Selected-segment fill for `PreferenceSegmentedTile`'s `SegmentedButton`
+  /// (`preference_segmented_tile.dart`) — split out of [brandBlueBright],
+  /// which is used as the fill there instead of its normal
+  /// ink-on-dark-surface role.
+  ///
+  /// [brandBlueBright] deliberately LIGHTENS in dark mode (see its own doc
+  /// comment); used as a FILL under a hardcoded white label, the lightened
+  /// dark value (`0xFFA3BEFF`) measured **1.85:1** against a 4.5:1 AA floor —
+  /// the same numeric failure already fixed once for
+  /// [chazaraSelectedGradientEnd], which pins this SAME light-mode hex for
+  /// the same reason. Pinned to the exact pre-fix light-mode hex in both
+  /// themes: 5.61:1 with white text in dark.
+  Color get preferenceSegmentedSelectedFill => const Color(0xFF2B5FD9);
 
   /// Fully transparent.
   Color get transparent => const Color(0x00000000);

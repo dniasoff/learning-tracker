@@ -7,7 +7,12 @@ ThemeData _learningDatePickerTheme(BuildContext context, ThemeData base) {
   final scheme = base.colorScheme;
   return base.copyWith(
     colorScheme: scheme.copyWith(
-      primary: context.colors.brandBlue,
+      // brandBlueDeepFill (not brandBlue): the selected day/year chip paints
+      // this as a solid FILL under the hardcoded white `onPrimary` below.
+      // brandBlue lightens in dark mode for its normal ink-on-card role,
+      // which drops that white foreground to 2.52:1 — see the token's doc
+      // comment (AppPalette).
+      primary: context.colors.brandBlueDeepFill,
       onPrimary: Colors.white,
       surface: context.colors.brandCreamCard,
       onSurface: context.colors.brandInk,
@@ -57,7 +62,9 @@ ThemeData _learningDatePickerTheme(BuildContext context, ThemeData base) {
       }),
       dayBackgroundColor: WidgetStateProperty.resolveWith((states) {
         if (states.contains(WidgetState.selected)) {
-          return context.colors.brandBlue;
+          // brandBlueDeepFill (not brandBlue) — see the colorScheme.primary
+          // comment above; same fill-under-white-text pairing.
+          return context.colors.brandBlueDeepFill;
         }
         return null;
       }),
