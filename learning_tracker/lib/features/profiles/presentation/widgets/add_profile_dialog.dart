@@ -66,8 +66,19 @@ Future<ProfileModel?> showAddProfileDialog(
 
         final theme = Theme.of(ctx);
         final surfaceGrey = context.colors.brandCreamSoft;
-        const labelGrey = Color(0xFF333333);
+        // AUD-profiles dark-mode sweep: was a hardcoded `Color(0xFF333333)`
+        // on this dialog's `brandCreamCard` surface (DARKENS in dark) —
+        // measured 1.38:1 in dark. `addProfileFormLabel` lightens like
+        // `brandInk` in dark (14.94:1 against the darkened card).
+        final labelGrey = context.colors.addProfileFormLabel;
         final canSubmit = ctrl.text.trim().isNotEmpty && err == null;
+        // AUD-profiles dark-mode sweep: `brandBlue` LIGHTENS in dark (an
+        // ink/contrast-role token, not a "stays deep" fill), so a hardcoded
+        // `Colors.white` label on top of it dropped to 2.52:1 in dark.
+        // `colorScheme.onPrimary` is the theme's own contrast-verified ink
+        // for this exact fill: white in light (unchanged), near-black in
+        // dark (~7.59:1).
+        final onAccent = theme.colorScheme.onPrimary;
         final createProfileButton = SizedBox(
           width: double.infinity,
           child: FilledButton(
@@ -76,7 +87,7 @@ Future<ProfileModel?> showAddProfileDialog(
                 : null,
             style: FilledButton.styleFrom(
               backgroundColor: context.colors.brandBlue,
-              foregroundColor: Colors.white,
+              foregroundColor: onAccent,
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(999),
@@ -84,7 +95,7 @@ Future<ProfileModel?> showAddProfileDialog(
               elevation: 0,
               shadowColor: Colors.transparent,
               textStyle: theme.textTheme.titleSmall?.copyWith(
-                color: Colors.white,
+                color: onAccent,
                 fontWeight: FontWeight.w700,
               ),
             ),

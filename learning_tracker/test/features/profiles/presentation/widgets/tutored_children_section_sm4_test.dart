@@ -32,6 +32,8 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/navigation/guards/pin_guard.dart';
 import 'package:learning_tracker/core/navigation/pin_scope.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
+import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/tutored_children_section.dart';
@@ -262,6 +264,99 @@ void main() {
             'getTutoredProfile await once the row has unmounted (switcher '
             'sheet dismissed mid-flight) — this must not throw',
       );
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+    },
+  );
+
+  // ── AUD-profiles dark-mode sweep ────────────────────────────────────────
+  //
+  // The leading icon-tile bg was a hardcoded Color(0xFFE8F4FD) that stayed
+  // light in dark while its icon reads brandBlue (LIGHTENS in dark) —
+  // measured 2.26:1 in dark. See
+  // test/core/theme/darkmode_sweep_contrast_test.dart for the WCAG math.
+
+  Finder leadingIcon() => find.byWidgetPredicate(
+    (w) => w is Icon && w.icon == Icons.school_rounded && w.size == 24,
+  );
+
+  testWidgets(
+    'dark mode: TutoredChildRow icon-tile bg reads '
+    'settingsProfileBadgeParentBg (not the old hardcoded 0xFFE8F4FD literal)',
+    (tester) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      final grant = _activeGrant();
+
+      await tester.pumpWidget(
+        pumpApp(
+          theme: AppTheme.darkTheme(),
+          child: const _Harness(),
+          overrides: [
+            incomingTutorGrantsProvider.overrideWith((ref) async => [grant]),
+            selectedProfileIdProvider.overrideWith(
+              () => _FixedSelectedProfileId(_kTutorProfileId),
+            ),
+          ],
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.text('Sm4Child'), findsOneWidget);
+
+      final container = tester.widget<Container>(
+        find
+            .ancestor(of: leadingIcon(), matching: find.byType(Container))
+            .first,
+      );
+      final decoration = container.decoration! as BoxDecoration;
+
+      expect(decoration.color, AppPalette.dark.settingsProfileBadgeParentBg);
+      expect(decoration.color, isNot(const Color(0xFFE8F4FD)));
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+    },
+  );
+
+  testWidgets(
+    'light mode: TutoredChildRow icon-tile bg stays the original '
+    '0xFFE8F4FD (no regression)',
+    (tester) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      final grant = _activeGrant();
+
+      await tester.pumpWidget(
+        pumpApp(
+          child: const _Harness(),
+          overrides: [
+            incomingTutorGrantsProvider.overrideWith((ref) async => [grant]),
+            selectedProfileIdProvider.overrideWith(
+              () => _FixedSelectedProfileId(_kTutorProfileId),
+            ),
+          ],
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.text('Sm4Child'), findsOneWidget);
+
+      final container = tester.widget<Container>(
+        find
+            .ancestor(of: leadingIcon(), matching: find.byType(Container))
+            .first,
+      );
+      final decoration = container.decoration! as BoxDecoration;
+
+      expect(decoration.color, const Color(0xFFE8F4FD));
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(Duration.zero);

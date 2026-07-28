@@ -235,7 +235,12 @@ class ParentSettingsScreen extends ConsumerWidget {
                     _ManageRow(
                       iconBackground: context.colors.peachTint,
                       icon: Icons.card_giftcard_rounded,
-                      iconColor: const Color(0xFFB45309),
+                      // AUD-profiles dark-mode sweep: was a hardcoded
+                      // Color(0xFFB45309) — fine in light (~4.06:1) but
+                      // peachTint darkens sharply in dark, dropping this
+                      // fixed rust-brown to 2.95:1. peachTintIconAccent
+                      // lightens like peachDark in dark: 9.96:1.
+                      iconColor: context.colors.peachTintIconAccent,
                       title: l10n.rewardConfigurationTitle,
                       subtitle: l10n.rewardConfigurationSubtitle,
                       trailing: const Icon(
@@ -295,7 +300,13 @@ class ParentSettingsScreen extends ConsumerWidget {
             const SizedBox(height: 16),
             _WhitePanel(
               child: _ManageRow(
-                iconBackground: const Color(0xFFE8F4FD),
+                // AUD-profiles dark-mode sweep: was a hardcoded
+                // Color(0xFFE8F4FD) that stayed light in dark while its icon
+                // reads brandBlue (LIGHTENS in dark) — measured 2.26:1 in
+                // dark. Reusing settingsProfileBadgeParentBg: identical
+                // 0xFFE8F4FD in light, darkens to 6.22:1 against brandBlue
+                // dark.
+                iconBackground: context.colors.settingsProfileBadgeParentBg,
                 icon: Icons.school_rounded,
                 iconColor: context.colors.brandBlue,
                 leadingSquare: false,
@@ -343,13 +354,19 @@ class ParentSettingsScreen extends ConsumerWidget {
                 child: _ManageRow(
                   iconBackground: _dangerIconBg(context),
                   icon: Icons.delete_forever_rounded,
-                  iconColor: const Color(0xFFB00020),
+                  // AUD-profiles dark-mode sweep: was a hardcoded Material
+                  // Color(0xFFB00020) against surfaces that BOTH darken in
+                  // dark (statusErrorSoft icon chip, brandCreamCard row
+                  // text) — measured 2.30:1 (icon) / 2.37:1 (text).
+                  // deleteAccountDangerRed lightens like brandError in dark:
+                  // ~6.7-6.9:1 against both.
+                  iconColor: context.colors.deleteAccountDangerRed,
                   title: l10n.deleteAccountTitle,
-                  titleColor: const Color(0xFFB00020),
+                  titleColor: context.colors.deleteAccountDangerRed,
                   subtitle: authState.isLocalBorn
                       ? l10n.deleteLocalAccountSubtitle
                       : l10n.deleteAccountSubtitle,
-                  subtitleColor: const Color(0xFFB00020),
+                  subtitleColor: context.colors.deleteAccountDangerRed,
                   leadingSquare: true,
                   trailing: const SizedBox.shrink(),
                   onTap: () {

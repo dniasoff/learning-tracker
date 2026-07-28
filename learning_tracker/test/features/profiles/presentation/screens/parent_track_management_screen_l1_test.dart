@@ -24,6 +24,7 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/track_repository.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
@@ -123,6 +124,7 @@ Widget _buildApp({
   required List<CurriculumTrack> tracks,
   UserDatabase? db,
   Locale locale = const Locale('en'),
+  ThemeData? theme,
 }) {
   final database = db ?? inMemoryDb();
   // AUD-t-cross-08: only close the database WE created here — a
@@ -136,6 +138,7 @@ Widget _buildApp({
 
   return pumpApp(
     locale: locale,
+    theme: theme,
     overrides: [
       activeProfileIdProvider.overrideWithValue(profileId),
       userDatabaseProvider.overrideWith((ref) => database),
@@ -879,6 +882,65 @@ void main() {
               'TRK-PAR-04: "RUNNING" is an English literal that must not '
               'appear under he locale.',
         );
+        await _teardown(tester);
+      },
+    );
+  });
+
+  // ── AUD-profiles dark-mode sweep ──────────────────────────────────────────
+  //
+  // `context.colors.brandBlue` LIGHTENS in dark mode (a contrast/ink-role
+  // token, not a "stays deep" fill), so a hardcoded `Colors.white` FAB
+  // icon/label dropped to 2.52:1 in dark. See
+  // test/core/theme/darkmode_sweep_contrast_test.dart for the WCAG math.
+
+  group('AUD-profiles dark-mode sweep — ADD TRACK FAB', () {
+    testWidgets(
+      'dark mode: FAB icon + foreground read colorScheme.onPrimary (not '
+      'hardcoded white)',
+      (tester) async {
+        final track = _track();
+        await tester.pumpWidget(
+          _buildApp(
+            router: router,
+            tracks: [track],
+            theme: AppTheme.darkTheme(),
+          ),
+        );
+        await _settle(tester);
+
+        final onAccent = AppTheme.darkTheme().colorScheme.onPrimary;
+        // Sanity: onPrimary must actually differ from the old hardcoded
+        // white in dark mode (else this test couldn't catch a regression).
+        expect(onAccent, isNot(const Color(0xFFFFFFFF)));
+
+        final icon = tester.widget<Icon>(find.byIcon(Icons.add));
+        expect(icon.color, onAccent);
+
+        final fab = tester.widget<FloatingActionButton>(
+          find.byType(FloatingActionButton),
+        );
+        expect(fab.foregroundColor, onAccent);
+
+        await _teardown(tester);
+      },
+    );
+
+    testWidgets(
+      'light mode: FAB icon + foreground stay white (no regression)',
+      (tester) async {
+        final track = _track();
+        await tester.pumpWidget(_buildApp(router: router, tracks: [track]));
+        await _settle(tester);
+
+        final icon = tester.widget<Icon>(find.byIcon(Icons.add));
+        expect(icon.color, const Color(0xFFFFFFFF));
+
+        final fab = tester.widget<FloatingActionButton>(
+          find.byType(FloatingActionButton),
+        );
+        expect(fab.foregroundColor, const Color(0xFFFFFFFF));
+
         await _teardown(tester);
       },
     );

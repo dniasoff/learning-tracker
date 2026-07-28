@@ -56,6 +56,15 @@ class _ParentTrackManagementScreenState
     // non-nullable).
     final showAddTrackFab = activeAsync.asData?.value.isNotEmpty ?? false;
 
+    // AUD-profiles dark-mode sweep: `context.colors.brandBlue` LIGHTENS in
+    // dark mode (it's a contrast/ink-role token, not a "stays deep" fill), so
+    // a hardcoded `Colors.white` label/icon on top of it dropped to 2.52:1 in
+    // dark (near-invisible). `colorScheme.onPrimary` is the theme's own
+    // already-contrast-verified ink for this exact fill (app_theme.dart's
+    // `onFill`): white in light mode (unchanged) and near-black in dark
+    // (~7.59:1).
+    final onAccent = Theme.of(context).colorScheme.onPrimary;
+
     return Scaffold(
       backgroundColor: context.colors.surfaceF5,
       appBar: AppBar(
@@ -85,14 +94,17 @@ class _ParentTrackManagementScreenState
                 width: 32,
                 height: 32,
                 decoration: BoxDecoration(
+                  // Decorative highlight overlay only (not text/ink) — stays
+                  // a subtle lightening layer over the FAB fill in both
+                  // themes, so it is left as a fixed white alpha.
                   color: Colors.white.withValues(alpha: 0.16),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.add, color: Colors.white),
+                child: Icon(Icons.add, color: onAccent),
               ),
               label: Text(l10n.addTrackButton),
               backgroundColor: context.colors.brandBlue,
-              foregroundColor: Colors.white,
+              foregroundColor: onAccent,
               extendedPadding: const EdgeInsets.symmetric(
                 horizontal: 14,
                 vertical: 10,
