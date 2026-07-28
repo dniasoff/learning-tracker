@@ -221,9 +221,15 @@ class _ConfirmDialogBody extends StatelessWidget {
     final iconColor = destructive
         ? context.colors.chartRed
         : (isDark ? context.colors.brandBlue : context.colors.brandBlue);
+    // chartRedDeepFill / brandBlueDeepFill (not chartRed / brandBlue): this is
+    // the CONFIRM BUTTON'S SOLID FILL, painted under a hardcoded white label
+    // below. chartRed/brandBlue both lighten in dark mode for their normal
+    // ink-on-card role, which drops that white label to ~2.5:1 — see each
+    // token's doc comment (AppPalette). The badge/icon colours above keep the
+    // un-split tokens since those really are ink on a soft tint container.
     final confirmColor = destructive
-        ? context.colors.chartRed
-        : context.colors.brandBlue;
+        ? context.colors.chartRedDeepFill
+        : context.colors.brandBlueDeepFill;
 
     final titleColor = isDark
         ? context.colors.brandInk
