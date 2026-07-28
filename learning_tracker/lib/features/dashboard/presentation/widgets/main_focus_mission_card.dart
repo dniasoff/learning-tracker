@@ -60,10 +60,17 @@ class MainFocusMissionCard extends StatelessWidget {
                       color: context.colors.brandBlue,
                       borderRadius: BorderRadius.circular(999),
                     ),
+                    // AUD-dashboard-darkmode: the pill fill is brandBlue,
+                    // which LIGHTENS in dark mode (its normal ink-on-card
+                    // role) — a hardcoded white count digit measured ~2.5:1
+                    // against that lightened fill. `colorScheme.onPrimary`
+                    // is computed per-brightness for exactly this surface
+                    // (brandBlue == colorScheme.primary): white in light
+                    // (no regression), near-black ink in dark (~7.6:1).
                     child: Text(
                       '$count',
                       style: theme.textTheme.labelMedium?.copyWith(
-                        color: Colors.white,
+                        color: theme.colorScheme.onPrimary,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -75,7 +82,8 @@ class MainFocusMissionCard extends StatelessWidget {
                 onPressed: onTap,
                 style: FilledButton.styleFrom(
                   backgroundColor: context.colors.brandBlue,
-                  foregroundColor: Colors.white,
+                  // Same fix as the count pill above — see its comment.
+                  foregroundColor: theme.colorScheme.onPrimary,
                   minimumSize: const Size(double.infinity, 52),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(999),

@@ -33,10 +33,21 @@ class ActiveTrackFocusPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    // AUD-dashboard-darkmode: the prominent pill's fill IS
+    // `kActiveTrackPrimaryBlue` (brandBlue) — a token that deliberately
+    // LIGHTENS in dark mode for its normal ink-on-dark-card role (see its
+    // own doc comment). Used as a FILL here, a hardcoded `Colors.white`
+    // label/value measured ~2.5:1 against the lightened dark-mode fill —
+    // failing WCAG. `theme.colorScheme.onPrimary` is computed per-brightness
+    // specifically for text/icons on `colorScheme.primary` (== brandBlue):
+    // it resolves to the same white in light mode (no regression) and to a
+    // near-black ink in dark mode (~7.6:1), exactly like the FilledButtons
+    // elsewhere that already rely on it (see `app_theme.dart`'s `onFill`).
+    final onAccent = theme.colorScheme.onPrimary;
     final labelColor = prominent
-        ? Colors.white.withValues(alpha: 0.85)
+        ? onAccent.withValues(alpha: 0.85)
         : kActiveTrackPrimaryBlue(context);
-    final valueColor = prominent ? Colors.white : context.colors.brandInk;
+    final valueColor = prominent ? onAccent : context.colors.brandInk;
     final valueStyle =
         (prominent ? theme.textTheme.titleMedium : theme.textTheme.titleSmall)
             ?.copyWith(
