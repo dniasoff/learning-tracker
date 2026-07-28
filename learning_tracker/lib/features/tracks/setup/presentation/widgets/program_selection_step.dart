@@ -133,7 +133,14 @@ class _ProgramSelectionStepState extends ConsumerState<ProgramSelectionStep> {
                   onPressed: () => widget.onSelected(null, null, null),
                   style: FilledButton.styleFrom(
                     backgroundColor: context.colors.peachMid,
-                    foregroundColor: const Color(0xFF2E271E),
+                    // darkmode/tracks audit: peachMid correctly darkens in
+                    // dark mode (0xFFF3D4A5 → 0xFF332613), but this label was
+                    // a hardcoded near-black literal that nearly coincides
+                    // with peachMid's dark value — measured 1.01:1 in dark,
+                    // effectively invisible. programSelfPacedCtaText is the
+                    // theme-aware token (identical hex in light; lightens in
+                    // dark like the sibling ink-on-peach token peachDark).
+                    foregroundColor: context.colors.programSelfPacedCtaText,
                     elevation: 0,
                     minimumSize: const Size.fromHeight(60),
                     shape: RoundedRectangleBorder(
@@ -207,9 +214,15 @@ class _FeaturedProgramCard extends ConsumerWidget {
                     shape: BoxShape.circle,
                     color: context.colors.surfaceBlueLight,
                   ),
-                  child: const Icon(
+                  // darkmode/tracks audit: icon colour was a hardcoded
+                  // Colors(0xFF2E4BBB) while its background (surfaceBlueLight)
+                  // already correctly darkens in dark mode — the fixed icon
+                  // then sank into the near-black circle, measured 2.34:1 in
+                  // dark. programFeaturedCardIcon is the theme-aware token
+                  // (identical hex in light; lightens in dark).
+                  child: Icon(
                     Icons.menu_book_rounded,
-                    color: Color(0xFF2E4BBB),
+                    color: context.colors.programFeaturedCardIcon,
                   ),
                 ),
                 const SizedBox(height: 12),

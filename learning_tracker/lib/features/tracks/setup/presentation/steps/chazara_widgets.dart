@@ -133,7 +133,12 @@ class CustomDayEditorChip extends StatelessWidget {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(color: accentColor, width: 5),
-              color: Colors.white,
+              // darkmode/tracks audit: was a hardcoded Colors.white while the
+              // day-number text below reads the theme's default headlineSmall
+              // colour (brandInk, near-white in dark) — measured 1.05:1 in
+              // dark. brandCreamCard is the theme-aware card surface token
+              // (identical 0xFFFFFFFF in light; darkens in dark).
+              color: context.colors.brandCreamCard,
             ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -269,7 +274,11 @@ class TinyCircleButton extends StatelessWidget {
           height: 22,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: const Color(0xFFF1F3F7),
+            // darkmode/tracks audit: was a hardcoded Colors(0xFFF1F3F7) while
+            // the icon reads the adapting brandInkMuted (lightens in dark) —
+            // measured ~2.32:1 in dark. chazaraTinyButtonBg is the
+            // theme-aware token (identical hex in light; darkens in dark).
+            color: context.colors.chazaraTinyButtonBg,
             border: Border.all(color: const Color(0xFFDDE2EB)),
           ),
           child: Icon(icon, size: 14, color: context.colors.brandInkMuted),

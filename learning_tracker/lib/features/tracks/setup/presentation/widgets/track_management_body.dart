@@ -179,7 +179,12 @@ class _TrackManagementBodyState extends ConsumerState<TrackManagementBody> {
         child: const Icon(Icons.add, color: Colors.white),
       ),
       label: Text(AppLocalizations.of(context)!.trackAddLabel),
-      backgroundColor: context.colors.brandBlue,
+      // darkmode/tracks audit: brandBlue is tested as an INK role (it
+      // LIGHTENS in dark for ink-on-dark-card use) but was painted here as a
+      // hero FILL with a hardcoded white icon/label on top — measured 2.52:1
+      // in dark. trackAddFabFill keeps the exact brandBlue light hex but
+      // stays deep in dark: 8.41:1 with white.
+      backgroundColor: context.colors.trackAddFabFill,
       foregroundColor: Colors.white,
       extendedPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),

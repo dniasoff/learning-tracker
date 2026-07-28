@@ -857,23 +857,28 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFF0F4FF),
+        // darkmode/tracks audit: bg was a hardcoded Colors(0xFFF0F4FF) while
+        // the icon/text below already read the adapting brandBlueDeep ink —
+        // the bg never darkened, measuring 1.46:1 in dark. trackProgramLockedBg
+        // is the theme-aware tint-container token (identical hex in light;
+        // darkens to 0xFF16233F in dark).
+        color: context.colors.trackProgramLockedBg,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFCDD6F5)),
       ),
       child: Row(
         children: [
-          const Icon(
+          Icon(
             Icons.lock_outline_rounded,
             size: 18,
-            color: Color(0xFF6B84D6),
+            color: context.colors.trackProgramLockedIcon,
           ),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
               l10n.trackEditProgramLocked,
               style: theme.textTheme.bodySmall?.copyWith(
-                color: const Color(0xFF4A5C99),
+                color: context.colors.trackProgramLockedText,
               ),
             ),
           ),
@@ -939,7 +944,12 @@ class _SectionCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        // darkmode/tracks audit: was a hardcoded Colors.white, which stayed
+        // white in dark mode while the title text below correctly reads
+        // brandInkMuted (lightens in dark) — measured 2.58:1 in dark.
+        // brandCreamCard is the theme-aware card surface token (identical
+        // 0xFFFFFFFF in light; darkens to 0xFF151A26 in dark).
+        color: context.colors.brandCreamCard,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
@@ -1029,8 +1039,16 @@ class _PeriodChip extends StatelessWidget {
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
+          // darkmode/tracks audit: brandBlueBright is a CONTRAST role that
+          // deliberately LIGHTENS in dark mode for ink-on-dark-card use (see
+          // its own doc comment) — painted here as a chip FILL with a
+          // hardcoded white label on top, measured 1.85:1 in dark. This is
+          // the same hero-fill bug the chazaraSelectedGradient* tokens were
+          // split out for; chazaraSelectedGradientEnd is the exact same
+          // light-mode hex (0xFF2B5FD9) but stays deep in dark: 5.61:1 with
+          // white in dark.
           color: isSelected
-              ? context.colors.brandBlueBright
+              ? context.colors.chazaraSelectedGradientEnd
               : context.colors.surfaceBlueNeutral,
           borderRadius: BorderRadius.circular(20),
         ),

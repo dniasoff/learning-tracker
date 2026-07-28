@@ -236,9 +236,15 @@ class _CurriculumTile extends ConsumerWidget {
     CurriculumId curriculum,
   ) {
     return switch (curriculum) {
+      // darkmode/tracks audit: iconColor was a hardcoded Colors(0xFF3F53BF)
+      // while its background (surfaceBlueLight) already correctly darkens in
+      // dark mode — the fixed icon then sank into the near-black circle,
+      // measured 2.65:1 in dark (fails the 3:1 icon floor).
+      // curriculumMishnaPickerIcon is the theme-aware token (identical hex in
+      // light; lightens in dark like the other ink-on-blue-tint roles).
       CurriculumId.mishnayos => _CurriculumStyle(
         icon: Icons.menu_book_rounded,
-        iconColor: const Color(0xFF3F53BF),
+        iconColor: context.colors.curriculumMishnaPickerIcon,
         background: context.colors.surfaceBlueLight,
       ),
       CurriculumId.bavli => _CurriculumStyle(

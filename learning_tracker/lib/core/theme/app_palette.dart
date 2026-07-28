@@ -1385,6 +1385,135 @@ class AppPalette extends ThemeExtension<AppPalette> {
         .firstOrNull;
     return curriculum != null ? curriculumFor(curriculum) : brandBlue;
   }
+
+  // ---------------------------------------------------------------------------
+  // darkmode/tracks audit — lib/features/tracks/ dark-mode legibility sweep.
+  // Each token below preserves its call site's exact pre-fix light-mode hex;
+  // only the dark side changes.
+  // ---------------------------------------------------------------------------
+
+  /// `EditTrackScreen`'s "program locked" banner background
+  /// (`_buildProgramLockedBanner`) — a tint-container role, previously three
+  /// independent raw literals (bg/icon/text) that never changed with
+  /// brightness. Icon/text measured **1.46:1** in dark mode against this
+  /// fixed bg (paired with [trackProgramLockedIcon]/[trackProgramLockedText]
+  /// below, both of which already read as ink-on-tint and correctly lighten
+  /// in dark — only the background had not been migrated). Darkens with the
+  /// same derivation as [brandBlueSoft] (the semantically identical "blue
+  /// tint container" role): 9.56:1 with the paired ink in dark.
+  Color get trackProgramLockedBg =>
+      _dark ? const Color(0xFF16233F) : const Color(0xFFF0F4FF);
+
+  /// `EditTrackScreen`'s "program locked" banner lock icon, paired with
+  /// [trackProgramLockedBg]. Lightens in dark like [brandBlueDeep] (the same
+  /// ink-on-tint role) so it stays legible once the background darkens.
+  Color get trackProgramLockedIcon =>
+      _dark ? const Color(0xFFB9C9FF) : const Color(0xFF6B84D6);
+
+  /// `EditTrackScreen`'s "program locked" banner body text, paired with
+  /// [trackProgramLockedBg].
+  Color get trackProgramLockedText =>
+      _dark ? const Color(0xFFB9C9FF) : const Color(0xFF4A5C99);
+
+  /// `TrackManagementBody`'s "Add Track" FAB fill — HERO-FILL role split from
+  /// [brandBlue] (which `app_palette_test.dart` tests purely as an INK role:
+  /// it LIGHTENS in dark, `0xFF1442B8` → `0xFF7CA0FF`, for ink-on-dark-card
+  /// use). The FAB instead paints it as a solid fill with a hardcoded white
+  /// icon/label on top — the same hero-fill class as
+  /// [blueMedium]/[blueLight]/[blueMid] — measured **2.52:1** with white in
+  /// dark (fails 4.5:1). This token keeps the exact `brandBlue` light hex in
+  /// BOTH themes so light rendering is unchanged and dark stays deep enough
+  /// for the white icon/label: 8.41:1.
+  Color get trackAddFabFill => const Color(0xFF1442B8);
+
+  /// `CustomDayEditorChip`'s day-number circle fill (chazara custom-cycle
+  /// editor) — was a hardcoded `Colors.white` while the day-number text reads
+  /// the theme's default `headlineSmall` colour (`brandInk`, near-white in
+  /// dark): measured **1.05:1** in dark. Darkens like the neighbouring
+  /// recessed-surface tokens ([surfaceF3]/[surfaceF4]/[brandCreamSoft]),
+  /// which all converge on the same dark value: 14.7:1 with `brandInk` in
+  /// dark (unaffected by the light-mode literal's tiny offset from theirs).
+  Color get chazaraTinyButtonBg =>
+      _dark ? const Color(0xFF1E2532) : const Color(0xFFF1F3F7);
+
+  /// `ChazaraReadOnlyStep`'s "fixed by program" hint banner background,
+  /// paired with the existing `brandBlueDeep` ink (already correctly
+  /// lightens in dark) — only the background was a raw literal that never
+  /// darkened, measured **1.46:1** in dark. Same tint-container derivation as
+  /// [trackProgramLockedBg].
+  Color get chazaraReadOnlyHintBg =>
+      _dark ? const Color(0xFF16233F) : const Color(0xFFEFF2FF);
+
+  /// `ChazaraReadOnlyStep`'s numbered stage-card badge circle, paired with
+  /// the existing `brandBlueDeep` ink (already correctly lightens in dark) —
+  /// only the badge background was a raw literal, measured **1.5:1** in dark.
+  /// Same tint-container derivation as [trackProgramLockedBg].
+  Color get chazaraReadOnlyStageBadgeBg =>
+      _dark ? const Color(0xFF16233F) : const Color(0xFFE9ECFF);
+
+  /// `StartingPositionCalendarMode`'s "Use Today" reset button fill, paired
+  /// with the existing `brandInk` foreground (already correctly lightens in
+  /// dark). The fixed bg is nearly identical to `brandInk`'s dark value
+  /// (`0xFFE9EBF1` vs `0xFFEAEEF5`), measuring **1.02:1** in dark — an
+  /// effectively invisible label. Darkens like the neighbouring
+  /// neutral-surface token [surfaceE9]: 13.4:1 with `brandInk` in dark.
+  Color get calendarResetButtonBg =>
+      _dark ? const Color(0xFF263041) : const Color(0xFFE9EBF1);
+
+  /// `StartingPositionCalendarMode`'s date-card icon circle, paired with the
+  /// existing `brandBlueDeep` icon ink (already correctly lightens in dark)
+  /// — only the circle background was a raw literal, measured **1.5:1** in
+  /// dark. Same tint-container derivation as [trackProgramLockedBg].
+  Color get calendarDateIconBg =>
+      _dark ? const Color(0xFF16233F) : const Color(0xFFE6E8FF);
+
+  /// `StartingPositionCalendarMode`'s ± offset stepper button fill, paired
+  /// with the existing `brandBlueDeep`/`brandInkMuted` icon ink (already
+  /// correctly lightens in dark) — only the button background was a raw
+  /// literal, measured **~1.6:1** in dark. Darkens like the neighbouring
+  /// recessed-surface token [surfaceF4b]: 10.36:1 with `brandBlueDeep` in
+  /// dark.
+  Color get calendarOffsetButtonBg =>
+      _dark ? const Color(0xFF131C33) : const Color(0xFFF4F6FA);
+
+  /// `CurriculumPickerStep`'s Mishnayos tile icon colour — its background
+  /// (`surfaceBlueLight`) already darkens correctly in dark mode, but this
+  /// icon ink was a raw literal that stayed a fixed medium blue, measured
+  /// **2.65:1** against the now-dark circle (fails the 3:1 icon floor). The
+  /// curriculum's other tiles pair a fixed icon with a fixed (never-changing)
+  /// background, which is a different, correct pattern — this was the one
+  /// mismatched pair. Lightens in dark like [brandBlueDeep] (the same
+  /// ink-on-blue-tint role): 10.66:1 in dark.
+  Color get curriculumMishnaPickerIcon =>
+      _dark ? const Color(0xFFB9C9FF) : const Color(0xFF3F53BF);
+
+  /// `ProgramSelectionStep._FeaturedProgramCard`'s icon colour — same
+  /// mismatched-pair bug as [curriculumMishnaPickerIcon] (fixed icon ink on
+  /// the correctly-darkening `surfaceBlueLight` background), measured
+  /// **2.34:1** in dark. 10.66:1 in dark once lightened.
+  Color get programFeaturedCardIcon =>
+      _dark ? const Color(0xFFB9C9FF) : const Color(0xFF2E4BBB);
+
+  /// `ProgramSelectionStep`'s "Self-Paced" CTA button label — paired with
+  /// `context.colors.peachMid` as the button fill, which correctly darkens
+  /// in dark mode (`0xFFF3D4A5` → `0xFF332613`). The label was a raw fixed
+  /// near-black literal that does not adapt, and it happens to nearly
+  /// coincide with `peachMid`'s dark value — measured **1.01:1** in dark,
+  /// effectively invisible. Lightens in dark like the sibling ink-on-peach
+  /// token [peachDark]: 9.87:1 in dark.
+  Color get programSelfPacedCtaText =>
+      _dark ? const Color(0xFFE1D2B6) : const Color(0xFF2E271E);
+
+  /// `BlurInactiveGoalOption`'s "why is this blurred" hint-chip text. The
+  /// chip itself is a fixed near-opaque white (`Colors.white` at 94% alpha)
+  /// in BOTH themes — a tooltip-like callout, not a themed card — but its
+  /// text read `brandBlueDeep`, a CONTRAST role that deliberately LIGHTENS in
+  /// dark for ink-on-DARK-card use, measured **1.63:1** on the fixed white
+  /// chip in dark. Pinned to the exact light-mode `brandBlueDeep` hex in
+  /// both themes (matches [chazaraSelectedGradientStart]'s value, which is
+  /// the same "stays legible on a surface that does not darken" contract):
+  /// 11.0:1.
+  Color get goalHintChipInk => const Color(0xFF0E3392);
 }
 
 /// Ergonomic access to [AppPalette] from any widget.
