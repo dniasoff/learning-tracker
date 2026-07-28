@@ -34,19 +34,31 @@ set/enter/wrong/lockout-at-5 all correct. The run-8 Learn OOM P0 stays REFUTED (
 - **Siyumim tier-counter digit illegible in dark mode** (P1, 1.22:1) — `b7399de7`. Found on 3 devices.
 - **Deleted track shown in Progress "ACTIVE TRACKS"** (P2) — `bf692d71`.
 
-### Being fixed now (parallel sub-agents, isolated worktrees)
+### FIXED this session (sub-agents, isolated worktrees, red-demoed, merged)
 1. **Dark-mode contrast cluster (P1/P2)** — three surfaces the shipped dark-mode work did
-   not reach, each pixel-sampled:
-   - Onboarding intro carousel primary CTA: **1.39:1** (dark label on dark-blue button)
-   - Add-track wizard schedule-preset cards: **~1:1** (white card + near-white heading — white-on-white)
-   - Add/Edit-Profile "Choose Mode" cards: **1.06:1**
-2. **Parent-PIN keypad clips digits 7/8/9/0 + Cancel/Delete in LANDSCAPE** (P2) — dialog
-   taller than the landscape viewport, no scroll → PIN un-enterable rotated.
-3. **"Add items I learned previously" CTA does nothing on device** (P1 on 5558, P2 on 5562)
-   — element exists + receives the tap (uiautomator), screen byte-identical after; yet the
-   widget test asserting its onTap passes. Under investigation: most likely a route guard on
-   `LifetimeMarkingRoute` silently cancelling navigation (a visible-but-dead CTA with no user
-   feedback). Fix only if a real code cause is isolated — not a false fix.
+   not reach, each pixel-sampled and fixed:
+   - Onboarding intro carousel primary CTA: **1.39:1 → 12.56:1** (new `introCtaLabel` token)
+   - Add-track wizard schedule-preset card: **~1.16:1 → 14.94:1** (was hardcoded `Colors.white`; now `brandCreamCard`)
+   - Add/Edit-Profile "Choose Mode" card: **1.06:1 → 13.21:1** (new `profileModeCardBg` token)
+   Each red-demoed at exactly the measured pre-fix ratio; 12 new contrast tests; light mode unchanged.
+2. **"Add items I learned previously" CTA does nothing on device** (P1/5558, P2/5562) —
+   **REAL BUG, root-caused and fixed.** The CTA navigates to `LifetimeMarkingRoute`, which
+   carries `childModeGuard`; that guard calls `resolver.next(false)` **silently** when the
+   active profile is in adult mode (the common case *and* the test default) → a visible-but-
+   dead button with no feedback. The widget test passed because it used a fake `_RecordingRouter`
+   that **bypasses real guards** — the wrong layer, a textbook case of this campaign's thesis.
+   Fixed by hiding the CTA in non-child mode (mirroring `_ParentalControlsSection`'s hide-when-
+   `!isChildProfile` pattern); the security guard is untouched; the wrong-layer test was
+   corrected and a real one added (CTA absent for adult / present for child, no fake router).
+   No capability lost — adults reach lifetime-marking via Settings → Add Lifetime Learning.
+
+### Investigated → FALSE POSITIVE (no code fix; regression test added)
+3. **Parent-PIN keypad "clips digits 7/8/9/0 in landscape"** (P2) — the code already handles
+   it: `ParentModeDialogFrame` bounds content to 88% height and wraps it in a
+   `SingleChildScrollView` (commit `01b63b4d`, pre-run-10). Verified landscape is genuinely
+   reachable (no orientation lock in `lib/`). Added a regression test pumping the dialog in an
+   800×360 landscape viewport (no overflow, all keys reachable); red-demoed by stripping the
+   scroll → 139px overflow matching the report. The device observation was stale/misread.
 
 ### Real, but held for a dedicated follow-up (documented, not rushed)
 - **Reader next-item chevron swallows rapid taps** (P2) — source-confirmed:
@@ -68,11 +80,19 @@ set/enter/wrong/lockout-at-5 all correct. The run-8 Learn OOM P0 stays REFUTED (
   card. Already analysed in `progress-percentage-divergence.md`; the defect is labelling,
   and the arithmetic is defensible.
 
-### Low severity
+### Low severity (documented, not fixed this pass)
 - Breadcrumb separator chevrons in Learn→Browse content hierarchy (P3, 5564) — a chevron
   direction case in a different breadcrumb; check against the chevron-direction fix.
 - "Today's Missions: 0 remaining" flashes on cold start before data loads (P3, 5558) — a
   one-frame loading-state race.
+
+### Dark-mode: MORE remains (flagged by the fix agent, out of this pass's scope)
+The 3 fixed sites were the confirmed pixel-sampled findings. The fix agent flagged additional
+dark-mode weaknesses it did not touch, for a dedicated follow-up: the **selected-state**
+variants of the chazara preset card and the profile mode card (~1.6–2.5:1), and
+`step_chazara.dart`'s "Custom Cycle" card (same hardcoded-white pattern). Dark mode is
+materially better than the shipped build but is **not yet certified fully legible app-wide** —
+stated plainly.
 
 ### Tooling gap found and fixed
 - `crash_attribution.sh` missed ANRs (they land in the `system` logcat buffer, not
