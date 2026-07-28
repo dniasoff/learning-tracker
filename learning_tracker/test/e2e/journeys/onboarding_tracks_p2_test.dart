@@ -475,6 +475,12 @@ void main() {
             ...h.dashboardSilenceOverrides,
             effectiveUseHebrewTermsProvider.overrideWithValue(false),
             useHebrewTermsProvider.overrideWithValue(false),
+            // CurriculumSettingsScreen now watches activeTracksProvider (to
+            // show a renamed track's custom name in its title). The reactive
+            // Drift StreamProvider's cleanup timer trips the pending-timer
+            // assertion on disposal; the one-shot override avoids it (empty
+            // tracks here → title falls back to the curriculum label).
+            activeTracksOneShotOverride(),
           ],
         );
         await tester.pump(const Duration(milliseconds: 300));
@@ -518,6 +524,12 @@ void main() {
             ...h.dashboardSilenceOverrides,
             effectiveUseHebrewTermsProvider.overrideWithValue(false),
             useHebrewTermsProvider.overrideWithValue(false),
+            // CurriculumSettingsScreen now watches activeTracksProvider (to
+            // show a renamed track's custom name in its title). The reactive
+            // Drift StreamProvider's cleanup timer trips the pending-timer
+            // assertion on disposal; the one-shot override avoids it (empty
+            // tracks here → title falls back to the curriculum label).
+            activeTracksOneShotOverride(),
           ],
         );
         await tester.pump(const Duration(milliseconds: 300));
