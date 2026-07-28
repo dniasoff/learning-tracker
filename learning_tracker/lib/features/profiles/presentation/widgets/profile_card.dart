@@ -22,6 +22,13 @@ class ProfileCard extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final isChild = profile.profileMode.isChild;
     final modeColor = context.colors.brandBlue;
+    // AUD-profiles dark-mode sweep: `brandBlue` LIGHTENS in dark (an
+    // ink/contrast-role token, not a "stays deep" fill), so a hardcoded
+    // `Colors.white` badge label on top of it dropped to 2.52:1 in dark.
+    // `colorScheme.onPrimary` is the theme's own contrast-verified ink for
+    // this exact fill: white in light (unchanged), near-black in dark
+    // (~7.59:1).
+    final onModeColor = theme.colorScheme.onPrimary;
     final trimmedName = profile.displayName.trim();
     final firstLetter = trimmedName.isEmpty
         ? '?'
@@ -69,7 +76,7 @@ class ProfileCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.labelSmall?.copyWith(
-                        color: Colors.white,
+                        color: onModeColor,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 0.35,
                         fontSize: 10,
@@ -93,10 +100,19 @@ class ProfileCard extends StatelessWidget {
                       width: 92,
                       height: 92,
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(
+                        // AUD-profiles dark-mode sweep: this gradient was a
+                        // hardcoded light pair under the adaptive
+                        // `brandBlueDeep` initial-letter ink below (LIGHTENS
+                        // in dark for ink-on-dark-card use) — measured
+                        // 1.38:1 in dark (near-invisible). The tokens darken
+                        // to a navy pair, restoring ~9.6:1 in dark.
+                        gradient: LinearGradient(
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
-                          colors: [Color(0xFFF2F5FC), Color(0xFFE6ECF8)],
+                          colors: [
+                            context.colors.profileAvatarGradientStart,
+                            context.colors.profileAvatarGradientEnd,
+                          ],
                         ),
                         shape: BoxShape.circle,
                         border: Border.all(

@@ -13,6 +13,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
+import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
@@ -284,6 +286,130 @@ void main() {
       );
 
       // Close the dialog and flush the delayed controller-dispose timer.
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(milliseconds: 350));
+      await tester.pump(Duration.zero);
+    },
+  );
+
+  // ── AUD-profiles dark-mode sweep ────────────────────────────────────────
+  //
+  // Two hardcoded literals here stayed fixed against surfaces that darken
+  // (or paired with ink that lightens) in dark mode — see
+  // test/core/theme/darkmode_sweep_contrast_test.dart for the WCAG math.
+
+  testWidgets(
+    'dark mode: Create Profile button + form labels read the theme-aware '
+    'tokens (not the old hardcoded white/0xFF333333 literals)',
+    (tester) async {
+      tester.view.physicalSize = const Size(1080, 2340);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      final db = createTestDatabase();
+      await seedProfileWithIds(db, profileId: 1, accountId: 1);
+      addTearDown(() => db.close());
+
+      final repo = _MockProfileRepository();
+
+      await tester.pumpWidget(
+        pumpApp(
+          theme: AppTheme.darkTheme(),
+          overrides: [
+            userDatabaseProvider.overrideWithValue(db),
+            currentAccountIdProvider.overrideWithValue(1),
+            profileRepositoryProvider.overrideWithValue(repo),
+          ],
+          child: Consumer(
+            builder: (ctx, ref, _) => Scaffold(
+              body: Center(
+                child: ElevatedButton(
+                  key: const Key('open'),
+                  onPressed: () => showAddProfileDialog(ctx, ref),
+                  child: const Text('Open'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.byKey(const Key('open')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // FilledButton foregroundColor: was hardcoded Colors.white, dropping to
+      // 2.52:1 against brandBlue's lightened dark value.
+      final onAccent = AppTheme.darkTheme().colorScheme.onPrimary;
+      expect(onAccent, isNot(const Color(0xFFFFFFFF)));
+
+      final button = tester.widget<FilledButton>(find.byType(FilledButton));
+      expect(
+        button.style?.foregroundColor?.resolve(<WidgetState>{}),
+        onAccent,
+      );
+
+      // "What's your name?" label: was hardcoded Color(0xFF333333), dropping
+      // to 1.38:1 against the dialog's darkened brandCreamCard surface.
+      final label = tester.widget<Text>(find.text("What's your name?"));
+      expect(label.style?.color, AppPalette.dark.addProfileFormLabel);
+      expect(label.style?.color, isNot(const Color(0xFF333333)));
+
+      // Close the dialog and flush the delayed controller-dispose timer.
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(milliseconds: 350));
+      await tester.pump(Duration.zero);
+    },
+  );
+
+  testWidgets(
+    'light mode: Create Profile button + form labels stay white/0xFF333333 '
+    '(no regression)',
+    (tester) async {
+      tester.view.physicalSize = const Size(1080, 2340);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      final db = createTestDatabase();
+      await seedProfileWithIds(db, profileId: 1, accountId: 1);
+      addTearDown(() => db.close());
+
+      final repo = _MockProfileRepository();
+
+      await tester.pumpWidget(
+        pumpApp(
+          overrides: [
+            userDatabaseProvider.overrideWithValue(db),
+            currentAccountIdProvider.overrideWithValue(1),
+            profileRepositoryProvider.overrideWithValue(repo),
+          ],
+          child: Consumer(
+            builder: (ctx, ref, _) => Scaffold(
+              body: Center(
+                child: ElevatedButton(
+                  key: const Key('open'),
+                  onPressed: () => showAddProfileDialog(ctx, ref),
+                  child: const Text('Open'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.byKey(const Key('open')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      final button = tester.widget<FilledButton>(find.byType(FilledButton));
+      expect(
+        button.style?.foregroundColor?.resolve(<WidgetState>{}),
+        const Color(0xFFFFFFFF),
+      );
+
+      final label = tester.widget<Text>(find.text("What's your name?"));
+      expect(label.style?.color, const Color(0xFF333333));
+
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(const Duration(milliseconds: 350));
       await tester.pump(Duration.zero);

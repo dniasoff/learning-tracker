@@ -21,11 +21,17 @@ class AddProfileModePickCard extends StatelessWidget {
   final String title;
   final String subtitle;
 
-  static const _iconCircleMuted = Color(0xFFE4E8EF);
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    // AUD-profiles dark-mode sweep: `brandBlue` LIGHTENS in dark (an
+    // ink/contrast-role token, not a "stays deep" fill), so the two hardcoded
+    // `Colors.white` icons below (selected mode-icon + selected checkmark
+    // badge) — both painted on `brandBlue` fills — dropped to 2.52:1 in dark.
+    // `colorScheme.onPrimary` is the theme's own contrast-verified ink for
+    // this exact fill: white in light (unchanged), near-black in dark
+    // (~7.59:1).
+    final onAccent = theme.colorScheme.onPrimary;
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -73,16 +79,21 @@ class AddProfileModePickCard extends StatelessWidget {
                     width: 44,
                     height: 44,
                     decoration: BoxDecoration(
+                      // AUD-profiles dark-mode sweep: the unselected circle
+                      // was a hardcoded `Color(0xFFE4E8EF)` that stayed light
+                      // in dark mode while its icon reads `brandInkMuted`
+                      // (LIGHTENS in dark for ink-on-dark-card use) —
+                      // measured 2.10:1 in dark. `profileModeIconMutedBg`
+                      // darkens to match `surfaceE9`'s dark tone: 5.16:1
+                      // against `brandInkMuted` dark.
                       color: selected
                           ? context.colors.brandBlue
-                          : _iconCircleMuted,
+                          : context.colors.profileModeIconMutedBg,
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
                       icon,
-                      color: selected
-                          ? Colors.white
-                          : context.colors.brandInkMuted,
+                      color: selected ? onAccent : context.colors.brandInkMuted,
                       size: 24,
                     ),
                   ),
@@ -124,11 +135,7 @@ class AddProfileModePickCard extends StatelessWidget {
                       color: context.colors.brandBlue,
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(
-                      Icons.check_rounded,
-                      size: 14,
-                      color: Colors.white,
-                    ),
+                    child: Icon(Icons.check_rounded, size: 14, color: onAccent),
                   ),
                 ),
             ],

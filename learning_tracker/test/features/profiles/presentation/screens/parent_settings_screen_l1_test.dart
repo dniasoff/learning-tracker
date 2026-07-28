@@ -41,6 +41,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/sync/providers/sync_status_providers.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
+import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
@@ -103,6 +105,7 @@ Widget _buildApp({
   Locale locale = const Locale('en'),
   AuthState? authState,
   UserDatabase? db,
+  ThemeData? theme,
 }) {
   final auth = _MockAuthRepository();
   when(() => auth.currentUser).thenReturn(null);
@@ -120,6 +123,7 @@ Widget _buildApp({
 
   return pumpApp(
     locale: locale,
+    theme: theme,
     retry: (_, __) => null,
     overrides: [
       // Auth
@@ -992,4 +996,176 @@ void main() {
     await _tearDown(tester);
     await db.close();
   });
+
+  // ── AUD-profiles dark-mode sweep ──────────────────────────────────────────
+  //
+  // Three hardcoded literals here stayed fixed against surfaces that darken
+  // (or paired with ink that lightens) in dark mode — see
+  // test/core/theme/darkmode_sweep_contrast_test.dart for the WCAG math.
+
+  testWidgets(
+    'dark mode: Manage Tutors icon-tile bg reads settingsProfileBadgeParentBg '
+    '(not the old hardcoded 0xFFE8F4FD literal)',
+    (tester) async {
+      _useTallViewport(tester);
+      await tester.pumpWidget(
+        _buildApp(
+          router: router,
+          tutorPerms: null,
+          theme: AppTheme.darkTheme(),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      final container = tester.widget<Container>(
+        find
+            .ancestor(
+              of: find.byIcon(Icons.school_rounded),
+              matching: find.byType(Container),
+            )
+            .first,
+      );
+      final decoration = container.decoration! as BoxDecoration;
+
+      expect(decoration.color, AppPalette.dark.settingsProfileBadgeParentBg);
+      expect(decoration.color, isNot(const Color(0xFFE8F4FD)));
+
+      await _tearDown(tester);
+    },
+  );
+
+  testWidgets(
+    'light mode: Manage Tutors icon-tile bg stays the original 0xFFE8F4FD '
+    '(no regression)',
+    (tester) async {
+      _useTallViewport(tester);
+      await tester.pumpWidget(_buildApp(router: router, tutorPerms: null));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      final container = tester.widget<Container>(
+        find
+            .ancestor(
+              of: find.byIcon(Icons.school_rounded),
+              matching: find.byType(Container),
+            )
+            .first,
+      );
+      final decoration = container.decoration! as BoxDecoration;
+
+      expect(decoration.color, const Color(0xFFE8F4FD));
+
+      await _tearDown(tester);
+    },
+  );
+
+  testWidgets(
+    'dark mode: Reward Configuration icon reads peachTintIconAccent '
+    '(not the old hardcoded 0xFFB45309 literal)',
+    (tester) async {
+      await tester.pumpWidget(
+        _buildApp(
+          router: router,
+          tutorPerms: null,
+          theme: AppTheme.darkTheme(),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      final icon = tester.widget<Icon>(
+        find.byIcon(Icons.card_giftcard_rounded),
+      );
+      expect(icon.color, AppPalette.dark.peachTintIconAccent);
+      expect(icon.color, isNot(const Color(0xFFB45309)));
+
+      await _tearDown(tester);
+    },
+  );
+
+  testWidgets(
+    'light mode: Reward Configuration icon stays the original 0xFFB45309 '
+    '(no regression)',
+    (tester) async {
+      await tester.pumpWidget(_buildApp(router: router, tutorPerms: null));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      final icon = tester.widget<Icon>(
+        find.byIcon(Icons.card_giftcard_rounded),
+      );
+      expect(icon.color, const Color(0xFFB45309));
+
+      await _tearDown(tester);
+    },
+  );
+
+  testWidgets(
+    'dark mode: Delete Account icon/title read deleteAccountDangerRed (not '
+    'the old hardcoded 0xFFB00020 literal)',
+    (tester) async {
+      _useTallViewport(tester);
+      const localState = AuthState.signedIn(
+        user: AuthUser(
+          profileId: 1,
+          email: 'local@example.com',
+          displayName: 'Local User',
+        ),
+        tier: Tier.localBorn,
+      );
+      await tester.pumpWidget(
+        _buildApp(
+          router: router,
+          tutorPerms: null,
+          authState: localState,
+          theme: AppTheme.darkTheme(),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      final icon = tester.widget<Icon>(
+        find.byIcon(Icons.delete_forever_rounded),
+      );
+      expect(icon.color, AppPalette.dark.deleteAccountDangerRed);
+      expect(icon.color, isNot(const Color(0xFFB00020)));
+
+      final title = tester.widget<Text>(find.text('Delete Account'));
+      expect(title.style?.color, AppPalette.dark.deleteAccountDangerRed);
+
+      await _tearDown(tester);
+    },
+  );
+
+  testWidgets(
+    'light mode: Delete Account icon/title stay the original 0xFFB00020 '
+    '(no regression)',
+    (tester) async {
+      _useTallViewport(tester);
+      const localState = AuthState.signedIn(
+        user: AuthUser(
+          profileId: 1,
+          email: 'local@example.com',
+          displayName: 'Local User',
+        ),
+        tier: Tier.localBorn,
+      );
+      await tester.pumpWidget(
+        _buildApp(router: router, tutorPerms: null, authState: localState),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      final icon = tester.widget<Icon>(
+        find.byIcon(Icons.delete_forever_rounded),
+      );
+      expect(icon.color, const Color(0xFFB00020));
+
+      final title = tester.widget<Text>(find.text('Delete Account'));
+      expect(title.style?.color, const Color(0xFFB00020));
+
+      await _tearDown(tester);
+    },
+  );
 }

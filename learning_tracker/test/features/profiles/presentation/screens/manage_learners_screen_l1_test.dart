@@ -27,6 +27,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/network/connectivity_gateway.dart';
 import 'package:learning_tracker/core/providers/network_providers.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
+import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
@@ -107,6 +109,7 @@ Widget _buildApp({
   AuthState authState = _kLocalBornAuthState,
   Locale locale = const Locale('en'),
   bool disableRetry = false,
+  ThemeData? theme,
 }) {
   final mockRepo = repo ?? _MockProfileRepository();
   final isDefaultConnectivity = connectivity == null;
@@ -134,6 +137,7 @@ Widget _buildApp({
   }
 
   return pumpApp(
+    theme: theme,
     retry: disableRetry ? (_, __) => null : null,
     overrides: [
       profileListStreamProvider.overrideWith((ref) => makeStream()),
@@ -789,5 +793,85 @@ void main() {
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(Duration.zero);
     });
+  });
+
+  // ── AUD-profiles dark-mode sweep ──────────────────────────────────────────
+  //
+  // The initials-avatar gradient was a hardcoded light pair under the
+  // adaptive brandBlueDeep initial-letter ink (LIGHTENS in dark) — measured
+  // 1.38:1 in dark. See test/core/theme/darkmode_sweep_contrast_test.dart
+  // for the WCAG math.
+
+  group('AUD-profiles dark-mode sweep — profile initials avatar gradient', () {
+    testWidgets(
+      'dark mode: avatar gradient reads profileAvatarGradientStart/End (not '
+      'the old hardcoded 0xFFF2F5FC/0xFFE6ECF8 literals)',
+      (tester) async {
+        final profile = _profile(id: 1, name: 'Moshe', mode: 'child');
+        await tester.pumpWidget(
+          _buildApp(
+            router: router,
+            profilesState: AsyncData([profile]),
+            theme: AppTheme.darkTheme(),
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+
+        final containers = tester.widgetList<Container>(
+          find.byType(Container),
+        );
+        final avatarContainer = containers.firstWhere(
+          (c) =>
+              c.decoration is BoxDecoration &&
+              (c.decoration! as BoxDecoration).gradient != null,
+        );
+        final gradient =
+            (avatarContainer.decoration! as BoxDecoration).gradient!
+                as LinearGradient;
+
+        expect(gradient.colors, [
+          AppPalette.dark.profileAvatarGradientStart,
+          AppPalette.dark.profileAvatarGradientEnd,
+        ]);
+        expect(gradient.colors, isNot(contains(const Color(0xFFF2F5FC))));
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(Duration.zero);
+      },
+    );
+
+    testWidgets(
+      'light mode: avatar gradient stays the original '
+      '0xFFF2F5FC/0xFFE6ECF8 (no regression)',
+      (tester) async {
+        final profile = _profile(id: 1, name: 'Moshe', mode: 'child');
+        await tester.pumpWidget(
+          _buildApp(router: router, profilesState: AsyncData([profile])),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+
+        final containers = tester.widgetList<Container>(
+          find.byType(Container),
+        );
+        final avatarContainer = containers.firstWhere(
+          (c) =>
+              c.decoration is BoxDecoration &&
+              (c.decoration! as BoxDecoration).gradient != null,
+        );
+        final gradient =
+            (avatarContainer.decoration! as BoxDecoration).gradient!
+                as LinearGradient;
+
+        expect(gradient.colors, [
+          const Color(0xFFF2F5FC),
+          const Color(0xFFE6ECF8),
+        ]);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(Duration.zero);
+      },
+    );
   });
 }

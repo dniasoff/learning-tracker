@@ -128,10 +128,18 @@ class _ProfileInitialsAvatar extends StatelessWidget {
       width: 48,
       height: 48,
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        // AUD-profiles dark-mode sweep: this gradient was a hardcoded light
+        // pair under the adaptive `brandBlueDeep` initial-letter ink below
+        // (LIGHTENS in dark for ink-on-dark-card use) — measured 1.38:1 in
+        // dark (near-invisible), matching ProfileCard's identical bug. The
+        // tokens darken to a navy pair, restoring ~9.6:1 in dark.
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFFF2F5FC), Color(0xFFE6ECF8)],
+          colors: [
+            context.colors.profileAvatarGradientStart,
+            context.colors.profileAvatarGradientEnd,
+          ],
         ),
         shape: BoxShape.circle,
         border: Border.all(

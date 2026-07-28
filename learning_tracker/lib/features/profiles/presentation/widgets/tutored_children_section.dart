@@ -367,7 +367,13 @@ class _TutoredChildRow extends ConsumerWidget {
           width: 44,
           height: 44,
           decoration: BoxDecoration(
-            color: const Color(0xFFE8F4FD),
+            // AUD-profiles dark-mode sweep: was a hardcoded
+            // Color(0xFFE8F4FD) that stayed light in dark while the icon
+            // reads brandBlue (LIGHTENS in dark) — measured 2.26:1 in dark
+            // (same bug as parent_settings_screen.dart's Manage Tutors
+            // tile). Reusing settingsProfileBadgeParentBg: identical
+            // 0xFFE8F4FD in light, darkens to 6.22:1 against brandBlue dark.
+            color: context.colors.settingsProfileBadgeParentBg,
             borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(

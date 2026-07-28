@@ -1241,6 +1241,57 @@ class AppPalette extends ThemeExtension<AppPalette> {
   /// Fully transparent.
   Color get transparent => const Color(0x00000000);
 
+  // ---------------------------------------------------------------------------
+  // Profiles dark-mode legibility burndown (lib/features/profiles/presentation)
+  // ---------------------------------------------------------------------------
+
+  /// Icon-circle background for the UNSELECTED [AddProfileModePickCard]
+  /// variant (add_profile_mode_pick_card.dart). Was a hardcoded
+  /// `Color(0xFFE4E8EF)` that stayed light in dark mode while its icon reads
+  /// `brandInkMuted` (LIGHTENS in dark for ink-on-dark-card use) — measured
+  /// **2.10:1** in dark (icon on its own circle). Darkens to match
+  /// [surfaceE9]'s dark tone: **5.16:1** against `brandInkMuted` dark.
+  Color get profileModeIconMutedBg =>
+      _dark ? const Color(0xFF263041) : const Color(0xFFE4E8EF);
+
+  /// "What's your name" / "Choose Mode" form-label text in the Add-Profile
+  /// dialog (add_profile_dialog.dart). Was a hardcoded `Color(0xFF333333)` on
+  /// the dialog's `brandCreamCard` surface (DARKENS in dark) — measured
+  /// **1.38:1** in dark (near-invisible dark-grey-on-near-black). Lightens
+  /// like [brandInk] in dark: **14.94:1** against `brandCreamCard` dark.
+  Color get addProfileFormLabel =>
+      _dark ? const Color(0xFFEAEEF5) : const Color(0xFF333333);
+
+  /// Avatar-circle gradient — top-left stop. Shared by `ProfileCard` (profile
+  /// picker) and manage_learners_screen.dart's initials avatar. Was a
+  /// hardcoded light gradient under the adaptive `brandBlueDeep` initial-
+  /// letter ink (LIGHTENS in dark for ink-on-dark-card use) — measured
+  /// **1.38:1** in dark (near-invisible light-blue-on-near-white).
+  Color get profileAvatarGradientStart =>
+      _dark ? const Color(0xFF1D2636) : const Color(0xFFF2F5FC);
+
+  /// Avatar-circle gradient — bottom-right stop. Paired with
+  /// [profileAvatarGradientStart].
+  Color get profileAvatarGradientEnd =>
+      _dark ? const Color(0xFF161E2C) : const Color(0xFFE6ECF8);
+
+  /// Icon accent on [peachTint] (Reward Configuration tile icon,
+  /// parent_settings_screen.dart). Was a hardcoded `Color(0xFFB45309)` — fine
+  /// in light (~4.06:1) but `peachTint` darkens sharply in dark mode, dropping
+  /// this fixed rust-brown to **2.95:1**. Lightens like [peachDark] in dark:
+  /// **9.96:1** against `peachTint` dark.
+  Color get peachTintIconAccent =>
+      _dark ? const Color(0xFFE1D2B6) : const Color(0xFFB45309);
+
+  /// "Delete Account" danger row icon/title/subtitle
+  /// (parent_settings_screen.dart). Was a hardcoded Material
+  /// `Color(0xFFB00020)` against surfaces that BOTH darken in dark mode
+  /// (`statusErrorSoft` icon chip, `brandCreamCard` row text) — measured
+  /// **2.30:1** (icon) / **2.37:1** (text), both invisible-adjacent. Lightens
+  /// like [brandError] in dark: **~6.7–6.9:1** against both surfaces.
+  Color get deleteAccountDangerRed =>
+      _dark ? const Color(0xFFF0857B) : const Color(0xFFB00020);
+
   /// Brightness-aware identity colour for a curriculum.
   ///
   /// Replaces `AppTheme.getCurriculumColor`, whose values were fixed light
