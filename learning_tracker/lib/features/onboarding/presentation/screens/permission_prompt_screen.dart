@@ -167,7 +167,16 @@ class _PermissionPromptScreenState
                       ? l10n.startLearning
                       : l10n.permissionPromptCtaDone,
                   style: theme.textTheme.titleMedium?.copyWith(
-                    color: Colors.white,
+                    // Dark-mode legibility burndown: brandBlue LIGHTENS in
+                    // dark mode (0xFF7CA0FF, a pale pastel blue) — hardcoded
+                    // white text measured 2.52:1 on it. theme.colorScheme
+                    // .onPrimary is the app theme's own computed
+                    // contrast-safe foreground for this exact fill (see
+                    // app_theme.dart's `onFill` — it already picks
+                    // near-black over white here); reusing it fixes dark
+                    // mode while light mode still resolves to white
+                    // (brandBlue stays a saturated dark blue there).
+                    color: theme.colorScheme.onPrimary,
                     fontWeight: FontWeight.w800,
                   ),
                 ),

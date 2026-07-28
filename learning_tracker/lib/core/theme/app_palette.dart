@@ -1238,6 +1238,38 @@ class AppPalette extends ThemeExtension<AppPalette> {
   Color get settingsProfileNoBackupAccent =>
       _dark ? const Color(0xFFD5A97B) : const Color(0xFFCE8A41);
 
+  /// Deep-navy ink for text/icons painted ON a surface that ADAPTS (darkens)
+  /// in dark mode — the intro carousel's chip/card/tag text and the AppIntro
+  /// highlighted-word span (dark-mode legibility burndown, onboarding area).
+  ///
+  /// [introNavy] is a FILL role that deliberately stays a deep, saturated
+  /// blue in BOTH themes (hero card/pill backgrounds). Several call sites
+  /// across `intro_mishna_page.dart`, `intro_rewards_page.dart`, and
+  /// `app_intro_screen.dart` (as a private `_kNavy` duplicate of introNavy's
+  /// light value) reused it directly as INK on top of surfaces that
+  /// correctly darken (`introPillBlue`, `introBadgeBg`, `brandCreamCard`,
+  /// `brandCream`) — measured on device ≈1.3–1.9:1 in dark mode
+  /// (near-invisible). This token keeps the exact light value (`0xFF1A36A5`,
+  /// pixel-identical to the old `introNavy`/`_kNavy` literal) and LIGHTENS in
+  /// dark mode to the same pale blue [brandBlueDeep] already uses for its
+  /// "deep ink on a dark surface" role — clears ≥6.4:1 on every affected
+  /// surface (vs. the ~1.3–1.9:1 measured before the fix).
+  Color get introAccentInk =>
+      _dark ? const Color(0xFFB9C9FF) : const Color(0xFF1A36A5);
+
+  /// Child-mode icon-circle background on the onboarding profile-creation
+  /// step's "Child" mode card (`onboarding_profile_creation_step.dart`).
+  ///
+  /// Was a hardcoded `Color(0xFFE8E0FF)` — stays light lavender in dark mode
+  /// while the icon on top correctly reads `context.colors.brandInkMuted`
+  /// (lightens for dark surfaces) — measured **2.03:1** in dark mode (the
+  /// sibling "Adult" card's circle already used the theme-aware
+  /// [brandOutline] and had no such bug). This token keeps the exact light
+  /// value in both themes and darkens like the other muted icon-circle
+  /// surfaces.
+  Color get onboardingChildIconBg =>
+      _dark ? const Color(0xFF241E38) : const Color(0xFFE8E0FF);
+
   /// Fully transparent.
   Color get transparent => const Color(0x00000000);
 

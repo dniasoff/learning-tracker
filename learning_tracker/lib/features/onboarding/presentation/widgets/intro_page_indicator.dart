@@ -29,8 +29,15 @@ class IntroPageIndicator extends StatelessWidget {
           width: isActive ? 20 : 8,
           height: 8,
           decoration: BoxDecoration(
+            // Dark-mode legibility burndown: introNavy is a FILL role that
+            // stays deep navy in both themes, so on the page's own
+            // brandCream background (which darkens) the active dot nearly
+            // vanished in dark mode — measured 9.35:1 (light) vs 1.52:1
+            // (dark), barely above the inactive dot's 1.44:1. introAccentInk
+            // keeps the identical light value and lightens in dark so the
+            // active dot still pops against the darkened background.
             color: isActive
-                ? context.colors.introNavy
+                ? context.colors.introAccentInk
                 : context.colors.introIndicatorInactive,
             borderRadius: BorderRadius.circular(4),
           ),

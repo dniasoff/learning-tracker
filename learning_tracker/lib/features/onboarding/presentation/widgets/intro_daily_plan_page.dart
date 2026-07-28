@@ -103,7 +103,13 @@ class IntroDailyPlanIllustration extends StatelessWidget {
               child: Center(
                 child: Icon(
                   Icons.auto_awesome,
-                  color: context.colors.goldTrophy,
+                  // Dark-mode legibility burndown: goldTrophy DARKENS in dark
+                  // mode (it's ink-on-fixed-white-surface by design) but this
+                  // circle's fill (introNavy) stays deep-saturated in BOTH
+                  // themes — measured 1.13:1 in dark. goldOnColouredSurface
+                  // is the token built for exactly this "stays coloured"
+                  // pairing (see its doc comment).
+                  color: context.colors.goldOnColouredSurface,
                   size: 16,
                 ),
               ),
@@ -134,7 +140,13 @@ Widget _dailyListRow1Checked(BuildContext context) {
           child: Icon(
             Icons.check,
             size: 14,
-            color: context.colors.brandCreamCard,
+            // Dark-mode legibility burndown: brandCreamCard is a SURFACE
+            // token (correctly darkens for real cards) but this circle's
+            // fill is introNavy, which stays deep navy in BOTH themes —
+            // measured 1.39:1 in dark. introCtaLabel is the fixed-white
+            // token already built for ink painted on introNavy (same pairing
+            // as GlowingCtaButton's label).
+            color: context.colors.introCtaLabel,
           ),
         ),
         const SizedBox(width: 10),
@@ -172,7 +184,13 @@ Widget _dailyListRow2Highlight(BuildContext context) {
           width: 24,
           height: 24,
           decoration: BoxDecoration(
-            color: context.colors.brandCreamCard,
+            // Dark-mode legibility burndown: brandCreamCard (a SURFACE
+            // token) darkened this "punched-out" accent circle to near-black
+            // in dark mode while the introNavy pill around it stayed deep
+            // navy — measured 1.39:1. introCtaLabel keeps it fixed white in
+            // both themes, matching the introNavy-fill pairing used
+            // elsewhere in this illustration.
+            color: context.colors.introCtaLabel,
             shape: BoxShape.circle,
           ),
           child: Icon(
@@ -186,7 +204,9 @@ Widget _dailyListRow2Highlight(BuildContext context) {
           child: Container(
             height: 8,
             decoration: BoxDecoration(
-              color: context.colors.brandCreamCard.withValues(alpha: 0.9),
+              // Same fix as the circle above — was brandCreamCard (darkens),
+              // painted on the introNavy pill (stays deep navy).
+              color: context.colors.introCtaLabel.withValues(alpha: 0.9),
               borderRadius: BorderRadius.circular(4),
             ),
           ),

@@ -40,7 +40,13 @@ class IntroMishnaIllustration extends StatelessWidget {
                   child: Text(
                     AppLocalizations.of(context)!.introMishnaReviewChip,
                     style: GoogleFonts.plusJakartaSans(
-                      color: context.colors.introNavy,
+                      // Dark-mode legibility burndown: introPillBlue (a
+                      // SURFACE token) properly darkens to a near-black tint
+                      // in dark mode, but this text read introNavy, which
+                      // stays deep navy in BOTH themes — measured 1.33:1 in
+                      // dark. introAccentInk keeps the identical light value
+                      // and lightens in dark.
+                      color: context.colors.introAccentInk,
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                     ),
@@ -93,7 +99,12 @@ class IntroMishnaIllustration extends StatelessWidget {
                     Center(
                       child: Icon(
                         Icons.psychology_rounded,
-                        color: context.colors.brandCreamCard,
+                        // Dark-mode legibility burndown: brandCreamCard (a
+                        // SURFACE token) darkened to near-black in dark mode
+                        // while the surrounding introNavy card fill stayed
+                        // deep navy — measured 1.39:1. introCtaLabel is the
+                        // fixed-white token for ink on introNavy.
+                        color: context.colors.introCtaLabel,
                         size: 96,
                       ),
                     ),
@@ -121,7 +132,14 @@ class IntroMishnaIllustration extends StatelessWidget {
                         width: 44,
                         height: 44,
                         decoration: BoxDecoration(
-                          color: context.colors.brandCreamCard,
+                          // Dark-mode legibility burndown: brandCreamCard (a
+                          // SURFACE token) darkened this "punched-out" accent
+                          // chip to near-black in dark mode while the
+                          // introNavy card behind it stayed deep navy —
+                          // measured 1.39:1 for the icon on top. introCtaLabel
+                          // keeps this fixed white in both themes so the
+                          // introNavy icon on it stays high-contrast.
+                          color: context.colors.introCtaLabel,
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Icon(

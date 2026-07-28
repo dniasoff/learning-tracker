@@ -181,7 +181,15 @@ class _OnboardingProfileCreationStepState
                   textAlign: TextAlign.center,
                   style: theme.textTheme.labelLarge?.copyWith(
                     fontWeight: FontWeight.w700,
-                    color: selected ? Colors.white : context.colors.brandInk,
+                    // Dark-mode legibility burndown: brandBlue LIGHTENS in
+                    // dark mode (a pale pastel blue) — hardcoded white text
+                    // measured 2.52:1 on it. theme.colorScheme.onPrimary is
+                    // the app theme's own computed contrast-safe foreground
+                    // for this exact fill (app_theme.dart's `onFill`), which
+                    // still resolves to white in light mode (no regression).
+                    color: selected
+                        ? theme.colorScheme.onPrimary
+                        : context.colors.brandInk,
                   ),
                 ),
               ),
@@ -364,7 +372,13 @@ class _OnboardingProfileCreationStepState
                 modeCard(
                   isChild: true,
                   icon: Icons.rocket_launch_rounded,
-                  iconBgMuted: const Color(0xFFE8E0FF),
+                  // Dark-mode legibility burndown: this literal stayed light
+                  // lavender in dark mode while the icon on top correctly
+                  // read brandInkMuted (lightens for dark surfaces) —
+                  // measured 2.03:1 in dark (the sibling "Adult" card already
+                  // used the theme-aware brandOutline). onboardingChildIconBg
+                  // keeps the identical light value and darkens like it.
+                  iconBgMuted: context.colors.onboardingChildIconBg,
                   title: AppLocalizations.of(context)!.childModeCardTitle,
                   subtitle: AppLocalizations.of(
                     context,
@@ -502,12 +516,15 @@ class _OnboardingProfileCreationStepState
                   ? _createProfile
                   : null,
               child: _isCreatingProfile
-                  ? const SizedBox(
+                  ? SizedBox(
                       height: 22,
                       width: 22,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: Colors.white,
+                        // Dark-mode legibility burndown: brandBlue LIGHTENS
+                        // in dark mode — see the CTA text fix below for the
+                        // full rationale.
+                        color: theme.colorScheme.onPrimary,
                       ),
                     )
                   : Row(
@@ -518,16 +535,26 @@ class _OnboardingProfileCreationStepState
                           child: Text(
                             AppLocalizations.of(context)!.createProfile,
                             style: theme.textTheme.titleMedium?.copyWith(
-                              color: Colors.white,
+                              // Dark-mode legibility burndown: brandBlue
+                              // LIGHTENS in dark mode (0xFF7CA0FF, a pale
+                              // pastel blue) — hardcoded white text measured
+                              // 2.52:1 on it. theme.colorScheme.onPrimary is
+                              // the app theme's own computed contrast-safe
+                              // foreground for this exact fill
+                              // (app_theme.dart's `onFill`); it still
+                              // resolves to white in light mode (brandBlue
+                              // stays a saturated dark blue there), so light
+                              // mode is unchanged.
+                              color: theme.colorScheme.onPrimary,
                               fontWeight: FontWeight.w800,
                             ),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         const SizedBox(width: 8),
-                        const Icon(
+                        Icon(
                           Icons.arrow_forward_rounded,
-                          color: Colors.white,
+                          color: theme.colorScheme.onPrimary,
                           size: 22,
                         ),
                       ],

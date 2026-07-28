@@ -45,9 +45,6 @@ const _kIntroCtaVInset = 20.0;
 /// split deterministic across locales.
 const _kHighlightPlaceholder = '\uE000';
 
-/// Onboarding intro palette (design mockup).
-const _kNavy = Color(0xFF1A36A5);
-
 /// Breathing room at the bottom of the scroll content above the pinned CTA.
 /// The CTA is now a non-overlapping Column sibling (not an overlay), so this is
 /// just visual padding — not a clearance reserve.
@@ -391,8 +388,13 @@ class _IntroPage extends ConsumerWidget {
     required AppLocalizations l10n,
     required String mishnaLabel,
   }) {
-    const highlightStyle = TextStyle(
-      color: _kNavy,
+    // Dark-mode legibility burndown: was a hardcoded `_kNavy` literal that
+    // stayed deep navy in dark mode while sitting on this screen's own
+    // brandCream background (which correctly darkens) — measured 1.93:1 on
+    // device. introAccentInk keeps the identical light value and lightens in
+    // dark, matching brandBlueDeep's "deep ink on dark surface" role.
+    final highlightStyle = TextStyle(
+      color: context.colors.introAccentInk,
       fontStyle: FontStyle.italic,
     );
     switch (data.variant) {

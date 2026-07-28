@@ -47,7 +47,12 @@ class IntroRewardsHeroIllustration extends StatelessWidget {
               ),
               child: Icon(
                 Icons.emoji_events_rounded,
-                color: context.colors.goldTrophy,
+                // Dark-mode legibility burndown: goldTrophy DARKENS in dark
+                // mode (ink-on-fixed-white-surface by design) but this
+                // circle's fill is introNavy, which stays deep-saturated in
+                // BOTH themes — measured 1.13:1 in dark. goldOnColouredSurface
+                // is the token built for exactly this "stays coloured" pairing.
+                color: context.colors.goldOnColouredSurface,
                 size: 68,
               ),
             ),
@@ -135,8 +140,16 @@ class IntroFeatureCardsRow extends StatelessWidget {
             label: l10n.introBadgeCollection,
             bottomBorder: context.colors.introNavy,
             circleColor: context.colors.introBadgeBg,
-            textColor: context.colors.introNavy,
-            iconColor: context.colors.introNavy,
+            // Dark-mode legibility burndown: both read introNavy, which
+            // stays deep navy in BOTH themes, painted on this card's own
+            // brandCreamCard background and introBadgeBg circle — both
+            // correctly darken — measured 1.38-1.39:1 in dark. The sibling
+            // "Mystery Prizes" card already used adapting ink
+            // (introMysteryText/introMysteryIcon); introAccentInk gives
+            // Badge Collection the same correctly-adapting behaviour while
+            // keeping the identical light-mode hex.
+            textColor: context.colors.introAccentInk,
+            iconColor: context.colors.introAccentInk,
           ),
         ),
         const SizedBox(width: 12),
@@ -246,10 +259,18 @@ class IntroChildModeTag extends StatelessWidget {
               shape: BoxShape.circle,
             ),
             alignment: Alignment.center,
+            // Dark-mode legibility burndown: icon/title/body below read
+            // introNavy, which stays deep navy in BOTH themes, on top of
+            // introBadgeBg (adapts) / the introNavy@0.12 circle tint (also
+            // effectively adapts, since it is blended over introBadgeBg) —
+            // measured ~1.34-1.38:1 in dark. introAccentInk keeps the
+            // identical light-mode hex and lightens in dark. The border and
+            // this circle's own low-alpha tint fill are left as introNavy —
+            // decorative, non-text.
             child: Icon(
               Icons.child_care_rounded,
               size: 22,
-              color: context.colors.introNavy,
+              color: context.colors.introAccentInk,
             ),
           ),
           const SizedBox(width: 12),
@@ -260,7 +281,7 @@ class IntroChildModeTag extends StatelessWidget {
                 Text(
                   AppLocalizations.of(context)!.introChildModeTagTitle,
                   style: GoogleFonts.plusJakartaSans(
-                    color: context.colors.introNavy,
+                    color: context.colors.introAccentInk,
                     fontSize: 14,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 0.2,
@@ -270,7 +291,9 @@ class IntroChildModeTag extends StatelessWidget {
                 Text(
                   AppLocalizations.of(context)!.introChildModeTagBody,
                   style: GoogleFonts.plusJakartaSans(
-                    color: context.colors.introNavy.withValues(alpha: 0.75),
+                    color: context.colors.introAccentInk.withValues(
+                      alpha: 0.75,
+                    ),
                     fontSize: 12.5,
                     height: 1.35,
                     fontWeight: FontWeight.w500,
@@ -339,7 +362,12 @@ class IntroScholarLevelCard extends ConsumerWidget {
                 child: Text(
                   l10n.introScholarExample,
                   style: GoogleFonts.plusJakartaSans(
-                    color: context.colors.introNavy,
+                    // Dark-mode legibility burndown: introNavy stays deep
+                    // navy in BOTH themes, painted on this card's own
+                    // brandCreamCard background (correctly darkens) via a
+                    // low-alpha tint — measured 1.35:1 in dark. introAccentInk
+                    // keeps the identical light-mode hex and lightens in dark.
+                    color: context.colors.introAccentInk,
                     fontSize: 9,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 0.4,
