@@ -30,6 +30,7 @@ import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
+import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/items_learned_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
@@ -74,6 +75,18 @@ class _UseHebrewTermsOverride extends UseHebrewTerms {
   @override
   bool build() => useHebrew;
 }
+
+/// Minimal [ProfileModel] fixture for [activeProfileProvider] overrides —
+/// only `mode` varies across the CTA-visibility tests below.
+ProfileModel _profileModel({required String mode}) => ProfileModel(
+  id: _profileId,
+  accountId: 1,
+  displayName: 'Test User',
+  mode: mode,
+  avatarIndex: 0,
+  createdAt: DateTime.utc(2026, 1, 1),
+  updatedAt: DateTime.utc(2026, 1, 1),
+);
 
 // ---------------------------------------------------------------------------
 // Seed helpers — mirror the patterns in story_i3_items_learned_test.dart so
@@ -658,6 +671,24 @@ void main() {
   });
 
   // ─── Test 4 — CTA navigates to LifetimeMarkingRoute ───────────────────
+  //
+  // NOTE on layering (sweep-fix/lifetime-cta): this test drives navigation
+  // through [_RecordingRouter], a fake `StackRouter` that records `push()`
+  // calls WITHOUT running AutoRoute's real guard pipeline. It only proves
+  // the CTA's `onTap` closure calls `router.push(LifetimeMarkingRoute())` —
+  // it cannot and does not prove the push actually lands anywhere, because
+  // the real `LifetimeMarkingRoute` carries [authGuard, childModeGuard,
+  // pinGuard] (see app_router.dart) and childModeGuard fails CLOSED
+  // (`resolver.next(false)`, no error/snackbar) whenever the active profile
+  // is not in child mode. That is exactly the failure mode two independent
+  // on-device sweeps reproduced (byte-identical screen before/after the
+  // tap): this test was testing the wrong layer and passed throughout. The
+  // real regression coverage is the CTA-visibility test below, which pumps
+  // the actual screen (no fake router) against both profile modes and
+  // asserts the guard's precondition is honoured *before* the tap — i.e.
+  // the CTA is hidden rather than visible-but-dead. This test is kept
+  // (now with an explicit child-mode profile, since that's what the guard
+  // actually requires) to cover the wiring once the precondition holds.
 
   group('CTA navigates to LifetimeMarkingRoute', () {
     testWidgets('tapping the "Add items I learned previously" card pushes '
@@ -681,6 +712,12 @@ void main() {
             userDatabaseProvider.overrideWith((ref) => db),
             contentRepositoryProvider.overrideWithValue(fakeRepo),
             activeProfileIdProvider.overrideWith(() => _ProfileIdOverride(1)),
+            // Real destination route requires childModeGuard — the active
+            // profile must be in child mode or the (real, non-faked)
+            // navigation silently no-ops. Reflect that precondition here.
+            activeProfileProvider.overrideWith(
+              (ref) async => _profileModel(mode: 'child'),
+            ),
             useHebrewTermsProvider.overrideWith(
               () => _UseHebrewTermsOverride(useHebrew: false),
             ),
@@ -711,6 +748,89 @@ void main() {
             'on the router',
       );
     });
+  });
+
+  // ─── Test 5 — CTA hidden when active profile cannot pass childModeGuard ──
+  //
+  // BUG-lifetime-cta-dead-tap (sweep-fix/lifetime-cta): two independent
+  // on-device sweeps found the CTA visible but permanently unresponsive —
+  // uiautomator confirmed the tap landed, but the screen never changed.
+  // Root cause: `LifetimeKnowledgeRoute` carries only [authGuard] (reachable
+  // by ANY active profile — adult or child; see
+  // docs/planning/progress-ia-redesign.md Q5, which explicitly keeps
+  // Progress/Lifetime Knowledge available in adult mode), but the CTA's
+  // destination `LifetimeMarkingRoute` carries [authGuard, childModeGuard,
+  // pinGuard]. childModeGuard fails CLOSED with no user-visible feedback
+  // when the active profile is not in child mode — exactly the state an
+  // adult self-tracking profile (or a parent viewing their own progress) is
+  // in by default. This is also the app-wide default test fixture: the
+  // canonical `seedProfile()` helper (test/helpers/drift_memory.dart) seeds
+  // profile 1 as `mode: 'adult'` — the same default the two sweeps almost
+  // certainly hit.
+  group('CTA hidden when active profile is not in child mode', () {
+    Future<void> pumpWithMode(WidgetTester tester, String mode) async {
+      await _seedLive(
+        db,
+        trackId: trackId,
+        ref: leaves[0].sefariaRef,
+        stageId: 1,
+        at: DateTime.utc(2026, 5, 1, 10),
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            userDatabaseProvider.overrideWith((ref) => db),
+            contentRepositoryProvider.overrideWithValue(fakeRepo),
+            activeProfileIdProvider.overrideWith(() => _ProfileIdOverride(1)),
+            activeProfileProvider.overrideWith(
+              (ref) async => _profileModel(mode: mode),
+            ),
+            useHebrewTermsProvider.overrideWith(
+              () => _UseHebrewTermsOverride(useHebrew: false),
+            ),
+          ],
+          child: const MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: LifetimeKnowledgeScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets(
+      'adult-mode active profile: the CTA is not rendered (would be a dead '
+      'button — its route requires childModeGuard)',
+      (tester) async {
+        await pumpWithMode(tester, 'adult');
+
+        expect(
+          find.text('Add items I learned previously'),
+          findsNothing,
+          reason:
+              'BUG-lifetime-cta-dead-tap: an adult-mode active profile can '
+              'never satisfy childModeGuard on LifetimeMarkingRoute, so the '
+              'CTA must be hidden rather than shown-but-permanently-dead',
+        );
+      },
+    );
+
+    testWidgets(
+      'child-mode active profile: the CTA renders (guard precondition met)',
+      (tester) async {
+        await pumpWithMode(tester, 'child');
+
+        expect(
+          find.text('Add items I learned previously'),
+          findsOneWidget,
+          reason:
+              'a child-mode active profile satisfies childModeGuard, so the '
+              'CTA must still be offered here',
+        );
+      },
+    );
   });
 }
 
