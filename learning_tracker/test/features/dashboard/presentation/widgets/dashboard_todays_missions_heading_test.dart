@@ -10,6 +10,8 @@
 @Tags(['dashboard', 'i18n', 'overflow'])
 library;
 
+import 'dart:async';
+
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -29,6 +31,7 @@ import 'package:learning_tracker/features/profiles/presentation/providers/profil
 import 'package:learning_tracker/features/progress/domain/models/journey_view_model.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/journey_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
@@ -79,7 +82,11 @@ JourneyViewModel _journey() => const JourneyViewModel(
   curriculumLevelSiyumimCount: 0,
 );
 
-Widget _buildApp({required _MockStackRouter router, required Locale locale}) {
+Widget _buildApp({
+  required _MockStackRouter router,
+  required Locale locale,
+  Future<List<DailyTask>>? dailyTasksFuture,
+}) {
   final track = _track();
   return ProviderScope(
     overrides: [
@@ -116,7 +123,9 @@ Widget _buildApp({required _MockStackRouter router, required Locale locale}) {
       dashboardStreakProvider.overrideWith(
         (ref) => Stream.value((currentStreak: 7, maxStreak: 7)),
       ),
-      allDailyTasksProvider.overrideWith((ref) => Future.value(const [])),
+      allDailyTasksProvider.overrideWith(
+        (ref) => dailyTasksFuture ?? Future.value(const []),
+      ),
       initialSyncCompleteProvider.overrideWith((ref) => Future.value(true)),
       journeyViewModelProvider(
         1,
@@ -197,6 +206,7 @@ void main() {
     WidgetTester tester, {
     required Locale locale,
     required double textScale,
+    Future<List<DailyTask>>? dailyTasksFuture,
   }) async {
     tester.view.physicalSize = const Size(412, 915);
     tester.view.devicePixelRatio = 1.0;
@@ -204,7 +214,11 @@ void main() {
     await tester.pumpWidget(
       MediaQuery(
         data: MediaQueryData(textScaler: TextScaler.linear(textScale)),
-        child: _buildApp(router: router, locale: locale),
+        child: _buildApp(
+          router: router,
+          locale: locale,
+          dailyTasksFuture: dailyTasksFuture,
+        ),
       ),
     );
     await tester.pump();
@@ -250,4 +264,77 @@ void main() {
     final l10n = await AppLocalizations.delegate.load(const Locale('he'));
     _expectHeadingNotTruncated(tester, l10n.todaysMissions);
   });
+
+  // P3(5558) regression: on cold start the "N remaining" pill read the daily
+  // task list's default placeholder (an empty list substituted while
+  // allDailyTasksProvider is still loading — see dashboard_body.dart's
+  // `allTasks = dailyTasksAsync.value ?? const <DailyTask>[]`), so it showed
+  // a concrete "0 remaining" for ~1-2s before the real count arrived — even
+  // though the adjacent OVERDUE/TODAY/CHAZARA bubbles correctly show "…"
+  // while not ready. These two tests pin: (1) the pill must NOT show a
+  // concrete count while allDailyTasksProvider is still loading, and (2) once
+  // the provider resolves — even with a genuine zero — the pill DOES show
+  // "0 remaining".
+  testWidgets(
+    'en: missions pill shows a placeholder (not "0 remaining") while tasks '
+    'are still loading',
+    (tester) async {
+      final neverCompletes = Completer<List<DailyTask>>();
+      addTearDown(() {
+        // Complete after the test so no dangling unhandled-Future/leak
+        // assertions fire; flutter_test only guards against pending Timers,
+        // but completing tidily avoids an "unhandled exception in a
+        // disposed test zone" if anything were to await this later.
+        if (!neverCompletes.isCompleted) {
+          neverCompletes.complete(const []);
+        }
+      });
+      await pumpAt(
+        tester,
+        locale: const Locale('en'),
+        textScale: 1.0,
+        dailyTasksFuture: neverCompletes.future,
+      );
+      final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+
+      final pillFinder = find.byKey(const Key('todaysMissionsRemainingPill'));
+      expect(pillFinder, findsOneWidget);
+      final pillText = tester.widget<Text>(pillFinder).data;
+      expect(
+        pillText,
+        isNot(equals(l10n.remaining(0))),
+        reason:
+            'The missions pill showed a concrete "0 remaining" while '
+            'allDailyTasksProvider was still loading — it must show a '
+            'placeholder instead, matching the sibling OVERDUE/TODAY/CHAZARA '
+            'bubbles.',
+      );
+      expect(pillText, equals('…'));
+    },
+  );
+
+  testWidgets(
+    'en: missions pill shows "0 remaining" once tasks resolve with zero '
+    'items',
+    (tester) async {
+      await pumpAt(
+        tester,
+        locale: const Locale('en'),
+        textScale: 1.0,
+        dailyTasksFuture: Future.value(const []),
+      );
+      final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+
+      final pillFinder = find.byKey(const Key('todaysMissionsRemainingPill'));
+      expect(pillFinder, findsOneWidget);
+      expect(
+        tester.widget<Text>(pillFinder).data,
+        equals(l10n.remaining(0)),
+        reason:
+            'Once the local Drift query genuinely resolves with zero tasks, '
+            'the pill must show the real "0 remaining" — the loading-state '
+            'placeholder fix must not suppress a legitimate zero.',
+      );
+    },
+  );
 }
