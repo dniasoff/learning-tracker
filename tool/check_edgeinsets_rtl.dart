@@ -60,7 +60,7 @@ const _baseline = <String>{
   // unaddressed sites by a few lines. No content at any site
   // changed, and the set of hit files is byte-identical to the
   // last known-green commit (verified before re-pinning).
-  'learning_tracker/lib/features/gamification/presentation/screens/reward_configuration_screen.dart:110',
+  'learning_tracker/lib/features/gamification/presentation/screens/reward_configuration_screen.dart:123',
 };
 
 void main() {

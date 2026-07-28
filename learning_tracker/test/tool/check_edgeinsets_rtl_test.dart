@@ -64,9 +64,11 @@ void main() {
         );
         expect(
           result.stdout.toString(),
-          // Re-pinned :111 -> :110 by the AppPalette theme migration; the
+          // Re-pinned :111 -> :110 by the AppPalette theme migration, then
+          // :110 -> :123 by the dark-mode legibility burndown (recolour of
+          // reward_configuration_screen.dart shifted the lines down); the
           // site itself is unchanged, only its line number moved.
-          contains('reward_configuration_screen.dart:110'),
+          contains('reward_configuration_screen.dart:123'),
           reason:
               'the pre-existing, out-of-scope baseline entry must still be '
               'suppressed (scope discipline — not this finding\'s site).',
