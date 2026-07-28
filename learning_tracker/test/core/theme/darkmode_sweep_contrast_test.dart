@@ -29,6 +29,36 @@
 // `0xFFF2F4F7` in light mode (not a re-point onto `brandCreamCard`, which
 // is pure white and would have shifted the light-mode hex) and darkens in
 // dark mode.
+//
+// Run-11 acceptance sweep deferred three more findings (SELECTED-state
+// counterparts of the above, held back for careful, precedent-matching
+// fixes) — Findings 4-6 below:
+//
+// Finding 4 (P1) — `ReviewPresetCard`'s SELECTED variant
+// (`chazara_widgets.dart`): the gradient fill was painted directly from
+// `brandBlueDeep`/`brandBlueBright` — a CONTRAST role that deliberately
+// LIGHTENS in dark mode for ink-on-dark-surface use — with white
+// title/icon/subtitle text on top. Used as a FILL instead of ink, the
+// lightened dark values washed the card to pale lavender: measured
+// **1.63:1** (title/icon) and **1.85:1** (subtitle region) in dark. Same
+// hero-fill role as `blueMedium`/`blueLight`/`blueMid`. Fixed with two new
+// tokens, `chazaraSelectedGradientStart`/`End`, pinned to the exact
+// pre-fix light-mode hex pair in both themes.
+//
+// Finding 5 (P1) — `AddProfileModePickCard`'s SELECTED variant
+// (`add_profile_mode_pick_card.dart`): the background was a hardcoded
+// `Colors.white` (stays white in dark) under a title/subtitle reading
+// `brandBlueDeep`/`brandBlue`, which LIGHTEN in dark for ink-on-dark-card
+// use — light-blue-on-white, measured **1.63:1** (title) / **2.52:1**
+// (subtitle). Fixed by pointing the background at `brandCreamCard`
+// (identical `0xFFFFFFFF` in light mode); the existing dark-mode ink
+// tokens then do exactly the job they were designed for.
+//
+// Finding 6 (P2) — the "Custom Cycle" card in `step_chazara.dart`: same
+// hardcoded-`Colors.white` bug as Finding 2's (already-fixed) unselected
+// preset card, under a `titleLarge` heading defaulting to `brandInk` —
+// measured **1.16:1** in dark. Fixed the same way: background repointed at
+// `brandCreamCard`.
 @Tags(['core_widgets', 'onboarding', 'tracks', 'profiles'])
 library;
 
@@ -36,11 +66,13 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/onboarding/presentation/widgets/glowing_cta_button.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/add_profile_mode_pick_card.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/steps/chazara_widgets.dart';
+import 'package:learning_tracker/features/tracks/setup/presentation/steps/step_chazara.dart';
 
 import '../../helpers/pump_app.dart';
 
@@ -307,5 +339,295 @@ void main() {
         expect(decoration.color, const Color(0xFFF2F4F7));
       },
     );
+  });
+
+  group('Finding 4 — ReviewPresetCard SELECTED gradient (chazara step)', () {
+    test('white clears WCAG 4.5:1 on both chazaraSelectedGradient stops in '
+        'dark mode (measured 1.63:1 / 1.85:1 on the pre-fix '
+        'brandBlueDeep/brandBlueBright pair)', () {
+      const palette = AppPalette.dark;
+      final startRatio = _contrast(
+        Colors.white,
+        palette.chazaraSelectedGradientStart,
+      );
+      final endRatio = _contrast(
+        Colors.white,
+        palette.chazaraSelectedGradientEnd,
+      );
+
+      expect(
+        startRatio,
+        greaterThanOrEqualTo(4.5),
+        reason:
+            'the selected card gradient start was brandBlueDeep, which '
+            'LIGHTENS in dark mode for its normal ink-on-dark-surface '
+            'role; painted as a fill under white text it measured 1.63:1',
+      );
+      expect(
+        endRatio,
+        greaterThanOrEqualTo(4.5),
+        reason:
+            'the selected card gradient end was brandBlueBright, same '
+            'lightens-in-dark bug, measured 1.85:1 as a fill',
+      );
+    });
+
+    test('light mode is unchanged — chazaraSelectedGradientStart/End equal the '
+        'old brandBlueDeep/brandBlueBright light-mode hexes exactly', () {
+      const light = AppPalette.light;
+
+      expect(light.chazaraSelectedGradientStart, light.brandBlueDeep);
+      expect(light.chazaraSelectedGradientEnd, light.brandBlueBright);
+      expect(
+        _contrast(Colors.white, light.chazaraSelectedGradientStart),
+        greaterThanOrEqualTo(4.5),
+      );
+    });
+
+    testWidgets('the real selected card paints its gradient from the new '
+        'chazaraSelectedGradient tokens (not brandBlueDeep/Bright) in dark '
+        'mode', (tester) async {
+      await tester.pumpWidget(
+        pumpApp(
+          child: Theme(
+            data: AppTheme.darkTheme(),
+            child: Scaffold(
+              body: ReviewPresetCard(
+                title: 'Week',
+                subtitle: 'Review after 1 and 7 days',
+                icon: Icons.auto_awesome_rounded,
+                isSelected: true,
+                onTap: () {},
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      final box = tester.widget<DecoratedBox>(find.byType(DecoratedBox).first);
+      final decoration = box.decoration as BoxDecoration;
+      final gradient = decoration.gradient! as LinearGradient;
+
+      expect(gradient.colors[0], AppPalette.dark.chazaraSelectedGradientStart);
+      expect(gradient.colors[1], AppPalette.dark.chazaraSelectedGradientEnd);
+      expect(gradient.colors[0], isNot(AppPalette.dark.brandBlueDeep));
+      expect(gradient.colors[1], isNot(AppPalette.dark.brandBlueBright));
+    });
+
+    testWidgets(
+      'the real selected card keeps the exact pre-fix gradient in light '
+      'mode (no regression)',
+      (tester) async {
+        await tester.pumpWidget(
+          pumpApp(
+            child: Scaffold(
+              body: ReviewPresetCard(
+                title: 'Week',
+                subtitle: 'Review after 1 and 7 days',
+                icon: Icons.auto_awesome_rounded,
+                isSelected: true,
+                onTap: () {},
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+
+        final box = tester.widget<DecoratedBox>(
+          find.byType(DecoratedBox).first,
+        );
+        final decoration = box.decoration as BoxDecoration;
+        final gradient = decoration.gradient! as LinearGradient;
+
+        expect(gradient.colors[0], const Color(0xFF0E3392));
+        expect(gradient.colors[1], const Color(0xFF2B5FD9));
+      },
+    );
+  });
+
+  group('Finding 5 — AddProfileModePickCard SELECTED background '
+      '("Choose Mode" cards)', () {
+    test(
+      'brandBlueDeep/brandBlue clear WCAG 4.5:1 on brandCreamCard in dark '
+      'mode (measured 1.63:1 / 2.52:1 on the pre-fix hardcoded-white bg)',
+      () {
+        const palette = AppPalette.dark;
+        final titleRatio = _contrast(
+          palette.brandBlueDeep,
+          palette.brandCreamCard,
+        );
+        final subtitleRatio = _contrast(
+          palette.brandBlue,
+          palette.brandCreamCard,
+        );
+
+        expect(
+          titleRatio,
+          greaterThanOrEqualTo(4.5),
+          reason:
+              'the selected "Child Mode" card painted a hardcoded '
+              'Colors.white background (stays white in dark) under a '
+              'brandBlueDeep title, which LIGHTENS in dark for its '
+              'ink-on-dark-card role — measured 1.63:1 on the still-white '
+              'card',
+        );
+        expect(subtitleRatio, greaterThanOrEqualTo(4.5));
+      },
+    );
+
+    test('light mode is unchanged — brandCreamCard keeps the exact pre-fix '
+        'Colors.white value', () {
+      const light = AppPalette.light;
+
+      expect(light.brandCreamCard, const Color(0xFFFFFFFF));
+      expect(
+        _contrast(light.brandBlueDeep, light.brandCreamCard),
+        greaterThanOrEqualTo(4.5),
+      );
+    });
+
+    testWidgets(
+      'the real selected card reads brandCreamCard (not the hardcoded '
+      'Colors.white literal) in dark mode',
+      (tester) async {
+        await tester.pumpWidget(
+          pumpApp(
+            child: Theme(
+              data: AppTheme.darkTheme(),
+              child: Scaffold(
+                body: AddProfileModePickCard(
+                  selected: true,
+                  onTap: () {},
+                  icon: Icons.rocket_launch_rounded,
+                  title: 'Child Mode',
+                  subtitle: 'Fun rewards along the way',
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+
+        final ink = tester.widget<Ink>(find.byType(Ink));
+        final decoration = ink.decoration! as BoxDecoration;
+
+        expect(decoration.color, AppPalette.dark.brandCreamCard);
+        expect(decoration.color, isNot(const Color(0xFFFFFFFF)));
+      },
+    );
+
+    testWidgets(
+      'the real selected card keeps the exact Colors.white-equivalent '
+      'background in light mode (no regression)',
+      (tester) async {
+        await tester.pumpWidget(
+          pumpApp(
+            child: Scaffold(
+              body: AddProfileModePickCard(
+                selected: true,
+                onTap: () {},
+                icon: Icons.rocket_launch_rounded,
+                title: 'Child Mode',
+                subtitle: 'Fun rewards along the way',
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+
+        final ink = tester.widget<Ink>(find.byType(Ink));
+        final decoration = ink.decoration! as BoxDecoration;
+        expect(decoration.color, const Color(0xFFFFFFFF));
+      },
+    );
+  });
+
+  group('Finding 6 — "Custom Cycle" card background (step_chazara)', () {
+    test('brandInk clears WCAG 4.5:1 on brandCreamCard in dark mode (measured '
+        '1.16:1 on the pre-fix white-on-white pair)', () {
+      const palette = AppPalette.dark;
+      final ratio = _contrast(palette.brandInk, palette.brandCreamCard);
+
+      expect(
+        ratio,
+        greaterThanOrEqualTo(4.5),
+        reason:
+            'the "Custom Cycle" card painted a hardcoded Colors.white '
+            'background under a titleLarge heading defaulting to brandInk '
+            '(near-white in dark) — white-on-white',
+      );
+    });
+
+    test('light mode is unchanged — brandCreamCard stays pure white, same as '
+        'the old hardcoded Colors.white literal', () {
+      const light = AppPalette.light;
+
+      expect(light.brandCreamCard, const Color(0xFFFFFFFF));
+      expect(
+        _contrast(light.brandInk, light.brandCreamCard),
+        greaterThanOrEqualTo(4.5),
+      );
+    });
+
+    testWidgets(
+      'the real Custom Cycle card reads brandCreamCard (not the hardcoded '
+      'white literal) in dark mode',
+      (tester) async {
+        await tester.pumpWidget(
+          pumpApp(
+            child: Theme(
+              data: AppTheme.darkTheme(),
+              child: Scaffold(
+                body: ChazaraInlineSetup(
+                  curriculumId: CurriculumId.mishnayos,
+                  headerTitle: 'Review Schedule',
+                  headerSubtitle: 'Choose how often to review',
+                  onComplete: (_) {},
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+
+        final box = tester.widget<DecoratedBox>(
+          find.ancestor(
+            of: find.text('Custom Cycle'),
+            matching: find.byType(DecoratedBox),
+          ),
+        );
+        final decoration = box.decoration as BoxDecoration;
+
+        expect(decoration.color, AppPalette.dark.brandCreamCard);
+        expect(decoration.color, isNot(Colors.white));
+      },
+    );
+
+    testWidgets('the real Custom Cycle card stays white in light mode '
+        '(no regression)', (tester) async {
+      await tester.pumpWidget(
+        pumpApp(
+          child: Scaffold(
+            body: ChazaraInlineSetup(
+              curriculumId: CurriculumId.mishnayos,
+              headerTitle: 'Review Schedule',
+              headerSubtitle: 'Choose how often to review',
+              onComplete: (_) {},
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      final box = tester.widget<DecoratedBox>(
+        find.ancestor(
+          of: find.text('Custom Cycle'),
+          matching: find.byType(DecoratedBox),
+        ),
+      );
+      final decoration = box.decoration as BoxDecoration;
+      expect(decoration.color, const Color(0xFFFFFFFF));
+    });
   });
 }

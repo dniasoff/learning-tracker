@@ -42,7 +42,22 @@ class AddProfileModePickCard extends StatelessWidget {
             // heading on its own card). profileModeCardBg is the
             // theme-aware replacement: identical 0xFFF2F4F7 in light mode,
             // darkens in dark mode.
-            color: selected ? Colors.white : context.colors.profileModeCardBg,
+            //
+            // Run-11 deferred dark-mode sweep: the SELECTED card had the
+            // same shape of bug — a hardcoded `Colors.white` background that
+            // stays white in dark mode, under a title/subtitle that reads
+            // `brandBlueDeep`/`brandBlue` and LIGHTENS in dark (a
+            // contrast-role token designed to be ink on a DARK surface) —
+            // light-blue-on-white, measured 1.63:1 (title) / 2.52:1
+            // (subtitle) on device. `brandCreamCard` is the theme-aware card
+            // surface (identical 0xFFFFFFFF in light mode, so light is
+            // unchanged); once the surface actually darkens in dark mode,
+            // brandBlueDeep/brandBlue's existing dark values already do
+            // exactly the ink-on-dark-card job they were designed for —
+            // 10.65:1 / 6.90:1.
+            color: selected
+                ? context.colors.brandCreamCard
+                : context.colors.profileModeCardBg,
             borderRadius: BorderRadius.circular(20),
             border: selected
                 ? Border.all(color: context.colors.brandBlue, width: 1.5)
