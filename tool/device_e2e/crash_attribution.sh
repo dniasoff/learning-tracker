@@ -37,10 +37,16 @@ PKG="${PKG:-com.jcom.torah.learning_tracker}"
 #     -- ANR-dump plumbing for unrelated processes (e.g. .android.video).
 # Matching those would have re-created the very false-positive that got run-8's
 # "OOM P0" and two run-9 P1s wrongly escalated. Match KILLS, not chatter.
+#
+# NOT a failure signal: a bare "ActivityManager: Process <pkg> ... has died: cch
+# CAC / vis +99TOP". A process dying is NORMAL Android lifecycle -- backgrounded
+# and cached processes are reaped constantly. It fired on an IDLE device once the
+# `system` buffer was added (run-10). A GENUINE crash already shows as FATAL
+# EXCEPTION (main/crash) or `am_crash` or `ANR in` -- so the bare death line adds
+# nothing but false positives and was removed.
 GUEST_FAILURE_RE="\
 am_crash.*${PKG}\
 |ANR in ${PKG}\
-|Process ${PKG}.*(has died|died)\
 |lmkd.*[Kk]ill(ing)? '?${PKG}\
 |lowmemorykiller.*[Kk]illing '?${PKG}\
 |>>> ${PKG} <<<"
@@ -51,11 +57,18 @@ dev="emulator-${port}"
 
 case "$cmd" in
   clear)
-    "$ADB" -s "$dev" logcat -c -b crash,main 2>/dev/null
+    "$ADB" -s "$dev" logcat -c -b crash,main,system 2>/dev/null
     echo "[$dev] logcat cleared"
     ;;
   check)
-    raw="$("$ADB" -s "$dev" logcat -b crash,main -d 2>/dev/null)"
+    # NOTE the `system` buffer: ActivityManager writes "ANR in <pkg>" there, NOT
+    # to crash/main. A run-10 sweep found a real ANR reported "guest clean"
+    # because this read omitted `system` — the GUEST_FAILURE_RE `ANR in <pkg>`
+    # pattern had nothing to match against. (`am_crash` and `lmkd` kill lines
+    # also originate in `system`.) All patterns stay package-scoped, so the
+    # extra buffer's chatter — generic lowmemorykiller / tombstoned lines for
+    # OTHER processes — still does not match.
+    raw="$("$ADB" -s "$dev" logcat -b crash,main,system -d 2>/dev/null)"
     if [ -z "$raw" ]; then
       # An unreachable device is an ENVIRONMENT problem, not an app crash.
       # Say so explicitly rather than letting silence read as "clean".
