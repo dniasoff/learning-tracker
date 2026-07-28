@@ -3,6 +3,12 @@
 Four decisions made by the repo owner after the run-11 clean sweep. Items 1–3 are
 new build work; item 4 is a documented decision-to-not-act.
 
+**STATUS (2026-07-29): all four resolved and on dev.** #2 dark-mode burndown SHIPPED
+(dev 48eac15a). #1 configurable siyum granularity SHIPPED (dev 75300b80). #3 two-section
+Overall Stats card SHIPPED (dev 75300b80). #4 Learn eager-load LEFT AS-IS (documented).
+All gated green: full `make ci` (MAKE_CI_RC=0) + `make audit`. Not yet device-verified on
+emulators — that is the remaining follow-up.
+
 ## 1. Configurable siyum granularity (FEATURE — to build)
 
 **Decision:** siyum (milestone) granularity is a **user-configurable setting**, because
