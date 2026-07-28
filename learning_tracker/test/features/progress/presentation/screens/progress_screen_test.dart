@@ -11,13 +11,17 @@
 library;
 
 import 'package:auto_route/auto_route.dart';
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
+import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/progress/domain/models/journey_view_model.dart';
@@ -26,6 +30,8 @@ import 'package:learning_tracker/features/progress/presentation/providers/lifeti
 import 'package:learning_tracker/features/progress/presentation/screens/progress_screen.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/progress_tier_counter_row.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
+
+import '../../../../helpers/drift_memory.dart';
 
 const _profileId = 1;
 
@@ -111,9 +117,19 @@ Widget _wrap({
   double cyclePct = 0.31,
   double lifetimePct = 0.33,
   Locale locale = const Locale('en'),
+  // P2 fix (deferred/track-rename-propagation): [db] + [metricsOverride] let
+  // a test supply a seeded in-memory database + a metrics list whose
+  // trackId matches a real seeded track/goal row, so `_PerTrackRow`'s
+  // `trackCustomNameProvider(metric.trackId)` watch resolves against real
+  // data instead of the default `_metrics()` synthetic trackIds (which have
+  // no backing track/goal row). Both default to the pre-existing behaviour
+  // when omitted, so every other test in this file is unaffected.
+  UserDatabase? db,
+  List<TrackDualProgressMetric>? metricsOverride,
 }) {
   final scope = ProviderScope(
     overrides: [
+      if (db != null) userDatabaseProvider.overrideWith((ref) => db),
       activeProfileIdProvider.overrideWith(
         () => _ProfileIdOverride(_profileId),
       ),
@@ -139,11 +155,12 @@ Widget _wrap({
       ).overrideWith((ref) => Future.value(totals)),
       trackDualProgressMetricsProvider(_profileId).overrideWith(
         (ref) => Future.value(
-          _metrics(
-            curricula: activeCurricula,
-            cyclePct: cyclePct,
-            lifetimePct: lifetimePct,
-          ),
+          metricsOverride ??
+              _metrics(
+                curricula: activeCurricula,
+                cyclePct: cyclePct,
+                lifetimePct: lifetimePct,
+              ),
         ),
       ),
     ],
@@ -468,6 +485,101 @@ void main() {
 
       expect(find.text('Track progress: 50%'), findsOneWidget);
       expect(find.text('Lifetime: 50%'), findsOneWidget);
+    });
+  });
+
+  // ── P2 fix (deferred/track-rename-propagation) ────────────────────────────
+  // The Progress hub's per-track row is a specific track's own label (each
+  // row = one track), so it must honour a custom track name the same way
+  // Track Detail and the Learn track cards already do (B-EDIT-NAME,
+  // commit 00048c68) instead of always showing the raw curriculum label.
+  group('P2 — per-track row surfaces a custom track name', () {
+    testWidgets(
+      'a track renamed via Goal.description shows the custom name, not '
+      'the curriculum label',
+      (tester) async {
+        final db = inMemoryDb();
+        addTearDown(db.close);
+        await seedProfile(db);
+        final trackId = await seedTrack(
+          db,
+          profileId: _profileId,
+          curriculumId: CurriculumId.mishnayos.storageKey,
+        );
+        await db
+            .into(db.goals)
+            .insert(
+              GoalsCompanion.insert(
+                profileId: _profileId,
+                curriculumId: CurriculumId.mishnayos.storageKey,
+                trackId: trackId,
+                description: const Value('My Shas Journey'),
+                createdAt: DateTimeFactory.nowUtc(),
+                updatedAt: DateTimeFactory.nowUtc(),
+              ),
+            );
+
+        await tester.pumpWidget(
+          _wrap(
+            activeCurricula: const [CurriculumId.mishnayos],
+            journey: _journey(),
+            totals: _lifetime(),
+            streak: 0,
+            db: db,
+            metricsOverride: [
+              TrackDualProgressMetric(
+                trackId: trackId,
+                trackLabel: CurriculumId.mishnayos.storageKey,
+                curriculumId: CurriculumId.mishnayos,
+                currentCyclePercentage: 0.31,
+                lifetimePercentage: 0.33,
+                isProgramTrack: false,
+              ),
+            ],
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Pre-fix the row always showed the curriculum label and ignored
+        // the edited name. The custom name must now surface on the row.
+        expect(find.text('My Shas Journey'), findsOneWidget);
+        expect(find.text('Mishnayos'), findsNothing);
+      },
+    );
+
+    testWidgets('no custom name (no goal seeded) falls back to the '
+        'curriculum label', (tester) async {
+      final db = inMemoryDb();
+      addTearDown(db.close);
+      await seedProfile(db);
+      final trackId = await seedTrack(
+        db,
+        profileId: _profileId,
+        curriculumId: CurriculumId.mishnayos.storageKey,
+      );
+
+      await tester.pumpWidget(
+        _wrap(
+          activeCurricula: const [CurriculumId.mishnayos],
+          journey: _journey(),
+          totals: _lifetime(),
+          streak: 0,
+          db: db,
+          metricsOverride: [
+            TrackDualProgressMetric(
+              trackId: trackId,
+              trackLabel: CurriculumId.mishnayos.storageKey,
+              curriculumId: CurriculumId.mishnayos,
+              currentCyclePercentage: 0.31,
+              lifetimePercentage: 0.33,
+              isProgramTrack: false,
+            ),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Mishnayos'), findsOneWidget);
     });
   });
 }

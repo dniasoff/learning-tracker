@@ -25,6 +25,7 @@ import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
@@ -814,6 +815,110 @@ void main() {
       reason:
           'AUD-progress-12: the English literal tooltip must not appear '
           'when locale is he.',
+    );
+  });
+
+  // ── P2 fix (deferred/track-rename-propagation) ────────────────────────────
+  // This screen is reached exclusively from the Progress-hub per-track row
+  // for one specific track (W3.22: one track per {profileId, curriculumId}),
+  // so its AppBar title is that track's own identity label — it must honour
+  // a custom track name the same way Track Detail does (B-EDIT-NAME,
+  // commit 00048c68) instead of always showing the raw curriculum label.
+  group('P2 — AppBar title surfaces a custom track name', () {
+    testWidgets(
+      'a track renamed via Goal.description shows the custom name in the '
+      'AppBar title, not the curriculum label',
+      (tester) async {
+        await db
+            .into(db.goals)
+            .insert(
+              GoalsCompanion.insert(
+                profileId: _profileId,
+                curriculumId: _curriculumKey,
+                trackId: trackId,
+                description: const Value('My Shas Journey'),
+                createdAt: DateTimeFactory.nowUtc(),
+                updatedAt: DateTimeFactory.nowUtc(),
+              ),
+            );
+
+        final repo = _FakeContentRepository(leaves);
+        final router = _RecordingRouter([]);
+
+        await tester.pumpWidget(
+          _pump(
+            db: db,
+            repo: repo,
+            stageRepo: stageRepo,
+            router: router,
+            dualMetrics: [
+              TrackDualProgressMetric(
+                trackId: trackId,
+                trackLabel: 'Mishnayos',
+                curriculumId: CurriculumId.mishnayos,
+                currentCyclePercentage: 0.25,
+                lifetimePercentage: 0.5,
+                isProgramTrack: false,
+              ),
+            ],
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Pre-fix the header always showed the curriculum label and ignored
+        // the edited name. The custom name must now surface in the title.
+        expect(
+          find.descendant(
+            of: find.byType(AppBar),
+            matching: find.text('My Shas Journey'),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(
+            of: find.byType(AppBar),
+            matching: find.text('Mishnayos'),
+          ),
+          findsNothing,
+        );
+      },
+    );
+
+    testWidgets(
+      'no custom name (no goal seeded) → AppBar title falls back to the '
+      'curriculum label',
+      (tester) async {
+        final repo = _FakeContentRepository(leaves);
+        final router = _RecordingRouter([]);
+
+        await tester.pumpWidget(
+          _pump(
+            db: db,
+            repo: repo,
+            stageRepo: stageRepo,
+            router: router,
+            dualMetrics: [
+              TrackDualProgressMetric(
+                trackId: trackId,
+                trackLabel: 'Mishnayos',
+                curriculumId: CurriculumId.mishnayos,
+                currentCyclePercentage: 0.25,
+                lifetimePercentage: 0.5,
+                isProgramTrack: false,
+              ),
+            ],
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.descendant(
+            of: find.byType(AppBar),
+            matching: find.text('Mishnayos'),
+          ),
+          findsOneWidget,
+        );
+      },
     );
   });
 }

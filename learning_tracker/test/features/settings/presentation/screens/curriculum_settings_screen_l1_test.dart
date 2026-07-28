@@ -21,6 +21,7 @@
 @Tags(['settings', 'curriculum_settings'])
 library;
 
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -30,10 +31,13 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/curriculum_settings_screen.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
+
+import '../../../../helpers/drift_memory.dart' show seedProfile, seedTrack;
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -551,5 +555,64 @@ void main() {
 
       await _tearDown(tester);
     });
+  });
+
+  // ── P2 fix (deferred/track-rename-propagation) ──────────────────────────────
+  // This screen is reached exclusively from the curriculum-progress screen's
+  // settings icon for one specific track (W3.22: one track per {profileId,
+  // curriculumId}), so its AppBar title is that track's own identity label —
+  // it must honour a custom track name the same way Track Detail does
+  // (B-EDIT-NAME, commit 00048c68) instead of always showing the raw
+  // curriculum label.
+  group('CurriculumSettingsScreen — P2: AppBar title honours a custom track '
+      'name', () {
+    testWidgets(
+      'a track renamed via Goal.description shows the custom name in the '
+      'AppBar title, not the curriculum label',
+      (tester) async {
+        await seedProfile(_db);
+        final trackId = await seedTrack(
+          _db,
+          profileId: 1,
+          curriculumId: _curriculumKey,
+        );
+        await _db
+            .into(_db.goals)
+            .insert(
+              GoalsCompanion.insert(
+                profileId: 1,
+                curriculumId: _curriculumKey,
+                trackId: trackId,
+                description: const Value('My Shas Journey'),
+                createdAt: DateTimeFactory.nowUtc(),
+                updatedAt: DateTimeFactory.nowUtc(),
+              ),
+            );
+
+        await _pump(tester, _buildApp(db: _db));
+
+        // Pre-fix the header always showed "Settings - Mishnayos" and
+        // ignored the edited name. The custom name must now surface.
+        expect(find.textContaining('My Shas Journey'), findsWidgets);
+        expect(find.textContaining('Mishnayos'), findsNothing);
+
+        await _tearDown(tester);
+      },
+    );
+
+    testWidgets(
+      'no custom name (no goal seeded) → AppBar title falls back to the '
+      'curriculum label',
+      (tester) async {
+        await seedProfile(_db);
+        await seedTrack(_db, profileId: 1, curriculumId: _curriculumKey);
+
+        await _pump(tester, _buildApp(db: _db));
+
+        expect(find.textContaining('Mishnayos'), findsWidgets);
+
+        await _tearDown(tester);
+      },
+    );
   });
 }
