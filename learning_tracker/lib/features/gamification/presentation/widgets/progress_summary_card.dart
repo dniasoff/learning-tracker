@@ -16,7 +16,14 @@ class ProgressSummaryCard extends StatelessWidget {
   final int unlocked;
   final int total;
 
-  static Color _kBrandBlue(BuildContext context) => context.colors.brandBlue;
+  // AUD-darkmode: brandBlue is an ACCENT role that intentionally LIGHTENS in
+  // dark mode (paired with a dynamically computed onPrimary foreground for
+  // buttons), but this hero card paints it as a solid FILL with hardcoded
+  // white text -- measured 2.52:1 in dark. gamifProgressSummaryFill is
+  // pinned to the exact old brandBlue light literal (0xFF1442B8) in both
+  // themes, restoring 8.41:1.
+  static Color _kBrandBlue(BuildContext context) =>
+      context.colors.gamifProgressSummaryFill;
 
   @override
   Widget build(BuildContext context) {
@@ -46,7 +53,14 @@ class ProgressSummaryCard extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: context.colors.statusErrorCardText,
+                // AUD-darkmode: statusErrorCardText is TEXT/icon ink paired
+                // with statusErrorCardBg (lightens for legibility against a
+                // darkening card), but this small badge paints it as a FILL
+                // with a hardcoded white icon -- measured 2.71:1 in dark.
+                // gamifProgressSummaryBadgeFill is pinned to the exact old
+                // statusErrorCardText light literal (0xFFD51F1B) in both
+                // themes, restoring 5.20:1.
+                color: context.colors.gamifProgressSummaryBadgeFill,
                 shape: BoxShape.circle,
               ),
               child: const Icon(

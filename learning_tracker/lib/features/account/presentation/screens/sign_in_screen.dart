@@ -192,7 +192,13 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       ..showSnackBar(
         SnackBar(
           content: Text(message),
-          backgroundColor: context.colors.brandWarningDeep,
+          // AUD-darkmode: brandWarningDeep is a warning-TEXT role that
+          // LIGHTENS in dark mode, but this SnackBar paints it as the fill
+          // while the app's SnackBarThemeData contentTextStyle (near-white
+          // in dark) goes untouched -- measured ~1.36:1 in dark.
+          // signInErrorSnackbarBg is pinned to the exact old brandWarningDeep
+          // light literal in both themes, restoring ~5.44:1.
+          backgroundColor: context.colors.signInErrorSnackbarBg,
           duration: const Duration(seconds: 5),
           behavior: SnackBarBehavior.floating,
         ),

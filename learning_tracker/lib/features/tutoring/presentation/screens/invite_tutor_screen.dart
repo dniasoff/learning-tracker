@@ -138,10 +138,21 @@ class _InviteTutorScreenState extends ConsumerState<InviteTutorScreen> {
           // put with no navigation, so the tap appeared to do nothing.
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
+              // AUD-darkmode: statusSuccessSnackbar is correctly used as TEXT
+              // ink elsewhere (tutor_audit_log_screen.dart), but here it was
+              // painted as the SnackBar's own backgroundColor while the
+              // theme's default contentTextStyle (near-white brandInk in
+              // dark) went untouched -- in dark mode the fill lightens,
+              // dropping that near-white text to ~1.55:1.
+              // inviteSentSnackbarBg is pinned to the exact old
+              // statusSuccessSnackbar light literal in both themes, and the
+              // content is now explicitly white so both themes render
+              // identically to the already-shipped light-mode look.
               content: Text(
                 AppLocalizations.of(context)!.inviteTutorSentSnackbar(email),
+                style: const TextStyle(color: Colors.white),
               ),
-              backgroundColor: context.colors.statusSuccessSnackbar,
+              backgroundColor: context.colors.inviteSentSnackbarBg,
             ),
           );
           await Navigator.of(context).maybePop();
@@ -308,12 +319,18 @@ class _InviteTutorScreenState extends ConsumerState<InviteTutorScreen> {
               // Send invite button
               FilledButton.icon(
                 icon: _isLoading
-                    ? const SizedBox(
+                    ? SizedBox(
                         height: 18,
                         width: 18,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: Colors.white,
+                          // AUD-darkmode: this FilledButton uses the default
+                          // theme style (brandBlue bg + dynamically-computed
+                          // onPrimary text), but the spinner hardcoded white
+                          // instead, so in dark mode it went invisible
+                          // against the lightened brandBlue fill (~2.52:1)
+                          // while the label correctly stayed legible.
+                          color: Theme.of(context).colorScheme.onPrimary,
                         ),
                       )
                     : const Icon(Icons.send_rounded),

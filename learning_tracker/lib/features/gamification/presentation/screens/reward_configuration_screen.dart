@@ -17,6 +17,19 @@ import 'package:learning_tracker/features/tutoring/tutoring.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 Color _kNavy(BuildContext context) => context.colors.brandBlueDeep;
+
+/// Deep-navy FILL colour for the Save/Update button background and for the
+/// reward-preview icon painted on its FIXED-white circle. `_kNavy`
+/// (brandBlueDeep) is an ink-on-CARD role that deliberately LIGHTENS in dark
+/// mode (0xFF0E3392 -> 0xFFB9C9FF), correct for the heading-text call sites
+/// in this file but wrong for these two: a button FILL with hardcoded white
+/// text, and an icon painted on a Colors.white circle — both measured
+/// **1.63:1** in dark mode. [AppPalette.chazaraSelectedGradientStart] is
+/// already pinned to this exact brandBlueDeep light literal (0xFF0E3392) in
+/// both themes, so reusing it here keeps light mode byte-identical and
+/// restores ~11:1 in dark.
+Color _kNavyFixed(BuildContext context) =>
+    context.colors.chazaraSelectedGradientStart;
 Color _kOrange(BuildContext context) => context.colors.brandWarning;
 Color _kPageBg(BuildContext context) => context.colors.surfaceF4b;
 Color _kPreviewBg(BuildContext context) => context.colors.gamifSoftBlueCardBg;
@@ -505,7 +518,7 @@ class _RewardConfigurationScreenState
                                           ),
                                         ),
                               style: FilledButton.styleFrom(
-                                backgroundColor: _kNavy(context),
+                                backgroundColor: _kNavyFixed(context),
                                 foregroundColor: Colors.white,
                                 elevation: 0,
                                 shape: RoundedRectangleBorder(
@@ -587,7 +600,7 @@ class _RewardPreview extends StatelessWidget {
                 ),
                 child: Icon(
                   RewardMilestoneIcons.iconForIndex(iconIndex),
-                  color: _kNavy(context),
+                  color: _kNavyFixed(context),
                   size: 30,
                 ),
               ),

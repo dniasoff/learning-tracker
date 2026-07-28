@@ -384,7 +384,14 @@ class _RewardCard extends StatelessWidget {
               child: FilledButton(
                 onPressed: buttonEnabled ? onRedeem : null,
                 style: FilledButton.styleFrom(
-                  backgroundColor: context.colors.brandBlueDeep,
+                  // AUD-darkmode: brandBlueDeep is an ink-on-CARD role that
+                  // LIGHTENS in dark mode (correct for the icon above, painted
+                  // on the themed gamifSoftBlueCardBg circle), but here it was
+                  // misused as a button FILL with hardcoded white text --
+                  // measured 1.63:1 in dark. chazaraSelectedGradientStart is
+                  // pinned to this exact brandBlueDeep light literal
+                  // (0xFF0E3392) in both themes, restoring ~11:1 in dark.
+                  backgroundColor: context.colors.chazaraSelectedGradientStart,
                   disabledBackgroundColor: context.colors.brandCreamSoft,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 14,

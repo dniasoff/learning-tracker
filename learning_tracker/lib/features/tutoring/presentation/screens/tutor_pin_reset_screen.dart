@@ -221,12 +221,17 @@ class _TutorPinResetScreenState extends ConsumerState<TutorPinResetScreen> {
             shape: const StadiumBorder(),
           ),
           child: _isSending
-              ? const SizedBox(
+              ? SizedBox(
                   height: 20,
                   width: 20,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    color: Colors.white,
+                    // AUD-darkmode: this FilledButton uses the default theme
+                    // style (brandBlue bg + dynamically-computed onPrimary
+                    // text), but the spinner hardcoded white instead, going
+                    // invisible in dark mode against the lightened brandBlue
+                    // fill (~2.52:1) while the label stayed correctly legible.
+                    color: theme.colorScheme.onPrimary,
                   ),
                 )
               : Text(l10n.tutorPinResetSendButton),

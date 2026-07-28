@@ -1238,6 +1238,115 @@ class AppPalette extends ThemeExtension<AppPalette> {
   Color get settingsProfileNoBackupAccent =>
       _dark ? const Color(0xFFD5A97B) : const Color(0xFFCE8A41);
 
+  // ---------------------------------------------------------------------------
+  // Dark-mode legibility burndown — gamification / tutoring / sacred_time /
+  // account areas. Each token below documents the exact bug class (same
+  // "hero-fill" / "ink-on-fixed-surface" misuse this campaign already fixed
+  // for goldTrophy / blueMedium / chazaraSelectedGradientStart) and pins the
+  // OLD light-mode literal exactly so light mode is unchanged.
+  // ---------------------------------------------------------------------------
+
+  /// Bronze achievement-tier badge icon glyph — split out of the raw
+  /// `Colors.white` literal in `TierStyle.forTier`'s bronze branch.
+  ///
+  /// The bronze badge's icon-accent surface ([gamifTierBronzeIconAccent])
+  /// LIGHTENS in dark mode (0xFF8D6E63 -> 0xFFBEACA6), the opposite direction
+  /// from every sibling tier's badge fill (silver/gold both DARKEN in dark
+  /// mode) -- so a hardcoded white glyph measured **2.18:1** against it,
+  /// under the 3:1 floor for a graphical icon. This token inverts with the
+  /// surface instead: white in light mode (byte-identical to the old
+  /// literal) and a deep brown ink in dark mode, restoring **6.82:1**.
+  Color get gamifTierBronzeIconFg =>
+      _dark ? const Color(0xFF332513) : const Color(0xFFFFFFFF);
+
+  /// Achievements-screen progress-summary hero card fill — split out of
+  /// [brandBlue]. brandBlue is an ACCENT role that intentionally LIGHTENS in
+  /// dark mode (paired with a dynamically computed `onPrimary` foreground for
+  /// buttons), but `ProgressSummaryCard` paints it as a solid HERO FILL with
+  /// hardcoded white text -- same hero-fill misuse class as
+  /// [blueMedium]/[blueLight]/[blueMid] (`a68c97d5`). In dark mode brandBlue
+  /// lightens to 0xFF7CA0FF, dropping the white "x/y Rewards" numerals to
+  /// measured **2.52:1** (light mode was fine at 8.41:1). Pinned to the exact
+  /// old brandBlue light literal in both themes, restoring 8.41:1 in dark.
+  Color get gamifProgressSummaryFill => const Color(0xFF1442B8);
+
+  /// Achievements-screen progress-summary "sparkle" badge fill — split out
+  /// of [statusErrorCardText]. That token is TEXT/icon ink paired with
+  /// [statusErrorCardBg] (lightens for legibility against a darkening card),
+  /// but `ProgressSummaryCard` paints it as the small badge's own background
+  /// fill with a hardcoded white icon on top. In dark mode it lightens to a
+  /// pale salmon (0xFFE6807E), dropping the white icon to measured
+  /// **2.71:1** (light mode was fine at 5.20:1). Pinned to the exact old
+  /// statusErrorCardText light literal in both themes, restoring 5.20:1.
+  Color get gamifProgressSummaryBadgeFill => const Color(0xFFD51F1B);
+
+  /// Sign-in CTA gradient START colour — split out of [brandBlue].
+  /// `SignInActions`'s primary CTA paints brandBlue -> brandBlueBright as a
+  /// gradient FILL with a hardcoded white label/spinner, but both accent
+  /// tokens LIGHTEN in dark mode (same hero-fill misuse class as
+  /// [gamifProgressSummaryFill] above) -- in dark mode the gradient washes
+  /// out to pale sky-blue and the white "Sign In" label measured **1.85:1**
+  /// against the bright end (light mode was fine at 8.41:1). Pinned to the
+  /// exact old brandBlue light literal in both themes, restoring 8.41:1.
+  Color get signInCtaGradientStart => const Color(0xFF1442B8);
+
+  /// Sign-in CTA gradient END colour, paired with [signInCtaGradientStart].
+  /// Same value/role as [chazaraSelectedGradientEnd] (both split from
+  /// brandBlueBright's light literal for the identical hero-fill misuse),
+  /// kept separate so this call site documents its own measured numbers:
+  /// **5.62:1** with white content in dark, up from 1.85:1.
+  Color get signInCtaGradientEnd => const Color(0xFF2B5FD9);
+
+  /// Sign-in error SnackBar fill — split out of [brandWarningDeep].
+  /// brandWarningDeep is a warning-TEXT role that deliberately LIGHTENS in
+  /// dark mode (paired with a darkening card), but `SignInScreen._showError`
+  /// paints it as the SnackBar's own `backgroundColor` while the app's
+  /// `SnackBarThemeData.contentTextStyle` is left untouched (near-white
+  /// `brandInk` in dark mode, white `brandCreamCard` in light) -- in dark
+  /// mode the fill lightens to a pale amber (0xFFF0C883) under that
+  /// near-white text, measured **1.36:1** (light mode was fine at 6.33:1
+  /// with white text). Pinned to the exact old brandWarningDeep light
+  /// literal in both themes, restoring 5.44:1 against the theme's own
+  /// near-white dark-mode SnackBar ink.
+  Color get signInErrorSnackbarBg => const Color(0xFF8A5306);
+
+  /// Invite-sent confirmation SnackBar fill — split out of
+  /// [statusSuccessSnackbar]. That token is correctly used as TEXT ink
+  /// elsewhere (`tutor_audit_log_screen.dart`, painted on a darkening card,
+  /// where lightening is right), but `InviteTutorScreen`'s confirmation
+  /// toast paints it as the SnackBar's own `backgroundColor` -- in dark mode
+  /// it lightens to a pale green (0xFF95CF97), badly undercutting the
+  /// SnackBar theme's near-white dark-mode ink (measured **1.55:1**).
+  /// Pinned to the exact old statusSuccessSnackbar light literal in both
+  /// themes; the call site also now sets the content text to a fixed white
+  /// so both themes render identically (**4.12:1**, matching the
+  /// already-shipped light-mode look byte-for-byte).
+  Color get inviteSentSnackbarBg => const Color(0xFF388E3C);
+
+  /// Account-picker "needs re-sign-in" avatar badge icon — split out of
+  /// [chartRed]. chartRed is a chart-series-on-CARD role that LIGHTENS in
+  /// dark mode (assumes its card darkens alongside it), but
+  /// `_AccountTileState._avatarFg` pairs it with a FIXED light-pink literal
+  /// (never routed through AppPalette, an always-light alert badge by
+  /// design) -- in dark mode chartRed lightens to 0xFFD58F99, dropping the
+  /// icon to measured **2.00:1** against that fixed pink (light mode was
+  /// already only marginal at 4.51:1). Pinned to the exact old chartRed
+  /// light literal in both themes, keeping dark mode no worse than the
+  /// pre-existing light-mode number.
+  Color get accountPickerAlertBadgeIcon => const Color(0xFFB43A4A);
+
+  /// Sacred-time Yom Tov full-screen lock-overlay background — split out of
+  /// [accentPurpleDeep]. accentPurpleDeep is an ink/icon-on-card role that
+  /// deliberately LIGHTENS in dark mode, but `SacredTimeLockOverlay`'s Yom
+  /// Tov screen paints it as a full-screen HERO FILL with hardcoded white
+  /// greeting/icon text -- same hero-fill misuse class as [blueMedium] et
+  /// al. In dark mode it lightens to a pale lavender (0xFFC2B0E7), dropping
+  /// the white "Good Yom Tov!" greeting to measured **1.97:1**, under the
+  /// large-text 3:1 floor (light mode was fine at 10.55:1). Pinned to the
+  /// exact old accentPurpleDeep light literal in both themes, restoring
+  /// 10.55:1.
+  Color get sacredTimeLockYomTovBg => const Color(0xFF4A2A8A);
+
   /// Fully transparent.
   Color get transparent => const Color(0x00000000);
 

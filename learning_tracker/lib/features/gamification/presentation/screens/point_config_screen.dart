@@ -799,7 +799,13 @@ class _RoundStepButton extends StatelessWidget {
     final bg = filled
         ? context.colors.brandBlue
         : context.colors.gamifPointConfigChipUnselectedBg;
-    final fg = filled ? Colors.white : context.colors.brandInkMuted;
+    // AUD-darkmode: brandBlue lightens in dark mode, so a hardcoded white
+    // icon on the filled "+" button measured 2.52:1. colorScheme.onPrimary
+    // is the same dynamically-computed contrast-safe ink FilledButton
+    // already uses for this exact accent colour.
+    final fg = filled
+        ? Theme.of(context).colorScheme.onPrimary
+        : context.colors.brandInkMuted;
     final child = Icon(icon, size: 20, color: fg);
     return Opacity(
       opacity: onPressed == null ? 0.45 : 1,
@@ -846,7 +852,12 @@ class _SaveBar extends StatelessWidget {
               child: FilledButton.icon(
                 style: FilledButton.styleFrom(
                   backgroundColor: context.colors.brandBlue,
-                  foregroundColor: Colors.white,
+                  // AUD-darkmode: brandBlue lightens in dark mode, so a
+                  // hardcoded white foreground/spinner measured 2.52:1.
+                  // colorScheme.onPrimary is the same dynamically-computed
+                  // contrast-safe ink FilledButton already uses for this
+                  // exact accent colour by default.
+                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
@@ -861,12 +872,12 @@ class _SaveBar extends StatelessWidget {
                   }
                 },
                 icon: busy
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 22,
                         height: 22,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.onPrimary,
                         ),
                       )
                     : const Icon(Icons.save_rounded, size: 22),

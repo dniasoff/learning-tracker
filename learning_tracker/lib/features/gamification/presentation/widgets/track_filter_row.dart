@@ -89,7 +89,14 @@ class AchievementFilterChip extends StatelessWidget {
           curve: Curves.easeOutCubic,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           decoration: BoxDecoration(
-            color: selected ? _kBrandBlue(context) : Colors.white,
+            // AUD-darkmode: the unselected chip fill was a hardcoded
+            // Colors.white, but its ink (inkSlate) LIGHTENS in dark mode
+            // (documented as "text on white cards") -- near-white-on-white,
+            // ~1:1 in dark. brandCreamCard is the actual card surface token
+            // and darkens correctly, restoring ~15:1.
+            color: selected
+                ? _kBrandBlue(context)
+                : context.colors.brandCreamCard,
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
               color: selected
@@ -109,7 +116,14 @@ class AchievementFilterChip extends StatelessWidget {
           child: Text(
             label,
             style: TextStyle(
-              color: selected ? Colors.white : context.colors.inkSlate,
+              // AUD-darkmode: brandBlue lightens in dark mode, so a
+              // hardcoded white label on the selected fill measured 2.52:1.
+              // colorScheme.onPrimary is the same dynamically-computed
+              // contrast-safe ink FilledButton already uses for this exact
+              // accent colour.
+              color: selected
+                  ? Theme.of(context).colorScheme.onPrimary
+                  : context.colors.inkSlate,
               fontWeight: FontWeight.w700,
               fontSize: 13,
             ),

@@ -429,12 +429,23 @@ class _AccountTileState extends ConsumerState<_AccountTile> {
 
   Color _avatarFg(bool isCloud, bool hasValidSession) {
     if (!isCloud) return const Color(0xFF6A4926);
-    if (!hasValidSession) return context.colors.chartRed;
+    // AUD-darkmode: chartRed is a chart-series-on-CARD role that LIGHTENS in
+    // dark mode, but _avatarBg's paired pink above is a FIXED literal in
+    // both themes -- measured ~2.00:1 in dark (light mode was already only
+    // marginal at 4.51:1). accountPickerAlertBadgeIcon is pinned to the
+    // exact old chartRed light literal in both themes.
+    if (!hasValidSession) return context.colors.accountPickerAlertBadgeIcon;
     return context.colors.brandBlue;
   }
 
   Color _pillBg(bool isCloud, bool hasValidSession) {
-    if (!isCloud) return const Color(0xFFE8EBF0);
+    // AUD-darkmode: this was a hardcoded Color(0xFFE8EBF0), but its paired
+    // ink (brandInkMuted, in _pillFg below) LIGHTENS in dark mode --
+    // measured ~2.16:1 in dark (light mode was fine at 5.01:1).
+    // gamifPointConfigChipUnselectedBg is an EXISTING themed token whose
+    // light value is byte-identical to the old literal and darkens
+    // correctly in dark mode, restoring ~5.15:1.
+    if (!isCloud) return context.colors.gamifPointConfigChipUnselectedBg;
     if (!hasValidSession) return context.colors.statusErrorSoft;
     return const Color(0xFFE8EEFF);
   }
@@ -442,7 +453,12 @@ class _AccountTileState extends ConsumerState<_AccountTile> {
   Color _pillFg(bool isCloud, bool hasValidSession) {
     if (!isCloud) return context.colors.brandInkMuted;
     if (!hasValidSession) return context.colors.statusError;
-    return context.colors.brandBlueDeep;
+    // AUD-darkmode: brandBlueDeep is an ink-on-CARD role that LIGHTENS in
+    // dark mode, but _pillBg's paired blue above is a FIXED literal in both
+    // themes -- measured ~1.41:1 in dark. chazaraSelectedGradientStart is
+    // pinned to this exact brandBlueDeep light literal (0xFF0E3392) in both
+    // themes, restoring ~9.9:1.
+    return context.colors.chazaraSelectedGradientStart;
   }
 
   String _pillText(AppLocalizations l10n, bool isCloud, bool hasValidSession) {
