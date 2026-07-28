@@ -21,6 +21,8 @@ import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
+import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
@@ -126,6 +128,12 @@ Widget _wrap({
   // when omitted, so every other test in this file is unaffected.
   UserDatabase? db,
   List<TrackDualProgressMetric>? metricsOverride,
+  // Run-11 progress-area dark-mode sweep: lets a test pump the real
+  // AppTheme.darkTheme()/lightTheme() so a resolved-colour assertion can be
+  // made against the ambient theme, instead of only the default
+  // MaterialApp() light theme every pre-existing call site relies on.
+  // `null` (the default) preserves every existing call site's behaviour.
+  ThemeData? theme,
 }) {
   final scope = ProviderScope(
     overrides: [
@@ -166,6 +174,7 @@ Widget _wrap({
     ],
     child: MaterialApp(
       locale: locale,
+      theme: theme,
       localizationsDelegates: const [
         AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
@@ -581,5 +590,70 @@ void main() {
 
       expect(find.text('Mishnayos'), findsOneWidget);
     });
+  });
+
+  // Run-11 progress-area dark-mode sweep — Finding 5: the "Lifetime
+  // Knowledge" lens tile icon and the per-track row icon both sit on a FIXED
+  // pale-blue chip (`0xFFEEF3FF`, does not adapt with brightness) but read
+  // their colour from `context.colors.brandBlue`, which LIGHTENS in dark
+  // mode for its normal ink-on-ADAPTIVE-dark-card role — producing a
+  // pale-blue icon on a pale-blue chip (measured 2.27:1; see
+  // AppPalette.progressFixedChipBlueIcon's doc). Fixed by reading
+  // `progressFixedChipBlueIcon` instead, pinned to brandBlue's light-mode hex
+  // in both themes.
+  group('ProgressScreen — Finding 5: fixed pale-blue icon chips', () {
+    testWidgets('Lifetime-Knowledge lens tile + per-track row icons read '
+        'progressFixedChipBlueIcon (not brandBlue) in dark mode', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _wrap(
+          activeCurricula: const [CurriculumId.mishnayos],
+          journey: _journey(),
+          totals: _lifetime(),
+          streak: 0,
+          theme: AppTheme.darkTheme(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final lensIcon = tester.widget<Icon>(
+        find.byIcon(Icons.menu_book_outlined),
+      );
+      expect(lensIcon.color, AppPalette.dark.progressFixedChipBlueIcon);
+      expect(lensIcon.color, isNot(AppPalette.dark.brandBlue));
+
+      final trackIcon = tester.widget<Icon>(
+        find.byIcon(Icons.collections_bookmark_outlined),
+      );
+      expect(trackIcon.color, AppPalette.dark.progressFixedChipBlueIcon);
+      expect(trackIcon.color, isNot(AppPalette.dark.brandBlue));
+    });
+
+    testWidgets(
+      'both icons keep the exact pre-fix brandBlue-light colour in light '
+      'mode (no regression)',
+      (tester) async {
+        await tester.pumpWidget(
+          _wrap(
+            activeCurricula: const [CurriculumId.mishnayos],
+            journey: _journey(),
+            totals: _lifetime(),
+            streak: 0,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final lensIcon = tester.widget<Icon>(
+          find.byIcon(Icons.menu_book_outlined),
+        );
+        expect(lensIcon.color, const Color(0xFF1442B8));
+
+        final trackIcon = tester.widget<Icon>(
+          find.byIcon(Icons.collections_bookmark_outlined),
+        );
+        expect(trackIcon.color, const Color(0xFF1442B8));
+      },
+    );
   });
 }

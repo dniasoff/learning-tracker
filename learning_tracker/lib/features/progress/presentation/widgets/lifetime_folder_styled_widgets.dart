@@ -16,7 +16,12 @@ class LifetimeFolderGradients {
       end: Alignment.bottomRight,
       colors: [
         context.colors.progressLifetimeCardGradientStart,
-        context.colors.brandBlue,
+        // NOT brandBlue directly — it LIGHTENS in dark mode for its normal
+        // ink-on-dark-surface role, which painted a light pastel-blue band
+        // in the middle of this otherwise-deep gradient when used as a fill
+        // (see AppPalette.progressLifetimeCardGradientMid's doc, run-11
+        // progress-area sweep).
+        context.colors.progressLifetimeCardGradientMid,
         context.colors.progressLifetimeCardGradientEnd,
       ],
       stops: [0.0, 0.45, 1.0],
