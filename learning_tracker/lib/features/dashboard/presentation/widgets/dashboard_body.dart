@@ -448,7 +448,16 @@ class DashboardBody extends ConsumerWidget {
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(
-                    l10n.remaining(totalRemaining),
+                    // P3(5558): mirror the tasksReady gate the sibling
+                    // OVERDUE/TODAY/CHAZARA bubbles already use (see
+                    // DashboardLevelPointsCard's PP-15 "…" pattern above).
+                    // Before the local Drift query has emitted, `totalRemaining`
+                    // is derived from an empty placeholder task list, so it
+                    // always reads 0 — showing "0 remaining" here during the
+                    // load window falsely told the user there was nothing to
+                    // do. Show "…" (never a number) until tasksReady flips true.
+                    key: const Key('todaysMissionsRemainingPill'),
+                    tasksReady ? l10n.remaining(totalRemaining) : '…',
                     style: theme.textTheme.labelMedium?.copyWith(
                       color: context.colors.statusDanger,
                       fontWeight: FontWeight.w700,
