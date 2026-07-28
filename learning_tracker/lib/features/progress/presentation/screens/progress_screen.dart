@@ -15,6 +15,7 @@ import 'package:learning_tracker/features/progress/presentation/providers/journe
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/progress_lens_refresh_tick_provider.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/progress_tier_counter_row.dart';
+import 'package:learning_tracker/features/tracks/tracks.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Progress hub — the bottom-nav landing page for the three-lens IA.
@@ -330,6 +331,19 @@ class _PerTrackRow extends ConsumerWidget {
     // and track-detail — previously `.round()` floored it to "0%" (Bug 3).
     final trackPct = formatFractionAsPercent(metric.currentCyclePercentage);
     final lifetimePct = formatFractionAsPercent(metric.lifetimePercentage);
+    // P2 fix (deferred/track-rename-propagation): this row is a specific
+    // track's own label (not a curriculum-grouping header — each row is one
+    // track), so it must honour a custom track name the same way Track
+    // Detail and the Learn track cards already do (see
+    // track_management_providers.dart's trackDisplayTitle, commit 00048c68).
+    final customName = ref
+        .watch(trackCustomNameProvider(metric.trackId))
+        .asData
+        ?.value;
+    final titleText = resolveTrackTitle(
+      customName: customName,
+      curriculumFallback: curriculumLabelText(ref, curriculum: curriculum),
+    );
 
     return InkWell(
       borderRadius: BorderRadius.circular(16),
@@ -371,7 +385,7 @@ class _PerTrackRow extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    curriculumLabelText(ref, curriculum: curriculum),
+                    titleText,
                     style: theme.textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),

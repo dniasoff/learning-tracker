@@ -13,7 +13,7 @@ import 'package:learning_tracker/features/onboarding/presentation/screens/bulk_m
 import 'package:learning_tracker/features/onboarding/presentation/screens/learning_process_wizard_screen.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/scheduler/scheduler.dart';
-import 'package:learning_tracker/features/tracks/stages/presentation/providers/stage_providers.dart';
+import 'package:learning_tracker/features/tracks/tracks.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -47,12 +47,30 @@ class _CurriculumSettingsScreenState
   Widget build(BuildContext context) {
     final programInfo = ref.watch(_currentProgramProvider(_curriculum));
 
+    // P2 fix (deferred/track-rename-propagation): this screen is reached
+    // exclusively from the curriculum-progress screen's settings icon for
+    // one specific track (W3.22 guarantees a single track per {profileId,
+    // curriculumId}), so its header is that track's own identity label —
+    // honour a custom track name the same way Track Detail does
+    // (trackDisplayTitle / commit 00048c68).
+    final activeTracksAsync = ref.watch(activeTracksProvider);
+    final matchingTrack = activeTracksAsync.asData?.value
+        .where((t) => t.curriculumId == _curriculum.storageKey)
+        .firstOrNull;
+    final trackCustomName = matchingTrack == null
+        ? null
+        : ref.watch(trackCustomNameProvider(matchingTrack.id)).asData?.value;
+    final titleText = resolveTrackTitle(
+      customName: trackCustomName,
+      curriculumFallback: curriculumLabelText(ref, curriculum: _curriculum),
+    );
+
     return Scaffold(
       appBar: AppBar(
         title: AppBarTitle(
-          text: AppLocalizations.of(context)!.curriculumSettingsTitle(
-            curriculumLabelText(ref, curriculum: _curriculum),
-          ),
+          text: AppLocalizations.of(
+            context,
+          )!.curriculumSettingsTitle(titleText),
         ),
       ),
       body: SafeArea(

@@ -16,6 +16,7 @@ import 'package:learning_tracker/features/progress/presentation/providers/progre
 import 'package:learning_tracker/features/progress/presentation/widgets/hierarchy_progress_card.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/overall_stats_card.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/pace_indicator.dart';
+import 'package:learning_tracker/features/tracks/tracks.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 @RoutePage()
@@ -67,6 +68,25 @@ class CurriculumProgressScreen extends ConsumerWidget {
         : dualMetricsAsync.asData?.value
               .where((m) => m.curriculumId == curriculum)
               .firstOrNull;
+    // P2 fix (deferred/track-rename-propagation): this screen is reached
+    // exclusively from the Progress-hub per-track row for one specific track
+    // (W3.22 guarantees a single track per {profileId, curriculumId}), so its
+    // header is that track's own identity label, not a curriculum-grouping
+    // header — honour a custom track name the same way Track Detail does
+    // (trackDisplayTitle / commit 00048c68). The Hebrew-name subtitle below
+    // stays a curriculum fact (untouched by the rename).
+    final trackCustomName = dualMetric == null
+        ? null
+        : ref.watch(trackCustomNameProvider(dualMetric.trackId)).asData?.value;
+    final titleText = curriculum == null
+        ? null
+        : resolveTrackTitle(
+            customName: trackCustomName,
+            curriculumFallback: curriculumLabelText(
+              ref,
+              curriculum: curriculum,
+            ),
+          );
     final curriculumColor = context.colors.curriculumForKey(curriculumId);
     final baseTheme = Theme.of(context);
     final plusJakartaTheme = baseTheme.copyWith(
@@ -98,8 +118,8 @@ class CurriculumProgressScreen extends ConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               if (curriculum != null)
-                CurriculumLabel.curriculum(
-                  curriculum,
+                Text(
+                  titleText!,
                   style: plusJakartaTheme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w800,
                     color: context.colors.brandInk,
