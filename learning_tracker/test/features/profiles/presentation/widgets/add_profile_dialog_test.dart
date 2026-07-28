@@ -344,10 +344,7 @@ void main() {
       expect(onAccent, isNot(const Color(0xFFFFFFFF)));
 
       final button = tester.widget<FilledButton>(find.byType(FilledButton));
-      expect(
-        button.style?.foregroundColor?.resolve(<WidgetState>{}),
-        onAccent,
-      );
+      expect(button.style?.foregroundColor?.resolve(<WidgetState>{}), onAccent);
 
       // "What's your name?" label: was hardcoded Color(0xFF333333), dropping
       // to 1.38:1 against the dialog's darkened brandCreamCard surface.

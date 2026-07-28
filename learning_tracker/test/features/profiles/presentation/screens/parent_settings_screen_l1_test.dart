@@ -1060,29 +1060,20 @@ void main() {
     },
   );
 
-  testWidgets(
-    'dark mode: Reward Configuration icon reads peachTintIconAccent '
-    '(not the old hardcoded 0xFFB45309 literal)',
-    (tester) async {
-      await tester.pumpWidget(
-        _buildApp(
-          router: router,
-          tutorPerms: null,
-          theme: AppTheme.darkTheme(),
-        ),
-      );
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 1));
+  testWidgets('dark mode: Reward Configuration icon reads peachTintIconAccent '
+      '(not the old hardcoded 0xFFB45309 literal)', (tester) async {
+    await tester.pumpWidget(
+      _buildApp(router: router, tutorPerms: null, theme: AppTheme.darkTheme()),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
 
-      final icon = tester.widget<Icon>(
-        find.byIcon(Icons.card_giftcard_rounded),
-      );
-      expect(icon.color, AppPalette.dark.peachTintIconAccent);
-      expect(icon.color, isNot(const Color(0xFFB45309)));
+    final icon = tester.widget<Icon>(find.byIcon(Icons.card_giftcard_rounded));
+    expect(icon.color, AppPalette.dark.peachTintIconAccent);
+    expect(icon.color, isNot(const Color(0xFFB45309)));
 
-      await _tearDown(tester);
-    },
-  );
+    await _tearDown(tester);
+  });
 
   testWidgets(
     'light mode: Reward Configuration icon stays the original 0xFFB45309 '

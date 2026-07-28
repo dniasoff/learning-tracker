@@ -323,43 +323,38 @@ void main() {
     },
   );
 
-  testWidgets(
-    'light mode: TutoredChildRow icon-tile bg stays the original '
-    '0xFFE8F4FD (no regression)',
-    (tester) async {
-      tester.view.physicalSize = const Size(800, 1600);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.resetPhysicalSize);
+  testWidgets('light mode: TutoredChildRow icon-tile bg stays the original '
+      '0xFFE8F4FD (no regression)', (tester) async {
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
 
-      final grant = _activeGrant();
+    final grant = _activeGrant();
 
-      await tester.pumpWidget(
-        pumpApp(
-          child: const _Harness(),
-          overrides: [
-            incomingTutorGrantsProvider.overrideWith((ref) async => [grant]),
-            selectedProfileIdProvider.overrideWith(
-              () => _FixedSelectedProfileId(_kTutorProfileId),
-            ),
-          ],
-        ),
-      );
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 1));
+    await tester.pumpWidget(
+      pumpApp(
+        child: const _Harness(),
+        overrides: [
+          incomingTutorGrantsProvider.overrideWith((ref) async => [grant]),
+          selectedProfileIdProvider.overrideWith(
+            () => _FixedSelectedProfileId(_kTutorProfileId),
+          ),
+        ],
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
 
-      expect(find.text('Sm4Child'), findsOneWidget);
+    expect(find.text('Sm4Child'), findsOneWidget);
 
-      final container = tester.widget<Container>(
-        find
-            .ancestor(of: leadingIcon(), matching: find.byType(Container))
-            .first,
-      );
-      final decoration = container.decoration! as BoxDecoration;
+    final container = tester.widget<Container>(
+      find.ancestor(of: leadingIcon(), matching: find.byType(Container)).first,
+    );
+    final decoration = container.decoration! as BoxDecoration;
 
-      expect(decoration.color, const Color(0xFFE8F4FD));
+    expect(decoration.color, const Color(0xFFE8F4FD));
 
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump(Duration.zero);
-    },
-  );
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(Duration.zero);
+  });
 }

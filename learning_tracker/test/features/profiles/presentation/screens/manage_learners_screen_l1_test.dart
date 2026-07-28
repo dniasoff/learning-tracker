@@ -818,9 +818,7 @@ void main() {
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 100));
 
-        final containers = tester.widgetList<Container>(
-          find.byType(Container),
-        );
+        final containers = tester.widgetList<Container>(find.byType(Container));
         final avatarContainer = containers.firstWhere(
           (c) =>
               c.decoration is BoxDecoration &&
@@ -841,37 +839,32 @@ void main() {
       },
     );
 
-    testWidgets(
-      'light mode: avatar gradient stays the original '
-      '0xFFF2F5FC/0xFFE6ECF8 (no regression)',
-      (tester) async {
-        final profile = _profile(id: 1, name: 'Moshe', mode: 'child');
-        await tester.pumpWidget(
-          _buildApp(router: router, profilesState: AsyncData([profile])),
-        );
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 100));
+    testWidgets('light mode: avatar gradient stays the original '
+        '0xFFF2F5FC/0xFFE6ECF8 (no regression)', (tester) async {
+      final profile = _profile(id: 1, name: 'Moshe', mode: 'child');
+      await tester.pumpWidget(
+        _buildApp(router: router, profilesState: AsyncData([profile])),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
 
-        final containers = tester.widgetList<Container>(
-          find.byType(Container),
-        );
-        final avatarContainer = containers.firstWhere(
-          (c) =>
-              c.decoration is BoxDecoration &&
-              (c.decoration! as BoxDecoration).gradient != null,
-        );
-        final gradient =
-            (avatarContainer.decoration! as BoxDecoration).gradient!
-                as LinearGradient;
+      final containers = tester.widgetList<Container>(find.byType(Container));
+      final avatarContainer = containers.firstWhere(
+        (c) =>
+            c.decoration is BoxDecoration &&
+            (c.decoration! as BoxDecoration).gradient != null,
+      );
+      final gradient =
+          (avatarContainer.decoration! as BoxDecoration).gradient!
+              as LinearGradient;
 
-        expect(gradient.colors, [
-          const Color(0xFFF2F5FC),
-          const Color(0xFFE6ECF8),
-        ]);
+      expect(gradient.colors, [
+        const Color(0xFFF2F5FC),
+        const Color(0xFFE6ECF8),
+      ]);
 
-        await tester.pumpWidget(const SizedBox.shrink());
-        await tester.pump(Duration.zero);
-      },
-    );
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+    });
   });
 }
