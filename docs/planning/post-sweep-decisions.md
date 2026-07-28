@@ -6,8 +6,12 @@ new build work; item 4 is a documented decision-to-not-act.
 **STATUS (2026-07-29): all four resolved and on dev.** #2 dark-mode burndown SHIPPED
 (dev 48eac15a). #1 configurable siyum granularity SHIPPED (dev 75300b80). #3 two-section
 Overall Stats card SHIPPED (dev 75300b80). #4 Learn eager-load LEFT AS-IS (documented).
-All gated green: full `make ci` (MAKE_CI_RC=0) + `make audit`. Not yet device-verified on
-emulators — that is the remaining follow-up.
+All gated green: full `make ci` (MAKE_CI_RC=0) + `make audit`. **#1 and #3 also verified
+on-device** (emulator-5560, API 34, dark mode): #3's two-section card renders correctly
+(This-track 0.1% / Whole-Mishnayos 3.1%, no contradiction); #1's selector shows Mishnayos's
+3 real tiers (מסכת default / סדר / Whole) and the suppression filter works live — switching
+to Whole dropped the siyum counter 2→0 (per-Masechta siyumim hidden, Mishnayos incomplete),
+switching back restored 2→0→2, with Lifetime unaffected. Fixture restored to default.
 
 ## 1. Configurable siyum granularity (FEATURE — to build)
 
