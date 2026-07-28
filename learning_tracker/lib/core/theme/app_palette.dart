@@ -574,6 +574,21 @@ class AppPalette extends ThemeExtension<AppPalette> {
   Color get introNavy =>
       _dark ? const Color(0xFF142A80) : const Color(0xFF1A36A5);
 
+  /// Label/icon colour painted ON [introNavy] — the intro carousel's primary
+  /// CTA button ("Continue" / "Get Started").
+  ///
+  /// The call site used to read `context.colors.brandCreamCard` — a SURFACE
+  /// role token, not a foreground one — which happens to equal white in
+  /// light mode (matching the design) but, being a card token, correctly
+  /// DARKENS to near-black (`0xFF151A26`) in dark mode. `introNavy` is a
+  /// fill that stays a deep, saturated blue in BOTH themes (same class as
+  /// [goldOnColouredSurface] / [chartLimudBlue]'s "stays coloured" role), so
+  /// its label must stay light in both too. Measured on device: button bg
+  /// `RGB(20,42,128)` vs the borrowed card-token ink `RGB(21,26,38)` =
+  /// **1.39:1** in dark mode — effectively invisible. This token keeps the
+  /// light value in both themes, exactly as [goldOnColouredSurface] does.
+  Color get introCtaLabel => const Color(0xFFFFFFFF);
+
   /// Soft peach used for the Mishna/Rewards illustration accent chips.
   Color get introPeach =>
       _dark ? const Color(0xFF331C13) : const Color(0xFFFFD8C8);
@@ -1167,6 +1182,20 @@ class AppPalette extends ThemeExtension<AppPalette> {
   /// reuses [accentBurntOrange] — same hex, already defined.
   Color get settingsProfileBadgeTutorBg =>
       _dark ? const Color(0xFF332713) : const Color(0xFFFFF3E0);
+
+  /// Add/Edit-Profile "Choose Mode" (Child/Adult) card background —
+  /// unselected state.
+  ///
+  /// Was a hardcoded `Color(0xFFF2F4F7)` in `add_profile_mode_pick_card.dart`,
+  /// which stayed light in dark mode while the card's own heading text
+  /// correctly read `context.colors.brandInk` (near-white in dark) —
+  /// measured **1.06:1** on device for the "Child Mode" heading on its own
+  /// card. `0xFFF2F4F7` is not [brandCreamCard]'s exact white, so this is a
+  /// dedicated token (not a re-point onto brandCreamCard) to keep the light
+  /// value pixel-identical to the pre-fix design; the dark value darkens
+  /// like the other recessed near-white surfaces ([surfaceF3], [surfaceF4]).
+  Color get profileModeCardBg =>
+      _dark ? const Color(0xFF1E2532) : const Color(0xFFF2F4F7);
 
   /// Profile avatar circle's outer ring fill (shown before the avatar image
   /// loads / behind the initial-letter avatar).

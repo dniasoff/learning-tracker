@@ -21,7 +21,6 @@ class AddProfileModePickCard extends StatelessWidget {
   final String title;
   final String subtitle;
 
-  static const _surfaceGrey = Color(0xFFF2F4F7);
   static const _iconCircleMuted = Color(0xFFE4E8EF);
 
   @override
@@ -36,7 +35,14 @@ class AddProfileModePickCard extends StatelessWidget {
           height: 148,
           padding: const EdgeInsets.fromLTRB(12, 14, 12, 12),
           decoration: BoxDecoration(
-            color: selected ? Colors.white : _surfaceGrey,
+            // AUD dark-mode sweep: the unselected card used a hardcoded
+            // Color(0xFFF2F4F7), which stays light in dark mode while the
+            // title text below correctly reads context.colors.brandInk
+            // (near-white in dark) — measured 1.06:1 on device ("Child Mode"
+            // heading on its own card). profileModeCardBg is the
+            // theme-aware replacement: identical 0xFFF2F4F7 in light mode,
+            // darkens in dark mode.
+            color: selected ? Colors.white : context.colors.profileModeCardBg,
             borderRadius: BorderRadius.circular(20),
             border: selected
                 ? Border.all(color: context.colors.brandBlue, width: 1.5)

@@ -27,7 +27,14 @@ class ReviewPresetCard extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         gradient: isSelected ? selectedGradient : null,
-        color: isSelected ? null : Colors.white,
+        // AUD dark-mode sweep: this was a hardcoded Colors.white, which stays
+        // white in dark mode while the card's own title text correctly reads
+        // context.colors.brandInk (near-white in dark) — white-on-white,
+        // measured 1.06:1 on device. brandCreamCard is the theme-aware card
+        // surface token (white in light, matches the old literal exactly;
+        // darkens to 0xFF151A26 in dark) so the card now darkens along with
+        // its ink.
+        color: isSelected ? null : context.colors.brandCreamCard,
         borderRadius: BorderRadius.circular(22),
         border: Border.all(
           color: isSelected

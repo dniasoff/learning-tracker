@@ -54,7 +54,7 @@ class GlowingCtaButton extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.plusJakartaSans(
-                          color: context.colors.brandCreamCard,
+                          color: context.colors.introCtaLabel,
                           fontSize: 17,
                           fontWeight: FontWeight.w800,
                         ),
@@ -63,7 +63,7 @@ class GlowingCtaButton extends StatelessWidget {
                         const SizedBox(width: 6),
                         Icon(
                           Icons.arrow_forward_rounded,
-                          color: context.colors.brandCreamCard,
+                          color: context.colors.introCtaLabel,
                           size: 22,
                         ),
                       ],
