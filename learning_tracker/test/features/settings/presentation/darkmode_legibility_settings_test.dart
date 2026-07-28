@@ -80,6 +80,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/app/router/router_provider.dart';
@@ -103,14 +104,26 @@ import 'package:learning_tracker/features/account/presentation/providers/auth_pr
     show authRepositoryProvider;
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
+import 'package:learning_tracker/features/learning/data/repositories/track_repository_impl.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_ledger_providers.dart';
+import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/account_management_providers.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/lifetime_marking_screen.dart';
+import 'package:learning_tracker/features/settings/presentation/screens/settings_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/utils/account_actions.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/user_profile_header_card.dart';
+import 'package:learning_tracker/features/tracks/domain/services/curriculum_activation_service.dart';
+import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
+import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
+import 'package:learning_tracker/features/tutoring/presentation/providers/manage_tutors_providers.dart'
+    show incomingTutorGrantsProvider;
+import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_grant_providers.dart'
+    show pendingTutorInvitesProvider;
 import 'package:mocktail/mocktail.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../../helpers/pump_app.dart';
 
@@ -168,6 +181,13 @@ class _FakeProfileId extends ActiveProfileId {
   int build() => 1;
 }
 
+/// A CHILD-mode profile id, so `_ParentalControlsSection` (the "Parent Mode"
+/// tile, Finding 2) actually renders — it early-returns for adult profiles.
+class _FakeChildProfileId extends ActiveProfileId {
+  @override
+  int build() => 2;
+}
+
 class _FakeUseHebrewTerms extends UseHebrewTerms {
   @override
   bool build() => false;
@@ -212,7 +232,128 @@ Widget _buildSignOutApp({
   );
 }
 
+// ─── SettingsScreen pump harness (Findings 1/2/3 widget-level tests) ────────
+//
+// Mirrors test/features/settings/presentation/screens/settings_screen_test.dart's
+// `createTestWidget` (same minimal override set — db, auth, curriculum
+// activation service — proven sufficient to render SettingsScreen without a
+// real router/Firebase) and
+// test/features/settings/presentation/screens/settings_screen_r5_regression_test.dart's
+// TutorGrant fixtures (same shape, reused here for Finding 3).
+
+/// Builds the real [SettingsScreen] wrapped in the shared [pumpApp] rig, with
+/// the minimal provider set [settings_screen_test.dart] already proves is
+/// enough to render it (no tutored session, adult profile by default).
+/// [extraOverrides] layers in the per-finding provider state (a child
+/// profile for Finding 2, tutor-grant data for Finding 3).
+Widget _buildSettingsScreen({
+  required UserDatabase db,
+  required _MockAuthRepository authRepo,
+  ThemeData? theme,
+  List<Override> extraOverrides = const [],
+}) {
+  return pumpApp(
+    theme: theme,
+    overrides: [
+      appDatabaseProvider.overrideWithValue(db),
+      userDatabaseProvider.overrideWithValue(db),
+      authRepositoryProvider.overrideWithValue(authRepo),
+      authStateProvider.overrideWithValue(
+        const AuthState.signedIn(
+          user: AuthUser(
+            profileId: 1,
+            email: 'test@test.com',
+            displayName: 'Test',
+          ),
+          tier: Tier.localBorn,
+        ),
+      ),
+      curriculumActivationServiceProvider.overrideWith((ref) {
+        return CurriculumActivationService(
+          database: db,
+          pushCurriculumTrack: (_) async {},
+          trackRepository: TrackRepositoryImpl(database: db),
+        );
+      }),
+      ...extraOverrides,
+    ],
+    child: const SettingsScreen(),
+  );
+}
+
+/// A child-mode [ProfileModel] fixture (Finding 2 — the "Parent Mode" tile
+/// only renders `_ParentalControlsSection` for a child profile).
+ProfileModel _childProfileFixture() {
+  final fixedNow = DateTime.utc(2026, 1, 1);
+  return ProfileModel(
+    id: 2,
+    accountId: 1,
+    displayName: 'Child',
+    mode: 'child',
+    avatarIndex: 0,
+    createdAt: fixedNow,
+    updatedAt: fixedNow,
+  );
+}
+
+/// A pending tutor-grant fixture (Finding 3 — renders as a `_TutorGrantTile`
+/// with `isPending: true`, the `statusWarningSoft` background).
+TutorGrant _pendingGrantFixture() {
+  final fixedNow = DateTime.utc(2026, 1, 1);
+  return TutorGrant(
+    doc: TutorGrantDoc(
+      grantId: 'grant_pending_1',
+      parentUid: 'parent_uid',
+      childProfileId: '2',
+      tutorEmail: 'tutor@test.com',
+      state: TutorGrantState.pending,
+      invitedAt: fixedNow,
+      updatedAt: fixedNow,
+      expiresAt: fixedNow.add(const Duration(days: 7)),
+      childName: 'Yosef',
+    ),
+    grantState: PendingGrant(expiresAt: fixedNow.add(const Duration(days: 7))),
+  );
+}
+
+/// An active tutor-grant fixture (Finding 3 — renders as a `_TutorGrantTile`
+/// with `isPending: false`, the `statusSuccessSoftBg` background).
+TutorGrant _activeGrantFixture() {
+  final fixedNow = DateTime.utc(2026, 1, 1);
+  return TutorGrant(
+    doc: TutorGrantDoc(
+      grantId: 'grant_active_1',
+      parentUid: 'parent_uid',
+      childProfileId: '3',
+      tutorEmail: 'tutor@test.com',
+      state: TutorGrantState.active,
+      invitedAt: fixedNow,
+      updatedAt: fixedNow,
+      acceptedAt: fixedNow,
+      childName: 'Avigail',
+    ),
+    grantState: ActiveGrant(
+      acceptedAt: fixedNow,
+      permissions: TutorPermissions.defaults(),
+    ),
+  );
+}
+
 void main() {
+  setUpAll(() {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    // SettingsScreen's build() calls PackageInfo.fromPlatform() (app version
+    // footer) — mock it once so Findings 1/2/3's widget tests (which pump
+    // the real SettingsScreen) don't hit an unmocked platform channel.
+    PackageInfo.setMockInitialValues(
+      appName: 'Learning Tracker',
+      packageName: 'learning_tracker',
+      version: '1.0.0',
+      buildNumber: '1',
+      buildSignature: '',
+    );
+  });
+
   // ── Finding 1 — SendLogs tile icon-pill background ─────────────────────
 
   group('Finding 1 — Send Diagnostic Logs icon-pill background', () {
@@ -726,6 +867,433 @@ void main() {
 
         expect(border.top.color, isNot(Colors.white));
         expect(border.top.color, AppPalette.dark.brandCreamCard);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(Duration.zero);
+      },
+    );
+  });
+
+  // ── Finding 1 (widget) — Send Diagnostic Logs icon-pill background ──────
+  //
+  // The palette-only test above (line ~237) only proves the TOKEN PAIR
+  // clears WCAG contrast — it does not touch the real widget, so reverting
+  // settings_screen.dart's `iconBackground` back to the hardcoded literal
+  // would not fail it. These pump the real `SettingsScreen` and read the
+  // rendered tile's own decoration.
+
+  group('Finding 1 (widget) — Send Diagnostic Logs icon-pill background', () {
+    late UserDatabase db;
+    late _MockAuthRepository authRepo;
+
+    setUp(() {
+      db = UserDatabase(NativeDatabase.memory());
+      authRepo = _MockAuthRepository();
+      when(() => authRepo.currentUser).thenReturn(null);
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    testWidgets(
+      'the real Send Diagnostic Logs icon-pill reads brandCreamSoft (not '
+      'the hardcoded 0xFFF0F1F5 literal) in dark mode',
+      (tester) async {
+        await tester.pumpWidget(
+          _buildSettingsScreen(
+            db: db,
+            authRepo: authRepo,
+            theme: AppTheme.darkTheme(),
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+
+        await tester.scrollUntilVisible(
+          find.text('Send Diagnostic Logs'),
+          300,
+          scrollable: find.byType(Scrollable).first,
+        );
+
+        final pill = tester.widget<Container>(
+          find
+              .ancestor(
+                of: find.byIcon(Icons.bug_report_outlined),
+                matching: find.byType(Container),
+              )
+              .first,
+        );
+        final decoration = pill.decoration! as BoxDecoration;
+
+        expect(decoration.color, AppPalette.dark.brandCreamSoft);
+        expect(decoration.color, isNot(const Color(0xFFF0F1F5)));
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(Duration.zero);
+      },
+    );
+
+    testWidgets(
+      'the real Send Diagnostic Logs icon-pill resolves brandCreamSoft in '
+      'light mode too (no regression)',
+      (tester) async {
+        await tester.pumpWidget(
+          _buildSettingsScreen(db: db, authRepo: authRepo),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+
+        await tester.scrollUntilVisible(
+          find.text('Send Diagnostic Logs'),
+          300,
+          scrollable: find.byType(Scrollable).first,
+        );
+
+        final pill = tester.widget<Container>(
+          find
+              .ancestor(
+                of: find.byIcon(Icons.bug_report_outlined),
+                matching: find.byType(Container),
+              )
+              .first,
+        );
+        final decoration = pill.decoration! as BoxDecoration;
+
+        expect(decoration.color, AppPalette.light.brandCreamSoft);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(Duration.zero);
+      },
+    );
+  });
+
+  // ── Finding 2 (widget) — Parent Mode icon-pill background ────────────────
+
+  group('Finding 2 (widget) — Parent Mode icon-pill background', () {
+    late UserDatabase db;
+    late _MockAuthRepository authRepo;
+
+    setUp(() {
+      db = UserDatabase(NativeDatabase.memory());
+      authRepo = _MockAuthRepository();
+      when(() => authRepo.currentUser).thenReturn(null);
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    testWidgets('the real Parent Mode icon-pill reads brandCoralSoft (not the '
+        'hardcoded 0xFFF8E3E7 literal) in dark mode', (tester) async {
+      await tester.pumpWidget(
+        _buildSettingsScreen(
+          db: db,
+          authRepo: authRepo,
+          theme: AppTheme.darkTheme(),
+          extraOverrides: [
+            activeProfileIdProvider.overrideWith(_FakeChildProfileId.new),
+            profileListStreamProvider.overrideWith(
+              (ref) => Stream.value([_childProfileFixture()]),
+            ),
+          ],
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      await tester.scrollUntilVisible(
+        find.text('Parent Mode'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+
+      final pill = tester.widget<Container>(
+        find
+            .ancestor(
+              of: find.byIcon(Icons.admin_panel_settings_outlined),
+              matching: find.byType(Container),
+            )
+            .first,
+      );
+      final decoration = pill.decoration! as BoxDecoration;
+
+      expect(decoration.color, AppPalette.dark.brandCoralSoft);
+      expect(decoration.color, isNot(const Color(0xFFF8E3E7)));
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+    });
+
+    testWidgets(
+      'the real Parent Mode icon-pill resolves brandCoralSoft in light mode '
+      'too (no regression)',
+      (tester) async {
+        await tester.pumpWidget(
+          _buildSettingsScreen(
+            db: db,
+            authRepo: authRepo,
+            extraOverrides: [
+              activeProfileIdProvider.overrideWith(_FakeChildProfileId.new),
+              profileListStreamProvider.overrideWith(
+                (ref) => Stream.value([_childProfileFixture()]),
+              ),
+            ],
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+
+        await tester.scrollUntilVisible(
+          find.text('Parent Mode'),
+          300,
+          scrollable: find.byType(Scrollable).first,
+        );
+
+        final pill = tester.widget<Container>(
+          find
+              .ancestor(
+                of: find.byIcon(Icons.admin_panel_settings_outlined),
+                matching: find.byType(Container),
+              )
+              .first,
+        );
+        final decoration = pill.decoration! as BoxDecoration;
+
+        expect(decoration.color, AppPalette.light.brandCoralSoft);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(Duration.zero);
+      },
+    );
+  });
+
+  // ── Finding 3 (widget) — Tutor grant preview tile background ─────────────
+
+  group('Finding 3 (widget) — Tutor grant preview tile background', () {
+    late UserDatabase db;
+    late _MockAuthRepository authRepo;
+
+    setUp(() {
+      db = UserDatabase(NativeDatabase.memory());
+      authRepo = _MockAuthRepository();
+      when(() => authRepo.currentUser).thenReturn(null);
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    testWidgets(
+      'the real pending/active tutor-grant tiles read statusWarningSoft/'
+      'statusSuccessSoftBg (not the hardcoded pastel literals) in dark mode',
+      (tester) async {
+        await tester.pumpWidget(
+          _buildSettingsScreen(
+            db: db,
+            authRepo: authRepo,
+            theme: AppTheme.darkTheme(),
+            extraOverrides: [
+              incomingTutorGrantsProvider.overrideWith(
+                (ref) => Future.value([_activeGrantFixture()]),
+              ),
+              pendingTutorInvitesProvider.overrideWith(
+                (ref) => Future.value([_pendingGrantFixture()]),
+              ),
+            ],
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+
+        final pendingTile = tester.widget<Container>(
+          find
+              .ancestor(
+                of: find.text('Yosef'),
+                matching: find.byType(Container),
+              )
+              .first,
+        );
+        final pendingDecoration = pendingTile.decoration! as BoxDecoration;
+        expect(pendingDecoration.color, AppPalette.dark.statusWarningSoft);
+        expect(pendingDecoration.color, isNot(const Color(0xFFFFF8E1)));
+
+        final activeTile = tester.widget<Container>(
+          find
+              .ancestor(
+                of: find.text('Avigail'),
+                matching: find.byType(Container),
+              )
+              .first,
+        );
+        final activeDecoration = activeTile.decoration! as BoxDecoration;
+        expect(activeDecoration.color, AppPalette.dark.statusSuccessSoftBg);
+        expect(activeDecoration.color, isNot(const Color(0xFFE8F5E9)));
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(Duration.zero);
+      },
+    );
+
+    testWidgets(
+      'the real pending/active tutor-grant tiles resolve the token in light '
+      'mode too (no regression)',
+      (tester) async {
+        await tester.pumpWidget(
+          _buildSettingsScreen(
+            db: db,
+            authRepo: authRepo,
+            extraOverrides: [
+              incomingTutorGrantsProvider.overrideWith(
+                (ref) => Future.value([_activeGrantFixture()]),
+              ),
+              pendingTutorInvitesProvider.overrideWith(
+                (ref) => Future.value([_pendingGrantFixture()]),
+              ),
+            ],
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+
+        final pendingTile = tester.widget<Container>(
+          find
+              .ancestor(
+                of: find.text('Yosef'),
+                matching: find.byType(Container),
+              )
+              .first,
+        );
+        expect(
+          (pendingTile.decoration! as BoxDecoration).color,
+          AppPalette.light.statusWarningSoft,
+        );
+
+        final activeTile = tester.widget<Container>(
+          find
+              .ancestor(
+                of: find.text('Avigail'),
+                matching: find.byType(Container),
+              )
+              .first,
+        );
+        expect(
+          (activeTile.decoration! as BoxDecoration).color,
+          AppPalette.light.statusSuccessSoftBg,
+        );
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(Duration.zero);
+      },
+    );
+  });
+
+  // ── Finding 8 (widget) — Sign-out-failure SnackBar background ────────────
+
+  group('Finding 8 (widget) — Sign-out-failure SnackBar background', () {
+    late _MockAppRouter router;
+    late _MockAuthRepository authRepo;
+    late _MockAccountManagementService service;
+    late _MockConnectivityGateway connectivity;
+    late DeviceRegistryDatabase registry;
+    late UserDatabase userDb;
+
+    setUp(() {
+      router = _MockAppRouter();
+      authRepo = _MockAuthRepository();
+      service = _MockAccountManagementService();
+      connectivity = _MockConnectivityGateway();
+      registry = DeviceRegistryDatabase(NativeDatabase.memory());
+      userDb = UserDatabase(NativeDatabase.memory());
+      registerFallbackValue(_FakePageRouteInfo());
+      registerFallbackValue(<PageRouteInfo>[]);
+      when(
+        () => router.replaceAll(any<List<PageRouteInfo>>()),
+      ).thenAnswer((_) async {});
+      when(() => authRepo.signOut()).thenAnswer((_) async {});
+      when(() => authRepo.currentUser).thenReturn(null);
+      when(
+        () => authRepo.onAuthStateChanged(),
+      ).thenAnswer((_) => const Stream.empty());
+      // Red demo requires a genuine FAILURE path — service.signOut() throws
+      // so showSignOutConfirmation's catch block fires and shows the
+      // SnackBar under test (mirrors account_actions_test.dart's own
+      // "sign-out exception shows SnackBar" test, which proves this mock
+      // shape actually reaches the catch block).
+      when(() => service.signOut()).thenThrow(Exception('network error'));
+      when(() => connectivity.isOnline).thenAnswer((_) async => true);
+    });
+
+    tearDown(() async {
+      await registry.close();
+      await userDb.close();
+    });
+
+    testWidgets(
+      'the real sign-out-failure SnackBar reads theme.colorScheme.error/'
+      'onError (not the hardcoded brandCoralDeep fill) in dark mode',
+      (tester) async {
+        final darkTheme = AppTheme.darkTheme();
+        await tester.pumpWidget(
+          _buildSignOutApp(
+            router: router,
+            authRepo: authRepo,
+            service: service,
+            connectivity: connectivity,
+            registry: registry,
+            userDb: userDb,
+            theme: darkTheme,
+          ),
+        );
+        await tester.pump();
+        await tester.tap(find.text('trigger'));
+        await tester.pump();
+
+        await tester.tap(find.widgetWithText(FilledButton, 'Sign Out'));
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+
+        final snackBar = tester.widget<SnackBar>(find.byType(SnackBar));
+        expect(snackBar.backgroundColor, darkTheme.colorScheme.error);
+        expect(snackBar.backgroundColor, isNot(AppPalette.dark.brandCoralDeep));
+
+        final content = snackBar.content as Text;
+        expect(content.style?.color, darkTheme.colorScheme.onError);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(Duration.zero);
+      },
+    );
+
+    testWidgets(
+      'the real sign-out-failure SnackBar resolves theme.colorScheme.error/'
+      'onError in light mode too (no regression, still >4.5:1)',
+      (tester) async {
+        final lightTheme = AppTheme.lightTheme();
+        await tester.pumpWidget(
+          _buildSignOutApp(
+            router: router,
+            authRepo: authRepo,
+            service: service,
+            connectivity: connectivity,
+            registry: registry,
+            userDb: userDb,
+            theme: lightTheme,
+          ),
+        );
+        await tester.pump();
+        await tester.tap(find.text('trigger'));
+        await tester.pump();
+
+        await tester.tap(find.widgetWithText(FilledButton, 'Sign Out'));
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+
+        final snackBar = tester.widget<SnackBar>(find.byType(SnackBar));
+        expect(snackBar.backgroundColor, lightTheme.colorScheme.error);
+
+        final content = snackBar.content as Text;
+        expect(content.style?.color, lightTheme.colorScheme.onError);
 
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pump(Duration.zero);
