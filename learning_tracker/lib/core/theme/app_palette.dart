@@ -1264,6 +1264,54 @@ class AppPalette extends ThemeExtension<AppPalette> {
         .firstOrNull;
     return curriculum != null ? curriculumFor(curriculum) : brandBlue;
   }
+
+  // ---------------------------------------------------------------------------
+  // Content-and-learning dark-mode burndown (OWNER DECISION #2)
+  // ---------------------------------------------------------------------------
+
+  /// "View all" link ink on the Learn screen's Daily Tasks header — sits
+  /// directly on the app canvas ([surfaceF4]), not a card.
+  ///
+  /// Was a hardcoded `Color(0xFF354993)` in `learning_screen.dart`'s
+  /// `_DailyTasksSection`. [surfaceF4] darkens under the link in dark mode
+  /// (`0xFF1E2532`), but the literal never adapted, dropping this
+  /// medium-navy link text to a measured **1.85:1** against a 4.5:1 AA
+  /// floor — dark ink stranded on a dark canvas. Light value is the exact
+  /// old literal (light rendering unchanged, verified 7.63:1). Dark value
+  /// lightens to sky-blue, matching [brandBlue]'s own light/dark split —
+  /// 6.10:1 in dark.
+  Color get brandBlueLinkInk =>
+      _dark ? const Color(0xFF7CA0FF) : const Color(0xFF354993);
+
+  /// "Overdue" pill-badge text, paired with [statusErrorSoft].
+  ///
+  /// Was a hardcoded `Color(0xFFC22840)` in `learning_screen.dart`'s
+  /// `_LearnTaskCard`. [statusErrorSoft] darkens to a deep maroon in dark
+  /// mode, but the literal stayed the same mid-red, dropping the badge text
+  /// to a measured **2.94:1** against a 4.5:1 AA floor (dark red sinking
+  /// into dark maroon). Light value is the exact old literal (unchanged,
+  /// 4.85:1). Dark value reuses [statusError]'s dark tone for the same
+  /// error-ink family — 6.30:1 in dark.
+  Color get overdueBadgeInk =>
+      _dark ? const Color(0xFFDE8686) : const Color(0xFFC22840);
+
+  /// Warning-toned SnackBar/toast FILL — stays deep enough in BOTH themes
+  /// for the app's default SnackBar content text (near-white in both
+  /// themes per `app_theme.dart`'s `snackBarTheme.contentTextStyle`).
+  ///
+  /// `text_display_screen.dart`'s "could not save" SnackBar used
+  /// [brandWarningDeep] as its `backgroundColor` — but that token is an INK
+  /// role ("text tone on tint") that deliberately LIGHTENS in dark mode for
+  /// use as text, the opposite of what a background fill needs. Used as a
+  /// fill, it washed the SnackBar out to a pale cream in dark mode, dropping
+  /// the default near-white content text to a measured **1.36:1** against a
+  /// 4.5:1 AA floor — the same hero-fill-vs-ink role mismatch as
+  /// [goldOnColouredSurface] (split from [goldTrophy]), just the ink/fill
+  /// roles reversed. Pinned to the exact pre-fix light-mode hex
+  /// ([brandWarningDeep]'s light value) in BOTH themes — light rendering is
+  /// byte-identical to before (6.32:1), and staying deep in dark keeps the
+  /// default light content text legible: 5.43:1.
+  Color get warningSnackbarFill => const Color(0xFF8A5306);
 }
 
 /// Ergonomic access to [AppPalette] from any widget.

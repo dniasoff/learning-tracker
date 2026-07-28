@@ -820,7 +820,14 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
             content: Text(
               AppLocalizations.of(context)!.couldNotSave(e.toString()),
             ),
-            backgroundColor: context.colors.brandWarningDeep,
+            // warningSnackbarFill (not brandWarningDeep): brandWarningDeep is
+            // an INK role that lightens in dark mode for text-on-tint use —
+            // used as a SnackBar FILL it washed out to pale cream in dark,
+            // dropping the theme's default near-white content text to a
+            // measured 1.36:1. warningSnackbarFill stays deep in both themes
+            // so that default text stays legible (AUD content-and-learning
+            // dark-mode burndown).
+            backgroundColor: context.colors.warningSnackbarFill,
           ),
         );
       }

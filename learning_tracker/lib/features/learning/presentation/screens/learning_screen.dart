@@ -300,7 +300,7 @@ class _DailyTasksSection extends ConsumerWidget {
             TextButton(
               onPressed: onViewAll,
               style: TextButton.styleFrom(
-                foregroundColor: const Color(0xFF354993),
+                foregroundColor: context.colors.brandBlueLinkInk,
                 padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 2),
                 textStyle: theme.textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w600,
@@ -458,7 +458,7 @@ class _LearnTaskCard extends ConsumerWidget {
                               AppLocalizations.of(context)!.bubbleOverdue,
                               style: theme.textTheme.labelSmall?.copyWith(
                                 fontWeight: FontWeight.w800,
-                                color: const Color(0xFFC22840),
+                                color: context.colors.overdueBadgeInk,
                                 letterSpacing: 0.5,
                               ),
                             ),
