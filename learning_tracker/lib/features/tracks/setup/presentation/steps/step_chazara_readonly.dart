@@ -59,7 +59,12 @@ class ChazaraReadOnlyStep extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
-              color: const Color(0xFFEFF2FF),
+              // darkmode/tracks audit: was a hardcoded Colors(0xFFEFF2FF)
+              // while the icon/text below already read the adapting
+              // brandBlueDeep ink — measured 1.46:1 in dark.
+              // chazaraReadOnlyHintBg is the theme-aware token (identical hex
+              // in light; darkens in dark).
+              color: context.colors.chazaraReadOnlyHintBg,
               borderRadius: BorderRadius.circular(14),
             ),
             child: Row(
@@ -123,7 +128,14 @@ class ChazaraReadOnlyStep extends StatelessWidget {
 
                       return DecoratedBox(
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          // darkmode/tracks audit: was a hardcoded
+                          // Colors.white while the title text below reads the
+                          // theme's default titleMedium colour (brandInk,
+                          // near-white in dark) — measured ~1.06:1 in dark.
+                          // brandCreamCard is the theme-aware card surface
+                          // token (identical 0xFFFFFFFF in light; darkens in
+                          // dark).
+                          color: context.colors.brandCreamCard,
                           borderRadius: BorderRadius.circular(22),
                           border: Border.all(color: const Color(0xFFE7EAF1)),
                         ),
@@ -136,7 +148,15 @@ class ChazaraReadOnlyStep extends StatelessWidget {
                             children: [
                               CircleAvatar(
                                 radius: 16,
-                                backgroundColor: const Color(0xFFE9ECFF),
+                                // darkmode/tracks audit: was a hardcoded
+                                // Colors(0xFFE9ECFF) while the number text
+                                // below already read the adapting
+                                // brandBlueDeep ink — measured ~1.5:1 in
+                                // dark. chazaraReadOnlyStageBadgeBg is the
+                                // theme-aware token (identical hex in light;
+                                // darkens in dark).
+                                backgroundColor:
+                                    context.colors.chazaraReadOnlyStageBadgeBg,
                                 child: Text(
                                   '${index + 1}',
                                   style: theme.textTheme.labelLarge?.copyWith(

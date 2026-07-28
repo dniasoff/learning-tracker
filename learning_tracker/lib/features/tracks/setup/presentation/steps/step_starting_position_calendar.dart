@@ -192,7 +192,12 @@ class _StartingPositionCalendarModeState
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(28),
               ),
-              backgroundColor: const Color(0xFFE9EBF1),
+              // darkmode/tracks audit: was a hardcoded Colors(0xFFE9EBF1),
+              // nearly identical to brandInk's dark value (0xFFEAEEF5) —
+              // measured ~1.02:1 in dark, an effectively invisible label.
+              // calendarResetButtonBg is the theme-aware token (identical hex
+              // in light; darkens in dark).
+              backgroundColor: context.colors.calendarResetButtonBg,
               foregroundColor: context.colors.brandInk,
             ),
             child: Text(l10n.actionUseToday),
@@ -259,7 +264,12 @@ class _StartingPositionCalendarModeState
               children: [
                 CircleAvatar(
                   radius: 34,
-                  backgroundColor: const Color(0xFFE6E8FF),
+                  // darkmode/tracks audit: was a hardcoded Colors(0xFFE6E8FF)
+                  // while the icon below already read the adapting
+                  // brandBlueDeep ink — measured ~1.5:1 in dark.
+                  // calendarDateIconBg is the theme-aware token (identical
+                  // hex in light; darkens in dark).
+                  backgroundColor: context.colors.calendarDateIconBg,
                   child: Icon(
                     Icons.calendar_today_rounded,
                     size: 28,
@@ -512,7 +522,11 @@ class _OffsetButton extends StatelessWidget {
         width: 52,
         height: 52,
         decoration: BoxDecoration(
-          color: const Color(0xFFF4F6FA),
+          // darkmode/tracks audit: was a hardcoded Colors(0xFFF4F6FA) while
+          // the icon reads the adapting brandBlueDeep/brandInkMuted ink —
+          // measured ~1.6:1 in dark. calendarOffsetButtonBg is the
+          // theme-aware token (identical hex in light; darkens in dark).
+          color: context.colors.calendarOffsetButtonBg,
           borderRadius: BorderRadius.circular(999),
         ),
         child: Icon(

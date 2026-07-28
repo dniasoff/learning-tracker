@@ -96,10 +96,19 @@ class ScopeTopLevelView extends ConsumerWidget {
         // "Learn All" hero card
         DecoratedBox(
           decoration: BoxDecoration(
+            // darkmode/tracks audit: brandBlueDeep/brandBlueBright are a
+            // CONTRAST role that deliberately LIGHTENS in dark mode for
+            // ink-on-dark-card use — painted here as a gradient FILL with
+            // white text/icon on top, measured 1.63:1/1.85:1 in dark. This is
+            // the exact hero-fill bug already fixed for ReviewPresetCard's
+            // selected gradient (chazara_widgets.dart) via the dedicated
+            // chazaraSelectedGradientStart/End tokens, which hold the same
+            // light-mode hex pair but stay deep in dark — this call site was
+            // missed by that sweep.
             gradient: LinearGradient(
               colors: [
-                context.colors.brandBlueDeep,
-                context.colors.brandBlueBright,
+                context.colors.chazaraSelectedGradientStart,
+                context.colors.chazaraSelectedGradientEnd,
               ],
             ),
             borderRadius: BorderRadius.circular(28),
@@ -161,7 +170,12 @@ class ScopeTopLevelView extends ConsumerWidget {
         // Sub-section breadcrumb header
         DecoratedBox(
           decoration: BoxDecoration(
-            color: Colors.white,
+            // darkmode/tracks audit: was a hardcoded Colors.white while the
+            // curriculum chip / prompt text below read the adapting
+            // brandBlueDeep/brandInk ink — measured ~1.1:1 in dark.
+            // brandCreamCard is the theme-aware card surface token
+            // (identical 0xFFFFFFFF in light; darkens in dark).
+            color: context.colors.brandCreamCard,
             borderRadius: BorderRadius.circular(24),
             border: Border.all(color: context.colors.surfaceE9),
           ),

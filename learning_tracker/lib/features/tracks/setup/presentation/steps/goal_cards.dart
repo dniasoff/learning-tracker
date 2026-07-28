@@ -58,7 +58,15 @@ class BlurInactiveGoalOption extends StatelessWidget {
                         textAlign: TextAlign.center,
                         style: theme.textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.w700,
-                          color: context.colors.brandBlueDeep,
+                          // darkmode/tracks audit: this chip is a fixed
+                          // near-opaque white (Colors.white at 94% alpha) in
+                          // BOTH themes — a tooltip-like callout, not a
+                          // themed card — but brandBlueDeep deliberately
+                          // LIGHTENS in dark for ink-on-DARK-card use,
+                          // measured 1.63:1 on this fixed white chip in dark.
+                          // goalHintChipInk stays the same deep blue in both
+                          // themes.
+                          color: context.colors.goalHintChipInk,
                           height: 1.3,
                         ),
                       ),
