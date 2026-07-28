@@ -17,6 +17,7 @@ import 'package:flutter/material.dart'
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/content/content_index.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
@@ -102,6 +103,32 @@ List<Override> _textContentOverrides(String sefariaRef) => [
     ),
   ),
 ];
+
+/// Builds a minimal fake [ContentIndex] containing [refsInOrder] as
+/// sequential leaves of one fake curriculum, so `contentIndex.adjacent(ref)`
+/// resolves prev/next exactly as that reading order implies.
+///
+/// READER CHEVRON TAP-SWALLOW FIX: the reader's chevrons now read adjacency
+/// synchronously off [contentIndexProvider] instead of the async
+/// `adjacentContentRefsProvider` (see text_display_screen.dart's fix note),
+/// so E2E-311 wires the fake chain through here rather than stubbing
+/// `adjacentContentRefsProvider` per-ref as before.
+ContentIndex _fakeContentIndex(List<String> refsInOrder) {
+  final items = [
+    for (var i = 0; i < refsInOrder.length; i++)
+      ContentItem(
+        curriculumId: 'mishnayos',
+        level1: 'Fake Chapter',
+        level4: 'Item $i',
+        displayNameHe: refsInOrder[i],
+        displayNameEn: refsInOrder[i],
+        sefariaRef: refsInOrder[i],
+        sortOrder: i,
+        isLeaf: true,
+      ),
+  ];
+  return ContentIndex.fromCurricula({CurriculumId.mishnayos: items});
+}
 
 /// A minimal daily task on the fine-paced (non-coarse) Mishnayos curriculum.
 DailyTask _finePacedTask({
@@ -518,16 +545,19 @@ void main() {
   // ── E2E-311 ──────────────────────────────────────────────────────────────
 
   group('E2E-311 — Prev/Next navigation between sibling text refs', () {
-    // Risk R-LC4: adjacentContentRefsProvider does an N×thousands scan when
-    // backed by the real ContentRepository. Stub it with a fixed list of two
-    // items so the provider resolves instantly.
+    // Risk R-LC4: contentIndexProvider does a full curriculum scan when
+    // backed by the real ContentRepository. Stub it (via _fakeContentIndex)
+    // with a fixed list of two items so it resolves instantly.
     //
     // The TextDisplayScreen renders:
     //   • a chevron_left IconButton (Previous) — enabled when adj.prev != null
     //   • a chevron_right IconButton (Next)    — enabled when adj.next != null
     //
-    // Both navigations use context.router.replace, so after tapping Next we
-    // land on the sibling's TextDisplayScreen.
+    // READER CHEVRON TAP-SWALLOW FIX: both chevrons now update the displayed
+    // ref via in-widget state (a synchronous ContentIndex.adjacent() lookup)
+    // instead of context.router.replace — see text_display_screen.dart's
+    // fix note. After tapping Next the SAME TextDisplayScreen instance shows
+    // the sibling's content; no new route is pushed/replaced.
 
     testWidgets(
       'Next chevron is enabled when adjacentContentRefsProvider has a next ref',
@@ -546,10 +576,11 @@ void main() {
             allDailyTasksProvider.overrideWith((ref) => Future.value([])),
             coarsePacedTrackIdsProvider.overrideWith((ref) => Future.value({})),
             ..._textContentOverrides(currentRef),
-            // Risk R-LC4: stub adjacent refs with a fixed next sibling.
-            adjacentContentRefsProvider(
-              currentRef,
-            ).overrideWith((ref) => Future.value((prev: null, next: nextRef))),
+            // Risk R-LC4: stub a fixed 2-item chain so the chevron's
+            // synchronous ContentIndex.adjacent() lookup resolves instantly.
+            contentIndexProvider.overrideWith(
+              (ref) async => _fakeContentIndex([currentRef, nextRef]),
+            ),
           ],
         );
 
@@ -609,12 +640,9 @@ void main() {
                 ),
               ),
             ),
-            // Stubs for adjacent refs of both pages.
-            adjacentContentRefsProvider(
-              currentRef,
-            ).overrideWith((ref) => Future.value((prev: null, next: nextRef))),
-            adjacentContentRefsProvider(nextRef).overrideWith(
-              (ref) => Future.value((prev: currentRef, next: null)),
+            // Fake chain covering both pages' adjacency.
+            contentIndexProvider.overrideWith(
+              (ref) async => _fakeContentIndex([currentRef, nextRef]),
             ),
           ],
         );
@@ -673,12 +701,10 @@ void main() {
               ),
             ),
           ),
-          adjacentContentRefsProvider(
-            currentRef,
-          ).overrideWith((ref) => Future.value((prev: prevRef, next: null))),
-          adjacentContentRefsProvider(
-            prevRef,
-          ).overrideWith((ref) => Future.value((prev: null, next: currentRef))),
+          // Fake chain covering both pages' adjacency.
+          contentIndexProvider.overrideWith(
+            (ref) async => _fakeContentIndex([prevRef, currentRef]),
+          ),
         ],
       );
 

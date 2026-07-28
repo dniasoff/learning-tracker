@@ -34,9 +34,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
+import 'package:learning_tracker/core/content/content_index.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label_providers.dart';
+import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/preferences/text_display_preferences.dart';
 import 'package:learning_tracker/features/content_browsing/domain/entities/text_content.dart';
@@ -98,7 +101,11 @@ TextContent _content({
 /// [dailyTasks] — what [allDailyTasksProvider] resolves to.
 /// [isCompleted] — override for [isStageCompletedProvider].
 /// [isTutorSession] — sets [activeTutoredProfileSelectionProvider] to non-null.
-/// [adjacentRefs] — what [adjacentContentRefsProvider] resolves to.
+/// [adjacentRefs] — prev/next refs the reader's chevrons resolve to. Wired
+///   through a fake [ContentIndex] (via [contentIndexProvider]) rather than
+///   [adjacentContentRefsProvider] directly — the screen now reads adjacency
+///   synchronously off the index (see text_display_screen.dart's READER
+///   CHEVRON TAP-SWALLOW FIX note).
 /// [disableRetry] — pass `retry: (_, __) => null` to surface AsyncError.
 Widget _buildApp({
   required _MockStackRouter router,
@@ -146,7 +153,13 @@ Widget _buildApp({
       fontSizeProvider.overrideWith(() => _FakeFontSizeNotifier()),
       showNikudProvider.overrideWith(() => _FakeShowNikudNotifier()),
       renderedDisplayForRefProvider(_kRef).overrideWith((ref) async => _kRef),
-      adjacentContentRefsProvider(_kRef).overrideWith((ref) async => adj),
+      contentIndexProvider.overrideWith((ref) async => _fakeContentIndex(adj)),
+      // `curriculumLabelText` (invoked once contentIndexProvider resolves a
+      // matching curriculum for `_kRef`) needs this — DB-free fake so it
+      // never throws mid-build.
+      currentTransliterationVariantProvider.overrideWith(
+        () => _FakeTransliterationVariant(),
+      ),
       allDailyTasksProvider.overrideWith((ref) => Future.value(tasks)),
       trackStorageKeyForTrackIdProvider.overrideWith(
         (ref, trackId) async => 'personal',
@@ -182,6 +195,33 @@ Widget _buildApp({
   );
 }
 
+/// Builds a minimal fake [ContentIndex] containing just [adj.prev] (if any),
+/// `_kRef`, and [adj.next] (if any) as sequential leaves of one fake
+/// curriculum — so `contentIndex.adjacent(_kRef)` synchronously resolves to
+/// exactly [adj], matching the pre-fix `adjacentContentRefsProvider(_kRef)`
+/// override's contract one-for-one.
+ContentIndex _fakeContentIndex(({String? prev, String? next}) adj) {
+  final refs = [
+    if (adj.prev != null) adj.prev!,
+    _kRef,
+    if (adj.next != null) adj.next!,
+  ];
+  final items = [
+    for (var i = 0; i < refs.length; i++)
+      ContentItem(
+        curriculumId: 'mishnayos',
+        level1: 'Fake Chapter',
+        level4: 'Item $i',
+        displayNameHe: refs[i],
+        displayNameEn: refs[i],
+        sefariaRef: refs[i],
+        sortOrder: i,
+        isLeaf: true,
+      ),
+  ];
+  return ContentIndex.fromCurricula({CurriculumId.mishnayos: items});
+}
+
 // ─── Minimal notifier overrides ───────────────────────────────────────────────
 
 class _FakeFontSizeNotifier extends FontSizeNotifier {
@@ -203,6 +243,11 @@ class _FakeCompletionCommitted extends CompletionCommitted {
 class _FakeUseHebrewTerms extends UseHebrewTerms {
   @override
   bool build() => false;
+}
+
+class _FakeTransliterationVariant extends CurrentTransliterationVariant {
+  @override
+  TransliterationVariant build() => TransliterationVariant.ashkenazi;
 }
 
 class _FakeActiveTutoredProfileSelection extends ActiveTutoredProfileSelection {
@@ -554,9 +599,12 @@ void main() {
     // but on the very first pump the AppBar should show something.
     await tester.pump();
 
-    // The screen shows the ref as fallback title while the rendered chain loads.
-    // After one pump the chainTitle resolves to the ref string.
-    expect(find.text(_kRef), findsOneWidget);
+    // The screen shows the ref as fallback title while the rendered chain
+    // loads. `textContaining` (not exact `text`) because contentIndexProvider
+    // (a fake, DB-free index in this test) may already have resolved by this
+    // point and prefixed a curriculum label ("<Label> › $_kRef") — this test
+    // only asserts the ref itself ends up visible, not the exact title shape.
+    expect(find.textContaining(_kRef), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(Duration.zero);
@@ -629,7 +677,10 @@ void main() {
       _buildApp(
         router: router,
         textState: AsyncData(_content()),
-        adjacentRefs: (prev: _kRef, next: null),
+        // A distinct placeholder ref (not `_kRef` itself) — the fake
+        // ContentIndex needs unique sefariaRefs per leaf, and this test only
+        // cares that prev is SOME non-null value.
+        adjacentRefs: (prev: 'Mishnah Berakhot 1:0', next: null),
       ),
     );
     await tester.pump();
@@ -688,51 +739,82 @@ void main() {
     await tester.pump(Duration.zero);
   });
 
-  testWidgets(
-    'navigation — tapping next arrow calls router.replace with next ref',
-    (tester) async {
-      await tester.pumpWidget(
-        _buildApp(
-          router: router,
-          textState: AsyncData(_content()),
-          adjacentRefs: (prev: null, next: _kRef2),
-        ),
-      );
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 1));
+  // READER CHEVRON TAP-SWALLOW FIX: chevron navigation no longer calls
+  // `router.replace` — it updates the displayed ref via in-widget state
+  // directly (synchronous `ContentIndex.adjacent` lookup, no route
+  // transition, no async loading-gap for rapid taps to drop into). See
+  // text_display_screen.dart's fix note and
+  // text_display_chevron_tap_swallow_test.dart for the RED-DEMO regression
+  // test.
+  testWidgets('navigation — tapping next arrow updates displayed ref via state '
+      '(no router.replace)', (tester) async {
+    await tester.pumpWidget(
+      _buildApp(
+        router: router,
+        textState: AsyncData(_content()),
+        adjacentRefs: (prev: null, next: _kRef2),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
 
-      await tester.tap(find.byIcon(Icons.chevron_right));
-      await tester.pump();
+    await tester.tap(find.byIcon(Icons.chevron_right));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
 
-      verify(() => router.replace<Object?>(any())).called(1);
+    verifyNever(() => router.replace<Object?>(any()));
 
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump(Duration.zero);
-    },
-  );
+    // The fake index only has _kRef → _kRef2 ahead, so having moved to
+    // _kRef2 the prev arrow (back to _kRef) is now enabled and next
+    // (nothing beyond _kRef2) is disabled — confirms the ref actually
+    // advanced, not just that replace wasn't called.
+    final prevBtn = tester.widget<IconButton>(
+      find.widgetWithIcon(IconButton, Icons.chevron_left),
+    );
+    final nextBtn = tester.widget<IconButton>(
+      find.widgetWithIcon(IconButton, Icons.chevron_right),
+    );
+    expect(prevBtn.onPressed, isNotNull);
+    expect(nextBtn.onPressed, isNull);
 
-  testWidgets(
-    'navigation — tapping prev arrow calls router.replace with prev ref',
-    (tester) async {
-      await tester.pumpWidget(
-        _buildApp(
-          router: router,
-          textState: AsyncData(_content()),
-          adjacentRefs: (prev: 'Mishnah Berakhot 1:0', next: null),
-        ),
-      );
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 1));
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(Duration.zero);
+  });
 
-      await tester.tap(find.byIcon(Icons.chevron_left));
-      await tester.pump();
+  testWidgets('navigation — tapping prev arrow updates displayed ref via state '
+      '(no router.replace)', (tester) async {
+    const prevRef = 'Mishnah Berakhot 1:0';
+    await tester.pumpWidget(
+      _buildApp(
+        router: router,
+        textState: AsyncData(_content()),
+        adjacentRefs: (prev: prevRef, next: null),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
 
-      verify(() => router.replace<Object?>(any())).called(1);
+    await tester.tap(find.byIcon(Icons.chevron_left));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
 
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump(Duration.zero);
-    },
-  );
+    verifyNever(() => router.replace<Object?>(any()));
+
+    // The fake index only has prevRef → _kRef ahead, so having moved to
+    // prevRef, next (forward to _kRef) is now enabled and prev (nothing
+    // before prevRef) is disabled — confirms the ref actually moved back.
+    final prevBtn = tester.widget<IconButton>(
+      find.widgetWithIcon(IconButton, Icons.chevron_left),
+    );
+    final nextBtn = tester.widget<IconButton>(
+      find.widgetWithIcon(IconButton, Icons.chevron_right),
+    );
+    expect(prevBtn.onPressed, isNull);
+    expect(nextBtn.onPressed, isNotNull);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(Duration.zero);
+  });
 
   // ── Completion section ──────────────────────────────────────────────────────
 

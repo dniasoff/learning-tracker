@@ -35,7 +35,7 @@ import 'package:learning_tracker/features/tutoring/presentation/providers/active
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 @RoutePage()
-class TextDisplayScreen extends ConsumerWidget {
+class TextDisplayScreen extends ConsumerStatefulWidget {
   const TextDisplayScreen({
     super.key,
     @PathParam('sefariaRef') required this.sefariaRef,
@@ -44,7 +44,50 @@ class TextDisplayScreen extends ConsumerWidget {
   final String sefariaRef;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<TextDisplayScreen> createState() => _TextDisplayScreenState();
+}
+
+// READER CHEVRON TAP-SWALLOW FIX (deferred item, run11-acceptance-sweep):
+// the ref currently on screen used to be `widget.sefariaRef` directly, and
+// the prev/next chevrons advanced by calling `context.router.replace(...)`
+// with the adjacent ref — a FULL ROUTE REPLACE that tears down this widget
+// and mounts a brand-new one for the new ref. Rebuilding from scratch means
+// `adjacentContentRefsProvider(newRef)` (async — it awaits
+// `curriculumContentProvider`) starts back at AsyncLoading, and with no
+// listener bridging the gap `curriculumContentProvider` itself gets
+// auto-disposed and must re-fetch from scratch. During that
+// replace+rebuild+recompute window both chevrons render `onPressed: null`
+// (disabled) — a real user's rapid taps land on a disabled button and are
+// silently dropped (Flutter never queues a tap on a disabled control), not
+// merely debounced.
+//
+// Fix has two parts, both needed to close the window completely:
+//
+//  1. The displayed ref is now in-widget STATE (`_currentRef`, seeded from
+//     `widget.sefariaRef` once). Prev/next mutate that state directly
+//     (`setState`) instead of navigating — no route transition, no widget
+//     teardown. Deep-linking is unaffected: the state is still seeded from
+//     the route's path param, so a direct `/text/<ref>` link (a genuinely
+//     NEW `TextDisplayScreen` instance) opens exactly where it should.
+//
+//  2. Adjacency is now read SYNCHRONOUSLY off [ContentIndex.adjacent] (an
+//     O(1) lookup already used elsewhere, e.g. `BookmarkRepositoryImpl`)
+//     instead of the async `adjacentContentRefsProvider`. Measured (widget
+//     test, real navigation vs. real setState): even with local state, an
+//     async family provider re-keyed per ref still shows one real
+//     (frame-boundary) `AsyncLoading` gap after every tap, which is enough
+//     for a rapid-tap sequence to hit a momentarily-disabled button and
+//     drop a tap. `contentIndexProvider` is keepAlive and, once warm (it is
+//     already a dependency of this screen for the curriculum-name prefix
+//     below), `.adjacent(ref)` returns instantly with no async gap at all
+//     — so every chevron tap synchronously computes the next state, with
+//     nothing to race.
+class _TextDisplayScreenState extends ConsumerState<TextDisplayScreen> {
+  late String _currentRef = widget.sefariaRef;
+
+  @override
+  Widget build(BuildContext context) {
+    final sefariaRef = _currentRef;
     final textAsync = ref.watch(textContentProvider(sefariaRef));
     final fontSize = ref.watch(fontSizeProvider);
     final showNikud = ref.watch(showNikudProvider);
@@ -60,24 +103,27 @@ class TextDisplayScreen extends ConsumerWidget {
       error: (_, __) => sefariaRef.replaceAll('_', ' '),
     );
 
-    final adjAsync = ref.watch(adjacentContentRefsProvider(sefariaRef));
-    final adj = adjAsync.asData?.value;
+    // contentIndexProvider is keepAlive so the lookup is O(1) once warm —
+    // shared with the curriculum-name resolution below (#16), and now also
+    // the source of prev/next adjacency (see the fix note above).
+    final contentIndex = ref.watch(contentIndexProvider).asData?.value;
+    final adj = contentIndex?.adjacent(sefariaRef);
+    final prevRef = adj?.prev?.sefariaRef;
+    final nextRef = adj?.next?.sefariaRef;
 
     // #14 — fire-and-forget background prefetch so the SQLite read is warm
     // before the user taps ‹ or ›, eliminating the ~8s "Loading text…" spinner.
     // Uses ref.read (non-reactive) + .ignore() to swallow both the result and
     // any error; textContentProvider is auto-dispose so no leak occurs.
-    if (adj?.next != null) {
-      ref.read(textContentProvider(adj!.next!).future).ignore();
+    if (nextRef != null) {
+      ref.read(textContentProvider(nextRef).future).ignore();
     }
-    if (adj?.prev != null) {
-      ref.read(textContentProvider(adj!.prev!).future).ignore();
+    if (prevRef != null) {
+      ref.read(textContentProvider(prevRef).future).ignore();
     }
 
     // #16 — resolve the curriculum root name so the AppBar title can
     // disambiguate shared seder/masechta names (e.g. ברכות in Mishnah vs Bavli).
-    // contentIndexProvider is keepAlive so the lookup is O(1) once warm.
-    final contentIndex = ref.watch(contentIndexProvider).asData?.value;
     final curriculumId = contentIndex != null
         ? _curriculumIdForRef(sefariaRef, contentIndex)
         : null;
@@ -114,20 +160,16 @@ class TextDisplayScreen extends ConsumerWidget {
             key: const Key('text_display_prev_button'),
             icon: const Icon(Icons.chevron_left),
             tooltip: AppLocalizations.of(context)!.textReaderTooltipPrevious,
-            onPressed: adj?.prev != null
-                ? () => context.router.replace(
-                    TextDisplayRoute(sefariaRef: adj!.prev!),
-                  )
+            onPressed: prevRef != null
+                ? () => setState(() => _currentRef = prevRef)
                 : null,
           ),
           IconButton(
             key: const Key('text_display_next_button'),
             icon: const Icon(Icons.chevron_right),
             tooltip: AppLocalizations.of(context)!.textReaderTooltipNext,
-            onPressed: adj?.next != null
-                ? () => context.router.replace(
-                    TextDisplayRoute(sefariaRef: adj!.next!),
-                  )
+            onPressed: nextRef != null
+                ? () => setState(() => _currentRef = nextRef)
                 : null,
           ),
         ],

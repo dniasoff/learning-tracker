@@ -36,6 +36,17 @@
 // preserves every pre-existing call site's behavior — `MaterialApp` falls
 // back to its own default `ThemeData.light()` exactly as before.
 //
+// READER CHEVRON TAP-SWALLOW FIX regression test: [routerConfig] was added
+// so a test that needs a REAL (non-mocktail) auto_route router — i.e. one
+// where `context.router.replace`/`.push` must perform an actual page
+// transition, not just record a mock call — can still go through this one
+// shared delegate-list definition instead of hand-rolling a second
+// `MaterialApp.router(localizationsDelegates: [...])` block (which would
+// grow the TQ-3 ratchet in tool/check_tq3_pump_app_migration.dart). Pass
+// [routerConfig] INSTEAD OF [child] (never both); everything else — the
+// [ProviderScope]/[UncontrolledProviderScope] wiring, [locale], [theme],
+// [builder] — behaves identically either way.
+//
 // Usage:
 // ```dart
 //   await tester.pumpWidget(
@@ -75,8 +86,15 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 /// [child] becomes `MaterialApp.home` directly — callers that need a
 /// [Scaffold], `StackRouterScope`, or other ancestor build it themselves and
 /// pass the result in, exactly as the pre-extraction call sites did.
+///
+/// Pass [routerConfig] instead of [child] when the test needs a real
+/// `RouterConfig` (e.g. `someRootStackRouter.config(...)`) driving a
+/// `MaterialApp.router` — for tests that must exercise genuine auto_route
+/// navigation (a mocktail `StackRouter` never rebuilds the tree, so it can't
+/// stand in for this). Exactly one of [child]/[routerConfig] must be given.
 Widget pumpApp({
-  required Widget child,
+  Widget? child,
+  RouterConfig<Object>? routerConfig,
   List<Override> overrides = const [],
   Locale locale = const Locale('en'),
   // Matches ProviderContainer's `Retry` typedef (Duration? Function(int
@@ -99,20 +117,37 @@ Widget pumpApp({
   // `AppTheme.themeFor(brightness: brightness)` to sweep light + dark.
   ThemeData? theme,
 }) {
-  final app = MaterialApp(
-    locale: locale,
-    debugShowCheckedModeBanner: debugShowCheckedModeBanner,
-    theme: theme,
-    localizationsDelegates: const [
-      AppLocalizations.delegate,
-      GlobalMaterialLocalizations.delegate,
-      GlobalWidgetsLocalizations.delegate,
-      GlobalCupertinoLocalizations.delegate,
-    ],
-    supportedLocales: AppLocalizations.supportedLocales,
-    builder: builder,
-    home: child,
+  assert(
+    (child == null) != (routerConfig == null),
+    'pumpApp: pass exactly one of `child` or `routerConfig`.',
   );
+
+  const delegates = [
+    AppLocalizations.delegate,
+    GlobalMaterialLocalizations.delegate,
+    GlobalWidgetsLocalizations.delegate,
+    GlobalCupertinoLocalizations.delegate,
+  ];
+
+  final app = routerConfig != null
+      ? MaterialApp.router(
+          routerConfig: routerConfig,
+          locale: locale,
+          debugShowCheckedModeBanner: debugShowCheckedModeBanner,
+          theme: theme,
+          localizationsDelegates: delegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          builder: builder,
+        )
+      : MaterialApp(
+          locale: locale,
+          debugShowCheckedModeBanner: debugShowCheckedModeBanner,
+          theme: theme,
+          localizationsDelegates: delegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          builder: builder,
+          home: child,
+        );
 
   if (container != null) {
     return UncontrolledProviderScope(container: container, child: app);
