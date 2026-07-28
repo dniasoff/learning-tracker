@@ -273,7 +273,15 @@ class SettingsScreen extends ConsumerWidget {
                 child: PreferenceListTile.withIcon(
                   icon: Icons.bug_report_outlined,
                   iconColor: context.colors.brandInkMuted,
-                  iconBackground: const Color(0xFFF0F1F5),
+                  // AUD dark-mode sweep: was a hardcoded Color(0xFFF0F1F5)
+                  // pale-grey chip under the already brightness-aware
+                  // brandInkMuted icon (which LIGHTENS in dark) — the icon
+                  // and its own background stopped matching, measured
+                  // 2.28:1 in dark. brandCreamSoft is the paired recessed-
+                  // surface token (equals the old literal almost exactly in
+                  // light — 0xFFEFF2F7 vs 0xFFF0F1F5 — and darkens with the
+                  // icon in dark), 5.97:1 in dark.
+                  iconBackground: context.colors.brandCreamSoft,
                   title: l10n.settingsSendDiagnosticLogs,
                   subtitle: l10n.settingsSendDiagnosticLogsSubtitle,
                   trailing: const SizedBox.shrink(),
@@ -534,11 +542,18 @@ class _SurfaceCard extends StatelessWidget {
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: context.colors.surfaceE9),
-        boxShadow: const [
+        boxShadow: [
+          // AUD dark-mode sweep: was a hardcoded Color(0x121D2939) — a
+          // translucent NAVY-tinted shadow that keeps a light-mode tint in
+          // dark mode instead of the app's own dark-surface shadow.
+          // settingsProfileCardShadow is the existing Settings card-shadow
+          // token (already used by UserProfileHeaderCard for the identical
+          // role) — pixel-identical to the old literal in light, plain
+          // black at higher alpha in dark.
           BoxShadow(
-            color: Color(0x121D2939),
+            color: context.colors.settingsProfileCardShadow,
             blurRadius: 16,
-            offset: Offset(0, 5),
+            offset: const Offset(0, 5),
           ),
         ],
       ),
@@ -631,7 +646,13 @@ class _ParentalControlsSectionState
           child: PreferenceListTile.withIcon(
             icon: Icons.admin_panel_settings_outlined,
             iconColor: context.colors.brandCoralDeep,
-            iconBackground: const Color(0xFFF8E3E7),
+            // AUD dark-mode sweep: was a hardcoded Color(0xFFF8E3E7) pale-
+            // pink chip under brandCoralDeep, which LIGHTENS in dark mode
+            // (it is an ink role) — icon and background stopped matching,
+            // measured 1.42:1 in dark. brandCoralSoft is brandCoralDeep's
+            // own paired tint container (used together everywhere else in
+            // the app), 9.32:1 in dark; light stays 5.02:1 (was 4.79:1).
+            iconBackground: context.colors.brandCoralSoft,
             title: l10n.parentMode,
             subtitle: inParentMode
                 ? l10n.parentModeActiveSubtitle
@@ -801,24 +822,37 @@ class _TutorGrantTile extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final childLabel = grant.childDisplayLabel;
 
+    // AUD dark-mode sweep: bg/border/icon/text here were four hardcoded,
+    // brightness-fixed literals (pale-yellow/pale-green pastel card), so the
+    // card stayed exactly as bright in dark mode as in light — inconsistent
+    // with every sibling status-badge in the app, which already uses
+    // statusActiveBadge/statusPendingBadge for this exact "tutor grant"
+    // concept (manage_grants_screen.dart, manage_tutors_screen.dart).
+    // statusSuccessSoftBg/statusSuccessSoftText and
+    // statusWarningSoft/statusWarningSoftText are the app's existing
+    // solid-card pairs for this same active/pending shape (accept/decline
+    // confirmation cards) — reusing them here darkens the card in dark mode
+    // while very slightly IMPROVING the light-mode pair (old pending
+    // icon/text-on-bg measured 2.49:1 in light, a pre-existing amber-on-
+    // near-white contrast gap; new pairing clears 4.55–4.68:1 in both
+    // modes, 7.67–8.64:1 in dark).
+    final cardBg = isPending
+        ? context.colors.statusWarningSoft
+        : context.colors.statusSuccessSoftBg;
+    final accentColor = isPending
+        ? context.colors.statusWarningSoftText
+        : context.colors.statusSuccessSoftText;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: isPending ? const Color(0xFFFFF8E1) : const Color(0xFFE8F5E9),
+        color: cardBg,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: isPending ? const Color(0xFFFFE082) : const Color(0xFFA5D6A7),
-        ),
+        border: Border.all(color: accentColor.withValues(alpha: 0.4)),
       ),
       child: Row(
         children: [
-          Icon(
-            Icons.school_rounded,
-            color: isPending
-                ? const Color(0xFFF57F17)
-                : const Color(0xFF2E7D32),
-            size: 26,
-          ),
+          Icon(Icons.school_rounded, color: accentColor, size: 26),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -835,9 +869,7 @@ class _TutorGrantTile extends StatelessWidget {
                       ? l10n.statusPendingTapToAccept
                       : l10n.tutoredChildrenStatusTutoring,
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: isPending
-                        ? const Color(0xFFF57F17)
-                        : const Color(0xFF2E7D32),
+                    color: accentColor,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -847,7 +879,12 @@ class _TutorGrantTile extends StatelessWidget {
           if (isPending)
             FilledButton(
               style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFFF57F17),
+                // statusPendingBadge (not the old hardcoded 0xFFF57F17):
+                // same hue family, but brightness-aware so it stays
+                // consistent with the icon/text above; the button's
+                // foreground already comes from the theme's own
+                // contrast-computed default (unaffected by this change).
+                backgroundColor: context.colors.statusPendingBadge,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 14,
                   vertical: 8,

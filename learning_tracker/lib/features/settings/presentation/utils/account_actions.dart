@@ -89,10 +89,16 @@ Future<void> showSignOutConfirmation(
                             width: 2,
                           ),
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.question_mark_rounded,
                           size: 13,
-                          color: Colors.white,
+                          // AUD dark-mode sweep: was a hardcoded
+                          // Colors.white — brandBlue LIGHTENS in dark mode
+                          // (an ink-role token used here as a fill), so a
+                          // fixed white glyph sank to 2.52:1.
+                          // theme.colorScheme.onPrimary is the app's own
+                          // contrast-computed pair for this exact fill.
+                          color: theme.colorScheme.onPrimary,
                         ),
                       ),
                     ),
@@ -123,7 +129,13 @@ Future<void> showSignOutConfirmation(
                     onPressed: () => Navigator.pop(context, true),
                     style: FilledButton.styleFrom(
                       backgroundColor: context.colors.brandBlue,
-                      foregroundColor: Colors.white,
+                      // AUD dark-mode sweep: was a hardcoded Colors.white —
+                      // same brandBlue-as-fill issue as the badge icon
+                      // above (2.52:1 in dark). theme.colorScheme.onPrimary
+                      // is the app's own contrast-computed pair for this
+                      // fill (already used by every FilledButton that does
+                      // NOT override its foreground).
+                      foregroundColor: theme.colorScheme.onPrimary,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(999),
@@ -140,7 +152,13 @@ Future<void> showSignOutConfirmation(
                     onPressed: () => Navigator.pop(context, false),
                     style: TextButton.styleFrom(
                       foregroundColor: context.colors.brandInkMuted,
-                      backgroundColor: const Color(0xFFF0F1F5),
+                      // AUD dark-mode sweep: was a hardcoded
+                      // Color(0xFFF0F1F5) pale-grey chip under the already
+                      // brightness-aware brandInkMuted text (lightens in
+                      // dark) — measured 2.28:1 in dark. brandCreamSoft is
+                      // the paired recessed-surface token (near-identical
+                      // in light; darkens with the text in dark, 5.97:1).
+                      backgroundColor: context.colors.brandCreamSoft,
                       padding: const EdgeInsets.symmetric(vertical: 15),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(999),
@@ -202,10 +220,22 @@ Future<void> showSignOutConfirmation(
     }
   } catch (e) {
     if (context.mounted) {
+      // AUD dark-mode sweep: backgroundColor was context.colors
+      // .brandCoralDeep — an INK-role token that LIGHTENS in dark mode —
+      // used as a fill under the SnackBar theme's default (also near-
+      // white-in-dark) content text: both went light together, measured
+      // 1.5:1 in dark. theme.colorScheme.error/onError is the app's own
+      // fill+contrast-computed-text pair (same mechanism as onPrimary
+      // above) for exactly this "error surface" role — 7.6:1 in dark,
+      // 5.52:1 in light (was 5.87:1; still comfortably >4.5:1).
+      final theme = Theme.of(context);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(AppLocalizations.of(context)!.errorSignOutFailed),
-          backgroundColor: context.colors.brandCoralDeep,
+          content: Text(
+            AppLocalizations.of(context)!.errorSignOutFailed,
+            style: TextStyle(color: theme.colorScheme.onError),
+          ),
+          backgroundColor: theme.colorScheme.error,
         ),
       );
     }

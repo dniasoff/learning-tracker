@@ -146,7 +146,17 @@ class UserProfileHeaderCard extends ConsumerWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: context.colors.settingsProfileAvatarRing,
-                border: Border.all(color: Colors.white, width: 2),
+                // AUD dark-mode sweep: was a hardcoded Colors.white — a
+                // "cutout" ring meant to blend with the surrounding card
+                // (brandCreamCard), which is white in light but darkens in
+                // dark mode. A fixed white ring instead created a bright
+                // halo around the avatar in dark mode. brandCreamCard keeps
+                // the ring pixel-identical to the old literal in light and
+                // blends with the (now-dark) card in dark mode.
+                border: Border.all(
+                  color: context.colors.brandCreamCard,
+                  width: 2,
+                ),
               ),
               child: Container(
                 color: theme.colorScheme.primary.withValues(alpha: 0.12),
