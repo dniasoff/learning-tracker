@@ -247,7 +247,14 @@ class StudyDayCard extends StatelessWidget {
     final theme = Theme.of(context);
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: Colors.white,
+        // AUD dark-mode sweep: this was a hardcoded Colors.white, which stays
+        // white in dark mode while the day-row title correctly reads the
+        // theme's default headlineSmall colour (brandInk, near-white in
+        // dark) — white-on-white, measured 1.16:1 on device. brandCreamCard
+        // is the theme-aware card surface token (white in light, matches the
+        // old literal exactly; darkens to 0xFF151A26 in dark, 14.94:1 with
+        // brandInk) so the card now darkens along with its ink.
+        color: context.colors.brandCreamCard,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
           color: isShabbos ? const Color(0xFFD8DCE5) : const Color(0xFFE8EBF2),
