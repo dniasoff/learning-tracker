@@ -158,18 +158,31 @@ void main() {
 
       goldenTest(
         'stat_card',
+        // Reworked into two labelled scope sections (owner decision
+        // 2026-07-28): Section A "This track · this cycle" (track-scoped
+        // current-cycle % + count breakdown) and Section B "Whole
+        // [curriculum] · lifetime" (whole-curriculum lifetime % + items
+        // touched). The golden exercises BOTH sections, so the fractions +
+        // lifetime counts + curriculum name are supplied here.
         builder: (locale, brightness) => _pumpHarness(
           locale: locale,
           brightness: brightness,
-          child: const Padding(
-            padding: EdgeInsets.all(12),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
             child: OverallStatsCard(
-              stats: OverallCurriculumStats(
+              stats: const OverallCurriculumStats(
                 totalItems: 4192,
                 completedAllStages: 312,
                 inProgress: 88,
                 notStarted: 3792,
               ),
+              trackProgressFraction: 0.07,
+              lifetimeFraction: 0.34,
+              lifetimeLearnedCount: 1998,
+              lifetimeTotalCount: 5846,
+              curriculumName: locale.languageCode == 'he'
+                  ? 'משניות'
+                  : 'Mishnayos',
             ),
           ),
         ),

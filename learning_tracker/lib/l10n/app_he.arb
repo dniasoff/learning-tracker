@@ -1967,6 +1967,10 @@
   "overallProgressStatCompletedAllStages": "הושלמו כל השלבים",
   "overallProgressStatInProgress": "בתהליך",
   "overallProgressStatNotStarted": "טרם הוחל",
+  "overallProgressSectionThisTrackCycle": "המסלול הזה · המחזור הזה",
+  "overallProgressSectionWholeLifetime": "כל {curriculum} · ידע כולל",
+  "overallProgressSectionWholeLifetimeGeneric": "כל התוכנית · ידע כולל",
+  "overallProgressStatLifetimeItemsTouched": "פריטים שנלמדו",
 
   "curriculumProgressBreakdownByLevel": "פירוט לפי רמה",
   "curriculumProgressLoading": "טוענים נתוני התקדמות...",

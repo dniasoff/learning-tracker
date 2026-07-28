@@ -7065,6 +7065,30 @@ abstract class AppLocalizations {
   /// **'Not started'**
   String get overallProgressStatNotStarted;
 
+  /// Scope header for the first section of OverallStatsCard. Everything under it — the time-gated current-cycle percentage and the count breakdown (total items / completed all stages / in progress / not started) — is scoped to the ACTIVE track's own scope, NOT the whole curriculum.
+  ///
+  /// In en, this message translates to:
+  /// **'This track · this cycle'**
+  String get overallProgressSectionThisTrackCycle;
+
+  /// Scope header for the second section of OverallStatsCard: whole-curriculum lifetime knowledge (distinct items ever touched / total across the ENTIRE curriculum, not just the active track's scope). {curriculum} is the curriculum display name.
+  ///
+  /// In en, this message translates to:
+  /// **'Whole {curriculum} · lifetime'**
+  String overallProgressSectionWholeLifetime(String curriculum);
+
+  /// Fallback scope header for OverallStatsCard's whole-curriculum lifetime section when the curriculum display name is unavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Whole curriculum · lifetime'**
+  String get overallProgressSectionWholeLifetimeGeneric;
+
+  /// Row label in OverallStatsCard's whole-curriculum lifetime section for the count of distinct items ever touched across the entire curriculum (value shown as '{completed} of {total}' via itemsLearnedOf).
+  ///
+  /// In en, this message translates to:
+  /// **'Items touched'**
+  String get overallProgressStatLifetimeItemsTouched;
+
   /// Section heading in CurriculumProgressScreen above the per-level hierarchy cards.
   ///
   /// In en, this message translates to:

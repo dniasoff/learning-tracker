@@ -230,6 +230,13 @@ void main() {
       expect(find.text('Completed all stages'), findsOneWidget);
       expect(find.text('In progress'), findsOneWidget);
       expect(find.text('Not started'), findsOneWidget);
+      // The track-scoped counts now sit under an explicit scope header
+      // (owner rework 2026-07-28) so they can never read as contradictory
+      // beside the whole-curriculum lifetime figure.
+      expect(find.text('This track · this cycle'), findsOneWidget);
+      // With no lifetime data supplied, the whole-curriculum section is
+      // omitted entirely (no empty/placeholder header).
+      expect(find.textContaining('lifetime'), findsNothing);
     });
   });
 
