@@ -211,7 +211,16 @@ class _ChazaraInlineSetupState extends ConsumerState<ChazaraInlineSetup> {
                   const SizedBox(height: 14),
                   DecoratedBox(
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      // Run-11 deferred dark-mode sweep: same hardcoded-white
+                      // bug as the (already-fixed) unselected ReviewPresetCard
+                      // above — this stayed white in dark mode while the
+                      // "Custom Cycle" heading below reads the theme's default
+                      // titleLarge colour (brandInk, near-white in dark),
+                      // measured 1.16:1 on device. brandCreamCard is the
+                      // theme-aware card surface: identical 0xFFFFFFFF in
+                      // light mode, darkens to 0xFF151A26 in dark (14.94:1
+                      // with brandInk).
+                      color: context.colors.brandCreamCard,
                       borderRadius: BorderRadius.circular(24),
                       border: Border.all(
                         color: _selectedPresetIndex == -1

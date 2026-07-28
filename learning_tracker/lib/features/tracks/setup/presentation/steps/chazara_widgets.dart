@@ -21,8 +21,18 @@ class ReviewPresetCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    // Run-11 deferred dark-mode sweep: this was `context.colors.brandBlueDeep`
+    // / `brandBlueBright` — a CONTRAST role that lightens in dark mode for
+    // ink-on-dark-surface use — painted here as a gradient FILL with white
+    // text/icon on top, measured 1.63:1/1.85:1 on device in dark. The
+    // dedicated `chazaraSelectedGradient*` tokens keep this exact light-mode
+    // hex pair but stay deep (not lightened) in dark, like the
+    // blueMedium/blueLight/blueMid hero-fill tokens.
     final selectedGradient = LinearGradient(
-      colors: [context.colors.brandBlueDeep, context.colors.brandBlueBright],
+      colors: [
+        context.colors.chazaraSelectedGradientStart,
+        context.colors.chazaraSelectedGradientEnd,
+      ],
     );
     return DecoratedBox(
       decoration: BoxDecoration(

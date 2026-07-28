@@ -310,6 +310,30 @@ class AppPalette extends ThemeExtension<AppPalette> {
   Color get chartLimudBlue =>
       _dark ? const Color(0xFFAFBFE8) : const Color(0xFF123DAE);
 
+  /// Chazara preset-card SELECTED state (run-11 deferred dark-mode sweep) —
+  /// gradient FILL start colour (deep blue), paired with
+  /// [chazaraSelectedGradientEnd].
+  ///
+  /// `ReviewPresetCard`'s selected variant (`chazara_widgets.dart`) painted
+  /// its gradient fill directly from [brandBlueDeep]/[brandBlueBright], with
+  /// white title/icon/subtitle text on top. Those two tokens are a CONTRAST
+  /// role that deliberately LIGHTENS in dark mode for use as ink on a dark
+  /// surface (see their own doc comments) — used as a FILL instead, the
+  /// lightened dark-mode values washed the card out to pale lavender and
+  /// dropped the white heading to a measured **1.63:1** (icon/title) and
+  /// **1.85:1** (subtitle region), against a 4.5:1 AA floor. Same hero-fill
+  /// role/bug as [blueMedium]/[blueLight]/[blueMid] (`a68c97d5`'s "keep deep
+  /// hero fills deep in dark mode" sweep, which missed this call site).
+  /// Pinned to the exact pre-fix light-mode hex in both themes — light
+  /// rendering is byte-identical to before, and a deep, saturated blue in
+  /// dark keeps the white content legible: 11.01:1.
+  Color get chazaraSelectedGradientStart => const Color(0xFF0E3392);
+
+  /// Chazara preset-card SELECTED state — gradient FILL end colour (bright
+  /// blue). Paired with [chazaraSelectedGradientStart] (see its doc) —
+  /// 5.61:1 with white content in dark, up from a measured 1.85:1.
+  Color get chazaraSelectedGradientEnd => const Color(0xFF2B5FD9);
+
   /// Trophy gold (streak flame icon, milestone badge fill).
   ///
   /// Darkens in dark mode because its call sites paint it as INK ON A FIXED
