@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/empty_state.dart';
@@ -54,6 +55,24 @@ class _LifetimeKnowledgeScreenState
     final l10n = AppLocalizations.of(context)!;
     final baseTheme = Theme.of(context);
     final textTheme = GoogleFonts.plusJakartaSansTextTheme(baseTheme.textTheme);
+
+    // BUG-lifetime-cta-dead-tap: the Lifetime Marking CTA below pushes
+    // LifetimeMarkingRoute, which carries [authGuard, childModeGuard,
+    // pinGuard] (app_router.dart) — childModeGuard silently cancels the
+    // navigation (resolver.next(false), no error/snackbar) unless the
+    // *active* profile is in child mode. This screen itself is reachable by
+    // ANY active profile (LifetimeKnowledgeRoute carries only [authGuard] —
+    // see docs/planning/progress-ia-redesign.md Q5, which explicitly keeps
+    // Progress/Lifetime Knowledge available in adult mode too), so an adult
+    // self-tracking profile (or a parent viewing their own progress) hit an
+    // always-visible-but-permanently-dead button with zero feedback. Mirror
+    // the established pattern for this exact precondition
+    // (`_ParentalControlsSection` in settings_screen.dart, which hides its
+    // "Parent Mode" tile via `if (!isChildProfile) return SizedBox.shrink()`)
+    // rather than surfacing a guard that silently no-ops.
+    final isChildProfile =
+        ref.watch(activeProfileProvider).asData?.value?.profileMode ==
+        ProfileMode.child;
 
     final summariesAsync = _filter == _LifetimeSourceFilter.allSources
         ? ref.watch(lifetimeViewSummariesProvider(profileId))
@@ -152,16 +171,24 @@ class _LifetimeKnowledgeScreenState
               ),
             ),
             // CTA — navigate to Lifetime Marking (existing settings flow).
-            SafeArea(
-              top: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                child: _LifetimeMarkingCta(
-                  onTap: () =>
-                      context.router.push(const LifetimeMarkingRoute()),
+            //
+            // Only rendered when the active profile is in child mode: its
+            // destination route requires childModeGuard, which fails CLOSED
+            // (silently cancels — no error, no snackbar) for any other
+            // profile. Showing a tappable card that can never navigate would
+            // be a dead button with no feedback — hide it instead, matching
+            // `_ParentalControlsSection`'s handling of the same precondition.
+            if (isChildProfile)
+              SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                  child: _LifetimeMarkingCta(
+                    onTap: () =>
+                        context.router.push(const LifetimeMarkingRoute()),
+                  ),
                 ),
               ),
-            ),
           ],
         ),
       ),
