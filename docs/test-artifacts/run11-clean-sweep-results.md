@@ -68,13 +68,26 @@ green `make ci`.
   host and would add redundant coverage (the fixes are not API-specific); run-11's
   under-load pass already touched all six. Honestly skipped rather than dressed up.
 
-## NEW finding from the sweep (being fixed)
-- **Dark-mode white-on-white (P2):** the wizard "Study Days" step + "Add Lifetime
-  Learning" curriculum-picker rows render muted-grey text on a hardcoded WHITE card
-  (measured **1.16:1** in dark). Same hardcoded-white class the deferred pass fixed
-  elsewhere. Fix in progress. **Dark mode has a LONG TAIL of these** — the raw-color
-  ratchet blocks NEW ones, but exhaustively burning down the existing ~249 raw-color
-  occurrences is a dedicated effort, NOT claimed complete here.
+## NEW finding from the sweep — FIXED
+- **Dark-mode white-on-white (P2):** the wizard "Study Days" step (`StudyDayCard`) +
+  "Add Lifetime Learning" curriculum-picker card render muted-grey text on a hardcoded
+  WHITE card (measured **1.16:1** in dark). Same hardcoded-white class the deferred pass
+  fixed elsewhere. **FIXED** (`Colors.white` → `brandCreamCard` in
+  `step_study_days.dart` + `lifetime_marking_screen.dart`): 1.16:1 → **14.94:1**;
+  red-demoed (reverting makes the real-widget test render white and fail), 32/32 theme
+  tests, audit PASSED, light mode unchanged.
+- ⚠️ **Dark mode still has a LONG TAIL of hardcoded-white cards.** The raw-color ratchet
+  (`check_raw_color_literal_ratchet.dart`) blocks NEW ones, but exhaustively burning down
+  the existing ~249 raw-color occurrences is a dedicated effort and is **NOT** claimed
+  complete here. Every dark-mode site surfaced on-device this campaign is fixed; the tail
+  that no one has looked at is genuinely open.
+
+## Correction to the "NOT reached" list above
+5560's coverage was fuller than first recorded: item 4 (4-tab sense-check) **PASSED** in
+dark mode for both profiles, and "Reward Configuration"/"Parental Controls" were not
+"unreached" — they **do not exist by those names** in this build (the coordinator's brief
+used stale run-10 labels); the agent searched thoroughly and flagged the naming gap rather
+than guessing. So 5560 completed its full mandate.
 
 ## Verdict
 
