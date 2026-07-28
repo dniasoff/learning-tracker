@@ -26,6 +26,20 @@ different families want different levels:
   does not fire).
 - Default (per sefer) matches what shipped, so existing behaviour is the default.
 
+**Owner refinement (2026-07-28, after tier investigation):** SHIP the config with each
+curriculum's *real* tiers only. The app's Chumash content is stored `Sefer → Perek →
+Pasuk` with **no Parsha level** (`curriculum_defaults.dart:309`), so a per-sidra siyum is
+**not buildable as a toggle** — it would require re-structuring Chumash content by parsha
+(a separate, larger content project, explicitly DEFERRED). Tiers offered per curriculum:
+Chumash / Nach / Tanach / Mussar = {Whole, per-Sefer}; Mishnayos / Bavli / Yerushalmi =
+{Whole, per-Seder, per-Masechta}; Mishna Berurah = {Whole, per-Siman}; Mishneh Torah =
+{Whole, per-Sefer, per-Hilchos}. **Semantics:** the chosen tier is the FINEST level
+celebrated — coarser levels still fire, finer levels are suppressed (pick "Whole" → only
+the curriculum-level siyum; "per-Masechta" default → masechta + seder + whole). The gate
+is a filter on `_detectMilestones` output keyed on a per-profile, per-curriculum
+preference; because it only ever *suppresses* emissions it cannot reintroduce the run-11
+false-siyum class.
+
 ## 2. Dark-mode legibility — dedicated audit + burndown (to build)
 
 **Decision:** do a **dedicated, exhaustive** dark-mode legibility pass, not just fix-as-
@@ -54,6 +68,16 @@ progress is presented so it's clear and not self-contradictory.
 - This is a design task: propose a clearer layout (e.g. two clearly-labelled sections, or a
   single progress model) before building. Investigate `curriculum_progress_screen.dart`'s
   `OverallStatsCard` and the four live progress aggregators.
+
+**Owner decision (2026-07-28): TWO LABELLED SECTIONS.** Rework `OverallStatsCard` into two
+clearly-headed groups — **"This track · this cycle"** (the time-gated
+`currentCyclePercentage` + the count breakdown: completed-all-stages / in-progress /
+not-started) and **"Whole [curriculum] · lifetime"** (the lifetime %, i.e. distinct items
+ever touched / total). Every number sits under an explicit scope header so the
+track-cycle figure and the whole-curriculum lifetime figure never read as contradictory.
+Do NOT equalise the numbers (they answer different questions — the distinction is real).
+Verify the exact scope of each count row at build time against
+`progress-percentage-divergence.md` before labelling it.
 
 ## 4. Learn tab eager-load — LEAVE AS-IS (documented, not acting)
 
