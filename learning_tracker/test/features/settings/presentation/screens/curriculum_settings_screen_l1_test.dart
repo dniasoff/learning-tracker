@@ -363,12 +363,13 @@ void main() {
   // ── Divider between tiles ────────────────────────────────────────────────────
 
   group('CurriculumSettingsScreen — layout', () {
-    testWidgets('Divider is present between Change Program and Request tiles', (
-      tester,
-    ) async {
+    testWidgets('Dividers bracket the siyum-granularity section between the '
+        'Change Program and Request tiles', (tester) async {
       await _pump(tester, _buildApp(db: _db));
 
-      expect(find.byType(Divider), findsOneWidget);
+      // Two dividers now bracket the siyum-granularity selector section that
+      // sits between the Change-Program tile and the Request-Program tile.
+      expect(find.byType(Divider), findsNWidgets(2));
 
       await _tearDown(tester);
     });

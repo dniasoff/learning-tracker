@@ -321,12 +321,21 @@ List<ContentItem> _mishnaBerurahContent() {
 /// Build a [ProviderContainer] with overrides that pin the in-memory DB,
 /// the active curricula list, and curriculum-specific content.
 ///
+/// [granularity] pins the siyum-granularity gate for every active curriculum
+/// (via `siyumGranularityProvider`). It defaults to [MilestoneLevel.unit] — the
+/// finest tier — which is a pass-through filter, so the pre-gate assertions
+/// throughout this file keep their original expected values. Overriding it is
+/// also necessary to keep this binding-less container off SharedPreferences
+/// (the real notifier reads it in `build`), mirroring the existing
+/// useHebrewTerms / variant overrides.
+///
 /// All other providers (the actual milestone detector, the ledger DAO
 /// query, the level tallies) run through their real implementations.
 ProviderContainer _container({
   required UserDatabase db,
   required List<CurriculumId> activeCurricula,
   required Map<CurriculumId, List<ContentItem>> content,
+  MilestoneLevel granularity = MilestoneLevel.unit,
 }) {
   return ProviderContainer(
     overrides: [
@@ -340,9 +349,38 @@ ProviderContainer _container({
         curriculumContentProvider(
           entry.key,
         ).overrideWith((ref) => Future.value(entry.value)),
+      for (final curriculum in activeCurricula)
+        siyumGranularityProvider(curriculum).overrideWithValue(granularity),
     ],
   );
 }
+
+/// Mishnayos content with a SINGLE seder (Zeraim) of two masechtos — the
+/// minimal shape that emits ALL three milestone tiers when both masechtos are
+/// in the ledger: 2 unit + 1 aggregate (Zeraim complete) + 1 curriculum (both
+/// of the two total units complete). Used by the granularity-gate tests.
+List<ContentItem> _oneSederContent() => const [
+  ContentItem(
+    curriculumId: 'mishnayos',
+    level1: 'Zeraim',
+    level2: 'Berakhot',
+    displayNameHe: 'ברכות',
+    displayNameEn: 'Berakhot',
+    sefariaRef: 'Mishnah Berakhot 1.1',
+    sortOrder: 0,
+    isLeaf: true,
+  ),
+  ContentItem(
+    curriculumId: 'mishnayos',
+    level1: 'Zeraim',
+    level2: 'Peah',
+    displayNameHe: 'פאה',
+    displayNameEn: 'Peah',
+    sefariaRef: 'Mishnah Peah 1.1',
+    sortOrder: 1,
+    isLeaf: true,
+  ),
+];
 
 void main() {
   group('JourneySortModeValue', () {
@@ -830,6 +868,129 @@ void main() {
         expect(unitMilestones, hasLength(1));
         // Latest-wins: the milestone's date matches the later entry.
         expect(unitMilestones.single.achievedAt, DateTime(2026, 5, 10));
+      },
+    );
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Configurable siyum granularity — the gate applied INSIDE journeyViewModel
+  // after `_detectMilestones`. A single-seder Mishnayos ledger emits all three
+  // tiers (2 unit + 1 aggregate + 1 curriculum); the chosen tier suppresses
+  // anything finer than itself. `_detectMilestones` output is identical across
+  // the three cases — only the gate differs.
+  // ─────────────────────────────────────────────────────────────────────────
+
+  group('siyum granularity gate — journeyViewModel filtering', () {
+    // TQ-6: each test owns its in-memory DB via the sanctioned
+    // `final db = inMemoryDb(); addTearDown(db.close);` form (not a group-level
+    // setUp/tearDown), so the native handle is always closed.
+    Future<UserDatabase> freshDb() async {
+      final db = inMemoryDb();
+      addTearDown(db.close);
+      await seedProfile(db);
+      final base = DateTime(2026, 1, 1);
+      for (final (i, masechta) in ['Berakhot', 'Peah'].indexed) {
+        await _seedMasechtaLedger(
+          db,
+          curriculum: CurriculumId.mishnayos,
+          masechta: masechta,
+          at: base.add(Duration(days: i)),
+        );
+      }
+      return db;
+    }
+
+    Future<JourneyViewModel> readVm(
+      UserDatabase db,
+      MilestoneLevel granularity,
+    ) async {
+      final container = _container(
+        db: db,
+        activeCurricula: const [CurriculumId.mishnayos],
+        content: {CurriculumId.mishnayos: _oneSederContent()},
+        granularity: granularity,
+      );
+      addTearDown(container.dispose);
+      return container.read(journeyViewModelProvider(_profileId).future);
+    }
+
+    List<MilestoneLevel> levelsFor(JourneyViewModel vm) => vm.curricula
+        .firstWhere((c) => c.curriculumId == CurriculumId.mishnayos)
+        .milestones
+        .map((m) => m.level)
+        .toList();
+
+    test(
+      'chosen = unit → all three tiers fire (2 unit · 1 agg · 1 curr)',
+      () async {
+        final db = await freshDb();
+        final vm = await readVm(db, MilestoneLevel.unit);
+
+        expect(vm.unitLevelSiyumimCount, 2);
+        expect(vm.aggregateLevelSiyumimCount, 1);
+        expect(vm.curriculumLevelSiyumimCount, 1);
+        expect(levelsFor(vm), hasLength(4));
+      },
+    );
+
+    test(
+      'chosen = aggregate → unit suppressed (0 unit · 1 agg · 1 curr)',
+      () async {
+        final db = await freshDb();
+        final vm = await readVm(db, MilestoneLevel.aggregate);
+
+        expect(
+          vm.unitLevelSiyumimCount,
+          0,
+          reason: 'per-masechta siyumim suppressed at aggregate granularity',
+        );
+        expect(vm.aggregateLevelSiyumimCount, 1);
+        expect(vm.curriculumLevelSiyumimCount, 1);
+        final levels = levelsFor(vm);
+        expect(levels, isNot(contains(MilestoneLevel.unit)));
+        expect(levels, hasLength(2));
+      },
+    );
+
+    test('chosen = curriculum → only the whole siyum fires (0·0·1)', () async {
+      final db = await freshDb();
+      final vm = await readVm(db, MilestoneLevel.curriculum);
+
+      expect(vm.unitLevelSiyumimCount, 0);
+      expect(
+        vm.aggregateLevelSiyumimCount,
+        0,
+        reason: 'seder siyum suppressed at curriculum granularity',
+      );
+      expect(vm.curriculumLevelSiyumimCount, 1);
+      expect(levelsFor(vm), [MilestoneLevel.curriculum]);
+    });
+
+    test(
+      'DEFAULT-BEHAVIOUR EQUIVALENCE — default (unit) === unfiltered emission',
+      () async {
+        final db = await freshDb();
+        // `_container` defaults granularity to unit (what an unset preference
+        // resolves to). The result must be the full three-tier emission,
+        // identical to pre-gate behaviour.
+        final container = _container(
+          db: db,
+          activeCurricula: const [CurriculumId.mishnayos],
+          content: {CurriculumId.mishnayos: _oneSederContent()},
+        );
+        addTearDown(container.dispose);
+        final vm = await container.read(
+          journeyViewModelProvider(_profileId).future,
+        );
+
+        expect(vm.unitLevelSiyumimCount, 2);
+        expect(vm.aggregateLevelSiyumimCount, 1);
+        expect(vm.curriculumLevelSiyumimCount, 1);
+        expect(
+          levelsFor(vm),
+          hasLength(4),
+          reason: 'no preference set (default unit) must emit every tier',
+        );
       },
     );
   });

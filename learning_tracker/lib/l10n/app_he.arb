@@ -2221,6 +2221,22 @@
     }
   },
 
+  "siyumGranularityTitle": "חגגו סיום ברמת",
+  "@siyumGranularityTitle": {
+    "description": "Section title for the per-curriculum siyum-granularity radio selector on the Curriculum Settings screen. Followed by the tier options (e.g. Masechta / Seder / Whole Bavli)."
+  },
+  "siyumGranularitySubtitle": "אבני דרך גדולות עדיין נחגגות; קטנות מהן מוסתרות.",
+  "@siyumGranularitySubtitle": {
+    "description": "Helper text under the siyum-granularity selector explaining that the chosen tier is the finest one celebrated — anything finer is suppressed, anything coarser still fires."
+  },
+  "siyumGranularityWholeCurriculum": "כל {curriculum}",
+  "@siyumGranularityWholeCurriculum": {
+    "description": "Coarsest siyum-granularity option — celebrate only the whole-curriculum siyum. `{curriculum}` is the localized curriculum name (e.g. Chumash, Talmud Bavli).",
+    "placeholders": {
+      "curriculum": { "type": "String" }
+    }
+  },
+
   "siyumimLevelCurriculum": "{count, plural, one{סיום אחד ברמת מסלול} other{{count} סיומים ברמת מסלול}}",
   "@siyumimLevelCurriculum": {
     "description": "IL-3 fix: ICU plural. Top-counter row on the Siyumim & Milestones screen for the curriculum-complete tier.",

@@ -128,7 +128,7 @@ final class JourneyViewModelProvider
   }
 }
 
-String _$journeyViewModelHash() => r'2af56ea76c448e4ca66487f473563f6db4c6b252';
+String _$journeyViewModelHash() => r'9eaa660b66a70cf78c2e1c8f102a3bdb92a5dcdc';
 
 /// Computes the full JourneyViewModel for a given profile.
 
@@ -150,4 +150,165 @@ final class JourneyViewModelFamily extends $Family
 
   @override
   String toString() => r'journeyViewModelProvider';
+}
+
+/// The siyum tiers offered for [curriculum] in Settings, finest → coarsest.
+///
+/// Always includes [MilestoneLevel.unit] (per-masechta/sefer/siman/hilchos)
+/// and [MilestoneLevel.curriculum] (the whole-curriculum siyum). The
+/// [MilestoneLevel.aggregate] (seder-style) tier is offered only when the
+/// curriculum's content exposes a *meaningful* aggregate: it must both pass
+/// [_hasAggregateLevel] (the same predicate that gates aggregate emission, so
+/// the UI can never offer a tier the engine won't fire) AND have more than one
+/// level-1 group. The second clause excludes a degenerate single-group
+/// "aggregate" that coincides with the whole curriculum (Mishna Berurah's one
+/// book of 697 simanim), which would otherwise duplicate the curriculum tier.
+///
+/// The list is a strict superset relationship to emission: a tier absent here
+/// is only ever a tier the granularity gate could suppress, never one it would
+/// fabricate.
+
+@ProviderFor(availableSiyumTiers)
+final availableSiyumTiersProvider = AvailableSiyumTiersFamily._();
+
+/// The siyum tiers offered for [curriculum] in Settings, finest → coarsest.
+///
+/// Always includes [MilestoneLevel.unit] (per-masechta/sefer/siman/hilchos)
+/// and [MilestoneLevel.curriculum] (the whole-curriculum siyum). The
+/// [MilestoneLevel.aggregate] (seder-style) tier is offered only when the
+/// curriculum's content exposes a *meaningful* aggregate: it must both pass
+/// [_hasAggregateLevel] (the same predicate that gates aggregate emission, so
+/// the UI can never offer a tier the engine won't fire) AND have more than one
+/// level-1 group. The second clause excludes a degenerate single-group
+/// "aggregate" that coincides with the whole curriculum (Mishna Berurah's one
+/// book of 697 simanim), which would otherwise duplicate the curriculum tier.
+///
+/// The list is a strict superset relationship to emission: a tier absent here
+/// is only ever a tier the granularity gate could suppress, never one it would
+/// fabricate.
+
+final class AvailableSiyumTiersProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<List<MilestoneLevel>>,
+          List<MilestoneLevel>,
+          FutureOr<List<MilestoneLevel>>
+        >
+    with
+        $FutureModifier<List<MilestoneLevel>>,
+        $FutureProvider<List<MilestoneLevel>> {
+  /// The siyum tiers offered for [curriculum] in Settings, finest → coarsest.
+  ///
+  /// Always includes [MilestoneLevel.unit] (per-masechta/sefer/siman/hilchos)
+  /// and [MilestoneLevel.curriculum] (the whole-curriculum siyum). The
+  /// [MilestoneLevel.aggregate] (seder-style) tier is offered only when the
+  /// curriculum's content exposes a *meaningful* aggregate: it must both pass
+  /// [_hasAggregateLevel] (the same predicate that gates aggregate emission, so
+  /// the UI can never offer a tier the engine won't fire) AND have more than one
+  /// level-1 group. The second clause excludes a degenerate single-group
+  /// "aggregate" that coincides with the whole curriculum (Mishna Berurah's one
+  /// book of 697 simanim), which would otherwise duplicate the curriculum tier.
+  ///
+  /// The list is a strict superset relationship to emission: a tier absent here
+  /// is only ever a tier the granularity gate could suppress, never one it would
+  /// fabricate.
+  AvailableSiyumTiersProvider._({
+    required AvailableSiyumTiersFamily super.from,
+    required CurriculumId super.argument,
+  }) : super(
+         retry: null,
+         name: r'availableSiyumTiersProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$availableSiyumTiersHash();
+
+  @override
+  String toString() {
+    return r'availableSiyumTiersProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<List<MilestoneLevel>> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<List<MilestoneLevel>> create(Ref ref) {
+    final argument = this.argument as CurriculumId;
+    return availableSiyumTiers(ref, argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is AvailableSiyumTiersProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$availableSiyumTiersHash() =>
+    r'dc44f57d4d31b748c624ed585bbc6c8bd9b6bd75';
+
+/// The siyum tiers offered for [curriculum] in Settings, finest → coarsest.
+///
+/// Always includes [MilestoneLevel.unit] (per-masechta/sefer/siman/hilchos)
+/// and [MilestoneLevel.curriculum] (the whole-curriculum siyum). The
+/// [MilestoneLevel.aggregate] (seder-style) tier is offered only when the
+/// curriculum's content exposes a *meaningful* aggregate: it must both pass
+/// [_hasAggregateLevel] (the same predicate that gates aggregate emission, so
+/// the UI can never offer a tier the engine won't fire) AND have more than one
+/// level-1 group. The second clause excludes a degenerate single-group
+/// "aggregate" that coincides with the whole curriculum (Mishna Berurah's one
+/// book of 697 simanim), which would otherwise duplicate the curriculum tier.
+///
+/// The list is a strict superset relationship to emission: a tier absent here
+/// is only ever a tier the granularity gate could suppress, never one it would
+/// fabricate.
+
+final class AvailableSiyumTiersFamily extends $Family
+    with
+        $FunctionalFamilyOverride<
+          FutureOr<List<MilestoneLevel>>,
+          CurriculumId
+        > {
+  AvailableSiyumTiersFamily._()
+    : super(
+        retry: null,
+        name: r'availableSiyumTiersProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// The siyum tiers offered for [curriculum] in Settings, finest → coarsest.
+  ///
+  /// Always includes [MilestoneLevel.unit] (per-masechta/sefer/siman/hilchos)
+  /// and [MilestoneLevel.curriculum] (the whole-curriculum siyum). The
+  /// [MilestoneLevel.aggregate] (seder-style) tier is offered only when the
+  /// curriculum's content exposes a *meaningful* aggregate: it must both pass
+  /// [_hasAggregateLevel] (the same predicate that gates aggregate emission, so
+  /// the UI can never offer a tier the engine won't fire) AND have more than one
+  /// level-1 group. The second clause excludes a degenerate single-group
+  /// "aggregate" that coincides with the whole curriculum (Mishna Berurah's one
+  /// book of 697 simanim), which would otherwise duplicate the curriculum tier.
+  ///
+  /// The list is a strict superset relationship to emission: a tier absent here
+  /// is only ever a tier the granularity gate could suppress, never one it would
+  /// fabricate.
+
+  AvailableSiyumTiersProvider call(CurriculumId curriculum) =>
+      AvailableSiyumTiersProvider._(argument: curriculum, from: this);
+
+  @override
+  String toString() => r'availableSiyumTiersProvider';
 }

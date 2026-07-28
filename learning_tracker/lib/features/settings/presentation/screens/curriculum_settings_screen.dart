@@ -13,6 +13,7 @@ import 'package:learning_tracker/features/onboarding/presentation/screens/bulk_m
 import 'package:learning_tracker/features/onboarding/presentation/screens/learning_process_wizard_screen.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/scheduler/scheduler.dart';
+import 'package:learning_tracker/features/settings/presentation/widgets/siyum_granularity_selector.dart';
 import 'package:learning_tracker/features/tracks/tracks.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -143,6 +144,12 @@ class _CurriculumSettingsScreenState
               trailing: const Icon(Icons.chevron_right),
               onTap: () => _onChangeProgram(context),
             ),
+
+            const Divider(),
+
+            // Siyum granularity: the finest milestone level celebrated for
+            // this curriculum (per-profile, per-curriculum).
+            SiyumGranularitySelector(curriculum: _curriculum),
 
             const Divider(),
 

@@ -4320,6 +4320,18 @@ class AppLocalizationsHe extends AppLocalizations {
   }
 
   @override
+  String get siyumGranularityTitle => 'חגגו סיום ברמת';
+
+  @override
+  String get siyumGranularitySubtitle =>
+      'אבני דרך גדולות עדיין נחגגות; קטנות מהן מוסתרות.';
+
+  @override
+  String siyumGranularityWholeCurriculum(String curriculum) {
+    return 'כל $curriculum';
+  }
+
+  @override
   String siyumimLevelCurriculum(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

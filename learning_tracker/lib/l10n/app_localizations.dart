@@ -7383,6 +7383,24 @@ abstract class AppLocalizations {
   /// **'Siyum Hilchos {name}'**
   String siyumHilchos(String name);
 
+  /// Section title for the per-curriculum siyum-granularity radio selector on the Curriculum Settings screen. Followed by the tier options (e.g. Masechta / Seder / Whole Bavli).
+  ///
+  /// In en, this message translates to:
+  /// **'Celebrate a siyum at'**
+  String get siyumGranularityTitle;
+
+  /// Helper text under the siyum-granularity selector explaining that the chosen tier is the finest one celebrated — anything finer is suppressed, anything coarser still fires.
+  ///
+  /// In en, this message translates to:
+  /// **'Coarser milestones still fire; finer ones are hidden.'**
+  String get siyumGranularitySubtitle;
+
+  /// Coarsest siyum-granularity option — celebrate only the whole-curriculum siyum. `{curriculum}` is the localized curriculum name (e.g. Chumash, Talmud Bavli).
+  ///
+  /// In en, this message translates to:
+  /// **'Whole {curriculum}'**
+  String siyumGranularityWholeCurriculum(String curriculum);
+
   /// IL-3 fix: ICU plural so 1 reads '1 curriculum-level siyum' not '1 curriculum-level siyumim'. Top-counter row on the Siyumim & Milestones screen.
   ///
   /// In en, this message translates to:

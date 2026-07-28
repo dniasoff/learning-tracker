@@ -543,6 +543,13 @@ void main() {
             activeCurriculaProvider.overrideWith(
               (ref) => Future.value(const [CurriculumId.chumash]),
             ),
+            // Pin siyum granularity to the finest tier (pass-through gate) so
+            // this binding-less container stays off SharedPreferences and the
+            // milestone assertions below see the full unfiltered emission —
+            // mirrors the useHebrewTerms / variant overrides above.
+            siyumGranularityProvider(
+              CurriculumId.chumash,
+            ).overrideWithValue(MilestoneLevel.unit),
           ],
         );
         addTearDown(container.dispose);

@@ -3,6 +3,7 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/learning/domain/services/completion_detection_service.dart';
@@ -10,6 +11,7 @@ import 'package:learning_tracker/features/learning/presentation/providers/comple
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/progress/domain/models/journey_view_model.dart';
+import 'package:learning_tracker/features/progress/domain/siyum_granularity_filter.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -154,16 +156,27 @@ Future<JourneyViewModel> journeyViewModel(Ref ref, int profileId) async {
         .map((e) => e.unitIdentifier)
         .toSet();
 
-    // Detect milestones at all three levels.
+    // Detect milestones at all three levels — `_detectMilestones` stays pure
+    // (emits everything the ledger earns). The per-(profile, curriculum) siyum
+    // granularity is then applied HERE as a suppression-only filter, so a
+    // family that only wants a whole-Chumash siyum never sees the per-sefer
+    // rows. profileId is in scope at this call site, keeping the detector
+    // itself testable in isolation.
     final milestones = _detectMilestones(
       ref,
       entriesForCurriculum,
       content,
       curriculum,
     );
+    final chosenTier = ref.watch(siyumGranularityProvider(curriculum));
+    final visibleMilestones = filterMilestonesByGranularity(
+      milestones,
+      chosenTier,
+    );
 
-    // Tally the level breakdown for the top-of-screen counters.
-    for (final m in milestones) {
+    // Tally the level breakdown for the top-of-screen counters from the
+    // filtered set so the counters never advertise a suppressed tier.
+    for (final m in visibleMilestones) {
       switch (m.level) {
         case MilestoneLevel.unit:
           unitLevelSiyumimCount++;
@@ -184,7 +197,7 @@ Future<JourneyViewModel> journeyViewModel(Ref ref, int profileId) async {
           completions: completions,
           uniqueUnitsCompleted: uniqueUnits.length,
           totalUnitsAvailable: totalUnits,
-          milestones: milestones,
+          milestones: visibleMilestones,
         ),
       );
     }
@@ -198,6 +211,40 @@ Future<JourneyViewModel> journeyViewModel(Ref ref, int profileId) async {
     aggregateLevelSiyumimCount: aggregateLevelSiyumimCount,
     curriculumLevelSiyumimCount: curriculumLevelSiyumimCount,
   );
+}
+
+/// The siyum tiers offered for [curriculum] in Settings, finest → coarsest.
+///
+/// Always includes [MilestoneLevel.unit] (per-masechta/sefer/siman/hilchos)
+/// and [MilestoneLevel.curriculum] (the whole-curriculum siyum). The
+/// [MilestoneLevel.aggregate] (seder-style) tier is offered only when the
+/// curriculum's content exposes a *meaningful* aggregate: it must both pass
+/// [_hasAggregateLevel] (the same predicate that gates aggregate emission, so
+/// the UI can never offer a tier the engine won't fire) AND have more than one
+/// level-1 group. The second clause excludes a degenerate single-group
+/// "aggregate" that coincides with the whole curriculum (Mishna Berurah's one
+/// book of 697 simanim), which would otherwise duplicate the curriculum tier.
+///
+/// The list is a strict superset relationship to emission: a tier absent here
+/// is only ever a tier the granularity gate could suppress, never one it would
+/// fabricate.
+@riverpod
+Future<List<MilestoneLevel>> availableSiyumTiers(
+  Ref ref,
+  CurriculumId curriculum,
+) async {
+  final content = await ref.watch(curriculumContentProvider(curriculum).future);
+  final groupsWithUnits = <String>{};
+  for (final item in content) {
+    if (item.level2 != null) groupsWithUnits.add(item.level1);
+  }
+  final offersAggregate =
+      _hasAggregateLevel(content, curriculum) && groupsWithUnits.length > 1;
+  return [
+    MilestoneLevel.unit,
+    if (offersAggregate) MilestoneLevel.aggregate,
+    MilestoneLevel.curriculum,
+  ];
 }
 
 /// Count total available units for a curriculum.

@@ -256,6 +256,120 @@ final class TextDisplayPreferenceProvider
 String _$textDisplayPreferenceHash() =>
     r'edc7eb2168517732087c61fb3b867f0769032924';
 
+/// Long-lived store for the per-(profile, curriculum) siyum-granularity
+/// preference. Keyed by [CurriculumId] because the value is per-curriculum;
+/// the underlying broadcast stream survives route changes so the journey and
+/// settings screens stay in sync.
+// keepAlive: profile-scoped store; lives for the app session.
+
+@ProviderFor(siyumGranularityPreference)
+final siyumGranularityPreferenceProvider = SiyumGranularityPreferenceFamily._();
+
+/// Long-lived store for the per-(profile, curriculum) siyum-granularity
+/// preference. Keyed by [CurriculumId] because the value is per-curriculum;
+/// the underlying broadcast stream survives route changes so the journey and
+/// settings screens stay in sync.
+// keepAlive: profile-scoped store; lives for the app session.
+
+final class SiyumGranularityPreferenceProvider
+    extends
+        $FunctionalProvider<
+          SiyumGranularityPreference,
+          SiyumGranularityPreference,
+          SiyumGranularityPreference
+        >
+    with $Provider<SiyumGranularityPreference> {
+  /// Long-lived store for the per-(profile, curriculum) siyum-granularity
+  /// preference. Keyed by [CurriculumId] because the value is per-curriculum;
+  /// the underlying broadcast stream survives route changes so the journey and
+  /// settings screens stay in sync.
+  // keepAlive: profile-scoped store; lives for the app session.
+  SiyumGranularityPreferenceProvider._({
+    required SiyumGranularityPreferenceFamily super.from,
+    required CurriculumId super.argument,
+  }) : super(
+         retry: null,
+         name: r'siyumGranularityPreferenceProvider',
+         isAutoDispose: false,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$siyumGranularityPreferenceHash();
+
+  @override
+  String toString() {
+    return r'siyumGranularityPreferenceProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $ProviderElement<SiyumGranularityPreference> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  SiyumGranularityPreference create(Ref ref) {
+    final argument = this.argument as CurriculumId;
+    return siyumGranularityPreference(ref, argument);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(SiyumGranularityPreference value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<SiyumGranularityPreference>(value),
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is SiyumGranularityPreferenceProvider &&
+        other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$siyumGranularityPreferenceHash() =>
+    r'eb98c14c8c19c78d2648f60563c2fa0477a5c7eb';
+
+/// Long-lived store for the per-(profile, curriculum) siyum-granularity
+/// preference. Keyed by [CurriculumId] because the value is per-curriculum;
+/// the underlying broadcast stream survives route changes so the journey and
+/// settings screens stay in sync.
+// keepAlive: profile-scoped store; lives for the app session.
+
+final class SiyumGranularityPreferenceFamily extends $Family
+    with $FunctionalFamilyOverride<SiyumGranularityPreference, CurriculumId> {
+  SiyumGranularityPreferenceFamily._()
+    : super(
+        retry: null,
+        name: r'siyumGranularityPreferenceProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: false,
+      );
+
+  /// Long-lived store for the per-(profile, curriculum) siyum-granularity
+  /// preference. Keyed by [CurriculumId] because the value is per-curriculum;
+  /// the underlying broadcast stream survives route changes so the journey and
+  /// settings screens stay in sync.
+  // keepAlive: profile-scoped store; lives for the app session.
+
+  SiyumGranularityPreferenceProvider call(CurriculumId curriculum) =>
+      SiyumGranularityPreferenceProvider._(argument: curriculum, from: this);
+
+  @override
+  String toString() => r'siyumGranularityPreferenceProvider';
+}
+
 /// Whether to render Jewish learning terms in Hebrew script for the active
 /// profile. This is the **only** `core/` entry point for the toggle —
 /// `core/labels/` reads here, never via `features/settings/`.
@@ -674,5 +788,148 @@ abstract class _$CurrentFontSize extends $Notifier<FontSize> {
               Object?
             >;
     element.handleCreate(ref, build);
+  }
+}
+
+/// The finest [MilestoneLevel] the active profile wants celebrated for
+/// [curriculum] (a Riverpod family keyed by curriculum). Defaults to
+/// [MilestoneLevel.unit] — the finest tier — so an unset preference reproduces
+/// the current shipped behaviour. The journey layer reads this and suppresses
+/// any milestone finer than the chosen level; it can only ever remove
+/// emissions, never add one.
+// keepAlive: mirrors a persisted preference; must survive widget unmounts.
+
+@ProviderFor(SiyumGranularity)
+final siyumGranularityProvider = SiyumGranularityFamily._();
+
+/// The finest [MilestoneLevel] the active profile wants celebrated for
+/// [curriculum] (a Riverpod family keyed by curriculum). Defaults to
+/// [MilestoneLevel.unit] — the finest tier — so an unset preference reproduces
+/// the current shipped behaviour. The journey layer reads this and suppresses
+/// any milestone finer than the chosen level; it can only ever remove
+/// emissions, never add one.
+// keepAlive: mirrors a persisted preference; must survive widget unmounts.
+final class SiyumGranularityProvider
+    extends $NotifierProvider<SiyumGranularity, MilestoneLevel> {
+  /// The finest [MilestoneLevel] the active profile wants celebrated for
+  /// [curriculum] (a Riverpod family keyed by curriculum). Defaults to
+  /// [MilestoneLevel.unit] — the finest tier — so an unset preference reproduces
+  /// the current shipped behaviour. The journey layer reads this and suppresses
+  /// any milestone finer than the chosen level; it can only ever remove
+  /// emissions, never add one.
+  // keepAlive: mirrors a persisted preference; must survive widget unmounts.
+  SiyumGranularityProvider._({
+    required SiyumGranularityFamily super.from,
+    required CurriculumId super.argument,
+  }) : super(
+         retry: null,
+         name: r'siyumGranularityProvider',
+         isAutoDispose: false,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$siyumGranularityHash();
+
+  @override
+  String toString() {
+    return r'siyumGranularityProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  SiyumGranularity create() => SiyumGranularity();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(MilestoneLevel value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<MilestoneLevel>(value),
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is SiyumGranularityProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$siyumGranularityHash() => r'382567ff6f9a87e53d37254c371db5cd284e34e8';
+
+/// The finest [MilestoneLevel] the active profile wants celebrated for
+/// [curriculum] (a Riverpod family keyed by curriculum). Defaults to
+/// [MilestoneLevel.unit] — the finest tier — so an unset preference reproduces
+/// the current shipped behaviour. The journey layer reads this and suppresses
+/// any milestone finer than the chosen level; it can only ever remove
+/// emissions, never add one.
+// keepAlive: mirrors a persisted preference; must survive widget unmounts.
+
+final class SiyumGranularityFamily extends $Family
+    with
+        $ClassFamilyOverride<
+          SiyumGranularity,
+          MilestoneLevel,
+          MilestoneLevel,
+          MilestoneLevel,
+          CurriculumId
+        > {
+  SiyumGranularityFamily._()
+    : super(
+        retry: null,
+        name: r'siyumGranularityProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: false,
+      );
+
+  /// The finest [MilestoneLevel] the active profile wants celebrated for
+  /// [curriculum] (a Riverpod family keyed by curriculum). Defaults to
+  /// [MilestoneLevel.unit] — the finest tier — so an unset preference reproduces
+  /// the current shipped behaviour. The journey layer reads this and suppresses
+  /// any milestone finer than the chosen level; it can only ever remove
+  /// emissions, never add one.
+  // keepAlive: mirrors a persisted preference; must survive widget unmounts.
+
+  SiyumGranularityProvider call(CurriculumId curriculum) =>
+      SiyumGranularityProvider._(argument: curriculum, from: this);
+
+  @override
+  String toString() => r'siyumGranularityProvider';
+}
+
+/// The finest [MilestoneLevel] the active profile wants celebrated for
+/// [curriculum] (a Riverpod family keyed by curriculum). Defaults to
+/// [MilestoneLevel.unit] — the finest tier — so an unset preference reproduces
+/// the current shipped behaviour. The journey layer reads this and suppresses
+/// any milestone finer than the chosen level; it can only ever remove
+/// emissions, never add one.
+// keepAlive: mirrors a persisted preference; must survive widget unmounts.
+
+abstract class _$SiyumGranularity extends $Notifier<MilestoneLevel> {
+  late final _$args = ref.$arg as CurriculumId;
+  CurriculumId get curriculum => _$args;
+
+  MilestoneLevel build(CurriculumId curriculum);
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final ref = this.ref as $Ref<MilestoneLevel, MilestoneLevel>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<MilestoneLevel, MilestoneLevel>,
+              MilestoneLevel,
+              Object?,
+              Object?
+            >;
+    element.handleCreate(ref, () => build(_$args));
   }
 }

@@ -2,15 +2,19 @@ import 'dart:async';
 import 'dart:ui';
 
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/preferences/hebrew_date_preference.dart';
 import 'package:learning_tracker/core/preferences/hebrew_terms_preference.dart';
 import 'package:learning_tracker/core/preferences/nikud_preference.dart';
 import 'package:learning_tracker/core/preferences/profile_scoped_preference.dart';
+import 'package:learning_tracker/core/preferences/siyum_granularity_preference.dart';
 import 'package:learning_tracker/core/preferences/text_display_preference.dart';
 import 'package:learning_tracker/core/preferences/text_display_preferences.dart';
 import 'package:learning_tracker/core/preferences/transliteration_variant_preference.dart';
 import 'package:learning_tracker/core/utils/guarded_persist.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/progress/domain/models/journey_view_model.dart'
+    show MilestoneLevel;
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart'
     show syncWriteFacadeProvider;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -55,6 +59,21 @@ TransliterationVariantPreference transliterationVariantPreference(Ref ref) {
 @Riverpod(keepAlive: true)
 TextDisplayPreference textDisplayPreference(Ref ref) {
   final pref = TextDisplayPreference();
+  ref.onDispose(pref.dispose);
+  return pref;
+}
+
+/// Long-lived store for the per-(profile, curriculum) siyum-granularity
+/// preference. Keyed by [CurriculumId] because the value is per-curriculum;
+/// the underlying broadcast stream survives route changes so the journey and
+/// settings screens stay in sync.
+// keepAlive: profile-scoped store; lives for the app session.
+@Riverpod(keepAlive: true)
+SiyumGranularityPreference siyumGranularityPreference(
+  Ref ref,
+  CurriculumId curriculum,
+) {
+  final pref = SiyumGranularityPreference(curriculum);
   ref.onDispose(pref.dispose);
   return pref;
 }
@@ -348,6 +367,48 @@ class CurrentFontSize extends _$CurrentFontSize
     await guardedPersist(
       event: 'current_font_size_persist_failed',
       write: () => _writeAndPushSnapshot(ref, pref, profileId, size),
+      onFailure: () => state = previous,
+    );
+  }
+}
+
+/// The finest [MilestoneLevel] the active profile wants celebrated for
+/// [curriculum] (a Riverpod family keyed by curriculum). Defaults to
+/// [MilestoneLevel.unit] — the finest tier — so an unset preference reproduces
+/// the current shipped behaviour. The journey layer reads this and suppresses
+/// any milestone finer than the chosen level; it can only ever remove
+/// emissions, never add one.
+// keepAlive: mirrors a persisted preference; must survive widget unmounts.
+@Riverpod(keepAlive: true)
+class SiyumGranularity extends _$SiyumGranularity
+    with _SentinelGuardedPreference<MilestoneLevel> {
+  @override
+  MilestoneLevel build(CurriculumId curriculum) {
+    final profileId = ref.watch(activeProfileIdProvider);
+    // IL-1 fix: see _SentinelGuardedPreference — do NOT re-bind when
+    // profileId transiently reverts to the sentinel 0.
+    if (sentinelBlocksRebind(profileId)) return state;
+    final pref = ref.watch(siyumGranularityPreferenceProvider(curriculum));
+    _bindObserver(ref, pref, profileId, (value) {
+      if (value != state) state = value;
+    });
+    return pref.defaultValue;
+  }
+
+  Future<void> set(MilestoneLevel level) async {
+    if (level == state) return;
+    final profileId = ref.read(activeProfileIdProvider);
+    final pref = ref.read(siyumGranularityPreferenceProvider(curriculum));
+    final previous = state;
+    state = level;
+    // Siyum granularity is local-only — no Firestore push (mirrors
+    // CurrentTransliterationVariant.set).
+    // AUD-core-preferences-04 (EH-2): see UseHebrewTerms.set — guard the
+    // persistence write so a failure logs + rolls back instead of leaving
+    // state silently diverged from the persisted value.
+    await guardedPersist(
+      event: 'siyum_granularity_persist_failed',
+      write: () => pref.write(profileId, level),
       onFailure: () => state = previous,
     );
   }

@@ -35,6 +35,14 @@ class ProfileScopedPreferenceKeys {
   static String uiPreferencesUpdatedAtMs(int profileId) =>
       'ui_preferences_updated_at_ms_p$profileId';
 
+  /// Per-(profile, curriculum) siyum granularity: the FINEST milestone level a
+  /// family wants celebrated for [curriculumStorageKey]. Curriculum is part of
+  /// the key (not just the profile) because the choice is per-curriculum — a
+  /// family may want per-masechta siyumim for Mishnayos but only a whole-Chumash
+  /// siyum. Pass [CurriculumId.storageKey] as [curriculumStorageKey].
+  static String siyumGranularity(int profileId, String curriculumStorageKey) =>
+      'siyum_granularity_p${profileId}_$curriculumStorageKey';
+
   static String readAppLocale(SharedPreferences prefs, int profileId) {
     final scoped = prefs.getString(appLocale(profileId));
     if (scoped != null) return scoped;

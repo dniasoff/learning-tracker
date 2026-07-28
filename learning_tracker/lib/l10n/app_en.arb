@@ -2530,6 +2530,22 @@
     }
   },
 
+  "siyumGranularityTitle": "Celebrate a siyum at",
+  "@siyumGranularityTitle": {
+    "description": "Section title for the per-curriculum siyum-granularity radio selector on the Curriculum Settings screen. Followed by the tier options (e.g. Masechta / Seder / Whole Bavli)."
+  },
+  "siyumGranularitySubtitle": "Coarser milestones still fire; finer ones are hidden.",
+  "@siyumGranularitySubtitle": {
+    "description": "Helper text under the siyum-granularity selector explaining that the chosen tier is the finest one celebrated — anything finer is suppressed, anything coarser still fires."
+  },
+  "siyumGranularityWholeCurriculum": "Whole {curriculum}",
+  "@siyumGranularityWholeCurriculum": {
+    "description": "Coarsest siyum-granularity option — celebrate only the whole-curriculum siyum. `{curriculum}` is the localized curriculum name (e.g. Chumash, Talmud Bavli).",
+    "placeholders": {
+      "curriculum": { "type": "String" }
+    }
+  },
+
   "siyumimLevelCurriculum": "{count, plural, one{1 curriculum-level siyum} other{{count} curriculum-level siyumim}}",
   "@siyumimLevelCurriculum": {
     "description": "IL-3 fix: ICU plural so 1 reads '1 curriculum-level siyum' not '1 curriculum-level siyumim'. Top-counter row on the Siyumim & Milestones screen.",

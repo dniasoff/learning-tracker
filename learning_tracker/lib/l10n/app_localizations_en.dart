@@ -4365,6 +4365,18 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get siyumGranularityTitle => 'Celebrate a siyum at';
+
+  @override
+  String get siyumGranularitySubtitle =>
+      'Coarser milestones still fire; finer ones are hidden.';
+
+  @override
+  String siyumGranularityWholeCurriculum(String curriculum) {
+    return 'Whole $curriculum';
+  }
+
+  @override
   String siyumimLevelCurriculum(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

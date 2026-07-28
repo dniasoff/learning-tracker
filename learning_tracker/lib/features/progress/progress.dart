@@ -14,8 +14,24 @@
 // pointing at one such consumer.
 library progress;
 
+// Siyum-granularity settings support — the tier enum the selector is keyed on.
+// Consumed by:
+//   - lib/features/settings/presentation/widgets/siyum_granularity_selector.dart
+export 'domain/models/journey_view_model.dart' show MilestoneLevel;
+
+// Siyum-granularity settings support — the tiers offered per curriculum.
+// Consumed by:
+//   - lib/features/settings/presentation/widgets/siyum_granularity_selector.dart
+export 'presentation/providers/journey_providers.dart'
+    show availableSiyumTiersProvider;
+
 // Tier counter row — header widget shared between Progress hub and the
 // Dashboard body. Consumed by:
 //   - lib/features/dashboard/presentation/widgets/dashboard_body.dart
 export 'presentation/widgets/progress_tier_counter_row.dart'
     show ProgressTierCounterRow;
+
+// Siyum-granularity settings support — the localized label for each tier.
+// Consumed by:
+//   - lib/features/settings/presentation/widgets/siyum_granularity_selector.dart
+export 'presentation/widgets/siyum_tier_label.dart' show siyumTierLabel;
