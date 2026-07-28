@@ -7,4 +7,4 @@
 # (device-audit-run9, ~15-widget white-surface cluster).
 # Lower this only by migrating a call site onto context.colors.* — do
 # NOT raise it to paper over a new raw literal.
-229
+222
