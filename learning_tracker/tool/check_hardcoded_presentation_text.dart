@@ -73,7 +73,12 @@ const _baseline = <String>{
   // context.colors collapsed a two-line AppTheme reference above this
   // site, moving this SAME pre-existing, still-unaddressed AX-2 hit up
   // by 1 line. No content at this site changed.
-  'lib/features/settings/presentation/screens/settings_screen.dart:317',
+  // Dark-mode legibility burndown (owner decision #2): re-pinned from
+  // :317 — a doc comment added above the "Send Diagnostic Logs" tile's
+  // iconBackground (explaining its brandCreamSoft dark-mode fix) pushed
+  // this SAME pre-existing, still-unaddressed AX-2 hit down by 8 lines.
+  // No content at this site changed.
+  'lib/features/settings/presentation/screens/settings_screen.dart:325',
   // AUD-t-track_setup-01: re-pinned from :513 — the testability-seam
   // extraction (smartDefaultTrackName + its imports, added near the top of
   // this file so _getSmartDefault can delegate to a ref-free pure function)

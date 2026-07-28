@@ -180,14 +180,22 @@ class _LifetimeLibraryCategoryCard extends ConsumerWidget {
         child: Ink(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.white,
+            // AUD dark-mode sweep: was a hardcoded Colors.white, which stays
+            // white in dark mode while the title/percentage text below
+            // correctly reads context.colors.brandInk (near-white in dark)
+            // — white-on-white, measured 1.16:1 on the same token pair as
+            // the sibling fix in LifetimeCurriculumMarkingScreen below.
+            // brandCreamCard is the theme-aware card surface (equals the
+            // old literal exactly in light; darkens to 0xFF151A26 in dark,
+            // 14.94:1 with brandInk).
+            color: context.colors.brandCreamCard,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: context.colors.surfaceE9),
-            boxShadow: const [
+            boxShadow: [
               BoxShadow(
-                color: Color(0x121D2939),
+                color: context.colors.settingsProfileCardShadow,
                 blurRadius: 14,
-                offset: Offset(0, 4),
+                offset: const Offset(0, 4),
               ),
             ],
           ),
@@ -278,7 +286,13 @@ class _LifetimeLibraryCategoryCard extends ConsumerWidget {
                   child: LinearProgressIndicator(
                     value: summary.percentage.clamp(0.0, 1.0),
                     minHeight: 8,
-                    backgroundColor: const Color(0xFFE8ECF3),
+                    // AUD dark-mode sweep: was a hardcoded Color(0xFFE8ECF3)
+                    // that stayed a bright pale track in dark mode.
+                    // surfaceE9 is the app's existing "inactive background"
+                    // token (0xFFE9ECF2 in light — a 1-unit-per-channel
+                    // match to the old literal), and darkens with the card
+                    // in dark mode.
+                    backgroundColor: context.colors.surfaceE9,
                     valueColor: AlwaysStoppedAnimation<Color>(color),
                   ),
                 ),
@@ -684,7 +698,13 @@ class _LifetimeCurriculumMarkingScreenState
     return Scaffold(
       backgroundColor: context.colors.brandCreamCard,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        // AUD dark-mode sweep: was a hardcoded Colors.white under a
+        // foregroundColor/back-icon that already read brandInk/
+        // brandBlueDeep (both near-white in dark) — white-on-white,
+        // measured 1.16:1 (title) / 1.63:1 (back icon) in dark.
+        // brandCreamCard matches the Scaffold's own surface (pixel-
+        // identical to the old literal in light; darkens in dark).
+        backgroundColor: context.colors.brandCreamCard,
         foregroundColor: context.colors.brandInk,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
@@ -733,11 +753,17 @@ class _LifetimeCurriculumMarkingScreenState
                       color: context.colors.brandCreamCard,
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(color: context.colors.surfaceE9),
-                      boxShadow: const [
+                      boxShadow: [
+                        // AUD dark-mode sweep: was a hardcoded
+                        // Color(0x121D2939) navy-tinted shadow that stayed
+                        // light-tinted in dark mode. settingsProfileCardShadow
+                        // is the existing Settings card-shadow token (same
+                        // exact light-mode hex; plain black at higher alpha
+                        // in dark, matching UserProfileHeaderCard).
                         BoxShadow(
-                          color: Color(0x121D2939),
+                          color: context.colors.settingsProfileCardShadow,
                           blurRadius: 16,
-                          offset: Offset(0, 5),
+                          offset: const Offset(0, 5),
                         ),
                       ],
                     ),
@@ -958,8 +984,16 @@ class _LifetimeCurriculumMarkingScreenState
                                       style: OutlinedButton.styleFrom(
                                         foregroundColor:
                                             context.colors.brandInkMuted,
-                                        side: const BorderSide(
-                                          color: Color(0xFFD7DEEA),
+                                        // AUD dark-mode sweep: was a
+                                        // hardcoded Color(0xFFD7DEEA) —
+                                        // near-identical to brandOutline's
+                                        // own light value (0xFFD4DCE8) —
+                                        // that stayed a bright near-white
+                                        // ring around the button in dark
+                                        // mode instead of the app's subtle
+                                        // dark-mode border.
+                                        side: BorderSide(
+                                          color: context.colors.brandOutline,
                                         ),
                                       ),
                                       child: Text(l10n.clearSelection),
@@ -971,7 +1005,20 @@ class _LifetimeCurriculumMarkingScreenState
                                       style: FilledButton.styleFrom(
                                         backgroundColor:
                                             context.colors.brandBlue,
-                                        foregroundColor: Colors.white,
+                                        // AUD dark-mode sweep: was a
+                                        // hardcoded Colors.white — brandBlue
+                                        // LIGHTENS in dark mode (it is an
+                                        // ink-role token used here as a
+                                        // fill), so a fixed white label sank
+                                        // to 2.52:1. theme.colorScheme
+                                        // .onPrimary is the app's own
+                                        // contrast-computed pair for this
+                                        // exact fill (already used by every
+                                        // FilledButton that does NOT
+                                        // override its foreground) — near
+                                        // 8:1+ in both themes.
+                                        foregroundColor:
+                                            theme.colorScheme.onPrimary,
                                       ),
                                       onPressed: _saving || _selections.isEmpty
                                           ? null
@@ -979,12 +1026,16 @@ class _LifetimeCurriculumMarkingScreenState
                                               List.of(_selections),
                                             ),
                                       child: _saving
-                                          ? const SizedBox(
+                                          ? SizedBox(
                                               width: 20,
                                               height: 20,
                                               child: CircularProgressIndicator(
                                                 strokeWidth: 2,
-                                                color: Colors.white,
+                                                // Same fix as the button's
+                                                // foreground above — paints
+                                                // on the same brandBlue fill.
+                                                color:
+                                                    theme.colorScheme.onPrimary,
                                               ),
                                             )
                                           : Text(l10n.save),
