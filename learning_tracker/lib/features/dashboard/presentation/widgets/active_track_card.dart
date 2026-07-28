@@ -373,7 +373,15 @@ class ActiveTrackCard extends ConsumerWidget {
                     },
                     style: FilledButton.styleFrom(
                       backgroundColor: kActiveTrackPrimaryBlue(context),
-                      foregroundColor: Colors.white,
+                      // AUD-dashboard-darkmode: kActiveTrackPrimaryBlue is
+                      // brandBlue, which LIGHTENS in dark mode for its
+                      // normal ink-on-card role — a hardcoded white label
+                      // measured ~2.5:1 against that lightened fill in dark
+                      // mode. `colorScheme.onPrimary` is computed
+                      // per-brightness for text on `colorScheme.primary`
+                      // (== brandBlue): white in light (no regression),
+                      // near-black ink in dark (~7.6:1).
+                      foregroundColor: theme.colorScheme.onPrimary,
                       minimumSize: const Size(double.infinity, 48),
                       padding: EdgeInsets.zero,
                       shape: RoundedRectangleBorder(

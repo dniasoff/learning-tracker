@@ -16,8 +16,21 @@ Color kActiveTrackFocusPillBg(BuildContext context) =>
     context.colors.brandCreamSoft;
 
 /// Lifetime bar on the "all caught up" dashboard stats card (design spec).
+///
+/// AUD-dashboard-darkmode: this progress-bar FILL sits on the card's own
+/// blue gradient (`blueMedium`/`blueLight`/`blueDeepNavy`), which STAYS a
+/// deep, saturated blue in both themes (hero-fill role — see those tokens'
+/// doc comments). [goldTrophy] darkens to a near-brown in dark mode — right
+/// for ink on a FIXED WHITE surface, but on this coloured card it measures
+/// ~1.29:1 against the card's dark-navy track (WCAG non-text needs ≥3:1) —
+/// the fill was effectively invisible. [goldOnColouredSurface] is the token
+/// already split out for exactly this "ink/fill painted on a surface that
+/// stays coloured" role (see `dashboard_level_points_card.dart`, which uses
+/// it for its own sibling lifetime-progress fill) — ~11.96:1 on this card
+/// once used here. Light mode is pixel-identical: both tokens' light value
+/// is `0xFFFFC94A`.
 Color kAllCaughtUpProgressFill(BuildContext context) =>
-    context.colors.goldTrophy;
+    context.colors.goldOnColouredSurface;
 
 /// Child dashboard — points & rewards hero (design spec).
 Color kChildRewardsCardBlueTop(BuildContext context) =>
