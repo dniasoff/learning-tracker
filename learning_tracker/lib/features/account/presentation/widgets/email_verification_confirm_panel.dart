@@ -7,7 +7,20 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// Peach tone for the "Send Again" pill (matches email confirmation mock).
+/// Fixed in BOTH themes by design (never routed through AppPalette).
 const Color _sendAgainPeach = Color(0xFFFFE4D6);
+
+/// Ink/icon colour for the "Send Again" pill, paired with [_sendAgainPeach].
+///
+/// AUD-darkmode: `context.colors.brandInk` was used here, but brandInk is an
+/// ink-on-CARD role that deliberately LIGHTENS in dark mode (to stay legible
+/// against a darkening card) — on this always-light peach pill that produced
+/// near-white-on-peach in dark mode (measured ~1:1, the same class as the
+/// goldTrophy incident this campaign was warned not to repeat, but inverted:
+/// the ink lightened when the surface stayed fixed-light). Pinned to the
+/// exact old brandInk light literal so it stays legible in both themes:
+/// measured 14.6:1.
+const Color _sendAgainPeachInk = Color(0xFF101828);
 
 /// Opens the default mail client; [email] is optional (mailto target).
 Future<void> openEmailApp({String? email}) async {
@@ -123,9 +136,13 @@ class _MailIllustration extends StatelessWidget {
                 ),
               ],
             ),
-            child: const Icon(
+            // AUD-darkmode: brandBlue lightens in dark mode, so a hardcoded
+            // white icon on this circle measured ~2.52:1. onPrimary is the
+            // same dynamically-computed contrast-safe ink FilledButton
+            // already uses for this exact accent colour.
+            child: Icon(
               Icons.star_rounded,
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onPrimary,
               size: 16,
             ),
           ),
@@ -266,7 +283,12 @@ class _EmailVerificationConfirmPanelState
                     : () => openEmailApp(email: widget.email),
                 style: FilledButton.styleFrom(
                   backgroundColor: context.colors.brandBlue,
-                  foregroundColor: Colors.white,
+                  // AUD-darkmode: brandBlue lightens in dark mode, so a
+                  // hardcoded white foreground/label measured ~2.52:1.
+                  // onPrimary is the same dynamically-computed contrast-safe
+                  // ink FilledButton already uses for this exact accent
+                  // colour by default.
+                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
                   disabledBackgroundColor: context.colors.brandBlue.withValues(
                     alpha: 0.5,
                   ),
@@ -287,7 +309,7 @@ class _EmailVerificationConfirmPanelState
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.onPrimary,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -304,7 +326,12 @@ class _EmailVerificationConfirmPanelState
                     onPressed: busy ? null : _wrapSendAgain,
                     style: FilledButton.styleFrom(
                       backgroundColor: _sendAgainPeach,
-                      foregroundColor: context.colors.brandInk,
+                      // AUD-darkmode: brandInk is an ink-on-CARD role that
+                      // LIGHTENS in dark mode, but _sendAgainPeach is a FIXED
+                      // colour in both themes -- near-white-on-peach in dark
+                      // mode (~1:1). _sendAgainPeachInk stays dark in both
+                      // themes to match.
+                      foregroundColor: _sendAgainPeachInk,
                       disabledBackgroundColor: _sendAgainPeach.withValues(
                         alpha: 0.6,
                       ),
@@ -318,19 +345,17 @@ class _EmailVerificationConfirmPanelState
                             width: 20,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              color: context.colors.brandInk.withValues(
-                                alpha: 0.7,
-                              ),
+                              color: _sendAgainPeachInk.withValues(alpha: 0.7),
                             ),
                           )
                         : Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(
+                              const Icon(
                                 Icons.refresh_rounded,
                                 size: 20,
-                                color: context.colors.brandInk,
+                                color: _sendAgainPeachInk,
                               ),
                               const SizedBox(width: 6),
                               Flexible(
@@ -341,7 +366,7 @@ class _EmailVerificationConfirmPanelState
                                   style: Theme.of(context).textTheme.labelLarge
                                       ?.copyWith(
                                         fontWeight: FontWeight.w700,
-                                        color: context.colors.brandInk,
+                                        color: _sendAgainPeachInk,
                                       ),
                                 ),
                               ),

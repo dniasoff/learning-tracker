@@ -63,7 +63,7 @@ class TierStyle {
           cardBg: c.gamifTierBronzeCardBg,
           borderColor: c.gamifTierBronzeBorder,
           iconBg: c.gamifTierBronzeIconAccent,
-          iconFg: Colors.white,
+          iconFg: c.gamifTierBronzeIconFg,
           iconBorder: c.gamifTierBronzeDeepAccent,
           titleColor: c.gamifTierBronzeTitle,
           mutedIconColor: c.gamifTierBronzeIconAccent,

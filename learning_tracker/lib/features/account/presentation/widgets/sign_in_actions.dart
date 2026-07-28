@@ -64,10 +64,17 @@ class _SignInActionsState extends State<SignInActions> {
           height: 58,
           child: DecoratedBox(
             decoration: BoxDecoration(
+              // AUD-darkmode: brandBlue/brandBlueBright are ACCENT roles
+              // that intentionally LIGHTEN in dark mode, but this CTA paints
+              // them as a gradient FILL with hardcoded white text/spinner --
+              // in dark mode the gradient washed out to pale sky-blue,
+              // measured 1.85:1 against the bright end. signInCtaGradient*
+              // are pinned to the exact old brandBlue/brandBlueBright light
+              // literals in both themes, restoring 5.62-8.41:1.
               gradient: LinearGradient(
                 colors: [
-                  context.colors.brandBlue,
-                  context.colors.brandBlueBright,
+                  context.colors.signInCtaGradientStart,
+                  context.colors.signInCtaGradientEnd,
                 ],
               ),
               borderRadius: BorderRadius.circular(30),

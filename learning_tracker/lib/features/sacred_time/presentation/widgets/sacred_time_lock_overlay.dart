@@ -117,7 +117,14 @@ class _LockScreen extends StatelessWidget {
       case SacredWindowKind.yomTov:
         return _LockSpec(
           icon: Icons.celebration_outlined,
-          background: context.colors.accentPurpleDeep,
+          // AUD-darkmode: accentPurpleDeep is an ink/icon-on-card role that
+          // LIGHTENS in dark mode, but this full-screen lock overlay paints
+          // it as a HERO FILL with hardcoded white greeting/icon text --
+          // measured ~1.97:1 in dark. sacredTimeLockYomTovBg is pinned to
+          // the exact old accentPurpleDeep light literal in both themes,
+          // restoring ~10.55:1 (matching the other sacred-time lock
+          // backgrounds, which already stay deep in both themes).
+          background: context.colors.sacredTimeLockYomTovBg,
         );
       case SacredWindowKind.shabbosYomTov:
         return _LockSpec(

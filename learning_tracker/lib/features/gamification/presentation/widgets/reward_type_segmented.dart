@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 
-Color _kNavy(BuildContext context) => context.colors.brandBlueDeep;
+/// AUD-darkmode: brandBlueDeep is an ink-on-CARD role that LIGHTENS in dark
+/// mode, but the selected segment paints it as a FILL with hardcoded white
+/// text -- measured 1.63:1 in dark. chazaraSelectedGradientStart is pinned
+/// to this exact brandBlueDeep light literal (0xFF0E3392) in both themes.
+Color _kNavy(BuildContext context) =>
+    context.colors.chazaraSelectedGradientStart;
 Color _kFieldFill(BuildContext context) => context.colors.gamifFieldFillLight;
 Color _kMutedLabel(BuildContext context) => context.colors.gamifMutedLabelGrey;
 
