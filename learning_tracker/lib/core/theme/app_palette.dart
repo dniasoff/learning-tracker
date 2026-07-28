@@ -1053,8 +1053,19 @@ class AppPalette extends ThemeExtension<AppPalette> {
       _dark ? const Color(0xFF36425A) : const Color(0xFFB8C0CC);
 
   /// Points-over-time bar-chart fill.
-  Color get progressPointsBarFill =>
-      _dark ? const Color(0xFF332713) : const Color(0xFFF2D9B3);
+  ///
+  /// Run-11 progress-area sweep: this bar is drawn directly on
+  /// `brandCreamCard`/`colorScheme.surface` — an ADAPTIVE card, not a fixed
+  /// surface — the same ink-on-adaptive-card role as
+  /// [chartLimudBlue]/[progressChazaraSegment]. It used to DARKEN in dark
+  /// mode (`0xFF332713`), the derivation that is correct for ink painted on
+  /// a surface that stays fixed-light, not for a fill drawn on a card that
+  /// itself goes dark: measured **1.19:1** against `brandCreamCard`'s dark
+  /// value (`0xFF151A26`), the bars nearly invisible. Now pinned to the
+  /// existing light-mode hex in both themes (that pale tone already reads
+  /// clearly against the dark card — **12.71:1**); light mode is byte-for-
+  /// byte unchanged.
+  Color get progressPointsBarFill => const Color(0xFFF2D9B3);
 
   /// Progress/dashboard shared tier-counter row — streak accent.
   Color get progressTierStreakAccent =>
@@ -1102,8 +1113,17 @@ class AppPalette extends ThemeExtension<AppPalette> {
       _dark ? const Color(0xFF10306D) : const Color(0xFF153E8C);
 
   /// Lifetime-folder card gradient — bottom-right stop (bright blue).
+  ///
+  /// Run-11 progress-area sweep: `a68c97d5`'s "keep deep hero fills deep in
+  /// dark mode" sweep pinned this gradient's START stop deep but left this
+  /// END stop at its pre-sweep dark value (`0xFF84AAE0`) — still bright
+  /// enough that white content painted over it measured only **2.38:1**
+  /// (computed from the hex values), against a 4.5:1 AA floor. Darkened to
+  /// hold white text while staying visibly brighter than
+  /// [progressLifetimeCardGradientStart]'s dark value (preserving the
+  /// gradient's deep-to-bright shape): **7.90:1**. Light mode is unchanged.
   Color get progressLifetimeCardGradientEnd =>
-      _dark ? const Color(0xFF84AAE0) : const Color(0xFF3D7DDA);
+      _dark ? const Color(0xFF28518E) : const Color(0xFF3D7DDA);
 
   /// Lifetime-folder page-background gradient — top stop.
   Color get progressLifetimePageBgTop =>
@@ -1269,6 +1289,75 @@ class AppPalette extends ThemeExtension<AppPalette> {
   /// surfaces.
   Color get onboardingChildIconBg =>
       _dark ? const Color(0xFF241E38) : const Color(0xFFE8E0FF);
+
+  /// `OverallStatsCard` (Curriculum Progress screen) gradient — top-left stop
+  /// (deep blue hero fill).
+  ///
+  /// The card painted its gradient fill directly from
+  /// `brandBlueDeep`/`brandBlue`/`brandBlueBright`, with white title/stat
+  /// text on top. Those tokens are a CONTRAST role that deliberately
+  /// LIGHTENS in dark mode for use as ink on a dark surface (see their own
+  /// doc comments) — used as a FILL instead, the lightened dark-mode values
+  /// (`0xFFB9C9FF` / `0xFF7CA0FF` / `0xFFA3BEFF`) washed the card out to pale
+  /// sky-blue and dropped the white stat rows to **1.63:1** / **2.52:1** /
+  /// **1.85:1** (computed from the hex values), against a 4.5:1 AA floor.
+  /// Same hero-fill role/bug as
+  /// [blueMedium]/[blueLight]/[blueMid]/[chazaraSelectedGradientStart]
+  /// (`a68c97d5`'s "keep deep hero fills deep in dark mode" sweep, which
+  /// missed this call site). Pinned to the exact pre-fix light-mode hex in
+  /// both themes — light rendering is byte-identical to before, and a deep,
+  /// saturated blue in dark keeps the white content legible: **11.01:1**.
+  Color get progressOverallStatsGradientStart => const Color(0xFF0E3392);
+
+  /// `OverallStatsCard` gradient — middle stop (base blue), and also reused
+  /// by `LifetimeFolderGradients.card`'s middle stop (see
+  /// [progressLifetimeCardGradientMid]) — both sandwich a `brandBlue` middle
+  /// stop between two deep-hero-fixed stops. Paired with
+  /// [progressOverallStatsGradientStart] (see its doc) — **8.40:1** with
+  /// white content in dark, up from a measured **2.52:1**.
+  Color get progressOverallStatsGradientMid => const Color(0xFF1442B8);
+
+  /// `OverallStatsCard` gradient — bottom-right stop (bright blue). Paired
+  /// with [progressOverallStatsGradientStart] (see its doc) — **5.61:1**
+  /// with white content in dark, up from a measured **1.85:1**.
+  Color get progressOverallStatsGradientEnd => const Color(0xFF2B5FD9);
+
+  /// `LifetimeFolderGradients.card`'s middle gradient stop
+  /// (`progressLifetimeCardGradientStart` → `brandBlue` →
+  /// `progressLifetimeCardGradientEnd`, run-11 progress-area sweep).
+  ///
+  /// The card's start/end stops
+  /// ([progressLifetimeCardGradientStart]/[progressLifetimeCardGradientEnd])
+  /// are already pinned deep for dark mode, but the middle stop read
+  /// `context.colors.brandBlue` directly — a CONTRAST role that LIGHTENS in
+  /// dark mode for ink-on-dark-surface use (see its own doc). Used as a FILL
+  /// between two deep stops instead, dark mode painted a light pastel-blue
+  /// band (`0xFF7CA0FF`) in the middle of an otherwise-deep gradient,
+  /// dropping the folder header's white icon/title/hint text there to
+  /// **2.52:1** wherever it overlapped that band. Same value/fix as
+  /// [progressOverallStatsGradientMid] (identical `brandBlue`-light hex) —
+  /// kept as a separate token so each call site's name matches its own
+  /// widget, per this file's convention. **8.40:1** with white content in
+  /// dark.
+  Color get progressLifetimeCardGradientMid => const Color(0xFF1442B8);
+
+  /// Blue ink for the FIXED pale-blue icon chip (`0xFFEEF3FF`) shared by the
+  /// Progress hub's "Lifetime Knowledge" lens tile and its per-track row icon
+  /// (run-11 progress-area sweep).
+  ///
+  /// That chip background is a raw hex literal that does NOT adapt with
+  /// brightness (by design — the same fixed-chip shape as the "Recent
+  /// Activity"/"Siyumim & Milestones" lens tiles), but the icon read
+  /// `context.colors.brandBlue` directly, which LIGHTENS in dark mode for
+  /// its normal ink-on-ADAPTIVE-dark-card role. Painted on this fixed chip
+  /// instead, dark mode produced a pale-blue icon on a pale-blue chip:
+  /// measured **2.27:1** (computed from the hex values), against a 4.5:1 AA
+  /// floor — light mode (a deep blue icon on the same pale chip) was already
+  /// fine at 7.56:1. Same fix shape as [goldOnColouredSurface] (mirrored
+  /// direction: that token stays put for a fixed-DARK role; this one stays
+  /// put for a fixed-LIGHT role). Pinned to `brandBlue`'s light-mode hex in
+  /// both themes: **7.56:1** in dark too now.
+  Color get progressFixedChipBlueIcon => const Color(0xFF1442B8);
 
   /// Fully transparent.
   Color get transparent => const Color(0x00000000);

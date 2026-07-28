@@ -254,7 +254,12 @@ class _LifetimeKnowledgeLensTile extends ConsumerWidget {
     return _LensTile(
       icon: Icons.menu_book_outlined,
       iconBgColor: const Color(0xFFEEF3FF),
-      iconColor: context.colors.brandBlue,
+      // NOT context.colors.brandBlue — it LIGHTENS in dark mode for its
+      // normal ink-on-adaptive-dark-card role, which painted a pale-blue
+      // icon on this FIXED pale-blue chip (see
+      // AppPalette.progressFixedChipBlueIcon's doc, run-11 progress-area
+      // sweep).
+      iconColor: context.colors.progressFixedChipBlueIcon,
       title: l10n.tierLensLifetimeKnowledge,
       subtitle: l10n.itemsLearnedSubtitle,
       onTap: () => context.router.push(const LifetimeKnowledgeRoute()),
@@ -375,7 +380,10 @@ class _PerTrackRow extends ConsumerWidget {
               ),
               child: Icon(
                 curriculumIcon(curriculum),
-                color: context.colors.brandBlue,
+                // NOT context.colors.brandBlue — same fixed-chip mismatch as
+                // _LifetimeKnowledgeLensTile above (see
+                // AppPalette.progressFixedChipBlueIcon's doc).
+                color: context.colors.progressFixedChipBlueIcon,
                 size: 20,
               ),
             ),

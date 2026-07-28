@@ -42,13 +42,18 @@ class OverallStatsCard extends ConsumerWidget {
       padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
+        // Deep-hero-fixed tokens (NOT brandBlueDeep/brandBlue/brandBlueBright
+        // — those LIGHTEN in dark mode for their normal ink-on-dark-surface
+        // role and washed this card out to pale sky-blue when misused as a
+        // fill; see AppPalette.progressOverallStatsGradientStart's doc,
+        // run-11 progress-area sweep).
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            context.colors.brandBlueDeep,
-            context.colors.brandBlue,
-            context.colors.brandBlueBright,
+            context.colors.progressOverallStatsGradientStart,
+            context.colors.progressOverallStatsGradientMid,
+            context.colors.progressOverallStatsGradientEnd,
           ],
         ),
         border: Border.all(color: Colors.white.withValues(alpha: 0.22)),
