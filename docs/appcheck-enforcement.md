@@ -1,7 +1,7 @@
 ---
 title: "App Check Enforcement Status"
 description: "Current Firebase App Check enforcement status and the gating criteria (CI/device token registration, metrics review) that must be met before flipping enforcement on, per PV-6."
-date: 2026-07-13
+date: 2026-07-29
 ---
 
 # App Check Enforcement Status
@@ -10,25 +10,48 @@ This document is the record PV-6 (`docs/coding-standards.md`) points to. It trac
 Firebase App Check enforcement has been flipped on for this project, and what has to be true
 before it is.
 
-## Current status: **not enforced**
+## Current status: **Firestore ENFORCED** (confirmed via API, 2026-07-29)
 
-Firebase App Check enforcement for Firestore/Functions/Storage has **not** been flipped on for
-the `torah-study-tracker` project. The codebase runs in the pre-enforcement state described by
-PV-6:
+Firebase App Check enforcement for **Cloud Firestore is ENFORCED** on the `torah-study-tracker`
+project (verified directly:
+`GET firebaseappcheck.googleapis.com/v1/projects/346569574648/services/firestore.googleapis.com`
+→ `enforcementMode=ENFORCED`). Functions/Storage were not returned as enforced at that check.
+
+> **This document previously (and wrongly) read "not enforced."** It was created 2026-07-13 and
+> never updated when the console toggle was flipped, in exactly the manner the "update the status
+> line the same day" instruction warns against. That staleness is what made the incident below
+> take a full investigation to diagnose. Keep this line honest.
 
 - `learning_tracker/lib/app/bootstrap/firebase_bootstrap.dart` activates App Check
-  (`FirebaseAppCheck.instance.activate(...)`) but the call is wrapped in a non-fatal `try`/`catch`
-  — a failed or missing attestation is logged (`app_check_activation_failed`) and startup
-  continues in local-first mode.
+  (`FirebaseAppCheck.instance.activate(...)`) in a non-fatal `try`/`catch` — a failed/missing
+  attestation is logged (`app_check_activation_failed`) and startup continues local-first. **But
+  with enforcement ON, every Firestore request is then rejected `PERMISSION_DENIED`.**
 - Debug builds (`kDebugMode`) use `AndroidDebugProvider` / `AppleDebugProvider`; release builds use
   `AndroidPlayIntegrityProvider` / `AppleAppAttestProvider`.
-- No CI step or `make audit` check currently confirms that CI runners' or developers' debug
-  tokens are registered, and no attestation-failure metrics have been reviewed against an
-  enforcement decision.
 
-Because none of the gating criteria below have been met, enforcement must stay off. This is a
-manually-maintained record — update the status line above the same day the Firebase console
-enforcement toggle changes for any of Firestore, Functions, or Storage.
+### Incident (2026-07-29): enforcement on before Play Integrity was functional
+
+Enforcement was flipped on for Firestore **without gating criterion 3 (and the Play Integrity
+prerequisites) actually met**. On the 1.0.67 Play internal build, fresh installs showed
+"Cloud backup is temporarily unavailable" and Send-Diagnostic-Logs failed — because:
+
+- the **Play Integrity API (`playintegrity.googleapis.com`) was DISABLED** in the project, so
+  release builds could not obtain an App Check token (`Error getting App Check token … Too many
+  attempts`), and
+- the **Play App Signing SHA-256 was not registered** in Firebase.
+
+Emulator/debug builds were unaffected (they use the *debug* provider with a registered token),
+which is why all on-device testing passed while production was broken.
+
+**Remediation applied 2026-07-29** (enforcement kept ON):
+1. Enabled `playintegrity.googleapis.com` in project 346569574648.
+2. Registered the Play App Signing SHA-256 (`2fb5354664f2440547b37365bbd76f76af14a3156e78d3a1c281f71dccabd27f`)
+   and the upload key SHA-256 in the Firebase Android app.
+3. Confirmed the Play Integrity provider is registered (`playIntegrityConfig`, `NO_INTEGRITY`);
+   the Play↔project link is Google-managed for App Check.
+
+This is a manually-maintained record — **update the status line above the same day the Firebase
+console enforcement toggle changes** for any of Firestore, Functions, or Storage.
 
 ## Gating criteria (all required before flipping enforcement on)
 
