@@ -159,6 +159,10 @@ class _DeviceRestoreScreenState extends ConsumerState<DeviceRestoreScreen> {
   String _errorSubtitle(SyncErrorCode code, AppLocalizations l10n) {
     return switch (code) {
       SyncErrorCode.timeout => l10n.deviceRestoreErrorTimeout,
+      // App Check attestation failure is an access/verification failure like a
+      // rules rejection from the user's standpoint — reuse the permission-denied
+      // restore copy rather than the transient/generic one.
+      SyncErrorCode.appCheck ||
       SyncErrorCode.permissionDenied => l10n.deviceRestoreErrorPermissionDenied,
       SyncErrorCode.unknown => l10n.deviceRestoreErrorGeneric,
     };

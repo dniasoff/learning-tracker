@@ -1017,8 +1017,18 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
       // pre-formatted human message. Presentation resolves the user-facing
       // string for each code via AppLocalizations. [debugDetail] retains
       // e.toString() for logs/diagnostics only; it must never be rendered.
+      //
+      // App-Check failures (Play Integrity disabled/misconfigured, "Too many
+      // attempts", or a permission-denied that carries an App Check context)
+      // are PERMANENT and non-retryable — they must classify as `appCheck`,
+      // NOT `permissionDenied`, so the card can drop the "temporarily … tap to
+      // retry" framing that sends users into a doomed retry loop. The App Check
+      // signature is checked BEFORE the permission-denied case so an App-Check
+      // permission-denied resolves to `appCheck`; a bare permission-denied with
+      // no App Check signature still resolves to `permissionDenied`.
       final code = switch (e) {
         TimeoutException() => SyncErrorCode.timeout,
+        _ when _isAppCheckSignature(e) => SyncErrorCode.appCheck,
         FirestorePermissionDeniedException() => SyncErrorCode.permissionDenied,
         _ => SyncErrorCode.unknown,
       };
@@ -1046,10 +1056,43 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
   /// orchestrator was disposed between a pull starting and completing) the
   /// emit is a safe no-op.
   void _safeEmitStatus(SyncStatus status) {
+    // Meta-fix (1.0.67 App Check incident): capture the underlying error
+    // detail on EVERY transition into an error state. Diagnosing the field
+    // report was expensive precisely because the real Firebase/Firestore error
+    // string was thrown away — this is the single most valuable change. Emit
+    // BEFORE mutating `_currentStatus`/notifying listeners so the telemetry
+    // fires exactly once per error transition regardless of the emit site.
+    if (status is SyncStatusError) {
+      _recordSyncErrorTelemetry(status);
+    }
     _currentStatus = status;
     if (!_statusController.isClosed) {
       _statusController.add(status);
     }
+  }
+
+  /// Forward a [SyncStatusError] transition to telemetry, carrying the stable
+  /// [SyncErrorCode] together with the real `debugDetail` (the underlying
+  /// Firebase/Firestore error string that was previously dropped).
+  ///
+  /// The structured log ([AppLogger]) makes it greppable; the Crashlytics
+  /// non-fatal surfaces it in the crash dashboard without a log viewer —
+  /// mirroring the existing `_onListenerError` non-fatal pattern. Crashlytics
+  /// (developer triage) is the sanctioned home for raw diagnostic detail; the
+  /// coarse category still goes to Analytics via `_analyticsErrorKind` at the
+  /// pull boundary (PV-1: raw strings must never reach Analytics).
+  void _recordSyncErrorTelemetry(SyncStatusError status) {
+    final detail = status.debugDetail ?? '(no debugDetail)';
+    _logger?.error(
+      event: 'sync_status_error',
+      fields: {'code': status.code.name, 'debug_detail': detail},
+    );
+    final recorded = _crashlytics?.recordError(
+      'sync_status_error [${status.code.name}]: $detail',
+      StackTrace.current,
+      fatal: false,
+    );
+    if (recorded != null) unawaited(recorded);
   }
 
   // ── Phase 4 — outbox-derived sync-status emission ───────────────────────────
@@ -1478,9 +1521,33 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
   /// the content they studied.
   static String _analyticsErrorKind(Object error) => switch (error) {
     TimeoutException() => 'timeout',
+    _ when _isAppCheckSignature(error) => 'app_check',
     FirestorePermissionDeniedException() => 'permission_denied',
     _ => 'other',
   };
+
+  /// Heuristic detector for a Firebase App Check attestation failure.
+  ///
+  /// The 1.0.67 field incident (App Check enforcement + a disabled Play
+  /// Integrity API) surfaced as a Firestore PERMISSION_DENIED whose message
+  /// carried an App Check context, so a plain `permission-denied` code check is
+  /// not enough — the underlying error string must be inspected. Matches the
+  /// documented App Check signatures ("App Check", "app-check", "Too many
+  /// attempts") case-insensitively. Kept low-cardinality and string-based so it
+  /// works whether the error arrives as a wrapped
+  /// [FirestorePermissionDeniedException] (whose `toString()` includes the
+  /// original message + cause) or a raw `FirebaseException`.
+  ///
+  /// This inspects [Object.toString] for classification ONLY — the raw string
+  /// is never rendered to the user (presentation resolves the localized copy
+  /// from the stable [SyncErrorCode]).
+  static bool _isAppCheckSignature(Object error) {
+    final text = error.toString().toLowerCase();
+    return text.contains('app check') ||
+        text.contains('app-check') ||
+        text.contains('appcheck') ||
+        text.contains('too many attempts');
+  }
 
   /// Maps a listener channel key to the [EntityKind] its payloads merge into.
   ///

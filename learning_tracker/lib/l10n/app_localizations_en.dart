@@ -3359,6 +3359,14 @@ class AppLocalizationsEn extends AppLocalizations {
       'Cloud backup is temporarily unavailable.';
 
   @override
+  String get backupSyncAppCheckUnavailable =>
+      'Cloud backup can\'t verify this app right now. Please update to the latest version from the store.';
+
+  @override
+  String get backupSyncAccountUnavailable =>
+      'Cloud backup is unavailable for this account.';
+
+  @override
   String get backupSyncOutboxStuck =>
       'Some changes are waiting to sync. We\'ll retry automatically.';
 
