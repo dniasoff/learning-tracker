@@ -15,6 +15,16 @@ enum SyncErrorCode {
   /// (expired/revoked session, rules rejection, identity mismatch).
   permissionDenied,
 
+  /// The request was rejected because Firebase App Check could not attest the
+  /// app (e.g. Play Integrity misconfigured/disabled, "Too many attempts", a
+  /// permission-denied carrying an App Check context). This is a PERMANENT,
+  /// non-retryable failure from the user's perspective — retrying the same
+  /// pull cannot succeed until the app/install is verified again, so the
+  /// presentation layer must NOT frame it as "temporarily unavailable, tap to
+  /// retry". Distinct from [permissionDenied] (a bare rules/session rejection
+  /// with no App Check signature).
+  appCheck,
+
   /// Any other failure not covered by a more specific code.
   unknown,
 }

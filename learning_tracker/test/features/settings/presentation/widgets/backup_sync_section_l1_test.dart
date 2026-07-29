@@ -370,11 +370,16 @@ void main() {
       // ST-4 fix: the error card must show a friendly localized message
       // rather than the raw exception string.  The subtitle is now:
       //   l10n.backupSyncCloudUnavailable + "\n" + l10n.backupSyncTapToRetry
+      //
+      // Uses a TRANSIENT code (unknown): the "temporarily … tap to retry"
+      // copy is intentionally reserved for retryable codes now. The permanent
+      // codes (appCheck / permissionDenied) render distinct non-transient copy
+      // — see backup_sync_error_l10n_test.dart (D1–D3).
       await _pump(
         tester,
         _buildHarness(
           syncStatus: SyncStatus.error(
-            code: SyncErrorCode.permissionDenied,
+            code: SyncErrorCode.unknown,
             failedAt: DateTime.now(),
             debugDetail:
                 'FirestorePermissionDeniedException: raw internal error',

@@ -3317,6 +3317,14 @@ class AppLocalizationsHe extends AppLocalizations {
   String get backupSyncCloudUnavailable => 'הגיבוי בענן אינו זמין כרגע.';
 
   @override
+  String get backupSyncAppCheckUnavailable =>
+      'הגיבוי בענן אינו מצליח לאמת את האפליקציה כרגע. עדכנו לגרסה האחרונה מהחנות.';
+
+  @override
+  String get backupSyncAccountUnavailable =>
+      'הגיבוי בענן אינו זמין עבור חשבון זה.';
+
+  @override
   String get backupSyncOutboxStuck =>
       'חלק מהשינויים ממתינים לסנכרון. ננסה שוב באופן אוטומטי.';
 

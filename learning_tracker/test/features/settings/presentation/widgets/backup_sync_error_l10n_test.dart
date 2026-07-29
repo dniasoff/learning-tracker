@@ -322,4 +322,101 @@ void main() {
       await tester.pump(Duration.zero);
     },
   );
+
+  // -------------------------------------------------------------------------
+  // D1–D3. Card copy is differentiated by SyncErrorCode (1.0.67 App Check
+  // incident). A PERMANENT failure (appCheck / permissionDenied) must NOT read
+  // as "temporarily … tap to retry"; a TRANSIENT failure (timeout) keeps it.
+  // -------------------------------------------------------------------------
+  testWidgets(
+    'D1. appCheck error renders NON-transient copy — no "temporarily", no '
+    '"Tap to retry"',
+    (tester) async {
+      await _pump(
+        tester,
+        _buildHarness(
+          syncStatus: SyncStatus.error(
+            code: SyncErrorCode.appCheck,
+            failedAt: DateTimeFactory.nowUtc(),
+            debugDetail:
+                '[cloud_firestore/permission-denied] App Check token is '
+                'invalid: Too many attempts.',
+          ),
+        ),
+      );
+
+      expect(
+        find.textContaining('temporarily'),
+        findsNothing,
+        reason:
+            'A permanent App Check failure must not be framed as temporary — '
+            'retrying the same pull can never succeed (1.0.67 incident).',
+      );
+      expect(
+        find.textContaining('Tap to retry'),
+        findsNothing,
+        reason:
+            'A permanent App Check failure must not invite a doomed retry loop.',
+      );
+      // A non-transient, app-verification-oriented message IS shown.
+      expect(find.textContaining('verify this app'), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+    },
+  );
+
+  testWidgets(
+    'D2. permissionDenied error renders NON-transient copy — no "temporarily", '
+    'no "Tap to retry"',
+    (tester) async {
+      await _pump(
+        tester,
+        _buildHarness(
+          syncStatus: SyncStatus.error(
+            code: SyncErrorCode.permissionDenied,
+            failedAt: DateTimeFactory.nowUtc(),
+            debugDetail: 'FirestorePermissionDeniedException: rules rejected',
+          ),
+        ),
+      );
+
+      expect(find.textContaining('temporarily'), findsNothing);
+      expect(find.textContaining('Tap to retry'), findsNothing);
+      // The permanent "unavailable for this account" copy IS shown.
+      expect(
+        find.textContaining('unavailable for this account'),
+        findsOneWidget,
+      );
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+    },
+  );
+
+  testWidgets(
+    'D3. timeout error keeps the TRANSIENT "temporarily … tap to retry" copy',
+    (tester) async {
+      await _pump(
+        tester,
+        _buildHarness(
+          syncStatus: SyncStatus.error(
+            code: SyncErrorCode.timeout,
+            failedAt: DateTimeFactory.nowUtc(),
+            debugDetail: 'TimeoutException after 0:00:08.000000',
+          ),
+        ),
+      );
+
+      expect(
+        find.textContaining('temporarily'),
+        findsOneWidget,
+        reason: 'A timeout IS transient — retry framing is correct here.',
+      );
+      expect(find.textContaining('Tap to retry'), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+    },
+  );
 }

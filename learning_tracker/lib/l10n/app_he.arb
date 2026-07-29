@@ -1538,6 +1538,8 @@
   },
   "backupSyncTapToRetry": "הקש לניסיון חוזר",
   "backupSyncCloudUnavailable": "הגיבוי בענן אינו זמין כרגע.",
+  "backupSyncAppCheckUnavailable": "הגיבוי בענן אינו מצליח לאמת את האפליקציה כרגע. עדכנו לגרסה האחרונה מהחנות.",
+  "backupSyncAccountUnavailable": "הגיבוי בענן אינו זמין עבור חשבון זה.",
   "backupSyncOutboxStuck": "חלק מהשינויים ממתינים לסנכרון. ננסה שוב באופן אוטומטי.",
   "backupSyncIdentityMismatch": "מחוברים בתור {signedInEmail} — התחברו בתור {activeEmail} כדי לגבות חשבון זה.",
   "@backupSyncIdentityMismatch": {

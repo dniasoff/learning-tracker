@@ -10,6 +10,7 @@ import 'package:learning_tracker/core/sync/providers/sync_status_providers.dart'
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
+import 'package:learning_tracker/features/sync/domain/models/sync_error_code.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
@@ -112,19 +113,32 @@ class _BackupSyncSectionState extends ConsumerState<BackupSyncSection> {
             ? l10n.backupPendingChanges(pendingChanges)
             : l10n.backupOffline,
       ),
-      // ST-4 / AUD-sync-01 (EH-5): SyncStatusError now carries a stable code
-      // (never a pre-formatted message) — there is no raw text on the type
-      // to short-circuit around any more. Same friendly message regardless
-      // of code today (the retry action is identical either way); the
-      // `code` field is available here if a future card wants to
-      // differentiate.
-      SyncStatusError() => _buildCloudStatusCard(
-        theme,
-        icon: Icons.warning_amber_rounded,
-        subtitle:
-            '${l10n.backupSyncCloudUnavailable}\n${l10n.backupSyncTapToRetry}',
-        onTap: () => ref.read(syncOrchestratorProvider)?.retryPull(),
-      ),
+      // ST-4 / AUD-sync-01 (EH-5): SyncStatusError carries a stable code and
+      // the card copy is differentiated by it (1.0.67 App Check incident).
+      //   - appCheck / permissionDenied are PERMANENT: a retry re-runs a pull
+      //     that can never succeed, so the copy must NOT say "temporarily" and
+      //     must NOT offer a doomed tap-to-retry. Show guidance instead.
+      //   - timeout / unknown ARE transient: keep the "temporarily
+      //     unavailable, tap to retry" affordance.
+      SyncStatusError(:final code) => switch (code) {
+        SyncErrorCode.appCheck => _buildCloudStatusCard(
+          theme,
+          icon: Icons.gpp_maybe_rounded,
+          subtitle: l10n.backupSyncAppCheckUnavailable,
+        ),
+        SyncErrorCode.permissionDenied => _buildCloudStatusCard(
+          theme,
+          icon: Icons.lock_outline_rounded,
+          subtitle: l10n.backupSyncAccountUnavailable,
+        ),
+        SyncErrorCode.timeout || SyncErrorCode.unknown => _buildCloudStatusCard(
+          theme,
+          icon: Icons.warning_amber_rounded,
+          subtitle:
+              '${l10n.backupSyncCloudUnavailable}\n${l10n.backupSyncTapToRetry}',
+          onTap: () => ref.read(syncOrchestratorProvider)?.retryPull(),
+        ),
+      },
       SyncStatusDegraded(:final pendingChanges, :final reason) =>
         _buildDegradedCard(context, ref, theme, pendingChanges, reason),
     };

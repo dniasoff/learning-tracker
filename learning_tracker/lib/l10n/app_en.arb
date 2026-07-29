@@ -1799,7 +1799,15 @@
   "backupSyncTapToRetry": "Tap to retry",
   "backupSyncCloudUnavailable": "Cloud backup is temporarily unavailable.",
   "@backupSyncCloudUnavailable": {
-    "description": "Friendly message shown instead of a raw exception string when cloud sync fails (ST-4)."
+    "description": "Friendly message shown instead of a raw exception string when cloud sync fails (ST-4). TRANSIENT codes only (timeout/unknown) — paired with backupSyncTapToRetry. Permanent codes use backupSyncAppCheckUnavailable / backupSyncAccountUnavailable."
+  },
+  "backupSyncAppCheckUnavailable": "Cloud backup can't verify this app right now. Please update to the latest version from the store.",
+  "@backupSyncAppCheckUnavailable": {
+    "description": "Non-transient error shown on the Backup & Sync card when sync fails with SyncErrorCode.appCheck (Firebase App Check attestation failure — e.g. Play Integrity disabled/misconfigured, 1.0.67 incident). Must NOT read as temporary and must NOT invite a doomed retry — retrying the same pull cannot succeed until the app install is verified again."
+  },
+  "backupSyncAccountUnavailable": "Cloud backup is unavailable for this account.",
+  "@backupSyncAccountUnavailable": {
+    "description": "Non-transient error shown on the Backup & Sync card when sync fails with SyncErrorCode.permissionDenied (a bare rules/session rejection with no App Check signature). A permanent access failure — must NOT read as temporary and must NOT offer a doomed tap-to-retry."
   },
   "backupSyncOutboxStuck": "Some changes are waiting to sync. We'll retry automatically.",
   "@backupSyncOutboxStuck": {

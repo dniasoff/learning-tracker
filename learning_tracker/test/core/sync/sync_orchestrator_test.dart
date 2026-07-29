@@ -24,8 +24,10 @@ library;
 
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
+import 'package:learning_tracker/core/logging/crashlytics_service.dart';
 import 'package:learning_tracker/core/sync/exceptions/firestore_permission_denied_exception.dart';
 import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
@@ -387,6 +389,7 @@ SyncOrchestratorImpl _makeOrchestrator({
   Future<void> Function()? pushAllLocalData,
   void Function()? onFirstSyncComplete,
   AnalyticsService? analytics,
+  CrashlyticsService? crashlytics,
 }) {
   final gw = gateway ?? _FakeGateway();
   final mr = mergeRouter ?? _FakeMergeRouter();
@@ -397,10 +400,41 @@ SyncOrchestratorImpl _makeOrchestrator({
     resolvePushAllLocalData: pushAllLocalData ?? () async {},
     onFirstSyncComplete: onFirstSyncComplete,
     analytics: analytics,
+    crashlytics: crashlytics,
     // Disable connectivity stream and network reset so tests run synchronously.
     connectivityStream: null,
     resetFirestoreNetworkOverride: () async {},
   );
+}
+
+// ── Spy CrashlyticsService — records recordError calls for assertion ────────
+
+class _RecordedCrashError {
+  const _RecordedCrashError(this.error, this.fatal);
+  final Object error;
+  final bool fatal;
+}
+
+class _SpyCrashlyticsService implements CrashlyticsService {
+  final List<_RecordedCrashError> recorded = [];
+
+  @override
+  Future<void> recordError(
+    Object error,
+    StackTrace? stack, {
+    bool fatal = false,
+  }) async {
+    recorded.add(_RecordedCrashError(error, fatal));
+  }
+
+  @override
+  Future<void> recordFlutterFatalError(FlutterErrorDetails details) async {}
+
+  @override
+  Future<void> setCrashlyticsCollectionEnabled(bool enabled) async {}
+
+  @override
+  Future<void> setUserIdentifier(int? profileId) async {}
 }
 
 // ── Fake AnalyticsService — records fired events for assertion ──────────────
@@ -771,6 +805,97 @@ void main() {
       );
       expect(orchestrator.currentStatus, isA<SyncStatusError>());
     });
+
+    // ── App Check classification (1.0.67 incident) ─────────────────────────
+    test('App-Check-signature FirestorePermissionDeniedException classifies as '
+        'SyncErrorCode.appCheck (not permissionDenied)', () async {
+      // The 1.0.67 field failure: App Check enforcement + disabled Play
+      // Integrity → Firestore PERMISSION_DENIED whose message carries an
+      // App Check context. Must resolve to the PERMANENT appCheck code so
+      // the card drops the doomed "temporarily … tap to retry" framing.
+      final gw = _FakeGateway()
+        ..throwWith = const FirestorePermissionDeniedException(
+          'Requests are blocked because App Check is enforced and the '
+          'attestation failed. Too many attempts.',
+          collection: 'completions',
+          operation: 'read',
+        );
+      final orchestrator = _makeOrchestrator(gateway: gw);
+
+      await expectLater(orchestrator.pullOnLaunch(), throwsA(anything));
+      final status = orchestrator.currentStatus as SyncStatusError;
+      expect(
+        status.code,
+        equals(SyncErrorCode.appCheck),
+        reason:
+            'A permission-denied carrying an App Check signature must '
+            'classify as appCheck, never permissionDenied',
+      );
+    });
+
+    test('bare permission-denied (no App Check signature) stays '
+        'SyncErrorCode.permissionDenied', () async {
+      final gw = _FakeGateway()
+        ..throwWith = const FirestorePermissionDeniedException(
+          'Missing or insufficient permissions.',
+          collection: 'completions',
+          operation: 'read',
+        );
+      final orchestrator = _makeOrchestrator(gateway: gw);
+
+      await expectLater(orchestrator.pullOnLaunch(), throwsA(anything));
+      final status = orchestrator.currentStatus as SyncStatusError;
+      expect(status.code, equals(SyncErrorCode.permissionDenied));
+    });
+
+    test('TimeoutException classifies as SyncErrorCode.timeout', () async {
+      final gw = _FakeGateway()..throwWith = TimeoutException('pull budget');
+      final orchestrator = _makeOrchestrator(gateway: gw);
+
+      await expectLater(orchestrator.pullOnLaunch(), throwsA(anything));
+      final status = orchestrator.currentStatus as SyncStatusError;
+      expect(status.code, equals(SyncErrorCode.timeout));
+    });
+
+    // ── Telemetry meta-fix: the underlying error string is captured ────────
+    test(
+      'a SyncStatusError transition emits a Crashlytics non-fatal carrying the '
+      'error code AND the raw debugDetail',
+      () async {
+        const rawDetail =
+            'FirestorePermissionDeniedException: App Check attestation failed '
+            'for profiles/1/completions [cloud_firestore/permission-denied]';
+        final gw = _FakeGateway()
+          ..throwWith = const FirestorePermissionDeniedException(
+            rawDetail,
+            collection: 'completions',
+            operation: 'read',
+          );
+        final spy = _SpyCrashlyticsService();
+        final orchestrator = _makeOrchestrator(gateway: gw, crashlytics: spy);
+
+        await expectLater(orchestrator.pullOnLaunch(), throwsA(anything));
+
+        expect(
+          spy.recorded,
+          isNotEmpty,
+          reason:
+              'Every transition into SyncStatusError must record a non-fatal '
+              'so the field failure is diagnosable without a huge investigation',
+        );
+        final recorded = spy.recorded.firstWhere(
+          (r) => r.error.toString().contains('sync_status_error'),
+        );
+        expect(recorded.fatal, isFalse);
+        final text = recorded.error.toString();
+        // The stable code is captured...
+        expect(text, contains(SyncErrorCode.appCheck.name));
+        // ...AND the real underlying Firebase/Firestore error string (the
+        // detail previously dropped) is preserved for triage.
+        expect(text, contains('cloud_firestore/permission-denied'));
+        expect(text, contains('App Check attestation failed'));
+      },
+    );
 
     test('error status code is SyncErrorCode.unknown for non-timeout, '
         'non-permission-denied errors (AUD-sync-01/EH-5, was SY-3)', () async {

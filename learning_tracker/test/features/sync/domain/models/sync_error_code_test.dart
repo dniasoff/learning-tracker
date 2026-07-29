@@ -3,13 +3,17 @@ import 'package:learning_tracker/features/sync/domain/models/sync_error_code.dar
 
 void main() {
   group('SyncErrorCode', () {
-    test('has exactly the three documented values', () {
-      expect(SyncErrorCode.values, hasLength(3));
+    test('has exactly the four documented values', () {
+      expect(SyncErrorCode.values, hasLength(4));
       expect(
         SyncErrorCode.values,
         containsAll(<SyncErrorCode>[
           SyncErrorCode.timeout,
           SyncErrorCode.permissionDenied,
+          // appCheck: a PERMANENT App Check attestation failure, distinct from
+          // a bare permissionDenied (1.0.67 incident) — presentation must not
+          // frame it as transient / tap-to-retry.
+          SyncErrorCode.appCheck,
           SyncErrorCode.unknown,
         ]),
       );
