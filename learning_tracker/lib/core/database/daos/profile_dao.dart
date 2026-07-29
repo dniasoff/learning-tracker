@@ -62,6 +62,24 @@ class ProfileDao extends DatabaseAccessor<UserDatabase> with _$ProfileDaoMixin {
     return result.read(count) ?? 0;
   }
 
+  /// Count every own (non-tutored) profile in this per-account user DB,
+  /// unscoped by account id.
+  ///
+  /// The user database file is per-account (one `accounts` row per file), so
+  /// "any own profile exists here" ⇔ "the active account has ≥1 profile" — no
+  /// need to resolve the int account id. Used by `AuthGuard` to treat an
+  /// already-set-up account as onboarded even when the device-global
+  /// `kOnboardingComplete` flag is false (e.g. cleared on an account switch).
+  /// Lightest possible query — a COUNT, never a full fetch.
+  Future<int> countOwnProfiles() async {
+    final count = countAll();
+    final query = selectOnly(learnerProfiles)
+      ..addColumns([count])
+      ..where(learnerProfiles.isTutored.equals(false));
+    final result = await query.getSingle();
+    return result.read(count) ?? 0;
+  }
+
   /// Insert a new profile. Returns the profile ID.
   Future<int> insertProfile(LearnerProfilesCompanion entry) =>
       into(learnerProfiles).insert(entry);

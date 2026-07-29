@@ -380,4 +380,141 @@ void main() {
       },
     );
   });
+
+  // ── Profile-aware pass-through (Epic 21 multi-account re-entry bug) ────────
+  //
+  // kOnboardingComplete is a single device-global flag written only by the
+  // onboarding wizard's terminal step. It is cleared on an account switch, and
+  // the DIRECT setup flow (add-profile dialog → track management, no wizard)
+  // never re-sets it. Result (the bug): an account that already has a
+  // profile+track was dumped back into the onboarding wizard whenever the flag
+  // was false.
+  //
+  // Fix: the guard treats "the active account already has ≥1 own profile" as
+  // onboarded. The profile count is supplied by an injected callback
+  // (activeAccountProfileCount) that reuses the app's already-open per-account
+  // user DB connection — no second connection to the live DB file. These tests
+  // exercise that callback directly (the router wires it to
+  // userDatabaseProvider in production).
+
+  group('Profile-aware pass-through', () {
+    test('BUG REGRESSION: flag=false AND active account has ≥1 profile '
+        '→ resolver.next() (pass-through, no redirect)', () async {
+      // flag=false; profile-aware guard sees a profile in the active DB.
+      SharedPreferences.setMockInitialValues({'intro_seen': true});
+      final profileAwareGuard = AuthGuard(
+        activeAccountProfileCount: () async => 1,
+      );
+
+      await profileAwareGuard.onNavigation(resolver, router);
+
+      verify(() => resolver.next()).called(1);
+      verifyNever(() => resolver.next(false));
+      verifyNever(() => router.replace(any<PageRouteInfo>()));
+    });
+
+    test('passes through even when intro not yet seen '
+        '(a profile-bearing account is definitively onboarded)', () async {
+      SharedPreferences.setMockInitialValues({}); // flag false, intro unseen
+      final profileAwareGuard = AuthGuard(
+        activeAccountProfileCount: () async => 2,
+      );
+
+      await profileAwareGuard.onNavigation(resolver, router);
+
+      verify(() => resolver.next()).called(1);
+      verifyNever(() => resolver.next(false));
+      verifyNever(() => router.replace(any<PageRouteInfo>()));
+    });
+
+    test(
+      'LEGIT NEW ACCOUNT (must stay green): flag=false AND 0 profiles, '
+      'accounts on device → AccountPickerRoute (not over-broadened)',
+      () async {
+        await _seedRegistryAccount();
+        SharedPreferences.setMockInitialValues({'intro_seen': true});
+        final profileAwareGuard = AuthGuard(
+          activeAccountProfileCount: () async => 0,
+        );
+
+        await profileAwareGuard.onNavigation(resolver, router);
+
+        final captured = verify(
+          () => router.replace(captureAny<PageRouteInfo>()),
+        ).captured.single;
+        expect(captured, isA<AccountPickerRoute>());
+        verify(() => resolver.next(false)).called(1);
+        verifyNever(() => resolver.next());
+      },
+    );
+
+    test('LEGIT NEW ACCOUNT (must stay green): flag=false AND 0 profiles, '
+        'no accounts on device → SignInRoute', () async {
+      // No registry seeded → getAllAccounts() == [].
+      SharedPreferences.setMockInitialValues({'intro_seen': true});
+      final profileAwareGuard = AuthGuard(
+        activeAccountProfileCount: () async => 0,
+      );
+
+      await profileAwareGuard.onNavigation(resolver, router);
+
+      final captured = verify(
+        () => router.replace(captureAny<PageRouteInfo>()),
+      ).captured.single;
+      expect(captured, isA<SignInRoute>());
+      verify(() => resolver.next(false)).called(1);
+      verifyNever(() => resolver.next());
+    });
+
+    test(
+      'ONBOARDED FAST-PATH UNCHANGED: flag=true short-circuits with NO DB read '
+      '(profile-count callback never invoked)',
+      () async {
+        SharedPreferences.setMockInitialValues({'onboarding_complete': true});
+        var callbackInvoked = false;
+        final profileAwareGuard = AuthGuard(
+          activeAccountProfileCount: () async {
+            callbackInvoked = true;
+            return 1;
+          },
+        );
+
+        await profileAwareGuard.onNavigation(resolver, router);
+
+        expect(
+          callbackInvoked,
+          isFalse,
+          reason: 'onboarded fast-path must not read the DB',
+        );
+        verify(() => resolver.next()).called(1);
+        verifyNever(() => resolver.next(false));
+        verifyNever(() => router.replace(any<PageRouteInfo>()));
+      },
+    );
+
+    test('FAIL-SAFE PRESERVED: profile-count callback throws → SignInRoute + '
+        'next(false), never hangs, never passes through', () async {
+      // Seed an account so the NON-throwing path would redirect to the
+      // AccountPicker — proving SignInRoute here came from the fail-safe
+      // catch, not the ordinary accounts-exist branch.
+      await _seedRegistryAccount();
+      SharedPreferences.setMockInitialValues({'intro_seen': true});
+      final profileAwareGuard = AuthGuard(
+        activeAccountProfileCount: () async =>
+            throw StateError('user DB unreadable'),
+      );
+
+      await expectLater(
+        profileAwareGuard.onNavigation(resolver, router),
+        completes,
+      );
+
+      final captured = verify(
+        () => router.replace(captureAny<PageRouteInfo>()),
+      ).captured.last;
+      expect(captured, isA<SignInRoute>());
+      verify(() => resolver.next(false)).called(1);
+      verifyNever(() => resolver.next());
+    });
+  });
 }

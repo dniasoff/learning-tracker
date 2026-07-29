@@ -36,7 +36,14 @@ final routerProvider = Provider<AppRouter>((ref) {
 
   return AppRouter(
     navigatorKey: navigatorKey,
-    authGuard: AuthGuard(),
+    // Profile-aware pass-through: reuse the app's already-open per-account user
+    // DB connection (via getDb(), the same lazy ref.read used by the other
+    // guards) to count own profiles — never a second connection to the live
+    // DB file. When the active account already has a profile, AuthGuard lets it
+    // through even if the device-global onboarding flag is false.
+    authGuard: AuthGuard(
+      activeAccountProfileCount: () => getDb().profileDao.countOwnProfiles(),
+    ),
     restoreGuard: RestoreGuard(
       getDatabase: getDb,
       hasCloudAccount: () => ref.read(authStateProvider).isCloudBorn,
