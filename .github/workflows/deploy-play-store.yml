@@ -191,7 +191,11 @@ jobs:
           releaseFiles: learning_tracker/build/app/outputs/bundle/release/app-release.aab
           releaseName: ${{ steps.version.outputs.name }} (${{ steps.version.outputs.code }})
           whatsNewDirectory: release-notes
-          track: ${{ steps.track.outputs.track }}
+          # 'track' (singular) is deprecated in r0adkll/upload-google-play and
+          # slated for removal; 'tracks' is the replacement input (single value
+          # is accepted). Migrated after the v1.0.67-internal deploy logged the
+          # deprecation warning.
+          tracks: ${{ steps.track.outputs.track }}
           status: completed
 
       - name: Cleanup signing and Firebase files
