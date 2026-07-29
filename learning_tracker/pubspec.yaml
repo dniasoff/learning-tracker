@@ -2,7 +2,7 @@ name: learning_tracker
 description: "Learning tracker for daily study management."
 publish_to: 'none'
 
-version: 1.0.68+1
+version: 1.0.69+1
 
 environment:
   sdk: ^3.10.8
