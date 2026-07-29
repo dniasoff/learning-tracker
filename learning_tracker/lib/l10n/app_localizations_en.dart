@@ -5301,7 +5301,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get onboardingIntentSkipSubtitle =>
-      'Go to the app and decide later. You can set up a track or accept an invite any time.';
+      'Go to the app and decide later. You can set up a track, or accept an invite to tutor a child, any time.';
 
   @override
   String get permissionPromptTitleOnboarding => 'Almost Done!';

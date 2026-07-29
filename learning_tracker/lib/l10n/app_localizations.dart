@@ -8907,7 +8907,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingIntentSkipSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Go to the app and decide later. You can set up a track or accept an invite any time.'**
+  /// **'Go to the app and decide later. You can set up a track, or accept an invite to tutor a child, any time.'**
   String get onboardingIntentSkipSubtitle;
 
   /// AppBar title for PermissionPromptScreen when launched from the onboarding flow.

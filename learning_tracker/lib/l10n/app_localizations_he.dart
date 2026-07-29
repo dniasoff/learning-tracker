@@ -5246,7 +5246,7 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get onboardingIntentSkipSubtitle =>
-      'כנס לאפליקציה והחלט מאוחר יותר. תוכל להגדיר מסלול או לקבל הזמנה בכל עת.';
+      'כנס לאפליקציה והחלט מאוחר יותר. תוכל להגדיר מסלול, או לקבל הזמנה להדריך ילד, בכל עת.';
 
   @override
   String get permissionPromptTitleOnboarding => 'כמעט סיימנו!';
