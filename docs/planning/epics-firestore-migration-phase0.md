@@ -1,5 +1,5 @@
 ---
-stepsCompleted: [step-01]
+stepsCompleted: [step-01, step-02]
 status: draft
 inputDocuments:
   - docs/specs/spec-drift-firestore-migration/SPEC.md
@@ -72,11 +72,38 @@ No UX design contract applies to this scope.
 
 ### FR Coverage Map
 
-{{requirements_coverage_map}}
+FR1: Epic 2 — Prove two-app cache isolation on oldest device (go/no-go gate)
+FR2: Epic 2 — Doc-id module reproduces every formula byte-for-byte except track rekey
+FR3: Epic 2 — Track-scoped child formulas keyed on the canonical curriculum_id
+FR4: Epic 2 — learner_profiles doc-id becomes a profile-scoped ULID, not path uid
+FR5: Epic 2 — Standardize ULID generation on the existing in-repo generator
+FR6: Epic 2 — Standing grep bans autoincrement ids in payloads outside merge/
+FR7: Epic 2 — Retarget no-firebase-outside-core grep to the new data-layer dirs
+FR8: Epic 2 — New grep bans bare FirebaseFirestore/FirebaseAuth instance access
+FR9: Epic 2 — New grep enforces repository-only dependency direction
+FR10: Epic 2 — All boundary rules enforced via make-audit greps, not custom_lint
+FR11: Epic 2 — Extract the canonical 5-step LWW predicate into one module
+FR12: Epic 2 — Golden-branch unit tests pin every predicate branch plus a drift red-demo
+FR13: Epic 2 — Every merger routes through the canonical predicate, no exceptions
+FR14: Epic 1 — Every listener marks-dead and backs off before resubscribing on error
+FR15: Epic 1 — Connectivity-online and app resume trigger dead-channel resubscribe
+FR16: Epic 1 — Own- and tutored-account listeners get resubscribe parity
+FR17: Epic 1 — A backoff-capped channel surfaces as syncing, never falsely synced
+FR18: Epic 1 — Resume network reset gated to a real network-identity change, debounced
+FR19: Epic 1 — Connectivity sourced from a hardened stream/platform events, not the poller
+FR20: Epic 1 — Redundant offline-poll loop removed; idle-cost comment corrected
+FR21: Epic 1 — Status collapses to exactly synced|syncing|offline from SDK signals
+FR22: Epic 1 — Zero app-level pending/dead-letter bookkeeping remains
 
 ## Epic List
 
-{{epics_list}}
+### Epic 1: Bulletproof sync on the current engine
+Users get sync that recovers by itself — a dead listener never stays dark while online, status never lies, and the app stops burning battery/mobile data on a 5-second polling loop. (The two migration-surviving fixes, landing now.)
+**FRs covered:** FR14, FR15, FR16, FR17, FR18, FR19, FR20, FR21, FR22 (CAP-5, CAP-6 — AD-9, AD-11, AD-22)
+
+### Epic 2: Migration Phase 0 — foundations and the go/no-go gate
+The Firestore migration is proven feasible on real hardware (the two-app cache-isolation smoke test — its result is a recorded go/no-go; failure STOPS and reopens AD-1) and its data-integrity foundations exist: deterministic doc-ids with no autoincrement landmines, the canonical LWW predicate in exactly one pinned module, and every boundary rule enforced by a make-audit grep.
+**FRs covered:** FR1, FR2, FR3, FR4, FR5, FR6, FR7, FR8, FR9, FR10, FR11, FR12, FR13 (CAP-1, CAP-2, CAP-3, CAP-4 — AD-1/2/3/5/7/23/24/25/28/29)
 
 <!-- Repeat for each epic in epics_list (N = 1, 2, 3...) -->
 
