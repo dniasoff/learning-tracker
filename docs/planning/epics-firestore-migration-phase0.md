@@ -129,7 +129,7 @@ So that my data keeps updating in real time after a transient fault (App-Check a
 **Given** the DNI-335 single-delivery contract and the R-1 "needs care around double-attach" warning,
 **When** a resubscribe races a concurrent `restart()`/`unpark()` or a second error on the same channel,
 **Then** exactly one live subscription set results (no duplicate subscription, no doubled `_onEvent` delivery for a single upstream emission), reusing the existing serialized/coalesced `restart()` machinery (`:264-308`),
-**And** a channel that errors while `park()`ed does not resubscribe until `unpark()`.
+**And** a channel that errors while `park()`ed does not resubscribe until `unpark()` (AD-9).
 
 **Given** the red-demo requirement (NFR-1),
 **When** a test forces a live own-account channel into `onError` and then pushes a new server snapshot,
@@ -148,9 +148,9 @@ So that 16 tutored gRPC streams don't stay live 24/7 draining battery, and a rev
 
 **Acceptance Criteria:**
 
-**Given** `TutoredListenerSupervisor` (`lib/core/sync/tutored_listener_supervisor.dart`) which today exposes only `attach`/`detach` (`:82-115`), declares `channelCount = 16` (`:70`), and passes an `_onError` that only logs (`:197-209`),
-**When** the lifecycle observer parks/unparks (Story 1.3's hooks) after the background window,
-**Then** the tutored supervisor parks and unparks its inner `ListenerSupervisor` with the same semantics as the own-account fleet, so all 16 tutored streams detach while backgrounded and reopen on resume (FR16; CAP-5; AD-9, AD-22).
+**Given** `TutoredListenerSupervisor` (`lib/core/sync/tutored_listener_supervisor.dart`) which today exposes only `attach`/`detach` (`:82-115`), declares `channelCount = 16` (`:70`), and passes an `_onError` that only logs (`:197-209`), alongside the **pre-existing** lifecycle park/unpark hooks (`parkListeners`/`unparkListeners` in `lib/core/sync/lifecycle_observer.dart:70-78,136-138,156-159`, built by prior sync-architecture-plan work) that today drive only the own-account supervisor,
+**When** those existing lifecycle park/unpark hooks fire after the background window,
+**Then** the tutored supervisor is wired into the existing hooks and parks/unparks its inner `ListenerSupervisor` with the same semantics as the own-account fleet, so all 16 tutored streams detach while backgrounded and reopen on resume (FR16; CAP-5; AD-9, AD-22).
 
 **Given** the own-account resubscribe machinery from Story 1.1,
 **When** a tutored `snapshots()` channel errors (e.g. a parent revokes `tutor_active_access` while the tutor's channels are live, or a transient `UNAVAILABLE`),
@@ -159,7 +159,7 @@ So that 16 tutored gRPC streams don't stay live 24/7 draining battery, and a rev
 
 **Given** a permission-denied that is genuinely permanent (grant actually revoked),
 **When** the tutored channel resubscribes and is rejected again,
-**Then** it degrades to retrying-at-the-cap (Story 1.1 rule) rather than looping tightly, and `detach()` on session exit / mirror-wipe cleanly cancels all pending backoff timers (no leaked timer after detach).
+**Then** it degrades to retrying-at-the-cap (Story 1.1 rule) rather than looping tightly, and `detach()` on session exit / mirror-wipe cleanly cancels all pending backoff timers (no leaked timer after detach) (AD-9, AD-22).
 
 **Given** the red-demo requirement,
 **When** a test (a) backgrounds a live tutored session past the park window and (b) forces a tutored channel into `onError`,
@@ -188,7 +188,7 @@ So that recovery from a Wi-Fi↔cell handoff or an App-Check outage is automatic
 
 **Given** airplane-mode / flaky-link edge transitions,
 **When** connectivity flaps offline→online→offline rapidly,
-**Then** resubscribes coalesce (no thundering-herd of overlapping attaches), and a channel that is already healthy is left untouched (no needless teardown).
+**Then** resubscribes coalesce (no thundering-herd of overlapping attaches), and a channel that is already healthy is left untouched (no needless teardown) (FR15; AD-9).
 
 **Given** the red-demo requirement,
 **When** a test drives (a) a dead channel + connectivity-online and (b) a resume preceded only by an `inactive` blip,
@@ -221,7 +221,7 @@ So that it stops draining my battery and mobile data on an invisible background 
 
 **Given** airplane-mode and cold-start transitions,
 **When** the device toggles airplane mode or cold-starts genuinely offline,
-**Then** offline is detected without the startup false-offline flash (the existing debounce is preserved), and recovery to online is automatic on platform events/resume without a manual pull-to-refresh.
+**Then** offline is detected without the startup false-offline flash (the existing debounce is preserved), and recovery to online is automatic on platform events/resume without a manual pull-to-refresh (FR19; AD-11).
 
 **Given** the red-demo requirement,
 **When** a test asserts (a) the connectivity source is the hardened stream/platform events, (b) no 5 s demo-host poll loop remains, and a grep asserts (c) the false "~0 idle cost" comment is gone,
@@ -284,8 +284,8 @@ So that the entire migration paradigm is proven feasible on real hardware before
 **Then** the test must FAIL loudly — app B sees app A's writes and/or the cache-dir collision check trips — proving the isolation assertion can actually detect a violation rather than passing vacuously.
 
 **Given** the oldest-hardware resource risk (the `api29-learn-oom` thread is a live warning),
-**When** the two apps run concurrently with persistence enabled,
-**Then** the harness records whether native resources/file-handles/memory hold at the 2-app shape (the leading edge of the ≤5-account target) as supporting evidence attached to the memlog event.
+**When** the two named apps run concurrently with persistence enabled on the oldest supported device,
+**Then** the pass/fail bar is binary — the two-app run completes with **no resource failure** (no OOM kill, no file-handle exhaustion, no cache-init crash) at the 2-app shape (the leading edge of the ≤5-account target); the recorded memory/file-handle numbers are observational evidence attached to the memlog event, not themselves the gate (CAP-1; AD-1).
 
 **Given** the gate requirements,
 **When** the story is complete,
@@ -299,7 +299,7 @@ So that native writes and the Phase-5 backfill mint the exact same document ids 
 
 **Acceptance Criteria:**
 
-**Given** doc-id derivation is today scattered across `lib/core/sync/firestore_gateway_impl.dart` `.doc(...)` sites (e.g. `curriculum_tracks/{curriculumId}` `:567`; ULID-keyed ledger/points/streak/redemption `:302/:516/:541/:1219/:1242`) and the per-collection codecs (`lib/core/sync/codec/*.dart`),
+**Given** doc-id derivation is today scattered across `lib/core/sync/firestore_gateway_impl.dart` `.doc(...)` sites (e.g. `curriculum_tracks` in `pushTrack` — `_collection(profileId, 'curriculum_tracks')` `:346` → `collection.doc(docId).set(...)` `:357`; ULID-keyed ledger/points/streak/redemption `:302/:516/:541/:1219/:1242`) and the per-collection codecs (`lib/core/sync/codec/*.dart`),
 **When** the formulas are extracted into a new `lib/data/firestore/doc_ids.dart`,
 **Then** the module reproduces **every** formula byte-for-byte *except* the AD-25 track-scoped re-key (owned by Story 2.3), keeping every legacy field-alias path intact (FR2; CAP-2; AD-5, AD-13).
 
@@ -313,7 +313,7 @@ So that native writes and the Phase-5 backfill mint the exact same document ids 
 
 **Given** this is Phase-0 additive scaffolding,
 **When** `doc_ids.dart` lands,
-**Then** it is a pure string-formula module with no `cloud_firestore` import (so it does not trip the Story 2.6 Firebase-confinement grep), and no feature yet imports it (no cutover in Phase 0).
+**Then** it is a pure string-formula module with no `cloud_firestore` import (so it does not trip the Story 2.6 Firebase-confinement grep), and no feature yet imports it (no cutover in Phase 0) (AD-28 interplay; CAP-2).
 
 **Given** the gate + isolation requirements,
 **When** the story is complete,
@@ -396,6 +396,10 @@ So that no hand-copied second implementation can drift and silently ship a lost-
 **When** a test introduces a hand-copied/drifted second implementation (e.g. one that omits the D15 fallback, exactly the AUD-t-cross-68 defect),
 **Then** the suite fails on that drifted copy, and a grep-gated single-module check fails if any reconciliation path re-implements the predicate instead of calling `conflict.dart` — proving a second copy cannot silently exist (FR12; AD-7, AD-28, AD-29).
 
+**Given** the Story 2.2 grep-safety pattern and that Story 2.5 lands *before* the Story 2.6 grep widening,
+**When** `lib/data/firestore/conflict.dart` lands,
+**Then** it is a pure decision module — plain `DateTime`/`bool`/duration parameters with **no** `cloud_firestore` import (callers pass in the `synced_at` values and the FB-3 `hasPendingWrites`/`isFromCache` booleans) — so it cannot trip the not-yet-widened Firebase-confinement grep, keeping 2.5's "`make audit` green" claim true even though `lib/data/firestore/**` is not yet on the allow-list (FR11; CAP-3; AD-28 interplay).
+
 **Given** the gate + isolation requirements,
 **When** the story is complete,
 **Then** `make ci MAKE_CI_RC=0` and `make audit` (67 greps, plus the single-module predicate grep) are green, tests are seed-randomized (NFR-4) and TQ-3/TQ-6-compliant (NFR-5), no shipped P0 (MCF-2/6/8/9/11) is reopened (NFR-10), and it lands in an isolated worktree because `conflict.dart` and the merger fleet are shared foundation files (NFR-11).
@@ -408,9 +412,9 @@ So that when features start reading through repositories, the layer boundaries a
 
 **Acceptance Criteria:**
 
-**Given** the shipped `no-firebase-outside-core` gate today confines Firebase symbols to `lib/core/sync/` + `lib/core/auth/` (`Makefile` checks `1/15` and `2/15`, `:356-368`) and the engine is not deleted until Phase 6,
+**Given** the shipped `no-firebase-outside-core` gate today confines Firebase symbols to `lib/core/sync/` + `lib/core/auth/` (`Makefile` checks `1/15` and `2/15`, `:356-368`), that today's check `2/15` **additionally carves out** `lib/core/providers/` and all of `lib/features/` from the scan (`:364-366`), and that the engine is not deleted until Phase 6,
 **When** the grep is retargeted,
-**Then** its allowed-dir list is **widened** to include `lib/data/firestore/**` and `lib/data/repositories/**` alongside the retained legacy `lib/core/sync|auth` entries (so the still-live engine is not flagged) — feature/service/provider files importing `cloud_firestore` fail the gate; the grep stays green on the current tree (not yet tripped, no feature imports Firestore) (FR7; CAP-4; AD-28, AD-3).
+**Then** its allowed-dir list is **widened** to include `lib/data/firestore/**` and `lib/data/repositories/**` alongside the retained legacy `lib/core/sync|auth` entries (so the still-live engine is not flagged), **and** the existing `lib/core/providers/` + `lib/features/` carve-outs are removed/tightened so that a feature/service/provider file importing `cloud_firestore` actually fails the gate (today those files are silently exempt); the grep stays green on the current tree (not yet tripped, no feature imports Firestore) (FR7; CAP-4; AD-28, AD-3).
 
 **Given** AD-2's bare-instance ban,
 **When** a new grep is added,
