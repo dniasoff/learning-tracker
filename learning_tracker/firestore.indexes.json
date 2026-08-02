@@ -129,6 +129,20 @@
           "order": "ASCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "track_learning_order",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "curriculum_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "user_sort_order",
+          "order": "ASCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": []

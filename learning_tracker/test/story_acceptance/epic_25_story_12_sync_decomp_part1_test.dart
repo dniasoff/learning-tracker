@@ -78,6 +78,7 @@ void main() {
           'data/repositories/firestore_streak_event_repository.dart',
           'data/repositories/firestore_curriculum_track_repository.dart',
           'data/repositories/firestore_learning_order_repository.dart',
+          'data/repositories/firestore_track_learning_order_repository.dart',
           'data/repositories/firestore_completion_repository.dart',
           'data/repositories/firestore_account_repository.dart',
           'data/repositories/firestore_learner_profile_repository.dart',
