@@ -90,6 +90,18 @@ class _FakeRegistryHarness {
   }
 }
 
+/// Exposes a real, container-scoped [Ref] usable by tests that need to call
+/// [disposeAccountFirebase] (which takes a [Ref], matching every other
+/// function in `account_firebase_providers.dart` — the real production
+/// caller is a widget/notifier with its own `ref`, not a bare
+/// [ProviderContainer]). A plain (non-autoDispose) `Provider` stays mounted
+/// for the container's whole lifetime, so the `ref` it hands back remains
+/// safe to call `.read`/`.invalidate` on for as long as the container itself
+/// is alive — exactly the tests' lifetime here.
+final _refProvider = Provider<Ref>((ref) => ref);
+
+Ref _refOf(ProviderContainer container) => container.read(_refProvider);
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -170,9 +182,15 @@ void main() {
     });
   });
 
-  group('activeAccountFirebaseProvider — switching the active account', () {
-    test('yields different handles for a different account and disposes '
-        'the previously-active account\'s app', () async {
+  group('activeAccountFirebaseProvider — switching the active account '
+      'never disposes (keepAlive)', () {
+    test('HEADLINE: A → B → A within one container creates A exactly ONCE, '
+        'never calls terminate()/delete() on the switch, and A\'s original '
+        'handles remain the exact same (usable) object throughout — this is '
+        'the defect the keepAlive change exists to prevent (a same-process '
+        'dispose→re-resolve of the same account hands cloud_firestore\'s '
+        'statically-cached, now-terminate()d FirebaseFirestore instance back '
+        'to `.settings =`, which throws)', () async {
       final harness = _FakeRegistryHarness();
       final container = ProviderContainer(
         overrides: [
@@ -182,9 +200,80 @@ void main() {
       addTearDown(container.dispose);
 
       container.read(activeAccountIdProvider.notifier).setAccountId('acct-A');
-      // A keepAlive listener so activeAccountFirebaseProvider itself stays
-      // alive across the switch below (only the FAMILY member for the
-      // account being left is expected to autoDispose).
+      final sub = container.listen(activeAccountFirebaseProvider, (_, _) {});
+      addTearDown(sub.close);
+
+      final handlesA1 = await container.read(
+        activeAccountFirebaseProvider.future,
+      );
+      expect(handlesA1?.app.name, 'account_acct-A');
+
+      container.read(activeAccountIdProvider.notifier).setAccountId('acct-B');
+      final handlesB = await container.read(
+        activeAccountFirebaseProvider.future,
+      );
+      expect(handlesB?.app.name, 'account_acct-B');
+
+      container.read(activeAccountIdProvider.notifier).setAccountId('acct-A');
+      final handlesA2 = await container.read(
+        activeAccountFirebaseProvider.future,
+      );
+
+      // Drain the event queue — if anything WERE scheduled to dispose A
+      // (the pre-fix autoDispose behaviour), this gives it every chance
+      // to run before the assertions below.
+      await pumpEventQueue();
+
+      expect(
+        harness.initializedNames,
+        ['account_acct-A', 'account_acct-B'],
+        reason:
+            'account_acct-A must be created exactly ONCE across the '
+            'whole A→B→A round trip — no second initializeApp for A',
+      );
+      expect(
+        harness.deletedNames,
+        isEmpty,
+        reason:
+            'switching the active account must never call '
+            'terminate()/delete() — that is now reserved for explicit '
+            'removal (disposeAccountFirebase) or process teardown',
+      );
+      expect(
+        identical(handlesA1, handlesA2),
+        isTrue,
+        reason:
+            'revisiting acct-A must hand back the SAME handles bundle '
+            'produced on the first visit, not a fresh resolve',
+      );
+      expect(
+        handlesA2?.isDisposed,
+        isFalse,
+        reason:
+            'A\'s handles must still be live/usable after the round '
+            'trip through B',
+      );
+      expect(
+        container.read(accountFirebaseRegistryProvider).activeAccountIds,
+        {'acct-A', 'acct-B'},
+        reason:
+            'BOTH accounts stay resolved simultaneously under keepAlive '
+            '— this is the whole point: switching accumulates instead '
+            'of tearing down',
+      );
+    });
+
+    test('yields different (both still-live) handles for a different account, '
+        'and disposes neither', () async {
+      final harness = _FakeRegistryHarness();
+      final container = ProviderContainer(
+        overrides: [
+          accountFirebaseRegistryProvider.overrideWithValue(harness.build()),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      container.read(activeAccountIdProvider.notifier).setAccountId('acct-A');
       final sub = container.listen(activeAccountFirebaseProvider, (_, _) {});
       addTearDown(sub.close);
 
@@ -206,22 +295,180 @@ void main() {
         reason: 'switching accounts must yield a different handles bundle',
       );
 
-      // accountFirebaseProvider('acct-A') is no longer watched by anything
-      // once activeAccountFirebaseProvider moved on to 'acct-B' — autoDispose
-      // teardown is scheduled for the next event-loop tick(s).
-      await Future<void>.delayed(Duration.zero);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       expect(
         harness.deletedNames,
-        ['account_acct-A'],
+        isEmpty,
         reason:
-            'switching the active account must dispose exactly the '
-            'account being left (account_acct-A), never the one being '
-            'entered (account_acct-B) and never both.',
+            'switching the active account must dispose NEITHER the '
+            'account being left NOR the one being entered',
       );
+      expect(handlesA?.isDisposed, isFalse);
+      expect(handlesB?.isDisposed, isFalse);
     });
   });
+
+  group('disposeAccountFirebase — explicit removal DOES dispose', () {
+    test('terminates the Firestore handle then deletes the app, in that '
+        'order, and does not touch any other resolved account', () async {
+      final callOrder = <String>[];
+      final harness = _FakeRegistryHarness();
+      final registry = AccountFirebase(
+        options: _options,
+        enableAppCheck: false,
+        initializeApp:
+            ({required String name, required FirebaseOptions options}) async {
+              harness.initializedNames.add(name);
+              final app = MockFirebaseApp();
+              when(() => app.name).thenReturn(name);
+              return app;
+            },
+        listApps: () => const [],
+        resolveFirestore: (app) {
+          final mock = MockFirebaseFirestore();
+          when(() => mock.terminate()).thenAnswer((_) async {
+            callOrder.add('terminate:${app.name}');
+          });
+          return mock;
+        },
+        resolveAuth: (app) => MockFirebaseAuthHandle(),
+        deleteApp: (app) async {
+          callOrder.add('delete:${app.name}');
+          harness.deletedNames.add(app.name);
+        },
+      );
+
+      final container = ProviderContainer(
+        overrides: [
+          accountFirebaseRegistryProvider.overrideWithValue(registry),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final handlesA = await container.read(
+        accountFirebaseProvider('acct-A').future,
+      );
+      final handlesB = await container.read(
+        accountFirebaseProvider('acct-B').future,
+      );
+      expect(handlesA.isDisposed, isFalse);
+
+      await disposeAccountFirebase(_refOf(container), 'acct-A');
+
+      expect(
+        callOrder,
+        ['terminate:account_acct-A', 'delete:account_acct-A'],
+        reason:
+            'defect #3\'s ordering (terminate() before delete()) must '
+            'hold for the explicit-removal path too',
+      );
+      expect(handlesA.isDisposed, isTrue);
+      expect(
+        registry.activeAccountIds,
+        {'acct-B'},
+        reason: 'removing acct-A must not touch acct-B, which stays resolved',
+      );
+      expect(handlesB.isDisposed, isFalse);
+    });
+
+    test('after removal, re-resolving the same account id triggers a genuinely '
+        'fresh resolve (a second initializeApp), never the stale cached '
+        'handles', () async {
+      final harness = _FakeRegistryHarness();
+      final container = ProviderContainer(
+        overrides: [
+          accountFirebaseRegistryProvider.overrideWithValue(harness.build()),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final first = await container.read(
+        accountFirebaseProvider('acct-A').future,
+      );
+      await disposeAccountFirebase(_refOf(container), 'acct-A');
+
+      final second = await container.read(
+        accountFirebaseProvider('acct-A').future,
+      );
+
+      expect(identical(first, second), isFalse);
+      expect(harness.initializedNames, ['account_acct-A', 'account_acct-A']);
+      expect(harness.deletedNames, ['account_acct-A']);
+    });
+  });
+
+  group(
+    'RED-DEMO: reverting accountFirebaseProvider to autoDispose would break '
+    'the A→B→A invariant the keepAlive fix exists for',
+    () {
+      test('a hand-rolled autoDispose-family analogue of the PRE-FIX '
+          'accountFirebaseProvider (same resolve/onDispose body, just '
+          'without `keepAlive: true`) recreates acct-A a SECOND time and '
+          'tears it down mid-round-trip — the exact symptoms the headline '
+          'test above proves no longer happen', () async {
+        final harness = _FakeRegistryHarness();
+        final registry = harness.build();
+
+        // The pre-fix shape of `accountFirebase`: a plain autoDispose
+        // family with the same resolve + onDispose wiring, minus
+        // `keepAlive: true`.
+        final legacyAccountFirebase = FutureProvider.autoDispose
+            .family<AccountFirebaseHandles, String>((ref, accountId) async {
+              ref.onDispose(() => unawaited(registry.dispose(accountId)));
+              return registry.resolve(accountId);
+            });
+
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+
+        // A → B → A, driven exactly like the real
+        // activeAccountFirebaseProvider does (a single listener that
+        // re-watches whichever id is "active"), so losing the listener
+        // on A when the "active" id moves to B is what schedules A's
+        // autoDispose teardown.
+        ProviderSubscription<AsyncValue<AccountFirebaseHandles>>? current;
+        Future<AccountFirebaseHandles> switchTo(String id) {
+          current?.close();
+          current = container.listen(legacyAccountFirebase(id), (_, _) {});
+          return container.read(legacyAccountFirebase(id).future);
+        }
+
+        final handlesA1 = await switchTo('acct-A');
+        await pumpEventQueue();
+        await switchTo('acct-B');
+        await pumpEventQueue();
+        final handlesA2 = await switchTo('acct-A');
+        current?.close();
+
+        expect(
+          harness.initializedNames,
+          ['account_acct-A', 'account_acct-B', 'account_acct-A'],
+          reason:
+              'PRE-FIX SYMPTOM: acct-A is created a SECOND time — the '
+              'keepAlive fix\'s headline test asserts this list has '
+              'exactly ONE account_acct-A entry; under autoDispose it '
+              'does not',
+        );
+        expect(
+          harness.deletedNames,
+          ['account_acct-A'],
+          reason:
+              'PRE-FIX SYMPTOM: switching away from A calls '
+              'terminate()/delete() on it — the keepAlive fix\'s '
+              'headline test asserts deletedNames stays empty across a '
+              'switch; under autoDispose it does not',
+        );
+        expect(
+          identical(handlesA1, handlesA2),
+          isFalse,
+          reason:
+              'PRE-FIX SYMPTOM: revisiting A is a fresh resolve, not the '
+              'same object the keepAlive fix guarantees',
+        );
+      });
+    },
+  );
 
   group('accountFirebaseProvider — flag OFF: legacy single-instance '
       'fallback is genuinely reachable', () {
@@ -295,97 +542,114 @@ void main() {
 
   group('accountFirebaseProvider — disposed mid-resolve does not leak the '
       'app (defect #1 red-demo)', () {
-    test('a provider disposed while resolve() is still awaiting a slow native '
-        'initializeApp() still tears the app down once resolve() settles — '
-        'every OTHER harness in this file settles in a single microtask, '
-        'which is exactly why this disposed-mid-resolve window never existed '
-        'in this suite before this test', () async {
-      final releaseInit = Completer<void>();
-      final initializedNames = <String>[];
-      final deletedNames = <String>[];
+    test(
+      'a provider disposed while resolve() is still awaiting a slow native '
+      'initializeApp() still tears the app down once resolve() settles — '
+      'every OTHER harness in this file settles in a single microtask, '
+      'which is exactly why this disposed-mid-resolve window never existed '
+      'in this suite before this test\n\n'
+      'ADAPTED FOR KEEPALIVE (structurally-moot trigger note): pre-keepAlive, '
+      'this test disposed the provider instance by dropping its only '
+      'listener (`sub.close()`), which used to schedule autoDispose '
+      'teardown. Under `keepAlive`, losing the last listener no longer '
+      'disposes anything — that trigger is gone. The `!ref.mounted` guard '
+      'and the "onDispose registered before the await" ordering this test '
+      'exists to prove are still fully reachable, just via the NEW '
+      'disposal trigger this story introduces: `container.invalidate(...)` '
+      '(what `disposeAccountFirebase` calls internally). Everything else '
+      'about the defect #1 fix this test characterizes is unchanged.',
+      () async {
+        final releaseInit = Completer<void>();
+        final initializedNames = <String>[];
+        final deletedNames = <String>[];
 
-      final registry = AccountFirebase(
-        options: _options,
-        enableAppCheck: false,
-        initializeApp:
-            ({required String name, required FirebaseOptions options}) async {
-              // Genuinely yields to the event loop instead of settling in
-              // the same microtask — this is the real-world "hundreds of
-              // ms of native initializeApp" window the fix targets.
-              await releaseInit.future;
-              initializedNames.add(name);
-              final app = MockFirebaseApp();
-              when(() => app.name).thenReturn(name);
-              return app;
-            },
-        listApps: () => const [],
-        resolveFirestore: (app) {
-          final mock = MockFirebaseFirestore();
-          when(() => mock.terminate()).thenAnswer((_) async {});
-          return mock;
-        },
-        resolveAuth: (app) => MockFirebaseAuthHandle(),
-        deleteApp: (app) async {
-          deletedNames.add(app.name);
-        },
-      );
+        final registry = AccountFirebase(
+          options: _options,
+          enableAppCheck: false,
+          initializeApp:
+              ({required String name, required FirebaseOptions options}) async {
+                // Genuinely yields to the event loop instead of settling in
+                // the same microtask — this is the real-world "hundreds of
+                // ms of native initializeApp" window the fix targets.
+                await releaseInit.future;
+                initializedNames.add(name);
+                final app = MockFirebaseApp();
+                when(() => app.name).thenReturn(name);
+                return app;
+              },
+          listApps: () => const [],
+          resolveFirestore: (app) {
+            final mock = MockFirebaseFirestore();
+            when(() => mock.terminate()).thenAnswer((_) async {});
+            return mock;
+          },
+          resolveAuth: (app) => MockFirebaseAuthHandle(),
+          deleteApp: (app) async {
+            deletedNames.add(app.name);
+          },
+        );
 
-      final container = ProviderContainer(
-        overrides: [
-          accountFirebaseRegistryProvider.overrideWithValue(registry),
-        ],
-      );
-      addTearDown(container.dispose);
+        final container = ProviderContainer(
+          overrides: [
+            accountFirebaseRegistryProvider.overrideWithValue(registry),
+          ],
+        );
+        addTearDown(container.dispose);
 
-      // Start resolving 'acct-A' via the ONLY listener on this family
-      // member, then drop it before the native initializeApp settles —
-      // this disposes the provider instance while `registry.resolve` is
-      // still in flight, the exact window defect #1 lives in.
-      final sub = container.listen(
-        accountFirebaseProvider('acct-A'),
-        (_, _) {},
-      );
-      sub.close();
-      // Drain the event queue so Riverpod's `ProviderScheduler` actually
-      // RUNS the scheduled disposal now, WHILE resolve() is still
-      // suspended on `releaseInit` (not yet completed) — this is what
-      // makes the window real: the disposal must complete (marking
-      // `ref.mounted` false) before resolve() settles, not after.
-      // Without this drain, completing `releaseInit` immediately lets
-      // resolve() race ahead of the scheduler via microtasks alone and
-      // "accidentally" win, masking the bug this test targets.
-      await pumpEventQueue();
+        // Start resolving 'acct-A' (a listener kicks the build off
+        // synchronously, exactly like the pre-keepAlive version of this test
+        // did), then explicitly invalidate it — the keepAlive-era equivalent
+        // of "dispose this provider instance" (what `disposeAccountFirebase`
+        // calls internally) — before the native initializeApp settles. This
+        // disposes the provider instance while `registry.resolve` is still in
+        // flight, the exact window defect #1 lives in.
+        final sub = container.listen(
+          accountFirebaseProvider('acct-A'),
+          (_, _) {},
+        );
+        addTearDown(sub.close);
+        container.invalidate(accountFirebaseProvider('acct-A'));
+        // Drain the event queue so Riverpod's `ProviderScheduler` actually
+        // RUNS the scheduled disposal now, WHILE resolve() is still
+        // suspended on `releaseInit` (not yet completed) — this is what
+        // makes the window real: the disposal must complete (marking
+        // `ref.mounted` false) before resolve() settles, not after.
+        // Without this drain, completing `releaseInit` immediately lets
+        // resolve() race ahead of the scheduler via microtasks alone and
+        // "accidentally" win, masking the bug this test targets.
+        await pumpEventQueue();
 
-      // Let the slow initializeApp actually settle now that the provider
-      // is already disposed.
-      releaseInit.complete();
-      // Drain the event queue so resolve() completes, the
-      // `!ref.mounted` guard fires, and the onDispose-triggered
-      // registry.dispose() runs to completion.
-      await pumpEventQueue();
+        // Let the slow initializeApp actually settle now that the provider
+        // is already disposed.
+        releaseInit.complete();
+        // Drain the event queue so resolve() completes, the
+        // `!ref.mounted` guard fires, and the onDispose-triggered
+        // registry.dispose() runs to completion.
+        await pumpEventQueue();
 
-      expect(
-        initializedNames,
-        ['account_acct-A'],
-        reason:
-            'the in-flight native call still completes (it cannot be '
-            'cancelled mid-flight) — the fix is about what happens '
-            'AFTER it settles, not preventing the native call itself',
-      );
-      expect(
-        deletedNames,
-        ['account_acct-A'],
-        reason:
-            'CRITICAL: once disposed mid-resolve, the app resolve() went '
-            'on to create must still be torn down. Pre-fix, '
-            'ref.onDispose was registered AFTER the await, so '
-            'registering it in this exact disposed-mid-resolve window '
-            'threw UnmountedRefException instead of ever running — the '
-            'app (+ its 20 MiB persistent cache) would then be pinned '
-            'for the rest of the process.',
-      );
-      expect(registry.activeAccountIds, isEmpty);
-    });
+        expect(
+          initializedNames,
+          ['account_acct-A'],
+          reason:
+              'the in-flight native call still completes (it cannot be '
+              'cancelled mid-flight) — the fix is about what happens '
+              'AFTER it settles, not preventing the native call itself',
+        );
+        expect(
+          deletedNames,
+          ['account_acct-A'],
+          reason:
+              'CRITICAL: once disposed mid-resolve, the app resolve() went '
+              'on to create must still be torn down. Pre-fix, '
+              'ref.onDispose was registered AFTER the await, so '
+              'registering it in this exact disposed-mid-resolve window '
+              'threw UnmountedRefException instead of ever running — the '
+              'app (+ its 20 MiB persistent cache) would then be pinned '
+              'for the rest of the process.',
+        );
+        expect(registry.activeAccountIds, isEmpty);
+      },
+    );
   });
 
   group('injection seams preserved (AD-2/AD-28 ratchet fallback default)', () {
