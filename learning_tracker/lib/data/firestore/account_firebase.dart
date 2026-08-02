@@ -114,8 +114,21 @@ final RegExp _unsafeAppNameChar = RegExp('[^A-Za-z0-9_-]');
 /// account's Firestore/Auth handles, which the app can function without App
 /// Check attestation (rules-only enforcement, unenforced App Check today —
 /// AD-12).
+///
+/// **Not immutable end-to-end** (defect #3 fix): [isDisposed] is a mutable
+/// marker [AccountFirebase] flips the moment it starts tearing this bundle
+/// down (see [AccountFirebase.dispose]). This exists because
+/// `cloud_firestore`'s `FirebaseFirestore.instanceFor` caches instances in
+/// its own static map with no `registerService` hook into
+/// `FirebaseApp.delete()` (unlike `firebase_auth`/`firebase_app_check`,
+/// which DO register and therefore self-invalidate on delete) — so
+/// [firestore] on an already-disposed bundle would otherwise look and act
+/// exactly like a live handle to any caller that kept a reference to it
+/// past [AccountFirebase.dispose]. [isDisposed] lets such a holder detect
+/// that asymmetry instead of silently reading/writing through a handle
+/// whose underlying app no longer exists.
 final class AccountFirebaseHandles {
-  const AccountFirebaseHandles({
+  AccountFirebaseHandles({
     required this.app,
     required this.firestore,
     required this.auth,
@@ -140,6 +153,22 @@ final class AccountFirebaseHandles {
   /// This account's private App Check instance, or `null` if resolution/
   /// activation was not possible on this run (see class doc).
   final FirebaseAppCheck? appCheck;
+
+  bool _disposed = false;
+
+  /// Whether [AccountFirebase.dispose] has already torn this bundle's
+  /// native app down. A caller holding a reference to a handles bundle
+  /// across an `await` (e.g. mid-write) should check this before trusting
+  /// [firestore]/[auth] to still be backed by a live [app] — see the class
+  /// doc for why `app.delete()` alone does not make that detectable via
+  /// [firestore] itself.
+  bool get isDisposed => _disposed;
+
+  /// Marks this bundle disposed. Package-private to this library —
+  /// [AccountFirebase] is the only caller, from [AccountFirebase.dispose].
+  void _markDisposed() {
+    _disposed = true;
+  }
 }
 
 /// Abstracts `Firebase.initializeApp` so tests can supply a platform-binding
@@ -268,6 +297,15 @@ class AccountFirebase {
   final Map<String, AccountFirebaseHandles> _handles = {};
   final Map<String, Future<AccountFirebaseHandles>> _pending = {};
 
+  /// Accounts currently being torn down by [dispose] — recorded before the
+  /// native `app.delete()` call starts and cleared once it (and the
+  /// `firestore.terminate()` that now precedes it) finishes. [resolve]
+  /// consults this (defect #2 fix) so a fast dispose→re-resolve of the SAME
+  /// account id cannot hand back an app the SDK still lists but is mid-way
+  /// through deleting natively — see [resolve]'s doc for why that window is
+  /// real, not theoretical.
+  final Map<String, Future<void>> _disposing = {};
+
   /// Derives this registry's named-app identity for [accountId] (AD-1,
   /// AD-24): `'account_<sanitized accountId>'`. Pure — no Firebase call, no
   /// registry state. Every unsafe character (anything outside
@@ -307,6 +345,18 @@ class AccountFirebase {
   ///
   /// Throws [MaxAccountsReachedException] if [accountId] is not already
   /// active and resolving it would exceed [maxAccounts].
+  ///
+  /// **Waits out an in-flight [dispose] of the SAME [accountId] first**
+  /// (defect #2 fix). `firebase_core_platform_interface`'s
+  /// `MethodChannelFirebaseApp.delete()` only removes an app from
+  /// `Firebase.apps` AFTER its platform-channel delete call returns — so
+  /// without this wait, [_findOrInitializeApp] could "find" and hand back
+  /// an app this same registry is mid-way through deleting (e.g. a fast
+  /// A→B→A account switch), memoizing a handle bundle wrapping an app that
+  /// is deleted milliseconds later. Every call is re-issued via a fresh
+  /// [resolve] recursion once the disposal settles, so the settled/in-flight
+  /// checks above run again against post-disposal state rather than assuming
+  /// nothing else changed while this call was waiting.
   Future<AccountFirebaseHandles> resolve(String accountId) async {
     if (accountId.isEmpty) {
       throw ArgumentError.value(accountId, 'accountId', 'must not be empty');
@@ -318,7 +368,23 @@ class AccountFirebase {
     final inFlight = _pending[accountId];
     if (inFlight != null) return inFlight;
 
-    if (_handles.length >= maxAccounts) {
+    final disposing = _disposing[accountId];
+    if (disposing != null) {
+      await disposing;
+      // Re-run every guard (including this one) against the post-disposal
+      // state — a concurrent caller may have already started a fresh
+      // resolve/dispose for this same accountId while this call was
+      // waiting.
+      return resolve(accountId);
+    }
+
+    // Defect #4 fix: this must count `_pending` (a resolve already in
+    // flight for a DIFFERENT account id) too, not just `_handles` — using
+    // the SAME notion of "active" [activeAccountIds] itself publishes keeps
+    // the bound consistent with what callers observe. Without this, N
+    // concurrent resolve() calls for N distinct new ids all see an empty
+    // `_handles` map and all proceed, defeating the bound entirely.
+    if (activeAccountIds.length >= maxAccounts) {
       throw const MaxAccountsReachedException();
     }
 
@@ -344,6 +410,33 @@ class AccountFirebase {
     // AD-18: `.settings` MUST be assigned immediately after obtaining the
     // handle and before any other call on it — this is that ordering,
     // enforced in exactly this one place.
+    //
+    // **Known Phase 1 limitation, deliberately not patched around (defect
+    // #3's "settings immutability" question):** `cloud_firestore`'s
+    // `FirebaseFirestore.instanceFor` caches its Dart-side instance in a
+    // static map keyed ONLY by `'<appName>|(default)'`, for the lifetime of
+    // the process, with no eviction hook. If [accountId] was previously
+    // resolved-then-[dispose]d IN THIS SAME PROCESS, this call returns the
+    // exact same (now-`terminate()`d — see [_teardown]) cached instance,
+    // and `.settings =` below throws `FirebaseException` (per `terminate()`
+    // 's own contract: "Any other method will throw"), rather than the
+    // pre-fix silent no-op. Two ways out were considered: (1) keep
+    // [appNameForAccount] a stable, pure function of the account id (what
+    // this file does), accepting that a same-process same-account revisit
+    // fails loudly here; or (2) suffix the app name with a per-dispose
+    // "generation" counter so each revisit gets a fresh cache key. (2) was
+    // rejected: it would silently break AD-24's "stable on-disk cache
+    // directory per account" guarantee (the on-disk Firestore persistence
+    // path is derived from the app name — see the library doc's Story 2.1
+    // reference) and leak one orphaned cache directory per revisit, an
+    // unbounded disk cost strictly worse than a loud, deterministic
+    // exception on what Phase 1 does not yet expose to real traffic
+    // ("ships to users: nothing yet"). This is therefore an explicit,
+    // documented Phase 1 gap: a same-process same-account dispose→resolve
+    // cycle is not yet fully supported by this registry — tracked as a
+    // Phase 2 follow-up (candidates: process-level restart on revisit, or
+    // an upstream `cloud_firestore` fix/workaround) before repository code
+    // relies on repeatedly revisiting one account within a single process.
     final firestore = _resolveFirestore(app);
     firestore.settings = const Settings(
       persistenceEnabled: true,
@@ -410,6 +503,11 @@ class AccountFirebase {
   /// progress from another caller), this awaits that resolution first so
   /// the app it just created is not deleted out from under it — then
   /// immediately tears it down.
+  ///
+  /// **Records the teardown in [_disposing] before starting it** (defect #2
+  /// fix) and only clears that entry once it finishes, so a concurrent
+  /// [resolve] for the same [accountId] can wait it out instead of racing
+  /// [_findOrInitializeApp] against a still-native-but-dying app.
   Future<void> dispose(String accountId) async {
     final inFlight = _pending[accountId];
     if (inFlight != null) {
@@ -419,6 +517,39 @@ class AccountFirebase {
     final handles = _handles.remove(accountId);
     if (handles == null) return;
 
+    final teardown = _teardown(handles);
+    _disposing[accountId] = teardown;
+    try {
+      await teardown;
+    } finally {
+      unawaited(_disposing.remove(accountId));
+    }
+  }
+
+  /// Actually releases [handles]'s native resources (defect #3 fix).
+  ///
+  /// `app.delete()` alone does not release the [FirebaseFirestore] handle:
+  /// `cloud_firestore`'s `FirebaseFirestore.instanceFor` caches instances in
+  /// a static map keyed by app name, with no `registerService` hook into
+  /// `FirebaseApp.delete()` — unlike `firebase_auth`/`firebase_app_check`,
+  /// which DO register and are therefore disposed automatically. Left
+  /// alone, that means (b) a disposed account's `handles.firestore` keeps
+  /// working against a deleted app while `handles.auth` throws — an
+  /// asymmetry undetectable by callers — and (c) a live `snapshots()`
+  /// subscription would keep running against a deleted app.
+  /// `terminate()` (documented to release the instance's platform-side
+  /// resources) closes both. It does NOT, however, remove the entry from
+  /// `_cachedInstances` — see [_resolveNew]'s doc comment for the residual
+  /// same-process/same-account-revisit consequence of that, and the
+  /// deliberate decision not to work around it by varying the app name's
+  /// identity per generation.
+  ///
+  /// [handles] is marked [AccountFirebaseHandles.isDisposed] first, before
+  /// either native call, so a caller racing this teardown with an in-flight
+  /// read observes the marker no later than the teardown itself starts.
+  Future<void> _teardown(AccountFirebaseHandles handles) async {
+    handles._markDisposed();
+    await handles.firestore.terminate();
     await _deleteApp(handles.app);
   }
 

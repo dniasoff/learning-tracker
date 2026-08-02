@@ -133,6 +133,28 @@ AccountFirebase accountFirebaseRegistry(Ref ref) {
 /// tears down that (and only that) account's named app via
 /// [AccountFirebase.dispose]. The registry singleton itself, and every
 /// OTHER account's handles it holds, are untouched.
+///
+/// **`ref.onDispose` is registered BEFORE the `await registry.resolve(...)`
+/// below — this ordering is load-bearing (defect #1 fix).** `Ref.onDispose`
+/// throws `UnmountedRefException` if the provider is already disposed
+/// (`!ref.mounted`) by the time it is called (riverpod's own `Ref.onDispose`
+/// doc: "check `ref.mounted` after async gaps"). `registry.resolve` awaits a
+/// real native `initializeApp` call — hundreds of milliseconds on-device —
+/// so a caller that switches accounts again before it settles (e.g. rapid
+/// A→B) disposes THIS provider instance mid-`await`. If `onDispose` were
+/// registered only after the `await` (the pre-fix ordering), that
+/// registration call would itself throw in exactly that window — and
+/// because the throw happens AFTER `resolve` already completed and cached
+/// the handles in the registry, nothing would ever call
+/// [AccountFirebase.dispose] for this account: its named app + persistent
+/// cache would be pinned for the rest of the process. Registering the
+/// teardown first means it exists no matter when disposal happens; the
+/// closure only closes over `registry`/`accountId` (never `ref`), so it
+/// stays safe to invoke even after `ref` itself is unmounted, and the
+/// `_disposeCalledOnce` guard makes it safe to invoke a second time from
+/// the `!ref.mounted` branch below without double-disposing (itself also
+/// safe per [AccountFirebase.dispose]'s own idempotency, but kept explicit
+/// here rather than relied upon implicitly).
 @riverpod
 Future<AccountFirebaseHandles> accountFirebase(
   Ref ref,
@@ -143,10 +165,35 @@ Future<AccountFirebaseHandles> accountFirebase(
   }
 
   final registry = ref.watch(accountFirebaseRegistryProvider);
-  final handles = await registry.resolve(accountId);
-  ref.onDispose(() {
+
+  var disposeCalledOnce = false;
+  void disposeOnce() {
+    if (disposeCalledOnce) return;
+    disposeCalledOnce = true;
     unawaited(registry.dispose(accountId));
-  });
+  }
+
+  // MUST be registered before the `await` below — see the doc comment.
+  ref.onDispose(disposeOnce);
+
+  final handles = await registry.resolve(accountId);
+
+  if (!ref.mounted) {
+    // This provider instance was disposed while `resolve` was still in
+    // flight. `disposeOnce` above already ran (from `ref.onDispose`) and
+    // is tearing the account down (it awaits the same in-flight resolve
+    // internally — see `AccountFirebase.dispose`'s doc — so it cannot
+    // delete an app out from under this call); calling it again here is a
+    // no-op guard, not a second real teardown. Never hand back a "live"
+    // bundle nobody will use once this provider is gone.
+    disposeOnce();
+    throw StateError(
+      'accountFirebase($accountId): provider was disposed while resolve() '
+      'was still in flight; the resolved handles were torn down instead '
+      'of being returned.',
+    );
+  }
+
   return handles;
 }
 
