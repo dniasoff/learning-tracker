@@ -42,6 +42,8 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart' show Provider;
 import 'package:learning_tracker/core/auth/firebase_auth_gateway_impl.dart'
     show firebaseAuthInstanceProvider;
+import 'package:learning_tracker/core/database/registry/device_registry_database.dart'
+    show kMaxDeviceAccounts;
 import 'package:learning_tracker/core/sync/providers/firestore_instance_provider.dart'
     show firebaseFirestoreProvider;
 import 'package:learning_tracker/data/firestore/account_firebase.dart';
@@ -72,9 +74,39 @@ final accountFirebaseRegistryEnabledProvider = Provider<bool>((ref) => true);
 /// widget rebuilds" invariant the story asks for).
 ///
 /// [fa]: https://pub.dev/documentation/firebase_core/latest/firebase_core/FirebaseApp-class.html
+///
+/// **`maxAccounts` is [kMaxDeviceAccounts] + 1, not [kMaxDeviceAccounts] —
+/// deliberately, a Phase 1 Story D finding.** `AccountFirebase.resolve`'s
+/// bound check and Riverpod's `autoDispose` family-member teardown are two
+/// independently-scheduled things: when [activeAccountFirebaseProvider]
+/// moves from account A to account B, the family member for A does not lose
+/// its listener and get disposed (which is what runs `ref.onDispose` →
+/// `registry.dispose(A)`) synchronously with B's resolve — Riverpod
+/// schedules that teardown via its own `ProviderScheduler`, which can run
+/// strictly after B's `resolve()` call already evaluated the bound check.
+/// Confirmed by a deterministic unit test
+/// (`test/data/firestore/account_switch_lifecycle_test.dart`, the "FINDING"
+/// test in its "the ≤5 bound interacts correctly with switching" group): at
+/// a bound
+/// exactly equal to the number of accounts already resolved, a back-to-back
+/// switch (no yield to the event loop between the two `setAccountId` calls)
+/// spuriously throws [MaxAccountsReachedException] even though A truly is
+/// being released — reproduced even with an INSTANT (non-artificially-slow)
+/// `app.delete()`, so it is not merely a "slow native call" edge case. One
+/// account of headroom absorbs exactly this transient A-still-counted/
+/// B-just-requested overlap without weakening the real, DB-enforced ≤5
+/// **owned**-account cap ([kMaxDeviceAccounts] itself, `DeviceRegistryDatabase
+/// .addAccount`) — that cap is untouched; this is purely a concurrently-
+/// resolved-named-apps cushion in the in-memory registry. Steady state
+/// (after the scheduled teardown actually runs) still settles back to
+/// ≤[kMaxDeviceAccounts] active apps, verified by the same test file's
+/// sequential/cyclic-switch coverage.
 @Riverpod(keepAlive: true)
 AccountFirebase accountFirebaseRegistry(Ref ref) {
-  return AccountFirebase(options: DefaultFirebaseOptions.currentPlatform);
+  return AccountFirebase(
+    options: DefaultFirebaseOptions.currentPlatform,
+    maxAccounts: kMaxDeviceAccounts + 1,
+  );
 }
 
 /// Resolves [accountId]'s [AccountFirebaseHandles] — the plan's
