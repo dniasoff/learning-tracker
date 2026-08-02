@@ -1,0 +1,10 @@
+# AD-2 / AD-28 bare-Firebase-instance ratchet baseline — generated
+# by tool/check_bare_firebase_instance_ratchet.dart
+# --update-baseline. Tracks the count of confirmed bare
+# FirebaseFirestore.instance / FirebaseAuth.instance sites outside
+# the (Phase 1) AccountFirebase registry
+# (lib/data/firestore/account_firebase.dart). The number only goes
+# DOWN — lower it only by routing a site through
+# accountFirebase(activeAccountId) once the registry lands, or by
+# deleting dead code, never by raising it to paper over a NEW site.
+3
