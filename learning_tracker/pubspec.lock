@@ -362,7 +362,7 @@ packages:
     source: hosted
     version: "0.8.0"
   connectivity_plus:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: connectivity_plus
       sha256: b5e72753cf63becce2c61fd04dfe0f1c430cc5278b53a1342dc5ad839eab29ec
@@ -370,7 +370,7 @@ packages:
     source: hosted
     version: "6.1.5"
   connectivity_plus_platform_interface:
-    dependency: transitive
+    dependency: "direct dev"
     description:
       name: connectivity_plus_platform_interface
       sha256: "3c09627c536d22fd24691a905cdd8b14520de69da52c7a97499c8be5284a32ed"

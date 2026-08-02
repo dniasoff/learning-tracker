@@ -100,6 +100,11 @@ dependencies:
   talker_dio_logger: ^5.1.13
   cryptography: ^2.9.0
   internet_connection_checker: ^3.0.1
+  # Story 1.4 / AD-11 / E-1: promoted from transitive to a direct dependency —
+  # connectivity_plus platform events (not the internet_connection_checker
+  # package default 5 s / 3-demo-host poll) are now the connectivity status
+  # source. See lib/features/account/presentation/providers/connectivity_providers.dart.
+  connectivity_plus: ^6.1.5
 
   # Typography (Playfair Display headlines + Inter body for Mesorah Heritage theme)
   google_fonts: ^8.1.0
@@ -134,6 +139,10 @@ dev_dependencies:
   geolocator_platform_interface: ^4.2.6
   geocoding_platform_interface: ^3.2.0
   path_provider_platform_interface: ^2.1.2
+  # Story 1.4: fakes ConnectivityPlatform.instance so connectivity_providers
+  # tests can inject platform connectivity transitions without touching the
+  # real EventChannel.
+  connectivity_plus_platform_interface: ^2.1.0
   # AUD-dashboard-02: gates SharedPreferences.remove() behind a Completer in
   # skipped_onboarding_cta_banner_dismiss_mounted_test.dart so the test can
   # unmount the widget mid-await.
