@@ -1,5 +1,4 @@
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/auth/auth_gateway_user.dart';
 import 'package:learning_tracker/core/auth/firebase_auth_gateway.dart';
 import 'package:learning_tracker/core/exceptions/app_exception.dart';
@@ -38,16 +37,6 @@ class NotAuthenticatedException extends InternalException {
 /// bare-instance ratchet counts exactly one `FirebaseAuth.instance` site in
 /// this file.
 FirebaseAuth _defaultFirebaseAuth() => FirebaseAuth.instance;
-
-/// [Provider] wrapper around [_defaultFirebaseAuth], so
-/// `lib/data/firestore/account_firebase_providers.dart`'s feature-flag
-/// (registry vs. legacy single-instance) shim can reuse this SAME
-/// resolution instead of typing a second `FirebaseAuth.instance` literal
-/// elsewhere in `lib/` — see that file's `accountFirebaseRegistryEnabledProvider`
-/// doc for the flag contract.
-final firebaseAuthInstanceProvider = Provider<FirebaseAuth>((ref) {
-  return _defaultFirebaseAuth();
-});
 
 /// Concrete [FirebaseAuthGateway].
 ///

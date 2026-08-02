@@ -1,12 +1,13 @@
 // Phase 1 Stories D+E — the Phase 1 EXIT verification (file 1 of 3).
 //
-// This file drives the REAL, unmodified `AccountFirebase` registry (lib/
-// data/firestore/account_firebase.dart, Story P1-A) end-to-end on a real
-// Android emulator against the Firestore + Auth EMULATORS (learning_
-// tracker/firebase.json, reached from an Android emulator/device at
-// 10.0.2.2 — same wiring `firestore_multi_app_isolation_test.dart`, Story
-// 2.1, already proved works on API 28 + 34). Nothing here is a fake/mock:
-// every `resolve`/`dispose` call goes through the actual shipped code.
+// This file drives the REAL `AccountFirebase` registry (lib/data/firestore/
+// account_firebase.dart) end-to-end on a real Android emulator against the
+// Firestore + Auth EMULATORS (learning_tracker/firebase.json, reached from
+// an Android emulator/device at 10.0.2.2 — same wiring
+// `firestore_multi_app_isolation_test.dart`, Story 2.1, already proved works
+// on API 28 + 34). Nothing here is a fake/mock: every
+// `createAnonymousAccount`/`resolve`/`dispose` call goes through the actual
+// shipped code.
 //
 // Covers 2 of the 6 migration-plan Phase 1 Exit-criteria items:
 //   1. <=5 named apps create/switch/tear down cleanly with multi-account
@@ -18,43 +19,53 @@
 // `account_firebase_guard_and_flood_test.dart`; items 2 (offline switch)
 // and 6 (red-demo) live in `account_firebase_offline_switch_test.dart`.
 //
+// **A1 fix (named-app auth).** `AccountFirebase.resolve()` now requires an
+// already-authenticated session — resolve() itself never signs in, which
+// the account-creation flow below now does explicitly via
+// `AccountFirebase.createAnonymousAccount()`, with emulator routing
+// supplied via the registry's `onSessionCreated` hook (see
+// `account_firebase_guard_and_flood_test.dart`'s header for the full
+// rationale, and `_emulatorize` below).
+//
 // **A confirmed environment/tooling defect this file works around — not a
-// topology or AccountFirebase defect.** While building this suite, calling
-// `FirebaseAuth.useAuthEmulator()` (or issuing a Firestore operation) on
-// ANY app immediately after a DIFFERENT app was deleted in the SAME
-// process reproducibly throws `_TypeError: type 'String' is not a subtype
-// of type 'Map<dynamic, dynamic>?'` inside
-// `platformExceptionToFirebaseAuthException` — this is the SAME class of
-// Android `firebase_auth`-plugin bug `firestore_multi_app_isolation_test
-// .dart` (Story 2.1) already documented and front-loaded its app creation
-// to avoid. Independently isolated here via a throwaway probe (see the
-// story report, not checked in) with three findings: (a) the bug is
-// reproducible on a 2-second settle delay too — not a race, a deterministic
-// plugin defect; (b) once it fires, a FOLLOW-UP Firestore operation on a
-// DIFFERENT, still-valid app can additionally throw `[cloud_firestore/
-// unknown] FirebaseApp was deleted` — a second, more serious symptom of
-// the same underlying native app-registry confusion; (c) crucially, PURE
-// `AccountFirebase.resolve()`/`dispose()` cycles — the real native
-// `Firebase.initializeApp`/`FirebaseApp.delete()` calls, with NO
-// `useAuthEmulator`/`useFirestoreEmulator`/Firestore-operation involved —
-// are completely unaffected, proven via 10 repeated create/dispose cycles
-// with zero errors. The bug lives specifically in firebase_auth/
-// cloud_firestore's Android platform-channel handling of emulator-routing
-// (and subsequent operations) on a sibling app after another app's
-// deletion — third-party plugin code, not `lib/data/firestore/
-// account_firebase.dart`, which this story is told not to modify. This
-// file's design therefore separates concerns precisely: every assertion
-// that needs auth-emulator-routed reads/writes happens BEFORE this file's
-// first `dispose()` call; every assertion made AFTER a `dispose()` call
-// uses ONLY the pure `resolve()`/`dispose()`/`activeAccountIds` surface
-// (proven safe), never `useAuthEmulator`/Firestore operations on the
-// post-dispose handle. Where that leaves a gap in ON-DEVICE, real-SDK
-// coverage (specifically: proving a POST-dispose re-resolved account gets
-// a genuinely NEW Auth identity, not just a new [FirebaseApp] object), the
-// gap is filled by `test/data/firestore/account_firebase_test.dart` and
-// `account_switch_lifecycle_test.dart` (Story D) — real production code,
-// injected SDK entry points, immune to this Android-platform-channel-only
-// bug — see this story's final report for the explicit cross-reference.
+// topology or AccountFirebase defect — RE-CONFIRMED on-device while fixing
+// A1.** Calling `FirebaseAuth.useAuthEmulator()` on ANY app immediately
+// after a DIFFERENT app was deleted in the SAME process reproducibly throws
+// `_TypeError: type 'String' is not a subtype of type 'Map<dynamic,
+// dynamic>?'` inside `platformExceptionToFirebaseAuthException` — the SAME
+// class of Android `firebase_auth`-plugin bug `firestore_multi_app_isolation
+// _test.dart` (Story 2.1) already documented. Under the OLD design this
+// file avoided it by keeping every post-dispose assertion to the pure
+// `resolve()`/`dispose()`/`activeAccountIds` surface. **That avoidance is
+// structurally no longer available for a FULL create-with-emulator-routing
+// cycle**: every account's session establishment now runs `onSessionCreated`
+// (`_emulatorize`) exactly once, regardless of which `AccountFirebase`
+// method triggers it or whether that method ultimately signs in — so even
+// attempting to re-establish a session (with the hook attached) for a NEW
+// account immediately after ANY dispose() in the same process retriggers
+// this exact bug. Confirmed empirically while fixing A1: attaching
+// `onSessionCreated` and calling `createAnonymousAccount` for a fresh id
+// right after `dispose()`d two others reproduced the identical `_TypeError`
+// above, on a real Android 14 (API 34) emulator against the real Firestore/
+// Auth emulators — not a hypothetical.
+//
+// Consequently, Exit criterion 1's post-dispose assertions below are scoped
+// to what is safe to prove without a fresh hook-attached session
+// establishment: dispose() really deletes the native app (proven via a RAW,
+// hook-free `Firebase.initializeApp` call with the SAME name — the SDK
+// rejects a duplicate name with `[core/duplicate-app]` if the old app were
+// still alive, so this call SUCCEEDING at all is itself the proof — "pure
+// `Firebase.initializeApp`/`FirebaseApp.delete()` calls... are completely
+// unaffected" per the original investigation), and the Dart-level bound
+// bookkeeping recovers (`activeAccountIds` shrinks below [kMaxDeviceAccounts]
+// once slots are freed). Proving a full "6th REAL account with an
+// authenticated session, in the SAME process, right after a dispose" is
+// left to `test/data/firestore/account_firebase_test.dart`'s unit suite
+// (immune to this Android-platform-channel-only bug — injected fakes never
+// touch a real platform channel at all) — see e.g. its "bounded account
+// count fails loudly, never evicts" and "dispose — releases the app"
+// groups. Exit criterion 5 similarly no longer attaches `onSessionCreated`
+// at all (see that test's own comment for why).
 //
 // Scope note (Phase 1 honesty): this exercises the registry directly, NOT
 // through the app's UI / a Parent-PIN gate — per the migration plan, Phase
@@ -65,6 +76,7 @@
 import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
@@ -83,14 +95,46 @@ FirebaseOptions _emulatorOptions() => const FirebaseOptions(
   projectId: 'torah-study-tracker',
 );
 
-/// Points a freshly-[AccountFirebase.resolve]d handle bundle at the
-/// emulators. Must be called immediately after `resolve()` returns and
-/// before any other Firestore/Auth call on the bundle, and — per this
-/// file's header note — must NEVER be called on a handle resolved AFTER
-/// this file's first `dispose()` call.
-Future<void> _emulatorize(AccountFirebaseHandles handles) async {
-  handles.firestore.useFirestoreEmulator(_emulatorHost, _firestorePort);
-  await handles.auth.useAuthEmulator(_emulatorHost, _authPort);
+/// The [AccountSessionHook] passed to [AccountFirebase]: redirects a
+/// just-created account's Firestore/Auth instances to the emulators before
+/// [AccountFirebase] performs its first sign-in. See the sibling
+/// `account_firebase_guard_and_flood_test.dart` for the full rationale.
+Future<void> _emulatorize(
+  FirebaseApp app,
+  FirebaseFirestore firestore,
+  FirebaseAuth auth,
+) async {
+  firestore.useFirestoreEmulator(_emulatorHost, _firestorePort);
+  await auth.useAuthEmulator(_emulatorHost, _authPort);
+}
+
+/// Fails loudly, before any Firebase call, if either emulator port is
+/// unreachable — an environment problem, not a code regression. See the
+/// identical helper in `account_firebase_guard_and_flood_test.dart` for the
+/// full rationale (kept duplicated rather than shared, matching this
+/// directory's existing per-file convention — see e.g.
+/// `firestore_multi_app_isolation_test.dart`'s own inline
+/// `_emulatorOptions`).
+Future<void> _ensureEmulatorsReachable() async {
+  for (final port in [_firestorePort, _authPort]) {
+    try {
+      final socket = await Socket.connect(
+        _emulatorHost,
+        port,
+      ).timeout(const Duration(seconds: 5));
+      await socket.close();
+    } catch (e) {
+      fail(
+        'Cannot reach the Firebase emulator at $_emulatorHost:$port ($e). '
+        'This is an ENVIRONMENT problem, not a code regression: start the '
+        'Firestore/Auth emulators (`firebase emulators:start`) and confirm '
+        'the Android emulator/device has outbound network access (AVDs on '
+        'this box have been observed to boot with airplane mode on — clear '
+        'it with `adb -s <device> shell settings put global '
+        'airplane_mode_on 0`).',
+      );
+    }
+  }
 }
 
 void _logResourceSnapshot(String label) {
@@ -111,6 +155,10 @@ void main() {
 
   group('Phase 1 exit verification (1/3) — registry boundary/switch + '
       'resource sanity', () {
+    setUpAll(() async {
+      await _ensureEmulatorsReachable();
+    });
+
     testWidgets(
       'Exit criterion 1: <=5 named apps create cleanly with distinguishable '
       'per-account data; a 6th fails loudly (MaxAccountsReachedException), '
@@ -122,20 +170,18 @@ void main() {
         final registry = AccountFirebase(
           options: _emulatorOptions(),
           enableAppCheck: false,
+          onSessionCreated: _emulatorize,
         );
+        addTearDown(registry.disposeAll);
 
-        // ── Phase A: full auth+Firestore proof for all 5, BEFORE any
-        // dispose() in this process (safe — see file header). ──
         final ids = List.generate(kMaxDeviceAccounts, (i) => 'e2e_bound_$i');
         final uids = <String, String>{};
         final firstAppRefs = <String, FirebaseApp>{};
 
         for (final id in ids) {
-          final handles = await registry.resolve(id);
+          final handles = await registry.createAnonymousAccount(id);
           firstAppRefs[id] = handles.app;
-          await _emulatorize(handles);
-          final cred = await handles.auth.signInAnonymously();
-          uids[id] = cred.user!.uid;
+          uids[id] = handles.uid;
           await handles.firestore
               .doc('users/${uids[id]}/diagnostic_logs/boundary_marker')
               .set({'account': id, 'uid': uids[id]});
@@ -144,10 +190,9 @@ void main() {
 
         // The 6th must fail LOUDLY — pure Dart-side bound check, never
         // reaches Firebase.initializeApp at all (see AccountFirebase.
-        // resolve's ordering), so this is unaffected by the plugin bug
-        // regardless of process history.
+        // resolve's ordering).
         await expectLater(
-          registry.resolve('e2e_bound_6th'),
+          registry.createAnonymousAccount('e2e_bound_6th'),
           throwsA(isA<MaxAccountsReachedException>()),
         );
         expect(
@@ -165,41 +210,44 @@ void main() {
           expect(doc.data()!['account'], id);
         }
 
-        // ── Phase B: real teardown + bound recovery, using ONLY the pure
-        // resolve()/dispose() surface from here on (proven safe post-
-        // dispose; see file header — no useAuthEmulator/Firestore calls
-        // past this point). ──
+        // ── Real teardown + bound recovery. See this file's header for why
+        // the post-dispose proofs below deliberately stop short of a fresh
+        // hook-attached session establishment (the documented, on-device-
+        // reproduced Android plugin bug). ──
         await registry.dispose(ids[0]);
         await registry.dispose(ids[1]);
         expect(registry.activeAccountIds, ids.skip(2).toSet());
-
-        // Now under the bound again: the 6th CAN be created for real (a
-        // genuine native Firebase.initializeApp call) — proves this is a
-        // real, recoverable bound, not a permanent lockout.
-        final sixth = await registry.resolve('e2e_bound_6th');
-        expect(sixth.app.name, 'account_e2e_bound_6th');
-        await registry.dispose('e2e_bound_6th');
-
-        // Re-resolving a disposed account yields a genuinely DIFFERENT
-        // native [FirebaseApp] object — not the same cached reference —
-        // the on-device, real-SDK proof that dispose() actually released
-        // it rather than leaving a stale handle. (The complementary proof
-        // that this also carries a genuinely NEW Auth identity is covered
-        // by the mocked-but-structurally-faithful
-        // `account_firebase_test.dart` unit suite — seeing it on-device
-        // too is blocked by the Android plugin bug described in this
-        // file's header.)
-        final reResolved = await registry.resolve(ids[0]);
         expect(
-          identical(reResolved.app, firstAppRefs[ids[0]]),
-          isFalse,
+          registry.activeAccountIds.length,
+          lessThan(kMaxDeviceAccounts),
           reason:
-              'a fresh resolve after dispose must return a genuinely new '
-              'native FirebaseApp object, not the stale pre-dispose '
-              'reference',
+              'the Dart-level bound bookkeeping must recover once slots are '
+              'freed — this is a real, recoverable bound, not a permanent '
+              'lockout (the corresponding "a new account CAN then be '
+              'created" proof, which needs a fresh authenticated session, '
+              'lives in the unit suite — see this file\'s header)',
         );
 
-        await registry.dispose(ids[0]);
+        // Proves dispose() really deleted the native app for ids[0] — a
+        // RAW, hook-free Firebase.initializeApp call with the SAME name.
+        // If the old native app were still alive, this would throw
+        // `[core/duplicate-app]`; it succeeding at all is the proof. No
+        // useAuthEmulator/Firestore operation is involved, so this is safe
+        // per the original investigation's finding (c).
+        final rawReplacement = await Firebase.initializeApp(
+          name: 'account_${ids[0]}',
+          options: _emulatorOptions(),
+        );
+        expect(
+          identical(rawReplacement, firstAppRefs[ids[0]]),
+          isFalse,
+          reason:
+              'a fresh initializeApp with the SAME name succeeding at all '
+              '(rather than throwing [core/duplicate-app]) already proves '
+              'dispose() deleted the old native app',
+        );
+        await rawReplacement.delete();
+
         for (final id in ids.skip(2)) {
           await registry.dispose(id);
         }
@@ -218,23 +266,33 @@ void main() {
       "evidence, matching Story 2.1's harness)",
       (tester) async {
         _logResourceSnapshot('criterion5-start');
+        // Deliberately NO `onSessionCreated` hook here: this criterion
+        // measures the resource cost of the LOCAL app + Firestore-local-
+        // persistence-engine creation/teardown cycle (AD-18's `.settings`
+        // assignment already spins up the full native Firestore
+        // persistence engine regardless of backend — that IS the
+        // resource-relevant cost). It is not about auth or emulator
+        // routing, and attaching the hook here would repeat this file's
+        // header-documented Android plugin bug on cycle 2 onward. Each
+        // `resolve()` call is therefore expected to throw
+        // `AccountNotAuthenticatedException` — by the time it does, the
+        // resource-relevant local operations (`Firebase.initializeApp`,
+        // Firestore `.settings` pinning) have already run, which is what
+        // this criterion measures; `activeAccountIds` confirms the session
+        // was genuinely created before the expected throw.
         final registry = AccountFirebase(
           options: _emulatorOptions(),
           enableAppCheck: false,
         );
+        addTearDown(registry.disposeAll);
         const cycles = 20;
         for (var i = 0; i < cycles; i++) {
           final id = 'e2e_cycle_${i % kMaxDeviceAccounts}';
-          final handles = await registry.resolve(id);
-          // The registry's own `.settings` assignment (persistence +
-          // bounded cache, AD-18) already spins up the full native
-          // Firestore local-persistence engine regardless of which
-          // backend it points at — that IS the resource-relevant cost
-          // this criterion measures. Emulator routing / sign-in are
-          // deliberately NOT exercised here (see file header): they are
-          // orthogonal to the resource question and would trip the
-          // unrelated Android plugin bug on cycle 2 onward.
-          expect(handles.app.name, 'account_$id');
+          await expectLater(
+            registry.resolve(id),
+            throwsA(isA<AccountNotAuthenticatedException>()),
+          );
+          expect(registry.activeAccountIds, contains(id));
           await registry.dispose(id);
           if (i % 5 == 0) _logResourceSnapshot('criterion5-cycle-$i');
         }

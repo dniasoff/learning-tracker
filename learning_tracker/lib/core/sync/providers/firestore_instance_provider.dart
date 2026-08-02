@@ -7,25 +7,22 @@ import 'package:learning_tracker/core/logging/logger.dart';
 /// The default (non-named) app's `FirebaseFirestore` singleton.
 ///
 /// **Phase 1 (AD-1/AD-2) status.** This is the pre-registry, single-instance
-/// data path the migration-plan Phase 1 rollback contract keeps present
-/// "until Phase 6": `AccountFirebase` (`lib/data/firestore/
-/// account_firebase.dart`) is now the canonical per-account resolution
-/// seam, and `lib/data/firestore/account_firebase_providers.dart`'s
-/// `accountFirebaseRegistryEnabledProvider` feature flag governs whether
-/// NEW call sites resolve through it or fall back to this singleton. This
-/// function is that flag's OFF-path implementation (reused by
-/// `account_firebase_providers.dart` via [firebaseFirestoreProvider] below,
-/// not re-typed there) as well as the sole remaining implementation for
-/// [firebaseFirestoreProvider] and [resetFirestoreNetwork]'s default —
-/// deliberately still not routed through the registry itself: this file's
-/// existing callers (`tutored_pull_providers.dart`, `outbox_providers.dart`)
-/// are the still-live pre-Phase-1 sync engine, which Phase 1 does not cut
-/// over ("no collection reads through it until Phase 2/3" — migration
-/// plan). Kept as exactly one call site (was two, in
-/// [firebaseFirestoreProvider] and [resetFirestoreNetwork] separately)
-/// so the AD-2/AD-28 bare-instance ratchet
-/// (`tool/check_bare_firebase_instance_ratchet.dart`) counts one site here,
-/// not two.
+/// data path. `AccountFirebase` (`lib/data/firestore/account_firebase.dart`)
+/// is now the canonical per-account resolution seam and the only path for
+/// NEW call sites — there is no feature flag left choosing between it and
+/// this singleton (the old `accountFirebaseRegistryEnabledProvider` flag and
+/// its legacy fallback shim in `account_firebase_providers.dart` were
+/// deleted once the registry became the sole data path). This function
+/// remains the sole implementation for [firebaseFirestoreProvider] and
+/// [resetFirestoreNetwork]'s default — deliberately still not routed
+/// through the registry itself: this file's existing callers
+/// (`tutored_pull_providers.dart`, `outbox_providers.dart`) are the
+/// still-live pre-Phase-1 sync engine, which Phase 1 does not cut over
+/// ("no collection reads through it until Phase 2/3" — migration plan).
+/// Kept as exactly one call site (was two, in [firebaseFirestoreProvider]
+/// and [resetFirestoreNetwork] separately) so the AD-2/AD-28 bare-instance
+/// ratchet (`tool/check_bare_firebase_instance_ratchet.dart`) counts one
+/// site here, not two.
 FirebaseFirestore _defaultFirestoreInstance() => FirebaseFirestore.instance;
 
 /// The single canonical provider for [FirebaseFirestore].

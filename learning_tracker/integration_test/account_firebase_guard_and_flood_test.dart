@@ -17,9 +17,41 @@
 // documented in the sibling file's header — every `useAuthEmulator` call
 // here happens with ZERO prior in-process deletions, matching Story 2.1's
 // own proven-safe shape.
+//
+// **A1 fix (named-app auth).** `AccountFirebase.resolve()` now requires an
+// already-authenticated session (it throws `AccountNotAuthenticatedException`
+// otherwise) — resolve() itself never signs in, which is what this file used
+// to rely on to redirect a fresh Auth instance to the emulator BEFORE the
+// first sign-in. The registry now exposes `onSessionCreated` — an
+// `AccountSessionHook` run once per account, after its app/Firestore/Auth
+// instances exist but strictly before any sign-in — for exactly this. This
+// file passes `_emulatorize` as that hook and drives account creation for
+// real via `AccountFirebase.createAnonymousAccount()`, never touching
+// `handles.auth.signInAnonymously()` directly for a FIRST sign-in (a
+// same-app sign-out/back-in — the AD-19 uid-reset shape below — still goes
+// through the registry too, via `signOut()` + a second
+// `createAnonymousAccount()` call, which reuses the already-emulator-routed
+// session rather than re-running the hook).
+//
+// **Production-traffic guard.** `_ensureEmulatorsReachable()` runs first, in
+// `setUpAll`, before any Firebase call: it opens a raw TCP probe to both
+// emulator ports and fails LOUDLY with an unambiguous message if either is
+// unreachable, rather than letting a real Firebase call fail deep in the
+// SDK with a cryptic connection error (or, worse, silently proceed) — see
+// that function's doc for why a probe failure here is an ENVIRONMENT
+// problem, not a code regression. Once `useFirestoreEmulator`/
+// `useAuthEmulator` are called on an instance, the SDK pins that instance to
+// the emulator host:port for its lifetime and does not fall back to
+// production if the emulator becomes unreachable — it fails the request
+// instead. Combined with the preflight probe, this file is structurally
+// incapable of authenticating against the production `torah-study-tracker`
+// project.
 import 'dart:async';
+import 'dart:io';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:drift/native.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
@@ -38,9 +70,46 @@ FirebaseOptions _emulatorOptions() => const FirebaseOptions(
   projectId: 'torah-study-tracker',
 );
 
-Future<void> _emulatorize(AccountFirebaseHandles handles) async {
-  handles.firestore.useFirestoreEmulator(_emulatorHost, _firestorePort);
-  await handles.auth.useAuthEmulator(_emulatorHost, _authPort);
+/// The [AccountSessionHook] passed to [AccountFirebase] for this file:
+/// redirects a just-created account's Firestore/Auth instances to the
+/// emulators before [AccountFirebase] performs its first sign-in.
+Future<void> _emulatorize(
+  FirebaseApp app,
+  FirebaseFirestore firestore,
+  FirebaseAuth auth,
+) async {
+  firestore.useFirestoreEmulator(_emulatorHost, _firestorePort);
+  await auth.useAuthEmulator(_emulatorHost, _authPort);
+}
+
+/// Fails loudly, before any Firebase call, if either emulator port is
+/// unreachable from this (on-device) process — an environment problem (the
+/// emulator suite isn't running, or the device/emulator's network is down,
+/// e.g. the AVD booted with airplane mode on) rather than a code
+/// regression. Without this, an unreachable emulator surfaces many seconds
+/// later as a confusing `signInAnonymously()`/Firestore connection error
+/// buried inside whichever test happened to need the network first.
+Future<void> _ensureEmulatorsReachable() async {
+  for (final port in [_firestorePort, _authPort]) {
+    try {
+      final socket = await Socket.connect(
+        _emulatorHost,
+        port,
+      ).timeout(const Duration(seconds: 5));
+      await socket.close();
+    } catch (e) {
+      fail(
+        'Cannot reach the Firebase emulator at $_emulatorHost:$port ($e). '
+        'This is an ENVIRONMENT problem, not a code regression: start the '
+        'Firestore/Auth emulators (`firebase emulators:start` from the '
+        'learning_tracker/ directory) and confirm the Android '
+        'emulator/device has outbound network access — AVDs on this box '
+        'have been observed to boot with airplane mode on, which this '
+        'exact symptom would also produce (clear it with `adb -s <device> '
+        'shell settings put global airplane_mode_on 0`).',
+      );
+    }
+  }
 }
 
 void main() {
@@ -50,10 +119,11 @@ void main() {
       'permission-denied flood check', () {
     late AccountFirebase registry;
 
-    setUpAll(() {
+    setUpAll(() async {
+      await _ensureEmulatorsReachable();
       registry = AccountFirebase(
         options: _emulatorOptions(),
-        enableAppCheck: false,
+        onSessionCreated: _emulatorize,
       );
     });
 
@@ -85,11 +155,8 @@ void main() {
           ),
         );
 
-        final handles = await registry.resolve(accountId);
-        await _emulatorize(handles);
-
-        final cred1 = await handles.auth.signInAnonymously();
-        final uid1 = cred1.user!.uid;
+        final handles = await registry.createAnonymousAccount(accountId);
+        final uid1 = handles.uid;
         final bind = await resolver.reconcileLiveUid(
           accountId: accountId,
           liveUid: uid1,
@@ -101,13 +168,18 @@ void main() {
             .doc('users/$uid1/diagnostic_logs/guard_marker')
             .set({'account': accountId, 'uid': uid1});
 
-        // AD-19 anon-uid reset: sign out + back in on the SAME named app
-        // (no new Firebase.initializeApp/delete involved — safe). Anon
-        // Auth never recovers a signed-out identity, so this
-        // deterministically yields a genuinely different uid.
-        await handles.auth.signOut();
-        final cred2 = await handles.auth.signInAnonymously();
-        final uid2 = cred2.user!.uid;
+        // AD-19 anon-uid reset: sign out + back in on the SAME named app,
+        // through the registry (no new Firebase.initializeApp/delete
+        // involved — safe). Anon Auth never recovers a signed-out
+        // identity, so this deterministically yields a genuinely
+        // different uid. The re-`createAnonymousAccount` call reuses the
+        // already-emulator-routed session — `onSessionCreated` runs at
+        // most once per account (see `account_firebase_test.dart`'s
+        // "runs exactly once per account" coverage), so it is not
+        // re-invoked here.
+        await registry.signOut(accountId);
+        final rebound = await registry.createAnonymousAccount(accountId);
+        final uid2 = rebound.uid;
         expect(uid2, isNot(equals(uid1)));
 
         // THE GUARD: reconcile against the PERSISTED record.
@@ -119,7 +191,7 @@ void main() {
         expect(remap.previousUid, uid1);
         final correctPathUid = await resolver.pathUidFor(accountId);
         expect(correctPathUid, uid2);
-        expect(correctPathUid, handles.auth.currentUser!.uid);
+        expect(correctPathUid, rebound.auth.currentUser!.uid);
 
         expect(
           uid1,
@@ -132,7 +204,7 @@ void main() {
               'orphaned tree — exactly the historical "uid-under-live-'
               'listeners PERMISSION_DENIED flood" class AD-2 prevents',
         );
-        final newTreeRead = await handles.firestore
+        final newTreeRead = await rebound.firestore
             .doc('users/$uid2/diagnostic_logs/guard_marker')
             .get();
         expect(
@@ -172,10 +244,8 @@ void main() {
       final ids = ['e2e_flood_1', 'e2e_flood_2', 'e2e_flood_3'];
       final subs = <StreamSubscription<void>>[];
       for (final id in ids) {
-        final handles = await registry.resolve(id);
-        await _emulatorize(handles);
-        final cred = await handles.auth.signInAnonymously();
-        final uid = cred.user!.uid;
+        final handles = await registry.createAnonymousAccount(id);
+        final uid = handles.uid;
 
         final sub = handles.firestore
             .collection('users/$uid/diagnostic_logs')
@@ -209,10 +279,9 @@ void main() {
       // account's uid (the same safe sign-out/sign-in-on-the-same-app
       // shape as criterion 3) — zero permission-denied, because nothing
       // was left outliving the context change.
-      final disciplined = await registry.resolve('e2e_flood_disciplined');
-      await _emulatorize(disciplined);
-      final firstCred = await disciplined.auth.signInAnonymously();
-      final firstUid = firstCred.user!.uid;
+      const disciplinedId = 'e2e_flood_disciplined';
+      final disciplined = await registry.createAnonymousAccount(disciplinedId);
+      final firstUid = disciplined.uid;
       final disciplinedEvents = <String>[];
       final disciplinedSub = disciplined.firestore
           .collection('users/$firstUid/diagnostic_logs')
@@ -226,10 +295,11 @@ void main() {
           .set({'phase': 'before-switch'});
       await Future<void>.delayed(const Duration(milliseconds: 500));
 
-      // Correct order: cancel FIRST, then switch identity.
+      // Correct order: cancel FIRST, then switch identity — through the
+      // registry, exactly as criterion 3 does.
       await disciplinedSub.cancel();
-      await disciplined.auth.signOut();
-      await disciplined.auth.signInAnonymously();
+      await registry.signOut(disciplinedId);
+      await registry.createAnonymousAccount(disciplinedId);
       await Future<void>.delayed(const Duration(milliseconds: 500));
 
       expect(

@@ -14,9 +14,18 @@
 //      assertion is not vacuous.
 //
 // Drives the REAL `AccountFirebase` registry (lib/data/firestore/
-// account_firebase.dart, Story P1-A) against the Firestore + Auth
-// EMULATORS, exactly like the sibling file — see that file's header for
-// the shared `_emulatorize` rationale.
+// account_firebase.dart) against the Firestore + Auth EMULATORS, exactly
+// like the sibling file — see that file's header for the shared
+// `_emulatorize`/`onSessionCreated` rationale.
+//
+// **A1 fix (named-app auth).** `AccountFirebase.resolve()` now requires an
+// already-authenticated session — account creation below goes through
+// `AccountFirebase.createAnonymousAccount()`, with emulator routing
+// supplied via the registry's `onSessionCreated` hook (`_emulatorize`)
+// rather than a manual post-resolve `signInAnonymously()` call. No
+// `dispose()` happens until `tearDownAll`, so this file does not exercise
+// the documented Android plugin-bug risk the sibling
+// `account_firebase_multi_account_test.dart` now does.
 //
 // **Methodology note — what "network disabled" means here.** This uses
 // `FirebaseFirestore.disableNetwork()`/`enableNetwork()`, the SDK's own
@@ -60,12 +69,43 @@ FirebaseOptions _emulatorOptions() => const FirebaseOptions(
   projectId: 'torah-study-tracker',
 );
 
-/// See the sibling file's identical helper doc — points a freshly-resolved
-/// handle bundle at the emulators without disturbing the `.settings` the
-/// registry itself already pinned (AD-18).
-Future<void> _emulatorize(AccountFirebaseHandles handles) async {
-  handles.firestore.useFirestoreEmulator(_emulatorHost, _firestorePort);
-  await handles.auth.useAuthEmulator(_emulatorHost, _authPort);
+/// See the sibling file's identical helper doc — the [AccountSessionHook]
+/// passed to [AccountFirebase], redirecting a just-created account's
+/// Firestore/Auth instances to the emulators before the registry's first
+/// sign-in.
+Future<void> _emulatorize(
+  FirebaseApp app,
+  FirebaseFirestore firestore,
+  FirebaseAuth auth,
+) async {
+  firestore.useFirestoreEmulator(_emulatorHost, _firestorePort);
+  await auth.useAuthEmulator(_emulatorHost, _authPort);
+}
+
+/// Fails loudly, before any Firebase call, if either emulator port is
+/// unreachable — an environment problem, not a code regression. See the
+/// identical helper in `account_firebase_guard_and_flood_test.dart` for the
+/// full rationale.
+Future<void> _ensureEmulatorsReachable() async {
+  for (final port in [_firestorePort, _authPort]) {
+    try {
+      final socket = await Socket.connect(
+        _emulatorHost,
+        port,
+      ).timeout(const Duration(seconds: 5));
+      await socket.close();
+    } catch (e) {
+      fail(
+        'Cannot reach the Firebase emulator at $_emulatorHost:$port ($e). '
+        'This is an ENVIRONMENT problem, not a code regression: start the '
+        'Firestore/Auth emulators (`firebase emulators:start`) and confirm '
+        'the Android emulator/device has outbound network access (AVDs on '
+        'this box have been observed to boot with airplane mode on — clear '
+        'it with `adb -s <device> shell settings put global '
+        'airplane_mode_on 0`).',
+      );
+    }
+  }
 }
 
 void _logResourceSnapshot(String label) {
@@ -119,20 +159,19 @@ void main() {
     late FirebaseAuth sharedAuth;
 
     setUpAll(() async {
+      await _ensureEmulatorsReachable();
+
       registry = AccountFirebase(
         options: _emulatorOptions(),
         enableAppCheck: false,
+        onSessionCreated: _emulatorize,
       );
 
-      handlesA = await registry.resolve('e2e_offline_A');
-      await _emulatorize(handlesA);
-      final credA = await handlesA.auth.signInAnonymously();
-      uidA = credA.user!.uid;
+      handlesA = await registry.createAnonymousAccount('e2e_offline_A');
+      uidA = handlesA.uid;
 
-      handlesB = await registry.resolve('e2e_offline_B');
-      await _emulatorize(handlesB);
-      final credB = await handlesB.auth.signInAnonymously();
-      uidB = credB.user!.uid;
+      handlesB = await registry.createAnonymousAccount('e2e_offline_B');
+      uidB = handlesB.uid;
 
       sharedApp = await Firebase.initializeApp(
         name: 'e2e_offline_shared_leaky',
