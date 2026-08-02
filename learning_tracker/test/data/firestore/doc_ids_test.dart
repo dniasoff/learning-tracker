@@ -348,13 +348,45 @@ void main() {
       expect(live, equals('default'));
     });
 
-    // NOTE: stage_definitions / study_day_configs are intentionally NOT
-    // pinned against the live gateway here anymore — Story 2.3's AD-25
-    // re-key makes DocIds's output for these two collections deliberately
-    // DIVERGE from the (not-yet-rewired) live gateway's per-device
-    // track_id-based output. See the "AD-25 re-key — Story 2.3" group
-    // below for their new golden formulas and the explicit red-demo
-    // proving the old shape is rejected.
+    // NOTE: the NEW stage_definitions / study_day_configs formulas
+    // ([DocIds.stageDefinitionDocId] / [DocIds.studyDayConfigDocId]) are
+    // intentionally NOT pinned against the live gateway here — Story 2.3's
+    // AD-25 re-key makes DocIds's new output for these two collections
+    // deliberately DIVERGE from the (not-yet-rewired) live gateway's
+    // per-device track_id-based output. See the "AD-25 re-key — Story 2.3"
+    // group below for their new golden formulas and the explicit red-demo
+    // proving the old shape is rejected. The two tests immediately below
+    // instead pin the LEGACY functions — [DocIds.legacyStageDefinitionDocId]
+    // / [DocIds.legacyStudyDayConfigDocId] — which intentionally keep
+    // matching the live gateway byte-for-byte forever, so the Phase-5
+    // backfill has a pinned record of the pre-rekey shape to locate and
+    // verify historical documents against.
+
+    test('stage_definitions (LEGACY pre-AD-25 shape): '
+        '{trackId}_{stageOrder} is byte-for-byte', () async {
+      final fs = createFakeFirestore(authenticatedUid: _uid);
+      final data = <String, dynamic>{
+        'track_id': '7',
+        'stage_order': '3',
+        'name': 'Stage 3',
+      };
+      await _gw(fs).pushStageDefinition(profileId: _profileId, data: data);
+      final live = await _liveDocId(fs, 'stage_definitions');
+      expect(DocIds.legacyStageDefinitionDocId(data), equals(live));
+    });
+
+    test('study_day_configs (LEGACY pre-AD-25 shape): '
+        '{curriculumId}_{dayOfWeek}_{trackId} is byte-for-byte', () async {
+      final fs = createFakeFirestore(authenticatedUid: _uid);
+      final data = <String, dynamic>{
+        'curriculum_id': 'mishnayos',
+        'day_of_week': '1',
+        'track_id': '5',
+      };
+      await _gw(fs).pushStudyDayConfig(profileId: _profileId, data: data);
+      final live = await _liveDocId(fs, 'study_day_configs');
+      expect(DocIds.legacyStudyDayConfigDocId(data), equals(live));
+    });
 
     test('points_ledger: byte-for-byte', () async {
       final fs = createFakeFirestore(authenticatedUid: _uid);

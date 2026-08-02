@@ -43,7 +43,12 @@
 /// is no per-device id left for it to resolve. `goals` is untouched by this
 /// re-key: unlike the two collections above, its doc-id formula
 /// ([goalDocId]) never embedded `track_id` in the first place — see that
-/// function's doc comment for why.
+/// function's doc comment for why. The pre-rekey shape is not discarded:
+/// [legacyStageDefinitionDocId] and [legacyStudyDayConfigDocId] keep it
+/// byte-for-byte, explicitly named as legacy and never for new writes, so
+/// the Phase-5 backfill (and its verifier) can locate and confirm existing
+/// `{perDeviceTrackId}_*` documents from this module alone — mirroring
+/// exactly how [learnerProfileDocId] is kept below for the AD-24 re-key.
 ///
 /// **AD-24 re-key (Story 2.3) — profile-scoped ULID.** [mintProfileUlid]
 /// and [learnerProfileUlidDocId] give `learner_profiles` a profile-scoped
@@ -317,6 +322,37 @@ final class DocIds {
     return '${curriculumId}_$stageOrder';
   }
 
+  // ── stage_definitions (legacy, pre-AD-25 shape) ──────────────────────
+
+  /// `stage_definitions/{trackId}_{stageOrder}` doc-id formula — the
+  /// LEGACY, pre-AD-25 shape the live (not-yet-rewired) gateway still
+  /// writes today.
+  ///
+  /// Mirrors `FirestoreGatewayImpl.pushStageDefinition`
+  /// (`firestore_gateway_impl.dart:1152-1176`) byte-for-byte, including its
+  /// `ArgumentError` guard — this is exactly [stageDefinitionDocId]'s body
+  /// before Story 2.3's AD-25 re-key.
+  ///
+  /// **Exists only so Phase 5 can find historical documents, not so new
+  /// code can mint ids.** It is the pinned record of the old
+  /// `{trackId}_{stageOrder}` shape the one-time re-key/backfill (Phase 3
+  /// Wave A per AD-25) must locate and verify against before writing the
+  /// new [stageDefinitionDocId] shape — kept here so that record survives
+  /// even after the live gateway's pre-rekey code path is deleted in
+  /// Phase 6. **Must NOT be used for new writes** — new writes always go
+  /// through [stageDefinitionDocId].
+  static String legacyStageDefinitionDocId(Map<String, dynamic> data) {
+    final trackId = data['track_id']?.toString() ?? '';
+    final stageOrder = data['stage_order']?.toString() ?? '';
+    if (trackId.isEmpty || stageOrder.isEmpty) {
+      throw ArgumentError(
+        'legacyStageDefinitionDocId requires non-empty track_id and '
+        'stage_order',
+      );
+    }
+    return '${trackId}_$stageOrder';
+  }
+
   // ── study_day_configs ────────────────────────────────────────────────
 
   /// `study_day_configs/{curriculumId}_{dayOfWeek}` doc-id formula
@@ -353,6 +389,38 @@ final class DocIds {
       );
     }
     return '${curriculumId}_$dayOfWeek';
+  }
+
+  // ── study_day_configs (legacy, pre-AD-25 shape) ──────────────────────
+
+  /// `study_day_configs/{curriculumId}_{dayOfWeek}_{trackId}` doc-id
+  /// formula — the LEGACY, pre-AD-25 shape the live (not-yet-rewired)
+  /// gateway still writes today.
+  ///
+  /// Mirrors `FirestoreGatewayImpl.pushStudyDayConfig`
+  /// (`firestore_gateway_impl.dart:1180-1204`) byte-for-byte, including its
+  /// `ArgumentError` guard — this is exactly [studyDayConfigDocId]'s body
+  /// before Story 2.3's AD-25 re-key.
+  ///
+  /// **Exists only so Phase 5 can find historical documents, not so new
+  /// code can mint ids.** It is the pinned record of the old
+  /// `{curriculumId}_{dayOfWeek}_{trackId}` shape the one-time
+  /// re-key/backfill (Phase 3 Wave A per AD-25) must locate and verify
+  /// against before writing the new [studyDayConfigDocId] shape — kept
+  /// here so that record survives even after the live gateway's pre-rekey
+  /// code path is deleted in Phase 6. **Must NOT be used for new writes**
+  /// — new writes always go through [studyDayConfigDocId].
+  static String legacyStudyDayConfigDocId(Map<String, dynamic> data) {
+    final curriculumId = data['curriculum_id']?.toString() ?? '';
+    final dayOfWeek = data['day_of_week']?.toString() ?? '';
+    final trackId = data['track_id']?.toString() ?? '';
+    if (curriculumId.isEmpty || dayOfWeek.isEmpty || trackId.isEmpty) {
+      throw ArgumentError(
+        'legacyStudyDayConfigDocId requires non-empty curriculum_id, '
+        'day_of_week, and track_id',
+      );
+    }
+    return '${curriculumId}_${dayOfWeek}_$trackId';
   }
 
   // ── points_ledger ────────────────────────────────────────────────────
