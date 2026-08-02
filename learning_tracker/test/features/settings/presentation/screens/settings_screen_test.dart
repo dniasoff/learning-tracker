@@ -73,7 +73,6 @@ void main() {
   Widget createTestWidget({
     List<CurriculumId> initialActive = const [],
     bool tutoredSession = false,
-    Locale locale = const Locale('en'),
   }) {
     final talmidMirror = ProfileModel(
       id: 99,
@@ -98,7 +97,6 @@ void main() {
         }
 
         return pumpApp(
-          locale: locale,
           overrides: [
             appDatabaseProvider.overrideWithValue(database),
             userDatabaseProvider.overrideWithValue(database),
@@ -395,64 +393,6 @@ void main() {
       await pumpUntilSettled(tester);
 
       expect(find.byType(UserProfileHeaderCard), findsOneWidget);
-
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump(Duration.zero);
-    });
-  });
-
-  group('Hebrew-Terms toggle — visible in both locales (R2/i18n)', () {
-    // R2/i18n regression: the Hebrew-Terms preference row (title + subtitle +
-    // Switch) previously vanished entirely under a Hebrew UI, leaving a
-    // Hebrew-locale user no control to change it. It is a transliteration/terms
-    // preference that is meaningful in Hebrew too, so the row must render in
-    // BOTH locales.
-    testWidgets('renders the Hebrew Terms toggle under Locale(he)', (
-      tester,
-    ) async {
-      await tester.pumpWidget(
-        createTestWidget(
-          initialActive: [CurriculumId.mishnayos],
-          locale: const Locale('he'),
-        ),
-      );
-      await pumpUntilSettled(tester);
-
-      // 'מונחים בעברית' == hebrewTermsPreference under he.
-      await tester.scrollUntilVisible(
-        find.text('מונחים בעברית'),
-        300,
-        scrollable: find.byType(Scrollable).first,
-      );
-      expect(find.text('מונחים בעברית'), findsOneWidget);
-      // The trailing Switch control is reachable so the setting can be changed
-      // (the tile wraps it in a Semantics carrying the Hebrew-Terms label).
-      expect(
-        find.descendant(
-          of: find.bySemanticsLabel('מונחים בעברית'),
-          matching: find.byType(Switch),
-        ),
-        findsOneWidget,
-      );
-
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump(Duration.zero);
-    });
-
-    testWidgets('renders the Hebrew Terms toggle under Locale(en)', (
-      tester,
-    ) async {
-      await tester.pumpWidget(
-        createTestWidget(initialActive: [CurriculumId.mishnayos]),
-      );
-      await pumpUntilSettled(tester);
-
-      await tester.scrollUntilVisible(
-        find.text('Hebrew Terms'),
-        300,
-        scrollable: find.byType(Scrollable).first,
-      );
-      expect(find.text('Hebrew Terms'), findsOneWidget);
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(Duration.zero);

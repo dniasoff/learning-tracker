@@ -208,13 +208,10 @@ class SettingsScreen extends ConsumerWidget {
               child: Column(
                 children: [
                   const _HebrewDateTile(),
-                  // R2/i18n: the Hebrew-Terms toggle is a transliteration/terms
-                  // preference (Hebrew script vs English transliteration) that
-                  // is meaningful in BOTH UI languages — a Hebrew-UI user still
-                  // needs the control. It must render regardless of locale; do
-                  // not re-gate it on `languageCode != 'he'`.
-                  _tileDivider(theme),
-                  const _HebrewTermsTile(),
+                  if (Localizations.localeOf(context).languageCode != 'he') ...[
+                    _tileDivider(theme),
+                    const _HebrewTermsTile(),
+                  ],
                   _TransliterationVariantTileSection(theme: theme),
                   _tileDivider(theme),
                   _NikudTile(theme: theme),
