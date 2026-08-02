@@ -353,21 +353,21 @@ lint-rules-test: ## Run packages/custom_lints unit tests (dart test) — AUD-gua
 audit: lint-rules-test ## Run all 68 enforcement greps (NFR19) — exits non-zero on any violation
 	@echo "=== audit: enforcement greps ==="
 	@FAIL=0; \
-	echo "1/15 — No Firebase imports outside core/auth or core/sync"; \
-	if grep -rn "package:firebase_auth" lib/ tool/lib/ --include="*.dart" \
-	    | grep -v "lib/core/auth/" | grep -v "lib/features/auth/" | grep -v "\.g\.dart" | grep -v "\.freezed\.dart" | grep -q .; then \
-	  grep -rn "package:firebase_auth" lib/ tool/lib/ --include="*.dart" \
-	    | grep -v "lib/core/auth/" | grep -v "lib/features/auth/" | grep -v "\.g\.dart" | grep -v "\.freezed\.dart"; \
+	echo "1/15 — No Firebase imports outside core/auth, core/sync, data/firestore, or data/repositories (Story 2.6: widened — legacy lib/core/sync|auth retained, lib/data/firestore/**+lib/data/repositories/** added per AD-3/AD-28)"; \
+	if ! dart run tool/check_firebase_confinement.dart --auth > /tmp/firebase_confinement_auth_check.$$$$.log 2>&1; then \
+	  cat /tmp/firebase_confinement_auth_check.$$$$.log; \
+	  rm -f /tmp/firebase_confinement_auth_check.$$$$.log; \
 	  FAIL=1; \
+	else \
+	  rm -f /tmp/firebase_confinement_auth_check.$$$$.log; \
 	fi; \
-	echo "2/15 — No FirebaseFirestore/FirebaseStorage outside core/sync or core/auth"; \
-	if grep -rn "FirebaseFirestore\|FirebaseStorage\|firebase_firestore\|firebase_storage" lib/ tool/lib/ --include="*.dart" \
-	    | grep -v "lib/core/sync/" | grep -v "lib/core/auth/" | grep -v "lib/core/providers/" \
-	    | grep -v "lib/features/" | grep -v "\.g\.dart" | grep -q .; then \
-	  grep -rn "FirebaseFirestore\|FirebaseStorage\|firebase_firestore\|firebase_storage" lib/ tool/lib/ --include="*.dart" \
-	    | grep -v "lib/core/sync/" | grep -v "lib/core/auth/" | grep -v "lib/core/providers/" \
-	    | grep -v "lib/features/" | grep -v "\.g\.dart"; \
+	echo "2/15 — No FirebaseFirestore/FirebaseStorage/cloud_firestore outside core/sync, core/auth, data/firestore, or data/repositories (Story 2.6: widened — legacy lib/core/sync|auth retained, lib/data/firestore/**+lib/data/repositories/** added; the former lib/core/providers/ + lib/features/ blanket carve-outs are RETIRED so a feature/service/provider file importing cloud_firestore actually fails the gate, per AD-3/AD-28)"; \
+	if ! dart run tool/check_firebase_confinement.dart --storage > /tmp/firebase_confinement_storage_check.$$$$.log 2>&1; then \
+	  cat /tmp/firebase_confinement_storage_check.$$$$.log; \
+	  rm -f /tmp/firebase_confinement_storage_check.$$$$.log; \
 	  FAIL=1; \
+	else \
+	  rm -f /tmp/firebase_confinement_storage_check.$$$$.log; \
 	fi; \
 	echo "3/15 — No FirebaseAuth.instance.signOut outside core/auth"; \
 	if grep -rn "FirebaseAuth\.instance\.signOut" lib/ tool/lib/ --include="*.dart" \
@@ -1330,6 +1330,22 @@ audit: lint-rules-test ## Run all 68 enforcement greps (NFR19) — exits non-zer
 	  FAIL=1; \
 	else \
 	  rm -f /tmp/mcf11_autoincrement_id_in_payload_check.$$$$.log; \
+	fi; \
+	echo "101/101 — AD-2/AD-28 (Story 2.6): no NEW bare FirebaseFirestore.instance/FirebaseAuth.instance site outside the (not-yet-built, Phase 1) AccountFirebase registry at lib/data/firestore/account_firebase.dart — RATCHET, only growth above the tracked baseline fails the gate (baseline is today's already-load-bearing lib/core/auth/ + lib/core/sync/ singleton usage, pending the Phase-1 registry cutover)"; \
+	if ! dart run tool/check_bare_firebase_instance_ratchet.dart > /tmp/bare_firebase_instance_check.$$$$.log 2>&1; then \
+	  cat /tmp/bare_firebase_instance_check.$$$$.log; \
+	  rm -f /tmp/bare_firebase_instance_check.$$$$.log; \
+	  FAIL=1; \
+	else \
+	  rm -f /tmp/bare_firebase_instance_check.$$$$.log; \
+	fi; \
+	echo "102/102 — AD-23/AD-28 (Story 2.6): no lib/features/** (outside its own data/repositories/ implementation dirs) or lib/domain/** file imports the data-access ring (lib/data/firestore/**) past a repository interface — hard gate, zero tolerated"; \
+	if ! dart run tool/check_dependency_direction.dart > /tmp/dependency_direction_check.$$$$.log 2>&1; then \
+	  cat /tmp/dependency_direction_check.$$$$.log; \
+	  rm -f /tmp/dependency_direction_check.$$$$.log; \
+	  FAIL=1; \
+	else \
+	  rm -f /tmp/dependency_direction_check.$$$$.log; \
 	fi; \
 	if [ "$$FAIL" -eq 1 ]; then \
 	  echo "=== audit FAILED — fix violations above ==="; \
