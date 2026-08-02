@@ -42,6 +42,7 @@ library;
 import 'dart:async';
 
 import 'package:auto_route/auto_route.dart';
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -58,6 +59,7 @@ import 'package:learning_tracker/core/network/connectivity_gateway.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/network_providers.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
+import 'package:learning_tracker/data/firestore/active_account_providers.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/account/domain/services/account_management_service.dart';
@@ -923,6 +925,86 @@ void main() {
       ).captured;
       final routes = captured.last as List<PageRouteInfo>;
       expect(routes.first, isA<SignInRoute>());
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+    },
+  );
+
+  // ── activeAccountIdProvider wiring (Epic C account activation) ─────────────
+  //
+  // Red-demo: before `_runDeletion` (account_actions.dart) called
+  // `activeAccountIdProvider.notifier.set(null)`, this provider stayed
+  // whatever it was forever — deleting the active account never cleared it.
+  // Requires a device-registry row matching the deleted Firebase uid AND
+  // accountDbFileNameProvider already pointing at that row's dbFileName
+  // (mirrors a real prior sign-in/switch) so `_runDeletion`'s `if (account
+  // != null && ref.read(accountDbFileNameProvider) == account.dbFileName)`
+  // reset branch actually runs — the existing "success" test above seeds no
+  // registry row, so it never exercises this branch.
+  testWidgets(
+    'DeletingAccountOverlay success resets activeAccountIdProvider to null '
+    'when the deleted account is the currently-active device account',
+    (tester) async {
+      final user = _cloudUser(
+        providers: const [],
+        uid: 'fb-uid-active-del',
+        email: 'active-del@example.com',
+      );
+      when(() => service.deleteAccount(any<String>())).thenAnswer((_) async {});
+
+      const dbFileName = 'db_active-del';
+      await registry.addAccount(
+        DeviceAccountsCompanion.insert(
+          accountId: 'acc-active-del',
+          email: 'active-del@example.com',
+          displayName: 'Active Del',
+          tier: 'cloudBorn',
+          firebaseUid: Value(user.uid),
+          dbFileName: dbFileName,
+          createdAt: DateTime.utc(2026, 1, 1),
+          lastUsedAt: DateTime.utc(2026, 1, 1),
+        ),
+      );
+
+      final container = ProviderContainer(
+        overrides: [
+          routerProvider.overrideWithValue(router),
+          authRepositoryProvider.overrideWithValue(authRepo),
+          accountManagementServiceProvider.overrideWithValue(service),
+          connectivityServiceProvider.overrideWithValue(connectivity),
+          userDatabaseProvider.overrideWithValue(userDb),
+          deviceRegistryProvider.overrideWithValue(registry),
+          currentAccountIdProvider.overrideWith((ref) => 1),
+          authStateProvider.overrideWith(() => _StubAuthStateNotifier()),
+        ],
+      );
+      addTearDown(container.dispose);
+      // Seed the "currently active" state exactly as a prior sign-in/switch
+      // would have — see the two real providers this task wires.
+      container
+          .read(accountDbFileNameProvider.notifier)
+          .setFileName(dbFileName);
+      container.read(activeAccountIdProvider.notifier).set('acc-active-del');
+
+      await tester.pumpWidget(
+        pumpApp(
+          container: container,
+          child: _DeleteHost(user: user),
+        ),
+      );
+      await tester.pump();
+      await tester.tap(find.text('trigger'));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      await tester.enterText(find.byType(TextField), 'DELETE');
+      await tester.pump();
+      await tester.tap(find.widgetWithText(TextButton, 'Delete Account'));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(container.read(activeAccountIdProvider), isNull);
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(Duration.zero);
