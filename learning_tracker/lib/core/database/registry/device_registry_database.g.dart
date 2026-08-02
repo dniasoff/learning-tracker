@@ -60,6 +60,29 @@ class $DeviceAccountsTable extends DeviceAccounts
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _previousFirebaseUidMeta =
+      const VerificationMeta('previousFirebaseUid');
+  @override
+  late final GeneratedColumn<String> previousFirebaseUid =
+      GeneratedColumn<String>(
+        'previous_firebase_uid',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _uidRemappedAtMeta = const VerificationMeta(
+    'uidRemappedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> uidRemappedAt =
+      GeneratedColumn<DateTime>(
+        'uid_remapped_at',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
   static const VerificationMeta _avatarIndexMeta = const VerificationMeta(
     'avatarIndex',
   );
@@ -113,6 +136,8 @@ class $DeviceAccountsTable extends DeviceAccounts
     displayName,
     tier,
     firebaseUid,
+    previousFirebaseUid,
+    uidRemappedAt,
     avatarIndex,
     createdAt,
     lastUsedAt,
@@ -171,6 +196,24 @@ class $DeviceAccountsTable extends DeviceAccounts
         firebaseUid.isAcceptableOrUnknown(
           data['firebase_uid']!,
           _firebaseUidMeta,
+        ),
+      );
+    }
+    if (data.containsKey('previous_firebase_uid')) {
+      context.handle(
+        _previousFirebaseUidMeta,
+        previousFirebaseUid.isAcceptableOrUnknown(
+          data['previous_firebase_uid']!,
+          _previousFirebaseUidMeta,
+        ),
+      );
+    }
+    if (data.containsKey('uid_remapped_at')) {
+      context.handle(
+        _uidRemappedAtMeta,
+        uidRemappedAt.isAcceptableOrUnknown(
+          data['uid_remapped_at']!,
+          _uidRemappedAtMeta,
         ),
       );
     }
@@ -242,6 +285,14 @@ class $DeviceAccountsTable extends DeviceAccounts
         DriftSqlType.string,
         data['${effectivePrefix}firebase_uid'],
       ),
+      previousFirebaseUid: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}previous_firebase_uid'],
+      ),
+      uidRemappedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}uid_remapped_at'],
+      ),
       avatarIndex: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}avatar_index'],
@@ -275,8 +326,33 @@ class DeviceAccount extends DataClass implements Insertable<DeviceAccount> {
   /// `cloudBorn` | `localBorn`
   final String tier;
 
-  /// Firebase UID — null for local-born accounts.
+  /// The **Firestore-path uid** — the `{uid}` in `users/{uid}/…` — for this
+  /// account. Null for local-born accounts that have not yet been bound to a
+  /// Firebase principal.
+  ///
+  /// **AD-24 rule 2:** this persisted field, never the live
+  /// `FirebaseAuth.currentUser`, is the sole source of the path uid. It holds
+  /// either the resolved cloud uid (email/Google sign-in) or the Anonymous
+  /// Auth uid assigned to a local-born account (AD-19, Phase 4). Callers MUST
+  /// go through [PathUidResolver] (`path_uid_resolver.dart`) rather than
+  /// reading this column directly, so the remap bookkeeping below stays
+  /// consistent.
   final String? firebaseUid;
+
+  /// The uid [firebaseUid] held immediately before the most recent
+  /// anon-uid-reset remap (AD-19/AD-24), or null if no remap has ever
+  /// happened for this account.
+  ///
+  /// Breadcrumb for the downstream Firestore data layer (out of this
+  /// story's scope — see `path_uid_resolver.dart`): a non-null value here
+  /// means the document tree at `users/<previousFirebaseUid>/…` may still
+  /// hold data that belongs to this account and has not yet been re-homed
+  /// to `users/<firebaseUid>/…`.
+  final String? previousFirebaseUid;
+
+  /// When the most recent anon-uid-reset remap happened, or null if none has
+  /// ever happened for this account. Diagnostic timestamp only.
+  final DateTime? uidRemappedAt;
   final int avatarIndex;
   final DateTime createdAt;
   final DateTime lastUsedAt;
@@ -290,6 +366,8 @@ class DeviceAccount extends DataClass implements Insertable<DeviceAccount> {
     required this.displayName,
     required this.tier,
     this.firebaseUid,
+    this.previousFirebaseUid,
+    this.uidRemappedAt,
     required this.avatarIndex,
     required this.createdAt,
     required this.lastUsedAt,
@@ -304,6 +382,12 @@ class DeviceAccount extends DataClass implements Insertable<DeviceAccount> {
     map['tier'] = Variable<String>(tier);
     if (!nullToAbsent || firebaseUid != null) {
       map['firebase_uid'] = Variable<String>(firebaseUid);
+    }
+    if (!nullToAbsent || previousFirebaseUid != null) {
+      map['previous_firebase_uid'] = Variable<String>(previousFirebaseUid);
+    }
+    if (!nullToAbsent || uidRemappedAt != null) {
+      map['uid_remapped_at'] = Variable<DateTime>(uidRemappedAt);
     }
     map['avatar_index'] = Variable<int>(avatarIndex);
     map['created_at'] = Variable<DateTime>(createdAt);
@@ -321,6 +405,12 @@ class DeviceAccount extends DataClass implements Insertable<DeviceAccount> {
       firebaseUid: firebaseUid == null && nullToAbsent
           ? const Value.absent()
           : Value(firebaseUid),
+      previousFirebaseUid: previousFirebaseUid == null && nullToAbsent
+          ? const Value.absent()
+          : Value(previousFirebaseUid),
+      uidRemappedAt: uidRemappedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(uidRemappedAt),
       avatarIndex: Value(avatarIndex),
       createdAt: Value(createdAt),
       lastUsedAt: Value(lastUsedAt),
@@ -339,6 +429,10 @@ class DeviceAccount extends DataClass implements Insertable<DeviceAccount> {
       displayName: serializer.fromJson<String>(json['displayName']),
       tier: serializer.fromJson<String>(json['tier']),
       firebaseUid: serializer.fromJson<String?>(json['firebaseUid']),
+      previousFirebaseUid: serializer.fromJson<String?>(
+        json['previousFirebaseUid'],
+      ),
+      uidRemappedAt: serializer.fromJson<DateTime?>(json['uidRemappedAt']),
       avatarIndex: serializer.fromJson<int>(json['avatarIndex']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       lastUsedAt: serializer.fromJson<DateTime>(json['lastUsedAt']),
@@ -354,6 +448,8 @@ class DeviceAccount extends DataClass implements Insertable<DeviceAccount> {
       'displayName': serializer.toJson<String>(displayName),
       'tier': serializer.toJson<String>(tier),
       'firebaseUid': serializer.toJson<String?>(firebaseUid),
+      'previousFirebaseUid': serializer.toJson<String?>(previousFirebaseUid),
+      'uidRemappedAt': serializer.toJson<DateTime?>(uidRemappedAt),
       'avatarIndex': serializer.toJson<int>(avatarIndex),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'lastUsedAt': serializer.toJson<DateTime>(lastUsedAt),
@@ -367,6 +463,8 @@ class DeviceAccount extends DataClass implements Insertable<DeviceAccount> {
     String? displayName,
     String? tier,
     Value<String?> firebaseUid = const Value.absent(),
+    Value<String?> previousFirebaseUid = const Value.absent(),
+    Value<DateTime?> uidRemappedAt = const Value.absent(),
     int? avatarIndex,
     DateTime? createdAt,
     DateTime? lastUsedAt,
@@ -377,6 +475,12 @@ class DeviceAccount extends DataClass implements Insertable<DeviceAccount> {
     displayName: displayName ?? this.displayName,
     tier: tier ?? this.tier,
     firebaseUid: firebaseUid.present ? firebaseUid.value : this.firebaseUid,
+    previousFirebaseUid: previousFirebaseUid.present
+        ? previousFirebaseUid.value
+        : this.previousFirebaseUid,
+    uidRemappedAt: uidRemappedAt.present
+        ? uidRemappedAt.value
+        : this.uidRemappedAt,
     avatarIndex: avatarIndex ?? this.avatarIndex,
     createdAt: createdAt ?? this.createdAt,
     lastUsedAt: lastUsedAt ?? this.lastUsedAt,
@@ -393,6 +497,12 @@ class DeviceAccount extends DataClass implements Insertable<DeviceAccount> {
       firebaseUid: data.firebaseUid.present
           ? data.firebaseUid.value
           : this.firebaseUid,
+      previousFirebaseUid: data.previousFirebaseUid.present
+          ? data.previousFirebaseUid.value
+          : this.previousFirebaseUid,
+      uidRemappedAt: data.uidRemappedAt.present
+          ? data.uidRemappedAt.value
+          : this.uidRemappedAt,
       avatarIndex: data.avatarIndex.present
           ? data.avatarIndex.value
           : this.avatarIndex,
@@ -414,6 +524,8 @@ class DeviceAccount extends DataClass implements Insertable<DeviceAccount> {
           ..write('displayName: $displayName, ')
           ..write('tier: $tier, ')
           ..write('firebaseUid: $firebaseUid, ')
+          ..write('previousFirebaseUid: $previousFirebaseUid, ')
+          ..write('uidRemappedAt: $uidRemappedAt, ')
           ..write('avatarIndex: $avatarIndex, ')
           ..write('createdAt: $createdAt, ')
           ..write('lastUsedAt: $lastUsedAt, ')
@@ -429,6 +541,8 @@ class DeviceAccount extends DataClass implements Insertable<DeviceAccount> {
     displayName,
     tier,
     firebaseUid,
+    previousFirebaseUid,
+    uidRemappedAt,
     avatarIndex,
     createdAt,
     lastUsedAt,
@@ -443,6 +557,8 @@ class DeviceAccount extends DataClass implements Insertable<DeviceAccount> {
           other.displayName == this.displayName &&
           other.tier == this.tier &&
           other.firebaseUid == this.firebaseUid &&
+          other.previousFirebaseUid == this.previousFirebaseUid &&
+          other.uidRemappedAt == this.uidRemappedAt &&
           other.avatarIndex == this.avatarIndex &&
           other.createdAt == this.createdAt &&
           other.lastUsedAt == this.lastUsedAt &&
@@ -455,6 +571,8 @@ class DeviceAccountsCompanion extends UpdateCompanion<DeviceAccount> {
   final Value<String> displayName;
   final Value<String> tier;
   final Value<String?> firebaseUid;
+  final Value<String?> previousFirebaseUid;
+  final Value<DateTime?> uidRemappedAt;
   final Value<int> avatarIndex;
   final Value<DateTime> createdAt;
   final Value<DateTime> lastUsedAt;
@@ -466,6 +584,8 @@ class DeviceAccountsCompanion extends UpdateCompanion<DeviceAccount> {
     this.displayName = const Value.absent(),
     this.tier = const Value.absent(),
     this.firebaseUid = const Value.absent(),
+    this.previousFirebaseUid = const Value.absent(),
+    this.uidRemappedAt = const Value.absent(),
     this.avatarIndex = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.lastUsedAt = const Value.absent(),
@@ -478,6 +598,8 @@ class DeviceAccountsCompanion extends UpdateCompanion<DeviceAccount> {
     required String displayName,
     required String tier,
     this.firebaseUid = const Value.absent(),
+    this.previousFirebaseUid = const Value.absent(),
+    this.uidRemappedAt = const Value.absent(),
     this.avatarIndex = const Value.absent(),
     required DateTime createdAt,
     required DateTime lastUsedAt,
@@ -496,6 +618,8 @@ class DeviceAccountsCompanion extends UpdateCompanion<DeviceAccount> {
     Expression<String>? displayName,
     Expression<String>? tier,
     Expression<String>? firebaseUid,
+    Expression<String>? previousFirebaseUid,
+    Expression<DateTime>? uidRemappedAt,
     Expression<int>? avatarIndex,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? lastUsedAt,
@@ -508,6 +632,9 @@ class DeviceAccountsCompanion extends UpdateCompanion<DeviceAccount> {
       if (displayName != null) 'display_name': displayName,
       if (tier != null) 'tier': tier,
       if (firebaseUid != null) 'firebase_uid': firebaseUid,
+      if (previousFirebaseUid != null)
+        'previous_firebase_uid': previousFirebaseUid,
+      if (uidRemappedAt != null) 'uid_remapped_at': uidRemappedAt,
       if (avatarIndex != null) 'avatar_index': avatarIndex,
       if (createdAt != null) 'created_at': createdAt,
       if (lastUsedAt != null) 'last_used_at': lastUsedAt,
@@ -522,6 +649,8 @@ class DeviceAccountsCompanion extends UpdateCompanion<DeviceAccount> {
     Value<String>? displayName,
     Value<String>? tier,
     Value<String?>? firebaseUid,
+    Value<String?>? previousFirebaseUid,
+    Value<DateTime?>? uidRemappedAt,
     Value<int>? avatarIndex,
     Value<DateTime>? createdAt,
     Value<DateTime>? lastUsedAt,
@@ -534,6 +663,8 @@ class DeviceAccountsCompanion extends UpdateCompanion<DeviceAccount> {
       displayName: displayName ?? this.displayName,
       tier: tier ?? this.tier,
       firebaseUid: firebaseUid ?? this.firebaseUid,
+      previousFirebaseUid: previousFirebaseUid ?? this.previousFirebaseUid,
+      uidRemappedAt: uidRemappedAt ?? this.uidRemappedAt,
       avatarIndex: avatarIndex ?? this.avatarIndex,
       createdAt: createdAt ?? this.createdAt,
       lastUsedAt: lastUsedAt ?? this.lastUsedAt,
@@ -559,6 +690,14 @@ class DeviceAccountsCompanion extends UpdateCompanion<DeviceAccount> {
     }
     if (firebaseUid.present) {
       map['firebase_uid'] = Variable<String>(firebaseUid.value);
+    }
+    if (previousFirebaseUid.present) {
+      map['previous_firebase_uid'] = Variable<String>(
+        previousFirebaseUid.value,
+      );
+    }
+    if (uidRemappedAt.present) {
+      map['uid_remapped_at'] = Variable<DateTime>(uidRemappedAt.value);
     }
     if (avatarIndex.present) {
       map['avatar_index'] = Variable<int>(avatarIndex.value);
@@ -586,6 +725,8 @@ class DeviceAccountsCompanion extends UpdateCompanion<DeviceAccount> {
           ..write('displayName: $displayName, ')
           ..write('tier: $tier, ')
           ..write('firebaseUid: $firebaseUid, ')
+          ..write('previousFirebaseUid: $previousFirebaseUid, ')
+          ..write('uidRemappedAt: $uidRemappedAt, ')
           ..write('avatarIndex: $avatarIndex, ')
           ..write('createdAt: $createdAt, ')
           ..write('lastUsedAt: $lastUsedAt, ')
@@ -836,6 +977,8 @@ typedef $$DeviceAccountsTableCreateCompanionBuilder =
       required String displayName,
       required String tier,
       Value<String?> firebaseUid,
+      Value<String?> previousFirebaseUid,
+      Value<DateTime?> uidRemappedAt,
       Value<int> avatarIndex,
       required DateTime createdAt,
       required DateTime lastUsedAt,
@@ -849,6 +992,8 @@ typedef $$DeviceAccountsTableUpdateCompanionBuilder =
       Value<String> displayName,
       Value<String> tier,
       Value<String?> firebaseUid,
+      Value<String?> previousFirebaseUid,
+      Value<DateTime?> uidRemappedAt,
       Value<int> avatarIndex,
       Value<DateTime> createdAt,
       Value<DateTime> lastUsedAt,
@@ -887,6 +1032,16 @@ class $$DeviceAccountsTableFilterComposer
 
   ColumnFilters<String> get firebaseUid => $composableBuilder(
     column: $table.firebaseUid,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get previousFirebaseUid => $composableBuilder(
+    column: $table.previousFirebaseUid,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get uidRemappedAt => $composableBuilder(
+    column: $table.uidRemappedAt,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -945,6 +1100,16 @@ class $$DeviceAccountsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get previousFirebaseUid => $composableBuilder(
+    column: $table.previousFirebaseUid,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get uidRemappedAt => $composableBuilder(
+    column: $table.uidRemappedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get avatarIndex => $composableBuilder(
     column: $table.avatarIndex,
     builder: (column) => ColumnOrderings(column),
@@ -991,6 +1156,16 @@ class $$DeviceAccountsTableAnnotationComposer
 
   GeneratedColumn<String> get firebaseUid => $composableBuilder(
     column: $table.firebaseUid,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get previousFirebaseUid => $composableBuilder(
+    column: $table.previousFirebaseUid,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get uidRemappedAt => $composableBuilder(
+    column: $table.uidRemappedAt,
     builder: (column) => column,
   );
 
@@ -1055,6 +1230,8 @@ class $$DeviceAccountsTableTableManager
                 Value<String> displayName = const Value.absent(),
                 Value<String> tier = const Value.absent(),
                 Value<String?> firebaseUid = const Value.absent(),
+                Value<String?> previousFirebaseUid = const Value.absent(),
+                Value<DateTime?> uidRemappedAt = const Value.absent(),
                 Value<int> avatarIndex = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> lastUsedAt = const Value.absent(),
@@ -1066,6 +1243,8 @@ class $$DeviceAccountsTableTableManager
                 displayName: displayName,
                 tier: tier,
                 firebaseUid: firebaseUid,
+                previousFirebaseUid: previousFirebaseUid,
+                uidRemappedAt: uidRemappedAt,
                 avatarIndex: avatarIndex,
                 createdAt: createdAt,
                 lastUsedAt: lastUsedAt,
@@ -1079,6 +1258,8 @@ class $$DeviceAccountsTableTableManager
                 required String displayName,
                 required String tier,
                 Value<String?> firebaseUid = const Value.absent(),
+                Value<String?> previousFirebaseUid = const Value.absent(),
+                Value<DateTime?> uidRemappedAt = const Value.absent(),
                 Value<int> avatarIndex = const Value.absent(),
                 required DateTime createdAt,
                 required DateTime lastUsedAt,
@@ -1090,6 +1271,8 @@ class $$DeviceAccountsTableTableManager
                 displayName: displayName,
                 tier: tier,
                 firebaseUid: firebaseUid,
+                previousFirebaseUid: previousFirebaseUid,
+                uidRemappedAt: uidRemappedAt,
                 avatarIndex: avatarIndex,
                 createdAt: createdAt,
                 lastUsedAt: lastUsedAt,
