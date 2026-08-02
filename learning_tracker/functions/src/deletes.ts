@@ -149,15 +149,62 @@ export const deleteLearnerProfile = onCall(CALL_OPTS, async (request) => {
   return { success: true };
 });
 
+// Sibling collections that hold track-scoped config, keyed by a `curriculum_id`
+// field. They live under the *profile*, not under the track document, so
+// recursiveDelete(trackRef) never touches them — each must be swept
+// separately. Field name verified against firestore.rules `.hasOnly()`
+// whitelists (goals, stage_definitions, study_day_configs, learning_order)
+// and, for curriculum_scopes (which has no rules whitelist — open payload),
+// against the `curriculum_id` fixtures in
+// functions/test/firestore_rules.test.mjs (PAYLOADS.curriculum_scopes /
+// the Path 21 + PHASE E test blocks).
+const TRACK_SCOPED_QUERIED_COLLECTIONS = [
+  "goals",
+  "stage_definitions",
+  "study_day_configs",
+  "curriculum_scopes",
+  "learning_order",
+] as const;
+
+// profile_programs is NOT keyed by a curriculum_id *field* — its doc-id IS
+// the curriculumId (see firestore.rules `match /profile_programs/{curriculumId}`
+// and the `programId: string, // profile_programs doc-id (curriculum_id)`
+// comment in tutor_writes.ts). A direct doc delete, not a query.
+const PROFILE_PROGRAMS_COLLECTION = "profile_programs";
+
 /**
- * Callable: delete a single curriculum track document from Firestore.
+ * Callable: delete a single curriculum track document from Firestore, plus
+ * every track-scoped sibling collection under the profile.
  *
  * H2 fix (V3-W1): W3.22 removed trackType from curriculum_tracks; the doc-id
  * is now just curriculumId (matching the client pushTrack fix in H1).
  * The trackType parameter is no longer required or accepted.
  *
+ * Deliberately NOT swept — append-only history that must survive a track
+ * delete (FR5 / E24), plus data that isn't in Firestore at all:
+ *   completions, learning_ledger, streak_events, points_ledger, preferences,
+ *   daily_plans (device-local only).
+ *
+ * Uses a single shared `bulkWriter()` (not hand-chunked WriteBatches, which
+ * cap at 500 ops) across the track's recursiveDelete and every sibling sweep,
+ * so a track with many config docs can't silently exceed a batch limit.
+ *
+ * Idempotent: every operation is a delete-if-exists (queries only match
+ * surviving docs; Firestore .delete() on an already-gone doc is a no-op), so
+ * re-running after a partial failure converges without double-deleting or
+ * erroring.
+ *
+ * Partial failure: every collection is swept independently — one failing
+ * does not stop the others, to make maximum forward progress before
+ * reporting. If anything failed, the call throws HttpsError("internal")
+ * *after* attempting everything, rather than silently returning
+ * `{ success: true }` for a partial sweep. A silent partial success would
+ * leave orphaned config docs with no future retry trigger; throwing routes
+ * into the client's existing error-handling path, and retrying is safe
+ * because the whole operation is idempotent.
+ *
  * Expects: { profileId: number, curriculumId: string }
- * Returns: { success: true }
+ * Returns: { success: true, deleted: Record<string, number> }
  */
 export const deleteCurriculumTrack = onCall(CALL_OPTS, async (request) => {
   const uid = request.auth?.uid;
@@ -173,16 +220,105 @@ export const deleteCurriculumTrack = onCall(CALL_OPTS, async (request) => {
 
   // H1/H2 fix: doc-id = curriculumId only (W3.22 removed trackType).
   const docId = curriculumId;
-  const trackRef = db
+  const profileRef = db
     .collection("users").doc(uid)
-    .collection("learner_profiles").doc(String(profileId))
-    .collection("curriculum_tracks").doc(docId);
+    .collection("learner_profiles").doc(String(profileId));
+  const trackRef = profileRef.collection("curriculum_tracks").doc(docId);
 
-  // recursiveDelete (not a shallow delete) so any future track subcollection
-  // is purged too — consistent with deleteLearnerProfile / deleteAccountData.
-  await db.recursiveDelete(trackRef);
-  logger.info(`deleteCurriculumTrack: uid=${uid} profileId=${profileId} doc=${docId}`);
-  return { success: true };
+  const deleted: Record<string, number> = {};
+  const failures: string[] = [];
+  const bulkWriter = db.bulkWriter();
+
+  // ── Sibling collections queried by `curriculum_id` field ──────────────────
+  const sweepPromises = TRACK_SCOPED_QUERIED_COLLECTIONS.map(async (collectionName) => {
+    let successCount = 0;
+    try {
+      const snap = await profileRef
+        .collection(collectionName)
+        .where("curriculum_id", "==", docId)
+        .get();
+      for (const doc of snap.docs) {
+        // Fire-and-forget: bulkWriter batches/throttles internally and
+        // resolves each op's promise once committed. We don't await these
+        // individually (that would block batch accumulation) — `.close()`
+        // below guarantees every one of these has settled before we read
+        // successCount/failures.
+        bulkWriter.delete(doc.ref).then(
+          () => { successCount++; },
+          (err) => { failures.push(`${collectionName}/${doc.id}: ${err}`); },
+        );
+      }
+    } catch (err) {
+      failures.push(`${collectionName} (query): ${err}`);
+      logger.error(`deleteCurriculumTrack: query failed for ${collectionName}`, err);
+    }
+    // Assigned via closure after bulkWriter.close() has resolved (see below);
+    // reading successCount here would race the in-flight deletes.
+    return () => { deleted[collectionName] = successCount; };
+  });
+
+  // ── profile_programs: direct doc-id lookup, not a query ───────────────────
+  const programRef = profileRef.collection(PROFILE_PROGRAMS_COLLECTION).doc(docId);
+  const programPromise = (async () => {
+    let successCount = 0;
+    try {
+      const programSnap = await programRef.get();
+      if (programSnap.exists) {
+        bulkWriter.delete(programRef).then(
+          () => { successCount++; },
+          (err) => { failures.push(`${PROFILE_PROGRAMS_COLLECTION}/${docId}: ${err}`); },
+        );
+      }
+    } catch (err) {
+      failures.push(`${PROFILE_PROGRAMS_COLLECTION} (read): ${err}`);
+      logger.error(`deleteCurriculumTrack: read failed for ${PROFILE_PROGRAMS_COLLECTION}`, err);
+    }
+    return () => { deleted[PROFILE_PROGRAMS_COLLECTION] = successCount; };
+  })();
+
+  // ── The track document itself (+ any future subcollection under it) ──────
+  const trackPromise = (async () => {
+    let trackExisted = false;
+    try {
+      trackExisted = (await trackRef.get()).exists;
+    } catch (err) {
+      failures.push(`curriculum_tracks (read): ${err}`);
+    }
+    try {
+      // recursiveDelete shares our bulkWriter so its throttling coordinates
+      // with the sibling-collection deletes above.
+      await db.recursiveDelete(trackRef, bulkWriter);
+      return () => { deleted["curriculum_tracks"] = trackExisted ? 1 : 0; };
+    } catch (err) {
+      failures.push(`curriculum_tracks (recursiveDelete): ${err}`);
+      logger.error(`deleteCurriculumTrack: recursiveDelete failed for track`, err);
+      return () => { deleted["curriculum_tracks"] = 0; };
+    }
+  })();
+
+  const finalizers = await Promise.all([...sweepPromises, programPromise, trackPromise]);
+  // Drain the bulkWriter: resolves once every enqueued delete (including
+  // retries) has settled, so the per-doc .then/.catch trackers above have
+  // all fired by the time we read their results below. close() itself never
+  // rejects — per-op failures are only visible via those trackers.
+  await bulkWriter.close();
+  for (const finalize of finalizers) finalize();
+
+  logger.info(
+    `deleteCurriculumTrack: uid=${uid} profileId=${profileId} doc=${docId} ` +
+      `deleted=${JSON.stringify(deleted)}` +
+      (failures.length ? ` failures=${JSON.stringify(failures)}` : ""),
+  );
+
+  if (failures.length > 0) {
+    throw new HttpsError(
+      "internal",
+      `deleteCurriculumTrack: partial failure sweeping ${failures.length} operation(s) ` +
+        `for profileId=${profileId} curriculumId=${docId}. Safe to retry (idempotent).`,
+    );
+  }
+
+  return { success: true, deleted };
 });
 
 /**
