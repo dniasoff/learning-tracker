@@ -10,6 +10,7 @@ import 'package:learning_tracker/core/sync/initial_sync_state.dart';
 import 'package:learning_tracker/core/sync/providers/merge_router_provider.dart';
 import 'package:learning_tracker/core/sync/providers/outbox_providers.dart';
 import 'package:learning_tracker/core/sync/providers/resolve_profile_id_provider.dart';
+import 'package:learning_tracker/core/sync/providers/tutored_pull_providers.dart';
 import 'package:learning_tracker/core/sync/sync_identity_status.dart';
 import 'package:learning_tracker/core/sync/sync_orchestrator.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
@@ -198,6 +199,37 @@ final syncOrchestratorProvider = Provider<SyncOrchestrator?>((ref) {
     // as <email>" status instead of "rows stuck after N attempts" (the drain
     // is skipped at the processor layer so nothing actually retries).
     resolveIdentityStatus: () => ref.read(syncIdentityStatusProvider),
+    // Story 1.3 (AD-22): the singleton tutored-fleet supervisor — resolved
+    // lazily so the orchestrator always parks/unparks/resubscribes the
+    // CURRENT tutor session, not one captured at build time. `keepAlive` on
+    // its own provider means this read is cheap and always returns the same
+    // instance; its park/unpark/deadChannels are all no-ops when no tutor
+    // session is attached.
+    resolveTutoredListenerSupervisor: () =>
+        ref.read(tutoredListenerSupervisorProvider),
+    // Story 1.3 (FR18/AD-9/E-5): probes the device's current network
+    // "identity" so LifecycleObserver can gate the resume Firestore-network
+    // reset to a genuine change (e.g. WiFi↔cellular handoff) rather than
+    // every trivial app-switch. Reuses the same `connectivity_plus` instance
+    // Story 1.4's connectivityStreamProvider is built on
+    // (connectivityPlusProvider) — a direct `checkConnectivity()` probe
+    // rather than the boolean online/offline stream, because a handoff
+    // between two "online" network types is exactly the case a boolean
+    // can't distinguish. Canonicalized to a sorted, comma-joined String so
+    // two reads with the same active interfaces compare `==` equal
+    // regardless of list-instance identity or interface ordering.
+    resolveNetworkIdentity: () async {
+      try {
+        final connectivity = ref.read(connectivityPlusProvider);
+        final results = await connectivity.checkConnectivity();
+        final names = results.map((r) => r.name).toList()..sort();
+        return names.join(',');
+      } on Exception {
+        // A failed probe means we can't tell — treat as "unknown" rather
+        // than letting the exception propagate into the resume path.
+        return null;
+      }
+    },
   );
 
   // Idempotent: registers the lifecycle observer + Firestore listeners once.

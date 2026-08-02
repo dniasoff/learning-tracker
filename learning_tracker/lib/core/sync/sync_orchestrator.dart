@@ -19,6 +19,7 @@ import 'package:learning_tracker/core/sync/providers/firestore_instance_provider
     show resetFirestoreNetwork;
 import 'package:learning_tracker/core/sync/pull_pipeline.dart';
 import 'package:learning_tracker/core/sync/sync_identity_status.dart';
+import 'package:learning_tracker/core/sync/tutored_listener_supervisor.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_error_code.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
@@ -262,6 +263,31 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
     /// so no retries accrue. Optional: when null (tests / legacy wiring) the
     /// status path behaves exactly as before.
     SyncIdentityStatus Function()? resolveIdentityStatus,
+
+    /// Story 1.3 (AD-9/AD-22): lazy resolver for the singleton
+    /// [TutoredListenerSupervisor] that owns the tutored talmid fleet, when a
+    /// tutor session is active. Resolved lazily (like every other
+    /// collaborator here) so the orchestrator never holds a stale reference.
+    /// Optional — when null (no tutoring feature wired, most tests) every
+    /// tutored-fleet touch point below is a no-op.
+    TutoredListenerSupervisor? Function()? resolveTutoredListenerSupervisor,
+
+    /// Story 1.3 (FR18/AD-9/E-5): optional probe for the current network's
+    /// "identity" (e.g. the sorted set of active `ConnectivityResult`s),
+    /// forwarded to [LifecycleObserver] to gate the resume network reset to a
+    /// genuine change rather than every trivial app-switch. See
+    /// [LifecycleObserver.resolveNetworkIdentity].
+    Future<Object?> Function()? resolveNetworkIdentity,
+
+    /// Story 1.1 per-channel resubscribe-on-error backoff schedule, forwarded
+    /// straight through to the internal [ListenerSupervisor]. Defaults match
+    /// [ListenerSupervisor]'s own production defaults exactly — exposed here
+    /// (mirroring [periodicDrainInterval] / [parkAfterBackgroundDuration])
+    /// purely so tests can shrink or grow the schedule without waiting on
+    /// real production timings.
+    Duration resubscribeBackoffBase = const Duration(seconds: 1),
+    Duration resubscribeBackoffCap = const Duration(seconds: 30),
+    double resubscribeBackoffJitter = 0.2,
   }) : _resolveMergeRouter = resolveMergeRouter,
        _resolveGateway = resolveGateway,
        _resolveProfileId = resolveProfileId,
@@ -277,6 +303,11 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
        _periodicDrainInterval = periodicDrainInterval,
        _resolveOutboxDao = resolveOutboxDao,
        _resolveIdentityStatus = resolveIdentityStatus,
+       _resolveTutoredListenerSupervisor = resolveTutoredListenerSupervisor,
+       _resolveNetworkIdentity = resolveNetworkIdentity,
+       _resubscribeBackoffBase = resubscribeBackoffBase,
+       _resubscribeBackoffCap = resubscribeBackoffCap,
+       _resubscribeBackoffJitter = resubscribeBackoffJitter,
        parkAfterBackgroundDuration =
            parkAfterBackgroundDuration ?? const Duration(seconds: 60);
 
@@ -291,6 +322,28 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
 
   /// Resolves the live-vs-active identity match — see constructor doc.
   final SyncIdentityStatus Function()? _resolveIdentityStatus;
+
+  /// Story 1.3: lazy resolver for the tutored fleet — see constructor doc.
+  final TutoredListenerSupervisor? Function()?
+  _resolveTutoredListenerSupervisor;
+
+  /// Story 1.3: network-identity probe forwarded to [LifecycleObserver] — see
+  /// constructor doc.
+  final Future<Object?> Function()? _resolveNetworkIdentity;
+
+  /// Story 1.1 backoff schedule forwarded to the internal
+  /// [ListenerSupervisor] — see constructor doc.
+  final Duration _resubscribeBackoffBase;
+  final Duration _resubscribeBackoffCap;
+  final double _resubscribeBackoffJitter;
+
+  /// Story 1.3 (FR15/AD-9): guards concurrent/overlapping dead-channel
+  /// resubscribe attempts (own + tutored) so a burst of connectivity/resume
+  /// triggers coalesces into a single in-flight attempt — the same
+  /// no-thundering-herd discipline [ListenerSupervisor.restart] already
+  /// applies to a single fleet, extended here across both fleets and both
+  /// trigger paths.
+  Future<void>? _resubscribeInFlight;
 
   /// Minimum attempt count before a stuck outbox row pushes the orchestrator
   /// into the [SyncStatus.degraded] state. Matches Plan §F Phase 4.
@@ -505,6 +558,9 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
       // validate `.limit(500)` is keeping the delivered page size bounded.
       // After 10 the supervisor stops calling this callback.
       snapshotTelemetry: _onListenerSnapshot,
+      resubscribeBackoffBase: _resubscribeBackoffBase,
+      resubscribeBackoffCap: _resubscribeBackoffCap,
+      resubscribeBackoffJitter: _resubscribeBackoffJitter,
     );
     _listenerSupervisor = listenerSupervisor;
 
@@ -543,34 +599,75 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
       // is current before the listener stream resumes.
       parkListeners: () async {
         final supervisor = _listenerSupervisor;
-        if (supervisor == null) return;
-        try {
-          await supervisor.park();
-          _logger?.info(event: LogEvents.sync.listenersParked);
-        } on Exception catch (e, st) {
-          // AUD-core-sync-26 (EH-4): narrowed from a bare `catch`.
-          _logger?.warning(
-            event: 'sync_listeners_park_failed',
-            exception: e,
-            stackTrace: st,
-          );
+        if (supervisor != null) {
+          try {
+            await supervisor.park();
+            _logger?.info(event: LogEvents.sync.listenersParked);
+          } on Exception catch (e, st) {
+            // AUD-core-sync-26 (EH-4): narrowed from a bare `catch`.
+            _logger?.warning(
+              event: 'sync_listeners_park_failed',
+              exception: e,
+              stackTrace: st,
+            );
+          }
+        }
+        // Story 1.3 (AD-22/E-3.1): park the tutored fleet alongside the
+        // own-account one — mirrors the block above exactly. Previously the
+        // 16 tutored streams stayed live 24/7 across a background window.
+        final tutored = _resolveTutoredListenerSupervisor?.call();
+        if (tutored != null) {
+          try {
+            await tutored.park();
+            _logger?.info(event: LogEvents.sync.tutoredListenersParked);
+          } on Exception catch (e, st) {
+            _logger?.warning(
+              event: 'sync_tutored_listeners_park_failed',
+              exception: e,
+              stackTrace: st,
+            );
+          }
         }
       },
       unparkListeners: () async {
         final supervisor = _listenerSupervisor;
-        if (supervisor == null) return;
-        try {
-          await supervisor.unpark();
-          _logger?.info(event: LogEvents.sync.listenersUnparked);
-        } on Exception catch (e, st) {
-          // AUD-core-sync-26 (EH-4): narrowed from a bare `catch`.
-          _logger?.warning(
-            event: 'sync_listeners_unpark_failed',
-            exception: e,
-            stackTrace: st,
-          );
+        if (supervisor != null) {
+          try {
+            await supervisor.unpark();
+            _logger?.info(event: LogEvents.sync.listenersUnparked);
+          } on Exception catch (e, st) {
+            // AUD-core-sync-26 (EH-4): narrowed from a bare `catch`.
+            _logger?.warning(
+              event: 'sync_listeners_unpark_failed',
+              exception: e,
+              stackTrace: st,
+            );
+          }
+        }
+        // Story 1.3 (AD-22/E-3.1): unpark the tutored fleet alongside the
+        // own-account one — mirrors the block above exactly.
+        final tutored = _resolveTutoredListenerSupervisor?.call();
+        if (tutored != null) {
+          try {
+            await tutored.unpark();
+            _logger?.info(event: LogEvents.sync.tutoredListenersUnparked);
+          } on Exception catch (e, st) {
+            _logger?.warning(
+              event: 'sync_tutored_listeners_unpark_failed',
+              exception: e,
+              stackTrace: st,
+            );
+          }
         }
       },
+      // Story 1.3 (FR15/AD-9): resurrect any dead channel (own + tutored) on
+      // every genuine resume from background, including a short `inactive`
+      // blip that does not warrant the heavier network reset above.
+      resubscribeDeadChannels: () => _resubscribeDeadChannels('lifecycle'),
+      // Story 1.3 (FR18/AD-9/E-5): gates the resume network reset to a
+      // genuine network-identity change rather than every trivial
+      // app-switch. Forwarded straight through — see constructor doc.
+      resolveNetworkIdentity: _resolveNetworkIdentity,
       parkAfterBackgroundDuration: parkAfterBackgroundDuration,
     );
     _lifecycleObserver = lifecycleObserver;
@@ -649,8 +746,85 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
             stackTrace: st,
           );
         }
+        // Story 1.3 (R-1/R-8/AD-9): `resetFirestoreNetwork` above does NOT
+        // resurrect an already-terminated `.snapshots()` stream — a dead
+        // channel needs its own fresh subscription. Resubscribe every dead
+        // channel (own + tutored) now that connectivity is confirmed back.
+        // Shares this same debounce window, so a flap coalesces both actions
+        // into one shot.
+        if (_lastConnectivity ?? false) {
+          await _resubscribeDeadChannels('connectivity');
+        }
       },
     );
+  }
+
+  /// Story 1.3 (FR15/AD-9/R-1/R-8): resubscribe every currently-dead channel
+  /// — own AND tutored — via the Story 1.1/1.2 machinery. A no-op fleet touch
+  /// point when nothing is dead (AC3 — a healthy channel is left untouched):
+  /// the own fleet is only [ListenerSupervisor.restart]ed when
+  /// [ListenerSupervisor.deadChannels] is non-empty, and the tutored fleet is
+  /// only park+unparked when its [TutoredListenerSupervisor.deadChannels] is
+  /// non-empty.
+  ///
+  /// Concurrent/rapid calls (a burst from connectivity flapping and/or a
+  /// resume landing close together) coalesce onto a single in-flight
+  /// attempt — mirrors [ListenerSupervisor.restart]'s own coalescing,
+  /// extended here across both trigger paths and both fleets, so a flap never
+  /// produces a thundering herd of overlapping attaches (AC3).
+  Future<void> _resubscribeDeadChannels(String trigger) {
+    final inFlight = _resubscribeInFlight;
+    if (inFlight != null) return inFlight;
+    final future = _doResubscribeDeadChannels(trigger);
+    _resubscribeInFlight = future;
+    return future.whenComplete(() {
+      if (identical(_resubscribeInFlight, future)) {
+        _resubscribeInFlight = null;
+      }
+    });
+  }
+
+  Future<void> _doResubscribeDeadChannels(String trigger) async {
+    final supervisor = _listenerSupervisor;
+    if (supervisor != null && supervisor.deadChannels.isNotEmpty) {
+      try {
+        // ListenerSupervisor.restart() is itself serialized/coalesced (L1)
+        // and resolves the source lazily, so this always rebinds every
+        // channel — including the dead one(s) — to a fresh subscription.
+        await supervisor.restart();
+        _logger?.info(
+          event: LogEvents.sync.listenersResubscribed,
+          fields: {'trigger': trigger},
+        );
+      } on Exception catch (e, st) {
+        _logger?.warning(
+          event: 'sync_listeners_resubscribe_failed',
+          exception: e,
+          stackTrace: st,
+        );
+      }
+    }
+
+    final tutored = _resolveTutoredListenerSupervisor?.call();
+    if (tutored != null && tutored.deadChannels.isNotEmpty) {
+      try {
+        // TutoredListenerSupervisor exposes no restart() — park+unpark is
+        // its only fleet-level reopen, same semantics as the own fleet's
+        // start() (a fresh start clears all dead-channel bookkeeping).
+        await tutored.park();
+        await tutored.unpark();
+        _logger?.info(
+          event: LogEvents.sync.tutoredListenersResubscribed,
+          fields: {'trigger': trigger},
+        );
+      } on Exception catch (e, st) {
+        _logger?.warning(
+          event: 'sync_tutored_listeners_resubscribe_failed',
+          exception: e,
+          stackTrace: st,
+        );
+      }
+    }
   }
 
   /// Minimum time between full pull-on-launch runs when triggered from resume
