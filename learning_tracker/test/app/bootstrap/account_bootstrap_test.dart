@@ -80,7 +80,8 @@ void main() {
 
         // The error is caught by the outer catch and the legacy fallback
         // filename is returned — this already worked before the fix.
-        expect(result, 'learning_tracker');
+        expect(result.dbFileName, 'learning_tracker');
+        expect(result.accountId, null);
 
         // This is the actual regression guard: before the fix, close() was
         // never reached on this path because it sat at the end of the try
@@ -108,7 +109,8 @@ void main() {
         );
 
         // No accounts registered → fast path returns the legacy fallback.
-        expect(result, 'learning_tracker');
+        expect(result.dbFileName, 'learning_tracker');
+        expect(result.accountId, null);
         expect(interceptor.closeCalled, isTrue);
       },
     );

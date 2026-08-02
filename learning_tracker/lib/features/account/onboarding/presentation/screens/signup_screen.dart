@@ -10,6 +10,7 @@ import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
+import 'package:learning_tracker/core/providers/active_account_id_provider.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
@@ -194,6 +195,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         ref
             .read(accountDbFileNameProvider.notifier)
             .setFileName('learning_tracker');
+        ref.read(activeAccountIdProvider.notifier).set(null);
         ref.invalidate(userDatabaseProvider);
       }
     }
@@ -221,6 +223,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       reservedEmail = true;
 
       ref.read(accountDbFileNameProvider.notifier).setFileName(dbFileName);
+      ref.read(activeAccountIdProvider.notifier).set(accountId);
       ref.invalidate(userDatabaseProvider);
       switchedDb = true;
 
@@ -382,6 +385,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         final accountId = const Uuid().v4();
         final dbFileName = 'user_acc_$accountId.db';
         ref.read(accountDbFileNameProvider.notifier).setFileName(dbFileName);
+        ref.read(activeAccountIdProvider.notifier).set(accountId);
         ref.invalidate(userDatabaseProvider);
 
         await ref
@@ -407,6 +411,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         ref
             .read(accountDbFileNameProvider.notifier)
             .setFileName(existingEntry.dbFileName);
+        ref.read(activeAccountIdProvider.notifier).set(existingEntry.accountId);
         ref.invalidate(userDatabaseProvider);
         await ref
             .read(authStateProvider.notifier)

@@ -10,6 +10,7 @@ import 'package:learning_tracker/app/router/router_provider.dart';
 import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
+import 'package:learning_tracker/core/providers/active_account_id_provider.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/core/sync/providers/outbox_providers.dart'
@@ -370,6 +371,7 @@ class SignInController extends Notifier<SignInState> {
       _ref
           .read(accountDbFileNameProvider.notifier)
           .setFileName(account.dbFileName);
+      _ref.read(activeAccountIdProvider.notifier).set(account.accountId);
       _ref.invalidate(userDatabaseProvider);
 
       final dao = _ref.read(userDatabaseProvider).userProfileDao;
@@ -494,6 +496,7 @@ class SignInController extends Notifier<SignInState> {
             .setFileName(existingEntry.dbFileName);
         _ref.invalidate(userDatabaseProvider);
       }
+      _ref.read(activeAccountIdProvider.notifier).set(existingEntry.accountId);
       await _ref
           .read(authStateProvider.notifier)
           .setCloudBornSessionFromFirebaseUser(user);
@@ -507,6 +510,7 @@ class SignInController extends Notifier<SignInState> {
       final accountId = user.uid;
       final dbFileName = 'user_acc_$accountId.db';
       _ref.read(accountDbFileNameProvider.notifier).setFileName(dbFileName);
+      _ref.read(activeAccountIdProvider.notifier).set(accountId);
       _ref.invalidate(userDatabaseProvider);
 
       await _ref
@@ -807,6 +811,7 @@ class SignInController extends Notifier<SignInState> {
       _ref
           .read(accountDbFileNameProvider.notifier)
           .setFileName(account.dbFileName);
+      _ref.read(activeAccountIdProvider.notifier).set(account.accountId);
       _ref.invalidate(userDatabaseProvider);
 
       final dao = _ref.read(userDatabaseProvider).userProfileDao;

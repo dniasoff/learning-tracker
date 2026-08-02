@@ -9,6 +9,7 @@ import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/app/router/router_provider.dart';
 import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
+import 'package:learning_tracker/core/providers/active_account_id_provider.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/core/sync/providers/sync_orchestrator_providers.dart';
@@ -494,6 +495,7 @@ class _AccountTileState extends ConsumerState<_AccountTile> {
       ref
           .read(accountDbFileNameProvider.notifier)
           .setFileName(account.dbFileName);
+      ref.read(activeAccountIdProvider.notifier).set(account.accountId);
       ref.invalidate(userDatabaseProvider);
 
       await _activateCloudAccountFromLocalData(context, ref);
@@ -650,6 +652,7 @@ class _AccountTileState extends ConsumerState<_AccountTile> {
     ref
         .read(accountDbFileNameProvider.notifier)
         .setFileName(account.dbFileName);
+    ref.read(activeAccountIdProvider.notifier).set(account.accountId);
     ref.invalidate(userDatabaseProvider);
 
     final dao = ref.read(userDatabaseProvider).userProfileDao;
@@ -751,6 +754,7 @@ class _AccountTileState extends ConsumerState<_AccountTile> {
     ref
         .read(accountDbFileNameProvider.notifier)
         .setFileName(account.dbFileName);
+    ref.read(activeAccountIdProvider.notifier).set(account.accountId);
     ref.invalidate(userDatabaseProvider);
 
     final dao = ref.read(userDatabaseProvider).userProfileDao;
@@ -902,6 +906,7 @@ class _AccountTileState extends ConsumerState<_AccountTile> {
       ref
           .read(accountDbFileNameProvider.notifier)
           .setFileName('learning_tracker');
+      ref.read(activeAccountIdProvider.notifier).set(null);
       ref.invalidate(userDatabaseProvider);
       ref.read(authStateProvider.notifier).signOut();
       ref.read(selectedProfileIdProvider.notifier).clear();

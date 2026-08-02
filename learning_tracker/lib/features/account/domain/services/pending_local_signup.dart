@@ -4,6 +4,7 @@ import 'package:drift_flutter/drift_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/database/drift_db_file.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
+import 'package:learning_tracker/core/providers/active_account_id_provider.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/features/account/domain/services/session_persistence_service.dart';
@@ -179,6 +180,7 @@ class PendingLocalSignupStore {
     ref
         .read(accountDbFileNameProvider.notifier)
         .setFileName('learning_tracker');
+    ref.read(activeAccountIdProvider.notifier).set(null);
     ref.invalidate(userDatabaseProvider);
     ref.read(authStateProvider.notifier).signOut();
   }

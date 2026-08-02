@@ -12,6 +12,7 @@ import 'package:learning_tracker/core/logging/crashlytics_service.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/providers/crashlytics_provider.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/data/firestore/active_account_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:talker_riverpod_logger/talker_riverpod_logger.dart';
@@ -58,7 +59,7 @@ Future<BootstrapResult> bootstrap() async {
   // content-DB-dependent screens show their loading state until seeding
   // completes.
   final docsDir = await getApplicationDocumentsDirectory();
-  final resolvedDbFileName = await bootstrapAccount(
+  final accountBootstrap = await bootstrapAccount(
     databasesPath: docsDir.path,
     log: log,
   );
@@ -89,13 +90,21 @@ Future<BootstrapResult> bootstrap() async {
     ],
   );
 
-  // Seed the resolved account DB file name into the provider.
-  // bootstrapAccount completed before runApp so this is effectively
-  // synchronous from the provider tree's perspective.
-  if (resolvedDbFileName != 'learning_tracker') {
+  // Seed the resolved account DB file name + Firestore account id into their
+  // providers. bootstrapAccount completed before runApp so this is
+  // effectively synchronous from the provider tree's perspective. The two
+  // providers are seeded from the same BootstrapAccountResult (see its doc
+  // comment) so a DB file is never swapped in without the matching
+  // activeAccountIdProvider value, or vice versa.
+  if (accountBootstrap.dbFileName != 'learning_tracker') {
     container
         .read(accountDbFileNameProvider.notifier)
-        .setFileName(resolvedDbFileName);
+        .setFileName(accountBootstrap.dbFileName);
+  }
+  if (accountBootstrap.accountId != null) {
+    container
+        .read(activeAccountIdProvider.notifier)
+        .set(accountBootstrap.accountId);
   }
 
   container.listen<int?>(selectedProfileIdProvider, (_, id) {
