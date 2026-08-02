@@ -1,6 +1,10 @@
 ---
-stepsCompleted: [step-01, step-02, step-03]
+stepsCompleted: [step-01, step-02, step-03, step-04]
 status: draft
+ownerDecisions:
+  - "Story 1.5 slim-status shape kept as ratified (owner [C], 2026-08-02): AD-30 per-item recovery affordance stays Phase 3; NO Story 1.6 pulling it forward. Accepted regression window — a permanently-failed write shows only as 'syncing' until Phase 3."
+validation: "Adversarial step-04 validation READY (b352952d); 22 FRs covered, 11 stories, no forward deps."
+wikiPublish: "BLOCKED — docmost-cli absent; this is the unpublished local draft, route to the living manual via doc-amend when the CLI is restored (never treat local as canon)."
 inputDocuments:
   - docs/specs/spec-drift-firestore-migration/SPEC.md
   - docs/specs/spec-drift-firestore-migration/traceability.md
