@@ -1,5 +1,6 @@
 import 'package:learning_tracker/core/codec/firestore_codec.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 
 /// Domain model for one append-only `learning_ledger/{ulid}` entry
 /// (`docs/firestore-rewrite-map.md`, `firestore.rules` `match
@@ -41,6 +42,21 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 ///   write — see the repository's class doc comment for the corresponding
 ///   "do not stamp the current wall-clock time on retry" logic.
 ///
+/// **[source] is new — added after the initial build, additively.** No
+/// Drift column carried it (`CompletionSource` is a B1 write-time policy
+/// discriminator, not a persisted `LearningLedger` column) but a downstream
+/// consumer needs it: the bulk-mark-deletion Cloud Function must retract
+/// only the lifetime ledger entries a bulk-mark created, never a `live`
+/// entry that happens to share the same `(curriculumId, unitIdentifier)`
+/// from a different track years earlier — and because
+/// [completionNumber] means that collision is real and structurally
+/// possible, there is no other field on this entry a deletion sweep could
+/// safely key on. See [LearningLedgerEntryFirestoreCodec.toFirestore] for
+/// the encoding and [learningLedgerEntryFromFirestore] for why a
+/// missing/unrecognised value decodes as [CompletionSource.live] rather
+/// than throwing — the fail-safe direction here is "never deletable",
+/// not "best guess".
+///
 /// **`curriculumId` is deliberately KEPT despite the "no FK to tracks or
 /// curricula" invariant.** `docs/firestore-rewrite-map.md` ("RESOLVED:
 /// prior-import tier tracking...") states the ledger "deliberately has no
@@ -65,6 +81,7 @@ class LearningLedgerEntry {
     required this.completionNumber,
     required this.markedBy,
     required this.isManual,
+    required this.source,
   });
 
   /// This entry's identity — also its Firestore doc-id
@@ -104,6 +121,16 @@ class LearningLedgerEntry {
   final String markedBy;
 
   final bool isManual;
+
+  /// Which write-time policy tier produced this entry — `live` |
+  /// `bulkInTrack` | `lifetimeOnly` (`CompletionSource`). Deterministic
+  /// provenance, supplied by the caller (never derived from anything that
+  /// varies between a write and its retry, e.g. wall-clock time or
+  /// existing Firestore state) so it stays byte-identical across a retry
+  /// of the same logical write — required for the append-only "identical
+  /// replay only" update rule (SR-1) to keep accepting it. See the class
+  /// doc comment's "[source] is new" section for why this exists.
+  final CompletionSource source;
 }
 
 /// One row for [FirestoreLearningLedgerRepository.recordCompletionsBatch] —
@@ -177,6 +204,16 @@ class LedgerEntryDraft {
 /// hands a `Timestamp` OBJECT back on read, which [FirestoreCodec.
 /// parseDateTime] — deliberately free of any `cloud_firestore` import —
 /// cannot decode on its own).
+///
+/// **`source` is written via [CompletionSource.name]** (`'live'` /
+/// `'bulkInTrack'` / `'lifetimeOnly'`) — the Dart enum's own member name,
+/// not a hand-rolled storage key. `CompletionSource`'s three member names
+/// already ARE that exact camelCase vocabulary (unlike e.g. `CurriculumId`,
+/// whose `storageKey` deliberately diverges from its Dart enum name into
+/// snake_case), so `.name` is the single source of truth here — no second
+/// mapping to keep in sync or typo. `learning_ledger`'s create rule has no
+/// `.hasOnly()` field whitelist (verified against `firestore.rules`), so
+/// adding this key needs no rules change.
 extension LearningLedgerEntryFirestoreCodec on LearningLedgerEntry {
   /// Encodes this entry for a Firestore write. [ulid] IS included (unlike
   /// [StageDefinition.id], which is Drift-only and omitted) — it is this
@@ -193,6 +230,7 @@ extension LearningLedgerEntryFirestoreCodec on LearningLedgerEntry {
     'completion_number': completionNumber,
     'marked_by': markedBy,
     'is_manual': isManual,
+    'source': source.name,
   };
 }
 
@@ -213,6 +251,20 @@ extension LearningLedgerEntryFirestoreCodec on LearningLedgerEntry {
 /// document) or `FirestoreLearningLedgerRepository`'s one-shot-read
 /// leniency, never silently defaulted. Mirrors
 /// `stageDefinitionFromFirestore`'s error-shape split exactly.
+///
+/// **`source` is the one exception to "never silently defaulted" — by
+/// design, not oversight.** A document with no `source` key (written
+/// before this field existed) or an unrecognised value decodes as
+/// [CompletionSource.live] rather than throwing — see [_parseSource].
+/// [CompletionSource.live] is the fail-SAFE default for this specific
+/// field: it is the one value a bulk-mark-deletion sweep (`source ==
+/// 'bulkInTrack'`) can never match, so an entry with unknown provenance is
+/// never mistakenly treated as safe to delete. Throwing instead (like every
+/// other field here) would be the wrong kind of strict — it would make a
+/// pre-existing, perfectly valid entry invisible from every read
+/// ([_decodeAll] skips a document whose decode throws) purely because it
+/// predates this field, which is worse than decoding it into the
+/// safe-by-construction default.
 LearningLedgerEntry learningLedgerEntryFromFirestore(
   Map<String, dynamic> data,
 ) {
@@ -244,5 +296,19 @@ LearningLedgerEntry learningLedgerEntryFromFirestore(
     completionNumber: FirestoreCodec.parseInt(data['completion_number']) ?? 1,
     markedBy: markedBy,
     isManual: FirestoreCodec.parseBool(data['is_manual']) ?? false,
+    source: _parseSource(data['source']),
   );
+}
+
+/// Parses `source`, defaulting to [CompletionSource.live] when [raw] is
+/// missing or does not match any [CompletionSource.name] — see
+/// [learningLedgerEntryFromFirestore]'s doc comment for why this field
+/// alone defaults instead of throwing.
+CompletionSource _parseSource(Object? raw) {
+  if (raw is String) {
+    for (final value in CompletionSource.values) {
+      if (value.name == raw) return value;
+    }
+  }
+  return CompletionSource.live;
 }

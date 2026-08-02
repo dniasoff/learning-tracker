@@ -55,6 +55,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/time/ulid.dart';
 import 'package:learning_tracker/data/firestore/doc_ids.dart';
 import 'package:learning_tracker/data/repositories/firestore_learning_ledger_repository.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 import 'package:learning_tracker/features/learning/domain/entities/learning_ledger_entry.dart';
 
 import '../../helpers/firestore_fake.dart';
@@ -92,6 +93,7 @@ void main() {
     DateTime? completedAt,
     bool isManual = false,
     String markedBy = _profileId,
+    CompletionSource source = CompletionSource.live,
     String? ulid,
   }) {
     return repo.recordCompletion(
@@ -104,6 +106,7 @@ void main() {
       completedAt: completedAt ?? DateTime.utc(2026, 1, 1),
       markedBy: markedBy,
       isManual: isManual,
+      source: source,
       ulid: ulid,
     );
   }
@@ -258,6 +261,7 @@ void main() {
         isManual: true,
         markedBy: 'marker-profile-ulid',
         completedAt: DateTime.utc(2026, 3, 15, 10, 30, 45),
+        source: CompletionSource.bulkInTrack,
       );
 
       final all = await repo.getLedgerForCurriculum(CurriculumId.yerushalmi);
@@ -274,6 +278,7 @@ void main() {
       expect(loaded.completionNumber, 1);
       expect(loaded.markedBy, 'marker-profile-ulid');
       expect(loaded.isManual, isTrue);
+      expect(loaded.source, CompletionSource.bulkInTrack);
     });
 
     group('completed_at is a real Firestore Timestamp, not a String', () {
@@ -308,6 +313,157 @@ void main() {
         expect(reloaded.single.completedAt, completedAt);
         expect(reloaded.single.completedAt.isUtc, isTrue);
       });
+    });
+  });
+
+  group('source — provenance for the bulk-mark-deletion Cloud Function', () {
+    test('recordCompletion defaults to CompletionSource.live', () async {
+      final repo = buildRepo();
+      final entry = await repo.recordCompletion(
+        curriculumId: CurriculumId.mishnayos,
+        entryScope: 'masechta',
+        unitIdentifier: 'unit-1',
+        unitDisplayNameHe: 'שם',
+        unitDisplayNameEn: 'Name',
+        trackType: 'personal',
+        completedAt: DateTime.utc(2026, 1, 1),
+        markedBy: _profileId,
+        isManual: false,
+        // source omitted deliberately.
+      );
+
+      expect(entry.source, CompletionSource.live);
+    });
+
+    test('each CompletionSource round-trips through write then read', () async {
+      final repo = buildRepo();
+
+      for (final source in CompletionSource.values) {
+        final written = await record(
+          repo,
+          unitIdentifier: 'unit-${source.name}',
+          source: source,
+        );
+
+        final all = await repo.getLedgerForCurriculum(CurriculumId.mishnayos);
+        final loaded = all.firstWhere((e) => e.ulid == written.ulid);
+
+        expect(
+          loaded.source,
+          source,
+          reason: 'CompletionSource.${source.name} must round-trip exactly',
+        );
+      }
+    });
+
+    test(
+      'is present, as the enum member name, on every written raw document',
+      () async {
+        final repo = buildRepo();
+        final entry = await record(repo, source: CompletionSource.bulkInTrack);
+
+        final data = (await rawDoc(entry.ulid).get()).data()!;
+
+        expect(
+          data['source'],
+          'bulkInTrack',
+          reason:
+              'written via CompletionSource.name — the exact string the '
+              'bulk-mark-deletion Cloud Function filters on',
+        );
+      },
+    );
+
+    test(
+      'recordCompletionsBatch stamps the same source across the whole batch, '
+      'defaulting to CompletionSource.lifetimeOnly',
+      () async {
+        final repo = buildRepo();
+
+        final defaulted = await repo.recordCompletionsBatch([
+          const LedgerEntryDraft(
+            curriculumId: CurriculumId.bavli,
+            entryScope: 'masechta',
+            unitIdentifier: 'daf-1',
+            unitDisplayNameHe: 'א',
+            unitDisplayNameEn: 'A',
+            trackType: 'personal',
+            markedBy: _profileId,
+            isManual: true,
+          ),
+        ], completedAt: DateTime.utc(2026, 1, 1));
+        expect(defaulted.single.source, CompletionSource.lifetimeOnly);
+
+        final explicit = await repo.recordCompletionsBatch(
+          [
+            const LedgerEntryDraft(
+              curriculumId: CurriculumId.bavli,
+              entryScope: 'masechta',
+              unitIdentifier: 'daf-2',
+              unitDisplayNameHe: 'ב',
+              unitDisplayNameEn: 'B',
+              trackType: 'personal',
+              markedBy: _profileId,
+              isManual: true,
+            ),
+          ],
+          completedAt: DateTime.utc(2026, 1, 1),
+          source: CompletionSource.bulkInTrack,
+        );
+        expect(explicit.single.source, CompletionSource.bulkInTrack);
+      },
+    );
+
+    group('missing or unrecognised source decodes safely, never throws', () {
+      test(
+        'a document written before this field existed decodes as live',
+        () async {
+          final repo = buildRepo();
+          const ulid = 'PRESOURCE0000000000000AA';
+          await rawDoc(ulid).set(
+            rawLedgerData(
+              ulid: ulid,
+              curriculumId: CurriculumId.mishnayos,
+              unitIdentifier: 'unit-1',
+            ), // no 'source' key — mirrors a pre-this-change document.
+          );
+
+          final all = await repo.getLedgerForCurriculum(CurriculumId.mishnayos);
+
+          expect(
+            all.single.source,
+            CompletionSource.live,
+            reason:
+                'the fail-SAFE default: an entry with unknown provenance must '
+                'never be mistaken for source == bulkInTrack (deletable)',
+          );
+        },
+      );
+
+      test(
+        'an unrecognised source value decodes as live rather than throwing',
+        () async {
+          final repo = buildRepo();
+          const ulid = 'BADSOURCE0000000000000AA';
+          await rawDoc(ulid).set({
+            ...rawLedgerData(
+              ulid: ulid,
+              curriculumId: CurriculumId.mishnayos,
+              unitIdentifier: 'unit-1',
+            ),
+            'source': 'not-a-real-source',
+          });
+
+          final all = await repo.getLedgerForCurriculum(CurriculumId.mishnayos);
+
+          expect(
+            all,
+            hasLength(1),
+            reason: 'must not be skipped as a decode failure',
+          );
+          expect(all.single.source, CompletionSource.live);
+        },
+      );
     });
   });
 

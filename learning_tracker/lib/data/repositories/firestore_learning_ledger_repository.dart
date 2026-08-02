@@ -17,6 +17,7 @@ import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/time/ulid.dart';
 import 'package:learning_tracker/data/firestore/doc_ids.dart';
 import 'package:learning_tracker/data/firestore/resilient_doc_stream.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 import 'package:learning_tracker/features/learning/domain/entities/learning_ledger_entry.dart';
 
 /// Firestore-backed learning-ledger repository: `users/{uid}/
@@ -320,6 +321,14 @@ class FirestoreLearningLedgerRepository {
   /// [LearningLedgerEntry.completionNumber] (existing count for this
   /// `(curriculumId, unitIdentifier)` + 1).
   ///
+  /// [source] defaults to [CompletionSource.live], mirroring the Drift-era
+  /// `LearningLedgerRepository.recordCompletion`'s own default. It is
+  /// written verbatim (see [LearningLedgerEntryFirestoreCodec.toFirestore])
+  /// and, like every other parameter here, must stay the SAME value across
+  /// a retry of the same logical call — this repository never derives it
+  /// from anything else, so that is automatic as long as the caller does
+  /// not vary it either.
+  ///
   /// Pass the same [ulid] back in on a retry of an ambiguous prior call
   /// (timeout, lost ack) to get that already-committed entry back
   /// idempotently instead of a wrongly-recomputed `completionNumber` — see
@@ -335,6 +344,7 @@ class FirestoreLearningLedgerRepository {
     required DateTime completedAt,
     required String markedBy,
     required bool isManual,
+    CompletionSource source = CompletionSource.live,
     String? ulid,
   }) async {
     final id = ulid ?? newUlid();
@@ -365,15 +375,18 @@ class FirestoreLearningLedgerRepository {
       completionNumber: completionNumber,
       markedBy: markedBy,
       isManual: isManual,
+      source: source,
     );
     await ref.set(entry.toFirestore());
     return entry;
   }
 
-  /// Batch-records [items], all stamped with the same [completedAt] —
-  /// mirrors the Drift-era `recordCompletionsBatch`'s single shared
-  /// timestamp for the whole batch. Chunks writes into `WriteBatch`es of at
-  /// most [_maxPageSize] (Firestore's hard per-batch operation cap).
+  /// Batch-records [items], all stamped with the same [completedAt] AND the
+  /// same [source] — mirrors the Drift-era `recordCompletionsBatch`'s
+  /// single shared timestamp and single shared `CompletionSource` for the
+  /// whole batch (defaulting to [CompletionSource.lifetimeOnly], same as
+  /// that Drift-era method). Chunks writes into `WriteBatch`es of at most
+  /// [_maxPageSize] (Firestore's hard per-batch operation cap).
   ///
   /// `completionNumber`s for repeated `(curriculumId, unitIdentifier)`
   /// pairs WITHIN [items] are assigned consecutively via an in-memory
@@ -387,6 +400,7 @@ class FirestoreLearningLedgerRepository {
   Future<List<LearningLedgerEntry>> recordCompletionsBatch(
     List<LedgerEntryDraft> items, {
     required DateTime completedAt,
+    CompletionSource source = CompletionSource.lifetimeOnly,
   }) async {
     if (items.isEmpty) return const [];
 
@@ -421,6 +435,7 @@ class FirestoreLearningLedgerRepository {
           completionNumber: count,
           markedBy: item.markedBy,
           isManual: item.isManual,
+          source: source,
         ),
       );
     }

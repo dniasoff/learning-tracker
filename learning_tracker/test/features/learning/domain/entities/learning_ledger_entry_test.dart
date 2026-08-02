@@ -23,6 +23,7 @@ library;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 import 'package:learning_tracker/features/learning/domain/entities/learning_ledger_entry.dart';
 
 void main() {
@@ -38,6 +39,7 @@ void main() {
     markedBy: 'profile-ulid-1',
     isManual: true,
     trackType: 'personal',
+    source: CompletionSource.live,
   );
 
   group('round-trip', () {
@@ -55,6 +57,7 @@ void main() {
       expect(decoded.completionNumber, base.completionNumber);
       expect(decoded.markedBy, base.markedBy);
       expect(decoded.isManual, base.isManual);
+      expect(decoded.source, base.source);
     });
 
     test('a non-manual entry round-trips isManual: false', () {
@@ -70,10 +73,39 @@ void main() {
         markedBy: 'profile-ulid-2',
         isManual: false,
         trackType: 'personal',
+        source: CompletionSource.bulkInTrack,
       );
 
       final decoded = learningLedgerEntryFromFirestore(manual.toFirestore());
       expect(decoded.isManual, isFalse);
+      expect(decoded.source, CompletionSource.bulkInTrack);
+    });
+
+    test('every CompletionSource round-trips via .name', () {
+      for (final source in CompletionSource.values) {
+        final entry = LearningLedgerEntry(
+          ulid: 'ULID0000000000000000SRC${source.index}',
+          curriculumId: CurriculumId.mishnayos,
+          entryScope: 'masechta',
+          unitIdentifier: 'unit-${source.name}',
+          unitDisplayNameHe: 'שם',
+          unitDisplayNameEn: 'Name',
+          completedAt: DateTime.utc(2026, 3, 1),
+          completionNumber: 1,
+          markedBy: 'profile-ulid-1',
+          isManual: false,
+          trackType: 'personal',
+          source: source,
+        );
+
+        final payload = entry.toFirestore();
+        expect(
+          payload['source'],
+          source.name,
+          reason: 'written as CompletionSource.name, not a hand-rolled key',
+        );
+        expect(learningLedgerEntryFromFirestore(payload).source, source);
+      }
     });
   });
 
@@ -93,6 +125,7 @@ void main() {
         'completion_number',
         'marked_by',
         'is_manual',
+        'source',
       });
     });
 
@@ -128,6 +161,7 @@ void main() {
         markedBy: 'profile-ulid-3',
         isManual: false,
         trackType: 'personal',
+        source: CompletionSource.lifetimeOnly,
       );
 
       final payload = local.toFirestore();
@@ -234,6 +268,24 @@ void main() {
         'DateTime by the time it reaches this function) decodes correctly', () {
       final decoded = learningLedgerEntryFromFirestore(validMap());
       expect(decoded.completedAt, DateTime.utc(2026, 3, 1));
+    });
+
+    test(
+      'source defaults to CompletionSource.live when missing — the fail-SAFE '
+      'default (never bulkInTrack, so an unknown-provenance entry can never '
+      'be mistaken for one the bulk-mark-deletion Cloud Function may sweep)',
+      () {
+        final data = validMap()..remove('source');
+        final decoded = learningLedgerEntryFromFirestore(data);
+        expect(decoded.source, CompletionSource.live);
+      },
+    );
+
+    test('an unrecognised source value decodes as CompletionSource.live rather '
+        'than throwing', () {
+      final data = validMap()..['source'] = 'not-a-real-source';
+      final decoded = learningLedgerEntryFromFirestore(data);
+      expect(decoded.source, CompletionSource.live);
     });
   });
 }

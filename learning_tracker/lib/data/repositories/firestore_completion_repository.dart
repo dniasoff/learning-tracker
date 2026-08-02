@@ -1,0 +1,688 @@
+/// Firestore implementation for completions — the largest surface in the
+/// Firestore rewrite (`docs/firestore-rewrite-map.md`). Copies the shape
+/// `firestore_learning_ledger_repository.dart` established (resolved-handle
+/// constructor, `DocIds`-only doc-ids, entity-owned codec, append-only
+/// creates, `completed_at` raw-`Timestamp` round-trip, doc-id-ordered
+/// pagination past the 500-item `list()` cap, one-shot reads sharing the
+/// stream's per-document decode leniency) and replaces the entire Drift-era
+/// `PriorCompletionImports` tier apparatus with a plain `source` field. See
+/// the class doc comment for what is new here specifically.
+library;
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
+import 'package:learning_tracker/data/firestore/doc_ids.dart';
+import 'package:learning_tracker/data/firestore/resilient_doc_stream.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_entity.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_tier_filter.dart';
+
+/// Firestore-backed completions repository: `users/{uid}/learner_profiles/
+/// {profileId}/completions/{completionId}` — append-only, deterministic
+/// natural-key doc-id (`docs/firestore-rewrite-map.md`, `firestore.rules`
+/// `match /completions/{completionId}`).
+///
+/// **Not wired into the app yet** — same status as every repository under
+/// `lib/data/repositories/`: stands alone, nothing under `lib/features/`
+/// reads it, the existing Drift-backed `CompletionRepositoryImpl`
+/// (`lib/features/learning/data/repositories/`) and `CompletionDao`
+/// (`lib/core/database/daos/completion_dao.dart`) are untouched.
+///
+/// **No interface, no `implements`** — same reasoning as
+/// `FirestoreBookmarkRepository`'s doc comment: the Drift implementation is
+/// being deleted outright, not kept alongside this one.
+///
+/// ## `source` replaces the entire prior-import tier apparatus
+///
+/// `docs/firestore-rewrite-map.md`'s "RESOLVED: prior-import tier tracking"
+/// section is the design this class implements. Owner invariant: *"if
+/// something is marked as learnt in a track it cannot be shown or marked
+/// learnt again... globally yes, something can be learnt multiple times."*
+///
+/// | `source`     | Engagement (streak/points) | Track achievement | Lifetime ledger |
+/// |--------------|:---------------------------:|:------------------:|:-----------------:|
+/// | `live`       | ✓ | ✓ | ✓ |
+/// | `bulkInTrack`| ✗ | ✓ | ✓ |
+///
+/// [CompletionSource.lifetimeOnly] is deliberately absent from that table —
+/// it writes **only** a `learning_ledger` entry (owned by
+/// `FirestoreLearningLedgerRepository`), never a `completions` document.
+/// [recordCompletion] / [recordCompletionsBatch] both reject it with an
+/// [ArgumentError] rather than silently accepting a value that would
+/// corrupt this collection's own invariant.
+///
+/// A completion's `source` is **fixed at creation and never updated** — the
+/// once-per-track invariant above makes a `bulkInTrack`→`live` "upgrade"
+/// (the Drift-era B8 mechanism) permanently unreachable; see the map doc's
+/// "B8 / `_upgradePriorMarkRow` is dead" note. `getCompletionsByTier`'s 8
+/// Drift call sites (`CompletionDao`) become the plain field filter in
+/// [getCompletionsByTier] below.
+///
+/// ### A consequence worth being explicit about: `trackAchievement` ==
+/// `lifetime` for THIS repository
+///
+/// Under the old Drift model, `CompletionTierFilter.lifetime` included
+/// `lifetimeOnly` rows (imported historical data) that lived in the same
+/// table as everything else. Under this model, `lifetimeOnly` rows never
+/// enter `completions` at all — so, scoped to this collection alone, every
+/// document already qualifies for `trackAchievement` (`live` or
+/// `bulkInTrack`), which means [getCompletionsByTier] returns the *same*
+/// result set for [CompletionTierFilter.trackAchievement] and
+/// [CompletionTierFilter.lifetime] — see that method's doc comment. A
+/// caller that needs the OLD `lifetime` semantics (this collection PLUS
+/// historical `lifetimeOnly` imports) must separately query
+/// `FirestoreLearningLedgerRepository`, whose ledger entries are the only
+/// place a `lifetimeOnly` completion is recorded — this repository cannot
+/// reach across that collection boundary itself.
+///
+/// ## No delete method — server-side only, by design
+///
+/// `firestore.rules` denies `delete` on `completions` unconditionally
+/// (`allow delete: if false`). The map doc's owner decision (2026-08-02)
+/// permits deleting a `bulkInTrack` completion (the onboarding un-tick,
+/// which must also retract the linked `learning_ledger` entry) but
+/// EXPLICITLY routes it through a Cloud Function using the Admin SDK — "Both
+/// `completions` and `learning_ledger` are SR-1 append-only... Rather than
+/// punch the first delete hole into append-only history — which a client
+/// could widen by writing `source: 'bulkInTrack'` onto a live completion and
+/// then deleting it — this routes server-side." This class therefore has NO
+/// delete method at all, not even a `bulkInTrack`-only one; do not add one
+/// without re-reading that reasoning.
+///
+/// ## Doc-id: diverges from `DocIds.completionDocId`'s literal signature —
+/// flagged, not silently guessed
+///
+/// `DocIds.completionDocId(int profileId, Map data)` mirrors
+/// `FirestoreGatewayImpl._completionDocId` byte-for-byte — but that
+/// signature takes the Drift-era **local autoincrement** `int profileId`
+/// (verified against the live gateway's call sites, `firestore_gateway_impl.
+/// dart:212-237`: the same `int profileId` parameter is used BOTH to resolve
+/// the path via a device-local registry lookup AND embedded as a raw string
+/// inside the doc-id itself). This repository is constructed with the
+/// AD-24 learner-profile **ULID `String`** instead (per this migration's
+/// binding constraint — never the Drift int), which `completionDocId`'s
+/// `int`-typed parameter cannot honestly accept: there is no lossless way to
+/// turn a ULID into the specific int the old gateway would have embedded,
+/// and inventing one (a hash, a sentinel) would silently diverge from
+/// `DocIds.completionDocId`'s actual output anyway, just less visibly than
+/// admitting the divergence outright. Given the app is greenfield ("no
+/// users, no back-compat" — `docs/firestore-rewrite-map.md`), there is no
+/// live document written by the old gateway for this repository to stay
+/// byte-compatible with.
+///
+/// [_docId] therefore reproduces `completionDocId`'s exact SHAPE (four
+/// components, [DocIds.encodeKeyComponent]-escaped, `_`-joined, same order)
+/// using [DocIds.encodeKeyComponent] directly — the actual reusable
+/// primitive `DocIds` exposes for this, so doc-ids still route through
+/// `DocIds` per the "never hand-rolled" rule, same as
+/// `FirestoreGoalRepository`'s handling of its own doc-id nuance — just with
+/// the profile-id component holding this repository's real ULID identity
+/// instead of an unreachable int. Embedding the profile ULID here is
+/// strictly redundant with the collection path
+/// (`.../learner_profiles/{profileId}/completions/...` already scopes by
+/// profile) but is kept for maximum fidelity to the four-component shape
+/// `firestore.rules`' own `completions` comment describes.
+///
+/// **This is a genuinely new finding, not one of the 9 traps
+/// `docs/firestore-rewrite-map.md` already enumerates — flagged in the
+/// delivery report for `doc_ids.dart` to gain a proper `String`-profileId
+/// formula (or overload) in a follow-up, rather than fixed here** (editing
+/// `doc_ids.dart` — a shared, golden-tested module read by every concurrent
+/// repository-building agent in this wave — was out of this change's
+/// scope).
+///
+/// ## `trackType` is NOT part of the doc-id's natural key — flagged
+///
+/// `firestore.rules`' own `completions` comment says the natural key is
+/// `(profileId, sefariaRef, stageId, trackType, curriculumId)`, but
+/// `docs/firestore-rewrite-map.md` states plainly that comment is stale and
+/// `doc_ids.dart` is authoritative — and `DocIds.completionDocId`'s actual
+/// code omits `trackType` entirely (only profileId/sefariaRef/stageId/
+/// curriculumId). [_docId] mirrors that authoritative four-component
+/// formula exactly, which means: **two completions that differ ONLY by
+/// `trackType` (same curriculum, same stage, same sefariaRef) collide onto
+/// the SAME document.** The second write is not rejected — SR-1's
+/// byte-identical-replay rule would deny it in production only if the
+/// payloads actually differ, and a different `trackType` value does make
+/// them differ, so a genuine second `trackType` completion for the same
+/// item+stage would be **rules-denied as an illegal update** in production,
+/// not silently merged. This is pre-existing target-schema behavior (the
+/// map doc says "the target schema is not new... do not redesign"), not
+/// introduced here — flagged because it is easy to miss and not on the
+/// existing traps list.
+///
+/// ## `stageId` is expected to hold `stage_order`, not a Drift row id
+///
+/// See [CompletionEntity]'s class doc comment. [hasCompletionsForStage]
+/// below is the method `FirestoreStageDefinitionRepository`'s class doc
+/// comment explicitly flagged as belonging to "whoever builds the Firestore
+/// completions repository," keyed by `(curriculumId, stageOrder)` — this is
+/// that method.
+///
+/// ## `completed_at` round-trips through a real `Timestamp`, not a string
+///
+/// Same handling as `FirestoreLearningLedgerRepository` —
+/// [CompletionEntityFirestoreCodec.toFirestore] writes a raw [DateTime] (see
+/// that extension's doc comment for why a `String` would rules-deny every
+/// write); [_normalizeForDecode] converts the `Timestamp` object read back
+/// into a UTC [DateTime] before [completionEntityFromFirestore] (which stays
+/// free of any `cloud_firestore` import) ever sees it.
+///
+/// ## Idempotent retries: `completedAt` is ALWAYS caller-supplied
+///
+/// [recordCompletion] takes `completedAt` as a required parameter — this
+/// repository never mints one internally (no `DateTimeFactory.nowUtc()`
+/// fallback anywhere in this file). SR-1's append-only `update` rule permits
+/// ONLY a byte-identical replay of the existing document; if this repository
+/// stamped a freshly-computed "now" into `completed_at` on every call, a
+/// genuine retry of the same logical completion (lost ack, timeout) would
+/// recompute a DIFFERENT timestamp and get rules-denied as an illegal
+/// update. The caller owns minting `completedAt` once and passing the exact
+/// same value back on any retry.
+///
+/// ## The 500-item `list()` cap (`firestore.rules` SR-4) — zero new
+/// composite indexes
+///
+/// Every `list()` query here is capped at `request.query.limit <= 500` in
+/// production; `fake_cloud_firestore` does not enforce this at all (see
+/// `firestore_learning_ledger_repository.dart`'s class doc comment for the
+/// full reasoning, identical here). [getCompletionsForCurriculum] and
+/// [getCompletionsByDateRange] page internally via [_fetchAllPagesByDocId] /
+/// a `completed_at`-ordered cursor loop rather than issuing one unbounded
+/// `.get()`.
+///
+/// Every query in this file is deliberately either (a) equality-only
+/// (including `whereIn`) across any number of fields, which Firestore
+/// serves from single-field indexes with NO composite index — see
+/// `FirestoreLearningLedgerRepository._nextCompletionNumber`'s doc comment
+/// for the same point — or (b) a single range filter on `completed_at` with
+/// no other filter, ordered by that same field, which is also a single-
+/// field index. **No method in this repository requires a new composite
+/// index.** This was a deliberate design choice, not an accident: an
+/// earlier draft considered a `curriculum_id`-equality +
+/// `completed_at`-orderBy "recent activity for this curriculum" query (the
+/// live analogue of `FirestoreStageDefinitionRepository`'s
+/// `curriculum_id`+`stage_order` composite), but it was dropped in favor of
+/// the doc-id-ordered (unordered-by-time, but complete and index-free)
+/// equivalent — see [watchCompletionsForCurriculum]'s doc comment.
+///
+/// ## Aggregates are computed client-side
+///
+/// `CompletionDao` has real `GROUP BY`/`COUNT(DISTINCT)` SQL
+/// ([CompletionDao.getTrackBreakdownByProfile],
+/// [CompletionDao.getAggregateCountByProfile], etc.) — Firestore has no
+/// `GROUP BY`. [getAggregateCountForCurriculum],
+/// [getTrackTypeBreakdownForCurriculum], [getReviewCountsByItem], and
+/// [getStageBreakdownByItem] all compute their aggregate client-side over a
+/// bounded (paginated) query result, not server-side.
+///
+/// ## Trimmed from the Drift-era `CompletionDao`/`CompletionRepository`
+/// surface — not reimplemented
+///
+/// - **Every `int trackId`-keyed method**
+///   (`getCompletionsByTrack`/`getCompletionsByTrackAndProfile`/
+///   `getCompletionsByTrackAndProfileSince`/`getAggregateCountByTrack`/
+///   `completionExistsByTrack`/`getCompletionsByDateRangeAndTrack`/
+///   `getReviewCountsByItemAndTrack`/`getStageBreakdownByItemAndTrack`) is
+///   absent — AD-25 retired the per-device track id; `curriculum_id` is the
+///   sole canonical stable track key now, so the curriculum-scoped methods
+///   below (e.g. [getCompletionsForCurriculum]) are the direct replacements.
+/// - **`getCompletionById(int id)` does not exist.** There is no Drift
+///   autoincrement id here; the doc-id IS the identity, and it is derived
+///   from the natural key, not looked up by a surrogate.
+/// - **Every `internal…CrossProfile` method is absent.** This repository is
+///   constructed already profile-scoped (constructor-level [profileId], the
+///   same structural argument `FirestoreGoalRepository`'s doc comment makes
+///   for dropping `GoalProfileMismatchException`) — there is no way to
+///   construct a request that reaches another profile's completions through
+///   this class. A genuine cross-profile analytics need belongs in a
+///   dedicated repository/service that instantiates one of these per
+///   profile and aggregates the results, not here.
+/// - **`completionExistsByProfile`/`completionExists` do not take
+///   `trackType` or `completedAt` parameters.** The doc-id's actual natural
+///   key (see "`trackType` is NOT part of the doc-id's natural key" above)
+///   is `(profileId, sefariaRef, stageId, curriculumId)` — existence is a
+///   direct doc-id `.get()`, not a query, and a parameter this repository
+///   would silently ignore is worse than one it never accepts.
+/// - **`getExistingSefariaRefsForBulkStage`/`getCompletionsForRefsBulkStage`
+///   (chunked `IN` helpers for the Drift bulk-import path) are not ported.**
+///   [recordCompletionsBatch] here writes unconditionally (deterministic
+///   doc-ids make a duplicate write idempotent via SR-1's byte-identical-
+///   replay rule); there is no separate "which of these already exist"
+///   pre-check step the way SQLite's `INSERT OR IGNORE` needed one.
+class FirestoreCompletionRepository {
+  FirestoreCompletionRepository({
+    required FirebaseFirestore firestore,
+    required String uid,
+    required String profileId,
+    AppLogger? logger,
+  }) : _firestore = firestore,
+       _uid = uid,
+       _profileId = profileId,
+       _logger = logger ?? AppLogger.instance;
+
+  final FirebaseFirestore _firestore;
+  final String _uid;
+  final String _profileId;
+  final AppLogger _logger;
+
+  /// Firestore's hard per-`WriteBatch` operation cap, and also exactly
+  /// `firestore.rules`' SR-4 `list()` cap for this collection
+  /// (`request.query.limit <= 500`) — see the class doc comment.
+  static const _maxPageSize = 500;
+
+  CollectionReference<Map<String, dynamic>> get _completions => _firestore
+      .collection('users')
+      .doc(_uid)
+      .collection('learner_profiles')
+      .doc(_profileId)
+      .collection('completions');
+
+  /// See the class doc comment's "Doc-id" section for why this does not
+  /// call `DocIds.completionDocId` directly.
+  String _docId(CompletionEntity entity) => [
+    DocIds.encodeKeyComponent(_profileId),
+    DocIds.encodeKeyComponent(entity.sefariaRef),
+    DocIds.encodeKeyComponent(entity.stageId.toString()),
+    DocIds.encodeKeyComponent(entity.curriculumId.storageKey),
+  ].join('_');
+
+  DocumentReference<Map<String, dynamic>> _doc(CompletionEntity entity) =>
+      _completions.doc(_docId(entity));
+
+  /// Direct doc-id lookup for [completionExists] — same natural-key
+  /// components as [_docId], built from raw fields rather than a full
+  /// [CompletionEntity] (a caller checking existence usually does not have
+  /// one yet).
+  String _docIdFromKey({
+    required CurriculumId curriculumId,
+    required String sefariaRef,
+    required int stageId,
+  }) => [
+    DocIds.encodeKeyComponent(_profileId),
+    DocIds.encodeKeyComponent(sefariaRef),
+    DocIds.encodeKeyComponent(stageId.toString()),
+    DocIds.encodeKeyComponent(curriculumId.storageKey),
+  ].join('_');
+
+  /// Converts a `completed_at` that arrived as a real Firestore [Timestamp]
+  /// back into a UTC [DateTime] — see the class doc comment's
+  /// "`completed_at` round-trips through a real `Timestamp`" section. Every
+  /// read call site routes through this before decoding.
+  Map<String, dynamic> _normalizeForDecode(Map<String, dynamic> raw) {
+    final completedAt = raw['completed_at'];
+    if (completedAt is Timestamp) {
+      return {...raw, 'completed_at': completedAt.toDate().toUtc()};
+    }
+    return raw;
+  }
+
+  /// Decodes every document in [docs], skipping (and logging) any single
+  /// document whose decode fails rather than letting one malformed row fail
+  /// the whole read — same treatment as every other repository in this
+  /// rewrite.
+  List<CompletionEntity> _decodeAll(
+    Iterable<QueryDocumentSnapshot<Map<String, dynamic>>> docs,
+  ) {
+    final results = <CompletionEntity>[];
+    for (final doc in docs) {
+      try {
+        results.add(
+          completionEntityFromFirestore(_normalizeForDecode(doc.data())),
+        );
+      } catch (error, stackTrace) {
+        _logger.warning(
+          event: 'firestore_completions_decode_error',
+          exception: error,
+          stackTrace: stackTrace,
+          fields: {'doc_id': doc.id},
+        );
+      }
+    }
+    return results;
+  }
+
+  /// Runs [baseQuery] to exhaustion via doc-id-ordered pagination — same
+  /// technique and same `fake_cloud_firestore`-specific caveats as
+  /// `FirestoreLearningLedgerRepository._fetchAllPages` (see that method's
+  /// doc comment for the `startAfterDocument`-vs-`startAfter([id])` and
+  /// limit-chaining-order pitfalls verified against `fake_cloud_firestore`
+  /// 4.1.1). [baseQuery] must carry ONLY equality/`whereIn` filters (no
+  /// `orderBy`, no range filter) — see the class doc comment's "zero new
+  /// composite indexes" section.
+  Future<List<QueryDocumentSnapshot<Map<String, dynamic>>>>
+  _fetchAllPagesByDocId(Query<Map<String, dynamic>> baseQuery) async {
+    final results = <QueryDocumentSnapshot<Map<String, dynamic>>>[];
+    QueryDocumentSnapshot<Map<String, dynamic>>? cursor;
+    while (true) {
+      var page = baseQuery.orderBy(FieldPath.documentId);
+      if (cursor != null) {
+        page = page.startAfterDocument(cursor);
+      }
+      page = page.limit(_maxPageSize);
+      final snapshot = await page.get();
+      results.addAll(snapshot.docs);
+      if (snapshot.docs.length < _maxPageSize) break;
+      cursor = snapshot.docs.last;
+    }
+    return results;
+  }
+
+  // ── Writes ────────────────────────────────────────────────────────────
+
+  /// Records one completion. [entity.source] must be [CompletionSource.live]
+  /// or [CompletionSource.bulkInTrack] — see the class doc comment.
+  ///
+  /// Writes unconditionally via `set(..., SetOptions(merge: true))`, mirroring
+  /// the old sync gateway's push shape (`docs/firestore-rewrite-map.md`'s
+  /// rules comment: "the push uses set(merge:true) on a natural-key doc-id,
+  /// so an outbox retry... is an UPDATE"). Idempotency comes entirely from
+  /// the deterministic doc-id plus the caller passing byte-identical field
+  /// values on any retry — see the class doc comment's "Idempotent retries"
+  /// section. There is no pre-write existence check (unlike
+  /// `FirestoreLearningLedgerRepository.recordCompletion`'s ulid-exists
+  /// short-circuit) because there is no derived field here that a re-query
+  /// could recompute wrong — every field this repository writes comes
+  /// directly from [entity].
+  Future<CompletionEntity> recordCompletion(CompletionEntity entity) async {
+    if (entity.source == CompletionSource.lifetimeOnly) {
+      throw ArgumentError(
+        'CompletionSource.lifetimeOnly must never be written to the '
+        'completions collection — it writes only a learning_ledger entry. '
+        'See FirestoreCompletionRepository\'s class doc comment.',
+      );
+    }
+    await _doc(entity).set(entity.toFirestore(), SetOptions(merge: true));
+    return entity;
+  }
+
+  /// Batch-records [entities]. Chunks writes into `WriteBatch`es of at most
+  /// [_maxPageSize] (Firestore's hard per-batch operation cap). Every entry
+  /// must satisfy the same [CompletionSource] constraint as
+  /// [recordCompletion] — validated up front so a batch either writes
+  /// entirely or fails before any chunk commits, rather than partially
+  /// committing live/bulkInTrack entries ahead of a later rejected one.
+  Future<List<CompletionEntity>> recordCompletionsBatch(
+    List<CompletionEntity> entities,
+  ) async {
+    if (entities.isEmpty) return const [];
+    for (final entity in entities) {
+      if (entity.source == CompletionSource.lifetimeOnly) {
+        throw ArgumentError(
+          'CompletionSource.lifetimeOnly must never be written to the '
+          'completions collection — it writes only a learning_ledger '
+          'entry. See FirestoreCompletionRepository\'s class doc comment.',
+        );
+      }
+    }
+
+    for (var offset = 0; offset < entities.length; offset += _maxPageSize) {
+      final chunk = entities.skip(offset).take(_maxPageSize);
+      final batch = _firestore.batch();
+      for (final entity in chunk) {
+        batch.set(_doc(entity), entity.toFirestore(), SetOptions(merge: true));
+      }
+      await batch.commit();
+    }
+    return entities;
+  }
+
+  // ── Reads ─────────────────────────────────────────────────────────────
+
+  /// Returns every completion for [curriculumId] — the direct replacement
+  /// for `CompletionDao.getCompletionsByCurriculumAndProfile`. Paginated
+  /// internally (see the class doc comment's "500-item list() cap"
+  /// section); unordered, matching the Drift query it replaces (which had
+  /// no `ORDER BY` either).
+  Future<List<CompletionEntity>> getCompletionsForCurriculum(
+    CurriculumId curriculumId,
+  ) async {
+    final docs = await _fetchAllPagesByDocId(
+      _completions.where('curriculum_id', isEqualTo: curriculumId.storageKey),
+    );
+    return _decodeAll(docs);
+  }
+
+  /// Live updates for [curriculumId]'s completions, doc-id ordered and
+  /// bounded at [_maxPageSize] (`firestore.rules`' SR-4 cap) — a "the first
+  /// 500 by doc-id" live view, NOT a "most recent 500" one. An earlier draft
+  /// ordered by `completed_at` instead (giving a genuine recency ordering)
+  /// but that combination (`curriculum_id` equality + `completed_at`
+  /// orderBy, different fields) needs a NEW composite index — dropped in
+  /// favor of this index-free equivalent; see the class doc comment's "zero
+  /// new composite indexes" section. A caller that genuinely needs
+  /// most-recent-first should sort the emitted list client-side by
+  /// `completedAt` (every document has one — never nullable here, unlike
+  /// `GoalEntity.targetDate`) and treat the 500-cap as a real limit; this
+  /// method does not attempt to page a live subscription past it.
+  Stream<List<CompletionEntity>> watchCompletionsForCurriculum(
+    CurriculumId curriculumId,
+  ) {
+    return resilientQueryStream<CompletionEntity>(
+      openStream: () => _completions
+          .where('curriculum_id', isEqualTo: curriculumId.storageKey)
+          .orderBy(FieldPath.documentId)
+          .limit(_maxPageSize)
+          .snapshots(),
+      decode: (doc) =>
+          completionEntityFromFirestore(_normalizeForDecode(doc.data())),
+      onError: (error, stackTrace) => _logger.warning(
+        event: 'firestore_completions_watch_error',
+        exception: error,
+        stackTrace: stackTrace,
+        fields: {'curriculum_id': curriculumId.storageKey},
+      ),
+    );
+  }
+
+  /// Returns completions for [sefariaRef] — replaces
+  /// `CompletionDao.getCompletionsForContentAndProfile`. A single item's
+  /// completions across a profile's whole history is expected to stay well
+  /// under [_maxPageSize] (at most a handful of stages × a handful of
+  /// re-reviews), so this issues one bounded query rather than paginating —
+  /// flagged explicitly: a caller that reviews the SAME item hundreds of
+  /// times could theoretically exceed the cap and see a truncated list.
+  Future<List<CompletionEntity>> getCompletionsForContent(
+    String sefariaRef,
+  ) async {
+    final snapshot = await _completions
+        .where('sefaria_ref', isEqualTo: sefariaRef)
+        .limit(_maxPageSize)
+        .get();
+    return _decodeAll(snapshot.docs);
+  }
+
+  /// Returns `true` if a completion exists for the natural key
+  /// `(curriculumId, sefariaRef, stageId)` for this profile — direct doc-id
+  /// `.get()`, not a query. Deliberately does NOT accept `trackType` — see
+  /// the class doc comment's "`trackType` is NOT part of the doc-id's
+  /// natural key" section for why a parameter this method would silently
+  /// ignore is worse than one it never accepts.
+  Future<bool> completionExists({
+    required CurriculumId curriculumId,
+    required String sefariaRef,
+    required int stageId,
+  }) async {
+    final docId = _docIdFromKey(
+      curriculumId: curriculumId,
+      sefariaRef: sefariaRef,
+      stageId: stageId,
+    );
+    final snapshot = await _completions.doc(docId).get();
+    return snapshot.exists;
+  }
+
+  /// Returns `true` if any completion references [curriculumId] +
+  /// [stageOrder] — the method `FirestoreStageDefinitionRepository`'s class
+  /// doc comment flagged as belonging here (`hasCompletionsForStage`, keyed
+  /// by `(curriculumId, stageOrder)` rather than a Drift `int stageId`). Two
+  /// equality filters on different fields, no `orderBy` — no composite index
+  /// needed.
+  Future<bool> hasCompletionsForStage({
+    required CurriculumId curriculumId,
+    required int stageOrder,
+  }) async {
+    final snapshot = await _completions
+        .where('curriculum_id', isEqualTo: curriculumId.storageKey)
+        .where('stage_id', isEqualTo: stageOrder)
+        .limit(1)
+        .get();
+    return snapshot.docs.isNotEmpty;
+  }
+
+  /// Returns completions in `[start, end]` inclusive, across every
+  /// curriculum — replaces `CompletionDao.getCompletionsByDateRangeAndProfile`.
+  /// A single range filter on `completed_at`, ordered by that SAME field
+  /// (Firestore requires the first `orderBy` to match a range-filtered
+  /// field) — a single-field index, no composite index needed. Paginated
+  /// via `startAfterDocument` (works with any `orderBy` field, unlike
+  /// [_fetchAllPagesByDocId], which is hard-coded to doc-id ordering because
+  /// none of its callers filter on a range).
+  Future<List<CompletionEntity>> getCompletionsByDateRange({
+    required DateTime start,
+    required DateTime end,
+  }) async {
+    final results = <QueryDocumentSnapshot<Map<String, dynamic>>>[];
+    QueryDocumentSnapshot<Map<String, dynamic>>? cursor;
+    while (true) {
+      // Two CHAINED `.where()` calls, not one call with both
+      // `isGreaterThanOrEqualTo`/`isLessThanOrEqualTo` named parameters —
+      // verified against `fake_cloud_firestore` 4.1.1: the single-call form
+      // silently applies only ONE of the two bounds (observed: it let a
+      // document past the upper bound through), while two chained calls
+      // filter correctly. Not on `docs/firestore-rewrite-map.md`'s existing
+      // `fake_cloud_firestore` quirks list — a new one, flagged here.
+      var page = _completions
+          .where('completed_at', isGreaterThanOrEqualTo: start.toUtc())
+          .where('completed_at', isLessThanOrEqualTo: end.toUtc())
+          .orderBy('completed_at');
+      if (cursor != null) {
+        page = page.startAfterDocument(cursor);
+      }
+      page = page.limit(_maxPageSize);
+      final snapshot = await page.get();
+      results.addAll(snapshot.docs);
+      if (snapshot.docs.length < _maxPageSize) break;
+      cursor = snapshot.docs.last;
+    }
+    return _decodeAll(results);
+  }
+
+  /// Returns `true` if any completion falls in `[start, end]` inclusive —
+  /// replaces `CompletionDao.hasCompletionsInDateRangeByProfile`. Same
+  /// single-field range+orderBy shape as [getCompletionsByDateRange], capped
+  /// at 1 result.
+  Future<bool> hasCompletionsInDateRange({
+    required DateTime start,
+    required DateTime end,
+  }) async {
+    // Two chained `.where()` calls — see [getCompletionsByDateRange]'s doc
+    // comment for the `fake_cloud_firestore` bug this avoids.
+    final snapshot = await _completions
+        .where('completed_at', isGreaterThanOrEqualTo: start.toUtc())
+        .where('completed_at', isLessThanOrEqualTo: end.toUtc())
+        .orderBy('completed_at')
+        .limit(1)
+        .get();
+    return snapshot.docs.isNotEmpty;
+  }
+
+  /// Returns completions filtered by [tier], optionally narrowed to
+  /// [curriculumId] — the plain-field-filter replacement for
+  /// `CompletionDao.getCompletionsByTier`'s 8 call sites (see the class doc
+  /// comment's "`source` replaces the entire prior-import tier apparatus"
+  /// section).
+  ///
+  /// - [CompletionTierFilter.liveOnly] → `source == 'live'`.
+  /// - [CompletionTierFilter.trackAchievement] and
+  ///   [CompletionTierFilter.lifetime] → **no source filter at all**, and
+  ///   therefore return the SAME result set. Every document in this
+  ///   collection already has `source` ∈ {`live`, `bulkInTrack`} (a
+  ///   `lifetimeOnly` document can never exist here — enforced by
+  ///   [recordCompletion]/[recordCompletionsBatch]), so both tiers already
+  ///   include everything this collection can hold. See the class doc
+  ///   comment's "A consequence worth being explicit about" section for why
+  ///   a caller wanting the historical `lifetime` semantics (this PLUS
+  ///   `lifetimeOnly` imports) must separately query
+  ///   `FirestoreLearningLedgerRepository`.
+  ///
+  /// Every filter combination here is equality/`whereIn` only — no
+  /// composite index needed (see the class doc comment).
+  Future<List<CompletionEntity>> getCompletionsByTier({
+    required CompletionTierFilter tier,
+    CurriculumId? curriculumId,
+  }) async {
+    Query<Map<String, dynamic>> query = _completions;
+    if (curriculumId != null) {
+      query = query.where('curriculum_id', isEqualTo: curriculumId.storageKey);
+    }
+    if (tier == CompletionTierFilter.liveOnly) {
+      query = query.where('source', isEqualTo: CompletionSource.live.name);
+    }
+    final docs = await _fetchAllPagesByDocId(query);
+    return _decodeAll(docs);
+  }
+
+  // ── Client-side aggregates ───────────────────────────────────────────
+  //
+  // Firestore has no `GROUP BY`/`COUNT(DISTINCT)` — every method below
+  // computes its aggregate client-side over a bounded (paginated) query
+  // result. See the class doc comment's "Aggregates are computed
+  // client-side" section.
+
+  /// Count of DISTINCT `sefariaRef`s completed for [curriculumId] — mirrors
+  /// `CompletionDao.getAggregateCountByProfile`'s `COUNT(DISTINCT
+  /// sefariaRef)` semantics (completing the same ref at multiple stages
+  /// counts once).
+  Future<int> getAggregateCountForCurriculum(CurriculumId curriculumId) async {
+    final completions = await getCompletionsForCurriculum(curriculumId);
+    return completions.map((c) => c.sefariaRef).toSet().length;
+  }
+
+  /// Completion count per `trackType` for [curriculumId] — mirrors
+  /// `CompletionDao.getTrackBreakdownByProfile`.
+  Future<Map<String, int>> getTrackTypeBreakdownForCurriculum(
+    CurriculumId curriculumId,
+  ) async {
+    final completions = await getCompletionsForCurriculum(curriculumId);
+    final breakdown = <String, int>{};
+    for (final completion in completions) {
+      breakdown[completion.trackType] =
+          (breakdown[completion.trackType] ?? 0) + 1;
+    }
+    return breakdown;
+  }
+
+  /// Total review count per `sefariaRef` for [curriculumId] — mirrors
+  /// `CompletionDao.getReviewCountsByItem`.
+  Future<Map<String, int>> getReviewCountsByItem(
+    CurriculumId curriculumId,
+  ) async {
+    final completions = await getCompletionsForCurriculum(curriculumId);
+    final counts = <String, int>{};
+    for (final completion in completions) {
+      counts[completion.sefariaRef] = (counts[completion.sefariaRef] ?? 0) + 1;
+    }
+    return counts;
+  }
+
+  /// Per-stage review-count breakdown for one [sefariaRef] within
+  /// [curriculumId] — mirrors `CompletionDao.getStageBreakdownByItem`.
+  Future<Map<int, int>> getStageBreakdownByItem({
+    required CurriculumId curriculumId,
+    required String sefariaRef,
+  }) async {
+    final snapshot = await _completions
+        .where('curriculum_id', isEqualTo: curriculumId.storageKey)
+        .where('sefaria_ref', isEqualTo: sefariaRef)
+        .limit(_maxPageSize)
+        .get();
+    final completions = _decodeAll(snapshot.docs);
+    final breakdown = <int, int>{};
+    for (final completion in completions) {
+      breakdown[completion.stageId] = (breakdown[completion.stageId] ?? 0) + 1;
+    }
+    return breakdown;
+  }
+}

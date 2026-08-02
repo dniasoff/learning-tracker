@@ -256,15 +256,78 @@ pass locally and fail only in production; one passes forever while doing nothing
    `lib/` files also need real coverage or the lcov-denominator gate fails.
 7. **Hand-rolled doc-ids collide.** Free-text key components can contain the separator —
    always use `DocIds` with `encodeKeyComponent`.
+   **Pre-existing exception worth fixing:** `DocIds.learningOrderDocId` is the only formula
+   that does NOT route its components through `encodeKeyComponent` — it mirrors the live
+   gateway's `'${curriculumId}_$ref'` byte-for-byte. A `sefariaRef` containing a literal
+   `_` can therefore collide. The byte-for-byte continuity requirement that justified it no
+   longer applies (greenfield, no back-compat), so this should be encoded like every other
+   formula.
 8. **Check whether a collection is keyed by doc-id or by a field** before writing a query.
    `profile_programs` is keyed by doc-id; a `where('curriculum_id', …)` sweep matches
    nothing, deletes nothing, and reports success.
-9. **`fake_cloud_firestore` quirks:** `orderBy(FieldPath.documentId) + startAfter([id])`
+9a. **`completions` doc-id does NOT include `trackType`**, despite `firestore.rules`'
+   own comment claiming a 5-component natural key. The code
+   (`DocIds.completionDocId`) joins only `profileId/sefariaRef/stageId/curriculumId`.
+   Two completions differing ONLY by `trackType` for the same item+stage therefore
+   collide onto one document, and the second write is rules-denied as a non-identical
+   SR-1 replay. Probably unreachable in practice (one track per curriculum per profile),
+   but pinned by a `DOCUMENTED COLLISION` test in
+   `firestore_completion_repository_test.dart`. Decide deliberately before relying on
+   multi-track-type completion of the same item.
+
+9b. **`DocIds.completionDocId` takes a Drift-era `int` profileId** and cannot be called
+   from a repository keyed by the AD-24 ULID `String`. Needs a `String` variant so the
+   "doc-ids always come from `DocIds`" rule holds without a lossy conversion.
+
+9. **`fake_cloud_firestore` quirks:**
+   A single `.where(field, isGreaterThanOrEqualTo: a, isLessThanOrEqualTo: b)` silently
+   DROPS one bound (verified by standalone repro — a document past the upper bound came
+   back). Split into two chained `.where()` calls, which is what production Firestore
+   expects anyway. `orderBy(FieldPath.documentId) + startAfter([id])`
    throws — use `startAfterDocument(snapshot)`; `.limit()` must be chained AFTER the
    cursor or page 2 comes back empty; a `WriteBatch` arrives as several incremental
    snapshots rather than one atomic update; and `strictRules: true` denies even the
    legitimate owner's writes, so **no positive rules test is possible** — rules
    correctness rests on reading the rules text.
+
+## OPEN: schema fields that exist in Drift but have no Firestore home
+
+Adding a field that is absent from a collection's `.hasOnly()` whitelist does not merely
+drop the field — it **permission-denies the entire write**. So each of these needs a
+`firestore.rules` change (mirrored in the matching `ALLOWED_FIELDS` list in
+`functions/src/tutor_writes.ts`, which the rules whitelists are kept identical to) before
+the feature can be ported.
+
+- **Track-level learning order has NO Firestore home at all, and the feature dies without
+  one.** `TrackLearningOrder` (reordering sedarim/masechtos *within* a track) is Drift-only
+  today — never synced, no gateway push, no rules block. It cannot share the
+  `learning_order` collection: `DocIds.learningOrderDocId` is `{curriculumId}_{ref}` with
+  nowhere for a track key (AD-25 retired the Drift-local `trackId`), the rules
+  `hasOnly(['curriculum_id','sefaria_ref','ref','user_sort_order','updated_at','synced_at'])`
+  forbids writing any discriminator, and both orderings draw from the **same `sefariaRef`
+  universe** — so they compute identical doc-ids and silently clobber one another
+  (red-demo in `firestore_learning_order_repository_test.dart`, group "doc-id collision").
+  Since the Drift user database is being deleted, this needs its own collection
+  (`track_learning_order` under the profile) with its own rules block — preferred, because
+  it is purely additive and cannot destabilise the working curriculum-order path — or the
+  feature is lost.
+- **`learning_order` has no reset path.** Drift's `resetToDefault` deletes all rows to fall
+  back to natural order; rules deny delete on `learning_order` unconditionally, and unlike
+  `stage_definitions` there is no fixed doc-id universe to overwrite in place (a custom
+  order can be an arbitrary subset). Needs either a soft-delete marker in the whitelist or
+  a server-side reset. Currently throws `UnimplementedError`.
+- **`learning_order.learning_order_version`** — the content-seed staleness marker. Absent
+  from the whitelist; its Drift side effect was local bookkeeping only.
+- **`curriculum_tracks.last_reorder_at`** — the reorder-amnesty baseline
+  (`TrackDao.stampReorderAt`). Absent from both whitelists. The repository method was
+  dropped rather than smuggling the timestamp into an unrelated field; the feature is
+  non-functional until the field is added.
+
+Also note `curriculum_tracks` carries five fields that are whitelisted but have **no
+producer or consumer anywhere in the repo**: `progress_schema_version`,
+`progress_computed_at`, `progress_model`, `program_progress`, `self_paced_progress`.
+They are preserved as decode-only round-trip fields rather than having a schema invented
+for them.
 
 ## Watch out
 

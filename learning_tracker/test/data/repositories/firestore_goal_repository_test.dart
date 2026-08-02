@@ -422,20 +422,23 @@ void main() {
       expect(remaining.map((g) => g.description), ['keep me']);
     });
 
-    test('deleting an already-absent document is a no-op (idempotent)', () async {
-      final repo = buildRepo();
-      final goal = await repo.createGoal(
-        curriculumId: CurriculumId.mishnayos,
-        targetPercent: 80,
-      );
-      await repo.deleteGoal(goal);
+    test(
+      'deleting an already-absent document is a no-op (idempotent)',
+      () async {
+        final repo = buildRepo();
+        final goal = await repo.createGoal(
+          curriculumId: CurriculumId.mishnayos,
+          targetPercent: 80,
+        );
+        await repo.deleteGoal(goal);
 
-      // Deleting again must not throw — matches Firestore's own delete()
-      // semantics (deleting a non-existent document succeeds).
-      await repo.deleteGoal(goal);
+        // Deleting again must not throw — matches Firestore's own delete()
+        // semantics (deleting a non-existent document succeeds).
+        await repo.deleteGoal(goal);
 
-      expect((await rawDoc(goal.firestoreId).get()).exists, isFalse);
-    });
+        expect((await rawDoc(goal.firestoreId).get()).exists, isFalse);
+      },
+    );
   });
 
   group('watchGoals — stream emits on change', () {
