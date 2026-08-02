@@ -1,9 +1,17 @@
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/sync/sync_write_facade.dart';
+import 'package:learning_tracker/data/firestore/account_firebase.dart';
+import 'package:learning_tracker/data/firestore/active_account_providers.dart';
+import 'package:learning_tracker/data/firestore/repository_providers.dart'
+    show activeProfileDocIdProvider;
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/learning/data/repositories/bookmark_repository_impl.dart';
 import 'package:mocktail/mocktail.dart';
@@ -13,6 +21,10 @@ import '../../../../helpers/test_database.dart';
 class MockSyncEngine extends Mock implements SyncWriteFacade {}
 
 class MockContentRepository extends Mock implements ContentRepository {}
+
+class MockFirebaseApp extends Mock implements FirebaseApp {}
+
+class MockFirebaseAuthHandle extends Mock implements FirebaseAuth {}
 
 const _ref1 = 'Mishnah Berachot 1:1';
 const _ref2 = 'Mishnah Berachot 1:2';
@@ -312,5 +324,183 @@ void main() {
         expect(result?.sefariaRef, _ref2); // Local won
       },
     );
+  });
+
+  group('FirestoreBookmarkRepositoryAdapter', () {
+    const uid = 'uid-1';
+    const profileDocId = 'profile-ulid-1';
+
+    AccountFirebaseHandles handles(FakeFirebaseFirestore firestore) {
+      return AccountFirebaseHandles(
+        app: MockFirebaseApp(),
+        firestore: firestore,
+        auth: MockFirebaseAuthHandle(),
+        uid: uid,
+      );
+    }
+
+    // Constructing FirestoreBookmarkRepositoryAdapter requires a Ref
+    // (Riverpod's Ref is sealed — it can only come from inside a provider
+    // callback), so tests obtain one the same way production does: read a
+    // throwaway Provider that builds the adapter from the container's ref.
+    FirestoreBookmarkRepositoryAdapter buildAdapter(
+      ProviderContainer container,
+      ContentRepository contentRepository,
+    ) {
+      final adapterProvider = Provider<FirestoreBookmarkRepositoryAdapter>(
+        (ref) => FirestoreBookmarkRepositoryAdapter(
+          ref: ref,
+          contentRepository: contentRepository,
+        ),
+      );
+      return container.read(adapterProvider);
+    }
+
+    group('not ready (no active account/profile)', () {
+      test('getBookmark returns null instead of throwing', () async {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        final adapter = buildAdapter(container, mockContentRepository);
+
+        final result = await adapter.getBookmark(
+          curriculumId: CurriculumId.mishnayos,
+        );
+
+        expect(result, isNull);
+      });
+
+      test('setBookmark throws BookmarkRepositoryNotReadyException', () async {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        final adapter = buildAdapter(container, mockContentRepository);
+
+        expect(
+          () => adapter.setBookmark(
+            curriculumId: CurriculumId.mishnayos,
+            sefariaRef: _ref1,
+          ),
+          throwsA(isA<BookmarkRepositoryNotReadyException>()),
+        );
+      });
+
+      test(
+        'initializeBookmark throws BookmarkRepositoryNotReadyException',
+        () async {
+          final container = ProviderContainer();
+          addTearDown(container.dispose);
+          final adapter = buildAdapter(container, mockContentRepository);
+
+          expect(
+            () => adapter.initializeBookmark(
+              curriculumId: CurriculumId.mishnayos,
+            ),
+            throwsA(isA<BookmarkRepositoryNotReadyException>()),
+          );
+        },
+      );
+
+      test(
+        'advanceBookmark throws BookmarkRepositoryNotReadyException',
+        () async {
+          final container = ProviderContainer();
+          addTearDown(container.dispose);
+          final adapter = buildAdapter(container, mockContentRepository);
+
+          expect(
+            () => adapter.advanceBookmark(
+              curriculumId: CurriculumId.mishnayos,
+              completedSefariaRef: _ref1,
+            ),
+            throwsA(isA<BookmarkRepositoryNotReadyException>()),
+          );
+        },
+      );
+
+      test('syncFromFirestore is a no-op that returns 0', () async {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        final adapter = buildAdapter(container, mockContentRepository);
+
+        expect(await adapter.syncFromFirestore(), 0);
+      });
+    });
+
+    group('ready (active account + profile)', () {
+      late FakeFirebaseFirestore firestore;
+      late ProviderContainer container;
+      late FirestoreBookmarkRepositoryAdapter adapter;
+
+      setUp(() {
+        firestore = FakeFirebaseFirestore();
+        container = ProviderContainer(
+          overrides: [
+            activeAccountFirebaseProvider.overrideWith(
+              (ref) async => handles(firestore),
+            ),
+          ],
+        );
+        container.read(activeProfileDocIdProvider.notifier).set(profileDocId);
+        adapter = buildAdapter(container, mockContentRepository);
+      });
+
+      tearDown(() => container.dispose());
+
+      test('initializeBookmark delegates to FirestoreBookmarkRepository and '
+          'writes a doc reachable at the expected Firestore path', () async {
+        final bookmark = await adapter.initializeBookmark(
+          curriculumId: CurriculumId.mishnayos,
+        );
+
+        expect(bookmark.sefariaRef, _ref1);
+
+        final doc = await firestore
+            .collection('users')
+            .doc(uid)
+            .collection('learner_profiles')
+            .doc(profileDocId)
+            .collection('bookmarks')
+            .doc('mishnayos')
+            .get();
+        expect(doc.exists, isTrue);
+      });
+
+      test(
+        'setBookmark then getBookmark round-trips through Firestore',
+        () async {
+          await adapter.setBookmark(
+            curriculumId: CurriculumId.mishnayos,
+            sefariaRef: _ref2,
+          );
+
+          final result = await adapter.getBookmark(
+            curriculumId: CurriculumId.mishnayos,
+          );
+
+          expect(result?.sefariaRef, _ref2);
+        },
+      );
+
+      test('advanceBookmark moves the bookmark to the next item in content '
+          'order', () async {
+        await adapter.setBookmark(
+          curriculumId: CurriculumId.mishnayos,
+          sefariaRef: _ref1,
+        );
+
+        await adapter.advanceBookmark(
+          curriculumId: CurriculumId.mishnayos,
+          completedSefariaRef: _ref1,
+        );
+
+        final result = await adapter.getBookmark(
+          curriculumId: CurriculumId.mishnayos,
+        );
+        expect(result?.sefariaRef, _ref2);
+      });
+
+      test('syncFromFirestore is still a no-op that returns 0', () async {
+        expect(await adapter.syncFromFirestore(), 0);
+      });
+    });
   });
 }
