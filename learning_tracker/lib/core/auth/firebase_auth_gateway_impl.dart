@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/auth/auth_gateway_user.dart';
 import 'package:learning_tracker/core/auth/firebase_auth_gateway.dart';
 import 'package:learning_tracker/core/exceptions/app_exception.dart';
@@ -26,6 +27,28 @@ class NotAuthenticatedException extends InternalException {
     : super('No authenticated user found: FirebaseAuth.currentUser is null');
 }
 
+/// The default (non-named) app's `FirebaseAuth` singleton.
+///
+/// **Phase 1 (AD-1/AD-2) status.** Same rationale as
+/// `core/sync/providers/firestore_instance_provider.dart`'s
+/// `_defaultFirestoreInstance`: this is the pre-registry, single-instance
+/// auth path the migration-plan Phase 1 rollback contract keeps present
+/// "until Phase 6". [FirebaseAuthGatewayImpl]'s injection-seam default
+/// (`firebaseAuth ?? ...`) calls this — and only this — so the AD-2/AD-28
+/// bare-instance ratchet counts exactly one `FirebaseAuth.instance` site in
+/// this file.
+FirebaseAuth _defaultFirebaseAuth() => FirebaseAuth.instance;
+
+/// [Provider] wrapper around [_defaultFirebaseAuth], so
+/// `lib/data/firestore/account_firebase_providers.dart`'s feature-flag
+/// (registry vs. legacy single-instance) shim can reuse this SAME
+/// resolution instead of typing a second `FirebaseAuth.instance` literal
+/// elsewhere in `lib/` — see that file's `accountFirebaseRegistryEnabledProvider`
+/// doc for the flag contract.
+final firebaseAuthInstanceProvider = Provider<FirebaseAuth>((ref) {
+  return _defaultFirebaseAuth();
+});
+
 /// Concrete [FirebaseAuthGateway].
 ///
 /// **This is the only file in `lib/` outside `lib/core/sync/` permitted to
@@ -39,7 +62,7 @@ class NotAuthenticatedException extends InternalException {
 /// types from leaking out of `lib/core/auth/`.
 class FirebaseAuthGatewayImpl implements FirebaseAuthGateway {
   FirebaseAuthGatewayImpl({FirebaseAuth? firebaseAuth})
-    : _firebaseAuth = firebaseAuth ?? FirebaseAuth.instance;
+    : _firebaseAuth = firebaseAuth ?? _defaultFirebaseAuth();
 
   final FirebaseAuth _firebaseAuth;
 
