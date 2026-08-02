@@ -150,6 +150,12 @@ dev_dependencies:
   # DNI-377 (27.1): Fake Firestore for unit/integration tests that exercise
   # the sync layer without spinning up the emulator.
   fake_cloud_firestore: ^4.1.0
+  # Was previously only a transitive dependency (pulled in by `test`);
+  # `resilient_doc_stream_test.dart` imports it directly to deterministically
+  # test Timer-based backoff/cancellation without racing a real sleep
+  # (TQ-6, AUD-t-cross-36) — declaring it directly avoids depending on an
+  # undeclared transitive package.
+  fake_async: ^1.3.3
 
   # Story 19.3: Seed Content DB build tool
   crypto: ^3.0.6

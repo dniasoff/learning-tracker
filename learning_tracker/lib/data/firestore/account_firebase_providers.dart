@@ -37,6 +37,14 @@
 /// Neither deletion removes capability: every caller of the old layer was
 /// itself unwired (nothing in `lib/` outside this module and its own tests
 /// referenced it), so nothing downstream loses anything by their removal.
+///
+/// **Update (Epic B):** a new, deliberately-minimal "active account"
+/// replacement now exists in `active_account_providers.dart` —
+/// [ActiveAccountId]/`activeAccountIdProvider`/
+/// `activeAccountFirebaseProvider`. It does not assume [resolve] creates
+/// anything (the defect above), and nothing writes to it in production yet
+/// — see that file's doc comment before assuming it is wired into any real
+/// flow.
 library;
 
 import 'dart:async';

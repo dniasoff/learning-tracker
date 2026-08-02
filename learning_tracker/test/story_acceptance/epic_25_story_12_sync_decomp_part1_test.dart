@@ -57,6 +57,15 @@ void main() {
           // importer here must also be allowed by
           // `tool/check_firebase_confinement.dart`, and vice versa.
           'data/firestore/account_firebase.dart',
+          // Epic B, Story "Bookmarks reference repository": the small
+          // resubscribe-with-backoff stream helper and the first Firestore
+          // repository built on it. Every future repository under
+          // `lib/data/repositories/` that imports `cloud_firestore` directly
+          // must be added here too — this exact-file allowlist is enforced
+          // under `make ci` (this test), NOT `make audit`, so a green audit
+          // will not catch a missing entry.
+          'data/firestore/resilient_doc_stream.dart',
+          'data/repositories/firestore_bookmark_repository.dart',
         };
 
         final offenders = <String>[];

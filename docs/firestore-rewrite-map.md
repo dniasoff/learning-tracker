@@ -46,7 +46,7 @@ users/{uid}/learner_profiles/{profileId}/<15 subcollections>
 | `Bookmarks` | `bookmarks` | |
 | `LearningOrder` + `TrackLearningOrder` | `learning_order` | |
 | `Goals` | `goals` | |
-| `PriorCompletionImports` | `import_metadata` | |
+| `PriorCompletionImports` | **UNRESOLVED — see below** | NOT `import_metadata` |
 
 ## Deleted outright
 
@@ -90,6 +90,59 @@ users/{uid}/learner_profiles/{profileId}/<15 subcollections>
   rebuildable projection.
 - Per-account named `FirebaseApp` **with its own authenticated session**; app key is
   the stable device-registry account UUID, never the Firebase uid.
+
+## OPEN: prior-import tier tracking and the B8 upgrade
+
+`PriorCompletionImports` does **not** map to `import_metadata`. They are different
+things:
+
+- Drift `PriorCompletionImports` — one row **per imported item**
+  (`profileId, curriculumId, sefariaRef, stageId, trackType, source`).
+- Firestore `import_metadata` — one doc **per curriculum import**, field-whitelisted to
+  `profile_id, curriculum_id, item_count, imported_at, synced_at` (`firestore.rules:482-490`).
+
+So per-item prior-import tracking has no Firestore home today. This matters because
+`CompletionDao.getCompletionsByTier` — **8 call sites**, the single most-used read in the
+app — distinguishes bulk-imported from genuinely-learned completions via a correlated
+`EXISTS` subquery against that per-item table.
+
+**B8 is currently inexpressible.** Its mechanism is "delete the prior-import record so
+the row counts as real learning" (`completion_writer.dart:159-162`), but
+`import_metadata` is `allow delete: if false` and `completions` permits `update` only as
+a byte-identical replay (SR-1). A completion can therefore never transition from
+bulk-import to real learning. The old sync engine never hit this because B8 only ever
+deleted the *Drift* row; Firestore was never involved.
+
+**Recommended resolution:** carry `source: 'bulkImport' | 'live'` on the completion
+document itself (the `completions` create rule is an open bag — no `.hasOnly()` — so a
+new field needs no rules change), and relax the `completions` update rule from
+"byte-identical replay only" to "byte-identical replay **or** a `source`
+`bulkImport`→`live` transition with every other field unchanged". That keeps one
+collection and one query (`where source == 'live'`), needs no client-side join against a
+possibly-huge import set, and preserves SR-1's actual intent — `points` and
+`completed_at` stay immutable, so the record-tampering the rule exists to prevent is
+still blocked.
+
+Rejected alternative: a separate mutable per-item `prior_imports` collection with
+existence-check semantics. Correct, but forces every tier-filtered read to load the
+profile's entire import set client-side — potentially 10k+ docs after a "I already know
+all of Shas" bulk import.
+
+## Owner decisions (2026-08-02)
+
+- **Track purge → extend the `deleteCurriculumTrack` Cloud Function** to sweep the
+  sibling collections by `curriculum_id`, rather than restructuring track-scoped data
+  into subcollections under the track doc. A recursive delete on
+  `curriculum_tracks/{curriculumId}` does NOT reach `goals`, `stage_definitions`,
+  `study_day_configs`, `curriculum_scopes`, `learning_order` or `profile_programs` —
+  they are siblings under the profile, not children of the track. A server path is
+  required regardless, because the current code tombstones completions and append-only
+  rules forbid that from a client.
+- **Data export/import survives, as a nice-to-have** — not on the critical path.
+  Rebuild it after the core repositories land. With Firestore authoritative, the natural
+  shape is a "download my data" export rather than a local-JSON round-trip backup.
+- **Prior-import tier** — proceeding with the `source`-field + narrow-rules-relaxation
+  option above. Lands as its own commit, independently revertible.
 
 ## Watch out
 
