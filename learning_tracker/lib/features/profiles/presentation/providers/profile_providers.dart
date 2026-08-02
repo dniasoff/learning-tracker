@@ -1,3 +1,4 @@
+import 'package:learning_tracker/core/providers/active_profile_doc_id_provider.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/profiles/data/repositories/profile_repository_impl.dart';
@@ -26,12 +27,20 @@ int currentAccountId(Ref ref) {
 }
 
 /// Provider for the ProfileRepository implementation.
+///
+/// Resolves to [FirestoreProfileRepositoryAdapter], not a bare
+/// [ProfileRepositoryImpl] — see that adapter's class doc comment
+/// (`profile_repository_impl.dart`) for why every caller of this provider
+/// (add/edit-profile screens, onboarding, the self-heal path below) now
+/// also mints a Firestore identity for a genuinely new profile and
+/// activates it, with zero changes needed at any of those call sites.
 // keepAlive: stateless repository facade over the DB, cheap to keep for the app's lifetime.
 @Riverpod(keepAlive: true)
 ProfileRepository profileRepository(Ref ref) {
   final db = ref.watch(userDatabaseProvider);
   final syncFacade = ref.watch(syncWriteFacadeProvider);
-  return ProfileRepositoryImpl(db, syncEngine: syncFacade);
+  final drift = ProfileRepositoryImpl(db, syncEngine: syncFacade);
+  return FirestoreProfileRepositoryAdapter(ref: ref, driftRepository: drift);
 }
 
 /// The currently selected profile ID. Null means no profile selected yet.
@@ -41,12 +50,22 @@ class SelectedProfileId extends _$SelectedProfileId {
   @override
   int? build() => null;
 
+  /// Selects profile [id] and — see `profile_repository_impl.dart`'s
+  /// [ProfileUlidSessionCache] doc comment for the "why a map" reasoning —
+  /// activates its Firestore identity via [activeProfileDocIdProvider] when
+  /// one is known for this session (freshly created, or switched to before
+  /// this session ended), and clears it otherwise. `null` accurately means
+  /// "no Firestore identity known for this profile yet", not an error.
   void select(int id) {
     state = id;
+    ref
+        .read(activeProfileDocIdProvider.notifier)
+        .set(ref.read(profileUlidSessionCacheProvider.notifier).ulidFor(id));
   }
 
   void clear() {
     state = null;
+    ref.read(activeProfileDocIdProvider.notifier).set(null);
   }
 }
 

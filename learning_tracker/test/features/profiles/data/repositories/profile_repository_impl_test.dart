@@ -1,14 +1,27 @@
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/sync/codec/learner_profile_codec.dart';
 import 'package:learning_tracker/core/sync/sync_write_facade.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
+import 'package:learning_tracker/data/firestore/account_firebase.dart';
+import 'package:learning_tracker/data/firestore/active_account_providers.dart';
+import 'package:learning_tracker/data/firestore/repository_providers.dart'
+    show activeProfileDocIdProvider;
 import 'package:learning_tracker/features/profiles/data/repositories/profile_repository_impl.dart';
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
 import 'package:learning_tracker/features/tutoring/tutoring.dart';
+import 'package:mocktail/mocktail.dart';
 
 import '../../../../helpers/test_database.dart';
+
+class MockFirebaseApp extends Mock implements FirebaseApp {}
+
+class MockFirebaseAuthHandle extends Mock implements FirebaseAuth {}
 
 /// [SyncWriteFacade] that captures the payload passed to [pushLearnerProfile].
 ///
@@ -933,6 +946,237 @@ void main() {
             'AppLogger so it leaves a diagnostic trail (EH-3, '
             'AUD-profiles-16). Talker history: $history',
       );
+    });
+  });
+
+  group('ProfileUlidSessionCache', () {
+    test('starts empty and ulidFor returns null for an unknown id', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      expect(
+        container.read(profileUlidSessionCacheProvider.notifier).ulidFor(1),
+        isNull,
+      );
+    });
+
+    test('put records a pairing that ulidFor then returns', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+      final notifier = container.read(profileUlidSessionCacheProvider.notifier);
+
+      notifier.put(7, 'ulid-7');
+
+      expect(notifier.ulidFor(7), 'ulid-7');
+      expect(container.read(profileUlidSessionCacheProvider), {7: 'ulid-7'});
+    });
+
+    test('remove drops a pairing; removing an absent id is a no-op', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+      final notifier = container.read(profileUlidSessionCacheProvider.notifier);
+      notifier.put(3, 'ulid-3');
+
+      notifier.remove(9); // absent — must not throw or clobber state
+      expect(notifier.ulidFor(3), 'ulid-3');
+
+      notifier.remove(3);
+      expect(notifier.ulidFor(3), isNull);
+    });
+  });
+
+  group('FirestoreProfileRepositoryAdapter', () {
+    const uid = 'uid-profiles-1';
+
+    AccountFirebaseHandles handles(FakeFirebaseFirestore firestore) {
+      return AccountFirebaseHandles(
+        app: MockFirebaseApp(),
+        firestore: firestore,
+        auth: MockFirebaseAuthHandle(),
+        uid: uid,
+      );
+    }
+
+    // Constructing FirestoreProfileRepositoryAdapter requires a Ref
+    // (Riverpod's Ref is sealed — it can only come from inside a provider
+    // callback), so tests obtain one the same way production does: read a
+    // throwaway Provider that builds the adapter from the container's ref.
+    // Mirrors FirestoreBookmarkRepositoryAdapter's test helper
+    // (bookmark_repository_impl_test.dart).
+    FirestoreProfileRepositoryAdapter buildAdapter(
+      ProviderContainer container,
+      ProfileRepositoryImpl driftRepository,
+    ) {
+      final adapterProvider = Provider<FirestoreProfileRepositoryAdapter>(
+        (ref) => FirestoreProfileRepositoryAdapter(
+          ref: ref,
+          driftRepository: driftRepository,
+        ),
+      );
+      return container.read(adapterProvider);
+    }
+
+    group('not ready (no active account)', () {
+      late UserDatabase localDb;
+      late FirestoreProfileRepositoryAdapter adapter;
+      late ProviderContainer container;
+
+      setUp(() async {
+        localDb = createTestDatabase();
+        await localDb
+            .into(localDb.accounts)
+            .insert(
+              AccountsCompanion.insert(
+                email: 'not-ready@test.com',
+                tier: 'localBorn',
+                displayName: 'Test Account',
+                createdAt: DateTimeFactory.nowUtc(),
+                updatedAt: DateTimeFactory.nowUtc(),
+              ),
+            );
+        container = ProviderContainer();
+        adapter = buildAdapter(container, ProfileRepositoryImpl(localDb));
+      });
+
+      tearDown(() async {
+        container.dispose();
+        await localDb.close();
+      });
+
+      test('createProfile still succeeds locally (offline-first) and leaves '
+          'activeProfileDocIdProvider unset', () async {
+        final profile = await adapter.createProfile(
+          accountId: 1,
+          displayName: 'Yosef',
+          mode: 'adult',
+        );
+
+        expect(profile.displayName, 'Yosef');
+        expect(container.read(activeProfileDocIdProvider), isNull);
+      });
+
+      test('ensureDefaultProfile still self-heals locally and leaves '
+          'activeProfileDocIdProvider unset', () async {
+        final id = await adapter.ensureDefaultProfile(
+          accountId: 1,
+          defaultDisplayName: 'Healed',
+        );
+
+        expect(id, isPositive);
+        expect(container.read(activeProfileDocIdProvider), isNull);
+      });
+    });
+
+    group('ready (active account)', () {
+      late UserDatabase localDb;
+      late FakeFirebaseFirestore firestore;
+      late ProviderContainer container;
+      late FirestoreProfileRepositoryAdapter adapter;
+
+      setUp(() async {
+        localDb = createTestDatabase();
+        await localDb
+            .into(localDb.accounts)
+            .insert(
+              AccountsCompanion.insert(
+                email: 'ready@test.com',
+                tier: 'localBorn',
+                displayName: 'Test Account',
+                createdAt: DateTimeFactory.nowUtc(),
+                updatedAt: DateTimeFactory.nowUtc(),
+              ),
+            );
+        firestore = FakeFirebaseFirestore();
+        container = ProviderContainer(
+          overrides: [
+            activeAccountFirebaseProvider.overrideWith(
+              (ref) async => handles(firestore),
+            ),
+          ],
+        );
+        adapter = buildAdapter(container, ProfileRepositoryImpl(localDb));
+      });
+
+      tearDown(() async {
+        container.dispose();
+        await localDb.close();
+      });
+
+      test('createProfile mints a Firestore doc, activates it, and caches the '
+          '(Drift id -> ULID) pairing', () async {
+        final profile = await adapter.createProfile(
+          accountId: 1,
+          displayName: 'Devorah',
+          mode: 'adult',
+        );
+
+        final activeUlid = container.read(activeProfileDocIdProvider);
+        expect(activeUlid, isNotNull);
+        expect(
+          container
+              .read(profileUlidSessionCacheProvider.notifier)
+              .ulidFor(profile.id),
+          activeUlid,
+        );
+
+        final doc = await firestore
+            .collection('users')
+            .doc(uid)
+            .collection('learner_profiles')
+            .doc(activeUlid)
+            .get();
+        expect(doc.exists, isTrue);
+        expect(doc.data()?['display_name'], 'Devorah');
+      });
+
+      test('ensureDefaultProfile mints exactly one Firestore doc on the '
+          'self-heal branch, and none on a subsequent already-has-a-profile '
+          'call (no duplicate document)', () async {
+        final firstId = await adapter.ensureDefaultProfile(
+          accountId: 1,
+          defaultDisplayName: 'Healed',
+        );
+        final ulidAfterHeal = container
+            .read(profileUlidSessionCacheProvider.notifier)
+            .ulidFor(firstId);
+        expect(ulidAfterHeal, isNotNull);
+
+        final collection = firestore
+            .collection('users')
+            .doc(uid)
+            .collection('learner_profiles');
+        expect((await collection.get()).docs, hasLength(1));
+
+        // Account already has a profile now — the fast (no-op) branch of
+        // ensureDefaultProfile must NOT mint a second Firestore document.
+        final secondId = await adapter.ensureDefaultProfile(
+          accountId: 1,
+          defaultDisplayName: 'Healed',
+        );
+        expect(secondId, firstId);
+        expect((await collection.get()).docs, hasLength(1));
+      });
+
+      test('deleteProfile drops the cached ULID pairing', () async {
+        final first = await adapter.createProfile(
+          accountId: 1,
+          displayName: 'A',
+          mode: 'adult',
+        );
+        await adapter.createProfile(
+          accountId: 1,
+          displayName: 'B',
+          mode: 'adult',
+        );
+        final notifier = container.read(
+          profileUlidSessionCacheProvider.notifier,
+        );
+        expect(notifier.ulidFor(first.id), isNotNull);
+
+        await adapter.deleteProfile(first.id);
+
+        expect(notifier.ulidFor(first.id), isNull);
+      });
     });
   });
 }
