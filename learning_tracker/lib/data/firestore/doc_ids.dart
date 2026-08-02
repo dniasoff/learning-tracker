@@ -175,6 +175,49 @@ final class DocIds {
   static String curriculumTrackDocId(Map<String, dynamic> data) =>
       data['curriculum_id']?.toString() ?? '';
 
+  // ── curriculum_scopes ────────────────────────────────────────────────
+
+  /// `curriculum_scopes/{curriculumId}_{scopeLevel}_{scopeValue}` doc-id
+  /// formula, each component percent-encoded via [encodeKeyComponent] and
+  /// joined with `_`.
+  ///
+  /// **No live `FirestoreGatewayImpl` counterpart — unlike every other
+  /// formula in this module.** `CurriculumScopeDao` (Drift) predates the
+  /// sync engine's Firestore path for this table; `FirestoreGatewayImpl`
+  /// never defines a `pushCurriculumScope` method at all, so there is no
+  /// "byte-for-byte against the live gateway" golden target the way
+  /// [completionDocId]/[bookmarkDocId]/etc. have (`doc_ids_test.dart`'s
+  /// primary group). This is a genuinely NEW formula, promoted here from
+  /// `FirestoreCurriculumScopeRepository` (Epic B, `lib/data/repositories/
+  /// firestore_curriculum_scope_repository.dart`) rather than reverse-
+  /// engineered from an existing push path — the same situation as the
+  /// AD-25-re-keyed [stageDefinitionDocId]/[studyDayConfigDocId] and the
+  /// AD-24 [learnerProfileUlidDocId], neither of which has a live-gateway
+  /// pin either; `doc_ids_test.dart` pins this one the same way those are
+  /// pinned — by direct formula assertion, not a live-gateway comparison.
+  ///
+  /// One document per selected scope VALUE — `firestore.rules`' `match
+  /// /curriculum_scopes/{scopeId}` names the id generically (not
+  /// `{curriculumId}`, unlike `bookmarks`/`profile_programs`), matching the
+  /// Drift `CurriculumScopes` table's one-row-per-selected-value shape.
+  /// `scope_level`/`scope_value` are therefore part of the natural key
+  /// alongside `curriculum_id` — a curriculum can have several scope rows
+  /// (e.g. "Seder Zeraim" + "Seder Moed" at level 1, or mixed levels from a
+  /// breadcrumb drill-down). Deliberately omits `track_id` — same AD-25
+  /// reasoning as [stageDefinitionDocId]: the per-device track id is
+  /// retired as a key component for this collection, `curriculum_id` is
+  /// the sole canonical stable track key.
+  static String curriculumScopeDocId(Map<String, dynamic> data) {
+    final curriculumId = data['curriculum_id']?.toString() ?? '';
+    final scopeLevel = data['scope_level']?.toString() ?? '';
+    final scopeValue = data['scope_value']?.toString() ?? '';
+    return [
+      encodeKeyComponent(curriculumId),
+      encodeKeyComponent(scopeLevel),
+      encodeKeyComponent(scopeValue),
+    ].join('_');
+  }
+
   // ── learning_order ───────────────────────────────────────────────────
 
   /// `learning_order/{curriculumId}_{ref}` doc-id formula.

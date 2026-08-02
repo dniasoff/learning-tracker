@@ -70,6 +70,12 @@ void main() {
           // (same file, now also hosting the query-stream sibling) plus a
           // composite-index query.
           'data/repositories/firestore_stage_definition_repository.dart',
+          'data/repositories/firestore_goal_repository.dart',
+          'data/repositories/firestore_study_day_config_repository.dart',
+          'data/repositories/firestore_curriculum_scope_repository.dart',
+          'data/repositories/firestore_profile_program_repository.dart',
+          'data/repositories/firestore_learning_ledger_repository.dart',
+          'data/repositories/firestore_streak_event_repository.dart',
         };
 
         final offenders = <String>[];

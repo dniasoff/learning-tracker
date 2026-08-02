@@ -628,4 +628,92 @@ void main() {
       );
     });
   });
+
+  // ── curriculum_scopes — new formula, no live-gateway counterpart ─────
+  //
+  // Epic B (`docs/firestore-rewrite-map.md`). Unlike every formula above,
+  // `curriculumScopeDocId` has no `FirestoreGatewayImpl.pushCurriculumScope`
+  // to golden-test byte-for-byte against — that method does not exist; the
+  // Drift-era gateway never pushed this collection. Same situation as the
+  // AD-25 re-key and AD-24 ULID groups above: pinned here by direct formula
+  // assertion (including a RED-DEMO proving the pin has teeth), not a
+  // live-gateway comparison. See `DocIds.curriculumScopeDocId`'s own doc
+  // comment for the full reasoning.
+  group('curriculum_scopes — DocIds.curriculumScopeDocId', () {
+    test('GREEN: {curriculumId}_{scopeLevel}_{scopeValue}, each component '
+        'percent-encoded via encodeKeyComponent', () {
+      expect(
+        DocIds.curriculumScopeDocId({
+          'curriculum_id': 'mishnayos',
+          'scope_level': 1,
+          'scope_value': 'Seder Zeraim',
+        }),
+        equals('mishnayos_1_Seder%20Zeraim'),
+      );
+    });
+
+    test('percent-encoding keeps two scope values differing only by an '
+        'embedded "_" or "/" distinct, matching the completions formula\'s '
+        'collision-avoidance guarantee', () {
+      final a = DocIds.curriculumScopeDocId({
+        'curriculum_id': 'bavli',
+        'scope_level': 2,
+        'scope_value': 'Berachos_2/3',
+      });
+      final b = DocIds.curriculumScopeDocId({
+        'curriculum_id': 'bavli',
+        'scope_level': 2,
+        'scope_value': 'Berachos 2 3',
+      });
+      expect(a, isNot(equals(b)));
+    });
+
+    test('RED-DEMO: an unencoded naive join collides two DISTINCT natural '
+        'keys onto one doc id when a component embeds the "_" separator — '
+        'the same orphaning defect class the AD-25 stage_definitions '
+        'RED-DEMO guards against, for the SAME reason: `scope_value` is '
+        'free text and can legitimately contain "_"', () {
+      String naiveJoin(Map<String, dynamic> data) =>
+          '${data['curriculum_id']}_${data['scope_level']}_'
+          '${data['scope_value']}';
+
+      // (curriculumId='mishnayos', scopeLevel=1, scopeValue='b_c') and
+      // (curriculumId='mishnayos', scopeLevel='1_b', scopeValue='c') are
+      // two DIFFERENT natural keys — but the naive join can't tell where
+      // one component ends and the next begins once "_" appears inside a
+      // component, so both collide on 'mishnayos_1_b_c'.
+      final keyA = {
+        'curriculum_id': 'mishnayos',
+        'scope_level': 1,
+        'scope_value': 'b_c',
+      };
+      final keyB = {
+        'curriculum_id': 'mishnayos',
+        'scope_level': '1_b',
+        'scope_value': 'c',
+      };
+      expect(naiveJoin(keyA), equals(naiveJoin(keyB))); // RED: collision.
+
+      // The real formula escapes the literal "_" inside each component
+      // (encodeKeyComponent's `_` is not in its unreserved set), so the
+      // two natural keys never collide.
+      expect(
+        DocIds.curriculumScopeDocId(keyA),
+        isNot(equals(DocIds.curriculumScopeDocId(keyB))),
+      );
+    });
+
+    test('deliberately omits track_id — AD-25 retires the per-device track '
+        'id as a key component for this collection too', () {
+      expect(
+        DocIds.curriculumScopeDocId({
+          'curriculum_id': 'mishnayos',
+          'scope_level': 1,
+          'scope_value': 'Seder Zeraim',
+          'track_id': '999', // present in payload, NOT in the doc-id
+        }),
+        equals('mishnayos_1_Seder%20Zeraim'),
+      );
+    });
+  });
 }

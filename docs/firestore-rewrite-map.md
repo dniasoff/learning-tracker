@@ -129,10 +129,27 @@ That is exactly the shipped three-tier `CompletionSource` model
 3. **B8 / `_upgradePriorMarkRow` is dead** — it upgraded a prior mark to real learning,
    which the invariant makes unreachable.
 
-**Still open (small):** `expungePriorCompletions` lets a user un-tick an onboarding
-bulk-mark, but `completions` denies client deletes. Either permit deleting a completion
-whose `source == 'bulkInTrack'`, or make the onboarding bulk-mark a confirm-before-commit
-step so there is nothing to undo. Decide before building the completions repository.
+**RESOLVED — owner decision, 2026-08-02.** *"app is able to delete just bulk marked
+learning linked to a track which will remove their global learnt status as well —
+deleting is only possible for bulk marked track learning and that's it."*
+
+- A completion with `source == 'bulkInTrack'` may be deleted (the onboarding un-tick).
+- A completion with `source == 'live'` is **permanent**. There is no undo for genuinely
+  learned material — a mis-tap cannot be corrected. This follows from the once-per-track
+  invariant and is intended.
+- Deleting a bulk mark **also deletes its `learning_ledger` entry**, retracting the
+  lifetime "learnt" status, not just the track one.
+
+**Implementation: a Cloud Function, not a rules relaxation.** Both `completions` and
+`learning_ledger` are SR-1 append-only (`allow delete: if false`). Rather than punch the
+first delete hole into append-only history — which a client could widen by writing
+`source: 'bulkInTrack'` onto a live completion and then deleting it — this routes
+server-side through the Admin SDK, matching `deleteLearnerProfile`,
+`deleteCurriculumTrack` and `tutorResetCompletion`. The rules stay fully closed and the
+client repository gets **no delete method at all**.
+
+Note the distinction from track deletion: deleting a *track* must NOT touch
+`learning_ledger` (lifetime history deliberately survives). Deleting a *bulk mark* must.
 
 ## SUPERSEDED (kept for the reasoning): prior-import tier tracking and the B8 upgrade
 
@@ -209,6 +226,45 @@ path **segment** (`/data/repositories/`).
 **Also:** there are two Makefiles. Always run `make audit` from `learning_tracker/`, not
 the repo root — the root one runs different checks and will report unrelated
 pre-existing debt as a false alarm.
+
+## Traps found while building the repositories (each cost a real debugging cycle)
+
+None of these are caught by the analyzer, the tests, or a green `make audit`. Several
+pass locally and fail only in production; one passes forever while doing nothing.
+
+1. **`orderBy` on a nullable field silently DROPS documents.** Firestore omits documents
+   that lack the ordered field entirely — no error. The Drift `goals` query ordered by
+   `target_date`, which is null for pace-type goals; a literal port made every pace goal
+   invisible. Sort client-side when the field is optional.
+2. **ISO strings fail `is timestamp` rules.** `FirestoreCodec.encodeDateTime` emits an
+   ISO-8601 String, but SR-3 guards on `streak_events`, `learning_ledger` and
+   `points_ledger` require a real `timestamp`, and `completions` compares
+   `completed_at <= request.time` — a type mismatch in rules evaluates to **deny**. So a
+   String there rules-denies **every write** in production. Write a raw `DateTime`.
+   Also: `Timestamp.toDate()` returns **local** time, not UTC — normalize on read.
+3. **`SetOptions(merge: true)` leaves stale keys.** Omitting a key does not clear it. When
+   a field goes from set to null, send `FieldValue.delete()` explicitly, or the old value
+   silently survives.
+4. **A raw NUL byte in source disables every grep gate on that file.** grep classifies the
+   file as binary and skips it, while audit still reports a pass. Use an escape sequence,
+   never a literal control byte. (A gate that stops applying looks identical to a gate
+   that passes.)
+5. **Doc comments trip greps.** Audit check 6/15 greps for the literal `DateTime.now()`
+   and does not exclude comments — prose warning against it fails the gate.
+6. **New `lib/` files need a MIRRORED test** at the matching `test/` path (audit check
+   29/40, AG-5) — a repository test does not satisfy it for a separate model file. New
+   `lib/` files also need real coverage or the lcov-denominator gate fails.
+7. **Hand-rolled doc-ids collide.** Free-text key components can contain the separator —
+   always use `DocIds` with `encodeKeyComponent`.
+8. **Check whether a collection is keyed by doc-id or by a field** before writing a query.
+   `profile_programs` is keyed by doc-id; a `where('curriculum_id', …)` sweep matches
+   nothing, deletes nothing, and reports success.
+9. **`fake_cloud_firestore` quirks:** `orderBy(FieldPath.documentId) + startAfter([id])`
+   throws — use `startAfterDocument(snapshot)`; `.limit()` must be chained AFTER the
+   cursor or page 2 comes back empty; a `WriteBatch` arrives as several incremental
+   snapshots rather than one atomic update; and `strictRules: true` denies even the
+   legitimate owner's writes, so **no positive rules test is possible** — rules
+   correctness rests on reading the rules text.
 
 ## Watch out
 

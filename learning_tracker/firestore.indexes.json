@@ -4,57 +4,116 @@
       "collectionGroup": "tutor_grants",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "tutor_uid", "order": "ASCENDING" },
-        { "fieldPath": "state",     "order": "ASCENDING" }
+        {
+          "fieldPath": "tutor_uid",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "state",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "tutor_grants",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "parent_uid",       "order": "ASCENDING" },
-        { "fieldPath": "child_profile_id", "order": "ASCENDING" },
-        { "fieldPath": "state",            "order": "ASCENDING" }
+        {
+          "fieldPath": "parent_uid",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "child_profile_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "state",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "tutor_grants",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "tutor_email", "order": "ASCENDING" },
-        { "fieldPath": "state",       "order": "ASCENDING" }
+        {
+          "fieldPath": "tutor_email",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "state",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "tutor_grants",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "state",      "order": "ASCENDING" },
-        { "fieldPath": "updated_at", "order": "ASCENDING" }
+        {
+          "fieldPath": "state",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "updated_at",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "tutor_grants",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "tutor_uid",  "order": "ASCENDING" },
-        { "fieldPath": "updated_at", "order": "DESCENDING" }
+        {
+          "fieldPath": "tutor_uid",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "updated_at",
+          "order": "DESCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "tutor_grants",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "parent_uid", "order": "ASCENDING" },
-        { "fieldPath": "updated_at", "order": "DESCENDING" }
+        {
+          "fieldPath": "parent_uid",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "updated_at",
+          "order": "DESCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "stage_definitions",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "curriculum_id", "order": "ASCENDING" },
-        { "fieldPath": "stage_order",   "order": "ASCENDING" }
+        {
+          "fieldPath": "curriculum_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "stage_order",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "study_day_configs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "curriculum_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "day_of_week",
+          "order": "ASCENDING"
+        }
       ]
     }
   ],
