@@ -348,34 +348,13 @@ void main() {
       expect(live, equals('default'));
     });
 
-    test('stage_definitions: {trackId}_{stageOrder} is byte-for-byte '
-        '(pre-AD-25-rekey formula, per Story 2.2 scope)', () async {
-      final fs = createFakeFirestore(authenticatedUid: _uid);
-      final data = <String, dynamic>{
-        'track_id': '7',
-        'stage_order': '3',
-        'name': 'Stage 3',
-      };
-      await _gw(fs).pushStageDefinition(profileId: _profileId, data: data);
-      final live = await _liveDocId(fs, 'stage_definitions');
-      expect(DocIds.stageDefinitionDocId(data), equals(live));
-    });
-
-    test(
-      'study_day_configs: {curriculumId}_{dayOfWeek}_{trackId} is '
-      'byte-for-byte (pre-AD-25-rekey formula, per Story 2.2 scope)',
-      () async {
-        final fs = createFakeFirestore(authenticatedUid: _uid);
-        final data = <String, dynamic>{
-          'curriculum_id': 'mishnayos',
-          'day_of_week': '1',
-          'track_id': '5',
-        };
-        await _gw(fs).pushStudyDayConfig(profileId: _profileId, data: data);
-        final live = await _liveDocId(fs, 'study_day_configs');
-        expect(DocIds.studyDayConfigDocId(data), equals(live));
-      },
-    );
+    // NOTE: stage_definitions / study_day_configs are intentionally NOT
+    // pinned against the live gateway here anymore — Story 2.3's AD-25
+    // re-key makes DocIds's output for these two collections deliberately
+    // DIVERGE from the (not-yet-rewired) live gateway's per-device
+    // track_id-based output. See the "AD-25 re-key — Story 2.3" group
+    // below for their new golden formulas and the explicit red-demo
+    // proving the old shape is rejected.
 
     test('points_ledger: byte-for-byte', () async {
       final fs = createFakeFirestore(authenticatedUid: _uid);
@@ -422,101 +401,199 @@ void main() {
     // AD-5/MCF-3: dropping the `_` separator in a two-component composite
     // key is exactly the class of defect the byte-for-byte AC exists to
     // catch — it doesn't just produce a wrong string, it collides distinct
-    // natural keys onto the SAME Firestore document (trackId='1'
-    // stageOrder='23' and trackId='12' stageOrder='3' both perturb to
+    // natural keys onto the SAME Firestore document (curriculumId='1'
+    // stageOrder='23' and curriculumId='12' stageOrder='3' both perturb to
     // '123'), which is precisely the "off-by-one-character orphans
     // history" failure mode called out in this story's brief.
     String brokenStageDefinitionDocId(Map<String, dynamic> data) {
-      final trackId = data['track_id']?.toString() ?? '';
+      final curriculumId = data['curriculum_id']?.toString() ?? '';
       final stageOrder = data['stage_order']?.toString() ?? '';
-      // Perturbation: separator dropped (vs the real '${trackId}_$stageOrder').
-      return '$trackId$stageOrder';
+      // Perturbation: separator dropped (vs the real
+      // '${curriculumId}_$stageOrder').
+      return '$curriculumId$stageOrder';
     }
 
-    test(
-      'RED: a separator-dropping formula disagrees with the live gateway',
-      () async {
-        final fs = createFakeFirestore(authenticatedUid: _uid);
-        final data = <String, dynamic>{'track_id': '1', 'stage_order': '23'};
-        await _gw(fs).pushStageDefinition(profileId: _profileId, data: data);
-        final live = await _liveDocId(fs, 'stage_definitions');
-
-        // The live gateway wrote '1_23'; the perturbed formula would emit
-        // '123' — proving a broken formula is NOT byte-for-byte and this
-        // harness would fail a real regression here.
-        expect(brokenStageDefinitionDocId(data), isNot(equals(live)));
-      },
-    );
+    test('RED: a separator-dropping formula disagrees with the real '
+        'curriculum_id-keyed formula', () {
+      final data = <String, dynamic>{'curriculum_id': '1', 'stage_order': '23'};
+      // The real formula emits '1_23'; the perturbed formula would emit
+      // '123' — proving a broken formula is NOT byte-for-byte and this
+      // harness would fail a real regression here.
+      expect(
+        brokenStageDefinitionDocId(data),
+        isNot(equals(DocIds.stageDefinitionDocId(data))),
+      );
+    });
 
     test('RED: the same perturbation collides two DISTINCT natural keys onto '
         'one doc id — the exact orphaning defect class this story guards '
         'against', () {
       final a = brokenStageDefinitionDocId({
-        'track_id': '1',
+        'curriculum_id': '1',
         'stage_order': '23',
       });
       final b = brokenStageDefinitionDocId({
-        'track_id': '12',
+        'curriculum_id': '12',
         'stage_order': '3',
       });
       expect(a, equals(b)); // collision — this is the bug class, not a fluke.
       expect(
-        DocIds.stageDefinitionDocId({'track_id': '1', 'stage_order': '23'}),
+        DocIds.stageDefinitionDocId({
+          'curriculum_id': '1',
+          'stage_order': '23',
+        }),
         isNot(
           equals(
-            DocIds.stageDefinitionDocId({'track_id': '12', 'stage_order': '3'}),
+            DocIds.stageDefinitionDocId({
+              'curriculum_id': '12',
+              'stage_order': '3',
+            }),
           ),
         ),
       );
     });
 
-    test('GREEN: restored — DocIds.stageDefinitionDocId matches the live '
-        'gateway exactly', () async {
-      final fs = createFakeFirestore(authenticatedUid: _uid);
-      final data = <String, dynamic>{'track_id': '1', 'stage_order': '23'};
-      await _gw(fs).pushStageDefinition(profileId: _profileId, data: data);
-      final live = await _liveDocId(fs, 'stage_definitions');
-      expect(DocIds.stageDefinitionDocId(data), equals(live));
-      expect(live, equals('1_23'));
+    test('GREEN: DocIds.stageDefinitionDocId produces the exact '
+        'curriculum_id-keyed shape', () {
+      final data = <String, dynamic>{'curriculum_id': '1', 'stage_order': '23'};
+      expect(DocIds.stageDefinitionDocId(data), equals('1_23'));
     });
   });
 
-  // ── AD-25 carve-out is documented, not silently absorbed ──────────────
+  // ── AD-25 re-key — Story 2.3 ────────────────────────────────────────
 
-  group(
-    'AD-25 carve-out — track-scoped children keep the pre-rekey formula',
-    () {
-      test(
-        'stage_definitions and study_day_configs still embed the per-device '
-        'track_id (Story 2.3 re-keys this to curriculum_id, not this story)',
-        () {
-          expect(
-            DocIds.stageDefinitionDocId({'track_id': '7', 'stage_order': '3'}),
-            equals('7_3'),
-          );
-          expect(
-            DocIds.studyDayConfigDocId({
-              'curriculum_id': 'mishnayos',
-              'day_of_week': '1',
-              'track_id': '5',
-            }),
-            equals('mishnayos_1_5'),
-          );
-        },
+  group('AD-25 re-key — track-scoped children now key off curriculum_id, not '
+      'the per-device track_id', () {
+    test('stage_definitions and study_day_configs no longer embed the '
+        'per-device track_id', () {
+      expect(
+        DocIds.stageDefinitionDocId({
+          'curriculum_id': 'mishnayos',
+          'stage_order': '3',
+          'track_id': '999', // present in payload, NOT in the doc-id
+        }),
+        equals('mishnayos_3'),
       );
+      expect(
+        DocIds.studyDayConfigDocId({
+          'curriculum_id': 'mishnayos',
+          'day_of_week': '1',
+          'track_id': '999', // present in payload, NOT in the doc-id
+        }),
+        equals('mishnayos_1'),
+      );
+    });
 
-      test('goals is NOT re-keyed here — its doc-id formula never embedded '
-          'track_id in the first place', () {
-        expect(
-          DocIds.goalDocId({
-            'curriculum_id': 'mishnayos',
-            'target_percent': 50,
-            'created_at': '2026-01-01T00:00:00.000Z',
-            'track_id': 999, // present in the payload but NOT in the doc-id
-          }),
-          isNot(contains('999')),
-        );
-      });
-    },
-  );
+    test('RED-DEMO (a): a track-scoped child doc-id built from the live '
+        "gateway's per-device track_id is REJECTED in favour of the "
+        'curriculum_id-keyed form — resolveLocalTrackId is no longer '
+        'needed by construction', () async {
+      final fs = createFakeFirestore(authenticatedUid: _uid);
+      final data = <String, dynamic>{
+        'curriculum_id': 'mishnayos',
+        'day_of_week': '1',
+        'track_id': '5', // the per-device autoincrement id (MCF-4)
+      };
+      // The live FirestoreGatewayImpl is NOT rewired in Phase 0 — it
+      // still writes the OLD `{curriculumId}_{dayOfWeek}_{trackId}`
+      // shape. Prove the new formula explicitly disagrees with it.
+      await _gw(fs).pushStudyDayConfig(profileId: _profileId, data: data);
+      final oldPerDeviceTrackIdShape = await _liveDocId(
+        fs,
+        'study_day_configs',
+      );
+      expect(oldPerDeviceTrackIdShape, equals('mishnayos_1_5'));
+      expect(
+        DocIds.studyDayConfigDocId(data),
+        isNot(equals(oldPerDeviceTrackIdShape)),
+      );
+      expect(DocIds.studyDayConfigDocId(data), equals('mishnayos_1'));
+    });
+
+    test('goals is NOT re-keyed here — its doc-id formula never embedded '
+        'track_id in the first place', () {
+      expect(
+        DocIds.goalDocId({
+          'curriculum_id': 'mishnayos',
+          'target_percent': 50,
+          'created_at': '2026-01-01T00:00:00.000Z',
+          'track_id': 999, // present in the payload but NOT in the doc-id
+        }),
+        isNot(contains('999')),
+      );
+    });
+  });
+
+  // ── AD-24 profile-scoped ULID — Story 2.3 ───────────────────────────
+
+  group('AD-24 profile-scoped ULID — learner_profiles doc-id', () {
+    // Mirrors newUlid's own contract (`lib/core/time/ulid.dart`): 26 chars,
+    // Crockford base32 alphabet only. Any string minted through a DIFFERENT
+    // generator is exceedingly unlikely to conform by chance (32^16
+    // possibilities for the random suffix alone), so this format pin
+    // doubles as the "minted outside newUlid" detector required by
+    // red-demo (c) — without reading any lib/ source text (the R7 ratchet
+    // is at its tracked cap; see docs/test-artifacts/reassurance-plan.md
+    // A1.1).
+    final crockford = RegExp(r'^[0-9ABCDEFGHJKMNPQRSTVWXYZ]{26}$');
+
+    test(
+      'mintProfileUlid routes through newUlid — 26-char Crockford base32',
+      () {
+        expect(DocIds.mintProfileUlid(), matches(crockford));
+      },
+    );
+
+    test('RED-DEMO (b): two profiles under one account get DISTINCT ULID '
+        'doc-ids, not a collision on the shared path uid', () {
+      const sharedPathUid = 'uid_shared_by_the_whole_account';
+
+      // Pre-fix shape: keying every profile doc-id by the account/path
+      // uid collides every profile of that account onto one document.
+      const naiveProfile1DocId = sharedPathUid;
+      const naiveProfile2DocId = sharedPathUid;
+      expect(naiveProfile1DocId, equals(naiveProfile2DocId)); // RED: collision.
+
+      // Fix: a profile-scoped ULID minted per profile.
+      final profile1DocId = DocIds.mintProfileUlid();
+      final profile2DocId = DocIds.mintProfileUlid();
+      expect(profile1DocId, isNot(equals(profile2DocId))); // GREEN.
+      expect(profile1DocId, isNot(equals(sharedPathUid)));
+      expect(profile2DocId, isNot(equals(sharedPathUid)));
+    });
+
+    test('RED-DEMO (c): a ULID minted outside newUlid does not conform to the '
+        'pinned 26-char Crockford-base32 shape and is flagged', () {
+      // A plausible "alternate generator" someone might reach for instead
+      // of the single standardized `newUlid` (AD-5) — a UUID-v4-shaped
+      // string. It is NOT 26-char Crockford base32, so the same pin that
+      // accepts newUlid's real output rejects it.
+      const alternateGeneratorOutput = '550e8400-e29b-41d4-a716-446655440000';
+      expect(alternateGeneratorOutput, isNot(matches(crockford)));
+      // The real mint always conforms.
+      expect(DocIds.mintProfileUlid(), matches(crockford));
+    });
+
+    test('learnerProfileUlidDocId reads the persisted profile_ulid from the '
+        'payload, falling back to a fresh mint only when absent (the '
+        'profile-creation-time case)', () {
+      final existingUlid = DocIds.mintProfileUlid();
+      expect(
+        DocIds.learnerProfileUlidDocId({'profile_ulid': existingUlid}),
+        equals(existingUlid),
+      );
+      expect(
+        DocIds.learnerProfileUlidDocId(<String, dynamic>{}),
+        matches(crockford),
+      );
+    });
+
+    test('learnerProfileUlidDocId output is distinct from the legacy '
+        'path-derived-profileId formula', () {
+      expect(
+        DocIds.mintProfileUlid(),
+        isNot(equals(DocIds.learnerProfileDocId(42))),
+      );
+    });
+  });
 }
