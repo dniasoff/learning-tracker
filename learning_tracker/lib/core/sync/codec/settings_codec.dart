@@ -6,8 +6,8 @@
 /// only the non-stage-definition settings fields.
 library;
 
+import 'package:learning_tracker/core/codec/firestore_codec.dart';
 import 'package:learning_tracker/core/sync/codec/entity_codec.dart';
-import 'package:learning_tracker/core/sync/codec/firestore_codec.dart';
 import 'package:learning_tracker/core/sync/codec/stage_definition_codec.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
 

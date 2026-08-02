@@ -91,7 +91,50 @@ users/{uid}/learner_profiles/{profileId}/<15 subcollections>
 - Per-account named `FirebaseApp` **with its own authenticated session**; app key is
   the stable device-registry account UUID, never the Firebase uid.
 
-## OPEN: prior-import tier tracking and the B8 upgrade
+## RESOLVED: prior-import tier tracking, the B8 upgrade, and lifetime learning
+
+**Owner invariant (2026-08-02):** *"if something is marked as learnt in a track it
+cannot be shown or marked learnt again — that should be impossible"*, and *"globally
+yes, something can be learnt multiple times"*.
+
+That is exactly the shipped three-tier `CompletionSource` model
+(`lib/features/learning/domain/entities/completion_source.dart:34-44`):
+
+| Source | Engagement (streak/points) | Track achievement | Lifetime ledger |
+|---|---|---|---|
+| `live` | ✓ | ✓ | ✓ |
+| `bulkInTrack` | ✗ | ✓ | ✓ |
+| `lifetimeOnly` | ✗ | ✗ | ✓ |
+
+- **Per-track: once only.** The `completions` natural key is
+  `(profileId, sefariaRef, stageId, trackType, curriculumId)` — one record per item per
+  track. Written once, never updated.
+- **Globally: many times.** `learning_ledger` is append-only, ULID-keyed, carries
+  `completionNumber` (the nth lifetime completion of that unit), and **deliberately has
+  no foreign keys to tracks or curricula so entries survive their deletion**
+  (`learning_ledger.dart:6-10`). This is the lifetime-statistics feature; the owner
+  flagged it as potentially very important, so it must not be weakened.
+- `lifetimeOnly` writes **only** a ledger entry — no `completions` row.
+
+**Consequences — all deletions, no rules change:**
+
+1. **No `firestore.rules` relaxation.** A bulk-marked item is hidden, so it can never be
+   re-learned; a completion's `source` is therefore fixed at creation and never
+   mutates. `completions`' create rule is an open bag (no `.hasOnly()`), so storing
+   `source: 'live' | 'bulkInTrack'` on the document needs no rule change. SR-1
+   append-only stays exactly as written.
+2. **`PriorCompletionImports` is not ported.** Its only job was to distinguish tiers via
+   a correlated `EXISTS` subquery; `source` on the document replaces it, and
+   `getCompletionsByTier`'s 8 call sites become a plain field filter.
+3. **B8 / `_upgradePriorMarkRow` is dead** — it upgraded a prior mark to real learning,
+   which the invariant makes unreachable.
+
+**Still open (small):** `expungePriorCompletions` lets a user un-tick an onboarding
+bulk-mark, but `completions` denies client deletes. Either permit deleting a completion
+whose `source == 'bulkInTrack'`, or make the onboarding bulk-mark a confirm-before-commit
+step so there is nothing to undo. Decide before building the completions repository.
+
+## SUPERSEDED (kept for the reasoning): prior-import tier tracking and the B8 upgrade
 
 `PriorCompletionImports` does **not** map to `import_metadata`. They are different
 things:

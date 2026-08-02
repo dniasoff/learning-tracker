@@ -66,6 +66,10 @@ void main() {
           // will not catch a missing entry.
           'data/firestore/resilient_doc_stream.dart',
           'data/repositories/firestore_bookmark_repository.dart',
+          // Second reference repository — exercises resilientQueryStream
+          // (same file, now also hosting the query-stream sibling) plus a
+          // composite-index query.
+          'data/repositories/firestore_stage_definition_repository.dart',
         };
 
         final offenders = <String>[];

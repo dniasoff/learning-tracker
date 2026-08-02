@@ -4,8 +4,8 @@
 /// W3.28/W3.29: isActive/deactivatedAt replaced by unified `state` enum + stateChangedAt.
 library;
 
+import 'package:learning_tracker/core/codec/firestore_codec.dart';
 import 'package:learning_tracker/core/sync/codec/entity_codec.dart';
-import 'package:learning_tracker/core/sync/codec/firestore_codec.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
 
 /// Decoded shape for a curriculum track row (W3.22/W3.28).

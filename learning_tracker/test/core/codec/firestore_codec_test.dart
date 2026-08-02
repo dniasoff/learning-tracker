@@ -8,14 +8,14 @@
 ///
 /// AG-5 (AUD-app-05): this is also the exhaustive unit-level home AG-5's
 /// test-mirroring checker requires for
-/// lib/core/sync/codec/firestore_codec.dart — every concrete codec
+/// lib/core/codec/firestore_codec.dart — every concrete codec
 /// (BookmarkCodec, GoalCodec, StageDefinitionCodec, ...) delegates its
 /// timestamp/primitive coercions to this helper.
 @Tags(['unit', 'sync'])
 library;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/sync/codec/firestore_codec.dart';
+import 'package:learning_tracker/core/codec/firestore_codec.dart';
 
 void main() {
   group('FirestoreCodec.parseDateTime', () {

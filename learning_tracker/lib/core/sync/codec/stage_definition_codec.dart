@@ -7,9 +7,9 @@ library;
 
 import 'dart:convert';
 
+import 'package:learning_tracker/core/codec/firestore_codec.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/sync/codec/entity_codec.dart';
-import 'package:learning_tracker/core/sync/codec/firestore_codec.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
 
 /// Decoded shape for a stage definition row.

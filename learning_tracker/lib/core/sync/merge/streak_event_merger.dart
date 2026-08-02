@@ -15,9 +15,9 @@
 /// `event_timestamp` field so pre-migration docs (if any) are still ingested.
 library;
 
+import 'package:learning_tracker/core/codec/firestore_codec.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
-import 'package:learning_tracker/core/sync/codec/firestore_codec.dart';
 import 'package:learning_tracker/core/sync/codec/streak_event_codec.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_event_log.dart';

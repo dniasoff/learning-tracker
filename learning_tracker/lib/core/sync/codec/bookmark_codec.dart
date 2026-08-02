@@ -1,8 +1,8 @@
 /// Codec for Firestore `bookmarks/{id}` documents.
 library;
 
+import 'package:learning_tracker/core/codec/firestore_codec.dart';
 import 'package:learning_tracker/core/sync/codec/entity_codec.dart';
-import 'package:learning_tracker/core/sync/codec/firestore_codec.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
 
 /// Decoded shape for a bookmark row.

@@ -1,19 +1,29 @@
-/// A small, self-healing wrapper around a single Firestore document's
-/// `snapshots()` stream.
+/// Small, self-healing wrappers around Firestore listener streams —
+/// [resilientDocStream] for a single document, [resilientQueryStream] for a
+/// query's `QuerySnapshot`.
 ///
-/// `DocumentReference.snapshots()` — like every Firestore listener stream —
-/// is **terminal on error**: once it emits an error event the stream is
-/// done and never emits again, silently leaving a listening UI dark for
-/// the rest of the session. [resilientDocStream] wraps one document's
-/// stream so an error instead schedules a fresh subscription after a
+/// A Firestore listener stream (`DocumentReference.snapshots()` or
+/// `Query.snapshots()`) is **terminal on error**: once it emits an error
+/// event the stream is done and never emits again, silently leaving a
+/// listening UI dark for the rest of the session. Both functions here wrap
+/// the raw stream so an error instead schedules a fresh subscription after a
 /// capped, jittered exponential-backoff delay — the small (tens-of-lines)
 /// replacement for the deleted `ListenerSupervisor`. Deliberately NOT a
 /// supervisor: no fleet of channels, no dead-channel registry, no recovery-
-/// pull triggers — one document in, one self-healing stream out. Every
-/// repository with a "watch one document" need should call this rather
-/// than hand-roll its own resubscribe loop — see
-/// `lib/data/repositories/firestore_bookmark_repository.dart` for the
-/// reference caller.
+/// pull triggers — one stream in, one self-healing stream out. Every
+/// repository with a "watch one document" or "watch a query" need should
+/// call one of these rather than hand-roll its own resubscribe loop — see
+/// `lib/data/repositories/firestore_bookmark_repository.dart` (doc) and
+/// `lib/data/repositories/firestore_stage_definition_repository.dart`
+/// (query) for the reference callers.
+///
+/// Both share the exact same backoff/lifecycle skeleton
+/// ([_resilientStream]) — attempt counting, capped jittered delay,
+/// lazy-subscribe-on-first-listen, teardown-on-last-cancel — parameterized
+/// only by what happens to one incoming snapshot. Factored once they turned
+/// out to be byte-for-byte identical outside that one piece; if a future
+/// change makes them diverge further, split them back out rather than
+/// bending the shared skeleton to fit a third shape.
 library;
 
 import 'dart:async';
@@ -34,9 +44,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 ///   error `snapshots()` itself raises) means the *subscription* is dead:
 ///   [onError] (if given) is called, the error is forwarded to the
 ///   returned stream via `addError` (so a caller can still observe the
-///   transient failure), and a fresh subscription is scheduled after
-///   [nextBackoffDelay]. The attempt counter resets to zero the moment a
-///   subsequent snapshot arrives successfully.
+///   transient failure), and a fresh subscription is scheduled after a
+///   capped, jittered backoff delay. The attempt counter resets to zero
+///   the moment a subsequent snapshot arrives successfully.
 /// - A [decode] failure (a malformed document) does NOT indicate the
 ///   underlying subscription is unhealthy — resubscribing would just hit
 ///   the same bad document again — so it is forwarded via `addError` only,
@@ -56,6 +66,93 @@ Stream<T> resilientDocStream<T>({
   math.Random? random,
   void Function(Object error, StackTrace stackTrace)? onError,
 }) {
+  return _resilientStream<T, DocumentSnapshot<Map<String, dynamic>>>(
+    openStream: openStream,
+    onSnapshot: (snapshot, emit, emitError) {
+      try {
+        emit(decode(snapshot));
+      } catch (error, stackTrace) {
+        emitError(error, stackTrace);
+      }
+    },
+    backoffBase: backoffBase,
+    backoffCap: backoffCap,
+    jitter: jitter,
+    random: random,
+    onError: onError,
+  );
+}
+
+/// Subscribes to the query-snapshot stream [openStream] returns, decoding
+/// every document in each snapshot via [decode] into the returned broadcast
+/// [Stream] of lists.
+///
+/// Same resubscribe-with-backoff contract as [resilientDocStream] for a
+/// stream-level error — see that function's doc comment.
+///
+/// **Deliberately different from [resilientDocStream] on a decode failure.**
+/// [resilientDocStream] wraps ONE document, so a decode failure means there
+/// is nothing valid to emit for that event. A query snapshot wraps MANY
+/// documents: dropping the whole list because one row is malformed would
+/// blank an entire screen (e.g. every other stage definition, every other
+/// goal) over a single corrupt document. Instead, each document is decoded
+/// independently — a document whose [decode] throws is *skipped* (forwarded
+/// via `addError` so a caller can still surface a "some items didn't load"
+/// signal out-of-band) while every other document in the same snapshot
+/// still decodes and is included in the emitted list. No resubscribe is
+/// scheduled for a decode failure either way, for the same reason as
+/// [resilientDocStream]: the subscription itself is healthy.
+Stream<List<T>> resilientQueryStream<T>({
+  required Stream<QuerySnapshot<Map<String, dynamic>>> Function() openStream,
+  required T Function(QueryDocumentSnapshot<Map<String, dynamic>> doc) decode,
+  Duration backoffBase = const Duration(seconds: 1),
+  Duration backoffCap = const Duration(seconds: 30),
+  double jitter = 0.2,
+  math.Random? random,
+  void Function(Object error, StackTrace stackTrace)? onError,
+}) {
+  return _resilientStream<List<T>, QuerySnapshot<Map<String, dynamic>>>(
+    openStream: openStream,
+    onSnapshot: (snapshot, emit, emitError) {
+      final results = <T>[];
+      for (final doc in snapshot.docs) {
+        try {
+          results.add(decode(doc));
+        } catch (error, stackTrace) {
+          emitError(error, stackTrace);
+        }
+      }
+      emit(results);
+    },
+    backoffBase: backoffBase,
+    backoffCap: backoffCap,
+    jitter: jitter,
+    random: random,
+    onError: onError,
+  );
+}
+
+/// The shared resubscribe-with-backoff skeleton behind both
+/// [resilientDocStream] and [resilientQueryStream]. [S] is the raw snapshot
+/// type (`DocumentSnapshot<Map<String, dynamic>>` or
+/// `QuerySnapshot<Map<String, dynamic>>`); [T] is whatever the caller's
+/// [onSnapshot] callback emits for one such snapshot (a single decoded value,
+/// or a decoded list — [onSnapshot] owns that decision entirely; this
+/// function only owns "is the subscription itself alive").
+Stream<T> _resilientStream<T, S>({
+  required Stream<S> Function() openStream,
+  required void Function(
+    S snapshot,
+    void Function(T value) emit,
+    void Function(Object error, StackTrace stackTrace) emitError,
+  )
+  onSnapshot,
+  required Duration backoffBase,
+  required Duration backoffCap,
+  required double jitter,
+  math.Random? random,
+  void Function(Object error, StackTrace stackTrace)? onError,
+}) {
   final rng = random ?? math.Random();
   // This controller is deliberately never `.close()`d. It models a "live
   // while listened to" stream, the same as `snapshots()` itself: the
@@ -67,7 +164,7 @@ Stream<T> resilientDocStream<T>({
   // other hot/broadcast stream factory with no explicit "done" signal.
   // ignore: close_sinks
   late final StreamController<T> controller;
-  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? subscription;
+  StreamSubscription<S>? subscription;
   Timer? pendingResubscribe;
   var attempt = 0;
 
@@ -91,11 +188,7 @@ Stream<T> resilientDocStream<T>({
     subscription = openStream().listen(
       (snapshot) {
         attempt = 0;
-        try {
-          controller.add(decode(snapshot));
-        } catch (error, stackTrace) {
-          controller.addError(error, stackTrace);
-        }
+        onSnapshot(snapshot, controller.add, controller.addError);
       },
       onError: (Object error, StackTrace stackTrace) {
         onError?.call(error, stackTrace);

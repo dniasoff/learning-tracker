@@ -48,6 +48,14 @@
         { "fieldPath": "parent_uid", "order": "ASCENDING" },
         { "fieldPath": "updated_at", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "stage_definitions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "curriculum_id", "order": "ASCENDING" },
+        { "fieldPath": "stage_order",   "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

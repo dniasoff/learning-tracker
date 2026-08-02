@@ -1,4 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:learning_tracker/core/codec/firestore_codec.dart';
 import 'package:learning_tracker/core/domain/value_objects/schedule_spec.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/tracks/stages/domain/models/schedule_type.dart';
@@ -48,5 +49,106 @@ extension StageDefinitionScheduleSpec on StageDefinition {
     delayDays: delayDays,
     daysOfWeek: daysOfWeek,
     rollingWindowSize: rollingWindowSize,
+  );
+}
+
+/// **TEMPORARY stopgap — exists only until the Drift stack is deleted.**
+/// Sentinel [StageDefinition.id] for instances decoded from Firestore
+/// (`docs/firestore-rewrite-map.md`; see [stageDefinitionFromFirestore]).
+///
+/// Firestore's `stage_definitions` doc-id is the **String**
+/// `{curriculumId}_{stageOrder}` (`DocIds.stageDefinitionDocId`) — there is
+/// no Drift-local autoincrement `int` for a Firestore-sourced row to carry.
+/// The real fix is removing `id` from [StageDefinition] entirely once
+/// `{curriculumId}_{stageOrder}` is the sole identity — not introducing a
+/// magic negative number. That isn't done now because [StageDefinition.id]
+/// is `required int` and widening/removing it ripples into the validator,
+/// scheduler, and UI, all of which are being rewired onto the Firestore
+/// repositories in a later stage anyway (touch it once, not twice). Until
+/// that rewiring deletes the Drift stack and this sentinel along with it,
+/// Firestore-sourced instances carry this negative value instead of a real
+/// id — Drift autoincrement primary keys are always positive, so a
+/// negative value can never collide with one.
+///
+/// **Never pass a Firestore-sourced [StageDefinition.id] to a method that
+/// expects a real Drift row id** (e.g. `StageDefinitionRepositoryImpl
+/// .hasCompletionsForStage`) — this value has no meaning there.
+const int kFirestoreUnmappedStageId = -1;
+
+/// Firestore document codec for `stage_definitions/{curriculumId}_
+/// {stageOrder}` (`docs/firestore-rewrite-map.md`, `firestore.rules`
+/// `match /stage_definitions/{stageId}`).
+///
+/// New writes use the flat schedule fields (`schedule_type`, `delay_days`,
+/// `days_of_week`, `rolling_window_size`) rather than the old sync engine's
+/// single JSON-string `schedule` blob (`StageDefinitionCodec`, W3.27) —
+/// Firestore documents are already structured; nesting a JSON string inside
+/// a field is a Drift-single-column-era artifact this rewrite does not
+/// need to perpetuate. Per the app's greenfield/no-back-compat premise,
+/// [stageDefinitionFromFirestore] does NOT also parse that legacy blob
+/// shape — a document missing `schedule_type` fails to decode (a clean,
+/// explicit throw) rather than silently guessing at its meaning.
+///
+/// Deliberately omits `track_id` from the write shape — AD-25 retires the
+/// per-device track id for this collection; `curriculum_id` is the sole
+/// canonical stable track key. Writing the Drift-local `int` `track_id`
+/// from a repository would also trip the MCF-11 autoincrement-id-in-payload
+/// ratchet (`tool/check_mcf11_autoincrement_id_in_payload_ratchet.dart`) as
+/// a brand-new site outside `lib/core/sync/merge/`.
+extension StageDefinitionFirestoreCodec on StageDefinition {
+  /// Encodes this stage for a Firestore write. [id] is never included — see
+  /// [kFirestoreUnmappedStageId]'s doc comment.
+  Map<String, dynamic> toFirestore({required DateTime updatedAt}) {
+    final spec = schedule;
+    return {
+      'curriculum_id': curriculumId.storageKey,
+      'stage_order': stageOrder,
+      'stage_name': stageName,
+      'schedule_type': spec.storageKey,
+      'delay_days': spec.delayDays,
+      if (spec.daysOfWeek != null) 'days_of_week': spec.daysOfWeek,
+      if (spec.rollingWindowSize != null)
+        'rolling_window_size': spec.rollingWindowSize,
+      'is_default': isDefault,
+      'updated_at': FirestoreCodec.encodeDateTime(updatedAt),
+    };
+  }
+}
+
+/// Decodes a `stage_definitions/{curriculumId}_{stageOrder}` document into
+/// a [StageDefinition]. See [StageDefinitionFirestoreCodec] for the write
+/// side and why this does not also handle the legacy JSON-string `schedule`
+/// blob shape.
+///
+/// Throws [ArgumentError] for an unrecognised `curriculum_id` and
+/// [FormatException] for a missing/invalid `schedule_type` — both are
+/// caller-visible decode failures by design (e.g. surfaced via
+/// `resilientQueryStream`'s per-document error handling, which skips just
+/// that document rather than the whole result), never silently defaulted.
+StageDefinition stageDefinitionFromFirestore(Map<String, dynamic> data) {
+  final curriculumId = CurriculumId.fromStorageKey(
+    data['curriculum_id'] as String? ?? '',
+  );
+  if (curriculumId == null) {
+    throw ArgumentError('Unknown curriculumId: ${data['curriculum_id']}');
+  }
+
+  final scheduleTypeKey = data['schedule_type'] as String?;
+  if (scheduleTypeKey == null) {
+    throw FormatException(
+      'stage_definitions document missing schedule_type: $data',
+    );
+  }
+
+  return StageDefinition(
+    id: kFirestoreUnmappedStageId,
+    curriculumId: curriculumId,
+    stageOrder: FirestoreCodec.parseInt(data['stage_order']) ?? 0,
+    stageName: data['stage_name'] as String? ?? '',
+    delayDays: FirestoreCodec.parseInt(data['delay_days']) ?? 0,
+    isDefault: FirestoreCodec.parseBool(data['is_default']) ?? false,
+    scheduleType: ScheduleType.fromStorageKey(scheduleTypeKey),
+    daysOfWeek: (data['days_of_week'] as List?)?.cast<int>(),
+    rollingWindowSize: FirestoreCodec.parseInt(data['rolling_window_size']),
   );
 }

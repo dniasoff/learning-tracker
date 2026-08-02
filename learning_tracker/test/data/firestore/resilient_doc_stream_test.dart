@@ -1,6 +1,7 @@
 /// Unit tests for `lib/data/firestore/resilient_doc_stream.dart` — the
-/// small resubscribe-on-error wrapper every Firestore repository's "watch
-/// one document" method should build on.
+/// small resubscribe-on-error wrappers every Firestore repository's "watch
+/// one document" ([resilientDocStream]) or "watch a query"
+/// ([resilientQueryStream]) method should build on.
 ///
 /// [openStream] is a factory rather than a bare `Stream`, specifically so
 /// these tests can simulate a `snapshots()` stream that errors once and
@@ -17,6 +18,13 @@
 /// needs to prove an ABSENCE of a resubscribe (nothing to await via
 /// `emitsInOrder`) uses `package:fake_async` instead, so "did the timer
 /// fire" is decided by a simulated clock, never a real sleep.
+///
+/// The `resilientQueryStream` groups below focus on what's actually NEW
+/// relative to `resilientDocStream` (already exhaustively covered above):
+/// the shared backoff/lifecycle skeleton is proven once by the doc-stream
+/// tests, so these mostly exercise the one place the two genuinely diverge
+/// — a per-document decode failure inside a multi-document snapshot skips
+/// that document rather than dropping the whole emission.
 library;
 
 import 'dart:async';
@@ -40,6 +48,32 @@ class MockDocumentSnapshot extends Mock
 MockDocumentSnapshot _snapshotWith(Map<String, dynamic>? data) {
   final snapshot = MockDocumentSnapshot();
   when(() => snapshot.data()).thenReturn(data);
+  return snapshot;
+}
+
+// `QuerySnapshot` is NOT `@sealed` in cloud_firestore (unlike
+// `DocumentSnapshot`/`QueryDocumentSnapshot`), so no ignore comment is
+// needed for this one.
+class MockQuerySnapshot extends Mock
+    implements QuerySnapshot<Map<String, dynamic>> {}
+
+// `QueryDocumentSnapshot` IS `@sealed` — same suppression as
+// `MockDocumentSnapshot` above.
+// ignore: subtype_of_sealed_class
+class MockQueryDocumentSnapshot extends Mock
+    implements QueryDocumentSnapshot<Map<String, dynamic>> {}
+
+MockQueryDocumentSnapshot _docWith(Map<String, dynamic> data) {
+  final doc = MockQueryDocumentSnapshot();
+  when(() => doc.data()).thenReturn(data);
+  return doc;
+}
+
+MockQuerySnapshot _querySnapshotOf(
+  List<QueryDocumentSnapshot<Map<String, dynamic>>> docs,
+) {
+  final snapshot = MockQuerySnapshot();
+  when(() => snapshot.docs).thenReturn(docs);
   return snapshot;
 }
 
@@ -272,5 +306,196 @@ void main() {
         expect(callCount, 1);
       });
     });
+  });
+
+  group('resilientQueryStream — happy path', () {
+    test('decodes every document in a snapshot into a list', () async {
+      final source = StreamController<QuerySnapshot<Map<String, dynamic>>>();
+      addTearDown(source.close);
+
+      final stream = resilientQueryStream<int>(
+        openStream: () => source.stream,
+        decode: (doc) => doc.data()['n'] as int,
+      );
+
+      source.add(
+        _querySnapshotOf([
+          _docWith({'n': 1}),
+          _docWith({'n': 2}),
+        ]),
+      );
+
+      await expectLater(stream, emits([1, 2]));
+    });
+
+    test(
+      'openStream is only called once while the subscription stays healthy',
+      () async {
+        var callCount = 0;
+        final source = StreamController<QuerySnapshot<Map<String, dynamic>>>();
+        addTearDown(source.close);
+
+        final stream = resilientQueryStream<int>(
+          openStream: () {
+            callCount++;
+            return source.stream;
+          },
+          decode: (doc) => doc.data()['n'] as int,
+        );
+
+        source.add(
+          _querySnapshotOf([
+            _docWith({'n': 1}),
+          ]),
+        );
+        await expectLater(stream, emits([1]));
+
+        expect(callCount, 1);
+      },
+    );
+  });
+
+  group('resilientQueryStream — one malformed document does not blank the '
+      'whole list', () {
+    test(
+      'a document whose decode() throws is skipped and surfaced via '
+      'addError; every other document in the same snapshot still decodes',
+      () async {
+        final source = StreamController<QuerySnapshot<Map<String, dynamic>>>();
+        addTearDown(source.close);
+
+        final stream = resilientQueryStream<int>(
+          openStream: () => source.stream,
+          decode: (doc) => doc.data()['n'] as int,
+        );
+
+        source.add(
+          _querySnapshotOf([
+            _docWith({'n': 1}),
+            _docWith({'not_n': 99}), // missing 'n' -> decode() throws
+            _docWith({'n': 3}),
+          ]),
+        );
+
+        // The bad document's error surfaces first (found mid-loop, before
+        // the partial list is emitted), then the list of the two valid
+        // documents — NOT a blank/failed emission for the whole snapshot.
+        await expectLater(
+          stream,
+          emitsInOrder([
+            emitsError(isA<TypeError>()),
+            [1, 3],
+          ]),
+        );
+      },
+    );
+
+    test('a later, all-valid snapshot on the SAME subscription recovers '
+        'fully — a decode failure never triggers a resubscribe', () async {
+      var callCount = 0;
+      final source = StreamController<QuerySnapshot<Map<String, dynamic>>>();
+      addTearDown(source.close);
+
+      final stream = resilientQueryStream<int>(
+        openStream: () {
+          callCount++;
+          return source.stream;
+        },
+        decode: (doc) => doc.data()['n'] as int,
+      );
+
+      // Every document in this snapshot is bad -> an empty list is
+      // still emitted (not "nothing"), after the one error.
+      source.add(
+        _querySnapshotOf([
+          _docWith({'not_n': 1}),
+        ]),
+      );
+      source.add(
+        _querySnapshotOf([
+          _docWith({'n': 5}),
+        ]),
+      );
+
+      await expectLater(
+        stream,
+        emitsInOrder([
+          emitsError(isA<TypeError>()),
+          <int>[],
+          [5],
+        ]),
+      );
+      expect(callCount, 1, reason: 'a bad document must not resubscribe');
+    });
+  });
+
+  group(
+    'resilientQueryStream — stream-level error: resubscribe with backoff',
+    () {
+      test('a stream error is forwarded via addError, then a fresh '
+          'subscription is opened after the backoff delay and its list '
+          'comes through', () async {
+        final firstAttempt =
+            StreamController<QuerySnapshot<Map<String, dynamic>>>();
+        final secondAttempt =
+            StreamController<QuerySnapshot<Map<String, dynamic>>>();
+        addTearDown(firstAttempt.close);
+        addTearDown(secondAttempt.close);
+
+        final attempts = [firstAttempt.stream, secondAttempt.stream];
+        var callCount = 0;
+
+        final stream = resilientQueryStream<int>(
+          openStream: () => attempts[callCount++],
+          decode: (doc) => doc.data()['n'] as int,
+          backoffBase: const Duration(milliseconds: 5),
+          backoffCap: const Duration(milliseconds: 20),
+        );
+
+        firstAttempt.addError(StateError('boom'));
+        // Buffered on `secondAttempt` (single-subscription) until the
+        // backoff timer fires and resubscribes — race-free, same as the
+        // resilientDocStream tests above.
+        secondAttempt.add(
+          _querySnapshotOf([
+            _docWith({'n': 9}),
+          ]),
+        );
+
+        await expectLater(
+          stream,
+          emitsInOrder([
+            emitsError(isA<StateError>()),
+            [9],
+          ]),
+        );
+        expect(callCount, 2, reason: 'resubscribed onto the second stream');
+      });
+    },
+  );
+
+  group('resilientQueryStream — lazy subscription', () {
+    test(
+      'openStream is not called until the returned stream gets a listener',
+      () async {
+        var callCount = 0;
+        final source = StreamController<QuerySnapshot<Map<String, dynamic>>>();
+        addTearDown(source.close);
+
+        final stream = resilientQueryStream<int>(
+          openStream: () {
+            callCount++;
+            return source.stream;
+          },
+          decode: (doc) => doc.data()['n'] as int,
+        );
+
+        expect(callCount, 0);
+
+        final subscription = stream.listen((_) {});
+        addTearDown(subscription.cancel);
+        expect(callCount, 1);
+      },
+    );
   });
 }

@@ -25,7 +25,8 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   final packageDir = Directory.current.path;
-  final scriptPath = '$packageDir/tool/check_mcf11_autoincrement_id_in_payload_ratchet.dart';
+  final scriptPath =
+      '$packageDir/tool/check_mcf11_autoincrement_id_in_payload_ratchet.dart';
   final fixtureFile = File(
     '$packageDir/lib/features/scheduler/domain/models/'
     '_story_2_4_mcf11_landmine_fixture.dart',
@@ -40,58 +41,54 @@ void main() {
     '--report',
   ], workingDirectory: packageDir);
 
-  group(
-    'tool/check_mcf11_autoincrement_id_in_payload_ratchet.dart '
-    '(Story 2.4, MCF-11/AD-5)',
-    () {
-      setUp(() {
-        // Guard against a prior failed/killed run leaving the fixture
-        // behind in lib/ — see the story's crash-safety note for this
-        // exact fixture-in-lib/ pattern.
-        if (fixtureFile.existsSync()) fixtureFile.deleteSync();
-      });
+  group('tool/check_mcf11_autoincrement_id_in_payload_ratchet.dart '
+      '(Story 2.4, MCF-11/AD-5)', () {
+    setUp(() {
+      // Guard against a prior failed/killed run leaving the fixture
+      // behind in lib/ — see the story's crash-safety note for this
+      // exact fixture-in-lib/ pattern.
+      if (fixtureFile.existsSync()) fixtureFile.deleteSync();
+    });
 
-      tearDown(() {
-        if (fixtureFile.existsSync()) fixtureFile.deleteSync();
-      });
+    tearDown(() {
+      if (fixtureFile.existsSync()) fixtureFile.deleteSync();
+    });
 
-      test('exits 0 on the real (fixed) tree, at the tracked baseline', () async {
-        final result = await runCheck();
-        expect(
-          result.exitCode,
-          0,
-          reason: 'stdout=${result.stdout}\nstderr=${result.stderr}',
-        );
-        expect(
-          result.stdout.toString(),
-          contains('MCF-11 autoincrement-id-in-payload ratchet passed'),
-        );
-      });
+    test('exits 0 on the real (fixed) tree, at the tracked baseline', () async {
+      final result = await runCheck();
+      expect(
+        result.exitCode,
+        0,
+        reason: 'stdout=${result.stdout}\nstderr=${result.stderr}',
+      );
+      expect(
+        result.stdout.toString(),
+        contains('MCF-11 autoincrement-id-in-payload ratchet passed'),
+      );
+    });
 
-      test('lib/core/sync/merge/ itself is never counted, even though it is '
-          'where the raw ids are legitimately consumed', () async {
-        final result = await runReport();
-        expect(
-          result.stdout.toString(),
-          isNot(contains('lib/core/sync/merge/')),
-          reason:
-              'the protected remap layer must be carved out entirely — '
-              'stdout=${result.stdout}',
-        );
-      });
+    test('lib/core/sync/merge/ itself is never counted, even though it is '
+        'where the raw ids are legitimately consumed', () async {
+      final result = await runReport();
+      expect(
+        result.stdout.toString(),
+        isNot(contains('lib/core/sync/merge/')),
+        reason:
+            'the protected remap layer must be carved out entirely — '
+            'stdout=${result.stdout}',
+      );
+    });
 
-      test(
-        'AC (red-demo, "the grep must have teeth"): a fixture planting an '
+    test('AC (red-demo, "the grep must have teeth"): a fixture planting an '
         'autoincrement id inside a payload on a path outside merge/ flips '
         'the checker from clean to FAILED; deleting the fixture restores a '
-        'clean pass',
-        () async {
-          // The exact MCF-4 shape: a device-local CurriculumTracks.id
-          // (`trackId`) embedded verbatim under the `track_id` payload key,
-          // on a path outside lib/core/sync/merge/ (here: a fresh feature
-          // file, not even the same file as the known goal_entity.dart
-          // finding already in the baseline).
-          fixtureFile.writeAsStringSync('''
+        'clean pass', () async {
+      // The exact MCF-4 shape: a device-local CurriculumTracks.id
+      // (`trackId`) embedded verbatim under the `track_id` payload key,
+      // on a path outside lib/core/sync/merge/ (here: a fresh feature
+      // file, not even the same file as the known goal_entity.dart
+      // finding already in the baseline).
+      fixtureFile.writeAsStringSync('''
 /// Story 2.4 red-demo fixture — deliberately reintroduces the MCF-11/MCF-4
 /// landmine (a device-local Drift autoincrement id embedded in a synced
 /// payload) on a path outside lib/core/sync/merge/. Deleted by the test's
@@ -109,39 +106,37 @@ class StoryTwoFourLandmineFixture {
 }
 ''');
 
-          final withFixture = await runCheck();
-          expect(
-            withFixture.exitCode,
-            1,
-            reason:
-                'a fresh track_id-from-trackId fixture outside merge/ must '
-                'fail the ratchet.\n'
-                'stdout=${withFixture.stdout}\nstderr=${withFixture.stderr}',
-          );
-          expect(
-            withFixture.stderr.toString(),
-            allOf(
-              contains('MCF-11 autoincrement-id-in-payload ratchet FAILED'),
-              contains('_story_2_4_mcf11_landmine_fixture.dart'),
-            ),
-          );
-
-          fixtureFile.deleteSync();
-
-          final clean = await runCheck();
-          expect(
-            clean.exitCode,
-            0,
-            reason:
-                'deleting the fixture must restore a clean pass.\n'
-                'stdout=${clean.stdout}\nstderr=${clean.stderr}',
-          );
-          expect(
-            clean.stdout.toString(),
-            contains('MCF-11 autoincrement-id-in-payload ratchet passed'),
-          );
-        },
+      final withFixture = await runCheck();
+      expect(
+        withFixture.exitCode,
+        1,
+        reason:
+            'a fresh track_id-from-trackId fixture outside merge/ must '
+            'fail the ratchet.\n'
+            'stdout=${withFixture.stdout}\nstderr=${withFixture.stderr}',
       );
-    },
-  );
+      expect(
+        withFixture.stderr.toString(),
+        allOf(
+          contains('MCF-11 autoincrement-id-in-payload ratchet FAILED'),
+          contains('_story_2_4_mcf11_landmine_fixture.dart'),
+        ),
+      );
+
+      fixtureFile.deleteSync();
+
+      final clean = await runCheck();
+      expect(
+        clean.exitCode,
+        0,
+        reason:
+            'deleting the fixture must restore a clean pass.\n'
+            'stdout=${clean.stdout}\nstderr=${clean.stderr}',
+      );
+      expect(
+        clean.stdout.toString(),
+        contains('MCF-11 autoincrement-id-in-payload ratchet passed'),
+      );
+    });
+  });
 }

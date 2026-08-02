@@ -1,9 +1,8 @@
-/// Firestore implementation of [BookmarkRepository] — the REFERENCE
-/// repository for the Firestore rewrite (`docs/firestore-rewrite-map.md`).
-/// Chosen as the smallest complete vertical slice; the other ~13
-/// repositories under `lib/features/**/domain/repositories/` should copy
-/// this file's shape. See the class doc comment below for what to copy and
-/// why.
+/// Firestore implementation for bookmarks — the REFERENCE repository for
+/// the Firestore rewrite (`docs/firestore-rewrite-map.md`). Chosen as the
+/// smallest complete vertical slice; the other ~13 repositories under
+/// `lib/data/repositories/` should copy this file's shape. See the class
+/// doc comment below for what to copy and why.
 library;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -15,9 +14,8 @@ import 'package:learning_tracker/data/firestore/doc_ids.dart';
 import 'package:learning_tracker/data/firestore/resilient_doc_stream.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/learning/domain/entities/bookmark.dart';
-import 'package:learning_tracker/features/learning/domain/repositories/bookmark_repository.dart';
 
-/// Firestore-backed [BookmarkRepository]: `users/{uid}/learner_profiles/
+/// Firestore-backed bookmark repository: `users/{uid}/learner_profiles/
 /// {profileId}/bookmarks/{curriculumId}` (one bookmark doc per curriculum —
 /// `docs/firestore-rewrite-map.md`, `firestore.rules` `match /bookmarks/
 /// {bookmarkId}`).
@@ -25,8 +23,26 @@ import 'package:learning_tracker/features/learning/domain/repositories/bookmark_
 /// **Not wired into the app yet.** This class stands alone, constructed
 /// directly with the pieces it needs; nothing under `lib/features/` reads
 /// it yet (that rewiring is a later stage — "C" in the migration plan). The
-/// existing Drift-backed [BookmarkRepositoryImpl] is untouched and keeps
-/// serving the app until then.
+/// existing Drift-backed `BookmarkRepositoryImpl` (`lib/features/learning/
+/// data/repositories/`) is untouched and keeps serving the app until then.
+///
+/// ## No interface — deliberate, not an oversight
+///
+/// `BookmarkRepositoryImpl` implements an abstract `BookmarkRepository`.
+/// This class does not implement anything. An interface buys
+/// substitutability, and there will never be a second implementation here —
+/// the Drift one is being deleted outright once the rewrite lands, not kept
+/// alongside this one. Meanwhile Dart's `implements` requires the
+/// implementing class to redeclare every interface member itself, even ones
+/// with a default body — so retrofitting a stream-returning method onto the
+/// old interface would force a matching (and pointless) override onto the
+/// Drift class this repository is explicitly not supposed to touch. Testing
+/// is also better without it: constructing this class directly over
+/// `fake_cloud_firestore` beats maintaining a hand-written fake
+/// implementation of an interface. Where a feature later genuinely needs
+/// substitutability (e.g. swapping in a test double for a widget test), it
+/// can get an interface then — introduced for that reason, not speculatively
+/// here.
 ///
 /// ## The pattern other repositories should copy
 ///
@@ -39,7 +55,7 @@ import 'package:learning_tracker/features/learning/domain/repositories/bookmark_
 ///    [profileId] is the Firestore **learner-profile ULID doc-id**
 ///    (`learner_profiles/{profileId}`, AD-24) — a `String`, deliberately
 ///    NOT the Drift-era `int profileId` the old
-///    [BookmarkRepositoryImpl] takes. Every Firestore repository should key
+///    `BookmarkRepositoryImpl` takes. Every Firestore repository should key
 ///    off this same String profile id, never the local integer.
 /// 2. **Doc-ids always come from `DocIds`**, never hand-rolled inline
 ///    (here: [DocIds.bookmarkDocId]) — never `collection.add()` (append-
@@ -58,22 +74,13 @@ import 'package:learning_tracker/features/learning/domain/repositories/bookmark_
 ///    merges and always stamps a server-set `synced_at`). A full-document
 ///    `.set()` from this client would blow that field away on the next
 ///    owner write.
-/// 5. **A stream-returning method exists ALONGSIDE the interface, not
-///    inside it.** [BookmarkRepository] has no stream-returning member,
-///    and Dart's `implements` requires every implementing class —
-///    including the still-live [BookmarkRepositoryImpl] — to redeclare
-///    every interface member itself, even ones with a default body. Adding
-///    a new required member to the interface would force a matching (and
-///    currently pointless) override onto that Drift class, which the story
-///    brief for this work explicitly says not to touch. So [watchBookmark]
-///    is extra public API on this concrete class only, exactly the same
-///    reasoning already established in this codebase for
-///    `LifetimeUnionLeafSource` (`content_repository.dart`) being a
-///    separate interface rather than a new method on [ContentRepository].
-///    Once every repository has a Firestore implementation, a later story
-///    can widen the interface (or add a shared `Watchable<T>` capability
-///    interface) — that is a call for whoever does the Epic C rewiring, not
-///    guessed at here.
+/// 5. **Streams sit right next to the one-shot reads, as ordinary public
+///    methods.** [watchBookmark] is not "extra" or "outside" anything —
+///    with no interface to redeclare against, it is simply a method on this
+///    class, exactly like [getBookmark]. This is the whole reason the
+///    interface was dropped: streams are the actual point of moving to
+///    Firestore, and forcing them through an `implements`-constrained
+///    abstraction was fighting the migration's own goal.
 /// 6. **A dead listener resubscribes itself.** [watchBookmark] is built on
 ///    [resilientDocStream] (`lib/data/firestore/resilient_doc_stream.dart`)
 ///    rather than a bare `.snapshots()` — see that file's doc comment for
@@ -95,7 +102,17 @@ import 'package:learning_tracker/features/learning/domain/repositories/bookmark_
 /// local, non-Firestore concerns) and does NOT check a custom
 /// `learning_order` override yet. Flagged, not fixed: wire the real
 /// Firestore-backed learning-order lookup in here once it exists.
-class FirestoreBookmarkRepository implements BookmarkRepository {
+///
+/// ## Dropped along with the interface
+///
+/// The Drift-era `BookmarkRepository` interface also declared
+/// `syncFromFirestore()` — a "pull remote updates" step from the old
+/// polling sync engine. Firestore listeners + offline persistence replace
+/// that entirely; there is no separate pull step for a Firestore-native
+/// repository to perform, so this class simply does not have the method
+/// (no interface member to satisfy, no reason to keep a permanent no-op
+/// around).
+class FirestoreBookmarkRepository {
   FirestoreBookmarkRepository({
     required FirebaseFirestore firestore,
     required String uid,
@@ -135,7 +152,7 @@ class FirestoreBookmarkRepository implements BookmarkRepository {
     return BookmarkEntity.fromFirestore(data);
   }
 
-  @override
+  /// Get the bookmark for [curriculumId], or `null` if none exists yet.
   Future<BookmarkEntity?> getBookmark({
     required CurriculumId curriculumId,
   }) async {
@@ -143,10 +160,11 @@ class FirestoreBookmarkRepository implements BookmarkRepository {
     return _decode(snapshot);
   }
 
-  /// Live updates for [curriculumId]'s bookmark. See the class doc
-  /// comment (point 5) for why this is not part of [BookmarkRepository]
-  /// itself. Resubscribes with bounded exponential backoff if the
-  /// underlying listener errors (`resilientDocStream`).
+  /// Live updates for [curriculumId]'s bookmark. Resubscribes with bounded
+  /// exponential backoff if the underlying listener errors
+  /// (`resilientDocStream`) — see the class doc comment (point 5) for why
+  /// this sits alongside [getBookmark] as an ordinary method rather than
+  /// behind any interface.
   Stream<BookmarkEntity?> watchBookmark({required CurriculumId curriculumId}) {
     return resilientDocStream<BookmarkEntity?>(
       openStream: () => _doc(curriculumId).snapshots(),
@@ -160,7 +178,8 @@ class FirestoreBookmarkRepository implements BookmarkRepository {
     );
   }
 
-  @override
+  /// Create or update a bookmark to point to a specific content item. Does
+  /// NOT create completion records — it only updates the pointer.
   Future<BookmarkEntity> setBookmark({
     required CurriculumId curriculumId,
     required String sefariaRef,
@@ -174,7 +193,10 @@ class FirestoreBookmarkRepository implements BookmarkRepository {
     return entity;
   }
 
-  @override
+  /// Advance the bookmark to the next item in learning order, but only if
+  /// it is currently on [completedSefariaRef] (or does not exist yet). Does
+  /// nothing if the bookmark is on a different item, or if
+  /// [completedSefariaRef] is the last item.
   Future<void> advanceBookmark({
     required CurriculumId curriculumId,
     required String completedSefariaRef,
@@ -197,7 +219,9 @@ class FirestoreBookmarkRepository implements BookmarkRepository {
     }
   }
 
-  @override
+  /// Initialize the bookmark for a new curriculum, pointing to the first
+  /// item in learning order. Throws [StateError] if the curriculum has no
+  /// content.
   Future<BookmarkEntity> initializeBookmark({
     required CurriculumId curriculumId,
   }) async {
@@ -210,16 +234,6 @@ class FirestoreBookmarkRepository implements BookmarkRepository {
     }
     return setBookmark(curriculumId: curriculumId, sefariaRef: first);
   }
-
-  /// Firestore listeners + offline persistence replace pull-based sync —
-  /// there is no separate "pull remote updates" step left to perform, so
-  /// this always returns 0. Kept only because [BookmarkRepository]
-  /// declares it and [BookmarkRepositoryImpl] (Drift + the old sync engine)
-  /// still needs it; no production code calls this method through the
-  /// interface today (verified: the only two references in `lib/` are the
-  /// interface declaration and the Drift implementation's own definition).
-  @override
-  Future<int> syncFromFirestore() async => 0;
 
   /// Mirrors `BookmarkRepositoryImpl._getNextItemId`'s natural-order path
   /// exactly (see the class doc comment's "Known, deliberate gap" section

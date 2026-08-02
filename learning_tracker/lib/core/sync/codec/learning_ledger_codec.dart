@@ -5,8 +5,8 @@
 /// push payload stays in sync with what [LearningLedgerMerger] reads on pull.
 library;
 
+import 'package:learning_tracker/core/codec/firestore_codec.dart';
 import 'package:learning_tracker/core/sync/codec/entity_codec.dart';
-import 'package:learning_tracker/core/sync/codec/firestore_codec.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
 
 /// Decoded shape for a learning ledger entry (live W3.18/W3.19 schema).

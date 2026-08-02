@@ -412,17 +412,4 @@ void main() {
       expect(bookmark!.sefariaRef, 'c');
     });
   });
-
-  group('syncFromFirestore', () {
-    test(
-      'always returns 0 — Firestore listeners replace pull-based sync',
-      () async {
-        final repo = buildRepo();
-
-        final result = await repo.syncFromFirestore();
-
-        expect(result, 0);
-      },
-    );
-  });
 }

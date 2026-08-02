@@ -16,9 +16,9 @@
 /// read-then-write TOCTOU against the row the DAO is about to update.
 library;
 
+import 'package:learning_tracker/core/codec/firestore_codec.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
-import 'package:learning_tracker/core/sync/codec/firestore_codec.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
 
 class RewardRedemptionMerger implements EntityMerger {
