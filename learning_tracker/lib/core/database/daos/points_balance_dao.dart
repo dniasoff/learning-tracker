@@ -7,6 +7,7 @@ import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart'
     show OutboxEntityKind;
 import 'package:learning_tracker/core/time/ulid.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
+import 'package:learning_tracker/data/firestore/conflict.dart';
 
 part 'points_balance_dao.g.dart';
 
@@ -411,8 +412,22 @@ class PointsBalanceDao extends DatabaseAccessor<UserDatabase>
       );
       return true;
     }
-    // LWW: only overwrite when the remote row is strictly newer.
-    if (!updatedAt.isAfter(existing.updatedAt)) return false;
+    // LWW: AD-7 / MCF-13 — this reconciliation path used to carry its own
+    // bespoke `updatedAt.isAfter(existing.updatedAt)` gate (F3), the one
+    // merger that bypassed the shared ±5 s / `synced_at` algorithm. It now
+    // routes through the single canonical predicate unconditionally, with
+    // no per-merger exception.
+    //
+    // No `synced_at` values are passed: reward redemptions keep no SyncKv
+    // shadow, so `localSyncedAt` is always unavailable and the server-
+    // timestamp tie-break (which requires BOTH sides) can never fire.
+    // Passing only the remote value would be a no-op, so it is omitted.
+    if (!canonicalRemoteIsNewer(
+      localUpdatedAt: existing.updatedAt,
+      remoteUpdatedAt: updatedAt,
+    )) {
+      return false;
+    }
     await (update(
       rewardRedemptions,
     )..where((t) => t.id.equals(existing.id))).write(

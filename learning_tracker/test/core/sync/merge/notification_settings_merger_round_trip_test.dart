@@ -14,9 +14,9 @@
 library;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/sync/merge/drift_merge_store.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
 import 'package:learning_tracker/core/sync/merge/notification_settings_merger.dart';
+import 'package:learning_tracker/data/firestore/conflict.dart';
 import 'package:learning_tracker/features/notifications/domain/repositories/notification_preferences_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -58,16 +58,17 @@ class _FakeMergeStore implements MergeStore {
         syncedAt;
   }
 
-  // AUD-t-cross-68: delegates to the real DriftMergeStore algorithm instead
-  // of re-deriving it by hand (this fake previously had no clock-skew
-  // window at all, so it cannot drift from D15 semantics any more).
+  // AUD-t-cross-68 / AD-7: delegates to the single canonical predicate
+  // instead of re-deriving it by hand (this fake previously had no
+  // clock-skew window at all, so it cannot drift from D15 semantics any
+  // more).
   @override
   bool remoteIsNewer({
     required DateTime? localUpdatedAt,
     required DateTime? remoteUpdatedAt,
     DateTime? localSyncedAt,
     DateTime? remoteSyncedAt,
-  }) => driftMergeStoreRemoteIsNewer(
+  }) => canonicalRemoteIsNewer(
     localUpdatedAt: localUpdatedAt,
     remoteUpdatedAt: remoteUpdatedAt,
     localSyncedAt: localSyncedAt,

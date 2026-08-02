@@ -6,6 +6,7 @@ import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:learning_tracker/core/sync/exceptions/firestore_permission_denied_exception.dart';
 import 'package:learning_tracker/core/sync/firestore_gateway.dart';
+import 'package:learning_tracker/data/firestore/conflict.dart';
 import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
 
 /// The canonical [FirestoreGateway] implementation.
@@ -996,9 +997,18 @@ class FirestoreGatewayImpl implements FirestoreGateway {
   /// the full rationale. `@visibleForTesting` so the predicate itself — and
   /// [listenToTutorGrants]'s direct use of it — can be unit-tested without a
   /// full [QuerySnapshot] fixture (AUD-core-sync-01).
+  ///
+  /// AD-7 / MCF-26: this is the SDK-metadata adapter only — it reads the two
+  /// flags off [SnapshotMetadata] and hands them to
+  /// [isUnresolvedSnapshotMetadata] in `lib/data/firestore/conflict.dart`,
+  /// the single module that owns every reconciliation decision. The guard's
+  /// behaviour at this call site is unchanged.
   @visibleForTesting
   static bool isUnresolvedSnapshot(SnapshotMetadata metadata) =>
-      metadata.hasPendingWrites || metadata.isFromCache;
+      isUnresolvedSnapshotMetadata(
+        hasPendingWrites: metadata.hasPendingWrites,
+        isFromCache: metadata.isFromCache,
+      );
 
   @override
   Stream<ListenerSnapshot> listenToTutorGrants({

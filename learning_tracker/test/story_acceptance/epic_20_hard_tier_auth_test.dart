@@ -3,7 +3,7 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/core/sync/merge/merge_rules.dart';
+import 'package:learning_tracker/data/firestore/conflict.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/domain/services/local_auth_service.dart';
 import 'package:learning_tracker/features/account/domain/services/password_hasher.dart';
@@ -195,20 +195,43 @@ void main() {
     // ─── Story 20.12: LWW + merge-forward ───────────────────────────
     // lwwMerge / mergeForwardMaxInt were deleted from merge_rules.dart as
     // dead code (AUD-core-sync-37) — no production merger called them.
-    // remoteIsNewer stays covered: StudyDayConfigMerger still calls it
-    // (pending AUD-core-sync-03).
+    //
+    // Story 2.5 / AD-7: merge_rules.dart itself is now gone. Its plain
+    // `remoteIsNewer` had zero production callers (every merger, including
+    // StudyDayConfigMerger, already went through the Phase-3 store gate),
+    // and the LWW decision now lives in exactly one module —
+    // [canonicalRemoteIsNewer] in lib/data/firestore/conflict.dart. This
+    // group is repointed at it; the branch-by-branch golden pinning lives in
+    // test/data/firestore/conflict_test.dart.
     group('Story 20.12 — merge rules', () {
-      test('remoteIsNewer predicate matches sync engine pull semantics', () {
+      test('canonical predicate matches sync engine pull semantics', () {
         expect(
-          remoteIsNewer(
+          canonicalRemoteIsNewer(
             localUpdatedAt: DateTime.utc(2026, 1, 1),
             remoteUpdatedAt: DateTime.utc(2026, 2, 1),
           ),
           isTrue,
         );
-        // Ties go local — matches the flapping-free promise.
+        // Outside the ±5 s clock-skew window an older remote never wins —
+        // the flapping-free promise this story pinned.
         final ts = DateTime.utc(2026, 1, 1);
-        expect(remoteIsNewer(localUpdatedAt: ts, remoteUpdatedAt: ts), isFalse);
+        expect(
+          canonicalRemoteIsNewer(
+            localUpdatedAt: ts,
+            remoteUpdatedAt: ts.subtract(const Duration(minutes: 1)),
+          ),
+          isFalse,
+        );
+        // BEHAVIOUR NOTE (AD-7): the deleted merge_rules.dart predicate
+        // returned FALSE on an exact `updated_at` tie ("ties go local").
+        // The canonical predicate resolves that one true tie in favour of
+        // remote so two devices that wrote the same value at the same
+        // instant converge instead of bouncing. Pinned here so the
+        // supersession is explicit rather than silent.
+        expect(
+          canonicalRemoteIsNewer(localUpdatedAt: ts, remoteUpdatedAt: ts),
+          isTrue,
+        );
       });
     });
 
