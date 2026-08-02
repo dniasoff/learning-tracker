@@ -59,6 +59,15 @@ final class _SyncEvents {
   // transitions.
   String get listenersParked => 'sync_listeners_parked';
   String get listenersUnparked => 'sync_listeners_unparked';
+  // Story 1.3 (AD-22) — tutored fleet gets park/unpark parity with the
+  // own-account fleet.
+  String get tutoredListenersParked => 'sync_tutored_listeners_parked';
+  String get tutoredListenersUnparked => 'sync_tutored_listeners_unparked';
+  // Story 1.3 (FR15/AD-9) — dead-channel resubscribe triggered by
+  // connectivity-online or a lifecycle resume, own and tutored fleets.
+  String get listenersResubscribed => 'sync_listeners_resubscribed';
+  String get tutoredListenersResubscribed =>
+      'sync_tutored_listeners_resubscribed';
 
   // Push lifecycle
   String get pushStarted => 'sync_push_started';
