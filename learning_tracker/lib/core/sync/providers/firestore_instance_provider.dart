@@ -4,6 +4,30 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/logging/log_events.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 
+/// The default (non-named) app's `FirebaseFirestore` singleton.
+///
+/// **Phase 1 (AD-1/AD-2) status.** This is the pre-registry, single-instance
+/// data path the migration-plan Phase 1 rollback contract keeps present
+/// "until Phase 6": `AccountFirebase` (`lib/data/firestore/
+/// account_firebase.dart`) is now the canonical per-account resolution
+/// seam, and `lib/data/firestore/account_firebase_providers.dart`'s
+/// `accountFirebaseRegistryEnabledProvider` feature flag governs whether
+/// NEW call sites resolve through it or fall back to this singleton. This
+/// function is that flag's OFF-path implementation (reused by
+/// `account_firebase_providers.dart` via [firebaseFirestoreProvider] below,
+/// not re-typed there) as well as the sole remaining implementation for
+/// [firebaseFirestoreProvider] and [resetFirestoreNetwork]'s default —
+/// deliberately still not routed through the registry itself: this file's
+/// existing callers (`tutored_pull_providers.dart`, `outbox_providers.dart`)
+/// are the still-live pre-Phase-1 sync engine, which Phase 1 does not cut
+/// over ("no collection reads through it until Phase 2/3" — migration
+/// plan). Kept as exactly one call site (was two, in
+/// [firebaseFirestoreProvider] and [resetFirestoreNetwork] separately)
+/// so the AD-2/AD-28 bare-instance ratchet
+/// (`tool/check_bare_firebase_instance_ratchet.dart`) counts one site here,
+/// not two.
+FirebaseFirestore _defaultFirestoreInstance() => FirebaseFirestore.instance;
+
 /// The single canonical provider for [FirebaseFirestore].
 ///
 /// Lives in `core/sync/` because Firestore is a sync concern — this is
@@ -13,7 +37,7 @@ import 'package:learning_tracker/core/logging/logger.dart';
 /// All callers that previously imported `firebaseFirestoreProvider` from
 /// `core/providers/firebase_providers.dart` should import from here instead.
 final firebaseFirestoreProvider = Provider<FirebaseFirestore>((ref) {
-  return FirebaseFirestore.instance;
+  return _defaultFirestoreInstance();
 });
 
 /// Forces the Firestore gRPC channel to re-establish by toggling its
@@ -50,7 +74,7 @@ Future<void> resetFirestoreNetwork({
   @visibleForTesting FirebaseFirestore? firestore,
   @visibleForTesting AppLogger? logger,
 }) async {
-  final fs = firestore ?? FirebaseFirestore.instance;
+  final fs = firestore ?? _defaultFirestoreInstance();
   try {
     await fs.disableNetwork();
     await fs.enableNetwork();
