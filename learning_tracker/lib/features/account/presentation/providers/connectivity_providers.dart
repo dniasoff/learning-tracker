@@ -1,23 +1,68 @@
 import 'dart:async';
 
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:internet_connection_checker/internet_connection_checker.dart';
 
-/// Shared `InternetConnectionChecker` instance. The package runs a
-/// low-frequency background probe against a set of reliable hosts
-/// and emits a [InternetConnectionStatus] on every change — event-
-/// driven instead of polling, so idle CPU cost is ~0.
+/// The single first-party reachability endpoint used for on-demand internet
+/// probes.
 ///
-/// Exposed as a provider so tests can override with a fake that
-/// emits a scripted sequence without touching the network.
+/// `generate_204` is what Android's own captive-portal / network-validation
+/// checks use: a bare, uncached, empty-body 204 response, so a probe costs
+/// one tiny round trip and nothing else. This REPLACES the
+/// `internet_connection_checker` package default of 3 third-party demo hosts
+/// (`dummyapi.online`, `jsonplaceholder.typicode.com`, `fakestoreapi.com`) —
+/// see finding E-1, docs/reports/sync-reliability-efficiency-review-2026-07-29.md.
+final AddressCheckOption _reachabilityAddress = AddressCheckOption(
+  uri: Uri.parse('https://www.gstatic.com/generate_204'),
+);
+
+/// Cadence of the background reachability safety-net probe (see
+/// [connectivityStreamProvider]). Deliberately long (3-5 min band): day-to-day
+/// online/offline detection is driven by real platform events
+/// ([Connectivity.onConnectivityChanged]) and on-demand probes on
+/// transitions/resume, not by this timer — it only exists to catch the rare
+/// case where the OS-level network interface stays associated but upstream
+/// connectivity silently drops or returns without a platform event (e.g. a
+/// router's WAN link flaps while the LAN association is untouched).
+const Duration _kBackgroundSafetyNetInterval = Duration(minutes: 4);
+
+/// Shared `InternetConnectionChecker` instance, used ONLY as an on-demand
+/// reachability probe (`hasConnection`) — never subscribed to its own
+/// `onStatusChange`/internal polling loop. Configured against a single
+/// first-party host so every probe this module ever issues (transition-
+/// triggered, resume-triggered, or the background safety net) costs exactly
+/// one request to ONE host, never the package default of 3.
+///
+/// Exposed as a provider so tests can override with a fake that emits a
+/// scripted sequence without touching the network.
 final internetConnectionCheckerProvider = Provider<InternetConnectionChecker>((
   ref,
 ) {
-  final checker = InternetConnectionChecker.createInstance();
+  final checker = InternetConnectionChecker.createInstance(
+    // Defensive/documentary only: this module never subscribes to
+    // `onStatusChange`, so the package's own internal timer (which is the
+    // only thing that reads `checkInterval`) never starts. Set anyway so a
+    // long, safe default is in force if anything else ever does.
+    checkInterval: _kBackgroundSafetyNetInterval,
+    addresses: [_reachabilityAddress],
+  );
   ref.onDispose(checker.dispose);
   return checker;
 });
+
+/// The platform's `connectivity_plus` singleton — the real, event-driven
+/// source of connectivity transitions (NIC associate/disassociate, Wi-Fi ↔
+/// cellular handoff, airplane mode). A genuine OS callback, not a poll: idle
+/// cost is ~0 while nothing on the device's network state changes.
+///
+/// Exposed as a provider so tests can swap the platform implementation via
+/// `ConnectivityPlatform.instance =` (the standard federated-plugin test
+/// seam) without needing to override this provider at all.
+final connectivityPlusProvider = Provider<Connectivity>(
+  (ref) => Connectivity(),
+);
 
 /// Last connectivity value observed by [connectivityStreamProvider] in this
 /// process. Seeds the *loading* state of connectivity-aware UI so screens never
@@ -52,202 +97,165 @@ void debugResetLastKnownOnline() => _lastKnownOnline = false;
 @visibleForTesting
 void debugSetLastKnownOnline(bool value) => _lastKnownOnline = value;
 
-/// How long an "offline" signal from the platform connectivity stream must
-/// persist before it is forwarded downstream as a real [connectivityStreamProvider]
-/// emission.
+/// How long an "offline" signal must persist before it is forwarded
+/// downstream as a real [connectivityStreamProvider] emission.
 ///
-/// The underlying `internet_connection_checker` package subscribes to the
-/// platform `connectivity_plus` stream on first listen. On Android/iOS the
-/// platform can fire an immediate `ConnectivityResult.none` event before the
-/// OS has finished associating the active network interface — a spurious
-/// ~1 s blip that causes the offline banner to flash on cold-start even though
-/// the device is genuinely online.
+/// On Android/iOS the platform can fire an immediate `ConnectivityResult.none`
+/// event before the OS has finished associating the active network interface
+/// — a spurious ~1 s blip that causes the offline banner to flash on
+/// cold-start even though the device is genuinely online.
 ///
 /// Buffering "offline" signals for this short window suppresses startup noise
 /// while keeping real mid-session offline detection fast (300 ms delay is
-/// imperceptible in practice).  "Online" (`true`) signals are always forwarded
+/// imperceptible in practice). "Online" (`true`) signals are always forwarded
 /// immediately because there is no benefit in delaying a recovery signal.
 const _kOfflineDebounce = Duration(milliseconds: 300);
 
-/// How often the provider re-probes connectivity while it currently believes
-/// the device is OFFLINE.
+/// Live connectivity stream — `true` when the device has a usable internet
+/// connection, `false` otherwise. Widgets/providers that need to react to
+/// online/offline transitions (offline banner, "Wait for Internet" screen,
+/// sync engine activation) watch this.
 ///
-/// Recovery must be automatic — the offline banner must clear on its own within
-/// a few seconds of the connection returning, NOT only after a manual
-/// pull-to-refresh. We cannot rely on `internet_connection_checker`'s own
-/// internal poll for this: its default reachability hosts are three flaky
-/// third-party demo APIs, and over a flaky link (e.g. Tailscale) its periodic
-/// check can keep timing out / returning offline, leaving the banner stuck.
+/// ## Cost model (E-1 fix)
 ///
-/// So while we believe we are offline we drive our OWN active `hasConnection`
-/// re-probe on this interval. As soon as one succeeds we emit `true` and stop
-/// the re-probe loop (the package's event-driven `onStatusChange` then handles
-/// the next offline transition). While online, no re-probe runs — idle cost
-/// stays ~0.
+/// Before this fix, connectivity was sourced from
+/// `InternetConnectionChecker.createInstance()` with NO overrides — the
+/// package default: a 5 s poll against 3 third-party demo hosts, running
+/// continuously in the foreground AND background (≈51,840 requests/day), plus
+/// a SECOND redundant 5 s re-probe loop that ran while offline, doubling that
+/// cost during any outage. Every one of those requests also wakes the
+/// cellular radio, which is the dominant real-world battery/data cost — a
+/// prior version of this comment incorrectly described the design as
+/// "event-driven ... so idle CPU cost is [near zero]", which was never true
+/// for this package version.
 ///
-/// Not `const` so tests can shrink it via [debugSetOfflineRecoveryProbeInterval]
-/// and exercise the self-heal loop without waiting whole seconds.
-Duration _offlineRecoveryProbeInterval = const Duration(seconds: 5);
-
-/// Test seam: shrink the offline recovery re-probe interval so the self-healing
-/// loop can be exercised quickly. Pair with [debugResetOfflineRecoveryProbeInterval]
-/// in a tearDown so the production default is restored between tests.
-@visibleForTesting
-void debugSetOfflineRecoveryProbeInterval(Duration value) =>
-    _offlineRecoveryProbeInterval = value;
-
-/// Test seam: restore the production offline recovery re-probe interval.
-@visibleForTesting
-void debugResetOfflineRecoveryProbeInterval() =>
-    _offlineRecoveryProbeInterval = const Duration(seconds: 5);
-
-/// Live connectivity stream — `true` when the device has a usable
-/// internet connection, `false` otherwise. Widgets/providers that
-/// need to react to online/offline transitions (offline banner,
-/// "Wait for Internet" screen, sync engine activation) watch this.
+/// After this fix, connectivity is sourced from real platform events
+/// ([Connectivity.onConnectivityChanged], via [connectivityPlusProvider]) —
+/// a genuine OS callback with ~0 idle cost — plus an on-demand reachability
+/// probe fired ONLY on a genuine transition or app-resume, against ONE
+/// first-party host ([_reachabilityAddress]). A long-interval background
+/// safety-net probe ([_kBackgroundSafetyNetInterval], 4 min) covers the rare
+/// case a platform event never fires. Steady-state cost is therefore ≈
+/// 86,400 / 240 ≈ 360 background probes/day, plus a handful more for real
+/// transitions/resumes — a ~99% reduction from the pre-fix ≈51,840/day, and
+/// the 5 s radio-wake cadence is eliminated entirely.
 ///
-/// Starts with an explicit `hasConnection` check so subscribers get
-/// the current state immediately instead of waiting for the first
-/// transition event. Every emission also updates [lastKnownOnline] so the
-/// loading state of connectivity-aware UI can seed from the latest reading.
+/// ## Behaviour
 ///
-/// Behaviour:
-///   * Offline signals from [InternetConnectionChecker.onStatusChange] are
-///     debounced by [_kOfflineDebounce] to suppress transient platform noise.
+/// Starts with an explicit `hasConnection` check so subscribers get the
+/// current state immediately instead of waiting for the first platform
+/// event. Every emission also updates [lastKnownOnline] so the loading state
+/// of connectivity-aware UI can seed from the latest reading.
+///
+///   * Offline signals are debounced by [_kOfflineDebounce] to suppress
+///     transient platform noise (the cold-start flash described above).
 ///   * Online signals are forwarded immediately.
-///   * While the provider currently believes it is OFFLINE it actively
-///     re-probes [InternetConnectionChecker.hasConnection] every
-///     [_kOfflineRecoveryProbeInterval] so the offline state self-heals to
-///     online without any external invalidation or manual refresh.
-///   * It also re-probes immediately on [AppLifecycleState.resumed], so a
-///     connection that returned while the app was backgrounded is detected the
-///     moment the user comes back.
+///   * A platform event reporting NO interface at all
+///     (`ConnectivityResult.none`) is surfaced as offline directly — no probe
+///     needed, the OS already told us there is no network path.
+///   * A platform event reporting SOME interface (Wi-Fi/cellular/etc.)
+///     triggers exactly one on-demand [InternetConnectionChecker.hasConnection]
+///     probe before surfacing — having a NIC is not the same as having
+///     working internet (captive portal, dead WAN).
+///   * A resume from background also triggers one on-demand probe, so a
+///     connection that returned while backgrounded is detected the moment
+///     the user comes back, without waiting for the next safety-net tick.
+///   * The self-healing loop from the pre-fix design (a fast, unconditional
+///     re-probe timer while believed-offline) is REMOVED — recovery is now
+///     driven by real platform events (the OS fires one the instant the
+///     interface actually reconnects) plus the resume probe plus the
+///     long-interval safety net, without doubling cost during an outage.
 final connectivityStreamProvider = StreamProvider<bool>((ref) async* {
   final checker = ref.watch(internetConnectionCheckerProvider);
+  final connectivity = ref.watch(connectivityPlusProvider);
+
   final initial = await checker.hasConnection;
   _lastKnownOnline = initial;
   yield initial;
 
-  // All downstream emissions flow through this controller so the debounce,
-  // the recovery re-probe, and the lifecycle re-probe share one output.
+  // All downstream emissions flow through this controller so every source
+  // (platform events, the background safety-net probe, the resume probe)
+  // shares one debounce + output path.
   final controller = StreamController<bool>();
   Timer? offlineDebounceTimer;
-  Timer? recoveryProbeTimer;
-  // Whether the value we last surfaced downstream is "offline". Drives the
-  // self-healing re-probe loop (only runs while we believe we're offline).
-  var believeOffline = !initial;
 
-  // Emits [online] downstream and (re)arms or cancels the offline recovery
-  // re-probe loop accordingly. Centralised so every path — the status stream,
-  // the periodic probe, and the lifecycle probe — keeps the loop consistent.
-  void surface(bool online) {
-    _lastKnownOnline = online;
-    believeOffline = !online;
-    if (!controller.isClosed) controller.add(online);
+  void surfaceOnline() {
+    offlineDebounceTimer?.cancel();
+    offlineDebounceTimer = null;
+    _lastKnownOnline = true;
+    if (!controller.isClosed) controller.add(true);
+  }
+
+  void surfaceOfflineDebounced() {
+    offlineDebounceTimer?.cancel();
+    offlineDebounceTimer = Timer(_kOfflineDebounce, () {
+      _lastKnownOnline = false;
+      if (!controller.isClosed) controller.add(false);
+    });
+  }
+
+  // Runs a single on-demand reachability probe and surfaces the result. This
+  // is the ONLY place a probe fires outside the long-interval background
+  // safety net — always in direct response to a genuine transition or resume
+  // signal, never on a fixed short cadence.
+  Future<void> probeAndSurface() async {
+    if (controller.isClosed) return;
+    bool online;
+    try {
+      online = await checker.hasConnection;
+    } on Object {
+      // A failed probe means we're (still) offline.
+      online = false;
+    }
+    if (controller.isClosed) return;
     if (online) {
-      // Recovered (or stayed online): no need to keep re-probing.
-      recoveryProbeTimer?.cancel();
-      recoveryProbeTimer = null;
+      surfaceOnline();
     } else {
-      // Offline: ensure the self-healing re-probe loop is running.
-      recoveryProbeTimer ??= Timer.periodic(
-        _offlineRecoveryProbeInterval,
-        (_) => _runRecoveryProbe(
-          checker,
-          controller,
-          () => believeOffline,
-          surface,
-        ),
-      );
+      surfaceOfflineDebounced();
     }
   }
 
-  // If we started offline, begin the recovery loop immediately.
-  if (believeOffline) {
-    recoveryProbeTimer = Timer.periodic(
-      _offlineRecoveryProbeInterval,
-      (_) =>
-          _runRecoveryProbe(checker, controller, () => believeOffline, surface),
-    );
-  }
-
-  final subscription = checker.onStatusChange.listen(
-    (status) {
-      final online = status == InternetConnectionStatus.connected;
-      if (online) {
-        // Cancel any pending offline debounce and surface online immediately.
-        offlineDebounceTimer?.cancel();
-        offlineDebounceTimer = null;
-        surface(true);
+  // Platform events: a real OS callback, not a poll — idle cost is ~0. Fires
+  // ONLY on a genuine NIC-level change.
+  final platformSubscription = connectivity.onConnectivityChanged.listen(
+    (results) {
+      if (results.length == 1 && results.single == ConnectivityResult.none) {
+        // No interface at all: certainly offline, no probe needed.
+        surfaceOfflineDebounced();
       } else {
-        // Defer the offline signal; only surface if still offline after the
-        // debounce window (suppresses transient startup noise).
-        offlineDebounceTimer?.cancel();
-        offlineDebounceTimer = Timer(_kOfflineDebounce, () => surface(false));
+        // Has *a* network path — confirm it's actually working internet.
+        unawaited(probeAndSurface());
       }
     },
-    onDone: () {
-      offlineDebounceTimer?.cancel();
-      recoveryProbeTimer?.cancel();
-      controller.close();
-    },
     onError: (Object e, StackTrace s) {
-      // An error on the status stream must NOT latch the banner offline.
-      // Surface it (app_shell treats AsyncError/AsyncLoading as assume-online),
-      // but keep the recovery loop alive so we still self-heal.
-      offlineDebounceTimer?.cancel();
-      if (!controller.isClosed) controller.addError(e, s);
+      // A platform-stream error must NOT latch the banner offline — leave
+      // the last known state as-is; the next event or the safety-net probe
+      // below will re-establish the truth.
     },
+  );
+
+  // Background safety net: re-verifies reachability on
+  // [_kBackgroundSafetyNetInterval] regardless of platform events. See the
+  // cost-model doc comment above.
+  final safetyNetTimer = Timer.periodic(
+    _kBackgroundSafetyNetInterval,
+    (_) => probeAndSurface(),
   );
 
   // Re-probe the moment the app returns to the foreground: a connection that
-  // came back while backgrounded is detected immediately instead of waiting up
-  // to one probe interval.
+  // came back while backgrounded is detected immediately instead of waiting
+  // up to one safety-net interval.
   final lifecycleListener = AppLifecycleListener(
-    onResume: () => _runRecoveryProbe(
-      checker,
-      controller,
-      // On resume we always re-probe (even if we believe we're online) so a
-      // connection that dropped while backgrounded is also re-evaluated.
-      () => true,
-      surface,
-    ),
+    onResume: () => probeAndSurface(),
   );
 
   ref.onDispose(() {
-    subscription.cancel();
+    platformSubscription.cancel();
+    safetyNetTimer.cancel();
     offlineDebounceTimer?.cancel();
-    recoveryProbeTimer?.cancel();
     lifecycleListener.dispose();
     controller.close();
   });
 
   yield* controller.stream;
 });
-
-/// Runs a single active connectivity re-probe and surfaces the result.
-///
-/// [shouldProbe] gates the probe so the periodic loop only re-checks while we
-/// still believe we're offline (a concurrent online signal may have already
-/// cancelled the need to probe). The lifecycle-resume caller always passes a
-/// `true` gate so a resume re-evaluates connectivity unconditionally.
-Future<void> _runRecoveryProbe(
-  InternetConnectionChecker checker,
-  StreamController<bool> controller,
-  bool Function() shouldProbe,
-  void Function(bool online) surface,
-) async {
-  if (controller.isClosed || !shouldProbe()) return;
-  bool online;
-  try {
-    online = await checker.hasConnection;
-  } on Object {
-    // A failed probe means we're (still) offline — keep the loop running.
-    online = false;
-  }
-  if (controller.isClosed) return;
-  // Only surface a result that still matters: an online recovery always
-  // matters; an offline result only re-affirms an existing offline state, so
-  // forwarding it is harmless (the controller de-dups at the StreamProvider).
-  surface(online);
-}

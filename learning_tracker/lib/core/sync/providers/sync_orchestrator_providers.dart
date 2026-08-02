@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:learning_tracker/core/analytics/analytics_provider.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/providers/crashlytics_provider.dart';
@@ -129,22 +128,29 @@ final syncOrchestratorProvider = Provider<SyncOrchestrator?>((ref) {
   // reconnect (DNS wedging mid-session is the most common cause of the
   // "Syncing…" hang — see SyncOrchestratorImpl._onConnectivityChange).
   //
-  // We construct the stream with an explicit `hasConnection` seed so the
-  // first emission carries the current connectivity state. Without that
-  // seed the orchestrator can't tell whether a missing `previous` value
-  // means "fresh start, currently online" or "fresh start, currently
-  // offline" — and an app that starts offline must fire the reset on its
-  // first online transition. This mirrors `connectivityStreamProvider`'s
-  // logic; we don't reuse that provider directly because StreamProvider
-  // doesn't expose its underlying Stream via a synchronous getter in this
-  // Riverpod version.
-  final connectivityChecker = ref.read(internetConnectionCheckerProvider);
-  final connectivityStream = () async* {
-    yield await connectivityChecker.hasConnection;
-    yield* connectivityChecker.onStatusChange.map(
-      (status) => status == InternetConnectionStatus.connected,
-    );
-  }();
+  // Story 1.4 / AD-11 / E-1: this now reads the hardened
+  // `connectivityStreamProvider` (platform events via `connectivity_plus` +
+  // an on-demand single-host probe on transitions/resume — see that
+  // provider's doc comment for the full cost model) instead of building a
+  // second, independent stream directly off `internetConnectionCheckerProvider`.
+  // That duplicate stream used to bypass every test/e2e override of
+  // `connectivityStreamProvider` and doubled the raw-checker subscription
+  // count; this wiring makes the orchestrator's gate and every UI consumer
+  // share exactly one connectivity source.
+  //
+  // `ref.listen` (not `ref.watch`) bridges the provider's `AsyncValue<bool>`
+  // into a plain `Stream<bool>` for the orchestrator constructor — mirrors
+  // the `ref.listen` pattern already used below for `activeProfileIdProvider`
+  // / `syncIdentityStatusProvider` — because `StreamProvider` doesn't expose
+  // its underlying `Stream` via a synchronous getter in this Riverpod
+  // version, and a `listen`-based bridge (unlike `watch`) does not rebuild
+  // this singleton provider on every connectivity change (S7).
+  final connectivityBridge = StreamController<bool>.broadcast();
+  ref.listen<AsyncValue<bool>>(connectivityStreamProvider, (previous, next) {
+    next.whenData(connectivityBridge.add);
+  }, fireImmediately: true);
+  ref.onDispose(connectivityBridge.close);
+  final connectivityStream = connectivityBridge.stream;
 
   final orchestrator = SyncOrchestratorImpl(
     // Every collaborator that can itself rebuild is handed in as a lazy
