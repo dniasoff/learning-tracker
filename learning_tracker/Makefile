@@ -350,7 +350,7 @@ lint-rules-test: ## Run packages/custom_lints unit tests (dart test) — AUD-gua
 	@echo "Running packages/custom_lints unit tests..."
 	@(cd ../packages/custom_lints && dart pub get && dart test) 1>&2
 
-audit: lint-rules-test ## Run all 67 enforcement greps (NFR19) — exits non-zero on any violation
+audit: lint-rules-test ## Run all 68 enforcement greps (NFR19) — exits non-zero on any violation
 	@echo "=== audit: enforcement greps ==="
 	@FAIL=0; \
 	echo "1/15 — No Firebase imports outside core/auth or core/sync"; \
@@ -1323,9 +1323,17 @@ audit: lint-rules-test ## Run all 67 enforcement greps (NFR19) — exits non-zer
 	else \
 	  rm -f /tmp/raw_color_literal_ratchet_check.$$$$.log; \
 	fi; \
+	echo "100/100 — MCF-11/AD-5 (Story 2.4, docs/planning/drift-to-firestore-migration-baseline.md MCF-4/MCF-11; docs/test-artifacts/mcf11-autoincrement-id-in-payload-sweep.md): no NEW site outside lib/core/sync/merge/ feeds a track_id/account_id/child_profile_id payload key directly from the corresponding device-local Drift autoincrement field — RATCHET, only growth above the tracked baseline fails the gate (the baseline is today's already-load-bearing sync-engine design, pending the AD-25 canonical-stable-key redesign)"; \
+	if ! dart run tool/check_mcf11_autoincrement_id_in_payload_ratchet.dart > /tmp/mcf11_autoincrement_id_in_payload_check.$$$$.log 2>&1; then \
+	  cat /tmp/mcf11_autoincrement_id_in_payload_check.$$$$.log; \
+	  rm -f /tmp/mcf11_autoincrement_id_in_payload_check.$$$$.log; \
+	  FAIL=1; \
+	else \
+	  rm -f /tmp/mcf11_autoincrement_id_in_payload_check.$$$$.log; \
+	fi; \
 	if [ "$$FAIL" -eq 1 ]; then \
 	  echo "=== audit FAILED — fix violations above ==="; \
 	  exit 1; \
 	else \
-	  echo "=== audit PASSED — all 67 greps clean ==="; \
+	  echo "=== audit PASSED — all 68 greps clean ==="; \
 	fi
