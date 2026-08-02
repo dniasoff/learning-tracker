@@ -1,11 +1,13 @@
-/// Deterministic Firestore document-id formulas — extracted verbatim.
+/// Deterministic Firestore document-id formulas — extracted verbatim, then
+/// re-keyed exactly where AD-25/AD-24 mandate it (Story 2.3).
 ///
-/// **Story 2.2 (Epic 2, Migration Phase 0).** Every doc-id derivation that
-/// today lives scattered across `lib/core/sync/firestore_gateway_impl.dart`
-/// (its `.doc(...)` call sites) is reproduced **byte-for-byte** here, in one
-/// standalone module, so that a future native write mints the *exact* same
-/// document id the live gateway mints today — no duplicate remote docs, no
-/// orphaned history (MCF-3, MCF-3-continuity; AD-5, AD-13).
+/// **Story 2.2 (Epic 2, Migration Phase 0)** reproduced every doc-id
+/// derivation that lives scattered across
+/// `lib/core/sync/firestore_gateway_impl.dart` (its `.doc(...)` call sites)
+/// **byte-for-byte** here, in one standalone module, so that a future native
+/// write mints the *exact* same document id the live gateway mints today —
+/// no duplicate remote docs, no orphaned history (MCF-3, MCF-3-continuity;
+/// AD-5, AD-13).
 ///
 /// **This is Phase-0 additive scaffolding only.** Nothing in `lib/` imports
 /// this module yet — no call site is rewired, no cutover happens in Phase 0.
@@ -20,20 +22,47 @@
 /// (today scoped to `lib/core/sync/` and `lib/core/auth/`) before that grep
 /// is deliberately widened to allow `lib/data/firestore/**` (AD-28).
 ///
-/// **AD-25 carve-out.** Track-scoped child collections
-/// (`stage_definitions`, `study_day_configs`) embed the *per-device*
-/// `track_id` in their current Firestore doc-id — a value that does not
-/// match across two devices for the same track. AD-25 mandates re-keying
-/// those formulas onto the single canonical stable track key
-/// (`curriculum_id`) via a one-time re-key + backfill, but that migration is
-/// **Story 2.3's** job, not this one. This module deliberately keeps the
-/// CURRENT (pre-rekey) formula for those two collections — each is marked
-/// with a **Story 2.3 follow-up** note below — so today's byte-for-byte AC
-/// holds. Every
-/// other formula in this file, including `goals`, reproduces the live
-/// gateway output exactly with no carve-out (see the note on [goalDocId]
-/// for why `goals` is NOT one of the two AD-25 reformulated collections
-/// despite being named as a "track-scoped child" in AD-25's binding list).
+/// **AD-25 re-key (Story 2.3) — track-scoped children.**
+/// [stageDefinitionDocId] and [studyDayConfigDocId] no longer embed the
+/// *per-device* `track_id` that made them impossible to reproduce
+/// byte-for-byte across two devices for the same track. Both are now
+/// re-expressed against the single canonical stable track key,
+/// `curriculum_id` (consistent with `curriculum_tracks/{curriculum_id}`) —
+/// no track ULID is used as the track key. **This deliberately BREAKS AD-13
+/// byte-for-byte continuity for these two collections — AD-25 explicitly
+/// supersedes AD-13 here.** Every historical cloud doc was written as
+/// `{oldPerDeviceTrackId}_{…}` and will NOT match the new formula's output
+/// for the same logical row. That is intended and owner-ratified, not a
+/// defect: it requires the mandatory Phase-5 one-time doc-id re-key +
+/// backfill of every historical `{perDeviceTrackId}_*` doc to the
+/// `curriculum_id`-keyed form (Phase 3 Wave A per AD-25, atomic across both
+/// collections). This module does not perform that backfill — it only
+/// defines the target formula new writes must land on — and, by
+/// construction, retires the `resolveLocalTrackId` remap
+/// (`local_track_id_resolver.dart`, MCF-4) for these two collections: there
+/// is no per-device id left for it to resolve. `goals` is untouched by this
+/// re-key: unlike the two collections above, its doc-id formula
+/// ([goalDocId]) never embedded `track_id` in the first place — see that
+/// function's doc comment for why.
+///
+/// **AD-24 re-key (Story 2.3) — profile-scoped ULID.** [mintProfileUlid]
+/// and [learnerProfileUlidDocId] give `learner_profiles` a profile-scoped
+/// stable ULID doc-id, distinct from the path uid
+/// (`users/{uid}/learner_profiles/{profileUlid}`) and never the
+/// account/Firebase uid — an account owns *many* profiles, so keying every
+/// profile doc-id by the shared uid would collide every child of that
+/// account onto one document. [learnerProfileDocId] — the path-derived
+/// local-autoincrement-`profileId` legacy formula — is left byte-for-byte
+/// unchanged: it still matches today's live (not-yet-rewired) gateway
+/// exactly, and Phase 0 performs no cutover, so both formulas intentionally
+/// coexist here until the same kind of Phase-5 backfill mints + persists a
+/// stable ULID for every pre-existing profile and re-keys its historical
+/// doc.
+///
+/// **AD-5 ULID standardization (Story 2.3).** Every ULID this module mints
+/// routes through the single in-repo generator, `newUlid`
+/// (`lib/core/time/ulid.dart`) — no alternate generator, no new pub.dev
+/// package.
 ///
 /// Source of truth for every formula below:
 ///   `lib/core/sync/firestore_gateway_impl.dart` — see the doc comment on
@@ -41,6 +70,8 @@
 library;
 
 import 'dart:convert' show utf8;
+
+import 'package:learning_tracker/core/time/ulid.dart';
 
 /// Deterministic Firestore document-id formulas for every synced collection.
 ///
@@ -248,60 +279,80 @@ final class DocIds {
 
   // ── stage_definitions ────────────────────────────────────────────────
 
-  /// `stage_definitions/{trackId}_{stageOrder}` doc-id formula.
+  /// `stage_definitions/{curriculumId}_{stageOrder}` doc-id formula
+  /// (AD-25 re-key — Story 2.3).
   ///
-  /// Mirrors `FirestoreGatewayImpl.pushStageDefinition`
-  /// (`firestore_gateway_impl.dart:1152-1176`) **exactly, including its
-  /// `ArgumentError` guard** for byte-for-byte parity on the invalid path
-  /// too.
+  /// **Re-keyed onto the canonical stable track key.** Before this story,
+  /// this formula mirrored `FirestoreGatewayImpl.pushStageDefinition`
+  /// (`firestore_gateway_impl.dart:1152-1176`) byte-for-byte, embedding the
+  /// *per-device* `track_id`. AD-25 mandates the single canonical stable
+  /// track key is `curriculum_id` (consistent with
+  /// `curriculum_tracks/{curriculum_id}`) — no track ULID, no per-device id.
+  /// This function now derives the doc-id from `curriculum_id` instead,
+  /// which by construction retires the `resolveLocalTrackId` FK-remap
+  /// (`local_track_id_resolver.dart`, MCF-4) for this collection: there is
+  /// no per-device id left to resolve.
   ///
-  /// **Story 2.3 follow-up:** AD-25 re-keys this to the canonical stable
-  /// track key — `{curriculum_id}_{stageOrder}` — retiring the per-device
-  /// `track_id`
-  /// component via a one-time re-key + backfill of historical
-  /// `{perDeviceTrackId}_*` docs. AD-13's byte-for-byte rule is explicitly
-  /// superseded for this collection (AD-25); this module intentionally
-  /// keeps the CURRENT (pre-rekey) formula below, which is what Story 2.2
-  /// is scoped to reproduce. Do not "fix" this ahead of Story 2.3 — doing
-  /// so here without the accompanying backfill would silently orphan every
-  /// existing user's stage-definition history.
+  /// **This deliberately BREAKS byte-for-byte continuity (AD-13) for this
+  /// collection — AD-25 explicitly supersedes AD-13 here.** Every historical
+  /// cloud doc was written as `{oldPerDeviceTrackId}_{stageOrder}`; it will
+  /// NOT match this formula's output for the same logical stage. That is
+  /// intended and owner-ratified, not a defect: it requires the mandatory
+  /// Phase-5 one-time doc-id re-key + backfill of every historical
+  /// `{perDeviceTrackId}_*` doc to this `{curriculumId}_{stageOrder}` form
+  /// (Phase 3 Wave A per AD-25) — this module does not perform that
+  /// backfill, it only defines the target formula new writes must land on.
+  ///
+  /// Keeps the live gateway's `ArgumentError` guard shape (now against
+  /// `curriculum_id`/`stage_order` instead of `track_id`/`stage_order`).
   static String stageDefinitionDocId(Map<String, dynamic> data) {
-    final trackId = data['track_id']?.toString() ?? '';
+    final curriculumId = data['curriculum_id']?.toString() ?? '';
     final stageOrder = data['stage_order']?.toString() ?? '';
-    if (trackId.isEmpty || stageOrder.isEmpty) {
+    if (curriculumId.isEmpty || stageOrder.isEmpty) {
       throw ArgumentError(
-        'stageDefinitionDocId requires non-empty track_id and stage_order',
+        'stageDefinitionDocId requires non-empty curriculum_id and '
+        'stage_order',
       );
     }
-    return '${trackId}_$stageOrder';
+    return '${curriculumId}_$stageOrder';
   }
 
   // ── study_day_configs ────────────────────────────────────────────────
 
-  /// `study_day_configs/{curriculumId}_{dayOfWeek}_{trackId}` doc-id
-  /// formula.
+  /// `study_day_configs/{curriculumId}_{dayOfWeek}` doc-id formula
+  /// (AD-25 re-key — Story 2.3).
   ///
-  /// Mirrors `FirestoreGatewayImpl.pushStudyDayConfig`
-  /// (`firestore_gateway_impl.dart:1180-1204`) **exactly, including its
-  /// `ArgumentError` guard**.
+  /// **Re-keyed onto the canonical stable track key.** Before this story,
+  /// this formula mirrored `FirestoreGatewayImpl.pushStudyDayConfig`
+  /// (`firestore_gateway_impl.dart:1180-1204`) byte-for-byte:
+  /// `{curriculumId}_{dayOfWeek}_{trackId}`, embedding the *per-device*
+  /// `track_id` as a third component. AD-25 drops that component entirely —
+  /// `curriculum_id` is already present and IS the single canonical stable
+  /// track key, so no replacement component is needed. This retires the
+  /// `resolveLocalTrackId` FK-remap (`local_track_id_resolver.dart`, MCF-4)
+  /// for this collection by construction.
   ///
-  /// **Story 2.3 follow-up:** AD-25 re-keys this to the canonical stable
-  /// track key — dropping the per-device `track_id` component in favor of
-  /// `curriculum_id` — via the same one-time re-key + backfill as
-  /// [stageDefinitionDocId]. See that function's doc comment for the full
-  /// rationale; this module intentionally keeps the CURRENT (pre-rekey)
-  /// formula below.
+  /// **This deliberately BREAKS byte-for-byte continuity (AD-13) for this
+  /// collection — AD-25 explicitly supersedes AD-13 here.** Every historical
+  /// cloud doc was written as
+  /// `{curriculumId}_{dayOfWeek}_{oldPerDeviceTrackId}`; it will NOT match
+  /// this formula's output. That is intended and owner-ratified, not a
+  /// defect: it requires the same mandatory Phase-5 one-time doc-id re-key +
+  /// backfill described on [stageDefinitionDocId], atomic across both
+  /// re-keyed collections (Phase 3 Wave A per AD-25).
+  ///
+  /// Keeps the live gateway's `ArgumentError` guard shape, minus the
+  /// now-dropped `track_id` requirement.
   static String studyDayConfigDocId(Map<String, dynamic> data) {
     final curriculumId = data['curriculum_id']?.toString() ?? '';
     final dayOfWeek = data['day_of_week']?.toString() ?? '';
-    final trackId = data['track_id']?.toString() ?? '';
-    if (curriculumId.isEmpty || dayOfWeek.isEmpty || trackId.isEmpty) {
+    if (curriculumId.isEmpty || dayOfWeek.isEmpty) {
       throw ArgumentError(
-        'studyDayConfigDocId requires non-empty curriculum_id, day_of_week, '
-        'and track_id',
+        'studyDayConfigDocId requires non-empty curriculum_id and '
+        'day_of_week',
       );
     }
-    return '${curriculumId}_${dayOfWeek}_$trackId';
+    return '${curriculumId}_$dayOfWeek';
   }
 
   // ── points_ledger ────────────────────────────────────────────────────
@@ -328,25 +379,63 @@ final class DocIds {
   static String? rewardRedemptionDocId(Map<String, dynamic> data) =>
       data['ulid'] as String?;
 
-  // ── learner_profiles ─────────────────────────────────────────────────
+  // ── learner_profiles (legacy, path-derived integer) ─────────────────
 
-  /// `learner_profiles/{profileId}` doc-id formula.
+  /// `learner_profiles/{profileId}` doc-id formula — the LEGACY,
+  /// not-yet-superseded formula that still matches the live gateway exactly.
   ///
   /// Mirrors `FirestoreGatewayImpl._learnerProfileDoc`
   /// (`firestore_gateway_impl.dart:1283-1291`): the path-derived local
   /// autoincrement `profileId`, stringified — NOT a natural key drawn from
   /// the payload.
   ///
-  /// **Distinct from the AD-25 carve-out above.** This collection is NOT
-  /// one of AD-25's track-scoped children (`stage_definitions`,
-  /// `study_day_configs`) — it is unaffected by AD-25. It IS, however,
-  /// separately scheduled to change under **AD-24** in Story 2.3: the
-  /// `learner_profiles` doc-id becomes a profile-scoped stable ULID minted
-  /// per profile, replacing this device-local-integer formula, because
-  /// keying it by the account uid would collide every child of an account
-  /// onto one document (AD-5). Story 2.2 keeps today's formula unchanged;
-  /// Story 2.3 replaces it under a different AD (AD-24, not AD-25) and a
-  /// different justification (profile-collision, not track-cross-device
-  /// mismatch) than the two collections above.
+  /// **Kept unchanged by Story 2.3, on purpose.** AD-24 mandates the
+  /// `learner_profiles` doc-id becomes a profile-scoped stable ULID (see
+  /// [mintProfileUlid] / [learnerProfileUlidDocId] below) — keying it by the
+  /// account uid, or leaving it on this device-local integer, would collide
+  /// every child of an account onto one document once profiles are keyed by
+  /// something account-wide (AD-5). Phase 0 performs no cutover: nothing
+  /// calls this module yet, so this legacy formula and the new ULID formula
+  /// intentionally coexist here until the Phase-5 backfill mints + persists
+  /// a stable ULID for every pre-existing profile and re-keys its
+  /// historical doc.
   static String learnerProfileDocId(int profileId) => profileId.toString();
+
+  // ── learner_profiles (AD-24 profile-scoped ULID — Story 2.3) ────────
+
+  /// Mints a fresh profile-scoped stable ULID (AD-24).
+  ///
+  /// Routes through the single in-repo ULID generator, `newUlid`
+  /// (`lib/core/time/ulid.dart`), per AD-5's standardization rule — no
+  /// alternate generator, no new pub.dev package. Intended to be called
+  /// once, at profile-creation time, to produce the value a caller then
+  /// persists on the profile's local record (a new stable-id field; adding
+  /// that column/migration is out of this Phase-0 scaffolding module's
+  /// scope) and reuses forever after as that profile's Firestore doc-id via
+  /// [learnerProfileUlidDocId].
+  static String mintProfileUlid() => newUlid();
+
+  /// `learner_profiles/{profileUlid}` doc-id formula (AD-24 profile-scoped
+  /// ULID — Story 2.3).
+  ///
+  /// Reads the profile's own persisted stable ULID from the payload's
+  /// `profile_ulid` field — mirroring the `data['ulid']`-echo pattern used
+  /// by [streakEventDocId]/[learningLedgerDocId]/etc. above — and mints a
+  /// fresh one via [mintProfileUlid] only when the payload carries none yet
+  /// (the profile-creation-time case). This is a profile-scoped id — NOT
+  /// the path-derived local autoincrement `profileId` that
+  /// [learnerProfileDocId] uses today, and NOT the account/Firebase uid: an
+  /// account owns *many* profiles, so keying every profile doc-id by the
+  /// shared uid would collide every child of that account onto one
+  /// document. The uid addresses the *path*
+  /// (`users/{uid}/learner_profiles/{profileUlid}`); this formula addresses
+  /// the *document* — the two must never be conflated (AD-5, AD-24).
+  ///
+  /// **This deliberately BREAKS byte-for-byte continuity (AD-13) for this
+  /// collection too**, exactly like the two AD-25 re-keys above, and needs
+  /// the same kind of Phase-5 one-time backfill: minting + persisting a
+  /// ULID for every existing profile and re-keying its historical doc from
+  /// the old `{profileId}` shape to this one.
+  static String learnerProfileUlidDocId(Map<String, dynamic> data) =>
+      (data['profile_ulid'] as String?) ?? mintProfileUlid();
 }
