@@ -711,8 +711,8 @@ describe('preferences — owner write (open bag, no whitelist), tutor read, dele
   });
 });
 
-// ── Path 18: goals (with hasOnly whitelist) ───────────────────────────────────
-describe('goals — owner write with key whitelist, tutor read-only', () => {
+// ── Path 18: goals (with hasOnly whitelist; owner DELETE allowed) ────────────
+describe('goals — owner write+delete with key whitelist, tutor read-only', () => {
   test('owner writes goal with whitelisted keys', async () => {
     await assertSucceeds(
       setDoc(doc(owner(), `${GOALS}/g`), {
@@ -731,6 +731,62 @@ describe('goals — owner write with key whitelist, tutor read-only', () => {
     });
     await assertSucceeds(getDoc(doc(tutor(), `${GOALS}/seed`)));
     await assertFails(setDoc(doc(tutor(), `${GOALS}/seed`), { goal_id: 'seed' }));
+  });
+
+  // Owner-initiated goal deletion: create/update were already owner-writable
+  // (above); this closes the asymmetry where a tutor could delete a goal via
+  // the `tutorDeleteGoal` Cloud Function (Admin SDK) but the owner could not
+  // remove their own goal from the client.
+  describe('owner-initiated delete', () => {
+    const validGoal = { goal_id: 'g_del', profile_id: PROFILE, target_percent: 50 };
+
+    test('owner CAN delete their own goal', async () => {
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        await setDoc(doc(ctx.firestore(), `${GOALS}/g_del`), validGoal);
+      });
+      await assertSucceeds(deleteDoc(doc(owner(), `${GOALS}/g_del`)));
+    });
+
+    test('a different signed-in user (stranger) CANNOT delete it', async () => {
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        await setDoc(doc(ctx.firestore(), `${GOALS}/g_del`), validGoal);
+      });
+      await assertFails(deleteDoc(doc(stranger(), `${GOALS}/g_del`)));
+    });
+
+    test('an unauthenticated client CANNOT delete it', async () => {
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        await setDoc(doc(ctx.firestore(), `${GOALS}/g_del`), validGoal);
+      });
+      await assertFails(deleteDoc(doc(anon(), `${GOALS}/g_del`)));
+    });
+
+    // A tutor with an active grant reads/writes via hasActiveTutorAccess(),
+    // but `allow delete: if isOwner(uid)` carries no such OR-clause — a
+    // tutor's uid is never the owner's uid, so this is denied structurally,
+    // same as any other non-owner. Real tutor deletion is server-side only,
+    // via tutorDeleteGoal (Admin SDK, bypasses rules entirely) — unaffected
+    // by this change.
+    test('a tutor with active access CANNOT delete it directly from the client', async () => {
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        await setDoc(doc(ctx.firestore(), `${GOALS}/g_del`), validGoal);
+      });
+      await assertFails(deleteDoc(doc(tutor(), `${GOALS}/g_del`)));
+    });
+
+    // Regression guard: confirm this change did not widen delete permission
+    // on a genuinely append-only collection — learning_ledger still denies
+    // owner delete outright (no isOwner-based allow delete at all).
+    test('regression guard: learning_ledger (append-only) still denies owner delete', async () => {
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        await setDoc(doc(ctx.firestore(), `${LP}/learning_ledger/ULID_del`), {
+          ulid: 'ULID_del',
+        });
+      });
+      await assertFails(
+        deleteDoc(doc(owner(), `${LP}/learning_ledger/ULID_del`)),
+      );
+    });
   });
 });
 

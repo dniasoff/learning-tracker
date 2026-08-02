@@ -13,14 +13,20 @@
 /// `firestore_stage_definition_repository_test.dart`):
 /// `fake_cloud_firestore`'s rules companion cannot evaluate
 /// `resource.data`/`request.resource`, so the `goals` rules' `.hasOnly()`
-/// field whitelist and `allow delete: if false` are NOT exercised here — a
-/// permissive fake is used throughout (`createFakeFirestore()` default,
-/// `strictRules: false`). The absence of a `deleteGoal` method on
-/// [FirestoreGoalRepository] is enforced by the type system (there is
-/// nothing to call), not by a rules-denial test. The resubscribe-with-
-/// backoff behavior [FirestoreGoalRepository.watchGoals] delegates to is
-/// covered directly in `resilient_doc_stream_test.dart`
-/// (`resilientQueryStream` groups) — not re-proven here.
+/// field whitelist is NOT exercised here — a permissive fake is used
+/// throughout (`createFakeFirestore()` default, `strictRules: false`).
+/// [FirestoreGoalRepository.deleteGoal] is likewise NOT a rules-permission
+/// test: `fake_cloud_firestore` deletes unconditionally regardless of who
+/// is "authenticated", so the [deleteGoal] tests below prove only that the
+/// method targets the right document (and leaves sibling documents
+/// untouched) — never that `firestore.rules` actually permits the owner
+/// (and denies everyone else) to delete a goal. That permission boundary
+/// is proven exclusively by `functions/test/firestore_rules.test.mjs`
+/// (`make test-rules`), the only harness that evaluates real Firestore
+/// Rules. The resubscribe-with-backoff behavior
+/// [FirestoreGoalRepository.watchGoals] delegates to is covered directly in
+/// `resilient_doc_stream_test.dart` (`resilientQueryStream` groups) — not
+/// re-proven here.
 ///
 /// TQ-6: no wall clock, no shared global state — every test builds its own
 /// fake Firestore instance.
@@ -352,6 +358,83 @@ void main() {
       final snapshot = await rawDoc(created.firestoreId).get();
       expect(snapshot.data()!['synced_at'], 'server-stamped-value');
       expect(snapshot.data()!['target_percent'], 75);
+    });
+  });
+
+  group('deleteGoal', () {
+    test('removes the target document', () async {
+      final repo = buildRepo();
+      final goal = await repo.createGoal(
+        curriculumId: CurriculumId.mishnayos,
+        targetPercent: 80,
+      );
+
+      await repo.deleteGoal(goal);
+
+      final snapshot = await rawDoc(goal.firestoreId).get();
+      expect(snapshot.exists, isFalse);
+    });
+
+    test('leaves other goals — including siblings in the same curriculum — '
+        'untouched', () async {
+      // Entities are constructed directly with explicit, distinct createdAt
+      // values rather than via back-to-back createGoal() calls — see the
+      // "sorts null target_date first" test above for why: createGoal's
+      // DateTimeFactory.nowUtc() only has millisecond resolution, and two
+      // calls landing in the same millisecond would collide onto the SAME
+      // firestoreId (curriculumId + createdAt only), defeating the point of
+      // this test.
+      final repo = buildRepo();
+      final toDelete = GoalEntity(
+        curriculumId: CurriculumId.mishnayos,
+        targetPercent: 80,
+        description: 'delete me',
+        goalType: 'none',
+        createdAt: DateTime.utc(2026, 1, 1, 0, 0, 1),
+        updatedAt: DateTime.utc(2026, 1, 1, 0, 0, 1),
+      );
+      final sibling = GoalEntity(
+        curriculumId: CurriculumId.mishnayos,
+        targetPercent: 50,
+        description: 'keep me',
+        goalType: 'none',
+        createdAt: DateTime.utc(2026, 1, 1, 0, 0, 2),
+        updatedAt: DateTime.utc(2026, 1, 1, 0, 0, 2),
+      );
+      final otherCurriculum = GoalEntity(
+        curriculumId: CurriculumId.bavli,
+        targetPercent: 30,
+        description: 'keep me too',
+        goalType: 'none',
+        createdAt: DateTime.utc(2026, 1, 1, 0, 0, 3),
+        updatedAt: DateTime.utc(2026, 1, 1, 0, 0, 3),
+      );
+      for (final goal in [toDelete, sibling, otherCurriculum]) {
+        await rawDoc(goal.firestoreId).set(goal.toFirestore());
+      }
+
+      await repo.deleteGoal(toDelete);
+
+      expect((await rawDoc(toDelete.firestoreId).get()).exists, isFalse);
+      expect((await rawDoc(sibling.firestoreId).get()).exists, isTrue);
+      expect((await rawDoc(otherCurriculum.firestoreId).get()).exists, isTrue);
+      final remaining = await repo.getGoals(CurriculumId.mishnayos);
+      expect(remaining.map((g) => g.description), ['keep me']);
+    });
+
+    test('deleting an already-absent document is a no-op (idempotent)', () async {
+      final repo = buildRepo();
+      final goal = await repo.createGoal(
+        curriculumId: CurriculumId.mishnayos,
+        targetPercent: 80,
+      );
+      await repo.deleteGoal(goal);
+
+      // Deleting again must not throw — matches Firestore's own delete()
+      // semantics (deleting a non-existent document succeeds).
+      await repo.deleteGoal(goal);
+
+      expect((await rawDoc(goal.firestoreId).get()).exists, isFalse);
     });
   });
 

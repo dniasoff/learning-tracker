@@ -475,7 +475,17 @@ service cloud.firestore {
               'created_at',
               'createdAt', 'updated_at', 'updatedAt', 'synced_at'
             ]);
-          allow delete: if false;
+          // Owner delete permitted — unlike the append-only event
+          // collections above, `create`/`update` are already owner-writable
+          // here, so a client can already replace a goal's fields
+          // arbitrarily; forbidding removal protected nothing. Matches the
+          // sibling mutable-config collections below (`profile_programs`,
+          // `curriculum_scopes`, `study_day_configs`), which all permit
+          // owner delete. A tutor with `can_edit_goals` can already delete
+          // a goal via the `tutorDeleteGoal` Cloud Function (Admin SDK,
+          // bypasses these rules) — this closes the asymmetry where only
+          // the tutor, not the owner, could remove the owner's own goal.
+          allow delete: if isOwner(uid);
         }
 
         // import_metadata — curriculum import tracking (W3.34: renamed from

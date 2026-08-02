@@ -80,15 +80,15 @@ import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.da
 ///   repository never sets that field on any entity it constructs — so no
 ///   `track_id` is ever written, keeping the MCF-11
 ///   autoincrement-id-in-payload ratchet unmoved.
-/// - **`deleteGoal` does not exist on this class.** `firestore.rules`
-///   denies `delete` on `goals` outright (`allow delete: if false` —
-///   same as `stage_definitions`), so there is no rules-legal way for an
-///   owner to remove a goal document from a client at all. Mirrors
-///   `FirestoreStageDefinitionRepository` dropping `deleteStagesForTrack`
-///   for the identical reason. (The Drift-era sync engine's own
-///   `FirestoreGatewayImpl.deleteGoal`/`SyncWriteFacade.deleteGoal` path is
-///   therefore already dead against real rules enforcement today — not
-///   something this rewrite introduces.)
+/// - **[deleteGoal] only ever removes the OWNER's own document.**
+///   `firestore.rules` permits `delete` on `goals` for the profile owner —
+///   `create`/`update` were already owner-writable, so forbidding removal
+///   protected nothing, and a tutor with `can_edit_goals` could already
+///   delete a goal via the `tutorDeleteGoal` Cloud Function (Admin SDK).
+///   See [deleteGoal]'s doc comment for the full rationale. This is
+///   unlike `FirestoreStageDefinitionRepository`, which still drops
+///   `deleteStagesForTrack` outright — `stage_definitions` itself still
+///   denies `delete` in `firestore.rules`, unaffected by this.
 /// - **`GoalProfileMismatchException` is never thrown here.** It existed
 ///   because the Drift DAO's `getGoalById`/`updateGoal`/`deleteGoal` are
 ///   NOT scoped by profile — any caller with a raw `goalId` int could
@@ -323,4 +323,18 @@ class FirestoreGoalRepository {
     await _doc(updated).set(updated.toFirestore(), SetOptions(merge: true));
     return updated;
   }
+
+  /// Hard-deletes [goal]'s Firestore document — a genuine remove, not a
+  /// tombstone. Permitted by `firestore.rules` (`match /goals/{goalId}`)
+  /// specifically so this call succeeds: `create`/`update` were already
+  /// owner-writable, so a client could already replace a goal's fields
+  /// arbitrarily — forbidding removal protected nothing, and it left an
+  /// asymmetry where a tutor with `can_edit_goals` could delete a goal via
+  /// the `tutorDeleteGoal` Cloud Function (Admin SDK, bypasses rules) but
+  /// the owner could not remove their own goal from the client. [goal]'s
+  /// `curriculumId`/`createdAt` pair (via [GoalEntity.firestoreId]) resolves
+  /// the same document [updateGoal] would target — see the class doc
+  /// comment's "Doc-id" section. Mirrors
+  /// `FirestoreProfileProgramRepository.removeProgram`.
+  Future<void> deleteGoal(GoalEntity goal) => _doc(goal).delete();
 }
