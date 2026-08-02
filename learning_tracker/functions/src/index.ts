@@ -16,6 +16,7 @@ export {
   onUserDeleted,
   deleteLearnerProfile,
   deleteCurriculumTrack,
+  deleteBulkMarkedCompletions,
   deleteAccountData,
 } from "./deletes";
 

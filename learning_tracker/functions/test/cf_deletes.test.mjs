@@ -1,5 +1,6 @@
 // CF tests — owner self-service delete functions:
-//   deleteLearnerProfile, deleteCurriculumTrack, deleteAccountData
+//   deleteLearnerProfile, deleteCurriculumTrack, deleteBulkMarkedCompletions,
+//   deleteAccountData
 // See _cf_helpers.mjs for the harness.
 
 import assert from 'node:assert/strict';
@@ -418,6 +419,543 @@ describe('deleteCurriculumTrack — sibling collection sweep', () => {
     assert.equal(res.deleted.goals, N);
     const remaining = await pRef.collection('goals').where('curriculum_id', '==', CURRICULUM).get();
     assert.equal(remaining.size, 0, 'all 550 goals docs should be deleted');
+  });
+});
+
+// ── deleteBulkMarkedCompletions ───────────────────────────────────────────────
+//
+// Owner decision (docs/firestore-rewrite-map.md, 2026-08-02): a `source ==
+// 'bulkInTrack'` completion may be deleted, which also retracts its
+// `learning_ledger` "learnt" status. A `source == 'live'` completion is
+// PERMANENT — the single most important property this suite verifies. A
+// `source == 'lifetimeOnly'` ledger entry (a standalone historical import,
+// never tied to a bulk-marked track) must also never be touched. A document
+// with no `source` field at all (legacy / not yet written by the new
+// FirestoreCompletionRepository) must be left alone — absence means
+// "don't touch", never "assume bulk".
+describe('deleteBulkMarkedCompletions', () => {
+  const CURRICULUM = 'genesis';
+  const OTHER_CURRICULUM = 'exodus';
+  const OTHER_PROFILE = PROFILE + 1;
+  const REF_A = 'Genesis 1:1';
+  const REF_B = 'Genesis 1:2';
+  const REF_UNTOUCHED = 'Genesis 1:3';
+  const UNIT_A = 'Genesis'; // the masechta/seder REF_A and REF_B belong to
+  const UNIT_B = 'Exodus'; // a different unit — must never be touched by goodArgs
+  const goodArgs = {
+    profileId: PROFILE,
+    curriculumId: CURRICULUM,
+    sefariaRefs: [REF_A, REF_B],
+    unitIdentifiers: [UNIT_A],
+  };
+
+  beforeEach(async () => {
+    await clearFirestore();
+  });
+
+  function pRefFor(uid, profileId) {
+    return db.collection('users').doc(uid).collection('learner_profiles').doc(String(profileId));
+  }
+
+  // ── argument validation ─────────────────────────────────────────────────────
+
+  test('unauthenticated caller → unauthenticated', async () => {
+    await expectHttpsError(
+      call(fns.deleteBulkMarkedCompletions, goodArgs, null),
+      'unauthenticated',
+    );
+  });
+
+  test('profileId missing → invalid-argument', async () => {
+    await expectHttpsError(
+      call(
+        fns.deleteBulkMarkedCompletions,
+        { curriculumId: CURRICULUM, sefariaRefs: [REF_A] },
+        parentAuth,
+      ),
+      'invalid-argument',
+    );
+  });
+
+  test('profileId is a float → invalid-argument', async () => {
+    await expectHttpsError(
+      call(fns.deleteBulkMarkedCompletions, { ...goodArgs, profileId: 2.5 }, parentAuth),
+      'invalid-argument',
+    );
+  });
+
+  test('profileId is zero → invalid-argument', async () => {
+    await expectHttpsError(
+      call(fns.deleteBulkMarkedCompletions, { ...goodArgs, profileId: 0 }, parentAuth),
+      'invalid-argument',
+    );
+  });
+
+  test('curriculumId missing → invalid-argument', async () => {
+    await expectHttpsError(
+      call(
+        fns.deleteBulkMarkedCompletions,
+        { profileId: PROFILE, sefariaRefs: [REF_A] },
+        parentAuth,
+      ),
+      'invalid-argument',
+    );
+  });
+
+  test('curriculumId empty string → invalid-argument', async () => {
+    await expectHttpsError(
+      call(fns.deleteBulkMarkedCompletions, { ...goodArgs, curriculumId: '' }, parentAuth),
+      'invalid-argument',
+    );
+  });
+
+  test('sefariaRefs missing → invalid-argument', async () => {
+    await expectHttpsError(
+      call(
+        fns.deleteBulkMarkedCompletions,
+        { profileId: PROFILE, curriculumId: CURRICULUM },
+        parentAuth,
+      ),
+      'invalid-argument',
+    );
+  });
+
+  test('sefariaRefs is an empty array → invalid-argument', async () => {
+    await expectHttpsError(
+      call(fns.deleteBulkMarkedCompletions, { ...goodArgs, sefariaRefs: [] }, parentAuth),
+      'invalid-argument',
+    );
+  });
+
+  test('sefariaRefs is not an array → invalid-argument', async () => {
+    await expectHttpsError(
+      call(fns.deleteBulkMarkedCompletions, { ...goodArgs, sefariaRefs: REF_A }, parentAuth),
+      'invalid-argument',
+    );
+  });
+
+  test('sefariaRefs contains a non-string element → invalid-argument', async () => {
+    await expectHttpsError(
+      call(fns.deleteBulkMarkedCompletions, { ...goodArgs, sefariaRefs: [REF_A, 42] }, parentAuth),
+      'invalid-argument',
+    );
+  });
+
+  test('sefariaRefs contains an empty string → invalid-argument', async () => {
+    await expectHttpsError(
+      call(fns.deleteBulkMarkedCompletions, { ...goodArgs, sefariaRefs: [''] }, parentAuth),
+      'invalid-argument',
+    );
+  });
+
+  // unitIdentifiers is REQUIRED — see the class doc comment's "Ledger sweep"
+  // section. A missing/empty value must fail loudly and delete NOTHING,
+  // never silently fall back to "every bulkInTrack ledger entry for the
+  // curriculum" (the exact over-deletion bug this parameter fixes).
+  test('unitIdentifiers missing → invalid-argument, and nothing is deleted', async () => {
+    const pRef = pRefFor(PARENT, PROFILE);
+    await pRef.collection('completions').doc('a-stage1').set({
+      curriculum_id: CURRICULUM, sefaria_ref: REF_A, stage_id: 1, source: 'bulkInTrack',
+    });
+    await pRef.collection('learning_ledger').doc('ledger-1').set({
+      ulid: 'ledger-1', curriculum_id: CURRICULUM, unit_identifier: UNIT_A, source: 'bulkInTrack',
+    });
+    const { unitIdentifiers: _omit, ...argsWithoutUnitIdentifiers } = goodArgs;
+
+    await expectHttpsError(
+      call(fns.deleteBulkMarkedCompletions, argsWithoutUnitIdentifiers, parentAuth),
+      'invalid-argument',
+    );
+
+    assert.equal(
+      (await pRef.collection('completions').doc('a-stage1').get()).exists,
+      true,
+      'a missing unitIdentifiers must not delete any completion',
+    );
+    assert.equal(
+      (await pRef.collection('learning_ledger').doc('ledger-1').get()).exists,
+      true,
+      'a missing unitIdentifiers must not delete any ledger entry',
+    );
+  });
+
+  test('unitIdentifiers is an empty array → invalid-argument, and nothing is deleted', async () => {
+    const pRef = pRefFor(PARENT, PROFILE);
+    await pRef.collection('completions').doc('a-stage1').set({
+      curriculum_id: CURRICULUM, sefaria_ref: REF_A, stage_id: 1, source: 'bulkInTrack',
+    });
+    await pRef.collection('learning_ledger').doc('ledger-1').set({
+      ulid: 'ledger-1', curriculum_id: CURRICULUM, unit_identifier: UNIT_A, source: 'bulkInTrack',
+    });
+
+    await expectHttpsError(
+      call(fns.deleteBulkMarkedCompletions, { ...goodArgs, unitIdentifiers: [] }, parentAuth),
+      'invalid-argument',
+    );
+
+    assert.equal((await pRef.collection('completions').doc('a-stage1').get()).exists, true);
+    assert.equal((await pRef.collection('learning_ledger').doc('ledger-1').get()).exists, true);
+  });
+
+  test('unitIdentifiers is not an array → invalid-argument', async () => {
+    await expectHttpsError(
+      call(fns.deleteBulkMarkedCompletions, { ...goodArgs, unitIdentifiers: UNIT_A }, parentAuth),
+      'invalid-argument',
+    );
+  });
+
+  test('unitIdentifiers contains a non-string element → invalid-argument', async () => {
+    await expectHttpsError(
+      call(
+        fns.deleteBulkMarkedCompletions,
+        { ...goodArgs, unitIdentifiers: [UNIT_A, 42] },
+        parentAuth,
+      ),
+      'invalid-argument',
+    );
+  });
+
+  test('unitIdentifiers contains an empty string → invalid-argument', async () => {
+    await expectHttpsError(
+      call(fns.deleteBulkMarkedCompletions, { ...goodArgs, unitIdentifiers: [''] }, parentAuth),
+      'invalid-argument',
+    );
+  });
+
+  // ── completions sweep ────────────────────────────────────────────────────────
+
+  test('deletes bulkInTrack completions for the named sefariaRefs, both stages', async () => {
+    const pRef = pRefFor(PARENT, PROFILE);
+    // Bulk-mark-prior writes one completion per (item x stage) — seed two
+    // stages for REF_A to prove the whole item, not just one stage, is swept.
+    await pRef.collection('completions').doc('a-stage1').set({
+      curriculum_id: CURRICULUM, sefaria_ref: REF_A, stage_id: 1, source: 'bulkInTrack',
+    });
+    await pRef.collection('completions').doc('a-stage2').set({
+      curriculum_id: CURRICULUM, sefaria_ref: REF_A, stage_id: 2, source: 'bulkInTrack',
+    });
+    await pRef.collection('completions').doc('b-stage1').set({
+      curriculum_id: CURRICULUM, sefaria_ref: REF_B, stage_id: 1, source: 'bulkInTrack',
+    });
+
+    const res = await call(fns.deleteBulkMarkedCompletions, goodArgs, parentAuth);
+
+    assert.equal(res.success, true);
+    assert.equal(res.deleted.completions, 3);
+    assert.equal((await pRef.collection('completions').doc('a-stage1').get()).exists, false);
+    assert.equal((await pRef.collection('completions').doc('a-stage2').get()).exists, false);
+    assert.equal((await pRef.collection('completions').doc('b-stage1').get()).exists, false);
+  });
+
+  test('a bulkInTrack completion for an UNNAMED sefariaRef in the same curriculum survives', async () => {
+    const pRef = pRefFor(PARENT, PROFILE);
+    await pRef.collection('completions').doc('untouched').set({
+      curriculum_id: CURRICULUM, sefaria_ref: REF_UNTOUCHED, stage_id: 1, source: 'bulkInTrack',
+    });
+
+    const res = await call(fns.deleteBulkMarkedCompletions, goodArgs, parentAuth);
+
+    assert.equal(res.success, true);
+    assert.equal(res.deleted.completions, 0);
+    assert.equal(
+      (await pRef.collection('completions').doc('untouched').get()).exists,
+      true,
+      'a completion outside the requested sefariaRefs must survive',
+    );
+  });
+
+  test('THE MOST IMPORTANT TEST — a live completion for a named sefariaRef is NEVER deleted', async () => {
+    const pRef = pRefFor(PARENT, PROFILE);
+    await pRef.collection('completions').doc('live-a').set({
+      curriculum_id: CURRICULUM, sefaria_ref: REF_A, stage_id: 1, source: 'live',
+    });
+
+    const res = await call(fns.deleteBulkMarkedCompletions, goodArgs, parentAuth);
+
+    assert.equal(res.success, true);
+    assert.equal(res.deleted.completions, 0);
+    const snap = await pRef.collection('completions').doc('live-a').get();
+    assert.equal(snap.exists, true, 'a live completion must survive — permanent, no undo');
+    assert.equal(snap.data().source, 'live');
+  });
+
+  test('a completion with no source field at all survives (legacy row — absence means leave alone)', async () => {
+    const pRef = pRefFor(PARENT, PROFILE);
+    await pRef.collection('completions').doc('legacy-a').set({
+      curriculum_id: CURRICULUM, sefaria_ref: REF_A, stage_id: 1,
+      // no `source` field
+    });
+
+    const res = await call(fns.deleteBulkMarkedCompletions, goodArgs, parentAuth);
+
+    assert.equal(res.success, true);
+    assert.equal(res.deleted.completions, 0);
+    assert.equal(
+      (await pRef.collection('completions').doc('legacy-a').get()).exists,
+      true,
+      'a completion with no source field must survive',
+    );
+  });
+
+  test('a bulkInTrack completion for a named sefariaRef but a DIFFERENT curriculum survives', async () => {
+    const pRef = pRefFor(PARENT, PROFILE);
+    await pRef.collection('completions').doc('other-curriculum').set({
+      curriculum_id: OTHER_CURRICULUM, sefaria_ref: REF_A, stage_id: 1, source: 'bulkInTrack',
+    });
+
+    const res = await call(fns.deleteBulkMarkedCompletions, goodArgs, parentAuth);
+
+    assert.equal(res.success, true);
+    assert.equal(
+      (await pRef.collection('completions').doc('other-curriculum').get()).exists,
+      true,
+    );
+  });
+
+  test('a bulkInTrack completion under a different profile survives', async () => {
+    const targetRef = pRefFor(PARENT, PROFILE);
+    const otherRef = pRefFor(PARENT, OTHER_PROFILE);
+    await otherRef.collection('completions').doc('other-profile').set({
+      curriculum_id: CURRICULUM, sefaria_ref: REF_A, stage_id: 1, source: 'bulkInTrack',
+    });
+
+    const res = await call(fns.deleteBulkMarkedCompletions, goodArgs, parentAuth);
+
+    assert.equal(res.success, true);
+    assert.equal((await otherRef.collection('completions').doc('other-profile').get()).exists, true);
+    assert.equal((await targetRef.collection('completions').doc('other-profile').get()).exists, false);
+  });
+
+  test('a bulkInTrack completion under a different user survives', async () => {
+    const strangerRef = pRefFor(STRANGER, PROFILE);
+    await strangerRef.collection('completions').doc('stranger').set({
+      curriculum_id: CURRICULUM, sefaria_ref: REF_A, stage_id: 1, source: 'bulkInTrack',
+    });
+
+    const res = await call(fns.deleteBulkMarkedCompletions, goodArgs, parentAuth);
+
+    assert.equal(res.success, true);
+    assert.equal((await strangerRef.collection('completions').doc('stranger').get()).exists, true);
+  });
+
+  // ── learning_ledger sweep ────────────────────────────────────────────────────
+
+  test('deletes bulkInTrack ledger entries for the target curriculum', async () => {
+    const pRef = pRefFor(PARENT, PROFILE);
+    await pRef.collection('learning_ledger').doc('ledger-1').set({
+      ulid: 'ledger-1', curriculum_id: CURRICULUM, unit_identifier: 'Genesis', source: 'bulkInTrack',
+    });
+
+    const res = await call(fns.deleteBulkMarkedCompletions, goodArgs, parentAuth);
+
+    assert.equal(res.success, true);
+    assert.equal(res.deleted.learning_ledger, 1);
+    assert.equal((await pRef.collection('learning_ledger').doc('ledger-1').get()).exists, false);
+  });
+
+  // Regression test for the over-deletion bug: an earlier version of this
+  // function matched learning_ledger by curriculum_id + source alone, with
+  // no per-unit narrowing. A user who bulk-marked all of Shas (~63 masechtos
+  // = ~63 bulkInTrack ledger entries under ONE curriculum_id) un-ticking a
+  // single daf of Berachos would have wiped every one of those 63 lifetime
+  // records instead of just Berachos's. unitIdentifiers exists to prevent
+  // exactly this: the ledger sweep must only ever touch units the caller
+  // actually named.
+  test('un-ticking a ref in unit A deletes only unit A\'s ledger entry — unit B is untouched', async () => {
+    const pRef = pRefFor(PARENT, PROFILE);
+    await pRef.collection('learning_ledger').doc('ledger-unit-a').set({
+      ulid: 'ledger-unit-a', curriculum_id: CURRICULUM, unit_identifier: UNIT_A, source: 'bulkInTrack',
+    });
+    // Same curriculum, same profile, same source — differs ONLY by unit.
+    // A third and fourth masechta stand in for the other ~61 of a bulk-marked
+    // Shas that must never be touched by an un-tick scoped to UNIT_A alone.
+    await pRef.collection('learning_ledger').doc('ledger-unit-b').set({
+      ulid: 'ledger-unit-b', curriculum_id: CURRICULUM, unit_identifier: UNIT_B, source: 'bulkInTrack',
+    });
+    await pRef.collection('learning_ledger').doc('ledger-unit-c').set({
+      ulid: 'ledger-unit-c', curriculum_id: CURRICULUM, unit_identifier: 'Leviticus', source: 'bulkInTrack',
+    });
+
+    // goodArgs.unitIdentifiers is [UNIT_A] only — the caller is un-ticking
+    // one item of unit A, not touching units B or C.
+    const res = await call(fns.deleteBulkMarkedCompletions, goodArgs, parentAuth);
+
+    assert.equal(res.success, true);
+    assert.equal(res.deleted.learning_ledger, 1, 'exactly one ledger entry (unit A) should be deleted');
+    assert.equal(
+      (await pRef.collection('learning_ledger').doc('ledger-unit-a').get()).exists,
+      false,
+      'unit A ledger entry should be deleted',
+    );
+    assert.equal(
+      (await pRef.collection('learning_ledger').doc('ledger-unit-b').get()).exists,
+      true,
+      'unit B ledger entry must survive — the caller never named it',
+    );
+    assert.equal(
+      (await pRef.collection('learning_ledger').doc('ledger-unit-c').get()).exists,
+      true,
+      'unit C ledger entry must survive — the caller never named it',
+    );
+  });
+
+  test('a live-sourced ledger entry for the same curriculum survives', async () => {
+    const pRef = pRefFor(PARENT, PROFILE);
+    await pRef.collection('learning_ledger').doc('ledger-live').set({
+      ulid: 'ledger-live', curriculum_id: CURRICULUM, unit_identifier: 'Genesis', source: 'live',
+    });
+
+    const res = await call(fns.deleteBulkMarkedCompletions, goodArgs, parentAuth);
+
+    assert.equal(res.success, true);
+    const snap = await pRef.collection('learning_ledger').doc('ledger-live').get();
+    assert.equal(snap.exists, true, 'a live ledger entry must survive');
+    assert.equal(snap.data().source, 'live');
+  });
+
+  test('a lifetimeOnly ledger entry for the same curriculum survives (standalone import, never track-bound)', async () => {
+    const pRef = pRefFor(PARENT, PROFILE);
+    await pRef.collection('learning_ledger').doc('ledger-lifetime').set({
+      ulid: 'ledger-lifetime', curriculum_id: CURRICULUM, unit_identifier: 'Genesis', source: 'lifetimeOnly',
+    });
+
+    const res = await call(fns.deleteBulkMarkedCompletions, goodArgs, parentAuth);
+
+    assert.equal(res.success, true);
+    const snap = await pRef.collection('learning_ledger').doc('ledger-lifetime').get();
+    assert.equal(snap.exists, true, 'a lifetimeOnly ledger entry must never be deleted by this function');
+    assert.equal(snap.data().source, 'lifetimeOnly');
+  });
+
+  test('a ledger entry with no source field at all survives (legacy — absence means leave alone)', async () => {
+    const pRef = pRefFor(PARENT, PROFILE);
+    await pRef.collection('learning_ledger').doc('ledger-legacy').set({
+      ulid: 'ledger-legacy', curriculum_id: CURRICULUM, unit_identifier: 'Genesis',
+      // no `source` field
+    });
+
+    const res = await call(fns.deleteBulkMarkedCompletions, goodArgs, parentAuth);
+
+    assert.equal(res.success, true);
+    assert.equal(
+      (await pRef.collection('learning_ledger').doc('ledger-legacy').get()).exists,
+      true,
+    );
+  });
+
+  test('a bulkInTrack ledger entry for a DIFFERENT curriculum survives', async () => {
+    const pRef = pRefFor(PARENT, PROFILE);
+    await pRef.collection('learning_ledger').doc('ledger-other-curriculum').set({
+      ulid: 'ledger-other-curriculum', curriculum_id: OTHER_CURRICULUM,
+      unit_identifier: 'Exodus', source: 'bulkInTrack',
+    });
+
+    const res = await call(fns.deleteBulkMarkedCompletions, goodArgs, parentAuth);
+
+    assert.equal(res.success, true);
+    assert.equal(
+      (await pRef.collection('learning_ledger').doc('ledger-other-curriculum').get()).exists,
+      true,
+      'a ledger entry for a different curriculum must survive',
+    );
+  });
+
+  test('a bulkInTrack ledger entry under a different profile survives', async () => {
+    const otherRef = pRefFor(PARENT, OTHER_PROFILE);
+    await otherRef.collection('learning_ledger').doc('ledger-other-profile').set({
+      ulid: 'ledger-other-profile', curriculum_id: CURRICULUM, unit_identifier: 'Genesis', source: 'bulkInTrack',
+    });
+
+    const res = await call(fns.deleteBulkMarkedCompletions, goodArgs, parentAuth);
+
+    assert.equal(res.success, true);
+    assert.equal(
+      (await otherRef.collection('learning_ledger').doc('ledger-other-profile').get()).exists,
+      true,
+    );
+  });
+
+  test('a bulkInTrack ledger entry under a different user survives', async () => {
+    const strangerRef = pRefFor(STRANGER, PROFILE);
+    await strangerRef.collection('learning_ledger').doc('ledger-stranger').set({
+      ulid: 'ledger-stranger', curriculum_id: CURRICULUM, unit_identifier: 'Genesis', source: 'bulkInTrack',
+    });
+
+    const res = await call(fns.deleteBulkMarkedCompletions, goodArgs, parentAuth);
+
+    assert.equal(res.success, true);
+    assert.equal((await strangerRef.collection('learning_ledger').doc('ledger-stranger').get()).exists, true);
+  });
+
+  // ── sibling append-only collections must never be touched ────────────────────
+
+  test('streak_events and points_ledger are untouched', async () => {
+    const pRef = pRefFor(PARENT, PROFILE);
+    await pRef.collection('streak_events').doc('keep').set({ profile_id: String(PROFILE) });
+    await pRef.collection('points_ledger').doc('keep').set({ profile_id: String(PROFILE), delta: 10 });
+
+    const res = await call(fns.deleteBulkMarkedCompletions, goodArgs, parentAuth);
+
+    assert.equal(res.success, true);
+    assert.equal((await pRef.collection('streak_events').doc('keep').get()).exists, true);
+    assert.equal((await pRef.collection('points_ledger').doc('keep').get()).exists, true);
+  });
+
+  // ── idempotency and scale ─────────────────────────────────────────────────────
+
+  test('idempotent — running twice is safe and does not error or double-report', async () => {
+    const pRef = pRefFor(PARENT, PROFILE);
+    await pRef.collection('completions').doc('a-stage1').set({
+      curriculum_id: CURRICULUM, sefaria_ref: REF_A, stage_id: 1, source: 'bulkInTrack',
+    });
+    await pRef.collection('learning_ledger').doc('ledger-1').set({
+      ulid: 'ledger-1', curriculum_id: CURRICULUM, unit_identifier: 'Genesis', source: 'bulkInTrack',
+    });
+
+    const first = await call(fns.deleteBulkMarkedCompletions, goodArgs, parentAuth);
+    assert.equal(first.success, true);
+    assert.equal(first.deleted.completions, 1);
+    assert.equal(first.deleted.learning_ledger, 1);
+
+    const second = await call(fns.deleteBulkMarkedCompletions, goodArgs, parentAuth);
+    assert.equal(second.success, true, 'rerun on already-deleted data must not error');
+    assert.equal(second.deleted.completions, 0);
+    assert.equal(second.deleted.learning_ledger, 0);
+  });
+
+  test('sweeps more than 500 bulkInTrack completions in one call (bulkWriter, not batch-capped)', async () => {
+    const pRef = pRefFor(PARENT, PROFILE);
+    const N = 550;
+    const refs = [];
+    const chunks = [];
+    let batch = db.batch();
+    let opsInBatch = 0;
+    for (let i = 0; i < N; i++) {
+      const ref = `Genesis 1:${i}`;
+      refs.push(ref);
+      batch.set(pRef.collection('completions').doc(`c${i}`), {
+        curriculum_id: CURRICULUM, sefaria_ref: ref, stage_id: 1, source: 'bulkInTrack',
+      });
+      opsInBatch++;
+      if (opsInBatch === 450) {
+        chunks.push(batch.commit());
+        batch = db.batch();
+        opsInBatch = 0;
+      }
+    }
+    if (opsInBatch > 0) chunks.push(batch.commit());
+    await Promise.all(chunks);
+
+    const res = await call(
+      fns.deleteBulkMarkedCompletions,
+      { profileId: PROFILE, curriculumId: CURRICULUM, sefariaRefs: refs, unitIdentifiers: [UNIT_A] },
+      parentAuth,
+    );
+
+    assert.equal(res.success, true);
+    assert.equal(res.deleted.completions, N);
+    const remaining = await pRef.collection('completions').where('curriculum_id', '==', CURRICULUM).get();
+    assert.equal(remaining.size, 0, 'all 550 completions should be deleted');
   });
 });
 
