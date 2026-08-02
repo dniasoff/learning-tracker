@@ -15,6 +15,8 @@
 /// independent under `--test-randomize-ordering-seed=random`.
 library;
 
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -51,6 +53,15 @@ class _FakeRegistryHarness {
   final List<String> deletedNames = [];
   final Map<String, MockFirebaseApp> apps = {};
 
+  /// Mirrors the real SDK's `Firebase.apps`: populated the instant the fake
+  /// `initializeApp` "creates" an app, and only cleared once the fake
+  /// `deleteApp` call actually finishes — see `_SwitchHarness`'s doc comment
+  /// (`account_switch_lifecycle_test.dart`) for the full rationale
+  /// (test-blindness fix: every harness in this suite used to stub
+  /// `listApps: () => const []`, so the reuse-an-existing-app branch never
+  /// ran).
+  final Set<String> _nativeAppNames = {};
+
   AccountFirebase build() {
     return AccountFirebase(
       options: _options,
@@ -61,13 +72,19 @@ class _FakeRegistryHarness {
             final app = MockFirebaseApp();
             when(() => app.name).thenReturn(name);
             apps[name] = app;
+            _nativeAppNames.add(name);
             return app;
           },
-      listApps: () => const [],
-      resolveFirestore: (app) => MockFirebaseFirestore(),
+      listApps: () => [for (final name in _nativeAppNames) apps[name]!],
+      resolveFirestore: (app) {
+        final mock = MockFirebaseFirestore();
+        when(() => mock.terminate()).thenAnswer((_) async {});
+        return mock;
+      },
       resolveAuth: (app) => MockFirebaseAuthHandle(),
       deleteApp: (app) async {
         deletedNames.add(app.name);
+        _nativeAppNames.remove(app.name);
       },
     );
   }
@@ -273,6 +290,101 @@ void main() {
       expect(onHandles.app.name, 'account_acct-A');
       expect(offHandles.app.name, '[DEFAULT]');
       expect(identical(onHandles.firestore, offHandles.firestore), isFalse);
+    });
+  });
+
+  group('accountFirebaseProvider — disposed mid-resolve does not leak the '
+      'app (defect #1 red-demo)', () {
+    test('a provider disposed while resolve() is still awaiting a slow native '
+        'initializeApp() still tears the app down once resolve() settles — '
+        'every OTHER harness in this file settles in a single microtask, '
+        'which is exactly why this disposed-mid-resolve window never existed '
+        'in this suite before this test', () async {
+      final releaseInit = Completer<void>();
+      final initializedNames = <String>[];
+      final deletedNames = <String>[];
+
+      final registry = AccountFirebase(
+        options: _options,
+        enableAppCheck: false,
+        initializeApp:
+            ({required String name, required FirebaseOptions options}) async {
+              // Genuinely yields to the event loop instead of settling in
+              // the same microtask — this is the real-world "hundreds of
+              // ms of native initializeApp" window the fix targets.
+              await releaseInit.future;
+              initializedNames.add(name);
+              final app = MockFirebaseApp();
+              when(() => app.name).thenReturn(name);
+              return app;
+            },
+        listApps: () => const [],
+        resolveFirestore: (app) {
+          final mock = MockFirebaseFirestore();
+          when(() => mock.terminate()).thenAnswer((_) async {});
+          return mock;
+        },
+        resolveAuth: (app) => MockFirebaseAuthHandle(),
+        deleteApp: (app) async {
+          deletedNames.add(app.name);
+        },
+      );
+
+      final container = ProviderContainer(
+        overrides: [
+          accountFirebaseRegistryProvider.overrideWithValue(registry),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      // Start resolving 'acct-A' via the ONLY listener on this family
+      // member, then drop it before the native initializeApp settles —
+      // this disposes the provider instance while `registry.resolve` is
+      // still in flight, the exact window defect #1 lives in.
+      final sub = container.listen(
+        accountFirebaseProvider('acct-A'),
+        (_, _) {},
+      );
+      sub.close();
+      // Drain the event queue so Riverpod's `ProviderScheduler` actually
+      // RUNS the scheduled disposal now, WHILE resolve() is still
+      // suspended on `releaseInit` (not yet completed) — this is what
+      // makes the window real: the disposal must complete (marking
+      // `ref.mounted` false) before resolve() settles, not after.
+      // Without this drain, completing `releaseInit` immediately lets
+      // resolve() race ahead of the scheduler via microtasks alone and
+      // "accidentally" win, masking the bug this test targets.
+      await pumpEventQueue();
+
+      // Let the slow initializeApp actually settle now that the provider
+      // is already disposed.
+      releaseInit.complete();
+      // Drain the event queue so resolve() completes, the
+      // `!ref.mounted` guard fires, and the onDispose-triggered
+      // registry.dispose() runs to completion.
+      await pumpEventQueue();
+
+      expect(
+        initializedNames,
+        ['account_acct-A'],
+        reason:
+            'the in-flight native call still completes (it cannot be '
+            'cancelled mid-flight) — the fix is about what happens '
+            'AFTER it settles, not preventing the native call itself',
+      );
+      expect(
+        deletedNames,
+        ['account_acct-A'],
+        reason:
+            'CRITICAL: once disposed mid-resolve, the app resolve() went '
+            'on to create must still be torn down. Pre-fix, '
+            'ref.onDispose was registered AFTER the await, so '
+            'registering it in this exact disposed-mid-resolve window '
+            'threw UnmountedRefException instead of ever running — the '
+            'app (+ its 20 MiB persistent cache) would then be pinned '
+            'for the rest of the process.',
+      );
+      expect(registry.activeAccountIds, isEmpty);
     });
   });
 

@@ -63,6 +63,19 @@ const _options = FirebaseOptions(
 /// makes, keyed by app name, so a test can reconstruct the exact sequence of
 /// creates/tears-down a chain of account switches produced. Optionally
 /// delays `delete` to simulate a slow/async teardown racing a fast switch.
+///
+/// **`listApps` models the REAL SDK's "still listed while deleting" window**
+/// (test-blindness fix): an app name is added to [_nativeAppNames] the
+/// instant the fake `initializeApp` "creates" it, and is only REMOVED once
+/// the fake `deleteApp` call actually finishes — mirroring
+/// `firebase_core_platform_interface`'s `MethodChannelFirebaseApp.delete()`,
+/// which only calls `MethodChannelFirebase.appInstances.remove(name)` AFTER
+/// `await _api.delete(name)` returns. Pre-this-fix, every harness in this
+/// suite stubbed `listApps: () => const []`, so the "reuse an
+/// already-listed app" branch in `AccountFirebase._findOrInitializeApp`
+/// never ran at all — combined with [_deleteDelay], this harness can now
+/// reproduce the real window where a concurrent `resolve()` sees a
+/// still-native, about-to-be-deleted app.
 class _SwitchHarness {
   _SwitchHarness({Duration? deleteDelay}) : _deleteDelay = deleteDelay;
 
@@ -70,6 +83,7 @@ class _SwitchHarness {
   final List<String> initializedNames = [];
   final List<String> deletedNames = [];
   final Map<String, MockFirebaseApp> apps = {};
+  final Set<String> _nativeAppNames = {};
 
   AccountFirebase build({int maxAccounts = 5}) {
     return AccountFirebase(
@@ -82,16 +96,22 @@ class _SwitchHarness {
             final app = MockFirebaseApp();
             when(() => app.name).thenReturn(name);
             apps[name] = app;
+            _nativeAppNames.add(name);
             return app;
           },
-      listApps: () => const [],
-      resolveFirestore: (app) => MockFirebaseFirestore(),
+      listApps: () => [for (final name in _nativeAppNames) apps[name]!],
+      resolveFirestore: (app) {
+        final mock = MockFirebaseFirestore();
+        when(() => mock.terminate()).thenAnswer((_) async {});
+        return mock;
+      },
       resolveAuth: (app) => MockFirebaseAuthHandle(),
       deleteApp: (app) async {
         if (_deleteDelay != null) {
           await Future<void>.delayed(_deleteDelay);
         }
         deletedNames.add(app.name);
+        _nativeAppNames.remove(app.name);
       },
     );
   }
