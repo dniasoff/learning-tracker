@@ -1,4 +1,7 @@
 ---
+superseded_by: docs/firestore-rewrite-map.md
+superseded_on: 2026-08-02
+superseded_note: "MIGRATION MACHINERY SUPERSEDED — owner scrapped the phased migration for a single-phase clean rewrite (greenfield, no users, no back-compat). The DESIGN invariants here are still good; the phasing, strangler waves, back-compat, shadow writes, rollback and feature flags are dead. See docs/firestore-rewrite-map.md."
 name: Drift→Firestore-Native Migration
 type: architecture-spine
 purpose: build-substrate
