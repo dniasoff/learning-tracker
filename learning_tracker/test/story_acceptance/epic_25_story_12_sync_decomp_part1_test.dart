@@ -45,6 +45,18 @@ void main() {
         const canonicalZone = <String>{
           canonical,
           'core/sync/providers/firestore_instance_provider.dart',
+          // Migration Phase 1 (Story P1-A), AD-1/AD-3/AD-28: the allowed zone
+          // widened to `lib/data/firestore/**` when the per-account
+          // `AccountFirebase` registry landed — it is the ONLY thing permitted
+          // to call `FirebaseFirestore.instanceFor(app:)` for a named app.
+          // This mirrors, at the story-acceptance layer, the same widening
+          // Story 2.6 applied to `make audit`'s no-firebase-outside-core grep
+          // (which now allows lib/data/firestore/** + lib/data/repositories/**
+          // while RETAINING the legacy lib/core/sync|auth entries until the
+          // engine is deleted in Phase 6). Keep the two layers in step: a new
+          // importer here must also be allowed by
+          // `tool/check_firebase_confinement.dart`, and vice versa.
+          'data/firestore/account_firebase.dart',
         };
 
         final offenders = <String>[];
