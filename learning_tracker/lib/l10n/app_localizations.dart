@@ -5811,66 +5811,6 @@ abstract class AppLocalizations {
   /// **'Syncing...'**
   String get backupSyncing;
 
-  /// No description provided for @backupPendingChanges.
-  ///
-  /// In en, this message translates to:
-  /// **'{count} changes pending'**
-  String backupPendingChanges(int count);
-
-  /// No description provided for @backupSyncError.
-  ///
-  /// In en, this message translates to:
-  /// **'Sync error: {message}'**
-  String backupSyncError(String message);
-
-  /// No description provided for @backupSyncTapToRetry.
-  ///
-  /// In en, this message translates to:
-  /// **'Tap to retry'**
-  String get backupSyncTapToRetry;
-
-  /// Friendly message shown instead of a raw exception string when cloud sync fails (ST-4). TRANSIENT codes only (timeout/unknown) — paired with backupSyncTapToRetry. Permanent codes use backupSyncAppCheckUnavailable / backupSyncAccountUnavailable.
-  ///
-  /// In en, this message translates to:
-  /// **'Cloud backup is temporarily unavailable.'**
-  String get backupSyncCloudUnavailable;
-
-  /// Non-transient error shown on the Backup & Sync card when sync fails with SyncErrorCode.appCheck (Firebase App Check attestation failure — e.g. Play Integrity disabled/misconfigured, 1.0.67 incident). Must NOT read as temporary and must NOT invite a doomed retry — retrying the same pull cannot succeed until the app install is verified again.
-  ///
-  /// In en, this message translates to:
-  /// **'Cloud backup can\'t verify this app right now. Please update to the latest version from the store.'**
-  String get backupSyncAppCheckUnavailable;
-
-  /// Non-transient error shown on the Backup & Sync card when sync fails with SyncErrorCode.permissionDenied (a bare rules/session rejection with no App Check signature). A permanent access failure — must NOT read as temporary and must NOT offer a doomed tap-to-retry.
-  ///
-  /// In en, this message translates to:
-  /// **'Cloud backup is unavailable for this account.'**
-  String get backupSyncAccountUnavailable;
-
-  /// Friendly message shown when the outbox has stuck rows, replacing the raw 'N row(s) stuck after 3+ attempts' English string (ST-4).
-  ///
-  /// In en, this message translates to:
-  /// **'Some changes are waiting to sync. We\'ll retry automatically.'**
-  String get backupSyncOutboxStuck;
-
-  /// Localized identity-mismatch degraded reason, replacing sync_orchestrator's hand-built English sentence so it never renders raw in non-English UIs (AUD-settings-01). Shown when the device's signed-in Firebase account differs from the active in-app account.
-  ///
-  /// In en, this message translates to:
-  /// **'Signed in as {signedInEmail} — sign in as {activeEmail} to back up this account.'**
-  String backupSyncIdentityMismatch(String signedInEmail, String activeEmail);
-
-  /// Fallback identity-mismatch reason when the active account has no known email (AUD-settings-01).
-  ///
-  /// In en, this message translates to:
-  /// **'Signed in as the wrong account — sign in again to back up.'**
-  String get backupSyncIdentityMismatchNoEmail;
-
-  /// Localized fallback used in place of the signed-in email when it is unknown, interpolated into backupSyncIdentityMismatch (AUD-settings-01).
-  ///
-  /// In en, this message translates to:
-  /// **'a different account'**
-  String get backupSyncUnknownAccount;
-
   /// No description provided for @backupConnecting.
   ///
   /// In en, this message translates to:
@@ -5882,18 +5822,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Offline'**
   String get backupOffline;
-
-  /// No description provided for @backupSyncPaused.
-  ///
-  /// In en, this message translates to:
-  /// **'Sync paused — {count} queued. {reason}'**
-  String backupSyncPaused(int count, String reason);
-
-  /// No description provided for @backupSyncPausedNoCount.
-  ///
-  /// In en, this message translates to:
-  /// **'Sync paused. {reason}'**
-  String backupSyncPausedNoCount(String reason);
 
   /// No description provided for @backupUpgradeToCloud.
   ///
@@ -5936,12 +5864,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count}d ago'**
   String backupTimeAgoDays(int count);
-
-  /// No description provided for @backupSyncSignInToBackUp.
-  ///
-  /// In en, this message translates to:
-  /// **'Sign in to back up'**
-  String get backupSyncSignInToBackUp;
 
   /// No description provided for @reauthDialogTitle.
   ///

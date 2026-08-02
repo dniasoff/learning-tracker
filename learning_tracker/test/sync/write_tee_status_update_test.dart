@@ -1,6 +1,6 @@
 /// Regression test for: after a write-tee drain failure the sync-status badge
-/// must update to `pending` (or `degraded` when stuck) rather than remaining
-/// at a stale `Synced`.
+/// must update to reflect the unsettled outbox rather than remaining at a
+/// stale `Synced`.
 ///
 /// Root cause: `OutboxSyncWriteFacade.onEnqueueDrain` called
 /// `outboxProcessor.drain()` directly, bypassing the orchestrator's
@@ -11,6 +11,12 @@
 /// Fix: expose `recordDrainAttempt()` on the [SyncOrchestrator] interface and
 /// chain it after every write-tee drain so the badge reflects push
 /// success/failure immediately.
+///
+/// Story 1.5 / AD-11: the badge used to distinguish `pending` (fresh rows)
+/// from `degraded` (rows stuck past an attempt threshold), each carrying a
+/// `pendingChanges` count. Both collapsed into the same honest `syncing`
+/// state — no app-level "N pending / N stuck" bookkeeping survives; a
+/// non-empty outbox while online is simply unsettled work in flight.
 library;
 
 import 'package:flutter_test/flutter_test.dart';
@@ -141,8 +147,8 @@ void main() {
     await db.close();
   });
 
-  test('after a failed write-tee drain, recordDrainAttempt() updates status to pending '
-      '(not a false Synced)', () async {
+  test('after a failed write-tee drain, recordDrainAttempt() updates status to '
+      'syncing (not a false Synced)', () async {
     // Build a processor whose push always fails (simulates network-offline
     // or permission-denied). Use a backoff of 0 so the row is immediately
     // eligible to retry.
@@ -182,27 +188,27 @@ void main() {
     await failingProcessor.drain(1);
 
     // OLD BEHAVIOUR (bug): the write-tee only calls drain() without calling
-    // recordDrainAttempt(). The status stays Synced even though there is a
-    // pending (failed) row.
+    // recordDrainAttempt(). The status stays Synced even though there is an
+    // unsettled (failed) row.
     //
     // NEW BEHAVIOUR (fix): the write-tee calls recordDrainAttempt() after
     // drain(), which calls _recomputeOutboxStatus() and emits the correct
-    // status. Assert that calling recordDrainAttempt() moves status to pending.
+    // status. Assert that calling recordDrainAttempt() moves status to
+    // syncing.
     await orchestrator.recordDrainAttempt();
 
-    // The outbox has 1 row (attempts < 3, so not stuck → pending, not degraded).
     expect(
       orchestrator.currentStatus,
-      isA<SyncStatusPending>(),
+      isA<SyncStatusSyncing>(),
       reason:
           'after a failed write-tee drain + recordDrainAttempt(), '
-          'status must be pending (not stale Synced)',
+          'status must be syncing (unsettled, not stale Synced)',
     );
-    expect((orchestrator.currentStatus as SyncStatusPending).pendingChanges, 1);
   });
 
-  test('after a failed write-tee drain that reaches stuck threshold, '
-      'recordDrainAttempt() updates status to degraded', () async {
+  test('after a failed write-tee drain that reaches the retry-attempt '
+      'ceiling, recordDrainAttempt() still updates status to syncing '
+      '(no distinct "stuck" state)', () async {
     final failingProcessor = OutboxProcessor(
       outboxDao: db.outboxDao,
       pipeline: _FailingPipeline(),
@@ -212,7 +218,10 @@ void main() {
     orchestrator = _buildOrchestrator(db, outboxProcessor: failingProcessor);
     await orchestrator.pullOnLaunch();
 
-    // Insert a row that already has 3 attempts (= _degradedAttemptThreshold).
+    // Insert a row and mark it as having failed 3 times — under the old
+    // model this crossed the "stuck" attempt threshold; under the collapsed
+    // tri-state model attempt count no longer changes the derived status at
+    // all (Story 1.5 / AD-11: no app-level pending/stuck bookkeeping).
     final rowId = await db.outboxDao.insertOutboxRow(
       OutboxCompanion.insert(
         profileId: 1,
@@ -222,7 +231,6 @@ void main() {
         createdAt: DateTime.utc(2026, 6, 10),
       ),
     );
-    // Mark as having failed 3 times (stuck threshold).
     await db.outboxDao.markAttempted(rowId);
     await db.outboxDao.markAttempted(rowId);
     await db.outboxDao.markAttempted(rowId);
@@ -233,10 +241,10 @@ void main() {
 
     expect(
       orchestrator.currentStatus,
-      isA<SyncStatusDegraded>(),
+      isA<SyncStatusSyncing>(),
       reason:
-          'stuck row (3 attempts) + recordDrainAttempt() → degraded, '
-          'not a false Synced',
+          'a still-queued row — regardless of attempt count — is unsettled '
+          'work while online → syncing, not a false Synced',
     );
   });
 }

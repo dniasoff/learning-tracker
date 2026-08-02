@@ -46,10 +46,14 @@ abstract class SyncOrchestrator {
 
   /// Bypass the once-per-launch guard and re-run a cold-start pull.
   ///
-  /// Wired to the tap-to-retry affordance on the Backup & Sync error card so
-  /// the user can recover from a stuck or failed sync without restarting the
-  /// app. Implementations should reset the in-flight guard before delegating
-  /// back to [pullOnLaunch].
+  /// Used by callers that need to force a fresh pull outside the normal
+  /// once-per-launch flow (e.g. [DeviceRestoreService] after a restore).
+  /// Story 1.5 / AD-11: the Backup & Sync card no longer renders a
+  /// differentiated error state with its own tap-to-retry affordance (that
+  /// UI was removed — see `backup_sync_section.dart`'s doc comment), but the
+  /// method itself remains a normal orchestrator capability. Implementations
+  /// should reset the in-flight guard before delegating back to
+  /// [pullOnLaunch].
   Future<void> retryPull();
 
   /// Push all locally-stored data to Firestore.
@@ -112,8 +116,6 @@ abstract class SyncOrchestrator {
   ///     ([SyncStatusSyncing] + online) — the pull owns the syncing→synced
   ///     window; [SyncStatus.offline] still wins immediately mid-pull when
   ///     the device goes offline (SYNC-OFFLINE-SYNCING-01)
-  ///   * a pull error is displayed ([SyncStatusError]) — the error card must
-  ///     remain visible until the user explicitly retries
   Future<void> recordDrainAttempt();
 }
 
@@ -255,12 +257,14 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
     OutboxDao Function()? resolveOutboxDao,
 
     /// Reports whether the live Firebase auth identity matches the active
-    /// account. When it returns a mismatched [SyncIdentityStatus], the
-    /// outbox-derived status surfaces an actionable "sign in as <email>"
-    /// `degraded` state instead of the misleading "rows stuck after N
-    /// attempts" — the drain itself is skipped at the [OutboxProcessor] layer
-    /// so no retries accrue. Optional: when null (tests / legacy wiring) the
-    /// status path behaves exactly as before.
+    /// account. When it returns a mismatched [SyncIdentityStatus],
+    /// [pullOnLaunch] skips the doomed read and surfaces `syncing` (Story
+    /// 1.5 / AD-11 — no distinct actionable status survives the tri-state
+    /// collapse) instead of attempting a pull that would fail with
+    /// permission-denied on every read. The outbox drain itself is skipped
+    /// at the [OutboxProcessor] layer so no retries accrue. Optional: when
+    /// null (tests / legacy wiring) the status path behaves exactly as
+    /// before.
     SyncIdentityStatus Function()? resolveIdentityStatus,
   }) : _resolveMergeRouter = resolveMergeRouter,
        _resolveGateway = resolveGateway,
@@ -285,16 +289,13 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
   final Duration parkAfterBackgroundDuration;
 
   /// Phase 4 sync-architecture-plan: lazy resolver for the [OutboxDao] used
-  /// to compute pending / degraded / offline sync-status counts. See
+  /// to compute the `syncing`-vs-`synced` boolean signal (Story 1.5: no
+  /// count is surfaced — depth is only ever tested for `> 0`). See
   /// constructor doc.
   final OutboxDao Function()? _resolveOutboxDao;
 
   /// Resolves the live-vs-active identity match — see constructor doc.
   final SyncIdentityStatus Function()? _resolveIdentityStatus;
-
-  /// Minimum attempt count before a stuck outbox row pushes the orchestrator
-  /// into the [SyncStatus.degraded] state. Matches Plan §F Phase 4.
-  static const int _degradedAttemptThreshold = 3;
 
   /// `true` once a `pull-on-launch` completes successfully at least once
   /// this session — the `synced` precondition per Plan §F Phase 4
@@ -338,6 +339,11 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
 
   ListenerSupervisor? _listenerSupervisor;
   LifecycleObserver? _lifecycleObserver;
+
+  /// Story 1.5 / AD-11: subscription to [ListenerSupervisor.deadChannelsChanges]
+  /// that triggers a status recompute on every dead-channel-set change.
+  /// Subscribed in [start], cancelled in [dispose].
+  StreamSubscription<Set<String>>? _deadChannelsSubscription;
 
   /// Optional connectivity stream injected by the provider. Subscribed in
   /// [start], cancelled in [dispose]. See constructor doc.
@@ -577,6 +583,16 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
 
     lifecycleObserver.start();
     listenerSupervisor.start();
+
+    // Story 1.5 / AD-11: recompute status on every dead-channel-set change so
+    // a channel that goes dead (or resolves) while online is reflected in
+    // the ambient status chip without waiting for an unrelated trigger (a
+    // drain, a connectivity flap, ...) to happen to fire a recompute. This is
+    // the wiring for the AD-11 total-function honesty rule — Story 1.1's
+    // exposed signal, consumed here.
+    _deadChannelsSubscription = listenerSupervisor.deadChannelsChanges.listen(
+      (_) => unawaited(_recomputeOutboxStatus()),
+    );
 
     // Subscribe to connectivity transitions so we can self-heal the
     // Firestore channel mid-session (not just on background→foreground).
@@ -1032,12 +1048,23 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
         FirestorePermissionDeniedException() => SyncErrorCode.permissionDenied,
         _ => SyncErrorCode.unknown,
       };
+      // Meta-fix (1.0.67 App Check incident): capture the underlying error
+      // detail on EVERY failed pull, independent of the status emitted below
+      // — see [_recordSyncErrorTelemetry] doc for why this is decoupled from
+      // the (now error-less) SyncStatus union.
+      _recordSyncErrorTelemetry(code: code, debugDetail: e.toString());
+      // Story 1.5 / AD-11 total-function honesty rule: a failed pull is
+      // unsettled work, not a terminal state. Never claim `synced` (a lie —
+      // the data may be stale/missing) and never claim `offline` unless the
+      // network genuinely is down — connectivity, not the exception type, is
+      // authoritative here (mirrors the `isOnline` read in
+      // [_recomputeOutboxStatus]). `_pullGuard` still resets to
+      // `_PullFailed` above so a later retry (manual or resume-triggered)
+      // can re-run the pull.
       _safeEmitStatus(
-        SyncStatus.error(
-          code: code,
-          failedAt: DateTimeFactory.nowUtc(),
-          debugDetail: e.toString(),
-        ),
+        (_lastConnectivity ?? true)
+            ? SyncStatus.syncing(startedAt: DateTimeFactory.nowUtc())
+            : const SyncStatus.offline(),
       );
       rethrow;
     }
@@ -1055,25 +1082,29 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
   /// is no longer involved. If the controller is already closed (e.g. the
   /// orchestrator was disposed between a pull starting and completing) the
   /// emit is a safe no-op.
+  ///
+  /// Story 1.5 / AD-11: [SyncStatus] no longer has an `error` case, so there
+  /// is nothing to branch on here anymore — a failed pull calls
+  /// [_recordSyncErrorTelemetry] directly at its own catch site (see
+  /// [pullOnLaunch]) before emitting the collapsed `syncing`/`offline` status.
   void _safeEmitStatus(SyncStatus status) {
-    // Meta-fix (1.0.67 App Check incident): capture the underlying error
-    // detail on EVERY transition into an error state. Diagnosing the field
-    // report was expensive precisely because the real Firebase/Firestore error
-    // string was thrown away — this is the single most valuable change. Emit
-    // BEFORE mutating `_currentStatus`/notifying listeners so the telemetry
-    // fires exactly once per error transition regardless of the emit site.
-    if (status is SyncStatusError) {
-      _recordSyncErrorTelemetry(status);
-    }
     _currentStatus = status;
     if (!_statusController.isClosed) {
       _statusController.add(status);
     }
   }
 
-  /// Forward a [SyncStatusError] transition to telemetry, carrying the stable
+  /// Record a failed-pull diagnostic to telemetry, carrying the stable
   /// [SyncErrorCode] together with the real `debugDetail` (the underlying
-  /// Firebase/Firestore error string that was previously dropped).
+  /// Firebase/Firestore error string).
+  ///
+  /// Story 1.5 / AD-11: the slim tri-state [SyncStatus] carries no error
+  /// detail at all (never a code, never a raw message) — but the 1.0.67 App
+  /// Check field incident showed that throwing this detail away entirely
+  /// makes production failures expensive to diagnose. So the classification
+  /// this method used to read off `SyncStatusError` is now computed once at
+  /// the [pullOnLaunch] catch site and passed straight through to telemetry,
+  /// decoupled from the (now error-less) status union.
   ///
   /// The structured log ([AppLogger]) makes it greppable; the Crashlytics
   /// non-fatal surfaces it in the crash dashboard without a log viewer —
@@ -1081,14 +1112,16 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
   /// (developer triage) is the sanctioned home for raw diagnostic detail; the
   /// coarse category still goes to Analytics via `_analyticsErrorKind` at the
   /// pull boundary (PV-1: raw strings must never reach Analytics).
-  void _recordSyncErrorTelemetry(SyncStatusError status) {
-    final detail = status.debugDetail ?? '(no debugDetail)';
+  void _recordSyncErrorTelemetry({
+    required SyncErrorCode code,
+    required String debugDetail,
+  }) {
     _logger?.error(
       event: 'sync_status_error',
-      fields: {'code': status.code.name, 'debug_detail': detail},
+      fields: {'code': code.name, 'debug_detail': debugDetail},
     );
     final recorded = _crashlytics?.recordError(
-      'sync_status_error [${status.code.name}]: $detail',
+      'sync_status_error [${code.name}]: $debugDetail',
       StackTrace.current,
       fatal: false,
     );
@@ -1097,26 +1130,34 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
 
   // ── Phase 4 — outbox-derived sync-status emission ───────────────────────────
 
-  /// Record one outbox-drain attempt and emit the appropriate sync-status.
+  /// Record one outbox-drain attempt (or a dead-channel-set change) and emit
+  /// the appropriate sync-status.
   ///
   /// Call this after every drain in the orchestrator (write-tee path,
   /// pull-complete path, connectivity-online path, lifecycle-resume path,
-  /// periodic timer). The method queries the outbox once and emits the
-  /// derived [SyncStatus] per Plan §F Phase 4 deliverable 2:
+  /// periodic timer) and whenever [ListenerSupervisor.deadChannelsChanges]
+  /// emits (wired in [start]). Story 1.5 / AD-11 collapsed the derivation to:
   ///
-  ///   * `offline`   — `_lastConnectivity == false` (regardless of outbox).
-  ///   * `degraded`  — outbox has rows whose `attempts ≥ 3`.
-  ///   * `pending`   — online + outbox not empty + no stuck rows.
-  ///   * `synced`    — online + outbox empty + a pull has completed.
+  ///   * `offline` — `_lastConnectivity == false` (connectivity is the only
+  ///     signal; there is no separate "offline with N pending" shape).
+  ///   * `syncing` — online, but unsettled: the outbox has queued rows
+  ///     (regardless of how many, or how many attempts — no "N pending / N
+  ///     stuck" bookkeeping survives) OR a listener channel is still dead
+  ///     (backoff-capped, Story 1.1's `deadChannels`) while online. This is
+  ///     the AD-11 total-function honesty rule: never falsely `synced`.
+  ///   * `synced`  — online + outbox empty + no dead channel + a pull has
+  ///     completed.
   ///
   /// While a pull is actively running ([SyncStatusSyncing]) the method is a
   /// no-op so the pull's `syncing` indicator is not overwritten with a
-  /// `pending` flicker on every transient drain. Mid-pull writes are still
-  /// reconciled by the post-pull recompute (see [pullOnLaunch]).
+  /// re-derived `syncing`/`synced` flicker on every transient drain. Mid-pull
+  /// writes are still reconciled by the post-pull recompute (see
+  /// [pullOnLaunch]).
   ///
   /// Side effect: logs the `sync_outbox_depth` observability gauge so
-  /// dashboards can graph backlog age. Safe to call after [dispose] —
-  /// the status-controller closed-check guards against use-after-dispose.
+  /// dashboards can graph backlog age (diagnostics-only; not surfaced in the
+  /// [SyncStatus] itself). Safe to call after [dispose] — the
+  /// status-controller closed-check guards against use-after-dispose.
   @override
   Future<void> recordDrainAttempt() => _recomputeOutboxStatus();
 
@@ -1171,46 +1212,29 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
     }
   }
 
-  /// Returns true (and emits an actionable identity-mismatch status) when the
-  /// live Firebase identity does not match the active account — in which case
-  /// the caller must NOT attempt a Firestore pull (every read would be denied).
+  /// Returns true (and emits `syncing`) when the live Firebase identity does
+  /// not match the active account — in which case the caller must NOT
+  /// attempt a Firestore pull (every read would be denied).
   ///
-  /// Best-effort outbox depth is read for the `pendingChanges` count; any DB
-  /// error there is swallowed (depth defaults to 0) since the actionable
-  /// re-auth message — not the count — is the point.
+  /// Story 1.5 / AD-11: an identity mismatch used to surface a distinct
+  /// actionable `degraded("sign in as <email>")` status with its own
+  /// "sign in to back up" UI affordance. That state no longer exists in the
+  /// collapsed tri-state union — connectivity is fine and there is
+  /// unsettled/unpushed work, so the honest, total-function status is
+  /// `syncing` (never falsely `synced`, never `offline`). The mismatch is
+  /// still logged (diagnostics only) so the condition remains observable.
   Future<bool> _skipPullOnIdentityMismatch() async {
     final identity = _resolveIdentityStatus?.call();
     if (identity == null || !identity.isMismatch) return false;
 
-    var depth = 0;
-    try {
-      final dao = _resolveOutboxDao?.call();
-      if (dao != null) {
-        depth = await dao.depth(_profileId);
-        if (_profileId != 0) depth += await dao.depth(0);
-      }
-    } catch (_) {
-      // Best-effort — the message matters more than an exact pending count.
-    }
-
-    final activeEmail = identity.activeAccountEmail;
     _logger?.info(
       event: 'sync_orchestrator_pull_skipped_identity_mismatch',
       fields: {
-        'activeAccountEmail': activeEmail,
+        'activeAccountEmail': identity.activeAccountEmail,
         'signedInEmail': identity.signedInEmail,
-        'pendingChanges': depth,
       },
     );
-    _safeEmitStatus(
-      SyncStatus.degraded(
-        pendingChanges: depth,
-        reason: activeEmail != null
-            ? 'Signed in as ${identity.signedInEmail ?? 'a different account'}'
-                  ' — sign in as $activeEmail to back up this account.'
-            : 'Signed in as the wrong account — sign in again to back up.',
-      ),
-    );
+    _safeEmitStatus(SyncStatus.syncing(startedAt: DateTimeFactory.nowUtc()));
     return true;
   }
 
@@ -1239,14 +1263,9 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
 
     int depth;
     DateTime? oldest;
-    int stuck;
     try {
       depth = await dao.depth(_profileId);
       oldest = await dao.oldestPendingAt(_profileId);
-      stuck = await dao.stuckCount(
-        _profileId,
-        minAttempts: _degradedAttemptThreshold,
-      );
       // D13: `_doDrain` sweeps the active profile AND profile 0 (the bootstrap
       // `learner_profile` push and any account-level row is enqueued under
       // profile 0 before a profile is active). The status MUST mirror that
@@ -1255,10 +1274,6 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
       // shows a false 'Synced' while the bootstrap push never reaches the cloud.
       if (_profileId != 0) {
         depth += await dao.depth(0);
-        stuck += await dao.stuckCount(
-          0,
-          minAttempts: _degradedAttemptThreshold,
-        );
         final oldest0 = await dao.oldestPendingAt(0);
         if (oldest0 != null && (oldest == null || oldest0.isBefore(oldest))) {
           oldest = oldest0;
@@ -1280,6 +1295,12 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
     // [_onConnectivityChange] will correct this on the next emission.
     final isOnline = _lastConnectivity ?? true;
 
+    // Story 1.5 / AD-11: a channel still dead (backoff-capped) while online
+    // is exactly the "in-flight/unsettled" case the honesty rule exists for
+    // — surface it as `syncing`, consuming Story 1.1's exposed signal.
+    final hasDeadChannel =
+        _listenerSupervisor?.deadChannels.isNotEmpty ?? false;
+
     final oldestAgeSeconds = oldest == null
         ? 0
         : DateTimeFactory.nowUtc().difference(oldest).inSeconds;
@@ -1288,13 +1309,13 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
       fields: {
         'count': depth,
         'oldest_age_seconds': oldestAgeSeconds,
-        'stuck_count': stuck,
         'is_online': isOnline,
+        'dead_channel_count': _listenerSupervisor?.deadChannels.length ?? 0,
       },
     );
 
-    // Don't overwrite a fresh `syncing` (active pull in progress) with an
-    // online-derived state — the pull's own _safeEmitStatus(syncing→synced)
+    // Don't overwrite a fresh `syncing` (active pull in progress) with a
+    // re-derived state — the pull's own _safeEmitStatus(syncing→synced)
     // chain owns that window.
     //
     // EXCEPTION: if the device is offline, the `offline` state must win
@@ -1305,43 +1326,19 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
     // hit this guard and silently return. (SYNC-OFFLINE-SYNCING-01)
     if (_currentStatus is SyncStatusSyncing && isOnline) return;
 
-    // Don't overwrite a pull error — the error card in Backup & Sync shows
-    // an actionable "tap to retry" affordance that the user needs to recover.
-    // Outbox-derived status (pending/degraded) is about PUSH health; a pull
-    // failure is a separate condition that must remain visible until the user
-    // explicitly retries or a successful pull supersedes it.  Without this
-    // guard a periodic drain or write-tee recompute would replace the error
-    // banner with "N changes pending", silently removing the retry option.
-    if (_currentStatus is SyncStatusError) return;
-
-    // Identity mismatch takes precedence over the generic stuck/pending states
-    // whenever there is queued data and the device is online: the rows are not
-    // "stuck after N attempts" (the drain is skipped before they ever retry) —
-    // they are blocked on the wrong Firebase identity. Surface the actionable
-    // "sign in as <email>" message so the user can resolve it.
-    final identity = _resolveIdentityStatus?.call();
+    // Story 1.5 / AD-11: no app-level pending/stuck bookkeeping and no
+    // identity-mismatch-specific branch survive here — both used to pick
+    // between `pending`/`degraded` variants that no longer exist. Any
+    // unsettled condition while online (queued outbox rows, regardless of
+    // attempt count, or a still-dead listener channel) collapses to the
+    // same honest `syncing` state.
+    final unsettled = depth > 0 || hasDeadChannel;
 
     final SyncStatus next;
     if (!isOnline) {
-      next = SyncStatus.offline(pendingChanges: depth);
-    } else if (identity != null && identity.isMismatch && depth > 0) {
-      final activeEmail = identity.activeAccountEmail;
-      next = SyncStatus.degraded(
-        pendingChanges: depth,
-        reason: activeEmail != null
-            ? 'Signed in as ${identity.signedInEmail ?? 'a different account'}'
-                  ' — sign in as $activeEmail to back up this account.'
-            : 'Signed in as the wrong account — sign in again to back up.',
-      );
-    } else if (stuck > 0) {
-      next = SyncStatus.degraded(
-        pendingChanges: depth,
-        reason:
-            'outbox has $stuck row(s) stuck after '
-            '$_degradedAttemptThreshold+ attempts',
-      );
-    } else if (depth > 0) {
-      next = SyncStatus.pending(pendingChanges: depth);
+      next = const SyncStatus.offline();
+    } else if (unsettled) {
+      next = SyncStatus.syncing(startedAt: DateTimeFactory.nowUtc());
     } else if (_everPulledOnLaunch) {
       next = SyncStatus.synced(lastSyncedAt: DateTimeFactory.nowUtc());
     } else {
@@ -1431,6 +1428,8 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
     _connectivityResetDebounce = null;
     _connectivitySubscription?.cancel();
     _connectivitySubscription = null;
+    _deadChannelsSubscription?.cancel();
+    _deadChannelsSubscription = null;
     // Phase 0 — cancel the periodic drain timer started in [start] so the
     // disposed orchestrator does not keep firing background work.
     _periodicDrainTimer?.cancel();

@@ -5,7 +5,7 @@
 ///   E2E-905  Toggle Hebrew date preference: English → Hebrew pill selected
 ///   E2E-906  Hebrew Terms toggle shows/hides transliteration variant tile
 ///   E2E-908  Cloud user sees "Synced" status in Backup+Sync section
-///   E2E-909  Sync error state — error card shows, tap triggers retryPull
+///   E2E-909  RETIRED (Story 1.5 / AD-11): error card + tap-to-retry removed
 ///   E2E-911  Upgrade-to-Cloud — email collision shows resolution options
 ///   E2E-915  Parental controls — child in parent mode shows PIN management tile
 ///   E2E-917  Delete account — AccountActionsSheet shows Delete Account tile
@@ -52,8 +52,6 @@ import 'package:learning_tracker/features/scheduler/presentation/providers/study
     show studyDayConfigsProvider;
 import 'package:learning_tracker/features/settings/presentation/screens/settings_screen.dart'
     show SettingsScreen;
-import 'package:learning_tracker/features/sync/domain/models/sync_error_code.dart'
-    show SyncErrorCode;
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart'
     show SyncStatus;
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart'
@@ -437,69 +435,21 @@ void main() {
   });
 
   // ── E2E-909 ─────────────────────────────────────────────────────────────────
+  //
+  // RETIRED (Story 1.5 / AD-11, owner-ratified 2026-08-02): SyncStatus
+  // collapsed to exactly synced | syncing | offline (+ localOnly) — there is
+  // no `SyncStatusError` case, no differentiated error card, and no
+  // tap-to-retry affordance left to exercise. This is a known, deliberate
+  // regression (see backup_sync_section.dart's class-level doc comment); the
+  // replacement is AD-30's per-item recovery affordance, landing in Phase 3.
 
   group('E2E-909 — Sync error state: tap-to-retry triggers orchestrator', () {
-    // BackupSyncSection renders an error card when syncStatusProvider returns
-    // SyncStatusError. The card body contains l10n.backupSyncTapToRetry =
-    // "Tap to retry". Tapping the card calls orchestrator.retryPull().
-    //
-    // R-ST4: the stub orchestrator safely swallows pullOnLaunch.
-    testWidgets('BackupSyncSection shows error card with "Tap to retry" and '
-        'tapping it calls orchestrator.retryPull()', (tester) async {
-      final identity = E2EIdentity.localBorn(
-        email: 'syncerror909@test.com',
-        displayName: 'SyncError909',
-        profileMode: 'adult',
-      );
-      final h = E2EHarness(tester, identity: identity);
-      addTearDown(h.dispose);
-
-      final errorStatus = SyncStatus.error(
-        code: SyncErrorCode.unknown,
-        failedAt: DateTimeFactory.nowUtc(),
-        debugDetail: 'Firestore unavailable',
-      );
-
-      // The harness already overrides syncOrchestratorProvider → null, so we
-      // do NOT re-override it here (would crash with "provider overridden
-      // twice"). We inject syncStatusProvider directly so BackupSyncSection
-      // renders the error card. Tap verification that retryPull is called is
-      // headless-constrained (orchestrator is null → no-op); the UI renders
-      // "Tap to retry" correctly which is the primary headless assertion here.
-      await h.pumpApp(
-        path: '/dashboard',
-        extraOverrides: [
-          ..._settingsSilences(h),
-          syncStatusProvider.overrideWithValue(errorStatus),
-        ],
-      );
-
-      await _goToSettings(h);
-      await _scrollSettingsToBottom(tester);
-      await h.pump(const Duration(milliseconds: 400));
-
-      // Error card body contains "Tap to retry".
-      expect(
-        find.textContaining('Tap to retry'),
-        findsWidgets,
-        reason: 'Expected "Tap to retry" in sync error card',
-      );
-
-      // Tap the error card — with the harness null orchestrator, retryPull()
-      // is a no-op (null?.retryPull()). We verify the tap does not crash
-      // and the error card remains visible (no navigation away).
-      final tapTarget = find.textContaining('Tap to retry').first;
-      await tester.tap(tapTarget);
-      await h.pump(const Duration(milliseconds: 300));
-      await h.pump();
-
-      // Post-tap: error card still visible (no navigation crash).
-      expect(
-        find.textContaining('Tap to retry'),
-        findsWidgets,
-        reason: 'Expected error card to remain after tap (no navigation crash)',
-      );
-    });
+    testWidgets(
+      'SKIP retired (Story 1.5 / AD-11): the error card and its '
+      'tap-to-retry affordance were removed',
+      skip: true,
+      (tester) async {},
+    );
   });
 
   // ── E2E-911 ─────────────────────────────────────────────────────────────────
@@ -971,7 +921,7 @@ void main() {
       // Also inject connectivityStreamProvider = false (offline) to simulate
       // the network state the user would be in.
       testWidgets('BackupSyncSection shows "Offline" status when syncStatus is '
-          'SyncStatusOffline(pendingChanges: 0)', (tester) async {
+          'SyncStatusOffline', (tester) async {
         final identity = E2EIdentity.localBorn(
           email: 'offline923@test.com',
           displayName: 'Offline923',
@@ -980,7 +930,7 @@ void main() {
         final h = E2EHarness(tester, identity: identity);
         addTearDown(h.dispose);
 
-        const offlineStatus = SyncStatus.offline(pendingChanges: 0);
+        const offlineStatus = SyncStatus.offline();
 
         // Use silences without connectivity override so we can set offline
         // below. The harness already overrides syncOrchestratorProvider → null
@@ -1008,49 +958,14 @@ void main() {
         h.expectOnScreen('Offline');
       });
 
-      testWidgets('BackupSyncSection shows pending-changes count when '
-          'SyncStatusOffline(pendingChanges: 3)', (tester) async {
-        final identity = E2EIdentity.localBorn(
-          email: 'offline923b@test.com',
-          displayName: 'Offline923B',
-          profileMode: 'adult',
-        );
-        final h = E2EHarness(tester, identity: identity);
-        addTearDown(h.dispose);
-
-        const pendingCount = 3;
-        const offlineWithPending = SyncStatus.offline(
-          pendingChanges: pendingCount,
-        );
-
-        // Use silences without connectivity override so we can set offline
-        // below. The harness already overrides syncOrchestratorProvider → null
-        // and authStateProvider → localBorn, so we do NOT re-override those.
-        await h.pumpApp(
-          path: '/dashboard',
-          extraOverrides: [
-            ..._settingsSilencesNoConnectivity(h),
-            connectivityStreamProvider.overrideWith(
-              (ref) => Stream.value(false),
-            ),
-            syncStatusProvider.overrideWithValue(offlineWithPending),
-          ],
-        );
-
-        await _goToSettings(h);
-        await _scrollSettingsToBottom(tester);
-        await h.pump(const Duration(milliseconds: 400));
-
-        // BackupSyncSection renders with pending-changes subtitle.
-        h.expectOnScreen('Backup & Sync');
-
-        // Subtitle: l10n.backupPendingChanges(3) = "3 changes pending".
-        expect(
-          find.textContaining('changes pending'),
-          findsWidgets,
-          reason: 'Expected pending-changes subtitle in offline sync card',
-        );
-      });
+      // Story 1.5 / AD-11 (owner-ratified, 2026-08-02): `SyncStatus.offline`
+      // no longer carries a `pendingChanges` count — the union has no field
+      // for it. Queued-but-offline work now surfaces identically to any
+      // other offline state ("Offline", no count); once connectivity is
+      // fine again with rows still queued, it is covered by the `syncing`
+      // case (backup_sync_section_l1_test.dart), not a distinct offline
+      // variant. The former "pending-changes count while offline" sub-test
+      // was retired along with that field.
     },
   );
 }

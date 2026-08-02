@@ -27,7 +27,6 @@ import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/core/utils/hebrew_calendar_utils.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
 import 'package:learning_tracker/features/sync/data/outbox_sync_write_facade.dart';
-import 'package:learning_tracker/features/sync/domain/models/sync_error_code.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
@@ -388,19 +387,17 @@ void main() {
     });
 
     test('SyncStatus freezed union has expected factories', () {
-      // Verify the four SyncStatus states compile.
+      // Story 1.5 / AD-11: collapsed to exactly four states — localOnly,
+      // syncing, synced, offline. Verify all four compile.
+      const localOnly = SyncStatus.localOnly();
       final syncing = SyncStatus.syncing(startedAt: DateTime.now());
       final synced = SyncStatus.synced(lastSyncedAt: DateTime.now());
-      const offline = SyncStatus.offline(pendingChanges: 0);
-      final error = SyncStatus.error(
-        code: SyncErrorCode.unknown,
-        failedAt: DateTime.now(),
-      );
+      const offline = SyncStatus.offline();
 
+      expect(localOnly, isA<SyncStatus>());
       expect(syncing, isA<SyncStatus>());
       expect(synced, isA<SyncStatus>());
       expect(offline, isA<SyncStatus>());
-      expect(error, isA<SyncStatus>());
     });
   });
 

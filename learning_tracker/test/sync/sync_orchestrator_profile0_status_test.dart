@@ -1,7 +1,8 @@
 /// D13: the sync-status recompute must mirror `_doDrain`'s two-profile sweep
 /// (active profile AND profile 0). A wedged profile-0 outbox row (e.g. the
-/// bootstrap `learner_profile` push that hit permission-denied) must surface as
-/// `pending`/`degraded` — NOT a false `synced`.
+/// bootstrap `learner_profile` push that hit permission-denied) must surface
+/// as `syncing` (Story 1.5 / AD-11 collapsed `pending`/`degraded` into the
+/// same honest, in-flight/unsettled state) — NOT a false `synced`.
 library;
 
 import 'package:flutter_test/flutter_test.dart';
@@ -73,31 +74,28 @@ void main() {
   }
 
   test(
-    'a pending profile-0 row surfaces as pending (not a false synced)',
+    'a queued profile-0 row surfaces as syncing (not a false synced)',
     () async {
       await enqueueProfile0Row();
 
       await orchestrator.recordDrainAttempt();
 
-      expect(orchestrator.currentStatus, isA<SyncStatusPending>());
-      expect(
-        (orchestrator.currentStatus as SyncStatusPending).pendingChanges,
-        1,
-      );
+      expect(orchestrator.currentStatus, isA<SyncStatusSyncing>());
     },
   );
 
-  test('a stuck profile-0 row surfaces as degraded', () async {
+  test('a still-stuck profile-0 row also surfaces as syncing (no distinct '
+      '"degraded" state)', () async {
     await enqueueProfile0Row(attempts: 5);
 
     await orchestrator.recordDrainAttempt();
 
-    expect(orchestrator.currentStatus, isA<SyncStatusDegraded>());
+    expect(orchestrator.currentStatus, isA<SyncStatusSyncing>());
   });
 
-  test('no profile-0 rows + empty active profile → not pending', () async {
+  test('no profile-0 rows + empty active profile → not syncing', () async {
     // Sanity: with nothing wedged the profile-0 sweep must not invent backlog.
     await orchestrator.recordDrainAttempt();
-    expect(orchestrator.currentStatus, isNot(isA<SyncStatusPending>()));
+    expect(orchestrator.currentStatus, isNot(isA<SyncStatusSyncing>()));
   });
 }

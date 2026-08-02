@@ -12,7 +12,6 @@ import 'package:learning_tracker/features/onboarding/domain/services/curriculum_
 import 'package:learning_tracker/features/sync/domain/models/restore_phase.dart';
 import 'package:learning_tracker/features/sync/domain/models/restore_status.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_error_code.dart';
-import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Orchestrates full data restoration when a user signs in on a new device.
@@ -177,17 +176,14 @@ class DeviceRestoreService {
           totalSteps: totalSteps,
         ),
       );
+      // Story 1.5 / AD-11: `pullOnLaunch` no longer leaves a `SyncStatusError`
+      // behind to check for — its slim tri-state union has no `error` case at
+      // all, and (unchanged from before) a pull failure always `rethrow`s, so
+      // control never reaches past this line on failure anyway. The `catch`
+      // block below is the sole failure path; it classifies the propagated
+      // exception itself via the same `SyncErrorCode` switch this used to
+      // read off the orchestrator's status.
       await _syncOrchestrator.pullOnLaunch();
-
-      // Check if pullOnLaunch failed (it catches errors internally).
-      // AUD-sync-01 (EH-5): propagate the orchestrator's own stable code
-      // directly instead of formatting it into an Exception's text and
-      // re-classifying it in the catch block below — that round trip is
-      // exactly the "pre-formatted human message" EH-5 forbids.
-      if (_syncOrchestrator.currentStatus case SyncStatusError(:final code)) {
-        _updateStatus(RestoreStatus.error(code: code));
-        return false;
-      }
 
       // Step 2: Derive active curricula from the just-pulled local DB.
       //

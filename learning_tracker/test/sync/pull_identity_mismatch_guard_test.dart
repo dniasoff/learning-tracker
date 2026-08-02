@@ -1,19 +1,25 @@
 // Identity-mismatch pull guard — pullOnLaunch must NOT attempt a Firestore pull
 // when the live Firebase identity belongs to a different account than the active
 // one. Every read would be PERMISSION_DENIED (rules require request.auth.uid ==
-// path uid); pulling anyway surfaces the misleading generic "Cloud backup is
-// temporarily unavailable — tap to retry" banner, which can never succeed via
-// retry because the identity (not the network) is wrong.
+// path uid); pulling anyway would surface a misleading terminal-looking status,
+// which can never resolve via retry because the identity (not the network) is
+// wrong.
 //
 // Fix (sync_orchestrator.dart): pullOnLaunch consults resolveIdentityStatus()
 // up front (mirroring the outbox drain's skip-on-mismatch) and, on mismatch,
-// emits an actionable SyncStatus.degraded("sign in as <account>") and skips the
-// pull — without consuming the once-per-launch guard, so a re-auth re-pulls.
+// skips the pull — without consuming the once-per-launch guard, so a re-auth
+// re-pulls.
+//
+// Story 1.5 / AD-11: the actionable `SyncStatus.degraded("sign in as
+// <account>")` this test used to assert on no longer exists — the collapsed
+// tri-state union has no distinct identity-mismatch case. The honest,
+// total-function status for "connectivity is fine but there is unsettled
+// work we can't push yet" is `syncing` (never falsely `synced`, never
+// falsely `offline`).
 //
 // Test strategy:
 //   * Mismatched identity → gateway.fetchPage() is NEVER called (would throw),
-//     NO SyncStatus.error is emitted, and a SyncStatus.degraded carrying the
-//     active account email is emitted.
+//     and the emitted status is `syncing` (unsettled, not a lie).
 //   * Matched identity → the pull proceeds normally (gateway IS consulted).
 
 @Tags(['unit', 'sync'])
@@ -89,8 +95,8 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('pullOnLaunch — identity-mismatch guard', () {
-    test('mismatched identity → pull skipped, degraded "sign in as" emitted, '
-        'no error banner', () async {
+    test('mismatched identity → pull skipped, honest "syncing" emitted (no '
+        'terminal-looking state)', () async {
       final gateway = _ExplodingPullGateway();
       final orchestrator = _buildOrchestrator(
         gateway,
@@ -117,23 +123,11 @@ void main() {
             'mismatch — every read would be permission-denied',
       );
 
-      // No generic error/"tap to retry" banner.
-      expect(
-        statuses.whereType<SyncStatusError>(),
-        isEmpty,
-        reason:
-            'An identity mismatch is not a transient error — it must not '
-            'emit SyncStatus.error (the misleading retry banner)',
-      );
-
-      // The actionable degraded status naming the account to sign in as.
-      final degraded = statuses.whereType<SyncStatusDegraded>().toList();
-      expect(degraded, isNotEmpty, reason: 'expected a degraded status');
-      expect(
-        degraded.last.reason,
-        contains('family@example.com'),
-        reason: 'the message must tell the user which account to sign in as',
-      );
+      // AD-11 total-function honesty rule: connectivity is fine and there
+      // is unsettled work, so the status is `syncing` — never a lie
+      // (`synced`) and never `offline` (the network is fine).
+      expect(statuses, isNotEmpty, reason: 'expected a status emission');
+      expect(statuses.last, isA<SyncStatusSyncing>());
     });
 
     test('matched identity → pull proceeds (gateway is consulted)', () async {
