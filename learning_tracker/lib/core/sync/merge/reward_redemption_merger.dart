@@ -6,6 +6,14 @@
 /// latest-by-updated_at status. The refund-on-decline credit is carried as a
 /// separate `points_ledger` entry, so this merger only reconciles the
 /// redemption row's status — the balance is re-derived by the ledger merger.
+///
+/// AD-7 / MCF-13: the ordering decision itself is **not** made here and is no
+/// longer bespoke. `PointsBalanceDao.upsertRemoteRedemption` performs the
+/// read-decide-write inside one statement sequence and routes the decision
+/// through the single canonical predicate
+/// (`lib/data/firestore/conflict.dart`), like every other reconciliation
+/// path — no per-merger exception. Deciding here instead would reintroduce a
+/// read-then-write TOCTOU against the row the DAO is about to update.
 library;
 
 import 'package:learning_tracker/core/database/user/user_database.dart';

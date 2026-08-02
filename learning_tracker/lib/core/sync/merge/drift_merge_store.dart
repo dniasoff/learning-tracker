@@ -9,59 +9,7 @@ import 'package:learning_tracker/core/sync/codec/firestore_codec.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
 import 'package:learning_tracker/core/sync/merge/local_track_id_resolver.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
-
-/// Pure D15 clock-skew / `synced_at` LWW comparison shared by
-/// [DriftMergeStore.remoteIsNewer] and its test doubles.
-///
-/// AUD-t-cross-68: hand-rolled `_FakeMergeStore.remoteIsNewer` copies in
-/// tests re-derived this algorithm and drifted from it — most visibly by
-/// omitting the D15 fallback below, so an older un-pushed local edit inside
-/// the clock-skew window was silently clobbered by an older remote value
-/// once no decisive `synced_at` was available. Fakes should delegate to
-/// this function instead of hand-rolling the rule, which makes that class
-/// of drift structurally impossible.
-///
-/// See [DriftMergeStore.remoteIsNewer] for the full rule order.
-bool driftMergeStoreRemoteIsNewer({
-  required DateTime? localUpdatedAt,
-  required DateTime? remoteUpdatedAt,
-  DateTime? localSyncedAt,
-  DateTime? remoteSyncedAt,
-}) {
-  if (remoteUpdatedAt == null) return false;
-  if (localUpdatedAt == null) return true;
-
-  final localUtc = localUpdatedAt.toUtc();
-  final remoteUtc = remoteUpdatedAt.toUtc();
-  final diff = remoteUtc.difference(localUtc).abs();
-
-  // Outside the clock-skew window: strict `remote > local` wins; ties go
-  // to local (matches the long-standing flapping-free behaviour).
-  if (diff > DriftMergeStore.clockSkewTieBreakWindow) {
-    return remoteUtc.isAfter(localUtc);
-  }
-
-  // Inside the window: when BOTH sides carry a Firestore server timestamp,
-  // it is the authoritative ordering for two already-pushed writes.
-  if (remoteSyncedAt != null && localSyncedAt != null) {
-    if (remoteSyncedAt.isAfter(localSyncedAt)) return true;
-    if (localSyncedAt.isAfter(remoteSyncedAt)) return false;
-    // Equal synced_at — fall through to the updated_at / convergence tie.
-  }
-
-  // D15: at least one side has no usable server timestamp — typically a
-  // fresh LOCAL edit that has `updated_at` but no `synced_at` yet (it has
-  // not been pushed). Do NOT blindly prefer remote here: that silently
-  // clobbers a demonstrably-newer un-pushed local edit with an OLDER remote
-  // value. Compare the client `updated_at` and keep the strictly-newer side.
-  if (remoteUtc.isAfter(localUtc)) return true;
-  if (localUtc.isAfter(remoteUtc)) return false;
-
-  // The one true tie (equal `updated_at`, no decisive server timestamp) is
-  // resolved by preferring remote so two devices that wrote the same value
-  // at the same instant converge instead of bouncing.
-  return true;
-}
+import 'package:learning_tracker/data/firestore/conflict.dart';
 
 /// Concrete [MergeStore] implementation backed by Drift DAOs.
 ///
@@ -88,7 +36,11 @@ class DriftMergeStore implements MergeStore {
   /// devices' clocks differ by less than this, the server timestamp
   /// (`synced_at`) decides instead of the strict `remote > local`
   /// comparison on the client `updated_at`.
-  static const Duration clockSkewTieBreakWindow = Duration(seconds: 5);
+  ///
+  /// AD-7: the value itself lives with the canonical predicate in
+  /// `lib/data/firestore/conflict.dart`; this is a re-export for callers
+  /// that already reference it through [DriftMergeStore].
+  static const Duration clockSkewTieBreakWindow = kClockSkewTieBreakWindow;
   DriftMergeStore(UserDatabase db, {AnalyticsService? analytics})
     : _db = db,
       _analytics = analytics;
@@ -164,15 +116,16 @@ class DriftMergeStore implements MergeStore {
 
   /// Phase-3 LWW gate. See [MergeStore.remoteIsNewer] for the rule order.
   ///
-  /// Delegates to the top-level [driftMergeStoreRemoteIsNewer] so this is
-  /// the single implementation of the algorithm (AUD-t-cross-68).
+  /// AD-7: delegates to [canonicalRemoteIsNewer] in
+  /// `lib/data/firestore/conflict.dart` — the single module that owns the
+  /// algorithm. This method holds no copy of it (AUD-t-cross-68).
   @override
   bool remoteIsNewer({
     required DateTime? localUpdatedAt,
     required DateTime? remoteUpdatedAt,
     DateTime? localSyncedAt,
     DateTime? remoteSyncedAt,
-  }) => driftMergeStoreRemoteIsNewer(
+  }) => canonicalRemoteIsNewer(
     localUpdatedAt: localUpdatedAt,
     remoteUpdatedAt: remoteUpdatedAt,
     localSyncedAt: localSyncedAt,
