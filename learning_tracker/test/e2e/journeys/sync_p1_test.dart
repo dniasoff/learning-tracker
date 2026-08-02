@@ -3,8 +3,11 @@
 /// Journeys implemented:
 ///   E2E-1302  Outbox write queued offline — row written to DB (offline);
 ///             reconnect/flush is harness-limited (device/harness).
-///   E2E-1303  Sync status indicator — all 7 SyncStatus states render in
-///             BackupSyncSection with the expected subtitle text.
+///   E2E-1303  Sync status indicator — all SyncStatus states render in
+///             BackupSyncSection with the expected subtitle text (localOnly /
+///             syncing / synced / offline — collapsed from 7 to 4 by Story
+///             1.5 / AD-11; the retired pending/error/degraded sub-journeys
+///             are noted inline in the group).
 ///   E2E-1304  Two-device sync — LWW merge: conflicting completions from
 ///             two in-memory DBs collapse to a single row (INSERT OR IGNORE).
 ///   E2E-1306  Offline banner: absent for local-born + offline (harness
@@ -21,7 +24,7 @@
 ///   - `outboxDao.depth(profileId)` correctly reflects the pending count.
 /// The reconnect/flush sub-path is documented as device-only.
 ///
-/// ## E2E-1303 — Sync status indicator: 7 states
+/// ## E2E-1303 — Sync status indicator: 4 states (localOnly/syncing/synced/offline)
 ///
 /// Overrides `syncStatusProvider` directly (a [Provider<SyncStatus>]).
 /// BackupSyncSection.build() reads this provider in every state and renders
@@ -81,8 +84,6 @@ import 'package:learning_tracker/features/learning/data/completion_writer.dart'
     show CompletionWriter;
 import 'package:learning_tracker/features/learning/domain/entities/completion_command.dart'
     show CompletionCommand;
-import 'package:learning_tracker/features/sync/domain/models/sync_error_code.dart'
-    show SyncErrorCode;
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart'
     show SyncStatus;
 
@@ -247,16 +248,17 @@ void main() {
 
   // ── E2E-1303 ──────────────────────────────────────────────────────────────
 
-  group('E2E-1303 — Sync status indicator: all 7 SyncStatus states render '
+  group('E2E-1303 — Sync status indicator: all SyncStatus states render '
       'in BackupSyncSection', () {
     // Key assertions (catalog §2 Area 13):
     //  • SyncStatus.localOnly()      → "LOCAL ONLY" card body visible
     //  • SyncStatus.syncing(…)       → "Syncing..." subtitle visible
     //  • SyncStatus.synced(…)        → "Backup & Sync" card; no "LOCAL ONLY"
-    //  • SyncStatus.pending(…)       → "changes pending" subtitle visible
-    //  • SyncStatus.offline(0)       → "Offline" subtitle visible
-    //  • SyncStatus.error(…)         → "Tap to retry" subtitle visible
-    //  • SyncStatus.degraded(…)      → "Sync paused" / "waiting to sync" text
+    //  • SyncStatus.offline()        → "Offline" subtitle visible
+    //
+    // Story 1.5 / AD-11 (owner-ratified, 2026-08-02): pending/error/degraded
+    // were retired along with those SyncStatus cases — see the note after
+    // the "offline" sub-test below.
     //
     // Each sub-test navigates to /settings and scrolls to BackupSyncSection.
     // R-ST4: syncOrchestratorProvider=null (harness default) prevents the
@@ -394,83 +396,14 @@ void main() {
       );
     });
 
-    // ── pending ───────────────────────────────────────────────────────────
-
-    testWidgets('pending: BackupSyncSection shows "changes pending" subtitle', (
-      tester,
-    ) async {
-      final identity = E2EIdentity.localBorn(
-        email: 'sync1303d@test.com',
-        displayName: 'Sync1303D',
-        profileMode: 'adult',
-      );
-      final h = E2EHarness(tester, identity: identity);
-      addTearDown(h.dispose);
-
-      await h.pumpApp(
-        path: '/dashboard',
-        extraOverrides: [
-          ..._syncSilences(h),
-          syncStatusProvider.overrideWithValue(
-            const SyncStatus.pending(pendingChanges: 2),
-          ),
-        ],
-      );
-
-      await goToBackupSync(h, tester);
-
-      // l10n.backupPendingChanges(2) = "2 changes pending"
-      expect(
-        find.textContaining('changes pending'),
-        findsWidgets,
-        reason:
-            'E2E-1303: pending state must show "{n} changes pending" subtitle',
-      );
-    });
-
     // ── offline ───────────────────────────────────────────────────────────
 
-    testWidgets(
-      'offline(0 pending): BackupSyncSection shows "Offline" subtitle',
-      (tester) async {
-        final identity = E2EIdentity.localBorn(
-          email: 'sync1303e@test.com',
-          displayName: 'Sync1303E',
-          profileMode: 'adult',
-        );
-        final h = E2EHarness(tester, identity: identity);
-        addTearDown(h.dispose);
-
-        await h.pumpApp(
-          path: '/dashboard',
-          extraOverrides: [
-            ..._syncSilencesNoConnectivity(h),
-            _offlineOverride(),
-            syncStatusProvider.overrideWithValue(
-              const SyncStatus.offline(pendingChanges: 0),
-            ),
-          ],
-        );
-
-        await goToBackupSync(h, tester);
-
-        // l10n.backupOffline = "Offline"
-        expect(
-          find.textContaining('Offline'),
-          findsWidgets,
-          reason: 'E2E-1303: offline(0) state must show "Offline" subtitle',
-        );
-      },
-    );
-
-    // ── error ─────────────────────────────────────────────────────────────
-
-    testWidgets('error: BackupSyncSection shows "Tap to retry" subtitle', (
+    testWidgets('offline: BackupSyncSection shows "Offline" subtitle', (
       tester,
     ) async {
       final identity = E2EIdentity.localBorn(
-        email: 'sync1303f@test.com',
-        displayName: 'Sync1303F',
+        email: 'sync1303e@test.com',
+        displayName: 'Sync1303E',
         profileMode: 'adult',
       );
       final h = E2EHarness(tester, identity: identity);
@@ -479,74 +412,32 @@ void main() {
       await h.pumpApp(
         path: '/dashboard',
         extraOverrides: [
-          ..._syncSilences(h),
-          syncStatusProvider.overrideWithValue(
-            SyncStatus.error(
-              code: SyncErrorCode.unknown,
-              failedAt: DateTimeFactory.nowUtc(),
-              debugDetail: 'Firestore unavailable',
-            ),
-          ),
+          ..._syncSilencesNoConnectivity(h),
+          _offlineOverride(),
+          syncStatusProvider.overrideWithValue(const SyncStatus.offline()),
         ],
       );
 
       await goToBackupSync(h, tester);
 
-      // l10n.backupSyncTapToRetry = "Tap to retry"
+      // l10n.backupOffline = "Offline"
       expect(
-        find.textContaining('Tap to retry'),
+        find.textContaining('Offline'),
         findsWidgets,
-        reason:
-            'E2E-1303: error state must show "Tap to retry" in the error card',
+        reason: 'E2E-1303: offline state must show "Offline" subtitle',
       );
     });
 
-    // ── degraded ──────────────────────────────────────────────────────────
-
-    testWidgets('degraded: BackupSyncSection shows "waiting to sync" or '
-        '"Sync paused" text for stuck-outbox reason', (tester) async {
-      final identity = E2EIdentity.localBorn(
-        email: 'sync1303g@test.com',
-        displayName: 'Sync1303G',
-        profileMode: 'adult',
-      );
-      final h = E2EHarness(tester, identity: identity);
-      addTearDown(h.dispose);
-
-      // Use the stuck-outbox reason string that BackupSyncSection checks
-      // via `reason.contains('row(s) stuck')` to produce the localised
-      // l10n.backupSyncOutboxStuck message.
-      await h.pumpApp(
-        path: '/dashboard',
-        extraOverrides: [
-          ..._syncSilences(h),
-          syncStatusProvider.overrideWithValue(
-            const SyncStatus.degraded(
-              pendingChanges: 3,
-              reason: 'outbox has 3 row(s) stuck after 3+ attempts',
-            ),
-          ),
-        ],
-      );
-
-      await goToBackupSync(h, tester);
-
-      // The degraded card renders either:
-      //   l10n.backupSyncPaused(3, localizedReason)
-      //     = "Sync paused — 3 queued. <reason>"
-      //   l10n.backupSyncOutboxStuck
-      //     = "Some changes are waiting to sync. We'll retry automatically."
-      // Either text fragment confirms the degraded card is rendered.
-      final showsPaused = tester.any(find.textContaining('Sync paused'));
-      final showsWaiting = tester.any(find.textContaining('waiting to sync'));
-      expect(
-        showsPaused || showsWaiting,
-        isTrue,
-        reason:
-            'E2E-1303: degraded state must show "Sync paused" or '
-            '"waiting to sync" text from the degraded card',
-      );
-    });
+    // Story 1.5 / AD-11 (owner-ratified, 2026-08-02): the `pending`, `error`,
+    // and `degraded` sub-journeys previously covered here were retired along
+    // with those SyncStatus cases — the union collapsed to exactly
+    // `synced | syncing | offline` (+ `localOnly`). A queued-but-unpushed
+    // write, a failed pull, and a stuck outbox row all now surface as the
+    // same ambient `syncing` state already covered by the "syncing" sub-test
+    // above; there is no differentiated card, count, or tap-to-retry
+    // affordance left to assert on (see backup_sync_section.dart's
+    // class-level doc comment — the replacement is AD-30's per-item recovery
+    // affordance, landing in Phase 3).
   });
 
   // ── E2E-1304 ──────────────────────────────────────────────────────────────

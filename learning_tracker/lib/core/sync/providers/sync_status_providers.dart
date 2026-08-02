@@ -2,7 +2,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/sync/providers/sync_orchestrator_providers.dart';
 import 'package:learning_tracker/core/sync/sync_orchestrator.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
-import 'package:learning_tracker/features/sync/domain/models/sync_error_code.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
 
 // W2.33: sync_status_providers now reads from syncOrchestratorProvider instead
@@ -29,8 +28,13 @@ final syncStatusStreamProvider = StreamProvider<SyncStatus>((ref) {
 /// Current [SyncStatus] derived from [syncStatusStreamProvider].
 ///
 /// Returns [SyncStatus.localOnly] for local-born / unauthenticated users.
-/// Returns [SyncStatus.syncing] while the stream is loading.
-/// Returns [SyncStatus.error] if the stream itself errors.
+/// Returns [SyncStatus.syncing] while the stream is loading OR if the stream
+/// itself errors (Story 1.5 / AD-11: the slim tri-state union has no `error`
+/// case — a Dart-level stream error is itself unsettled/in-flight state, not
+/// a terminal one, so the honest total-function status is `syncing`; the
+/// orchestrator's own pull-failure handling already applies the same rule
+/// via its own catch block, so this branch only guards against a stream
+/// error that somehow escapes the orchestrator).
 ///
 /// Canonical source of truth for sync-status in core/sync/. Feature-layer
 /// UI watches this directly (there is no feature-layer copy — see
@@ -48,13 +52,7 @@ final syncStatusProvider = Provider<SyncStatus>((ref) {
     // "Syncing…" forever. The orchestrator's [currentStatus] is the
     // authoritative snapshot between events.
     loading: () => orchestrator.currentStatus,
-    // AUD-sync-01 (EH-5): the stream itself errored (not a classified
-    // domain exception) — code is unknown; error.toString() is retained
-    // only as non-user-facing debugDetail.
-    error: (error, _) => SyncStatus.error(
-      code: SyncErrorCode.unknown,
-      failedAt: DateTimeFactory.nowLocal(),
-      debugDetail: error.toString(),
-    ),
+    error: (error, _) =>
+        SyncStatus.syncing(startedAt: DateTimeFactory.nowLocal()),
   );
 });

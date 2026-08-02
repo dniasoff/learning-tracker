@@ -4,17 +4,27 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
-import 'package:learning_tracker/core/sync/providers/outbox_providers.dart';
 import 'package:learning_tracker/core/sync/providers/sync_orchestrator_providers.dart';
 import 'package:learning_tracker/core/sync/providers/sync_status_providers.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
-import 'package:learning_tracker/features/sync/domain/models/sync_error_code.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Sync status and optional upgrade-to-cloud CTA (DNI-188).
+///
+/// Story 1.5 / AD-11 (owner-ratified, 2026-08-02): this widget used to render
+/// differentiated cards for `SyncStatusError` (appCheck / permissionDenied /
+/// timeout, each with its own copy) and `SyncStatusDegraded` (stuck-outbox /
+/// identity-mismatch, with a "Sign in to back up" re-auth affordance and a
+/// tap-to-retry action on the transient error card). Those states no longer
+/// exist in the slim `synced | syncing | offline` union (plus `localOnly`),
+/// so that UI — including the tap-to-retry affordance shipped in v1.0.68 —
+/// is gone. **This is a known, deliberate regression**: a permanently-failed
+/// write now surfaces only as ambient `syncing`, with no differentiated card
+/// and no per-item recovery action. The replacement is AD-30's per-item
+/// "tap to retry" recovery affordance, landing in Phase 3 — not this story.
 class BackupSyncSection extends ConsumerStatefulWidget {
   const BackupSyncSection({super.key, this.parentSettingsHeroLayout = false});
 
@@ -101,106 +111,12 @@ class _BackupSyncSectionState extends ConsumerState<BackupSyncSection> {
         icon: Icons.sync_rounded,
         subtitle: l10n.backupSyncing,
       ),
-      SyncStatusPending(:final pendingChanges) => _buildCloudStatusCard(
-        theme,
-        icon: Icons.schedule_rounded,
-        subtitle: l10n.backupPendingChanges(pendingChanges),
-      ),
-      SyncStatusOffline(:final pendingChanges) => _buildCloudStatusCard(
+      SyncStatusOffline() => _buildCloudStatusCard(
         theme,
         icon: Icons.cloud_off_rounded,
-        subtitle: pendingChanges > 0
-            ? l10n.backupPendingChanges(pendingChanges)
-            : l10n.backupOffline,
+        subtitle: l10n.backupOffline,
       ),
-      // ST-4 / AUD-sync-01 (EH-5): SyncStatusError carries a stable code and
-      // the card copy is differentiated by it (1.0.67 App Check incident).
-      //   - appCheck / permissionDenied are PERMANENT: a retry re-runs a pull
-      //     that can never succeed, so the copy must NOT say "temporarily" and
-      //     must NOT offer a doomed tap-to-retry. Show guidance instead.
-      //   - timeout / unknown ARE transient: keep the "temporarily
-      //     unavailable, tap to retry" affordance.
-      SyncStatusError(:final code) => switch (code) {
-        SyncErrorCode.appCheck => _buildCloudStatusCard(
-          theme,
-          icon: Icons.gpp_maybe_rounded,
-          subtitle: l10n.backupSyncAppCheckUnavailable,
-        ),
-        SyncErrorCode.permissionDenied => _buildCloudStatusCard(
-          theme,
-          icon: Icons.lock_outline_rounded,
-          subtitle: l10n.backupSyncAccountUnavailable,
-        ),
-        SyncErrorCode.timeout || SyncErrorCode.unknown => _buildCloudStatusCard(
-          theme,
-          icon: Icons.warning_amber_rounded,
-          subtitle:
-              '${l10n.backupSyncCloudUnavailable}\n${l10n.backupSyncTapToRetry}',
-          onTap: () => ref.read(syncOrchestratorProvider)?.retryPull(),
-        ),
-      },
-      SyncStatusDegraded(:final pendingChanges, :final reason) =>
-        _buildDegradedCard(context, ref, theme, pendingChanges, reason),
     };
-  }
-
-  /// Degraded card. When the degradation is an account-identity mismatch (the
-  /// device is signed into Firebase as a different account than the active
-  /// one), render an actionable "Sign in as <email>" affordance that routes to
-  /// the sign-in screen — once the matching Google account is signed in, the
-  /// identity guard clears and the queued rows flush. Otherwise show the plain
-  /// "sync paused" subtitle.
-  Widget _buildDegradedCard(
-    BuildContext context,
-    WidgetRef ref,
-    ThemeData theme,
-    int pendingChanges,
-    String reason,
-  ) {
-    final l10nLocal = AppLocalizations.of(context)!;
-    final identity = ref.watch(syncIdentityStatusProvider);
-    if (identity.isMismatch) {
-      // AUD-settings-01 (EH-5): sync_orchestrator's `reason` for an identity
-      // mismatch is a hand-built English sentence — it must never reach the
-      // UI. Build the subtitle entirely from AppLocalizations, using the
-      // structured fields on `identity` instead; `reason` stays unused here
-      // (it remains a log-only/debug value on the orchestrator side).
-      final activeEmail = identity.activeAccountEmail;
-      final localizedMismatchReason = activeEmail != null
-          ? l10nLocal.backupSyncIdentityMismatch(
-              identity.signedInEmail ?? l10nLocal.backupSyncUnknownAccount,
-              activeEmail,
-            )
-          : l10nLocal.backupSyncIdentityMismatchNoEmail;
-      return _buildCloudStatusCard(
-        theme,
-        icon: Icons.person_off_rounded,
-        subtitle: pendingChanges > 0
-            ? l10nLocal.backupSyncPaused(
-                pendingChanges,
-                localizedMismatchReason,
-              )
-            : l10nLocal.backupSyncPausedNoCount(localizedMismatchReason),
-        actionLabel: l10nLocal.backupSyncSignInToBackUp,
-        onTap: () => context.pushRoute(const SignInRoute()),
-      );
-    }
-    // ST-4 fix: the stuck-outbox reason is a raw English engineering string
-    // ("outbox has N row(s) stuck after 3+ attempts") that leaks internal
-    // terminology and English text into non-English UIs.  Replace it with a
-    // friendly localized message; keep the raw reason only for other known
-    // human-readable degraded states (e.g. quota exhausted).
-    final isStuckOutbox = reason.contains('row(s) stuck');
-    final localizedReason = isStuckOutbox
-        ? l10nLocal.backupSyncOutboxStuck
-        : reason;
-    return _buildCloudStatusCard(
-      theme,
-      icon: Icons.sync_problem_rounded,
-      subtitle: pendingChanges > 0
-          ? l10nLocal.backupSyncPaused(pendingChanges, localizedReason)
-          : l10nLocal.backupSyncPausedNoCount(localizedReason),
-    );
   }
 
   Widget _buildLocalOnlyCard(
@@ -415,14 +331,17 @@ class _BackupSyncSectionState extends ConsumerState<BackupSyncSection> {
     );
   }
 
+  // Story 1.5 / AD-11: this card no longer takes an `onTap`/`actionLabel` —
+  // the tap-to-retry and "Sign in to back up" affordances it used to support
+  // belonged to the now-removed SyncStatusError/SyncStatusDegraded cases (see
+  // this file's class-level doc comment). AD-30's Phase 3 per-item recovery
+  // affordance will need its own, differently-scoped UI when it lands.
   Widget _buildCloudStatusCard(
     ThemeData theme, {
     required IconData icon,
     required String subtitle,
-    VoidCallback? onTap,
-    String? actionLabel,
   }) {
-    final card = DecoratedBox(
+    return DecoratedBox(
       decoration: BoxDecoration(
         color: const Color(0xFF0B3FB4),
         borderRadius: BorderRadius.circular(24),
@@ -474,42 +393,8 @@ class _BackupSyncSectionState extends ConsumerState<BackupSyncSection> {
                 ),
               ],
             ),
-            if (actionLabel != null) ...[
-              const SizedBox(height: 14),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: context.colors.peachMid,
-                    foregroundColor: context.colors.peachDark,
-                    minimumSize: const Size.fromHeight(44),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                    textStyle: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 17,
-                      color: context.colors.peachDark,
-                    ),
-                  ),
-                  onPressed: onTap,
-                  child: Text(actionLabel),
-                ),
-              ),
-            ],
           ],
         ),
-      ),
-    );
-    // A standalone action button owns the tap; don't also wrap the whole card.
-    if (onTap == null || actionLabel != null) return card;
-    return Material(
-      color: Colors.transparent,
-      borderRadius: BorderRadius.circular(24),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(24),
-        child: card,
       ),
     );
   }

@@ -7,8 +7,9 @@
 ///   E2E-1107  Device notification toggle: OS blocked path
 ///   E2E-1108  Per-profile notification prefs isolated on profile switch
 ///   E2E-1111  Device restore: local-born account skips restore
-///   E2E-1112  Sync status indicator: online/offline/degraded transitions
-///   E2E-1113  Identity mismatch banner: degraded sync with wrong Firebase account
+///   E2E-1112  Sync status indicator: online/offline transitions (the
+///             "degraded" sub-journey was retired — Story 1.5 / AD-11)
+///   E2E-1113  RETIRED (Story 1.5 / AD-11): identity-mismatch banner removed
 ///
 /// ## Journey notes
 ///
@@ -64,20 +65,19 @@
 /// Navigate to '/' and verify the app lands on the dashboard — DeviceRestoreScreen
 /// is never shown.
 ///
-/// ### E2E-1112 — Sync status indicator: online/offline/degraded transitions
+/// ### E2E-1112 — Sync status indicator: online/offline transitions
 /// Navigates to SettingsScreen and overrides [syncStatusProvider] to each
 /// variant in a separate sub-test (separate pumpApp calls) to verify the
-/// BackupSyncSection card subtitle updates:
-///   synced → no "LOCAL ONLY" text; offline → "Offline"; degraded → "Sync paused"
+/// BackupSyncSection card subtitle updates: synced → no "LOCAL ONLY" text;
+/// offline → "Offline". Story 1.5 / AD-11 (owner-ratified, 2026-08-02)
+/// collapsed `SyncStatus` to exactly `synced | syncing | offline` (+
+/// `localOnly`) — the "degraded → Sync paused" sub-journey this section used
+/// to cover was retired along with `SyncStatus.degraded` itself.
 ///
-/// ### E2E-1113 — Identity mismatch banner
-/// When [syncIdentityStatusProvider] returns mismatched and [syncStatusProvider]
-/// is degraded, BackupSyncSection renders the identity-mismatch card with
-/// l10n.backupSyncSignInToBackUp = "Sign in to back up" action button.
-/// R-IC11 (AUD-settings-01): localised action label is asserted; no raw
-/// engineering string leaks — fixed by building the subtitle entirely from
-/// AppLocalizations in BackupSyncSection._buildDegradedCard's isMismatch
-/// branch.
+/// ### E2E-1113 — Identity mismatch banner (RETIRED)
+/// The identity-mismatch degraded card and its "Sign in to back up" action
+/// button no longer exist (Story 1.5 / AD-11) — see the group's doc comment
+/// below.
 ///
 /// ## Provider silence notes
 ///
@@ -98,12 +98,8 @@ import 'package:flutter/material.dart'
 import 'package:flutter_riverpod/flutter_riverpod.dart' show ProviderScope;
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/sync/providers/outbox_providers.dart'
-    show syncIdentityStatusProvider;
 import 'package:learning_tracker/core/sync/providers/sync_status_providers.dart'
     show syncStatusProvider;
-import 'package:learning_tracker/core/sync/sync_identity_status.dart'
-    show SyncIdentityStatus;
 import 'package:learning_tracker/core/utils/date_utils.dart'
     show DateTimeFactory;
 import 'package:learning_tracker/features/notifications/domain/repositories/notification_preferences_repository.dart'
@@ -735,204 +731,106 @@ void main() {
 
   // ── E2E-1112 ─────────────────────────────────────────────────────────────────
 
-  group(
-    'E2E-1112 — Sync status indicator: online/offline/degraded transitions',
-    () {
-      // Key assertions (catalog §2 Area 11):
-      //  • BackupSyncSection card title always "Backup & Sync"
-      //  • synced → no "LOCAL ONLY" text
-      //  • offline → "Offline" subtitle
-      //  • degraded → "Sync paused" subtitle (backupSyncPausedNoCount)
-      //
-      // Each variant is a separate testWidgets call with its own pumpApp to
-      // avoid "provider overridden twice" errors.
+  group('E2E-1112 — Sync status indicator: online/offline transitions', () {
+    // Key assertions (catalog §2 Area 11):
+    //  • BackupSyncSection card title always "Backup & Sync"
+    //  • synced → no "LOCAL ONLY" text
+    //  • offline → "Offline" subtitle
+    //
+    // Each variant is a separate testWidgets call with its own pumpApp to
+    // avoid "provider overridden twice" errors.
 
-      testWidgets('synced status: BackupSyncSection shows "Backup & Sync" card '
-          'with no "LOCAL ONLY" text', (tester) async {
-        final identity = E2EIdentity.localBorn(
-          email: 'synced1112@test.com',
-          displayName: 'SyncedUser',
-        );
-        final h = E2EHarness(tester, identity: identity);
-        addTearDown(h.dispose);
+    testWidgets('synced status: BackupSyncSection shows "Backup & Sync" card '
+        'with no "LOCAL ONLY" text', (tester) async {
+      final identity = E2EIdentity.localBorn(
+        email: 'synced1112@test.com',
+        displayName: 'SyncedUser',
+      );
+      final h = E2EHarness(tester, identity: identity);
+      addTearDown(h.dispose);
 
-        final fakeGw = _FakeNotificationGateway();
+      final fakeGw = _FakeNotificationGateway();
 
-        await h.pumpApp(
-          path: '/dashboard',
-          extraOverrides: [
-            ..._infraSilences(h),
-            ..._notificationSilenceOverrides(fakeGw),
-            syncStatusProvider.overrideWithValue(
-              SyncStatus.synced(lastSyncedAt: DateTimeFactory.nowUtc()),
-            ),
-          ],
-        );
-
-        await _goToSettings(h);
-        await _scrollSettingsTo(tester, 'Backup & Sync');
-        await h.pump(const Duration(milliseconds: 300));
-
-        h.expectOnScreen('Backup & Sync', routeName: 'BackupSyncSection');
-
-        expect(
-          find.textContaining('LOCAL ONLY'),
-          findsNothing,
-          reason: 'BackupSyncSection must NOT show LOCAL ONLY card when synced',
-        );
-      });
-
-      testWidgets(
-        'offline status: BackupSyncSection shows "Offline" subtitle',
-        (tester) async {
-          final identity = E2EIdentity.localBorn(
-            email: 'offline1112@test.com',
-            displayName: 'OfflineUser',
-          );
-          final h = E2EHarness(tester, identity: identity);
-          addTearDown(h.dispose);
-
-          final fakeGw = _FakeNotificationGateway();
-
-          await h.pumpApp(
-            path: '/dashboard',
-            extraOverrides: [
-              ..._infraSilences(h),
-              ..._notificationSilenceOverrides(fakeGw),
-              syncStatusProvider.overrideWithValue(
-                const SyncStatus.offline(pendingChanges: 0),
-              ),
-            ],
-          );
-
-          await _goToSettings(h);
-          await _scrollSettingsTo(tester, 'Backup & Sync');
-          await h.pump(const Duration(milliseconds: 300));
-
-          // l10n.backupOffline = 'Offline'
-          h.expectOnScreen('Offline', routeName: 'BackupSyncSection');
-        },
+      await h.pumpApp(
+        path: '/dashboard',
+        extraOverrides: [
+          ..._infraSilences(h),
+          ..._notificationSilenceOverrides(fakeGw),
+          syncStatusProvider.overrideWithValue(
+            SyncStatus.synced(lastSyncedAt: DateTimeFactory.nowUtc()),
+          ),
+        ],
       );
 
-      testWidgets(
-        'degraded status: BackupSyncSection shows "Sync paused" subtitle',
-        (tester) async {
-          final identity = E2EIdentity.localBorn(
-            email: 'degraded1112@test.com',
-            displayName: 'DegradedUser',
-          );
-          final h = E2EHarness(tester, identity: identity);
-          addTearDown(h.dispose);
+      await _goToSettings(h);
+      await _scrollSettingsTo(tester, 'Backup & Sync');
+      await h.pump(const Duration(milliseconds: 300));
 
-          final fakeGw = _FakeNotificationGateway();
+      h.expectOnScreen('Backup & Sync', routeName: 'BackupSyncSection');
 
-          await h.pumpApp(
-            path: '/dashboard',
-            extraOverrides: [
-              ..._infraSilences(h),
-              ..._notificationSilenceOverrides(fakeGw),
-              syncStatusProvider.overrideWithValue(
-                const SyncStatus.degraded(
-                  pendingChanges: 0,
-                  reason: 'quota exhausted',
-                ),
-              ),
-              // syncIdentityStatusProvider → matched so we get the generic
-              // degraded card (not the identity-mismatch card of E2E-1113).
-              syncIdentityStatusProvider.overrideWithValue(
-                const SyncIdentityStatus.matched(),
-              ),
-            ],
-          );
-
-          await _goToSettings(h);
-          await _scrollSettingsTo(tester, 'Backup & Sync');
-          await h.pump(const Duration(milliseconds: 300));
-
-          // l10n.backupSyncPausedNoCount(reason) = 'Sync paused. $reason'
-          expect(
-            find.textContaining('Sync paused'),
-            findsWidgets,
-            reason:
-                'BackupSyncSection must show "Sync paused" subtitle for degraded status',
-          );
-        },
+      expect(
+        find.textContaining('LOCAL ONLY'),
+        findsNothing,
+        reason: 'BackupSyncSection must NOT show LOCAL ONLY card when synced',
       );
-    },
-  );
+    });
+
+    testWidgets('offline status: BackupSyncSection shows "Offline" subtitle', (
+      tester,
+    ) async {
+      final identity = E2EIdentity.localBorn(
+        email: 'offline1112@test.com',
+        displayName: 'OfflineUser',
+      );
+      final h = E2EHarness(tester, identity: identity);
+      addTearDown(h.dispose);
+
+      final fakeGw = _FakeNotificationGateway();
+
+      await h.pumpApp(
+        path: '/dashboard',
+        extraOverrides: [
+          ..._infraSilences(h),
+          ..._notificationSilenceOverrides(fakeGw),
+          syncStatusProvider.overrideWithValue(const SyncStatus.offline()),
+        ],
+      );
+
+      await _goToSettings(h);
+      await _scrollSettingsTo(tester, 'Backup & Sync');
+      await h.pump(const Duration(milliseconds: 300));
+
+      // l10n.backupOffline = 'Offline'
+      h.expectOnScreen('Offline', routeName: 'BackupSyncSection');
+    });
+
+    // Story 1.5 / AD-11 (owner-ratified, 2026-08-02): the "degraded status"
+    // sub-journey (SyncStatus.degraded → "Sync paused" subtitle) was
+    // retired — SyncStatus collapsed to synced | syncing | offline (+
+    // localOnly), and a stuck/degraded outbox now surfaces as the same
+    // ambient `syncing` state covered by the `synced`/`offline` cases
+    // above (a `syncing` override would just show the ordinary l10n
+    // "Syncing..." subtitle already covered by backup_sync_section_l1_test.dart).
+  });
 
   // ── E2E-1113 ─────────────────────────────────────────────────────────────────
-
+  //
+  // RETIRED (Story 1.5 / AD-11, owner-ratified 2026-08-02): the
+  // identity-mismatch degraded card and its "Sign in to back up" action
+  // button no longer exist — an identity mismatch now surfaces as the same
+  // ambient `syncing` state as any other unsettled work, with no
+  // differentiated card or action. This is a known, deliberate regression
+  // (see backup_sync_section.dart's class-level doc comment); the
+  // replacement is AD-30's per-item recovery affordance, landing in Phase 3.
   group(
     'E2E-1113 — Identity mismatch banner: degraded sync with wrong Firebase account',
     () {
-      // Key assertions (catalog §2 Area 11):
-      //  • syncStatusProvider = degraded + syncIdentityStatusProvider = mismatched
-      //  • BackupSyncSection renders identity-mismatch card with action button
-      //  • l10n.backupSyncSignInToBackUp = "Sign in to back up" is visible
-      //
-      // R-IC11: localised action label is asserted; raw engineering string must
-      // not leak to user-facing UI.
-
-      testWidgets('R-IC11 (AUD-settings-01): identity-mismatch card with '
-          'pendingChanges>0 never leaks the raw SyncStatusDegraded engineering '
-          'reason string — subtitle is built entirely from AppLocalizations; '
-          '"Sign in to back up" action button is present', (tester) async {
-        final identity = E2EIdentity.localBorn(
-          email: 'mismatch1113@test.com',
-          displayName: 'MismatchUser',
-        );
-        final h = E2EHarness(tester, identity: identity);
-        addTearDown(h.dispose);
-
-        final fakeGw = _FakeNotificationGateway();
-
-        const mismatchStatus = SyncIdentityStatus.mismatched(
-          activeAccountEmail: 'active@test.com',
-          signedInEmail: 'wrong@test.com',
-        );
-
-        await h.pumpApp(
-          path: '/dashboard',
-          extraOverrides: [
-            ..._infraSilences(h),
-            ..._notificationSilenceOverrides(fakeGw),
-            syncStatusProvider.overrideWithValue(
-              const SyncStatus.degraded(
-                pendingChanges: 3,
-                reason: 'permission-denied threshold reached',
-              ),
-            ),
-            syncIdentityStatusProvider.overrideWithValue(mismatchStatus),
-          ],
-        );
-
-        await _goToSettings(h);
-        await _scrollSettingsTo(tester, 'Backup & Sync');
-        await h.pump(const Duration(milliseconds: 300));
-
-        // Card title present.
-        h.expectOnScreen('Backup & Sync', routeName: 'BackupSyncSection');
-
-        // Identity mismatch path: action button "Sign in to back up".
-        // l10n.backupSyncSignInToBackUp = 'Sign in to back up'
-        h.expectOnScreen(
-          'Sign in to back up',
-          routeName: 'BackupSyncSection identity mismatch',
-        );
-
-        // (R-IC11) Raw engineering reason must not be visible to the user.
-        // The mismatch card uses actionLabel-only layout; the raw reason
-        // is suppressed. We confirm the card rendered the action label,
-        // not raw exception text.
-        expect(
-          find.textContaining('permission-denied threshold'),
-          findsNothing,
-          reason:
-              'Raw engineering reason string must not leak to user-facing UI '
-              '(R-IC11)',
-        );
-      });
+      testWidgets(
+        'SKIP retired (Story 1.5 / AD-11): the identity-mismatch degraded '
+        'card and its "Sign in to back up" action were removed',
+        skip: true,
+        (tester) async {},
+      );
     },
   );
 }

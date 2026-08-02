@@ -486,7 +486,12 @@ void main() {
       expect(emitted[1], isA<SyncStatusSynced>());
     });
 
-    test('emits syncing then error on a failed pull', () async {
+    test('emits syncing then syncing again (still unsettled, never a lie) on a '
+        'failed pull while online', () async {
+      // Story 1.5 / AD-11: SyncStatus has no `error` case. A failed pull
+      // while connectivity is up is unsettled work — the total-function
+      // honesty rule forbids both `synced` (a lie) and `offline` (the
+      // network is fine), so the only truthful status is `syncing`.
       final gw = _FakeGateway()..throwWith = Exception('network down');
       final orchestrator = _makeOrchestrator(gateway: gw);
 
@@ -508,7 +513,7 @@ void main() {
 
       expect(emitted, hasLength(2));
       expect(emitted[0], isA<SyncStatusSyncing>());
-      expect(emitted[1], isA<SyncStatusError>());
+      expect(emitted[1], isA<SyncStatusSyncing>());
     });
 
     test('Bug 1: a single-row merge error during one pull step does NOT reset '
@@ -535,12 +540,12 @@ void main() {
       await Future<void>.value();
       await sub.cancel();
 
+      // Story 1.5 / AD-11: SyncStatus has no `error` case at all anymore —
+      // "a single bad row must never emit an error status" is now
+      // structurally guaranteed by the type system, not just by this
+      // assertion. The behavioural guarantee that matters is unchanged: the
+      // pull still completes with `synced`.
       expect(emitted.last, isA<SyncStatusSynced>());
-      expect(
-        emitted.whereType<SyncStatusError>(),
-        isEmpty,
-        reason: 'a single bad row must never emit an error status',
-      );
     });
 
     // AUD-t-cross-26 (TQ-8): removed two dead tests that lived here —
@@ -568,13 +573,19 @@ void main() {
       expect(orchestrator.currentStatus, isA<SyncStatusSynced>());
     });
 
-    test('currentStatus is error after a failed pull', () async {
-      final gw = _FakeGateway()..throwWith = Exception('boom');
-      final orchestrator = _makeOrchestrator(gateway: gw);
+    test(
+      'currentStatus is syncing (not a lie) after a failed pull while online',
+      () async {
+        final gw = _FakeGateway()..throwWith = Exception('boom');
+        final orchestrator = _makeOrchestrator(gateway: gw);
 
-      await expectLater(orchestrator.pullOnLaunch(), throwsA(isA<Exception>()));
-      expect(orchestrator.currentStatus, isA<SyncStatusError>());
-    });
+        await expectLater(
+          orchestrator.pullOnLaunch(),
+          throwsA(isA<Exception>()),
+        );
+        expect(orchestrator.currentStatus, isA<SyncStatusSyncing>());
+      },
+    );
 
     test('statusStream is a broadcast stream (multiple listeners)', () async {
       final orchestrator = _makeOrchestrator();
@@ -782,15 +793,16 @@ void main() {
   // ── Error handling ──────────────────────────────────────────────────────────
 
   group('pullOnLaunch — error handling', () {
-    test('error is re-thrown after emitting error status', () async {
+    test('error is re-thrown after emitting the collapsed status', () async {
       final gw = _FakeGateway()..throwWith = Exception('bad state');
       final orchestrator = _makeOrchestrator(gateway: gw);
 
       await expectLater(orchestrator.pullOnLaunch(), throwsA(isA<Exception>()));
-      expect(orchestrator.currentStatus, isA<SyncStatusError>());
+      expect(orchestrator.currentStatus, isA<SyncStatusSyncing>());
     });
 
-    test('FirestorePermissionDeniedException leads to error status', () async {
+    test('FirestorePermissionDeniedException still rethrows and leaves syncing '
+        '(not a lie)', () async {
       final gw = _FakeGateway()
         ..throwWith = const FirestorePermissionDeniedException(
           'rules rejected',
@@ -803,16 +815,25 @@ void main() {
         orchestrator.pullOnLaunch(),
         throwsA(isA<FirestorePermissionDeniedException>()),
       );
-      expect(orchestrator.currentStatus, isA<SyncStatusError>());
+      expect(orchestrator.currentStatus, isA<SyncStatusSyncing>());
     });
 
     // ── App Check classification (1.0.67 incident) ─────────────────────────
+    //
+    // Story 1.5 / AD-11: the classified SyncErrorCode is no longer carried on
+    // SyncStatus (there is no `error` case to read `.code` off of). The
+    // classification itself is UNCHANGED — it still happens in the
+    // pullOnLaunch catch block, now forwarded straight to telemetry (see
+    // _recordSyncErrorTelemetry) on every failed pull, unconditionally. These
+    // tests verify the classification the same way the telemetry meta-fix
+    // test below does: via the Crashlytics spy.
     test('App-Check-signature FirestorePermissionDeniedException classifies as '
         'SyncErrorCode.appCheck (not permissionDenied)', () async {
       // The 1.0.67 field failure: App Check enforcement + disabled Play
       // Integrity → Firestore PERMISSION_DENIED whose message carries an
-      // App Check context. Must resolve to the PERMANENT appCheck code so
-      // the card drops the doomed "temporarily … tap to retry" framing.
+      // App Check context. Must resolve to the PERMANENT appCheck code so a
+      // future AD-30 per-item recovery affordance can drop the doomed
+      // "temporarily … tap to retry" framing.
       final gw = _FakeGateway()
         ..throwWith = const FirestorePermissionDeniedException(
           'Requests are blocked because App Check is enforced and the '
@@ -820,13 +841,15 @@ void main() {
           collection: 'completions',
           operation: 'read',
         );
-      final orchestrator = _makeOrchestrator(gateway: gw);
+      final spy = _SpyCrashlyticsService();
+      final orchestrator = _makeOrchestrator(gateway: gw, crashlytics: spy);
 
       await expectLater(orchestrator.pullOnLaunch(), throwsA(anything));
-      final status = orchestrator.currentStatus as SyncStatusError;
+      // Ambient status never lies — still just the honest, unsettled `syncing`.
+      expect(orchestrator.currentStatus, isA<SyncStatusSyncing>());
       expect(
-        status.code,
-        equals(SyncErrorCode.appCheck),
+        spy.recorded.last.error.toString(),
+        contains(SyncErrorCode.appCheck.name),
         reason:
             'A permission-denied carrying an App Check signature must '
             'classify as appCheck, never permissionDenied',
@@ -841,83 +864,89 @@ void main() {
           collection: 'completions',
           operation: 'read',
         );
-      final orchestrator = _makeOrchestrator(gateway: gw);
+      final spy = _SpyCrashlyticsService();
+      final orchestrator = _makeOrchestrator(gateway: gw, crashlytics: spy);
 
       await expectLater(orchestrator.pullOnLaunch(), throwsA(anything));
-      final status = orchestrator.currentStatus as SyncStatusError;
-      expect(status.code, equals(SyncErrorCode.permissionDenied));
+      expect(
+        spy.recorded.last.error.toString(),
+        contains(SyncErrorCode.permissionDenied.name),
+      );
     });
 
     test('TimeoutException classifies as SyncErrorCode.timeout', () async {
       final gw = _FakeGateway()..throwWith = TimeoutException('pull budget');
-      final orchestrator = _makeOrchestrator(gateway: gw);
+      final spy = _SpyCrashlyticsService();
+      final orchestrator = _makeOrchestrator(gateway: gw, crashlytics: spy);
 
       await expectLater(orchestrator.pullOnLaunch(), throwsA(anything));
-      final status = orchestrator.currentStatus as SyncStatusError;
-      expect(status.code, equals(SyncErrorCode.timeout));
+      expect(
+        spy.recorded.last.error.toString(),
+        contains(SyncErrorCode.timeout.name),
+      );
     });
 
     // ── Telemetry meta-fix: the underlying error string is captured ────────
-    test(
-      'a SyncStatusError transition emits a Crashlytics non-fatal carrying the '
-      'error code AND the raw debugDetail',
-      () async {
-        const rawDetail =
-            'FirestorePermissionDeniedException: App Check attestation failed '
-            'for profiles/1/completions [cloud_firestore/permission-denied]';
-        final gw = _FakeGateway()
-          ..throwWith = const FirestorePermissionDeniedException(
-            rawDetail,
-            collection: 'completions',
-            operation: 'read',
-          );
-        final spy = _SpyCrashlyticsService();
-        final orchestrator = _makeOrchestrator(gateway: gw, crashlytics: spy);
-
-        await expectLater(orchestrator.pullOnLaunch(), throwsA(anything));
-
-        expect(
-          spy.recorded,
-          isNotEmpty,
-          reason:
-              'Every transition into SyncStatusError must record a non-fatal '
-              'so the field failure is diagnosable without a huge investigation',
+    test('a failed pull emits a Crashlytics non-fatal carrying the error code '
+        'AND the raw debugDetail', () async {
+      const rawDetail =
+          'FirestorePermissionDeniedException: App Check attestation failed '
+          'for profiles/1/completions [cloud_firestore/permission-denied]';
+      final gw = _FakeGateway()
+        ..throwWith = const FirestorePermissionDeniedException(
+          rawDetail,
+          collection: 'completions',
+          operation: 'read',
         );
-        final recorded = spy.recorded.firstWhere(
-          (r) => r.error.toString().contains('sync_status_error'),
-        );
-        expect(recorded.fatal, isFalse);
-        final text = recorded.error.toString();
-        // The stable code is captured...
-        expect(text, contains(SyncErrorCode.appCheck.name));
-        // ...AND the real underlying Firebase/Firestore error string (the
-        // detail previously dropped) is preserved for triage.
-        expect(text, contains('cloud_firestore/permission-denied'));
-        expect(text, contains('App Check attestation failed'));
-      },
-    );
-
-    test('error status code is SyncErrorCode.unknown for non-timeout, '
-        'non-permission-denied errors (AUD-sync-01/EH-5, was SY-3)', () async {
-      final gw = _FakeGateway()..throwWith = Exception('custom error message');
-      final orchestrator = _makeOrchestrator(gateway: gw);
+      final spy = _SpyCrashlyticsService();
+      final orchestrator = _makeOrchestrator(gateway: gw, crashlytics: spy);
 
       await expectLater(orchestrator.pullOnLaunch(), throwsA(anything));
-      final status = orchestrator.currentStatus as SyncStatusError;
-      // AUD-sync-01 (EH-5): the orchestrator classifies into a stable code
-      // — never a pre-formatted message. `code` is a closed enum value, so
-      // it structurally cannot expose internal class names or error
-      // details to users via the Backup & Sync card, unlike the free-text
-      // message this replaced.
+
       expect(
-        status.code,
-        equals(SyncErrorCode.unknown),
+        spy.recorded,
+        isNotEmpty,
+        reason:
+            'Every failed pull must record a non-fatal so the field '
+            'failure is diagnosable without a huge investigation',
+      );
+      final recorded = spy.recorded.firstWhere(
+        (r) => r.error.toString().contains('sync_status_error'),
+      );
+      expect(recorded.fatal, isFalse);
+      final text = recorded.error.toString();
+      // The stable code is captured...
+      expect(text, contains(SyncErrorCode.appCheck.name));
+      // ...AND the real underlying Firebase/Firestore error string (the
+      // detail previously dropped) is preserved for triage.
+      expect(text, contains('cloud_firestore/permission-denied'));
+      expect(text, contains('App Check attestation failed'));
+    });
+
+    test('unclassified error code is SyncErrorCode.unknown for non-timeout, '
+        'non-permission-denied errors (AUD-sync-01/EH-5, was SY-3)', () async {
+      final gw = _FakeGateway()..throwWith = Exception('custom error message');
+      final spy = _SpyCrashlyticsService();
+      final orchestrator = _makeOrchestrator(gateway: gw, crashlytics: spy);
+
+      await expectLater(orchestrator.pullOnLaunch(), throwsA(anything));
+      // AUD-sync-01 (EH-5): the orchestrator classifies into a stable code
+      // — never a pre-formatted message. Story 1.5 / AD-11: that code no
+      // longer lands on `SyncStatus` at all (there is no `error` case for
+      // it to live on) — it is forwarded straight to telemetry instead, so
+      // it structurally cannot expose internal class names or error details
+      // via the Backup & Sync card, unlike the free-text message this
+      // replaced.
+      final text = spy.recorded.last.error.toString();
+      expect(
+        text,
+        contains(SyncErrorCode.unknown.name),
         reason: 'An unclassified exception must map to SyncErrorCode.unknown',
       );
       // debugDetail is diagnostics-only (never rendered) — it legitimately
       // retains the raw exception text for logs.
       expect(
-        status.debugDetail,
+        text,
         contains('custom error message'),
         reason: 'debugDetail retains diagnostic detail for logs only',
       );
@@ -1198,28 +1227,41 @@ void main() {
       },
     );
 
-    test('a pull error is surfaced through statusStream', () async {
-      final gw = _FakeGateway()..throwWith = Exception('network down');
-      final orchestrator = _makeOrchestrator(gateway: gw);
+    test(
+      'a pull error is surfaced through statusStream as syncing (never a lie)',
+      () async {
+        // Story 1.5 / AD-11: there is no SyncStatusError to filter for
+        // anymore — the collapsed union surfaces a failed pull (while
+        // online) as a second `syncing` emission, never a falsely-terminal
+        // `synced`/`offline` state.
+        final gw = _FakeGateway()..throwWith = Exception('network down');
+        final orchestrator = _makeOrchestrator(gateway: gw);
 
-      final errors = <SyncStatus>[];
-      final sub = orchestrator.statusStream.listen((s) {
-        if (s is SyncStatusError) errors.add(s);
-      });
+        final syncingEmissions = <SyncStatus>[];
+        final sub = orchestrator.statusStream.listen((s) {
+          if (s is SyncStatusSyncing) syncingEmissions.add(s);
+        });
 
-      // Swallow the rethrown error — a UI caller that does not await is safe.
-      try {
-        await orchestrator.pullOnLaunch();
-      } catch (_) {}
+        // Swallow the rethrown error — a UI caller that does not await is safe.
+        try {
+          await orchestrator.pullOnLaunch();
+        } catch (_) {}
 
-      // Drain microtasks so any pending stream events are delivered.
-      await Future<void>.value();
-      await Future<void>.value();
+        // Drain microtasks so any pending stream events are delivered.
+        await Future<void>.value();
+        await Future<void>.value();
 
-      await sub.cancel();
+        await sub.cancel();
 
-      expect(errors, hasLength(1), reason: 'error surfaced via statusStream');
-    });
+        expect(
+          syncingEmissions,
+          hasLength(2),
+          reason:
+              'the pre-attempt syncing emission and the post-failure '
+              'syncing emission both surface via statusStream',
+        );
+      },
+    );
   });
 
   // ── Dispose guard ───────────────────────────────────────────────────────────

@@ -3342,61 +3342,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get backupSyncing => 'Syncing...';
 
   @override
-  String backupPendingChanges(int count) {
-    return '$count changes pending';
-  }
-
-  @override
-  String backupSyncError(String message) {
-    return 'Sync error: $message';
-  }
-
-  @override
-  String get backupSyncTapToRetry => 'Tap to retry';
-
-  @override
-  String get backupSyncCloudUnavailable =>
-      'Cloud backup is temporarily unavailable.';
-
-  @override
-  String get backupSyncAppCheckUnavailable =>
-      'Cloud backup can\'t verify this app right now. Please update to the latest version from the store.';
-
-  @override
-  String get backupSyncAccountUnavailable =>
-      'Cloud backup is unavailable for this account.';
-
-  @override
-  String get backupSyncOutboxStuck =>
-      'Some changes are waiting to sync. We\'ll retry automatically.';
-
-  @override
-  String backupSyncIdentityMismatch(String signedInEmail, String activeEmail) {
-    return 'Signed in as $signedInEmail — sign in as $activeEmail to back up this account.';
-  }
-
-  @override
-  String get backupSyncIdentityMismatchNoEmail =>
-      'Signed in as the wrong account — sign in again to back up.';
-
-  @override
-  String get backupSyncUnknownAccount => 'a different account';
-
-  @override
   String get backupConnecting => 'Connecting…';
 
   @override
   String get backupOffline => 'Offline';
-
-  @override
-  String backupSyncPaused(int count, String reason) {
-    return 'Sync paused — $count queued. $reason';
-  }
-
-  @override
-  String backupSyncPausedNoCount(String reason) {
-    return 'Sync paused. $reason';
-  }
 
   @override
   String get backupUpgradeToCloud => 'Upgrade to Cloud';
@@ -3425,9 +3374,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String backupTimeAgoDays(int count) {
     return '${count}d ago';
   }
-
-  @override
-  String get backupSyncSignInToBackUp => 'Sign in to back up';
 
   @override
   String get reauthDialogTitle => 'Verify Your Identity';

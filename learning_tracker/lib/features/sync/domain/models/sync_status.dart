@@ -1,62 +1,71 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:learning_tracker/features/sync/domain/models/sync_error_code.dart';
 
 part 'sync_status.freezed.dart';
 
 /// Represents the current state of data synchronization with Firestore.
 ///
-/// The sync status follows this lifecycle:
-/// 0. `localOnly` - Local-born tier, sync permanently disabled (v2 §4.5)
-/// 1. `syncing` - Active sync operation in progress
-/// 2. `synced` - All data successfully synchronized
-/// 3. `pending` - Online but local changes awaiting push
-/// 4. `offline` - Device is offline, changes queued locally
-/// 5. `error` - Sync operation failed
-/// 6. `degraded` - Pushes are queueing silently (e.g. repeated permission
-///    denied or listener quota exhaustion). Surfaced to the UI so users see
-///    that their writes are stuck instead of assuming everything synced.
+/// Story 1.5 / AD-11 (owner-ratified, slim 3-state sync status): this union
+/// was collapsed from a 7-case shape (`localOnly`/`syncing`/`synced`/
+/// `pending`/`offline`/`error`/`degraded`) down to exactly the three states
+/// below, plus [localOnly] (a genuinely distinct "sync is not applicable"
+/// concept — see its own doc comment). The removed states carried app-level
+/// "N pending / N stuck" bookkeeping (`pendingChanges` counts) and a
+/// dead-letter-ish `degraded` state; AD-11 forbids reviving either.
+///
+/// Each state is derived ONLY from SDK-observable signals
+/// (`hasPendingWrites`, `isFromCache`, connectivity) and per-account app
+/// state — never from an app-maintained counter:
+///   * [localOnly] — no cloud session exists for this account (per-account
+///     app state: local-born tier).
+///   * [syncing]   — work is in flight/unsettled: an active pull, an
+///     unpushed local write, or connectivity is up but a listener channel is
+///     still dead (backoff-capped, per Story 1.1's `deadChannels`/
+///     `deadChannelsChanges`). AD-11's total-function honesty rule: a
+///     backoff-capped channel while online is surfaced as `syncing` —
+///     *never* falsely `synced` and never `offline` (the network is fine).
+///   * [synced]    — a pull has completed, nothing is queued, and every
+///     listener channel is live.
+///   * [offline]   — connectivity itself is down (regardless of any queued
+///     work — there is no separate "offline with N pending" shape anymore).
+///
+/// **Out of scope (deliberately, not an oversight):** a permanently-rejected
+/// *write* (a genuine non-retryable rules rejection, distinct from an
+/// offline/backoff case the SDK queue will drain on its own) is NOT
+/// represented anywhere in this tri-state. Its user-facing recovery is
+/// AD-30's per-item "tap to retry" affordance, landing in Phase 3 — out of
+/// scope for this story. Until then there is a known, owner-ratified
+/// regression: a permanently-failed write surfaces only as ambient
+/// `syncing`, with no differentiated card and no retry affordance (the
+/// differentiated appCheck/permissionDenied/timeout cards and their
+/// tap-to-retry UI that `backup_sync_section.dart` used to render for this
+/// case were removed in Story 1.5; see that file's doc comment).
 @freezed
 sealed class SyncStatus with _$SyncStatus {
   /// Local-born tier — sync permanently disabled (v2 §4.5).
-  /// Previously "no account"; v2 frames this as an immutable tier.
+  ///
+  /// Distinct from [offline]: this is a per-account, structural "there is no
+  /// cloud session to sync" state (a local-born account never had one), not
+  /// a transient connectivity condition. It survives the Story 1.5 collapse
+  /// unchanged because it answers a different question than the tri-state
+  /// (is there a cloud session at all?) and drives entirely different UI
+  /// (the upgrade-to-cloud CTA, never a connectivity-style card).
   const factory SyncStatus.localOnly() = SyncStatusLocalOnly;
 
-  /// Sync operation is currently in progress.
+  /// Work is in flight or unsettled: an active pull, an unpushed local
+  /// write, or a listener channel that is still dead (backoff-capped) while
+  /// connectivity is up. See the class doc for the AD-11 honesty rule this
+  /// state exists to satisfy.
   const factory SyncStatus.syncing({required DateTime startedAt}) =
       SyncStatusSyncing;
 
-  /// All data is successfully synchronized with Firestore.
+  /// All data is successfully synchronized with Firestore: the last pull
+  /// completed, nothing is queued, and no listener channel is dead.
   const factory SyncStatus.synced({required DateTime lastSyncedAt}) =
       SyncStatusSynced;
 
-  /// Online but local changes are queued and awaiting push.
-  const factory SyncStatus.pending({required int pendingChanges}) =
-      SyncStatusPending;
-
-  /// Device is offline. Local changes are queued for sync when online.
-  const factory SyncStatus.offline({required int pendingChanges}) =
-      SyncStatusOffline;
-
-  /// Sync operation failed with an error.
-  ///
-  /// EH-5: [code] is a stable, localizable category — never a pre-formatted
-  /// human message. Presentation resolves the user-facing string for [code]
-  /// through `AppLocalizations`. [debugDetail], when present, is technical
-  /// (may contain exception class names, Firestore paths, SDK codes) and
-  /// must NEVER be rendered directly to the user — logs/diagnostics only.
-  const factory SyncStatus.error({
-    required SyncErrorCode code,
-    required DateTime failedAt,
-    String? debugDetail,
-  }) = SyncStatusError;
-
-  /// Pushes are silently queueing because Firestore keeps refusing them
-  /// (permission-denied threshold reached) or realtime listeners hit the
-  /// connection quota. The queue is intact — work resumes when the
-  /// underlying problem clears — but the UI must show the user that their
-  /// last few writes have not landed yet.
-  const factory SyncStatus.degraded({
-    required int pendingChanges,
-    required String reason,
-  }) = SyncStatusDegraded;
+  /// Connectivity itself is down. No `pendingChanges` count — the SDK
+  /// offline queue (or, pre-migration, the outbox) is the sole durability
+  /// owner; the status chip only ever answers "is the network up", never
+  /// "how many rows are queued" (AD-11).
+  const factory SyncStatus.offline() = SyncStatusOffline;
 }

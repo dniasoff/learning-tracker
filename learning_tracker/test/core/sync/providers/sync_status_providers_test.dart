@@ -83,7 +83,7 @@ void main() {
 
     test('when statusStream is empty and currentStatus is offline, provider '
         'returns offline (not syncing)', () {
-      const offlineStatus = SyncStatus.offline(pendingChanges: 3);
+      const offlineStatus = SyncStatus.offline();
       final mockOrch = _MockOrchestrator();
       when(() => mockOrch.currentStatus).thenReturn(offlineStatus);
       when(() => mockOrch.statusStream).thenAnswer((_) => const Stream.empty());

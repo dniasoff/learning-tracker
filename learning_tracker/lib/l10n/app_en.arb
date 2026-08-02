@@ -1784,66 +1784,8 @@
     }
   },
   "backupSyncing": "Syncing...",
-  "backupPendingChanges": "{count} changes pending",
-  "@backupPendingChanges": {
-    "placeholders": {
-      "count": { "type": "int" }
-    }
-  },
-  "backupSyncError": "Sync error: {message}",
-  "@backupSyncError": {
-    "placeholders": {
-      "message": { "type": "String" }
-    }
-  },
-  "backupSyncTapToRetry": "Tap to retry",
-  "backupSyncCloudUnavailable": "Cloud backup is temporarily unavailable.",
-  "@backupSyncCloudUnavailable": {
-    "description": "Friendly message shown instead of a raw exception string when cloud sync fails (ST-4). TRANSIENT codes only (timeout/unknown) — paired with backupSyncTapToRetry. Permanent codes use backupSyncAppCheckUnavailable / backupSyncAccountUnavailable."
-  },
-  "backupSyncAppCheckUnavailable": "Cloud backup can't verify this app right now. Please update to the latest version from the store.",
-  "@backupSyncAppCheckUnavailable": {
-    "description": "Non-transient error shown on the Backup & Sync card when sync fails with SyncErrorCode.appCheck (Firebase App Check attestation failure — e.g. Play Integrity disabled/misconfigured, 1.0.67 incident). Must NOT read as temporary and must NOT invite a doomed retry — retrying the same pull cannot succeed until the app install is verified again."
-  },
-  "backupSyncAccountUnavailable": "Cloud backup is unavailable for this account.",
-  "@backupSyncAccountUnavailable": {
-    "description": "Non-transient error shown on the Backup & Sync card when sync fails with SyncErrorCode.permissionDenied (a bare rules/session rejection with no App Check signature). A permanent access failure — must NOT read as temporary and must NOT offer a doomed tap-to-retry."
-  },
-  "backupSyncOutboxStuck": "Some changes are waiting to sync. We'll retry automatically.",
-  "@backupSyncOutboxStuck": {
-    "description": "Friendly message shown when the outbox has stuck rows, replacing the raw 'N row(s) stuck after 3+ attempts' English string (ST-4)."
-  },
-  "backupSyncIdentityMismatch": "Signed in as {signedInEmail} — sign in as {activeEmail} to back up this account.",
-  "@backupSyncIdentityMismatch": {
-    "description": "Localized identity-mismatch degraded reason, replacing sync_orchestrator's hand-built English sentence so it never renders raw in non-English UIs (AUD-settings-01). Shown when the device's signed-in Firebase account differs from the active in-app account.",
-    "placeholders": {
-      "signedInEmail": { "type": "String" },
-      "activeEmail": { "type": "String" }
-    }
-  },
-  "backupSyncIdentityMismatchNoEmail": "Signed in as the wrong account — sign in again to back up.",
-  "@backupSyncIdentityMismatchNoEmail": {
-    "description": "Fallback identity-mismatch reason when the active account has no known email (AUD-settings-01)."
-  },
-  "backupSyncUnknownAccount": "a different account",
-  "@backupSyncUnknownAccount": {
-    "description": "Localized fallback used in place of the signed-in email when it is unknown, interpolated into backupSyncIdentityMismatch (AUD-settings-01)."
-  },
   "backupConnecting": "Connecting…",
   "backupOffline": "Offline",
-  "backupSyncPaused": "Sync paused — {count} queued. {reason}",
-  "@backupSyncPaused": {
-    "placeholders": {
-      "count": { "type": "int" },
-      "reason": { "type": "String" }
-    }
-  },
-  "backupSyncPausedNoCount": "Sync paused. {reason}",
-  "@backupSyncPausedNoCount": {
-    "placeholders": {
-      "reason": { "type": "String" }
-    }
-  },
   "backupUpgradeToCloud": "Upgrade to Cloud",
   "backupSyncCardTitle": "Backup & Sync",
   "backupSyncCardBody": "Your learning progress is currently LOCAL ONLY. Upgrade to sync across all devices.",
@@ -1869,8 +1811,6 @@
       "count": { "type": "int" }
     }
   },
-  "backupSyncSignInToBackUp": "Sign in to back up",
-
   "reauthDialogTitle": "Verify Your Identity",
   "reauthDialogBody": "Please enter your current password to continue.",
   "reauthVerify": "Verify",

@@ -17,6 +17,7 @@ import 'package:learning_tracker/app/restore/device_restore_service.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
+import 'package:learning_tracker/core/sync/exceptions/firestore_permission_denied_exception.dart';
 import 'package:learning_tracker/core/sync/sync_orchestrator.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/curriculum_import_service.dart';
@@ -39,7 +40,7 @@ class _MockCurriculumImportService extends Mock
     implements CurriculumImportService {}
 
 class _StubSyncOrchestrator implements SyncOrchestrator {
-  _StubSyncOrchestrator({SyncStatus? status}) {
+  _StubSyncOrchestrator({SyncStatus? status, this.pullOnLaunchError}) {
     if (status != null) _status = status;
   }
 
@@ -47,10 +48,21 @@ class _StubSyncOrchestrator implements SyncOrchestrator {
     lastSyncedAt: DateTimeFactory.nowUtc(),
   );
 
+  /// Story 1.5 / AD-11: `SyncStatus` no longer has an `error` case, so a
+  /// failed pull can no longer be simulated by pre-seeding `currentStatus` —
+  /// [DeviceRestoreService.restore] now learns about a pull failure the same
+  /// way it does in production: `pullOnLaunch` throws. Set this to make the
+  /// stub throw from [pullOnLaunch], mirroring the real orchestrator's
+  /// always-rethrows contract.
+  final Exception? pullOnLaunchError;
+
   void setStatus(SyncStatus s) => _status = s;
 
   @override
-  Future<void> pullOnLaunch({bool triggeredFromResume = false}) async {}
+  Future<void> pullOnLaunch({bool triggeredFromResume = false}) async {
+    final error = pullOnLaunchError;
+    if (error != null) throw error;
+  }
 
   @override
   Future<void> retryPull() async {}
@@ -312,10 +324,10 @@ void main() {
         addTearDown(db.close);
 
         final orchestrator = _StubSyncOrchestrator(
-          status: SyncStatus.error(
-            code: SyncErrorCode.permissionDenied,
-            failedAt: DateTime.utc(2026, 5, 20),
-            debugDetail: 'Firestore unreachable',
+          pullOnLaunchError: const FirestorePermissionDeniedException(
+            'Firestore unreachable',
+            collection: 'completions',
+            operation: 'read',
           ),
         );
 
@@ -324,8 +336,9 @@ void main() {
 
         final result = await svc.restore();
 
-        // pullOnLaunch succeeded (stub does nothing) but currentStatus is Error,
-        // so restore detects the failure and returns false.
+        // pullOnLaunch threw (mirroring the real orchestrator's
+        // always-rethrows contract), so restore's own catch block classifies
+        // the exception and reports failure.
         expect(result, isFalse);
         expect(svc.currentStatus, isA<RestoreStatusError>());
         // AUD-sync-01 (EH-5): the orchestrator's code propagates directly

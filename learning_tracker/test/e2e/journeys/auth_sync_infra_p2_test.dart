@@ -8,9 +8,8 @@
 ///             verification (watchdog timer fires SignInTimeout error).
 ///   E2E-1210  Magic link warm-start: AppLinks emitting warm URI — headless
 ///             verification of harness override (full channel is device-only).
-///   E2E-1305  Degraded card — stuck outbox detected: BackupSyncSection renders
-///             the degraded card when syncStatusProvider carries a stuck-outbox
-///             reason string.
+///   E2E-1305  RETIRED (Story 1.5 / AD-11): the degraded card this journey
+///             covered was removed — see the group's doc comment below.
 ///
 /// ## Journey notes
 ///
@@ -51,15 +50,12 @@
 /// magic-link subscription is silently active (i.e. the override does not break
 /// the auth flow).  The full deep-link → Firebase sign-in path is device-only.
 ///
-/// ### E2E-1305 — Degraded card — stuck outbox detected
-/// [BackupSyncSection._buildDegradedCard] renders when [syncStatusProvider]
-/// carries [SyncStatus.degraded] with a reason string containing 'row(s) stuck'.
-/// The orchestrator produces exactly this reason format:
-///   `'outbox has $stuck row(s) stuck after $_degradedAttemptThreshold+ attempts'`
-/// Override [syncStatusProvider] directly with that pattern to assert the
-/// degraded card renders.  BackupSyncSection replaces the raw reason with
-/// [l10n.backupSyncOutboxStuck] ("Some changes are waiting to sync. We'll
-/// retry automatically.") — confirming localisation replaces the raw string.
+/// ### E2E-1305 — Degraded card — stuck outbox detected (RETIRED)
+/// Story 1.5 / AD-11 (owner-ratified, 2026-08-02) collapsed `SyncStatus` to
+/// exactly `synced | syncing | offline` (+ `localOnly`) — the
+/// `SyncStatus.degraded` case and `BackupSyncSection._buildDegradedCard` this
+/// journey exercised no longer exist. See the `E2E-1305` group below for the
+/// retirement note.
 ///
 /// ## Provider silence notes
 ///
@@ -74,21 +70,11 @@
 @Tags(['e2e', 'journey'])
 library;
 
-import 'package:flutter/material.dart' show ListView;
-import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/sync/providers/outbox_providers.dart'
-    show syncIdentityStatusProvider;
-import 'package:learning_tracker/core/sync/providers/sync_status_providers.dart'
-    show syncStatusProvider;
-import 'package:learning_tracker/core/sync/sync_identity_status.dart'
-    show SyncIdentityStatus;
 import 'package:learning_tracker/features/account/presentation/notifiers/sign_in_controller.dart'
     show SignInController, SignInError, SignInState, signInControllerProvider;
 import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart'
     show debugSetLastKnownOnline;
-import 'package:learning_tracker/features/sync/domain/models/sync_status.dart'
-    show SyncStatus;
 
 import '../harness/e2e_common_overrides.dart';
 import '../harness/e2e_harness.dart';
@@ -109,33 +95,6 @@ class _WatchdogTimeoutSignInController extends SignInController {
 
   @override
   SignInState build() => SignInError(_timeoutMessage);
-}
-
-// ── Shared helpers ────────────────────────────────────────────────────────────
-
-/// Standard silence overrides for tests that navigate through AppShell or land
-/// on SettingsScreen.
-List<Override> _shellSilences(E2EHarness h) => [
-  ...h.dashboardSilenceOverrides,
-  sacredWindowNullOverride(),
-  connectivityOnlineOverride(),
-  incomingGrantsEmptyOverride(),
-  pendingInvitesEmptyOverride(),
-];
-
-/// Navigate from dashboard to SettingsScreen and scroll to BackupSyncSection.
-Future<void> _goToBackupSync(E2EHarness h, WidgetTester tester) async {
-  await h.tapText('SETTINGS');
-  await h.pump(const Duration(milliseconds: 300));
-  await h.pump(const Duration(milliseconds: 300));
-  await h.pump();
-  // Scroll the Settings ListView to expose BackupSyncSection near the bottom.
-  final listView = find.byType(ListView);
-  if (listView.evaluate().isNotEmpty) {
-    await tester.drag(listView.first, const Offset(0, -1500));
-    await tester.pump(const Duration(milliseconds: 200));
-    await tester.pump();
-  }
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -412,169 +371,22 @@ void main() {
   // ── E2E-1305 ─────────────────────────────────────────────────────────────────
 
   group('E2E-1305 — Degraded card: stuck outbox detected', () {
-    // Key assertions (catalog §2 Area 13):
-    //  • BackupSyncSection renders the degraded card when syncStatusProvider
-    //    carries SyncStatus.degraded with a reason string matching the
-    //    'row(s) stuck' pattern produced by SyncOrchestrator._recomputeOutboxStatus.
-    //  • The raw engineering reason is replaced by the localised
-    //    l10n.backupSyncOutboxStuck = "Some changes are waiting to sync.
-    //    We'll retry automatically."
-    //  • The raw reason string ("outbox has N row(s) stuck after 3+ attempts")
-    //    must NOT be visible in the user-facing UI.
-    //  • Card title "Backup & Sync" is present.
-    //
-    // The seeded outbox row (catalog "Seeded old outbox row") would normally
-    // raise stuck count via OutboxDao.stuckCount(minAttempts=3) → orchestrator
-    // emits degraded. Headlessly we inject the final syncStatusProvider value
-    // directly (matching the same SyncStatus.degraded the orchestrator would emit)
-    // rather than seeding a Drift row and running the full orchestrator.
-    //
-    // SyncOrchestrator produces the reason string:
-    //   'outbox has $stuck row(s) stuck after $_degradedAttemptThreshold+ attempts'
-    // where _degradedAttemptThreshold = 3.  BackupSyncSection._buildDegradedCard
-    // detects `reason.contains('row(s) stuck')` and replaces it with the
-    // localised message (ST-4 fix).
-    //
-    // syncIdentityStatusProvider is overridden to matched() so the degraded card
-    // renders the generic stuck-outbox path (not the identity-mismatch path).
-
+    // RETIRED (Story 1.5 / AD-11, owner-ratified 2026-08-02): the degraded
+    // card this journey covered — SyncStatus.degraded, rendered by
+    // BackupSyncSection._buildDegradedCard with its localised
+    // stuck-outbox/identity-mismatch copy — no longer exists. SyncStatus
+    // collapsed to exactly synced | syncing | offline (+ localOnly); a
+    // stuck outbox row now surfaces as the same ambient `syncing` state as
+    // any other unsettled work, with no differentiated card. This is a
+    // known, deliberate regression (see backup_sync_section.dart's
+    // class-level doc comment) — the replacement is AD-30's per-item
+    // recovery affordance, landing in Phase 3.
     testWidgets(
-      'BackupSyncSection shows degraded card with localised stuck-outbox message '
-      'when outbox rows have ≥3 attempts; raw reason string is absent from UI',
-      (tester) async {
-        final identity = E2EIdentity.localBorn(
-          email: 'stuckoutbox1305@test.com',
-          displayName: 'StuckOutbox1305',
-          profileMode: 'adult',
-        );
-        final h = E2EHarness(tester, identity: identity);
-        addTearDown(h.dispose);
-
-        // The orchestrator's exact reason string for stuck outbox rows
-        // (_degradedAttemptThreshold = 3 in SyncOrchestrator):
-        const stuckReason = 'outbox has 2 row(s) stuck after 3+ attempts';
-
-        await h.pumpApp(
-          path: '/dashboard',
-          extraOverrides: [
-            ..._shellSilences(h),
-            // Inject the degraded status that the orchestrator would emit for
-            // stuck outbox rows (≥3 attempts).
-            syncStatusProvider.overrideWithValue(
-              const SyncStatus.degraded(pendingChanges: 2, reason: stuckReason),
-            ),
-            // matched() so _buildDegradedCard uses the stuck-outbox branch,
-            // not the identity-mismatch branch.
-            syncIdentityStatusProvider.overrideWithValue(
-              const SyncIdentityStatus.matched(),
-            ),
-          ],
-        );
-
-        await _goToBackupSync(h, tester);
-        await h.pump(const Duration(milliseconds: 300));
-
-        // Card title must be present.
-        expect(
-          find.textContaining('Backup & Sync'),
-          findsWidgets,
-          reason:
-              'E2E-1305: BackupSyncSection card title "Backup & Sync" must be '
-              'visible in the degraded (stuck-outbox) state',
-        );
-
-        // The degraded card must show the localised stuck-outbox message.
-        // BackupSyncSection._buildDegradedCard replaces the raw reason with
-        // l10n.backupSyncOutboxStuck = "Some changes are waiting to sync.
-        // We'll retry automatically." when reason.contains('row(s) stuck').
-        final showsWaiting = tester.any(find.textContaining('waiting to sync'));
-        final showsWillRetry = tester.any(
-          find.textContaining("We'll retry automatically"),
-        );
-        final showsPaused = tester.any(find.textContaining('Sync paused'));
-
-        expect(
-          showsWaiting || showsWillRetry || showsPaused,
-          isTrue,
-          reason:
-              'E2E-1305: degraded card must show localised stuck-outbox message '
-              '("waiting to sync" / "We\'ll retry automatically" / "Sync paused") '
-              '— BackupSyncSection._buildDegradedCard ST-4 fix must apply',
-        );
-
-        // The raw engineering reason must NOT be visible to the user (ST-4 fix).
-        expect(
-          find.textContaining('row(s) stuck'),
-          findsNothing,
-          reason:
-              'E2E-1305: raw engineering reason "row(s) stuck" must NOT be '
-              'rendered in the user-facing BackupSyncSection (ST-4 fix)',
-        );
-      },
-    );
-
-    testWidgets(
-      'BackupSyncSection degraded card with pendingChanges=0 and stuck reason '
-      'shows localised no-count subtitle (backupSyncPausedNoCount)',
-      (tester) async {
-        final identity = E2EIdentity.localBorn(
-          email: 'stuckoutbox1305b@test.com',
-          displayName: 'StuckOutbox1305B',
-          profileMode: 'adult',
-        );
-        final h = E2EHarness(tester, identity: identity);
-        addTearDown(h.dispose);
-
-        // pendingChanges=0 exercises the backupSyncPausedNoCount(reason) branch
-        // in _buildDegradedCard (the other branch uses backupSyncPaused(n, r)).
-        const stuckReason = 'outbox has 1 row(s) stuck after 3+ attempts';
-
-        await h.pumpApp(
-          path: '/dashboard',
-          extraOverrides: [
-            ..._shellSilences(h),
-            syncStatusProvider.overrideWithValue(
-              const SyncStatus.degraded(pendingChanges: 0, reason: stuckReason),
-            ),
-            syncIdentityStatusProvider.overrideWithValue(
-              const SyncIdentityStatus.matched(),
-            ),
-          ],
-        );
-
-        await _goToBackupSync(h, tester);
-        await h.pump(const Duration(milliseconds: 300));
-
-        // Card title present.
-        expect(
-          find.textContaining('Backup & Sync'),
-          findsWidgets,
-          reason:
-              'E2E-1305: "Backup & Sync" card title must be visible '
-              '(pendingChanges=0 degraded variant)',
-        );
-
-        // Localised message must appear — either "waiting to sync" or "Sync paused".
-        final showsWaiting = tester.any(find.textContaining('waiting to sync'));
-        final showsPaused = tester.any(find.textContaining('Sync paused'));
-
-        expect(
-          showsWaiting || showsPaused,
-          isTrue,
-          reason:
-              'E2E-1305: pendingChanges=0 degraded card must show localised '
-              'stuck-outbox message ("waiting to sync" / "Sync paused")',
-        );
-
-        // Raw engineering string must still be absent.
-        expect(
-          find.textContaining('row(s) stuck'),
-          findsNothing,
-          reason:
-              'E2E-1305: raw "row(s) stuck" string must be absent from UI '
-              '(ST-4 localisation fix applies for pendingChanges=0 too)',
-        );
-      },
+      'SKIP retired (Story 1.5 / AD-11): the degraded card and its '
+      'stuck-outbox/identity-mismatch copy were removed — no differentiated '
+      'card exists to assert on anymore',
+      skip: true,
+      (tester) async {},
     );
   });
 }

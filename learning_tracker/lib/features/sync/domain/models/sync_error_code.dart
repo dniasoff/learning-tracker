@@ -1,5 +1,10 @@
-/// Stable, localizable failure category for [SyncStatus.error] and
-/// [RestoreStatus.error] (EH-5).
+/// Stable, localizable failure category for [RestoreStatus.error] (EH-5).
+///
+/// Story 1.5: also still used internally by `SyncOrchestratorImpl` to
+/// classify a failed pull for logging/Crashlytics telemetry (App-Check vs.
+/// permission-denied vs. timeout vs. unknown) — that classification is no
+/// longer surfaced through `SyncStatus` (the slim 3-state union has no
+/// `error` case; see AD-11), only through diagnostics.
 ///
 /// This app ships EN + Hebrew. Domain/data errors must never carry a
 /// pre-formatted human-readable message: an English sentence baked into a

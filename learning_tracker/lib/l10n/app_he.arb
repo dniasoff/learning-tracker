@@ -1524,47 +1524,8 @@
     }
   },
   "backupSyncing": "מסנכרן...",
-  "backupPendingChanges": "{count} שינויים ממתינים",
-  "@backupPendingChanges": {
-    "placeholders": {
-      "count": { "type": "int" }
-    }
-  },
-  "backupSyncError": "שגיאת סנכרון: {message}",
-  "@backupSyncError": {
-    "placeholders": {
-      "message": { "type": "String" }
-    }
-  },
-  "backupSyncTapToRetry": "הקש לניסיון חוזר",
-  "backupSyncCloudUnavailable": "הגיבוי בענן אינו זמין כרגע.",
-  "backupSyncAppCheckUnavailable": "הגיבוי בענן אינו מצליח לאמת את האפליקציה כרגע. עדכנו לגרסה האחרונה מהחנות.",
-  "backupSyncAccountUnavailable": "הגיבוי בענן אינו זמין עבור חשבון זה.",
-  "backupSyncOutboxStuck": "חלק מהשינויים ממתינים לסנכרון. ננסה שוב באופן אוטומטי.",
-  "backupSyncIdentityMismatch": "מחוברים בתור {signedInEmail} — התחברו בתור {activeEmail} כדי לגבות חשבון זה.",
-  "@backupSyncIdentityMismatch": {
-    "placeholders": {
-      "signedInEmail": { "type": "String" },
-      "activeEmail": { "type": "String" }
-    }
-  },
-  "backupSyncIdentityMismatchNoEmail": "מחוברים לחשבון השגוי — התחברו מחדש כדי לגבות.",
-  "backupSyncUnknownAccount": "חשבון אחר",
   "backupConnecting": "מתחבר…",
   "backupOffline": "לא מקוון",
-  "backupSyncPaused": "סנכרון מושהה — {count} ממתינים. {reason}",
-  "@backupSyncPaused": {
-    "placeholders": {
-      "count": { "type": "int" },
-      "reason": { "type": "String" }
-    }
-  },
-  "backupSyncPausedNoCount": "סנכרון מושהה. {reason}",
-  "@backupSyncPausedNoCount": {
-    "placeholders": {
-      "reason": { "type": "String" }
-    }
-  },
   "backupUpgradeToCloud": "שדרג לענן",
   "backupSyncCardTitle": "גיבוי וסנכרון",
   "backupSyncCardBody": "התקדמות הלימוד שלך מאוחסנת כרגע במכשיר זה בלבד. שדרגו כדי לסנכרן בין כל המכשירים.",
@@ -1590,8 +1551,6 @@
       "count": { "type": "int" }
     }
   },
-  "backupSyncSignInToBackUp": "התחברו כדי לגבות",
-
   "reauthDialogTitle": "אמתו את זהותכם",
   "reauthDialogBody": "הזינו את הסיסמה הנוכחית כדי להמשיך.",
   "reauthVerify": "אמת",

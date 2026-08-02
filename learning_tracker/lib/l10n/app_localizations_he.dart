@@ -3301,60 +3301,10 @@ class AppLocalizationsHe extends AppLocalizations {
   String get backupSyncing => 'מסנכרן...';
 
   @override
-  String backupPendingChanges(int count) {
-    return '$count שינויים ממתינים';
-  }
-
-  @override
-  String backupSyncError(String message) {
-    return 'שגיאת סנכרון: $message';
-  }
-
-  @override
-  String get backupSyncTapToRetry => 'הקש לניסיון חוזר';
-
-  @override
-  String get backupSyncCloudUnavailable => 'הגיבוי בענן אינו זמין כרגע.';
-
-  @override
-  String get backupSyncAppCheckUnavailable =>
-      'הגיבוי בענן אינו מצליח לאמת את האפליקציה כרגע. עדכנו לגרסה האחרונה מהחנות.';
-
-  @override
-  String get backupSyncAccountUnavailable =>
-      'הגיבוי בענן אינו זמין עבור חשבון זה.';
-
-  @override
-  String get backupSyncOutboxStuck =>
-      'חלק מהשינויים ממתינים לסנכרון. ננסה שוב באופן אוטומטי.';
-
-  @override
-  String backupSyncIdentityMismatch(String signedInEmail, String activeEmail) {
-    return 'מחוברים בתור $signedInEmail — התחברו בתור $activeEmail כדי לגבות חשבון זה.';
-  }
-
-  @override
-  String get backupSyncIdentityMismatchNoEmail =>
-      'מחוברים לחשבון השגוי — התחברו מחדש כדי לגבות.';
-
-  @override
-  String get backupSyncUnknownAccount => 'חשבון אחר';
-
-  @override
   String get backupConnecting => 'מתחבר…';
 
   @override
   String get backupOffline => 'לא מקוון';
-
-  @override
-  String backupSyncPaused(int count, String reason) {
-    return 'סנכרון מושהה — $count ממתינים. $reason';
-  }
-
-  @override
-  String backupSyncPausedNoCount(String reason) {
-    return 'סנכרון מושהה. $reason';
-  }
 
   @override
   String get backupUpgradeToCloud => 'שדרג לענן';
@@ -3383,9 +3333,6 @@ class AppLocalizationsHe extends AppLocalizations {
   String backupTimeAgoDays(int count) {
     return 'לפני $count ימים';
   }
-
-  @override
-  String get backupSyncSignInToBackUp => 'התחברו כדי לגבות';
 
   @override
   String get reauthDialogTitle => 'אמתו את זהותכם';

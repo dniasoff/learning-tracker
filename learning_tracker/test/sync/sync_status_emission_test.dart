@@ -1,16 +1,21 @@
-/// Acceptance test for Plan §F Phase 4 deliverable 2.
+/// Acceptance test for Plan §F Phase 4 deliverable 2, updated for Story 1.5 /
+/// AD-11's slim tri-state collapse.
 ///
 /// `SyncOrchestratorImpl.recordDrainAttempt` must derive [SyncStatus] from
-/// the outbox + connectivity state matrix:
+/// the outbox + connectivity + dead-channel state matrix:
 ///
-///   * `offline`   — connectivity stream emits false (regardless of outbox).
-///   * `degraded`  — outbox has rows with `attempts ≥ 3` (stuck).
-///   * `pending`   — online + outbox not empty + no stuck rows.
-///   * `synced`    — online + outbox empty + a pull has completed.
+///   * `offline` — connectivity stream emits false (regardless of outbox).
+///   * `syncing` — online + (outbox not empty OR a listener channel is still
+///     dead) — no app-level "N pending / N stuck" bookkeeping survives; any
+///     unsettled condition while online collapses to this one honest state
+///     (AD-11 total-function rule — never falsely `synced`, never falsely
+///     `offline`).
+///   * `synced`  — online + outbox empty + no dead channel + a pull has
+///     completed.
 ///
 /// The orchestrator also fires `LogEvents.sync.outboxDepth` on every drain
-/// attempt with `{count, oldest_age_seconds, stuck_count, is_online}` —
-/// that gauge is observable in production logs and exercised here to
+/// attempt with `{count, oldest_age_seconds, is_online, dead_channel_count}`
+/// — that gauge is observable in production logs and exercised here to
 /// confirm the wiring.
 library;
 
@@ -172,7 +177,7 @@ void main() {
       expect(orchestrator.currentStatus, isA<SyncStatusSynced>());
     });
 
-    test('non-empty outbox + online → pending (with depth count)', () async {
+    test('non-empty outbox + online → syncing (no count surfaced)', () async {
       // Connectivity stream seeded online (true) so _lastConnectivity is set.
       final controller = StreamController<bool>();
       addTearDown(controller.close);
@@ -200,11 +205,12 @@ void main() {
       await orchestrator.recordDrainAttempt();
       await Future<void>.delayed(Duration.zero);
 
-      expect(observed, isA<SyncStatusPending>());
-      expect((observed! as SyncStatusPending).pendingChanges, 2);
+      // Story 1.5 / AD-11: no `pendingChanges` count on the status — the
+      // union has no field to carry it.
+      expect(observed, isA<SyncStatusSyncing>());
     });
 
-    test('non-empty outbox + offline → offline (with depth count)', () async {
+    test('non-empty outbox + offline → offline (no count surfaced)', () async {
       final controller = StreamController<bool>();
       addTearDown(controller.close);
 
@@ -242,39 +248,39 @@ void main() {
       );
     });
 
-    test(
-      'stuck row (attempts ≥ 3) + online → degraded (with depth count)',
-      () async {
-        final controller = StreamController<bool>();
-        addTearDown(controller.close);
+    test('stuck row (attempts ≥ 3) + online → syncing (no distinct "degraded" '
+        'state)', () async {
+      final controller = StreamController<bool>();
+      addTearDown(controller.close);
 
-        final orchestrator = _buildOrchestrator(
-          db: db,
-          connectivityStream: controller.stream,
-        );
-        addTearDown(orchestrator.dispose);
-        orchestrator.start();
+      final orchestrator = _buildOrchestrator(
+        db: db,
+        connectivityStream: controller.stream,
+      );
+      addTearDown(orchestrator.dispose);
+      orchestrator.start();
 
-        controller.add(true);
-        await Future<void>.delayed(Duration.zero);
+      controller.add(true);
+      await Future<void>.delayed(Duration.zero);
 
-        // Stuck row — already attempted 5 times, no success.
-        await _enqueue(db, attempts: 5);
+      // Stuck row — already attempted 5 times, no success.
+      await _enqueue(db, attempts: 5);
 
-        SyncStatus? observed;
-        final sub = orchestrator.statusStream.listen((s) => observed = s);
-        addTearDown(sub.cancel);
+      SyncStatus? observed;
+      final sub = orchestrator.statusStream.listen((s) => observed = s);
+      addTearDown(sub.cancel);
 
-        await orchestrator.recordDrainAttempt();
-        await Future<void>.delayed(Duration.zero);
+      await orchestrator.recordDrainAttempt();
+      await Future<void>.delayed(Duration.zero);
 
-        expect(observed, isA<SyncStatusDegraded>());
-        expect((observed! as SyncStatusDegraded).pendingChanges, 1);
-      },
-    );
+      // Story 1.5 / AD-11: attempt count is no longer a status-derivation
+      // signal — a row stuck at 5 attempts is exactly as "syncing" as a
+      // fresh row.
+      expect(observed, isA<SyncStatusSyncing>());
+    });
 
-    test('offline takes precedence over degraded — a stuck outbox while '
-        'offline emits SyncStatus.offline (not degraded)', () async {
+    test('offline takes precedence over syncing — a queued outbox while '
+        'offline emits SyncStatus.offline (not syncing)', () async {
       final controller = StreamController<bool>();
       addTearDown(controller.close);
 
@@ -301,85 +307,74 @@ void main() {
       await Future<void>.delayed(Duration.zero);
 
       expect(emissions.whereType<SyncStatusOffline>(), isNotEmpty);
-      expect(emissions.whereType<SyncStatusDegraded>(), isEmpty);
+      expect(
+        orchestrator.currentStatus,
+        isA<SyncStatusOffline>(),
+        reason: 'offline must win over a queued/unsettled outbox',
+      );
     });
 
-    test(
-      'identity mismatch + online + queued rows → degraded with an actionable '
-      '"sign in as <email>" reason (NOT the "stuck after N attempts" message)',
-      () async {
+    // Story 1.5 / AD-11: `_recomputeOutboxStatus` used to branch on
+    // `resolveIdentityStatus()` to pick between an actionable "sign in as
+    // <email>" degraded reason and the generic "stuck after N attempts"
+    // reason — both variants, and the branch itself, are gone. Identity
+    // mismatch is still consulted by `_skipPullOnIdentityMismatch` (a
+    // separate code path, covered by pull_identity_mismatch_guard_test.dart)
+    // but no longer differentiates the outbox-derived status at all: a
+    // queued row surfaces the same honest `syncing`, matched or mismatched.
+    test('identity mismatch no longer differentiates the outbox-derived status '
+        '— queued rows surface plain syncing either way', () async {
+      Future<SyncStatus?> observeWithIdentity(
+        SyncIdentityStatus identity,
+      ) async {
+        // A fresh connectivity StreamController per call: it is
+        // single-subscription, and each orchestrator.start() below
+        // subscribes to it exactly once.
         final controller = StreamController<bool>();
         addTearDown(controller.close);
 
         final orchestrator = _buildOrchestrator(
           db: db,
           connectivityStream: controller.stream,
-          resolveIdentityStatus: () => const SyncIdentityStatus.mismatched(
-            activeAccountEmail: 'dniasoff@gmail.com',
-            signedInEmail: 'familyniasoff@gmail.com',
-          ),
+          resolveIdentityStatus: () => identity,
         );
         addTearDown(orchestrator.dispose);
         orchestrator.start();
 
         controller.add(true);
         await Future<void>.delayed(Duration.zero);
-
-        // A row stuck at the retry ceiling — without the identity branch this
-        // would surface as "outbox has 1 row(s) stuck after 3+ attempts".
-        await _enqueue(db, attempts: 10);
-
-        SyncStatus? observed;
-        final sub = orchestrator.statusStream.listen((s) => observed = s);
-        addTearDown(sub.cancel);
+        await _enqueue(
+          db,
+          attempts: 10,
+          entityKey: identity.isMismatch ? 'mismatched' : 'matched',
+        );
 
         await orchestrator.recordDrainAttempt();
         await Future<void>.delayed(Duration.zero);
+        // Read currentStatus directly rather than racing a freshly
+        // subscribed stream listener: on the second call `db` already has
+        // a row left over from the first (accumulated in the shared
+        // in-memory outbox), so the connectivity-triggered recompute
+        // inside `start()` can itself already emit `syncing` before this
+        // call's own `_enqueue`/`recordDrainAttempt` — a subsequent
+        // recompute is then a correctly-guarded no-op that emits nothing
+        // new, even though currentStatus is already the right answer.
+        return orchestrator.currentStatus;
+      }
 
-        expect(observed, isA<SyncStatusDegraded>());
-        final degraded = observed! as SyncStatusDegraded;
-        expect(degraded.pendingChanges, 1);
-        expect(degraded.reason, contains('dniasoff@gmail.com'));
-        expect(degraded.reason, contains('familyniasoff@gmail.com'));
-        expect(
-          degraded.reason,
-          isNot(contains('stuck')),
-          reason:
-              'identity mismatch must override the generic stuck-attempts '
-              'message with the actionable re-auth prompt',
-        );
-      },
-    );
+      final mismatched = await observeWithIdentity(
+        const SyncIdentityStatus.mismatched(
+          activeAccountEmail: 'dniasoff@gmail.com',
+          signedInEmail: 'familyniasoff@gmail.com',
+        ),
+      );
+      expect(mismatched, isA<SyncStatusSyncing>());
 
-    test(
-      'matched identity → ordinary stuck-attempts degraded message is unchanged',
-      () async {
-        final controller = StreamController<bool>();
-        addTearDown(controller.close);
-
-        final orchestrator = _buildOrchestrator(
-          db: db,
-          connectivityStream: controller.stream,
-          resolveIdentityStatus: () => const SyncIdentityStatus.matched(),
-        );
-        addTearDown(orchestrator.dispose);
-        orchestrator.start();
-
-        controller.add(true);
-        await Future<void>.delayed(Duration.zero);
-        await _enqueue(db, attempts: 5);
-
-        SyncStatus? observed;
-        final sub = orchestrator.statusStream.listen((s) => observed = s);
-        addTearDown(sub.cancel);
-
-        await orchestrator.recordDrainAttempt();
-        await Future<void>.delayed(Duration.zero);
-
-        expect(observed, isA<SyncStatusDegraded>());
-        expect((observed! as SyncStatusDegraded).reason, contains('stuck'));
-      },
-    );
+      final matched = await observeWithIdentity(
+        const SyncIdentityStatus.matched(),
+      );
+      expect(matched, isA<SyncStatusSyncing>());
+    });
 
     test('syncing status is NOT overwritten while a pull is in progress — '
         'the post-pull recompute owns the transition out of syncing', () async {
@@ -431,89 +426,80 @@ void main() {
       }
     });
 
-    test(
-      'SYNC-ERR-OVERWRITE-01 (loop-iter3): error status is NOT overwritten by '
-      'outbox-derived status — a pending outbox must not hide the pull-failure '
-      'retry affordance',
-      () async {
-        // Scenario:
-        //   1. Pull fails → orchestrator status = SyncStatus.error(...)
-        //   2. User has outbox rows (queued while offline)
-        //   3. Periodic drain fires → _recomputeOutboxStatus()
-        //   4. BUG: status becomes SyncStatus.pending(...), hiding the error card
-        //   5. FIX: error status must survive _recomputeOutboxStatus()
-        final controller = StreamController<bool>();
-        addTearDown(controller.close);
+    test('SYNC-ERR-OVERWRITE-01 (loop-iter3), updated for Story 1.5 / AD-11: a '
+        'failed pull stays syncing across a subsequent outbox recompute — never '
+        'flips to synced while genuinely unsettled', () async {
+      // Scenario (pre-Story-1.5): a failed pull used to set
+      // SyncStatus.error(...), and _recomputeOutboxStatus() had an explicit
+      // guard so a later outbox recompute would not silently overwrite it
+      // with `pending`, hiding the "tap to retry" affordance. That
+      // differentiated error state — and the guard protecting it — no
+      // longer exist: a failed pull now leaves the honest `syncing` state,
+      // and an outbox recompute with rows still queued derives the SAME
+      // `syncing` state, so there is no overwrite hazard left to guard
+      // against. What must still hold: the status never flips to `synced`
+      // (a lie) while the pull failed and rows remain queued.
+      final controller = StreamController<bool>();
+      addTearDown(controller.close);
 
-        final orchestrator = _buildOrchestrator(
-          db: db,
-          connectivityStream: controller.stream,
-        );
-        addTearDown(orchestrator.dispose);
-        orchestrator.start();
+      final orchestrator = _buildOrchestrator(
+        db: db,
+        connectivityStream: controller.stream,
+      );
+      addTearDown(orchestrator.dispose);
+      orchestrator.start();
 
-        // Connectivity is online.
-        controller.add(true);
-        await Future<void>.delayed(Duration.zero);
+      // Connectivity is online.
+      controller.add(true);
+      await Future<void>.delayed(Duration.zero);
 
-        // Simulate a failed pull: emit error status directly.  In production
-        // this happens inside pullOnLaunch's catch block.  We can't call
-        // pullOnLaunch against the empty gateway (it throws on the first
-        // fetch), but the test goal is the status-overwrite invariant, so
-        // we trigger the error path via pullOnLaunch and let it fail.
-        unawaited(
-          orchestrator.pullOnLaunch().catchError((Object _) {
-            // Expected: _EmptyGateway raises a NoSuchMethodError for every
-            // real fetch.  After the catch, status is SyncStatusError.
-          }),
-        );
-        // Let the pull fail and emit error status.
-        await Future<void>.delayed(const Duration(milliseconds: 10));
+      // Simulate a failed pull.  We can't call pullOnLaunch successfully
+      // against the empty gateway (it throws on the first fetch), but the
+      // test goal is the status-honesty invariant, so we trigger the
+      // failure path via pullOnLaunch and let it fail.
+      unawaited(
+        orchestrator.pullOnLaunch().catchError((Object _) {
+          // Expected: _EmptyGateway raises a NoSuchMethodError for every
+          // real fetch.
+        }),
+      );
+      // Let the pull fail and emit its post-failure status.
+      await Future<void>.delayed(const Duration(milliseconds: 10));
 
-        // Confirm the error status was set.
+      expect(
+        orchestrator.currentStatus,
+        isA<SyncStatusSyncing>(),
+        reason:
+            'after a failed pull while online the orchestrator must be '
+            'syncing (unsettled), never synced or offline',
+      );
+
+      // Enqueue an outbox row (simulates a user write during the failed
+      // pull window).
+      await _enqueue(db);
+
+      // Capture any status change from the recompute.
+      SyncStatus? statusAfterRecompute;
+      final sub = orchestrator.statusStream.listen(
+        (s) => statusAfterRecompute = s,
+      );
+      addTearDown(sub.cancel);
+
+      // Trigger the outbox-status recompute (e.g. periodic drain).
+      await orchestrator.recordDrainAttempt();
+      await Future<void>.delayed(Duration.zero);
+
+      if (statusAfterRecompute != null) {
         expect(
-          orchestrator.currentStatus,
-          isA<SyncStatusError>(),
-          reason: 'after a failed pull the orchestrator must be in error state',
-        );
-
-        // Enqueue an outbox row (simulates a user write during the failed
-        // pull window).
-        await _enqueue(db);
-
-        // Capture any status change from the recompute.
-        SyncStatus? statusAfterRecompute;
-        final sub = orchestrator.statusStream.listen(
-          (s) => statusAfterRecompute = s,
-        );
-        addTearDown(sub.cancel);
-
-        // Trigger the outbox-status recompute (e.g. periodic drain).
-        await orchestrator.recordDrainAttempt();
-        await Future<void>.delayed(Duration.zero);
-
-        // The error status MUST NOT be overwritten by pending/degraded/synced.
-        // If statusAfterRecompute is non-null, it means a new status was
-        // emitted — it must still be error.
-        if (statusAfterRecompute != null) {
-          expect(
-            statusAfterRecompute,
-            isA<SyncStatusError>(),
-            reason:
-                'a pending outbox row must not overwrite a pull-error status; '
-                'the user needs the "tap to retry" affordance to recover',
-          );
-        }
-        // Also assert currentStatus is still error.
-        expect(
-          orchestrator.currentStatus,
-          isA<SyncStatusError>(),
+          statusAfterRecompute,
+          isA<SyncStatusSyncing>(),
           reason:
-              'currentStatus must remain error after _recomputeOutboxStatus '
-              'so the Backup & Sync error card is still visible',
+              'a queued outbox row must not flip the status to synced — '
+              'the work is still unsettled',
         );
-      },
-    );
+      }
+      expect(orchestrator.currentStatus, isA<SyncStatusSyncing>());
+    });
 
     test('no outbox dao wired → status emission is a no-op', () async {
       // Construct without a resolveOutboxDao — this is the legacy fallback
