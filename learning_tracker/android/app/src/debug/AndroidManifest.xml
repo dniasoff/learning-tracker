@@ -1,7 +1,17 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <!-- The INTERNET permission is required for development. Specifically,
          the Flutter tool needs it to communicate with the running application
          to allow setting breakpoints, to provide hot reload, etc.
     -->
     <uses-permission android:name="android.permission.INTERNET"/>
+
+    <!-- Debug-only: permits cleartext traffic to the emulator host-loopback
+         alias (10.0.2.2) so on-device integration tests can reach
+         `firebase emulators:start` (see res/xml/network_security_config.xml).
+         tools:node="merge" composites onto the main manifest's <application>
+         element rather than replacing it. -->
+    <application
+        android:networkSecurityConfig="@xml/network_security_config"
+        tools:node="merge"/>
 </manifest>
