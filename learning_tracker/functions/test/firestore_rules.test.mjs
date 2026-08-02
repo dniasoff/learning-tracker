@@ -13,7 +13,7 @@
 //   • completions field validation (points∈[0,100], completed_at<=now),
 //   • Admin-SDK-only tutor_grants / tutor_active_access.
 //
-// Coverage: 24/24 match paths in firestore.rules.
+// Coverage: 25/25 match paths in firestore.rules.
 //
 // Hardening additions (emulator-hardening plan):
 //   C-EXTRA: PAYLOADS fixture derived from Dart codec encode() outputs —
@@ -601,6 +601,30 @@ describe('curriculum_tracks — owner write with key whitelist, tutor read, dele
   test('tutor cannot write curriculum_tracks', async () => {
     await assertFails(setDoc(doc(tutor(), `${LP}/curriculum_tracks/t1`), validTrack));
   });
+  // Gap 2 (docs/firestore-rewrite-map.md "OPEN" section): last_reorder_at
+  // (TrackDao.stampReorderAt's reorder-amnesty baseline) was absent from
+  // this whitelist, which permission-denied the WHOLE track write, not
+  // merely dropped the field (hasOnly() is all-or-nothing).
+  test('owner CAN write last_reorder_at (Gap 2 — reorder-amnesty baseline)', async () => {
+    await assertSucceeds(
+      setDoc(doc(owner(), `${LP}/curriculum_tracks/t_reorder`), {
+        ...validTrack,
+        last_reorder_at: pastTs,
+      }),
+    );
+  });
+  // Regression guard: adding last_reorder_at did not widen the whitelist
+  // beyond that one field — a genuinely unknown field is still denied.
+  test('regression: an unrelated unknown field is still denied alongside ' +
+      'last_reorder_at', async () => {
+    await assertFails(
+      setDoc(doc(owner(), `${LP}/curriculum_tracks/t_reorder2`), {
+        ...validTrack,
+        last_reorder_at: pastTs,
+        still_unknown_field: true,
+      }),
+    );
+  });
 });
 
 // ── Path 15: bookmarks (with hasOnly whitelist) ───────────────────────────────
@@ -674,6 +698,59 @@ describe('learning_order — owner write with key whitelist, tutor read, delete 
   });
   test('tutor cannot write learning_order', async () => {
     await assertFails(setDoc(doc(tutor(), `${LP}/learning_order/o1`), validOrder));
+  });
+});
+
+// ── Path 16b: track_learning_order (Gap 1 — hasOnly whitelist, SR-4 cap) ────
+//
+// A SEPARATE collection from learning_order — see doc_ids.dart's
+// trackLearningOrderDocId doc comment for why the two orderings cannot share
+// one collection. Mirrors learning_order's owner/tutor/whitelist shape, plus
+// an SR-4 list() cap that learning_order itself does not have.
+describe('track_learning_order — owner write with key whitelist, tutor read, delete denied, SR-4 cap', () => {
+  const validTrackOrder = {
+    curriculum_id: 'c1',
+    sefaria_ref: 'Berakhot.2a',
+    user_sort_order: 1,
+    updated_at: pastTs,
+    synced_at: pastTs,
+  };
+
+  test('owner-write + tutor-read + stranger-deny + unauthenticated-deny matrix', async () => {
+    await expectOwnerWriteTutorRead(`${LP}/track_learning_order/o1`, validTrackOrder);
+  });
+  test('owner write with unknown field is rejected (whitelist)', async () => {
+    await assertFails(
+      setDoc(doc(owner(), `${LP}/track_learning_order/o1`), {
+        ...validTrackOrder,
+        bad_field: 99,
+      }),
+    );
+  });
+  test('tutor cannot write track_learning_order', async () => {
+    await assertFails(
+      setDoc(doc(tutor(), `${LP}/track_learning_order/o1`), validTrackOrder),
+    );
+  });
+  test('SR-4: list() capped at limit(500); unbounded/501+ denied; get() unaffected', async () => {
+    await expectSR4ListLimitCap(`${LP}/track_learning_order`);
+  });
+  // Regression guard: this is a genuinely separate collection from
+  // learning_order, not an accidental alias of the same rules block — a
+  // write to one never appears when querying the other.
+  test('regression: track_learning_order and learning_order are independent ' +
+      'collections — a write to one is invisible from the other', async () => {
+    const db = owner();
+    await assertSucceeds(
+      setDoc(doc(db, `${LP}/track_learning_order/independence_check`), validTrackOrder),
+    );
+    const learningOrderDocs = await getDocs(
+      query(collection(db, `${LP}/learning_order`), limit(500)),
+    );
+    assert.ok(
+      !learningOrderDocs.docs.some((d) => d.id === 'independence_check'),
+      'a track_learning_order write must never appear in learning_order',
+    );
   });
 });
 

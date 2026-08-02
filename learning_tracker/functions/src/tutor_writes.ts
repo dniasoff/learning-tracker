@@ -54,7 +54,7 @@ const CURRICULUM_TRACK_ALLOWED_FIELDS = [
   "profile_id", "track_id", "curriculum_id", "state", "state_changed_at",
   "activated_at", "pace_reset_date", "progress_schema_version",
   "progress_computed_at", "progress_model", "program_progress",
-  "self_paced_progress", "synced_at", "purged", "purged_at",
+  "self_paced_progress", "synced_at", "last_reorder_at", "purged", "purged_at",
 ] as const;
 
 const STAGE_DEFINITION_ALLOWED_FIELDS = [

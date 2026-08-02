@@ -90,8 +90,8 @@ import 'package:learning_tracker/features/learning/domain/entities/completion_ti
 /// delete method at all, not even a `bulkInTrack`-only one; do not add one
 /// without re-reading that reasoning.
 ///
-/// ## Doc-id: diverges from `DocIds.completionDocId`'s literal signature —
-/// flagged, not silently guessed
+/// ## Doc-id: `DocIds.completionDocIdForProfile`, the `String`-profileId
+/// variant
 ///
 /// `DocIds.completionDocId(int profileId, Map data)` mirrors
 /// `FirestoreGatewayImpl._completionDocId` byte-for-byte — but that
@@ -111,26 +111,19 @@ import 'package:learning_tracker/features/learning/domain/entities/completion_ti
 /// live document written by the old gateway for this repository to stay
 /// byte-compatible with.
 ///
-/// [_docId] therefore reproduces `completionDocId`'s exact SHAPE (four
-/// components, [DocIds.encodeKeyComponent]-escaped, `_`-joined, same order)
-/// using [DocIds.encodeKeyComponent] directly — the actual reusable
-/// primitive `DocIds` exposes for this, so doc-ids still route through
-/// `DocIds` per the "never hand-rolled" rule, same as
-/// `FirestoreGoalRepository`'s handling of its own doc-id nuance — just with
-/// the profile-id component holding this repository's real ULID identity
-/// instead of an unreachable int. Embedding the profile ULID here is
-/// strictly redundant with the collection path
-/// (`.../learner_profiles/{profileId}/completions/...` already scopes by
-/// profile) but is kept for maximum fidelity to the four-component shape
-/// `firestore.rules`' own `completions` comment describes.
-///
-/// **This is a genuinely new finding, not one of the 9 traps
-/// `docs/firestore-rewrite-map.md` already enumerates — flagged in the
-/// delivery report for `doc_ids.dart` to gain a proper `String`-profileId
-/// formula (or overload) in a follow-up, rather than fixed here** (editing
-/// `doc_ids.dart` — a shared, golden-tested module read by every concurrent
-/// repository-building agent in this wave — was out of this change's
-/// scope).
+/// [_docId] / [_docIdFromKey] therefore call
+/// [DocIds.completionDocIdForProfile] — the `String`-profileId sibling of
+/// `completionDocId`, added specifically so this repository (and any other
+/// ULID-`profileId`-keyed caller) can route its doc-ids through `DocIds`
+/// rather than reproducing the shape inline. Identical SHAPE to
+/// `completionDocId` (four components, [DocIds.encodeKeyComponent]-escaped,
+/// `_`-joined, same order) — only the profile-id component's type differs.
+/// Embedding the profile ULID here is strictly redundant with the
+/// collection path (`.../learner_profiles/{profileId}/completions/...`
+/// already scopes by profile) but is kept for maximum fidelity to the
+/// four-component shape `firestore.rules`' own `completions` comment
+/// describes. `completionDocId` itself is untouched — the live gateway
+/// still exists and is still golden-pinned against it.
 ///
 /// ## `trackType` is NOT part of the doc-id's natural key — flagged
 ///
@@ -279,14 +272,12 @@ class FirestoreCompletionRepository {
       .doc(_profileId)
       .collection('completions');
 
-  /// See the class doc comment's "Doc-id" section for why this does not
-  /// call `DocIds.completionDocId` directly.
-  String _docId(CompletionEntity entity) => [
-    DocIds.encodeKeyComponent(_profileId),
-    DocIds.encodeKeyComponent(entity.sefariaRef),
-    DocIds.encodeKeyComponent(entity.stageId.toString()),
-    DocIds.encodeKeyComponent(entity.curriculumId.storageKey),
-  ].join('_');
+  /// See the class doc comment's "Doc-id" section. Routes through
+  /// [DocIds.completionDocIdForProfile] — the `String`-profileId variant
+  /// added for exactly this repository — rather than reproducing the shape
+  /// inline, so the "doc-ids always come from `DocIds`" rule holds.
+  String _docId(CompletionEntity entity) =>
+      DocIds.completionDocIdForProfile(_profileId, entity.toFirestore());
 
   DocumentReference<Map<String, dynamic>> _doc(CompletionEntity entity) =>
       _completions.doc(_docId(entity));
@@ -299,12 +290,11 @@ class FirestoreCompletionRepository {
     required CurriculumId curriculumId,
     required String sefariaRef,
     required int stageId,
-  }) => [
-    DocIds.encodeKeyComponent(_profileId),
-    DocIds.encodeKeyComponent(sefariaRef),
-    DocIds.encodeKeyComponent(stageId.toString()),
-    DocIds.encodeKeyComponent(curriculumId.storageKey),
-  ].join('_');
+  }) => DocIds.completionDocIdForProfile(_profileId, {
+    'curriculum_id': curriculumId.storageKey,
+    'sefaria_ref': sefariaRef,
+    'stage_id': stageId,
+  });
 
   /// Converts a `completed_at` that arrived as a real Firestore [Timestamp]
   /// back into a UTC [DateTime] — see the class doc comment's

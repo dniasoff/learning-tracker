@@ -84,12 +84,11 @@ void main() {
     required String sefariaRef,
     required int stageId,
     required CurriculumId curriculumId,
-  }) => [
-    DocIds.encodeKeyComponent(_profileId),
-    DocIds.encodeKeyComponent(sefariaRef),
-    DocIds.encodeKeyComponent(stageId.toString()),
-    DocIds.encodeKeyComponent(curriculumId.storageKey),
-  ].join('_');
+  }) => DocIds.completionDocIdForProfile(_profileId, {
+    'sefaria_ref': sefariaRef,
+    'stage_id': stageId,
+    'curriculum_id': curriculumId.storageKey,
+  });
 
   FirestoreCompletionRepository buildRepo() {
     return FirestoreCompletionRepository(

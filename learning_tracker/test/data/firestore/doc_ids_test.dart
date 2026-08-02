@@ -237,30 +237,11 @@ void main() {
       expect(DocIds.curriculumTrackDocId(data), equals(live));
     });
 
-    test('learning_order: sefaria_ref payload is byte-for-byte', () async {
-      final fs = createFakeFirestore(authenticatedUid: _uid);
-      final data = <String, dynamic>{
-        'curriculum_id': 'mishnayos',
-        'sefaria_ref': 'Berakhot 1:1',
-      };
-      await _gw(fs).pushLearningOrder(profileId: _profileId, data: data);
-      final live = await _liveDocId(fs, 'learning_order');
-      expect(DocIds.learningOrderDocId(data), equals(live));
-    });
-
-    test(
-      'learning_order: legacy "ref" fallback payload is byte-for-byte',
-      () async {
-        final fs = createFakeFirestore(authenticatedUid: _uid);
-        final data = <String, dynamic>{
-          'curriculum_id': 'abc',
-          'ref': 'Shabbat 2:1',
-        };
-        await _gw(fs).pushLearningOrder(profileId: _profileId, data: data);
-        final live = await _liveDocId(fs, 'learning_order');
-        expect(DocIds.learningOrderDocId(data), equals(live));
-      },
-    );
+    // NOTE: learning_order is intentionally NOT pinned byte-for-byte against
+    // the live gateway here — see the "learning_order re-key" group below
+    // for why (Gap 3: DocIds.learningOrderDocId now percent-encodes its
+    // components, deliberately breaking continuity with the live,
+    // not-yet-rewired gateway's raw unencoded output).
 
     test('bookmarks: byte-for-byte', () async {
       final fs = createFakeFirestore(authenticatedUid: _uid);
@@ -716,4 +697,202 @@ void main() {
       );
     });
   });
+
+  // ── learning_order re-key — Gap 3 ─────────────────────────────────────
+  //
+  // `docs/firestore-rewrite-map.md`'s traps list, item 7: DocIds
+  // .learningOrderDocId was the ONLY formula in this module that skipped
+  // encodeKeyComponent, mirroring the live gateway's raw unencoded join
+  // byte-for-byte. Fixed here — see that formula's own doc comment for the
+  // full reasoning (greenfield, no back-compat, so the byte-for-byte
+  // continuity requirement no longer applies).
+  group('learning_order re-key — Gap 3: encodeKeyComponent closes a doc-id '
+      'collision hole', () {
+    test('GREEN: {curriculumId}_{ref}, each component percent-encoded', () {
+      expect(
+        DocIds.learningOrderDocId({
+          'curriculum_id': 'mishnayos',
+          'sefaria_ref': 'Berakhot 1:1',
+        }),
+        equals('mishnayos_Berakhot%201%3A1'),
+      );
+    });
+
+    test('still accepts the legacy "ref" field alias when sefaria_ref is '
+        'absent', () {
+      expect(
+        DocIds.learningOrderDocId({
+          'curriculum_id': 'abc',
+          'ref': 'Shabbat 2:1',
+        }),
+        equals('abc_Shabbat%202%3A1'),
+      );
+    });
+
+    test(
+      'RED-DEMO: the new formula INTENTIONALLY diverges from the live '
+      "(not-yet-rewired) gateway's raw unencoded output for a ref "
+      'containing a literal "_" — the exact collision this fix closes',
+      () async {
+        final fs = createFakeFirestore(authenticatedUid: _uid);
+        final data = <String, dynamic>{
+          'curriculum_id': 'mishnayos',
+          'sefaria_ref': 'Berakhot_1:1', // literal '_' inside the ref
+        };
+        await _gw(fs).pushLearningOrder(profileId: _profileId, data: data);
+        final liveUnencodedShape = await _liveDocId(fs, 'learning_order');
+        expect(liveUnencodedShape, equals('mishnayos_Berakhot_1:1'));
+        expect(
+          DocIds.learningOrderDocId(data),
+          isNot(equals(liveUnencodedShape)),
+        );
+      },
+    );
+
+    test('RED-DEMO: an unencoded naive join collides two DISTINCT natural '
+        'keys onto one doc id when a component embeds the "_" separator — '
+        'the real (encoded) formula does not', () {
+      String naiveJoin(Map<String, dynamic> data) =>
+          '${data['curriculum_id']}_${data['sefaria_ref']}';
+
+      // (curriculumId='mishnayos', sefariaRef='Berakhot_1:1') and
+      // (curriculumId='mishnayos_Berakhot', sefariaRef='1:1') are two
+      // DIFFERENT natural keys — but the naive join can't tell where one
+      // component ends and the next begins once "_" appears inside a
+      // component, so both collide on 'mishnayos_Berakhot_1:1'.
+      final keyA = {
+        'curriculum_id': 'mishnayos',
+        'sefaria_ref': 'Berakhot_1:1',
+      };
+      final keyB = {
+        'curriculum_id': 'mishnayos_Berakhot',
+        'sefaria_ref': '1:1',
+      };
+      expect(naiveJoin(keyA), equals(naiveJoin(keyB))); // RED: collision.
+
+      expect(
+        DocIds.learningOrderDocId(keyA),
+        isNot(equals(DocIds.learningOrderDocId(keyB))),
+      );
+    });
+  });
+
+  // ── track_learning_order — DocIds.trackLearningOrderDocId (Gap 1) ─────
+  //
+  // `docs/firestore-rewrite-map.md`'s "OPEN" section: TrackLearningOrder
+  // (Drift; per-track sedarim/masechtos reordering) had no Firestore home.
+  // Like curriculumScopeDocId, this is a NEW formula with no live-gateway
+  // counterpart — TrackLearningOrder was never synced by
+  // FirestoreGatewayImpl — so it is pinned here by direct formula
+  // assertion, not a live-gateway comparison.
+  group('track_learning_order — DocIds.trackLearningOrderDocId', () {
+    test('GREEN: {curriculumId}_{sefariaRef}, each component percent-encoded '
+        'via encodeKeyComponent', () {
+      expect(
+        DocIds.trackLearningOrderDocId({
+          'curriculum_id': 'mishnayos',
+          'sefaria_ref': 'Mishnah Berakhot',
+        }),
+        equals('mishnayos_Mishnah%20Berakhot'),
+      );
+    });
+
+    test('RED-DEMO: an unencoded naive join collides two DISTINCT natural '
+        'keys onto one doc id when a component embeds the "_" separator — '
+        'the real (encoded) formula does not', () {
+      String naiveJoin(Map<String, dynamic> data) =>
+          '${data['curriculum_id']}_${data['sefaria_ref']}';
+
+      final keyA = {
+        'curriculum_id': 'mishnayos',
+        'sefaria_ref': 'Mishnah_Berakhot',
+      };
+      final keyB = {
+        'curriculum_id': 'mishnayos_Mishnah',
+        'sefaria_ref': 'Berakhot',
+      };
+      expect(naiveJoin(keyA), equals(naiveJoin(keyB))); // RED: collision.
+
+      expect(
+        DocIds.trackLearningOrderDocId(keyA),
+        isNot(equals(DocIds.trackLearningOrderDocId(keyB))),
+      );
+    });
+
+    test('produces the SAME shape as DocIds.learningOrderDocId for the same '
+        'inputs — the collection PATH, not this formula, is what keeps '
+        'track_learning_order and learning_order from colliding (see the '
+        "formula's own doc comment)", () {
+      final data = {
+        'curriculum_id': 'mishnayos',
+        'sefaria_ref': 'Mishnah Berakhot',
+      };
+      expect(
+        DocIds.trackLearningOrderDocId(data),
+        equals(DocIds.learningOrderDocId(data)),
+      );
+    });
+  });
+
+  // ── completions (String profileId) — DocIds.completionDocIdForProfile ──
+  // (Gap 4)
+  //
+  // `docs/firestore-rewrite-map.md`'s traps list, item 9b. Same four-
+  // component shape as completionDocId (golden-pinned against the live
+  // gateway above), with the profile-id component typed `String` instead
+  // of `int` — no live-gateway counterpart exists for a String profileId
+  // (the live gateway is Drift-int-only), so this is pinned by direct
+  // comparison against completionDocId's own output (same shape, different
+  // input type) rather than a live-gateway read-back.
+  group(
+    'completions (String profileId) — DocIds.completionDocIdForProfile',
+    () {
+      test('produces the SAME shape as completionDocId for the numerically '
+          'equal profileId', () {
+        final data = <String, dynamic>{
+          'sefaria_ref': 'Berakhot 1:1',
+          'stage_id': 1,
+          'curriculum_id': 'mishnayos',
+        };
+        expect(
+          DocIds.completionDocIdForProfile('42', data),
+          equals(DocIds.completionDocId(42, data)),
+        );
+      });
+
+      test('a genuine AD-24 ULID profileId percent-encodes cleanly and is '
+          'distinct across profiles', () {
+        final data = <String, dynamic>{
+          'sefaria_ref': 'Berakhot 1:1',
+          'stage_id': 1,
+          'curriculum_id': 'mishnayos',
+        };
+        final idA = DocIds.completionDocIdForProfile(
+          '01ARZ3NDEKTSV4RRFFQ69G5FAV',
+          data,
+        );
+        final idB = DocIds.completionDocIdForProfile(
+          '01BX5ZZKBKACTAV9WEVGEMMVRZ',
+          data,
+        );
+        expect(idA, isNot(equals(idB)));
+        expect(idA, startsWith('01ARZ3NDEKTSV4RRFFQ69G5FAV_'));
+      });
+
+      test(
+        'accepts the camelCase legacy-alias payload, same as completionDocId',
+        () {
+          final data = <String, dynamic>{
+            'sefariaRef': 'Shabbat 2:3',
+            'stageId': 4,
+            'curriculumId': 'bavli',
+          };
+          expect(
+            DocIds.completionDocIdForProfile('profile-ulid-1', data),
+            equals('profile-ulid-1_Shabbat%202%3A3_4_bavli'),
+          );
+        },
+      );
+    },
+  );
 }

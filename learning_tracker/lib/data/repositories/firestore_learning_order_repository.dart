@@ -36,15 +36,25 @@
 ///    narrowing of scope — it is porting exactly what is already wired to
 ///    Firestore in production, no more, no less.
 /// 2. **The doc-id formula gives a track-scoped write nowhere else to go.**
-///    `DocIds.learningOrderDocId` — mirroring `FirestoreGatewayImpl
-///    .pushLearningOrder` byte-for-byte — is `{curriculumId}_{ref}`. AD-25
-///    retired the per-device `TrackLearningOrder.trackId` int as a key
-///    component for this migration; `curriculum_id` is the sole canonical
-///    stable track key, and there is exactly one track per curriculum. A
-///    track-scoped write for `(curriculumId, sefariaRef)` and a
-///    curriculum-scoped write for the SAME pair therefore compute the
-///    IDENTICAL doc-id — there is no spare key component left to
-///    disambiguate them.
+///    `DocIds.learningOrderDocId` is `{curriculumId}_{ref}` (each component
+///    percent-encoded — see that formula's own doc comment for why it no
+///    longer mirrors `FirestoreGatewayImpl.pushLearningOrder` byte-for-byte,
+///    a deliberate, unrelated fix). AD-25 retired the per-device
+///    `TrackLearningOrder.trackId` int as a key component for this
+///    migration; `curriculum_id` is the sole canonical stable track key, and
+///    there is exactly one track per curriculum. A track-scoped write for
+///    `(curriculumId, sefariaRef)` and a curriculum-scoped write for the
+///    SAME pair therefore compute the IDENTICAL doc-id if they shared this
+///    collection — there is no spare key component left to disambiguate
+///    them.
+///
+///    **Resolution: a separate `track_learning_order` collection now
+///    exists** (`firestore.rules` `match /track_learning_order/{orderId}`,
+///    `DocIds.trackLearningOrderDocId`) — schema and doc-id only so far, not
+///    yet backed by a repository. The collection PATH, not a doc-id
+///    component, is what disambiguates the two orderings; see
+///    `DocIds.trackLearningOrderDocId`'s doc comment for the full reasoning.
+///    This class still does not build that repository — see point 1 above.
 /// 3. **`firestore.rules` structurally forbids inventing a discriminator
 ///    field.** `match /learning_order/{orderId}` gates `create`/`update` on
 ///    `request.resource.data.keys().hasOnly(['curriculum_id', 'sefaria_ref',
@@ -82,15 +92,18 @@
 /// ## Doc-id and query shape
 ///
 /// [_doc] resolves `DocIds.learningOrderDocId({'curriculum_id': …,
-/// 'sefaria_ref': …})` — the SAME formula the live (not-yet-rewired)
-/// gateway's `pushLearningOrder` computes, so a native write and a legacy
-/// push land on the same document for the same logical row. Note this one
-/// formula, uniquely among `DocIds`' collections, does NOT route its
-/// components through `encodeKeyComponent` (mirrors the live gateway
-/// byte-for-byte — this repository does not "fix" it; see that function's
-/// doc comment). This is a pre-existing production collision surface (a
-/// `sefariaRef` containing a literal `_` could theoretically collide with a
-/// differently-split curriculum/ref pair), not one introduced here.
+/// 'sefaria_ref': …})`. `DocIds.learningOrderDocId` now percent-encodes
+/// each component via `encodeKeyComponent` — see that formula's own doc
+/// comment — which means a native write through this class INTENTIONALLY
+/// no longer lands on the same document as the live (not-yet-rewired)
+/// gateway's raw, unencoded `pushLearningOrder` output for a `sefariaRef`
+/// containing a literal `_`; every other `sefariaRef` still lands on the
+/// same document either way, since percent-encoding is a no-op for the
+/// unreserved character set. This closes what used to be a real production
+/// collision surface (a `sefariaRef` containing `_` could collide with a
+/// differently-split curriculum/ref pair) rather than merely documenting it
+/// — acceptable because the app is greenfield with no back-compat
+/// requirement (`docs/firestore-rewrite-map.md`).
 ///
 /// [_queryForCurriculum] filters `curriculum_id` (equality) and orders by
 /// `user_sort_order` (a different field) — like

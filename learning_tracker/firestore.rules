@@ -18,7 +18,12 @@ rules_version = '2';
 //   stage_definitions/{stageId}    — per-track stage config; split from settings (W3.32)
 //   curriculum_tracks/{trackId}    — per-curriculum track config snapshots
 //   bookmarks/{bookmarkId}         — current bookmark positions
-//   learning_order/{orderId}       — learning-order snapshots
+//   learning_order/{orderId}       — whole-curriculum learning-order snapshots
+//   track_learning_order/{orderId} — per-track (sedarim/masechtos) learning-
+//                                    order snapshots; a SEPARATE collection
+//                                    from learning_order — see doc_ids.dart's
+//                                    trackLearningOrderDocId doc comment for
+//                                    why these cannot share one collection
 //   preferences/{scope}            — unified preference bag (W3.33)
 //                                    scopes: notification_settings,
 //                                            gamification_settings,
@@ -397,6 +402,14 @@ service cloud.firestore {
               'pace_reset_date', 'progress_schema_version',
               'progress_computed_at', 'progress_model', 'program_progress',
               'self_paced_progress', 'synced_at',
+              // Reorder-amnesty baseline (TrackDao.stampReorderAt) — was
+              // absent from this whitelist entirely, which made the
+              // reorder-amnesty feature non-functional: hasOnly() is
+              // all-or-nothing, so writing this field would have
+              // permission-denied the WHOLE track write, not merely
+              // dropped the field (docs/firestore-rewrite-map.md's "OPEN"
+              // section).
+              'last_reorder_at',
               // Track tombstone fields — a hard purge stamps `purged: true` +
               // `purged_at` so the deletion propagates to other devices
               // (track_dao.dart `track_purge:<id>` payload). Omitting these
@@ -438,6 +451,30 @@ service cloud.firestore {
           allow create, update: if isOwner(uid)
             && request.resource.data.keys().hasOnly([
               'curriculum_id', 'sefaria_ref', 'ref', 'user_sort_order',
+              'updated_at', 'synced_at'
+            ]);
+          allow delete: if false;
+        }
+
+        // track_learning_order — per-track (sedarim/masechtos) custom
+        // reordering. A SEPARATE collection from learning_order, purely
+        // additive: does NOT alter the learning_order block above at all.
+        // Doc-id: DocIds.trackLearningOrderDocId — see that formula's doc
+        // comment for why this cannot share learning_order's collection
+        // (both orderings draw from the same sefariaRef universe and
+        // curriculum_id is the sole canonical track key post-AD-25, so a
+        // shared collection would compute identical doc-ids for a
+        // curriculum-scoped and a track-scoped write of the same pair).
+        match /track_learning_order/{orderId} {
+          // SR-4: single-doc reads are unrestricted; `list` queries are
+          // capped at 500 (the app's kListenerPageSize), matching the
+          // append-only event collections above.
+          allow get: if isOwner(uid) || hasActiveTutorAccess(uid, profileId);
+          allow list: if (isOwner(uid) || hasActiveTutorAccess(uid, profileId))
+            && request.query.limit <= 500;
+          allow create, update: if isOwner(uid)
+            && request.resource.data.keys().hasOnly([
+              'curriculum_id', 'sefaria_ref', 'user_sort_order',
               'updated_at', 'synced_at'
             ]);
           allow delete: if false;

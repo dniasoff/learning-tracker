@@ -140,6 +140,49 @@ final class DocIds {
     ].join('_');
   }
 
+  /// `completions/{profileId_sefariaRef_stageId_curriculumId}` doc-id
+  /// formula for a **`String`** (AD-24 profile-scoped ULID) `profileId` —
+  /// closes the gap `docs/firestore-rewrite-map.md`'s trap 9b describes.
+  ///
+  /// [completionDocId] above mirrors `FirestoreGatewayImpl._completionDocId`
+  /// byte-for-byte, but that live gateway method — and therefore
+  /// [completionDocId] itself — takes the Drift-era LOCAL AUTOINCREMENT `int
+  /// profileId`. A repository constructed with the AD-24 learner-profile
+  /// ULID `String` (never the Drift `int`, per this migration's binding
+  /// constraint) cannot honestly call it: there is no lossless way to turn a
+  /// ULID into the specific int the live gateway would have embedded, and
+  /// inventing one (a hash, a sentinel) would silently diverge from
+  /// [completionDocId]'s actual output anyway, just less visibly than
+  /// admitting the divergence outright. [completionDocId] is left
+  /// completely UNCHANGED by this addition — the live gateway
+  /// (`FirestoreGatewayImpl._completionDocId`) still exists, still takes an
+  /// `int`, and [completionDocId] still golden-pins its output byte-for-byte
+  /// against it (`doc_ids_test.dart`'s "golden equivalence" group); this is
+  /// a purely additive second entry point, not a replacement.
+  ///
+  /// Identical SHAPE to [completionDocId] — the same four natural-key
+  /// components in the same order, each percent-encoded via
+  /// [encodeKeyComponent] and `_`-joined — with only the profile-id
+  /// component's type changed. `FirestoreCompletionRepository` (constructed
+  /// with a `String profileId`) calls this instead of reproducing the shape
+  /// inline, so the "doc-ids always come from `DocIds`" rule holds for it
+  /// too.
+  static String completionDocIdForProfile(
+    String profileId,
+    Map<String, dynamic> data,
+  ) {
+    final ref = (data['sefaria_ref'] ?? data['sefariaRef']) as String? ?? '';
+    final stage = (data['stage_id'] ?? data['stageId'])?.toString() ?? '';
+    final curriculumId =
+        (data['curriculum_id'] ?? data['curriculumId']) as String? ?? '';
+    return [
+      encodeKeyComponent(profileId),
+      encodeKeyComponent(ref),
+      encodeKeyComponent(stage),
+      encodeKeyComponent(curriculumId),
+    ].join('_');
+  }
+
   // ── streak_events ────────────────────────────────────────────────────
 
   /// `streak_events/{ulid}` doc-id formula.
@@ -220,16 +263,83 @@ final class DocIds {
 
   // ── learning_order ───────────────────────────────────────────────────
 
-  /// `learning_order/{curriculumId}_{ref}` doc-id formula.
+  /// `learning_order/{curriculumId}_{ref}` doc-id formula, each component
+  /// percent-encoded via [encodeKeyComponent] and joined with `_`.
   ///
-  /// Mirrors `FirestoreGatewayImpl.pushLearningOrder`
-  /// (`firestore_gateway_impl.dart:377-382`), including the `sefaria_ref`
-  /// ?? `ref` legacy-key fallback.
+  /// **INTENTIONALLY diverges from `FirestoreGatewayImpl.pushLearningOrder`
+  /// (`firestore_gateway_impl.dart:377-382`) — this formula is NO LONGER
+  /// byte-for-byte with the live (not-yet-rewired) gateway, on purpose.**
+  /// Before this fix, this was the ONLY formula in this module that skipped
+  /// [encodeKeyComponent], mirroring the live gateway's raw
+  /// `'${curriculumId}_$ref'` join byte-for-byte. That byte-for-byte
+  /// continuity requirement existed to protect EXISTING users' data
+  /// (MCF-3-continuity) — but this app is greenfield with no users and no
+  /// back-compat (`docs/firestore-rewrite-map.md`'s opening line), so the
+  /// requirement no longer applies here, and leaving the hole open kept a
+  /// real collision surface live: a `sefariaRef` containing a literal `_`
+  /// could collide two distinct `(curriculumId, sefariaRef)` natural keys
+  /// onto one document (see the RED-DEMO in `doc_ids_test.dart`). **Do NOT
+  /// "restore continuity" by reverting this to the raw join** — there is no
+  /// historical document for it to stay compatible with, and doing so would
+  /// reopen the collision.
+  ///
+  /// Still accepts the legacy `ref` field alias when `sefaria_ref` is
+  /// absent — that fallback is a payload-shape convenience, independent of
+  /// the encoding fix above.
   static String learningOrderDocId(Map<String, dynamic> data) {
     final curriculumId = data['curriculum_id']?.toString() ?? '';
     final ref =
         data['sefaria_ref']?.toString() ?? data['ref']?.toString() ?? '';
-    return '${curriculumId}_$ref';
+    return [
+      encodeKeyComponent(curriculumId),
+      encodeKeyComponent(ref),
+    ].join('_');
+  }
+
+  // ── track_learning_order ─────────────────────────────────────────────
+
+  /// `track_learning_order/{curriculumId}_{sefariaRef}` doc-id formula,
+  /// each component percent-encoded via [encodeKeyComponent] and joined
+  /// with `_`. Closes the gap `docs/firestore-rewrite-map.md`'s "OPEN"
+  /// section describes: `TrackLearningOrder` (Drift; per-track
+  /// sedarim/masechtos reordering) had no Firestore home at all.
+  ///
+  /// **New collection, no live-gateway counterpart.** Same situation as
+  /// [curriculumScopeDocId] and the AD-25/AD-24 re-keyed formulas above:
+  /// `TrackLearningOrder` was NEVER synced by `FirestoreGatewayImpl` — no
+  /// `pushTrackLearningOrder` method exists to golden-test byte-for-byte
+  /// against. Pinned in `doc_ids_test.dart` by direct formula assertion,
+  /// not a live-gateway comparison.
+  ///
+  /// **Deliberately a SEPARATE collection from `learning_order`, not the
+  /// same collection with a discriminator field.** See
+  /// `firestore_learning_order_repository.dart`'s class doc comment ("The
+  /// collision finding") for the full reasoning: `TrackLearningOrder`
+  /// (track-scoped) and `LearningOrder` (curriculum-scoped) draw from the
+  /// SAME `sefariaRef` universe, and AD-25 makes `curriculum_id` the sole
+  /// canonical stable track key (there is exactly one track per
+  /// curriculum) — so a track-scoped write and a curriculum-scoped write
+  /// for the same `(curriculumId, sefariaRef)` pair would compute an
+  /// IDENTICAL doc-id if they shared one collection, with no spare key
+  /// component available to disambiguate them, and
+  /// `firestore.rules`' `learning_order` `.hasOnly()` whitelist forbids
+  /// writing a discriminator field to work around that. This formula's own
+  /// components are therefore intentionally identical in SHAPE to
+  /// [learningOrderDocId]'s post-encoding-fix shape — it is the COLLECTION
+  /// PATH (`track_learning_order` vs. `learning_order`), not this formula,
+  /// that disambiguates the two orderings.
+  ///
+  /// Unlike [learningOrderDocId]'s pre-fix shape, this formula was never
+  /// unencoded to begin with — it is new — so there is no continuity
+  /// concern here at all; no legacy `ref` alias either, since no prior
+  /// payload shape for this collection ever existed.
+  static String trackLearningOrderDocId(Map<String, dynamic> data) {
+    final curriculumId = data['curriculum_id']?.toString() ?? '';
+    final ref = data['sefaria_ref']?.toString() ?? '';
+    return [
+      encodeKeyComponent(curriculumId),
+      encodeKeyComponent(ref),
+    ].join('_');
   }
 
   // ── bookmarks ────────────────────────────────────────────────────────
