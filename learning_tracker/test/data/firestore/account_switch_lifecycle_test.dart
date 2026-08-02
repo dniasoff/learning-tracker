@@ -1,28 +1,28 @@
 /// Unit tests for Phase 1 Story D — account-switch lifecycle.
 ///
-/// Scope (migration-plan Phase 1, "Move listener teardown/rebind onto
-/// per-app lifecycle" — the actionable slice): activating a NEW account
-/// while another is active must resolve the new account's named app and
-/// dispose/release the previous one's, without leaking apps across many
-/// switches and without tearing down an app that is still in use. This is
-/// risk-register item (a), "named-app teardown leaks native resources →
-/// OOM" (`api29-learn-oom`), reproduced here as an in-memory accounting
-/// proof — the on-device resource-sanity evidence lives in the Phase 1
-/// Story E integration test.
+/// **Rewritten for the keepAlive change** (the story that made
+/// `accountFirebaseProvider` `@Riverpod(keepAlive: true)` instead of a plain
+/// `autoDispose` family — see `account_firebase_providers.dart`'s doc
+/// comment on `accountFirebase` for the full "why": `cloud_firestore
+/// 6.4.1` caches `FirebaseFirestore.instanceFor` in a process-lifetime
+/// static map with no eviction hook, so a same-process dispose→re-resolve
+/// of the SAME account — exactly what switching A→B→A used to do under the
+/// old autoDispose design — would hand `.settings =` a terminate()d cached
+/// instance and throw). This file used to prove "switching disposes the
+/// account being left"; it now proves the opposite invariant: **switching
+/// the active account, however many times, in whatever order, never
+/// disposes anything.** Disposal is now reserved for the explicit removal
+/// path (`disposeAccountFirebase`, tested in `account_firebase_providers_
+/// test.dart`) and process teardown (`accountFirebaseRegistryProvider`'s
+/// `ref.onDispose` → `AccountFirebase.disposeAll`).
 ///
-/// `activeAccountFirebaseProvider` (`account_firebase_providers.dart`,
-/// Story P1-C) already wires this: it watches `activeAccountIdProvider` and
-/// re-watches `accountFirebaseProvider(accountId)` for whichever id is
-/// current. Riverpod's `autoDispose` family semantics mean the FAMILY MEMBER
-/// for an account no longer watched is scheduled for disposal, which the
-/// generated `accountFirebase` provider's `ref.onDispose` turns into
-/// `AccountFirebase.dispose(accountId)` — a real `app.delete()` in
-/// production. This file is the account-SWITCH-shaped proof of that wiring:
-/// it does not re-test what `account_firebase_providers_test.dart` already
-/// covers (single-switch dispose-of-the-left-account), it extends to N
-/// switches, non-adjacent revisits, concurrent/rapid switches, and the
-/// bound interaction the plan calls out ("Exceeding it must fail loudly,
-/// not silently evict").
+/// Scope (migration-plan Phase 1, "Move listener teardown/rebind onto
+/// per-app lifecycle" — the actionable slice, since re-scoped by the
+/// keepAlive story): activating a NEW account while another is active must
+/// resolve the new account's named app WITHOUT disturbing the previous
+/// one's — extended here to N switches, non-adjacent revisits,
+/// concurrent/rapid switches, and the ≤5-account bound interaction the plan
+/// calls out ("Exceeding it must fail loudly, not silently evict").
 ///
 /// No platform binding, no device, no emulator: mirrors
 /// `account_firebase_test.dart`/`account_firebase_providers_test.dart`'s
@@ -117,6 +117,17 @@ class _SwitchHarness {
   }
 }
 
+/// Exposes a real, container-scoped [Ref] so tests can call
+/// [disposeAccountFirebase] (which takes a [Ref], matching every other
+/// function in `account_firebase_providers.dart`) without a widget/notifier
+/// — mirrors `account_firebase_providers_test.dart`'s identical helper. A
+/// plain (non-autoDispose) `Provider` stays mounted for the container's
+/// whole lifetime, so the `ref` it hands back stays safe to use for as long
+/// as the container itself is alive.
+final _refProvider = Provider<Ref>((ref) => ref);
+
+Ref _refOf(ProviderContainer container) => container.read(_refProvider);
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -141,101 +152,13 @@ void main() {
     return container.read(activeAccountFirebaseProvider.future);
   }
 
-  group('sequential account switching — no leaks across many switches', () {
-    test(
-      'switching through 5 distinct accounts one at a time leaves exactly '
-      'the current account active; every prior account is disposed',
-      () async {
-        final harness = _SwitchHarness();
-        final registry = harness.build();
-        final container = ProviderContainer(
-          overrides: [
-            accountFirebaseRegistryProvider.overrideWithValue(registry),
-          ],
-        );
-        addTearDown(container.dispose);
-        final sub = container.listen(activeAccountFirebaseProvider, (_, _) {});
-        addTearDown(sub.close);
-
-        final ids = ['acct-1', 'acct-2', 'acct-3', 'acct-4', 'acct-5'];
-        for (final id in ids) {
-          final handles = await switchTo(container, id);
-          expect(handles?.app.name, 'account_$id');
-          // Let the autoDispose teardown of the PREVIOUS family member run
-          // to completion before switching again — this is the well-behaved
-          // "await the switch" shape a real PIN-gated switch has.
-          await pumpEventQueue();
-
-          // The registry's own live-app accounting must show exactly one
-          // active account at a time: the current one.
-          expect(
-            registry.activeAccountIds,
-            {id},
-            reason:
-                'after switching to $id, the registry must show ONLY $id '
-                'as active — no accumulation from prior switches',
-          );
-        }
-
-        expect(
-          harness.initializedNames,
-          ids.map((id) => 'account_$id').toList(),
-        );
-        expect(
-          harness.deletedNames,
-          ids.take(4).map((id) => 'account_$id').toList(),
-          reason:
-              'every account except the last-entered one must have been '
-              'torn down, in the order it was left',
-        );
-      },
-    );
-
-    test(
-      'revisiting a previously-left account creates a genuinely NEW app '
-      '(not a stale cached handle) — proves dispose actually released it',
-      () async {
-        final harness = _SwitchHarness();
-        final registry = harness.build();
-        final container = ProviderContainer(
-          overrides: [
-            accountFirebaseRegistryProvider.overrideWithValue(registry),
-          ],
-        );
-        addTearDown(container.dispose);
-        final sub = container.listen(activeAccountFirebaseProvider, (_, _) {});
-        addTearDown(sub.close);
-
-        final firstVisitA = await switchTo(container, 'acct-A');
-        await pumpEventQueue();
-        await switchTo(container, 'acct-B');
-        await pumpEventQueue();
-        final secondVisitA = await switchTo(container, 'acct-A');
-        await pumpEventQueue();
-
-        expect(
-          identical(firstVisitA, secondVisitA),
-          isFalse,
-          reason:
-              'the second visit to acct-A must be a fresh resolve, not the '
-              'stale handles object from before it was disposed',
-        );
-        expect(harness.initializedNames, [
-          'account_acct-A',
-          'account_acct-B',
-          'account_acct-A',
-        ]);
-        expect(harness.deletedNames, ['account_acct-A', 'account_acct-B']);
-        expect(registry.activeAccountIds, {'acct-A'});
-      },
-    );
-
-    test('cycling through 8 distinct accounts (more than the 5-account bound) '
-        'one-at-a-time never exceeds 1 concurrently active account and never '
-        'trips MaxAccountsReachedException, because each is disposed before '
-        'the next is resolved', () async {
+  group('sequential account switching — accumulates active accounts, never '
+      'disposes (keepAlive)', () {
+    test('switching through 5 distinct accounts one at a time leaves ALL '
+        'FIVE active — none is disposed just because it is no longer the '
+        'current one', () async {
       final harness = _SwitchHarness();
-      final registry = harness.build(); // default maxAccounts = 5
+      final registry = harness.build();
       final container = ProviderContainer(
         overrides: [
           accountFirebaseRegistryProvider.overrideWithValue(registry),
@@ -245,19 +168,98 @@ void main() {
       final sub = container.listen(activeAccountFirebaseProvider, (_, _) {});
       addTearDown(sub.close);
 
-      for (var i = 0; i < 8; i++) {
-        final id = 'acct-$i';
-        await switchTo(container, id);
+      final ids = ['acct-1', 'acct-2', 'acct-3', 'acct-4', 'acct-5'];
+      for (final id in ids) {
+        final handles = await switchTo(container, id);
+        expect(handles?.app.name, 'account_$id');
         await pumpEventQueue();
-        expect(registry.activeAccountIds, {id});
       }
 
-      expect(harness.initializedNames.length, 8);
-      expect(harness.deletedNames.length, 7);
+      expect(
+        registry.activeAccountIds,
+        ids.toSet(),
+        reason:
+            'every account switched through must STILL be active — '
+            'keepAlive means switching accumulates, it never evicts',
+      );
+      expect(harness.initializedNames, ids.map((id) => 'account_$id').toList());
+      expect(
+        harness.deletedNames,
+        isEmpty,
+        reason: 'switching must never call terminate()/delete()',
+      );
     });
 
-    test('switching to null (sign-out) disposes the previously-active account '
-        'and leaves the registry with zero active accounts', () async {
+    test('revisiting a previously-left account returns the SAME cached '
+        'handles (never a fresh resolve) — it was never disposed in the '
+        'first place', () async {
+      final harness = _SwitchHarness();
+      final registry = harness.build();
+      final container = ProviderContainer(
+        overrides: [
+          accountFirebaseRegistryProvider.overrideWithValue(registry),
+        ],
+      );
+      addTearDown(container.dispose);
+      final sub = container.listen(activeAccountFirebaseProvider, (_, _) {});
+      addTearDown(sub.close);
+
+      final firstVisitA = await switchTo(container, 'acct-A');
+      await pumpEventQueue();
+      await switchTo(container, 'acct-B');
+      await pumpEventQueue();
+      final secondVisitA = await switchTo(container, 'acct-A');
+      await pumpEventQueue();
+
+      expect(
+        identical(firstVisitA, secondVisitA),
+        isTrue,
+        reason:
+            'the second visit to acct-A must be the SAME cached '
+            'handles object as the first — nothing disposed it in '
+            'between',
+      );
+      expect(harness.initializedNames, ['account_acct-A', 'account_acct-B']);
+      expect(harness.deletedNames, isEmpty);
+      expect(registry.activeAccountIds, {'acct-A', 'acct-B'});
+    });
+
+    test('cycling through exactly maxAccounts distinct accounts one-at-a-time '
+        'succeeds (all remain concurrently active); the NEXT, '
+        '(maxAccounts + 1)-th distinct account throws '
+        'MaxAccountsReachedException — switching alone never frees a slot '
+        'under keepAlive, unlike the old autoDispose design', () async {
+      final harness = _SwitchHarness();
+      final registry = harness.build(maxAccounts: 5);
+      final container = ProviderContainer(
+        overrides: [
+          accountFirebaseRegistryProvider.overrideWithValue(registry),
+        ],
+      );
+      addTearDown(container.dispose);
+      final sub = container.listen(activeAccountFirebaseProvider, (_, _) {});
+      addTearDown(sub.close);
+
+      for (var i = 0; i < 5; i++) {
+        await switchTo(container, 'acct-$i');
+        await pumpEventQueue();
+      }
+      expect(registry.activeAccountIds.length, 5);
+
+      expect(
+        () => registry.resolve('acct-overflow'),
+        throwsA(isA<MaxAccountsReachedException>()),
+        reason:
+            'the bound must still fail loudly once genuinely exhausted '
+            '— keepAlive removes the false positive the old design had '
+            'at the bound, it does not soften the bound itself',
+      );
+      expect(harness.deletedNames, isEmpty);
+    });
+
+    test('switching to null (sign-out) does NOT dispose the '
+        'previously-active account — signing out is just another switch, '
+        'not a removal', () async {
       final harness = _SwitchHarness();
       final registry = harness.build();
       final container = ProviderContainer(
@@ -277,8 +279,15 @@ void main() {
       await pumpEventQueue();
 
       expect(afterSignOut, isNull);
-      expect(harness.deletedNames, ['account_acct-A']);
-      expect(registry.activeAccountIds, isEmpty);
+      expect(
+        harness.deletedNames,
+        isEmpty,
+        reason:
+            'acct-A must stay resolved after sign-out — only explicit '
+            'removal (disposeAccountFirebase) or process teardown may '
+            'dispose it',
+      );
+      expect(registry.activeAccountIds, {'acct-A'});
     });
   });
 
@@ -306,11 +315,68 @@ void main() {
     });
   });
 
-  group('rapid switching (no await between switches) still converges '
-      'cleanly once settled', () {
-    test('firing 3 switches back-to-back without awaiting the intermediate '
-        'ones leaves exactly the final account active once the event queue '
-        'drains, with every intermediate account disposed', () async {
+  group('rapid switching (no await between switches) still converges cleanly '
+      'once settled, with nothing ever disposed', () {
+    test(
+      'firing 3 switches back-to-back without awaiting the intermediate '
+      'ones leaves only the FINAL account resolved once the event queue '
+      'drains — Riverpod coalesces the rapid activeAccountIdProvider '
+      'changes into a single rebuild of activeAccountFirebaseProvider, so '
+      'acct-1/acct-2 are never even watched/resolved through the registry '
+      '— and, crucially, nothing that WAS resolved is ever disposed by this',
+      () async {
+        final harness = _SwitchHarness();
+        final registry = harness.build();
+        final container = ProviderContainer(
+          overrides: [
+            accountFirebaseRegistryProvider.overrideWithValue(registry),
+          ],
+        );
+        addTearDown(container.dispose);
+        final sub = container.listen(activeAccountFirebaseProvider, (_, _) {});
+        addTearDown(sub.close);
+
+        // Deliberately NOT awaited between calls — simulates a caller
+        // (e.g. a rapidly-double-tapped switch affordance) driving the
+        // notifier faster than each resolve settles.
+        container.read(activeAccountIdProvider.notifier).setAccountId('acct-1');
+        container.read(activeAccountIdProvider.notifier).setAccountId('acct-2');
+        container.read(activeAccountIdProvider.notifier).setAccountId('acct-3');
+
+        final finalHandles = await container.read(
+          activeAccountFirebaseProvider.future,
+        );
+        await pumpEventQueue();
+
+        expect(finalHandles?.app.name, 'account_acct-3');
+        expect(
+          registry.activeAccountIds,
+          {'acct-3'},
+          reason:
+              'only the account activeAccountFirebaseProvider actually '
+              'settled on ever reaches the registry in a genuinely '
+              'synchronous burst — this is unchanged by keepAlive (it is '
+              'about how many times the WATCHING provider itself '
+              'rebuilds, not about disposal policy)',
+        );
+        expect(
+          harness.initializedNames,
+          ['account_acct-3'],
+          reason:
+              'acct-1 and acct-2 are never created at all in this exact '
+              'synchronous-burst shape, so there is nothing for keepAlive '
+              'to keep alive here — the invariant this test protects is '
+              'simply that NOTHING gets disposed either',
+        );
+        expect(harness.deletedNames, isEmpty);
+      },
+    );
+
+    test('the same idea with EACH switch actually awaited (the well-behaved, '
+        'PIN-gated-switch shape) confirms every intermediate account that DID '
+        'reach the registry stays resolved once the burst is done — this is '
+        'exactly the "sequential switching accumulates" group above, restated '
+        'as the direct counterpart to the true-burst test above it', () async {
       final harness = _SwitchHarness();
       final registry = harness.build();
       final container = ProviderContainer(
@@ -322,37 +388,30 @@ void main() {
       final sub = container.listen(activeAccountFirebaseProvider, (_, _) {});
       addTearDown(sub.close);
 
-      // Deliberately NOT awaited between calls — simulates a caller
-      // (e.g. a rapidly-double-tapped switch affordance) driving the
-      // notifier faster than Riverpod's autoDispose scheduling settles.
-      container.read(activeAccountIdProvider.notifier).setAccountId('acct-1');
-      container.read(activeAccountIdProvider.notifier).setAccountId('acct-2');
-      container.read(activeAccountIdProvider.notifier).setAccountId('acct-3');
+      for (final id in ['acct-1', 'acct-2', 'acct-3']) {
+        await switchTo(container, id);
+        await pumpEventQueue();
+      }
 
-      final finalHandles = await container.read(
-        activeAccountFirebaseProvider.future,
-      );
-      await pumpEventQueue();
-
-      expect(finalHandles?.app.name, 'account_acct-3');
       expect(
         registry.activeAccountIds,
-        {'acct-3'},
+        {'acct-1', 'acct-2', 'acct-3'},
         reason:
-            'once settled, only the FINAL account of a rapid-switch burst '
-            'may remain active — intermediate accounts (acct-1, acct-2) '
-            'must not linger',
+            'once each account genuinely reaches the registry, keepAlive '
+            'means it stays resolved — no teardown just because '
+            'activeAccountFirebaseProvider moved on to the next id',
       );
+      expect(harness.deletedNames, isEmpty);
     });
   });
 
-  group('the ≤5 bound interacts correctly with switching (fails loudly, '
-      'never silently evicts)', () {
-    test('switching among exactly maxAccounts distinct accounts, each awaited, '
-        'never throws — disposal of the left account always completes before '
-        'the bound is checked again', () async {
+  group('explicit removal (disposeAccountFirebase) — the only thing that frees '
+      'a slot', () {
+    test('once switching alone has filled every slot, explicitly removing '
+        'one account is what allows a genuinely new account to resolve — '
+        'switching cannot do this anymore', () async {
       final harness = _SwitchHarness();
-      final registry = harness.build(maxAccounts: 3);
+      final registry = harness.build(maxAccounts: 2);
       final container = ProviderContainer(
         overrides: [
           accountFirebaseRegistryProvider.overrideWithValue(registry),
@@ -362,115 +421,101 @@ void main() {
       final sub = container.listen(activeAccountFirebaseProvider, (_, _) {});
       addTearDown(sub.close);
 
-      for (final id in ['a', 'b', 'c', 'd', 'e']) {
-        await switchTo(container, id);
-        await pumpEventQueue();
-      }
+      await switchTo(container, 'acct-A');
+      await pumpEventQueue();
+      await switchTo(container, 'acct-B');
+      await pumpEventQueue();
+      expect(registry.activeAccountIds, {'acct-A', 'acct-B'});
 
-      expect(registry.activeAccountIds, {'e'});
-    });
-
-    test('resolving a genuinely NEW account directly against the bound '
-        '(bypassing the provider layer, as a second concurrent caller might) '
-        'still throws MaxAccountsReachedException rather than silently '
-        'evicting the oldest — the provider layer relies on this registry '
-        'contract, it does not soften it', () async {
-      final harness = _SwitchHarness();
-      final registry = harness.build(maxAccounts: 2);
-
-      await registry.resolve('acct-A');
-      await registry.resolve('acct-B');
-
+      // At the bound: a third distinct account cannot resolve yet.
       expect(
         () => registry.resolve('acct-C'),
         throwsA(isA<MaxAccountsReachedException>()),
       );
-      // The bound is enforced, not evicted around: A and B are still both
-      // active, C was never created.
-      expect(registry.activeAccountIds, {'acct-A', 'acct-B'});
-      expect(harness.initializedNames, ['account_acct-A', 'account_acct-B']);
-    });
 
+      // Explicit removal (NOT a switch) frees acct-A's slot.
+      await disposeAccountFirebase(_refOf(container), 'acct-A');
+      expect(registry.activeAccountIds, {'acct-B'});
+      expect(harness.deletedNames, ['account_acct-A']);
+
+      // Now a third account resolves cleanly.
+      final handlesC = await switchTo(container, 'acct-C');
+      await pumpEventQueue();
+      expect(handlesC?.app.name, 'account_acct-C');
+      expect(registry.activeAccountIds, {'acct-B', 'acct-C'});
+    });
+  });
+
+  group('the ≤5 bound + the +1 headroom cushion, re-characterized for '
+      'keepAlive (explicit removal, not switching, is the only remaining '
+      'disposal path)', () {
     // NOTE on methodology: the two tests below deliberately drive
     // `AccountFirebase` DIRECTLY (bypassing the Riverpod `ProviderContainer`
-    // entirely), rather than reproducing the race through
-    // `activeAccountFirebaseProvider` as the earlier tests in this file do.
-    // Going through the real provider chain when the underlying computation
-    // is EXPECTED to throw also engages Riverpod 3's built-in
-    // retry-with-backoff-on-error behavior (`ProviderElement.triggerRetry`,
-    // visible in this package's stack traces) — confirmed, while developing
-    // this test, to keep silently retrying the failed resolve for over a
-    // minute of real wall-clock time in the background before the test
-    // process moved on. That is a real, separately-interesting property of
-    // this codebase's Riverpod error handling (a switch that spuriously
-    // fails at the bound is NOT a permanent stuck state — Riverpod's own
-    // retry loop would eventually succeed once the deferred disposal runs,
-    // just with unpredictable, UI-relevant latency), but it makes the
-    // characterization test itself slow and non-deterministic. Calling
-    // `AccountFirebase.resolve`/`dispose` directly reproduces the EXACT same
-    // registry-level race (this is, after all, precisely what
-    // `ref.onDispose`'s `unawaited(registry.dispose(accountId))` and the new
-    // family member's `registry.resolve(accountId)` each do under the hood)
+    // entirely). See the equivalent note that used to live here pre-
+    // keepAlive: going through the real provider chain when the underlying
+    // computation is EXPECTED to throw also engages Riverpod 3's built-in
+    // retry-with-backoff-on-error behavior, which makes a characterization
+    // test slow/non-deterministic. Calling `AccountFirebase.resolve`/
+    // `dispose` directly reproduces the exact same registry-level shape
+    // `disposeAccountFirebase` and a concurrent `resolve` would hit,
     // without paying for Riverpod's own recovery machinery.
-    test(
-      'FINDING (documented, not silently fixed here): resolving a new '
-      'account while the previous one is still counted as active — because '
-      'its dispose() has not been CALLED yet, modeling the window before '
-      "Riverpod's autoDispose scheduler fires the outgoing family member's "
-      'ref.onDispose — spuriously throws MaxAccountsReachedException at a '
-      'bound exactly equal to the number of accounts already resolved',
-      () async {
-        final harness = _SwitchHarness();
-        final registry = harness.build(maxAccounts: 1);
+    test('RE-CHARACTERIZED: the race the +1 headroom was originally added '
+        'for (a not-yet-disposed outgoing account counted against the '
+        'bound while a new account resolves) can still be constructed '
+        'directly against the registry — but its PRODUCTION trigger has '
+        'changed. It no longer arises from a mere account switch (switching '
+        'never calls dispose() at all now); the closest surviving shape is '
+        'disposeAccountFirebase() called for an account whose FIRST resolve '
+        'is still in flight (_pending, not yet _handles) — dispose() must '
+        'await that in-flight resolve before it can remove the entry, so '
+        'activeAccountIds briefly still counts it during that await', () async {
+      final harness = _SwitchHarness();
+      final registry = harness.build(maxAccounts: 1);
 
-        await registry.resolve('acct-A');
-        // Deliberately NOT disposing acct-A yet — this models the real
-        // window between "activeAccountIdProvider moved on" and "Riverpod's
-        // scheduler actually invoked ref.onDispose for the acct-A family
-        // member", which is where the production race lives.
-        expect(
-          () => registry.resolve('acct-B'),
-          throwsA(isA<MaxAccountsReachedException>()),
-          reason:
-              'CHARACTERIZATION, not an endorsement: at maxAccounts == '
-              'accounts-already-resolved, resolving a new account while the '
-              'old one has not yet been disposed throws. See '
-              '`accountFirebaseRegistryProvider`\'s doc comment '
-              '(account_firebase_providers.dart) for the production fix '
-              '(+1 headroom) and the test immediately below for proof that '
-              'headroom resolves exactly this shape.',
-        );
-      },
-    );
+      await registry.resolve('acct-A');
+      // Deliberately NOT disposing acct-A yet — models an in-flight (or
+      // not-yet-started) dispose racing a concurrent resolve for a
+      // genuinely new account.
+      expect(
+        () => registry.resolve('acct-B'),
+        throwsA(isA<MaxAccountsReachedException>()),
+        reason:
+            'CHARACTERIZATION, not an endorsement: at maxAccounts == '
+            'accounts-already-resolved, resolving a new account while '
+            'the old one has not yet been disposed throws. See '
+            '`accountFirebaseRegistryProvider`\'s doc comment '
+            '(account_firebase_providers.dart) for why this residual '
+            'shape is much narrower under keepAlive than it was under '
+            'the old switch-driven design, and the test immediately '
+            'below for proof that headroom still resolves it.',
+      );
+    });
 
-    test('THE FIX: with ONE account of headroom over the number already '
-        'resolved (kMaxDeviceAccounts + 1 — what '
+    test('THE FIX (unchanged): with ONE account of headroom over the number '
+        'already resolved (kMaxDeviceAccounts + 1 — what '
         '`accountFirebaseRegistryProvider` actually configures in '
         'production), the same not-yet-disposed-old-account shape resolves '
-        'the new account cleanly, and steady state still settles back to a '
-        'single active account once dispose is actually called', () async {
+        'the new account cleanly, and steady state still settles back down '
+        'once dispose is actually called', () async {
       final harness = _SwitchHarness();
       final registry = harness.build(maxAccounts: 2); // 1 resolved + 1 headroom
 
       await registry.resolve('acct-A');
-      // Still not disposed — same shape as the FINDING test above, just
-      // with the production headroom value.
       final handlesB = await registry.resolve('acct-B');
       expect(handlesB.app.name, 'account_acct-B');
       expect(registry.activeAccountIds, {'acct-A', 'acct-B'});
 
-      // Now the deferred dispose actually runs (mirrors Riverpod's
-      // scheduler eventually firing ref.onDispose for acct-A) — steady
-      // state settles back to a single active account; the headroom slot
-      // was transient absorption, not a permanent second slot.
       await registry.dispose('acct-A');
       expect(registry.activeAccountIds, {'acct-B'});
       expect(harness.deletedNames, ['account_acct-A']);
     });
 
     test('the wired production registry (accountFirebaseRegistryProvider, no '
-        'override) is configured with exactly kMaxDeviceAccounts + 1 — the '
-        'headroom value the fix above relies on', () {
+        'override) is still configured with exactly kMaxDeviceAccounts + 1 '
+        '— kept as-is per this story\'s instructions even though the '
+        'ORIGINAL (switch-driven) justification for the headroom is now '
+        'moot; see the re-characterization test above for the narrower '
+        'residual scenario it still covers', () {
       final container = ProviderContainer();
       addTearDown(container.dispose);
       final registry = container.read(accountFirebaseRegistryProvider);

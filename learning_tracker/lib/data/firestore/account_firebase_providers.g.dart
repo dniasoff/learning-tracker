@@ -21,34 +21,54 @@ part of 'account_firebase_providers.dart';
 /// and now unreachable — this is the "must not create/destroy apps on
 /// widget rebuilds" invariant the story asks for).
 ///
+/// **Process-teardown hook.** `ref.onDispose` here runs [AccountFirebase
+/// .disposeAll] (fire-and-forget — `onDispose` callbacks are synchronous;
+/// there is nothing further for this provider to await once the container
+/// itself is going away) whenever this provider's own `Ref` is disposed.
+/// For a `keepAlive` provider that is exactly (and only) "the enclosing
+/// `ProviderContainer` was disposed" — i.e. graceful process/test teardown,
+/// never a mere account switch or a single account's removal (both of
+/// those are handled per-account by [disposeAccountFirebase] /
+/// [accountFirebase]'s own `ref.onDispose`, not by this one). There is no
+/// equivalent hook on a hard process kill (the common case on
+/// mobile — the OS simply reclaims memory, no Dart code runs), so this is
+/// "best-effort on the paths that do run cleanup" (tests, hot-restart,
+/// any future graceful-shutdown flow), not a substitute for the per-account
+/// disposal paths.
+///
 /// [fa]: https://pub.dev/documentation/firebase_core/latest/firebase_core/FirebaseApp-class.html
 ///
-/// **`maxAccounts` is [kMaxDeviceAccounts] + 1, not [kMaxDeviceAccounts] —
-/// deliberately, a Phase 1 Story D finding.** `AccountFirebase.resolve`'s
-/// bound check and Riverpod's `autoDispose` family-member teardown are two
-/// independently-scheduled things: when [activeAccountFirebaseProvider]
-/// moves from account A to account B, the family member for A does not lose
-/// its listener and get disposed (which is what runs `ref.onDispose` →
-/// `registry.dispose(A)`) synchronously with B's resolve — Riverpod
-/// schedules that teardown via its own `ProviderScheduler`, which can run
-/// strictly after B's `resolve()` call already evaluated the bound check.
-/// Confirmed by a deterministic unit test
-/// (`test/data/firestore/account_switch_lifecycle_test.dart`, the "FINDING"
-/// test in its "the ≤5 bound interacts correctly with switching" group): at
-/// a bound
-/// exactly equal to the number of accounts already resolved, a back-to-back
-/// switch (no yield to the event loop between the two `setAccountId` calls)
-/// spuriously throws [MaxAccountsReachedException] even though A truly is
-/// being released — reproduced even with an INSTANT (non-artificially-slow)
-/// `app.delete()`, so it is not merely a "slow native call" edge case. One
-/// account of headroom absorbs exactly this transient A-still-counted/
-/// B-just-requested overlap without weakening the real, DB-enforced ≤5
-/// **owned**-account cap ([kMaxDeviceAccounts] itself, `DeviceRegistryDatabase
-/// .addAccount`) — that cap is untouched; this is purely a concurrently-
-/// resolved-named-apps cushion in the in-memory registry. Steady state
-/// (after the scheduled teardown actually runs) still settles back to
-/// ≤[kMaxDeviceAccounts] active apps, verified by the same test file's
-/// sequential/cyclic-switch coverage.
+/// **`maxAccounts` is [kMaxDeviceAccounts] + 1, not [kMaxDeviceAccounts].**
+/// This originated as a Phase 1 Story D finding tied to the OLD
+/// autoDispose-per-switch design: `AccountFirebase.resolve`'s bound check
+/// and Riverpod's `autoDispose` family-member teardown used to be two
+/// independently-scheduled things, so a back-to-back switch could spuriously
+/// throw [MaxAccountsReachedException] even though the account being left
+/// was truly being released (Riverpod's own scheduler, not the caller,
+/// decided when that teardown actually ran). **That race no longer exists**
+/// now that [accountFirebase] is itself `keepAlive`: switching the active
+/// account never disposes anything (see [accountFirebase]'s doc), so there
+/// is nothing left to race against on a mere switch. The only remaining
+/// disposal path is the explicit one, [disposeAccountFirebase], which calls
+/// `registry.dispose(accountId)` directly and synchronously (up to its own
+/// first `await`) rather than going through Riverpod's scheduler — so a
+/// concurrent caller resolving a brand-new account no longer needs to wait
+/// out an opaque scheduling delay either. The one residual scenario the
+/// headroom still covers: [disposeAccountFirebase] called for an account
+/// whose FIRST resolve is still in flight (`_pending`, not yet `_handles`)
+/// — `AccountFirebase.dispose` awaits that in-flight resolve before it can
+/// remove the entry, so [activeAccountIds] briefly still counts it during
+/// that await. This is a narrower window than the old switch-race (removing
+/// an account that has never finished its first resolve is an edge case,
+/// not the common "user switches accounts" path), so **the cushion is very
+/// likely removable now** — kept as-is per this story's instructions rather
+/// than unilaterally dropped; see `test/data/firestore/
+/// account_switch_lifecycle_test.dart`'s "the ≤5 bound interacts correctly"
+/// group for the updated characterization and the coordinator note on this.
+/// The DB-enforced ≤5 **owned**-account cap ([kMaxDeviceAccounts] itself,
+/// `DeviceRegistryDatabase.addAccount`) is untouched either way; this is
+/// purely a concurrently-resolved-named-apps cushion in the in-memory
+/// registry.
 
 @ProviderFor(accountFirebaseRegistry)
 final accountFirebaseRegistryProvider = AccountFirebaseRegistryProvider._();
@@ -66,34 +86,54 @@ final accountFirebaseRegistryProvider = AccountFirebaseRegistryProvider._();
 /// and now unreachable — this is the "must not create/destroy apps on
 /// widget rebuilds" invariant the story asks for).
 ///
+/// **Process-teardown hook.** `ref.onDispose` here runs [AccountFirebase
+/// .disposeAll] (fire-and-forget — `onDispose` callbacks are synchronous;
+/// there is nothing further for this provider to await once the container
+/// itself is going away) whenever this provider's own `Ref` is disposed.
+/// For a `keepAlive` provider that is exactly (and only) "the enclosing
+/// `ProviderContainer` was disposed" — i.e. graceful process/test teardown,
+/// never a mere account switch or a single account's removal (both of
+/// those are handled per-account by [disposeAccountFirebase] /
+/// [accountFirebase]'s own `ref.onDispose`, not by this one). There is no
+/// equivalent hook on a hard process kill (the common case on
+/// mobile — the OS simply reclaims memory, no Dart code runs), so this is
+/// "best-effort on the paths that do run cleanup" (tests, hot-restart,
+/// any future graceful-shutdown flow), not a substitute for the per-account
+/// disposal paths.
+///
 /// [fa]: https://pub.dev/documentation/firebase_core/latest/firebase_core/FirebaseApp-class.html
 ///
-/// **`maxAccounts` is [kMaxDeviceAccounts] + 1, not [kMaxDeviceAccounts] —
-/// deliberately, a Phase 1 Story D finding.** `AccountFirebase.resolve`'s
-/// bound check and Riverpod's `autoDispose` family-member teardown are two
-/// independently-scheduled things: when [activeAccountFirebaseProvider]
-/// moves from account A to account B, the family member for A does not lose
-/// its listener and get disposed (which is what runs `ref.onDispose` →
-/// `registry.dispose(A)`) synchronously with B's resolve — Riverpod
-/// schedules that teardown via its own `ProviderScheduler`, which can run
-/// strictly after B's `resolve()` call already evaluated the bound check.
-/// Confirmed by a deterministic unit test
-/// (`test/data/firestore/account_switch_lifecycle_test.dart`, the "FINDING"
-/// test in its "the ≤5 bound interacts correctly with switching" group): at
-/// a bound
-/// exactly equal to the number of accounts already resolved, a back-to-back
-/// switch (no yield to the event loop between the two `setAccountId` calls)
-/// spuriously throws [MaxAccountsReachedException] even though A truly is
-/// being released — reproduced even with an INSTANT (non-artificially-slow)
-/// `app.delete()`, so it is not merely a "slow native call" edge case. One
-/// account of headroom absorbs exactly this transient A-still-counted/
-/// B-just-requested overlap without weakening the real, DB-enforced ≤5
-/// **owned**-account cap ([kMaxDeviceAccounts] itself, `DeviceRegistryDatabase
-/// .addAccount`) — that cap is untouched; this is purely a concurrently-
-/// resolved-named-apps cushion in the in-memory registry. Steady state
-/// (after the scheduled teardown actually runs) still settles back to
-/// ≤[kMaxDeviceAccounts] active apps, verified by the same test file's
-/// sequential/cyclic-switch coverage.
+/// **`maxAccounts` is [kMaxDeviceAccounts] + 1, not [kMaxDeviceAccounts].**
+/// This originated as a Phase 1 Story D finding tied to the OLD
+/// autoDispose-per-switch design: `AccountFirebase.resolve`'s bound check
+/// and Riverpod's `autoDispose` family-member teardown used to be two
+/// independently-scheduled things, so a back-to-back switch could spuriously
+/// throw [MaxAccountsReachedException] even though the account being left
+/// was truly being released (Riverpod's own scheduler, not the caller,
+/// decided when that teardown actually ran). **That race no longer exists**
+/// now that [accountFirebase] is itself `keepAlive`: switching the active
+/// account never disposes anything (see [accountFirebase]'s doc), so there
+/// is nothing left to race against on a mere switch. The only remaining
+/// disposal path is the explicit one, [disposeAccountFirebase], which calls
+/// `registry.dispose(accountId)` directly and synchronously (up to its own
+/// first `await`) rather than going through Riverpod's scheduler — so a
+/// concurrent caller resolving a brand-new account no longer needs to wait
+/// out an opaque scheduling delay either. The one residual scenario the
+/// headroom still covers: [disposeAccountFirebase] called for an account
+/// whose FIRST resolve is still in flight (`_pending`, not yet `_handles`)
+/// — `AccountFirebase.dispose` awaits that in-flight resolve before it can
+/// remove the entry, so [activeAccountIds] briefly still counts it during
+/// that await. This is a narrower window than the old switch-race (removing
+/// an account that has never finished its first resolve is an edge case,
+/// not the common "user switches accounts" path), so **the cushion is very
+/// likely removable now** — kept as-is per this story's instructions rather
+/// than unilaterally dropped; see `test/data/firestore/
+/// account_switch_lifecycle_test.dart`'s "the ≤5 bound interacts correctly"
+/// group for the updated characterization and the coordinator note on this.
+/// The DB-enforced ≤5 **owned**-account cap ([kMaxDeviceAccounts] itself,
+/// `DeviceRegistryDatabase.addAccount`) is untouched either way; this is
+/// purely a concurrently-resolved-named-apps cushion in the in-memory
+/// registry.
 
 final class AccountFirebaseRegistryProvider
     extends
@@ -112,34 +152,54 @@ final class AccountFirebaseRegistryProvider
   /// and now unreachable — this is the "must not create/destroy apps on
   /// widget rebuilds" invariant the story asks for).
   ///
+  /// **Process-teardown hook.** `ref.onDispose` here runs [AccountFirebase
+  /// .disposeAll] (fire-and-forget — `onDispose` callbacks are synchronous;
+  /// there is nothing further for this provider to await once the container
+  /// itself is going away) whenever this provider's own `Ref` is disposed.
+  /// For a `keepAlive` provider that is exactly (and only) "the enclosing
+  /// `ProviderContainer` was disposed" — i.e. graceful process/test teardown,
+  /// never a mere account switch or a single account's removal (both of
+  /// those are handled per-account by [disposeAccountFirebase] /
+  /// [accountFirebase]'s own `ref.onDispose`, not by this one). There is no
+  /// equivalent hook on a hard process kill (the common case on
+  /// mobile — the OS simply reclaims memory, no Dart code runs), so this is
+  /// "best-effort on the paths that do run cleanup" (tests, hot-restart,
+  /// any future graceful-shutdown flow), not a substitute for the per-account
+  /// disposal paths.
+  ///
   /// [fa]: https://pub.dev/documentation/firebase_core/latest/firebase_core/FirebaseApp-class.html
   ///
-  /// **`maxAccounts` is [kMaxDeviceAccounts] + 1, not [kMaxDeviceAccounts] —
-  /// deliberately, a Phase 1 Story D finding.** `AccountFirebase.resolve`'s
-  /// bound check and Riverpod's `autoDispose` family-member teardown are two
-  /// independently-scheduled things: when [activeAccountFirebaseProvider]
-  /// moves from account A to account B, the family member for A does not lose
-  /// its listener and get disposed (which is what runs `ref.onDispose` →
-  /// `registry.dispose(A)`) synchronously with B's resolve — Riverpod
-  /// schedules that teardown via its own `ProviderScheduler`, which can run
-  /// strictly after B's `resolve()` call already evaluated the bound check.
-  /// Confirmed by a deterministic unit test
-  /// (`test/data/firestore/account_switch_lifecycle_test.dart`, the "FINDING"
-  /// test in its "the ≤5 bound interacts correctly with switching" group): at
-  /// a bound
-  /// exactly equal to the number of accounts already resolved, a back-to-back
-  /// switch (no yield to the event loop between the two `setAccountId` calls)
-  /// spuriously throws [MaxAccountsReachedException] even though A truly is
-  /// being released — reproduced even with an INSTANT (non-artificially-slow)
-  /// `app.delete()`, so it is not merely a "slow native call" edge case. One
-  /// account of headroom absorbs exactly this transient A-still-counted/
-  /// B-just-requested overlap without weakening the real, DB-enforced ≤5
-  /// **owned**-account cap ([kMaxDeviceAccounts] itself, `DeviceRegistryDatabase
-  /// .addAccount`) — that cap is untouched; this is purely a concurrently-
-  /// resolved-named-apps cushion in the in-memory registry. Steady state
-  /// (after the scheduled teardown actually runs) still settles back to
-  /// ≤[kMaxDeviceAccounts] active apps, verified by the same test file's
-  /// sequential/cyclic-switch coverage.
+  /// **`maxAccounts` is [kMaxDeviceAccounts] + 1, not [kMaxDeviceAccounts].**
+  /// This originated as a Phase 1 Story D finding tied to the OLD
+  /// autoDispose-per-switch design: `AccountFirebase.resolve`'s bound check
+  /// and Riverpod's `autoDispose` family-member teardown used to be two
+  /// independently-scheduled things, so a back-to-back switch could spuriously
+  /// throw [MaxAccountsReachedException] even though the account being left
+  /// was truly being released (Riverpod's own scheduler, not the caller,
+  /// decided when that teardown actually ran). **That race no longer exists**
+  /// now that [accountFirebase] is itself `keepAlive`: switching the active
+  /// account never disposes anything (see [accountFirebase]'s doc), so there
+  /// is nothing left to race against on a mere switch. The only remaining
+  /// disposal path is the explicit one, [disposeAccountFirebase], which calls
+  /// `registry.dispose(accountId)` directly and synchronously (up to its own
+  /// first `await`) rather than going through Riverpod's scheduler — so a
+  /// concurrent caller resolving a brand-new account no longer needs to wait
+  /// out an opaque scheduling delay either. The one residual scenario the
+  /// headroom still covers: [disposeAccountFirebase] called for an account
+  /// whose FIRST resolve is still in flight (`_pending`, not yet `_handles`)
+  /// — `AccountFirebase.dispose` awaits that in-flight resolve before it can
+  /// remove the entry, so [activeAccountIds] briefly still counts it during
+  /// that await. This is a narrower window than the old switch-race (removing
+  /// an account that has never finished its first resolve is an edge case,
+  /// not the common "user switches accounts" path), so **the cushion is very
+  /// likely removable now** — kept as-is per this story's instructions rather
+  /// than unilaterally dropped; see `test/data/firestore/
+  /// account_switch_lifecycle_test.dart`'s "the ≤5 bound interacts correctly"
+  /// group for the updated characterization and the coordinator note on this.
+  /// The DB-enforced ≤5 **owned**-account cap ([kMaxDeviceAccounts] itself,
+  /// `DeviceRegistryDatabase.addAccount`) is untouched either way; this is
+  /// purely a concurrently-resolved-named-apps cushion in the in-memory
+  /// registry.
   AccountFirebaseRegistryProvider._()
     : super(
         from: null,
@@ -174,7 +234,7 @@ final class AccountFirebaseRegistryProvider
 }
 
 String _$accountFirebaseRegistryHash() =>
-    r'5db23c936e9d27ae9395b67b884bb045c6f15249';
+    r'c375eb92a33abde002428ad2c240a953fdb24c55';
 
 /// Resolves [accountId]'s [AccountFirebaseHandles] — the plan's
 /// `accountFirebase(activeAccountId)` (migration-plan Phase 1: "Wire handle
@@ -192,36 +252,61 @@ String _$accountFirebaseRegistryHash() =>
 /// genuinely reachable rather than a dead branch (see
 /// `test/data/firestore/account_firebase_providers_test.dart`'s red-demo).
 ///
-/// **Disposal on account switch.** `@riverpod` with a parameter generates
-/// an `autoDispose` family. Once nothing watches
+/// **`keepAlive` — switching the active account must NOT dispose the
+/// previous account's app.** This provider used to be a plain `@riverpod`
+/// (`autoDispose`) family: once nothing watched
 /// `accountFirebaseProvider(accountId)` for a given [accountId] anymore —
-/// e.g. [activeAccountFirebaseProvider] switches to watching a different
-/// id — Riverpod schedules this provider instance for disposal, which
-/// tears down that (and only that) account's named app via
-/// [AccountFirebase.dispose]. The registry singleton itself, and every
-/// OTHER account's handles it holds, are untouched.
+/// e.g. [activeAccountFirebaseProvider] moved on to a different id —
+/// Riverpod scheduled this provider instance for disposal, tearing the
+/// account's named app down via [AccountFirebase.dispose]. That is now
+/// deliberately NOT what happens on a switch: **`cloud_firestore 6.4.1`
+/// caches `FirebaseFirestore.instanceFor` in a process-lifetime `static` map
+/// with no eviction hook** (`firestore.dart`'s `_cachedInstances`), so a
+/// same-process dispose→re-resolve of the SAME account (exactly what A→B→A
+/// switching used to do) hands `_resolveNew`'s `.settings =` call the SAME,
+/// now-`terminate()`d, cached instance — which throws `FirebaseException`
+/// per `terminate()`'s own contract. Rather than work around the SDK, this
+/// provider removes the need to dispose-then-re-resolve at all: once an
+/// account is resolved, it (and every OTHER already-resolved account) stays
+/// resolved across any number of switches, for the lifetime of the process
+/// or until [disposeAccountFirebase] is called explicitly for it (below).
+/// The ≤5-account cap ([kMaxDeviceAccounts]) already bounds the worst case
+/// at [kMaxDeviceAccounts] `+ 1` (headroom) live apps × 20 MiB
+/// ([kAccountFirestoreCacheSizeBytes]) — see
+/// [accountFirebaseRegistryProvider]'s doc for that budget.
+///
+/// **Disposal now happens ONLY via explicit removal or process teardown.**
+/// [disposeAccountFirebase] (below) is the seam a genuine account-removal
+/// flow calls — never a mere switch. [accountFirebaseRegistryProvider]'s own
+/// `ref.onDispose` additionally tears every still-active account down if
+/// the whole container is ever disposed (tests, hot-restart).
 ///
 /// **`ref.onDispose` is registered BEFORE the `await registry.resolve(...)`
-/// below — this ordering is load-bearing (defect #1 fix).** `Ref.onDispose`
-/// throws `UnmountedRefException` if the provider is already disposed
+/// below — this ordering is load-bearing (defect #1 fix) and stays fully
+/// reachable under `keepAlive`.** `Ref.onDispose` throws
+/// `UnmountedRefException` if the provider is already disposed
 /// (`!ref.mounted`) by the time it is called (riverpod's own `Ref.onDispose`
 /// doc: "check `ref.mounted` after async gaps"). `registry.resolve` awaits a
 /// real native `initializeApp` call — hundreds of milliseconds on-device —
-/// so a caller that switches accounts again before it settles (e.g. rapid
-/// A→B) disposes THIS provider instance mid-`await`. If `onDispose` were
-/// registered only after the `await` (the pre-fix ordering), that
-/// registration call would itself throw in exactly that window — and
-/// because the throw happens AFTER `resolve` already completed and cached
-/// the handles in the registry, nothing would ever call
-/// [AccountFirebase.dispose] for this account: its named app + persistent
-/// cache would be pinned for the rest of the process. Registering the
-/// teardown first means it exists no matter when disposal happens; the
-/// closure only closes over `registry`/`accountId` (never `ref`), so it
-/// stays safe to invoke even after `ref` itself is unmounted, and the
-/// `_disposeCalledOnce` guard makes it safe to invoke a second time from
-/// the `!ref.mounted` branch below without double-disposing (itself also
-/// safe per [AccountFirebase.dispose]'s own idempotency, but kept explicit
-/// here rather than relied upon implicitly).
+/// so a caller that explicitly removes this account (via
+/// [disposeAccountFirebase], which invalidates this provider) before that
+/// settles disposes THIS provider instance mid-`await`; a `keepAlive`
+/// provider is exactly as disposable via explicit `ref.invalidate`/
+/// `container.invalidate` as an `autoDispose` one is via losing its last
+/// listener — `keepAlive` only removes the LISTENER-COUNT-triggered
+/// teardown path, not disposal itself. If `onDispose` were registered only
+/// after the `await` (the pre-fix ordering), that registration call would
+/// itself throw in exactly that window — and because the throw happens
+/// AFTER `resolve` already completed and cached the handles in the
+/// registry, nothing would ever call [AccountFirebase.dispose] for this
+/// account: its named app + persistent cache would be pinned for the rest
+/// of the process. Registering the teardown first means it exists no matter
+/// when disposal happens; the closure only closes over `registry`/
+/// `accountId` (never `ref`), so it stays safe to invoke even after `ref`
+/// itself is unmounted, and the `_disposeCalledOnce` guard makes it safe to
+/// invoke a second time from the `!ref.mounted` branch below without
+/// double-disposing (itself also safe per [AccountFirebase.dispose]'s own
+/// idempotency, but kept explicit here rather than relied upon implicitly).
 
 @ProviderFor(accountFirebase)
 final accountFirebaseProvider = AccountFirebaseFamily._();
@@ -242,36 +327,61 @@ final accountFirebaseProvider = AccountFirebaseFamily._();
 /// genuinely reachable rather than a dead branch (see
 /// `test/data/firestore/account_firebase_providers_test.dart`'s red-demo).
 ///
-/// **Disposal on account switch.** `@riverpod` with a parameter generates
-/// an `autoDispose` family. Once nothing watches
+/// **`keepAlive` — switching the active account must NOT dispose the
+/// previous account's app.** This provider used to be a plain `@riverpod`
+/// (`autoDispose`) family: once nothing watched
 /// `accountFirebaseProvider(accountId)` for a given [accountId] anymore —
-/// e.g. [activeAccountFirebaseProvider] switches to watching a different
-/// id — Riverpod schedules this provider instance for disposal, which
-/// tears down that (and only that) account's named app via
-/// [AccountFirebase.dispose]. The registry singleton itself, and every
-/// OTHER account's handles it holds, are untouched.
+/// e.g. [activeAccountFirebaseProvider] moved on to a different id —
+/// Riverpod scheduled this provider instance for disposal, tearing the
+/// account's named app down via [AccountFirebase.dispose]. That is now
+/// deliberately NOT what happens on a switch: **`cloud_firestore 6.4.1`
+/// caches `FirebaseFirestore.instanceFor` in a process-lifetime `static` map
+/// with no eviction hook** (`firestore.dart`'s `_cachedInstances`), so a
+/// same-process dispose→re-resolve of the SAME account (exactly what A→B→A
+/// switching used to do) hands `_resolveNew`'s `.settings =` call the SAME,
+/// now-`terminate()`d, cached instance — which throws `FirebaseException`
+/// per `terminate()`'s own contract. Rather than work around the SDK, this
+/// provider removes the need to dispose-then-re-resolve at all: once an
+/// account is resolved, it (and every OTHER already-resolved account) stays
+/// resolved across any number of switches, for the lifetime of the process
+/// or until [disposeAccountFirebase] is called explicitly for it (below).
+/// The ≤5-account cap ([kMaxDeviceAccounts]) already bounds the worst case
+/// at [kMaxDeviceAccounts] `+ 1` (headroom) live apps × 20 MiB
+/// ([kAccountFirestoreCacheSizeBytes]) — see
+/// [accountFirebaseRegistryProvider]'s doc for that budget.
+///
+/// **Disposal now happens ONLY via explicit removal or process teardown.**
+/// [disposeAccountFirebase] (below) is the seam a genuine account-removal
+/// flow calls — never a mere switch. [accountFirebaseRegistryProvider]'s own
+/// `ref.onDispose` additionally tears every still-active account down if
+/// the whole container is ever disposed (tests, hot-restart).
 ///
 /// **`ref.onDispose` is registered BEFORE the `await registry.resolve(...)`
-/// below — this ordering is load-bearing (defect #1 fix).** `Ref.onDispose`
-/// throws `UnmountedRefException` if the provider is already disposed
+/// below — this ordering is load-bearing (defect #1 fix) and stays fully
+/// reachable under `keepAlive`.** `Ref.onDispose` throws
+/// `UnmountedRefException` if the provider is already disposed
 /// (`!ref.mounted`) by the time it is called (riverpod's own `Ref.onDispose`
 /// doc: "check `ref.mounted` after async gaps"). `registry.resolve` awaits a
 /// real native `initializeApp` call — hundreds of milliseconds on-device —
-/// so a caller that switches accounts again before it settles (e.g. rapid
-/// A→B) disposes THIS provider instance mid-`await`. If `onDispose` were
-/// registered only after the `await` (the pre-fix ordering), that
-/// registration call would itself throw in exactly that window — and
-/// because the throw happens AFTER `resolve` already completed and cached
-/// the handles in the registry, nothing would ever call
-/// [AccountFirebase.dispose] for this account: its named app + persistent
-/// cache would be pinned for the rest of the process. Registering the
-/// teardown first means it exists no matter when disposal happens; the
-/// closure only closes over `registry`/`accountId` (never `ref`), so it
-/// stays safe to invoke even after `ref` itself is unmounted, and the
-/// `_disposeCalledOnce` guard makes it safe to invoke a second time from
-/// the `!ref.mounted` branch below without double-disposing (itself also
-/// safe per [AccountFirebase.dispose]'s own idempotency, but kept explicit
-/// here rather than relied upon implicitly).
+/// so a caller that explicitly removes this account (via
+/// [disposeAccountFirebase], which invalidates this provider) before that
+/// settles disposes THIS provider instance mid-`await`; a `keepAlive`
+/// provider is exactly as disposable via explicit `ref.invalidate`/
+/// `container.invalidate` as an `autoDispose` one is via losing its last
+/// listener — `keepAlive` only removes the LISTENER-COUNT-triggered
+/// teardown path, not disposal itself. If `onDispose` were registered only
+/// after the `await` (the pre-fix ordering), that registration call would
+/// itself throw in exactly that window — and because the throw happens
+/// AFTER `resolve` already completed and cached the handles in the
+/// registry, nothing would ever call [AccountFirebase.dispose] for this
+/// account: its named app + persistent cache would be pinned for the rest
+/// of the process. Registering the teardown first means it exists no matter
+/// when disposal happens; the closure only closes over `registry`/
+/// `accountId` (never `ref`), so it stays safe to invoke even after `ref`
+/// itself is unmounted, and the `_disposeCalledOnce` guard makes it safe to
+/// invoke a second time from the `!ref.mounted` branch below without
+/// double-disposing (itself also safe per [AccountFirebase.dispose]'s own
+/// idempotency, but kept explicit here rather than relied upon implicitly).
 
 final class AccountFirebaseProvider
     extends
@@ -299,43 +409,68 @@ final class AccountFirebaseProvider
   /// genuinely reachable rather than a dead branch (see
   /// `test/data/firestore/account_firebase_providers_test.dart`'s red-demo).
   ///
-  /// **Disposal on account switch.** `@riverpod` with a parameter generates
-  /// an `autoDispose` family. Once nothing watches
+  /// **`keepAlive` — switching the active account must NOT dispose the
+  /// previous account's app.** This provider used to be a plain `@riverpod`
+  /// (`autoDispose`) family: once nothing watched
   /// `accountFirebaseProvider(accountId)` for a given [accountId] anymore —
-  /// e.g. [activeAccountFirebaseProvider] switches to watching a different
-  /// id — Riverpod schedules this provider instance for disposal, which
-  /// tears down that (and only that) account's named app via
-  /// [AccountFirebase.dispose]. The registry singleton itself, and every
-  /// OTHER account's handles it holds, are untouched.
+  /// e.g. [activeAccountFirebaseProvider] moved on to a different id —
+  /// Riverpod scheduled this provider instance for disposal, tearing the
+  /// account's named app down via [AccountFirebase.dispose]. That is now
+  /// deliberately NOT what happens on a switch: **`cloud_firestore 6.4.1`
+  /// caches `FirebaseFirestore.instanceFor` in a process-lifetime `static` map
+  /// with no eviction hook** (`firestore.dart`'s `_cachedInstances`), so a
+  /// same-process dispose→re-resolve of the SAME account (exactly what A→B→A
+  /// switching used to do) hands `_resolveNew`'s `.settings =` call the SAME,
+  /// now-`terminate()`d, cached instance — which throws `FirebaseException`
+  /// per `terminate()`'s own contract. Rather than work around the SDK, this
+  /// provider removes the need to dispose-then-re-resolve at all: once an
+  /// account is resolved, it (and every OTHER already-resolved account) stays
+  /// resolved across any number of switches, for the lifetime of the process
+  /// or until [disposeAccountFirebase] is called explicitly for it (below).
+  /// The ≤5-account cap ([kMaxDeviceAccounts]) already bounds the worst case
+  /// at [kMaxDeviceAccounts] `+ 1` (headroom) live apps × 20 MiB
+  /// ([kAccountFirestoreCacheSizeBytes]) — see
+  /// [accountFirebaseRegistryProvider]'s doc for that budget.
+  ///
+  /// **Disposal now happens ONLY via explicit removal or process teardown.**
+  /// [disposeAccountFirebase] (below) is the seam a genuine account-removal
+  /// flow calls — never a mere switch. [accountFirebaseRegistryProvider]'s own
+  /// `ref.onDispose` additionally tears every still-active account down if
+  /// the whole container is ever disposed (tests, hot-restart).
   ///
   /// **`ref.onDispose` is registered BEFORE the `await registry.resolve(...)`
-  /// below — this ordering is load-bearing (defect #1 fix).** `Ref.onDispose`
-  /// throws `UnmountedRefException` if the provider is already disposed
+  /// below — this ordering is load-bearing (defect #1 fix) and stays fully
+  /// reachable under `keepAlive`.** `Ref.onDispose` throws
+  /// `UnmountedRefException` if the provider is already disposed
   /// (`!ref.mounted`) by the time it is called (riverpod's own `Ref.onDispose`
   /// doc: "check `ref.mounted` after async gaps"). `registry.resolve` awaits a
   /// real native `initializeApp` call — hundreds of milliseconds on-device —
-  /// so a caller that switches accounts again before it settles (e.g. rapid
-  /// A→B) disposes THIS provider instance mid-`await`. If `onDispose` were
-  /// registered only after the `await` (the pre-fix ordering), that
-  /// registration call would itself throw in exactly that window — and
-  /// because the throw happens AFTER `resolve` already completed and cached
-  /// the handles in the registry, nothing would ever call
-  /// [AccountFirebase.dispose] for this account: its named app + persistent
-  /// cache would be pinned for the rest of the process. Registering the
-  /// teardown first means it exists no matter when disposal happens; the
-  /// closure only closes over `registry`/`accountId` (never `ref`), so it
-  /// stays safe to invoke even after `ref` itself is unmounted, and the
-  /// `_disposeCalledOnce` guard makes it safe to invoke a second time from
-  /// the `!ref.mounted` branch below without double-disposing (itself also
-  /// safe per [AccountFirebase.dispose]'s own idempotency, but kept explicit
-  /// here rather than relied upon implicitly).
+  /// so a caller that explicitly removes this account (via
+  /// [disposeAccountFirebase], which invalidates this provider) before that
+  /// settles disposes THIS provider instance mid-`await`; a `keepAlive`
+  /// provider is exactly as disposable via explicit `ref.invalidate`/
+  /// `container.invalidate` as an `autoDispose` one is via losing its last
+  /// listener — `keepAlive` only removes the LISTENER-COUNT-triggered
+  /// teardown path, not disposal itself. If `onDispose` were registered only
+  /// after the `await` (the pre-fix ordering), that registration call would
+  /// itself throw in exactly that window — and because the throw happens
+  /// AFTER `resolve` already completed and cached the handles in the
+  /// registry, nothing would ever call [AccountFirebase.dispose] for this
+  /// account: its named app + persistent cache would be pinned for the rest
+  /// of the process. Registering the teardown first means it exists no matter
+  /// when disposal happens; the closure only closes over `registry`/
+  /// `accountId` (never `ref`), so it stays safe to invoke even after `ref`
+  /// itself is unmounted, and the `_disposeCalledOnce` guard makes it safe to
+  /// invoke a second time from the `!ref.mounted` branch below without
+  /// double-disposing (itself also safe per [AccountFirebase.dispose]'s own
+  /// idempotency, but kept explicit here rather than relied upon implicitly).
   AccountFirebaseProvider._({
     required AccountFirebaseFamily super.from,
     required String super.argument,
   }) : super(
          retry: null,
          name: r'accountFirebaseProvider',
-         isAutoDispose: true,
+         isAutoDispose: false,
          dependencies: null,
          $allTransitiveDependencies: null,
        );
@@ -373,7 +508,7 @@ final class AccountFirebaseProvider
   }
 }
 
-String _$accountFirebaseHash() => r'e8d3111f8892aed29096a20f9c87581f5d19dd56';
+String _$accountFirebaseHash() => r'96dc0f59beb65bf94cd91f14838f40309e96423f';
 
 /// Resolves [accountId]'s [AccountFirebaseHandles] — the plan's
 /// `accountFirebase(activeAccountId)` (migration-plan Phase 1: "Wire handle
@@ -391,36 +526,61 @@ String _$accountFirebaseHash() => r'e8d3111f8892aed29096a20f9c87581f5d19dd56';
 /// genuinely reachable rather than a dead branch (see
 /// `test/data/firestore/account_firebase_providers_test.dart`'s red-demo).
 ///
-/// **Disposal on account switch.** `@riverpod` with a parameter generates
-/// an `autoDispose` family. Once nothing watches
+/// **`keepAlive` — switching the active account must NOT dispose the
+/// previous account's app.** This provider used to be a plain `@riverpod`
+/// (`autoDispose`) family: once nothing watched
 /// `accountFirebaseProvider(accountId)` for a given [accountId] anymore —
-/// e.g. [activeAccountFirebaseProvider] switches to watching a different
-/// id — Riverpod schedules this provider instance for disposal, which
-/// tears down that (and only that) account's named app via
-/// [AccountFirebase.dispose]. The registry singleton itself, and every
-/// OTHER account's handles it holds, are untouched.
+/// e.g. [activeAccountFirebaseProvider] moved on to a different id —
+/// Riverpod scheduled this provider instance for disposal, tearing the
+/// account's named app down via [AccountFirebase.dispose]. That is now
+/// deliberately NOT what happens on a switch: **`cloud_firestore 6.4.1`
+/// caches `FirebaseFirestore.instanceFor` in a process-lifetime `static` map
+/// with no eviction hook** (`firestore.dart`'s `_cachedInstances`), so a
+/// same-process dispose→re-resolve of the SAME account (exactly what A→B→A
+/// switching used to do) hands `_resolveNew`'s `.settings =` call the SAME,
+/// now-`terminate()`d, cached instance — which throws `FirebaseException`
+/// per `terminate()`'s own contract. Rather than work around the SDK, this
+/// provider removes the need to dispose-then-re-resolve at all: once an
+/// account is resolved, it (and every OTHER already-resolved account) stays
+/// resolved across any number of switches, for the lifetime of the process
+/// or until [disposeAccountFirebase] is called explicitly for it (below).
+/// The ≤5-account cap ([kMaxDeviceAccounts]) already bounds the worst case
+/// at [kMaxDeviceAccounts] `+ 1` (headroom) live apps × 20 MiB
+/// ([kAccountFirestoreCacheSizeBytes]) — see
+/// [accountFirebaseRegistryProvider]'s doc for that budget.
+///
+/// **Disposal now happens ONLY via explicit removal or process teardown.**
+/// [disposeAccountFirebase] (below) is the seam a genuine account-removal
+/// flow calls — never a mere switch. [accountFirebaseRegistryProvider]'s own
+/// `ref.onDispose` additionally tears every still-active account down if
+/// the whole container is ever disposed (tests, hot-restart).
 ///
 /// **`ref.onDispose` is registered BEFORE the `await registry.resolve(...)`
-/// below — this ordering is load-bearing (defect #1 fix).** `Ref.onDispose`
-/// throws `UnmountedRefException` if the provider is already disposed
+/// below — this ordering is load-bearing (defect #1 fix) and stays fully
+/// reachable under `keepAlive`.** `Ref.onDispose` throws
+/// `UnmountedRefException` if the provider is already disposed
 /// (`!ref.mounted`) by the time it is called (riverpod's own `Ref.onDispose`
 /// doc: "check `ref.mounted` after async gaps"). `registry.resolve` awaits a
 /// real native `initializeApp` call — hundreds of milliseconds on-device —
-/// so a caller that switches accounts again before it settles (e.g. rapid
-/// A→B) disposes THIS provider instance mid-`await`. If `onDispose` were
-/// registered only after the `await` (the pre-fix ordering), that
-/// registration call would itself throw in exactly that window — and
-/// because the throw happens AFTER `resolve` already completed and cached
-/// the handles in the registry, nothing would ever call
-/// [AccountFirebase.dispose] for this account: its named app + persistent
-/// cache would be pinned for the rest of the process. Registering the
-/// teardown first means it exists no matter when disposal happens; the
-/// closure only closes over `registry`/`accountId` (never `ref`), so it
-/// stays safe to invoke even after `ref` itself is unmounted, and the
-/// `_disposeCalledOnce` guard makes it safe to invoke a second time from
-/// the `!ref.mounted` branch below without double-disposing (itself also
-/// safe per [AccountFirebase.dispose]'s own idempotency, but kept explicit
-/// here rather than relied upon implicitly).
+/// so a caller that explicitly removes this account (via
+/// [disposeAccountFirebase], which invalidates this provider) before that
+/// settles disposes THIS provider instance mid-`await`; a `keepAlive`
+/// provider is exactly as disposable via explicit `ref.invalidate`/
+/// `container.invalidate` as an `autoDispose` one is via losing its last
+/// listener — `keepAlive` only removes the LISTENER-COUNT-triggered
+/// teardown path, not disposal itself. If `onDispose` were registered only
+/// after the `await` (the pre-fix ordering), that registration call would
+/// itself throw in exactly that window — and because the throw happens
+/// AFTER `resolve` already completed and cached the handles in the
+/// registry, nothing would ever call [AccountFirebase.dispose] for this
+/// account: its named app + persistent cache would be pinned for the rest
+/// of the process. Registering the teardown first means it exists no matter
+/// when disposal happens; the closure only closes over `registry`/
+/// `accountId` (never `ref`), so it stays safe to invoke even after `ref`
+/// itself is unmounted, and the `_disposeCalledOnce` guard makes it safe to
+/// invoke a second time from the `!ref.mounted` branch below without
+/// double-disposing (itself also safe per [AccountFirebase.dispose]'s own
+/// idempotency, but kept explicit here rather than relied upon implicitly).
 
 final class AccountFirebaseFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<AccountFirebaseHandles>, String> {
@@ -430,7 +590,7 @@ final class AccountFirebaseFamily extends $Family
         name: r'accountFirebaseProvider',
         dependencies: null,
         $allTransitiveDependencies: null,
-        isAutoDispose: true,
+        isAutoDispose: false,
       );
 
   /// Resolves [accountId]'s [AccountFirebaseHandles] — the plan's
@@ -449,36 +609,61 @@ final class AccountFirebaseFamily extends $Family
   /// genuinely reachable rather than a dead branch (see
   /// `test/data/firestore/account_firebase_providers_test.dart`'s red-demo).
   ///
-  /// **Disposal on account switch.** `@riverpod` with a parameter generates
-  /// an `autoDispose` family. Once nothing watches
+  /// **`keepAlive` — switching the active account must NOT dispose the
+  /// previous account's app.** This provider used to be a plain `@riverpod`
+  /// (`autoDispose`) family: once nothing watched
   /// `accountFirebaseProvider(accountId)` for a given [accountId] anymore —
-  /// e.g. [activeAccountFirebaseProvider] switches to watching a different
-  /// id — Riverpod schedules this provider instance for disposal, which
-  /// tears down that (and only that) account's named app via
-  /// [AccountFirebase.dispose]. The registry singleton itself, and every
-  /// OTHER account's handles it holds, are untouched.
+  /// e.g. [activeAccountFirebaseProvider] moved on to a different id —
+  /// Riverpod scheduled this provider instance for disposal, tearing the
+  /// account's named app down via [AccountFirebase.dispose]. That is now
+  /// deliberately NOT what happens on a switch: **`cloud_firestore 6.4.1`
+  /// caches `FirebaseFirestore.instanceFor` in a process-lifetime `static` map
+  /// with no eviction hook** (`firestore.dart`'s `_cachedInstances`), so a
+  /// same-process dispose→re-resolve of the SAME account (exactly what A→B→A
+  /// switching used to do) hands `_resolveNew`'s `.settings =` call the SAME,
+  /// now-`terminate()`d, cached instance — which throws `FirebaseException`
+  /// per `terminate()`'s own contract. Rather than work around the SDK, this
+  /// provider removes the need to dispose-then-re-resolve at all: once an
+  /// account is resolved, it (and every OTHER already-resolved account) stays
+  /// resolved across any number of switches, for the lifetime of the process
+  /// or until [disposeAccountFirebase] is called explicitly for it (below).
+  /// The ≤5-account cap ([kMaxDeviceAccounts]) already bounds the worst case
+  /// at [kMaxDeviceAccounts] `+ 1` (headroom) live apps × 20 MiB
+  /// ([kAccountFirestoreCacheSizeBytes]) — see
+  /// [accountFirebaseRegistryProvider]'s doc for that budget.
+  ///
+  /// **Disposal now happens ONLY via explicit removal or process teardown.**
+  /// [disposeAccountFirebase] (below) is the seam a genuine account-removal
+  /// flow calls — never a mere switch. [accountFirebaseRegistryProvider]'s own
+  /// `ref.onDispose` additionally tears every still-active account down if
+  /// the whole container is ever disposed (tests, hot-restart).
   ///
   /// **`ref.onDispose` is registered BEFORE the `await registry.resolve(...)`
-  /// below — this ordering is load-bearing (defect #1 fix).** `Ref.onDispose`
-  /// throws `UnmountedRefException` if the provider is already disposed
+  /// below — this ordering is load-bearing (defect #1 fix) and stays fully
+  /// reachable under `keepAlive`.** `Ref.onDispose` throws
+  /// `UnmountedRefException` if the provider is already disposed
   /// (`!ref.mounted`) by the time it is called (riverpod's own `Ref.onDispose`
   /// doc: "check `ref.mounted` after async gaps"). `registry.resolve` awaits a
   /// real native `initializeApp` call — hundreds of milliseconds on-device —
-  /// so a caller that switches accounts again before it settles (e.g. rapid
-  /// A→B) disposes THIS provider instance mid-`await`. If `onDispose` were
-  /// registered only after the `await` (the pre-fix ordering), that
-  /// registration call would itself throw in exactly that window — and
-  /// because the throw happens AFTER `resolve` already completed and cached
-  /// the handles in the registry, nothing would ever call
-  /// [AccountFirebase.dispose] for this account: its named app + persistent
-  /// cache would be pinned for the rest of the process. Registering the
-  /// teardown first means it exists no matter when disposal happens; the
-  /// closure only closes over `registry`/`accountId` (never `ref`), so it
-  /// stays safe to invoke even after `ref` itself is unmounted, and the
-  /// `_disposeCalledOnce` guard makes it safe to invoke a second time from
-  /// the `!ref.mounted` branch below without double-disposing (itself also
-  /// safe per [AccountFirebase.dispose]'s own idempotency, but kept explicit
-  /// here rather than relied upon implicitly).
+  /// so a caller that explicitly removes this account (via
+  /// [disposeAccountFirebase], which invalidates this provider) before that
+  /// settles disposes THIS provider instance mid-`await`; a `keepAlive`
+  /// provider is exactly as disposable via explicit `ref.invalidate`/
+  /// `container.invalidate` as an `autoDispose` one is via losing its last
+  /// listener — `keepAlive` only removes the LISTENER-COUNT-triggered
+  /// teardown path, not disposal itself. If `onDispose` were registered only
+  /// after the `await` (the pre-fix ordering), that registration call would
+  /// itself throw in exactly that window — and because the throw happens
+  /// AFTER `resolve` already completed and cached the handles in the
+  /// registry, nothing would ever call [AccountFirebase.dispose] for this
+  /// account: its named app + persistent cache would be pinned for the rest
+  /// of the process. Registering the teardown first means it exists no matter
+  /// when disposal happens; the closure only closes over `registry`/
+  /// `accountId` (never `ref`), so it stays safe to invoke even after `ref`
+  /// itself is unmounted, and the `_disposeCalledOnce` guard makes it safe to
+  /// invoke a second time from the `!ref.mounted` branch below without
+  /// double-disposing (itself also safe per [AccountFirebase.dispose]'s own
+  /// idempotency, but kept explicit here rather than relied upon implicitly).
 
   AccountFirebaseProvider call(String accountId) =>
       AccountFirebaseProvider._(argument: accountId, from: this);
