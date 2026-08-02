@@ -299,6 +299,20 @@ class ProfileRepositoryImpl implements ProfileRepository {
   Future<int> countProfilesForAccount(int accountId) =>
       _db.profileDao.countProfilesForAccount(accountId);
 
+  /// Stamps [profileId]'s transition `ulid` column (schema v38) — see
+  /// `ProfileDao.setUlid` and `learner_profiles.dart`'s `ulid` doc comment.
+  ///
+  /// NOT part of [ProfileRepository] — this is a Firestore-rewrite-
+  /// transition-only helper, called exclusively by
+  /// [FirestoreProfileRepositoryAdapter] below, never by
+  /// [ProfileRepositoryImpl]'s own methods. Keeping it off the interface
+  /// means every other [ProfileRepository] implementer (were one ever
+  /// written, e.g. for tests) is not forced to know about a column that
+  /// exists purely to bridge Drift and Firestore identity during this
+  /// migration.
+  Future<void> setProfileUlid({required int profileId, required String ulid}) =>
+      _db.profileDao.setUlid(profileId, ulid);
+
   @override
   Future<int> ensureDefaultProfile({
     required int accountId,
@@ -395,73 +409,6 @@ class ProfileRepositoryImpl implements ProfileRepository {
   }
 }
 
-/// Session-scoped map of Drift `learner_profiles.id` (int) → Firestore
-/// `learner_profiles/{profileId}` doc-id (ULID string), populated by
-/// [FirestoreProfileRepositoryAdapter] the moment it mints a Firestore
-/// identity for a profile.
-///
-/// ## Why a map, not a Drift column
-///
-/// A newly-created profile needs BOTH identities live at once so
-/// [activeProfileDocIdProvider] can carry the ULID while every existing
-/// Drift-keyed screen/provider/query keeps working unchanged during the
-/// transition (every profile-scoped query in the app is still `WHERE
-/// profile_id = <int>`). The two honest ways to make that pairing durable
-/// are (a) a Drift schema migration adding a nullable `ulid` column to
-/// `learner_profiles` — the exact pattern already used for
-/// `learning_ledger`/`points_ledger`/`reward_redemptions` (`user_database.dart`
-/// schema v27) — or (b) keep the pairing in memory for the running session.
-/// (a) is real, bounded work (new column, `schemaVersion` bump, a guarded
-/// `onUpgrade` step, a new `test/migration/vNN_to_vNN+1_test.dart`, and a
-/// `build_runner` regen that touches every generated Drift file in the
-/// repo) — out of scope for wiring *creation*, and deliberately not
-/// attempted here (see this task's report). (b) is what this class is:
-/// it makes a freshly-created profile's ULID resolvable for the rest of
-/// this app session (immediately after creation, and on every subsequent
-/// [SelectedProfileId.select] of that same profile —
-/// `profile_providers.dart`) without touching `lib/core/database/**`.
-///
-/// **Known gap, not silently papered over:** a profile created in an
-/// EARLIER app session (including every profile that existed before this
-/// adapter shipped) has no entry here after a cold start — the same
-/// profile that resolves fine here mid-session resolves to `null` again
-/// after a restart, exactly like [activeProfileDocIdProvider] resolves to
-/// `null` for every profile today. That is the sequencing fact (a) above
-/// exists to close, not something this cache can paper over.
-// keepAlive: must survive the same route changes/unrelated rebuilds
-// SelectedProfileId (profile_providers.dart) already requires of itself —
-// losing this mid-session would silently blank activeProfileDocIdProvider
-// on the next profile switch.
-class ProfileUlidSessionCache extends Notifier<Map<int, String>> {
-  @override
-  Map<int, String> build() => const {};
-
-  /// Records that Drift profile [profileId] now has Firestore identity
-  /// [ulid].
-  void put(int profileId, String ulid) => state = {...state, profileId: ulid};
-
-  /// Returns the Firestore ULID recorded for [profileId] this session, or
-  /// `null` when none is known (not yet minted, or minted in a session
-  /// that has since ended — see the class doc comment).
-  String? ulidFor(int profileId) => state[profileId];
-
-  /// Drops any cached pairing for [profileId] (e.g. on profile delete) so a
-  /// stale ULID is never handed back for an id `learner_profiles` no longer
-  /// contains.
-  void remove(int profileId) {
-    if (!state.containsKey(profileId)) return;
-    final next = {...state}..remove(profileId);
-    state = next;
-  }
-}
-
-/// keepAlive: mirrors [ProfileUlidSessionCache]'s own reasoning — the
-/// pairing must survive the same rebuilds `SelectedProfileId` does.
-final profileUlidSessionCacheProvider =
-    NotifierProvider<ProfileUlidSessionCache, Map<int, String>>(
-      ProfileUlidSessionCache.new,
-    );
-
 /// Firestore-backed [ProfileRepository] adapter — wraps a
 /// [ProfileRepositoryImpl] instance rather than replacing it (dual-write,
 /// TEMPORARY — see the class doc comment for what removes it), following
@@ -482,12 +429,50 @@ final profileUlidSessionCacheProvider =
 /// both: every write still goes through [_drift] first (unchanged
 /// behavior — the local row, and its existing legacy `_syncEngine` push,
 /// are exactly as before), and this class ADDITIONALLY mints a Firestore
-/// `learner_profiles` document for a genuinely NEW profile and activates
-/// it via [activeProfileDocIdProvider]. This is explicitly temporary: it
-/// goes away the moment [ProfileRepository] (and every caller keyed off
-/// `ProfileModel.id`) is converted to the ULID identity end-to-end — at
-/// that point [_drift] and the Drift-only creation path it wraps are
-/// deleted outright, not merged into this class.
+/// `learner_profiles` document for a profile that does not have one yet and
+/// activates it via [activeProfileDocIdProvider]. This is explicitly
+/// temporary: it goes away the moment [ProfileRepository] (and every
+/// caller keyed off `ProfileModel.id`) is converted to the ULID identity
+/// end-to-end — at that point [_drift] and the Drift-only creation path it
+/// wraps are deleted outright, not merged into this class.
+///
+/// ## Pairing the two identities: the `ulid` column, not a session cache
+///
+/// A profile needs BOTH identities live at once so [activeProfileDocIdProvider]
+/// can carry the ULID while every existing Drift-keyed screen/provider/
+/// query keeps working unchanged during the transition. That pairing is
+/// stored durably on the Drift row itself — `learner_profiles.ulid`
+/// (schema v38, `ProfileModel.ulid`, `learner_profiles.dart`'s `ulid`
+/// column doc comment) — not in an in-memory cache, so it survives a
+/// restart and is visible to any caller that already reads a
+/// [ProfileModel] (e.g. [SelectedProfileId.select] in
+/// `profile_providers.dart`, which reads `ulid` back to set
+/// [activeProfileDocIdProvider] on every profile switch, not just a
+/// same-session one). A prior version of this adapter used a session-only
+/// `Map<int, String>` cache instead; that was rejected (see git history) —
+/// it made every pre-existing/older-session profile permanently
+/// unresolvable, which is not a bridge the next stage (rewiring every
+/// remaining feature) can stand on.
+///
+/// ## Backfill policy for pre-existing profiles: lazy, on edit — not eager
+///
+/// A profile created before this adapter shipped has `ulid IS NULL` and
+/// stays that way until it is next mutated: [createProfile] and the
+/// self-heal branch of [ensureDefaultProfile] always mint (a profile that
+/// young cannot already have a `ulid`); [updateProfile] additionally mints
+/// one for the profile being edited IF it is still missing — see that
+/// method's doc comment for why an eager mass-backfill of every
+/// pre-existing profile at migration time was rejected. Profile
+/// *selection* ([SelectedProfileId.select]) only ever READS `ulid` back —
+/// it never triggers a mint, so merely switching to (or auto-selecting) an
+/// old profile does not silently create Firestore documents for every
+/// profile on the account.
+///
+/// **`ulid == null` is never "no profile."** Every method below still
+/// returns/operates on [ProfileModel]s exactly as [_drift] does; a `null`
+/// `ulid` on a real, existing profile means "not yet migrated to
+/// Firestore" (see the column's own doc comment) — callers must never treat
+/// it as the profile being invalid or absent.
 ///
 /// ## `null`/non-fatal on Firestore failure — matches [_drift]'s own
 /// convention
@@ -528,23 +513,35 @@ class FirestoreProfileRepositoryAdapter implements ProfileRepository {
     String? displayName,
     String? mode,
     int? avatarIndex,
-  }) => _drift.updateProfile(
-    id: id,
-    displayName: displayName,
-    mode: mode,
-    avatarIndex: avatarIndex,
-  );
+  }) async {
+    final updated = await _drift.updateProfile(
+      id: id,
+      displayName: displayName,
+      mode: mode,
+      avatarIndex: avatarIndex,
+    );
+    // Lazy backfill (see class doc comment, "Backfill policy"): a
+    // pre-existing profile's `ulid` is still null until it is next edited.
+    // This IS that "next edited" moment — mint one now if still missing.
+    // Every OTHER caller of this method already had a `ulid` (or genuinely
+    // doesn't yet, and stays that way until edited or reactivated) —
+    // checking `updated.ulid == null` rather than unconditionally minting
+    // means a profile that already has a Firestore identity never gets a
+    // second, duplicate document on a routine rename.
+    if (updated.ulid == null) {
+      return await _mintAndActivateFirestoreProfile(updated) ?? updated;
+    }
+    return updated;
+  }
 
   @override
-  Future<void> deleteProfile(int id, {bool allowLast = false}) async {
-    await _drift.deleteProfile(id, allowLast: allowLast);
-    // Hygiene only: firestore.rules denies client-side delete on
-    // learner_profiles (see FirestoreLearnerProfileRepository's class doc
-    // comment, "No delete method") — nothing here deletes the Firestore
-    // document. This just stops a stale ULID from being handed back for a
-    // Drift id that no longer exists.
-    _ref.read(profileUlidSessionCacheProvider.notifier).remove(id);
-  }
+  Future<void> deleteProfile(int id, {bool allowLast = false}) =>
+      _drift.deleteProfile(id, allowLast: allowLast);
+  // firestore.rules denies client-side delete on learner_profiles (see
+  // FirestoreLearnerProfileRepository's class doc comment, "No delete
+  // method") — nothing here deletes the Firestore document; the Drift row
+  // (and its `ulid` column) is simply gone once this returns, same as
+  // before this adapter existed.
 
   @override
   Future<ProfileModel> createProfile({
@@ -559,8 +556,7 @@ class FirestoreProfileRepositoryAdapter implements ProfileRepository {
       mode: mode,
       avatarIndex: avatarIndex,
     );
-    await _mintAndActivateFirestoreProfile(model);
-    return model;
+    return await _mintAndActivateFirestoreProfile(model) ?? model;
   }
 
   @override
@@ -574,7 +570,10 @@ class FirestoreProfileRepositoryAdapter implements ProfileRepository {
     // value alone (just an int id) cannot distinguish the two branches,
     // and minting a Firestore doc on every fast-path call would create a
     // duplicate `learner_profiles` document each time this runs (e.g.
-    // every cold start) for an already-existing profile.
+    // every cold start) for an already-existing profile. The fast path
+    // does NOT backfill an old profile's missing `ulid` either — see the
+    // class doc comment, "Backfill policy": selection/self-heal only reads,
+    // it never mints.
     final existingBefore = await _drift.getProfilesByAccount(accountId);
     final id = await _drift.ensureDefaultProfile(
       accountId: accountId,
@@ -587,26 +586,29 @@ class FirestoreProfileRepositoryAdapter implements ProfileRepository {
     return id;
   }
 
-  /// Mints a fresh Firestore `learner_profiles` document for the just-
-  /// created [model], records the (Drift id → ULID) pairing in
-  /// [profileUlidSessionCacheProvider], and activates it via
-  /// [activeProfileDocIdProvider]. Non-fatal on any failure — see the
-  /// class doc comment.
-  Future<void> _mintAndActivateFirestoreProfile(ProfileModel model) async {
+  /// Mints a fresh Firestore `learner_profiles` document for [model],
+  /// persists the ULID onto its Drift row (`ProfileDao.setUlid`), and
+  /// activates it via [activeProfileDocIdProvider]. Non-fatal on any
+  /// failure — see the class doc comment. Returns the updated
+  /// [ProfileModel] (carrying the new [ProfileModel.ulid]) on success, or
+  /// `null` on failure/not-ready so callers can fall back to the
+  /// pre-mint [model] they already have.
+  Future<ProfileModel?> _mintAndActivateFirestoreProfile(
+    ProfileModel model,
+  ) async {
     try {
       final firestoreRepo = await _ref.read(
         firestoreLearnerProfileRepositoryProvider.future,
       );
-      if (firestoreRepo == null) return; // no active cloud account yet
+      if (firestoreRepo == null) return null; // no active cloud account yet
       final entity = await firestoreRepo.createProfile(
         displayName: model.displayName,
         mode: model.profileMode,
         avatar: model.avatarIndex.toString(),
       );
-      _ref
-          .read(profileUlidSessionCacheProvider.notifier)
-          .put(model.id, entity.profileId);
+      await _drift.setProfileUlid(profileId: model.id, ulid: entity.profileId);
       _ref.read(activeProfileDocIdProvider.notifier).set(entity.profileId);
+      return model.copyWith(ulid: entity.profileId);
     } catch (e, st) {
       // Non-fatal: mirrors _drift's own cloud-push failure handling above —
       // the local (Drift) profile already exists and is usable; this just
@@ -617,6 +619,7 @@ class FirestoreProfileRepositoryAdapter implements ProfileRepository {
         exception: e,
         stackTrace: st,
       );
+      return null;
     }
   }
 }

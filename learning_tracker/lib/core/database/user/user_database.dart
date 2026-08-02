@@ -143,6 +143,23 @@ part 'user_database.g.dart';
 ///   track/profile delete) are dropped first, since their owning profile is
 ///   unrecoverable.
 ///
+/// Schema v37 (AUD-scheduler-15 — completion_events.stage_id format
+/// disambiguation):
+/// - Added a nullable `stage_id_format` column to `completion_events` and
+///   backfilled it deterministically for every pre-existing row that can be
+///   classified with certainty. See the `onUpgrade` block for the full
+///   reasoning.
+///
+/// Schema v38 (Firestore-rewrite transition, Epic C):
+/// - Added a nullable `ulid` text column to `learner_profiles`, pairing a
+///   row's Drift autoincrement `id` with its Firestore
+///   `learner_profiles/{ulid}` doc-id during the migration. Additive only —
+///   existing rows get NULL (meaning "not yet migrated", never "no
+///   profile"). Mirrors the v27 points_ledger/reward_redemptions precedent.
+///   Transition cruft: removed along with the rest of the Drift user
+///   database once the app is fully cut over to Firestore-native profile
+///   identity — see `learner_profiles.dart`'s `ulid` column doc comment.
+///
 /// This database uses standard Drift migrations and holds all user-generated
 /// content: profiles, progress, configuration, streaks, and sync state.
 /// It is the only database that accepts writes at runtime.
@@ -206,7 +223,7 @@ class UserDatabase extends _$UserDatabase {
   UserDatabase(super.e);
 
   @override
-  int get schemaVersion => 37;
+  int get schemaVersion => 38;
 
   // drift_dev cannot express WHERE in a Dart-defined view's `as()` body
   // (cascade `..where()` confuses the generator).  The auto-generated SQL for
@@ -241,6 +258,9 @@ class UserDatabase extends _$UserDatabase {
       // AUD-t-cross-06 (v36): profileId FK added to track_learning_order.
       // AUD-scheduler-15 (v37): additive stage_id_format marker on
       //            completion_events, one-time-tagged for pre-existing rows.
+      // Epic C (v38): additive nullable `ulid` on learner_profiles —
+      //            Firestore-rewrite transition column, removed with the
+      //            Drift user database (see learner_profiles.dart).
       onUpgrade: (Migrator m, int from, int to) async {
         if (from < 25) {
           await m.createTable(pointsBalance);
@@ -769,6 +789,46 @@ class UserDatabase extends _$UserDatabase {
                 '    AND sd.id = completion_events.stage_id'
                 ')',
               );
+            }
+          }
+        }
+        if (from < 38) {
+          // Firestore-rewrite transition (Epic C): additive nullable `ulid`
+          // column on learner_profiles, pairing a row's Drift autoincrement
+          // id with its Firestore `learner_profiles/{ulid}` doc-id. Mirrors
+          // the same additive-nullable-ULID shape v27 already added to
+          // points_ledger/reward_redemptions — see this column's own doc
+          // comment (`learner_profiles.dart`) for the full "why a column,
+          // why nullable, why deleted with the Drift user database"
+          // reasoning. Existing rows get NULL — "not yet migrated to
+          // Firestore", not "no profile" (profile existence is, and always
+          // was, governed by the row itself, never by this column).
+          // Guard #1: partial-schema migration paths (e.g. older upgrade
+          // tests that model only their own migration's tables) may not
+          // have created learner_profiles yet — same pattern as every guard
+          // above.
+          final hasLearnerProfiles = await customSelect(
+            'SELECT 1 FROM sqlite_master '
+            "WHERE type = 'table' AND name = 'learner_profiles'",
+          ).get();
+          if (hasLearnerProfiles.isNotEmpty) {
+            // Guard #2: a long-jump upgrade starting below v26 already hit
+            // the `if (from < 26)` rebuild above, which
+            // `TableMigration(learnerProfiles)`s from the LIVE (current)
+            // Dart table definition — which already declares `ulid` — so
+            // that rebuild has ALREADY materialised this column (as NULL,
+            // same end state `addColumn` would produce) before execution
+            // ever reaches here. Re-running `addColumn` in that case fails
+            // with "duplicate column name: ulid" (SqliteException 1). A
+            // short-hop upgrade starting at v26..v37 never went through
+            // that rebuild, so its `learner_profiles` genuinely lacks the
+            // column and `addColumn` is the only thing that adds it.
+            final hasUlidColumn = await customSelect(
+              "SELECT 1 FROM pragma_table_info('learner_profiles') "
+              "WHERE name = 'ulid'",
+            ).get();
+            if (hasUlidColumn.isEmpty) {
+              await m.addColumn(learnerProfiles, learnerProfiles.ulid);
             }
           }
         }

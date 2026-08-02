@@ -120,7 +120,9 @@ class _DeviceRestoreScreenState extends ConsumerState<DeviceRestoreScreen> {
     if (!mounted) return;
 
     if (profiles.length == 1) {
-      ref.read(selectedProfileIdProvider.notifier).select(profiles.first.id);
+      ref
+          .read(selectedProfileIdProvider.notifier)
+          .select(profiles.first.id, ulid: profiles.first.ulid);
       await context.router.replaceAll([const AppShellRoute()]);
     } else if (profiles.length > 1) {
       ref.read(selectedProfileIdProvider.notifier).clear();

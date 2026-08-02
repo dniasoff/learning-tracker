@@ -192,7 +192,20 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
     _isSelectingProfile = true;
 
     try {
-      ref.read(selectedProfileIdProvider.notifier).select(profileId);
+      // Synchronous — profileListProvider is already resolved (it rendered
+      // the tile that was just tapped), so this is a lookup on data already
+      // in memory, not a new read. See SelectedProfileId.select's doc
+      // comment for why this must stay synchronous rather than awaiting a
+      // fresh repository call.
+      final ulid = ref
+          .read(profileListProvider)
+          .value
+          ?.where((ProfileModel p) => p.id == profileId)
+          .firstOrNull
+          ?.ulid;
+      ref
+          .read(selectedProfileIdProvider.notifier)
+          .select(profileId, ulid: ulid);
 
       if (!mounted) return;
       await context.router.replaceAll([const AppShellRoute()]);

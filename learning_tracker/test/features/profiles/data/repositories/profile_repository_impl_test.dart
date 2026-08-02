@@ -949,42 +949,6 @@ void main() {
     });
   });
 
-  group('ProfileUlidSessionCache', () {
-    test('starts empty and ulidFor returns null for an unknown id', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      expect(
-        container.read(profileUlidSessionCacheProvider.notifier).ulidFor(1),
-        isNull,
-      );
-    });
-
-    test('put records a pairing that ulidFor then returns', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-      final notifier = container.read(profileUlidSessionCacheProvider.notifier);
-
-      notifier.put(7, 'ulid-7');
-
-      expect(notifier.ulidFor(7), 'ulid-7');
-      expect(container.read(profileUlidSessionCacheProvider), {7: 'ulid-7'});
-    });
-
-    test('remove drops a pairing; removing an absent id is a no-op', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-      final notifier = container.read(profileUlidSessionCacheProvider.notifier);
-      notifier.put(3, 'ulid-3');
-
-      notifier.remove(9); // absent — must not throw or clobber state
-      expect(notifier.ulidFor(3), 'ulid-3');
-
-      notifier.remove(3);
-      expect(notifier.ulidFor(3), isNull);
-    });
-  });
-
   group('FirestoreProfileRepositoryAdapter', () {
     const uid = 'uid-profiles-1';
 
@@ -1102,8 +1066,9 @@ void main() {
         await localDb.close();
       });
 
-      test('createProfile mints a Firestore doc, activates it, and caches the '
-          '(Drift id -> ULID) pairing', () async {
+      test('createProfile mints a Firestore doc, activates it, and '
+          'PERSISTS the ULID onto the Drift row (survives beyond this '
+          'adapter instance)', () async {
         final profile = await adapter.createProfile(
           accountId: 1,
           displayName: 'Devorah',
@@ -1112,12 +1077,14 @@ void main() {
 
         final activeUlid = container.read(activeProfileDocIdProvider);
         expect(activeUlid, isNotNull);
-        expect(
-          container
-              .read(profileUlidSessionCacheProvider.notifier)
-              .ulidFor(profile.id),
-          activeUlid,
-        );
+        // The returned model already carries it...
+        expect(profile.ulid, activeUlid);
+        // ...and so does a completely fresh read of the SAME Drift row,
+        // proving the pairing is durable, not held only in memory.
+        final reread = await ProfileRepositoryImpl(
+          localDb,
+        ).getProfileById(profile.id);
+        expect(reread?.ulid, activeUlid);
 
         final doc = await firestore
             .collection('users')
@@ -1129,6 +1096,43 @@ void main() {
         expect(doc.data()?['display_name'], 'Devorah');
       });
 
+      test('a profile minted in one adapter instance still resolves its ULID '
+          'through a BRAND NEW adapter over the same Drift database — the '
+          'restart case the persisted column exists for', () async {
+        final created = await adapter.createProfile(
+          accountId: 1,
+          displayName: 'Restart Case',
+          mode: 'adult',
+        );
+        final mintedUlid = created.ulid;
+        expect(mintedUlid, isNotNull);
+
+        // Simulate an app restart: a fresh Ref/container (so nothing
+        // in-memory survives) wrapping a NEW ProfileRepositoryImpl, but
+        // over the SAME underlying Drift database file/connection.
+        final restartContainer = ProviderContainer(
+          overrides: [
+            activeAccountFirebaseProvider.overrideWith(
+              (ref) async => handles(firestore),
+            ),
+          ],
+        );
+        addTearDown(restartContainer.dispose);
+        final restartedAdapter = buildAdapter(
+          restartContainer,
+          ProfileRepositoryImpl(localDb),
+        );
+
+        final reread = await restartedAdapter.getProfileById(created.id);
+        expect(
+          reread?.ulid,
+          mintedUlid,
+          reason:
+              'ulid is read from the Drift column, not an in-memory '
+              'cache scoped to the adapter/container that minted it',
+        );
+      });
+
       test('ensureDefaultProfile mints exactly one Firestore doc on the '
           'self-heal branch, and none on a subsequent already-has-a-profile '
           'call (no duplicate document)', () async {
@@ -1136,10 +1140,8 @@ void main() {
           accountId: 1,
           defaultDisplayName: 'Healed',
         );
-        final ulidAfterHeal = container
-            .read(profileUlidSessionCacheProvider.notifier)
-            .ulidFor(firstId);
-        expect(ulidAfterHeal, isNotNull);
+        final healed = await adapter.getProfileById(firstId);
+        expect(healed?.ulid, isNotNull);
 
         final collection = firestore
             .collection('users')
@@ -1148,7 +1150,9 @@ void main() {
         expect((await collection.get()).docs, hasLength(1));
 
         // Account already has a profile now — the fast (no-op) branch of
-        // ensureDefaultProfile must NOT mint a second Firestore document.
+        // ensureDefaultProfile must NOT mint a second Firestore document,
+        // and must NOT backfill the existing profile's ulid either (that's
+        // updateProfile's job — see the next group).
         final secondId = await adapter.ensureDefaultProfile(
           accountId: 1,
           defaultDisplayName: 'Healed',
@@ -1157,25 +1161,114 @@ void main() {
         expect((await collection.get()).docs, hasLength(1));
       });
 
-      test('deleteProfile drops the cached ULID pairing', () async {
+      test('ensureDefaultProfile fast path (account already has a profile) '
+          'does NOT backfill that profile\'s missing ulid', () async {
+        // Simulate a profile that predates this adapter: inserted
+        // directly (bypassing createProfile), so ulid is NULL.
+        final preExistingId = await localDb.profileDao.insertProfile(
+          LearnerProfilesCompanion.insert(
+            accountId: 1,
+            displayName: 'Pre-existing',
+            mode: 'adult',
+            createdAt: DateTimeFactory.nowUtc(),
+            updatedAt: DateTimeFactory.nowUtc(),
+          ),
+        );
+
+        final id = await adapter.ensureDefaultProfile(
+          accountId: 1,
+          defaultDisplayName: 'unused — fast path',
+        );
+
+        expect(id, preExistingId);
+        final profile = await adapter.getProfileById(id);
+        expect(
+          profile?.ulid,
+          isNull,
+          reason:
+              'selection/self-heal only READS ulid — see the class doc '
+              'comment, "Backfill policy": it never mints one',
+        );
+      });
+
+      test('updateProfile lazily backfills a missing ulid for a pre-existing '
+          'profile — the "next created/edited" trigger', () async {
+        // Simulate a profile that predates this adapter: inserted
+        // directly (bypassing createProfile), so ulid is NULL, exactly
+        // like every profile that existed before schema v38 shipped.
+        final preExistingId = await localDb.profileDao.insertProfile(
+          LearnerProfilesCompanion.insert(
+            accountId: 1,
+            displayName: 'Old Name',
+            mode: 'adult',
+            createdAt: DateTimeFactory.nowUtc(),
+            updatedAt: DateTimeFactory.nowUtc(),
+          ),
+        );
+        expect((await adapter.getProfileById(preExistingId))?.ulid, isNull);
+
+        final updated = await adapter.updateProfile(
+          id: preExistingId,
+          displayName: 'New Name',
+        );
+
+        expect(updated.displayName, 'New Name');
+        expect(updated.ulid, isNotNull);
+        expect(container.read(activeProfileDocIdProvider), updated.ulid);
+
+        final doc = await firestore
+            .collection('users')
+            .doc(uid)
+            .collection('learner_profiles')
+            .doc(updated.ulid)
+            .get();
+        expect(doc.exists, isTrue);
+        expect(doc.data()?['display_name'], 'New Name');
+      });
+
+      test('updateProfile does NOT mint a second Firestore doc for a profile '
+          'that already has a ulid', () async {
+        final created = await adapter.createProfile(
+          accountId: 1,
+          displayName: 'Already Migrated',
+          mode: 'adult',
+        );
+        final collection = firestore
+            .collection('users')
+            .doc(uid)
+            .collection('learner_profiles');
+        expect((await collection.get()).docs, hasLength(1));
+
+        final updated = await adapter.updateProfile(
+          id: created.id,
+          displayName: 'Renamed',
+        );
+
+        expect(updated.ulid, created.ulid);
+        expect((await collection.get()).docs, hasLength(1));
+      });
+
+      test('deleteProfile delegates through to the Drift row (its ulid, '
+          'if any, is gone along with the row itself)', () async {
         final first = await adapter.createProfile(
           accountId: 1,
           displayName: 'A',
           mode: 'adult',
         );
+        // A second profile so deleting the first doesn't trip
+        // LastProfileException (deleteProfile refuses to leave the account
+        // with zero profiles by default) — irrelevant to what this test
+        // actually checks.
         await adapter.createProfile(
           accountId: 1,
           displayName: 'B',
           mode: 'adult',
         );
-        final notifier = container.read(
-          profileUlidSessionCacheProvider.notifier,
-        );
-        expect(notifier.ulidFor(first.id), isNotNull);
+        expect(first.ulid, isNotNull);
 
         await adapter.deleteProfile(first.id);
 
-        expect(notifier.ulidFor(first.id), isNull);
+        expect(await adapter.getProfileById(first.id), isNull);
       });
     });
   });

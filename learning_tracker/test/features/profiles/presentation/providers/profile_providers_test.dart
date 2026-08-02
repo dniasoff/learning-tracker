@@ -1,52 +1,53 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/providers/active_profile_doc_id_provider.dart';
-import 'package:learning_tracker/features/profiles/data/repositories/profile_repository_impl.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 
 /// Covers only the NEW behavior added to [SelectedProfileId] — bridging a
-/// Drift profile-id selection to its cached Firestore ULID via
-/// [activeProfileDocIdProvider] (see [ProfileUlidSessionCache]'s doc comment
-/// in `profile_repository_impl.dart` for the "why a session cache" reasoning
-/// this leans on). The rest of `profile_providers.dart` (self-heal,
-/// `profileList`, etc.) predates this change and is intentionally left
-/// untouched here.
+/// Drift profile-id selection to a Firestore ULID via
+/// [activeProfileDocIdProvider]. See `SelectedProfileId.select`'s own doc
+/// comment (`profile_providers.dart`) for why this is a purely synchronous,
+/// caller-supplied `ulid` parameter rather than an internal DB read: an
+/// earlier version read `learner_profiles.ulid` back itself, which is
+/// genuinely async and left dangling work behind whenever `select` was
+/// called from a synchronous tap/callback context that never pumped for
+/// it afterward — surfacing as "A Timer is still pending" in several
+/// pre-existing widget tests across the app. The rest of
+/// `profile_providers.dart` (self-heal, `profileList`, etc.) predates this
+/// change and is intentionally left untouched here.
 void main() {
   group('SelectedProfileId — activeProfileDocIdProvider wiring', () {
-    test(
-      'select() activates the session-cached ULID for a known profile id',
-      () {
-        final container = ProviderContainer();
-        addTearDown(container.dispose);
-        container
-            .read(profileUlidSessionCacheProvider.notifier)
-            .put(5, 'ulid-5');
+    late ProviderContainer container;
 
-        container.read(selectedProfileIdProvider.notifier).select(5);
+    setUp(() => container = ProviderContainer());
+    tearDown(() => container.dispose());
 
-        expect(container.read(selectedProfileIdProvider), 5);
-        expect(container.read(activeProfileDocIdProvider), 'ulid-5');
-      },
-    );
+    test('select() with a known ulid activates it synchronously — no '
+        'pumping/awaiting required', () {
+      container
+          .read(selectedProfileIdProvider.notifier)
+          .select(5, ulid: 'ulid-5');
 
-    test('select() clears activeProfileDocIdProvider for a profile with no '
-        'known ULID this session — accurate, not a regression (see class doc '
-        'comment: nothing here invents an identity)', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
+      expect(container.read(selectedProfileIdProvider), 5);
+      expect(container.read(activeProfileDocIdProvider), 'ulid-5');
+    });
+
+    test('select() without a ulid clears activeProfileDocIdProvider — '
+        'accurate for a profile not yet migrated to Firestore (or genuinely '
+        'unknown at the call site), not a regression', () {
       container.read(activeProfileDocIdProvider.notifier).set('stale-ulid');
 
       container.read(selectedProfileIdProvider.notifier).select(99);
 
+      expect(container.read(selectedProfileIdProvider), 99);
       expect(container.read(activeProfileDocIdProvider), isNull);
     });
 
     test('clear() clears both selectedProfileIdProvider and '
         'activeProfileDocIdProvider', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-      container.read(profileUlidSessionCacheProvider.notifier).put(1, 'ulid-1');
-      container.read(selectedProfileIdProvider.notifier).select(1);
+      container
+          .read(selectedProfileIdProvider.notifier)
+          .select(1, ulid: 'ulid-1');
       expect(container.read(activeProfileDocIdProvider), 'ulid-1');
 
       container.read(selectedProfileIdProvider.notifier).clear();

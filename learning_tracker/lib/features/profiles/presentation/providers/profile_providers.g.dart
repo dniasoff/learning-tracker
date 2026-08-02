@@ -81,12 +81,26 @@ final class CurrentAccountIdProvider extends $FunctionalProvider<int, int, int>
 String _$currentAccountIdHash() => r'49a36871feb359d35d08592973d7e6ceb9282cec';
 
 /// Provider for the ProfileRepository implementation.
+///
+/// Resolves to [FirestoreProfileRepositoryAdapter], not a bare
+/// [ProfileRepositoryImpl] — see that adapter's class doc comment
+/// (`profile_repository_impl.dart`) for why every caller of this provider
+/// (add/edit-profile screens, onboarding, the self-heal path below) now
+/// also mints a Firestore identity for a genuinely new profile and
+/// activates it, with zero changes needed at any of those call sites.
 // keepAlive: stateless repository facade over the DB, cheap to keep for the app's lifetime.
 
 @ProviderFor(profileRepository)
 final profileRepositoryProvider = ProfileRepositoryProvider._();
 
 /// Provider for the ProfileRepository implementation.
+///
+/// Resolves to [FirestoreProfileRepositoryAdapter], not a bare
+/// [ProfileRepositoryImpl] — see that adapter's class doc comment
+/// (`profile_repository_impl.dart`) for why every caller of this provider
+/// (add/edit-profile screens, onboarding, the self-heal path below) now
+/// also mints a Firestore identity for a genuinely new profile and
+/// activates it, with zero changes needed at any of those call sites.
 // keepAlive: stateless repository facade over the DB, cheap to keep for the app's lifetime.
 
 final class ProfileRepositoryProvider
@@ -98,6 +112,13 @@ final class ProfileRepositoryProvider
         >
     with $Provider<ProfileRepository> {
   /// Provider for the ProfileRepository implementation.
+  ///
+  /// Resolves to [FirestoreProfileRepositoryAdapter], not a bare
+  /// [ProfileRepositoryImpl] — see that adapter's class doc comment
+  /// (`profile_repository_impl.dart`) for why every caller of this provider
+  /// (add/edit-profile screens, onboarding, the self-heal path below) now
+  /// also mints a Firestore identity for a genuinely new profile and
+  /// activates it, with zero changes needed at any of those call sites.
   // keepAlive: stateless repository facade over the DB, cheap to keep for the app's lifetime.
   ProfileRepositoryProvider._()
     : super(
@@ -133,7 +154,7 @@ final class ProfileRepositoryProvider
   }
 }
 
-String _$profileRepositoryHash() => r'c9296d2f6106fde461c56e63533441e6ca991519';
+String _$profileRepositoryHash() => r'e76df7a62e67c25846ca631cc7bb69cf6dabfe45';
 
 /// The currently selected profile ID. Null means no profile selected yet.
 // keepAlive: the session's profile selection must survive route changes and unrelated rebuilds.
@@ -174,7 +195,7 @@ final class SelectedProfileIdProvider
   }
 }
 
-String _$selectedProfileIdHash() => r'7b2ad48d035d9a0a6211950b76474f43941d5d66';
+String _$selectedProfileIdHash() => r'2be3130921c16496827ae92b495add20f0884dc0';
 
 /// The currently selected profile ID. Null means no profile selected yet.
 // keepAlive: the session's profile selection must survive route changes and unrelated rebuilds.
@@ -325,7 +346,7 @@ final class AutoSelectedProfileIdProvider
 }
 
 String _$autoSelectedProfileIdHash() =>
-    r'7d0cbfb9ffbca580047c472d599db7744a739f7e';
+    r'382260a5c8080492f8762d85a5dfca94b86e4a6f';
 
 /// Auto-selects (or self-heals) the account's profile on an auth-valid startup.
 ///

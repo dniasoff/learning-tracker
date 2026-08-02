@@ -688,7 +688,9 @@ class SignInController extends Notifier<SignInState> {
     if (profiles.isNotEmpty &&
         !cloudAccountHasProfiles &&
         orchestrator != null) {
-      _ref.read(selectedProfileIdProvider.notifier).select(profiles.first.id);
+      _ref
+          .read(selectedProfileIdProvider.notifier)
+          .select(profiles.first.id, ulid: profiles.first.ulid);
       unawaited(
         orchestrator.pushAllLocalData().catchError((Object e, StackTrace st) {
           AppLogger.instance.warning(
@@ -703,7 +705,9 @@ class SignInController extends Notifier<SignInState> {
     // Multi-profile accounts go to the picker; single-profile accounts go
     // straight to the app shell. Both paths bypass OnboardingRoute.
     if (profiles.length == 1) {
-      _ref.read(selectedProfileIdProvider.notifier).select(profiles.first.id);
+      _ref
+          .read(selectedProfileIdProvider.notifier)
+          .select(profiles.first.id, ulid: profiles.first.ulid);
       final selectedOrchestrator = _ref.read(syncOrchestratorProvider);
       if (selectedOrchestrator != null) {
         unawaited(selectedOrchestrator.pullOnLaunch());

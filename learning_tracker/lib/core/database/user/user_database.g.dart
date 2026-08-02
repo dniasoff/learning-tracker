@@ -662,6 +662,15 @@ class $LearnerProfilesTable extends LearnerProfiles
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _ulidMeta = const VerificationMeta('ulid');
+  @override
+  late final GeneratedColumn<String> ulid = GeneratedColumn<String>(
+    'ulid',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -675,6 +684,7 @@ class $LearnerProfilesTable extends LearnerProfiles
     tutorParentUid,
     tutorRemoteProfileId,
     tutorGrantId,
+    ulid,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -776,6 +786,12 @@ class $LearnerProfilesTable extends LearnerProfiles
         ),
       );
     }
+    if (data.containsKey('ulid')) {
+      context.handle(
+        _ulidMeta,
+        ulid.isAcceptableOrUnknown(data['ulid']!, _ulidMeta),
+      );
+    }
     return context;
   }
 
@@ -829,6 +845,10 @@ class $LearnerProfilesTable extends LearnerProfiles
         DriftSqlType.string,
         data['${effectivePrefix}tutor_grant_id'],
       ),
+      ulid: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}ulid'],
+      ),
     );
   }
 
@@ -866,6 +886,33 @@ class LearnerProfile extends DataClass implements Insertable<LearnerProfile> {
   final String? tutorParentUid;
   final String? tutorRemoteProfileId;
   final String? tutorGrantId;
+
+  /// Firestore `learner_profiles/{ulid}` doc-id (AD-24), paired with this
+  /// row's Drift autoincrement [id] during the Firestore-rewrite transition
+  /// (schema v38, `docs/firestore-rewrite-map.md`). Mirrors the same
+  /// nullable-ULID-alongside-the-autoincrement-id shape already used by
+  /// `learning_ledger`/`points_ledger`/`reward_redemptions` (schema v27) —
+  /// see this table's own migration comment in `user_database.dart` for why
+  /// that precedent, not a fresh design, governs this column.
+  ///
+  /// **`NULL` means "not yet migrated to Firestore" — NEVER "no profile".**
+  /// Profile existence is governed entirely by the Drift row existing (this
+  /// [id] resolving via [ProfileDao.getProfileById]/[getProfilesByAccount]),
+  /// never by this column. A profile created before
+  /// `FirestoreProfileRepositoryAdapter` shipped has `ulid IS NULL` and stays
+  /// that way until it is next created (impossible — it already exists) or
+  /// EDITED: [FirestoreProfileRepositoryAdapter.updateProfile] mints a
+  /// Firestore identity for it at that point if one is still missing (lazy
+  /// backfill — see that method's doc comment for why an eager mass-backfill
+  /// of every pre-existing profile was rejected).
+  ///
+  /// **Transition cruft — deleted with the Drift user database.** Once every
+  /// profile-scoped caller reads Firestore ULID identity directly and the
+  /// Drift `learner_profiles` table (and the rest of the Drift user
+  /// database) is deleted, this column disappears with it. It has no
+  /// meaning in the target (Firestore-only) schema — the temporary pairing
+  /// belongs in the stack being deleted, not in the schema being kept.
+  final String? ulid;
   const LearnerProfile({
     required this.id,
     required this.accountId,
@@ -878,6 +925,7 @@ class LearnerProfile extends DataClass implements Insertable<LearnerProfile> {
     this.tutorParentUid,
     this.tutorRemoteProfileId,
     this.tutorGrantId,
+    this.ulid,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -898,6 +946,9 @@ class LearnerProfile extends DataClass implements Insertable<LearnerProfile> {
     }
     if (!nullToAbsent || tutorGrantId != null) {
       map['tutor_grant_id'] = Variable<String>(tutorGrantId);
+    }
+    if (!nullToAbsent || ulid != null) {
+      map['ulid'] = Variable<String>(ulid);
     }
     return map;
   }
@@ -921,6 +972,7 @@ class LearnerProfile extends DataClass implements Insertable<LearnerProfile> {
       tutorGrantId: tutorGrantId == null && nullToAbsent
           ? const Value.absent()
           : Value(tutorGrantId),
+      ulid: ulid == null && nullToAbsent ? const Value.absent() : Value(ulid),
     );
   }
 
@@ -943,6 +995,7 @@ class LearnerProfile extends DataClass implements Insertable<LearnerProfile> {
         json['tutorRemoteProfileId'],
       ),
       tutorGrantId: serializer.fromJson<String?>(json['tutorGrantId']),
+      ulid: serializer.fromJson<String?>(json['ulid']),
     );
   }
   @override
@@ -960,6 +1013,7 @@ class LearnerProfile extends DataClass implements Insertable<LearnerProfile> {
       'tutorParentUid': serializer.toJson<String?>(tutorParentUid),
       'tutorRemoteProfileId': serializer.toJson<String?>(tutorRemoteProfileId),
       'tutorGrantId': serializer.toJson<String?>(tutorGrantId),
+      'ulid': serializer.toJson<String?>(ulid),
     };
   }
 
@@ -975,6 +1029,7 @@ class LearnerProfile extends DataClass implements Insertable<LearnerProfile> {
     Value<String?> tutorParentUid = const Value.absent(),
     Value<String?> tutorRemoteProfileId = const Value.absent(),
     Value<String?> tutorGrantId = const Value.absent(),
+    Value<String?> ulid = const Value.absent(),
   }) => LearnerProfile(
     id: id ?? this.id,
     accountId: accountId ?? this.accountId,
@@ -991,6 +1046,7 @@ class LearnerProfile extends DataClass implements Insertable<LearnerProfile> {
         ? tutorRemoteProfileId.value
         : this.tutorRemoteProfileId,
     tutorGrantId: tutorGrantId.present ? tutorGrantId.value : this.tutorGrantId,
+    ulid: ulid.present ? ulid.value : this.ulid,
   );
   LearnerProfile copyWithCompanion(LearnerProfilesCompanion data) {
     return LearnerProfile(
@@ -1015,6 +1071,7 @@ class LearnerProfile extends DataClass implements Insertable<LearnerProfile> {
       tutorGrantId: data.tutorGrantId.present
           ? data.tutorGrantId.value
           : this.tutorGrantId,
+      ulid: data.ulid.present ? data.ulid.value : this.ulid,
     );
   }
 
@@ -1031,7 +1088,8 @@ class LearnerProfile extends DataClass implements Insertable<LearnerProfile> {
           ..write('isTutored: $isTutored, ')
           ..write('tutorParentUid: $tutorParentUid, ')
           ..write('tutorRemoteProfileId: $tutorRemoteProfileId, ')
-          ..write('tutorGrantId: $tutorGrantId')
+          ..write('tutorGrantId: $tutorGrantId, ')
+          ..write('ulid: $ulid')
           ..write(')'))
         .toString();
   }
@@ -1049,6 +1107,7 @@ class LearnerProfile extends DataClass implements Insertable<LearnerProfile> {
     tutorParentUid,
     tutorRemoteProfileId,
     tutorGrantId,
+    ulid,
   );
   @override
   bool operator ==(Object other) =>
@@ -1064,7 +1123,8 @@ class LearnerProfile extends DataClass implements Insertable<LearnerProfile> {
           other.isTutored == this.isTutored &&
           other.tutorParentUid == this.tutorParentUid &&
           other.tutorRemoteProfileId == this.tutorRemoteProfileId &&
-          other.tutorGrantId == this.tutorGrantId);
+          other.tutorGrantId == this.tutorGrantId &&
+          other.ulid == this.ulid);
 }
 
 class LearnerProfilesCompanion extends UpdateCompanion<LearnerProfile> {
@@ -1079,6 +1139,7 @@ class LearnerProfilesCompanion extends UpdateCompanion<LearnerProfile> {
   final Value<String?> tutorParentUid;
   final Value<String?> tutorRemoteProfileId;
   final Value<String?> tutorGrantId;
+  final Value<String?> ulid;
   const LearnerProfilesCompanion({
     this.id = const Value.absent(),
     this.accountId = const Value.absent(),
@@ -1091,6 +1152,7 @@ class LearnerProfilesCompanion extends UpdateCompanion<LearnerProfile> {
     this.tutorParentUid = const Value.absent(),
     this.tutorRemoteProfileId = const Value.absent(),
     this.tutorGrantId = const Value.absent(),
+    this.ulid = const Value.absent(),
   });
   LearnerProfilesCompanion.insert({
     this.id = const Value.absent(),
@@ -1104,6 +1166,7 @@ class LearnerProfilesCompanion extends UpdateCompanion<LearnerProfile> {
     this.tutorParentUid = const Value.absent(),
     this.tutorRemoteProfileId = const Value.absent(),
     this.tutorGrantId = const Value.absent(),
+    this.ulid = const Value.absent(),
   }) : accountId = Value(accountId),
        displayName = Value(displayName),
        mode = Value(mode),
@@ -1121,6 +1184,7 @@ class LearnerProfilesCompanion extends UpdateCompanion<LearnerProfile> {
     Expression<String>? tutorParentUid,
     Expression<String>? tutorRemoteProfileId,
     Expression<String>? tutorGrantId,
+    Expression<String>? ulid,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -1135,6 +1199,7 @@ class LearnerProfilesCompanion extends UpdateCompanion<LearnerProfile> {
       if (tutorRemoteProfileId != null)
         'tutor_remote_profile_id': tutorRemoteProfileId,
       if (tutorGrantId != null) 'tutor_grant_id': tutorGrantId,
+      if (ulid != null) 'ulid': ulid,
     });
   }
 
@@ -1150,6 +1215,7 @@ class LearnerProfilesCompanion extends UpdateCompanion<LearnerProfile> {
     Value<String?>? tutorParentUid,
     Value<String?>? tutorRemoteProfileId,
     Value<String?>? tutorGrantId,
+    Value<String?>? ulid,
   }) {
     return LearnerProfilesCompanion(
       id: id ?? this.id,
@@ -1163,6 +1229,7 @@ class LearnerProfilesCompanion extends UpdateCompanion<LearnerProfile> {
       tutorParentUid: tutorParentUid ?? this.tutorParentUid,
       tutorRemoteProfileId: tutorRemoteProfileId ?? this.tutorRemoteProfileId,
       tutorGrantId: tutorGrantId ?? this.tutorGrantId,
+      ulid: ulid ?? this.ulid,
     );
   }
 
@@ -1204,6 +1271,9 @@ class LearnerProfilesCompanion extends UpdateCompanion<LearnerProfile> {
     if (tutorGrantId.present) {
       map['tutor_grant_id'] = Variable<String>(tutorGrantId.value);
     }
+    if (ulid.present) {
+      map['ulid'] = Variable<String>(ulid.value);
+    }
     return map;
   }
 
@@ -1220,7 +1290,8 @@ class LearnerProfilesCompanion extends UpdateCompanion<LearnerProfile> {
           ..write('isTutored: $isTutored, ')
           ..write('tutorParentUid: $tutorParentUid, ')
           ..write('tutorRemoteProfileId: $tutorRemoteProfileId, ')
-          ..write('tutorGrantId: $tutorGrantId')
+          ..write('tutorGrantId: $tutorGrantId, ')
+          ..write('ulid: $ulid')
           ..write(')'))
         .toString();
   }
@@ -14024,6 +14095,7 @@ typedef $$LearnerProfilesTableCreateCompanionBuilder =
       Value<String?> tutorParentUid,
       Value<String?> tutorRemoteProfileId,
       Value<String?> tutorGrantId,
+      Value<String?> ulid,
     });
 typedef $$LearnerProfilesTableUpdateCompanionBuilder =
     LearnerProfilesCompanion Function({
@@ -14038,6 +14110,7 @@ typedef $$LearnerProfilesTableUpdateCompanionBuilder =
       Value<String?> tutorParentUid,
       Value<String?> tutorRemoteProfileId,
       Value<String?> tutorGrantId,
+      Value<String?> ulid,
     });
 
 final class $$LearnerProfilesTableReferences
@@ -14421,6 +14494,11 @@ class $$LearnerProfilesTableFilterComposer
 
   ColumnFilters<String> get tutorGrantId => $composableBuilder(
     column: $table.tutorGrantId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get ulid => $composableBuilder(
+    column: $table.ulid,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -14833,6 +14911,11 @@ class $$LearnerProfilesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get ulid => $composableBuilder(
+    column: $table.ulid,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$AccountsTableOrderingComposer get accountId {
     final $$AccountsTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -14905,6 +14988,9 @@ class $$LearnerProfilesTableAnnotationComposer
     column: $table.tutorGrantId,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get ulid =>
+      $composableBuilder(column: $table.ulid, builder: (column) => column);
 
   $$AccountsTableAnnotationComposer get accountId {
     final $$AccountsTableAnnotationComposer composer = $composerBuilder(
@@ -15314,6 +15400,7 @@ class $$LearnerProfilesTableTableManager
                 Value<String?> tutorParentUid = const Value.absent(),
                 Value<String?> tutorRemoteProfileId = const Value.absent(),
                 Value<String?> tutorGrantId = const Value.absent(),
+                Value<String?> ulid = const Value.absent(),
               }) => LearnerProfilesCompanion(
                 id: id,
                 accountId: accountId,
@@ -15326,6 +15413,7 @@ class $$LearnerProfilesTableTableManager
                 tutorParentUid: tutorParentUid,
                 tutorRemoteProfileId: tutorRemoteProfileId,
                 tutorGrantId: tutorGrantId,
+                ulid: ulid,
               ),
           createCompanionCallback:
               ({
@@ -15340,6 +15428,7 @@ class $$LearnerProfilesTableTableManager
                 Value<String?> tutorParentUid = const Value.absent(),
                 Value<String?> tutorRemoteProfileId = const Value.absent(),
                 Value<String?> tutorGrantId = const Value.absent(),
+                Value<String?> ulid = const Value.absent(),
               }) => LearnerProfilesCompanion.insert(
                 id: id,
                 accountId: accountId,
@@ -15352,6 +15441,7 @@ class $$LearnerProfilesTableTableManager
                 tutorParentUid: tutorParentUid,
                 tutorRemoteProfileId: tutorRemoteProfileId,
                 tutorGrantId: tutorGrantId,
+                ulid: ulid,
               ),
           withReferenceMapper: (p0) => p0
               .map(

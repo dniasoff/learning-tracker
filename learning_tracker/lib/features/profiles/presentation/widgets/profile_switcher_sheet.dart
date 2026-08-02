@@ -184,7 +184,12 @@ class ProfileSwitcherSheet extends ConsumerWidget {
                       pinGuardRequired: pinGuardRequired,
                       activeProfileId: activeProfileId,
                       subtitle: l10n.pinDialogSubtitleSwitchProfile,
-                      action: () => _switchProfile(context, ref, profile.id),
+                      action: () => _switchProfile(
+                        context,
+                        ref,
+                        profile.id,
+                        ulid: profile.ulid,
+                      ),
                     ),
                     onEdit: () => _guardEscalating(
                       context,
@@ -311,7 +316,12 @@ class ProfileSwitcherSheet extends ConsumerWidget {
   /// drops straight into that child's LEARNING view — parent mode is a
   /// separate PIN-gated elevation, so we clear any existing elevation here to
   /// guarantee the freshly-selected profile starts unelevated (no banner).
-  void _switchProfile(BuildContext context, WidgetRef ref, int profileId) {
+  void _switchProfile(
+    BuildContext context,
+    WidgetRef ref,
+    int profileId, {
+    String? ulid,
+  }) {
     Navigator.of(context).pop();
     // R4-H1: exit any active tutored session before replacing the route.
     // No UID change occurs on profile switch, so AppShell's auth-uid listener
@@ -336,7 +346,7 @@ class ProfileSwitcherSheet extends ConsumerWidget {
     // callback (router_provider.dart), the reactive flag — so it strictly
     // supersedes the old clear() rather than duplicating it.
     ref.read(routerProvider).pinGuard.lock();
-    ref.read(selectedProfileIdProvider.notifier).select(profileId);
+    ref.read(selectedProfileIdProvider.notifier).select(profileId, ulid: ulid);
     unawaited(context.router.replaceAll([const AppShellRoute()]));
   }
 

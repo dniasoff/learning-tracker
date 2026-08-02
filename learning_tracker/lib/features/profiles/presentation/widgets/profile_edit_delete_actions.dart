@@ -144,7 +144,9 @@ Future<void> deleteProfileFlow(
     final remainingProfiles = await repo.getProfilesByAccount(accountId);
     final next = remainingProfiles.where((p) => p.id != profile.id).firstOrNull;
     if (next != null) {
-      ref.read(selectedProfileIdProvider.notifier).select(next.id);
+      ref
+          .read(selectedProfileIdProvider.notifier)
+          .select(next.id, ulid: next.ulid);
     } else {
       ref.read(selectedProfileIdProvider.notifier).clear();
     }

@@ -136,7 +136,9 @@ class _OnboardingProfileCreationStepState
     // that await throws once this State is disposed — bail out first.
     if (!mounted) return;
 
-    ref.read(selectedProfileIdProvider.notifier).select(profile.id);
+    ref
+        .read(selectedProfileIdProvider.notifier)
+        .select(profile.id, ulid: profile.ulid);
     await PendingLocalSignupStore.finalizeAfterFirstProfile(ref);
 
     if (mounted) setState(() => _isCreatingProfile = false);

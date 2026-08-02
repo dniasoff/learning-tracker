@@ -88,6 +88,19 @@ class ProfileDao extends DatabaseAccessor<UserDatabase> with _$ProfileDaoMixin {
   Future<bool> updateProfile(LearnerProfilesCompanion entry) =>
       update(learnerProfiles).replace(entry);
 
+  /// Stamps [profileId]'s Firestore-rewrite-transition `ulid` column
+  /// (schema v38, `learner_profiles.dart`'s `ulid` doc comment). Partial
+  /// update — only this column changes, matching [upsertFromSync]'s
+  /// established shape rather than [updateProfile]'s full-row `.replace`.
+  /// Called exclusively by `FirestoreProfileRepositoryAdapter`
+  /// (`lib/features/profiles/data/repositories/profile_repository_impl.dart`)
+  /// the moment it mints a Firestore identity for [profileId] — never by
+  /// [ProfileRepositoryImpl] itself, which has no Firestore awareness.
+  Future<void> setUlid(int profileId, String ulid) =>
+      (update(learnerProfiles)..where((t) => t.id.equals(profileId))).write(
+        LearnerProfilesCompanion(ulid: Value(ulid)),
+      );
+
   /// Delete a profile by ID.
   Future<int> deleteProfile(int id) =>
       (delete(learnerProfiles)..where((t) => t.id.equals(id))).go();

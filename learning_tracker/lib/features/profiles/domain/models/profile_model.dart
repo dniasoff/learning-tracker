@@ -19,6 +19,12 @@ abstract class ProfileModel with _$ProfileModel {
     required int avatarIndex,
     required DateTime createdAt,
     required DateTime updatedAt,
+    // Firestore-rewrite transition column (schema v38,
+    // `learner_profiles.dart`'s `ulid` doc comment) — `null` means "not yet
+    // migrated to Firestore", never "no profile". Transition cruft: this
+    // field disappears along with the Drift-backed [id] once the app is
+    // fully cut over to Firestore-native profile identity.
+    String? ulid,
   }) = _ProfileModel;
 
   /// Typed profile mode derived from the raw [mode] storage key.
@@ -50,5 +56,6 @@ abstract class ProfileModel with _$ProfileModel {
     avatarIndex: row.avatarIndex,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
+    ulid: row.ulid,
   );
 }

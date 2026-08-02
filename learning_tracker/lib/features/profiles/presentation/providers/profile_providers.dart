@@ -50,17 +50,36 @@ class SelectedProfileId extends _$SelectedProfileId {
   @override
   int? build() => null;
 
-  /// Selects profile [id] and — see `profile_repository_impl.dart`'s
-  /// [ProfileUlidSessionCache] doc comment for the "why a map" reasoning —
-  /// activates its Firestore identity via [activeProfileDocIdProvider] when
-  /// one is known for this session (freshly created, or switched to before
-  /// this session ended), and clears it otherwise. `null` accurately means
-  /// "no Firestore identity known for this profile yet", not an error.
-  void select(int id) {
+  /// Selects profile [id] and, purely synchronously, activates its Firestore
+  /// identity via [activeProfileDocIdProvider] — set to [ulid] verbatim, no
+  /// I/O, no async work.
+  ///
+  /// **Why a caller-supplied [ulid], not an internal DB read:** an early
+  /// version of this method read `learner_profiles.ulid` back itself via
+  /// `ref.read(profileRepositoryProvider).getProfileById(id)`. That is
+  /// genuinely async, and `select` is called from synchronous tap/callback
+  /// contexts across the app (`profile_switcher_sheet.dart`,
+  /// `router_provider.dart`'s `ProfileGuard`, a notification-tap handler in
+  /// `notifications_bootstrap.dart`, ...) that do not, and should not have
+  /// to, await or pump a `void` state setter. In a widget test that taps and
+  /// asserts without a follow-up `pumpAndSettle`, that left-over async work
+  /// surfaced as "A Timer is still pending even after the widget tree was
+  /// disposed." — a real regression, not a test-only artifact: the same
+  /// dangling work would run in production too, just silently.
+  ///
+  /// Every caller that already holds the [ProfileModel] it is switching to
+  /// (profile creation, the switcher, sign-in, the self-heal path below)
+  /// passes `ulid: model.ulid` — no new read, it was already in hand. A
+  /// caller with only a bare `int` (the two exceptions above) omits [ulid],
+  /// which clears [activeProfileDocIdProvider] to `null` — the same "not
+  /// ready yet" signal every profile-scoped repository already treats as
+  /// "show a loading/empty state", never a wrong-profile leak. This is
+  /// strictly safer than the alternative of leaving a PREVIOUS profile's
+  /// ulid active across a switch to a profile whose identity is unknown
+  /// here.
+  void select(int id, {String? ulid}) {
     state = id;
-    ref
-        .read(activeProfileDocIdProvider.notifier)
-        .set(ref.read(profileUlidSessionCacheProvider.notifier).ulidFor(id));
+    ref.read(activeProfileDocIdProvider.notifier).set(ulid);
   }
 
   void clear() {
@@ -141,15 +160,22 @@ class AutoSelectedProfileId extends _$AutoSelectedProfileId {
     final current = ref.read(selectedProfileIdProvider);
     if (current != null) {
       final existingProfile = await repo.getProfileById(current);
-      if (existingProfile != null) return current;
+      if (existingProfile != null) {
+        // Already selected, still valid — just (re-)activate its Firestore
+        // identity from the model we already fetched to confirm it exists.
+        ref.read(activeProfileDocIdProvider.notifier).set(existingProfile.ulid);
+        return current;
+      }
       // Stale id — clear it and fall through to the auto-select/self-heal path.
       ref.read(selectedProfileIdProvider.notifier).clear();
     }
     final profiles = await repo.getProfilesByAccount(accountId);
 
     final int id;
+    String? ulid;
     if (profiles.isNotEmpty) {
       id = profiles.first.id;
+      ulid = profiles.first.ulid;
     } else {
       // Self-heal: an authenticated account with no local profile. Create a
       // default adult profile (named from the account) and adopt any orphaned
@@ -162,12 +188,13 @@ class AutoSelectedProfileId extends _$AutoSelectedProfileId {
       // The freshly created profile changed the account's profile set; refresh
       // any list/stream consumers so the new profile is visible immediately.
       ref.invalidate(profileListProvider);
+      ulid = (await repo.getProfileById(id))?.ulid;
     }
 
     // Re-check after the await: the picker / sign-in flow may have selected
     // a profile while we were fetching. Don't clobber an explicit choice.
     if (ref.read(selectedProfileIdProvider) == null) {
-      ref.read(selectedProfileIdProvider.notifier).select(id);
+      ref.read(selectedProfileIdProvider.notifier).select(id, ulid: ulid);
       return id;
     }
     return ref.read(selectedProfileIdProvider);

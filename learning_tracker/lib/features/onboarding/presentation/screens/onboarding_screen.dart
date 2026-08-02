@@ -263,9 +263,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       // the "Choose an Account" picker — an extra, confusing tap right after
       // "Start Learning". Mirrors the account-picker / sign-in landing paths,
       // which all assert the active profile before replaceAll([AppShellRoute]).
-      final landingProfileId = _createdProfileId ?? profiles.firstOrNull?.id;
-      if (landingProfileId != null) {
-        ref.read(selectedProfileIdProvider.notifier).select(landingProfileId);
+      final landingProfile =
+          profiles.where((p) => p.id == _createdProfileId).firstOrNull ??
+          profiles.firstOrNull;
+      if (landingProfile != null) {
+        ref
+            .read(selectedProfileIdProvider.notifier)
+            .select(landingProfile.id, ulid: landingProfile.ulid);
       }
       unawaited(context.router.replaceAll([const AppShellRoute()]));
     }
@@ -304,9 +308,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       ref.read(selectedProfileIdProvider.notifier).clear();
       unawaited(context.router.replaceAll([const ProfilePickerRoute()]));
     } else {
-      final landingProfileId = _createdProfileId ?? profiles.firstOrNull?.id;
-      if (landingProfileId != null) {
-        ref.read(selectedProfileIdProvider.notifier).select(landingProfileId);
+      final landingProfile =
+          profiles.where((p) => p.id == _createdProfileId).firstOrNull ??
+          profiles.firstOrNull;
+      if (landingProfile != null) {
+        ref
+            .read(selectedProfileIdProvider.notifier)
+            .select(landingProfile.id, ulid: landingProfile.ulid);
       }
       unawaited(context.router.replaceAll([const AppShellRoute()]));
     }
