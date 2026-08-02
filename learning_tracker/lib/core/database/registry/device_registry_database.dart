@@ -43,7 +43,23 @@ class DeviceRegistryDatabase extends _$DeviceRegistryDatabase {
   DeviceRegistryDatabase(super.e);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+    onCreate: (Migrator m) => m.createAll(),
+    // v1 -> v2 (Phase 1 Story B, AD-24): additive nullable columns on
+    // deviceAccounts for the persisted path-uid remap breadcrumb —
+    // `previousFirebaseUid` + `uidRemappedAt`. Safe on existing rows (NULL
+    // default); no backfill needed since no remap has ever happened for a
+    // pre-v2 row.
+    onUpgrade: (Migrator m, int from, int to) async {
+      if (from < 2) {
+        await m.addColumn(deviceAccounts, deviceAccounts.previousFirebaseUid);
+        await m.addColumn(deviceAccounts, deviceAccounts.uidRemappedAt);
+      }
+    },
+  );
 
   // ───── DeviceAccounts queries ─────────────────────────────────
 
@@ -141,6 +157,32 @@ class DeviceRegistryDatabase extends _$DeviceRegistryDatabase {
           // synthetic @offline.local email with the real one. Absent =
           // unchanged.
           email: email == null ? const Value.absent() : Value(email),
+        ),
+      );
+
+  /// Persist the resolved path uid for [accountId] (AD-24 rule 2).
+  ///
+  /// Used by [PathUidResolver] (`path_uid_resolver.dart`) for BOTH the
+  /// initial bind (no prior uid — [previousFirebaseUid]/[remappedAt] stay
+  /// null) and the anon-uid-reset remap (a prior uid existed and differs —
+  /// [previousFirebaseUid]/[remappedAt] are stamped as the remap breadcrumb).
+  /// Not intended to be called directly by feature code; go through
+  /// [PathUidResolver].
+  Future<void> writePathUid(
+    String accountId, {
+    required String uid,
+    String? previousFirebaseUid,
+    DateTime? remappedAt,
+  }) => (update(deviceAccounts)..where((t) => t.accountId.equals(accountId)))
+      .write(
+        DeviceAccountsCompanion(
+          firebaseUid: Value(uid),
+          previousFirebaseUid: previousFirebaseUid == null
+              ? const Value.absent()
+              : Value(previousFirebaseUid),
+          uidRemappedAt: remappedAt == null
+              ? const Value.absent()
+              : Value(remappedAt),
         ),
       );
 
