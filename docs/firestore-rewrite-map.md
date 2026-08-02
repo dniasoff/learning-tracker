@@ -187,6 +187,29 @@ all of Shas" bulk import.
 - **Prior-import tier** — proceeding with the `source`-field + narrow-rules-relaxation
   option above. Lands as its own commit, independently revertible.
 
+## Where shared utilities may live (AD-23 constraint, learned the hard way)
+
+`tool/check_dependency_direction.dart` (audit check 102, **hard gate, zero tolerance**)
+forbids any `lib/features/**` or `lib/domain/**` file from importing
+`package:learning_tracker/data/firestore/...` unless its path contains the segment
+`/data/repositories/`.
+
+Consequence: **any shared Firestore-adjacent utility that a DOMAIN MODEL calls directly
+must live outside `lib/data/firestore/`.** `lib/data/firestore/` is reserved for the
+repository layer. This is why `FirestoreCodec` — a pure date/number coercion helper with
+no Firebase dependency — sits at `lib/core/codec/firestore_codec.dart` and not in the
+Firestore ring: `stage_definition.dart` is a domain model under `lib/features/`, and it
+calls the codec directly under the "entity owns its codec" pattern.
+
+Note the two import gates have **different** path semantics, which is easy to get
+backwards: the Firebase-confinement gate (check 2) matches a path **prefix**
+(`lib/data/repositories/`), while the dependency-direction gate (check 102) matches a
+path **segment** (`/data/repositories/`).
+
+**Also:** there are two Makefiles. Always run `make audit` from `learning_tracker/`, not
+the repo root — the root one runs different checks and will report unrelated
+pre-existing debt as a false alarm.
+
 ## Watch out
 
 - **8 collections have two writers** — the owner directly, and a tutor via a proxy CF
