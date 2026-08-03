@@ -18,10 +18,17 @@ import 'package:learning_tracker/features/profiles/domain/models/learner_profile
 /// learner_profiles/{profileId}` (`docs/firestore-rewrite-map.md`,
 /// `firestore.rules` `match /learner_profiles/{profileId}`).
 ///
-/// **Not wired into the app yet** — same status as every other repository
-/// under `lib/data/repositories/`: stands alone, nothing under
-/// `lib/features/` reads it, the existing Drift-backed `ProfileDao`/
-/// `ProfileRepositoryImpl` are untouched.
+/// **Wired into the app — as a dual-write, not a full cutover.**
+/// `FirestoreProfileRepositoryAdapter`
+/// (`lib/features/profiles/data/repositories/profile_repository_impl.dart`)
+/// reads this repository via `firestoreLearnerProfileRepositoryProvider` to
+/// mint/activate a Firestore `learner_profiles` document alongside every
+/// Drift-side profile create/update; `profileRepositoryProvider`
+/// (`profile_providers.dart`) resolves to that adapter. See that class's
+/// doc comment ("Dual-write, not cutover — and why") for why this is not
+/// yet the same full swap `FirestoreBookmarkRepository` made: the existing
+/// Drift-backed `ProfileDao`/`ProfileRepositoryImpl` still owns every read
+/// and every write's local row, unchanged.
 ///
 /// **No interface** — same reasoning as `FirestoreBookmarkRepository`'s doc
 /// comment.

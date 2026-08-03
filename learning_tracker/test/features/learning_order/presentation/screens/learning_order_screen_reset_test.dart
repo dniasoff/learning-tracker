@@ -76,9 +76,6 @@ class _ControlledRepository implements LearningOrderRepository {
     List<LearningOrderItem> items, {
     bool isChildRestricted = false,
   }) async {}
-
-  @override
-  Future<void> repairStaleOrderVersion(CurriculumId curriculumId) async {}
 }
 
 /// Minimal [ContentRepository] stub returning empty results for every

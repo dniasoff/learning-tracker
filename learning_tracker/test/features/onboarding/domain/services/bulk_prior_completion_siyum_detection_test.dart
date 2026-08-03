@@ -186,9 +186,6 @@ class _NoopBookmarkRepository implements BookmarkRepository {
     sefariaRef: '',
     updatedAt: DateTime.utc(2026, 5, 13),
   );
-
-  @override
-  Future<int> syncFromFirestore() async => 0;
 }
 
 Future<int> _seedAccountAndProfile(UserDatabase db) async {

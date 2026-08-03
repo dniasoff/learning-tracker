@@ -6,16 +6,33 @@
 library;
 
 import 'package:drift/native.dart';
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/daos/track_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
+import 'package:learning_tracker/data/firestore/account_firebase.dart';
+import 'package:learning_tracker/data/firestore/active_account_providers.dart';
+import 'package:learning_tracker/data/firestore/repository_providers.dart'
+    show activeProfileDocIdProvider;
+import 'package:learning_tracker/data/repositories/firestore_learning_order_repository.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/data/repositories/learning_order_repository_impl.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/domain/models/learning_order_item.dart';
+import 'package:learning_tracker/features/tracks/whole_curriculum_order/domain/repositories/learning_order_repository.dart'
+    show ParentControlException;
+import 'package:mocktail/mocktail.dart';
 
 import '../../../../helpers/drift_memory.dart'
     show seedProfile, seedProfileZero, seedTrack;
+import '../../../../helpers/firestore_fake.dart';
+
+class MockFirebaseApp extends Mock implements FirebaseApp {}
+
+class MockFirebaseAuthHandle extends Mock implements FirebaseAuth {}
 
 ContentItem _makeItem(String ref, {int sortOrder = 0}) {
   return ContentItem(
@@ -371,4 +388,202 @@ void main() {
       });
     },
   );
+
+  // F2: `learningOrderRepositoryProvider` now resolves to
+  // FirestoreLearningOrderRepositoryAdapter instead of the Drift-backed
+  // LearningOrderRepositoryImpl above. These tests exercise that adapter
+  // directly, mirroring the FirestoreBookmarkRepositoryAdapter test group in
+  // `bookmark_repository_impl_test.dart`.
+  group('FirestoreLearningOrderRepositoryAdapter', () {
+    const uid = 'uid-1';
+    const profileDocId = 'profile-ulid-1';
+
+    AccountFirebaseHandles handles(FakeFirebaseFirestore firestore) {
+      return AccountFirebaseHandles(
+        app: MockFirebaseApp(),
+        firestore: firestore,
+        auth: MockFirebaseAuthHandle(),
+        uid: uid,
+      );
+    }
+
+    // Constructing FirestoreLearningOrderRepositoryAdapter requires a Ref
+    // (Riverpod's Ref is sealed — it can only come from inside a provider
+    // callback), so tests obtain one the same way production does: read a
+    // throwaway Provider that builds the adapter from the container's ref.
+    FirestoreLearningOrderRepositoryAdapter buildAdapter(
+      ProviderContainer container,
+    ) {
+      final adapterProvider = Provider<FirestoreLearningOrderRepositoryAdapter>(
+        (ref) => FirestoreLearningOrderRepositoryAdapter(ref: ref),
+      );
+      return container.read(adapterProvider);
+    }
+
+    final saveItems = [
+      const LearningOrderItem(
+        sefariaRef: 'Shabbat',
+        displayNameHe: 'שבת',
+        displayNameEn: 'Shabbat',
+        userSortOrder: 0,
+      ),
+      const LearningOrderItem(
+        sefariaRef: 'Berakhot',
+        displayNameHe: 'ברכות',
+        displayNameEn: 'Berakhot',
+        userSortOrder: 1,
+      ),
+    ];
+
+    group('not ready (no active account/profile)', () {
+      test('getOrder returns [] instead of throwing', () async {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        final adapter = buildAdapter(container);
+
+        final order = await adapter.getOrder(CurriculumId.mishnayos, const []);
+
+        expect(order, isEmpty);
+      });
+
+      test(
+        'saveOrder throws LearningOrderRepositoryNotReadyException',
+        () async {
+          final container = ProviderContainer();
+          addTearDown(container.dispose);
+          final adapter = buildAdapter(container);
+
+          expect(
+            () => adapter.saveOrder(CurriculumId.mishnayos, saveItems),
+            throwsA(isA<LearningOrderRepositoryNotReadyException>()),
+          );
+        },
+      );
+
+      test(
+        'resetToDefault throws LearningOrderRepositoryNotReadyException',
+        () async {
+          final container = ProviderContainer();
+          addTearDown(container.dispose);
+          final adapter = buildAdapter(container);
+
+          expect(
+            () => adapter.resetToDefault(CurriculumId.mishnayos),
+            throwsA(isA<LearningOrderRepositoryNotReadyException>()),
+          );
+        },
+      );
+
+      test('saveOrder throws ParentControlException before the not-ready '
+          'repository check, even when not ready', () async {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        final adapter = buildAdapter(container);
+
+        expect(
+          () => adapter.saveOrder(
+            CurriculumId.mishnayos,
+            saveItems,
+            isChildRestricted: true,
+          ),
+          throwsA(isA<ParentControlException>()),
+        );
+      });
+    });
+
+    group('ready (active account + profile)', () {
+      late FakeFirebaseFirestore firestore;
+      late ProviderContainer container;
+      late FirestoreLearningOrderRepositoryAdapter adapter;
+
+      setUp(() {
+        firestore = createFakeFirestore();
+        container = ProviderContainer(
+          overrides: [
+            activeAccountFirebaseProvider.overrideWith(
+              (ref) async => handles(firestore),
+            ),
+          ],
+        );
+        container.read(activeProfileDocIdProvider.notifier).set(profileDocId);
+        adapter = buildAdapter(container);
+      });
+
+      tearDown(() => container.dispose());
+
+      test('saveOrder then getOrder round-trips the custom order through '
+          'Firestore', () async {
+        await adapter.saveOrder(CurriculumId.mishnayos, saveItems);
+
+        final order = await adapter.getOrder(CurriculumId.mishnayos, const []);
+
+        expect(order.map((i) => i.sefariaRef).toList(), [
+          'Shabbat',
+          'Berakhot',
+        ]);
+        expect(order.every((i) => i.isCustomOrdered), isTrue);
+      });
+
+      test('saveOrder with isChildRestricted throws ParentControlException '
+          'without writing anything to Firestore', () async {
+        await expectLater(
+          () => adapter.saveOrder(
+            CurriculumId.mishnayos,
+            saveItems,
+            isChildRestricted: true,
+          ),
+          throwsA(isA<ParentControlException>()),
+        );
+
+        final rawRepo = FirestoreLearningOrderRepository(
+          firestore: firestore,
+          uid: uid,
+          profileId: profileDocId,
+        );
+        final refs = await rawRepo.getCustomOrderRefs(CurriculumId.mishnayos);
+        expect(refs, isEmpty);
+      });
+
+      test('resetToDefault propagates the documented UnimplementedError rather '
+          'than swallowing it', () async {
+        expect(
+          () => adapter.resetToDefault(CurriculumId.mishnayos),
+          throwsA(isA<UnimplementedError>()),
+        );
+      });
+
+      // F2 — the defect this rewire fixes: a custom order saved through
+      // `learningOrderRepositoryProvider` (this adapter) must be visible to
+      // `FirestoreLearningOrderRepository.getCustomOrderRefs` — the exact
+      // read `FirestoreBookmarkRepositoryAdapter`'s bookmark-advance logic
+      // uses (`_getNextItemId`/`_getFirstItemId`). Before this fix, the
+      // reorder screen wrote to the Drift-backed LearningOrderRepositoryImpl
+      // while the bookmark repository read from this Firestore collection —
+      // two different document trees that never agreed, so a saved custom
+      // order was invisible to bookmark advance for every user.
+      test('F2 round-trip: an order saved via the adapter is visible to '
+          'FirestoreLearningOrderRepository.getCustomOrderRefs — writer and '
+          'reader agree on ONE document path', () async {
+        await adapter.saveOrder(CurriculumId.mishnayos, saveItems);
+
+        final rawRepo = FirestoreLearningOrderRepository(
+          firestore: firestore,
+          uid: uid,
+          profileId: profileDocId,
+        );
+        final refs = await rawRepo.getCustomOrderRefs(CurriculumId.mishnayos);
+
+        expect(
+          refs,
+          ['Shabbat', 'Berakhot'],
+          reason:
+              'If the adapter wrote to a different document tree than '
+              'getCustomOrderRefs reads (the F2 defect), this would come '
+              'back empty even though saveOrder above completed '
+              'successfully — silently freezing bookmark advance for '
+              'every user with a custom order.',
+        );
+      });
+    });
+  });
 }

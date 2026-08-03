@@ -31,11 +31,16 @@ const _defaultStages = [
 /// {stageOrder}` (`docs/firestore-rewrite-map.md`, `firestore.rules`
 /// `match /stage_definitions/{stageId}`).
 ///
-/// **Not wired into the app yet** — same status as
-/// `FirestoreBookmarkRepository`: stands alone, nothing under
-/// `lib/features/` reads it, the existing Drift-backed
-/// `StageDefinitionRepositoryImpl` (`lib/features/tracks/stages/data/
-/// repositories/`) is untouched.
+/// **Not wired into the app's production provider yet** — unlike
+/// `FirestoreBookmarkRepository`, which IS wired via
+/// `FirestoreBookmarkRepositoryAdapter`/`bookmarkRepositoryProvider` (see
+/// that class's own doc comment). A `FirestoreStageDefinitionRepositoryAdapter`
+/// (`lib/features/tracks/stages/data/repositories/
+/// stage_definition_repository_impl.dart`) exists and does construct this
+/// class, but `stageDefinitionRepositoryProvider`
+/// (`lib/features/tracks/stages/presentation/providers/stage_providers.dart`)
+/// still returns the Drift-backed `StageDefinitionRepositoryImpl` from that
+/// same file — no screen reaches this class today.
 ///
 /// **No interface** — same reasoning as `FirestoreBookmarkRepository`'s doc
 /// comment: the Drift implementation is being deleted outright, not kept
@@ -106,14 +111,17 @@ const _defaultStages = [
 ///
 /// ## Kept, still flagged — NOT silently guessed at
 ///
-/// - **[hasCompletionsForStage] throws [UnimplementedError].** It reaches
-///   into a `completions` repository that does not exist yet — building one
-///   is out of this repository's scope (explicit instruction). `stageId` is
-///   ALSO a Drift-only concept: a real Firestore stage has no integer row
-///   id (see [kFirestoreUnmappedStageId]'s doc comment). Whoever builds the
-///   Firestore completions repository should own this, keyed by
-///   `(curriculumId, stageOrder)` or the stage doc-id string, never an
-///   `int`.
+/// - **[hasCompletionsForStage] throws [UnimplementedError].**
+///   `FirestoreCompletionRepository` (`firestore_completion_repository.dart`)
+///   now exists and has exactly the query this needs — its own
+///   `hasCompletionsForStage({curriculumId, stageOrder})`, built for this
+///   purpose. This method still can't delegate to it: `stageId` here is an
+///   `int`, a Drift-only concept — a real Firestore stage has no integer
+///   row id (see [kFirestoreUnmappedStageId]'s doc comment) — and this
+///   repository has no way to translate that `int` into the
+///   `(curriculumId, stageOrder)` pair the completions repository needs.
+///   Bridging the two requires changing this method's own signature (the
+///   `StageDefinitionRepository` interface), which has not happened yet.
 /// - **[resetToDefaults] does not actually "remove all" stages.** Its
 ///   Drift-era doc comment said "Removes all stages and restores the 3
 ///   defaults", but `firestore.rules` denies `delete` on

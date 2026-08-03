@@ -42,9 +42,10 @@
 /// replacement now exists in `active_account_providers.dart` —
 /// [ActiveAccountId]/`activeAccountIdProvider`/
 /// `activeAccountFirebaseProvider`. It does not assume [resolve] creates
-/// anything (the defect above), and nothing writes to it in production yet
-/// — see that file's doc comment before assuming it is wired into any real
-/// flow.
+/// anything (the defect above), and it IS wired into production now —
+/// bootstrap and every sign-in/sign-up/account-switch flow call
+/// `ActiveAccountId.set` — see that file's doc comment for the exact call
+/// sites.
 library;
 
 import 'dart:async';

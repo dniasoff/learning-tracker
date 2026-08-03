@@ -21,9 +21,13 @@ import 'package:learning_tracker/features/gamification/streak/streak_event_entry
 /// doc-id is the event's own ULID (`docs/firestore-rewrite-map.md`,
 /// `firestore.rules` `match /streak_events/{streakEventId}`).
 ///
-/// **Not wired into the app yet** — same status as every repository under
-/// `lib/data/repositories/`: stands alone, nothing under `lib/features/`
-/// reads it, the existing Drift-backed `StreakEventLog`
+/// **Not wired into the app's production provider yet** — but
+/// `FirestoreStreakStateRepository`
+/// (`lib/features/gamification/data/repositories/firestore_streak_state_repository.dart`)
+/// exists and does read this class. That repository itself is not
+/// constructed by any real provider (it appears nowhere in `lib/` outside
+/// its own definition), so no screen reaches this repository through it
+/// yet; the existing Drift-backed `StreakEventLog`
 /// (`lib/features/gamification/streak/streak_event_log.dart`, which wraps
 /// the `StreakEvents` Drift table) is untouched.
 ///

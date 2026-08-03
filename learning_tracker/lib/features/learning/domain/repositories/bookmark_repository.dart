@@ -49,12 +49,4 @@ abstract class BookmarkRepository {
   Future<BookmarkEntity> initializeBookmark({
     required CurriculumId curriculumId,
   });
-
-  /// Sync bookmarks with Firestore (pull remote updates).
-  ///
-  /// Performs conflict resolution using last-write-wins strategy based on
-  /// updatedAt timestamps (P5: UTC timestamps).
-  ///
-  /// Returns the number of bookmarks updated from remote.
-  Future<int> syncFromFirestore();
 }

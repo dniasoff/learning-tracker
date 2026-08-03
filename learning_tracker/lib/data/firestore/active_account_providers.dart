@@ -8,16 +8,14 @@
 /// replacement, built the same minimal way — a settable notifier plus a
 /// resolution provider, nothing more.
 ///
-/// **Not yet wired.** Nothing in production calls [ActiveAccountId.set] yet.
-/// The real call sites — bootstrap (restore the last-active account on
-/// cold start), sign-in/sign-up (activate the freshly-authenticated
-/// account), and account-switch (deactivate the old one, activate the
-/// new) — belong to Epic C, which does not exist yet. Until then,
-/// [activeAccountIdProvider] stays at its default (`null`) for the whole
-/// app session, and [activeAccountFirebaseProvider] resolves to `null`
-/// alongside it. Neither of those is a bug — it means "nobody has called
-/// `.set(...)` yet", which today is unconditionally true. Do not read this
-/// file's existence as proof anything is actually wired up.
+/// **Wired into production.** [ActiveAccountId.set] is called from
+/// `lib/app/bootstrap/bootstrap.dart` (restore the last-active account on
+/// cold start), and from the sign-in/sign-up/account-switch flows —
+/// `signup_screen.dart`, `account_picker_screen.dart`,
+/// `sign_in_controller.dart`, `account_actions.dart`, and
+/// `pending_local_signup.dart`. [activeAccountIdProvider] therefore holds a
+/// real account id for the whole app session once one of those has run,
+/// and [activeAccountFirebaseProvider] resolves its handles alongside it.
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -48,7 +46,7 @@ class ActiveAccountId extends Notifier<String?> {
 
 /// The active account id — `null` until some caller calls
 /// `ref.read(activeAccountIdProvider.notifier).set(accountId)`. See the
-/// library doc comment: nothing does that yet.
+/// library doc comment for the production call sites that now do.
 final activeAccountIdProvider = NotifierProvider<ActiveAccountId, String?>(
   ActiveAccountId.new,
 );
@@ -60,11 +58,10 @@ final activeAccountIdProvider = NotifierProvider<ActiveAccountId, String?>(
 /// or signs in an account itself, so it throws
 /// [AccountNotAuthenticatedException] (surfaced as this [FutureProvider]'s
 /// `AsyncError`) if [activeAccountIdProvider] names an account id that has
-/// no authenticated session to re-attach to. In practice that should never
-/// happen once Epic C's call sites only ever `set()` an id right after
-/// establishing that account's session — until Epic C exists, this
-/// provider simply has nothing to resolve ([activeAccountIdProvider] stays
-/// `null`).
+/// no authenticated session to re-attach to. In practice that should not
+/// happen: every production `.set()` call site (see the library doc
+/// comment) only ever activates an id right after establishing that
+/// account's session.
 final activeAccountFirebaseProvider = FutureProvider<AccountFirebaseHandles?>((
   ref,
 ) async {

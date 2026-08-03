@@ -22,9 +22,13 @@ import 'package:learning_tracker/features/scheduler/domain/models/study_day_conf
 /// {dayOfWeek}` (`docs/firestore-rewrite-map.md`, `firestore.rules`
 /// `match /study_day_configs/{configId}`).
 ///
-/// **Not wired into the app yet** — same status as the reference
-/// repositories. Nothing under `lib/features/` reads this yet; the
-/// existing Drift-backed `StudyDayConfigDao`
+/// **Not wired into the app's production provider yet** — but
+/// `FirestoreStudyDayConfigRepositoryAdapter`
+/// (`lib/features/scheduler/data/repositories/
+/// study_day_config_repository_impl.dart`) exists and does read this class.
+/// That adapter itself is not constructed by any real provider (it appears
+/// nowhere in `lib/` outside its own definition), so no screen reaches this
+/// repository through it yet; the existing Drift-backed `StudyDayConfigDao`
 /// (`lib/core/database/daos/study_day_config_dao.dart`) is untouched and
 /// keeps serving the app until the rewiring stage.
 ///

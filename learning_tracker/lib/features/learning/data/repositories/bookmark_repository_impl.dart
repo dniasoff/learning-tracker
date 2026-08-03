@@ -13,6 +13,10 @@ import 'package:learning_tracker/data/repositories/firestore_bookmark_repository
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/learning/domain/entities/bookmark.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/bookmark_repository.dart';
+// Cross-feature reference goes through the tutoring feature's public barrel
+// (layering Rule 2), never a deep path — this file needs exactly one symbol
+// from it: `activeTutoredProfileSelectionProvider`.
+import 'package:learning_tracker/features/tutoring/tutoring.dart';
 
 /// Implementation of [BookmarkRepository] using Drift database and sync engine.
 ///
@@ -208,7 +212,9 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
     );
   }
 
-  @override
+  // No longer part of BookmarkRepository; unreachable from the bookmark
+  // providers after the Firestore rewire. Dies with this class in the Drift
+  // demolition.
   Future<int> syncFromFirestore() async {
     final remoteBookmarks =
         await _firestoreGateway?.fetchAll(
@@ -404,6 +410,53 @@ class BookmarkRepositoryNotReadyException implements Exception {
       'yet) — cannot complete a bookmark write until one is active.';
 }
 
+/// Thrown by every [FirestoreBookmarkRepositoryAdapter] write method when a
+/// tutor is currently acting inside a talmid's context
+/// (`activeTutoredProfileSelectionProvider` is non-null).
+///
+/// ## Why a hard refusal rather than "just write it"
+///
+/// A tutored session has **no Firestore learner-profile identity of its
+/// own.** The talmid's real data lives in the PARENT's tree —
+/// `users/{parentUid}/learner_profiles/{childProfileId}/bookmarks/…`,
+/// addressed through the grant's `tutorParentUid`/`tutorRemoteProfileId`
+/// (`LearnerProfiles`, `lib/core/database/tables/learner_profiles.dart`) —
+/// and the tutor's local mirror row is Drift-only:
+/// `ProfileDao.upsertTutoredProfile` mints no `ulid`, so the mirror has no
+/// doc-id anywhere.
+///
+/// Meanwhile `firestoreBookmarkRepositoryProvider` keys solely off
+/// `activeProfileDocIdProvider`, which during a tutored session still holds
+/// the **tutor's own** profile ULID — nothing under `lib/features/tutoring/`
+/// sets it, and nothing can, because there is no ULID to set. So resolving
+/// the owner repository here would address
+/// `users/{tutorUid}/learner_profiles/{tutorOwnUlid}/bookmarks/{curriculumId}`
+/// — the tutor's OWN bookmark. A write would overwrite the tutor's personal
+/// reading position with the talmid's, while the talmid's real bookmark was
+/// never touched: data loss with no error, no exception and no visible
+/// symptom.
+///
+/// Routing tutored writes correctly is a cross-account concern this class
+/// cannot decide on its own (the proxy path is
+/// `functions/src/tutor_writes.ts`'s `tutorUpsertBookmark`, whose
+/// `profileId` contract is still a positive integer, not a ULID). Until
+/// that routing exists, refusing loudly is the only outcome that is not
+/// silent corruption. [CompletionOrchestrator] already wraps its bookmark
+/// advance in a logged `_safeStep`, so this surfaces as a recorded
+/// `completion_bookmark_advance_failed` rather than a lost completion.
+class TutoredBookmarkWriteUnsupportedException implements Exception {
+  const TutoredBookmarkWriteUnsupportedException();
+
+  @override
+  String toString() =>
+      'TutoredBookmarkWriteUnsupportedException: a tutored session has no '
+      'Firestore learner-profile identity, so this write would land on the '
+      "TUTOR's own bookmark document instead of the talmid's. Tutored "
+      'bookmark writes must go through the tutor-proxy Cloud Function '
+      '(functions/src/tutor_writes.ts, tutorUpsertBookmark); that routing '
+      'does not exist yet, so the write is refused rather than misdirected.';
+}
+
 /// Firestore-backed [BookmarkRepository] adapter — the reference pattern
 /// for Epic C's feature-by-feature rewire onto Firestore (see
 /// `lib/data/firestore/repository_providers.dart`'s library doc comment,
@@ -428,8 +481,7 @@ class BookmarkRepositoryNotReadyException implements Exception {
 ///    constructed. Holding a [Ref] and re-reading the provider inside every
 ///    method (see [_resolve]) means construction itself stays synchronous
 ///    and cheap, which matters because [BookmarkRepository]'s existing
-///    callers (`bookmarkRepositoryProvider`,
-///    `bookmarkRepositoryFactoryProvider` — both in
+///    callers (`bookmarkRepositoryProvider`, in
 ///    `lib/features/learning/presentation/providers/bookmark_providers.dart`)
 ///    are themselves plain, synchronous `Provider`s. Making construction
 ///    async would force those — and everything that watches them — to
@@ -454,43 +506,24 @@ class BookmarkRepositoryNotReadyException implements Exception {
 ///    error (e.g. [AccountNotAuthenticatedException]), it propagates
 ///    unchanged out of whichever [BookmarkRepository] method called
 ///    [_resolve], exactly as reading the provider directly would.
-///
-/// ## Why this sits ALONGSIDE [BookmarkRepositoryImpl], not in place of it
-///
-/// [BookmarkRepositoryImpl]'s Drift-era constructor (`database`,
-/// `syncEngine`, `firestoreGateway`, an `int profileId`) is constructed
-/// directly — bypassing the [BookmarkRepository] interface entirely, so
-/// swapping the class the *name* `BookmarkRepositoryImpl` refers to would
-/// not be enough to redirect these — at two call sites this task's scope
-/// does not include:
-/// `bookmark_providers.dart`'s `bookmarkRepositoryFactoryProvider`, and
-/// `completion_repository_impl.dart`'s `_advanceBookmark` fallback branch
-/// (both under `lib/features/learning/`). Repurposing
-/// [BookmarkRepositoryImpl]'s constructor — or its name — for the Firestore
-/// adapter would force edits to both. This class is therefore new and
-/// additive: [BookmarkRepositoryImpl] keeps serving the app exactly as
-/// before, unmodified, and this class demonstrates the same
-/// [BookmarkRepository] contract backed by Firestore, ready for a follow-up
-/// task to wire into those two call sites (and to retire
-/// [BookmarkRepositoryImpl] once every caller has moved).
-///
-/// ## Known runtime state today
-///
-/// Nothing in production calls `ActiveProfileDocId.set` yet (see
-/// `repository_providers.dart`'s library doc comment) — so
-/// `firestoreBookmarkRepositoryProvider` resolves to `null` for the whole
-/// app session today, regardless of which account/profile the Drift side
-/// thinks is active. That is expected at this stage of the migration, not
-/// a bug in this class.
+/// 6. **A tutored session is refused outright, not served from the owner
+///    path.** See [TutoredBookmarkWriteUnsupportedException] — the owner
+///    path resolves to the TUTOR's own profile document while a tutor is
+///    inside a talmid's context, so serving it would silently corrupt the
+///    tutor's own data. Every profile-scoped repository rewired onto
+///    Firestore has this same exposure, not just this one.
 class FirestoreBookmarkRepositoryAdapter implements BookmarkRepository {
   FirestoreBookmarkRepositoryAdapter({
     required Ref ref,
     required ContentRepository contentRepository,
+    ContentIndex? contentIndex,
   }) : _ref = ref,
-       _contentRepository = contentRepository;
+       _contentRepository = contentRepository,
+       _contentIndex = contentIndex;
 
   final Ref _ref;
   final ContentRepository _contentRepository;
+  final ContentIndex? _contentIndex;
 
   /// Re-reads `firestoreBookmarkRepositoryProvider`, resolving to `null`
   /// exactly when it does (no active account, or no active learner
@@ -500,8 +533,27 @@ class FirestoreBookmarkRepositoryAdapter implements BookmarkRepository {
   /// caught here.
   Future<FirestoreBookmarkRepository?> _resolveOrNull() {
     return _ref.read(
-      firestoreBookmarkRepositoryProvider(_contentRepository).future,
+      firestoreBookmarkRepositoryProvider((
+        contentRepository: _contentRepository,
+        contentIndex: _contentIndex,
+      )).future,
     );
+  }
+
+  /// `true` while a tutor is acting inside a talmid's context. Read fresh on
+  /// every call for the same reason [_resolveOrNull] is (class doc, point 3):
+  /// a tutor can enter and exit a talmid context mid-session, and this
+  /// adapter caches nothing on `this`.
+  bool get _isTutoredSession =>
+      _ref.read(activeTutoredProfileSelectionProvider) != null;
+
+  /// Guards the three write methods. See
+  /// [TutoredBookmarkWriteUnsupportedException] for why a tutored session is
+  /// refused instead of being served from the owner path.
+  void _assertNotTutoredSession() {
+    if (_isTutoredSession) {
+      throw const TutoredBookmarkWriteUnsupportedException();
+    }
   }
 
   /// Like [_resolveOrNull], but throws [BookmarkRepositoryNotReadyException]
@@ -520,6 +572,14 @@ class FirestoreBookmarkRepositoryAdapter implements BookmarkRepository {
   Future<BookmarkEntity?> getBookmark({
     required CurriculumId curriculumId,
   }) async {
+    // A tutored session reads as "nothing to show" for the same reason the
+    // writes throw (see TutoredBookmarkWriteUnsupportedException): the owner
+    // path would return the TUTOR's own bookmark, and presenting the tutor's
+    // reading position as the talmid's is the read-side twin of the write
+    // corruption. Reusing `null` here rather than throwing keeps the
+    // existing "not ready → show a loading/empty state" caller contract.
+    if (_isTutoredSession) return null;
+
     // Not-ready reads as "nothing to show yet" rather than an exception —
     // see BookmarkRepositoryNotReadyException's doc comment for why reads
     // and writes are treated differently here.
@@ -533,6 +593,7 @@ class FirestoreBookmarkRepositoryAdapter implements BookmarkRepository {
     required CurriculumId curriculumId,
     required String sefariaRef,
   }) async {
+    _assertNotTutoredSession();
     final repo = await _resolve();
     return repo.setBookmark(curriculumId: curriculumId, sefariaRef: sefariaRef);
   }
@@ -542,6 +603,7 @@ class FirestoreBookmarkRepositoryAdapter implements BookmarkRepository {
     required CurriculumId curriculumId,
     required String completedSefariaRef,
   }) async {
+    _assertNotTutoredSession();
     final repo = await _resolve();
     await repo.advanceBookmark(
       curriculumId: curriculumId,
@@ -553,19 +615,8 @@ class FirestoreBookmarkRepositoryAdapter implements BookmarkRepository {
   Future<BookmarkEntity> initializeBookmark({
     required CurriculumId curriculumId,
   }) async {
+    _assertNotTutoredSession();
     final repo = await _resolve();
     return repo.initializeBookmark(curriculumId: curriculumId);
-  }
-
-  @override
-  Future<int> syncFromFirestore() async {
-    // Firestore listeners + offline persistence replace the old polling
-    // pull step entirely — FirestoreBookmarkRepository itself does not even
-    // declare this method (see its class doc comment, "Dropped along with
-    // the interface"). BookmarkRepository still declares it for the
-    // Drift-era implementer, so this adapter keeps a no-op override rather
-    // than requiring an interface change that would ripple into every
-    // other current implementer/caller.
-    return 0;
   }
 }

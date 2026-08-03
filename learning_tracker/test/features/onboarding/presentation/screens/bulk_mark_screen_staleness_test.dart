@@ -34,18 +34,35 @@
 /// calls `.increment()` itself — only the production code under test may.
 ///
 /// `bulkPriorCompletionServiceProvider`'s default Riverpod wiring pulls in
-/// `bookmarkRepositoryProvider` -> `firestoreGatewayProvider` -> real
-/// Firebase Auth (`[core/no-app] No Firebase App '[DEFAULT]'` in a plain
-/// widget test) — every existing `BulkMarkScreen` test avoids this the same
-/// way (`bulk_mark_screen_test.dart`,
+/// `bookmarkRepositoryProvider` -> `FirestoreBookmarkRepositoryAdapter` ->
+/// `firestoreBookmarkRepositoryProvider` -> real Firebase Auth/Firestore
+/// account resolution (still `[core/no-app] No Firebase App '[DEFAULT]'`
+/// in a plain widget test — bookmarks moved onto a different provider
+/// chain than the old `firestoreGatewayProvider` one, but it still needs a
+/// real signed-in Firebase app) — every existing `BulkMarkScreen` test
+/// avoids this the same way (`bulk_mark_screen_test.dart`,
 /// `bulk_mark_screen_expunge_ordering_test.dart`): override
 /// `completionRepositoryProvider`/`bulkPriorCompletionServiceProvider`
-/// directly instead of letting the real provider graph resolve. This test
-/// does the same, but constructs REAL `CompletionRepositoryImpl` /
-/// `BookmarkRepositoryImpl` / `BulkPriorCompletionService` instances with
-/// `syncEngine: null` — the exact wiring the app itself uses for a
-/// local-born (offline) account — rather than a canned mock, so the actual
-/// completion-write SQL still runs against the real in-memory DB.
+/// directly instead of letting the real provider graph resolve. Those two
+/// sibling tests get away with a canned `_MockBulkPriorCompletionService`
+/// because they never assert on real completion-write side effects; this
+/// test needs the actual completion-write SQL to run — that is what makes
+/// `lifetimeTotalsAcrossAllCurriculaProvider` change — so it constructs a
+/// REAL `CompletionRepositoryImpl` (`syncEngine: null`, the same wiring
+/// `completionRepositoryProvider` gives a local-born/offline account)
+/// backed by the real in-memory DB, rather than a mock.
+///
+/// `BulkPriorCompletionService.execute()` also calls
+/// `_bookmarkRepository.setBookmark(...)`, so the service still needs some
+/// working `BookmarkRepository`. Bookmarks are Firestore-only now for
+/// every account — local-born or not, `bookmarkRepositoryProvider` no
+/// longer has a Drift branch — so there is no "the app's own wiring"
+/// version of this dependency left to reuse the way there is for
+/// completions. The Drift-backed `BookmarkRepositoryImpl` class is still
+/// real, working code — just unreachable from the bookmark providers, not
+/// deleted — so this test constructs it directly against the same
+/// in-memory `db` as a Firebase-free stand-in: real SQL runs, but this is
+/// no longer the path production traffic takes.
 @Tags(['onboarding', 'bulk_mark', 'riverpod', 'contract'])
 library;
 
@@ -172,9 +189,12 @@ void main() {
 
     final contentRepo = _TwoLeafContentRepository();
 
-    // Real, DB-backed implementations wired exactly like a local-born
-    // (offline) account — `syncEngine: null` — so the write path is real
-    // SQL, not a canned mock, while never touching Firebase.
+    // completionRepo mirrors production wiring for a local-born (offline)
+    // account (`syncEngine: null`, same as `completionRepositoryProvider`).
+    // bookmarkRepo has no such production equivalent to mirror anymore —
+    // bookmarks are Firestore-only now — so it's a deliberate Firebase-free
+    // stand-in instead: still real, DB-backed code (not a canned mock),
+    // just not what the app itself calls for bookmarks today.
     final bookmarkRepo = BookmarkRepositoryImpl(
       database: db,
       syncEngine: null,

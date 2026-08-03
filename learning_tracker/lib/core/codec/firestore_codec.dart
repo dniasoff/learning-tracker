@@ -54,8 +54,30 @@ abstract class FirestoreCodec {
   ///
   /// Always produces UTC. Returns `null` when [dt] is `null`.
   ///
-  /// The Firestore SDK converts ISO-8601 strings into Timestamp objects on
-  /// write, so this format is safe to use in push documents.
+  /// This produces a plain ISO-8601 UTC string — `cloud_firestore` stores a
+  /// [String] as a `string`-typed field, it does NOT convert it into a
+  /// `Timestamp` on write. That makes this format safe to push ONLY for
+  /// fields no security rule type-checks as a timestamp (`is timestamp` in
+  /// `firestore.rules`); a field guarded that way must be written as a real
+  /// `Timestamp` by the repository itself, not via this helper.
+  ///
+  /// Reference the three collections whose rules actually enforce
+  /// `is timestamp` today for how to do this correctly: `completions`'/
+  /// `learning_ledger`'s `completed_at` (`firestore_completion_repository.dart`,
+  /// `firestore_learning_ledger_repository.dart`) and `points_ledger`'s
+  /// `created_at` (`firestore_points_ledger_repository.dart`) all pass the
+  /// raw [DateTime] straight into the document map — the SDK auto-converts a
+  /// [DateTime] (never a [String]) into a real `Timestamp` on write.
+  /// `streak_events`' `created_at` guard (`firestore_streak_event_repository
+  /// .dart`) is satisfied a different way: that repository never writes a
+  /// `created_at` key at all, so the rule's "field absent" branch always
+  /// applies (see that file's "No `Timestamp`-vs-`String` trap here"
+  /// section).
+  ///
+  /// On the read side, note that `Timestamp.toDate()` returns a [DateTime]
+  /// flagged local, so callers decoding a real `Timestamp` back into UTC
+  /// need an explicit `.toUtc()` — see [parseDateTime]'s `DateTime` branch,
+  /// which does this.
   static String? encodeDateTime(DateTime? dt) => dt?.toUtc().toIso8601String();
 
   // ── Primitive coercions ──────────────────────────────────────────────────────

@@ -1,7 +1,7 @@
 ---
 title: "Drift → Firestore rewrite map"
 status: active
-updated: 2026-08-02
+updated: 2026-08-03
 ---
 
 # Drift → Firestore rewrite map
@@ -71,11 +71,103 @@ users/{uid}/learner_profiles/{profileId}/<15 subcollections>
   non-cascading cleanup existed because the sync engine had to *copy* a tutored child's
   data into the tutor's local DB. The rules already let a tutor read
   `users/{parentUid}/learner_profiles/{profileId}` and all 15 subcollections directly
-  via `hasActiveTutorAccess()`. The tutor reads the parent's tree. No mirror.
+  via `hasActiveTutorAccess()` — deleting the mirror and having the tutor read the
+  parent's tree directly is still the right target design.
+
+  **Correction (2026-08-03): this does not work yet, as written — it is
+  permission-denied.** `hasActiveTutorAccess(ownerUid, profileId)`
+  (`firestore.rules:87-91`) builds its access-document id from the **path segment** it is
+  called with: `accessId = tutorUid + '_' + ownerUid + '_' + profileId`. Once
+  `learner_profiles` is keyed by the ULID (see "Table → collection" above), that path
+  segment IS the ULID, so a tutor read needs a document
+  `tutor_active_access/{tutorUid}_{parentUid}_{ULID}`. But `acceptInvite`
+  (`functions/src/tutor_invites.ts:203-205`, mirrored in the resign/revoke paths at
+  `:402-403` and `:458-459`) builds that same access document's id from
+  `String(grant.child_profile_id)` — the Drift **int** the client passed as
+  `childProfileId` (`profile.id.toString()` at
+  `lib/features/tutoring/presentation/screens/manage_tutors_screen.dart:293,298`). A
+  tutor reading the parent's ULID-keyed tree is therefore rules-denied: the access
+  document `hasActiveTutorAccess` looks for doesn't exist — the one that does exist is
+  keyed on the wrong id. This is one instance of "the int→ULID boundary is global"
+  below, not an isolated bug. Fixing it needs either `acceptInvite` (and its siblings) to
+  write `tutor_active_access` keyed on the ULID, or a resolvable int→ULID mapping
+  surfaced to the CF at grant-accept time; neither exists today.
 - **LWW conflict predicate** (`conflict.dart`) — one writer per account.
 - **`legacy*DocId` twins** in `doc_ids.dart` — for a backfill that will never run.
 - Merge routers, mergers, codecs, outbox/push pipeline, sync orchestrator, pull
   pagination, per-account Drift file swapping, Drift user-schema migrations.
+
+## CRITICAL: the int→ULID boundary is global, not per-feature (2026-08-03)
+
+**The migration unit is the cut, not the feature.** Two disjoint document trees exist
+side by side right now:
+
+- The old sync engine — `FirestoreGatewayImpl._learnerProfileDoc`
+  (`lib/core/sync/firestore_gateway_impl.dart:1293`; its own doc comment at `:1290` calls
+  it "the sole place the learner-profile document path is constructed") — writes and
+  reads `users/{uid}/learner_profiles/{int}/...` across all 15 per-profile
+  subcollections (`bookmarks`, `completions`, `curriculum_tracks`, `goals`,
+  `import_metadata`, `learning_ledger`, `learning_order`, `points_ledger`,
+  `profile_programs`, `reward_redemptions`, `settings`, `stage_definitions`,
+  `streak_events`, `study_day_configs`, `preferences/*`).
+- Every new Firestore repository under `lib/data/repositories/` reads and writes
+  `users/{uid}/learner_profiles/{ULID}/...` (`lib/data/firestore/doc_ids.dart`).
+
+These do not overlap. A row written by one is invisible to the other — not stale, not
+conflicting, just never seen. Because most features share the same profile-scoped
+provider plumbing, fixing one writer to target the ULID tree routinely stranded a reader
+(or another writer) still pointed at the int tree, with nothing flagging the two as
+related. Observed today, in order:
+
+1. Bookmarks were repointed at the ULID tree.
+2. That stranded **track creation**'s bookmark write, which still passes a Drift
+   `int profileId` through `_syncFacade?.pushBookmark` into the old int-keyed gateway
+   path (`lib/features/tracks/setup/domain/services/track_creation_service.dart:102`,
+   comment at `:245-246`) — not yet fixed as of this writing.
+3. Fixing the **learning-order** writer to the ULID tree stranded the **scheduler's**
+   reader, which read the frozen Drift `learning_order` table. That has since been
+   rewired to `SchedulerFirestoreLearningOrderRepositoryAdapter`
+   (`lib/features/scheduler/presentation/providers/scheduler_providers.dart:146-148`) —
+   fixed, but only after the gap was hit in practice, not predicted in advance.
+4. **Tutoring** is still entirely on the int side end-to-end — see below.
+
+Each fix so far has relocated the boundary rather than removed it. Treat "migrate
+feature X" as unsafe scoping for this rewrite: the unit that must move atomically is the
+full read/write graph for a profile-scoped entity, including every consumer, not just the
+repository class that happens to own the write.
+
+**Two further consequences of the same global boundary, independent of any single
+feature:**
+
+- **Owner-path Cloud Functions are int-keyed and silently no-op post-cutover.**
+  `functions/src/deletes.ts`: `deleteLearnerProfile` (`:135-143`), `deleteCurriculumTrack`
+  (`:214-225`), `deleteBulkMarkedCompletions` (`:406-441`) all validate `profileId must be
+  a positive integer` and address
+  `.collection("learner_profiles").doc(String(profileId))`. These are the owner's own
+  destructive operations — nothing to do with tutoring. Once a profile's live data is
+  under its ULID, these functions address a path with **no data**: they report success
+  while deleting nothing. `deleteBulkMarkedCompletions` implements the owner's
+  un-tick-a-bulk-mark rule (see the RESOLVED prior-import section above), so that
+  feature would silently stop working with no error surfaced anywhere.
+- **Tutoring's identity is Drift-int end-to-end**, not just at the read path corrected
+  above: grant creation passes `profile.id.toString()`
+  (`lib/features/tutoring/presentation/screens/manage_tutors_screen.dart:293,298`); the
+  tutor-invite and tutor-write Cloud Functions validate a positive integer at 14 call
+  sites (`functions/src/tutor_writes.ts:277,335,391,444,498,551,610,664,727,793,853,913,980`,
+  `functions/src/tutor_bulk_completions.ts:75`) and write
+  `learner_profiles/{String(profileId)}`; `TutoredWriteRouter._profileIdOrThrow`
+  (`lib/features/tutoring/data/routers/tutored_write_router.dart:410-412`) does
+  `int.tryParse` on the profile id; `ProfileDao.upsertTutoredProfile`
+  (`lib/core/database/daos/profile_dao.dart:226`) mints no ULID at all, so a tutored
+  mirror row has no Firestore identity to speak of. Separately, and regardless of the
+  int/ULID question: `DocIds.bookmarkDocId` is bare `{curriculum_id}`
+  (`lib/data/firestore/doc_ids.dart:352-353`) while `TutoredWriteRouter.pushBookmark`
+  computes `{curriculum_id}_{track_type}` (`tutored_write_router.dart:227-236`) — two
+  writers targeting **different documents** on a collection meant to have exactly one
+  per curriculum. Blast radius for the tutoring-identity problem: all 13 profile-scoped
+  providers that funnel through `_watchActiveAccountAndProfile`
+  (`lib/data/firestore/repository_providers.dart:126-134`, 13 call sites at
+  `:196,217,230,243,256,269,282,295,308,321,342,355,368`).
 
 ## Invariants that survive
 
@@ -330,6 +422,27 @@ pass locally and fail only in production; one passes forever while doing nothing
    snapshots rather than one atomic update; and `strictRules: true` denies even the
    legitimate owner's writes, so **no positive rules test is possible** — rules
    correctness rests on reading the rules text.
+10. **The test suite cannot catch a writer/reader path disagreement — by construction,
+    not by oversight.** Trap 9's `fake_cloud_firestore` cannot evaluate `resource.data` /
+    `request.resource`, and unit tests seed fixture documents directly into whichever
+    path the test author chooses. So if a writer and a reader silently disagree about
+    which document tree they're using (see "the int→ULID boundary is global" above),
+    both sides of the test still talk to the same fixture and the test passes green. On
+    2026-08-03: 144 tests passed, including six custom-order regression tests, over a
+    wiring where the custom-order branch could not execute in production at all (the
+    scheduler read Drift while the writer wrote Firestore). `make audit`'s 102 checks
+    also passed throughout. **What actually catches it:** tracing the real
+    provider/call graph end to end and checking that a feature's writers and readers
+    name the same collection and doc-id formula — not a green test run.
+11. **A rules whitelist can outrun the comments describing it — verify against
+    `firestore.rules` directly, not against prose.** `curriculum_tracks.last_reorder_at`
+    is no longer rules-blocked: it IS in the `curriculum_tracks` `.hasOnly()` whitelist
+    now (`firestore.rules:412`). Several code comments — and this file's own OPEN
+    section, corrected below — still claimed it was rules-impossible, and that stale
+    claim caused a wrong deletion on 2026-08-03. The remaining reorder-amnesty gap is a
+    code/wiring gap, not a rules one: nothing writes the field yet, and
+    `daily_task_projection_service.dart:443-446` still reads `lastReorderAt` off the
+    Drift row.
 
 ## OPEN: schema fields that exist in Drift but have no Firestore home
 
@@ -360,9 +473,14 @@ the feature can be ported.
 - **`learning_order.learning_order_version`** — the content-seed staleness marker. Absent
   from the whitelist; its Drift side effect was local bookkeeping only.
 - **`curriculum_tracks.last_reorder_at`** — the reorder-amnesty baseline
-  (`TrackDao.stampReorderAt`). Absent from both whitelists. The repository method was
-  dropped rather than smuggling the timestamp into an unrelated field; the feature is
-  non-functional until the field is added.
+  (`TrackDao.stampReorderAt`). **RESOLVED on the rules side (2026-08-03): this field IS
+  in the `curriculum_tracks` `.hasOnly()` whitelist now** (`firestore.rules:412`) — it
+  is no longer true that writing it needs a rules change. What remains is a code/wiring
+  gap, not a schema gap: no repository write path exists yet, and
+  `daily_task_projection_service.dart:443-446` still reads `lastReorderAt` from the
+  Drift row rather than Firestore. See trap 11 — a stale comment claiming this field was
+  rules-blocked caused a wrong deletion once already; verify against `firestore.rules`
+  directly before trusting any comment (including this file) on this point.
 
 Also note `curriculum_tracks` carries five fields that are whitelisted but have **no
 producer or consumer anywhere in the repo**: `progress_schema_version`,

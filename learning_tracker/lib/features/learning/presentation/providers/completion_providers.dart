@@ -116,13 +116,6 @@ CompletionOrchestrator completionOrchestrator(Ref ref) {
   final ledgerRepository = ref.watch(learningLedgerRepositoryProvider);
 
   final bookmarkRepository = ref.watch(bookmarkRepositoryProvider);
-  // AUD-learning-04: delegated-profile bookmark advances (bookmarkProfileId
-  // != the active profile) can't use bookmarkRepository above — it's hard-
-  // scoped to the active profile. The factory carries the same ContentIndex
-  // wiring for any profile, so those advances keep the O(1) fast path.
-  final bookmarkRepositoryFactory = ref.watch(
-    bookmarkRepositoryFactoryProvider,
-  );
 
   final completionRepository = ref.watch(completionRepositoryProvider);
 
@@ -138,7 +131,6 @@ CompletionOrchestrator completionOrchestrator(Ref ref) {
     contentRepository: contentRepository,
     activeProfileId: profileId,
     bookmarkRepository: bookmarkRepository,
-    bookmarkRepositoryFactory: bookmarkRepositoryFactory,
     completionDetectionService: detectionService,
     pointsPort: ref.watch(completionPointsPortProvider),
     streakPort: ref.watch(completionStreakPortProvider),

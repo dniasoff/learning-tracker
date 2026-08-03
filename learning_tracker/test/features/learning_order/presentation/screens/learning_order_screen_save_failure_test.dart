@@ -79,9 +79,6 @@ class _ThrowingRepository implements LearningOrderRepository {
       throw Exception('offline — cannot reach outbox');
     }
   }
-
-  @override
-  Future<void> repairStaleOrderVersion(CurriculumId curriculumId) async {}
 }
 
 /// Minimal [ContentRepository] stub returning empty results for every

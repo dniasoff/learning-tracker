@@ -41,6 +41,8 @@ import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
+import 'package:learning_tracker/features/learning/domain/entities/bookmark.dart';
+import 'package:learning_tracker/features/learning/domain/repositories/bookmark_repository.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/features/scheduler/domain/repositories/goal_repository.dart';
@@ -75,6 +77,8 @@ class MockCurriculumActivationService extends Mock
 
 class MockLearningProcessWizardService extends Mock
     implements LearningProcessWizardService {}
+
+class MockBookmarkRepository extends Mock implements BookmarkRepository {}
 
 // ── Widget harness ──────────────────────────────────────────────────────────
 
@@ -1074,12 +1078,31 @@ void main() {
         ),
       ).thenAnswer((_) async {});
 
+      // startingRef: 'offset:-7' below resolves to a non-empty bookmarkRef
+      // (see _parseProgramStartingRef — no '|' token means the raw string
+      // itself is the bookmarkRef), so createTrack calls setBookmark.
+      final bookmarkRepo = MockBookmarkRepository();
+      when(
+        () => bookmarkRepo.setBookmark(
+          curriculumId: any(named: 'curriculumId'),
+          sefariaRef: any(named: 'sefariaRef'),
+        ),
+      ).thenAnswer(
+        (invocation) async => BookmarkEntity(
+          curriculumId:
+              invocation.namedArguments[#curriculumId] as CurriculumId,
+          sefariaRef: invocation.namedArguments[#sefariaRef] as String,
+          updatedAt: DateTime.now().toUtc(),
+        ),
+      );
+
       final svc = TrackCreationService(
         database: db,
         activationService: activationSvc,
         wizardService: wizardSvc,
         goalRepository: goalRepo,
         stageRepository: stageRepo,
+        bookmarkRepository: bookmarkRepo,
         gateway: null,
         syncFacade: null,
         analytics: null,
@@ -1163,12 +1186,15 @@ void main() {
           ),
         ).thenAnswer((_) async {});
 
+        // No startingRef below → bookmarkRef stays null → setBookmark is
+        // never called, so the mock needs no stub.
         final svc = TrackCreationService(
           database: db,
           activationService: activationSvc,
           wizardService: wizardSvc,
           goalRepository: goalRepo,
           stageRepository: stageRepo,
+          bookmarkRepository: MockBookmarkRepository(),
           gateway: null,
           syncFacade: null,
           analytics: null,

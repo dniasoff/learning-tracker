@@ -23,13 +23,17 @@ import 'package:learning_tracker/features/progress/domain/repositories/progress_
 /// agent's — do NOT build one." This class therefore never imports
 /// `cloud_firestore` and never constructs a `FirestoreCompletionRepository`
 /// itself — every read goes through `firestoreCompletionRepositoryProvider`
-/// (`lib/data/firestore/repository_providers.dart`), which some other task
-/// is responsible for wiring to a real, ready instance. Until that happens
-/// this adapter behaves exactly like every other not-yet-activated provider
-/// in this file (see [_resolveOrNull]): the provider resolves `null`
-/// (`activeProfileDocIdProvider` is unset in production today — see that
-/// provider's doc comment), and every method below falls back to its "not
-/// ready" value.
+/// (`lib/data/firestore/repository_providers.dart`), which is already wired
+/// to a real, ready instance. Like every provider in that file (see
+/// [_resolveOrNull]), it resolves `null` only while no account or learner
+/// profile is active yet — the same "not ready yet, show a loading/empty
+/// state" contract every provider there documents, not a stub — and every
+/// method below falls back to its "not ready" value in exactly that case.
+///
+/// This class is not itself wired into `progressRepositoryProvider` yet —
+/// that provider (`progress_providers.dart`) still returns the Drift-era
+/// `ProgressRepositoryImpl`. Rewiring the progress feature onto this
+/// adapter is a separate task that has not happened yet.
 ///
 /// [FirestoreCompletionRepository]'s own aggregate methods
 /// (`getTrackTypeBreakdownForCurriculum`, `getAggregateCountForCurriculum`)

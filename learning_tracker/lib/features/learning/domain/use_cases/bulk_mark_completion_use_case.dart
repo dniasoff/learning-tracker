@@ -94,7 +94,6 @@ class BulkMarkCompletionUseCase {
       sefariaRefs: request.sefariaRefs,
       stageId: request.stageId,
       trackType: request.trackType,
-      profileId: request.profileId,
       awardGamificationPoints: source.creditsEngagement,
       creditsAchievement: source.creditsAchievement,
       completedAt: effectiveCompletedAt,

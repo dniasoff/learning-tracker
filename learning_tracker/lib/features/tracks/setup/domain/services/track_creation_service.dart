@@ -5,10 +5,10 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/domain/value_objects/program_starting_position.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
-import 'package:learning_tracker/core/sync/codec/bookmark_codec.dart';
 import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/core/sync/sync_write_facade.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
+import 'package:learning_tracker/features/learning/domain/repositories/bookmark_repository.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
 import 'package:learning_tracker/features/scheduler/scheduler.dart';
 import 'package:learning_tracker/features/tracks/domain/services/curriculum_activation_service.dart';
@@ -40,6 +40,7 @@ class TrackCreationService {
     required LearningProcessWizardService wizardService,
     required GoalRepository goalRepository,
     required StageDefinitionRepository stageRepository,
+    required BookmarkRepository bookmarkRepository,
     FirestoreGateway? gateway,
     SyncWriteFacade? syncFacade,
     AnalyticsService? analytics,
@@ -48,6 +49,7 @@ class TrackCreationService {
        _wizardService = wizardService,
        _goalRepository = goalRepository,
        _stageRepository = stageRepository,
+       _bookmarkRepository = bookmarkRepository,
        _gateway = gateway,
        _syncFacade = syncFacade,
        _analytics = analytics ?? const NullAnalyticsService();
@@ -57,6 +59,12 @@ class TrackCreationService {
   final LearningProcessWizardService _wizardService;
   final GoalRepository _goalRepository;
   final StageDefinitionRepository _stageRepository;
+  // The SAME repository the rest of the app reads bookmarks through
+  // (Firestore-backed, ULID-profile-keyed — see bookmark_providers.dart).
+  // The initial program-track bookmark MUST be written here, not via the
+  // Drift DAO or the int-keyed outbox gateway, or it lands on a document
+  // nothing reads (see createTrack's doc comment).
+  final BookmarkRepository _bookmarkRepository;
   final FirestoreGateway? _gateway;
   // All routable writes (bookmark, study-day, profile-program) go through the
   // tutored router when a tutor session is active.
@@ -72,6 +80,23 @@ class TrackCreationService {
   /// dangling enrolment. Network / idempotent work (curriculum activation, goal
   /// sync, cloud pushes) runs AFTER commit so the transaction is never held
   /// open on a network round.
+  ///
+  /// The initial bookmark for a program track is one of those post-commit
+  /// writes (see the `bookmarkRef != null` branch below): [BookmarkRepository]
+  /// is Firestore-backed, so it cannot participate in the Drift transaction
+  /// above, and it can throw (e.g. [BookmarkRepositoryNotReadyException] via
+  /// the adapter) or fail on the network. That failure is deliberately left
+  /// unhandled here, exactly like the `_syncFacade?.pushProfileProgram` push
+  /// beside it: the LOCAL track/program row (the source of truth for
+  /// `trackingStartRef`) is already durable by that point, so a failed
+  /// bookmark push is a retriable cloud-sync gap, not data loss — the caller
+  /// surfaces the error, and re-opening the track (or a future explicit
+  /// retry) re-attempts the same idempotent `setBookmark` call. Writing the
+  /// bookmark BEFORE commit was rejected: it would mean either holding the
+  /// Drift transaction open across a network round-trip, or writing the
+  /// bookmark first and then rolling back the local row on a later DAO
+  /// failure while the remote bookmark stays set — a worse inconsistency than
+  /// the one this method already accepts for the sibling cloud pushes.
   Future<void> createTrack({
     required AddTrackResult result,
     required int profileId,
@@ -157,15 +182,12 @@ class TrackCreationService {
           trackingStartDate: trackingStartDate,
           trackingStartRef: bookmarkRef,
         );
-        if (bookmarkRef != null && bookmarkRef.isNotEmpty) {
-          await _database.bookmarkDao.upsertBookmarkByProfile(
-            profileId: profileId,
-            curriculumId: curriculum.storageKey,
-            trackId: trackId,
-            sefariaRef: bookmarkRef,
-            updatedAt: DateTimeFactory.nowUtc(),
-          );
-        }
+        // The bookmark itself is NOT written here. It is a Firestore write
+        // (via [_bookmarkRepository], post-commit below) and cannot
+        // participate in this Drift transaction — see createTrack's doc
+        // comment for the full reasoning. `trackingStartRef` above is the
+        // durable LOCAL record of the chosen starting ref; it is not read as
+        // a bookmark by anything.
       }
     });
 
@@ -217,17 +239,17 @@ class TrackCreationService {
       }
     } else {
       if (bookmarkRef != null && bookmarkRef.isNotEmpty) {
-        // Phase 1 — route the bookmark write through the outbox so offline
-        // track-creates do not silently drop the bookmark.
-        // Phase B — use BookmarkCodec.encode() as the canonical serializer.
-        await _syncFacade?.pushBookmark(
-          const BookmarkCodec().encode(
-            BookmarkRow(
-              curriculumId: curriculum.storageKey,
-              sefariaRef: bookmarkRef,
-              updatedAt: DateTimeFactory.nowUtc(),
-            ),
-          ),
+        // Route the initial bookmark through the SAME repository every
+        // other bookmark read/write in the app uses (Firestore-backed,
+        // ULID-profile-keyed — see bookmark_providers.dart). The old outbox
+        // path (`_syncFacade?.pushBookmark`) wrote through
+        // `FirestoreGatewayImpl`'s int-profileId-keyed doc path, which the
+        // reader never looks at — the bookmark landed on a document nothing
+        // reads. See createTrack's doc comment for why this call is here
+        // (post-commit) rather than inside the Drift transaction above.
+        await _bookmarkRepository.setBookmark(
+          curriculumId: curriculum,
+          sefariaRef: bookmarkRef,
         );
       }
       // Phase 1 — route the profile-program assignment through syncFacade so

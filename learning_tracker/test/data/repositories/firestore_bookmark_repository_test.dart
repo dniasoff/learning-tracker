@@ -1,10 +1,11 @@
 /// Unit tests for `lib/data/repositories/firestore_bookmark_repository.dart`
 /// — the REFERENCE Firestore repository (Epic B). Covers: doc-id
-/// correctness, model round-trip, the stream emitting on change, and the
-/// advance/initialize natural-order paths. See the class doc comment's
-/// "Known, deliberate gap" section for what [advanceBookmark]/
-/// [initializeBookmark] deliberately do NOT cover (a custom `learning_order`
-/// override — that repository does not exist yet).
+/// correctness, model round-trip, the stream emitting on change, the
+/// advance/initialize natural-order paths, and (see the "custom learning
+/// order" group) the custom `learning_order` override that
+/// [advanceBookmark]/[initializeBookmark] now check FIRST via the injected
+/// [FirestoreLearningOrderRepository] — see the class doc comment's
+/// "Custom learning order is honoured" section.
 ///
 /// **What these tests cannot see** (report this honestly, do not paper over
 /// it): `fake_cloud_firestore`'s rules companion cannot evaluate
@@ -32,6 +33,8 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/data/firestore/doc_ids.dart';
 import 'package:learning_tracker/data/repositories/firestore_bookmark_repository.dart';
+import 'package:learning_tracker/data/repositories/firestore_learning_order_repository.dart';
+import 'package:learning_tracker/features/tracks/whole_curriculum_order/domain/models/learning_order_item.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../helpers/firestore_fake.dart';
@@ -74,13 +77,47 @@ void main() {
           .collection('bookmarks')
           .doc(curriculumId.storageKey);
 
+  FirestoreLearningOrderRepository buildLearningOrderRepo() {
+    return FirestoreLearningOrderRepository(
+      firestore: firestore,
+      uid: _uid,
+      profileId: _profileId,
+    );
+  }
+
   FirestoreBookmarkRepository buildRepo({ContentIndex? contentIndex}) {
     return FirestoreBookmarkRepository(
       firestore: firestore,
       uid: _uid,
       profileId: _profileId,
       contentRepository: contentRepository,
+      learningOrderRepository: buildLearningOrderRepo(),
       contentIndex: contentIndex,
+    );
+  }
+
+  /// Seeds a custom `learning_order` for [curriculumId] via
+  /// [FirestoreLearningOrderRepository.saveOrder] — the list POSITION of
+  /// [refs] becomes the saved `user_sort_order`, exactly like a real drag-
+  /// reorder save.
+  Future<void> seedCustomOrder(
+    CurriculumId curriculumId,
+    List<String> refs,
+  ) async {
+    final orderRepo = buildLearningOrderRepo();
+    await orderRepo.saveOrder(
+      curriculumId,
+      refs
+          .map(
+            (ref) => LearningOrderItem(
+              sefariaRef: ref,
+              displayNameHe: ref,
+              displayNameEn: ref,
+              userSortOrder: 0,
+              isCustomOrdered: true,
+            ),
+          )
+          .toList(),
     );
   }
 
@@ -410,6 +447,143 @@ void main() {
         curriculumId: CurriculumId.mishnayos,
       );
       expect(bookmark!.sefariaRef, 'c');
+    });
+  });
+
+  group('advanceBookmark/initializeBookmark — custom learning order', () {
+    late ContentIndex naturalIndex;
+
+    setUp(() {
+      naturalIndex = ContentIndex.fromCurricula({
+        CurriculumId.mishnayos: [
+          _leaf(
+            curriculumId: CurriculumId.mishnayos,
+            sefariaRef: 'A',
+            sortOrder: 1,
+          ),
+          _leaf(
+            curriculumId: CurriculumId.mishnayos,
+            sefariaRef: 'B',
+            sortOrder: 2,
+          ),
+          _leaf(
+            curriculumId: CurriculumId.mishnayos,
+            sefariaRef: 'C',
+            sortOrder: 3,
+          ),
+        ],
+      });
+    });
+
+    test('custom order [B, A, C] with natural order A,B,C: completing A '
+        'advances to C, not the natural-order B', () async {
+      await seedCustomOrder(CurriculumId.mishnayos, ['B', 'A', 'C']);
+      final repo = buildRepo(contentIndex: naturalIndex);
+      await repo.setBookmark(
+        curriculumId: CurriculumId.mishnayos,
+        sefariaRef: 'A',
+      );
+
+      await repo.advanceBookmark(
+        curriculumId: CurriculumId.mishnayos,
+        completedSefariaRef: 'A',
+      );
+
+      final bookmark = await repo.getBookmark(
+        curriculumId: CurriculumId.mishnayos,
+      );
+      expect(bookmark!.sefariaRef, 'C');
+    });
+
+    test('completed ref absent from a non-empty custom order: no advance, '
+        'NOT a natural-order fallback', () async {
+      await seedCustomOrder(CurriculumId.mishnayos, ['X', 'Y']);
+      final repo = buildRepo(contentIndex: naturalIndex);
+
+      await repo.advanceBookmark(
+        curriculumId: CurriculumId.mishnayos,
+        completedSefariaRef: 'A',
+      );
+
+      final bookmark = await repo.getBookmark(
+        curriculumId: CurriculumId.mishnayos,
+      );
+      expect(bookmark, isNull);
+    });
+
+    test(
+      'completed ref is the last entry of the custom order: no advance',
+      () async {
+        await seedCustomOrder(CurriculumId.mishnayos, ['A', 'B', 'C']);
+        final repo = buildRepo(contentIndex: naturalIndex);
+        await repo.setBookmark(
+          curriculumId: CurriculumId.mishnayos,
+          sefariaRef: 'C',
+        );
+
+        await repo.advanceBookmark(
+          curriculumId: CurriculumId.mishnayos,
+          completedSefariaRef: 'C',
+        );
+
+        final bookmark = await repo.getBookmark(
+          curriculumId: CurriculumId.mishnayos,
+        );
+        expect(bookmark!.sefariaRef, 'C');
+      },
+    );
+
+    test('initializeBookmark with custom order [C, A, B] sets C, not the '
+        'natural-first A', () async {
+      await seedCustomOrder(CurriculumId.mishnayos, ['C', 'A', 'B']);
+      final repo = buildRepo(contentIndex: naturalIndex);
+
+      final result = await repo.initializeBookmark(
+        curriculumId: CurriculumId.mishnayos,
+      );
+
+      expect(result.sefariaRef, 'C');
+    });
+
+    test('REGRESSION GUARD: zero learning_order documents saved — '
+        "advanceBookmark('A') yields the natural next item B (catches a "
+        'naive getOrder().isNotEmpty port, which would wrongly treat this '
+        'as a custom order)', () async {
+      final repo = buildRepo(contentIndex: naturalIndex);
+
+      await repo.advanceBookmark(
+        curriculumId: CurriculumId.mishnayos,
+        completedSefariaRef: 'A',
+      );
+
+      final bookmark = await repo.getBookmark(
+        curriculumId: CurriculumId.mishnayos,
+      );
+      expect(bookmark!.sefariaRef, 'B');
+    });
+
+    test('the custom-order branch is taken even when a ContentIndex IS '
+        'injected — custom order beats the O(1) fast path', () async {
+      // Natural order (via naturalIndex) is A, B, C — its fast-path next
+      // after 'A' would be 'B'. The custom order reverses that, so a
+      // result of 'A' proves the custom-order branch ran instead of the
+      // ContentIndex fast path.
+      await seedCustomOrder(CurriculumId.mishnayos, ['C', 'B', 'A']);
+      final repo = buildRepo(contentIndex: naturalIndex);
+      await repo.setBookmark(
+        curriculumId: CurriculumId.mishnayos,
+        sefariaRef: 'B',
+      );
+
+      await repo.advanceBookmark(
+        curriculumId: CurriculumId.mishnayos,
+        completedSefariaRef: 'B',
+      );
+
+      final bookmark = await repo.getBookmark(
+        curriculumId: CurriculumId.mishnayos,
+      );
+      expect(bookmark!.sefariaRef, 'A');
     });
   });
 }

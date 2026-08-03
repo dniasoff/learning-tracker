@@ -27,6 +27,8 @@ lib/core/exceptions/validation_exception.dart
 lib/core/ids/ids.dart
 lib/core/navigation/pin_scope.dart
 lib/core/network/sefaria/models/content_item.dart
+lib/core/providers/active_account_id_provider.dart
+lib/core/providers/active_profile_doc_id_provider.dart
 lib/core/providers/firebase_providers.dart
 lib/core/sync/outbox/push_pipeline.dart
 lib/core/sync/sync_write_facade.dart

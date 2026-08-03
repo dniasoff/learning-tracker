@@ -28,14 +28,19 @@ class LearningOrder extends Table {
   ///
   /// Default 1 is safe for existing rows: if the current seed version exceeds
   /// the saved version the order is considered stale.
-  /// `LearningOrderRepository.repairStaleOrderVersion` (AUD-tracks-06) is the
-  /// one-shot repair that re-amnesties the projection (last_reorder_at set to
-  /// nowUtc) so overdue tasks reset — it is swept once per app start for
-  /// every curriculum by `repairStaleLearningOrders`
-  /// (lib/app/bootstrap/learning_order_repair_bootstrap.dart), wired into
-  /// `bootstrap()`. `LearningOrderRepositoryImpl.getOrder` is a pure read
-  /// (SM-2) and never performs this write itself. See §10.1 of the
-  /// architecture spec.
+  /// `LearningOrderRepositoryImpl.repairStaleOrderVersion` (AUD-tracks-06) is
+  /// the one-shot repair that re-amnesties the projection (last_reorder_at
+  /// set to nowUtc) so overdue tasks reset. `LearningOrderRepositoryImpl
+  /// .getOrder` is a pure read (SM-2) and never performs this write itself.
+  /// See §10.1 of the architecture spec.
+  ///
+  /// F2: this column and its repair routine are Drift-only bookkeeping with
+  /// no Firestore counterpart — `learningOrderRepositoryProvider` now
+  /// resolves to the Firestore-backed
+  /// `FirestoreLearningOrderRepositoryAdapter`, whose writes never touch this
+  /// table, and the bootstrap sweep that used to call the repair
+  /// (`lib/app/bootstrap/learning_order_repair_bootstrap.dart`) has been
+  /// retired. Dead unless `LearningOrderRepositoryImpl` is invoked directly.
   IntColumn get learningOrderVersion =>
       integer().withDefault(const Constant(1))();
 

@@ -46,19 +46,4 @@ abstract class LearningOrderRepository {
 
   /// Reset to default order by deleting all learning_order rows for curriculum.
   Future<void> resetToDefault(CurriculumId curriculumId);
-
-  /// Repairs a stale §10.1 `learningOrderVersion` guard for [curriculumId].
-  ///
-  /// AUD-tracks-06: this write was formerly a side effect of [getOrder],
-  /// which meant every `learningOrderProvider` `FutureProvider.family` build
-  /// call (cold start, invalidation, ...) silently re-stamped
-  /// `lastReorderAt = now` while a version mismatch persisted — an SM-2
-  /// violation (provider `build` must stay a pure read) that also
-  /// permanently suppressed overdue-item detection after a reseed. The
-  /// repair now lives here as an explicit, idempotent, one-shot step:
-  /// no-ops when no rows exist, or when the saved version already matches
-  /// the current content version; otherwise stamps `lastReorderAt` on the
-  /// active track and marks the rows as repaired so a second call against
-  /// the same stale rows is a genuine no-op rather than a repeated write.
-  Future<void> repairStaleOrderVersion(CurriculumId curriculumId);
 }

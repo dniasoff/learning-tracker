@@ -120,8 +120,9 @@ class BulkPriorCompletionService {
     // AUD-onboarding-08 removed the last consumer (an ad-hoc
     // `BookmarkRepositoryImpl(syncEngine: _syncEngine, ...)` construction in
     // execute()'s former profileId branch — see owner decision 2,
-    // `docs/firestore-rewrite-map.md`, for why that branch and the
-    // `bookmarkRepositoryFactory` seam it used are gone entirely now).
+    // `docs/firestore-rewrite-map.md`, for why that branch, and the
+    // delegated-profile bookmark-repository seam it relied on, are gone
+    // entirely now).
     // Dropping this parameter too would require updating ~40 existing call
     // sites for zero behavioural change; kept as a no-op instead.
     // ignore: avoid_unused_constructor_parameters
@@ -245,11 +246,12 @@ class BulkPriorCompletionService {
   /// document tree, permanently. Removed rather than left in place and
   /// ignored. The one caller that used to pass a real cross-profile id
   /// (`AddTrackFlow` during onboarding, via `_applySelfPacedPriorCompletions`
-  /// in `add_track_flow_screen.dart`) threads a newly-created child's
-  /// profile id through `AddTrackFlow.profileId` without ever switching the
-  /// session's active profile to that child first — see that file's doc
-  /// comment for what it would need instead (switch the active profile,
-  /// don't thread the id).
+  /// in `add_track_flow_screen.dart`) still threads a newly-created child's
+  /// profile id through `AddTrackFlow.profileId`, but only for post-write
+  /// invalidation now — `onboarding_screen.dart`'s `_onProfileCreated`
+  /// switches the session's active profile to that child right after
+  /// creation, before the add-track step is ever reached, so by the time
+  /// this method runs the active profile already matches.
   Future<BulkPriorCompletionResult> execute({
     required CurriculumId curriculumId,
     required List<ContentItem> resolvedItems,

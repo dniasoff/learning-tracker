@@ -303,9 +303,8 @@ void main() {
     // test used to live here. Owner decision 2
     // (`docs/firestore-rewrite-map.md`, 2026-08) removed cross-profile
     // bulk-marking entirely — execute() no longer takes a profileId at all,
-    // it always targets the active profile — so the
-    // bookmarkRepositoryFactory delegation this test pinned no longer
-    // exists to test.
+    // it always targets the active profile — so the delegated-profile
+    // bookmark-repository seam this test pinned no longer exists to test.
 
     test('returns null bookmark when all items completed', () async {
       when(() => completionRepo.bulkMarkComplete(any())).thenAnswer(

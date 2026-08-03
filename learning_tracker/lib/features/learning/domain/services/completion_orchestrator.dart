@@ -179,7 +179,6 @@ class CompletionOrchestrator {
     required ContentRepository contentRepository,
     required int activeProfileId,
     BookmarkRepository? bookmarkRepository,
-    BookmarkRepository Function(int profileId)? bookmarkRepositoryFactory,
     CompletionDetectionService? completionDetectionService,
     CompletionPointsPort? pointsPort,
     CompletionStreakPort? streakPort,
@@ -187,7 +186,6 @@ class CompletionOrchestrator {
        _contentRepository = contentRepository,
        _activeProfileId = activeProfileId,
        _bookmarkRepository = bookmarkRepository,
-       _bookmarkRepositoryFactory = bookmarkRepositoryFactory,
        _completionDetectionService = completionDetectionService,
        _pointsPort = pointsPort,
        _streakPort = streakPort;
@@ -196,7 +194,6 @@ class CompletionOrchestrator {
   final ContentRepository _contentRepository;
   final int _activeProfileId;
   final BookmarkRepository? _bookmarkRepository;
-  final BookmarkRepository Function(int profileId)? _bookmarkRepositoryFactory;
   final CompletionDetectionService? _completionDetectionService;
   final CompletionPointsPort? _pointsPort;
   final CompletionStreakPort? _streakPort;
@@ -302,7 +299,6 @@ class CompletionOrchestrator {
       () => _advanceBookmark(
         curriculumId: completion.curriculumId,
         completedSefariaRef: completion.sefariaRef,
-        profileId: _activeProfileId,
       ),
     );
 
@@ -334,14 +330,13 @@ class CompletionOrchestrator {
     BulkCompletionRequest request,
   ) async {
     if (request.sefariaRefs.isEmpty) return const [];
-    final effectiveProfileId = request.profileId ?? _activeProfileId;
 
     await _validateBulkOrder(
       curriculumId: request.curriculumId,
       trackType: request.trackType,
       stageId: request.stageId,
       sefariaRefs: request.sefariaRefs,
-      profileId: effectiveProfileId,
+      profileId: _activeProfileId,
     );
 
     var points = 0;
@@ -349,7 +344,7 @@ class CompletionOrchestrator {
       points = await _pointsPort.calculatePoints(
         curriculumId: request.curriculumId,
         stageOrder: request.stageId,
-        profileId: effectiveProfileId,
+        profileId: _activeProfileId,
       );
     }
 
@@ -360,7 +355,6 @@ class CompletionOrchestrator {
             sefariaRefs: request.sefariaRefs,
             stageId: request.stageId,
             trackType: request.trackType,
-            profileId: request.profileId,
             awardGamificationPoints: request.awardGamificationPoints,
             creditsAchievement: request.creditsAchievement,
             completedAt: request.completedAt,
@@ -387,7 +381,7 @@ class CompletionOrchestrator {
         curriculumId: request.curriculumId,
         sefariaRefs: completions.map((c) => c.sefariaRef).toList(),
         trackType: request.trackType,
-        profileId: effectiveProfileId,
+        profileId: _activeProfileId,
         source: source,
       );
     }
@@ -403,10 +397,10 @@ class CompletionOrchestrator {
     if (request.awardGamificationPoints) {
       await _safeStep(
         'completion_streak_record_failed',
-        {'profileId': effectiveProfileId},
+        {'profileId': _activeProfileId},
         () async {
           await _streakPort?.recordStudyDay(
-            profileId: effectiveProfileId,
+            profileId: _activeProfileId,
             at: request.completedAt ?? completions.first.completedAt,
           );
         },
@@ -422,7 +416,6 @@ class CompletionOrchestrator {
       () => _advanceBookmark(
         curriculumId: request.curriculumId,
         completedSefariaRef: request.sefariaRefs.last,
-        profileId: effectiveProfileId,
       ),
     );
 
@@ -615,18 +608,8 @@ class CompletionOrchestrator {
   Future<void> _advanceBookmark({
     required String curriculumId,
     required String completedSefariaRef,
-    required int profileId,
   }) async {
-    final injected = _bookmarkRepository;
-    final factory = _bookmarkRepositoryFactory;
-    final BookmarkRepository? bookmarkRepo;
-    if (injected != null && profileId == _activeProfileId) {
-      bookmarkRepo = injected;
-    } else if (factory != null) {
-      bookmarkRepo = factory(profileId);
-    } else {
-      bookmarkRepo = injected;
-    }
+    final bookmarkRepo = _bookmarkRepository;
     if (bookmarkRepo == null) return;
 
     final curriculum = CurriculumId.values.firstWhere(

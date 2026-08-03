@@ -296,6 +296,116 @@ void main() {
     );
   });
 
+  group('getCustomOrderRefs', () {
+    test('returns [] when no learning_order documents exist, even though '
+        'getOrder synthesizes a non-empty natural-order list from the same '
+        'content', () async {
+      final repo = buildRepo();
+
+      final customRefs = await repo.getCustomOrderRefs(CurriculumId.mishnayos);
+      final synthesized = await repo.getOrder(CurriculumId.mishnayos, allItems);
+
+      expect(
+        customRefs,
+        isEmpty,
+        reason:
+            'no learning_order rows were ever saved for this curriculum — '
+            'this must be the raw-row truth, not a synthesized fallback',
+      );
+      expect(
+        synthesized,
+        isNotEmpty,
+        reason:
+            'getOrder falls back to a synthesized natural-order list even '
+            'with zero stored rows — pinning the exact contrast '
+            'getCustomOrderRefs exists to resolve',
+      );
+    });
+
+    test('returns the saved refs in user_sort_order order, in an order that '
+        'differs from the items\' natural sortOrder', () async {
+      final repo = buildRepo();
+      // Natural sortOrder is berakhot(0), peah(1), demai(2). Save a
+      // custom order that is neither that order nor its reverse, so a
+      // regression to natural order cannot accidentally pass.
+      await repo.saveOrder(CurriculumId.mishnayos, [
+        LearningOrderItem(
+          sefariaRef: peah.sefariaRef,
+          displayNameHe: '?',
+          displayNameEn: '?',
+          userSortOrder: 0,
+        ),
+        LearningOrderItem(
+          sefariaRef: demai.sefariaRef,
+          displayNameHe: '?',
+          displayNameEn: '?',
+          userSortOrder: 0,
+        ),
+        LearningOrderItem(
+          sefariaRef: berakhot.sefariaRef,
+          displayNameHe: '?',
+          displayNameEn: '?',
+          userSortOrder: 0,
+        ),
+      ]);
+
+      final customRefs = await repo.getCustomOrderRefs(CurriculumId.mishnayos);
+
+      expect(customRefs, [
+        peah.sefariaRef,
+        demai.sefariaRef,
+        berakhot.sefariaRef,
+      ]);
+    });
+
+    test('is curriculum-scoped — rows saved for another curriculum are not '
+        'returned', () async {
+      final repo = buildRepo();
+      await repo.saveOrder(CurriculumId.mishnayos, [
+        LearningOrderItem(
+          sefariaRef: berakhot.sefariaRef,
+          displayNameHe: '?',
+          displayNameEn: '?',
+          userSortOrder: 0,
+        ),
+      ]);
+      await repo.saveOrder(CurriculumId.bavli, [
+        const LearningOrderItem(
+          sefariaRef: 'Berakhot 2a',
+          displayNameHe: '?',
+          displayNameEn: '?',
+          userSortOrder: 0,
+        ),
+      ]);
+
+      final customRefs = await repo.getCustomOrderRefs(CurriculumId.mishnayos);
+
+      expect(customRefs, [berakhot.sefariaRef]);
+    });
+
+    test('skips a malformed document (missing sefaria_ref) and still returns '
+        'the well-formed ones', () async {
+      final repo = buildRepo();
+      await repo.saveOrder(CurriculumId.mishnayos, [
+        LearningOrderItem(
+          sefariaRef: berakhot.sefariaRef,
+          displayNameHe: '?',
+          displayNameEn: '?',
+          userSortOrder: 0,
+        ),
+      ]);
+      await rawDoc('malformed_doc').set({
+        'curriculum_id': CurriculumId.mishnayos.storageKey,
+        'user_sort_order': 1,
+        // sefaria_ref (and legacy ref) deliberately missing.
+      });
+
+      final customRefs = await repo.getCustomOrderRefs(CurriculumId.mishnayos);
+
+      expect(customRefs, [berakhot.sefariaRef]);
+    });
+  });
+
   group('saveOrder — reorder semantics', () {
     test('re-saving a new order overwrites the same documents rather than '
         'accumulating duplicates', () async {

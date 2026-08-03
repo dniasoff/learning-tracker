@@ -12,6 +12,8 @@ import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/learning/data/repositories/track_repository_impl.dart';
+import 'package:learning_tracker/features/learning/domain/entities/bookmark.dart';
+import 'package:learning_tracker/features/learning/domain/repositories/bookmark_repository.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
 import 'package:learning_tracker/features/scheduler/data/repositories/goal_repository_impl.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
@@ -21,6 +23,32 @@ import 'package:learning_tracker/features/tracks/setup/domain/services/track_cre
 import 'package:learning_tracker/features/tracks/stages/data/repositories/stage_definition_repository_impl.dart';
 
 import '../../../../../helpers/drift_memory.dart';
+
+/// No-op [BookmarkRepository]: every test in this file is self-paced (no
+/// programId), so createTrack's `setBookmark` branch is never reached — this
+/// exists only to satisfy the required constructor param.
+class _NoopBookmarkRepository implements BookmarkRepository {
+  @override
+  Future<BookmarkEntity?> getBookmark({required CurriculumId curriculumId}) =>
+      throw UnimplementedError();
+
+  @override
+  Future<BookmarkEntity> setBookmark({
+    required CurriculumId curriculumId,
+    required String sefariaRef,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<void> advanceBookmark({
+    required CurriculumId curriculumId,
+    required String completedSefariaRef,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<BookmarkEntity> initializeBookmark({
+    required CurriculumId curriculumId,
+  }) => throw UnimplementedError();
+}
 
 void main() {
   late UserDatabase db;
@@ -53,6 +81,7 @@ void main() {
           completionDao: db.completionDao,
           pushStageDefinitions: pushStages,
         ),
+        bookmarkRepository: _NoopBookmarkRepository(),
         analytics: const NullAnalyticsService(),
       );
 

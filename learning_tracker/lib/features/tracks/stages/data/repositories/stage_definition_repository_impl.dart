@@ -355,10 +355,13 @@ class StageDefinitionRepositoryNotReadyException implements Exception {
 /// ## [hasCompletionsForStage] — propagated, not re-solved
 ///
 /// `FirestoreStageDefinitionRepository.hasCompletionsForStage` itself throws
-/// [UnimplementedError] — it needs a Firestore completions repository that
-/// does not exist yet (out of this adapter's scope to build) and, even once
-/// one exists, `stageId` is a Drift-only concept a real Firestore stage has
-/// no integer row id for (see `kFirestoreUnmappedStageId`'s doc comment).
+/// [UnimplementedError] — not because a Firestore completions repository is
+/// missing (`FirestoreCompletionRepository.hasCompletionsForStage({curriculumId,
+/// stageOrder})` now exists and runs exactly this query), but because
+/// `stageId` here is a Drift-only concept a real Firestore stage has no
+/// integer row id for (see `kFirestoreUnmappedStageId`'s doc comment), with
+/// no way to translate it into the `(curriculumId, stageOrder)` pair that
+/// repository needs.
 /// This method still resolves the provider first ([_resolve], which throws
 /// [StageDefinitionRepositoryNotReadyException] when not ready) before
 /// delegating, so a genuinely not-ready caller sees that exception rather
@@ -369,11 +372,9 @@ class StageDefinitionRepositoryNotReadyException implements Exception {
 ///
 /// The Drift-era push-pipeline step ("flush the local write to Firestore")
 /// has nothing left to flush here: [initializeDefaults]/[resetToDefaults]
-/// already write straight to Firestore. Mirrors
-/// `FirestoreBookmarkRepositoryAdapter.syncFromFirestore`'s reasoning for
-/// the same shape of now-redundant method — silently succeeding, not
-/// throwing, since callers (e.g. `TrackCreationService.createTrack`) treat
-/// it as a fire-and-forget step, not a not-ready-sensitive write.
+/// already write straight to Firestore. Silently succeeding, not throwing,
+/// since callers (e.g. `TrackCreationService.createTrack`) treat it as a
+/// fire-and-forget step, not a not-ready-sensitive write.
 class FirestoreStageDefinitionRepositoryAdapter
     implements StageDefinitionRepository {
   FirestoreStageDefinitionRepositoryAdapter({required Ref ref}) : _ref = ref;

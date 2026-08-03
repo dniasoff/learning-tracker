@@ -23,11 +23,21 @@ import 'package:learning_tracker/features/learning/domain/entities/completion_ti
 /// natural-key doc-id (`docs/firestore-rewrite-map.md`, `firestore.rules`
 /// `match /completions/{completionId}`).
 ///
-/// **Not wired into the app yet** — same status as every repository under
-/// `lib/data/repositories/`: stands alone, nothing under `lib/features/`
-/// reads it, the existing Drift-backed `CompletionRepositoryImpl`
+/// **Not wired into the app's production provider yet** — but two adapters
+/// under `lib/features/` already read this class:
+/// `FirestoreCompletionRepositoryAdapter` and
+/// `FirestoreProgressRepositoryAdapter`
+/// (`lib/features/learning/data/repositories/completion_repository_impl.dart`,
+/// `lib/features/progress/data/repositories/
+/// firestore_progress_repository_adapter.dart`). Neither adapter is itself
+/// wired to the provider its feature actually uses —
+/// `completionRepositoryProvider`/`progressRepositoryProvider` still
+/// construct the Drift-backed `CompletionRepositoryImpl`/
+/// `ProgressRepositoryImpl` (see those adapters' own doc comments for
+/// exactly what is still gating the swap) — so the existing Drift-backed
+/// `CompletionRepositoryImpl`
 /// (`lib/features/learning/data/repositories/`) and `CompletionDao`
-/// (`lib/core/database/daos/completion_dao.dart`) are untouched.
+/// (`lib/core/database/daos/completion_dao.dart`) still serve the app.
 ///
 /// **No interface, no `implements`** — same reasoning as
 /// `FirestoreBookmarkRepository`'s doc comment: the Drift implementation is

@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/content/content_index.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
@@ -14,6 +15,7 @@ import 'package:learning_tracker/data/firestore/repository_providers.dart'
     show activeProfileDocIdProvider;
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/learning/data/repositories/bookmark_repository_impl.dart';
+import 'package:learning_tracker/features/tutoring/tutoring.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../../../helpers/test_database.dart';
@@ -345,12 +347,14 @@ void main() {
     // throwaway Provider that builds the adapter from the container's ref.
     FirestoreBookmarkRepositoryAdapter buildAdapter(
       ProviderContainer container,
-      ContentRepository contentRepository,
-    ) {
+      ContentRepository contentRepository, {
+      ContentIndex? contentIndex,
+    }) {
       final adapterProvider = Provider<FirestoreBookmarkRepositoryAdapter>(
         (ref) => FirestoreBookmarkRepositoryAdapter(
           ref: ref,
           contentRepository: contentRepository,
+          contentIndex: contentIndex,
         ),
       );
       return container.read(adapterProvider);
@@ -415,14 +419,6 @@ void main() {
           );
         },
       );
-
-      test('syncFromFirestore is a no-op that returns 0', () async {
-        final container = ProviderContainer();
-        addTearDown(container.dispose);
-        final adapter = buildAdapter(container, mockContentRepository);
-
-        expect(await adapter.syncFromFirestore(), 0);
-      });
     });
 
     group('ready (active account + profile)', () {
@@ -498,9 +494,193 @@ void main() {
         expect(result?.sefariaRef, _ref2);
       });
 
-      test('syncFromFirestore is still a no-op that returns 0', () async {
-        expect(await adapter.syncFromFirestore(), 0);
+      test('initializeBookmark forwards the injected ContentIndex instead of '
+          'falling back to a curriculum content scan', () async {
+        final contentIndex = ContentIndex.fromCurricula({
+          CurriculumId.mishnayos: [
+            const ContentItem(
+              curriculumId: 'mishnayos',
+              sefariaRef: _ref1,
+              displayNameEn: 'B 1:1',
+              displayNameHe: '',
+              isLeaf: true,
+              sortOrder: 1,
+              level1: 'Zeraim',
+            ),
+            const ContentItem(
+              curriculumId: 'mishnayos',
+              sefariaRef: _ref2,
+              displayNameEn: 'B 1:2',
+              displayNameHe: '',
+              isLeaf: true,
+              sortOrder: 2,
+              level1: 'Zeraim',
+            ),
+          ],
+        });
+        final indexedAdapter = buildAdapter(
+          container,
+          mockContentRepository,
+          contentIndex: contentIndex,
+        );
+
+        final bookmark = await indexedAdapter.initializeBookmark(
+          curriculumId: CurriculumId.mishnayos,
+        );
+
+        expect(bookmark.sefariaRef, _ref1);
+        verifyNever(() => mockContentRepository.getContentForCurriculum(any()));
       });
+    });
+
+    // REGRESSION GUARD — a tutor acting inside a talmid's context.
+    //
+    // `activeProfileDocIdProvider` still holds the TUTOR's own profile ULID
+    // during a tutored session (nothing under lib/features/tutoring/ sets it,
+    // and there is nothing to set — the tutored mirror row is Drift-only and
+    // carries no ULID). So the owner path resolves to
+    // users/{tutorUid}/learner_profiles/{tutorOwnUlid}/bookmarks/... — the
+    // tutor's OWN document. Writing there overwrites the tutor's personal
+    // reading position with the talmid's and never touches the talmid's real
+    // bookmark, silently. See TutoredBookmarkWriteUnsupportedException.
+    group('tutored session (tutor acting inside a talmid context)', () {
+      late FakeFirebaseFirestore firestore;
+      late ProviderContainer container;
+      late FirestoreBookmarkRepositoryAdapter adapter;
+
+      /// Reads `sefaria_ref` straight out of the TUTOR's own bookmark
+      /// document — the one that must never be touched by a write issued
+      /// while the tutor is inside a talmid's context. Read from Firestore
+      /// directly rather than through the adapter, because the adapter
+      /// itself refuses to read during a tutored session.
+      Future<Object?> tutorOwnSefariaRef() async {
+        final snapshot = await firestore
+            .collection('users')
+            .doc(uid)
+            .collection('learner_profiles')
+            .doc(profileDocId)
+            .collection('bookmarks')
+            .doc('mishnayos')
+            .get();
+        return snapshot.data()?['sefaria_ref'];
+      }
+
+      setUp(() async {
+        firestore = FakeFirebaseFirestore();
+        container = ProviderContainer(
+          overrides: [
+            activeAccountFirebaseProvider.overrideWith(
+              (ref) async => handles(firestore),
+            ),
+          ],
+        );
+        // The tutor's own account + own profile are active, exactly as they
+        // are in production when the tutor enters a talmid's context.
+        container.read(activeProfileDocIdProvider.notifier).set(profileDocId);
+        adapter = buildAdapter(container, mockContentRepository);
+
+        // The tutor's own bookmark, parked on _ref1.
+        await adapter.setBookmark(
+          curriculumId: CurriculumId.mishnayos,
+          sefariaRef: _ref1,
+        );
+
+        // Now enter tutor mode for a talmid, exactly as
+        // tutored_children_section.dart does after the PIN gate passes.
+        container
+            .read(activeTutoredProfileSelectionProvider.notifier)
+            .enter(
+              const TutoredProfileSelection(
+                profileId: '42', // the talmid's id in the PARENT's account
+                ownerUid: 'parent-uid',
+                grantId: 'grant-1',
+                permissions: TutorPermissions(),
+              ),
+            );
+      });
+
+      tearDown(() => container.dispose());
+
+      test(
+        "advanceBookmark never rewrites the TUTOR's own bookmark document",
+        () async {
+          // Deliberately NOT expressed as `throwsA(...)`: what this test
+          // pins is the absence of the write, not the shape of the refusal.
+          // Swallowing the refusal here means that with the guard reverted
+          // the failure surfaces as the actual corruption — the tutor's
+          // bookmark advanced from _ref1 to _ref2 — rather than as a
+          // missing-exception message.
+          try {
+            await adapter.advanceBookmark(
+              curriculumId: CurriculumId.mishnayos,
+              completedSefariaRef: _ref1,
+            );
+          } on TutoredBookmarkWriteUnsupportedException {
+            // Expected — pinned separately below.
+          }
+
+          expect(
+            await tutorOwnSefariaRef(),
+            _ref1,
+            reason:
+                "the tutor's own bookmark was silently overwritten by a "
+                'write issued during a tutored session (it should still '
+                'point at $_ref1)',
+          );
+        },
+      );
+
+      test('advanceBookmark throws '
+          'TutoredBookmarkWriteUnsupportedException', () async {
+        await expectLater(
+          adapter.advanceBookmark(
+            curriculumId: CurriculumId.mishnayos,
+            completedSefariaRef: _ref1,
+          ),
+          throwsA(isA<TutoredBookmarkWriteUnsupportedException>()),
+        );
+      });
+
+      test(
+        "setBookmark never rewrites the TUTOR's own bookmark document",
+        () async {
+          try {
+            await adapter.setBookmark(
+              curriculumId: CurriculumId.mishnayos,
+              sefariaRef: _ref3,
+            );
+          } on TutoredBookmarkWriteUnsupportedException {
+            // Expected.
+          }
+
+          expect(await tutorOwnSefariaRef(), _ref1);
+        },
+      );
+
+      test('initializeBookmark throws '
+          'TutoredBookmarkWriteUnsupportedException', () async {
+        await expectLater(
+          adapter.initializeBookmark(curriculumId: CurriculumId.mishnayos),
+          throwsA(isA<TutoredBookmarkWriteUnsupportedException>()),
+        );
+      });
+
+      test(
+        "getBookmark returns null rather than the TUTOR's own bookmark",
+        () async {
+          final result = await adapter.getBookmark(
+            curriculumId: CurriculumId.mishnayos,
+          );
+
+          expect(
+            result,
+            isNull,
+            reason:
+                "presenting the tutor's own reading position as the talmid's "
+                'is the read-side twin of the write corruption',
+          );
+        },
+      );
     });
   });
 }

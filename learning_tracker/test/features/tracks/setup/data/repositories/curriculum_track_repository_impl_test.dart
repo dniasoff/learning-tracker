@@ -20,9 +20,11 @@
 /// account/profile changes mid-stream) is documented in the class doc
 /// comment, not exercised here — proving it would require simulating a
 /// provider-state change after a stream is already open, which adds
-/// significant harness complexity for a scenario `activeProfileDocIdProvider`
-/// itself flags as "not yet wired into production" (repository_providers.dart
-/// library doc comment).
+/// significant harness complexity. `activeProfileDocIdProvider` IS now set
+/// in production (see `repository_providers.dart`'s library doc comment for
+/// the call sites), so this "provider-state change mid-stream" scenario is
+/// reachable in the real app; it remains an untested gap here, not a moot
+/// one.
 library;
 
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';

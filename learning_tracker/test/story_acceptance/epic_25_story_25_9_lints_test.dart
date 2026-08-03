@@ -125,6 +125,24 @@ void main() {
       'lib/features/tracks/whole_curriculum_order/data/repositories/learning_order_repository_impl.dart',
       'lib/features/tracks/whole_curriculum_order/domain/models/learning_order_item.dart',
       'lib/features/tracks/track_order/data/repositories/track_learning_order_repository_impl.dart',
+      // Firestore ports of the two repositories directly above — same
+      // dual-field row → dual-field record converter, same data layer, no UI
+      // surface. They read the raw enum strings to populate
+      // LearningOrderItem's own `displayNameHe`/`displayNameEn` fields, which
+      // its tests assert verbatim; CurriculumLabelRenderer is the wrong tool
+      // here because its job is locale-aware formatting (useHebrew, level
+      // prefixes, gematriya), not raw passthrough — routing through it would
+      // move the grep token without moving any behaviour.
+      //
+      // REMOVE AS A PAIR WITH THEIR DRIFT COUNTERPARTS at the Drift
+      // demolition: `firestore_learning_order_repository.dart` replaces
+      // `.../whole_curriculum_order/data/repositories/learning_order_repository_impl.dart`,
+      // and `firestore_track_learning_order_repository.dart` replaces
+      // `.../track_order/data/repositories/track_learning_order_repository_impl.dart`.
+      // This list must shrink at demolition, not accumulate exemptions for
+      // files that no longer exist.
+      'lib/data/repositories/firestore_learning_order_repository.dart',
+      'lib/data/repositories/firestore_track_learning_order_repository.dart',
       // Progress domain service — builds bilingual tree nodes.
       'lib/features/progress/domain/services/lifetime_tree_builder.dart',
       // journey_view_model.dart and journey_providers.dart were removed from

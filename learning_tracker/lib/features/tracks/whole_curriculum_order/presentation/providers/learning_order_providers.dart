@@ -5,43 +5,30 @@ import 'package:learning_tracker/core/preferences/profile_scoped_preference_keys
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
-import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/data/repositories/learning_order_repository_impl.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/domain/models/learning_order_item.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/domain/repositories/learning_order_repository.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/domain/use_cases/save_learning_order_use_case.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// The current seed/content version from [SeedMetadata] (§10.1 version guard).
+/// The app's learning-order repository — Firestore-backed via
+/// [FirestoreLearningOrderRepositoryAdapter] (F2 fix). Construction stays
+/// synchronous: the adapter holds a [Ref] and resolves
+/// `firestoreLearningOrderRepositoryProvider` per method call, so this stays
+/// a plain [Provider] for its existing watchers (`learningOrderProvider`,
+/// `saveLearningOrderUseCaseProvider`, `learning_order_screen.dart`'s direct
+/// read for `resetToDefault`).
 ///
-/// Reads the `version` field from the content DB's single SeedMetadata row.
-/// Defaults to 1 when no metadata row is found (test / first-install paths).
-final contentVersionProvider = FutureProvider<int>((ref) async {
-  final contentDb = await ref.watch(contentDatabaseProvider.future);
-  final meta = await contentDb.seedMetadataDao.getVersion();
-  return meta?.version ?? 1;
-});
-
-/// Provides the LearningOrderRepository (stateless — curriculum passed per call).
+/// Previously resolved to the Drift-backed [LearningOrderRepositoryImpl],
+/// whose writes landed on a document tree
+/// `FirestoreBookmarkRepositoryAdapter`'s bookmark-advance read
+/// (`FirestoreLearningOrderRepository.getCustomOrderRefs`) never looked at —
+/// see [FirestoreLearningOrderRepositoryAdapter]'s class doc comment for the
+/// full defect this rewire fixes.
 final learningOrderRepositoryProvider = Provider<LearningOrderRepository>((
   ref,
 ) {
-  final database = ref.watch(userDatabaseProvider);
-  final syncFacade = ref.watch(syncWriteFacadeProvider);
-  final profileId = ref.watch(activeProfileIdProvider);
-  // §10.1: pass the current content version for the version-mismatch guard.
-  // Use 1 as a safe synchronous default; the FutureProvider resolves shortly
-  // after startup but the repository is accessed from async call sites so the
-  // version will be current in practice.
-  final contentVersion = ref
-      .watch(contentVersionProvider)
-      .maybeWhen(data: (v) => v, orElse: () => 1);
-  return LearningOrderRepositoryImpl(
-    database: database,
-    syncEngine: syncFacade,
-    profileId: profileId,
-    currentContentVersion: contentVersion,
-  );
+  return FirestoreLearningOrderRepositoryAdapter(ref: ref);
 });
 
 /// Provides the [SaveLearningOrderUseCase] wired to the repository.

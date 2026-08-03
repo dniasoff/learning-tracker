@@ -125,12 +125,11 @@ class CompletionRepositoryImpl implements CompletionRepository {
     BulkCompletionRequest request,
   ) async {
     if (request.sefariaRefs.isEmpty) return const [];
-    final effectiveProfileId = request.profileId ?? _activeProfileId;
 
     final trackId = await _resolveTrackId(
       curriculumId: request.curriculumId,
       trackType: request.trackType,
-      profileId: effectiveProfileId,
+      profileId: _activeProfileId,
     );
 
     final now = request.completedAt ?? DateTimeFactory.nowUtc();
@@ -161,7 +160,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
     final commands = uniqueRefs
         .map(
           (ref) => CompletionCommand(
-            profileId: effectiveProfileId,
+            profileId: _activeProfileId,
             curriculumId: request.curriculumId,
             sefariaRef: ref,
             stageId: request.stageId,
@@ -177,7 +176,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
     await _completionWriter.commitBatch(commands);
 
     final rows = await _database.completionDao.getCompletionsForRefsBulkStage(
-      profileId: effectiveProfileId,
+      profileId: _activeProfileId,
       curriculumId: request.curriculumId,
       stageId: request.stageId,
       trackType: request.trackType,
@@ -372,24 +371,27 @@ class CompletionRepositoryNotReadyException implements Exception {
 }
 
 /// Thrown when a caller passes a non-null `profileId` to
-/// [FirestoreCompletionRepositoryAdapter.getCompletionsByCurriculum], or a
-/// non-null [BulkCompletionRequest.profileId] to
-/// [FirestoreCompletionRepositoryAdapter.bulkMarkComplete] — the
-/// delegated-profile path used by e.g. a parent bulk-marking a child's track
-/// during onboarding (`bulk_prior_completion_service.dart`).
+/// [FirestoreCompletionRepositoryAdapter.getCompletionsByCurriculum] — the
+/// delegated-profile read path used by
+/// `completion_detection_service.dart:276`. There is no corresponding write
+/// path any more: [BulkCompletionRequest] carries no `profileId` field, and
+/// [CompletionOrchestrator] (`completion_orchestrator.dart`) writes only for
+/// the active profile — see that class's doc comment for the invariant
+/// ("to write for a profile, make it active") that makes a delegated bulk
+/// write unreachable by construction, not merely unsupported here.
 ///
-/// [CompletionRepositoryImpl] can serve this because `profileId` is the same
-/// Drift `int` primary key its own session profile id is — swapping in a
-/// different int just points the same DAO at a different row. This adapter
-/// has no such option: it is resolved from a single "active profile" seam
-/// (`activeProfileDocIdProvider`, a Firestore ULID `String`) with no stored
-/// mapping from an arbitrary Drift `int` to a Firestore profile handle — see
-/// `repository_providers.dart`'s library doc comment, "The active-profile
-/// bridge is a new, deliberately separate seam," for why inventing one here
-/// would be fabricating a fact, not reading one. There is no way to tell
-/// whether a given `profileId` even means the active profile, so silently
-/// serving the active profile's data regardless — right or wrong — would be
-/// worse than refusing outright.
+/// [CompletionRepositoryImpl] can serve a delegated read because `profileId`
+/// is the same Drift `int` primary key its own session profile id is —
+/// swapping in a different int just points the same DAO at a different row.
+/// This adapter has no such option: it is resolved from a single "active
+/// profile" seam (`activeProfileDocIdProvider`, a Firestore ULID `String`)
+/// with no stored mapping from an arbitrary Drift `int` to a Firestore
+/// profile handle — see `repository_providers.dart`'s library doc comment,
+/// "The active-profile bridge is a new, deliberately separate seam," for why
+/// inventing one here would be fabricating a fact, not reading one. There is
+/// no way to tell whether a given `profileId` even means the active
+/// profile, so silently serving the active profile's data regardless —
+/// right or wrong — would be worse than refusing outright.
 class CompletionRepositoryDelegatedProfileUnsupportedException
     implements Exception {
   const CompletionRepositoryDelegatedProfileUnsupportedException();
@@ -399,7 +401,7 @@ class CompletionRepositoryDelegatedProfileUnsupportedException
       'CompletionRepositoryDelegatedProfileUnsupportedException: this '
       'adapter cannot resolve a Firestore repository for a Drift int '
       'profileId other than the active profile — delegated/cross-profile '
-      'completion reads and bulk-writes are not supported.';
+      'completion reads are not supported.';
 }
 
 /// Firestore-backed [CompletionRepository] adapter — the third application
@@ -508,15 +510,18 @@ class CompletionRepositoryDelegatedProfileUnsupportedException
 /// reconcile, so this adapter's [isStageCompleted] is a plain equality
 /// check, not a reduced one.
 ///
-/// ## Delegated-profile reads/writes are unsupported
+/// ## Delegated-profile reads are unsupported (writes have no such channel
+/// any more)
 ///
 /// See [CompletionRepositoryDelegatedProfileUnsupportedException]'s doc
-/// comment. **This is reachable today, not theoretical**:
-/// `BulkPriorCompletionService` (the onboarding bulk-mark-prior wizard)
-/// passes a non-null `profileId` whenever it runs for a delegated profile
-/// (e.g. a parent adding a track for a child), so both
-/// `getCompletionsByCurriculum` and `bulkMarkComplete` throw for that flow
-/// under this adapter.
+/// comment. `getCompletionsByCurriculum`'s `profileId` parameter still has a
+/// live caller (`completion_detection_service.dart:276`) and throws under
+/// this adapter when it is non-null. `bulkMarkComplete` has no equivalent
+/// guard because it has no equivalent parameter: `BulkCompletionRequest`
+/// carries no `profileId` field, and `BulkPriorCompletionService` (the
+/// onboarding bulk-mark-prior wizard) switches the active profile to the
+/// child before it runs rather than delegating around it — see
+/// `bulk_prior_completion_service.dart`'s doc comment.
 class FirestoreCompletionRepositoryAdapter implements CompletionRepository {
   FirestoreCompletionRepositoryAdapter({required Ref ref}) : _ref = ref;
 
@@ -615,9 +620,6 @@ class FirestoreCompletionRepositoryAdapter implements CompletionRepository {
   Future<List<Completion>> bulkMarkComplete(
     BulkCompletionRequest request,
   ) async {
-    if (request.profileId != null) {
-      throw const CompletionRepositoryDelegatedProfileUnsupportedException();
-    }
     if (request.sefariaRefs.isEmpty) return const [];
 
     final repo = await _resolve();

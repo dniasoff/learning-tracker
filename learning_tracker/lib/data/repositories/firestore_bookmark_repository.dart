@@ -12,6 +12,7 @@ import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/data/firestore/doc_ids.dart';
 import 'package:learning_tracker/data/firestore/resilient_doc_stream.dart';
+import 'package:learning_tracker/data/repositories/firestore_learning_order_repository.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/learning/domain/entities/bookmark.dart';
 
@@ -20,11 +21,10 @@ import 'package:learning_tracker/features/learning/domain/entities/bookmark.dart
 /// `docs/firestore-rewrite-map.md`, `firestore.rules` `match /bookmarks/
 /// {bookmarkId}`).
 ///
-/// **Not wired into the app yet.** This class stands alone, constructed
-/// directly with the pieces it needs; nothing under `lib/features/` reads
-/// it yet (that rewiring is a later stage — "C" in the migration plan). The
-/// existing Drift-backed `BookmarkRepositoryImpl` (`lib/features/learning/
-/// data/repositories/`) is untouched and keeps serving the app until then.
+/// **Wired into the app via `FirestoreBookmarkRepositoryAdapter` and
+/// `bookmarkRepositoryProvider`.** The existing Drift-backed
+/// `BookmarkRepositoryImpl` (`lib/features/learning/data/repositories/`) is
+/// untouched and is condemned wholesale in the Drift demolition task.
 ///
 /// ## No interface — deliberate, not an oversight
 ///
@@ -87,21 +87,23 @@ import 'package:learning_tracker/features/learning/domain/entities/bookmark.dart
 ///    why `snapshots()` alone would leave a UI dark forever after one
 ///    transient error.
 ///
-/// ## Known, deliberate gap — NOT silently guessed at
+/// ## Custom learning order is honoured
 ///
 /// [advanceBookmark]/[initializeBookmark] need "the next item in learning
 /// order", which the Drift implementation resolves two ways: a custom
 /// `learning_order` override (checked first), falling back to natural
-/// content order via [ContentIndex]/[ContentRepository]. `learning_order`
-/// is itself moving to Firestore (`docs/firestore-rewrite-map.md`) but its
-/// repository does not exist yet — building it is out of this (Bookmarks)
-/// repository's scope, and reaching into its raw Firestore collection here
-/// would duplicate logic the real repository will own. This class
-/// therefore only implements the natural-content-order fallback
-/// ([ContentIndex]/[ContentRepository] — unchanged from Drift, both are
-/// local, non-Firestore concerns) and does NOT check a custom
-/// `learning_order` override yet. Flagged, not fixed: wire the real
-/// Firestore-backed learning-order lookup in here once it exists.
+/// content order via [ContentIndex]/[ContentRepository]. This class mirrors
+/// that exactly via the injected [FirestoreLearningOrderRepository]: both
+/// [_getNextItemId] and [_getFirstItemId] first call
+/// `_learningOrderRepository.getCustomOrderRefs(curriculumId)` and take the
+/// custom-order branch whenever that list is non-empty (see the predicate
+/// doc on [getCustomOrderRefs] itself). `getOrder(...).isNotEmpty` would be
+/// the WRONG gate here — it always synthesizes a non-empty natural-order
+/// list when there are zero stored rows, so it would read as "custom order
+/// exists" for every uncustomized profile. [getCustomOrderRefs] returns raw
+/// rows only, so its emptiness is a truthful "is there a custom order?"
+/// signal, and it needs no `allItems`, which keeps the [ContentIndex] O(1)
+/// fast path intact when there is no custom order.
 ///
 /// ## Dropped along with the interface
 ///
@@ -118,12 +120,14 @@ class FirestoreBookmarkRepository {
     required String uid,
     required String profileId,
     required ContentRepository contentRepository,
+    required FirestoreLearningOrderRepository learningOrderRepository,
     ContentIndex? contentIndex,
     AppLogger? logger,
   }) : _firestore = firestore,
        _uid = uid,
        _profileId = profileId,
        _contentRepository = contentRepository,
+       _learningOrderRepository = learningOrderRepository,
        _contentIndex = contentIndex,
        _logger = logger ?? AppLogger.instance;
 
@@ -131,6 +135,7 @@ class FirestoreBookmarkRepository {
   final String _uid;
   final String _profileId;
   final ContentRepository _contentRepository;
+  final FirestoreLearningOrderRepository _learningOrderRepository;
   final ContentIndex? _contentIndex;
   final AppLogger _logger;
 
@@ -235,13 +240,28 @@ class FirestoreBookmarkRepository {
     return setBookmark(curriculumId: curriculumId, sefariaRef: first);
   }
 
-  /// Mirrors `BookmarkRepositoryImpl._getNextItemId`'s natural-order path
-  /// exactly (see the class doc comment's "Known, deliberate gap" section
-  /// for what is NOT mirrored — the custom `learning_order` override).
+  /// Mirrors `BookmarkRepositoryImpl._getNextItemId` exactly: a custom
+  /// `learning_order` override is checked FIRST and, whenever any row
+  /// exists for [curriculumId], wins unconditionally — [currentSefariaRef]
+  /// not being found in it (or being its last entry) returns `null`, it
+  /// does NOT fall through to natural order. Only when there is no custom
+  /// order at all does this fall back to the natural-order path
+  /// ([ContentIndex]/[ContentRepository] — unchanged from Drift).
   Future<String?> _getNextItemId({
     required CurriculumId curriculumId,
     required String currentSefariaRef,
   }) async {
+    final customOrder = await _learningOrderRepository.getCustomOrderRefs(
+      curriculumId,
+    );
+    if (customOrder.isNotEmpty) {
+      final currentIndex = customOrder.indexOf(currentSefariaRef);
+      if (currentIndex == -1 || currentIndex == customOrder.length - 1) {
+        return null;
+      }
+      return customOrder[currentIndex + 1];
+    }
+
     final index = _contentIndex;
     if (index != null) {
       return index.adjacent(currentSefariaRef).next?.sefariaRef;
@@ -262,9 +282,18 @@ class FirestoreBookmarkRepository {
     return leafItems[currentIndex + 1].sefariaRef;
   }
 
-  /// Mirrors `BookmarkRepositoryImpl._getFirstItemId`'s natural-order path
-  /// exactly (same caveat as [_getNextItemId]).
+  /// Mirrors `BookmarkRepositoryImpl._getFirstItemId` exactly: same custom-
+  /// `learning_order`-first gate as [_getNextItemId] — a non-empty custom
+  /// order returns its first entry unconditionally, before either the
+  /// [ContentIndex] fast path or the O(N) content fallback runs.
   Future<String?> _getFirstItemId(CurriculumId curriculumId) async {
+    final customOrder = await _learningOrderRepository.getCustomOrderRefs(
+      curriculumId,
+    );
+    if (customOrder.isNotEmpty) {
+      return customOrder.first;
+    }
+
     final index = _contentIndex;
     if (index != null) {
       return index.firstLeaf(curriculumId);

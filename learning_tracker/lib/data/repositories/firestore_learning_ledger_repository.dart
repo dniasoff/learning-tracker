@@ -25,10 +25,16 @@ import 'package:learning_tracker/features/learning/domain/entities/learning_ledg
 /// doc-id is the entry's own ULID (`docs/firestore-rewrite-map.md`,
 /// `firestore.rules` `match /learning_ledger/{entryId}`).
 ///
-/// **Not wired into the app yet** — same status as every repository under
-/// `lib/data/repositories/`: stands alone, nothing under `lib/features/`
-/// reads it, the existing Drift-backed `LearningLedgerRepositoryImpl`
-/// (`lib/features/learning/data/repositories/`) is untouched.
+/// **Not wired into any screen yet** — but
+/// `FirestoreGamificationLedgerRepository`
+/// (`lib/features/gamification/data/repositories/
+/// firestore_gamification_ledger_repository.dart`) already reads this class
+/// via `firestoreLearningLedgerRepositoryProvider`, built ahead of a
+/// consumer for a future gamification feature (see that file's own doc
+/// comment, "Not wired to any current caller"). The `learning` feature's
+/// own reads/writes still go through the Drift-backed
+/// `LearningLedgerRepositoryImpl`
+/// (`lib/features/learning/data/repositories/`), which is untouched.
 ///
 /// **No interface, no `implements`** — same reasoning as
 /// `FirestoreBookmarkRepository`'s doc comment: the Drift implementation is

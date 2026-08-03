@@ -21,9 +21,15 @@ import 'package:learning_tracker/features/learning/domain/entities/completion_so
 /// doc-id is the entry's own ULID (`docs/firestore-rewrite-map.md`,
 /// `firestore.rules` `match /points_ledger/{entryId}`).
 ///
-/// **Not wired into the app yet** — same status as every repository under
-/// `lib/data/repositories/`: stands alone, nothing under `lib/features/`
-/// reads it, the existing Drift-backed `PointsBalanceDao`
+/// **Not wired into the app's production provider yet** — but
+/// `FirestorePointsRepository`
+/// (`lib/features/gamification/data/repositories/firestore_points_repository.dart`)
+/// exists and does read this class: its `getGlobalTotal` delegates to
+/// [getBalance] (see that file's class doc comment, "Partially unblocked").
+/// `FirestorePointsRepository` itself is not constructed by any real
+/// provider (it appears nowhere in `lib/` outside its own definition), so
+/// no screen reaches this repository through it yet; the existing
+/// Drift-backed `PointsBalanceDao`
 /// (`lib/core/database/daos/points_balance_dao.dart`) is untouched.
 ///
 /// **No interface, no `implements`** — same reasoning as

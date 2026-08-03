@@ -137,9 +137,14 @@ SchedulerEngine schedulerEngine(Ref ref) {
       profileId: profileId,
     ),
     stageRepository: SchedulerStageRepositoryImpl(stageDao: db.stageDao),
-    learningOrderRepository: SchedulerLearningOrderRepositoryImpl(
-      learningOrderDao: db.learningOrderDao,
-      profileId: profileId,
+    // F2-parallel fix: the custom-order WRITER moved to Firestore
+    // (`learningOrderRepositoryProvider` → `FirestoreLearningOrderRepositoryAdapter`),
+    // so the scheduler's reader must resolve the same document tree instead
+    // of the now-frozen Drift `learning_order` table — see
+    // `SchedulerFirestoreLearningOrderRepositoryAdapter`'s class doc comment
+    // for the full defect and the not-ready-read decision.
+    learningOrderRepository: SchedulerFirestoreLearningOrderRepositoryAdapter(
+      ref: ref,
     ),
   );
 }

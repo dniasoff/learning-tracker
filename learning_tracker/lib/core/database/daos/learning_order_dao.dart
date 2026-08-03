@@ -136,6 +136,12 @@ class LearningOrderDao extends DatabaseAccessor<UserDatabase>
   /// to mark a §10.1 version-mismatch repair as done, so the repair is a
   /// genuine one-shot: a subsequent call against the same rows sees the
   /// version already matches and no-ops instead of re-stamping.
+  ///
+  /// F2: [LearningOrderRepositoryImpl.repairStaleOrderVersion] is no longer
+  /// part of the [LearningOrderRepository] interface or reachable from any
+  /// bootstrap sweep (`learningOrderRepositoryProvider` now resolves to the
+  /// Firestore-backed adapter) — this DAO method is unreachable dead code
+  /// until that Drift class is removed in the Drift demolition.
   Future<int> markLearningOrderVersionRepaired(
     String curriculumId, {
     required int profileId,

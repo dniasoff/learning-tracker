@@ -22,8 +22,13 @@ import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.da
 /// Mishnayos by bar mitzvah") — `goals` is deliberately NOT unique per
 /// curriculum, unlike `bookmarks`/`stage_definitions`.
 ///
-/// **Not wired into the app yet** — same status as the reference
-/// repositories; the existing Drift-backed `GoalRepositoryImpl`
+/// **Not wired into the app's production provider yet** — but
+/// `FirestoreGoalRepositoryAdapter`
+/// (`lib/features/scheduler/data/repositories/goal_repository_impl.dart`)
+/// exists and does read this class. That adapter itself is not constructed
+/// by any real provider (it appears nowhere in `lib/` outside its own
+/// definition), so no screen reaches this repository through it yet; the
+/// existing Drift-backed `GoalRepositoryImpl`
 /// (`lib/features/scheduler/data/repositories/`) is untouched and keeps
 /// serving the app until the rewiring stage.
 ///

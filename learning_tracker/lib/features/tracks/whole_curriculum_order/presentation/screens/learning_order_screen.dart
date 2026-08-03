@@ -195,9 +195,16 @@ class _LearningOrderScreenState extends ConsumerState<LearningOrderScreen>
     if (!confirmed) return;
 
     final repository = ref.read(learningOrderRepositoryProvider);
+    // F2: caught as `catch`, not `on Exception`, because the Firestore-backed
+    // repository's resetToDefault deliberately throws UnimplementedError (an
+    // Error, not an Exception) — see
+    // FirestoreLearningOrderRepositoryAdapter's class doc comment,
+    // "resetToDefault is NOT force-fitted into working". Without the wider
+    // catch this would bypass the snackbar below and surface as an
+    // unhandled crash instead.
     try {
       await repository.resetToDefault(widget.curriculumId);
-    } on Exception catch (e, st) {
+    } catch (e, st) {
       AppLogger.instance.error(
         event:
             'learning_order_reset_failed: curriculumId=${widget.curriculumId}',

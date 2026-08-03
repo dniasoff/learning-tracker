@@ -81,9 +81,17 @@
 /// track-scoped writer through this same collection would hit on every
 /// masechta-level overlap.
 ///
-/// **Not wired into the app yet** — same status as every other reference
-/// repository; the existing Drift-backed `LearningOrderRepositoryImpl` is
-/// untouched.
+/// **Wired into the app — via `FirestoreBookmarkRepository`, not directly.**
+/// `repository_providers.dart`'s `firestoreBookmarkRepositoryProvider`
+/// constructs one of these inline for every bookmark resolution and passes
+/// it to `FirestoreBookmarkRepository`, which calls [getCustomOrderRefs] on
+/// it from `_getNextItemId`/`_getFirstItemId` (see that class's "Custom
+/// learning order is honoured" doc section) — so that method already runs
+/// in production on every bookmark advance. No feature reads [getOrder]/
+/// [saveOrder]/[resetToDefault] (the write-side / full-list surface) yet.
+/// The existing Drift-backed `LearningOrderRepositoryImpl`
+/// (`lib/features/tracks/whole_curriculum_order/`) is untouched and still
+/// serves the reorder screen and every other learning-order caller.
 ///
 /// **No interface** — same reasoning as the reference repositories: the
 /// Drift implementation is being deleted outright, not kept alongside this
@@ -348,6 +356,28 @@ class FirestoreLearningOrderRepository {
     final snapshot = await _queryForCurriculum(curriculumId).get();
     final rows = _decodeAllRows(snapshot.docs);
     return _mergeWithContent(rows, _buildRefIndex(allItems));
+  }
+
+  /// The raw saved custom order for [curriculumId]: every `learning_order`
+  /// document's `sefaria_ref`, ordered by `user_sort_order` (server-side).
+  ///
+  /// An EMPTY list means "no custom order has ever been saved for this
+  /// curriculum" — never a synthesized natural order. This is the ONE method
+  /// on this class whose emptiness is a truthful "is there a custom order?"
+  /// signal: [getOrder]/[watchOrder] deliberately fall back to natural
+  /// content order and therefore return a NON-EMPTY list even with zero
+  /// stored rows (see [_mergeWithContent]). Callers that must distinguish
+  /// "custom order exists" from "no custom order" — e.g. the bookmark
+  /// repository's next-item resolution, which mirrors the Drift DAO's raw
+  /// `getLearningOrderByCurriculum` — use this, not [getOrder]. (A caller
+  /// that does use [getOrder] must gate on
+  /// `order.isNotEmpty && order.first.isCustomOrdered`, never on emptiness.)
+  ///
+  /// No content tree is needed: this returns refs only, so it costs one
+  /// Firestore read and does not force a full-curriculum content fetch.
+  Future<List<String>> getCustomOrderRefs(CurriculumId curriculumId) async {
+    final snapshot = await _queryForCurriculum(curriculumId).get();
+    return _decodeAllRows(snapshot.docs).map((r) => r.sefariaRef).toList();
   }
 
   /// Live updates for [curriculumId]'s ordered item list, merged against

@@ -142,7 +142,6 @@ void main() {
           sefariaRefs: ['Shabbat.2a', 'Shabbat.2b'],
           stageId: 3,
           trackType: 'review',
-          profileId: 42,
         );
 
         await useCase(inputRequest, source: CompletionSource.bulkInTrack);
@@ -157,7 +156,6 @@ void main() {
         expect(captured.sefariaRefs, ['Shabbat.2a', 'Shabbat.2b']);
         expect(captured.stageId, 3);
         expect(captured.trackType, 'review');
-        expect(captured.profileId, 42);
         // engagement gate overridden by source
         expect(captured.awardGamificationPoints, isFalse);
       },

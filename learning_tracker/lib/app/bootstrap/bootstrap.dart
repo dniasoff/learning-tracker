@@ -5,7 +5,6 @@ import 'package:learning_tracker/app/bootstrap/account_bootstrap.dart';
 import 'package:learning_tracker/app/bootstrap/analytics_bootstrap.dart';
 import 'package:learning_tracker/app/bootstrap/crashlytics_bootstrap.dart';
 import 'package:learning_tracker/app/bootstrap/firebase_bootstrap.dart';
-import 'package:learning_tracker/app/bootstrap/learning_order_repair_bootstrap.dart';
 import 'package:learning_tracker/app/bootstrap/notifications_bootstrap.dart';
 import 'package:learning_tracker/core/analytics/analytics_provider.dart';
 import 'package:learning_tracker/core/logging/crashlytics_service.dart';
@@ -110,14 +109,6 @@ Future<BootstrapResult> bootstrap() async {
   container.listen<int?>(selectedProfileIdProvider, (_, id) {
     crashlytics.setUserIdentifier(id);
   }, fireImmediately: true);
-
-  // AUD-tracks-06 REGRESSION: sweep every curriculum's §10.1
-  // learningOrderVersion guard once per app start. Fire-and-forget — it
-  // awaits content-DB seed/reseed resolution internally, so it must not
-  // delay runApp any more than the deferred seed extraction itself does
-  // (see contentDbPathProvider). Non-fatal on failure (logged, retried next
-  // launch).
-  unawaited(repairStaleLearningOrders(container: container, log: log));
 
   await bootstrapNotifications(container: container, log: log);
 

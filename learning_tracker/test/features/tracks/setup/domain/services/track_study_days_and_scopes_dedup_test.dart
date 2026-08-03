@@ -11,6 +11,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/features/learning/domain/repositories/bookmark_repository.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/features/scheduler/domain/repositories/goal_repository.dart';
@@ -30,6 +31,8 @@ class _MockWizard extends Mock implements LearningProcessWizardService {}
 class _MockGoalRepo extends Mock implements GoalRepository {}
 
 class _MockStageRepo extends Mock implements StageDefinitionRepository {}
+
+class _MockBookmarkRepo extends Mock implements BookmarkRepository {}
 
 void main() {
   late UserDatabase db;
@@ -86,6 +89,9 @@ void main() {
         wizardService: wizard,
         goalRepository: _MockGoalRepo(),
         stageRepository: stageRepo,
+        // None of these tests set a programId, so setBookmark is never
+        // reached — no stubbing needed.
+        bookmarkRepository: _MockBookmarkRepo(),
       );
     }
 

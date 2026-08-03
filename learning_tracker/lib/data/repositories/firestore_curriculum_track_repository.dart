@@ -19,10 +19,14 @@ import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculu
 /// (`docs/firestore-rewrite-map.md`, `firestore.rules` `match
 /// /curriculum_tracks/{trackId}`).
 ///
-/// **Not wired into the app yet** — same status as every other repository
-/// under `lib/data/repositories/`: stands alone, nothing under
-/// `lib/features/` reads it, the existing Drift-backed `TrackDao`/
-/// `ActiveCurriculumDao` are untouched.
+/// **Not wired into the app's production provider yet** — but
+/// `FirestoreCurriculumTrackRepositoryAdapter`
+/// (`lib/features/tracks/setup/data/repositories/
+/// curriculum_track_repository_impl.dart`) exists and does read this class.
+/// That adapter itself is not constructed by any real provider (it appears
+/// nowhere in `lib/` outside its own definition and its tests), so no
+/// screen reaches this repository through it yet. The existing Drift-backed
+/// `TrackDao`/`ActiveCurriculumDao` are untouched and still serve the app.
 ///
 /// **No interface** — same reasoning as `FirestoreBookmarkRepository`'s doc
 /// comment: the Drift implementations are being deleted outright, not kept
@@ -77,30 +81,33 @@ import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculu
 /// [getTrack] returning `null`, never a fourth state value. This repository
 /// never constructs, writes, or exposes a `'deleted'` state.
 ///
-/// ## `reorder-amnesty stamp` is DROPPED, not ported — a genuine field gap
+/// ## `reorder-amnesty stamp` — rules gap closed, code gap remains
 ///
-/// `TrackDao.stampReorderAt` (`lastReorderAt`) has **no Firestore field to
-/// carry it.** `firestore.rules`' `curriculum_tracks` `.hasOnly()` whitelist
-/// (mirrored 1:1 in `tutor_writes.ts`'s `CURRICULUM_TRACK_ALLOWED_FIELDS`)
-/// is: `profile_id, track_id, curriculum_id, state, state_changed_at,
-/// activated_at, pace_reset_date, progress_schema_version,
-/// progress_computed_at, progress_model, program_progress,
-/// self_paced_progress, synced_at, purged, purged_at` — `last_reorder_at`
-/// is not in that list. Writing it anyway would make `hasOnly()` reject the
-/// ENTIRE document write with `permission-denied`, for the legitimate owner,
-/// on every track write this repository makes — exactly the class of trap
-/// `docs/firestore-rewrite-map.md` warns `fake_cloud_firestore` cannot catch
-/// (its `strictRules` mode denies even a legitimate owner's writes, so no
-/// positive rules test could have caught this either way; it rests on
-/// reading the rules text). Rather than guess at a workaround (e.g.
-/// smuggling the timestamp into the unrelated `progress_model` field), this
-/// repository drops the method entirely and flags the gap here: **the
-/// reorder-amnesty feature needs a `firestore.rules` change
-/// (`+ 'last_reorder_at'` to the whitelist, mirrored in `tutor_writes.ts`)
-/// before it can be ported** — out of this repository's scope (`firestore
-/// .rules` is explicitly off-limits for this build). Until then, a caller
-/// that reorders a track's content order client-side has no way to persist
-/// the "amnesty baseline moved" fact to Firestore through this class.
+/// `TrackDao.stampReorderAt` (`lastReorderAt`) used to have **no Firestore
+/// field to carry it**: `firestore.rules`' `curriculum_tracks` `.hasOnly()`
+/// whitelist (mirrored 1:1 in `tutor_writes.ts`'s
+/// `CURRICULUM_TRACK_ALLOWED_FIELDS`) omitted `last_reorder_at` entirely, and
+/// because `hasOnly()` is all-or-nothing, writing that field would have made
+/// `permission-denied` reject the ENTIRE document write, for the legitimate
+/// owner, on every track write this repository makes.
+///
+/// **That rules gap is now closed.** Both `firestore.rules`' whitelist and
+/// `tutor_writes.ts`'s mirrored `CURRICULUM_TRACK_ALLOWED_FIELDS` include
+/// `last_reorder_at` today, so a client write from this repository CAN
+/// legally carry the stamp without endangering the rest of the document.
+///
+/// **This repository was never updated to use that opening, though.** There
+/// is still no method here that writes `last_reorder_at` — `TrackDao
+/// .stampReorderAt` has no counterpart in this class, so the field goes
+/// unwritten regardless of what the rules now permit. And even once such a
+/// method exists, `daily_task_projection_service.dart` still reads
+/// `lastReorderAt` from **Drift** (`db.trackDao.getActiveTracksForProfile`),
+/// not from Firestore, so a write from here would not yet reach that
+/// consumer either. Porting the reorder-amnesty feature needs (1) a write
+/// method on this class and (2) rewiring the projection service's read
+/// side — the `firestore.rules`/`tutor_writes.ts` blocker that used to make
+/// this impossible outright is gone; what remains is a code/wiring gap, not
+/// a rules-imposed one.
 ///
 /// ## `purged` / `purged_at` are in the whitelist but likewise unused here
 ///

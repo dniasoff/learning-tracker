@@ -681,15 +681,13 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
   /// `docs/firestore-rewrite-map.md`): bulk-marking always targets the
   /// CURRENTLY ACTIVE profile now. During onboarding, [profileId] here is
   /// `_createdProfileId` — a newly-created CHILD profile
-  /// (`onboarding_screen.dart`'s `_ScreenPhase.addTrack` phase) — which can
-  /// legitimately differ from `activeProfileIdProvider` at this point in the
-  /// flow, since nothing in `onboarding_screen.dart` switches the session's
-  /// active profile to the child before reaching this step. That is a
-  /// pre-existing gap this method cannot close on its own (out of scope
-  /// here — see `bulk_prior_completion_service.dart`'s `execute` doc
-  /// comment): the fix belongs in onboarding, switching the active profile
-  /// to the child right after profile creation instead of threading its id
-  /// through as a parameter.
+  /// (`onboarding_screen.dart`'s `_ScreenPhase.addTrack` phase). It now
+  /// matches `activeProfileIdProvider` at this point in the flow:
+  /// `onboarding_screen.dart`'s `_onProfileCreated` selects the just-created
+  /// profile (`selectedProfileIdProvider.notifier.select`) immediately after
+  /// creation, before the flow ever reaches this step. See
+  /// `bulk_prior_completion_service.dart`'s `execute` doc comment for the
+  /// storage-layer side of the same fix.
   Future<({int itemCount, int completionCount})>
   _applySelfPacedPriorCompletions(
     Set<HierarchySelection> selections, {

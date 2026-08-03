@@ -278,9 +278,6 @@ class _FakeBookmarkRepository implements BookmarkRepository {
   Future<BookmarkEntity> initializeBookmark({
     required CurriculumId curriculumId,
   }) => throw UnimplementedError();
-
-  @override
-  Future<int> syncFromFirestore() => throw UnimplementedError();
 }
 
 class _MockCompletionDetectionService extends Mock

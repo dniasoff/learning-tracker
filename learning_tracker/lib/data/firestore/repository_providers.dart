@@ -30,12 +30,13 @@
 /// activeProfileDocIdProvider] below is instead a second, independent
 /// "which profile is active" seam, deliberately shaped like
 /// `ActiveAccountId` (`active_account_providers.dart`): a settable
-/// [Notifier] that starts at `null`. **Not yet wired** — nothing in
-/// production calls [ActiveProfileDocId.set] yet; the real call site
-/// (bridging profile selection/creation to its Firestore ULID) belongs to
-/// Epic C, which does not exist yet. Until then this stays `null` for the
-/// whole app session, and every profile-scoped provider below resolves to
-/// `null` alongside it — same status as [activeAccountIdProvider].
+/// [Notifier] that starts at `null`. **Wired into production.**
+/// [ActiveProfileDocId.set] is called from
+/// `lib/features/profiles/presentation/providers/profile_providers.dart`
+/// (`SelectedProfileId.select`, and profile creation) and from
+/// `lib/features/profiles/data/repositories/profile_repository_impl.dart`
+/// — every profile-scoped provider below resolves once one of those call
+/// sites has run.
 ///
 /// **Not `.autoDispose`.** [activeAccountFirebaseProvider] and
 /// [activeAccountIdProvider] are themselves not `.autoDispose` (a named
@@ -74,6 +75,7 @@
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/content/content_index.dart';
 import 'package:learning_tracker/data/firestore/account_firebase.dart';
 import 'package:learning_tracker/data/firestore/active_account_providers.dart';
 import 'package:learning_tracker/data/repositories/firestore_account_repository.dart';
@@ -113,7 +115,7 @@ class ActiveProfileDocId extends Notifier<String?> {
 
 /// The active learner profile's Firestore doc-id — `null` until some
 /// caller calls `ref.read(activeProfileDocIdProvider.notifier).set(id)`.
-/// See the library doc comment: nothing does that yet.
+/// See the library doc comment for the production call sites that now do.
 final activeProfileDocIdProvider =
     NotifierProvider<ActiveProfileDocId, String?>(ActiveProfileDocId.new);
 
@@ -157,32 +159,57 @@ final firestoreLearnerProfileRepositoryProvider =
       );
     });
 
+/// The two local, non-Firestore collaborators [FirestoreBookmarkRepository]
+/// needs, supplied by the caller. This file resolves Firestore handles and
+/// nothing else: `ContentRepository` lives under `lib/features/`, and the
+/// policy for what to do while `contentIndexProvider` is still loading
+/// (pass `null`, fall back to the O(N) scan) belongs to the feature layer
+/// that already owns it — see
+/// `lib/features/learning/presentation/providers/bookmark_providers.dart`.
+typedef BookmarkRepositoryDeps = ({
+  ContentRepository contentRepository,
+  ContentIndex? contentIndex,
+});
+
 /// `.../bookmarks/{curriculumId}`.
 ///
-/// Family-parameterized on [ContentRepository]: [FirestoreBookmarkRepository]
-/// requires one for its natural-content-order fallback (see that class's
-/// "Known, deliberate gap" doc section), and that is a local, non-Firestore
-/// domain collaborator this file has no business resolving on its own —
-/// this file only knows how to resolve Firestore handles. The caller (a
-/// feature's own `data/repositories/bookmark_repository_impl.dart`, see the
-/// library doc comment on reaching this file) already has, or can reach,
-/// its feature's own `contentRepositoryProvider` and supplies the resolved
-/// [ContentRepository] here.
+/// Family-parameterized on [BookmarkRepositoryDeps]:
+/// [FirestoreBookmarkRepository] requires a [ContentRepository] for its
+/// natural-content-order fallback (see that class's "Custom learning order
+/// is honoured" doc section) and accepts an optional [ContentIndex] for the
+/// O(1) adjacent-item fast path — both are local, non-Firestore domain
+/// collaborators this file has no business resolving on its own; this file
+/// only knows how to resolve Firestore handles. The caller (a feature's own
+/// `data/repositories/bookmark_repository_impl.dart`, see the library doc
+/// comment on reaching this file) already has, or can reach, its feature's
+/// own `contentRepositoryProvider`/`contentIndexProvider` and supplies the
+/// resolved pair here as one record. The [FirestoreLearningOrderRepository]
+/// [FirestoreBookmarkRepository] also requires is NOT part of that record
+/// — unlike the two above, it IS a Firestore repository this file already
+/// knows how to build, so it is constructed inline below from the exact
+/// same `(handles, profileId)` pair every other provider in this file
+/// resolves through, with no extra `await` and no second provider
+/// dependency.
 final firestoreBookmarkRepositoryProvider =
-    FutureProvider.family<FirestoreBookmarkRepository?, ContentRepository>((
-      ref,
-      contentRepository,
-    ) async {
-      final resolved = await _watchActiveAccountAndProfile(ref);
-      if (resolved == null) return null;
-      final (handles, profileId) = resolved;
-      return FirestoreBookmarkRepository(
-        firestore: handles.firestore,
-        uid: handles.uid,
-        profileId: profileId,
-        contentRepository: contentRepository,
-      );
-    });
+    FutureProvider.family<FirestoreBookmarkRepository?, BookmarkRepositoryDeps>(
+      (ref, deps) async {
+        final resolved = await _watchActiveAccountAndProfile(ref);
+        if (resolved == null) return null;
+        final (handles, profileId) = resolved;
+        return FirestoreBookmarkRepository(
+          firestore: handles.firestore,
+          uid: handles.uid,
+          profileId: profileId,
+          contentRepository: deps.contentRepository,
+          contentIndex: deps.contentIndex,
+          learningOrderRepository: FirestoreLearningOrderRepository(
+            firestore: handles.firestore,
+            uid: handles.uid,
+            profileId: profileId,
+          ),
+        );
+      },
+    );
 
 /// `.../completions/{completionId}`.
 final firestoreCompletionRepositoryProvider =

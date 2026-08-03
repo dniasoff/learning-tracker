@@ -112,7 +112,6 @@ void main() {
                 sefariaRefs: entry.refs,
                 stageId: entry.stageId,
                 trackType: trackType,
-                profileId: profileId,
                 awardGamificationPoints: false,
               ),
             );
@@ -158,7 +157,6 @@ void main() {
               sefariaRefs: refs,
               stageId: 1,
               trackType: trackType,
-              profileId: profileId,
               awardGamificationPoints: false,
             ),
           );
@@ -187,7 +185,6 @@ void main() {
             sefariaRefs: refs,
             stageId: 1,
             trackType: trackType,
-            profileId: profileId,
             awardGamificationPoints: false,
           ),
         );
@@ -197,7 +194,6 @@ void main() {
             sefariaRefs: refs,
             stageId: 2,
             trackType: trackType,
-            profileId: profileId,
             awardGamificationPoints: false,
           ),
         );

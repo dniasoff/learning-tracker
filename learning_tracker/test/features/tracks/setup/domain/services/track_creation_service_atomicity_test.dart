@@ -6,6 +6,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
+import 'package:learning_tracker/features/learning/domain/entities/bookmark.dart';
+import 'package:learning_tracker/features/learning/domain/repositories/bookmark_repository.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
 import 'package:learning_tracker/features/scheduler/domain/repositories/goal_repository.dart';
 import 'package:learning_tracker/features/tracks/domain/services/curriculum_activation_service.dart';
@@ -24,6 +26,68 @@ class _MockWizard extends Mock implements LearningProcessWizardService {}
 class _MockGoalRepo extends Mock implements GoalRepository {}
 
 class _MockStageRepo extends Mock implements StageDefinitionRepository {}
+
+class _MockBookmarkRepo extends Mock implements BookmarkRepository {}
+
+/// A real (non-mock) in-memory [BookmarkRepository] — used by the F1
+/// regression test below to prove the bookmark written by [createTrack] is
+/// actually READABLE back through the same repository interface the rest of
+/// the app uses (`getBookmark`), not just that some method was called with
+/// the right arguments.
+class _InMemoryBookmarkRepo implements BookmarkRepository {
+  final Map<CurriculumId, BookmarkEntity> _store = {};
+
+  @override
+  Future<BookmarkEntity?> getBookmark({
+    required CurriculumId curriculumId,
+  }) async => _store[curriculumId];
+
+  @override
+  Future<BookmarkEntity> setBookmark({
+    required CurriculumId curriculumId,
+    required String sefariaRef,
+  }) async {
+    final entity = BookmarkEntity(
+      curriculumId: curriculumId,
+      sefariaRef: sefariaRef,
+      updatedAt: DateTimeFactory.nowUtc(),
+    );
+    _store[curriculumId] = entity;
+    return entity;
+  }
+
+  @override
+  Future<void> advanceBookmark({
+    required CurriculumId curriculumId,
+    required String completedSefariaRef,
+  }) => throw UnimplementedError('not exercised by TrackCreationService');
+
+  @override
+  Future<BookmarkEntity> initializeBookmark({
+    required CurriculumId curriculumId,
+  }) => throw UnimplementedError('not exercised by TrackCreationService');
+}
+
+/// A [_MockBookmarkRepo] with `setBookmark` stubbed to echo back its
+/// arguments as a [BookmarkEntity] — used by the B3 back-date tests below,
+/// whose `startingRef` (e.g. "offset:5") resolves to a non-empty
+/// `bookmarkRef`, which reaches `createTrack`'s `setBookmark` call.
+_MockBookmarkRepo _stubbedBookmarkRepo() {
+  final repo = _MockBookmarkRepo();
+  when(
+    () => repo.setBookmark(
+      curriculumId: any(named: 'curriculumId'),
+      sefariaRef: any(named: 'sefariaRef'),
+    ),
+  ).thenAnswer(
+    (invocation) async => BookmarkEntity(
+      curriculumId: invocation.namedArguments[#curriculumId] as CurriculumId,
+      sefariaRef: invocation.namedArguments[#sefariaRef] as String,
+      updatedAt: DateTimeFactory.nowUtc(),
+    ),
+  );
+  return repo;
+}
 
 void main() {
   late UserDatabase db;
@@ -68,6 +132,9 @@ void main() {
         wizardService: _MockWizard(),
         goalRepository: _MockGoalRepo(),
         stageRepository: stageRepo,
+        // No startingRef below → bookmarkRef stays null → setBookmark is
+        // never reached (and the stage-seed throw happens first anyway).
+        bookmarkRepository: _MockBookmarkRepo(),
       );
 
       const result = AddTrackResult(
@@ -127,6 +194,7 @@ void main() {
       wizardService: wizard,
       goalRepository: _MockGoalRepo(),
       stageRepository: stageRepo,
+      bookmarkRepository: _stubbedBookmarkRepo(),
     );
 
     // AUD-t-tracks-04 (TQ-6): freeze the clock the SUT reads via
@@ -207,6 +275,7 @@ void main() {
       wizardService: wizard,
       goalRepository: _MockGoalRepo(),
       stageRepository: stageRepo,
+      bookmarkRepository: _stubbedBookmarkRepo(),
     );
 
     // AUD-t-tracks-04 (TQ-6): see the sibling positive-offset test above for
@@ -239,5 +308,88 @@ void main() {
       reason: 'offset:-5 must resolve to 5 days ago',
     );
     expect(before.difference(startDate).inDays, 5);
+  });
+
+  // F1 regression (confirmed blocker): the initial bookmark for a
+  // program-based track was previously written to Drift
+  // (bookmarkDao.upsertBookmarkByProfile) and pushed via the int-profileId
+  // outbox path — NEITHER of which the Firestore reader (ULID-profile-keyed)
+  // ever reads. A learner choosing "Mishnah Berakhot 2:1" as their starting
+  // position would see `getBookmark` return null, and the next completion
+  // (of a DIFFERENT ref) would silently overwrite their chosen start. The
+  // fix routes the write through the same BookmarkRepository the reader
+  // uses. This test proves the ref is readable back through that repository
+  // — not merely that some write call happened.
+  test('F1: program-track creation writes the initial bookmark through '
+      'BookmarkRepository.setBookmark, readable via the SAME repository '
+      '(regression: previously landed on Drift / the int-keyed outbox path, '
+      'invisible to the Firestore reader)', () async {
+    final stageRepo = _MockStageRepo();
+    when(() => stageRepo.deleteStagesForTrack(any())).thenAnswer((_) async {});
+    when(
+      () => stageRepo.pushStagesForTrack(
+        trackId: any(named: 'trackId'),
+        curriculumId: any(named: 'curriculumId'),
+      ),
+    ).thenAnswer((_) async {});
+
+    final activation = _MockActivation();
+    when(
+      () => activation.activateForProfile(any(), any()),
+    ).thenAnswer((_) async {});
+
+    final wizard = _MockWizard();
+    when(
+      () => wizard.applyWizardResult(
+        any(),
+        profileId: any(named: 'profileId'),
+        trackId: any(named: 'trackId'),
+      ),
+    ).thenAnswer((_) async {});
+
+    final bookmarkRepo = _InMemoryBookmarkRepo();
+
+    final service = TrackCreationService(
+      database: db,
+      activationService: activation,
+      wizardService: wizard,
+      goalRepository: _MockGoalRepo(),
+      stageRepository: stageRepo,
+      bookmarkRepository: bookmarkRepo,
+    );
+
+    const startingRef = 'Mishnah Berakhot 2:1';
+    const result = AddTrackResult(
+      curriculumId: CurriculumId.bavli,
+      label: 'Bavli',
+      programId: 99,
+      studyDays: {1: 'study'},
+      startingRef: startingRef,
+    );
+
+    await service.createTrack(result: result, profileId: 1);
+
+    // Readable back through the exact repository the rest of the app
+    // (completion flow, dashboard) reads bookmarks from.
+    final bookmark = await bookmarkRepo.getBookmark(
+      curriculumId: CurriculumId.bavli,
+    );
+    expect(
+      bookmark,
+      isNotNull,
+      reason: 'the chosen starting ref must be readable via BookmarkRepository',
+    );
+    expect(bookmark!.sefariaRef, startingRef);
+
+    // Nothing writes the Drift bookmark table anymore — the old dead
+    // write path is gone, not just bypassed.
+    final driftBookmarks = await db.bookmarkDao.getAllBookmarks();
+    expect(
+      driftBookmarks,
+      isEmpty,
+      reason:
+          'createTrack must no longer write bookmarks to Drift — the '
+          'Firestore-backed BookmarkRepository is the only writer now',
+    );
   });
 }
