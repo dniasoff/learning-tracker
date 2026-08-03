@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:drift/drift.dart' as drift;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/database/daos/completion_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
@@ -10,12 +11,15 @@ import 'package:learning_tracker/core/sync/codec/streak_event_codec.dart';
 import 'package:learning_tracker/core/sync/sync_write_facade.dart';
 import 'package:learning_tracker/core/time/ulid.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
+import 'package:learning_tracker/data/firestore/repository_providers.dart';
+import 'package:learning_tracker/data/repositories/firestore_completion_repository.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
 import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
 import 'package:learning_tracker/features/learning/data/completion_writer.dart';
 import 'package:learning_tracker/features/learning/data/repositories/bookmark_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_command.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_entity.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 import 'package:learning_tracker/features/learning/domain/entities/mark_completion_result.dart';
@@ -1003,5 +1007,422 @@ class CompletionRepositoryImpl implements CompletionRepository {
     }
 
     return false;
+  }
+}
+
+/// Sentinel value for [Completion.id] / [Completion.profileId] /
+/// [Completion.trackId] on completions synthesized by
+/// [FirestoreCompletionRepositoryAdapter] from a Firestore [CompletionEntity].
+///
+/// Mirrors `kFirestoreUnmappedStageId`'s reasoning
+/// (`lib/features/tracks/stages/domain/models/stage_definition.dart`): Drift
+/// autoincrement primary keys are always positive, so a negative sentinel
+/// can never collide with a real Drift-sourced value. See
+/// [FirestoreCompletionRepositoryAdapter]'s class doc comment ("`id` /
+/// `profileId` / `trackId` are sentinel, not real") for why there is no real
+/// value to put here: a Firestore [CompletionEntity] has no autoincrement
+/// id, no Drift-local `int profileId` (the profile is a ULID `String` — see
+/// `repository_providers.dart`'s library doc comment), and no `trackId`
+/// (AD-25 retired the per-device track id; `curriculumId` is the sole
+/// canonical stable track key, per `docs/firestore-rewrite-map.md`).
+///
+/// **Never pass one of these three fields from a Firestore-sourced
+/// [Completion] into a method that expects a real Drift row/profile/track
+/// id.** Audited (2026-08-03): none of [CompletionRepository]'s current
+/// callers read `.id`, `.profileId`, or `.trackId` off the objects it
+/// returns — they only read `.sefariaRef`, `.completedAt`, `.curriculumId`,
+/// `.trackType`, and list `.length` (see the class doc comment for the
+/// callers audited). A new caller that starts reading one of those three
+/// fields off a completion returned through this adapter would silently get
+/// -1 instead of a real id.
+const int kFirestoreUnmappedCompletionRowId = -1;
+
+/// Thrown by [FirestoreCompletionRepositoryAdapter]'s write methods
+/// (`markComplete`, `bulkMarkComplete`) when
+/// `firestoreCompletionRepositoryProvider` resolves to `null` — i.e. no
+/// account is active yet, or no learner profile is active yet. Same shape
+/// and reasoning as [BookmarkRepositoryNotReadyException]
+/// (`bookmark_repository_impl.dart`): the three read methods
+/// (`getCompletionsByCurriculum`, `getCompletionsForContentItem`,
+/// `isStageCompleted`) reuse their already-empty-shaped "nothing yet" return
+/// value (`[]` / `false`) instead of throwing — see that exception's doc
+/// comment for the read-vs-write split this class copies exactly.
+class CompletionRepositoryNotReadyException implements Exception {
+  const CompletionRepositoryNotReadyException();
+
+  @override
+  String toString() =>
+      'CompletionRepositoryNotReadyException: '
+      'firestoreCompletionRepositoryProvider resolved to null (no active '
+      'account, or no active learner profile, yet) — cannot complete a '
+      'completion write until one is active.';
+}
+
+/// Thrown when a caller passes a non-null `profileId` to
+/// [FirestoreCompletionRepositoryAdapter.getCompletionsByCurriculum], or a
+/// non-null [BulkCompletionRequest.profileId] to
+/// [FirestoreCompletionRepositoryAdapter.bulkMarkComplete] — the
+/// delegated-profile path used by e.g. a parent bulk-marking a child's track
+/// during onboarding (`bulk_prior_completion_service.dart`).
+///
+/// [CompletionRepositoryImpl] can serve this because `profileId` is the same
+/// Drift `int` primary key its own session profile id is — swapping in a
+/// different int just points the same DAO at a different row. This adapter
+/// has no such option: it is resolved from a single "active profile" seam
+/// (`activeProfileDocIdProvider`, a Firestore ULID `String`) with no stored
+/// mapping from an arbitrary Drift `int` to a Firestore profile handle — see
+/// `repository_providers.dart`'s library doc comment, "The active-profile
+/// bridge is a new, deliberately separate seam," for why inventing one here
+/// would be fabricating a fact, not reading one. There is no way to tell
+/// whether a given `profileId` even means the active profile, so silently
+/// serving the active profile's data regardless — right or wrong — would be
+/// worse than refusing outright.
+class CompletionRepositoryDelegatedProfileUnsupportedException
+    implements Exception {
+  const CompletionRepositoryDelegatedProfileUnsupportedException();
+
+  @override
+  String toString() =>
+      'CompletionRepositoryDelegatedProfileUnsupportedException: this '
+      'adapter cannot resolve a Firestore repository for a Drift int '
+      'profileId other than the active profile — delegated/cross-profile '
+      'completion reads and bulk-writes are not supported.';
+}
+
+/// Firestore-backed [CompletionRepository] adapter — the third application
+/// of the pattern [FirestoreBookmarkRepositoryAdapter]
+/// (`bookmark_repository_impl.dart`) establishes and
+/// `FirestoreProfileRepositoryAdapter`
+/// (`lib/features/profiles/data/repositories/profile_repository_impl.dart`)
+/// applies second. Read those two class doc comments first; this one only
+/// calls out what is DIFFERENT — and there is a lot, because
+/// [CompletionRepository] is the largest and most business-logic-heavy
+/// surface in the app.
+///
+/// ## Construction: a [Ref], re-resolved every call — same as bookmarks
+///
+/// See [FirestoreBookmarkRepositoryAdapter]'s doc comment, points 2–3.
+/// [firestoreCompletionRepositoryProvider] is the same nullable-async,
+/// non-family shape as `firestoreBookmarkRepositoryProvider` minus the
+/// `ContentRepository` family parameter (this repository needs no local
+/// content-order collaborator), so [_resolve] / [_resolveOrNull] mirror that
+/// adapter's helpers exactly.
+///
+/// ## `source` is a pure function of the two existing boolean gates — no
+/// per-call-site guessing needed
+///
+/// [CompletionRepository.markComplete] and
+/// [CompletionRepository.bulkMarkComplete] do not take a [CompletionSource]
+/// parameter — every caller already expresses it as the two independent B1
+/// gates, `awardGamificationPoints` (engagement) and `creditsAchievement`
+/// (achievement), which exactly mirror [CompletionSourceX.creditsEngagement]
+/// / [CompletionSourceX.creditsAchievement]. [_sourceFor] is the inverse of
+/// those two getters — the same derivation
+/// [CompletionRepositoryImpl._bulkSourceFor] already uses for the bulk path,
+/// generalized here to also cover the single-item path (Drift's own
+/// `markComplete` does not need it there, since Drift stores a
+/// `priorMarkOnly` bool rather than a `source` enum). Every currently-live
+/// call site was audited (2026-08-03):
+///   - `MarkCompletionUseCase` (only caller: `text_display_screen.dart`,
+///     the "Mark Complete" button) → default `source = live` → `(true,
+///     true)` → [CompletionSource.live].
+///   - `BulkMarkCompletionUseCase` and `BulkPriorCompletionService` (the
+///     onboarding "I already learned this" bulk-mark wizard) → always
+///     `(false, true)` → [CompletionSource.bulkInTrack].
+///   - No call site passes `(false, false)`
+///     ([CompletionSource.lifetimeOnly]) today — see "`lifetimeOnly` is
+///     rejected, not silently downgraded" below for what happens if one
+///     ever does.
+///   - No call site passes `(true, false)` — the one combination
+///     [_sourceFor] cannot losslessly represent (it collapses to `live`,
+///     silently granting achievement credit alongside engagement credit).
+///     Flagged, not fixed: fixing it would mean widening [CompletionSource]
+///     itself, out of this file's scope.
+///
+/// ## `lifetimeOnly` is rejected, not silently downgraded
+///
+/// `FirestoreCompletionRepository.recordCompletion`/`recordCompletionsBatch`
+/// throw [ArgumentError] for [CompletionSource.lifetimeOnly] — by design,
+/// per `docs/firestore-rewrite-map.md`: a lifetime-only import writes ONLY a
+/// `learning_ledger` entry, never a `completions` document. This adapter
+/// does not catch that error; it propagates unchanged out of `markComplete`/
+/// `bulkMarkComplete`, matching point 5 of
+/// [FirestoreBookmarkRepositoryAdapter]'s doc comment ("a genuine resolution
+/// failure is never swallowed"). Since no current call site reaches
+/// `(false, false)`, this is a defensive path, not a live one today — but it
+/// is a REAL behavior difference from [CompletionRepositoryImpl], which
+/// happily writes a `priorMarkOnly` Drift row for `lifetimeOnly`. Writing
+/// the matching `learning_ledger` entry for a `lifetimeOnly` mark is
+/// `FirestoreLearningLedgerRepository`'s job, not this adapter's — out of
+/// scope here.
+///
+/// ## What this adapter does NOT do — read before ever flipping
+/// `completionRepositoryProvider`
+///
+/// `FirestoreCompletionRepository`
+/// (`lib/data/repositories/firestore_completion_repository.dart`) is a thin
+/// CRUD/read layer — unlike `FirestoreBookmarkRepository`, which already
+/// carries the bookmark feature's equivalent business logic
+/// (`advanceBookmark`, `initializeBookmark`, next-item resolution), it has
+/// no stage-progression validation, no points calculation, no
+/// siyum/achievement detection, no bookmark advancement, and no
+/// streak-event teeing. Those five behaviors are exactly what
+/// [CompletionRepositoryImpl.markComplete] /
+/// [CompletionRepositoryImpl.bulkMarkComplete] spend most of their body
+/// doing, and none of them exist as a Firestore-repository primitive today.
+/// This adapter's `markComplete`/`bulkMarkComplete` therefore do exactly one
+/// thing: derive `source`, write the `completions` document(s), and return.
+/// They do **not**:
+///   - validate stage progression (a stage-3 mark with no stage-1/2 history
+///     silently succeeds here, where Drift throws
+///     [StageProgressionException]);
+///   - calculate or award gamification points (`CompletionEntity.points` is
+///     always written as `0`);
+///   - advance the learner's bookmark;
+///   - run `CompletionDetectionService`'s siyum/achievement detection;
+///   - write a `streak_events` row.
+///
+/// **This matters more than the usual "not feature-complete yet" gap**
+/// because a `live`-source completion is *permanent* —
+/// `docs/firestore-rewrite-map.md`'s owner decision treats it as undoable.
+/// A mis-ordered stage mark written through this adapter today could not be
+/// corrected later. Closing this gap needs a deliberate design decision
+/// (build the orchestration into a new layer above
+/// `FirestoreCompletionRepository`, or fold it into
+/// `MarkCompletionUseCase`/`BulkMarkCompletionUseCase`, which already own
+/// the B1 gating and sit above whichever [CompletionRepository] is
+/// injected) — not something to improvise inside this file. **Do not flip
+/// `completionRepositoryProvider` to construct this class until that
+/// decision is made and built.**
+///
+/// ## `id` / `profileId` / `trackId` are sentinel, not real
+///
+/// See [kFirestoreUnmappedCompletionRowId]'s doc comment.
+///
+/// ## `getCompletionsByCurriculum`/`getCompletionsForContentItem` are
+/// faithful reads; `isStageCompleted` is simpler than Drift's, not weaker
+///
+/// Drift's `isStageCompleted` carries a legacy stage-id/stage-order
+/// reconciliation branch for rows written before stage ids were normalized
+/// to stage order (see [CompletionRepositoryImpl.isStageCompleted]). Every
+/// Firestore [CompletionEntity.stageId] is a `stage_order` value by
+/// construction (see that class's doc comment) — there is no legacy shape to
+/// reconcile, so this adapter's [isStageCompleted] is a plain equality
+/// check, not a reduced one.
+///
+/// ## Delegated-profile reads/writes are unsupported
+///
+/// See [CompletionRepositoryDelegatedProfileUnsupportedException]'s doc
+/// comment. **This is reachable today, not theoretical**:
+/// `BulkPriorCompletionService` (the onboarding bulk-mark-prior wizard)
+/// passes a non-null `profileId` whenever it runs for a delegated profile
+/// (e.g. a parent adding a track for a child), so both
+/// `getCompletionsByCurriculum` and `bulkMarkComplete` throw for that flow
+/// under this adapter.
+class FirestoreCompletionRepositoryAdapter implements CompletionRepository {
+  FirestoreCompletionRepositoryAdapter({required Ref ref}) : _ref = ref;
+
+  final Ref _ref;
+
+  /// Re-reads `firestoreCompletionRepositoryProvider`, resolving to `null`
+  /// exactly when it does (no active account, or no active learner
+  /// profile). See the class doc comment ("Construction") for why this
+  /// re-reads on every call rather than caching.
+  Future<FirestoreCompletionRepository?> _resolveOrNull() {
+    return _ref.read(firestoreCompletionRepositoryProvider.future);
+  }
+
+  /// Like [_resolveOrNull], but throws [CompletionRepositoryNotReadyException]
+  /// instead of returning `null` — for the two write methods, which have no
+  /// nullable "not ready" value of their own to return.
+  Future<FirestoreCompletionRepository> _resolve() async {
+    final repo = await _resolveOrNull();
+    if (repo == null) {
+      throw const CompletionRepositoryNotReadyException();
+    }
+    return repo;
+  }
+
+  static CurriculumId _curriculumFor(String storageKey) =>
+      CurriculumId.values.firstWhere(
+        (c) => c.storageKey == storageKey,
+        orElse: () => throw ArgumentError('Unknown curriculumId: $storageKey'),
+      );
+
+  /// Inverse of [CompletionSourceX.creditsEngagement] /
+  /// [CompletionSourceX.creditsAchievement] — see the class doc comment,
+  /// "`source` is a pure function of the two existing boolean gates."
+  static CompletionSource _sourceFor({
+    required bool awardGamificationPoints,
+    required bool creditsAchievement,
+  }) {
+    if (awardGamificationPoints) return CompletionSource.live;
+    if (creditsAchievement) return CompletionSource.bulkInTrack;
+    return CompletionSource.lifetimeOnly;
+  }
+
+  /// Maps a Firestore [CompletionEntity] onto the Drift-shaped [Completion]
+  /// the interface still returns. See [kFirestoreUnmappedCompletionRowId]'s
+  /// doc comment for the sentinel `id`/`profileId`/`trackId`.
+  static Completion _toDriftCompletion(CompletionEntity entity) => Completion(
+    id: kFirestoreUnmappedCompletionRowId,
+    profileId: kFirestoreUnmappedCompletionRowId,
+    curriculumId: entity.curriculumId.storageKey,
+    sefariaRef: entity.sefariaRef,
+    stageId: entity.stageId,
+    trackType: entity.trackType,
+    trackId: kFirestoreUnmappedCompletionRowId,
+    completedAt: entity.completedAt,
+    points: entity.points,
+    // Every Firestore completion's stageId is a stage_order value by
+    // construction — see CompletionEntity's class doc comment.
+    stageIdFormat: 'stageOrder',
+  );
+
+  @override
+  Future<MarkCompletionResult> markComplete(
+    CompletionRequest request, {
+    bool awardGamificationPoints = true,
+    bool creditsAchievement = true,
+  }) async {
+    final repo = await _resolve();
+    final curriculum = _curriculumFor(request.curriculumId);
+
+    // Idempotency guard: SR-1 permits `update` only as a byte-identical
+    // replay. A genuine re-mark of an already-completed stage would compute
+    // a fresh DateTimeFactory.nowUtc() below and get rules-denied as a
+    // non-identical replay in production — this is the single-item analogue
+    // of CompletionRepositoryImpl.markComplete's own duplicate check
+    // ("existing != null → return existing"), needed here for the same
+    // idempotency reason, not merely to save a write.
+    final existing = await _findExisting(
+      repo,
+      curriculum: curriculum,
+      stageId: request.stageId,
+      sefariaRef: request.sefariaRef,
+      trackType: request.trackType,
+    );
+    if (existing != null) {
+      return MarkCompletionResult(completion: _toDriftCompletion(existing));
+    }
+
+    final entity = CompletionEntity(
+      curriculumId: curriculum,
+      sefariaRef: request.sefariaRef,
+      stageId: request.stageId,
+      trackType: request.trackType,
+      source: _sourceFor(
+        awardGamificationPoints: awardGamificationPoints,
+        creditsAchievement: creditsAchievement,
+      ),
+      completedAt: DateTimeFactory.nowUtc(), // P5: UTC timestamps
+    );
+    final recorded = await repo.recordCompletion(entity);
+    return MarkCompletionResult(completion: _toDriftCompletion(recorded));
+  }
+
+  @override
+  Future<List<Completion>> bulkMarkComplete(
+    BulkCompletionRequest request,
+  ) async {
+    if (request.profileId != null) {
+      throw const CompletionRepositoryDelegatedProfileUnsupportedException();
+    }
+    if (request.sefariaRefs.isEmpty) return const [];
+
+    final repo = await _resolve();
+    final curriculum = _curriculumFor(request.curriculumId);
+    final source = _sourceFor(
+      awardGamificationPoints: request.awardGamificationPoints,
+      creditsAchievement: request.creditsAchievement,
+    );
+    // No per-item existing-check pass here (unlike markComplete) — every
+    // current call site (BulkPriorCompletionService) always supplies the
+    // fixed kBulkPriorSentinelDate for prior-mark requests, so a retry is a
+    // byte-identical replay and SR-1 accepts it without a pre-check. A
+    // hypothetical live-source bulk call that left completedAt null would
+    // mint a fresh timestamp per retry and could hit the same replay
+    // rejection markComplete's pre-check exists to avoid — flagged in the
+    // class doc comment, not guarded here (no current call site reaches it).
+    final completedAt = request.completedAt ?? DateTimeFactory.nowUtc();
+    final entities = request.sefariaRefs
+        .map(
+          (sefariaRef) => CompletionEntity(
+            curriculumId: curriculum,
+            sefariaRef: sefariaRef,
+            stageId: request.stageId,
+            trackType: request.trackType,
+            source: source,
+            completedAt: completedAt,
+          ),
+        )
+        .toList();
+    final recorded = await repo.recordCompletionsBatch(entities);
+    return recorded.map(_toDriftCompletion).toList();
+  }
+
+  @override
+  Future<List<Completion>> getCompletionsByCurriculum(
+    String curriculumId, {
+    int? profileId,
+  }) async {
+    if (profileId != null) {
+      throw const CompletionRepositoryDelegatedProfileUnsupportedException();
+    }
+    // Not-ready reads as "nothing to show yet" rather than an exception —
+    // see CompletionRepositoryNotReadyException's doc comment.
+    final repo = await _resolveOrNull();
+    if (repo == null) return const [];
+    final curriculum = _curriculumFor(curriculumId);
+    final entities = await repo.getCompletionsForCurriculum(curriculum);
+    return entities.map(_toDriftCompletion).toList();
+  }
+
+  @override
+  Future<List<Completion>> getCompletionsForContentItem(
+    String sefariaRef,
+  ) async {
+    final repo = await _resolveOrNull();
+    if (repo == null) return const [];
+    final entities = await repo.getCompletionsForContent(sefariaRef);
+    return entities.map(_toDriftCompletion).toList();
+  }
+
+  @override
+  Future<bool> isStageCompleted({
+    required String sefariaRef,
+    required int stageId,
+    required String trackType,
+  }) async {
+    final repo = await _resolveOrNull();
+    if (repo == null) return false;
+    final entities = await repo.getCompletionsForContent(sefariaRef);
+    return entities.any(
+      (e) => e.trackType == trackType && e.stageId == stageId,
+    );
+  }
+
+  /// Finds an existing completion matching the natural key, if any — see
+  /// [markComplete]'s doc comment for why this pre-check exists.
+  /// [FirestoreCompletionRepository] has no direct-by-key read; this filters
+  /// [FirestoreCompletionRepository.getCompletionsForContent]'s result
+  /// (already scoped to [sefariaRef]) client-side instead of adding a new
+  /// method to that repository, which is out of this file's scope.
+  Future<CompletionEntity?> _findExisting(
+    FirestoreCompletionRepository repo, {
+    required CurriculumId curriculum,
+    required int stageId,
+    required String sefariaRef,
+    required String trackType,
+  }) async {
+    final candidates = await repo.getCompletionsForContent(sefariaRef);
+    for (final c in candidates) {
+      if (c.curriculumId == curriculum &&
+          c.stageId == stageId &&
+          c.trackType == trackType) {
+        return c;
+      }
+    }
+    return null;
   }
 }

@@ -93,6 +93,33 @@ const _similarityThreshold = 0.8;
 /// description is significant regardless of body length.
 const _minTokensForBodyComparison = 8;
 
+/// Matches an inline assertion — `expect(...)`, `expectLater(...)`.
+final _inlineAssertion = RegExp(r'\bexpect(Later)?\s*\(');
+
+/// True when a test body contains NO inline assertion, i.e. it delegates
+/// its assertions to a shared expectation helper.
+///
+/// **Added 2026-08-03, during the Drift→Firestore rewrite.** This checker
+/// targets DUPLICATED ASSERTION LOGIC (AUD-t-scheduler-01: the same
+/// `expect` block copy-pasted between scheduler test files). A body that
+/// contains no `expect` at all has no assertion to duplicate — its
+/// assertion lives exactly once, inside the shared helper it calls. That is
+/// the opposite of the smell: it is the extraction the checker exists to
+/// encourage.
+///
+/// Without this, the rewrite's repository adapters were unfixable by design.
+/// Every adapter has an identical "not ready" contract (no active account or
+/// profile → a list read yields `[]`), so two adapters each verifying it
+/// score >80% Jaccard no matter how the test is written — extracting the
+/// assertion into a helper and hoisting the setup into `setUp` both left it
+/// at 83%, because what remains is the helper call itself. Two DIFFERENT
+/// adapters verifying the same invariant is correct testing, not copy-paste.
+///
+/// Deliberately narrow: both bodies must delegate. A body with even one
+/// inline `expect` is still compared, so the original AUD-t-scheduler-01
+/// shape — duplicated inline assertions — still fails. A test pins that.
+bool _delegatesAssertions(String body) => !_inlineAssertion.hasMatch(body);
+
 void main() {
   final dir = Directory(_scanDir);
   if (!dir.existsSync()) {
@@ -159,7 +186,9 @@ void main() {
         final tokensA = _normalizeTokens(a.effectiveBody);
         final tokensB = _normalizeTokens(b.effectiveBody);
         if (tokensA.length >= _minTokensForBodyComparison &&
-            tokensB.length >= _minTokensForBodyComparison) {
+            tokensB.length >= _minTokensForBodyComparison &&
+            !(_delegatesAssertions(a.effectiveBody) &&
+                _delegatesAssertions(b.effectiveBody))) {
           sim = _jaccard(tokensA.toSet(), tokensB.toSet());
         }
 

@@ -37,6 +37,28 @@ import 'dart:io';
 /// `foo_repository_impl.dart`).
 final _repositoryFileName = RegExp(r'_repository[a-zA-Z_]*\.dart$');
 
+/// The canonical Firestore data-access ring (`R --> A` in AD-23's diagram).
+///
+/// **Narrowed 2026-08-03, during the Drift→Firestore rewrite.** SM-8 exists
+/// because AUD-tracks-15 found `TrackLearningOrderRepositoryImpl` importing
+/// **`ContentRepository`** — a DIFFERENT FEATURE's repository. That is the
+/// hidden-coupling shape SM-8 forbids, and it is still caught: a
+/// `lib/features/**` repository importing another `lib/features/**`
+/// repository remains a violation.
+///
+/// Importing `lib/data/repositories/**` is a categorically different
+/// relationship. That directory IS the data-access ring a repository is
+/// supposed to depend on — the same `Repositories --> {Data-access ring,
+/// Domain}` edge AD-23 sanctions and `tool/check_dependency_direction.dart`
+/// enforces from the other side. A feature's `*_repository_impl.dart` now
+/// adapts the Firestore repository for its collection; forbidding that would
+/// forbid the architecture, not a smell.
+///
+/// This is a deliberate scope narrowing, not a carve-out for convenience:
+/// the original AUD-tracks-15 evidence (`ContentRepository`) still fails, and
+/// a test pins that.
+const _dataAccessRingPrefix = 'data/repositories/';
+
 /// Matches an `import 'package:learning_tracker/<path>'` line, capturing
 /// `<path>`. Trailing `as x;` / `show ...` / `hide ...` clauses are ignored
 /// since the match isn't anchored to end-of-line.
@@ -76,6 +98,7 @@ void main() {
       final importedBasename = importedPath.split('/').last;
       if (!_repositoryFileName.hasMatch(importedBasename)) continue;
       if (importedBasename == ownInterfaceBasename) continue;
+      if (importedPath.startsWith(_dataAccessRingPrefix)) continue;
 
       violations.add(
         '$path: imports another repository file '

@@ -89,6 +89,7 @@ import 'package:learning_tracker/data/repositories/firestore_profile_program_rep
 import 'package:learning_tracker/data/repositories/firestore_stage_definition_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_streak_event_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_study_day_config_repository.dart';
+import 'package:learning_tracker/data/repositories/firestore_track_learning_order_repository.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 
 /// Holds the Firestore ULID doc-id of the "active" learner profile, or
@@ -280,6 +281,27 @@ final firestoreStageDefinitionRepositoryProvider =
       if (resolved == null) return null;
       final (handles, profileId) = resolved;
       return FirestoreStageDefinitionRepository(
+        firestore: handles.firestore,
+        uid: handles.uid,
+        profileId: profileId,
+      );
+    });
+
+/// `.../track_learning_order/{orderId}`.
+///
+/// Distinct from [firestoreLearningOrderRepositoryProvider]: that one serves
+/// WHOLE-CURRICULUM ordering, this one serves per-track (sedarim/masechtos)
+/// reordering. They are separate collections precisely because
+/// `DocIds.trackLearningOrderDocId` and `DocIds.learningOrderDocId` compute
+/// the IDENTICAL string for the same `(curriculumId, sefariaRef)` — only the
+/// collection path keeps them apart. Sharing one collection would let a
+/// track-level order silently clobber a curriculum-level one.
+final firestoreTrackLearningOrderRepositoryProvider =
+    FutureProvider<FirestoreTrackLearningOrderRepository?>((ref) async {
+      final resolved = await _watchActiveAccountAndProfile(ref);
+      if (resolved == null) return null;
+      final (handles, profileId) = resolved;
+      return FirestoreTrackLearningOrderRepository(
         firestore: handles.firestore,
         uid: handles.uid,
         profileId: profileId,

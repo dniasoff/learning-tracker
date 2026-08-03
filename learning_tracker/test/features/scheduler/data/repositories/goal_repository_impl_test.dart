@@ -1,12 +1,26 @@
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/sync/sync_write_facade.dart';
+import 'package:learning_tracker/data/firestore/account_firebase.dart';
+import 'package:learning_tracker/data/firestore/active_account_providers.dart';
+import 'package:learning_tracker/data/firestore/repository_providers.dart'
+    show activeProfileDocIdProvider;
 import 'package:learning_tracker/features/scheduler/data/repositories/goal_repository_impl.dart';
 import 'package:learning_tracker/features/scheduler/domain/exceptions/goal_profile_mismatch_exception.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
+import 'package:mocktail/mocktail.dart';
 
 import '../../../../helpers/test_database.dart';
+import 'not_ready_expectations.dart';
+
+class MockFirebaseApp extends Mock implements FirebaseApp {}
+
+class MockFirebaseAuthHandle extends Mock implements FirebaseAuth {}
 
 /// Recording [SyncWriteFacade] that captures [pushGoal] payloads.
 ///
@@ -536,6 +550,182 @@ void main() {
           ),
           throwsA(isA<GoalProfileMismatchException>()),
         );
+      });
+    });
+  });
+
+  group('FirestoreGoalRepositoryAdapter', () {
+    const uid = 'uid-1';
+    const profileDocId = 'profile-ulid-1';
+
+    AccountFirebaseHandles handles(FakeFirebaseFirestore firestore) {
+      return AccountFirebaseHandles(
+        app: MockFirebaseApp(),
+        firestore: firestore,
+        auth: MockFirebaseAuthHandle(),
+        uid: uid,
+      );
+    }
+
+    // Constructing FirestoreGoalRepositoryAdapter requires a Ref
+    // (Riverpod's Ref is sealed — it can only come from inside a provider
+    // callback), so tests obtain one the same way production does: read a
+    // throwaway Provider that builds the adapter from the container's ref.
+    // Mirrors FirestoreBookmarkRepositoryAdapter's test helper
+    // (bookmark_repository_impl_test.dart).
+    FirestoreGoalRepositoryAdapter buildAdapter(ProviderContainer container) {
+      final adapterProvider = Provider<FirestoreGoalRepositoryAdapter>(
+        (ref) => FirestoreGoalRepositoryAdapter(ref: ref),
+      );
+      return container.read(adapterProvider);
+    }
+
+    group('not ready (no active account/profile)', () {
+      // Hoisted: every test in this group needs the same bare container (no
+      // account/profile overrides — that IS the not-ready condition), so
+      // repeating it per test was pure setup noise.
+      late FirestoreGoalRepositoryAdapter notReadyAdapter;
+
+      setUp(() {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        notReadyAdapter = buildAdapter(container);
+      });
+
+      test('getGoals returns an empty list instead of throwing', () async {
+        await expectEmptyListWhenNotReady(
+          () => notReadyAdapter.getGoals(CurriculumId.mishnayos),
+          describe: 'GoalRepository.getGoals',
+        );
+      });
+
+      test('createGoal throws GoalRepositoryNotReadyException', () async {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        final adapter = buildAdapter(container);
+
+        expect(
+          () => adapter.createGoal(
+            curriculumId: CurriculumId.mishnayos,
+            targetPercent: 100.0,
+          ),
+          throwsA(isA<GoalRepositoryNotReadyException>()),
+        );
+      });
+
+      test('updateGoal throws GoalRepositoryNotReadyException', () async {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        final adapter = buildAdapter(container);
+        final goal = GoalEntity(
+          curriculumId: CurriculumId.mishnayos,
+          createdAt: now,
+          updatedAt: now,
+        );
+
+        expect(
+          () => adapter.updateGoal(goal: goal, targetPercent: 50.0),
+          throwsA(isA<GoalRepositoryNotReadyException>()),
+        );
+      });
+
+      test('deleteGoal throws GoalRepositoryNotReadyException', () async {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        final adapter = buildAdapter(container);
+        final goal = GoalEntity(
+          curriculumId: CurriculumId.mishnayos,
+          createdAt: now,
+          updatedAt: now,
+        );
+
+        expect(
+          () => adapter.deleteGoal(goal),
+          throwsA(isA<GoalRepositoryNotReadyException>()),
+        );
+      });
+    });
+
+    group('ready (active account + profile)', () {
+      late FakeFirebaseFirestore firestore;
+      late ProviderContainer container;
+      late FirestoreGoalRepositoryAdapter adapter;
+
+      setUp(() {
+        firestore = FakeFirebaseFirestore();
+        container = ProviderContainer(
+          overrides: [
+            activeAccountFirebaseProvider.overrideWith(
+              (ref) async => handles(firestore),
+            ),
+          ],
+        );
+        container.read(activeProfileDocIdProvider.notifier).set(profileDocId);
+        adapter = buildAdapter(container);
+      });
+
+      tearDown(() => container.dispose());
+
+      test('createGoal delegates to FirestoreGoalRepository and writes a doc '
+          'reachable at the expected Firestore path', () async {
+        final goal = await adapter.createGoal(
+          curriculumId: CurriculumId.mishnayos,
+          targetPercent: 80.0,
+          description: 'Finish Mishnayos',
+        );
+
+        expect(goal.targetPercent, 80.0);
+
+        final doc = await firestore
+            .collection('users')
+            .doc(uid)
+            .collection('learner_profiles')
+            .doc(profileDocId)
+            .collection('goals')
+            .doc(goal.firestoreId)
+            .get();
+        expect(doc.exists, isTrue);
+      });
+
+      test('createGoal then getGoals round-trips through Firestore', () async {
+        await adapter.createGoal(
+          curriculumId: CurriculumId.mishnayos,
+          targetPercent: 60.0,
+        );
+
+        final goals = await adapter.getGoals(CurriculumId.mishnayos);
+
+        expect(goals, hasLength(1));
+        expect(goals.single.targetPercent, 60.0);
+      });
+
+      test('updateGoal writes the change back to the same document', () async {
+        final created = await adapter.createGoal(
+          curriculumId: CurriculumId.mishnayos,
+          targetPercent: 60.0,
+        );
+
+        final updated = await adapter.updateGoal(
+          goal: created,
+          targetPercent: 90.0,
+        );
+
+        expect(updated.targetPercent, 90.0);
+        expect(updated.firestoreId, created.firestoreId);
+        final goals = await adapter.getGoals(CurriculumId.mishnayos);
+        expect(goals.single.targetPercent, 90.0);
+      });
+
+      test('deleteGoal removes the document', () async {
+        final created = await adapter.createGoal(
+          curriculumId: CurriculumId.mishnayos,
+          targetPercent: 60.0,
+        );
+
+        await adapter.deleteGoal(created);
+
+        final goals = await adapter.getGoals(CurriculumId.mishnayos);
+        expect(goals, isEmpty);
       });
     });
   });

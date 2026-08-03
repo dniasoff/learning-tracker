@@ -1,4 +1,8 @@
 import 'package:drift/drift.dart' show Value;
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/content/content_index.dart';
 import 'package:learning_tracker/core/database/daos/profile_dao.dart';
@@ -7,12 +11,17 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/sync/sync_write_facade.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
+import 'package:learning_tracker/data/firestore/account_firebase.dart';
+import 'package:learning_tracker/data/firestore/active_account_providers.dart';
+import 'package:learning_tracker/data/firestore/repository_providers.dart'
+    show activeProfileDocIdProvider;
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_state_service.dart';
 import 'package:learning_tracker/features/learning/data/repositories/bookmark_repository_impl.dart';
 import 'package:learning_tracker/features/learning/data/repositories/completion_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -24,6 +33,10 @@ class MockContentRepository extends Mock implements ContentRepository {}
 
 class MockRewardMilestoneService extends Mock
     implements RewardMilestoneService {}
+
+class MockFirebaseApp extends Mock implements FirebaseApp {}
+
+class MockFirebaseAuthHandle extends Mock implements FirebaseAuth {}
 
 void main() {
   setUpAll(() {
@@ -622,6 +635,418 @@ void main() {
             'The ContentIndex fast path must resolve the same next-item '
             'as the O(N) scan it replaces.',
       );
+    });
+  });
+
+  group('FirestoreCompletionRepositoryAdapter', () {
+    const uid = 'uid-1';
+    const profileDocId = 'profile-ulid-1';
+    const curriculumId = 'mishnayos';
+    const sefariaRef = 'Mishnah Berachot 1:1';
+
+    AccountFirebaseHandles handles(FakeFirebaseFirestore firestore) {
+      return AccountFirebaseHandles(
+        app: MockFirebaseApp(),
+        firestore: firestore,
+        auth: MockFirebaseAuthHandle(),
+        uid: uid,
+      );
+    }
+
+    // Constructing FirestoreCompletionRepositoryAdapter requires a Ref
+    // (Riverpod's Ref is sealed — it can only come from inside a provider
+    // callback), so tests obtain one the same way production does: read a
+    // throwaway Provider that builds the adapter from the container's ref.
+    // Mirrors FirestoreBookmarkRepositoryAdapter's test helper
+    // (bookmark_repository_impl_test.dart).
+    FirestoreCompletionRepositoryAdapter buildAdapter(
+      ProviderContainer container,
+    ) {
+      final adapterProvider = Provider<FirestoreCompletionRepositoryAdapter>(
+        (ref) => FirestoreCompletionRepositoryAdapter(ref: ref),
+      );
+      return container.read(adapterProvider);
+    }
+
+    group('not ready (no active account/profile)', () {
+      test(
+        'getCompletionsByCurriculum returns [] instead of throwing',
+        () async {
+          final container = ProviderContainer();
+          addTearDown(container.dispose);
+          final adapter = buildAdapter(container);
+
+          expect(
+            await adapter.getCompletionsByCurriculum(curriculumId),
+            isEmpty,
+          );
+        },
+      );
+
+      test(
+        'getCompletionsForContentItem returns [] instead of throwing',
+        () async {
+          final container = ProviderContainer();
+          addTearDown(container.dispose);
+          final adapter = buildAdapter(container);
+
+          expect(
+            await adapter.getCompletionsForContentItem(sefariaRef),
+            isEmpty,
+          );
+        },
+      );
+
+      test('isStageCompleted returns false instead of throwing', () async {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        final adapter = buildAdapter(container);
+
+        expect(
+          await adapter.isStageCompleted(
+            sefariaRef: sefariaRef,
+            stageId: 1,
+            trackType: 'personal',
+          ),
+          isFalse,
+        );
+      });
+
+      test(
+        'markComplete throws CompletionRepositoryNotReadyException',
+        () async {
+          final container = ProviderContainer();
+          addTearDown(container.dispose);
+          final adapter = buildAdapter(container);
+
+          expect(
+            () => adapter.markComplete(
+              const CompletionRequest(
+                curriculumId: curriculumId,
+                sefariaRef: sefariaRef,
+                stageId: 1,
+                trackType: 'personal',
+              ),
+            ),
+            throwsA(isA<CompletionRepositoryNotReadyException>()),
+          );
+        },
+      );
+
+      test(
+        'bulkMarkComplete throws CompletionRepositoryNotReadyException',
+        () async {
+          final container = ProviderContainer();
+          addTearDown(container.dispose);
+          final adapter = buildAdapter(container);
+
+          expect(
+            () => adapter.bulkMarkComplete(
+              const BulkCompletionRequest(
+                curriculumId: curriculumId,
+                sefariaRefs: [sefariaRef],
+                stageId: 1,
+                trackType: 'personal',
+              ),
+            ),
+            throwsA(isA<CompletionRepositoryNotReadyException>()),
+          );
+        },
+      );
+    });
+
+    group('ready (active account + profile)', () {
+      late FakeFirebaseFirestore firestore;
+      late ProviderContainer container;
+      late FirestoreCompletionRepositoryAdapter adapter;
+
+      setUp(() {
+        firestore = FakeFirebaseFirestore();
+        container = ProviderContainer(
+          overrides: [
+            activeAccountFirebaseProvider.overrideWith(
+              (ref) async => handles(firestore),
+            ),
+          ],
+        );
+        container.read(activeProfileDocIdProvider.notifier).set(profileDocId);
+        adapter = buildAdapter(container);
+      });
+
+      tearDown(() => container.dispose());
+
+      Future<List<Map<String, dynamic>>> rawCompletionDocs() async {
+        final snapshot = await firestore
+            .collection('users')
+            .doc(uid)
+            .collection('learner_profiles')
+            .doc(profileDocId)
+            .collection('completions')
+            .get();
+        return snapshot.docs.map((d) => d.data()).toList();
+      }
+
+      group('source correctness per call-site category', () {
+        test(
+          'markComplete with default (live) args writes source=live',
+          () async {
+            final result = await adapter.markComplete(
+              const CompletionRequest(
+                curriculumId: curriculumId,
+                sefariaRef: sefariaRef,
+                stageId: 1,
+                trackType: 'personal',
+              ),
+            );
+
+            expect(result.completion.sefariaRef, sefariaRef);
+            expect(result.completion.curriculumId, curriculumId);
+            expect(result.completion.stageId, 1);
+            expect(result.completion.trackType, 'personal');
+            expect(result.completion.completedAt.isUtc, isTrue);
+            // No points calculation exists at this layer — see the class
+            // doc comment, "What this adapter does NOT do."
+            expect(result.completion.points, 0);
+
+            final docs = await rawCompletionDocs();
+            expect(docs, hasLength(1));
+            expect(docs.single['source'], CompletionSource.live.name);
+          },
+        );
+
+        test('markComplete with (awardGamificationPoints: false, '
+            'creditsAchievement: true) writes source=bulkInTrack — the '
+            'BulkPriorCompletionService category', () async {
+          await adapter.markComplete(
+            const CompletionRequest(
+              curriculumId: curriculumId,
+              sefariaRef: sefariaRef,
+              stageId: 1,
+              trackType: 'personal',
+            ),
+            awardGamificationPoints: false,
+            creditsAchievement: true,
+          );
+
+          final docs = await rawCompletionDocs();
+          expect(docs.single['source'], CompletionSource.bulkInTrack.name);
+        });
+
+        test('markComplete with (false, false) — lifetimeOnly — throws '
+            'ArgumentError instead of writing a completions doc', () async {
+          expect(
+            () => adapter.markComplete(
+              const CompletionRequest(
+                curriculumId: curriculumId,
+                sefariaRef: sefariaRef,
+                stageId: 1,
+                trackType: 'personal',
+              ),
+              awardGamificationPoints: false,
+              creditsAchievement: false,
+            ),
+            throwsA(isA<ArgumentError>()),
+          );
+        });
+
+        test(
+          'bulkMarkComplete with (false, true) writes every item as '
+          'source=bulkInTrack — the onboarding bulk-mark-prior category',
+          () async {
+            final completedAt = DateTime.utc(2000, 1, 1);
+            final results = await adapter.bulkMarkComplete(
+              BulkCompletionRequest(
+                curriculumId: curriculumId,
+                sefariaRefs: const [sefariaRef, 'Mishnah Berachot 1:2'],
+                stageId: 1,
+                trackType: 'personal',
+                awardGamificationPoints: false,
+                creditsAchievement: true,
+                completedAt: completedAt,
+              ),
+            );
+
+            expect(results, hasLength(2));
+            final docs = await rawCompletionDocs();
+            expect(docs, hasLength(2));
+            expect(
+              docs.every(
+                (d) => d['source'] == CompletionSource.bulkInTrack.name,
+              ),
+              isTrue,
+            );
+          },
+        );
+      });
+
+      group('idempotency (SR-1 byte-identical-replay guard)', () {
+        test('marking the same stage twice returns the SAME completedAt '
+            'instead of computing a fresh one on the second call', () async {
+          final first = await adapter.markComplete(
+            const CompletionRequest(
+              curriculumId: curriculumId,
+              sefariaRef: sefariaRef,
+              stageId: 1,
+              trackType: 'personal',
+            ),
+          );
+
+          final second = await adapter.markComplete(
+            const CompletionRequest(
+              curriculumId: curriculumId,
+              sefariaRef: sefariaRef,
+              stageId: 1,
+              trackType: 'personal',
+            ),
+          );
+
+          expect(second.completion.completedAt, first.completion.completedAt);
+          // Only one document should exist — the second call must not
+          // have attempted a second, differently-timestamped write.
+          final docs = await rawCompletionDocs();
+          expect(docs, hasLength(1));
+        });
+      });
+
+      group('delegated profile is unsupported', () {
+        test(
+          'getCompletionsByCurriculum with a non-null profileId throws',
+          () async {
+            expect(
+              () => adapter.getCompletionsByCurriculum(
+                curriculumId,
+                profileId: 42,
+              ),
+              throwsA(
+                isA<CompletionRepositoryDelegatedProfileUnsupportedException>(),
+              ),
+            );
+          },
+        );
+
+        test('bulkMarkComplete with a non-null profileId throws', () async {
+          expect(
+            () => adapter.bulkMarkComplete(
+              const BulkCompletionRequest(
+                curriculumId: curriculumId,
+                sefariaRefs: [sefariaRef],
+                stageId: 1,
+                trackType: 'personal',
+                profileId: 42,
+              ),
+            ),
+            throwsA(
+              isA<CompletionRepositoryDelegatedProfileUnsupportedException>(),
+            ),
+          );
+        });
+      });
+
+      group('read delegation', () {
+        test('getCompletionsByCurriculum round-trips a completion written via '
+            'markComplete', () async {
+          await adapter.markComplete(
+            const CompletionRequest(
+              curriculumId: curriculumId,
+              sefariaRef: sefariaRef,
+              stageId: 1,
+              trackType: 'personal',
+            ),
+          );
+
+          final results = await adapter.getCompletionsByCurriculum(
+            curriculumId,
+          );
+
+          expect(results, hasLength(1));
+          expect(results.single.sefariaRef, sefariaRef);
+        });
+
+        test('getCompletionsForContentItem round-trips a completion written '
+            'via markComplete', () async {
+          await adapter.markComplete(
+            const CompletionRequest(
+              curriculumId: curriculumId,
+              sefariaRef: sefariaRef,
+              stageId: 1,
+              trackType: 'personal',
+            ),
+          );
+
+          final results = await adapter.getCompletionsForContentItem(
+            sefariaRef,
+          );
+
+          expect(results, hasLength(1));
+          expect(results.single.curriculumId, curriculumId);
+        });
+
+        test(
+          'isStageCompleted is true only for a matching trackType + stageId',
+          () async {
+            await adapter.markComplete(
+              const CompletionRequest(
+                curriculumId: curriculumId,
+                sefariaRef: sefariaRef,
+                stageId: 1,
+                trackType: 'personal',
+              ),
+            );
+
+            expect(
+              await adapter.isStageCompleted(
+                sefariaRef: sefariaRef,
+                stageId: 1,
+                trackType: 'personal',
+              ),
+              isTrue,
+            );
+            expect(
+              await adapter.isStageCompleted(
+                sefariaRef: sefariaRef,
+                stageId: 2,
+                trackType: 'personal',
+              ),
+              isFalse,
+            );
+            expect(
+              await adapter.isStageCompleted(
+                sefariaRef: sefariaRef,
+                stageId: 1,
+                trackType: 'someOtherTrackType',
+              ),
+              isFalse,
+            );
+          },
+        );
+      });
+
+      group('id / profileId / trackId are sentinel', () {
+        test(
+          'markComplete result carries kFirestoreUnmappedCompletionRowId '
+          'for id, profileId, and trackId — never a real Drift value',
+          () async {
+            final result = await adapter.markComplete(
+              const CompletionRequest(
+                curriculumId: curriculumId,
+                sefariaRef: sefariaRef,
+                stageId: 1,
+                trackType: 'personal',
+              ),
+            );
+
+            expect(result.completion.id, kFirestoreUnmappedCompletionRowId);
+            expect(
+              result.completion.profileId,
+              kFirestoreUnmappedCompletionRowId,
+            );
+            expect(
+              result.completion.trackId,
+              kFirestoreUnmappedCompletionRowId,
+            );
+          },
+        );
+      });
     });
   });
 }

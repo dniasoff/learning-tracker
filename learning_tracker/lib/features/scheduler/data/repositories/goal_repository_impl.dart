@@ -1,9 +1,12 @@
 import 'package:drift/drift.dart' as drift;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/sync/codec/goal_codec.dart';
 import 'package:learning_tracker/core/sync/sync_write_facade.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
+import 'package:learning_tracker/data/firestore/repository_providers.dart';
+import 'package:learning_tracker/data/repositories/firestore_goal_repository.dart';
 import 'package:learning_tracker/features/scheduler/domain/exceptions/goal_profile_mismatch_exception.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/features/scheduler/domain/repositories/goal_repository.dart';
@@ -285,5 +288,177 @@ class GoalRepositoryImpl implements GoalRepository {
       'firestore_id': entity.firestoreId,
       'curriculum_id': entity.curriculumId.storageKey,
     });
+  }
+}
+
+/// Thrown by [FirestoreGoalRepositoryAdapter]'s write methods when
+/// `firestoreGoalRepositoryProvider` resolves to `null` — see
+/// `BookmarkRepositoryNotReadyException`'s doc comment
+/// (`lib/features/learning/data/repositories/bookmark_repository_impl.dart`)
+/// for the read-vs-write split this mirrors: reads reuse a natural "nothing
+/// yet" value (`[]`), writes have no such value and throw instead.
+class GoalRepositoryNotReadyException implements Exception {
+  const GoalRepositoryNotReadyException();
+
+  @override
+  String toString() =>
+      'GoalRepositoryNotReadyException: firestoreGoalRepositoryProvider '
+      'resolved to null (no active account, or no active learner profile, '
+      'yet) — cannot complete a goal write until one is active.';
+}
+
+/// Firestore-backed adapter over [FirestoreGoalRepository]. Follows the
+/// pattern `FirestoreBookmarkRepositoryAdapter`
+/// (`lib/features/learning/data/repositories/bookmark_repository_impl.dart`)
+/// establishes — read that class's doc comment first; this one only calls
+/// out what is DIFFERENT here.
+///
+/// ## Deliberately does NOT `implements` [GoalRepository] — an unbridgeable
+/// id mismatch, not an oversight
+///
+/// [GoalRepository.updateGoal] takes `required int goalId` and
+/// [GoalRepository.deleteGoal] takes `int goalId` — both address a goal by
+/// [GoalDao]'s Drift-local autoincrement primary key. [FirestoreGoalRepository]
+/// has no such key at all: per its own class doc comment ("Doc-id"), a
+/// Firestore goal is identified by [GoalEntity.firestoreId]
+/// (`curriculumId` + `createdAt`), and [FirestoreGoalRepository.updateGoal]/
+/// `.deleteGoal` both take the current [GoalEntity] itself, not an int.
+/// There is no honest way to synthesize an `int` for a document that was
+/// never assigned one — inventing one (a hash, a counter) would silently
+/// diverge from what [GoalRepositoryImpl] actually stores and break the very
+/// callers this adapter would be adapting for.
+///
+/// This is the same CLASS of problem
+/// `FirestoreProfileRepositoryAdapter`(`lib/features/profiles/data/
+/// repositories/profile_repository_impl.dart`) solved for
+/// `ProfileRepository`'s `int`-keyed interface — but that fix was a
+/// dual-write hybrid (every write still goes through the Drift repository
+/// first, Firestore identity is bridged via a `ulid` column added to the
+/// Drift row) built specifically because `ProfileModel.id` is threaded
+/// through a great many profile-scoped screens/providers/queries. Goals'
+/// `int goalId` has a much narrower blast radius — exactly two callers,
+/// both outside this task's scope to touch:
+/// `TrackEditService.editTrack` (`lib/features/tracks/setup/domain/
+/// services/track_edit_service.dart`, calls `updateGoal(goalId: goalId,
+/// ...)`) and `TrackCreationService._deleteExistingGoals`/`._recreateGoal`
+/// (`lib/features/tracks/setup/domain/services/track_creation_service.dart`,
+/// calls `deleteGoal(g.id)` / `createGoal(...)`). Building the equivalent
+/// dual-write bridge for goals (a Drift-row `firestoreId` column, or
+/// widening [GoalRepository] itself to accept an entity instead of an int)
+/// would mean editing those two `domain/services/` files — outside this
+/// adapter's `data/repositories/` scope. So this class instead exposes
+/// [FirestoreGoalRepository]'s own entity-keyed method shapes directly,
+/// standalone (not `implements` anything) — the same "no interface, nothing
+/// to be substitutable with yet" status
+/// [FirestoreStudyDayConfigRepositoryAdapter] documents for study-day
+/// configs — ready for a future task that either widens [GoalRepository]'s
+/// contract or builds the same kind of identity bridge Profiles used.
+///
+/// ## Not-ready semantics
+///
+/// [getGoals]/[watchGoals] reuse the interface's own `[]` "nothing yet"
+/// value. [createGoal]/[updateGoal]/[deleteGoal] have no such value and
+/// throw [GoalRepositoryNotReadyException] instead.
+class FirestoreGoalRepositoryAdapter {
+  FirestoreGoalRepositoryAdapter({required Ref ref}) : _ref = ref;
+
+  final Ref _ref;
+
+  /// Re-reads `firestoreGoalRepositoryProvider`, resolving to `null` exactly
+  /// when it does (no active account, or no active learner profile). See
+  /// `FirestoreBookmarkRepositoryAdapter._resolveOrNull`'s doc comment for
+  /// why this re-reads on every call rather than caching.
+  Future<FirestoreGoalRepository?> _resolveOrNull() {
+    return _ref.read(firestoreGoalRepositoryProvider.future);
+  }
+
+  /// Like [_resolveOrNull], but throws [GoalRepositoryNotReadyException]
+  /// instead of returning `null` — for the three write methods; see the
+  /// class doc comment.
+  Future<FirestoreGoalRepository> _resolve() async {
+    final repo = await _resolveOrNull();
+    if (repo == null) {
+      throw const GoalRepositoryNotReadyException();
+    }
+    return repo;
+  }
+
+  /// Returns all goals for [curriculumId], sorted by `targetDate`
+  /// (null-first, ascending). `[]` when not ready.
+  Future<List<GoalEntity>> getGoals(CurriculumId curriculumId) async {
+    final repo = await _resolveOrNull();
+    if (repo == null) return const [];
+    return repo.getGoals(curriculumId);
+  }
+
+  /// Live updates for [curriculumId]'s goal list. See
+  /// [FirestoreCurriculumTrackRepositoryAdapter]'s class doc comment
+  /// ("Not-ready semantics") for the one-shot-resolve limitation shared by
+  /// every `watch*` method built in this wave: this does not re-subscribe
+  /// if the active account/profile changes after the stream opens while
+  /// not-ready.
+  Stream<List<GoalEntity>> watchGoals(CurriculumId curriculumId) async* {
+    final repo = await _resolveOrNull();
+    if (repo == null) {
+      yield const [];
+      return;
+    }
+    yield* repo.watchGoals(curriculumId);
+  }
+
+  /// Creates a new goal for [curriculumId]. Throws
+  /// [GoalRepositoryNotReadyException] when not ready.
+  Future<GoalEntity> createGoal({
+    required CurriculumId curriculumId,
+    required double targetPercent,
+    PaceTarget? paceTarget,
+    String description = '',
+    String dateType = 'gregorian',
+    PaceGranularity? paceGranularity,
+    String? rawLearningUnit,
+  }) async {
+    final repo = await _resolve();
+    return repo.createGoal(
+      curriculumId: curriculumId,
+      targetPercent: targetPercent,
+      paceTarget: paceTarget,
+      description: description,
+      dateType: dateType,
+      paceGranularity: paceGranularity,
+      rawLearningUnit: rawLearningUnit,
+    );
+  }
+
+  /// Updates [goal] and writes the result back to the same Firestore
+  /// document (see [FirestoreGoalRepository.updateGoal]'s doc comment).
+  /// Throws [GoalRepositoryNotReadyException] when not ready.
+  Future<GoalEntity> updateGoal({
+    required GoalEntity goal,
+    double? targetPercent,
+    PaceTarget? paceTarget,
+    bool clearPaceTarget = false,
+    String? description,
+    PaceGranularity? paceGranularity,
+    String? rawLearningUnit,
+    bool clearLearningUnit = false,
+  }) async {
+    final repo = await _resolve();
+    return repo.updateGoal(
+      goal: goal,
+      targetPercent: targetPercent,
+      paceTarget: paceTarget,
+      clearPaceTarget: clearPaceTarget,
+      description: description,
+      paceGranularity: paceGranularity,
+      rawLearningUnit: rawLearningUnit,
+      clearLearningUnit: clearLearningUnit,
+    );
+  }
+
+  /// Hard-deletes [goal]'s Firestore document. Throws
+  /// [GoalRepositoryNotReadyException] when not ready.
+  Future<void> deleteGoal(GoalEntity goal) async {
+    final repo = await _resolve();
+    await repo.deleteGoal(goal);
   }
 }
