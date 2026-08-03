@@ -7,6 +7,7 @@ import 'package:learning_tracker/features/learning/domain/repositories/learning_
 import 'package:learning_tracker/features/learning/domain/use_cases/manual_completion_use_case.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/parent_pin_session_provider.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -14,16 +15,23 @@ part 'learning_ledger_providers.g.dart';
 
 /// Fetches the [ProfileMode] for the active profile.
 ///
-/// Uses [ProfileMode.fromStorageKey] to convert the raw storage key to a typed
-/// enum. Falls back to [ProfileMode.adult] for unrecognised values.
+/// Routes through [profileRepositoryProvider] (the profiles feature's own
+/// repository interface) rather than reading `profileDao` directly — this
+/// provider lives outside `data/repositories/`, so it must not touch Drift
+/// (or Firestore) storage on its own (audit check 102's caller-goes-through-
+/// its-feature's-repository rule).
+///
+/// Falls back to [ProfileMode.adult] for a missing profile or an
+/// unrecognised raw mode value — [ProfileModel.profileMode] already applies
+/// that same fallback.
 final _activeProfileModeProvider = FutureProvider.autoDispose<ProfileMode>((
   ref,
 ) async {
-  final database = ref.watch(userDatabaseProvider);
+  final repository = ref.watch(profileRepositoryProvider);
   final profileId = ref.watch(activeProfileIdProvider);
-  final profile = await database.profileDao.getProfileById(profileId);
+  final profile = await repository.getProfileById(profileId);
   if (profile == null) return ProfileMode.adult;
-  return ProfileMode.fromStorageKey(profile.mode);
+  return profile.profileMode;
 });
 
 /// Provides the learning ledger repository.
@@ -74,20 +82,17 @@ ManualCompletionUseCase manualCompletionUseCase(Ref ref) {
 /// Watches all ledger entries for the active profile.
 final learningLedgerProvider =
     FutureProvider.autoDispose<List<LearningLedgerData>>((ref) async {
-      final database = ref.watch(userDatabaseProvider);
+      final repository = ref.watch(learningLedgerRepositoryProvider);
       final profileId = ref.watch(activeProfileIdProvider);
-      return database.learningLedgerDao.getEntriesByProfile(profileId);
+      return repository.getLifetimeLedger(profileId);
     });
 
 /// Watches ledger entries filtered by curriculum for the active profile.
 final curriculumLedgerProvider = FutureProvider.autoDispose
     .family<List<LearningLedgerData>, String>((ref, curriculumId) async {
-      final database = ref.watch(userDatabaseProvider);
+      final repository = ref.watch(learningLedgerRepositoryProvider);
       final profileId = ref.watch(activeProfileIdProvider);
-      return database.learningLedgerDao.getEntriesByCurriculum(
-        profileId,
-        curriculumId,
-      );
+      return repository.getLedgerByCurriculum(profileId, curriculumId);
     });
 
 /// Computed completion stats for a curriculum.

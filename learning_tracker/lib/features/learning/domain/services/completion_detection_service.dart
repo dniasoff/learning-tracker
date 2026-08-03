@@ -1,7 +1,7 @@
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
+import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/learning_ledger_repository.dart';
 import 'package:learning_tracker/features/tracks/stages/domain/models/stage_definition.dart'
     as domain_stage;
@@ -123,17 +123,17 @@ bool hasNamedLevel2Unit(CurriculumId curriculum) {
 ///
 /// Called immediately after each markComplete() in CompletionRepositoryImpl.
 class CompletionDetectionService {
-  final UserDatabase _database;
+  final CompletionRepository _completionRepository;
   final ContentRepository _contentRepository;
   final LearningLedgerRepository _ledgerRepository;
   final StageDefinitionRepository? _stageRepository;
 
   CompletionDetectionService({
-    required UserDatabase database,
+    required CompletionRepository completionRepository,
     required ContentRepository contentRepository,
     required LearningLedgerRepository ledgerRepository,
     StageDefinitionRepository? stageRepository,
-  }) : _database = database,
+  }) : _completionRepository = completionRepository,
        _contentRepository = contentRepository,
        _ledgerRepository = ledgerRepository,
        _stageRepository = stageRepository;
@@ -272,8 +272,8 @@ class CompletionDetectionService {
     // call per leaf — for a masechta with 40 mishnayot leaves that was 40
     // round trips per detection call, and a seder-level check across
     // multiple masechtos could trigger hundreds.
-    final allCompletions = await _database.completionDao
-        .getCompletionsByCurriculumAndProfile(curriculumId, profileId);
+    final allCompletions = await _completionRepository
+        .getCompletionsByCurriculum(curriculumId, profileId: profileId);
     final stagesByRef = <String, Set<int>>{};
     for (final c in allCompletions) {
       if (c.trackType != trackType) continue;

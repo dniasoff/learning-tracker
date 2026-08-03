@@ -51,6 +51,12 @@ abstract class LearningLedgerRepository {
   /// Get the full lifetime ledger for a profile.
   Future<List<LearningLedgerData>> getLifetimeLedger(int profileId);
 
+  /// Get the lifetime ledger for a profile, filtered to one curriculum.
+  Future<List<LearningLedgerData>> getLedgerByCurriculum(
+    int profileId,
+    String curriculumId,
+  );
+
   /// Get completion stats for a curriculum.
   ///
   /// Returns a map with keys: 'total', 'manual', 'auto'.

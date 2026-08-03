@@ -127,15 +127,15 @@ void main() {
       completionDao: db.completionDao,
       pushStageDefinitions: null,
     );
-    final detectionService = CompletionDetectionService(
-      database: db,
-      contentRepository: contentRepo,
-      ledgerRepository: ledgerRepo,
-      stageRepository: stageRepo,
-    );
     final repo = CompletionRepositoryImpl(
       database: db,
       activeProfileId: profileId,
+    );
+    final detectionService = CompletionDetectionService(
+      completionRepository: repo,
+      contentRepository: contentRepo,
+      ledgerRepository: ledgerRepo,
+      stageRepository: stageRepo,
     );
     // Post completion-orchestrator lift (`docs/firestore-rewrite-map.md`,
     // owner decision 1): the unawaited-and-logged siyum dispatch under test

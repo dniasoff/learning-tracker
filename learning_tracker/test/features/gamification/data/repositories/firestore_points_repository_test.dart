@@ -7,6 +7,7 @@ import 'package:learning_tracker/data/firestore/account_firebase.dart';
 import 'package:learning_tracker/data/firestore/active_account_providers.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart'
     show activeProfileDocIdProvider;
+import 'package:learning_tracker/data/repositories/firestore_points_ledger_repository.dart';
 import 'package:learning_tracker/features/gamification/data/repositories/firestore_points_repository.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -45,22 +46,105 @@ void main() {
     });
   });
 
-  group('every read method — unavailable regardless of readiness', () {
-    // No FirestorePointsLedgerRepository exists yet under
-    // lib/data/repositories/ (see PointsRepositoryUnavailableException's
-    // doc comment) — every method throws unconditionally, whether or not
-    // an active account/profile is resolved.
+  group(
+    'getGlobalTotal — wired to FirestorePointsLedgerRepository.getBalance',
+    () {
+      // FirestorePointsLedgerRepository landed since this class was first
+      // built as a stub — getGlobalTotal now delegates to it (see the class
+      // doc comment). getCurriculumTotal / getDerivedTotal / getCurriculumBreakdown
+      // remain unavailable (points_ledger carries no curriculumId field) and
+      // are covered in the group below.
 
-    test('not ready: getGlobalTotal throws', () async {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-      final adapter = buildAdapter(container);
+      test(
+        'not ready (no active account/profile): returns 0, does not throw',
+        () async {
+          final container = ProviderContainer();
+          addTearDown(container.dispose);
+          final adapter = buildAdapter(container);
 
-      expect(
-        () => adapter.getGlobalTotal(),
-        throwsA(isA<PointsRepositoryUnavailableException>()),
+          expect(await adapter.getGlobalTotal(), 0);
+        },
       );
-    });
+
+      group('ready (active account + profile)', () {
+        const uid = 'uid-1';
+        const profileDocId = 'profile-ulid-1';
+
+        late FakeFirebaseFirestore firestore;
+        late ProviderContainer container;
+        late FirestorePointsRepository adapter;
+
+        setUp(() {
+          firestore = FakeFirebaseFirestore();
+          container = ProviderContainer(
+            overrides: [
+              activeAccountFirebaseProvider.overrideWith(
+                (ref) async => AccountFirebaseHandles(
+                  app: MockFirebaseApp(),
+                  firestore: firestore,
+                  auth: MockFirebaseAuthHandle(),
+                  uid: uid,
+                ),
+              ),
+            ],
+          );
+          container.read(activeProfileDocIdProvider.notifier).set(profileDocId);
+          adapter = buildAdapter(container);
+        });
+
+        tearDown(() => container.dispose());
+
+        test('sums and clamps the ledger — mirrors PointsBalanceDao\'s stored '
+            'balance for the same ledger contents', () async {
+          final ledger = FirestorePointsLedgerRepository(
+            firestore: firestore,
+            uid: uid,
+            profileId: profileDocId,
+          );
+          await ledger.append(
+            entryKind: 'completion',
+            delta: 10,
+            createdAt: DateTime.utc(2026, 4, 10, 9),
+          );
+          await ledger.append(
+            entryKind: 'redemption_debit',
+            delta: -3,
+            createdAt: DateTime.utc(2026, 4, 11, 9),
+          );
+
+          expect(await adapter.getGlobalTotal(), 7);
+        });
+
+        test('empty ledger derives a 0 balance', () async {
+          expect(await adapter.getGlobalTotal(), 0);
+        });
+
+        test(
+          'clamps a net-negative ledger at 0 rather than going negative',
+          () async {
+            final ledger = FirestorePointsLedgerRepository(
+              firestore: firestore,
+              uid: uid,
+              profileId: profileDocId,
+            );
+            await ledger.append(
+              entryKind: 'redemption_debit',
+              delta: -5,
+              createdAt: DateTime.utc(2026, 4, 10, 9),
+            );
+
+            expect(await adapter.getGlobalTotal(), 0);
+          },
+        );
+      });
+    },
+  );
+
+  group('every other read method — unavailable regardless of readiness', () {
+    // points_ledger carries no curriculumId field (see
+    // PointsRepositoryUnavailableException's doc comment) — every
+    // per-curriculum method throws unconditionally, whether or not an
+    // active account/profile is resolved.
 
     test('not ready: getCurriculumTotal throws', () async {
       final container = ProviderContainer();
@@ -95,50 +179,46 @@ void main() {
       );
     });
 
-    group('ready (active account + profile) — still throws', () {
-      const uid = 'uid-1';
-      const profileDocId = 'profile-ulid-1';
+    group(
+      'ready (active account + profile) — per-curriculum methods still throw',
+      () {
+        const uid = 'uid-1';
+        const profileDocId = 'profile-ulid-1';
 
-      late ProviderContainer container;
-      late FirestorePointsRepository adapter;
+        late ProviderContainer container;
+        late FirestorePointsRepository adapter;
 
-      AccountFirebaseHandles handles() {
-        return AccountFirebaseHandles(
-          app: MockFirebaseApp(),
-          firestore: FakeFirebaseFirestore(),
-          auth: MockFirebaseAuthHandle(),
-          uid: uid,
-        );
-      }
+        AccountFirebaseHandles handles() {
+          return AccountFirebaseHandles(
+            app: MockFirebaseApp(),
+            firestore: FakeFirebaseFirestore(),
+            auth: MockFirebaseAuthHandle(),
+            uid: uid,
+          );
+        }
 
-      setUp(() {
-        container = ProviderContainer(
-          overrides: [
-            activeAccountFirebaseProvider.overrideWith(
-              (ref) async => handles(),
-            ),
-          ],
-        );
-        container.read(activeProfileDocIdProvider.notifier).set(profileDocId);
-        adapter = buildAdapter(container);
-      });
+        setUp(() {
+          container = ProviderContainer(
+            overrides: [
+              activeAccountFirebaseProvider.overrideWith(
+                (ref) async => handles(),
+              ),
+            ],
+          );
+          container.read(activeProfileDocIdProvider.notifier).set(profileDocId);
+          adapter = buildAdapter(container);
+        });
 
-      tearDown(() => container.dispose());
+        tearDown(() => container.dispose());
 
-      test('getGlobalTotal still throws — a missing-dependency gap, not a '
-          'readiness gap', () async {
-        expect(
-          () => adapter.getGlobalTotal(),
-          throwsA(isA<PointsRepositoryUnavailableException>()),
-        );
-      });
-
-      test('getCurriculumTotal still throws', () async {
-        expect(
-          () => adapter.getCurriculumTotal('bavli'),
-          throwsA(isA<PointsRepositoryUnavailableException>()),
-        );
-      });
-    });
+        test('getCurriculumTotal still throws — a schema gap (no curriculumId '
+            'field on points_ledger), not a readiness gap', () async {
+          expect(
+            () => adapter.getCurriculumTotal('bavli'),
+            throwsA(isA<PointsRepositoryUnavailableException>()),
+          );
+        });
+      },
+    );
   });
 }

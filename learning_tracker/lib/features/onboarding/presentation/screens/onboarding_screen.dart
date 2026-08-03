@@ -167,6 +167,20 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     required TransliterationVariant transliterationVariant,
   }) {
     _createdProfileId = profile.id;
+    // Firestore-rewrite (docs/firestore-rewrite-map.md): every profile-scoped
+    // repository now reads the ACTIVE profile
+    // (`selectedProfileIdProvider`/`activeProfileIdProvider`), not an id
+    // threaded through call parameters. Without this, a just-created child's
+    // profile id was passed into the add-track step (see `_onAddTrackComplete`
+    // and `AddTrackFlow.profileId` below) while the session's active profile
+    // stayed on whatever was selected before onboarding started — so bulk-mark
+    // and track-creation writes landed on the WRONG profile for a multi-child
+    // add-another-learner flow. Selecting here mirrors every other place a
+    // freshly created/fetched [ProfileModel] is adopted (`profile_providers.dart`'s
+    // `AutoSelectedProfileId._resolveSelection`, the profile switcher).
+    ref
+        .read(selectedProfileIdProvider.notifier)
+        .select(profile.id, ulid: profile.ulid);
     _profileName = profile.displayName;
     _isChildMode = isChildMode;
     _useHebrewCalendar = useHebrewCalendar;

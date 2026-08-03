@@ -332,20 +332,20 @@ void main() {
         pushStageDefinitions: null,
       );
 
-      // Real detection service — this is the production class that produces
-      // the ledger row.
-      detectionService = CompletionDetectionService(
-        database: db,
-        contentRepository: contentRepo,
-        ledgerRepository: ledgerRepo,
-        stageRepository: stageRepo,
-      );
-
       // Real completion repo — storage-only since the completion-
       // orchestrator lift (docs/firestore-rewrite-map.md, owner decision 1).
       completionRepo = CompletionRepositoryImpl(
         database: db,
         activeProfileId: profileId,
+      );
+
+      // Real detection service — this is the production class that produces
+      // the ledger row.
+      detectionService = CompletionDetectionService(
+        completionRepository: completionRepo,
+        contentRepository: contentRepo,
+        ledgerRepository: ledgerRepo,
+        stageRepository: stageRepo,
       );
 
       // Real orchestrator, with the detection service injected so the F1
@@ -485,15 +485,15 @@ void main() {
           completionDao: db.completionDao,
           pushStageDefinitions: null,
         );
-        detectionService = CompletionDetectionService(
-          database: db,
-          contentRepository: contentRepo,
-          ledgerRepository: ledgerRepo,
-          stageRepository: stageRepo,
-        );
         completionRepo = CompletionRepositoryImpl(
           database: db,
           activeProfileId: profileId,
+        );
+        detectionService = CompletionDetectionService(
+          completionRepository: completionRepo,
+          contentRepository: contentRepo,
+          ledgerRepository: ledgerRepo,
+          stageRepository: stageRepo,
         );
         final orchestrator = CompletionOrchestrator(
           repository: completionRepo,

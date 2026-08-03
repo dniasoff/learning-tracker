@@ -270,6 +270,17 @@ class LearningLedgerRepositoryImpl implements LearningLedgerRepository {
   }
 
   @override
+  Future<List<LearningLedgerData>> getLedgerByCurriculum(
+    int profileId,
+    String curriculumId,
+  ) {
+    return _database.learningLedgerDao.getEntriesByCurriculum(
+      profileId,
+      curriculumId,
+    );
+  }
+
+  @override
   Future<Map<String, int>> getCompletionStats(
     int profileId,
     String curriculumId,

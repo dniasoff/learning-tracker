@@ -6,6 +6,7 @@ import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
+import 'package:learning_tracker/features/learning/data/repositories/completion_repository_impl.dart';
 import 'package:learning_tracker/features/learning/data/repositories/learning_ledger_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/services/completion_detection_service.dart';
 import 'package:learning_tracker/features/sync/data/outbox_sync_write_facade.dart';
@@ -139,8 +140,12 @@ void main() {
       completionDao: db.completionDao,
       pushStageDefinitions: null,
     );
-    return CompletionDetectionService(
+    final completionRepo = CompletionRepositoryImpl(
       database: db,
+      activeProfileId: 1,
+    );
+    return CompletionDetectionService(
+      completionRepository: completionRepo,
       contentRepository: mockContentRepo,
       ledgerRepository: ledgerRepo,
       stageRepository: stageRepo,

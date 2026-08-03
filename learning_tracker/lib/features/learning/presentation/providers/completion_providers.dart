@@ -110,7 +110,6 @@ CompletionStreakPort completionStreakPort(Ref ref) {
 /// through this, not [completionRepositoryProvider] directly.
 @riverpod
 CompletionOrchestrator completionOrchestrator(Ref ref) {
-  final database = ref.watch(userDatabaseProvider);
   final contentRepository = ref.watch(contentRepositoryProvider);
   final profileId = ref.watch(activeProfileIdProvider);
   final stageRepository = ref.watch(globalStageRepositoryProvider);
@@ -125,15 +124,17 @@ CompletionOrchestrator completionOrchestrator(Ref ref) {
     bookmarkRepositoryFactoryProvider,
   );
 
+  final completionRepository = ref.watch(completionRepositoryProvider);
+
   final detectionService = CompletionDetectionService(
-    database: database,
+    completionRepository: completionRepository,
     contentRepository: contentRepository,
     ledgerRepository: ledgerRepository,
     stageRepository: stageRepository,
   );
 
   return CompletionOrchestrator(
-    repository: ref.watch(completionRepositoryProvider),
+    repository: completionRepository,
     contentRepository: contentRepository,
     activeProfileId: profileId,
     bookmarkRepository: bookmarkRepository,
