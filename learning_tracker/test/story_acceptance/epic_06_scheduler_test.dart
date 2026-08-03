@@ -554,7 +554,7 @@ void main() {
         );
 
         final updated = await goalRepo.updateGoal(
-          goalId: goal.id!,
+          goal: goal,
           targetPercent: 80.0,
           paceTarget: DeadlineTarget(DateTime.utc(2027, 6, 1)),
         );

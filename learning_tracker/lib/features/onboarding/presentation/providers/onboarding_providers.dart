@@ -44,12 +44,6 @@ final bulkPriorCompletionServiceProvider = Provider<BulkPriorCompletionService>(
     final contentRepo = ref.watch(contentRepositoryProvider);
     final completionRepo = ref.watch(completionRepositoryProvider);
     final bookmarkRepo = ref.watch(bookmarkRepositoryProvider);
-    // AUD-onboarding-08 (SM-7): the delegated-profile bookmark write inside
-    // execute() (a parent bulk-marking prior learning for a specific child)
-    // goes through this factory instead of a bare `new BookmarkRepositoryImpl`
-    // — same seam completionRepositoryProvider already wires into
-    // CompletionRepositoryImpl for the identical delegated-profile scenario.
-    final bookmarkRepoFactory = ref.watch(bookmarkRepositoryFactoryProvider);
     final db = ref.watch(userDatabaseProvider);
     final syncFacade = ref.watch(syncWriteFacadeProvider);
     final analytics = ref.watch(analyticsServiceProvider);
@@ -62,16 +56,22 @@ final bulkPriorCompletionServiceProvider = Provider<BulkPriorCompletionService>(
       // kind replaces the legacy pushSettings piggyback.
       pushStageDefinitions: syncFacade?.pushStageDefinitions,
     );
+    // Post completion-orchestrator lift (`docs/firestore-rewrite-map.md`,
+    // owner decision 1): route the bulk-mark write through
+    // CompletionOrchestrator so achievement (siyum) detection still fires —
+    // CompletionRepositoryImpl no longer does that itself. See
+    // BulkPriorCompletionService's `_orchestrator` field doc comment.
+    final orchestrator = ref.watch(completionOrchestratorProvider);
     return BulkPriorCompletionService(
       contentRepository: contentRepo,
       completionRepository: completionRepo,
       bookmarkRepository: bookmarkRepo,
-      bookmarkRepositoryFactory: bookmarkRepoFactory,
       database: db,
       syncEngine: syncFacade,
       analytics: analytics,
       stageRepository: stageRepo,
       outboxDao: db.outboxDao,
+      orchestrator: orchestrator,
     );
   },
 );

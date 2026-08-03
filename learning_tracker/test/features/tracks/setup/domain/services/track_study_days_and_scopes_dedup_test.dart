@@ -12,6 +12,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/features/scheduler/domain/repositories/goal_repository.dart';
 import 'package:learning_tracker/features/tracks/domain/services/curriculum_activation_service.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/add_track_result.dart';
@@ -169,7 +170,14 @@ void main() {
 
         await service.editTrack(
           trackId: trackId,
-          goalId: 1,
+          // No goal-changing field is passed below, so this value is never
+          // read (hasGoalChange stays false) — a minimal stand-in is enough.
+          goal: GoalEntity(
+            id: 1,
+            curriculumId: CurriculumId.bavli,
+            createdAt: DateTime.utc(2026, 1, 1),
+            updatedAt: DateTime.utc(2026, 1, 1),
+          ),
           profileId: 1,
           curriculum: CurriculumId.bavli,
           studyDays: const {3: 'rest'},

@@ -61,6 +61,7 @@ import 'package:learning_tracker/features/dashboard/presentation/providers/dashb
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/services/track_edit_service.dart';
@@ -365,6 +366,13 @@ void main() {
   setUpAll(() {
     GoogleFonts.config.allowRuntimeFetching = false;
     registerFallbackValue(CurriculumId.mishnayos);
+    registerFallbackValue(
+      GoalEntity(
+        curriculumId: CurriculumId.mishnayos,
+        createdAt: DateTime.utc(2026, 1, 1),
+        updatedAt: DateTime.utc(2026, 1, 1),
+      ),
+    );
   });
 
   late UserDatabase db;
@@ -377,7 +385,7 @@ void main() {
     when(
       () => mockService.editTrack(
         trackId: any(named: 'trackId'),
-        goalId: any(named: 'goalId'),
+        goal: any(named: 'goal'),
         profileId: any(named: 'profileId'),
         curriculum: any(named: 'curriculum'),
         label: any(named: 'label'),
@@ -662,7 +670,7 @@ void main() {
       verify(
         () => mockService.editTrack(
           trackId: trackId,
-          goalId: any(named: 'goalId'),
+          goal: any(named: 'goal'),
           profileId: 1,
           curriculum: CurriculumId.mishnayos,
           label: any(named: 'label'),
@@ -703,7 +711,7 @@ void main() {
       verifyNever(
         () => mockService.editTrack(
           trackId: any(named: 'trackId'),
-          goalId: any(named: 'goalId'),
+          goal: any(named: 'goal'),
           profileId: any(named: 'profileId'),
           curriculum: any(named: 'curriculum'),
           label: any(named: 'label'),
@@ -749,7 +757,7 @@ void main() {
       final captured = verify(
         () => mockService.editTrack(
           trackId: trackId,
-          goalId: any(named: 'goalId'),
+          goal: any(named: 'goal'),
           profileId: 1,
           curriculum: CurriculumId.mishnayos,
           label: captureAny(named: 'label'),
@@ -876,7 +884,7 @@ void main() {
       when(
         () => mockService.editTrack(
           trackId: any(named: 'trackId'),
-          goalId: any(named: 'goalId'),
+          goal: any(named: 'goal'),
           profileId: any(named: 'profileId'),
           curriculum: any(named: 'curriculum'),
           label: any(named: 'label'),

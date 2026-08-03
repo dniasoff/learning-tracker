@@ -281,7 +281,7 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
       try {
         await service.editTrack(
           trackId: widget.track.id,
-          goalId: goal.id,
+          goal: goalEntityFromRow(goal),
           profileId: profileId,
           curriculum: curriculum,
           label: newLabel,

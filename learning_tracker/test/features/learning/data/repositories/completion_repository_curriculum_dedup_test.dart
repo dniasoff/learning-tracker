@@ -10,27 +10,13 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/daos/profile_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/sync/sync_write_facade.dart';
-import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/learning/data/repositories/completion_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
-import 'package:mocktail/mocktail.dart';
 
 import '../../../../helpers/test_database.dart';
 
-class _MockSync extends Mock implements SyncWriteFacade {}
-
-class _MockContent extends Mock implements ContentRepository {}
-
 void main() {
-  setUpAll(() {
-    registerFallbackValue(CurriculumId.mishnayos);
-  });
-
   late UserDatabase db;
-  late _MockSync mockSync;
-  late _MockContent mockContent;
   late int learnerId;
 
   // Helper: creates a track for the given curriculumId and returns its id.
@@ -51,8 +37,6 @@ void main() {
 
   setUp(() async {
     db = createTestDatabase();
-    mockSync = _MockSync();
-    mockContent = _MockContent();
 
     final now = DateTime.now().toUtc();
 
@@ -80,15 +64,6 @@ void main() {
           ),
         );
     learnerId = profileRow.id;
-
-    // Stub sync / content (bookmark advance is a no-op in these tests).
-    when(() => mockSync.pushBookmark(any())).thenAnswer((_) async {});
-    when(
-      () => mockSync.pushGamificationSettingsSnapshot(),
-    ).thenAnswer((_) async {});
-    when(
-      () => mockContent.getContentForCurriculum(any()),
-    ).thenAnswer((_) async => []);
   });
 
   tearDown(() => db.close());
@@ -104,8 +79,6 @@ void main() {
 
         final repoMishnayos = CompletionRepositoryImpl(
           database: db,
-          syncEngine: mockSync,
-          contentRepository: mockContent,
           activeProfileId: learnerId,
         );
 
@@ -122,8 +95,6 @@ void main() {
         // …and the same textual ref under Bavli (different curriculum).
         final repoBavli = CompletionRepositoryImpl(
           database: db,
-          syncEngine: mockSync,
-          contentRepository: mockContent,
           activeProfileId: learnerId,
         );
         final r2 = (await repoBavli.markComplete(
@@ -163,8 +134,6 @@ void main() {
 
         final repo = CompletionRepositoryImpl(
           database: db,
-          syncEngine: mockSync,
-          contentRepository: mockContent,
           activeProfileId: learnerId,
         );
 

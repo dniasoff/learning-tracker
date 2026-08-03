@@ -12,13 +12,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/daos/completion_dao.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
-import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
+import 'package:learning_tracker/features/learning/domain/services/completion_orchestrator.dart';
 import 'package:learning_tracker/features/learning/domain/use_cases/bulk_mark_completion_use_case.dart';
 import 'package:mocktail/mocktail.dart';
 
 // ── Mock repository ───────────────────────────────────────────────────────────
 
-class _MockCompletionRepository extends Mock implements CompletionRepository {}
+class _MockCompletionOrchestrator extends Mock
+    implements CompletionOrchestrator {}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -46,16 +47,16 @@ void main() {
     );
   });
 
-  late _MockCompletionRepository repository;
+  late _MockCompletionOrchestrator orchestrator;
   late BulkMarkCompletionUseCase useCase;
 
   setUp(() {
-    repository = _MockCompletionRepository();
-    useCase = BulkMarkCompletionUseCase(repository);
+    orchestrator = _MockCompletionOrchestrator();
+    useCase = BulkMarkCompletionUseCase(orchestrator);
 
     // Stub bulkMarkComplete to capture the request passed to it.
     when(
-      () => repository.bulkMarkComplete(any()),
+      () => orchestrator.bulkMarkComplete(any()),
     ).thenAnswer((_) async => const <Completion>[]);
   });
 
@@ -69,7 +70,7 @@ void main() {
 
         final captured =
             verify(
-                  () => repository.bulkMarkComplete(captureAny()),
+                  () => orchestrator.bulkMarkComplete(captureAny()),
                 ).captured.single
                 as BulkCompletionRequest;
 
@@ -90,7 +91,7 @@ void main() {
 
         final captured =
             verify(
-                  () => repository.bulkMarkComplete(captureAny()),
+                  () => orchestrator.bulkMarkComplete(captureAny()),
                 ).captured.single
                 as BulkCompletionRequest;
 
@@ -105,7 +106,7 @@ void main() {
 
         final captured =
             verify(
-                  () => repository.bulkMarkComplete(captureAny()),
+                  () => orchestrator.bulkMarkComplete(captureAny()),
                 ).captured.single
                 as BulkCompletionRequest;
 
@@ -122,7 +123,7 @@ void main() {
 
       final captured =
           verify(
-                () => repository.bulkMarkComplete(captureAny()),
+                () => orchestrator.bulkMarkComplete(captureAny()),
               ).captured.single
               as BulkCompletionRequest;
 
@@ -148,7 +149,7 @@ void main() {
 
         final captured =
             verify(
-                  () => repository.bulkMarkComplete(captureAny()),
+                  () => orchestrator.bulkMarkComplete(captureAny()),
                 ).captured.single
                 as BulkCompletionRequest;
 
@@ -202,7 +203,7 @@ void main() {
 
         final captured =
             verify(
-                  () => repository.bulkMarkComplete(captureAny()),
+                  () => orchestrator.bulkMarkComplete(captureAny()),
                 ).captured.single
                 as BulkCompletionRequest;
 
@@ -221,7 +222,7 @@ void main() {
 
       final captured =
           verify(
-                () => repository.bulkMarkComplete(captureAny()),
+                () => orchestrator.bulkMarkComplete(captureAny()),
               ).captured.single
               as BulkCompletionRequest;
 
@@ -236,7 +237,7 @@ void main() {
 
       final captured =
           verify(
-                () => repository.bulkMarkComplete(captureAny()),
+                () => orchestrator.bulkMarkComplete(captureAny()),
               ).captured.single
               as BulkCompletionRequest;
 
@@ -256,7 +257,7 @@ void main() {
 
         final captured =
             verify(
-                  () => repository.bulkMarkComplete(captureAny()),
+                  () => orchestrator.bulkMarkComplete(captureAny()),
                 ).captured.single
                 as BulkCompletionRequest;
 
@@ -288,7 +289,7 @@ void main() {
 
         final captured =
             verify(
-                  () => repository.bulkMarkComplete(captureAny()),
+                  () => orchestrator.bulkMarkComplete(captureAny()),
                 ).captured.single
                 as BulkCompletionRequest;
 

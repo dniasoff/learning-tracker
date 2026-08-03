@@ -2,9 +2,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/analytics/analytics_provider.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
+import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
+import 'package:learning_tracker/features/learning/data/completion_points_awarder.dart';
+import 'package:learning_tracker/features/learning/data/completion_streak_recorder.dart';
 import 'package:learning_tracker/features/learning/data/repositories/completion_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
 import 'package:learning_tracker/features/learning/domain/services/completion_detection_service.dart';
+import 'package:learning_tracker/features/learning/domain/services/completion_orchestrator.dart';
 import 'package:learning_tracker/features/learning/domain/use_cases/bulk_mark_completion_use_case.dart';
 import 'package:learning_tracker/features/learning/domain/use_cases/mark_completion_use_case.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/bookmark_providers.dart';
@@ -54,12 +58,63 @@ final isStageCompletedProvider = FutureProvider.autoDispose
       );
     });
 
-/// Provides the completion repository.
+/// Provides the completion repository — storage-only since the
+/// completion-orchestrator lift (`docs/firestore-rewrite-map.md`, owner
+/// decision 1). See [completionOrchestratorProvider] for where order
+/// validation, points, siyum detection, bookmark advance and streak now
+/// live.
 @riverpod
 CompletionRepository completionRepository(Ref ref) {
   final database = ref.watch(userDatabaseProvider);
+  final profileId = ref.watch(activeProfileIdProvider);
+  final stageRepository = ref.watch(globalStageRepositoryProvider);
+
+  return CompletionRepositoryImpl(
+    database: database,
+    activeProfileId: profileId,
+    completionWriter: ref.watch(completionWriterProvider),
+    stageRepository: stageRepository,
+  );
+}
+
+/// Drift-backed [CompletionPointsPort] — see that class's doc comment.
+@riverpod
+CompletionPointsPort completionPointsPort(Ref ref) {
+  final database = ref.watch(userDatabaseProvider);
   final syncFacade = ref.watch(syncWriteFacadeProvider);
+  return DriftCompletionPointsAwarder(
+    database: database,
+    rewardMilestoneServiceFactory: (profileId) =>
+        RewardMilestoneService(database, profileId: profileId),
+    syncEngine: syncFacade,
+  );
+}
+
+/// Drift-backed [CompletionStreakPort] — see that class's doc comment.
+@riverpod
+CompletionStreakPort completionStreakPort(Ref ref) {
+  final database = ref.watch(userDatabaseProvider);
+  // Phase 1 — outbox facade for the streak tee. Cloud-born only; null for
+  // local-born accounts (which short-circuit the enqueue path).
+  final outboxFacade = ref.watch(outboxSyncWriteFacadeProvider);
+  return DriftCompletionStreakRecorder(
+    database: database,
+    outboxFacade: outboxFacade,
+  );
+}
+
+/// Provides the [CompletionOrchestrator] — the single place the five
+/// completion side effects live (`docs/firestore-rewrite-map.md`, owner
+/// decision 1). [MarkCompletionUseCase], [BulkMarkCompletionUseCase], and
+/// (via `onboarding_providers.dart`) `BulkPriorCompletionService` all go
+/// through this, not [completionRepositoryProvider] directly.
+@riverpod
+CompletionOrchestrator completionOrchestrator(Ref ref) {
+  final database = ref.watch(userDatabaseProvider);
   final contentRepository = ref.watch(contentRepositoryProvider);
+  final profileId = ref.watch(activeProfileIdProvider);
+  final stageRepository = ref.watch(globalStageRepositoryProvider);
+  final ledgerRepository = ref.watch(learningLedgerRepositoryProvider);
 
   final bookmarkRepository = ref.watch(bookmarkRepositoryProvider);
   // AUD-learning-04: delegated-profile bookmark advances (bookmarkProfileId
@@ -70,11 +125,6 @@ CompletionRepository completionRepository(Ref ref) {
     bookmarkRepositoryFactoryProvider,
   );
 
-  final profileId = ref.watch(activeProfileIdProvider);
-  final ledgerRepository = ref.watch(learningLedgerRepositoryProvider);
-
-  final stageRepository = ref.watch(globalStageRepositoryProvider);
-
   final detectionService = CompletionDetectionService(
     database: database,
     contentRepository: contentRepository,
@@ -82,37 +132,31 @@ CompletionRepository completionRepository(Ref ref) {
     stageRepository: stageRepository,
   );
 
-  // Phase 1 — outbox facade for the streak tee. Cloud-born only; null for
-  // local-born accounts (which short-circuit the enqueue path).
-  final outboxFacade = ref.watch(outboxSyncWriteFacadeProvider);
-
-  return CompletionRepositoryImpl(
-    database: database,
-    syncEngine: syncFacade,
-    outboxFacade: outboxFacade,
+  return CompletionOrchestrator(
+    repository: ref.watch(completionRepositoryProvider),
     contentRepository: contentRepository,
+    activeProfileId: profileId,
     bookmarkRepository: bookmarkRepository,
     bookmarkRepositoryFactory: bookmarkRepositoryFactory,
     completionDetectionService: detectionService,
-    activeProfileId: profileId,
-    completionWriter: ref.watch(completionWriterProvider),
-    stageRepository: stageRepository,
+    pointsPort: ref.watch(completionPointsPortProvider),
+    streakPort: ref.watch(completionStreakPortProvider),
   );
 }
 
 /// Provides the mark completion use case.
 @riverpod
 MarkCompletionUseCase markCompletionUseCase(Ref ref) {
-  final repository = ref.watch(completionRepositoryProvider);
+  final orchestrator = ref.watch(completionOrchestratorProvider);
   final analytics = ref.watch(analyticsServiceProvider);
-  return MarkCompletionUseCase(repository, analytics: analytics);
+  return MarkCompletionUseCase(orchestrator, analytics: analytics);
 }
 
 /// Provides the bulk mark completion use case.
 @riverpod
 BulkMarkCompletionUseCase bulkMarkCompletionUseCase(Ref ref) {
-  final repository = ref.watch(completionRepositoryProvider);
-  return BulkMarkCompletionUseCase(repository);
+  final orchestrator = ref.watch(completionOrchestratorProvider);
+  return BulkMarkCompletionUseCase(orchestrator);
 }
 
 /// Provides the number of completions for a specific content item,

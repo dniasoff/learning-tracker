@@ -4,7 +4,7 @@ import 'package:learning_tracker/core/logging/log_events.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
-import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
+import 'package:learning_tracker/features/learning/domain/services/completion_orchestrator.dart';
 
 /// Use case for marking multiple content items as completed in a single operation.
 ///
@@ -26,9 +26,13 @@ import 'package:learning_tracker/features/learning/domain/repositories/completio
 /// NOT credit engagement (streak + points). Passing
 /// [CompletionSource.lifetimeOnly] additionally suppresses the achievement tier.
 class BulkMarkCompletionUseCase {
-  final CompletionRepository _repository;
+  /// Post completion-orchestrator lift (`docs/firestore-rewrite-map.md`,
+  /// owner decision 1): goes through [CompletionOrchestrator] rather than
+  /// `CompletionRepository` directly — see [MarkCompletionUseCase]'s doc
+  /// comment for why.
+  final CompletionOrchestrator _orchestrator;
 
-  BulkMarkCompletionUseCase(this._repository);
+  BulkMarkCompletionUseCase(this._orchestrator);
 
   /// Execute the use case to mark multiple items as completed.
   ///
@@ -95,6 +99,6 @@ class BulkMarkCompletionUseCase {
       creditsAchievement: source.creditsAchievement,
       completedAt: effectiveCompletedAt,
     );
-    return await _repository.bulkMarkComplete(gatedRequest);
+    return await _orchestrator.bulkMarkComplete(gatedRequest);
   }
 }

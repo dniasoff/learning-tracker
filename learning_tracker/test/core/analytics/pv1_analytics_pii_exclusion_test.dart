@@ -51,11 +51,16 @@ library;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/core/database/daos/completion_dao.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/exceptions/permission_exception.dart';
+import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
+import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
+import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 import 'package:learning_tracker/features/learning/domain/entities/mark_completion_result.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
+import 'package:learning_tracker/features/learning/domain/services/completion_orchestrator.dart';
 import 'package:learning_tracker/features/learning/domain/use_cases/mark_completion_use_case.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
@@ -345,10 +350,7 @@ void main() {
       });
 
       test('bulk_engagement_skipped — no parameters at all', () async {
-        final useCase = MarkCompletionUseCase(
-          _FakeCompletionRepository(),
-          analytics: analytics,
-        );
+        final useCase = _useCase(analytics);
         await useCase.call(
           const CompletionRequest(
             curriculumId: 'mishnayos',
@@ -362,10 +364,7 @@ void main() {
       });
 
       test('lifetime_achievement_skipped — no parameters at all', () async {
-        final useCase = MarkCompletionUseCase(
-          _FakeCompletionRepository(),
-          analytics: analytics,
-        );
+        final useCase = _useCase(analytics);
         await useCase.call(
           const CompletionRequest(
             curriculumId: 'mishnayos',
@@ -627,3 +626,70 @@ class _FakeCompletionRepository implements CompletionRepository {
     required String trackType,
   }) async => false;
 }
+
+/// Minimal [ContentRepository] stub — [CompletionOrchestrator] requires one
+/// at construction, but its methods are only reached by post-write side
+/// effects (siyum dispatch), which never fire here (no
+/// `CompletionDetectionService` is wired in, and every write below is a
+/// duplicate-free single mark, so [MarkCompletionResult.isNew] is `true`
+/// but the siyum dispatch itself is a no-op with `_completionDetectionService
+/// == null`).
+class _FakeContentRepository implements ContentRepository {
+  @override
+  Future<List<ContentItem>> getContentForCurriculum(
+    CurriculumId curriculumId,
+  ) async => const [];
+
+  @override
+  Future<CurriculumHierarchyConfig> getHierarchyConfig(
+    CurriculumId curriculumId,
+  ) async => const CurriculumHierarchyConfig(
+    curriculumId: 'mishnayos',
+    levelLabels: [],
+    totalItems: 0,
+  );
+
+  @override
+  Future<List<ContentItem>> filterByLevel({
+    required CurriculumId curriculumId,
+    String? level1,
+    String? level2,
+    String? level3,
+    String? level4,
+  }) async => const [];
+
+  @override
+  Future<List<ContentItem>> getScopedContent({
+    required CurriculumId curriculumId,
+    required int scopeLevel,
+    required List<String> scopeValues,
+  }) async => const [];
+
+  @override
+  Future<List<ContentItem>> search({
+    required CurriculumId curriculumId,
+    required String query,
+  }) async => const [];
+
+  @override
+  Future<ContentItem?> getContentByRef({
+    required CurriculumId curriculumId,
+    required String sefariaRef,
+  }) async => null;
+}
+
+/// Builds a [MarkCompletionUseCase] wired over [CompletionOrchestrator] for
+/// these PII-exclusion tests — the orchestrator's optional collaborators
+/// (bookmark repository, siyum detection, points, streak) are all omitted,
+/// which resolves every post-write side effect to a safe no-op (see
+/// [CompletionOrchestrator]'s class doc comment). Only order validation and
+/// the storage write itself run, both against [_FakeCompletionRepository].
+MarkCompletionUseCase _useCase(AnalyticsService analytics) =>
+    MarkCompletionUseCase(
+      CompletionOrchestrator(
+        repository: _FakeCompletionRepository(),
+        contentRepository: _FakeContentRepository(),
+        activeProfileId: 1,
+      ),
+      analytics: analytics,
+    );

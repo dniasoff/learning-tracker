@@ -11,6 +11,42 @@ import 'package:learning_tracker/features/scheduler/domain/exceptions/goal_profi
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/features/scheduler/domain/repositories/goal_repository.dart';
 
+/// Converts a Drift [Goal] row into the storage-agnostic [GoalEntity] that
+/// [GoalRepository]'s interface now speaks in terms of everywhere (owner
+/// decision 4, `docs/firestore-rewrite-map.md`: goals are addressed by
+/// value, not by row number). Exposed at top level — not just as
+/// [GoalRepositoryImpl]'s private mapping helper — so the other two call
+/// sites that already hold a Drift [Goal] row and need to hand a
+/// [GoalEntity] to [GoalRepository.updateGoal]/[GoalRepository.deleteGoal]
+/// (`TrackCreationService._deleteExistingGoals` and
+/// `edit_track_screen.dart`'s save handler) share one mapping instead of
+/// hand-rolling a second/third copy that could silently drift from this one
+/// (`track_detail_screen.dart` already had its own private copy,
+/// `_goalRowToEntity`, before this — the exact duplication this guards
+/// against going forward).
+GoalEntity goalEntityFromRow(Goal goal) {
+  final rawUnit = goal.paceGranularity;
+  final granularity = PaceGranularity.fromStorageKey(rawUnit);
+  return GoalEntity(
+    id: goal.id,
+    curriculumId: CurriculumId.values.firstWhere(
+      (c) => c.storageKey == goal.curriculumId,
+    ),
+    trackId: goal.trackId,
+    targetPercent: goal.targetPercent,
+    targetDate: goal.targetDate?.toUtc(),
+    description: goal.description,
+    dateType: goal.dateType,
+    goalType: goal.goalType,
+    paceValue: goal.paceValue,
+    pacePeriod: goal.pacePeriod,
+    paceGranularity: granularity,
+    rawLearningUnit: granularity == null ? rawUnit : null,
+    createdAt: goal.createdAt.toUtc(),
+    updatedAt: goal.updatedAt.toUtc(),
+  );
+}
+
 /// Implementation of [GoalRepository] using Drift database and sync engine.
 class GoalRepositoryImpl implements GoalRepository {
   final UserDatabase _database;
@@ -96,7 +132,7 @@ class GoalRepositoryImpl implements GoalRepository {
 
   @override
   Future<GoalEntity> updateGoal({
-    required int goalId,
+    required GoalEntity goal,
     double? targetPercent,
     PaceTarget? paceTarget,
     bool clearPaceTarget = false,
@@ -104,6 +140,17 @@ class GoalRepositoryImpl implements GoalRepository {
     PaceGranularity? paceGranularity,
     bool clearLearningUnit = false,
   }) async {
+    // [goal] is passed by value (owner decision 4) but this Drift-backed
+    // implementation still addresses the row by its autoincrement primary
+    // key — [GoalEntity.id] already carries it (populated by [_toEntity]
+    // below), so no new lookup mechanism is needed.
+    final goalId = goal.id;
+    if (goalId == null) {
+      throw ArgumentError(
+        'updateGoal: goal.id is null — this GoalEntity was never persisted '
+        'by this (Drift-backed) repository, so there is no row to update.',
+      );
+    }
     return await _database.transaction(() async {
       final existing = await _database.goalDao.getGoalById(goalId);
       if (existing == null) {
@@ -184,7 +231,14 @@ class GoalRepositoryImpl implements GoalRepository {
   }
 
   @override
-  Future<void> deleteGoal(int goalId) async {
+  Future<void> deleteGoal(GoalEntity goal) async {
+    // [goal] is passed by value (owner decision 4) — see [updateGoal]'s
+    // comment on why this Drift-backed implementation still resolves the
+    // row via [GoalEntity.id]. A `null` id means the entity was never
+    // persisted here, which is indistinguishable from "already absent" —
+    // deleting an already-absent goal is a no-op.
+    final goalId = goal.id;
+    if (goalId == null) return;
     // Retrieve the entity before deleting so we can sync the deletion
     final existing = await _database.goalDao.getGoalById(goalId);
     // Deleting an already-absent goal is a no-op (idempotent delete).
@@ -220,28 +274,7 @@ class GoalRepositoryImpl implements GoalRepository {
     }
   }
 
-  GoalEntity _toEntity(Goal goal) {
-    final rawUnit = goal.paceGranularity;
-    final granularity = PaceGranularity.fromStorageKey(rawUnit);
-    return GoalEntity(
-      id: goal.id,
-      curriculumId: CurriculumId.values.firstWhere(
-        (c) => c.storageKey == goal.curriculumId,
-      ),
-      trackId: goal.trackId,
-      targetPercent: goal.targetPercent,
-      targetDate: goal.targetDate?.toUtc(),
-      description: goal.description,
-      dateType: goal.dateType,
-      goalType: goal.goalType,
-      paceValue: goal.paceValue,
-      pacePeriod: goal.pacePeriod,
-      paceGranularity: granularity,
-      rawLearningUnit: granularity == null ? rawUnit : null,
-      createdAt: goal.createdAt.toUtc(),
-      updatedAt: goal.updatedAt.toUtc(),
-    );
-  }
+  GoalEntity _toEntity(Goal goal) => goalEntityFromRow(goal);
 
   Future<void> _syncGoal(GoalEntity entity) async {
     if (_syncEngine == null) return;
@@ -313,53 +346,38 @@ class GoalRepositoryNotReadyException implements Exception {
 /// establishes — read that class's doc comment first; this one only calls
 /// out what is DIFFERENT here.
 ///
-/// ## Deliberately does NOT `implements` [GoalRepository] — an unbridgeable
-/// id mismatch, not an oversight
+/// ## Now `implements` [GoalRepository] — the id mismatch that used to block
+/// this is gone
 ///
-/// [GoalRepository.updateGoal] takes `required int goalId` and
-/// [GoalRepository.deleteGoal] takes `int goalId` — both address a goal by
-/// [GoalDao]'s Drift-local autoincrement primary key. [FirestoreGoalRepository]
-/// has no such key at all: per its own class doc comment ("Doc-id"), a
-/// Firestore goal is identified by [GoalEntity.firestoreId]
-/// (`curriculumId` + `createdAt`), and [FirestoreGoalRepository.updateGoal]/
-/// `.deleteGoal` both take the current [GoalEntity] itself, not an int.
-/// There is no honest way to synthesize an `int` for a document that was
-/// never assigned one — inventing one (a hash, a counter) would silently
-/// diverge from what [GoalRepositoryImpl] actually stores and break the very
-/// callers this adapter would be adapting for.
+/// [GoalRepository.updateGoal]/[GoalRepository.deleteGoal] used to take
+/// `int goalId`, addressing a goal by [GoalDao]'s Drift-local autoincrement
+/// primary key — a key [FirestoreGoalRepository] never had (a Firestore goal
+/// is identified by [GoalEntity.firestoreId], `curriculumId` + `createdAt`;
+/// see that repository's class doc comment, "Doc-id"). Owner decision 4
+/// (`docs/firestore-rewrite-map.md`) widened the interface to pass the
+/// [GoalEntity] itself instead of a row number — both call sites
+/// (`TrackEditService.editTrack`,
+/// `TrackCreationService._deleteExistingGoals`) already held the goal they
+/// were editing, so the `int` was pure indirection. With that gone,
+/// [updateGoal]/[deleteGoal] below already matched
+/// [FirestoreGoalRepository]'s own entity-keyed shapes — nothing to change
+/// there but the `@override` annotation.
 ///
-/// This is the same CLASS of problem
-/// `FirestoreProfileRepositoryAdapter`(`lib/features/profiles/data/
-/// repositories/profile_repository_impl.dart`) solved for
-/// `ProfileRepository`'s `int`-keyed interface — but that fix was a
-/// dual-write hybrid (every write still goes through the Drift repository
-/// first, Firestore identity is bridged via a `ulid` column added to the
-/// Drift row) built specifically because `ProfileModel.id` is threaded
-/// through a great many profile-scoped screens/providers/queries. Goals'
-/// `int goalId` has a much narrower blast radius — exactly two callers,
-/// both outside this task's scope to touch:
-/// `TrackEditService.editTrack` (`lib/features/tracks/setup/domain/
-/// services/track_edit_service.dart`, calls `updateGoal(goalId: goalId,
-/// ...)`) and `TrackCreationService._deleteExistingGoals`/`._recreateGoal`
-/// (`lib/features/tracks/setup/domain/services/track_creation_service.dart`,
-/// calls `deleteGoal(g.id)` / `createGoal(...)`). Building the equivalent
-/// dual-write bridge for goals (a Drift-row `firestoreId` column, or
-/// widening [GoalRepository] itself to accept an entity instead of an int)
-/// would mean editing those two `domain/services/` files — outside this
-/// adapter's `data/repositories/` scope. So this class instead exposes
-/// [FirestoreGoalRepository]'s own entity-keyed method shapes directly,
-/// standalone (not `implements` anything) — the same "no interface, nothing
-/// to be substitutable with yet" status
-/// [FirestoreStudyDayConfigRepositoryAdapter] documents for study-day
-/// configs — ready for a future task that either widens [GoalRepository]'s
-/// contract or builds the same kind of identity bridge Profiles used.
+/// [createGoal] still carries `profileId`/`trackId` `int` parameters (the
+/// interface's shape, unchanged by owner decision 4) that are structurally
+/// meaningless here: this instance's Firestore profile identity is already
+/// fixed at construction (path-scoped, via the resolved
+/// [FirestoreGoalRepository]), and there is no Drift `int` to bridge it
+/// against; `trackId` is the Drift-era per-device value AD-25 retired. Both
+/// are accepted (to satisfy the interface) and ignored — see [createGoal]'s
+/// own doc comment.
 ///
 /// ## Not-ready semantics
 ///
 /// [getGoals]/[watchGoals] reuse the interface's own `[]` "nothing yet"
 /// value. [createGoal]/[updateGoal]/[deleteGoal] have no such value and
 /// throw [GoalRepositoryNotReadyException] instead.
-class FirestoreGoalRepositoryAdapter {
+class FirestoreGoalRepositoryAdapter implements GoalRepository {
   FirestoreGoalRepositoryAdapter({required Ref ref}) : _ref = ref;
 
   final Ref _ref;
@@ -385,6 +403,7 @@ class FirestoreGoalRepositoryAdapter {
 
   /// Returns all goals for [curriculumId], sorted by `targetDate`
   /// (null-first, ascending). `[]` when not ready.
+  @override
   Future<List<GoalEntity>> getGoals(CurriculumId curriculumId) async {
     final repo = await _resolveOrNull();
     if (repo == null) return const [];
@@ -408,30 +427,49 @@ class FirestoreGoalRepositoryAdapter {
 
   /// Creates a new goal for [curriculumId]. Throws
   /// [GoalRepositoryNotReadyException] when not ready.
+  ///
+  /// [profileId] and [trackId] exist only to satisfy [GoalRepository]'s
+  /// signature — see the class doc comment. This instance's Firestore
+  /// profile identity is already fixed at construction, and there is no
+  /// Drift `int` to bridge it against; `trackId` is the Drift-era
+  /// per-device value AD-25 retired. Both are accepted and ignored, exactly
+  /// like [FirestoreGoalRepository] itself already documents for its own
+  /// (parameter-less) `createGoal`.
+  ///
+  /// [paceGranularity] is the interface's raw storage-key string (unlike
+  /// [updateGoal]'s typed [PaceGranularity] param — an existing asymmetry in
+  /// [GoalRepository] itself, not introduced here). Resolved to the typed
+  /// enum when it matches a known value, else preserved verbatim via
+  /// [FirestoreGoalRepository.createGoal]'s `rawLearningUnit` — the same
+  /// fallback [GoalEntity.paceGranularityKey] documents.
+  @override
   Future<GoalEntity> createGoal({
+    required int profileId,
     required CurriculumId curriculumId,
+    required int trackId,
     required double targetPercent,
     PaceTarget? paceTarget,
     String description = '',
     String dateType = 'gregorian',
-    PaceGranularity? paceGranularity,
-    String? rawLearningUnit,
+    String? paceGranularity,
   }) async {
     final repo = await _resolve();
+    final granularity = PaceGranularity.fromStorageKey(paceGranularity);
     return repo.createGoal(
       curriculumId: curriculumId,
       targetPercent: targetPercent,
       paceTarget: paceTarget,
       description: description,
       dateType: dateType,
-      paceGranularity: paceGranularity,
-      rawLearningUnit: rawLearningUnit,
+      paceGranularity: granularity,
+      rawLearningUnit: granularity == null ? paceGranularity : null,
     );
   }
 
   /// Updates [goal] and writes the result back to the same Firestore
   /// document (see [FirestoreGoalRepository.updateGoal]'s doc comment).
   /// Throws [GoalRepositoryNotReadyException] when not ready.
+  @override
   Future<GoalEntity> updateGoal({
     required GoalEntity goal,
     double? targetPercent,
@@ -457,6 +495,7 @@ class FirestoreGoalRepositoryAdapter {
 
   /// Hard-deletes [goal]'s Firestore document. Throws
   /// [GoalRepositoryNotReadyException] when not ready.
+  @override
   Future<void> deleteGoal(GoalEntity goal) async {
     final repo = await _resolve();
     await repo.deleteGoal(goal);

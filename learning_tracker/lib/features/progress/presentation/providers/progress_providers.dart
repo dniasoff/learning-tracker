@@ -1,10 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/database/daos/completion_dao.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_entity.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/progress/data/repositories/progress_repository_impl.dart';
@@ -89,7 +89,7 @@ Future<ProgressOverviewStats> progressOverviewStats(Ref ref) async {
 /// overridden. Watching this provider keeps the screen reactive; invalidating
 /// it causes the UI to rebuild with fresh data.
 final completionHistoryForCurriculumProvider = FutureProvider.autoDispose
-    .family<List<Completion>, String>((ref, curriculumId) async {
+    .family<List<CompletionEntity>, String>((ref, curriculumId) async {
       final repository = ref.watch(progressRepositoryProvider);
       return repository.getCompletionsByCurriculum(curriculumId);
     });
@@ -98,7 +98,7 @@ final completionHistoryForCurriculumProvider = FutureProvider.autoDispose
 ///
 /// Used when no curriculumId filter is applied.
 final allCompletionHistoryProvider =
-    FutureProvider.autoDispose<List<Completion>>((ref) async {
+    FutureProvider.autoDispose<List<CompletionEntity>>((ref) async {
       final repository = ref.watch(progressRepositoryProvider);
       return repository.getAllCompletions();
     });

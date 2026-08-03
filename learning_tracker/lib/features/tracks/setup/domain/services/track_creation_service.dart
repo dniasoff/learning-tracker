@@ -254,10 +254,15 @@ class TrackCreationService {
 
   /// Delete all existing goals for [trackId], syncing tombstones so
   /// re-add does not stack duplicates.
+  ///
+  /// [GoalRepository.deleteGoal] takes the goal by value (owner decision 4,
+  /// `docs/firestore-rewrite-map.md`), not a Drift row id — this method
+  /// already holds the Drift rows from [GoalDao.getGoalsByTrack], so
+  /// converting each via [goalEntityFromRow] costs nothing extra.
   Future<void> _deleteExistingGoals(int trackId) async {
     final existingGoals = await _database.goalDao.getGoalsByTrack(trackId);
     for (final g in existingGoals) {
-      await _goalRepository.deleteGoal(g.id);
+      await _goalRepository.deleteGoal(goalEntityFromRow(g));
     }
   }
 

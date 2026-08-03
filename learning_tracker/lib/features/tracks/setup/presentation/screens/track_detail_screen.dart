@@ -863,7 +863,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
       );
     } else {
       await repo.updateGoal(
-        goalId: existingGoal.id,
+        goal: existingEntity!,
         targetPercent: result.targetPercent,
         paceTarget: paceTarget,
         // 'none' goals clear the pace target entirely.

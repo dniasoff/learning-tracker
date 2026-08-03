@@ -261,8 +261,21 @@ final _dbFactoryCall = RegExp(r'\b(inMemoryDb|createTestUserDatabase)\(\)');
 // alike — the factory call may be the whole RHS or the tail of a `??`
 // fallback expression; either way the assignment target is what must be
 // closed.
+/// **Widened 2026-08-03, during the Drift→Firestore rewrite.** Previously
+/// this only matched `final x = …` / `var x = …`, so the most common shape in
+/// this suite — a `late UserDatabase db;` declared at `main()` scope and
+/// assigned inside `setUp` — read as "no assigned variable at all" and was
+/// reported as unclosable regardless of whether it was closed. That is why so
+/// many files sit in [_baseline]: the checker never got as far as looking for
+/// their `close()`.
+///
+/// Matching a bare `db = inMemoryDb();` makes the check STRICTER, not looser:
+/// it can now actually evaluate those files, dropping the ones that do close
+/// and still flagging the ones that don't. A factory call with genuinely no
+/// assignment target (inlined straight into an argument) still matches
+/// nothing here and is still an automatic violation — a test pins that.
 final _assignedFactoryCall = RegExp(
-  r'^\s*(?:final|var)\s+(\w+)\s*=.*\b(?:inMemoryDb|createTestUserDatabase)\(\)',
+  r'^\s*(?:(?:final|var)\s+)?(\w+)\s*=.*\b(?:inMemoryDb|createTestUserDatabase)\(\)',
 );
 final _controlFlowOpener = RegExp(
   r'^\s*(?:}?\s*(?:else\s+)?if|for|while|switch|try|catch|}?\s*else)\b',

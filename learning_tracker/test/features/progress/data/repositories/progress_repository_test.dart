@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' as drift;
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/progress/data/repositories/progress_repository_impl.dart';
 import 'package:learning_tracker/features/progress/domain/repositories/progress_repository.dart';
 
@@ -306,6 +307,103 @@ void main() {
         // Assert
         expect(bavliCount, 1);
         expect(mishnaCount, 1);
+      });
+    });
+
+    // Owner decision 3 (docs/firestore-rewrite-map.md): these two methods
+    // return CompletionEntity now, not the Drift-era Completion class.
+    group('getCompletionsByCurriculum', () {
+      test('returns CompletionEntity records scoped to the curriculum and '
+          'profile', () async {
+        await seedCompletion(
+          database,
+          CompletionEventsCompanion.insert(
+            profileId: profileId,
+            curriculumId: 'bavli',
+            trackId: Value(trackId),
+            sefariaRef: 'Berakhot.2a',
+            stageId: 1,
+            trackType: 'personal',
+            eventTimestamp: DateTime.utc(2026, 1, 1),
+            points: const drift.Value(10),
+          ),
+        );
+        await seedCompletion(
+          database,
+          CompletionEventsCompanion.insert(
+            profileId: profileId,
+            curriculumId: 'mishnayos',
+            trackId: Value(trackId),
+            sefariaRef: 'Berakhot.1.1',
+            stageId: 1,
+            trackType: 'personal',
+            eventTimestamp: DateTime.utc(2026, 1, 1),
+            points: const drift.Value(5),
+          ),
+        );
+
+        final completions = await repository.getCompletionsByCurriculum(
+          'bavli',
+        );
+
+        expect(completions, hasLength(1));
+        expect(completions.single.sefariaRef, 'Berakhot.2a');
+        expect(completions.single.curriculumId, CurriculumId.bavli);
+        expect(completions.single.points, 10);
+      });
+
+      test('returns an empty list when no completions exist', () async {
+        final completions = await repository.getCompletionsByCurriculum(
+          'bavli',
+        );
+        expect(completions, isEmpty);
+      });
+    });
+
+    group('getAllCompletions', () {
+      test(
+        'returns CompletionEntity records across every curriculum',
+        () async {
+          await seedCompletion(
+            database,
+            CompletionEventsCompanion.insert(
+              profileId: profileId,
+              curriculumId: 'bavli',
+              trackId: Value(trackId),
+              sefariaRef: 'Berakhot.2a',
+              stageId: 1,
+              trackType: 'personal',
+              eventTimestamp: DateTime.utc(2026, 1, 1),
+              points: const drift.Value(10),
+            ),
+          );
+          await seedCompletion(
+            database,
+            CompletionEventsCompanion.insert(
+              profileId: profileId,
+              curriculumId: 'mishnayos',
+              trackId: Value(trackId),
+              sefariaRef: 'Berakhot.1.1',
+              stageId: 1,
+              trackType: 'personal',
+              eventTimestamp: DateTime.utc(2026, 1, 1),
+              points: const drift.Value(5),
+            ),
+          );
+
+          final completions = await repository.getAllCompletions();
+
+          expect(completions, hasLength(2));
+          expect(
+            completions.map((c) => c.sefariaRef),
+            containsAll(['Berakhot.2a', 'Berakhot.1.1']),
+          );
+        },
+      );
+
+      test('returns an empty list when no completions exist', () async {
+        final completions = await repository.getAllCompletions();
+        expect(completions, isEmpty);
       });
     });
   });

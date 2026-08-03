@@ -17,8 +17,10 @@ import 'package:learning_tracker/features/content_browsing/domain/repositories/c
 import 'package:learning_tracker/features/gamification/streak/streak_log_event.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_reducer.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_state_service.dart';
+import 'package:learning_tracker/features/learning/data/completion_streak_recorder.dart';
 import 'package:learning_tracker/features/learning/data/repositories/completion_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
+import 'package:learning_tracker/features/learning/domain/services/completion_orchestrator.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../helpers/fake_clock.dart';
@@ -37,7 +39,7 @@ void main() {
     late UserDatabase db;
     late _MockSyncEngine sync;
     late _MockContentRepository content;
-    late CompletionRepositoryImpl repo;
+    late CompletionOrchestrator orchestrator;
     late int profileId;
     late int trackId;
 
@@ -111,11 +113,23 @@ void main() {
             ),
           );
 
-      repo = CompletionRepositoryImpl(
+      // Post completion-orchestrator lift (`docs/firestore-rewrite-map.md`,
+      // owner decision 1): streak recording (the invariant this file pins)
+      // now lives in CompletionOrchestrator + CompletionStreakPort, not
+      // CompletionRepositoryImpl. Wires the real Drift-backed streak
+      // recorder so the same regression stays covered at its new layer —
+      // driving `repo.bulkMarkComplete`/`repo.markComplete` directly would
+      // trivially pass (the repository never writes streak_events at all
+      // any more, regardless of correctness).
+      final repo = CompletionRepositoryImpl(
         database: db,
-        syncEngine: sync,
+        activeProfileId: profileId,
+      );
+      orchestrator = CompletionOrchestrator(
+        repository: repo,
         contentRepository: content,
         activeProfileId: profileId,
+        streakPort: DriftCompletionStreakRecorder(database: db),
       );
     });
 
@@ -131,7 +145,7 @@ void main() {
       );
 
       for (final stageId in const [1, 2, 3]) {
-        await repo.bulkMarkComplete(
+        await orchestrator.bulkMarkComplete(
           BulkCompletionRequest(
             curriculumId: curriculumId,
             sefariaRefs: sefariaRefs,
@@ -208,7 +222,7 @@ void main() {
       // This guard test keeps the production behaviour honest: the
       // streak-tee is suppressed *only* for prior-learning bulk marks.
       // A normal "I learned this today" mark must still credit.
-      await repo.markComplete(
+      await orchestrator.markComplete(
         const CompletionRequest(
           curriculumId: curriculumId,
           sefariaRef: 'Mishnah Berachot 1:1',

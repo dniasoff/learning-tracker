@@ -1,10 +1,10 @@
 /// W1-A regression test — siyumim gate uses creditsAchievement (B1).
 ///
 /// Verifies that when a `bulkInTrack` completion reaches the real
-/// [CompletionRepositoryImpl] via [MarkCompletionUseCase], the
+/// [CompletionOrchestrator] via [MarkCompletionUseCase], the
 /// `CompletionDetectionService` runs and writes a siyum row to
 /// `learning_ledger`. This is the bug fixed by introducing the
-/// independent `creditsAchievement` gate on the repository:
+/// independent `creditsAchievement` gate:
 ///
 ///   - live          → engagement=true,  achievement=true  → siyum
 ///   - bulkInTrack   → engagement=false, achievement=true  → siyum
@@ -13,6 +13,11 @@
 /// Previously the detection service was wired to the engagement gate,
 /// which silently dropped siyumim for bulk-mark-prior completions even
 /// though the B1 policy says they should credit the achievement tier.
+/// Post completion-orchestrator lift (`docs/firestore-rewrite-map.md`,
+/// owner decision 1) the gate lives in [CompletionOrchestrator] rather than
+/// [CompletionRepositoryImpl] — this test now wires a real orchestrator
+/// over the (now storage-only) repository so the same regression stays
+/// covered at its new layer.
 ///
 /// The test drives a real [ProviderContainer] over in-memory Drift, and
 /// uses the real [CompletionRepositoryImpl], [CompletionDetectionService],
@@ -34,11 +39,13 @@ import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/sync/sync_write_facade.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
+import 'package:learning_tracker/features/learning/data/completion_streak_recorder.dart';
 import 'package:learning_tracker/features/learning/data/repositories/completion_repository_impl.dart';
 import 'package:learning_tracker/features/learning/data/repositories/learning_ledger_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 import 'package:learning_tracker/features/learning/domain/services/completion_detection_service.dart';
+import 'package:learning_tracker/features/learning/domain/services/completion_orchestrator.dart';
 import 'package:learning_tracker/features/learning/domain/use_cases/mark_completion_use_case.dart';
 import 'package:learning_tracker/features/sync/data/outbox_sync_write_facade.dart';
 import 'package:learning_tracker/features/tracks/stages/data/repositories/stage_definition_repository_impl.dart';
@@ -167,12 +174,22 @@ void main() {
     );
     final repo = CompletionRepositoryImpl(
       database: db,
-      syncEngine: syncFacade,
+      activeProfileId: profileId,
+    );
+    // Post completion-orchestrator lift (`docs/firestore-rewrite-map.md`,
+    // owner decision 1): siyum detection, streak recording, and the
+    // achievement/engagement gating this test verifies now live in
+    // CompletionOrchestrator, not CompletionRepositoryImpl. outboxFacade is
+    // omitted from the streak recorder — these assertions read the LOCAL
+    // streak_events table only, never the outbox tee.
+    final orchestrator = CompletionOrchestrator(
+      repository: repo,
       contentRepository: contentRepo,
       activeProfileId: profileId,
       completionDetectionService: detectionService,
+      streakPort: DriftCompletionStreakRecorder(database: db),
     );
-    useCase = MarkCompletionUseCase(repo);
+    useCase = MarkCompletionUseCase(orchestrator);
 
     // A real Riverpod ProviderContainer holds the in-memory DB and the
     // mocked content repo — the same overrides production code receives
@@ -208,7 +225,7 @@ void main() {
         );
 
         // CompletionDetectionService runs as a fire-and-forget unawaited
-        // future inside CompletionRepositoryImpl.markComplete. Let the
+        // future inside CompletionOrchestrator.markComplete. Let the
         // event loop drain so the unawaited write to learning_ledger
         // commits before we read it back.
         await Future<void>.delayed(Duration.zero);

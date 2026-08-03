@@ -42,6 +42,7 @@ import 'package:learning_tracker/features/content_browsing/domain/repositories/c
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/features/scheduler/domain/repositories/goal_repository.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
@@ -263,6 +264,17 @@ void main() {
       const WizardResult(
         curriculumId: CurriculumId.mishnayos,
         choice: WizardChoice.noReview,
+      ),
+    );
+    // GoalRepository.deleteGoal now takes the GoalEntity itself (owner
+    // decision 4, docs/firestore-rewrite-map.md) rather than an int — a
+    // custom type needs an explicit fallback for `any()` to work in
+    // when()/verify() below.
+    registerFallbackValue(
+      GoalEntity(
+        curriculumId: CurriculumId.mishnayos,
+        createdAt: DateTime.utc(2026, 1, 1),
+        updatedAt: DateTime.utc(2026, 1, 1),
       ),
     );
   });

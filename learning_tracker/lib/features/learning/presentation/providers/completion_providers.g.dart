@@ -8,12 +8,20 @@ part of 'completion_providers.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
-/// Provides the completion repository.
+/// Provides the completion repository — storage-only since the
+/// completion-orchestrator lift (`docs/firestore-rewrite-map.md`, owner
+/// decision 1). See [completionOrchestratorProvider] for where order
+/// validation, points, siyum detection, bookmark advance and streak now
+/// live.
 
 @ProviderFor(completionRepository)
 final completionRepositoryProvider = CompletionRepositoryProvider._();
 
-/// Provides the completion repository.
+/// Provides the completion repository — storage-only since the
+/// completion-orchestrator lift (`docs/firestore-rewrite-map.md`, owner
+/// decision 1). See [completionOrchestratorProvider] for where order
+/// validation, points, siyum detection, bookmark advance and streak now
+/// live.
 
 final class CompletionRepositoryProvider
     extends
@@ -23,7 +31,11 @@ final class CompletionRepositoryProvider
           CompletionRepository
         >
     with $Provider<CompletionRepository> {
-  /// Provides the completion repository.
+  /// Provides the completion repository — storage-only since the
+  /// completion-orchestrator lift (`docs/firestore-rewrite-map.md`, owner
+  /// decision 1). See [completionOrchestratorProvider] for where order
+  /// validation, points, siyum detection, bookmark advance and streak now
+  /// live.
   CompletionRepositoryProvider._()
     : super(
         from: null,
@@ -59,7 +71,178 @@ final class CompletionRepositoryProvider
 }
 
 String _$completionRepositoryHash() =>
-    r'426e043540e02abf1e9bc7f4d6e687a904fb1d1c';
+    r'af632af656e64af2a9af8bca8f61fe314f7c391d';
+
+/// Drift-backed [CompletionPointsPort] — see that class's doc comment.
+
+@ProviderFor(completionPointsPort)
+final completionPointsPortProvider = CompletionPointsPortProvider._();
+
+/// Drift-backed [CompletionPointsPort] — see that class's doc comment.
+
+final class CompletionPointsPortProvider
+    extends
+        $FunctionalProvider<
+          CompletionPointsPort,
+          CompletionPointsPort,
+          CompletionPointsPort
+        >
+    with $Provider<CompletionPointsPort> {
+  /// Drift-backed [CompletionPointsPort] — see that class's doc comment.
+  CompletionPointsPortProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'completionPointsPortProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$completionPointsPortHash();
+
+  @$internal
+  @override
+  $ProviderElement<CompletionPointsPort> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  CompletionPointsPort create(Ref ref) {
+    return completionPointsPort(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(CompletionPointsPort value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<CompletionPointsPort>(value),
+    );
+  }
+}
+
+String _$completionPointsPortHash() =>
+    r'a77ee0c191ed7f411f13c51bea1a885bb21dfb0a';
+
+/// Drift-backed [CompletionStreakPort] — see that class's doc comment.
+
+@ProviderFor(completionStreakPort)
+final completionStreakPortProvider = CompletionStreakPortProvider._();
+
+/// Drift-backed [CompletionStreakPort] — see that class's doc comment.
+
+final class CompletionStreakPortProvider
+    extends
+        $FunctionalProvider<
+          CompletionStreakPort,
+          CompletionStreakPort,
+          CompletionStreakPort
+        >
+    with $Provider<CompletionStreakPort> {
+  /// Drift-backed [CompletionStreakPort] — see that class's doc comment.
+  CompletionStreakPortProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'completionStreakPortProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$completionStreakPortHash();
+
+  @$internal
+  @override
+  $ProviderElement<CompletionStreakPort> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  CompletionStreakPort create(Ref ref) {
+    return completionStreakPort(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(CompletionStreakPort value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<CompletionStreakPort>(value),
+    );
+  }
+}
+
+String _$completionStreakPortHash() =>
+    r'3c14264d9a4da00152a0320b698eb49bfcd2871a';
+
+/// Provides the [CompletionOrchestrator] — the single place the five
+/// completion side effects live (`docs/firestore-rewrite-map.md`, owner
+/// decision 1). [MarkCompletionUseCase], [BulkMarkCompletionUseCase], and
+/// (via `onboarding_providers.dart`) `BulkPriorCompletionService` all go
+/// through this, not [completionRepositoryProvider] directly.
+
+@ProviderFor(completionOrchestrator)
+final completionOrchestratorProvider = CompletionOrchestratorProvider._();
+
+/// Provides the [CompletionOrchestrator] — the single place the five
+/// completion side effects live (`docs/firestore-rewrite-map.md`, owner
+/// decision 1). [MarkCompletionUseCase], [BulkMarkCompletionUseCase], and
+/// (via `onboarding_providers.dart`) `BulkPriorCompletionService` all go
+/// through this, not [completionRepositoryProvider] directly.
+
+final class CompletionOrchestratorProvider
+    extends
+        $FunctionalProvider<
+          CompletionOrchestrator,
+          CompletionOrchestrator,
+          CompletionOrchestrator
+        >
+    with $Provider<CompletionOrchestrator> {
+  /// Provides the [CompletionOrchestrator] — the single place the five
+  /// completion side effects live (`docs/firestore-rewrite-map.md`, owner
+  /// decision 1). [MarkCompletionUseCase], [BulkMarkCompletionUseCase], and
+  /// (via `onboarding_providers.dart`) `BulkPriorCompletionService` all go
+  /// through this, not [completionRepositoryProvider] directly.
+  CompletionOrchestratorProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'completionOrchestratorProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$completionOrchestratorHash();
+
+  @$internal
+  @override
+  $ProviderElement<CompletionOrchestrator> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  CompletionOrchestrator create(Ref ref) {
+    return completionOrchestrator(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(CompletionOrchestrator value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<CompletionOrchestrator>(value),
+    );
+  }
+}
+
+String _$completionOrchestratorHash() =>
+    r'a3de8f6c5a7d959ed3273ae695f657b2f50b494f';
 
 /// Provides the mark completion use case.
 
@@ -112,7 +295,7 @@ final class MarkCompletionUseCaseProvider
 }
 
 String _$markCompletionUseCaseHash() =>
-    r'0962174728eb94aac9e9cbb336c3e8510f6b9b0a';
+    r'9672ee564915bfbac34fd030d7e25a34459ffb76';
 
 /// Provides the bulk mark completion use case.
 
@@ -165,7 +348,7 @@ final class BulkMarkCompletionUseCaseProvider
 }
 
 String _$bulkMarkCompletionUseCaseHash() =>
-    r'cb0d52d29734909aba5219d6bd2c67f6149de9ef';
+    r'fa9117793175193b748541130a08347b70cc7084';
 
 /// Provides the number of completions for a specific content item,
 /// scoped to the active profile.

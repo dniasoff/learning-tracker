@@ -64,4 +64,40 @@ extension CompletionSourceX on CompletionSource {
   /// Always true — every source contributes to the learner's lifetime
   /// coverage record.
   bool get creditsLifetime => true;
+
+  /// Inverse of [creditsEngagement] / [creditsAchievement] — the single
+  /// canonical mapping from the two storage-facing credit booleans back to
+  /// the [CompletionSource] they encode.
+  ///
+  /// Every caller of [CompletionRepository.markComplete] /
+  /// [CompletionRepository.bulkMarkComplete] expresses provenance as these
+  /// two independent gates rather than passing a [CompletionSource]
+  /// directly (the storage layer only ever needs to know "should this row
+  /// be tagged priorMarkOnly / what `source` string", not the full
+  /// three-tier semantics) — so this one function is the single place that
+  /// re-derives the tier for the callers that DO need it (siyum-detection
+  /// dispatch, the `prior_completion_imports.source` column, the Firestore
+  /// `completions.source` field). Previously duplicated three times
+  /// (`CompletionRepositoryImpl._bulkSourceFor`,
+  /// `FirestoreCompletionRepositoryAdapter._sourceFor`, and — before this
+  /// lift — nowhere in the orchestration layer, which had no such need);
+  /// now written once.
+  ///
+  /// `(awardGamificationPoints: true, creditsAchievement: false)` has no
+  /// lossless representation — every real [CompletionSource] with
+  /// `creditsEngagement == true` also has `creditsAchievement == true` (see
+  /// the class doc comment's tier table). That combination collapses to
+  /// [CompletionSource.live], silently granting achievement credit
+  /// alongside engagement credit. No caller in this codebase produces it
+  /// (audited 2026-08-03, see `FirestoreCompletionRepositoryAdapter`'s
+  /// class doc comment) — flagged here rather than fixed, since fixing it
+  /// would mean widening [CompletionSource] itself.
+  static CompletionSource fromCredits({
+    required bool awardGamificationPoints,
+    required bool creditsAchievement,
+  }) {
+    if (awardGamificationPoints) return CompletionSource.live;
+    if (creditsAchievement) return CompletionSource.bulkInTrack;
+    return CompletionSource.lifetimeOnly;
+  }
 }

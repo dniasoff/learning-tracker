@@ -6,36 +6,12 @@
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/database/daos/completion_dao.dart'
-    show Completion;
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
 import 'package:learning_tracker/data/repositories/firestore_completion_repository.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_entity.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_tier_filter.dart';
 import 'package:learning_tracker/features/progress/domain/repositories/progress_repository.dart';
-
-/// Thrown by [FirestoreProgressRepositoryAdapter.getCompletionsByCurriculum]
-/// and [FirestoreProgressRepositoryAdapter.getAllCompletions] — see the
-/// class doc comment's "A real type-shape gap" section for why these two
-/// methods cannot honestly be implemented against the current
-/// [ProgressRepository] interface, regardless of whether the underlying
-/// Firestore provider is ready.
-class ProgressRepositoryUnsupportedException implements Exception {
-  const ProgressRepositoryUnsupportedException(this.method);
-
-  /// Name of the [ProgressRepository] method that cannot be served.
-  final String method;
-
-  @override
-  String toString() =>
-      'ProgressRepositoryUnsupportedException: $method cannot be served by '
-      'FirestoreProgressRepositoryAdapter — ProgressRepository\'s interface '
-      'returns List<Completion> (the Drift class from '
-      'lib/core/database/daos/completion_dao.dart, carrying an autoincrement '
-      'int id, an int profileId, and an int trackId), but '
-      'FirestoreCompletionRepository hands back CompletionEntity instead, '
-      'which deliberately has none of those three fields. See this class\'s '
-      'doc comment for the full reasoning and what unblocks it.';
-}
 
 /// Firestore-backed [ProgressRepository] adapter.
 ///
@@ -66,34 +42,21 @@ class ProgressRepositoryUnsupportedException implements Exception {
 /// by reading both DAO methods), just re-homed onto the Firestore-side
 /// equivalents.
 ///
-/// ## `getCompletionsByCurriculum` / `getAllCompletions`: a real type-shape
-/// gap, not an oversight
+/// ## `getCompletionsByCurriculum` / `getAllCompletions`: resolved — owner
+/// decision 3
 ///
-/// [ProgressRepository]'s interface returns `List<Completion>` — the Drift
-/// class from `lib/core/database/daos/completion_dao.dart`, which carries an
-/// autoincrement `int id`, an `int profileId`, and an `int trackId`.
-/// [FirestoreCompletionRepository] hands back `CompletionEntity`
-/// (`lib/features/learning/domain/entities/completion_entity.dart`)
-/// instead, whose own class doc comment states plainly it is
-/// "Firestore-shaped — not a port of the Drift-era `Completion` class" and
-/// deliberately drops exactly those three fields: no autoincrement id
-/// exists for a Firestore document, `profileId` is redundant with the
-/// collection path, and AD-25 retired the per-device `trackId` entirely.
-///
-/// There is no honest value to put in those three fields for a
-/// Firestore-sourced row — synthesizing one (`0`, a hash, whatever) would
-/// silently fabricate data a caller might reasonably key off of (e.g. a
-/// screen that groups completions by `trackId`). Rather than invent a
-/// sentinel, these two methods throw
-/// [ProgressRepositoryUnsupportedException] unconditionally — loud and
-/// catchable by name, not a silently-wrong `Completion`, and not
-/// conditioned on provider readiness (the gap exists whether or not an
-/// active profile is resolved). Unblocking these two needs a decision
-/// outside this adapter's scope: either widen [ProgressRepository] itself
-/// to return `CompletionEntity` (rippling into `ProgressRepositoryImpl` and
-/// every presentation call site that reads `.id`/`.trackId` off a
-/// `Completion`), or give progress its own Firestore-shaped completion
-/// projection. Flagged for the task owner rather than decided here.
+/// [ProgressRepository]'s interface used to return `List<Completion>` — the
+/// Drift class from `lib/core/database/daos/completion_dao.dart`, which
+/// carries an autoincrement `int id`, an `int profileId`, and an `int
+/// trackId` — none of which [FirestoreCompletionRepository]'s
+/// `CompletionEntity` has (see that class's own doc comment: "Firestore-
+/// shaped — not a port of the Drift-era `Completion` class"). Owner decision
+/// 3 (`docs/firestore-rewrite-map.md`) widened [ProgressRepository] to
+/// return `CompletionEntity` directly instead, after confirming the two
+/// consumers of these methods (`completionHistoryForCurriculumProvider`,
+/// `allCompletionHistoryProvider`) never read `.id`/`.profileId`/`.trackId`
+/// — they pass the list straight through. Both methods below now delegate
+/// directly, the same shape as [getTrackBreakdown]/[getAggregateCount].
 class FirestoreProgressRepositoryAdapter implements ProgressRepository {
   FirestoreProgressRepositoryAdapter({required Ref ref}) : _ref = ref;
 
@@ -127,18 +90,27 @@ class FirestoreProgressRepositoryAdapter implements ProgressRepository {
   }
 
   @override
-  Future<List<Completion>> getCompletionsByCurriculum(
+  Future<List<CompletionEntity>> getCompletionsByCurriculum(
     String curriculumId,
   ) async {
-    // See the class doc comment's "A real type-shape gap" section.
-    throw const ProgressRepositoryUnsupportedException(
-      'getCompletionsByCurriculum',
-    );
+    final repo = await _resolveOrNull();
+    if (repo == null) return const [];
+    final id = CurriculumId.fromStorageKey(curriculumId);
+    if (id == null) return const [];
+    return repo.getCompletionsForCurriculum(id);
   }
 
   @override
-  Future<List<Completion>> getAllCompletions() async {
-    // See the class doc comment's "A real type-shape gap" section.
-    throw const ProgressRepositoryUnsupportedException('getAllCompletions');
+  Future<List<CompletionEntity>> getAllCompletions() async {
+    final repo = await _resolveOrNull();
+    if (repo == null) return const [];
+    // No curriculumId filter + CompletionTierFilter.lifetime == every
+    // completion in the collection (see
+    // FirestoreCompletionRepository.getCompletionsByTier's doc comment:
+    // `trackAchievement`/`lifetime` return the same result set here, since
+    // `completions` can only ever hold `live`/`bulkInTrack` documents) —
+    // the same "no tier filter" scope the Drift-era
+    // `CompletionDao.getCompletionsByProfile` this replaces had.
+    return repo.getCompletionsByTier(tier: CompletionTierFilter.lifetime);
   }
 }

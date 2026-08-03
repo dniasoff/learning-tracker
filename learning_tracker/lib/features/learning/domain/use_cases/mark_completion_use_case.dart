@@ -3,6 +3,7 @@ import 'package:learning_tracker/features/learning/domain/entities/completion_re
 import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 import 'package:learning_tracker/features/learning/domain/entities/mark_completion_result.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
+import 'package:learning_tracker/features/learning/domain/services/completion_orchestrator.dart';
 
 /// Use case for marking a single content item as completed.
 ///
@@ -26,10 +27,16 @@ import 'package:learning_tracker/features/learning/domain/repositories/completio
 ///   - [CompletionSource.lifetimeOnly] → same as `bulkInTrack` at the
 ///     data level; no achievement side effects at the use-case level.
 class MarkCompletionUseCase {
-  const MarkCompletionUseCase(this._repository, {AnalyticsService? analytics})
+  const MarkCompletionUseCase(this._orchestrator, {AnalyticsService? analytics})
     : _analytics = analytics;
 
-  final CompletionRepository _repository;
+  /// Post completion-orchestrator lift (`docs/firestore-rewrite-map.md`,
+  /// owner decision 1): this use case now goes through
+  /// [CompletionOrchestrator] rather than [CompletionRepository] directly —
+  /// the orchestrator owns order validation, points, siyum detection,
+  /// bookmark advance and streak, none of which the repository does any
+  /// more. See [CompletionOrchestrator]'s class doc comment.
+  final CompletionOrchestrator _orchestrator;
   // W7.11: optional analytics — fires B1 regression telemetry when non-live
   // completions enter this use case.
   final AnalyticsService? _analytics;
@@ -81,7 +88,7 @@ class MarkCompletionUseCase {
     //
     // Lifetime-tier (coverage counters) is unconditional — every completion
     // enters the DB regardless of source.
-    return _repository.markComplete(
+    return _orchestrator.markComplete(
       request,
       awardGamificationPoints: source.creditsEngagement,
       creditsAchievement: source.creditsAchievement,

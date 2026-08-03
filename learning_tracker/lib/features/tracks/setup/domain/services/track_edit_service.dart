@@ -28,7 +28,12 @@ class TrackEditService {
 
   Future<void> editTrack({
     required int trackId,
-    required int goalId,
+
+    /// The goal being edited, by value (owner decision 4,
+    /// `docs/firestore-rewrite-map.md`) — not a Drift row id. The caller
+    /// (the edit-track screen) already holds this entity from loading the
+    /// track's current goal.
+    required GoalEntity goal,
     required int profileId,
     required CurriculumId curriculum,
     String? label,
@@ -74,7 +79,7 @@ class TrackEditService {
 
     if (hasGoalChange) {
       await _goalRepository.updateGoal(
-        goalId: goalId,
+        goal: goal,
         description: label,
         paceTarget: paceTarget,
         clearPaceTarget: clearPaceTarget,

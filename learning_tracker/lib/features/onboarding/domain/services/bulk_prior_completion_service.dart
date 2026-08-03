@@ -17,6 +17,7 @@ import 'package:learning_tracker/features/content_browsing/domain/repositories/c
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/bookmark_repository.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
+import 'package:learning_tracker/features/learning/domain/services/completion_orchestrator.dart';
 import 'package:learning_tracker/features/tracks/stages/domain/repositories/stage_definition_repository.dart';
 
 export 'package:learning_tracker/core/content/hierarchy_selection.dart';
@@ -88,19 +89,23 @@ class BulkPriorCompletionService {
   /// but NOT propagated to Firestore (a warning is logged).
   final OutboxDao? _outboxDao;
 
-  /// Factory for a [BookmarkRepository] scoped to an arbitrary profile
-  /// (AUD-onboarding-08, SM-7). [execute]'s `profileId` parameter can name a
-  /// profile other than the session's — the live path is a parent adding a
-  /// track for a specific child — and that write must go through an
-  /// injectable seam, not a bare `new` construction, so tests can intercept
-  /// it. Mirrors `bookmarkRepositoryFactoryProvider`
-  /// (`lib/features/learning/presentation/providers/bookmark_providers.dart`),
-  /// the same seam `CompletionRepositoryImpl._advanceBookmark` already uses
-  /// for the identical delegated-profile scenario. When `null` (a test
-  /// constructing this service directly without the provider), [execute]
-  /// falls back to the injected [_bookmarkRepository] regardless of
-  /// `profileId` rather than constructing a `BookmarkRepositoryImpl` itself.
-  final BookmarkRepository Function(int profileId)? _bookmarkRepositoryFactory;
+  /// Post completion-orchestrator lift (`docs/firestore-rewrite-map.md`,
+  /// owner decision 1). When set, [execute] routes its bulk-mark write
+  /// through [CompletionOrchestrator.bulkMarkComplete] instead of calling
+  /// [_completionRepository] directly — required for achievement (siyum)
+  /// detection to fire, since the repository no longer does that itself.
+  ///
+  /// **Optional, not required**, to avoid a breaking constructor change
+  /// across this service's ~10 existing test call sites, most of which
+  /// exercise dedup/bookmark/expunge behavior and never assert siyum
+  /// outcomes. When `null`, [execute] falls back to calling
+  /// `_completionRepository.bulkMarkComplete` directly — the storage write
+  /// still happens correctly, but the four post-write side effects
+  /// (points, streak, siyum, bookmark) do NOT fire, since the repository is
+  /// storage-only now. Production wiring (`onboarding_providers.dart`)
+  /// always supplies a real orchestrator; only test doubles that do not
+  /// care about those side effects may omit it.
+  final CompletionOrchestrator? _orchestrator;
 
   /// Cached content items from the last [resolveSelections] call.
   List<ContentItem>? _cachedAllItems;
@@ -114,18 +119,17 @@ class BulkPriorCompletionService {
     // Retained for call-site/API compatibility but intentionally unused:
     // AUD-onboarding-08 removed the last consumer (an ad-hoc
     // `BookmarkRepositoryImpl(syncEngine: _syncEngine, ...)` construction in
-    // execute()'s profileId branch). That branch now routes through
-    // [bookmarkRepositoryFactory], whose own provider
-    // (`bookmarkRepositoryFactoryProvider`) sources its own sync engine —
-    // this service no longer needs one directly. Dropping the parameter
-    // would require updating ~40 existing call sites for zero behavioural
-    // change; kept as a no-op instead.
+    // execute()'s former profileId branch — see owner decision 2,
+    // `docs/firestore-rewrite-map.md`, for why that branch and the
+    // `bookmarkRepositoryFactory` seam it used are gone entirely now).
+    // Dropping this parameter too would require updating ~40 existing call
+    // sites for zero behavioural change; kept as a no-op instead.
     // ignore: avoid_unused_constructor_parameters
     SyncWriteFacade? syncEngine,
     AnalyticsService? analytics,
     StageDefinitionRepository? stageRepository,
     OutboxDao? outboxDao,
-    BookmarkRepository Function(int profileId)? bookmarkRepositoryFactory,
+    CompletionOrchestrator? orchestrator,
   }) : _contentRepository = contentRepository,
        _completionRepository = completionRepository,
        _bookmarkRepository = bookmarkRepository,
@@ -133,7 +137,7 @@ class BulkPriorCompletionService {
        _analytics = analytics ?? const NullAnalyticsService(),
        _stageRepository = stageRepository,
        _outboxDao = outboxDao,
-       _bookmarkRepositoryFactory = bookmarkRepositoryFactory;
+       _orchestrator = orchestrator;
 
   /// Resolve hierarchy selections into leaf-level sefariaRefs.
   ///
@@ -231,6 +235,21 @@ class BulkPriorCompletionService {
   /// engagement (streak + points) is unconditionally suppressed; achievement
   /// (siyumim) and lifetime totals are credited. There is no caller-tunable
   /// gamification flag — a "live" bulk-mark would be a contradiction in terms.
+  ///
+  /// Always operates on the CURRENTLY OPEN (active) profile — owner decision
+  /// 2, `docs/firestore-rewrite-map.md`. This used to take an `int?
+  /// profileId` naming a profile other than the session's (the live path was
+  /// a parent adding a track for a specific child), but there is no way to
+  /// resolve another profile's Firestore identity from a bare Drift int, and
+  /// guessing would silently write one child's completions onto another's
+  /// document tree, permanently. Removed rather than left in place and
+  /// ignored. The one caller that used to pass a real cross-profile id
+  /// (`AddTrackFlow` during onboarding, via `_applySelfPacedPriorCompletions`
+  /// in `add_track_flow_screen.dart`) threads a newly-created child's
+  /// profile id through `AddTrackFlow.profileId` without ever switching the
+  /// session's active profile to that child first — see that file's doc
+  /// comment for what it would need instead (switch the active profile,
+  /// don't thread the id).
   Future<BulkPriorCompletionResult> execute({
     required CurriculumId curriculumId,
     required List<ContentItem> resolvedItems,
@@ -239,7 +258,6 @@ class BulkPriorCompletionService {
     /// these with the full track stage list. Pass `[1]` from the UI as before;
     /// the service will union in all remaining stages automatically.
     required List<int> stageIds,
-    int? profileId,
   }) async {
     final sefariaRefs = resolvedItems.map((item) => item.sefariaRef).toList();
     var totalCompletions = 0;
@@ -264,7 +282,8 @@ class BulkPriorCompletionService {
         sefariaRefs: sefariaRefs,
         stageId: stageId,
         trackType: 'personal',
-        profileId: profileId,
+        // profileId omitted — always the active profile now (owner decision
+        // 2, see [execute]'s doc comment).
         // Engagement gate: prior-mark NEVER credits streak or points.
         awardGamificationPoints: false,
         // F1 (W7-A): bulk-mark-prior represents the `bulkInTrack` source —
@@ -274,16 +293,17 @@ class BulkPriorCompletionService {
         creditsAchievement: true,
         completedAt: kBulkPriorSentinelDate, // sentinel: "learned in the past"
       );
-      final completions = await _completionRepository.bulkMarkComplete(request);
+      final orchestrator = _orchestrator;
+      final completions = orchestrator != null
+          ? await orchestrator.bulkMarkComplete(request)
+          : await _completionRepository.bulkMarkComplete(request);
       totalCompletions += completions.length;
     }
 
-    // Query DB for all existing completions for this curriculum
+    // Query DB for all existing completions for this curriculum — profileId
+    // omitted, defaults to the active profile (owner decision 2).
     final existingCompletions = await _completionRepository
-        .getCompletionsByCurriculum(
-          curriculumId.storageKey,
-          profileId: profileId,
-        );
+        .getCompletionsByCurriculum(curriculumId.storageKey);
     final allCompletedRefs = {
       ...sefariaRefs,
       ...existingCompletions.map((c) => c.sefariaRef),
@@ -296,15 +316,7 @@ class BulkPriorCompletionService {
     );
 
     if (bookmarkRef != null) {
-      // AUD-onboarding-08 (SM-7): route the delegated-profile write through
-      // the injected factory seam instead of `new`-ing a BookmarkRepositoryImpl
-      // here. See the [_bookmarkRepositoryFactory] doc comment for the
-      // fallback rationale.
-      final factory = _bookmarkRepositoryFactory;
-      final bookmarkRepo = (profileId != null && factory != null)
-          ? factory(profileId)
-          : _bookmarkRepository;
-      await bookmarkRepo.setBookmark(
+      await _bookmarkRepository.setBookmark(
         curriculumId: curriculumId,
         sefariaRef: bookmarkRef,
       );

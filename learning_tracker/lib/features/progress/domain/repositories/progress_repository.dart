@@ -1,4 +1,4 @@
-import 'package:learning_tracker/core/database/daos/completion_dao.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_entity.dart';
 
 /// Repository interface for progress data operations.
 ///
@@ -15,11 +15,19 @@ abstract class ProgressRepository {
 
   /// Get all completion records for a specific curriculum.
   ///
-  /// Returns completions in insertion order. Used by history screen.
-  Future<List<Completion>> getCompletionsByCurriculum(String curriculumId);
+  /// Owner decision 3 (`docs/firestore-rewrite-map.md`): returns
+  /// [CompletionEntity] — the Firestore-shaped record — rather than the
+  /// Drift-era `Completion` (which carried an autoincrement `id`, an `int
+  /// profileId`, and the AD-25-retired `trackId`; none of the three have a
+  /// Firestore equivalent). Order is not guaranteed. Used by history screen.
+  Future<List<CompletionEntity>> getCompletionsByCurriculum(
+    String curriculumId,
+  );
 
   /// Get all completion records across all curricula.
   ///
-  /// Used by history screen when no curriculum filter is applied.
-  Future<List<Completion>> getAllCompletions();
+  /// See [getCompletionsByCurriculum]'s doc comment for the [CompletionEntity]
+  /// return type. Used by history screen when no curriculum filter is
+  /// applied.
+  Future<List<CompletionEntity>> getAllCompletions();
 }

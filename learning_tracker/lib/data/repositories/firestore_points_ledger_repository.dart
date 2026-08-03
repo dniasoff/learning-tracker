@@ -69,7 +69,7 @@ import 'package:learning_tracker/features/learning/domain/entities/completion_so
 /// identical write, not because a retry could otherwise compute something
 /// wrong.
 ///
-/// ### `createdAt` is caller-supplied, never `DateTime.now()`
+/// ### `createdAt` is caller-supplied, never the current wall-clock time
 ///
 /// Mirrors `FirestoreLearningLedgerRepository.recordCompletion`'s
 /// `completedAt` parameter and `FirestoreStreakEventRepository.append`'s

@@ -183,9 +183,6 @@ void main() {
     );
     final completionRepo = CompletionRepositoryImpl(
       database: db,
-      syncEngine: null,
-      contentRepository: contentRepo,
-      bookmarkRepository: bookmarkRepo,
       activeProfileId: _profileId,
     );
     final bulkService = BulkPriorCompletionService(

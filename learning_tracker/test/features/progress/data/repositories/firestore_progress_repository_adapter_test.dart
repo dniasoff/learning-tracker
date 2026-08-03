@@ -55,31 +55,30 @@ void main() {
     });
 
     test(
-      'getCompletionsByCurriculum throws ProgressRepositoryUnsupportedException '
-      'regardless of readiness',
+      'getCompletionsByCurriculum returns an empty list instead of throwing',
       () async {
         final container = ProviderContainer();
         addTearDown(container.dispose);
         final adapter = buildAdapter(container);
 
-        expect(
-          () => adapter.getCompletionsByCurriculum('bavli'),
-          throwsA(isA<ProgressRepositoryUnsupportedException>()),
-        );
+        final result = await adapter.getCompletionsByCurriculum('bavli');
+
+        expect(result, isEmpty);
       },
     );
 
-    test('getAllCompletions throws ProgressRepositoryUnsupportedException '
-        'regardless of readiness', () async {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-      final adapter = buildAdapter(container);
+    test(
+      'getAllCompletions returns an empty list instead of throwing',
+      () async {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        final adapter = buildAdapter(container);
 
-      expect(
-        () => adapter.getAllCompletions(),
-        throwsA(isA<ProgressRepositoryUnsupportedException>()),
-      );
-    });
+        final result = await adapter.getAllCompletions();
+
+        expect(result, isEmpty);
+      },
+    );
   });
 
   group('ready (active account + profile)', () {
@@ -204,20 +203,51 @@ void main() {
       expect(aggregate, 0);
     });
 
-    test('getCompletionsByCurriculum still throws even when ready — a '
-        'type-shape gap, not a readiness gap', () async {
-      expect(
-        () => adapter.getCompletionsByCurriculum('bavli'),
-        throwsA(isA<ProgressRepositoryUnsupportedException>()),
+    test('getCompletionsByCurriculum delegates to '
+        'FirestoreCompletionRepository.getCompletionsForCurriculum', () async {
+      await writeCompletion(
+        curriculumId: CurriculumId.bavli,
+        sefariaRef: 'Berakhot.2a',
+        stageId: 1,
+        trackType: 'personal',
       );
+      await writeCompletion(
+        curriculumId: CurriculumId.mishnayos,
+        sefariaRef: 'Berakhot.1.1',
+        stageId: 1,
+        trackType: 'personal',
+      );
+
+      final result = await adapter.getCompletionsByCurriculum('bavli');
+
+      expect(result, hasLength(1));
+      expect(result.single.sefariaRef, 'Berakhot.2a');
     });
 
-    test('getAllCompletions still throws even when ready — a type-shape gap, '
-        'not a readiness gap', () async {
-      expect(
-        () => adapter.getAllCompletions(),
-        throwsA(isA<ProgressRepositoryUnsupportedException>()),
-      );
-    });
+    test(
+      'getAllCompletions returns completions across every curriculum',
+      () async {
+        await writeCompletion(
+          curriculumId: CurriculumId.bavli,
+          sefariaRef: 'Berakhot.2a',
+          stageId: 1,
+          trackType: 'personal',
+        );
+        await writeCompletion(
+          curriculumId: CurriculumId.mishnayos,
+          sefariaRef: 'Berakhot.1.1',
+          stageId: 1,
+          trackType: 'personal',
+        );
+
+        final result = await adapter.getAllCompletions();
+
+        expect(result, hasLength(2));
+        expect(
+          result.map((c) => c.sefariaRef),
+          containsAll(['Berakhot.2a', 'Berakhot.1.1']),
+        );
+      },
+    );
   });
 }

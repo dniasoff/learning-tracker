@@ -38,11 +38,14 @@ abstract class GoalRepository {
   /// it takes precedence over any previously stored unit. Passing
   /// [clearLearningUnit] == `true` removes the learning unit entirely.
   ///
-  /// [goalId] must belong to the profile the repository instance was
-  /// constructed for — implementations throw `GoalProfileMismatchException`
-  /// (AUD-scheduler-03) otherwise.
+  /// [goal] is passed by value rather than by row number (owner decision 4,
+  /// `docs/firestore-rewrite-map.md`) — Firestore has no integer identity, so
+  /// a Drift-only `int goalId` could never be implemented against a
+  /// Firestore-backed repository. [goal] must belong to the profile the
+  /// repository instance was constructed for — implementations throw
+  /// `GoalProfileMismatchException` (AUD-scheduler-03) otherwise.
   Future<GoalEntity> updateGoal({
-    required int goalId,
+    required GoalEntity goal,
     double? targetPercent,
     PaceTarget? paceTarget,
     bool clearPaceTarget,
@@ -53,9 +56,9 @@ abstract class GoalRepository {
 
   /// Delete a goal.
   ///
-  /// [goalId] must belong to the profile the repository instance was
-  /// constructed for — implementations throw `GoalProfileMismatchException`
-  /// (AUD-scheduler-03) otherwise. Deleting an already-absent goal is a
-  /// no-op.
-  Future<void> deleteGoal(int goalId);
+  /// [goal] is passed by value — see [updateGoal]'s doc comment. It must
+  /// belong to the profile the repository instance was constructed for —
+  /// implementations throw `GoalProfileMismatchException` (AUD-scheduler-03)
+  /// otherwise. Deleting an already-absent goal is a no-op.
+  Future<void> deleteGoal(GoalEntity goal);
 }

@@ -10,11 +10,7 @@ library;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
-import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
-import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_state_service.dart';
 import 'package:learning_tracker/features/learning/data/repositories/completion_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
@@ -63,52 +59,6 @@ Future<int> _seedProfileAndTrack(UserDatabase db) async {
   return profileRow.id;
 }
 
-/// Stub [ContentRepository] — bulk-mark-prior does not need content lookups;
-/// bookmark advance returns an empty list so advanceBookmark is a no-op.
-class _StubContentRepository implements ContentRepository {
-  @override
-  Future<List<ContentItem>> getContentForCurriculum(
-    CurriculumId curriculumId,
-  ) async => const [];
-
-  @override
-  Future<CurriculumHierarchyConfig> getHierarchyConfig(
-    CurriculumId curriculumId,
-  ) async => const CurriculumHierarchyConfig(
-    curriculumId: 'mishnayos',
-    levelLabels: [],
-    totalItems: 0,
-  );
-
-  @override
-  Future<List<ContentItem>> filterByLevel({
-    required CurriculumId curriculumId,
-    String? level1,
-    String? level2,
-    String? level3,
-    String? level4,
-  }) async => const [];
-
-  @override
-  Future<List<ContentItem>> getScopedContent({
-    required CurriculumId curriculumId,
-    required int scopeLevel,
-    required List<String> scopeValues,
-  }) async => const [];
-
-  @override
-  Future<List<ContentItem>> search({
-    required CurriculumId curriculumId,
-    required String query,
-  }) async => const [];
-
-  @override
-  Future<ContentItem?> getContentByRef({
-    required CurriculumId curriculumId,
-    required String sefariaRef,
-  }) async => null;
-}
-
 void main() {
   late UserDatabase db;
   late int profileId;
@@ -119,8 +69,6 @@ void main() {
     profileId = await _seedProfileAndTrack(db);
     repository = CompletionRepositoryImpl(
       database: db,
-      syncEngine: null,
-      contentRepository: _StubContentRepository(),
       activeProfileId: profileId,
     );
   });

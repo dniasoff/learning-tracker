@@ -169,7 +169,7 @@ void main() {
       );
 
       final updated = await repo.updateGoal(
-        goalId: goal.id!,
+        goal: goal,
         targetPercent: 75.0,
         description: 'Updated goal',
       );
@@ -179,14 +179,20 @@ void main() {
     });
 
     // AUD-scheduler-04 — updateGoal must throw a typed ArgumentError (not
-    // silently no-op, and not a raw DB/null-check crash) when the goalId
+    // silently no-op, and not a raw DB/null-check crash) when the goal's id
     // doesn't exist — e.g. the goal was already deleted by a sync merge
     // from another device before this device's in-flight edit lands.
-    test('updateGoal throws ArgumentError for a nonexistent goalId', () async {
+    test('updateGoal throws ArgumentError for a nonexistent goal id', () async {
       const missingGoalId = 999999;
+      final missingGoal = GoalEntity(
+        id: missingGoalId,
+        curriculumId: CurriculumId.mishnayos,
+        createdAt: now,
+        updatedAt: now,
+      );
 
       expect(
-        () => repo.updateGoal(goalId: missingGoalId, targetPercent: 50.0),
+        () => repo.updateGoal(goal: missingGoal, targetPercent: 50.0),
         throwsA(
           isA<ArgumentError>().having(
             (e) => e.message,
@@ -205,7 +211,7 @@ void main() {
         targetPercent: 100.0,
       );
 
-      await repo.deleteGoal(goal.id!);
+      await repo.deleteGoal(goal);
 
       final goals = await repo.getGoals(CurriculumId.mishnayos);
       expect(goals, isEmpty);
@@ -280,7 +286,7 @@ void main() {
         );
 
         final updated = await repo.updateGoal(
-          goalId: goal.id!,
+          goal: goal,
           paceTarget: const PacePeriodTarget(rate: 5, period: 'per_week'),
         );
 
@@ -299,7 +305,7 @@ void main() {
         );
 
         final updated = await repo.updateGoal(
-          goalId: goal.id!,
+          goal: goal,
           clearPaceTarget: true,
         );
 
@@ -321,7 +327,7 @@ void main() {
           );
 
           final updated = await repo.updateGoal(
-            goalId: goal.id!,
+            goal: goal,
             description: 'Updated description',
           );
 
@@ -403,7 +409,7 @@ void main() {
         );
         syncFacade.goalPayloads.clear();
 
-        await repoWithSync.updateGoal(goalId: goal.id!, targetPercent: 75.0);
+        await repoWithSync.updateGoal(goal: goal, targetPercent: 75.0);
 
         expect(syncFacade.goalPayloads, hasLength(1));
         final payload = syncFacade.goalPayloads.first;
@@ -429,7 +435,7 @@ void main() {
         );
         syncFacade.goalPayloads.clear();
 
-        await repoWithSync.deleteGoal(goal.id!);
+        await repoWithSync.deleteGoal(goal);
 
         expect(syncFacade.deletePayloads, hasLength(1));
         final payload = syncFacade.deletePayloads.first;
@@ -466,7 +472,7 @@ void main() {
         final createdId = syncFacade.goalPayloads.first['id'];
         syncFacade.goalPayloads.clear();
 
-        await repoWithSync.updateGoal(goalId: created.id!, targetPercent: 75.0);
+        await repoWithSync.updateGoal(goal: created, targetPercent: 75.0);
 
         expect(syncFacade.goalPayloads, hasLength(1));
         final updatedId = syncFacade.goalPayloads.first['id'];
@@ -507,7 +513,7 @@ void main() {
         );
 
         expect(
-          () => repoProfile0.updateGoal(goalId: goal.id!, targetPercent: 90.0),
+          () => repoProfile0.updateGoal(goal: goal, targetPercent: 90.0),
           throwsA(isA<GoalProfileMismatchException>()),
         );
 
@@ -529,7 +535,7 @@ void main() {
         );
 
         expect(
-          () => repoProfile0.deleteGoal(goal.id!),
+          () => repoProfile0.deleteGoal(goal),
           throwsA(isA<GoalProfileMismatchException>()),
         );
 
@@ -606,7 +612,12 @@ void main() {
 
         expect(
           () => adapter.createGoal(
+            // AUD-scheduler-16 follow-up: profileId/trackId are ignored by
+            // this adapter (see its class doc comment) — arbitrary
+            // sentinels, present only to satisfy GoalRepository's signature.
+            profileId: 0,
             curriculumId: CurriculumId.mishnayos,
+            trackId: 0,
             targetPercent: 100.0,
           ),
           throwsA(isA<GoalRepositoryNotReadyException>()),
@@ -669,7 +680,9 @@ void main() {
       test('createGoal delegates to FirestoreGoalRepository and writes a doc '
           'reachable at the expected Firestore path', () async {
         final goal = await adapter.createGoal(
+          profileId: 0,
           curriculumId: CurriculumId.mishnayos,
+          trackId: 0,
           targetPercent: 80.0,
           description: 'Finish Mishnayos',
         );
@@ -689,7 +702,9 @@ void main() {
 
       test('createGoal then getGoals round-trips through Firestore', () async {
         await adapter.createGoal(
+          profileId: 0,
           curriculumId: CurriculumId.mishnayos,
+          trackId: 0,
           targetPercent: 60.0,
         );
 
@@ -701,7 +716,9 @@ void main() {
 
       test('updateGoal writes the change back to the same document', () async {
         final created = await adapter.createGoal(
+          profileId: 0,
           curriculumId: CurriculumId.mishnayos,
+          trackId: 0,
           targetPercent: 60.0,
         );
 
@@ -718,7 +735,9 @@ void main() {
 
       test('deleteGoal removes the document', () async {
         final created = await adapter.createGoal(
+          profileId: 0,
           curriculumId: CurriculumId.mishnayos,
+          trackId: 0,
           targetPercent: 60.0,
         );
 

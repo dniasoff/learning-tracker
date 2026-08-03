@@ -485,7 +485,7 @@ void main() {
 
       // Modify later from goal management
       final updated = await goalRepo.updateGoal(
-        goalId: goal.id!,
+        goal: goal,
         paceTarget: DeadlineTarget(DateTime.utc(2027, 12, 31)),
         description: 'Extended deadline',
       );

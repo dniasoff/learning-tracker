@@ -40,6 +40,7 @@ import 'package:learning_tracker/features/learning/data/repositories/completion_
 import 'package:learning_tracker/features/learning/data/repositories/learning_ledger_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
 import 'package:learning_tracker/features/learning/domain/services/completion_detection_service.dart';
+import 'package:learning_tracker/features/learning/domain/services/completion_orchestrator.dart';
 import 'package:learning_tracker/features/sync/data/outbox_sync_write_facade.dart';
 import 'package:learning_tracker/features/tracks/stages/data/repositories/stage_definition_repository_impl.dart';
 import 'package:mocktail/mocktail.dart';
@@ -61,7 +62,7 @@ void main() {
   late int profileId;
   late _MockContentRepository contentRepo;
   late _MockOutboxFacade outboxFacade;
-  late CompletionRepositoryImpl repo;
+  late CompletionOrchestrator orchestrator;
 
   setUp(() async {
     // Fresh Talker per test so log history assertions never see a prior
@@ -132,9 +133,15 @@ void main() {
       ledgerRepository: ledgerRepo,
       stageRepository: stageRepo,
     );
-    repo = CompletionRepositoryImpl(
+    final repo = CompletionRepositoryImpl(
       database: db,
-      syncEngine: null,
+      activeProfileId: profileId,
+    );
+    // Post completion-orchestrator lift (`docs/firestore-rewrite-map.md`,
+    // owner decision 1): the unawaited-and-logged siyum dispatch under test
+    // now lives in CompletionOrchestrator, not CompletionRepositoryImpl.
+    orchestrator = CompletionOrchestrator(
+      repository: repo,
       contentRepository: contentRepo,
       activeProfileId: profileId,
       completionDetectionService: detectionService,
@@ -149,7 +156,7 @@ void main() {
       () async {
         // Must NOT throw — the fire-and-forget detection failure must never
         // fail (or block) the primary completion write.
-        final result = await repo.markComplete(
+        final result = await orchestrator.markComplete(
           const CompletionRequest(
             curriculumId: 'mishnayos',
             sefariaRef: oneLeafRef,
@@ -165,7 +172,7 @@ void main() {
     test(
       'the swallowed detection failure is logged via AppLogger, not left silent',
       () async {
-        await repo.markComplete(
+        await orchestrator.markComplete(
           const CompletionRequest(
             curriculumId: 'mishnayos',
             sefariaRef: oneLeafRef,

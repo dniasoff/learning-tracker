@@ -256,8 +256,6 @@ void main() {
 
       final completionRepo = CompletionRepositoryImpl(
         database: db,
-        syncEngine: null,
-        contentRepository: _StubContentRepository([...items]),
         activeProfileId: profileId,
       );
 
@@ -280,7 +278,6 @@ void main() {
         curriculumId: CurriculumId.mishnayos,
         resolvedItems: items,
         stageIds: [1], // caller passes only learn — B6 must add chazara 2 & 3
-        profileId: profileId,
       );
 
       // 2 items × 3 stages = 6 total completions.
@@ -325,8 +322,6 @@ void main() {
 
       final completionRepo = CompletionRepositoryImpl(
         database: db,
-        syncEngine: null,
-        contentRepository: _StubContentRepository([...items]),
         activeProfileId: profileId,
       );
       final stageRepo = StageDefinitionRepositoryImpl(
@@ -347,7 +342,6 @@ void main() {
         curriculumId: CurriculumId.mishnayos,
         resolvedItems: items,
         stageIds: [1],
-        profileId: profileId,
       );
 
       final events = await (db.select(
@@ -395,8 +389,6 @@ void main() {
           contentRepository: _StubContentRepository(const []),
           completionRepository: CompletionRepositoryImpl(
             database: db,
-            syncEngine: null,
-            contentRepository: _StubContentRepository(const []),
             activeProfileId: profileId,
           ),
           bookmarkRepository: bookmarkRepo,
@@ -465,8 +457,6 @@ void main() {
         contentRepository: _StubContentRepository(const []),
         completionRepository: CompletionRepositoryImpl(
           database: db,
-          syncEngine: null,
-          contentRepository: _StubContentRepository(const []),
           activeProfileId: profileId,
         ),
         bookmarkRepository: MockBookmarkRepository(),
@@ -525,8 +515,6 @@ void main() {
         contentRepository: _StubContentRepository(const []),
         completionRepository: CompletionRepositoryImpl(
           database: db,
-          syncEngine: null,
-          contentRepository: _StubContentRepository(const []),
           activeProfileId: profileId,
         ),
         bookmarkRepository: MockBookmarkRepository(),
@@ -570,8 +558,6 @@ void main() {
         contentRepository: _StubContentRepository(const []),
         completionRepository: CompletionRepositoryImpl(
           database: db,
-          syncEngine: null,
-          contentRepository: _StubContentRepository(const []),
           activeProfileId: profileId,
         ),
         bookmarkRepository: MockBookmarkRepository(),
@@ -606,8 +592,6 @@ void main() {
         contentRepository: _StubContentRepository(const []),
         completionRepository: CompletionRepositoryImpl(
           database: db,
-          syncEngine: null,
-          contentRepository: _StubContentRepository(const []),
           activeProfileId: profileId,
         ),
         bookmarkRepository: MockBookmarkRepository(),
@@ -683,8 +667,6 @@ void main() {
           contentRepository: _StubContentRepository(const []),
           completionRepository: CompletionRepositoryImpl(
             database: db,
-            syncEngine: null,
-            contentRepository: _StubContentRepository(const []),
             activeProfileId: profileId,
           ),
           bookmarkRepository: MockBookmarkRepository(),
@@ -785,8 +767,6 @@ void main() {
           contentRepository: _StubContentRepository(const []),
           completionRepository: CompletionRepositoryImpl(
             database: db,
-            syncEngine: null,
-            contentRepository: _StubContentRepository(const []),
             activeProfileId: profileId,
           ),
           bookmarkRepository: MockBookmarkRepository(),
@@ -857,8 +837,6 @@ void main() {
           contentRepository: _StubContentRepository(mishnayosItems),
           completionRepository: CompletionRepositoryImpl(
             database: db,
-            syncEngine: null,
-            contentRepository: _StubContentRepository(mishnayosItems),
             activeProfileId: profileId,
           ),
           bookmarkRepository: bookmarkRepo,
@@ -869,7 +847,6 @@ void main() {
           curriculumId: CurriculumId.mishnayos,
           resolvedItems: mishnayosItems,
           stageIds: [1],
-          profileId: profileId,
         );
 
         // Prior-mark under bavli.
@@ -877,8 +854,6 @@ void main() {
           contentRepository: _StubContentRepository(bavliItems),
           completionRepository: CompletionRepositoryImpl(
             database: db,
-            syncEngine: null,
-            contentRepository: _StubContentRepository(bavliItems),
             activeProfileId: profileId,
           ),
           bookmarkRepository: bookmarkRepo,
@@ -889,7 +864,6 @@ void main() {
           curriculumId: CurriculumId.bavli,
           resolvedItems: bavliItems,
           stageIds: [1],
-          profileId: profileId,
         );
 
         // Query all completion_events for 'Berakhot 2'.
@@ -961,8 +935,6 @@ void main() {
           contentRepository: _StubContentRepository(const []),
           completionRepository: CompletionRepositoryImpl(
             database: db,
-            syncEngine: null,
-            contentRepository: _StubContentRepository(const []),
             activeProfileId: profileId,
           ),
           bookmarkRepository: MockBookmarkRepository(),
@@ -1035,8 +1007,6 @@ void main() {
           contentRepository: _StubContentRepository(items),
           completionRepository: CompletionRepositoryImpl(
             database: db,
-            syncEngine: null,
-            contentRepository: _StubContentRepository(items),
             activeProfileId: profileId,
           ),
           bookmarkRepository: bookmarkRepo,
@@ -1052,7 +1022,6 @@ void main() {
           curriculumId: CurriculumId.mishnayos,
           resolvedItems: items,
           stageIds: [1],
-          profileId: profileId,
         );
 
         // Verify the prior-mark row has sentinel timestamp (replaces priorMarkOnly).

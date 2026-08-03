@@ -6,11 +6,18 @@
 ///   * AC2 — Structured log redaction: values for keys in
 ///           `PiiRedactor.sensitiveKeys` are replaced with `[REDACTED]`;
 ///           the `event` string is preserved verbatim (no substring scan).
-///   * AC3 — Bookmark-advance atomicity: the real `CompletionRepositoryImpl`
-///           wiring shares one Drift transaction between the completion
-///           insert and the bookmark advance, so an injected
-///           `BookmarkRepository` fake that throws rolls the completion
-///           back (AUD-t-story-acceptance-01).
+///   * AC3 — Bookmark-advance failure handling: an injected `BookmarkRepository`
+///           fake that throws must NOT roll back or fail the completion write.
+///           Superseded by the completion-orchestrator lift
+///           (`docs/firestore-rewrite-map.md`, owner decision 1, 2026-08-03):
+///           bookmark advance moved out of `CompletionRepositoryImpl`'s Drift
+///           transaction into `CompletionOrchestrator`'s post-write,
+///           independently-caught side effects — see that class's doc
+///           comment, "Regression this lift knowingly accepts," for why the
+///           original transactional rollback guarantee (AUD-t-story-
+///           acceptance-01) was intentionally NOT reproduced: Firestore
+///           cannot offer the same guarantee, and this orchestrator is meant
+///           to behave identically above either storage backend.
 @Tags(['epic_27'])
 library;
 
@@ -25,6 +32,7 @@ import 'package:learning_tracker/features/content_browsing/domain/repositories/c
 import 'package:learning_tracker/features/learning/data/repositories/completion_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/bookmark_repository.dart';
+import 'package:learning_tracker/features/learning/domain/services/completion_orchestrator.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:talker/talker.dart';
@@ -252,14 +260,19 @@ void main() {
   // ── AC3: Bookmark advance atomicity ────────────────────────────────────────
   //
   // The bookmark advance must share one Drift transaction with the completion
-  // insert so a failure in the advance rolls the completion back. This drives
-  // the REAL production wire-up — `CompletionRepositoryImpl.markComplete`,
-  // constructed with an injected `BookmarkRepository` fake — instead of a
-  // hand-rolled `db.transaction()` that only proves Drift's rollback
-  // primitive (AUD-t-story-acceptance-01 / TQ-8).
+  // insert so a failure in the advance does NOT roll the completion back
+  // (post completion-orchestrator lift — see the file doc comment's AC3
+  // entry). This drives the REAL production wire-up —
+  // `CompletionOrchestrator.markComplete` over a real
+  // `CompletionRepositoryImpl`, constructed with an injected
+  // `BookmarkRepository` fake — instead of a hand-rolled `db.transaction()`
+  // that would only prove Drift's rollback primitive (AUD-t-story-
+  // acceptance-01 / TQ-8's original intent, now testing the deliberately
+  // opposite contract).
 
   group(
-    'Story 27.9 — AC3: bookmark advance atomicity (transaction rollback)',
+    'Story 27.9 — AC3: bookmark-advance failure does not roll back the '
+    'completion',
     tags: ['story_27_9'],
     () {
       late UserDatabase db;
@@ -278,6 +291,11 @@ void main() {
       });
 
       setUp(() async {
+        // Fresh Talker per test — CompletionOrchestrator logs a caught
+        // bookmark-advance failure via AppLogger, and the first test below
+        // asserts on that log history.
+        AppLogger.init();
+
         db = UserDatabase(NativeDatabase.memory());
         await seedProfile(db);
         // seedProfile inserts exactly one account + one learner profile —
@@ -306,52 +324,75 @@ void main() {
         return rows.length;
       }
 
-      /// Builds the real [CompletionRepositoryImpl] under test, wired with
-      /// [bookmarkRepo] the same way `completionRepositoryProvider` wires
-      /// its production `BookmarkRepository` — as the `bookmarkRepository`
-      /// constructor field, so `_advanceBookmark` uses it directly instead
-      /// of building an ad-hoc `BookmarkRepositoryImpl`.
-      CompletionRepositoryImpl buildRepository(
+      /// Builds the real [CompletionOrchestrator] under test, over a real
+      /// (storage-only) [CompletionRepositoryImpl], wired with
+      /// [bookmarkRepo] the same way `completionOrchestratorProvider` wires
+      /// its production `BookmarkRepository`.
+      CompletionOrchestrator buildOrchestrator(
         BookmarkRepository bookmarkRepo,
       ) {
-        return CompletionRepositoryImpl(
+        final repository = CompletionRepositoryImpl(
           database: db,
-          syncEngine: null,
+          activeProfileId: profileId,
+        );
+        return CompletionOrchestrator(
+          repository: repository,
           contentRepository: _MockContentRepository(),
           bookmarkRepository: bookmarkRepo,
           activeProfileId: profileId,
         );
       }
 
-      test('completion is rolled back when the real CompletionRepositoryImpl '
-          'bookmark-advance wiring throws', () async {
-        final bookmarkRepo = _MockBookmarkRepository();
-        when(
-          () => bookmarkRepo.advanceBookmark(
-            curriculumId: any(named: 'curriculumId'),
-            completedSefariaRef: any(named: 'completedSefariaRef'),
-          ),
-        ).thenThrow(StateError('simulated bookmark-advance failure'));
+      test(
+        'completion is persisted (not rolled back) when the real '
+        'bookmark-advance wiring throws, and the failure is logged',
+        () async {
+          final bookmarkRepo = _MockBookmarkRepository();
+          when(
+            () => bookmarkRepo.advanceBookmark(
+              curriculumId: any(named: 'curriculumId'),
+              completedSefariaRef: any(named: 'completedSefariaRef'),
+            ),
+          ).thenThrow(StateError('simulated bookmark-advance failure'));
 
-        final repository = buildRepository(bookmarkRepo);
+          final orchestrator = buildOrchestrator(bookmarkRepo);
 
-        await expectLater(
-          repository.markComplete(request),
-          throwsA(isA<StateError>()),
-        );
-        expect(
-          await countCompletions(),
-          equals(0),
-          reason:
-              'CompletionRepositoryImpl.markComplete must roll the '
-              'completion insert back when the injected BookmarkRepository '
-              'throws during advanceBookmark — FR20 / Story 27.9\'s '
-              'atomicity invariant, exercised through the real production '
-              'wiring rather than a hand-rolled transaction.',
-        );
-      });
+          // Must NOT throw — CompletionOrchestrator catches and logs every
+          // post-write side effect independently (see its class doc comment,
+          // "Ordering"), so a bookmark-advance failure never surfaces to the
+          // caller or blocks the already-durable completion write.
+          final result = await orchestrator.markComplete(request);
 
-      test('completion is persisted through the real CompletionRepositoryImpl '
+          expect(result.completion.sefariaRef, equals(request.sefariaRef));
+          expect(
+            await countCompletions(),
+            equals(1),
+            reason:
+                'A completion is permanent once written (owner decision, '
+                'docs/firestore-rewrite-map.md) — a downstream bookmark-'
+                'advance failure must never retract it. Post completion-'
+                'orchestrator lift this is deliberately NOT a rollback '
+                'boundary any more; see CompletionOrchestrator\'s doc '
+                'comment, "Regression this lift knowingly accepts."',
+          );
+
+          final history = AppLogger.instance.talker.history
+              .map((e) => e.generateTextMessage())
+              .toList();
+          expect(
+            history.any(
+              (m) => m.contains('completion_bookmark_advance_failed'),
+            ),
+            isTrue,
+            reason:
+                'The caught bookmark-advance failure must be logged via '
+                'AppLogger instead of silently dropped. '
+                'Talker history: $history',
+          );
+        },
+      );
+
+      test('completion is persisted through the real orchestrator wiring '
           'when the bookmark advance succeeds', () async {
         final bookmarkRepo = _MockBookmarkRepository();
         when(
@@ -361,9 +402,9 @@ void main() {
           ),
         ).thenAnswer((_) async {});
 
-        final repository = buildRepository(bookmarkRepo);
+        final orchestrator = buildOrchestrator(bookmarkRepo);
 
-        final result = await repository.markComplete(request);
+        final result = await orchestrator.markComplete(request);
 
         expect(result.completion.sefariaRef, equals(request.sefariaRef));
         expect(await countCompletions(), equals(1));

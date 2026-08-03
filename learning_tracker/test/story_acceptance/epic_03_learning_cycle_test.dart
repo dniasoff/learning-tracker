@@ -9,8 +9,11 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/sync/sync_write_facade.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
+import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
+import 'package:learning_tracker/features/learning/data/completion_points_awarder.dart';
 import 'package:learning_tracker/features/learning/data/repositories/completion_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
+import 'package:learning_tracker/features/learning/domain/services/completion_orchestrator.dart';
 import 'package:learning_tracker/features/progress/data/repositories/progress_repository_impl.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
@@ -25,17 +28,8 @@ class _MockContentRepository extends Mock implements ContentRepository {}
 
 UserDatabase _db() => createTestDatabase();
 
-CompletionRepositoryImpl _repo(
-  UserDatabase db,
-  SyncWriteFacade engine,
-  ContentRepository content, {
-  int activeProfileId = 1,
-}) => CompletionRepositoryImpl(
-  database: db,
-  syncEngine: engine,
-  contentRepository: content,
-  activeProfileId: activeProfileId,
-);
+CompletionRepositoryImpl _repo(UserDatabase db, {int activeProfileId = 1}) =>
+    CompletionRepositoryImpl(database: db, activeProfileId: activeProfileId);
 
 /// Five-item default stub for ContentRepository.
 List<ContentItem> _fiveItems() => List.generate(
@@ -71,7 +65,7 @@ void main() {
       await seedTrack(db, profileId: 1);
       syncEngine = _MockSyncEngine();
       contentRepo = _MockContentRepository();
-      repo = _repo(db, syncEngine, contentRepo);
+      repo = _repo(db);
 
       when(
         () => syncEngine.pushGamificationSettingsSnapshot(),
@@ -158,11 +152,25 @@ void main() {
         ),
       );
 
+      // Post completion-orchestrator lift (`docs/firestore-rewrite-map.md`,
+      // owner decision 1): points calculation lives in CompletionOrchestrator
+      // + CompletionPointsPort now, not CompletionRepositoryImpl. Wires the
+      // real Drift-backed points port, matching production
+      // (`completion_providers.dart`'s `completionPointsPortProvider`).
       final childRepo = CompletionRepositoryImpl(
         database: db,
-        syncEngine: syncEngine,
+        activeProfileId: childProfile.id,
+      );
+      final childOrchestrator = CompletionOrchestrator(
+        repository: childRepo,
         contentRepository: contentRepo,
         activeProfileId: childProfile.id,
+        pointsPort: DriftCompletionPointsAwarder(
+          database: db,
+          rewardMilestoneServiceFactory: (profileId) =>
+              RewardMilestoneService(db, profileId: profileId),
+          syncEngine: syncEngine,
+        ),
       );
 
       await db.stageDao.insertStageDefinition(
@@ -186,7 +194,7 @@ void main() {
         ),
       );
 
-      final c1 = (await childRepo.markComplete(
+      final c1 = (await childOrchestrator.markComplete(
         const CompletionRequest(
           curriculumId: 'mishnayos',
           sefariaRef: 'Mishnah Berachot 1:1',
@@ -194,7 +202,7 @@ void main() {
           trackType: 'personal',
         ),
       )).completion;
-      final c2 = (await childRepo.markComplete(
+      final c2 = (await childOrchestrator.markComplete(
         const CompletionRequest(
           curriculumId: 'mishnayos',
           sefariaRef: 'Mishnah Berachot 1:1',
@@ -228,7 +236,6 @@ void main() {
   group('Story 3.2 -- Chazara stages', tags: ['story_3_2'], () {
     late UserDatabase db;
     late int trackId;
-    late _MockSyncEngine syncEngine;
     late _MockContentRepository contentRepo;
     late CompletionRepositoryImpl repo;
 
@@ -236,9 +243,8 @@ void main() {
       db = _db();
       await seedProfile(db);
       trackId = await seedTrack(db, profileId: 1);
-      syncEngine = _MockSyncEngine();
       contentRepo = _MockContentRepository();
-      repo = _repo(db, syncEngine, contentRepo);
+      repo = _repo(db);
 
       when(
         () => contentRepo.getContentForCurriculum(any()),
@@ -358,7 +364,7 @@ void main() {
       await seedTrack(db, profileId: 1);
       syncEngine = _MockSyncEngine();
       contentRepo = _MockContentRepository();
-      repo = _repo(db, syncEngine, contentRepo);
+      repo = _repo(db);
 
       when(() => syncEngine.pushBookmark(any())).thenAnswer((_) async {});
       when(

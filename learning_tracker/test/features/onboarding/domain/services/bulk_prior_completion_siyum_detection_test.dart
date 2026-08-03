@@ -60,6 +60,7 @@ import 'package:learning_tracker/features/learning/data/repositories/learning_le
 import 'package:learning_tracker/features/learning/domain/entities/bookmark.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/bookmark_repository.dart';
 import 'package:learning_tracker/features/learning/domain/services/completion_detection_service.dart';
+import 'package:learning_tracker/features/learning/domain/services/completion_orchestrator.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/bulk_prior_completion_service.dart';
 import 'package:learning_tracker/features/progress/domain/models/journey_view_model.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/journey_providers.dart';
@@ -340,14 +341,21 @@ void main() {
         stageRepository: stageRepo,
       );
 
-      // Real completion repo, with the detection service injected so the new
-      // F1 dispatch path can fire.
+      // Real completion repo — storage-only since the completion-
+      // orchestrator lift (docs/firestore-rewrite-map.md, owner decision 1).
       completionRepo = CompletionRepositoryImpl(
         database: db,
-        syncEngine: null,
-        contentRepository: contentRepo,
-        completionDetectionService: detectionService,
         activeProfileId: profileId,
+      );
+
+      // Real orchestrator, with the detection service injected so the F1
+      // dispatch path can fire (siyum detection lives here now, not in
+      // CompletionRepositoryImpl).
+      final orchestrator = CompletionOrchestrator(
+        repository: completionRepo,
+        contentRepository: contentRepo,
+        activeProfileId: profileId,
+        completionDetectionService: detectionService,
       );
 
       // Real bulk service that powers the onboarding wizard.
@@ -356,7 +364,7 @@ void main() {
         completionRepository: completionRepo,
         bookmarkRepository: _NoopBookmarkRepository(),
         database: db,
-        syncEngine: null,
+        orchestrator: orchestrator,
         stageRepository: stageRepo,
       );
     });
@@ -382,7 +390,6 @@ void main() {
         curriculumId: CurriculumId.mishnayos,
         resolvedItems: items,
         stageIds: const [1],
-        profileId: profileId,
       );
       expect(result.completionCount, 3);
 
@@ -421,7 +428,6 @@ void main() {
           curriculumId: CurriculumId.mishnayos,
           resolvedItems: items,
           stageIds: const [1],
-          profileId: profileId,
         );
 
         final entries = await db.learningLedgerDao.getEntriesByProfile(
@@ -487,17 +493,20 @@ void main() {
         );
         completionRepo = CompletionRepositoryImpl(
           database: db,
-          syncEngine: null,
-          contentRepository: contentRepo,
-          completionDetectionService: detectionService,
           activeProfileId: profileId,
+        );
+        final orchestrator = CompletionOrchestrator(
+          repository: completionRepo,
+          contentRepository: contentRepo,
+          activeProfileId: profileId,
+          completionDetectionService: detectionService,
         );
         bulkService = BulkPriorCompletionService(
           contentRepository: contentRepo,
           completionRepository: completionRepo,
           bookmarkRepository: _NoopBookmarkRepository(),
           database: db,
-          syncEngine: null,
+          orchestrator: orchestrator,
           stageRepository: stageRepo,
         );
       });
@@ -518,7 +527,6 @@ void main() {
           curriculumId: CurriculumId.chumash,
           resolvedItems: items,
           stageIds: const [1],
-          profileId: profileId,
         );
       }
 

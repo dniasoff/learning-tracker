@@ -675,6 +675,21 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
     }
   }
 
+  /// [profileId] is used only for post-write invalidation ([onTrackChanged])
+  /// below — NOT for the bulk-mark identity itself. `service.execute()` no
+  /// longer accepts a profileId (owner decision 2,
+  /// `docs/firestore-rewrite-map.md`): bulk-marking always targets the
+  /// CURRENTLY ACTIVE profile now. During onboarding, [profileId] here is
+  /// `_createdProfileId` — a newly-created CHILD profile
+  /// (`onboarding_screen.dart`'s `_ScreenPhase.addTrack` phase) — which can
+  /// legitimately differ from `activeProfileIdProvider` at this point in the
+  /// flow, since nothing in `onboarding_screen.dart` switches the session's
+  /// active profile to the child before reaching this step. That is a
+  /// pre-existing gap this method cannot close on its own (out of scope
+  /// here — see `bulk_prior_completion_service.dart`'s `execute` doc
+  /// comment): the fix belongs in onboarding, switching the active profile
+  /// to the child right after profile creation instead of threading its id
+  /// through as a parameter.
   Future<({int itemCount, int completionCount})>
   _applySelfPacedPriorCompletions(
     Set<HierarchySelection> selections, {
@@ -697,7 +712,6 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
       curriculumId: curriculum,
       resolvedItems: resolved,
       stageIds: const [1],
-      profileId: profileId,
     );
 
     // Refresh dashboard/progress/task views immediately.

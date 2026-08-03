@@ -18,11 +18,14 @@ import 'package:learning_tracker/data/firestore/repository_providers.dart'
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_state_service.dart';
+import 'package:learning_tracker/features/learning/data/completion_points_awarder.dart';
+import 'package:learning_tracker/features/learning/data/completion_streak_recorder.dart';
 import 'package:learning_tracker/features/learning/data/repositories/bookmark_repository_impl.dart';
 import 'package:learning_tracker/features/learning/data/repositories/completion_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
+import 'package:learning_tracker/features/learning/domain/services/completion_orchestrator.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../../../helpers/test_database.dart';
@@ -46,6 +49,7 @@ void main() {
   late MockSyncEngine mockSyncEngine;
   late MockContentRepository mockContentRepository;
   late CompletionRepositoryImpl repository;
+  late CompletionOrchestrator orchestrator;
   late int trackId;
   late int learnerId;
 
@@ -104,11 +108,33 @@ void main() {
           ),
         );
 
+    // Post completion-orchestrator lift (`docs/firestore-rewrite-map.md`,
+    // owner decision 1): `repository` is storage-only now. `orchestrator`
+    // wires the same collaborators production does
+    // (`completion_providers.dart`'s `completionOrchestratorProvider`) so
+    // order validation, points, streak, and bookmark advance — the
+    // behaviors this file's tests actually exercise — still fire.
     repository = CompletionRepositoryImpl(
       database: database,
-      syncEngine: mockSyncEngine,
+      activeProfileId: learnerId,
+    );
+    orchestrator = CompletionOrchestrator(
+      repository: repository,
       contentRepository: mockContentRepository,
       activeProfileId: learnerId,
+      bookmarkRepository: BookmarkRepositoryImpl(
+        database: database,
+        syncEngine: mockSyncEngine,
+        contentRepository: mockContentRepository,
+        profileId: learnerId,
+      ),
+      pointsPort: DriftCompletionPointsAwarder(
+        database: database,
+        rewardMilestoneServiceFactory: (profileId) =>
+            RewardMilestoneService(database, profileId: profileId),
+        syncEngine: mockSyncEngine,
+      ),
+      streakPort: DriftCompletionStreakRecorder(database: database),
     );
 
     // Default: no content items (bookmark advance is a no-op)
@@ -142,7 +168,7 @@ void main() {
         trackType: 'personal',
       );
 
-      final completion = (await repository.markComplete(request)).completion;
+      final completion = (await orchestrator.markComplete(request)).completion;
 
       expect(completion.curriculumId, curriculumId);
       expect(completion.sefariaRef, sefariaRef);
@@ -157,7 +183,7 @@ void main() {
       const sefariaRef = 'Mishnah Berachot 1:1';
 
       // Complete stage 1 first
-      await repository.markComplete(
+      await orchestrator.markComplete(
         const CompletionRequest(
           curriculumId: curriculumId,
           sefariaRef: sefariaRef,
@@ -166,9 +192,12 @@ void main() {
         ),
       );
 
-      // Try stage 3, skipping stage 2
+      // Try stage 3, skipping stage 2. Post completion-orchestrator lift
+      // (`docs/firestore-rewrite-map.md`, owner decision 1) this validation
+      // runs in CompletionOrchestrator BEFORE any write — see that class's
+      // doc comment, "Ordering" — not in CompletionRepositoryImpl any more.
       expect(
-        () => repository.markComplete(
+        () => orchestrator.markComplete(
           const CompletionRequest(
             curriculumId: curriculumId,
             sefariaRef: sefariaRef,
@@ -190,8 +219,8 @@ void main() {
         trackType: 'personal',
       );
 
-      final first = (await repository.markComplete(request)).completion;
-      final second = (await repository.markComplete(request)).completion;
+      final first = (await orchestrator.markComplete(request)).completion;
+      final second = (await orchestrator.markComplete(request)).completion;
 
       expect(second.id, first.id);
       expect(second.completedAt, first.completedAt);
@@ -201,7 +230,7 @@ void main() {
       const curriculumId = 'mishnayos';
       const sefariaRef = 'Mishnah Berachot 1:1';
 
-      await repository.markComplete(
+      await orchestrator.markComplete(
         const CompletionRequest(
           curriculumId: curriculumId,
           sefariaRef: sefariaRef,
@@ -212,7 +241,7 @@ void main() {
 
       // Stage 1 on a different track should succeed without requiring
       // stage 1 to be completed on that track first.
-      final chavrusaCompletion = (await repository.markComplete(
+      final chavrusaCompletion = (await orchestrator.markComplete(
         const CompletionRequest(
           curriculumId: curriculumId,
           sefariaRef: sefariaRef,
@@ -251,7 +280,7 @@ void main() {
         );
 
         // Stage 1 completion
-        final c1 = (await repository.markComplete(
+        final c1 = (await orchestrator.markComplete(
           const CompletionRequest(
             curriculumId: curriculumId,
             sefariaRef: 'Mishnah Berachot 1:1',
@@ -261,7 +290,7 @@ void main() {
         )).completion;
 
         // Stage 2 completion (same ref, different stage)
-        final c2 = (await repository.markComplete(
+        final c2 = (await orchestrator.markComplete(
           const CompletionRequest(
             curriculumId: curriculumId,
             sefariaRef: 'Mishnah Berachot 1:1',
@@ -284,20 +313,29 @@ void main() {
       // Injecting a factory whose fake always reports ineligible and
       // observing points drop to 0 conclusively proves the factory seam
       // — not a same-behavior ad-hoc construction — is what's consulted.
+      //
+      // Post completion-orchestrator lift (`docs/firestore-rewrite-map.md`,
+      // owner decision 1): `rewardMilestoneServiceFactory` is a
+      // `CompletionPointsPort` (`DriftCompletionPointsAwarder`) constructor
+      // argument now, not `CompletionRepositoryImpl`'s — the factory seam
+      // itself is unchanged, only which class owns it.
       final fakeReward = MockRewardMilestoneService();
       when(
         () => fakeReward.trackCountsTowardRewardPoints(any()),
       ).thenAnswer((_) async => false);
 
-      final repositoryWithFakeReward = CompletionRepositoryImpl(
-        database: database,
-        syncEngine: mockSyncEngine,
+      final orchestratorWithFakeReward = CompletionOrchestrator(
+        repository: repository,
         contentRepository: mockContentRepository,
         activeProfileId: learnerId,
-        rewardMilestoneServiceFactory: (profileId) => fakeReward,
+        pointsPort: DriftCompletionPointsAwarder(
+          database: database,
+          rewardMilestoneServiceFactory: (profileId) => fakeReward,
+          syncEngine: mockSyncEngine,
+        ),
       );
 
-      final completion = (await repositoryWithFakeReward.markComplete(
+      final completion = (await orchestratorWithFakeReward.markComplete(
         const CompletionRequest(
           curriculumId: 'mishnayos',
           sefariaRef: 'Mishnah Berachot 1:1',
@@ -395,7 +433,7 @@ void main() {
     // through `StreakStateService` rather than the cached `streaks`
     // snapshot.
     test('first completion produces currentStreak=1 via the reducer', () async {
-      await repository.markComplete(
+      await orchestrator.markComplete(
         const CompletionRequest(
           curriculumId: 'mishnayos',
           sefariaRef: 'Mishnah Berachot 1:1',
@@ -420,8 +458,8 @@ void main() {
         trackType: 'personal',
       );
 
-      await repository.markComplete(request);
-      await repository.markComplete(request); // idempotent path
+      await orchestrator.markComplete(request);
+      await orchestrator.markComplete(request); // idempotent path
 
       final state = await StreakStateService(
         db: database,
@@ -506,7 +544,7 @@ void main() {
         ),
       );
 
-      await repository.markComplete(
+      await orchestrator.markComplete(
         const CompletionRequest(
           curriculumId: curriculumId,
           sefariaRef: ref1,
@@ -583,15 +621,21 @@ void main() {
         CurriculumId.mishnayos: [item1, item2],
       });
 
-      // A repository wired with a bookmarkRepositoryFactory carrying a
-      // ContentIndex — mirrors how completionRepositoryProvider wires
-      // production. activeProfileId stays `learnerId`; the bulk request
-      // below targets the delegate profile, so the injected same-profile
+      // An orchestrator wired with a bookmarkRepositoryFactory carrying a
+      // ContentIndex — mirrors how completionOrchestratorProvider wires
+      // production (post completion-orchestrator lift,
+      // `docs/firestore-rewrite-map.md`, owner decision 1 — this seam moved
+      // from CompletionRepositoryImpl to CompletionOrchestrator).
+      // activeProfileId stays `learnerId`; the bulk request below targets
+      // the delegate profile, so the injected same-profile
       // `bookmarkRepository` (unset here) could never apply — only the
       // factory can serve this profile.
       final delegatingRepository = CompletionRepositoryImpl(
         database: database,
-        syncEngine: mockSyncEngine,
+        activeProfileId: learnerId,
+      );
+      final delegatingOrchestrator = CompletionOrchestrator(
+        repository: delegatingRepository,
         contentRepository: mockContentRepository,
         activeProfileId: learnerId,
         bookmarkRepositoryFactory: (profileId) => BookmarkRepositoryImpl(
@@ -603,16 +647,15 @@ void main() {
         ),
       );
 
-      await delegatingRepository.bulkMarkComplete(
+      await delegatingOrchestrator.bulkMarkComplete(
         BulkCompletionRequest(
           curriculumId: curriculumId,
           sefariaRefs: const [ref1],
           stageId: 1,
           trackType: 'personal',
           profileId: delegateProfileId,
-          // Routes through _bulkMarkCompletePriorOptimized — the leanest
-          // path to _advanceBookmark, avoiding unrelated reward/streak
-          // collaborators.
+          // No pointsPort/streakPort wired on this orchestrator — this
+          // request only exercises the bookmark-advance delegation seam.
           awardGamificationPoints: false,
         ),
       );

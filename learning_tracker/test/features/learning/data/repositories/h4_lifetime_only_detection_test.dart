@@ -30,6 +30,7 @@ import 'package:learning_tracker/features/learning/data/repositories/completion_
 import 'package:learning_tracker/features/learning/data/repositories/learning_ledger_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
 import 'package:learning_tracker/features/learning/domain/services/completion_detection_service.dart';
+import 'package:learning_tracker/features/learning/domain/services/completion_orchestrator.dart';
 import 'package:learning_tracker/features/sync/data/outbox_sync_write_facade.dart';
 import 'package:learning_tracker/features/tracks/stages/data/repositories/stage_definition_repository_impl.dart';
 import 'package:mocktail/mocktail.dart';
@@ -96,7 +97,12 @@ void main() {
     ),
   ];
 
-  CompletionRepositoryImpl buildRepo({
+  // Post completion-orchestrator lift (`docs/firestore-rewrite-map.md`,
+  // owner decision 1): siyum detection (the H4 gate under test) now lives
+  // in CompletionOrchestrator, not CompletionRepositoryImpl. Builds a real
+  // orchestrator over a real (storage-only) repository, matching the
+  // original real-components-only intent of this test.
+  CompletionOrchestrator buildOrchestrator({
     required _MockContentRepository contentRepo,
     required _MockOutboxFacade outboxFacade,
   }) {
@@ -126,9 +132,12 @@ void main() {
       ledgerRepository: ledgerRepo,
       stageRepository: stageRepo,
     );
-    return CompletionRepositoryImpl(
+    final repo = CompletionRepositoryImpl(
       database: db,
-      syncEngine: null,
+      activeProfileId: profileId,
+    );
+    return CompletionOrchestrator(
+      repository: repo,
       contentRepository: contentRepo,
       activeProfileId: profileId,
       completionDetectionService: detectionService,
@@ -173,7 +182,7 @@ void main() {
 
         await seedOneStage();
 
-        final repo = buildRepo(
+        final orchestrator = buildOrchestrator(
           contentRepo: contentRepo,
           outboxFacade: outboxFacade,
         );
@@ -182,7 +191,7 @@ void main() {
         // engagement=false (no streak/points) AND achievement=false
         // (no siyum). Historical import — only lifetime counters credited.
         for (final leaf in leaves) {
-          await repo.markComplete(
+          await orchestrator.markComplete(
             CompletionRequest(
               curriculumId: 'mishnayos',
               sefariaRef: leaf.sefariaRef,
@@ -237,13 +246,13 @@ void main() {
 
         await seedOneStage();
 
-        final repo = buildRepo(
+        final orchestrator = buildOrchestrator(
           contentRepo: contentRepo,
           outboxFacade: outboxFacade,
         );
 
         for (final leaf in leaves) {
-          await repo.markComplete(
+          await orchestrator.markComplete(
             CompletionRequest(
               curriculumId: 'mishnayos',
               sefariaRef: leaf.sefariaRef,
@@ -292,14 +301,14 @@ void main() {
 
       await seedOneStage();
 
-      final repo = buildRepo(
+      final orchestrator = buildOrchestrator(
         contentRepo: contentRepo,
         outboxFacade: outboxFacade,
       );
 
       // Defaults: engagement=true, achievement=true (the live profile).
       for (final leaf in leaves) {
-        await repo.markComplete(
+        await orchestrator.markComplete(
           CompletionRequest(
             curriculumId: 'mishnayos',
             sefariaRef: leaf.sefariaRef,

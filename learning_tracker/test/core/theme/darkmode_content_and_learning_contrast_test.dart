@@ -62,7 +62,7 @@ import 'package:learning_tracker/features/content_browsing/presentation/provider
 import 'package:learning_tracker/features/content_browsing/presentation/screens/text_display_screen.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
-import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
+import 'package:learning_tracker/features/learning/domain/services/completion_orchestrator.dart';
 import 'package:learning_tracker/features/learning/domain/use_cases/mark_completion_use_case.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
@@ -213,12 +213,15 @@ TextContent _readerContent() => TextContent.single(
   englishText: 'From when may one recite',
 );
 
-/// Repository whose `markComplete` always throws — drives
+/// Orchestrator whose `markComplete` always throws — drives
 /// `_CompletionSectionState._handleComplete`'s `catch (Exception e, st)`
 /// branch (the real production path that shows the "could not save"
-/// SnackBar) without needing a real completion write to succeed.
-class _ThrowingCompletionRepository extends Mock
-    implements CompletionRepository {}
+/// SnackBar) without needing a real completion write to succeed. Mocks
+/// `CompletionOrchestrator` (not `CompletionRepository`) because
+/// `MarkCompletionUseCase` goes through the orchestrator now — see
+/// `docs/firestore-rewrite-map.md`, owner decision 1.
+class _ThrowingCompletionOrchestrator extends Mock
+    implements CompletionOrchestrator {}
 
 class _FakeFontSizeNotifier extends FontSizeNotifier {
   @override
@@ -271,9 +274,9 @@ Widget _pumpTextDisplayScreen({
   required ThemeData theme,
   required StackRouter router,
 }) {
-  final repo = _ThrowingCompletionRepository();
+  final orchestrator = _ThrowingCompletionOrchestrator();
   when(
-    () => repo.markComplete(
+    () => orchestrator.markComplete(
       any(),
       awardGamificationPoints: any(named: 'awardGamificationPoints'),
       creditsAchievement: any(named: 'creditsAchievement'),
@@ -303,7 +306,7 @@ Widget _pumpTextDisplayScreen({
     ),
     useHebrewTermsProvider.overrideWith(_HebrewTermsOff.new),
     markCompletionUseCaseProvider.overrideWithValue(
-      MarkCompletionUseCase(repo),
+      MarkCompletionUseCase(orchestrator),
     ),
     userDatabaseProvider.overrideWithValue(_readerTestUserDb),
   ];
