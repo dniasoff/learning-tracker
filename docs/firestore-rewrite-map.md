@@ -188,6 +188,47 @@ existence-check semantics. Correct, but forces every tier-filtered read to load 
 profile's entire import set client-side — potentially 10k+ docs after a "I already know
 all of Shas" bulk import.
 
+## Owner decisions (2026-08-03) — the five that unblock the demolition
+
+Each of these was a genuine design question surfaced by an agent refusing to fake
+something, not a translation choice.
+
+1. **Completion side effects move ABOVE the data layer.** Marking something learned does
+   five things beyond saving a record: order validation (no stage 3 before stage 1),
+   points, siyum detection, bookmark advance, streak recording. They live only in the
+   Drift implementation. They are app rules rather than storage concerns, so they lift
+   into a layer above the repository that either storage can sit beneath — written once,
+   not copied. This matters more than usual because a `live` completion is permanent: a
+   wrongly-recorded one can never be corrected.
+
+2. **Bulk-marking always targets the CURRENTLY OPEN profile.** A parent picks the child,
+   the app switches to them, then the marking happens. This removes the need to resolve
+   another profile's identity entirely — there is only ever one profile in play. The
+   previous shape (pass a child's Drift `int` while a different profile is active) had no
+   honest implementation: guessing would write one child's completions onto another,
+   permanently. Onboarding gains an explicit "who is this for?" step.
+
+3. **Progress consumes the new record shape.** `ProgressRepository`'s two record-returning
+   methods change to `CompletionEntity` rather than the Drift `Completion` (which carries
+   an autoincrement id, a profile int and a retired track int). Fix the call sites that
+   actually read those three fields — check each first; most pass the record along rather
+   than reading its ids. The aggregate methods progress uses most (`getAggregateCount`,
+   `getTrackBreakdown`) return plain numbers and were never affected.
+
+4. **Goals are passed by value, not by row number.** The two direct call sites
+   (`TrackEditService.editTrack`, `TrackCreationService`) already hold the goal they are
+   editing, so the `int goalId` is indirection that buys nothing. Note the goal's Firestore
+   id deliberately EXCLUDES `targetPercent`, so editing 50%→75% updates the same document
+   instead of orphaning one (AUD-scheduler-16) — identity cannot simply be "all the
+   fields".
+
+5. **Points balance is derived and clamped at zero.** Sum the append-only `points_ledger`,
+   then clamp to `[0, 2^30)` exactly as the Drift code does, so nothing a user sees
+   changes. Log a warning when the raw sum is negative, so an over-deduction bug stays
+   visible to us rather than being hidden by the clamp. The balance is never stored — a
+   stored counter drifting from its ledger is one of the two dangerous-class defects the
+   ledger design exists to prevent.
+
 ## Owner decisions (2026-08-02)
 
 - **Track purge → extend the `deleteCurriculumTrack` Cloud Function** to sweep the
