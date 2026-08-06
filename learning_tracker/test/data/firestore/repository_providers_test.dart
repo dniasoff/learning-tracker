@@ -16,8 +16,10 @@
 ///
 /// [FirestoreGoalRepository] is used as the representative profile-scoped
 /// repository for the full null-branch matrix (no account/no profile,
-/// account-only, profile-only, both) rather than repeating all four cases
-/// 11 times — every profile-scoped provider shares the exact same
+/// account-only, profile-only, both, and — since T-35's hoist,
+/// `docs/planning/firestore-cutover-log.md` — a tutored session active on
+/// top of both) rather than repeating all five cases 11 times — every
+/// profile-scoped provider shares the exact same
 /// [_watchActiveAccountAndProfile] gate, so this is the one place that gate
 /// itself is exhaustively covered. The "every other profile-scoped
 /// provider resolves" group then spot-checks the remaining repositories
@@ -56,6 +58,7 @@ import 'package:learning_tracker/data/repositories/firestore_profile_program_rep
 import 'package:learning_tracker/data/repositories/firestore_stage_definition_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_streak_event_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_study_day_config_repository.dart';
+import 'package:learning_tracker/features/tutoring/tutoring.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../mocks/mock_repositories.dart';
@@ -313,6 +316,79 @@ void main() {
       expect(firstProfileGoals.docs, hasLength(1));
       expect(secondProfileGoals.docs, hasLength(1));
     });
+
+    // T-35 (docs/planning/firestore-cutover-log.md): the hoisted branch in
+    // _watchActiveAccountAndProfile. Before this, only the bookmark adapter
+    // carried its own copy of this check — every other profile-scoped
+    // provider, including this one, resolved the TUTOR's own account +
+    // profile during a tutored session. This is the regression guard for
+    // that defect at the shared-gate level, not just for bookmarks.
+    test('resolves to null when a tutored session is active — even with both '
+        'account and profile also active, which would otherwise resolve to '
+        "the TUTOR's own repository", () async {
+      final firestore = FakeFirebaseFirestore();
+      final container = ProviderContainer(
+        overrides: [
+          activeAccountFirebaseProvider.overrideWith(
+            (ref) async => _handles(firestore),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      container.read(activeProfileDocIdProvider.notifier).set(_profileId);
+      container
+          .read(activeTutoredProfileSelectionProvider.notifier)
+          .enter(
+            const TutoredProfileSelection(
+              profileId: '42', // the talmid's id in the PARENT's account
+              ownerUid: 'parent-uid',
+              grantId: 'grant-1',
+              permissions: TutorPermissions(),
+            ),
+          );
+
+      final repo = await container.read(firestoreGoalRepositoryProvider.future);
+
+      expect(repo, isNull);
+    });
+
+    test(
+      'exiting the tutored session lets the gate resolve again, scoped to '
+      "the account/profile that were active all along (the TUTOR's own)",
+      () async {
+        final firestore = FakeFirebaseFirestore();
+        final container = ProviderContainer(
+          overrides: [
+            activeAccountFirebaseProvider.overrideWith(
+              (ref) async => _handles(firestore),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+        container.read(activeProfileDocIdProvider.notifier).set(_profileId);
+        container
+            .read(activeTutoredProfileSelectionProvider.notifier)
+            .enter(
+              const TutoredProfileSelection(
+                profileId: '42',
+                ownerUid: 'parent-uid',
+                grantId: 'grant-1',
+                permissions: TutorPermissions(),
+              ),
+            );
+        expect(
+          await container.read(firestoreGoalRepositoryProvider.future),
+          isNull,
+        );
+
+        container.read(activeTutoredProfileSelectionProvider.notifier).exit();
+
+        expect(
+          await container.read(firestoreGoalRepositoryProvider.future),
+          isA<FirestoreGoalRepository>(),
+        );
+      },
+    );
   });
 
   group('firestoreBookmarkRepositoryProvider (family, parameterized on '

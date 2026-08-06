@@ -12,10 +12,6 @@ import 'package:learning_tracker/data/repositories/firestore_bookmark_repository
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/learning/domain/entities/bookmark.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/bookmark_repository.dart';
-// Cross-feature reference goes through the tutoring feature's public barrel
-// (layering Rule 2), never a deep path — this file needs exactly one symbol
-// from it: `activeTutoredProfileSelectionProvider`.
-import 'package:learning_tracker/features/tutoring/tutoring.dart';
 
 /// Implementation of [BookmarkRepository] using Drift database and sync engine.
 ///
@@ -398,53 +394,6 @@ class BookmarkRepositoryNotReadyException implements Exception {
       'yet) — cannot complete a bookmark write until one is active.';
 }
 
-/// Thrown by every [FirestoreBookmarkRepositoryAdapter] write method when a
-/// tutor is currently acting inside a talmid's context
-/// (`activeTutoredProfileSelectionProvider` is non-null).
-///
-/// ## Why a hard refusal rather than "just write it"
-///
-/// A tutored session has **no Firestore learner-profile identity of its
-/// own.** The talmid's real data lives in the PARENT's tree —
-/// `users/{parentUid}/learner_profiles/{childProfileId}/bookmarks/…`,
-/// addressed through the grant's `tutorParentUid`/`tutorRemoteProfileId`
-/// (`LearnerProfiles`, `lib/core/database/tables/learner_profiles.dart`) —
-/// and the tutor's local mirror row is Drift-only:
-/// `ProfileDao.upsertTutoredProfile` mints no `ulid`, so the mirror has no
-/// doc-id anywhere.
-///
-/// Meanwhile `firestoreBookmarkRepositoryProvider` keys solely off
-/// `activeProfileDocIdProvider`, which during a tutored session still holds
-/// the **tutor's own** profile ULID — nothing under `lib/features/tutoring/`
-/// sets it, and nothing can, because there is no ULID to set. So resolving
-/// the owner repository here would address
-/// `users/{tutorUid}/learner_profiles/{tutorOwnUlid}/bookmarks/{curriculumId}`
-/// — the tutor's OWN bookmark. A write would overwrite the tutor's personal
-/// reading position with the talmid's, while the talmid's real bookmark was
-/// never touched: data loss with no error, no exception and no visible
-/// symptom.
-///
-/// Routing tutored writes correctly is a cross-account concern this class
-/// cannot decide on its own (the proxy path is
-/// `functions/src/tutor_writes.ts`'s `tutorUpsertBookmark`, whose
-/// `profileId` contract is still a positive integer, not a ULID). Until
-/// that routing exists, refusing loudly is the only outcome that is not
-/// silent corruption. [CompletionOrchestrator] already wraps its bookmark
-/// advance in a logged `_safeStep`, so this surfaces as a recorded
-/// `completion_bookmark_advance_failed` rather than a lost completion.
-class TutoredBookmarkWriteUnsupportedException implements Exception {
-  const TutoredBookmarkWriteUnsupportedException();
-
-  @override
-  String toString() =>
-      'TutoredBookmarkWriteUnsupportedException: a tutored session has no '
-      'Firestore learner-profile identity, so this write would land on the '
-      "TUTOR's own bookmark document instead of the talmid's. Tutored "
-      'bookmark writes must go through the tutor-proxy Cloud Function '
-      '(functions/src/tutor_writes.ts, tutorUpsertBookmark); that routing '
-      'does not exist yet, so the write is refused rather than misdirected.';
-}
-
 /// Firestore-backed [BookmarkRepository] adapter — the reference pattern
 /// for Epic C's feature-by-feature rewire onto Firestore (see
 /// `lib/data/firestore/repository_providers.dart`'s library doc comment,
@@ -495,11 +444,19 @@ class TutoredBookmarkWriteUnsupportedException implements Exception {
 ///    unchanged out of whichever [BookmarkRepository] method called
 ///    [_resolve], exactly as reading the provider directly would.
 /// 6. **A tutored session is refused outright, not served from the owner
-///    path.** See [TutoredBookmarkWriteUnsupportedException] — the owner
-///    path resolves to the TUTOR's own profile document while a tutor is
-///    inside a talmid's context, so serving it would silently corrupt the
-///    tutor's own data. Every profile-scoped repository rewired onto
-///    Firestore has this same exposure, not just this one.
+///    path — enforced upstream, not here.**
+///    `_watchActiveAccountAndProfile` (`repository_providers.dart`)
+///    resolves to `null` whenever a tutor is acting inside a talmid's
+///    context, before this or any of the other 12 profile-scoped
+///    providers gets a chance to resolve the TUTOR's own profile document
+///    — which is what serving one would silently corrupt (T-35; see
+///    `docs/planning/firestore-cutover-log.md`). This class no longer
+///    carries its own copy of that check: `_resolveOrNull`/`_resolve`
+///    already see the hoisted `null` and handle it exactly like any other
+///    not-ready state (point 4 above). A tutored session and "no account/
+///    profile active yet" are therefore indistinguishable from this
+///    class's callers — both read as [BookmarkRepositoryNotReadyException]
+///    on write, `null` on read.
 class FirestoreBookmarkRepositoryAdapter implements BookmarkRepository {
   FirestoreBookmarkRepositoryAdapter({
     required Ref ref,
@@ -528,22 +485,6 @@ class FirestoreBookmarkRepositoryAdapter implements BookmarkRepository {
     );
   }
 
-  /// `true` while a tutor is acting inside a talmid's context. Read fresh on
-  /// every call for the same reason [_resolveOrNull] is (class doc, point 3):
-  /// a tutor can enter and exit a talmid context mid-session, and this
-  /// adapter caches nothing on `this`.
-  bool get _isTutoredSession =>
-      _ref.read(activeTutoredProfileSelectionProvider) != null;
-
-  /// Guards the three write methods. See
-  /// [TutoredBookmarkWriteUnsupportedException] for why a tutored session is
-  /// refused instead of being served from the owner path.
-  void _assertNotTutoredSession() {
-    if (_isTutoredSession) {
-      throw const TutoredBookmarkWriteUnsupportedException();
-    }
-  }
-
   /// Like [_resolveOrNull], but throws [BookmarkRepositoryNotReadyException]
   /// instead of returning `null` — for the three write methods, which have
   /// no nullable "not ready" value of their own to return. See
@@ -560,17 +501,11 @@ class FirestoreBookmarkRepositoryAdapter implements BookmarkRepository {
   Future<BookmarkEntity?> getBookmark({
     required CurriculumId curriculumId,
   }) async {
-    // A tutored session reads as "nothing to show" for the same reason the
-    // writes throw (see TutoredBookmarkWriteUnsupportedException): the owner
-    // path would return the TUTOR's own bookmark, and presenting the tutor's
-    // reading position as the talmid's is the read-side twin of the write
-    // corruption. Reusing `null` here rather than throwing keeps the
-    // existing "not ready → show a loading/empty state" caller contract.
-    if (_isTutoredSession) return null;
-
-    // Not-ready reads as "nothing to show yet" rather than an exception —
-    // see BookmarkRepositoryNotReadyException's doc comment for why reads
-    // and writes are treated differently here.
+    // Not-ready — including a tutored session, hoisted upstream into
+    // `_watchActiveAccountAndProfile` (point 6 above) — reads as "nothing
+    // to show yet" rather than an exception. See
+    // BookmarkRepositoryNotReadyException's doc comment for why reads and
+    // writes are treated differently here.
     final repo = await _resolveOrNull();
     if (repo == null) return null;
     return repo.getBookmark(curriculumId: curriculumId);
@@ -581,7 +516,6 @@ class FirestoreBookmarkRepositoryAdapter implements BookmarkRepository {
     required CurriculumId curriculumId,
     required String sefariaRef,
   }) async {
-    _assertNotTutoredSession();
     final repo = await _resolve();
     return repo.setBookmark(curriculumId: curriculumId, sefariaRef: sefariaRef);
   }
@@ -591,7 +525,6 @@ class FirestoreBookmarkRepositoryAdapter implements BookmarkRepository {
     required CurriculumId curriculumId,
     required String completedSefariaRef,
   }) async {
-    _assertNotTutoredSession();
     final repo = await _resolve();
     await repo.advanceBookmark(
       curriculumId: curriculumId,
@@ -603,7 +536,6 @@ class FirestoreBookmarkRepositoryAdapter implements BookmarkRepository {
   Future<BookmarkEntity> initializeBookmark({
     required CurriculumId curriculumId,
   }) async {
-    _assertNotTutoredSession();
     final repo = await _resolve();
     return repo.initializeBookmark(curriculumId: curriculumId);
   }

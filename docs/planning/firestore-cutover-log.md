@@ -77,21 +77,23 @@ nothing on disk to diff against. This is the fix, binding from 2026-08-06
 
 ## CURRENT STATE
 
-**Head:** this commit (P2-4) — SHA unknowable within its own commit, same
-self-reference lag as before. Parent is `feefe34b` (P2-3, verified via `git
-log --oneline -1` at P2-4 start).
+**Head:** this commit (P2-5) — SHA unknowable within its own commit, same
+self-reference lag as before. Parent is `b398bea5` (P2-4, verified via `git
+log --oneline -1` at P2-5 start).
 **Deployed:** unknown — nothing deployed this phase yet.
 **Phase:** 0 ✅ · 1 ✅ · **2 in progress** (P2-1 ✅, P2-2 ✅, P2-3 ✅, P2-4 ✅,
-P2-5 through P2-7 not started).
+P2-5 ✅, P2-6 through P2-7 not started).
 **Gates:** `dart analyze --fatal-infos` → `No issues found!` (0 issues in
 both `lib/` and `test/`). `make audit` green (**104** checks, unchanged;
-`=== audit PASSED — all 68 greps clean ===`). Check 104 (PROFILE-ID-INT-SITES)
-unchanged at **88 entries**, 0 new, 0 stale — P2-4 deleted a divergent CF
-call and its buggy doc-id formula, neither of which check 104 tracks (it
-scans `int`-typed profile identity, not doc-id formulas). Check 103's OK
-line and split set are **unchanged**: 2 collections (bookmarks,
-learning_order), 0 new violations. Full `make ci` last green at `5b4d7924`;
-batched to end of Phase 4 by owner decision (2026-08-06).
+`=== audit PASSED — all 68 greps clean ===`) — check 102 specifically fired
+clean, confirming the plan's corrected prediction (§4 P2-5) that it does not
+scan `lib/data/**` and so cannot object to `repository_providers.dart`
+importing `active_tutored_profile_provider.dart` directly. Check 104
+(PROFILE-ID-INT-SITES) unchanged at **88 entries**, 0 new, 0 stale — P2-5
+touches no int-keyed profile-identity site. Check 103's OK line and split
+set are **unchanged**: 2 collections (bookmarks, learning_order), 0 new
+violations. Full `make ci` last green at `5b4d7924`; batched to end of
+Phase 4 by owner decision (2026-08-06).
 
 **IN FLIGHT:** nothing.
 
@@ -124,6 +126,145 @@ stage-definition · study-day-config · track-learning-order.
 ## Entries
 
 Newest first. Append; never rewrite history.
+
+### 2026-08-06 — P2-5 complete: T-35, the tutored guard is hoisted into `_watchActiveAccountAndProfile`
+
+Per `docs/planning/firestore-phase2-plan.md` §4 P2-5, executed exactly as
+written — no draft provider move (that alternative was already deleted from
+the plan and its justification already verified false before this session
+started). `lib/data/firestore/repository_providers.dart`'s
+`_watchActiveAccountAndProfile` now imports
+`lib/features/tutoring/presentation/providers/active_tutored_profile_provider.dart`
+directly and returns `null` the moment
+`ref.watch(activeTutoredProfileSelectionProvider) != null`, **before**
+`activeAccountFirebaseProvider`/`activeProfileDocIdProvider` are even read.
+All 13 profile-scoped `FutureProvider`s funnel through this one function, so
+all 13 now refuse uniformly during a tutored session — previously only
+`bookmark_repository_impl.dart`'s adapter carried its own copy of this
+check, so the other 12 (including the live, unguarded `learning_order`)
+silently resolved the TUTOR's own account + profile instead. Deleted the
+now-redundant per-provider duplication in `bookmark_repository_impl.dart`:
+the `_isTutoredSession` getter, `_assertNotTutoredSession()`, its three call
+sites (`setBookmark`, `advanceBookmark`, `initializeBookmark`), and the
+read-side `if (_isTutoredSession) return null;` branch in `getBookmark`
+(and its explanatory comment) — the hoisted `null` from
+`firestoreBookmarkRepositoryProvider` now produces the exact same outcome
+through the existing not-ready path.
+
+**`TutoredBookmarkWriteUnsupportedException` deleted, not kept** — the
+plan's own conditional (§4 P2-5: "keep... only if a write path still needs
+to distinguish 'refused' from 'not ready'") resolves to *no* here, verified
+before cutting: `grep`ped every call site of the exception and of
+`CompletionOrchestrator._safeStep` (the only caller wrapping a bookmark
+write) — `_safeStep` catches generically (`catch (error, stackTrace)`),
+never by type, so nothing anywhere distinguished the two exceptions at
+runtime even before this commit. Post-hoist, a tutored write reaches
+`_resolve()` exactly the way any other not-ready write does (the provider
+itself now returns `null` uniformly), so the two states are the same
+signal by construction, not by choice — keeping a same-message-different-
+type exception around would have been dead code pretending to be a design
+decision. Its class doc comment (the "why a hard refusal" rationale) is
+preserved in substance, folded into the adapter's class doc comment point
+6, rewritten to cite the hoist instead of the CF's int contract as the plan
+instructed.
+
+**Doc-comment-staleness fix beyond the plan's literal edit list, same rule
+this log names as standing** (`test/data/firestore/repository_providers_test.dart`'s
+own header comment claimed `firestoreGoalRepositoryProvider`'s test group
+is "the one place [`_watchActiveAccountAndProfile`] itself is exhaustively
+covered" over a "full null-branch matrix (no account/no profile,
+account-only, profile-only, both)" — four cases. This commit adds a fifth
+branch to the function the comment describes as exhaustively covered by
+this file, so leaving the matrix at four cases would make the comment's own
+claim false the moment it was written. Fixed by extending the matrix, not
+by narrowing the claim: added two tests — tutored-active-with-both-also-
+active resolves to `null` (the actual regression guard for this commit,
+mirrored at the shared-gate level rather than only on the bookmark adapter
+that already had one), and exiting the tutored session lets the same
+container resolve a real repository again. Verified `TutoredListenerSupervisor
+.detach()` (called inside `ActiveTutoredProfileSelection.exit()`) is a safe
+no-op when nothing was ever attached — `_supervisor` is `null`, so
+`sup?.stop()` short-circuits — before adding the exit half of that test, by
+reading `tutored_listener_supervisor.dart` directly rather than assuming;
+`tutoredListenerSupervisorProvider`'s own construction is synchronous and
+touches nothing external (`resolveDispatcher` is a lazy closure, never
+invoked here). Updated `bookmark_repository_impl_test.dart`'s existing
+"tutored session" group to match the production change: every
+`on TutoredBookmarkWriteUnsupportedException` catch and
+`throwsA(isA<TutoredBookmarkWriteUnsupportedException>())` assertion now
+names `BookmarkRepositoryNotReadyException`, and the group's leading
+comment no longer cites the deleted exception. No test in either file was
+deleted — every scenario the old code proved still has a provable
+equivalent under the new code, unlike P2-4's CF-routing tests, which had no
+equivalent left to assert.
+
+**Gates (verbatim, run after `dart format`, confirmed a second time
+post-format):**
+```
+$ dart analyze --fatal-infos
+Analyzing learning_tracker...
+No issues found!
+
+$ dart run tool/check_profile_path_keying.dart | tail -1
+PROFILE-KEY-SPLIT check OK: 2 collection(s) currently split (bookmarks, learning_order), all within the tracked baseline (0 new violations).
+
+$ dart run tool/check_profile_id_int_sites.dart | tail -1
+PROFILE-ID-INT-SITES OK: 88 tracked site(s) across 5 pattern(s) [cf-int-guard, cf-string-profileid-doc, dart-int-profileid-param, dart-tutoring-int-parse, dart-tutoring-id-tostring]; 0 new, 0 stale.
+
+$ make audit | tail -1
+=== audit PASSED — all 68 greps clean ===   (104/104 checks)
+
+$ dart format <4 touched files>
+Formatted test/data/firestore/repository_providers_test.dart
+Formatted 4 files (1 changed) in 0.04 seconds.
+```
+No deviation. All four gates match the plan's prediction exactly, including
+the corrected one (§4 P2-5: check 102 green because it never scans
+`lib/data/**`) — the plan's own note that the *draft* had predicted 102 as
+the likely failure point, and that this plan's correction of that
+prediction is itself being verified here, held.
+
+**THE DEVIATION THIS COMMIT DELIBERATELY CREATES — not a gate deviation, a
+recorded behavioral regression per the task's own instruction:** after this
+commit, a talmid's scheduler (`learning_order`, live and previously
+unguarded) renders **nothing** during a tutored session, rather than the
+TUTOR's own learning order. This is not "the hoist working" merely because
+the screen is empty — it is empty for the correct reason now (refused)
+where before it was non-empty for a wrong one (silently serving the
+tutor's own tree), but a talmid actually being tutored sees no order at
+all until Phase 3's T-37 builds owner-uid-scoped handles (`uid` currently
+comes from the signed-in account inside `_watchActiveAccountAndProfile`;
+substituting the profile ULID alone, without also substituting the owner's
+`uid`, would address `users/{TUTOR}/learner_profiles/{talmid ULID}` — a
+brand-new wrong tree, not the parent's real one). Not attempted here, per
+the plan's explicit instruction not to.
+
+**Not attempted, per the plan's own instruction (§6 P2-5):** the device
+check — enter a tutored session and confirm every profile-scoped screen is
+empty/loading, specifically that the talmid's scheduler stops showing the
+TUTOR's own learning order (the one observation that discriminates "hoist
+worked" from "screen was already empty for an unrelated reason"). Deferred
+to whoever next has device access; recorded as **D9** below, not as passed.
+
+**Deferred (D1, unchanged from prior phase steps):** `make test` was not
+run. The 4 edited/extended test files compile but were not executed —
+including the two new tests added this commit, whose runtime safety was
+argued from reading `tutored_listener_supervisor.dart` and
+`tutored_pull_providers.dart` directly rather than confirmed by execution.
+
+**D9 (new):** the device check named above — tutored session, every
+profile-scoped screen empty/loading, talmid's scheduler specifically no
+longer shows the TUTOR's own order. No harness runs this automatically;
+device access is required. Distinguishing observation: the disappearance of
+the *tutor's* order, not merely "the screen is empty" (R6 in the phase
+plan's risk register).
+
+**Process note:** this session did not append an IN FLIGHT entry before its
+first edit — flagged, not silently corrected, same gap P2-1's and P2-4's
+entries recorded for themselves. The entry below was appended immediately
+before this closing entry, in the same commit, per the log's own recovery
+rule that a same-commit IN FLIGHT-then-clear is the honest record when the
+work was in fact completed in one uninterrupted sitting.
 
 ### 2026-08-06 — P2-4 complete: T-34, the divergent bookmark writer is deleted
 

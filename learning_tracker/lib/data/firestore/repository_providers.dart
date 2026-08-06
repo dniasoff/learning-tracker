@@ -94,6 +94,14 @@ import 'package:learning_tracker/data/repositories/firestore_streak_event_reposi
 import 'package:learning_tracker/data/repositories/firestore_study_day_config_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_track_learning_order_repository.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
+// Direct import, not the tutoring barrel: this file lives outside
+// lib/features/** and lib/domain/**, so it is outside audit check 102's
+// (`tool/check_dependency_direction.dart`) scan in either direction — the
+// check restricts lib/features/**'s imports of lib/data/**, never the
+// reverse, and it never inspects lib/data/** at all. See
+// _watchActiveAccountAndProfile below for why this one symbol is needed
+// here rather than in each of the 13 providers it feeds.
+import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 
 /// Holds the Firestore ULID doc-id of the "active" learner profile, or
 /// `null` when no profile is active.
@@ -121,11 +129,28 @@ final activeProfileDocIdProvider =
 
 /// Resolves the active account's handles and active profile id together as
 /// one optional pair. Every profile-scoped provider below funnels through
-/// this so "no account active" and "no profile active" collapse to the
-/// same `null` signal instead of each provider re-deriving it.
+/// this so "no account active", "no profile active" and "a tutor is acting
+/// inside a talmid's context" all collapse to the same `null` signal
+/// instead of each provider — or each feature's own repository adapter —
+/// re-deriving it.
+///
+/// **The tutored-session check below is deliberately first, before any
+/// handle resolution.** [activeProfileDocIdProvider] still holds the
+/// TUTOR's own profile ULID during a tutored session — nothing under
+/// `lib/features/tutoring/` sets it, and nothing can, because the tutored
+/// mirror row is Drift-only and carries no ULID (T-35; see
+/// `firestore-phase2-plan.md` §4 P2-5). Resolving handles first and only
+/// then checking would still hand back `(tutorHandles, tutorOwnProfileId)`
+/// on every path that doesn't itself repeat the check — which is exactly
+/// the bug this hoist closes: before this, only the bookmark adapter
+/// carried its own copy of this guard, so the other 12 profile-scoped
+/// providers silently served the tutor's own tree during a tutored
+/// session. Checking here makes all 13 refuse uniformly, with one seam
+/// instead of 13 (or 1, as it was).
 Future<(AccountFirebaseHandles, String)?> _watchActiveAccountAndProfile(
   Ref ref,
 ) async {
+  if (ref.watch(activeTutoredProfileSelectionProvider) != null) return null;
   final handles = await ref.watch(activeAccountFirebaseProvider.future);
   if (handles == null) return null;
   final profileId = ref.watch(activeProfileDocIdProvider);

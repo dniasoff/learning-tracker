@@ -528,11 +528,19 @@ void main() {
     // `activeProfileDocIdProvider` still holds the TUTOR's own profile ULID
     // during a tutored session (nothing under lib/features/tutoring/ sets it,
     // and there is nothing to set — the tutored mirror row is Drift-only and
-    // carries no ULID). So the owner path resolves to
+    // carries no ULID). Left unguarded, the owner path would resolve to
     // users/{tutorUid}/learner_profiles/{tutorOwnUlid}/bookmarks/... — the
-    // tutor's OWN document. Writing there overwrites the tutor's personal
-    // reading position with the talmid's and never touches the talmid's real
-    // bookmark, silently. See TutoredBookmarkWriteUnsupportedException.
+    // tutor's OWN document — and writing there would overwrite the tutor's
+    // personal reading position with the talmid's while never touching the
+    // talmid's real bookmark, silently.
+    //
+    // T-35 (`docs/planning/firestore-cutover-log.md`) hoisted the guard that
+    // used to live only on this adapter into
+    // `_watchActiveAccountAndProfile` (`repository_providers.dart`), so all
+    // 13 profile-scoped providers now refuse uniformly, before any handle
+    // resolution — this adapter no longer carries its own tutored-session
+    // check. A tutored write consequently reads the same way any other
+    // not-ready write does: [BookmarkRepositoryNotReadyException].
     group('tutored session (tutor acting inside a talmid context)', () {
       late FakeFirebaseFirestore firestore;
       late ProviderContainer container;
@@ -605,7 +613,7 @@ void main() {
               curriculumId: CurriculumId.mishnayos,
               completedSefariaRef: _ref1,
             );
-          } on TutoredBookmarkWriteUnsupportedException {
+          } on BookmarkRepositoryNotReadyException {
             // Expected — pinned separately below.
           }
 
@@ -621,13 +629,13 @@ void main() {
       );
 
       test('advanceBookmark throws '
-          'TutoredBookmarkWriteUnsupportedException', () async {
+          'BookmarkRepositoryNotReadyException', () async {
         await expectLater(
           adapter.advanceBookmark(
             curriculumId: CurriculumId.mishnayos,
             completedSefariaRef: _ref1,
           ),
-          throwsA(isA<TutoredBookmarkWriteUnsupportedException>()),
+          throwsA(isA<BookmarkRepositoryNotReadyException>()),
         );
       });
 
@@ -639,7 +647,7 @@ void main() {
               curriculumId: CurriculumId.mishnayos,
               sefariaRef: _ref3,
             );
-          } on TutoredBookmarkWriteUnsupportedException {
+          } on BookmarkRepositoryNotReadyException {
             // Expected.
           }
 
@@ -648,10 +656,10 @@ void main() {
       );
 
       test('initializeBookmark throws '
-          'TutoredBookmarkWriteUnsupportedException', () async {
+          'BookmarkRepositoryNotReadyException', () async {
         await expectLater(
           adapter.initializeBookmark(curriculumId: CurriculumId.mishnayos),
-          throwsA(isA<TutoredBookmarkWriteUnsupportedException>()),
+          throwsA(isA<BookmarkRepositoryNotReadyException>()),
         );
       });
 
