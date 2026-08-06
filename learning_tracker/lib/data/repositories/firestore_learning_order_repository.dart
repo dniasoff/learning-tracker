@@ -160,18 +160,21 @@
 ///   `saveSedarimOrder`/`saveMasechtosOrder`/`TrackLearningOrderRepository
 ///   .resetToDefault`) — see "The collision finding" above.
 ///
-/// ## Kept, still flagged — NOT silently guessed at
+/// ## [resetToDefault] — real delete, not a fixed-slot overwrite (T-33)
 ///
-/// - **[resetToDefault] throws [UnimplementedError].** The Drift path
-///   deletes every row for the curriculum so a subsequent read falls back to
-///   natural content order. `firestore.rules` denies `delete` on
-///   `learning_order` unconditionally (`allow delete: if false`), exactly
-///   like `stage_definitions` — but unlike that collection, there is no
-///   FIXED, small set of known doc-ids to overwrite-in-place instead
-///   (`FirestoreStageDefinitionRepository.resetToDefaults` overwrites 3
-///   known `stage_order` slots; a curriculum's custom order can touch an
-///   arbitrary, caller-chosen subset of that curriculum's drag-level items,
-///   with no fixed universe to target). See [resetToDefault]'s doc comment.
+/// Unlike `stage_definitions` (`FirestoreStageDefinitionRepository
+/// .resetToDefaults`, which overwrites 3 known `stage_order` slots because a
+/// curriculum's custom order can touch an arbitrary, caller-chosen subset of
+/// that curriculum's drag-level items, with no fixed universe to overwrite in
+/// place), [resetToDefault] genuinely deletes: it queries every
+/// `learning_order` document for the curriculum and batch-deletes them, so a
+/// subsequent [getOrder]/[watchOrder] read falls back to natural content
+/// order because no documents remain to override it. This was previously
+/// unbuildable — `firestore.rules` denied `delete` on `learning_order`
+/// unconditionally (`allow delete: if false`) — until T-33's rules change
+/// (`allow delete: if isOwner(uid)`, matching the `goals` collection's
+/// precedent: `create`/`update` were already owner-writable, so forbidding
+/// removal protected nothing).
 library;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -426,27 +429,23 @@ class FirestoreLearningOrderRepository {
     await batch.commit();
   }
 
-  /// Resets [curriculumId]'s custom order to natural content order.
-  ///
-  /// **Not implemented — no honest Firestore mapping exists today.** See
-  /// the class doc comment's "Kept, still flagged" section: the Drift path
-  /// DELETEs every row for the curriculum, but `firestore.rules` denies
-  /// `delete` on `learning_order` unconditionally, and — unlike
-  /// `stage_definitions`, which overwrites a fixed 3-slot universe instead
-  /// of deleting — a curriculum's custom order can touch an arbitrary,
-  /// caller-chosen subset of items, so there is no fixed doc-id set to
-  /// overwrite-in-place either. Whoever wires this repository into the app
-  /// needs a rules change (a soft-delete/superseded marker field, or a
-  /// narrow one-time `delete` allowance) or a server-side reset path
-  /// (Cloud Function, Admin SDK) — not a client-side workaround here.
-  Future<void> resetToDefault(CurriculumId curriculumId) {
-    throw UnimplementedError(
-      'resetToDefault: firestore.rules denies delete on learning_order '
-      '(allow delete: if false) and there is no fixed set of doc-ids to '
-      'overwrite in place (unlike stage_definitions\' 3 known slots) — see '
-      'the class doc comment\'s "Kept, still flagged" section. Needs a '
-      'rules change or a server-side reset path, not a client-side '
-      'workaround.',
-    );
+  /// Resets [curriculumId]'s custom order to natural content order by
+  /// deleting every `learning_order` document for [curriculumId] — mirrors
+  /// `LearningOrderRepositoryImpl.resetToDefault`'s Drift DELETE exactly
+  /// (delete every row for the curriculum so a subsequent read falls back to
+  /// natural content order, since [getOrder]/[watchOrder] treat an empty
+  /// result set as "no custom order"). See the class doc comment's "Kept,
+  /// still flagged" section for why this was previously unbuildable
+  /// (`firestore.rules` denied owner delete on `learning_order`) and T-33 for
+  /// the rules change that closed the gap (`allow delete: if isOwner(uid)`,
+  /// matching the `goals` collection's precedent).
+  Future<void> resetToDefault(CurriculumId curriculumId) async {
+    final snapshot = await _queryForCurriculum(curriculumId).get();
+    if (snapshot.docs.isEmpty) return;
+    final batch = _firestore.batch();
+    for (final doc in snapshot.docs) {
+      batch.delete(doc.reference);
+    }
+    await batch.commit();
   }
 }

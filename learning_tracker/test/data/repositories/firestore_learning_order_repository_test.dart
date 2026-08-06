@@ -3,26 +3,29 @@
 /// Epic B. Covers: doc-id correctness, content-enrichment round-trip (both
 /// the custom-order branch and the natural-content-order fallback), the
 /// composite-index-shaped `curriculum_id` + `user_sort_order` query,
-/// reorder/save semantics, `resetToDefault`'s documented
-/// [UnimplementedError], stream emission, decode leniency (a malformed
-/// document, and the legacy `ref` field alias), and — the load-bearing
-/// group — the `learning_order` doc-id collision finding described in the
-/// class doc comment: two Drift tables (`LearningOrder`, curriculum-scoped,
-/// and `TrackLearningOrder`, track-scoped) map onto this ONE Firestore
-/// collection, and the "doc-id collision" group below proves concretely why
-/// this repository only ports the curriculum-scoped side.
+/// reorder/save semantics, `resetToDefault`'s real delete (T-33), stream
+/// emission, decode leniency (a malformed document, and the legacy `ref`
+/// field alias), and — the load-bearing group — the `learning_order` doc-id
+/// collision finding described in the class doc comment: two Drift tables
+/// (`LearningOrder`, curriculum-scoped, and `TrackLearningOrder`,
+/// track-scoped) map onto this ONE Firestore collection, and the "doc-id
+/// collision" group below proves concretely why this repository only ports
+/// the curriculum-scoped side.
 ///
 /// **What these tests cannot see** (same limitation as
 /// `firestore_goal_repository_test.dart` /
 /// `firestore_stage_definition_repository_test.dart`):
 /// `fake_cloud_firestore`'s rules companion cannot evaluate
 /// `resource.data`/`request.resource`, so `learning_order`'s rules
-/// `.hasOnly()` field whitelist and its `allow delete: if false` are NOT
-/// exercised as an enforcement mechanism here — a permissive fake is used
-/// throughout (`createFakeFirestore()` default, `strictRules: false`). The
-/// "rules whitelist has no discriminator field" test below reads
-/// `firestore.rules` as TEXT instead (the only way to check a `.hasOnly()`
-/// list `fake_cloud_firestore` cannot evaluate) — matching
+/// `.hasOnly()` field whitelist and its (T-33) `allow delete: if
+/// isOwner(uid)` are NOT exercised as an enforcement mechanism here — a
+/// permissive fake is used throughout (`createFakeFirestore()` default,
+/// `strictRules: false`), so `resetToDefault`'s delete below proves the
+/// repository's own query+batch-delete logic, not that the deployed rules
+/// permit it (that is P2-6's D2, deferred to the CI phase's emulator
+/// matrix). The "rules whitelist has no discriminator field" test below
+/// reads `firestore.rules` as TEXT instead (the only way to check a
+/// `.hasOnly()` list `fake_cloud_firestore` cannot evaluate) — matching
 /// `docs/firestore-rewrite-map.md`'s guidance that rules correctness for
 /// `strictRules: true` cases "rests on reading the rules text". The
 /// resubscribe-with-backoff behavior [FirestoreLearningOrderRepository
@@ -485,15 +488,82 @@ void main() {
     });
   });
 
-  group('resetToDefault — flagged, not silently guessed at', () {
-    test('throws UnimplementedError (no rules-legal delete path exists)', () {
+  group('resetToDefault — real delete (T-33)', () {
+    test('deletes every learning_order document for the curriculum, leaving '
+        'other curricula untouched', () async {
       final repo = buildRepo();
+      await repo.saveOrder(CurriculumId.mishnayos, [
+        LearningOrderItem(
+          sefariaRef: berakhot.sefariaRef,
+          displayNameHe: '?',
+          displayNameEn: '?',
+          userSortOrder: 0,
+        ),
+        LearningOrderItem(
+          sefariaRef: peah.sefariaRef,
+          displayNameHe: '?',
+          displayNameEn: '?',
+          userSortOrder: 0,
+        ),
+      ]);
+      await repo.saveOrder(CurriculumId.bavli, [
+        const LearningOrderItem(
+          sefariaRef: 'Berakhot 2a',
+          displayNameHe: '?',
+          displayNameEn: '?',
+          userSortOrder: 0,
+        ),
+      ]);
 
-      expect(
-        () => repo.resetToDefault(CurriculumId.mishnayos),
-        throwsA(isA<UnimplementedError>()),
+      await repo.resetToDefault(CurriculumId.mishnayos);
+
+      final mishnayosRefs = await repo.getCustomOrderRefs(
+        CurriculumId.mishnayos,
       );
+      final bavliRefs = await repo.getCustomOrderRefs(CurriculumId.bavli);
+      expect(
+        mishnayosRefs,
+        isEmpty,
+        reason: 'every document for the reset curriculum must be gone',
+      );
+      expect(bavliRefs, [
+        'Berakhot 2a',
+      ], reason: 'a different curriculum\'s documents must be untouched');
     });
+
+    test('getOrder falls back to natural content order once reset', () async {
+      final repo = buildRepo();
+      await repo.saveOrder(CurriculumId.mishnayos, [
+        LearningOrderItem(
+          sefariaRef: demai.sefariaRef,
+          displayNameHe: '?',
+          displayNameEn: '?',
+          userSortOrder: 0,
+        ),
+      ]);
+
+      await repo.resetToDefault(CurriculumId.mishnayos);
+      final result = await repo.getOrder(CurriculumId.mishnayos, allItems);
+
+      expect(result.map((i) => i.sefariaRef), [
+        berakhot.sefariaRef,
+        peah.sefariaRef,
+        demai.sefariaRef,
+      ]);
+      expect(result.every((i) => !i.isCustomOrdered), isTrue);
+    });
+
+    test(
+      'no-ops without error when the curriculum has no saved documents',
+      () async {
+        final repo = buildRepo();
+
+        await repo.resetToDefault(CurriculumId.mishnayos);
+
+        final refs = await repo.getCustomOrderRefs(CurriculumId.mishnayos);
+        expect(refs, isEmpty);
+      },
+    );
   });
 
   group('watchOrder — stream emits on change', () {

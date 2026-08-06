@@ -453,7 +453,12 @@ service cloud.firestore {
               'curriculum_id', 'sefaria_ref', 'ref', 'user_sort_order',
               'updated_at', 'synced_at'
             ]);
-          allow delete: if false;
+          // Owner delete permitted — matches the `goals` precedent above
+          // (see its rationale comment at the `goals` block): `create`/
+          // `update` are already owner-writable here, so a client can
+          // already replace a learning-order entry's fields arbitrarily;
+          // forbidding removal protected nothing.
+          allow delete: if isOwner(uid);
         }
 
         // track_learning_order — per-track (sedarim/masechtos) custom

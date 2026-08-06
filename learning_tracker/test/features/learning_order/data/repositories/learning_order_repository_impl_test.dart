@@ -544,11 +544,25 @@ void main() {
         expect(refs, isEmpty);
       });
 
-      test('resetToDefault propagates the documented UnimplementedError rather '
-          'than swallowing it', () async {
+      test('resetToDefault (T-33) deletes the saved order through to the same '
+          'document tree getOrder reads from', () async {
+        await adapter.saveOrder(CurriculumId.mishnayos, saveItems);
+
+        await adapter.resetToDefault(CurriculumId.mishnayos);
+
+        final rawRepo = FirestoreLearningOrderRepository(
+          firestore: firestore,
+          uid: uid,
+          profileId: profileDocId,
+        );
+        final refs = await rawRepo.getCustomOrderRefs(CurriculumId.mishnayos);
         expect(
-          () => adapter.resetToDefault(CurriculumId.mishnayos),
-          throwsA(isA<UnimplementedError>()),
+          refs,
+          isEmpty,
+          reason:
+              'resetToDefault propagates through to the real '
+              'FirestoreLearningOrderRepository.resetToDefault delete — '
+              'no swallowing, no UnimplementedError any more (T-33).',
         );
       });
 

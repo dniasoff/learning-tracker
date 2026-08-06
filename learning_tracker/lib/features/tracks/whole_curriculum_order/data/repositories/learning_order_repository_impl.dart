@@ -316,21 +316,24 @@ class LearningOrderRepositoryNotReadyException implements Exception {
 /// [LearningOrderRepositoryImpl.saveOrder]'s own guard so behaviour is
 /// unchanged for callers of the domain interface.
 ///
-/// ## [resetToDefault] is NOT force-fitted into working
+/// ## [resetToDefault] — real delete, propagated unchanged (T-33)
 ///
-/// [FirestoreLearningOrderRepository.resetToDefault] throws
-/// [UnimplementedError] by design — `firestore.rules` denies `delete` on
-/// `learning_order` unconditionally and there is no fixed doc-id set to
-/// overwrite in its place (see that method's own doc comment). This adapter
-/// does not swallow or paper over that gap; it propagates it unchanged,
-/// exactly like every other genuine resolution failure in this file (see
-/// [FirestoreBookmarkRepositoryAdapter]'s doc comment, point 5). Fixing it
-/// for real needs a `firestore.rules` change or a server-side reset path —
-/// out of scope here, same as the reference repository's own author
-/// flagged it. `LearningOrderScreen._resetToDefault`'s catch clause was
-/// widened from `on Exception` to a bare `catch` so this (an [Error], not
-/// an [Exception]) still surfaces the screen's existing "reset failed"
-/// snackbar instead of an unhandled crash — see that screen's doc comment.
+/// [FirestoreLearningOrderRepository.resetToDefault] used to throw
+/// [UnimplementedError] — `firestore.rules` denied `delete` on
+/// `learning_order` unconditionally and there was no fixed doc-id set to
+/// overwrite in its place. T-33 closed both gaps: the rules now permit
+/// `allow delete: if isOwner(uid)` (matching the `goals` precedent), and
+/// the repository deletes every document for the curriculum outright
+/// instead of overwriting a fixed slot set (see that method's own doc
+/// comment). This adapter still does not swallow or paper over a genuine
+/// resolution failure — it propagates whatever the underlying repository
+/// does, exactly like every other write in this file (see
+/// [FirestoreBookmarkRepositoryAdapter]'s doc comment, point 5) — but a
+/// successful call now actually completes the reset instead of always
+/// throwing. `LearningOrderScreen._resetToDefault`'s catch clause is back to
+/// `on Exception`, narrowed from the bare `catch` that only ever existed to
+/// survive the now-deleted [UnimplementedError] (an [Error], not an
+/// [Exception]) — see that screen's doc comment.
 class FirestoreLearningOrderRepositoryAdapter
     implements LearningOrderRepository {
   FirestoreLearningOrderRepositoryAdapter({required Ref ref}) : _ref = ref;
@@ -391,9 +394,8 @@ class FirestoreLearningOrderRepositoryAdapter
   @override
   Future<void> resetToDefault(CurriculumId curriculumId) async {
     final repo = await _resolve();
-    // Propagates FirestoreLearningOrderRepository's UnimplementedError
-    // unchanged — see the class doc comment's "resetToDefault is NOT
-    // force-fitted into working" section.
+    // Real delete now (T-33) — see the class doc comment's "[resetToDefault]
+    // — real delete, propagated unchanged" section.
     await repo.resetToDefault(curriculumId);
   }
 }

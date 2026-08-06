@@ -77,23 +77,25 @@ nothing on disk to diff against. This is the fix, binding from 2026-08-06
 
 ## CURRENT STATE
 
-**Head:** this commit (P2-5) — SHA unknowable within its own commit, same
-self-reference lag as before. Parent is `b398bea5` (P2-4, verified via `git
-log --oneline -1` at P2-5 start).
-**Deployed:** unknown — nothing deployed this phase yet.
+**Head:** this commit (P2-6) — SHA unknowable within its own commit, same
+self-reference lag as before. Parent is `30790fef` (P2-5, verified via `git
+log --oneline -1` at P2-6 start).
+**Deployed:** unknown — the rules change this commit makes (`learning_order`
+`allow delete`) is **NOT deployed**. The tree is ahead of the deployed rules;
+deployment is the owner's call, not this agent's. Do not attribute a device
+`permission-denied` on `learning_order` delete to a code defect until this
+field says otherwise.
 **Phase:** 0 ✅ · 1 ✅ · **2 in progress** (P2-1 ✅, P2-2 ✅, P2-3 ✅, P2-4 ✅,
-P2-5 ✅, P2-6 through P2-7 not started).
+P2-5 ✅, P2-6 ✅, P2-7 not started).
 **Gates:** `dart analyze --fatal-infos` → `No issues found!` (0 issues in
 both `lib/` and `test/`). `make audit` green (**104** checks, unchanged;
-`=== audit PASSED — all 68 greps clean ===`) — check 102 specifically fired
-clean, confirming the plan's corrected prediction (§4 P2-5) that it does not
-scan `lib/data/**` and so cannot object to `repository_providers.dart`
-importing `active_tutored_profile_provider.dart` directly. Check 104
-(PROFILE-ID-INT-SITES) unchanged at **88 entries**, 0 new, 0 stale — P2-5
-touches no int-keyed profile-identity site. Check 103's OK line and split
-set are **unchanged**: 2 collections (bookmarks, learning_order), 0 new
-violations. Full `make ci` last green at `5b4d7924`; batched to end of
-Phase 4 by owner decision (2026-08-06).
+`=== audit PASSED — all 68 greps clean ===`). Check 104 (PROFILE-ID-INT-SITES)
+unchanged at **88 entries**, 0 new, 0 stale — P2-6 touches no int-keyed
+profile-identity site. Check 103's OK line and split set are **unchanged**: 2
+collections (bookmarks, learning_order), 0 new violations — adding a delete
+to an already-live-split ULID repo moves no bucket, exactly as predicted.
+Full `make ci` last green at `5b4d7924`; batched to end of Phase 4 by owner
+decision (2026-08-06).
 
 **IN FLIGHT:** nothing.
 
@@ -126,6 +128,121 @@ stage-definition · study-day-config · track-learning-order.
 ## Entries
 
 Newest first. Append; never rewrite history.
+
+### 2026-08-06 — P2-6 complete: T-33, `learning_order` owner delete (rules + code, one commit)
+
+Per `docs/planning/firestore-phase2-plan.md` §4 P2-6, executed exactly as
+written. `firestore.rules`'s `learning_order` block: `allow delete: if
+false;` → `allow delete: if isOwner(uid);`, with a comment pointing at the
+`goals` precedent (`firestore.rules:525`) — its rationale applies verbatim:
+`create`/`update` are already owner-writable there, so forbidding removal
+protected nothing.
+`lib/data/repositories/firestore_learning_order_repository.dart`'s
+`resetToDefault` no longer throws `UnimplementedError`: it queries every
+`learning_order` document for the curriculum (`_queryForCurriculum`) and
+batch-deletes them, mirroring `LearningOrderRepositoryImpl.resetToDefault`'s
+Drift DELETE — a subsequent `getOrder`/`watchOrder` read falls back to
+natural content order because no documents remain to override it.
+`learning_order_screen.dart`'s `_resetToDefault` catch clause is narrowed
+from a bare `catch (e, st)` back to `on Exception` — the widening only ever
+existed to survive the now-deleted `UnimplementedError` (an `Error`, not an
+`Exception`).
+
+**Doc-comment staleness fixed in the same commit, beyond the plan's literal
+three-item edit list, per this log's own standing rule** (a stale comment has
+already cost a live feature here): `firestore_learning_order_repository.dart`'s
+class doc comment had a whole "Kept, still flagged — NOT silently guessed at"
+section built entirely around `resetToDefault` throwing `UnimplementedError`
+by design — rewritten as "`[resetToDefault]` — real delete, not a fixed-slot
+overwrite (T-33)". A second file the plan's edit list did not name,
+`learning_order_repository_impl.dart` (the adapter wrapping
+`FirestoreLearningOrderRepository`), had its own class-doc-comment section
+("## `[resetToDefault]` is NOT force-fitted into working") built on the same
+now-false premise, plus an inline comment at its `resetToDefault` override
+citing that section by name — both rewritten to describe the real delete and
+the reverted catch clause. Left alone, either would have been a load-bearing
+lie about a method whichever reader encountered it next would have had to
+disprove by reading the implementation anyway — exactly the failure mode
+this log's standing facts name.
+
+**Test staleness fixed in the same commit, same rule, following the P2-2
+through P2-5 precedent of not leaving a test that compiles but asserts
+retired behavior:** `test/data/repositories/firestore_learning_order_repository_test.dart`'s
+`resetToDefault` group asserted `throwsA(isA<UnimplementedError>())` — a
+scenario that can no longer be constructed now the method actually deletes.
+Replaced with three behavioral tests: deletes every document for the reset
+curriculum while leaving another curriculum's documents untouched;
+`getOrder` falls back to natural content order once reset; resetting a
+curriculum with no saved documents no-ops without error. The file's own
+top-of-file doc comment (which described `resetToDefault`'s "documented
+`UnimplementedError`" as a thing these tests cover, and separately claimed
+`allow delete: if false` as the untested rules fact) was rewritten to match:
+the delete below proves the repository's own query+batch-delete logic
+against a permissive fake, not that the *deployed* rules permit it — that
+distinction is this same commit's D2, below.
+`test/features/learning_order/data/repositories/learning_order_repository_impl_test.dart`
+had one matching stale test on `FirestoreLearningOrderRepositoryAdapter`
+("resetToDefault propagates the documented UnimplementedError rather than
+swallowing it") — replaced with a test asserting the adapter's
+`resetToDefault` call actually deletes through to the same document tree
+`getOrder` reads from. Both files' remaining tests (including
+`learning_order_screen_save_failure_test.dart`'s "reset whose resetToDefault
+throws surfaces a visible error" test, which throws a plain `Exception` from
+its fake repository) needed no change — the catch-narrowing to `on
+Exception` does not affect them, since production `Exception`-typed failures
+(the only kind a real Firestore write can throw) were never the reason the
+bare `catch` existed.
+
+**Gates (verbatim, run after `dart format`):**
+```
+$ dart analyze --fatal-infos
+Analyzing learning_tracker...
+No issues found!
+
+$ dart run tool/check_profile_path_keying.dart | tail -1
+PROFILE-KEY-SPLIT check OK: 2 collection(s) currently split (bookmarks, learning_order), all within the tracked baseline (0 new violations).
+
+$ dart run tool/check_profile_id_int_sites.dart | tail -1
+PROFILE-ID-INT-SITES OK: 88 tracked site(s) across 5 pattern(s) [cf-int-guard, cf-string-profileid-doc, dart-int-profileid-param, dart-tutoring-int-parse, dart-tutoring-id-tostring]; 0 new, 0 stale.
+
+$ make audit | tail -1
+=== audit PASSED — all 68 greps clean ===   (104/104 checks)
+
+$ dart format <7 touched files>
+Formatted 7 files (2 changed) in ~0.05 seconds.
+```
+No deviation. All four gates match the plan's prediction exactly (§4 P2-6):
+`dart analyze` green; check 103 unchanged (`learning_order` was already a
+baselined split — adding a delete to an already-live ULID repo moves no
+bucket); check 104 unchanged (no int-keyed profile-identity site touched);
+`make audit` green.
+
+**CRITICAL — the rules change has no gate in this phase, exactly as the
+plan states.** `make test-rules` is `ci:`-only and barred this phase, and
+`fake_cloud_firestore`'s strict mode cannot evaluate custom `function`
+declarations (`isOwner(uid)`), so a strict-mode run would deny the owner
+too, not just a stranger — it is not a usable substitute even if it were
+allowed. All four gates run above are green whether or not the
+`firestore.rules` line was touched at all. **Deferred verification, D2 (per
+the plan's own table, §6 P2-6):** that `learning_order`'s `allow delete: if
+isOwner(uid)` actually permits the owner and denies a stranger. Recorded,
+not deployed — deployment is the owner's decision, not this agent's. See
+`CURRENT STATE`'s `Deployed:` field above, now stating explicitly that the
+rules in the tree are ahead of the rules deployed on Firestore.
+
+**Not attempted, per the plan's own instruction (§6 P2-6):** the device
+check — deploy rules to the dev project, reset a learning order to default,
+confirm the documents are gone from
+`users/{uid}/learner_profiles/{ULID}/learning_order/`, and the negative
+control (a signed-out/other-account client is denied). Not executable
+without a deploy, which is out of scope for this agent.
+
+**Deferred (D1, unchanged from prior phase steps):** `make test` was not
+run. The 2 edited/extended test files compile but were not executed —
+including the new/rewritten `resetToDefault` tests in both files, whose
+correctness was argued from reading `_queryForCurriculum`'s query shape and
+`_firestore.batch()`/`SetOptions` usage directly, not confirmed by
+execution.
 
 ### 2026-08-06 — P2-5 complete: T-35, the tutored guard is hoisted into `_watchActiveAccountAndProfile`
 
