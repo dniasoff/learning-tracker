@@ -77,52 +77,51 @@ nothing on disk to diff against. This is the fix, binding from 2026-08-06
 
 ## CURRENT STATE
 
-**Head:** `6422b4d3` (P2-10). This commit (P2-11) hardens audit check 104
-against the fail-open a mid-phase review found (SERIOUS DEFECT 3 / T-42
-item 3, plus its two folded-in MINOR items) — `6422b4d3` remains the
-correct SHA for a cold agent to diff a tree against until P2-11's own SHA
-is knowable (same self-reference lag as every prior closing commit).
+**Head:** `00db9af1` (P2-11). This commit (P2-12) is docs/comments-only —
+one doc-comment edit in `repository_providers.dart`, the rest is this log
+plus `firestore-cutover-tasks.md` — `00db9af1` remains the correct SHA for
+a cold agent to diff a tree against until P2-12's own SHA is knowable
+(same self-reference lag as every prior closing commit).
 **Deployed:** still `unknown — not deployed`. P2-6's `learning_order allow
-delete` rules change is **NOT deployed**; P2-7 through this commit (P2-11)
-are all docs/`tool`/`Makefile`-only and deploy nothing. Do not attribute a
-device `permission-denied` on `learning_order` delete to a code defect
-until this field says otherwise.
-**Phase:** 0 ✅ · 1 ✅ · **2 — IN PROGRESS, NOT RESOLVED** (P2-0 ✅, P2-1 ✅,
-P2-2 ✅, P2-3 ✅, P2-4 ✅, P2-5 ✅, P2-6 ✅, P2-7 ✅ docs-only, P2-8 ✅ fixed
-BLOCKING DEFECT 1 (T-40), P2-9 ✅ fixed BLOCKING DEFECT 2 (T-41), P2-10 ✅
-fixed four of `T-42`'s minor items, **P2-11 ✅ fixed `T-42` item 3 (check
-104's dedup fail-open) plus its two folded-in MINOR items (the
-`_patternListHash` overclaim and the silent-unreadable-file swallow)**).
-**Both BLOCKING defects remain fixed; no new one found this commit.**
-`T-42`'s remaining items — the D9 criterion, the `repository_providers.dart`
-stale reason, and the P2-1 entry's false verification claim — are
-untouched by this commit, out of its scope exactly as they were out of
-P2-8's, P2-9's and P2-10's. **Phase 3 must not start until `T-42` is
-triaged/resolved-or-explicitly-deferred** — that is still the ONLY
-remaining Phase-2-exit condition; no BLOCKING defect remains.
-**Gates (P2-11, re-confirmed against HEAD after the fix):** `dart analyze
---fatal-infos` → `No issues found!`. `make audit` green, exit 0, **104**
-checks, true last line (no parenthetical) `=== audit PASSED — all 68 greps
-clean ===`. Check 103's OK line and split set **unchanged**:
-`PROFILE-KEY-SPLIT check OK: 2 collection(s) currently split (bookmarks,
-learning_order), all within the tracked baseline (0 new violations).`
-Check 104's tracked **location set is unchanged** — the same 88
-`<pattern-id> <file>:<symbol>` locations as before this commit, verified by
-diffing the old baseline's location list against the new one with every
-` xN` suffix stripped, byte-identical — but the gate now reports it
-honestly as **88 entries covering 91 site(s)**, not "88 tracked site(s)"
-(the mislabel `T-42` item 3 flagged, and which disagreed with this very
-`CURRENT STATE` block's own prior "88 entries" wording). The extra 3 sites
-were always there, uncounted: `dart-tutoring-id-tostring`'s
-`_ChildGrantsSection.build` entry alone covers 4 raw
-`.id.toString()` occurrences (lines 206/293/298/312), not 1 — the exact
-undercounting the dedup fail-open produced. Both count-only ratchets
-(check 100 MCF-11, check 101 bare-Firebase-instance) re-measured
-**unchanged** at their tracked baselines (39, 2). Full `make ci` last
-green at `5b4d7924`; still batched to end of Phase 4 by owner decision
-(2026-08-06) — unchanged.
+delete` rules change is **NOT deployed**; P2-7 through this commit (P2-12)
+are all docs/`tool`/`Makefile`-only (P2-12 also touches one doc comment)
+and deploy nothing. Do not attribute a device `permission-denied` on
+`learning_order` delete to a code defect until this field says otherwise.
+**Phase:** 0 ✅ · 1 ✅ · **2 ✅** (P2-0 ✅, P2-1 ✅, P2-2 ✅, P2-3 ✅, P2-4 ✅,
+P2-5 ✅, P2-6 ✅, P2-7 ✅ docs-only, P2-8 ✅ fixed BLOCKING DEFECT 1 (T-40),
+P2-9 ✅ fixed BLOCKING DEFECT 2 (T-41), P2-10 ✅ fixed four of `T-42`'s
+minor items, P2-11 ✅ fixed `T-42` item 3 (check 104's dedup fail-open)
+plus its two folded-in MINOR items, **P2-12 ✅ triaged `T-42`'s three
+remaining sub-items (D9 criterion, `repository_providers.dart`'s stale
+reason, the P2-1 false-verification claim) and added the full KNOWN
+ISSUES / CARRIED FINDINGS disposition table — see that entry, above**).
+**Both BLOCKING defects fixed; `T-42` has no open sub-item left; no new
+defect found this commit.** Per `CURRENT STATE`'s own long-standing exit
+condition ("`T-42` triaged/resolved-or-explicitly-deferred... is the ONLY
+remaining Phase-2-exit condition; no BLOCKING defect remains"), **Phase 2
+is resolved as of this commit** — meaning the documentation record is
+truthful and every raised finding has a disposition, matching how Phase 0
+and Phase 1 were marked resolved. It does **not** mean every deferred
+device check ran: D1–D14 (P2-12's consolidated table, above) remain open
+and are the end-of-cutover CI phase's problem, not a Phase-3-start blocker
+(Phase 3's own T-37/T-39 prerequisites are separate, tracked in
+`firestore-cutover-tasks.md`).
+**Gates (P2-12, re-confirmed against HEAD; no code-behavior change so no
+gate was expected to move and none did):** `dart analyze --fatal-infos` →
+`No issues found!`. `make audit` green, exit 0, **104** checks, true last
+line (no parenthetical) `=== audit PASSED — all 68 greps clean ===`. Check
+103's OK line and split set **unchanged**: `PROFILE-KEY-SPLIT check OK: 2
+collection(s) currently split (bookmarks, learning_order), all within the
+tracked baseline (0 new violations).` Check 104 **unchanged**: `88 tracked
+entries covering 91 site(s) ...; 0 new, 0 stale, 0 changed`. Both
+count-only ratchets **unchanged** at their tracked baselines (39, 2). Full
+`make ci` last green at `5b4d7924`; still batched to end of Phase 4 by
+owner decision (2026-08-06) — unchanged.
 
-**IN FLIGHT:** nothing.
+**IN FLIGHT:** nothing. (This field held the full P2-12 edit-list — 12
+items — from before this commit's first edit until this commit landed the
+code, per the IN FLIGHT protocol above; the completed record is the P2-12
+entry itself, below, not this field.)
 
 **Live on Firestore (4):** bookmarks · learning-order · profile identity ·
 scheduler learning-order read. **Unchanged this phase** — Phase 2 moved no
@@ -173,6 +172,449 @@ stage-definition · study-day-config · track-learning-order.
 ## Entries
 
 Newest first. Append; never rewrite history.
+
+### 2026-08-07 — P2-12: correct the Phase 2 record — false regression, false verification, carried findings
+
+**Docs and comments only — no behaviour change**, per the brief. This
+entry closes out `T-42`'s three sub-items still open after P2-8 (T-40),
+P2-9 (T-41), P2-10 (four minor items) and P2-11 (three more) — the D9
+device-check criterion, `repository_providers.dart`'s stale reason, and
+the P2-1 entry's false verification claim — and adds the durable KNOWN
+ISSUES record this log's own "Convention for agent briefs" section
+("**Report** — not silently absorb — anything contradicting the standing
+facts") has been missing since P2-7 first transcribed an end-of-phase
+review's findings. (Citing that section by name, not by line number — this
+entry's own insertion above it has already shifted every line number below
+it once, which is exactly why the rest of this entry cites section names
+and commit SHAs instead of line numbers wherever the target sits below
+this insertion point.)
+**Every claim below was re-verified directly against the code on this
+tree before being written — not copied from the review JSON that
+assigned this work.** Where re-verification found the review's claim did
+not hold, that is recorded as a rejection, with evidence, not silently
+fixed.
+
+#### KNOWN ISSUES / CARRIED FINDINGS — full disposition
+
+Every finding raised by any mid-phase verifier or the end-of-phase review
+this phase ran, with what happened to it. "v21"/"v22"/"v25" below are the
+review JSON's own labels for the three mid-phase verifiers (6, 6 and 4
+findings respectively, all "defective" verdicts); the end-of-phase review
+itself is the JSON P2-7 through this entry both draw from.
+
+| # | Finding | Raised by | Disposition |
+|---|---|---|---|
+| 1 | Activation heal missing (deleted lazy backfill's replacement fires only at creation) | v22 (BLOCKING) | **Fixed, `8dea756b` (P2-8, T-40).** `ProfileRepository.ensureRemoteProfile` now fires on every `selectedProfileIdProvider` change via `app_shell.dart`'s listener. |
+| 2 | Two live paths (`upsertFromSync`, `DataExportImportService`) still insert `ulid IS NULL` rows; P2-3 made that a hard crash | v22 (BLOCKING) | **Fixed, `ed42c894` (P2-9, T-41).** Both now refuse/carry the real identity (`ProfileSyncMissingUlidException`; export/import `ulid` both ways). |
+| 3 | D9's recorded device-check criterion ("scheduler renders NOTHING") is factually wrong | v25 (serious) | **Fixed, `d083df77` (P2-7)** — corrected criterion already written into the Deferred Verification table's D9 row that commit added. **Re-verified fresh this commit, independent of the review JSON** — see "Re-verified — D9's criterion" below. Only the *documentation* was open (this `T-42` sub-item); the underlying device check itself remains D9, still unrun, correctly tracked as deferred, not as an open defect. |
+| 4 | `repository_providers.dart`'s doc comment gives a false reason for the tutored refusal ("carries no ULID") | v25 (serious) | **Fixed, this commit.** See "Fixed — the false reason" below; code comment corrected in `lib/data/firestore/repository_providers.dart`, `firestore-cutover-tasks.md`'s T-37 row updated to match. |
+| 5 | Check 104 dedups `<pattern-id> <file>:<symbol>`, so N matching lines inside one baselined symbol collapse to 1 entry | v21 (serious) | **Fixed, `00db9af1` (P2-11, T-42 item 3).** Per-location occurrence counts (`xN`) now ratchet; a changed `N` fails as CHANGED. |
+| 6 | The P2-1 entry's "17/5/61/2/3 exact equality" verification claim is false | v21 (serious) | **Corrected, this commit.** See "Corrected — P2-1's false verification claim" below. |
+| 7 | No mid-phase verifier finding was ever written into the durable log | v25 (serious) | **Fixed, `d083df77` (P2-7)** — the BLOCKING/SERIOUS/MINOR transcription in that entry is the remedy. **Extended, this commit** — the table you are reading now is the first *disposition* record (fixed/rejected/carried), as opposed to a bare transcription. |
+| 8 | The offline-first non-fatal contract is broken — the provider read sits outside `_ensureFirestoreProfile`'s `try`/`catch` | v22 (serious) | **Fixed, `8dea756b` (P2-8).** Moved back inside the `try`, per that entry's fix 4. |
+| 9 | "Exactly one site mints a profile's identity" is false — four live fallbacks plus a dormant fifth formula | v21 (minor) | **Reconciled, `6422b4d3` (P2-10) + re-measured fresh this commit.** See "Reconciled — exactly one site mints" below — true for every *reachable* call, with one residual caveat recorded, not previously stated precisely. |
+| 10 | P2-3 silently fixed a null-ULID-row bug P2-2 shipped, no deviation recorded | v21 (minor) | **Investigated, this commit — REJECTED as stated.** See "Investigated and rejected" below: no persisted row was ever created with `ulid IS NULL` by the diff in question. |
+| 11 | P2-3's lib-side blast radius (9 files, 4 new crash sites) was never recorded as a deviation | v21 (minor) | **Recorded, this commit** as a proper four-part deviation. See "Recorded — P2-3's lib-side blast radius" below. |
+| 12 | Four "verbatim" gate blocks print a `(104/104 checks)` parenthetical `make audit` never printed | v25 (minor) | **Fixed, this commit.** The four blocks (P2-3, P2-4, P2-5, P2-6 entries) are corrected in place, with a note outside each quote per the brief's instruction. |
+| 13 | `_patternListHash` hashes only prose, not the matching logic | v21 (minor) | **Fixed, `00db9af1` (P2-11).** Patterns are now data (scope/needles/regex); the hash covers `matchSignature` too. |
+| 14 | Check 104 swallows unreadable files silently (`on FileSystemException { continue; }`) | v21 (minor) | **Fixed, `00db9af1` (P2-11).** Ported check 103's `_readLinesVerified`/`_SuspectRead` loud-abort machinery. |
+| 15 | `BookmarkRepositoryNotReadyException`'s doc comment/`toString()` name only two causes, not the tutored refusal | v25 (minor) | **Fixed, `6422b4d3` (P2-10).** Both now name all three causes. |
+| 16 | `ensureDefaultProfile`'s adapter/impl double-decision can strand a profile permanently | v25 (minor) | **Fixed, `8dea756b` (P2-8).** Collapsed to one post-hoc decision via `ProfileRepositoryImpl.tryGetProfileById`. |
+| 17 | Commit `4877c7ef`'s message ("~31 sites baselined") was already false when written (first run measured 88) | v25 (minor) | **Uncorrectable at the source (commit messages cannot be amended); durable pointer recorded, this commit.** See "Recorded — commit `4877c7ef`'s message" below. |
+| 18 | Git hygiene: two stashes, disclosure incomplete (tree reads clean by accident; 18-day-old stash reindexed) | v25 (minor) | **Already substantially disclosed** in the "Known stashes" section and `d083df77` (P2-7)'s git-hygiene paragraph. **Re-verified unchanged, this commit** — see "Re-verified — the stash situation" below. |
+
+No row above is "carried with no owner" — every finding this phase's
+verifiers raised now has either a landed fix (with commit) or a reasoned
+rejection (with evidence). The only genuinely open work is the D-numbered
+*device checks* themselves (D1–D14 below), which were never claimed done
+and are correctly tracked as deferred, not as defects.
+
+#### Re-verified — D9's criterion (finding 3)
+
+Read the three files the corrected criterion cites, directly, on this
+tree — not trusted from the review JSON or from `d083df77`'s own table:
+
+- `lib/features/scheduler/domain/services/scheduler_engine.dart:531-561`
+  (`_buildOrderedRefs`) — confirmed: when `customOrder.isEmpty`, the method
+  falls through to `List.of(contentItems)..sort((a, b) =>
+  a.sortOrder.compareTo(b.sortOrder))` — natural content order, not an
+  empty list.
+- `lib/features/scheduler/data/repositories/scheduler_learning_order_repository_impl.dart:138`
+  (`getOrder`) — confirmed: `if (repo == null) return const [];` — the
+  hoisted guard makes the *custom* order empty, which is exactly the input
+  `_buildOrderedRefs` above already falls back on.
+- `lib/features/tracks/whole_curriculum_order/data/repositories/learning_order_repository_impl.dart:372`
+  (`getOrder`) returns `const []` the same way (→ the reorder screen's
+  `noItemsToOrder` state); `:358` (`_resolve`, used by `saveOrder` and
+  `resetToDefault`) throws `const LearningOrderRepositoryNotReadyException()`
+  — confirming the *reorder screen*, not the scheduler, is what actually
+  goes empty/throws.
+
+**Conclusion: the corrected criterion `d083df77` (P2-7) wrote into the
+Deferred Verification table is accurate.** Nothing needed re-writing there
+— what was missing was a *closure* record, since `CURRENT STATE` and
+`firestore-cutover-tasks.md`'s `T-42` row both still listed "D9 criterion"
+among the open sub-items even though the correction text already existed.
+Closed here. The device check itself (walk into a tutored session and
+observe both the reorder screen and the scheduler) remains **D9**,
+unexecuted — that is unchanged and is not what was open.
+
+#### Fixed — the false reason (finding 4)
+
+`lib/data/firestore/repository_providers.dart`'s
+`_watchActiveAccountAndProfile` doc comment said the tutored mirror row
+"is Drift-only and carries no ULID." Verified false, directly:
+`lib/core/database/daos/profile_dao.dart:296-311`
+(`ProfileDao.upsertTutoredProfile`'s insert branch) sets
+`ulid: Value(remoteChildProfileId)` — has, since P2-2 (`0d5d9125`). The
+comment's *conclusion* (tutored sessions must still refuse here) was
+always correct; only the *stated reason* was false, and it directly
+misdirects whoever picks up Phase 3's `T-37` (owner-uid-scoped handles) —
+exactly the risk `d083df77`'s SERIOUS DEFECT 2 named.
+
+**Fix:** rewrote the comment to state the real reason —
+`_watchActiveAccountAndProfile` pairs whatever id it is given with
+`activeAccountFirebaseProvider`'s handles, which during a tutored session
+are the **tutor's own**; wiring the talmid's real ULID in here would still
+resolve `users/{TUTOR}/learner_profiles/{talmid ULID}` (a document that
+does not exist), not the parent's real
+`users/{ownerUid}/learner_profiles/{talmid ULID}`. Reading the parent's
+tree needs an owner-uid-scoped handle seam — `T-37`, not a value plugged
+in here. `firestore-cutover-tasks.md`'s `T-37` row updated in the same
+commit to match (the "known trap" it warned about is now fixed at its
+source, so a cold implementer reading the comment is no longer
+misdirected — the underlying wrong-tree architectural trap itself is
+unchanged and still what `T-37` must avoid).
+
+`dart analyze --fatal-infos` on the touched file: `No issues found!`.
+`dart format`: `Formatted 1 file (0 changed)` (already correctly
+formatted). Doc-comment-only edit; no test, gate, or check-102/103/104 scan
+target touches this symbol's *body* (only its comment changed), so no
+gate number was expected to move and none did (full gate block below).
+
+#### Corrected — P2-1's false verification claim (finding 6)
+
+The P2-1 entry (above, append-only, unedited) claims its collapse-defect
+fix was verified "until all five patterns' printed counts equal their raw
+`grep -c` counts exactly (17/5/61/2/3 — no further silent collapses)."
+Re-measured fresh this commit with `dart run
+tool/check_profile_id_int_sites.dart --report`, current tree:
+
+```
+cf-int-guard              — 17 entries, 17 site(s)
+cf-string-profileid-doc   —  5 entries,  5 site(s)
+dart-int-profileid-param  — 61 entries, 61 site(s)
+dart-tutoring-int-parse   —  2 entries,  2 site(s)
+dart-tutoring-id-tostring —  3 entries,  6 site(s)
+TOTAL: 88 tracked entries covering 91 site(s)
+```
+
+**The claim is false, precisely as `d083df77` (P2-7) already flagged in
+SERIOUS DEFECT 4 — and P2-11's entries/sites split now lets it be stated
+exactly instead of approximately.** Four of the five patterns' entry
+counts equal their raw site counts (17=17, 5=5, 61=61, 2=2); the fifth,
+`dart-tutoring-id-tostring`, does not (3 entries, 6 raw sites) — by the
+tool's own design, not a scanner defect: `manage_tutors_screen.dart`'s
+`_ChildGrantsSection.build` alone accounts for 4 of those 6 sites under
+one baselined entry (`x4`, lines 206/293/298/312), and `_onRefresh`/
+`_refreshAll` each contribute one more (their own single-occurrence
+entries). The P2-1 entry's claimed "17/5/61/2/**3**" was a claim about
+*entries* worded as if it were independent verification against *raw*
+`grep -c`, for a pattern whose own tool doc comment
+(`check_profile_id_int_sites.dart:64-68` at the time, still true in
+substance today) says deliberately collapses multiple sites per symbol.
+The equality never held for that one pattern, and — per this log's
+append-only rule — the P2-1 entry above is not rewritten; this is the
+durable correction a cold agent should trust instead. **A cold agent
+re-running the P2-1 entry's stated check will correctly find 3 ≠ 6, and
+should read that as the tool working as designed (per the entries/sites
+split above), not as a scanner regression.**
+
+#### Reconciled — "exactly one site mints" (finding 9)
+
+Re-measured fresh, not assumed from `6422b4d3`'s (P2-10) own entry:
+
+```
+$ grep -rn "DocIds.mintProfileUlid()" lib/
+lib/features/profiles/data/repositories/profile_repository_impl.dart:58:
+    String _resolveProfileUlid(String? ulid) => ulid ?? DocIds.mintProfileUlid();
+```
+
+— the qualified form `DocIds.mintProfileUlid()` is now genuinely called
+from exactly one place in `lib/`, matching P2-10's claim. **One residual
+caveat P2-10 did not state precisely, recorded here:** `doc_ids.dart`
+itself contains a *second*, unqualified call —
+`lib/data/firestore/doc_ids.dart:661`
+(`learnerProfileUlidDocId`'s `... ?? mintProfileUlid();`, no `DocIds.`
+prefix since it's inside the same class) — invisible to a grep for the
+qualified form. Checked whether this second call site is reachable:
+`grep -rn "learnerProfileUlidDocId" lib/ | grep -v doc_ids.dart` returns
+nothing — `learnerProfileUlidDocId` itself has no caller anywhere in
+`lib/`, confirming this is the same "dormant fifth formula" `d083df77`
+(P2-7) already named in its MINOR DEFECTS list, unchanged by P2-10 (P2-10's
+edits were entirely inside `profile_repository_impl.dart`, never touched
+`doc_ids.dart`). **So: "exactly one site mints" is now true for every
+call reachable from production** (the qualified, single-site invariant
+P2-10 built); a literal "how many places does the source text call
+`mintProfileUlid()`" count is 2, not 1, if the dormant, unreached formula
+is included. Recorded precisely rather than left at P2-10's "exactly one"
+wording, which was correct about production but did not scope itself to
+"reachable" explicitly.
+
+#### Investigated and rejected — "P2-3 silently fixed a bug P2-2 shipped" (finding 10)
+
+**Re-verified against the actual diff before writing anything — this
+finding does NOT hold as stated.** The claim: `feefe34b` (P2-3) added
+`ulid: resolvedUlid` to `ProfileRepositoryImpl.ensureDefaultProfile`'s
+insert, implying that between `0d5d9125` (P2-2) and `feefe34b`, that path
+"created null-ULID rows."
+
+`git diff 0d5d9125 feefe34b -- lib/features/profiles/data/repositories/profile_repository_impl.dart`
+shows exactly one hunk adding `ulid: resolvedUlid`, at (then) line 396.
+Read in context (`git show 0d5d9125:...:360-405`): this is **not** the
+Drift row insert. The real Drift insert
+(`LearnerProfilesCompanion.insert(..., ulid: Value(resolvedUlid))`,
+~20 lines earlier in the same method) already carried `ulid` correctly at
+`0d5d9125` — unchanged by `feefe34b`. The hunk `feefe34b` touches instead
+constructs a **transient, in-memory `ProfileModel(...)` object**, used
+solely as the argument to `_toFirestorePayload(...)` for the legacy
+`_syncEngine?.pushLearnerProfile(...)` call (the OLD int-keyed sync-engine
+mirror push, unrelated to the new Firestore repository) — and
+`_toFirestorePayload` builds a `LearnerProfileRow` that has **no `ulid`
+field at all** (`LearnerProfileCodec` has never carried one, on either
+side — the standing fact this log already records under "Standing facts,"
+re-confirmed directly at `profile_repository_impl.dart`'s
+`_toFirestorePayload`, ~line 76-87, and `LearnerProfileCodec` itself).
+That transient object is discarded immediately after the call; it is never
+persisted, never read back, and its `ulid` field — null or not — was never
+observed by anything. `feefe34b`'s addition of `ulid: resolvedUlid` here
+is **compiler-driven** (satisfying `ProfileModel.ulid`'s new `required`
+constraint from the same commit), not a runtime bug fix.
+
+**Conclusion: no persisted `learner_profiles` row was ever created with
+`ulid IS NULL` by this specific code path, at any point between `0d5d9125`
+and `feefe34b`.** P2-2's log entry's present-tense claim ("no more window
+where a row exists with `ulid IS NULL` on a path this adapter controls")
+**holds** for the real Drift row this whole time — it is not falsified by
+this diff hunk, contrary to the finding as raised. Per the brief's own
+instruction ("if you conclude an assigned defect is NOT real, say so with
+evidence and do not 'fix' it"), no deviation is recorded for this finding
+beyond this rejection; nothing in the code or the P2-2 entry needed
+correcting.
+
+#### Recorded — P2-3's lib-side blast radius (finding 11, four-part deviation)
+
+- **Predicted** (`firestore-phase2-plan.md` §4 P2-3, verbatim): "4
+  construction sites in `lib/` (`profile_repository_impl.dart:96`,
+  `:381`, the factory `:14`, `fromDriftRow` `:51`) and 43 test files / 67
+  occurrences."
+- **Actual, measured now** (`git show --name-only feefe34b`, filtered to
+  non-generated `lib/` paths): **9 files** — `notifications_bootstrap.dart`,
+  `device_restore_screen.dart`, `router_provider.dart`,
+  `sign_in_controller.dart`, `profile_repository_impl.dart`,
+  `profile_model.dart`, `profile_providers.dart`, `profile_picker_screen.dart`,
+  `profile_switcher_sheet.dart`. Of these, **four new production crash
+  sites** were added (confirmed via `git diff 0d5d9125 feefe34b` on each):
+  `device_restore_screen.dart` (`ProfileModel.fromDriftRow(profiles.first)`),
+  `sign_in_controller.dart` **×2** (`reconcileProfile`, `soleProfile`, same
+  pattern), and `router_provider.dart`'s `setSelectedProfileId` closure
+  (`ulid ?? (throw StateError(...))`, inline, not routed through
+  `fromDriftRow`). `notifications_bootstrap.dart`'s edit is NOT a new crash
+  site — it added a `model == null` early-return guard, strictly safer than
+  before.
+- **Why the prediction was wrong (mechanism, not a person):** the plan's
+  blast-radius count named *construction sites* inside the two files where
+  `ProfileModel` is defined/directly built, not every caller that would
+  need to start supplying (or start crashing without) a `ulid:` once
+  `select()`'s signature changed. `router_provider.dart` and
+  `notifications_bootstrap.dart` were already known movers (P2-2 touched
+  both for the same reason), but `device_restore_screen.dart` and
+  `sign_in_controller.dart` construct `ProfileModel` indirectly, by routing
+  a Drift row through `ProfileModel.fromDriftRow` purely to satisfy
+  `select`'s new required parameter — a caller-side consequence of a
+  callee-side signature change, one hop further from the 4 sites the plan
+  counted directly.
+- **Invariant unaffected:** the test-side deviation (43→47/48 files) was
+  already recorded in full four-part form in P2-3's own entry above; check
+  103's OK line/split set and check 104's count/scan-set are unaffected
+  (none of the 9 files is a doc-id formula or a profile-path collection,
+  and none introduces a NEW int-typed profile-identity site — these are
+  `ProfileModel` construction/consumption sites, outside both scanners'
+  scope by design). The four new crash sites are exactly what BLOCKING
+  DEFECT 2 (T-41, `d083df77`) already named and `ed42c894` (P2-9)
+  addressed **upstream** (stopping the null-`ulid` writers, not softening
+  `fromDriftRow`) — this deviation record does not reopen that; it
+  documents that the *surface* these four sites represent was larger than
+  planned, which is why T-41's fix had to be upstream rather than local.
+
+#### Recorded — commit `4877c7ef`'s message (finding 17)
+
+`4877c7ef`'s message reads, in full: *"Named-entry ratchet: a new site
+fails, a stale baseline line fails. Prints its scan set, so 'N sites' is a
+claim about the code, not the scanner. **Ships green with ~31 sites
+baselined** — same shape as 103's Phase-1 green."* The bolded clause was
+**already false when written**: the plan's own instruction
+(`firestore-phase2-plan.md:125`) was explicit that "≈31 is a prediction;
+the first run's printed number is the fact, and that number goes verbatim
+into the log" — and the first run, in the same commit, measured **88**,
+recorded correctly (as a measured fact, in full four-part deviation form)
+in the P2-1 log entry above. The commit message itself never got that
+correction; it states the wrong number as an accomplished fact, in past
+tense ("ships... baselined"), not as the prediction it actually was.
+**Commit messages cannot be amended.** This paragraph is the durable
+correction: a cold agent reading `git log` before this file should trust
+the P2-1 log entry's "**Actual: 88 entries**" over the commit message's
+"~31 sites baselined."
+
+#### Re-verified — the stash situation, unchanged (finding 18)
+
+```
+$ git stash list
+stash@{0}: WIP on dev: d74e3829 docs(planning): durable task list + recovery log; mark Phase 1 resolved
+stash@{1}: WIP on (no branch): 8855b9b1 fix(tracks): AUD-tracks-18 - de-duplicate Hebrew-script detection regex
+
+$ git reflog show stash
+9796dba5 stash@{0}: WIP on dev: d74e3829 ...
+d30884bd stash@{1}: WIP on (no branch): 8855b9b1 ...
+
+$ git status --porcelain
+(empty, before this commit's own edits)
+```
+
+Identical to what `d083df77` (P2-7) and the "Known stashes" section
+already recorded: same two bases, same order, same reflog timestamps — no
+new stash pushed since 2026-08-06 19:52:02. **This confirms, rather than
+newly discloses, what was already written:** the "Known stashes" section
+(below, in this same file) already identifies both stashes by **base
+commit**, already states the working tree reads clean only because
+`stash@{0}` (base `d74e3829`) holds the 8 `_bmad/**` files (falsifying
+plan §1's "exactly 8 modified `_bmad` files" claim on the live tree, by
+design of an accident, not agent behavior), already states the mechanism
+is **unattributed** ("some process in this environment other than the
+executing agent creates stashes autonomously"), and already instructs
+never to pop/apply/drop either. **The one thing genuinely added by this
+verification: confirmation that nothing has drifted since P2-7** — the
+18-day-old stash's reindex from `stash@{0}` to `stash@{1}` (documented at
+the "Known stashes" section's own header) happened once, during P2-0, and
+has not recurred. Neither stash was popped, applied, or dropped by this
+commit.
+
+#### Confirmed — the Deferred Verification table is complete on disk (D1–D14)
+
+**This finding predates `d083df77` (P2-7)** — the review JSON that raised
+it (`unlanded_plan_items`) measured a tree at `2e85b097`, i.e. *before*
+`d083df77` landed the full D1–D12 attribution table (above, in the P2-7
+entry) that supersedes the plan's own §6 table. Re-checked against the
+live file, this commit: D1 through D12 are present in the P2-7 entry's
+table, in full, each with its "Recorded before this entry?" column. Two
+more were added since, inline in their own entries rather than in that
+master table (append-only — the P2-7 table itself cannot be edited to add
+rows without violating this file's own "never rewrite history" rule):
+**D13** (`ed42c894`, P2-9 — `make test` on the four touched sync/export
+suites) and **D14** (`6422b4d3`, P2-10 —
+`flutter test test/core/navigation/profile_guard_test.dart`). Consolidated
+here, once, as the complete attribution map a CI-phase reviewer should
+read — this table does not replace the P2-7 table (which stays as the
+historical record of what D1–D12 covered and when), it extends it:
+
+| ID | Skipped ci-only / device check | Commit | Where fully described |
+|---|---|---|---|
+| D1 | `make test` (Dart suite), all P2-2..P2-6 touched files | P2-2..P2-6 | P2-7 table |
+| D2 | `make test-rules` — `learning_order` owner delete/deny | P2-6 | P2-7 table |
+| D3 | `make test-functions` — regression only this phase | — (Phase 3) | P2-7 table |
+| D4 | `make test-serial-tools` → `audit_and_arb_parity_test.dart` | P2-1 | P2-7 table |
+| D5 | `check_lcov_denominator.dart --strict` + 60% floor | P2-2, P2-3, P2-5 | P2-7 table |
+| D6 | `dart format --set-exit-if-changed` | all commits | P2-7 table (closed: 85 files, 0 changed) |
+| D7 | `make audit` exit-code assertion test (`skip:`-disabled) | whole phase | P2-7 table |
+| D8 | Writer/reader agreement for CF-mediated paths | — (Phase 3) | P2-7 table |
+| D9 | Device: tutored session, corrected criterion | P2-5 | P2-7 table; re-verified above, this entry |
+| D10 | Device: P2-2's proving check + R4 mitigation | P2-2 | P2-7 table |
+| D11 | Device: P2-6 deploy + reset + negative control | P2-6 | P2-7 table (prose, no ID, until P2-7) |
+| D12 | Behavioural check, null-ulid producers vs `fromDriftRow` | P2-2, P2-3 | P2-7 table |
+| **D13** | `make test` (or the four named suites) for T-41's fix | P2-9 | P2-9 entry only, `ed42c894` |
+| **D14** | `flutter test test/core/navigation/profile_guard_test.dart` for T-42's `ProfileGuard` fix | P2-10 | P2-10 entry only, `6422b4d3` |
+
+**Tests that will pass misleadingly, restated for the CI-phase reviewer
+(unchanged from P2-7's table, still true):** all 14
+`test/data/repositories/firestore_*_test.dart` take `profileId` as a
+constructor argument and never touch identity resolution;
+`doc_ids_test.dart:244-249` cross-checks `DocIds.bookmarkDocId` against a
+*different* `pushBookmark` method with the same name as T-34's subject and
+stays green either way; the 104-test rules matrix is green regardless of
+keying. **New for this table:** the `ProfileGuard` tests P2-10 rewrote
+(`test/core/navigation/profile_guard_test.dart`) will pass or fail
+honestly on their own merits once run (D14) — they are not on the
+misleading list — but they have not been run yet, so their correctness
+today still rests on the trace P2-10's entry recorded, not on execution.
+
+#### Re-measured — both count-only ratchets, verbatim (finding 12 from the plan's own §6, not the numbered table above)
+
+```
+$ dart run tool/check_mcf11_autoincrement_id_in_payload_ratchet.dart | tail -1
+MCF-11 autoincrement-id-in-payload ratchet passed — 39 site(s) outside merge/ (tracked baseline: 39, AD-5/AD-28, docs/test-artifacts/mcf11-autoincrement-id-in-payload-sweep.md).
+
+$ dart run tool/check_bare_firebase_instance_ratchet.dart | tail -1
+Bare-Firebase-instance ratchet passed — 2 site(s) (tracked baseline: 2, AD-2/AD-28).
+```
+
+Both unchanged from `d083df77` (P2-7)'s first phase-exit measurement (39,
+2) and every gate block since. **Restated, not newly found:** `d083df77`
+already recorded that no step ran either ratchet standalone before phase
+exit, so this is still their re-confirmation, not their first measurement
+— that process fact does not change by re-measuring again here.
+
+#### T-42 closed
+
+With all three of its remaining sub-items now triaged (D9's criterion
+re-verified and formally closed; `repository_providers.dart`'s reason
+fixed at its source; the P2-1 false-verification claim corrected) and the
+full KNOWN ISSUES table above giving every other finding an explicit
+disposition, `T-42` has no open sub-item left. `firestore-cutover-tasks.md`
+updated in the same commit: `T-42` → `done`, citing this entry.
+`CURRENT STATE` below rewritten accordingly: **per its own stated exit
+condition** ("`T-42` triaged/resolved-or-explicitly-deferred... is the
+ONLY remaining Phase-2-exit condition; no BLOCKING defect remains"),
+**Phase 2 is now marked ✅.** This mirrors exactly how Phase 0 and Phase 1
+were marked resolved — gates green and defects triaged, not every
+deferred device check executed. D1–D14 above remain genuinely open and
+are the end-of-cutover CI phase's problem, not a Phase-2 blocker; they
+were never claimed closed by this entry or any other.
+
+**Gates (verbatim, run after `dart format`):**
+```
+$ dart analyze --fatal-infos
+Analyzing learning_tracker...
+No issues found!
+
+$ dart run tool/check_profile_path_keying.dart | tail -1
+PROFILE-KEY-SPLIT check OK: 2 collection(s) currently split (bookmarks, learning_order), all within the tracked baseline (0 new violations).
+
+$ dart run tool/check_profile_id_int_sites.dart | tail -1
+PROFILE-ID-INT-SITES OK: 88 tracked entries covering 91 site(s) across 5 pattern(s) [cf-int-guard, cf-string-profileid-doc, dart-int-profileid-param, dart-tutoring-int-parse, dart-tutoring-id-tostring]; 0 new, 0 stale, 0 changed.
+
+$ make audit; echo "EXIT=$?"
+... (104 checks) ...
+=== audit PASSED — all 68 greps clean ===
+EXIT=0
+
+$ dart run tool/check_mcf11_autoincrement_id_in_payload_ratchet.dart | tail -1
+MCF-11 autoincrement-id-in-payload ratchet passed — 39 site(s) outside merge/ (tracked baseline: 39, AD-5/AD-28, docs/test-artifacts/mcf11-autoincrement-id-in-payload-sweep.md).
+
+$ dart run tool/check_bare_firebase_instance_ratchet.dart | tail -1
+Bare-Firebase-instance ratchet passed — 2 site(s) (tracked baseline: 2, AD-2/AD-28).
+
+$ dart format learning_tracker/lib/data/firestore/repository_providers.dart
+Formatted 1 file (0 changed) in 0.02 seconds.
+```
+
+**No deviation.** All gates match the brief's own prediction exactly ("no
+code change, so all four gates are unchanged from P2-11's measurements") —
+the one `lib/` edit is a doc-comment-only change inside a function whose
+body, and every scan target both checkers key on, is untouched. `PREDICTED`
+(the brief, verbatim): *"no code change, so all four gates are unchanged
+from P2-11's measurements."* **Actual:** unchanged, exactly as predicted —
+recorded here per this log's own convention that even a correct prediction
+gets its gate run and reported, not assumed.
 
 ### 2026-08-07 — P2-11: audit check 104 hardened against its own fail-open (T-42 item 3)
 
@@ -1497,8 +1939,13 @@ $ dart run tool/check_profile_id_int_sites.dart | tail -1
 PROFILE-ID-INT-SITES OK: 88 tracked site(s) across 5 pattern(s) [cf-int-guard, cf-string-profileid-doc, dart-int-profileid-param, dart-tutoring-int-parse, dart-tutoring-id-tostring]; 0 new, 0 stale.
 
 $ make audit | tail -1
-=== audit PASSED — all 68 greps clean ===   (104/104 checks)
-
+=== audit PASSED — all 68 greps clean ===
+```
+*(P2-12 correction: this block originally printed a trailing `(104/104
+checks)` parenthetical after the line above — not part of `make audit`'s
+real stdout. The line is fixed here to the true, re-confirmed output; see
+the P2-12 entry's KNOWN ISSUES section for the finding.)*
+```
 $ dart format <7 touched files>
 Formatted 7 files (2 changed) in ~0.05 seconds.
 ```
@@ -1620,8 +2067,13 @@ $ dart run tool/check_profile_id_int_sites.dart | tail -1
 PROFILE-ID-INT-SITES OK: 88 tracked site(s) across 5 pattern(s) [cf-int-guard, cf-string-profileid-doc, dart-int-profileid-param, dart-tutoring-int-parse, dart-tutoring-id-tostring]; 0 new, 0 stale.
 
 $ make audit | tail -1
-=== audit PASSED — all 68 greps clean ===   (104/104 checks)
-
+=== audit PASSED — all 68 greps clean ===
+```
+*(P2-12 correction: this block originally printed a trailing `(104/104
+checks)` parenthetical after the line above — not part of `make audit`'s
+real stdout. The line is fixed here to the true, re-confirmed output; see
+the P2-12 entry's KNOWN ISSUES section for the finding.)*
+```
 $ dart format <4 touched files>
 Formatted test/data/firestore/repository_providers_test.dart
 Formatted 4 files (1 changed) in 0.04 seconds.
@@ -1808,8 +2260,13 @@ $ dart run tool/check_profile_id_int_sites.dart | tail -1
 PROFILE-ID-INT-SITES OK: 88 tracked site(s) across 5 pattern(s) [cf-int-guard, cf-string-profileid-doc, dart-int-profileid-param, dart-tutoring-int-parse, dart-tutoring-id-tostring]; 0 new, 0 stale.
 
 $ make audit | tail -1
-=== audit PASSED — all 68 greps clean ===   (104/104 checks)
-
+=== audit PASSED — all 68 greps clean ===
+```
+*(P2-12 correction: this block originally printed a trailing `(104/104
+checks)` parenthetical after the line above — not part of `make audit`'s
+real stdout. The line is fixed here to the true, re-confirmed output; see
+the P2-12 entry's KNOWN ISSUES section for the finding.)*
+```
 $ dart format <6 touched .dart files>
 Formatted 6 files (0 changed) in 0.04 seconds.
 ```
@@ -1886,8 +2343,13 @@ $ dart run tool/check_profile_id_int_sites.dart | tail -1
 PROFILE-ID-INT-SITES OK: 88 tracked site(s) across 5 pattern(s) [cf-int-guard, cf-string-profileid-doc, dart-int-profileid-param, dart-tutoring-int-parse, dart-tutoring-id-tostring]; 0 new, 0 stale.
 
 $ make audit | tail -1
-=== audit PASSED — all 68 greps clean ===   (104/104 checks)
-
+=== audit PASSED — all 68 greps clean ===
+```
+*(P2-12 correction: this block originally printed a trailing `(104/104
+checks)` parenthetical after the line above — not part of `make audit`'s
+real stdout. The line is fixed here to the true, re-confirmed output; see
+the P2-12 entry's KNOWN ISSUES section for the finding.)*
+```
 $ dart format <61 touched .dart files>
 Formatted 61 files (0 changed) in 0.69 seconds.
 ```

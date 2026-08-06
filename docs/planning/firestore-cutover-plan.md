@@ -1,14 +1,20 @@
 # Firestore cutover plan
 
-**Status:** Phase 0 ✅ · Phase 1 ✅ · **Phase 2 IN PROGRESS — BLOCKED** (see
-`firestore-cutover-log.md`'s P2-7 entry: two blocking defects, `T-40`/`T-41`,
-survive every gate the phase ran) · Phase 3 cannot start until Phase 2's
-blockers clear · Phases 4–5 pending
-**Last updated:** 2026-08-06
-**Head:** `2e85b097` on `dev` (P2-6; the P2-7 docs commit lands on top, not
-yet reflected here — same self-reference lag as every prior closing commit)
-— `make audit` green (104 checks), 4 features on Firestore, both keying
-gates (103, 104) live.
+**Status:** Phase 0 ✅ · Phase 1 ✅ · **Phase 2 ✅** (both BLOCKING defects,
+`T-40`/`T-41`, fixed at P2-8/P2-9; every other finding triaged —
+fixed-with-commit or rejected-with-evidence — at P2-10/P2-11/P2-12; full
+detail in `firestore-cutover-log.md`'s P2-7 through P2-12 entries and
+`firestore-cutover-tasks.md`'s `T-42` row) · Phase 3 may start; its own
+prerequisites (`T-37`, `T-39`) are unrelated to Phase 2's resolution ·
+Phases 4–5 pending. **This section's narrative below (commit list, blocked
+framing) predates P2-8 through P2-12 and is not rewritten here — treat the
+log entries above as authoritative over this paragraph's prose; only the
+status line and Head field are corrected in this pass.**
+**Last updated:** 2026-08-07 (P2-12; status line and Head field only)
+**Head:** `00db9af1` on `dev` (P2-11; the P2-12 docs commit lands on top,
+not yet reflected here — same self-reference lag as every prior closing
+commit) — `make audit` green (104 checks), 4 features on Firestore, both
+keying gates (103, 104) live.
 
 **Verification cadence (owner decision, 2026-08-06):** `dart analyze` and the
 keying gate run every stage (seconds); `make audit` runs at each phase
@@ -238,9 +244,15 @@ manufactures exactly the false confidence this gate exists to remove.
 
 ---
 
-### Phase 2 — Unify the identity (int → ULID) — **IN PROGRESS, BLOCKED, 2026-08-06 (`2e85b097`)**
+### Phase 2 — Unify the identity (int → ULID) — **RESOLVED 2026-08-07 (P2-12)**
 
-**Not resolved.** The full execution plan is
+**Both BLOCKING defects below were fixed and re-verified (P2-8 `T-40`,
+P2-9 `T-41`); every other finding this phase's reviews raised was triaged
+— fixed with a commit, or rejected with evidence — by P2-10/P2-11/P2-12.
+Full disposition table: `firestore-cutover-log.md`'s P2-12 entry.** The
+narrative immediately below describes the state as of the end-of-phase
+review that found them (P2-7) and is kept as the historical record, not
+rewritten. The full execution plan is
 [`firestore-phase2-plan.md`](firestore-phase2-plan.md); six code commits
 (`4877c7ef`, `0d5d9125`, `feefe34b`, `b398bea5`, `30790fef`, `2e85b097`)
 landed the profile ULID as an eagerly-minted, compile-enforced,
@@ -258,7 +270,9 @@ see** — full detail in `firestore-cutover-log.md`'s P2-7 entry:
    compile-enforced non-nullable `ProfileModel.ulid` now hard-crashes on
    exactly that shape. Tracked as `T-41`.
 
-**Phase 3 does not start until both are fixed and re-verified.**
+**Phase 3 does not start until both are fixed and re-verified.** Both were
+— `T-40` at P2-8 (`8dea756b`), `T-41` at P2-9 (`ed42c894`). Phase 3 may
+start.
 
 **Why the original exit line below was unachievable, replaced by §6 of
 `firestore-phase2-plan.md`'s verification table:** Phase 1's check

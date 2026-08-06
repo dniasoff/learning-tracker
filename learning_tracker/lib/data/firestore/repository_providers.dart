@@ -137,10 +137,21 @@ final activeProfileDocIdProvider =
 /// **The tutored-session check below is deliberately first, before any
 /// handle resolution.** [activeProfileDocIdProvider] still holds the
 /// TUTOR's own profile ULID during a tutored session — nothing under
-/// `lib/features/tutoring/` sets it, and nothing can, because the tutored
-/// mirror row is Drift-only and carries no ULID (T-35; see
-/// `firestore-phase2-plan.md` §4 P2-5). Resolving handles first and only
-/// then checking would still hand back `(tutorHandles, tutorOwnProfileId)`
+/// `lib/features/tutoring/` sets it. **Corrected reason (P2-12; the
+/// previous wording here was false and is Phase 3's T-37 trap):** the
+/// tutored mirror row is NOT missing a ULID — `ProfileDao.upsertTutoredProfile`
+/// has recorded the talmid's own remote id as `ulid` since P2-2
+/// (`profile_dao.dart`'s `ulid: Value(remoteChildProfileId)`, inside its
+/// insert branch). The real reason nothing wires that value in here is
+/// architectural, not an absent value: this provider pairs whatever id it
+/// is given with [activeAccountFirebaseProvider]'s handles, which during a
+/// tutored session are the **signed-in tutor's own** handles — so setting
+/// the talmid's ULID here would resolve to
+/// `users/{TUTOR}/learner_profiles/{talmid ULID}`, a document that does not
+/// exist, not the parent's real `users/{ownerUid}/learner_profiles/{talmid
+/// ULID}`. Reading the parent's tree needs an owner-uid-scoped handle
+/// seam — Phase 3's `T-37`, not a value plugged in here. Resolving handles
+/// first and only then checking would still hand back `(tutorHandles, tutorOwnProfileId)`
 /// on every path that doesn't itself repeat the check — which is exactly
 /// the bug this hoist closes: before this, only the bookmark adapter
 /// carried its own copy of this guard, so the other 12 profile-scoped
