@@ -104,25 +104,73 @@ real defect during the bookmarks slice.
 
 ## 3. Phases
 
-### Phase 0 — Decisions (blocking)
+### Phase 0 — Decisions — **RESOLVED 2026-08-04 (owner)**
 
-Three questions cannot be answered by reading code. Nothing downstream is
-safe to build until they are settled.
+#### D1 (#31) — Tutor identity: re-file permissions under the ULID
 
-| # | Question | Why it blocks |
-|---|---|---|
-| #31 | Tutoring identity: migrate to ULID, or keep the int and route through the proxy CF? | Determines the contract for all 13 profile-scoped providers and 17 CF validations |
-| #32 | Reorder amnesty: migrate tracks to restore it, or accept its loss? | Determines whether tracks must move in Phase 3 or can wait |
-| #33 | `learning_order` reset: rules change, or Cloud Function? | Determines whether Phase 2 touches `firestore.rules` |
+**Decision:** the tutor reads the parent's tree directly, keyed by the child's
+ULID everywhere — invite, grant record, `tutor_active_access` index, and all
+17 CF validations. The local tutored mirror is deleted (already listed as a
+deleted concept in `docs/firestore-rewrite-map.md`).
 
-**#31 is the one that shapes everything.** The design currently recorded in
-`docs/firestore-rewrite-map.md` ("the tutor reads the parent's tree, no
-mirror") is **rules-denied as written**: `hasActiveTutorAccess` builds its
-access-document id from the path segment, so a ULID-path read needs
-`tutor_active_access/{tutorUid}_{parentUid}_{ULID}`, but `acceptInvite` keys
-that document on the Drift int.
+The rules formula does **not** change. `hasActiveTutorAccess` builds
+`accessId = tutorUid + '_' + ownerUid + '_' + profileId` from the **path
+segment** (`firestore.rules:87-91`) and `acceptInvite` writes the identical
+formula (`functions/src/tutor_invites.ts:17`). Both are already
+self-consistent — only the *value* of `profileId` changes from the Drift int
+to the ULID. This is a value migration, not a redesign.
 
-**Exit:** all three answered and recorded in the rewrite map.
+No live users, so no existing grants to migrate.
+
+→ **Phase 2** owns this.
+
+#### D2 (#32) — Overdue backlog: restore both forgiveness paths
+
+**Decision:** both a user reorder and a content update clear overdue items.
+Rationale: "overdue" is computed against a schedule, so changing the schedule
+makes the old count meaningless; and a content update must not manufacture a
+backlog nobody could have completed.
+
+**Two paths, and they are NOT equal cost — this was under-stated when the
+decision was put to the owner:**
+
+- **Reorder forgiveness — cheap.** Write `last_reorder_at` on the track and
+  move `daily_task_projection_service`'s read off Drift. The rules whitelist
+  already permits the field (`firestore.rules:412`); it was added earlier in
+  this migration. Falls out of the Phase 3 tracks migration.
+- **Content-reseed forgiveness — needs a new mechanism.** The old detection
+  used the Drift `learning_order.learningOrderVersion` column compared against
+  the seed version. **There is no Firestore equivalent** — the `learning_order`
+  rules whitelist is `curriculum_id, sefaria_ref, ref, user_sort_order,
+  updated_at, synced_at`, with no version field. Restoring this requires
+  either adding a version field to the collection (rules change) or detecting
+  staleness another way. **Design this explicitly in Phase 3; do not assume
+  it comes free with the stamp.**
+
+→ **Phase 3** owns both.
+
+#### D3 (#33) — Learning-order reset: narrow client-delete allowance
+
+**Decision:** permit the owner to delete their own `learning_order` rows —
+`allow delete: if isOwner(uid)`, exactly as `goals` already does.
+
+Context for the exception: 19 of 20 collections currently say
+`allow delete: if false`, with `goals` the sole precedent (opened earlier in
+this migration to fix a delete-goal feature that had been built but was
+silently rules-blocked). That blanket rule largely protects the **old sync
+engine's** retry idempotency, which Phase 4 deletes. Learning order is user
+settings, not a ledger — no audit or history reason to retain it.
+
+Rejected: a Cloud Function (disproportionate — a cold start and round trip to
+clear one's own settings) and a soft "custom order off" flag (changes the
+"does a custom order exist" predicate that several call sites now depend on,
+and leaves orphaned rows).
+
+→ **Phase 2** owns the rules change (rules and the code writing through them
+must land in the same commit).
+
+**Exit:** ✅ all three resolved. Mirror these decisions into
+`docs/firestore-rewrite-map.md` when Phase 2 starts.
 
 ---
 
