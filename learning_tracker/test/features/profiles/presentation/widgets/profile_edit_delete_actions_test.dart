@@ -138,6 +138,7 @@ class _FixedSelectedProfileId extends SelectedProfileId {
 ProfileModel _cloudProfile({required int id, required String name}) =>
     ProfileModel(
       id: id,
+      ulid: 'ulid-$id',
       accountId: 1,
       displayName: name,
       mode: 'child',
@@ -584,6 +585,7 @@ void main() {
 
         final childProfile = ProfileModel(
           id: profileId,
+          ulid: 'ulid-$profileId',
           accountId: accountId,
           displayName: 'Yosef',
           mode: 'child',
@@ -685,6 +687,7 @@ void main() {
 
         final childProfile = ProfileModel(
           id: profileId,
+          ulid: 'ulid-$profileId',
           accountId: accountId,
           displayName: 'Rivka',
           mode: 'child',
@@ -779,6 +782,7 @@ void main() {
 
       final adultProfile = ProfileModel(
         id: profileId,
+        ulid: 'ulid-$profileId',
         accountId: accountId,
         displayName: 'Shmuel',
         mode: 'adult',
@@ -898,6 +902,7 @@ void main() {
 
         final profile = ProfileModel(
           id: profileId,
+          ulid: 'ulid-$profileId',
           accountId: accountId,
           displayName: 'Talmid',
           mode: 'child',

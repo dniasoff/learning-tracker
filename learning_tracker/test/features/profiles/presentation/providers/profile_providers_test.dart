@@ -32,17 +32,6 @@ void main() {
       expect(container.read(activeProfileDocIdProvider), 'ulid-5');
     });
 
-    test('select() without a ulid clears activeProfileDocIdProvider — '
-        'accurate for a profile not yet migrated to Firestore (or genuinely '
-        'unknown at the call site), not a regression', () {
-      container.read(activeProfileDocIdProvider.notifier).set('stale-ulid');
-
-      container.read(selectedProfileIdProvider.notifier).select(99);
-
-      expect(container.read(selectedProfileIdProvider), 99);
-      expect(container.read(activeProfileDocIdProvider), isNull);
-    });
-
     test('clear() clears both selectedProfileIdProvider and '
         'activeProfileDocIdProvider', () {
       container

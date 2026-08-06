@@ -320,7 +320,7 @@ class ProfileSwitcherSheet extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     int profileId, {
-    String? ulid,
+    required String ulid,
   }) {
     Navigator.of(context).pop();
     // R4-H1: exit any active tutored session before replacing the route.

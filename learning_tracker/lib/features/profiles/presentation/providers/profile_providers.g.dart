@@ -195,7 +195,7 @@ final class SelectedProfileIdProvider
   }
 }
 
-String _$selectedProfileIdHash() => r'2be3130921c16496827ae92b495add20f0884dc0';
+String _$selectedProfileIdHash() => r'ca75bc946f18974ca885381deb8873a89364b7a6';
 
 /// The currently selected profile ID. Null means no profile selected yet.
 // keepAlive: the session's profile selection must survive route changes and unrelated rebuilds.

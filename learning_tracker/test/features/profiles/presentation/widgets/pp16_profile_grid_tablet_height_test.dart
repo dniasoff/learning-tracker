@@ -40,6 +40,7 @@ List<ProfileModel> _profiles(int count) => List.generate(
   count,
   (i) => ProfileModel(
     id: i + 1,
+    ulid: 'ulid-${i + 1}',
     accountId: 1,
     displayName: 'Child ${i + 1}',
     mode: 'child',

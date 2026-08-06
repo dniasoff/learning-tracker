@@ -38,9 +38,17 @@ Future<void> bootstrapNotifications({
         final model = await container
             .read(profileRepositoryProvider)
             .getProfileById(profileId);
+        // P2-3: [model] is `ProfileModel?` (the profile may have been
+        // deleted between the notification being scheduled and tapped);
+        // [ProfileModel.ulid] itself is compiler-guaranteed non-null once a
+        // model exists (`ProfileModel.fromDriftRow` is the enforcement
+        // point, and `getProfileById` routes through it). No model to
+        // switch to means nothing to select — leave the current selection
+        // untouched rather than switching into an id with no data.
+        if (model == null) return;
         container
             .read(selectedProfileIdProvider.notifier)
-            .select(profileId, ulid: model?.ulid);
+            .select(profileId, ulid: model.ulid);
       },
     );
     await notificationInitializer.initialize();

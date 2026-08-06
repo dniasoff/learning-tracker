@@ -51,6 +51,7 @@ void main() {
       final createGate = Completer<ProfileModel>();
       final createdProfile = ProfileModel(
         id: 7,
+        ulid: 'ulid-7',
         accountId: 1,
         displayName: 'Yael',
         mode: 'adult',

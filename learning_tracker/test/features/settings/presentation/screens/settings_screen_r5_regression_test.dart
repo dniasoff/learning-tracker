@@ -88,6 +88,7 @@ ProfileModel _childProfile({int id = 2}) {
   final now = DateTime.utc(2026, 1, 1);
   return ProfileModel(
     id: id,
+    ulid: 'ulid-$id',
     accountId: 1,
     displayName: 'Child',
     mode: 'child',
@@ -101,6 +102,7 @@ ProfileModel _adultProfile({int id = 1}) {
   final now = DateTime.utc(2026, 1, 1);
   return ProfileModel(
     id: id,
+    ulid: 'ulid-$id',
     accountId: 1,
     displayName: 'Adult',
     mode: 'adult',

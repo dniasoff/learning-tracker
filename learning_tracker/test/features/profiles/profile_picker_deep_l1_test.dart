@@ -103,6 +103,7 @@ final _epoch = DateTime.utc(2026, 1, 1);
 
 ProfileModel _child({int id = 1, String name = 'Yosef'}) => ProfileModel(
   id: id,
+  ulid: 'ulid-$id',
   accountId: 1,
   displayName: name,
   mode: 'child',
@@ -113,6 +114,7 @@ ProfileModel _child({int id = 1, String name = 'Yosef'}) => ProfileModel(
 
 ProfileModel _adult({int id = 2, String name = 'Avraham'}) => ProfileModel(
   id: id,
+  ulid: 'ulid-$id',
   accountId: 1,
   displayName: name,
   mode: 'adult',

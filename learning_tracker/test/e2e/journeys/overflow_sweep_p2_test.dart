@@ -409,6 +409,7 @@ void main() {
     (tester) async {
       final alice = ProfileModel(
         id: 1,
+        ulid: 'ulid-1',
         accountId: 1,
         displayName: 'Alice',
         mode: 'adult',
@@ -418,6 +419,7 @@ void main() {
       );
       final bob = ProfileModel(
         id: 2,
+        ulid: 'ulid-2',
         accountId: 1,
         displayName: 'Bob',
         mode: 'child',

@@ -73,14 +73,10 @@ class SelectedProfileId extends _$SelectedProfileId {
   /// the two remaining call sites that once passed a bare `int`
   /// (`router_provider.dart`'s `ProfileGuard`, the notification-tap handler
   /// in `notifications_bootstrap.dart`) now resolve the profile first and
-  /// pass `ulid:` too — every production call site passes it. Omitting
-  /// [ulid] (e.g. a caller that genuinely has no model in hand) clears
-  /// [activeProfileDocIdProvider] to `null` — the same "not ready yet"
-  /// signal every profile-scoped repository already treats as "show a
-  /// loading/empty state", never a wrong-profile leak. This is strictly
-  /// safer than the alternative of leaving a PREVIOUS profile's ulid active
-  /// across a switch to a profile whose identity is unknown here.
-  void select(int id, {String? ulid}) {
+  /// pass `ulid:` too — every production call site passes it. P2-3: [ulid]
+  /// is now `required` — the compiler, not just convention, makes a third
+  /// bare call site impossible to write.
+  void select(int id, {required String ulid}) {
     state = id;
     ref.read(activeProfileDocIdProvider.notifier).set(ulid);
   }
@@ -175,7 +171,7 @@ class AutoSelectedProfileId extends _$AutoSelectedProfileId {
     final profiles = await repo.getProfilesByAccount(accountId);
 
     final int id;
-    String? ulid;
+    final String ulid;
     if (profiles.isNotEmpty) {
       id = profiles.first.id;
       ulid = profiles.first.ulid;
@@ -191,7 +187,20 @@ class AutoSelectedProfileId extends _$AutoSelectedProfileId {
       // The freshly created profile changed the account's profile set; refresh
       // any list/stream consumers so the new profile is visible immediately.
       ref.invalidate(profileListProvider);
-      ulid = (await repo.getProfileById(id))?.ulid;
+      final created = await repo.getProfileById(id);
+      if (created == null) {
+        // Genuine invariant violation, not a legacy-data case: the create
+        // above just committed and returned this exact id. A null read-back
+        // means something is actually broken (e.g. a transaction that
+        // didn't commit) — surface it loudly rather than silently picking a
+        // fallback identity.
+        throw StateError(
+          'AutoSelectedProfileId._resolveSelection: ensureDefaultProfile '
+          'returned id $id but getProfileById($id) found nothing right '
+          'after creating it.',
+        );
+      }
+      ulid = created.ulid;
     }
 
     // Re-check after the await: the picker / sign-in flow may have selected

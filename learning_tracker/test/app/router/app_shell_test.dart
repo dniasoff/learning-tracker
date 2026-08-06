@@ -172,6 +172,7 @@ const _authOverride = AuthState.signedIn(
 final _seededProfiles = [
   ProfileModel(
     id: 1,
+    ulid: 'ulid-1',
     accountId: 1,
     displayName: 'Test',
     mode: 'adult',
@@ -673,6 +674,7 @@ void main() {
         final childProfiles = [
           ProfileModel(
             id: 1,
+            ulid: 'ulid-1',
             accountId: 1,
             displayName: 'Test',
             mode: 'child',
@@ -990,6 +992,7 @@ void main() {
         final tutorOwnProfiles = [
           ProfileModel(
             id: 1,
+            ulid: 'ulid-1',
             accountId: 1,
             displayName: 'Family Niasoff',
             mode: 'adult',
@@ -1002,6 +1005,7 @@ void main() {
         // The talmid mirror profile (id 99) — what the header SHOULD display.
         final talmidMirror = ProfileModel(
           id: 99,
+          ulid: 'ulid-99',
           accountId: 1,
           displayName: 'Kid',
           mode: 'child',
@@ -1085,6 +1089,7 @@ void main() {
         final tutorOwnProfiles = [
           ProfileModel(
             id: 1,
+            ulid: 'ulid-1',
             accountId: 1,
             displayName: 'Family Niasoff',
             mode: 'adult',
@@ -1095,6 +1100,7 @@ void main() {
         ];
         final talmidMirror = ProfileModel(
           id: 99,
+          ulid: 'ulid-99',
           accountId: 1,
           displayName: 'Kid',
           mode: 'child',
@@ -1186,6 +1192,7 @@ void main() {
           (ref) => Stream.value(<ProfileModel>[
             ProfileModel(
               id: 1,
+              ulid: 'ulid-1',
               accountId: 1,
               displayName: 'Talmid1',
               mode: 'adult',
@@ -1273,6 +1280,7 @@ void main() {
           (ref) => Stream.value(<ProfileModel>[
             ProfileModel(
               id: 1,
+              ulid: 'ulid-1',
               accountId: 1,
               displayName: 'Talmid1',
               mode: 'adult',

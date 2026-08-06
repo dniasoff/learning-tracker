@@ -17,6 +17,7 @@ import 'package:learning_tracker/features/profiles/domain/models/profile_model.d
 
 ProfileModel _profileWithMode(String mode) => ProfileModel(
   id: 1,
+  ulid: 'ulid-1',
   accountId: 1,
   displayName: 'Test',
   mode: mode,

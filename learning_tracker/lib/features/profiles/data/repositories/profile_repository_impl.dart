@@ -396,6 +396,7 @@ class ProfileRepositoryImpl implements ProfileRepository {
             avatarIndex: 0,
             createdAt: now,
             updatedAt: now,
+            ulid: resolvedUlid,
           ),
         ),
       );
@@ -636,15 +637,13 @@ class FirestoreProfileRepositoryAdapter implements ProfileRepository {
   /// It is left unset only in the genuinely not-ready case (no active
   /// cloud account at all yet).
   Future<void> _ensureFirestoreProfile(ProfileModel model) async {
-    final ulid = model.ulid;
-    if (ulid == null) return; // defensive only — eager mint guarantees this
     final firestoreRepo = await _ref.read(
       firestoreLearnerProfileRepositoryProvider.future,
     );
     if (firestoreRepo == null) return; // no active cloud account yet
     try {
       await firestoreRepo.createProfile(
-        profileId: ulid,
+        profileId: model.ulid,
         displayName: model.displayName,
         mode: model.profileMode,
         avatar: model.avatarIndex.toString(),
@@ -663,6 +662,6 @@ class FirestoreProfileRepositoryAdapter implements ProfileRepository {
         stackTrace: st,
       );
     }
-    _ref.read(activeProfileDocIdProvider.notifier).set(ulid);
+    _ref.read(activeProfileDocIdProvider.notifier).set(model.ulid);
   }
 }

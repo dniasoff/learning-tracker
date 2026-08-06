@@ -31,6 +31,7 @@ final _epoch = DateTime(2026);
 
 ProfileModel _adult(int id) => ProfileModel(
   id: id,
+  ulid: 'ulid-$id',
   accountId: 1,
   displayName: 'Adult $id',
   mode: 'adult',
@@ -41,6 +42,7 @@ ProfileModel _adult(int id) => ProfileModel(
 
 ProfileModel _child(int id) => ProfileModel(
   id: id,
+  ulid: 'ulid-$id',
   accountId: 1,
   displayName: 'Child $id',
   mode: 'child',

@@ -43,6 +43,7 @@ ProfileModel _makeProfile({
 }) {
   return ProfileModel(
     id: id,
+    ulid: 'ulid-$id',
     accountId: accountId,
     displayName: displayName,
     mode: mode,

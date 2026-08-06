@@ -46,6 +46,7 @@ ProfileModel _profile({
   required String mode,
 }) => ProfileModel(
   id: id,
+  ulid: 'ulid-$id',
   accountId: 1,
   displayName: name,
   mode: mode,

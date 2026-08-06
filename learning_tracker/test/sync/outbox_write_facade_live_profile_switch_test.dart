@@ -72,7 +72,9 @@ void main() {
     () async {
       // Cloud-born (see setUp) with profile A active — the state at the
       // moment syncOrchestratorProvider would have built the facade.
-      container.read(selectedProfileIdProvider.notifier).select(_profileA);
+      container
+          .read(selectedProfileIdProvider.notifier)
+          .select(_profileA, ulid: 'ulid-$_profileA');
       expect(container.read(activeProfileIdProvider), _profileA);
 
       // Wire ONE facade with the live resolver, exactly like
@@ -95,7 +97,9 @@ void main() {
       // A household profile switch. Per R1, syncOrchestratorProvider does
       // NOT rebuild here — the SAME facade instance stays wired — only
       // activeProfileIdProvider's value changes.
-      container.read(selectedProfileIdProvider.notifier).select(_profileB);
+      container
+          .read(selectedProfileIdProvider.notifier)
+          .select(_profileB, ulid: 'ulid-$_profileB');
       expect(container.read(activeProfileIdProvider), _profileB);
 
       // Write #2 on the SAME facade instance, performed AFTER the switch.

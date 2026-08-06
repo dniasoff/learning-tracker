@@ -80,6 +80,7 @@ ProfileModel _child() {
   final now = DateTime.utc(2026, 1, 1);
   return ProfileModel(
     id: 1,
+    ulid: 'ulid-1',
     accountId: 1,
     displayName: 'LoopChild',
     mode: 'child',

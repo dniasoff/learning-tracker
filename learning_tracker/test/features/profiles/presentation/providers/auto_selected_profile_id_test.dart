@@ -41,6 +41,7 @@ final _epoch = DateTime.utc(2026, 1, 1);
 
 ProfileModel _profile({required int id, String mode = 'adult'}) => ProfileModel(
   id: id,
+  ulid: 'ulid-$id',
   accountId: 1,
   displayName: 'Profile $id',
   mode: mode,
@@ -178,7 +179,9 @@ void main() {
       ).container;
 
       // The picker / sign-in flow already chose profile 8.
-      container.read(selectedProfileIdProvider.notifier).select(8);
+      container
+          .read(selectedProfileIdProvider.notifier)
+          .select(8, ulid: 'ulid-8');
 
       final selected = await container
           .read(autoSelectedProfileIdProvider.notifier)
@@ -245,7 +248,9 @@ void main() {
         final container = result.container;
 
         // Pre-condition: stale id 42 is held from a previous account session.
-        container.read(selectedProfileIdProvider.notifier).select(42);
+        container
+            .read(selectedProfileIdProvider.notifier)
+            .select(42, ulid: 'ulid-42');
         expect(container.read(selectedProfileIdProvider), 42);
 
         final selected = await container

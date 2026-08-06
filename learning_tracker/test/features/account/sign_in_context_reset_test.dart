@@ -246,12 +246,16 @@ void main() {
         addTearDown(container.dispose);
 
         // Stale id from the previous account.
-        container.read(selectedProfileIdProvider.notifier).select(999);
+        container
+            .read(selectedProfileIdProvider.notifier)
+            .select(999, ulid: 'ulid-999');
         // Sign-in chokepoints clear it, then select the own primary.
         container.read(selectedProfileIdProvider.notifier).clear();
         expect(container.read(selectedProfileIdProvider), isNull);
 
-        container.read(selectedProfileIdProvider.notifier).select(1);
+        container
+            .read(selectedProfileIdProvider.notifier)
+            .select(1, ulid: 'ulid-1');
         expect(
           container.read(selectedProfileIdProvider),
           1,

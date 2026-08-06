@@ -43,6 +43,7 @@ const _kMilestoneTitle = 'Gold Star';
 /// A minimal [ProfileModel] used to feed [selectedProfileProvider].
 final _kProfile = ProfileModel(
   id: _kProfileId,
+  ulid: 'ulid-$_kProfileId',
   accountId: 1,
   displayName: _kProfileName,
   mode: 'child',

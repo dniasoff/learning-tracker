@@ -6,6 +6,7 @@ import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/app/router/router_provider.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
+import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/sync/domain/models/restore_phase.dart';
 import 'package:learning_tracker/features/sync/domain/models/restore_status.dart';
@@ -120,9 +121,10 @@ class _DeviceRestoreScreenState extends ConsumerState<DeviceRestoreScreen> {
     if (!mounted) return;
 
     if (profiles.length == 1) {
+      final soleProfile = ProfileModel.fromDriftRow(profiles.first);
       ref
           .read(selectedProfileIdProvider.notifier)
-          .select(profiles.first.id, ulid: profiles.first.ulid);
+          .select(soleProfile.id, ulid: soleProfile.ulid);
       await context.router.replaceAll([const AppShellRoute()]);
     } else if (profiles.length > 1) {
       ref.read(selectedProfileIdProvider.notifier).clear();

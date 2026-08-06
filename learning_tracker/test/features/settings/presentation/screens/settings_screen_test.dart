@@ -76,6 +76,7 @@ void main() {
   }) {
     final talmidMirror = ProfileModel(
       id: 99,
+      ulid: 'ulid-99',
       accountId: 1,
       displayName: 'Kid',
       mode: 'child',

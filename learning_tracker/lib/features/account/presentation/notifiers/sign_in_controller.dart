@@ -27,6 +27,7 @@ import 'package:learning_tracker/features/account/presentation/providers/connect
 import 'package:learning_tracker/features/account/presentation/widgets/email_verification_dialog.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_resume_store.dart'
     show kOnboardingComplete, kOnboardingSkipped;
+import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/tutoring/tutoring.dart'
     show
@@ -688,9 +689,10 @@ class SignInController extends Notifier<SignInState> {
     if (profiles.isNotEmpty &&
         !cloudAccountHasProfiles &&
         orchestrator != null) {
+      final reconcileProfile = ProfileModel.fromDriftRow(profiles.first);
       _ref
           .read(selectedProfileIdProvider.notifier)
-          .select(profiles.first.id, ulid: profiles.first.ulid);
+          .select(reconcileProfile.id, ulid: reconcileProfile.ulid);
       unawaited(
         orchestrator.pushAllLocalData().catchError((Object e, StackTrace st) {
           AppLogger.instance.warning(
@@ -705,9 +707,10 @@ class SignInController extends Notifier<SignInState> {
     // Multi-profile accounts go to the picker; single-profile accounts go
     // straight to the app shell. Both paths bypass OnboardingRoute.
     if (profiles.length == 1) {
+      final soleProfile = ProfileModel.fromDriftRow(profiles.first);
       _ref
           .read(selectedProfileIdProvider.notifier)
-          .select(profiles.first.id, ulid: profiles.first.ulid);
+          .select(soleProfile.id, ulid: soleProfile.ulid);
       final selectedOrchestrator = _ref.read(syncOrchestratorProvider);
       if (selectedOrchestrator != null) {
         unawaited(selectedOrchestrator.pullOnLaunch());

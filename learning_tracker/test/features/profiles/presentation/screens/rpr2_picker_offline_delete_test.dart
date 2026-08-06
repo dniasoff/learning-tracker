@@ -79,6 +79,7 @@ ProfileModel _profile({
   String mode = 'child',
 }) => ProfileModel(
   id: id,
+  ulid: 'ulid-$id',
   accountId: 1,
   displayName: name,
   mode: mode,

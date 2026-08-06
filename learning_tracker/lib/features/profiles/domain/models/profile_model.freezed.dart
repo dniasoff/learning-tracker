@@ -15,12 +15,11 @@ T _$identity<T>(T value) => value;
 mixin _$ProfileModel {
 
  int get id; int get accountId; String get displayName; String get mode;// 'child' or 'adult' — raw storage key
- int get avatarIndex; DateTime get createdAt; DateTime get updatedAt;// Firestore-rewrite transition column (schema v38,
-// `learner_profiles.dart`'s `ulid` doc comment) — `null` means "not yet
-// migrated to Firestore", never "no profile". Transition cruft: this
-// field disappears along with the Drift-backed [id] once the app is
-// fully cut over to Firestore-native profile identity.
- String? get ulid;
+ int get avatarIndex; DateTime get createdAt; DateTime get updatedAt;// Firestore-native profile identity, minted eagerly and unconditionally
+// at creation (`ProfileRepositoryImpl`, P2-2) — never null, never
+// cleared. This field disappears along with the Drift-backed [id] once
+// the app is fully cut over to Firestore-native profile identity.
+ String get ulid;
 /// Create a copy of ProfileModel
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -51,7 +50,7 @@ abstract mixin class $ProfileModelCopyWith<$Res>  {
   factory $ProfileModelCopyWith(ProfileModel value, $Res Function(ProfileModel) _then) = _$ProfileModelCopyWithImpl;
 @useResult
 $Res call({
- int id, int accountId, String displayName, String mode, int avatarIndex, DateTime createdAt, DateTime updatedAt, String? ulid
+ int id, int accountId, String displayName, String mode, int avatarIndex, DateTime createdAt, DateTime updatedAt, String ulid
 });
 
 
@@ -68,7 +67,7 @@ class _$ProfileModelCopyWithImpl<$Res>
 
 /// Create a copy of ProfileModel
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? accountId = null,Object? displayName = null,Object? mode = null,Object? avatarIndex = null,Object? createdAt = null,Object? updatedAt = null,Object? ulid = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? accountId = null,Object? displayName = null,Object? mode = null,Object? avatarIndex = null,Object? createdAt = null,Object? updatedAt = null,Object? ulid = null,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int,accountId: null == accountId ? _self.accountId : accountId // ignore: cast_nullable_to_non_nullable
@@ -77,8 +76,8 @@ as String,mode: null == mode ? _self.mode : mode // ignore: cast_nullable_to_non
 as String,avatarIndex: null == avatarIndex ? _self.avatarIndex : avatarIndex // ignore: cast_nullable_to_non_nullable
 as int,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as DateTime,updatedAt: null == updatedAt ? _self.updatedAt : updatedAt // ignore: cast_nullable_to_non_nullable
-as DateTime,ulid: freezed == ulid ? _self.ulid : ulid // ignore: cast_nullable_to_non_nullable
-as String?,
+as DateTime,ulid: null == ulid ? _self.ulid : ulid // ignore: cast_nullable_to_non_nullable
+as String,
   ));
 }
 
@@ -163,7 +162,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  int accountId,  String displayName,  String mode,  int avatarIndex,  DateTime createdAt,  DateTime updatedAt,  String? ulid)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  int accountId,  String displayName,  String mode,  int avatarIndex,  DateTime createdAt,  DateTime updatedAt,  String ulid)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _ProfileModel() when $default != null:
 return $default(_that.id,_that.accountId,_that.displayName,_that.mode,_that.avatarIndex,_that.createdAt,_that.updatedAt,_that.ulid);case _:
@@ -184,7 +183,7 @@ return $default(_that.id,_that.accountId,_that.displayName,_that.mode,_that.avat
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  int accountId,  String displayName,  String mode,  int avatarIndex,  DateTime createdAt,  DateTime updatedAt,  String? ulid)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  int accountId,  String displayName,  String mode,  int avatarIndex,  DateTime createdAt,  DateTime updatedAt,  String ulid)  $default,) {final _that = this;
 switch (_that) {
 case _ProfileModel():
 return $default(_that.id,_that.accountId,_that.displayName,_that.mode,_that.avatarIndex,_that.createdAt,_that.updatedAt,_that.ulid);case _:
@@ -204,7 +203,7 @@ return $default(_that.id,_that.accountId,_that.displayName,_that.mode,_that.avat
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  int accountId,  String displayName,  String mode,  int avatarIndex,  DateTime createdAt,  DateTime updatedAt,  String? ulid)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  int accountId,  String displayName,  String mode,  int avatarIndex,  DateTime createdAt,  DateTime updatedAt,  String ulid)?  $default,) {final _that = this;
 switch (_that) {
 case _ProfileModel() when $default != null:
 return $default(_that.id,_that.accountId,_that.displayName,_that.mode,_that.avatarIndex,_that.createdAt,_that.updatedAt,_that.ulid);case _:
@@ -219,7 +218,7 @@ return $default(_that.id,_that.accountId,_that.displayName,_that.mode,_that.avat
 
 
 class _ProfileModel extends ProfileModel {
-  const _ProfileModel({required this.id, required this.accountId, required this.displayName, required this.mode, required this.avatarIndex, required this.createdAt, required this.updatedAt, this.ulid}): super._();
+  const _ProfileModel({required this.id, required this.accountId, required this.displayName, required this.mode, required this.avatarIndex, required this.createdAt, required this.updatedAt, required this.ulid}): super._();
   
 
 @override final  int id;
@@ -230,12 +229,11 @@ class _ProfileModel extends ProfileModel {
 @override final  int avatarIndex;
 @override final  DateTime createdAt;
 @override final  DateTime updatedAt;
-// Firestore-rewrite transition column (schema v38,
-// `learner_profiles.dart`'s `ulid` doc comment) — `null` means "not yet
-// migrated to Firestore", never "no profile". Transition cruft: this
-// field disappears along with the Drift-backed [id] once the app is
-// fully cut over to Firestore-native profile identity.
-@override final  String? ulid;
+// Firestore-native profile identity, minted eagerly and unconditionally
+// at creation (`ProfileRepositoryImpl`, P2-2) — never null, never
+// cleared. This field disappears along with the Drift-backed [id] once
+// the app is fully cut over to Firestore-native profile identity.
+@override final  String ulid;
 
 /// Create a copy of ProfileModel
 /// with the given fields replaced by the non-null parameter values.
@@ -267,7 +265,7 @@ abstract mixin class _$ProfileModelCopyWith<$Res> implements $ProfileModelCopyWi
   factory _$ProfileModelCopyWith(_ProfileModel value, $Res Function(_ProfileModel) _then) = __$ProfileModelCopyWithImpl;
 @override @useResult
 $Res call({
- int id, int accountId, String displayName, String mode, int avatarIndex, DateTime createdAt, DateTime updatedAt, String? ulid
+ int id, int accountId, String displayName, String mode, int avatarIndex, DateTime createdAt, DateTime updatedAt, String ulid
 });
 
 
@@ -284,7 +282,7 @@ class __$ProfileModelCopyWithImpl<$Res>
 
 /// Create a copy of ProfileModel
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? accountId = null,Object? displayName = null,Object? mode = null,Object? avatarIndex = null,Object? createdAt = null,Object? updatedAt = null,Object? ulid = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? accountId = null,Object? displayName = null,Object? mode = null,Object? avatarIndex = null,Object? createdAt = null,Object? updatedAt = null,Object? ulid = null,}) {
   return _then(_ProfileModel(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int,accountId: null == accountId ? _self.accountId : accountId // ignore: cast_nullable_to_non_nullable
@@ -293,8 +291,8 @@ as String,mode: null == mode ? _self.mode : mode // ignore: cast_nullable_to_non
 as String,avatarIndex: null == avatarIndex ? _self.avatarIndex : avatarIndex // ignore: cast_nullable_to_non_nullable
 as int,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as DateTime,updatedAt: null == updatedAt ? _self.updatedAt : updatedAt // ignore: cast_nullable_to_non_nullable
-as DateTime,ulid: freezed == ulid ? _self.ulid : ulid // ignore: cast_nullable_to_non_nullable
-as String?,
+as DateTime,ulid: null == ulid ? _self.ulid : ulid // ignore: cast_nullable_to_non_nullable
+as String,
   ));
 }
 

@@ -446,6 +446,7 @@ void main() {
 
         final profileAlice = ProfileModel(
           id: 1,
+          ulid: 'ulid-1',
           accountId: 1,
           displayName: 'Alice',
           mode: 'adult',
@@ -455,6 +456,7 @@ void main() {
         );
         final profileBob = ProfileModel(
           id: 2,
+          ulid: 'ulid-2',
           accountId: 1,
           displayName: 'Bob',
           mode: 'adult',

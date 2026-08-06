@@ -73,7 +73,9 @@ void main() {
       final profileId = await _insertProfile(db, mode: 'child');
       final container = _makeContainer(db);
       addTearDown(container.dispose);
-      container.read(selectedProfileIdProvider.notifier).select(profileId);
+      container
+          .read(selectedProfileIdProvider.notifier)
+          .select(profileId, ulid: 'ulid-$profileId');
 
       final mode = await container.read(dashboardUserModeProvider.future);
       expect(mode, ProfileMode.child);
@@ -83,7 +85,9 @@ void main() {
       final profileId = await _insertProfile(db, mode: 'adult');
       final container = _makeContainer(db);
       addTearDown(container.dispose);
-      container.read(selectedProfileIdProvider.notifier).select(profileId);
+      container
+          .read(selectedProfileIdProvider.notifier)
+          .select(profileId, ulid: 'ulid-$profileId');
 
       final mode = await container.read(dashboardUserModeProvider.future);
       expect(mode, ProfileMode.adult);
@@ -109,7 +113,9 @@ void main() {
           ],
         );
         addTearDown(container.dispose);
-        container.read(selectedProfileIdProvider.notifier).select(tutorAdultId);
+        container
+            .read(selectedProfileIdProvider.notifier)
+            .select(tutorAdultId, ulid: 'ulid-$tutorAdultId');
 
         final mode = await container.read(dashboardUserModeProvider.future);
         // Must follow the ACTIVE (child) profile, not the tutor's adult mode.
@@ -120,7 +126,9 @@ void main() {
     test('defaults to adult when no profile row exists', () async {
       final container = _makeContainer(db);
       addTearDown(container.dispose);
-      container.read(selectedProfileIdProvider.notifier).select(9999);
+      container
+          .read(selectedProfileIdProvider.notifier)
+          .select(9999, ulid: 'ulid-9999');
 
       final mode = await container.read(dashboardUserModeProvider.future);
       expect(mode, ProfileMode.adult);

@@ -80,6 +80,7 @@ class _UseHebrewTermsOverride extends UseHebrewTerms {
 /// only `mode` varies across the CTA-visibility tests below.
 ProfileModel _profileModel({required String mode}) => ProfileModel(
   id: _profileId,
+  ulid: 'ulid-$_profileId',
   accountId: 1,
   displayName: 'Test User',
   mode: mode,

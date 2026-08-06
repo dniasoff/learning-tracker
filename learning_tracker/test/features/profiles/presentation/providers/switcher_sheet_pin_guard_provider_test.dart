@@ -30,6 +30,7 @@ class _FixedActiveProfileId extends ActiveProfileId {
 
 ProfileModel _profile({required int id, required String mode}) => ProfileModel(
   id: id,
+  ulid: 'ulid-$id',
   accountId: 1,
   displayName: 'Test $id',
   mode: mode,

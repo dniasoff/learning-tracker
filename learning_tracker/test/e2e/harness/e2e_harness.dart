@@ -567,6 +567,7 @@ class E2EHarness {
         ? [
             ProfileModel(
               id: profileId,
+              ulid: 'ulid-$profileId',
               accountId: accountId,
               displayName: identity.displayName,
               mode: identity.profileMode,

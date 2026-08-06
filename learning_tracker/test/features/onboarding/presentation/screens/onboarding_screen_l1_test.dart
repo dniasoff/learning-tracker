@@ -598,6 +598,7 @@ void main() {
           (_) async => [
             ProfileModel(
               id: 4, // matches onboarding_profile_id in this group's prefs
+              ulid: 'ulid-4',
               accountId: 1,
               displayName: 'Yitzchak',
               mode: 'child',

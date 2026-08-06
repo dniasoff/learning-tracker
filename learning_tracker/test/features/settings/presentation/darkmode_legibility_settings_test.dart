@@ -287,6 +287,7 @@ ProfileModel _childProfileFixture() {
   final fixedNow = DateTime.utc(2026, 1, 1);
   return ProfileModel(
     id: 2,
+    ulid: 'ulid-2',
     accountId: 1,
     displayName: 'Child',
     mode: 'child',

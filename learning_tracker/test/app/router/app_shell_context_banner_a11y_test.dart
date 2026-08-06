@@ -92,6 +92,7 @@ const _kAuthState = AuthState.signedIn(
 ProfileModel _profile({required String name, required String mode}) =>
     ProfileModel(
       id: 1,
+      ulid: 'ulid-1',
       accountId: 1,
       displayName: name,
       mode: mode,

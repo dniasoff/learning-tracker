@@ -105,6 +105,7 @@ ProfileModel _profile(int id) {
   final now = DateTime.utc(2026, 1, 1);
   return ProfileModel(
     id: id,
+    ulid: 'ulid-$id',
     accountId: 1,
     displayName: 'Profile $id',
     mode: 'adult',

@@ -203,6 +203,12 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
           ?.where((ProfileModel p) => p.id == profileId)
           .firstOrNull
           ?.ulid;
+      if (ulid == null) {
+        // Stale render — the tapped profile is no longer in the resolved
+        // list (e.g. deleted from another surface between render and tap).
+        // No-op rather than switch into an id we can no longer resolve.
+        return;
+      }
       ref
           .read(selectedProfileIdProvider.notifier)
           .select(profileId, ulid: ulid);

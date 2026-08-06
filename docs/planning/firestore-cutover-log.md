@@ -77,21 +77,22 @@ nothing on disk to diff against. This is the fix, binding from 2026-08-06
 
 ## CURRENT STATE
 
-**Head:** this commit (P2-2) — SHA unknowable within its own commit, same
-self-reference lag as before. Parent is `4877c7ef` (P2-1, verified via `git
-log --oneline -1` at P2-2 start).
+**Head:** this commit (P2-3) — SHA unknowable within its own commit, same
+self-reference lag as before. Parent is `0d5d9125` (P2-2, verified via `git
+log --oneline -1` at P2-3 start).
 **Deployed:** unknown — nothing deployed this phase yet.
-**Phase:** 0 ✅ · 1 ✅ · **2 in progress** (P2-1 ✅, P2-2 ✅, P2-3 through
-P2-7 not started).
-**Gates:** `make audit` green (**104** checks, unchanged). Check 104
-(PROFILE-ID-INT-SITES) unchanged at **88 entries** — P2-2 touches profile
-identity, not the tracked int-keyed sites, so the count did not move. Check
-103's OK line and split set are **unchanged**: 2 collections (bookmarks,
-learning_order), 0 new violations. Full `make ci` last green at `5b4d7924`;
-batched to end of Phase 4 by owner decision (2026-08-06).
+**Phase:** 0 ✅ · 1 ✅ · **2 in progress** (P2-1 ✅, P2-2 ✅, P2-3 ✅, P2-4
+through P2-7 not started).
+**Gates:** `dart analyze --fatal-infos` → `No issues found!` (0 issues in
+both `lib/` and `test/`). `make audit` green (**104** checks, unchanged;
+`=== audit PASSED — all 68 greps clean ===`). Check 104 (PROFILE-ID-INT-SITES)
+unchanged at **88 entries**, 0 new, 0 stale — P2-3 touches `ProfileModel`'s
+nullability, not the tracked int-keyed sites, so the count did not move.
+Check 103's OK line and split set are **unchanged**: 2 collections
+(bookmarks, learning_order), 0 new violations. Full `make ci` last green at
+`5b4d7924`; batched to end of Phase 4 by owner decision (2026-08-06).
 
-**IN FLIGHT:** nothing. P2-2 landed in the same commit that clears this
-entry.
+**IN FLIGHT:** nothing.
 
 **Live on Firestore (4):** bookmarks · learning-order · profile identity ·
 scheduler learning-order read.
@@ -122,6 +123,97 @@ stage-definition · study-day-config · track-learning-order.
 ## Entries
 
 Newest first. Append; never rewrite history.
+
+### 2026-08-06 — P2-3 complete (`ProfileModel.ulid` is `required String`; compiler-enforced identity)
+
+Per `docs/planning/firestore-phase2-plan.md` §4 P2-3, executed as a three-part
+agent brief (A: model + codegen + `lib/` fixes; B1/B2: the two test-file
+halves; C — this entry — closes and commits). `ProfileModel.ulid` is now
+`required String`, not `String?`; the "NULL means not yet migrated" comment
+is deleted. `ProfileModel.fromDriftRow` is the enforcement point (the Drift
+column itself stays nullable, per plan): on a `null` `row.ulid` it throws a
+named `StateError` —
+`'ProfileModel.fromDriftRow: profile id $id has no ulid — pre-P2-2 profile
+row with no ULID — wipe and reseed the device'` — no silent fallback
+anywhere, verified by grep across every touched `lib/` file for
+`ulid ?? `/`ulid?.`-shaped fallback patterns (none found). `SelectedProfileId.select`
+is now `void select(int id, {required String ulid})`, closing the third bare
+call site the type system couldn't previously prevent. Codegen
+(`dart run build_runner build --delete-conflicting-outputs`) regenerated
+`profile_model.freezed.dart` and `profile_providers.g.dart` in the same
+commit, plus three transitively-affected `.g.dart` files whose provider
+hashes shifted (`user_database.g.dart`, `completion_providers.g.dart`,
+`scheduler_providers.g.dart`) — all mechanical.
+
+**Part C's own fix, beyond stitching A/B1/B2 together:** `dart analyze
+--fatal-infos` on hand-off showed exactly the one error B2 had flagged and
+declined to guess at —
+`test/features/profiles/presentation/providers/profile_providers_test.dart:40`,
+a test titled *"select() without a ulid clears activeProfileDocIdProvider"*.
+Per the GREENFIELD ruling and `select`'s new signature, a caller omitting
+`ulid` is no longer a legal call — the scenario this test existed to pin
+cannot be constructed any more. Supplying a literal `ulid:` to make it
+compile (as B2 correctly judged) would silently flip the immediately-following
+`expect(activeProfileDocIdProvider, isNull)` to a guaranteed-false assertion,
+and would falsify both the test's name and its own docstring. **Fix: deleted
+the test** (lines 35–44), leaving the file's other two tests (`select()` with
+a known ulid; `clear()`), both of which already exercised the real, current
+contract and needed no change. This is a deliberate test-behavior change, not
+a mechanical patch — recorded here per the same rule P2-2 used for its own
+rewritten assertions.
+
+**Gates (verbatim, run after `dart format`, all four confirmed a second time
+post-format):**
+```
+$ dart analyze --fatal-infos
+Analyzing learning_tracker...
+No issues found!
+
+$ dart run tool/check_profile_path_keying.dart | tail -1
+PROFILE-KEY-SPLIT check OK: 2 collection(s) currently split (bookmarks, learning_order), all within the tracked baseline (0 new violations).
+
+$ dart run tool/check_profile_id_int_sites.dart | tail -1
+PROFILE-ID-INT-SITES OK: 88 tracked site(s) across 5 pattern(s) [cf-int-guard, cf-string-profileid-doc, dart-int-profileid-param, dart-tutoring-int-parse, dart-tutoring-id-tostring]; 0 new, 0 stale.
+
+$ make audit | tail -1
+=== audit PASSED — all 68 greps clean ===   (104/104 checks)
+
+$ dart format <61 touched .dart files>
+Formatted 61 files (0 changed) in 0.69 seconds.
+```
+All four match the plan's prediction (§6 P2-3: *"`dart analyze` green is a
+**complete** proof here... This is the one step in the phase where the cheap
+gate is sufficient."*) — no deviation on any of the four gates themselves.
+
+**DEVIATION — test-file blast radius vs. the plan's original prediction**
+(surfaced by part A, confirmed unchanged by part C; recorded here since this
+is the commit that lands it):
+- **Predicted** (`firestore-phase2-plan.md` §4 P2-3): "43 test files / 67
+  occurrences."
+- **Actual, measured:** **47 test files / 83 occurrences** fixed by B1+B2,
+  plus **1 additional file** (`profile_providers_test.dart`, 1 occurrence)
+  that part C resolved by deletion rather than by adding `ulid:` — so the
+  true total touched-file count for this commit is **48 test files**.
+- **Why the prediction was wrong (mechanism, not a person):** the plan's
+  blast-radius count was taken against tree `d74e3829` at plan-synthesis
+  time, before P2-1 and P2-2 executed. P2-2 itself added new call sites in
+  the same population it was later measured against (its own log entry
+  above records 8 files/~13 closures for the widened `setSelectedProfileId`
+  type, and a new `_FakeProfileRepository` override) — `auto_selected_profile_id_test.dart`
+  appears in both P2-2's touched-file list and P2-3's error list, confirming
+  test-file churn between plan-writing and P2-3 execution as at least a
+  partial cause. Not every one of the extra files/occurrences was
+  exhaustively attributed to a specific prior commit.
+- **Invariant unaffected:** check 103's OK line/split set and check 104's
+  count/scan-set are byte-identical before and after this commit.
+
+**Deferred (D1, per the plan's own table, unchanged from P2-2):** `make
+test` was not run. The 47 fixed + 1 deleted test files compile but were not
+executed — a green compile proves the fixture shape changed, not that the
+retained assertions still pass or that no test now asserts on a value it no
+longer meaningfully varies (e.g. the `ulid: 'ulid-$id'` convention used at
+`select()` call sites that assert only on the returned int id). Left for the
+end-of-cutover CI phase.
 
 ### 2026-08-06 — P2-2 complete: eager unconditional ULID mint; lazy backfill deleted
 

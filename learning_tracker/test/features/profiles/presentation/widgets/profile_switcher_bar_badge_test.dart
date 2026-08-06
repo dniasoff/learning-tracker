@@ -71,6 +71,7 @@ final _kNow = DateTime(2024);
 
 ProfileModel _childProfile() => ProfileModel(
   id: _kChildProfileId,
+  ulid: 'ulid-$_kChildProfileId',
   accountId: _kAccountId,
   displayName: 'Junior',
   mode: 'child',
@@ -81,6 +82,7 @@ ProfileModel _childProfile() => ProfileModel(
 
 ProfileModel _adultProfile() => ProfileModel(
   id: 99,
+  ulid: 'ulid-99',
   accountId: _kAccountId,
   displayName: 'Parent',
   mode: 'adult',

@@ -1012,6 +1012,7 @@ void main() {
       (tester) async {
         final profile = ProfileModel(
           id: 1,
+          ulid: 'ulid-1',
           accountId: 1,
           displayName: 'Moshe',
           mode: 'child',
@@ -1044,6 +1045,7 @@ void main() {
       (tester) async {
         final profile = ProfileModel(
           id: 1,
+          ulid: 'ulid-1',
           accountId: 1,
           displayName: 'Moshe',
           mode: 'child',

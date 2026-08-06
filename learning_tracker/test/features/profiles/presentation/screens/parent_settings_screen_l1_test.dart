@@ -74,6 +74,7 @@ ProfileModel _childProfile({int id = 1, String displayName = 'Moshe'}) {
   final now = DateTime.utc(2026, 1, 1);
   return ProfileModel(
     id: id,
+    ulid: 'ulid-$id',
     accountId: 1,
     displayName: displayName,
     mode: 'child',

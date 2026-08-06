@@ -152,6 +152,7 @@ const _authOverride = AuthState.signedIn(
 final _seededProfiles = [
   ProfileModel(
     id: 1,
+    ulid: 'ulid-1',
     accountId: 1,
     displayName: 'Test',
     mode: 'adult',

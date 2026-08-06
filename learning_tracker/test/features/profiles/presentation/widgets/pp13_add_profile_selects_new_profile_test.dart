@@ -57,6 +57,7 @@ void main() {
       ).thenAnswer(
         (_) async => ProfileModel(
           id: kNewProfileId,
+          ulid: 'ulid-$kNewProfileId',
           accountId: 1,
           displayName: 'Beni',
           mode: 'child',

@@ -173,6 +173,7 @@ void main() {
     ).thenAnswer(
       (_) async => ProfileModel(
         id: 9,
+        ulid: 'ulid-9',
         accountId: 1,
         displayName: 'TestKid',
         mode: 'adult',

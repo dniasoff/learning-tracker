@@ -25,9 +25,12 @@ import 'package:learning_tracker/features/tutoring/presentation/providers/active
 
 const int _tutorOwnProfileId = 1;
 const int _talmidMirrorProfileId = 42;
+const String _tutorOwnProfileUlid = 'ulid-1';
+const String _talmidMirrorProfileUlid = 'ulid-42';
 
 ProfileModel _talmidProfile() => ProfileModel(
   id: _talmidMirrorProfileId,
+  ulid: _talmidMirrorProfileUlid,
   accountId: 1,
   displayName: 'Tttt',
   mode: 'child',
@@ -38,6 +41,7 @@ ProfileModel _talmidProfile() => ProfileModel(
 
 ProfileModel _tutorProfile() => ProfileModel(
   id: _tutorOwnProfileId,
+  ulid: _tutorOwnProfileUlid,
   accountId: 1,
   displayName: 'Daniel Niasoff',
   mode: 'adult',
@@ -79,7 +83,9 @@ ProviderContainer _container({required bool tutored}) {
   // The tutor's own profile is the one they "selected" — outside tutor mode the
   // active profile must equal this; inside tutor mode it must be overridden by
   // the talmid mirror.
-  container.read(selectedProfileIdProvider.notifier).select(_tutorOwnProfileId);
+  container
+      .read(selectedProfileIdProvider.notifier)
+      .select(_tutorOwnProfileId, ulid: _tutorOwnProfileUlid);
 
   if (tutored) {
     container
@@ -147,14 +153,14 @@ void main() {
       // Active profile was the just-created child mirror (deleted below).
       container
           .read(selectedProfileIdProvider.notifier)
-          .select(_talmidMirrorProfileId);
+          .select(_talmidMirrorProfileId, ulid: _talmidMirrorProfileUlid);
 
       // deleteProfileFlow, on deleting the active profile, auto-switches the
       // selection to a REMAINING profile (here the "Daniel" adult) rather than
       // clearing to null. Emulate that selection move.
       container
           .read(selectedProfileIdProvider.notifier)
-          .select(_tutorOwnProfileId);
+          .select(_tutorOwnProfileId, ulid: _tutorOwnProfileUlid);
 
       expect(container.read(activeProfileIdProvider), _tutorOwnProfileId);
       final profile = await container.read(activeProfileProvider.future);
@@ -183,7 +189,7 @@ void main() {
 
       container
           .read(selectedProfileIdProvider.notifier)
-          .select(_talmidMirrorProfileId);
+          .select(_talmidMirrorProfileId, ulid: _talmidMirrorProfileUlid);
       // Old (buggy) delete behaviour: clear instead of selecting next.
       container.read(selectedProfileIdProvider.notifier).clear();
 
@@ -245,7 +251,7 @@ void main() {
 
       container
           .read(selectedProfileIdProvider.notifier)
-          .select(_tutorOwnProfileId);
+          .select(_tutorOwnProfileId, ulid: _tutorOwnProfileUlid);
       // Tutored selection active but mirror NOT yet resolved.
       container
           .read(activeTutoredProfileSelectionProvider.notifier)
