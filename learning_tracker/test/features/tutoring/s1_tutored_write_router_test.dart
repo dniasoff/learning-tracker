@@ -589,11 +589,6 @@ void main() {
             'day_of_week': 1,
             'track_id': 1,
           });
-          await router.pushBookmark({
-            'curriculum_id': 'daf_yomi',
-            'track_type': 'standard',
-            'content_item_id': 'Berakhot.2a',
-          });
           await router.pushProfileProgram({
             'curriculum_id': 'daf_yomi',
             'program_id': 'prog_001',
@@ -607,8 +602,8 @@ void main() {
           );
           expect(
             record.callCount,
-            7,
-            reason: '7 CF calls made (one per write)',
+            6,
+            reason: '6 CF calls made (one per write)',
           );
         },
       );
@@ -622,6 +617,19 @@ void main() {
         await router.pushGamificationSettingsSnapshot();
 
         expect(delegate.pushGamificationCount, 1);
+
+        // T-34: pushBookmark is pass-through even in a tutored session — the
+        // divergent CF-routing branch (tutorUpsertBookmark) was deleted, not
+        // reconciled; this router no longer distinguishes tutored from
+        // non-tutored for bookmarks.
+        await router.pushBookmark({
+          'curriculum_id': 'daf_yomi',
+          'track_type': 'standard',
+          'content_item_id': 'Berakhot.2a',
+        });
+
+        expect(delegate.pushBookmarkCount, 1);
+        expect(record.callCount, 0);
       });
     },
   );
@@ -668,120 +676,11 @@ void main() {
   });
 
   // ────────────────────────────────────────────────────────────────────────────
-  // S3: pushBookmark routing (new in S3 — parity CFs)
+  // T-34 (was S3): pushBookmark routing to tutorUpsertBookmark deleted.
+  // pushBookmark is now unconditional pass-through — see the "non-intercepted
+  // pass-throughs still reach delegate" test above (AC3 group) and the class
+  // doc comment in tutored_write_router.dart.
   // ────────────────────────────────────────────────────────────────────────────
-
-  group('S3 — pushBookmark routes to tutorUpsertBookmark', () {
-    test(
-      'tutored: pushBookmark → tutorUpsertBookmark with {curr}_{trackType} id',
-      () async {
-        final record = _FakeInvokerRecord();
-        final delegate = _FakeDelegate();
-        final router = _tutored(record, delegate);
-
-        await router.pushBookmark({
-          'curriculum_id': 'daf_yomi',
-          'track_type': 'standard',
-          'content_item_id': 'Berakhot.2a',
-          'updated_at': '2026-01-01T00:00:00.000Z',
-        });
-
-        expect(record.callCount, 1);
-        expect(record.lastCall!.fn, 'tutorUpsertBookmark');
-        expect(record.lastCall!.args['grantId'], _grantId);
-        expect(record.lastCall!.args['ownerUid'], _ownerUid);
-        expect(record.lastCall!.args['profileId'], 42);
-        expect(record.lastCall!.args['bookmarkId'], 'daf_yomi_standard');
-        expect(
-          record.lastCall!.args['bookmarkData'],
-          containsPair('curriculum_id', 'daf_yomi'),
-        );
-
-        expect(delegate.pushBookmarkCount, 0);
-        expect(delegate.totalEnqueueCount, 0);
-      },
-    );
-
-    test(
-      'tutored: pushBookmark without track_type falls back to curriculum_id',
-      () async {
-        final record = _FakeInvokerRecord();
-        final delegate = _FakeDelegate();
-        final router = _tutored(record, delegate);
-
-        await router.pushBookmark({
-          'curriculum_id': 'mishnayos',
-          'content_item_id': 'Berakhot.1.1',
-          'updated_at': '2026-01-01T00:00:00.000Z',
-        });
-
-        expect(record.callCount, 1);
-        expect(record.lastCall!.fn, 'tutorUpsertBookmark');
-        // M2 fix: fallback uses {curriculumId}_ (trailing underscore) to match
-        // parent-side gateway which always appends _{trackType}.
-        expect(record.lastCall!.args['bookmarkId'], 'mishnayos_');
-        expect(delegate.pushBookmarkCount, 0);
-      },
-    );
-
-    test('non-tutored: pushBookmark passes through to delegate', () async {
-      final record = _FakeInvokerRecord();
-      final delegate = _FakeDelegate();
-      final router = _nonTutored(record, delegate);
-
-      await router.pushBookmark({
-        'curriculum_id': 'daf_yomi',
-        'track_type': 'standard',
-        'content_item_id': 'Berakhot.2a',
-      });
-
-      expect(delegate.pushBookmarkCount, 1);
-      expect(record.wasCalled, isFalse);
-    });
-
-    test(
-      'tutored: pushBookmark CF failure → throws TutorWriteException',
-      () async {
-        final delegate = _FakeDelegate();
-        final router = TutoredWriteRouter(
-          delegate: delegate,
-          writeService: TutorWriteService(
-            invoker: (_, __) async => throw Exception('network timeout'),
-          ),
-          selection: _tutoredSelection,
-        );
-
-        await expectLater(
-          () => router.pushBookmark({
-            'curriculum_id': 'daf_yomi',
-            'track_type': 'standard',
-            'content_item_id': 'Berakhot.2a',
-          }),
-          throwsA(isA<TutorWriteException>()),
-        );
-
-        expect(delegate.pushBookmarkCount, 0);
-      },
-    );
-
-    test(
-      'AC3 extended: pushBookmark in tutored mode contributes 0 to outbox',
-      () async {
-        final record = _FakeInvokerRecord();
-        final delegate = _FakeDelegate();
-        final router = _tutored(record, delegate);
-
-        await router.pushBookmark({
-          'curriculum_id': 'daf_yomi',
-          'track_type': 'standard',
-          'content_item_id': 'Berakhot.2a',
-        });
-
-        expect(delegate.totalEnqueueCount, 0);
-        expect(record.callCount, 1);
-      },
-    );
-  });
 
   // ────────────────────────────────────────────────────────────────────────────
   // F2: pushProfileProgram → tutorSetProfileProgram

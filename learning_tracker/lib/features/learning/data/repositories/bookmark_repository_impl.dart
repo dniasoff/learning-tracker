@@ -6,7 +6,6 @@ import 'package:learning_tracker/core/content/content_index.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/sync/firestore_gateway.dart';
-import 'package:learning_tracker/core/sync/sync_write_facade.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
 import 'package:learning_tracker/data/repositories/firestore_bookmark_repository.dart';
@@ -32,7 +31,6 @@ import 'package:learning_tracker/features/tutoring/tutoring.dart';
 /// eliminating the O(N) scan over all curriculum items per call.
 class BookmarkRepositoryImpl implements BookmarkRepository {
   final UserDatabase _database;
-  final SyncWriteFacade? _syncEngine;
   final FirestoreGateway? _firestoreGateway;
   final ContentRepository _contentRepository;
   final int _profileId;
@@ -44,13 +42,11 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
 
   BookmarkRepositoryImpl({
     required UserDatabase database,
-    required SyncWriteFacade? syncEngine,
     required ContentRepository contentRepository,
     int profileId = 0,
     ContentIndex? contentIndex,
     FirestoreGateway? firestoreGateway,
   }) : _database = database,
-       _syncEngine = syncEngine,
        _firestoreGateway = firestoreGateway,
        _contentRepository = contentRepository,
        _profileId = profileId,
@@ -141,9 +137,6 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
         updatedAt: now,
       );
     }
-
-    // Offline-first: never block UI on remote bookmark push.
-    unawaited(_syncBookmark(bookmark));
 
     return bookmark;
   }
@@ -317,11 +310,6 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
       ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
 
     return leafItems.isNotEmpty ? leafItems.first.sefariaRef : null;
-  }
-
-  /// Queue bookmark for Firestore sync.
-  Future<void> _syncBookmark(BookmarkEntity bookmark) async {
-    await _syncEngine?.pushBookmark(bookmark.toFirestore());
   }
 
   /// Convert database model to domain entity.

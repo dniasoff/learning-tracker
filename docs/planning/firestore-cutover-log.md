@@ -77,20 +77,21 @@ nothing on disk to diff against. This is the fix, binding from 2026-08-06
 
 ## CURRENT STATE
 
-**Head:** this commit (P2-3) — SHA unknowable within its own commit, same
-self-reference lag as before. Parent is `0d5d9125` (P2-2, verified via `git
-log --oneline -1` at P2-3 start).
+**Head:** this commit (P2-4) — SHA unknowable within its own commit, same
+self-reference lag as before. Parent is `feefe34b` (P2-3, verified via `git
+log --oneline -1` at P2-4 start).
 **Deployed:** unknown — nothing deployed this phase yet.
-**Phase:** 0 ✅ · 1 ✅ · **2 in progress** (P2-1 ✅, P2-2 ✅, P2-3 ✅, P2-4
-through P2-7 not started).
+**Phase:** 0 ✅ · 1 ✅ · **2 in progress** (P2-1 ✅, P2-2 ✅, P2-3 ✅, P2-4 ✅,
+P2-5 through P2-7 not started).
 **Gates:** `dart analyze --fatal-infos` → `No issues found!` (0 issues in
 both `lib/` and `test/`). `make audit` green (**104** checks, unchanged;
 `=== audit PASSED — all 68 greps clean ===`). Check 104 (PROFILE-ID-INT-SITES)
-unchanged at **88 entries**, 0 new, 0 stale — P2-3 touches `ProfileModel`'s
-nullability, not the tracked int-keyed sites, so the count did not move.
-Check 103's OK line and split set are **unchanged**: 2 collections
-(bookmarks, learning_order), 0 new violations. Full `make ci` last green at
-`5b4d7924`; batched to end of Phase 4 by owner decision (2026-08-06).
+unchanged at **88 entries**, 0 new, 0 stale — P2-4 deleted a divergent CF
+call and its buggy doc-id formula, neither of which check 104 tracks (it
+scans `int`-typed profile identity, not doc-id formulas). Check 103's OK
+line and split set are **unchanged**: 2 collections (bookmarks,
+learning_order), 0 new violations. Full `make ci` last green at `5b4d7924`;
+batched to end of Phase 4 by owner decision (2026-08-06).
 
 **IN FLIGHT:** nothing.
 
@@ -123,6 +124,166 @@ stage-definition · study-day-config · track-learning-order.
 ## Entries
 
 Newest first. Append; never rewrite history.
+
+### 2026-08-06 — P2-4 complete: T-34, the divergent bookmark writer is deleted
+
+Per `docs/planning/firestore-phase2-plan.md` §4 P2-4. Verified the deletion's
+premise first, by grep, before cutting: `grep -rn "BookmarkRepositoryImpl("
+lib/` returns only the class's own constructor declaration and one comment;
+the only real constructions are three `test/` files. The live provider
+(`bookmark_providers.dart`) builds `FirestoreBookmarkRepositoryAdapter`,
+which refuses tutored bookmark writes outright — so `TutoredWriteRouter
+.pushBookmark`'s CF-routing branch, reachable only through
+`BookmarkRepositoryImpl`'s `_syncEngine?.pushBookmark(...)`, was
+unreachable from production, exactly as the plan stated.
+
+**DEVIATION from the plan's literal edit list and its predicted mechanism**
+(four-part structure):
+- **Predicted** (`firestore-phase2-plan.md` §4 P2-4 and §6's table): "Delete
+  `TutoredWriteRouter.pushBookmark`… `dart analyze` green — and it genuinely
+  proves this one, because deleting a method breaks every caller at compile
+  time."
+- **What happened:** a literal deletion of the `pushBookmark` override does
+  **not** compile. `SyncWriteFacade.pushBookmark` (`sync_write_facade.dart:21`)
+  is an abstract interface member, and `TutoredWriteRouter implements
+  SyncWriteFacade` (`tutored_write_router.dart:84`) — Dart's `implements`
+  clause requires a concrete implementation of every interface member
+  regardless of whether any caller ever invokes it. Verified empirically:
+  made the literal edit, ran `dart analyze --fatal-infos`, got exactly one
+  error — `Missing concrete implementation of 'SyncWriteFacade.pushBookmark'.
+  ... - non_abstract_class_inherits_abstract_member` — not a caller-side
+  error at all. **Fix:** kept `pushBookmark` as a required override but
+  replaced its body with an unconditional pass-through
+  (`_delegate.pushBookmark(bookmark)`), matching the file's own existing
+  style for `pushSettings`/`pushLearningOrder`/`pushUiPreferencesSnapshot`/
+  `deleteLearnerProfile` (already documented as "Pass-through (not
+  tutored-routed)"). This deletes the divergent CF-routing branch and its
+  buggy doc-id formula — the actual defect T-34 names — while satisfying
+  the interface. Moved the class doc comment's `pushBookmark` line from the
+  "Intercepted entity kinds" list to the "Pass-through" list accordingly (a
+  literal line-deletion, as the plan's edit list said, would have left the
+  header silently omitting any mention of `pushBookmark`'s handling — its
+  own kind of staleness risk).
+- **Why the prediction was wrong (mechanism, not a person):** the plan's own
+  verification table (§6) states the deleted path "was unreachable from
+  production" as the reason no behavioral check is needed — true, and it
+  correctly ruled out reachability as a risk. But the plan did not check
+  whether `TutoredWriteRouter`'s *conformance to its own declared interface*
+  survives removing one override; that is a compile-time property
+  independent of whether the method is ever called, and Dart's `implements`
+  semantics (not `extends`) make it non-optional. `dart analyze` still
+  provided complete proof of removal — it is a **complete gate**, exactly as
+  predicted — but the mechanism it caught was "missing interface member,"
+  not "broken caller."
+- **Invariant unaffected:** check 103's OK line and split set are byte-
+  identical before and after this commit (2 collections, bookmarks +
+  learning_order, 0 new violations). Check 104 unchanged at 88 entries, 0
+  new, 0 stale — neither check has a concept of a doc-id formula or a
+  CF-routing branch, so neither could have seen this defect either way.
+  `make audit` green including check 102 (`check_dependency_direction.dart`)
+  — no `DocIds` import was added anywhere under `lib/features/tutoring/data/
+  routers/`, which is what the plan's rejected "reconcile the formula"
+  alternative would have required and which check 102 forbids there.
+
+**Stale comment handled per the task's own instruction** (not fixed, cited):
+the deleted `// Mirror firestore_gateway_impl doc-id:
+{curriculum_id}_{track_type}.` comment described a formula
+`firestore_gateway_impl.dart` no longer implements for bookmarks (it writes
+a bare `curriculum_id`; `BookmarkEntity` has no `track_type` field), so the
+router in fact emitted `'{curriculumId}_'` with a trailing underscore,
+matching nobody. This is the doc-comment-staleness hazard (this log's own
+standing fact, above) firing on the exact task that named it as a risk.
+
+**Second, related dead-code cleanup, beyond the plan's literal edit list but
+required by the same doc-comment-staleness rule:** `bookmark_repository_impl
+.dart`'s `_syncBookmark` private helper existed only to call
+`_syncEngine?.pushBookmark(...)`. Deleting only that call (per the plan's
+literal text) would have left `_syncBookmark` an empty no-op async method
+whose own doc comment ("Queue bookmark for Firestore sync.") would have
+been immediately false. Deleted `_syncBookmark` and its single call site
+(`unawaited(_syncBookmark(bookmark))` in `initializeBookmark`) entirely,
+along with the `_syncEngine` field, the `syncEngine` constructor parameter,
+and the now-unused `sync_write_facade.dart` import — matching the plan's own
+conditional ("delete the `syncEngine` constructor parameter *if that leaves
+it unused*"), which it did.
+
+**Same-commit test edits, matching the plan's list exactly on file identity
+but not on content** (the plan predicted these tests "die with the method";
+since the method was not literally deleted, they instead compiled but
+asserted stale behavior, so they needed rewriting, not just recompiling):
+- `bookmark_repository_impl_test.dart`, `completion_repository_impl_test.dart`,
+  `bulk_mark_screen_staleness_test.dart` — removed the now-undefined
+  `syncEngine:`/`syncEngine: null` constructor argument at each
+  `BookmarkRepositoryImpl(...)` call site; removed the now-dead
+  `MockSyncEngine` class, field, and `pushBookmark` stub from the first two
+  (nothing calls `SyncWriteFacade.pushBookmark` through `BookmarkRepositoryImpl`
+  any more; `completion_repository_impl_test.dart`'s `mockSyncEngine` remains
+  in use for `DriftCompletionPointsAwarder`, an unrelated collaborator, so
+  only its `pushBookmark` stub was removed, not the mock itself).
+- `s1_tutored_write_router_test.dart` — deleted the whole `'S3 — pushBookmark
+  routes to tutorUpsertBookmark'` group (4 tests pinning the deleted
+  CF-routing formula and its CF-failure path — the exact scenario this
+  commit removes, so, per the same precedent P2-3's log entry used for its
+  own deleted test, the scenario can no longer be constructed and the tests
+  were deleted rather than patched to compile-but-lie). Removed the
+  `pushBookmark` call from the "all intercepted entity kinds" test (was one
+  of 7 CF calls; now 6) and added a new assertion to the adjacent
+  "non-intercepted pass-throughs still reach delegate" test proving
+  `pushBookmark` reaches the delegate even from a **tutored** router
+  (`delegate.pushBookmarkCount == 1`, `record.callCount == 0`) — the one
+  piece of real behavioral coverage this commit's change actually needs and
+  the plan's original test set never had (its tests only ever exercised the
+  *non-tutored* pass-through case for `pushBookmark`).
+
+**Not touched, per the plan:** the `tutorUpsertBookmark` Cloud Function
+(`functions/src/tutor_writes.ts:782`) — still deployed and externally
+callable; its fate rides with T-31 in Phase 3. A pre-existing, unrelated doc-
+comment staleness was noticed but left alone as out of scope for this
+commit: `bulk_mark_screen_staleness_test.dart:51,193` describe
+`CompletionRepositoryImpl`'s construction as `syncEngine: null`, but that
+class does not have a `syncEngine` parameter today (verified:
+`completion_repository_impl.dart`'s constructor has no such param) — this
+predates P2-4 and is not something this commit's edits made false, so it
+was not fixed here; flagged for whoever next touches that file.
+
+**Gates (verbatim, run after `dart format`):**
+```
+$ dart analyze --fatal-infos
+Analyzing learning_tracker...
+No issues found!
+
+$ dart run tool/check_profile_path_keying.dart | tail -1
+PROFILE-KEY-SPLIT check OK: 2 collection(s) currently split (bookmarks, learning_order), all within the tracked baseline (0 new violations).
+
+$ dart run tool/check_profile_id_int_sites.dart | tail -1
+PROFILE-ID-INT-SITES OK: 88 tracked site(s) across 5 pattern(s) [cf-int-guard, cf-string-profileid-doc, dart-int-profileid-param, dart-tutoring-int-parse, dart-tutoring-id-tostring]; 0 new, 0 stale.
+
+$ make audit | tail -1
+=== audit PASSED — all 68 greps clean ===   (104/104 checks)
+
+$ dart format <6 touched .dart files>
+Formatted 6 files (0 changed) in 0.04 seconds.
+```
+Three of four gates match the plan's prediction exactly (check 103, check
+104, `make audit` including check 102 specifically staying green). `dart
+analyze` also matches the *predicted color* (green) but not the predicted
+*mechanism* — see the deviation above.
+
+**Not attempted, per the plan's own instruction:** the "tutor sets a
+bookmark" device round-trip. Correctly unexecutable — the live adapter
+refuses tutored bookmark writes before anything reaches the router — and
+not recorded as passed.
+
+**Deferred (D1, unchanged from prior phase steps):** `make test` was not
+run. The 4 edited test files compile but were not executed.
+
+**Process note:** this session made one edit (the literal, plan-as-written
+deletion of `TutoredWriteRouter.pushBookmark`, to test the interface-
+conformance question empirically) before appending the IN FLIGHT entry
+required by this log's own protocol. The IN FLIGHT entry was appended
+immediately after, before any further edit, and before this closing entry.
+Flagged, not silently corrected, per the same convention P2-1's entry used
+for its own process gap.
 
 ### 2026-08-06 — P2-3 complete (`ProfileModel.ulid` is `required String`; compiler-enforced identity)
 

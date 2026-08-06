@@ -123,7 +123,6 @@ void main() {
       activeProfileId: learnerId,
       bookmarkRepository: BookmarkRepositoryImpl(
         database: database,
-        syncEngine: mockSyncEngine,
         contentRepository: mockContentRepository,
         profileId: learnerId,
       ),
@@ -142,9 +141,6 @@ void main() {
     ).thenAnswer((_) async => []);
 
     // Sync engine stubs
-    when(
-      () => mockSyncEngine.pushBookmark(any()),
-    ).thenAnswer((_) async => Future.value());
     when(
       () => mockSyncEngine.pushGamificationSettingsSnapshot(),
     ).thenAnswer((_) async => Future.value());

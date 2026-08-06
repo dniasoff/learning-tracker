@@ -20,14 +20,15 @@
 //   pushCurriculumTrack              → tutorUpsertTrack
 //   pushStageDefinitions             → tutorUpsertStageDefinition (one per stage)
 //   pushStudyDayConfig               → tutorUpsertStudyDayConfig
-//   pushBookmark                     → tutorUpsertBookmark
 //   pushProfileProgram               → tutorSetProfileProgram
 //   pushGamificationSettingsSnapshot → tutorUpdateGamificationSettings (S4)
 //   pushLearnerProfile               → tutorEditProfile (S4)
 //   deleteCompletion                 → tutorResetCompletion (S4)
 //
 // Pass-through (not tutored-routed — delegated to outbox):
-//   pushSettings, pushLearningOrder, pushUiPreferencesSnapshot,
+//   pushSettings, pushLearningOrder, pushUiPreferencesSnapshot, pushBookmark
+//   (T-34: this router no longer routes bookmark writes to a CF — the
+//   `tutorUpsertBookmark` CF still exists but nothing in lib/ calls it),
 //   deleteLearnerProfile (talmid's profile deletion is not a tutor right).
 //
 // Error handling: CF failures (TutorWriteFailure) are logged and re-thrown as
@@ -224,27 +225,6 @@ class TutoredWriteRouter implements SyncWriteFacade {
   }
 
   @override
-  Future<void> pushBookmark(Map<String, dynamic> bookmark) async {
-    final sel = _selection;
-    if (sel == null) return _delegate.pushBookmark(bookmark);
-
-    final curriculumId = bookmark['curriculum_id']?.toString() ?? '';
-    final trackType = bookmark['track_type']?.toString() ?? '';
-    // Mirror firestore_gateway_impl doc-id: {curriculum_id}_{track_type}.
-    // When track_type is absent the gateway writes {curriculumId}_ (with the
-    // trailing underscore), so we match that to keep LWW on the same doc.
-    final bookmarkId = '${curriculumId}_$trackType';
-    final result = await _writeService.upsertBookmark(
-      grantId: sel.grantId,
-      ownerUid: sel.ownerUid,
-      profileId: _profileIdOrThrow(sel),
-      bookmarkId: bookmarkId,
-      bookmarkData: bookmark,
-    );
-    _handleResult(result, 'tutorUpsertBookmark');
-  }
-
-  @override
   Future<void> pushProfileProgram(Map<String, dynamic> payload) async {
     final sel = _selection;
     if (sel == null) return _delegate.pushProfileProgram(payload);
@@ -372,6 +352,21 @@ class TutoredWriteRouter implements SyncWriteFacade {
   @override
   Future<void> pushSettings(Map<String, dynamic> settings) =>
       _delegate.pushSettings(settings);
+
+  // T-34: no tutor-write CF route for bookmarks in this router. The prior
+  // implementation intercepted this call and routed it to `tutorUpsertBookmark`
+  // using a doc-id formula (`{curriculum_id}_{track_type}`) that did not match
+  // what `firestore_gateway_impl.dart` actually writes for bookmarks (a bare
+  // `curriculum_id` — `BookmarkEntity` has no `track_type` field), so it
+  // produced a doc id nothing else agreed on. It was also unreachable from
+  // production: this router is only ever handed to `BookmarkRepositoryImpl`,
+  // which nothing under lib/ constructs (the live provider builds
+  // `FirestoreBookmarkRepositoryAdapter`, which refuses tutored bookmark
+  // writes outright). Deleted rather than fixed; see docs/planning/
+  // firestore-cutover-log.md, 2026-08-06 T-34 entry.
+  @override
+  Future<void> pushBookmark(Map<String, dynamic> bookmark) =>
+      _delegate.pushBookmark(bookmark);
 
   @override
   Future<void> pushLearningOrder({

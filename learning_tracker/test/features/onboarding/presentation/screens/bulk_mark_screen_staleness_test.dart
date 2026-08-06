@@ -197,7 +197,6 @@ void main() {
     // just not what the app itself calls for bookmarks today.
     final bookmarkRepo = BookmarkRepositoryImpl(
       database: db,
-      syncEngine: null,
       contentRepository: contentRepo,
       profileId: _profileId,
     );

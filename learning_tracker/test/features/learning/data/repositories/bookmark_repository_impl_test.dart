@@ -8,7 +8,6 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
-import 'package:learning_tracker/core/sync/sync_write_facade.dart';
 import 'package:learning_tracker/data/firestore/account_firebase.dart';
 import 'package:learning_tracker/data/firestore/active_account_providers.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart'
@@ -19,8 +18,6 @@ import 'package:learning_tracker/features/tutoring/tutoring.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../../../helpers/test_database.dart';
-
-class MockSyncEngine extends Mock implements SyncWriteFacade {}
 
 class MockContentRepository extends Mock implements ContentRepository {}
 
@@ -38,7 +35,6 @@ void main() {
   });
 
   late UserDatabase database;
-  late MockSyncEngine mockSyncEngine;
   late MockContentRepository mockContentRepository;
   late BookmarkRepositoryImpl repository;
   late int mishnayosTrackId;
@@ -48,7 +44,6 @@ void main() {
     await seedProfileZero(database);
     // Also seed profile 1 (referenced by learning_order tests).
     await seedProfile(database);
-    mockSyncEngine = MockSyncEngine();
     mockContentRepository = MockContentRepository();
 
     final mishnayosTrack = await database
@@ -76,13 +71,8 @@ void main() {
 
     repository = BookmarkRepositoryImpl(
       database: database,
-      syncEngine: mockSyncEngine,
       contentRepository: mockContentRepository,
     );
-
-    when(
-      () => mockSyncEngine.pushBookmark(any()),
-    ).thenAnswer((_) async => Future.value());
 
     // Default content order: ref1, ref2, ref3
     when(() => mockContentRepository.getContentForCurriculum(any())).thenAnswer(
