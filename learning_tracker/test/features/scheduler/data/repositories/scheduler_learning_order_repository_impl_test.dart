@@ -19,45 +19,26 @@
 /// would never reach daily-task generation. The "writer/reader agreement"
 /// test below constructs BOTH adapters — the actual production writer
 /// class and the actual production scheduler-reader class — on the SAME
-/// simulated account/profile, and proves a save through one is visible to
-/// the other.
+/// simulated account/profile (built via
+/// `test/helpers/writer_reader_agreement.dart`'s [activateAccountAndProfile],
+/// this file's worked example for Phase 1 step B2), and proves a save
+/// through one is visible to the other via [expectWriterReaderAgree].
 library;
 
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/data/firestore/account_firebase.dart';
-import 'package:learning_tracker/data/firestore/active_account_providers.dart';
-import 'package:learning_tracker/data/firestore/repository_providers.dart'
-    show activeProfileDocIdProvider;
 import 'package:learning_tracker/features/scheduler/data/repositories/scheduler_learning_order_repository_impl.dart';
+import 'package:learning_tracker/features/scheduler/domain/repositories/scheduler_learning_order_repository.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/data/repositories/learning_order_repository_impl.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/domain/models/learning_order_item.dart';
-import 'package:mocktail/mocktail.dart';
 
+import '../../../../helpers/writer_reader_agreement.dart';
 import 'not_ready_expectations.dart';
-
-class MockFirebaseApp extends Mock implements FirebaseApp {}
-
-class MockFirebaseAuthHandle extends Mock implements FirebaseAuth {}
 
 void main() {
   group('SchedulerFirestoreLearningOrderRepositoryAdapter', () {
-    const uid = 'uid-1';
-    const profileDocId = 'profile-ulid-1';
-
-    AccountFirebaseHandles handles(FakeFirebaseFirestore firestore) {
-      return AccountFirebaseHandles(
-        app: MockFirebaseApp(),
-        firestore: firestore,
-        auth: MockFirebaseAuthHandle(),
-        uid: uid,
-      );
-    }
-
     // Constructing the adapter requires a Ref (Riverpod's Ref is sealed —
     // it can only come from inside a provider callback), so tests obtain
     // one the same way production does: read a throwaway Provider that
@@ -106,20 +87,20 @@ void main() {
     });
 
     group('ready (active account + profile)', () {
+      // Built via activateAccountAndProfile — the ONE seam-touching call
+      // per test (`test/helpers/writer_reader_agreement.dart`), so the
+      // writer and reader below are guaranteed to resolve the same
+      // (uid, profileId, firestore) triple through Riverpod's per-container
+      // memoization rather than two hand-rolled rigs that merely share
+      // literal id strings.
       late FakeFirebaseFirestore firestore;
       late ProviderContainer container;
       late SchedulerFirestoreLearningOrderRepositoryAdapter reader;
 
       setUp(() {
-        firestore = FakeFirebaseFirestore();
-        container = ProviderContainer(
-          overrides: [
-            activeAccountFirebaseProvider.overrideWith(
-              (ref) async => handles(firestore),
-            ),
-          ],
-        );
-        container.read(activeProfileDocIdProvider.notifier).set(profileDocId);
+        final rig = activateAccountAndProfile();
+        firestore = rig.firestore;
+        container = rig.container;
         reader = buildReader(container);
       });
 
@@ -139,45 +120,43 @@ void main() {
       // visible to the scheduler's read path (here, the actual
       // SchedulerFirestoreLearningOrderRepositoryAdapter wired into
       // schedulerEngineProvider) — writer and reader agreeing on ONE
-      // Firestore document tree.
+      // Firestore document tree. Run through expectWriterReaderAgree
+      // (`test/helpers/writer_reader_agreement.dart`) as the worked example
+      // for an already-migrated collection (Phase 1 step B2).
       test('writer/reader agreement: an order saved via '
           'learningOrderRepositoryProvider\'s adapter is visible to the '
           'scheduler\'s adapter, in the saved order', () async {
-        final writer = buildWriter(container);
-        await writer.saveOrder(CurriculumId.mishnayos, const [
-          LearningOrderItem(
-            sefariaRef: 'Shabbat',
-            displayNameHe: 'שבת',
-            displayNameEn: 'Shabbat',
-            userSortOrder: 0,
-          ),
-          LearningOrderItem(
-            sefariaRef: 'Berakhot',
-            displayNameHe: 'ברכות',
-            displayNameEn: 'Berakhot',
-            userSortOrder: 1,
-          ),
-        ]);
-
-        final order = await reader.getOrder(CurriculumId.mishnayos);
-
-        expect(
-          order.map((i) => i.sefariaRef).toList(),
-          ['Shabbat', 'Berakhot'],
-          reason:
-              'If the scheduler reader pointed at a different document '
-              'tree than the writer (the regression this fix closes), '
-              'this would come back empty even though saveOrder above '
-              'completed successfully — silently freezing daily-task '
-              'generation on whatever order existed before the reorder.',
-        );
-        expect(
-          order.map((i) => i.userSortOrder).toList(),
-          [0, 1],
-          reason:
-              'List position becomes the new userSortOrder — see '
-              'SchedulerFirestoreLearningOrderRepositoryAdapter.getOrder\'s '
-              'doc comment.',
+        await expectWriterReaderAgree<List<SchedulerOrderItem>>(
+          firestore: firestore,
+          collection: 'learning_order',
+          writerDescription:
+              'learningOrderRepositoryProvider\'s '
+              'FirestoreLearningOrderRepositoryAdapter.saveOrder',
+          readerDescription:
+              'SchedulerFirestoreLearningOrderRepositoryAdapter.getOrder '
+              '(schedulerEngineProvider\'s reader)',
+          write: () async {
+            final writer = buildWriter(container);
+            await writer.saveOrder(CurriculumId.mishnayos, const [
+              LearningOrderItem(
+                sefariaRef: 'Shabbat',
+                displayNameHe: 'שבת',
+                displayNameEn: 'Shabbat',
+                userSortOrder: 0,
+              ),
+              LearningOrderItem(
+                sefariaRef: 'Berakhot',
+                displayNameHe: 'ברכות',
+                displayNameEn: 'Berakhot',
+                userSortOrder: 1,
+              ),
+            ]);
+          },
+          read: () => reader.getOrder(CurriculumId.mishnayos),
+          matches: equals(const [
+            SchedulerOrderItem(sefariaRef: 'Shabbat', userSortOrder: 0),
+            SchedulerOrderItem(sefariaRef: 'Berakhot', userSortOrder: 1),
+          ]),
         );
       });
     });

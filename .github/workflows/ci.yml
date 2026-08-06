@@ -264,6 +264,16 @@ jobs:
         working-directory: learning_tracker
         run: dart run tool/check_lcov_denominator.dart --strict
 
+      # docs/firestore-rewrite-map.md item 10 — the writer/reader
+      # path-disagreement defect class (bookmarks/learning-order
+      # regression). Belt-and-suspenders with `make audit`'s own 103/103
+      # check and the `ci:` Makefile target's new check-profile-path-keying
+      # prerequisite: this checker has no external-artifact dependency, so
+      # it cannot soft-skip and needs no --strict equivalent.
+      - name: Assert profile-scoped Firestore collections have exactly one live keying scheme
+        working-directory: learning_tracker
+        run: dart run tool/check_profile_path_keying.dart
+
       - name: Upload golden test failures (diffs)
         if: failure()
         uses: actions/upload-artifact@v7

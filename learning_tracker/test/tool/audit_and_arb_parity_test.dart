@@ -877,4 +877,153 @@ Status: ready-for-dev
       }
     });
   });
+
+  group('make audit check 103/103 — PROFILE-KEY-SPLIT '
+      '(docs/firestore-rewrite-map.md item 10, tool/check_profile_path_'
+      'keying.dart)', () {
+    final profilePathKeyingScript =
+        '$packageDir/tool/check_profile_path_keying.dart';
+    // Piggybacks on a REAL, already-verified-LIVE repository file
+    // (firestore_bookmark_repository.dart is reachable via HOP 1 from
+    // lib/features/learning/presentation/providers/bookmark_providers.dart
+    // today) rather than fabricating a fake provider/adapter chain: any
+    // literal collection-name touch added anywhere in an already-LIVE file
+    // is promoted to the liveness-filtered ULID-C bucket automatically,
+    // because reachability is a property of the FILE, not the line.
+    final bookmarkRepoFile = File(
+      '$packageDir/lib/data/repositories/firestore_bookmark_repository.dart',
+    );
+    final syncFixtureFile = File(
+      '$packageDir/lib/core/sync/_profile_path_keying_ac1_fixture.dart',
+    );
+    const fixtureCollectionName = 'some_new_test_collection_xyz';
+    const fixtureMarkerLine =
+        'const _profilePathKeyingAc1FixtureCollection = '
+        "'$fixtureCollectionName';\n";
+
+    void stripMarkerIfPresent() {
+      // Crash-safety: a prior killed run may have left the marker line
+      // appended to the real bookmark repository file — self-heal by
+      // stripping exactly that known, uniquely-named line rather than
+      // relying on a persisted backup across process runs.
+      if (!bookmarkRepoFile.existsSync()) return;
+      final content = bookmarkRepoFile.readAsStringSync();
+      if (content.contains(fixtureMarkerLine)) {
+        bookmarkRepoFile.writeAsStringSync(
+          content.replaceAll(fixtureMarkerLine, ''),
+        );
+      }
+    }
+
+    setUp(() {
+      stripMarkerIfPresent();
+      if (syncFixtureFile.existsSync()) syncFixtureFile.deleteSync();
+    });
+
+    tearDown(() {
+      stripMarkerIfPresent();
+      if (syncFixtureFile.existsSync()) syncFixtureFile.deleteSync();
+    });
+
+    test(
+      'the check runs as part of make audit, prints its stable description '
+      'text, and is clean against its tracked baseline today (the overall '
+      'make audit exit code is NOT asserted here — see this file\'s header '
+      'NOTE: pre-existing, unrelated violations from earlier epics already '
+      'keep it red; a dedicated skipped test above tracks that separately)',
+      () async {
+        final result = await Process.run('make', [
+          'audit',
+        ], workingDirectory: packageDir);
+        final stdout = result.stdout.toString();
+        expect(
+          stdout,
+          allOf(
+            contains('103/103'),
+            contains('PROFILE-KEY-SPLIT'),
+            contains('docs/firestore-rewrite-map.md item 10'),
+          ),
+          reason:
+              'make audit must run check 103/103 and print its stable '
+              'description text.\nstdout=$stdout\nstderr=${result.stderr}',
+        );
+        expect(
+          stdout,
+          isNot(contains('PROFILE-KEY-SPLIT check FAILED')),
+          reason:
+              'the check itself must be clean against its tracked '
+              'baseline on the real tree today.\nstdout=$stdout',
+        );
+        expect(stdout, contains('PROFILE-KEY-SPLIT check OK'));
+      },
+      // AUD-guardrails-17 (see file-level NOTE above): make audit's own
+      // cost, not this check's — check_profile_path_keying.dart itself
+      // runs in a few seconds.
+      timeout: const Timeout(Duration(minutes: 10)),
+    );
+
+    test('AC1 (red-demo, "the grep must have teeth"): a throwaway '
+        'cross-tree touch for a brand-new collection — an INT (sync-engine) '
+        'literal plus a liveness-reachable ULID literal — flips the checker '
+        'from clean to FAILED; removing both restores a clean pass', () async {
+      final tempDir = await Directory.systemTemp.createTemp(
+        'profile_path_keying_ac1_',
+      );
+      try {
+        final collectionsFile = File('${tempDir.path}/collections.txt')
+          ..writeAsStringSync('$fixtureCollectionName\n');
+        final baselineFile = File('${tempDir.path}/baseline.txt')
+          ..writeAsStringSync('');
+
+        Future<ProcessResult> runFixtureCheck() => Process.run('dart', [
+          'run',
+          profilePathKeyingScript,
+          '--collections',
+          collectionsFile.path,
+          '--baseline',
+          baselineFile.path,
+        ], workingDirectory: packageDir);
+
+        final originalBookmarkContent = bookmarkRepoFile.readAsStringSync();
+        try {
+          bookmarkRepoFile.writeAsStringSync(
+            '$originalBookmarkContent\n$fixtureMarkerLine',
+          );
+          syncFixtureFile.writeAsStringSync('''
+/// AC1 red-demo fixture for tool/check_profile_path_keying.dart's
+/// meta-test (test/tool/audit_and_arb_parity_test.dart). Deleted by the
+/// test's tearDown/finally; must never be committed.
+library;
+
+const someNewTestCollectionXyzIntTouch = '$fixtureCollectionName';
+''');
+
+          final dirty = await runFixtureCheck();
+          expect(
+            dirty.exitCode,
+            1,
+            reason:
+                'a brand-new cross-tree split outside the (empty) '
+                'fixture baseline must fail.\nstdout=${dirty.stdout}\n'
+                'stderr=${dirty.stderr}',
+          );
+          expect(dirty.stderr.toString(), contains(fixtureCollectionName));
+        } finally {
+          bookmarkRepoFile.writeAsStringSync(originalBookmarkContent);
+          if (syncFixtureFile.existsSync()) syncFixtureFile.deleteSync();
+        }
+
+        final clean = await runFixtureCheck();
+        expect(
+          clean.exitCode,
+          0,
+          reason:
+              'removing both fixture touches must restore a clean pass.\n'
+              'stdout=${clean.stdout}\nstderr=${clean.stderr}',
+        );
+      } finally {
+        await tempDir.delete(recursive: true);
+      }
+    }, timeout: const Timeout(Duration(minutes: 2)));
+  });
 }
