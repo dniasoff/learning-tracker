@@ -201,12 +201,15 @@ changes the plan. Entries are append-only.
 
 ---
 
-## Known stash — UNDISPOSITIONED-REPORTED
+## Known stashes — UNDISPOSITIONED-REPORTED
 
-`stash@{0}` exists in this repo's stash list and predates this cutover. It is
-recorded here so recovery runs stop re-raising it as a new finding each time —
-**not** because anyone has ruled on what to do with it. Do not pop, apply, or
-drop it based on this entry.
+Identified below by **base commit**, not by `stash@{N}` index — the index is
+positional and reorders every time a stash is pushed or popped, which already
+happened once during the P2-0 session that wrote this section (see the second
+entry). Do not pop, apply, or drop either stash based on this entry; nobody
+has ruled on either.
+
+### Stash on base `8855b9b1` (pre-existing, predates this cutover)
 
 Measured facts (verified 2026-08-06):
 - Base commit `8855b9b1` — `fix(tracks): AUD-tracks-18 - de-duplicate
@@ -220,7 +223,42 @@ Measured facts (verified 2026-08-06):
   all, so there is nothing for the contents to confirm or contradict — the
   mismatch is that generated codegen output was stashed rather than just
   regenerated).
+- Reflog: `refs/stash@{2026-07-19 12:08:06 +0200}`.
 
-**Explicitly not recorded:** "dispositioned benign." Nobody has examined
-whether dropping this stash is safe. It stays exactly as found until a human
-or an agent with an explicit mandate to investigate it does so.
+### Stash on base `d74e3829` (appeared mid-session, during P2-0 itself — see the risk note below)
+
+Measured facts (verified 2026-08-06, immediately on discovery):
+- Base commit `d74e3829` — the commit that was `dev`'s HEAD for almost all of
+  the P2-0 session that wrote this file (superseded by `b076006c` once P2-0
+  landed).
+- Label: `WIP on dev: d74e3829 docs(planning): durable task list + recovery
+  log; mark Phase 1 resolved` — i.e. an ordinary `git stash push` label, not
+  `(no branch)`.
+- Reflog: `refs/stash@{2026-08-06 19:52:02 +0200}`, authored under this
+  session's own configured git identity (`Daniel Niasoff
+  <daniel@orvex.ai>`).
+- Contents: the 8 pre-existing `_bmad/**` regenerator-noise files (the ones
+  this log's brief convention already says to never stage or commit), **plus
+  a partial, superseded copy of this same commit's own log edits** — the
+  `Head:`/`Deployed:` fix and the IN FLIGHT protocol section, but *not* the
+  A1 override or this stash section, i.e. a snapshot taken partway through
+  P2-0's own edit sequence.
+- **No data was lost.** The complete, correct version of every edit this
+  stash partially captured is in commit `b076006c`, verified by diff before
+  that commit was made. This stash's copy is strictly a stale subset.
+
+**Risk note, not yet in the risk register proper (R13 candidate for whoever
+next touches §7 of the phase plan):** P2-0 did not run `git stash` at any
+point — no `git stash` invocation appears in its command history — yet a
+stash matching this session's git identity materialized mid-edit, and the
+working tree was observed reverted to the pre-stash state immediately after
+(a live grep showed the just-written `Head:`/`Deployed:`/IN FLIGHT edits
+gone, and `git status --porcelain` showed the 8 `_bmad` files clean when
+they had been dirty at session start). **Mechanism unidentified** — some
+process in this environment other than the executing agent creates stashes
+autonomously and can catch uncommitted document edits, not only the `_bmad`
+regenerator churn it was presumably scoped to. The concrete consequence for
+every future step in this phase: **do not treat a `git status --porcelain`
+read as trustworthy for more than the instant it was taken.** Re-verify
+immediately before every `git add`, and if a just-written edit is missing on
+re-read, check `git stash list` before assuming the edit tool failed.
