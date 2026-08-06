@@ -48,9 +48,39 @@ Run these in order. Do not skip to the code.
 
 ---
 
+## IN FLIGHT protocol
+
+The recovery protocol above tells a cold agent to "read its section under IN
+FLIGHT" to find out what the last agent was doing. That only works if IN
+FLIGHT entries exist **before** the work they describe. Up to and including
+Phase 1, every IN FLIGHT entry in this log was written after the fact, by the
+agent that finished cleanly — which means an agent interrupted mid-commit left
+nothing on disk to diff against. This is the fix, binding from 2026-08-06
+(Phase 2) forward:
+
+1. **Before starting any commit boundary** (e.g. `P2-3`), the implementing
+   agent appends an entry to `CURRENT STATE`'s **IN FLIGHT** field naming:
+   - the commit id (e.g. `P2-3`), and
+   - its remaining edit-list items, citing the plan section they come from
+     (e.g. `docs/planning/firestore-phase2-plan.md` §4 P2-3's edit list).
+2. **The same commit that lands the code clears that entry** — resets IN
+   FLIGHT to `nothing` — and rewrites the rest of `CURRENT STATE` (`Head:`,
+   `Deployed:` where relevant, `Phase:`, `Gates:`) truthfully, in the same
+   commit.
+3. If an agent is interrupted before landing the commit, the entry stays as
+   the last true statement of intent. A cold agent diffs the working tree
+   against the named edit-list items in the plan, and either finishes them or
+   reverts the named files by hand — **never `git stash`**.
+
+---
+
 ## CURRENT STATE
 
-**Head:** `a2a21d0a` on `dev`, in sync with origin.
+**Head:** `d74e3829` on `dev`, in sync with origin. (Verified via `git log
+--oneline -1`; the previously-recorded `a2a21d0a` was stale by one commit —
+`d74e3829` is the doc-only commit that created this file, a self-reference lag
+that is unavoidable for whichever commit writes CURRENT STATE last.)
+**Deployed:** unknown — nothing deployed this phase yet.
 **Phase:** 0 ✅ · 1 ✅ · **2 not started**.
 **Gates:** `make audit` green (103 checks). Full `make ci` last green at
 `5b4d7924`; batched to end of Phase 4 by owner decision (2026-08-06).
@@ -153,8 +183,44 @@ Every agent brief for this migration MUST require the agent to:
 1. **Read this file first** and follow the recovery protocol.
 2. **Report** — not silently absorb — anything contradicting the standing facts
    above.
-3. Never `git stash`, never branch, never worktree, never commit or push.
+3. Never `git stash`, never branch, never worktree, never commit or push —
+   **except under the A1 override below.**
+
+**A1 override (binding for Phase 2, recorded 2026-08-06):** for Phase 2, the
+implementing agent **does** commit, at the named commit boundaries only (the
+`P2-n` sequence in `docs/planning/firestore-phase2-plan.md` §5), and rewrites
+`CURRENT STATE` truthfully in that same commit. This is a brief-level
+exception to point 3 above, not a repeal of it — never-stash, never-branch,
+never-worktree remain absolute with no exception, in Phase 2 or any other
+phase. A brief for a later phase that wants the same exception must state it
+explicitly; it does not carry forward by default.
 
 The **coordinator** appends an entry here when a phase lands, when a session
 dies mid-work (recording exactly what was in flight), and when a finding
 changes the plan. Entries are append-only.
+
+---
+
+## Known stash — UNDISPOSITIONED-REPORTED
+
+`stash@{0}` exists in this repo's stash list and predates this cutover. It is
+recorded here so recovery runs stop re-raising it as a new finding each time —
+**not** because anyone has ruled on what to do with it. Do not pop, apply, or
+drop it based on this entry.
+
+Measured facts (verified 2026-08-06):
+- Base commit `8855b9b1` — `fix(tracks): AUD-tracks-18 - de-duplicate
+  Hebrew-script detection regex`, dated 2026-07-19 (18 days old at time of
+  writing, predates this cutover's first commit `5b4d7924` by two weeks).
+- Label: `(no branch)`.
+- Base is **not an ancestor of `dev`** and is **contained by no branch** —
+  `git branch --contains 8855b9b1` returns nothing.
+- Contents: two generated `*.g.dart` Riverpod provider files. Their subject
+  does not match the stash's own label (`(no branch)` names no subject at
+  all, so there is nothing for the contents to confirm or contradict — the
+  mismatch is that generated codegen output was stashed rather than just
+  regenerated).
+
+**Explicitly not recorded:** "dispositioned benign." Nobody has examined
+whether dropping this stash is safe. It stays exactly as found until a human
+or an agent with an explicit mandate to investigate it does so.
