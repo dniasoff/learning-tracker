@@ -14,7 +14,7 @@ class ProfileGuard extends AutoRouteGuard {
   ProfileGuard({
     required UserDatabase Function() getDatabase,
     required int? Function() getSelectedProfileId,
-    required void Function(int) setSelectedProfileId,
+    required void Function(int, {String? ulid}) setSelectedProfileId,
     required int Function() getAccountId,
     required bool Function() isTutoredSession,
     required PageRouteInfo Function() profilePickerRoute,
@@ -27,7 +27,13 @@ class ProfileGuard extends AutoRouteGuard {
 
   final UserDatabase Function() _getDatabase;
   final int? Function() _getSelectedProfileId;
-  final void Function(int) _setSelectedProfileId;
+  // P2-2: carries the auto-selected profile's ULID synchronously — this
+  // guard already holds the full Drift row (`profiles.first`, with its
+  // `.ulid`) at the call site below, so passing it through here keeps the
+  // whole redirect decision synchronous (no extra DB round-trip, no
+  // reintroducing the async gap `SelectedProfileId.select`'s own doc
+  // comment specifically warns against for a route-guard caller).
+  final void Function(int, {String? ulid}) _setSelectedProfileId;
   final int Function() _getAccountId;
   final bool Function() _isTutoredSession;
 
@@ -132,7 +138,7 @@ class ProfileGuard extends AutoRouteGuard {
         event: 'profile_guard_single_profile_auto_selecting',
         fields: {'profileId': profiles.first.id},
       );
-      _setSelectedProfileId(profiles.first.id);
+      _setSelectedProfileId(profiles.first.id, ulid: profiles.first.ulid);
       resolver.next();
       return;
     }

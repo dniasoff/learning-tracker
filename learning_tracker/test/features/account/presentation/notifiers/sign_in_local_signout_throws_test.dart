@@ -86,7 +86,7 @@ class _StubProfileGuard extends ProfileGuard {
     : super(
         getDatabase: () => throw StateError('not needed'),
         getSelectedProfileId: () => null,
-        setSelectedProfileId: (_) {},
+        setSelectedProfileId: (_, {String? ulid}) {},
         getAccountId: () => 1,
         isTutoredSession: () => false,
         profilePickerRoute: () => const ProfilePickerRoute(),

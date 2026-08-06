@@ -51,18 +51,25 @@ class LearnerProfiles extends Table {
   /// nullable-ULID-alongside-the-autoincrement-id shape already used by
   /// `learning_ledger`/`points_ledger`/`reward_redemptions` (schema v27) —
   /// see this table's own migration comment in `user_database.dart` for why
-  /// that precedent, not a fresh design, governs this column.
+  /// that precedent, not a fresh design, governs this column. Column stays
+  /// nullable (P2-2 does not bump the schema for this) — a schema change
+  /// buys nothing for a column deleted wholesale in Phase 4.
   ///
-  /// **`NULL` means "not yet migrated to Firestore" — NEVER "no profile".**
-  /// Profile existence is governed entirely by the Drift row existing (this
-  /// [id] resolving via [ProfileDao.getProfileById]/[getProfilesByAccount]),
-  /// never by this column. A profile created before
-  /// `FirestoreProfileRepositoryAdapter` shipped has `ulid IS NULL` and stays
-  /// that way until it is next created (impossible — it already exists) or
-  /// EDITED: [FirestoreProfileRepositoryAdapter.updateProfile] mints a
-  /// Firestore identity for it at that point if one is still missing (lazy
-  /// backfill — see that method's doc comment for why an eager mass-backfill
-  /// of every pre-existing profile was rejected).
+  /// **P2-2: minted EAGERLY, unconditionally, before this row is ever
+  /// inserted — never lazily backfilled on a later edit.**
+  /// `FirestoreProfileRepositoryAdapter.createProfile`/`ensureDefaultProfile`
+  /// (`lib/features/profiles/data/repositories/profile_repository_impl.dart`)
+  /// mint the identity first and pass it into the very insert that creates
+  /// this row, so a profile created under this policy is NEVER observed
+  /// with `ulid IS NULL`.
+  ///
+  /// **`NULL` on a row that predates P2-2 means "created before the eager
+  /// mint policy shipped" — still never "no profile".** Profile existence
+  /// is governed entirely by the Drift row existing (this [id] resolving
+  /// via [ProfileDao.getProfileById]/[getProfilesByAccount]), never by this
+  /// column. There is no lazy backfill path anymore — under the greenfield
+  /// ruling, a pre-P2-2 row's `NULL` is not healed by any code path; the
+  /// remedy is wiping and reseeding the device.
   ///
   /// **Transition cruft — deleted with the Drift user database.** Once every
   /// profile-scoped caller reads Firestore ULID identity directly and the

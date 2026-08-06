@@ -128,7 +128,7 @@ void main() {
           profilePickerRoute: () => const ProfilePickerRoute(),
           getDatabase: () => db,
           getSelectedProfileId: () => childId,
-          setSelectedProfileId: (_) {},
+          setSelectedProfileId: (_, {String? ulid}) {},
           getAccountId: () => 1,
           isTutoredSession: () => false,
         ),

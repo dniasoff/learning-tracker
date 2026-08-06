@@ -74,6 +74,7 @@ class _FakeProfileRepository implements ProfileRepository {
   Future<int> ensureDefaultProfile({
     required int accountId,
     required String defaultDisplayName,
+    String? ulid,
   }) async {
     ensureCalls++;
     lastEnsureName = defaultDisplayName;
@@ -90,6 +91,7 @@ class _FakeProfileRepository implements ProfileRepository {
     required String displayName,
     required String mode,
     int avatarIndex = 0,
+    String? ulid,
   }) => throw UnimplementedError();
 
   @override

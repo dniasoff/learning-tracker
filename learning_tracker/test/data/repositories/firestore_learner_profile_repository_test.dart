@@ -1,13 +1,14 @@
 /// Unit tests for
 /// `lib/data/repositories/firestore_learner_profile_repository.dart` —
-/// Epic B. Covers: `createProfile` minting a fresh ULID doc-id every call
-/// (never re-derived from content, unlike the natural-key repositories),
-/// `getProfiles`/`watchProfiles` listing every profile under the account
-/// unfiltered, `updateProfile`'s current-entity-plus-overrides semantics,
-/// model round-trip for both `ProfileMode`s, and the "one bad document
-/// doesn't blank the list" decode leniency (both the stream and the
-/// one-shot read) exactly like
-/// `firestore_stage_definition_repository_test.dart`.
+/// Epic B. Covers: `createProfile` writing to the caller-supplied
+/// `profileId` (P2-2: this repository no longer mints one itself — see the
+/// class doc comment, "Doc-id" — so these tests supply distinct literal
+/// ids rather than asserting on minting behavior), `getProfiles`/
+/// `watchProfiles` listing every profile under the account unfiltered,
+/// `updateProfile`'s current-entity-plus-overrides semantics, model
+/// round-trip for both `ProfileMode`s, and the "one bad document doesn't
+/// blank the list" decode leniency (both the stream and the one-shot read)
+/// exactly like `firestore_stage_definition_repository_test.dart`.
 ///
 /// **What these tests cannot see**: same rules-evaluation limitation noted
 /// throughout this directory — `strictRules: false` throughout, so no
@@ -43,29 +44,33 @@ void main() {
   FirestoreLearnerProfileRepository buildRepo() =>
       FirestoreLearnerProfileRepository(firestore: firestore, uid: _uid);
 
-  group('doc-id — freshly minted ULID', () {
-    test('createProfile writes to users/{uid}/learner_profiles/{ulid}, '
-        'never the account uid', () async {
+  group('doc-id — caller-supplied (P2-2: never minted here)', () {
+    test('createProfile writes to users/{uid}/learner_profiles/{profileId}, '
+        'exactly the id passed in', () async {
       final repo = buildRepo();
 
       final profile = await repo.createProfile(
+        profileId: 'ulid-yossi',
         displayName: 'Yossi',
         mode: ProfileMode.child,
       );
 
-      expect(profile.profileId, isNot(_uid));
-      final snapshot = await rawProfiles().doc(profile.profileId).get();
+      expect(profile.profileId, 'ulid-yossi');
+      final snapshot = await rawProfiles().doc('ulid-yossi').get();
       expect(snapshot.exists, isTrue);
     });
 
-    test('two profiles for the same account get two distinct ids', () async {
+    test('two distinct ids passed for the same account write two distinct '
+        'documents', () async {
       final repo = buildRepo();
 
       final a = await repo.createProfile(
+        profileId: 'ulid-yossi',
         displayName: 'Yossi',
         mode: ProfileMode.child,
       );
       final b = await repo.createProfile(
+        profileId: 'ulid-daniel',
         displayName: 'Daniel',
         mode: ProfileMode.adult,
       );
@@ -73,10 +78,30 @@ void main() {
       expect(a.profileId, isNot(b.profileId));
     });
 
+    test('calling createProfile again for the SAME id is idempotent — a '
+        'create-if-missing merge, not a duplicate', () async {
+      final repo = buildRepo();
+
+      await repo.createProfile(
+        profileId: 'ulid-devorah',
+        displayName: 'Devorah',
+        mode: ProfileMode.adult,
+      );
+      await repo.createProfile(
+        profileId: 'ulid-devorah',
+        displayName: 'Devorah',
+        mode: ProfileMode.adult,
+      );
+
+      final docs = (await rawProfiles().get()).docs;
+      expect(docs, hasLength(1));
+    });
+
     test('toFirestore never writes a track_id-shaped account/profile int '
         'field (MCF-11)', () async {
       final repo = buildRepo();
       final profile = await repo.createProfile(
+        profileId: 'ulid-yossi',
         displayName: 'Yossi',
         mode: ProfileMode.child,
       );
@@ -92,6 +117,7 @@ void main() {
       final repo = buildRepo();
 
       final created = await repo.createProfile(
+        profileId: 'ulid-yossi',
         displayName: 'Yossi',
         mode: ProfileMode.child,
         avatar: 'bear',
@@ -109,6 +135,7 @@ void main() {
         final repo = buildRepo();
 
         final created = await repo.createProfile(
+          profileId: 'ulid-daniel',
           displayName: 'Daniel',
           mode: ProfileMode.adult,
         );
@@ -123,8 +150,16 @@ void main() {
   group('getProfiles / watchProfiles — unfiltered account listing', () {
     test('returns every profile for the account', () async {
       final repo = buildRepo();
-      await repo.createProfile(displayName: 'Yossi', mode: ProfileMode.child);
-      await repo.createProfile(displayName: 'Daniel', mode: ProfileMode.adult);
+      await repo.createProfile(
+        profileId: 'ulid-yossi',
+        displayName: 'Yossi',
+        mode: ProfileMode.child,
+      );
+      await repo.createProfile(
+        profileId: 'ulid-daniel',
+        displayName: 'Daniel',
+        mode: ProfileMode.adult,
+      );
 
       final profiles = await repo.getProfiles();
 
@@ -150,8 +185,16 @@ void main() {
       final stream = repo.watchProfiles().map((profiles) => profiles.length);
       final done = expectLater(stream, emitsThrough(2));
 
-      await repo.createProfile(displayName: 'Yossi', mode: ProfileMode.child);
-      await repo.createProfile(displayName: 'Daniel', mode: ProfileMode.adult);
+      await repo.createProfile(
+        profileId: 'ulid-yossi',
+        displayName: 'Yossi',
+        mode: ProfileMode.child,
+      );
+      await repo.createProfile(
+        profileId: 'ulid-daniel',
+        displayName: 'Daniel',
+        mode: ProfileMode.adult,
+      );
 
       await done;
     });
@@ -161,6 +204,7 @@ void main() {
     test('changes only the given field, leaving the rest untouched', () async {
       final repo = buildRepo();
       final profile = await repo.createProfile(
+        profileId: 'ulid-yossi',
         displayName: 'Yossi',
         mode: ProfileMode.child,
         avatar: 'bear',
@@ -181,6 +225,7 @@ void main() {
     test('updateProfile writes back to the SAME profileId', () async {
       final repo = buildRepo();
       final profile = await repo.createProfile(
+        profileId: 'ulid-yossi',
         displayName: 'Yossi',
         mode: ProfileMode.child,
       );
@@ -200,10 +245,12 @@ void main() {
         'returns the valid ones', () async {
       final repo = buildRepo();
       final good = await repo.createProfile(
+        profileId: 'ulid-good',
         displayName: 'Yossi',
         mode: ProfileMode.child,
       );
       final bad = await repo.createProfile(
+        profileId: 'ulid-bad',
         displayName: 'Daniel',
         mode: ProfileMode.adult,
       );
@@ -226,6 +273,7 @@ void main() {
       expect(await repo.getProfile('never-created'), isNull);
 
       final created = await repo.createProfile(
+        profileId: 'ulid-yossi',
         displayName: 'Yossi',
         mode: ProfileMode.child,
       );

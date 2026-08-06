@@ -52,8 +52,11 @@ final routerProvider = Provider<AppRouter>((ref) {
     profileGuard: ProfileGuard(
       getDatabase: getDb,
       getSelectedProfileId: () => ref.read(selectedProfileIdProvider),
-      setSelectedProfileId: (id) =>
-          ref.read(selectedProfileIdProvider.notifier).select(id),
+      // P2-2: forward the ULID ProfileGuard already resolved synchronously
+      // — this used to be a bare `select(id)`, which cleared
+      // activeProfileDocIdProvider to null on every auto-select redirect.
+      setSelectedProfileId: (id, {String? ulid}) =>
+          ref.read(selectedProfileIdProvider.notifier).select(id, ulid: ulid),
       getAccountId: () => ref.read(currentAccountIdProvider),
       isTutoredSession: () =>
           ref.read(activeTutoredProfileSelectionProvider) != null,

@@ -10,7 +10,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
-import 'package:learning_tracker/data/firestore/doc_ids.dart';
 import 'package:learning_tracker/data/firestore/resilient_doc_stream.dart';
 import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 
@@ -22,7 +21,9 @@ import 'package:learning_tracker/features/profiles/domain/models/learner_profile
 /// `FirestoreProfileRepositoryAdapter`
 /// (`lib/features/profiles/data/repositories/profile_repository_impl.dart`)
 /// reads this repository via `firestoreLearnerProfileRepositoryProvider` to
-/// mint/activate a Firestore `learner_profiles` document alongside every
+/// ensure/activate a Firestore `learner_profiles` document (P2-2: the
+/// adapter mints the identity eagerly, before its own Drift insert — this
+/// repository just persists whatever id it is handed) alongside every
 /// Drift-side profile create/update; `profileRepositoryProvider`
 /// (`profile_providers.dart`) resolves to that adapter. See that class's
 /// doc comment ("Dual-write, not cutover — and why") for why this is not
@@ -43,18 +44,22 @@ import 'package:learning_tracker/features/profiles/domain/models/learner_profile
 /// the [LearnerProfileEntity] a caller already holds), never a
 /// constructor-level constant.
 ///
-/// ## Doc-id: a freshly minted ULID (AD-24), never re-derived
+/// ## Doc-id: a caller-supplied, pre-minted ULID (AD-24) — P2-2, never
+/// minted here
 ///
-/// [createProfile] mints a fresh id via [DocIds.mintProfileUlid] — the
-/// sanctioned formula for this collection, whose own doc comment describes
-/// exactly this call site: "Intended to be called once, at profile-creation
-/// time." Every other repository in this codebase derives its doc-id from a
+/// [createProfile] takes a REQUIRED `profileId` rather than minting one
+/// itself. Before P2-2 this method called `DocIds.mintProfileUlid()`
+/// directly; that mint moved to `FirestoreProfileRepositoryAdapter`
+/// (`lib/features/profiles/data/repositories/profile_repository_impl.dart`)
+/// so exactly ONE site in the whole codebase mints a profile's identity —
+/// the adapter needs the SAME value for both the Drift row (minted before
+/// its insert) and this Firestore document; letting each side mint
+/// independently would silently produce two different ids for one profile.
+/// Every other repository in this codebase derives its doc-id from a
 /// natural key already present in the entity (`curriculumId` for bookmarks/
 /// stage-definitions, `curriculumId + createdAt` for goals); a learner
 /// profile has no such natural key — its identity is arbitrary and must be
-/// generated, not derived, so [DocIds.learnerProfileUlidDocId]'s
-/// echo-if-present/mint-if-absent formula is not used here: this repository
-/// IS the "if absent" case, every time.
+/// generated, which is now the caller's job, not this repository's.
 ///
 /// ## No `account_id` field in the write shape
 ///
@@ -78,6 +83,17 @@ import 'package:learning_tracker/features/profiles/domain/models/learner_profile
 /// write are byte-compatible, and every write here uses
 /// `SetOptions(merge: true)` so this client never clobbers a concurrent
 /// tutor edit (or vice versa).
+///
+/// **"the SAME document" above is VERIFIED FALSE today, and stays false
+/// through Phase 2 (R7, `firestore-phase2-plan.md` §7).** `tutorEditProfile`
+/// (`functions/src/tutor_writes.ts:968-978,1005`) validates an INT
+/// `profileId` and writes through the legacy int-keyed `profilePath`
+/// (`:186-191`) — the old `learner_profiles/{int}` document, never this
+/// repository's `learner_profiles/{ulid}` one. Re-keying tutoring's
+/// identity is Phase 3's job (T-30/T-31), not Phase 2's — see the plan's Q1
+/// ruling for why. Do not read the field-shape claim above as evidence that
+/// the two writers currently agree on a document; only the field NAMES are
+/// shared, not the document they're written to.
 ///
 /// ## No delete method
 ///
@@ -180,17 +196,21 @@ class FirestoreLearnerProfileRepository {
     );
   }
 
-  /// Creates a new learner profile with a freshly minted ULID doc-id — see
-  /// the class doc comment ("Doc-id") for why this always mints rather than
-  /// ever reusing an id.
+  /// Creates (or idempotently re-writes) a learner profile document at the
+  /// caller-supplied [profileId] — see the class doc comment ("Doc-id") for
+  /// why this repository no longer mints the id itself (P2-2). The write
+  /// uses `SetOptions(merge: true)` unconditionally, so calling this again
+  /// for an already-existing [profileId] is a safe create-if-missing /
+  /// heal, not a duplicate-create hazard.
   Future<LearnerProfileEntity> createProfile({
+    required String profileId,
     required String displayName,
     required ProfileMode mode,
     String avatar = '',
   }) async {
     final now = DateTimeFactory.nowUtc(); // P5: UTC timestamps
     final entity = LearnerProfileEntity(
-      profileId: DocIds.mintProfileUlid(),
+      profileId: profileId,
       displayName: displayName,
       mode: mode,
       avatar: avatar,

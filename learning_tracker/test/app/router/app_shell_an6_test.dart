@@ -124,7 +124,7 @@ Future<AppRouter> _createAuthenticatedRouter() async {
       profilePickerRoute: () => const ProfilePickerRoute(),
       getDatabase: () => testDb,
       getSelectedProfileId: () => 1,
-      setSelectedProfileId: (_) {},
+      setSelectedProfileId: (_, {String? ulid}) {},
       getAccountId: () => 1,
       isTutoredSession: () => false,
     ),

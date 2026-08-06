@@ -69,14 +69,17 @@ class SelectedProfileId extends _$SelectedProfileId {
   ///
   /// Every caller that already holds the [ProfileModel] it is switching to
   /// (profile creation, the switcher, sign-in, the self-heal path below)
-  /// passes `ulid: model.ulid` — no new read, it was already in hand. A
-  /// caller with only a bare `int` (the two exceptions above) omits [ulid],
-  /// which clears [activeProfileDocIdProvider] to `null` — the same "not
-  /// ready yet" signal every profile-scoped repository already treats as
-  /// "show a loading/empty state", never a wrong-profile leak. This is
-  /// strictly safer than the alternative of leaving a PREVIOUS profile's
-  /// ulid active across a switch to a profile whose identity is unknown
-  /// here.
+  /// passes `ulid: model.ulid` — no new read, it was already in hand. P2-2:
+  /// the two remaining call sites that once passed a bare `int`
+  /// (`router_provider.dart`'s `ProfileGuard`, the notification-tap handler
+  /// in `notifications_bootstrap.dart`) now resolve the profile first and
+  /// pass `ulid:` too — every production call site passes it. Omitting
+  /// [ulid] (e.g. a caller that genuinely has no model in hand) clears
+  /// [activeProfileDocIdProvider] to `null` — the same "not ready yet"
+  /// signal every profile-scoped repository already treats as "show a
+  /// loading/empty state", never a wrong-profile leak. This is strictly
+  /// safer than the alternative of leaving a PREVIOUS profile's ulid active
+  /// across a switch to a profile whose identity is unknown here.
   void select(int id, {String? ulid}) {
     state = id;
     ref.read(activeProfileDocIdProvider.notifier).set(ulid);

@@ -545,7 +545,7 @@ class E2EHarness {
       profileGuard: ProfileGuard(
         getDatabase: () => _db,
         getSelectedProfileId: () => profileId,
-        setSelectedProfileId: (_) {},
+        setSelectedProfileId: (_, {String? ulid}) {},
         getAccountId: () =>
             profileId != null ? (_identity!._resolvedAccountId ?? 1) : 1,
         isTutoredSession: () => false,

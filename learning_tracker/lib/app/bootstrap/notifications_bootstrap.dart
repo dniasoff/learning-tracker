@@ -26,8 +26,21 @@ Future<void> bootstrapNotifications({
       router: router,
       // WS5.per-profile: tap handler switches into the tapped profile before
       // opening the Scheduler so the user lands in the right profile.
-      onSwitchProfile: (profileId) {
-        container.read(selectedProfileIdProvider.notifier).select(profileId);
+      //
+      // P2-2: resolves the tapped profile's Firestore ULID before
+      // selecting. `select` used to be called bare here, which cleared
+      // `activeProfileDocIdProvider` to null on every notification tap —
+      // blanking every profile-scoped Firestore provider (`ProfileSwitchCallback`
+      // stays `void Function(int)`, so this closure runs fire-and-forget;
+      // that is fine here — unlike a route guard's `resolver.next()`,
+      // nothing downstream is synchronously waiting on this selection).
+      onSwitchProfile: (profileId) async {
+        final model = await container
+            .read(profileRepositoryProvider)
+            .getProfileById(profileId);
+        container
+            .read(selectedProfileIdProvider.notifier)
+            .select(profileId, ulid: model?.ulid);
       },
     );
     await notificationInitializer.initialize();

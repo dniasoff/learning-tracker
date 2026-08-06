@@ -6,6 +6,13 @@ import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/sync/codec/learner_profile_codec.dart';
 import 'package:learning_tracker/core/sync/sync_write_facade.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
+// P2-2: this file lives under `data/repositories/` — the directory
+// `check_dependency_direction.dart` (audit check 102) exempts from the
+// "no lib/features/** → lib/data/** import" rule — so it is the one place
+// allowed to mint a profile's Firestore identity directly. See
+// `ProfileRepository.createProfile`'s doc comment for why every OTHER
+// caller (screens, `profile_providers.dart`) never mints one itself.
+import 'package:learning_tracker/data/firestore/doc_ids.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
@@ -63,6 +70,7 @@ class ProfileRepositoryImpl implements ProfileRepository {
     required String displayName,
     required String mode,
     int avatarIndex = 0,
+    String? ulid,
   }) async {
     final trimmedName = displayName.trim();
 
@@ -82,6 +90,13 @@ class ProfileRepositoryImpl implements ProfileRepository {
 
     _log.info(event: 'profile_repo_create_start', fields: {'mode': mode});
     final now = DateTimeFactory.nowUtc();
+    // P2-2: eager, unconditional mint — every profile gets a Firestore
+    // identity at creation, atomically with the Drift insert below, never
+    // left null for a later edit to lazily backfill. [ulid] is normally
+    // already minted by the caller (`FirestoreProfileRepositoryAdapter`);
+    // the fallback here only fires for a caller that bypasses the adapter
+    // (e.g. a test constructing this class directly).
+    final resolvedUlid = ulid ?? DocIds.mintProfileUlid();
     final id = await _db.profileDao.insertProfile(
       LearnerProfilesCompanion.insert(
         accountId: accountId,
@@ -90,6 +105,7 @@ class ProfileRepositoryImpl implements ProfileRepository {
         avatarIndex: Value(avatarIndex),
         createdAt: now,
         updatedAt: now,
+        ulid: Value(resolvedUlid),
       ),
     );
 
@@ -101,6 +117,7 @@ class ProfileRepositoryImpl implements ProfileRepository {
       avatarIndex: avatarIndex,
       createdAt: now,
       updatedAt: now,
+      ulid: resolvedUlid,
     );
 
     _log.info(
@@ -299,24 +316,11 @@ class ProfileRepositoryImpl implements ProfileRepository {
   Future<int> countProfilesForAccount(int accountId) =>
       _db.profileDao.countProfilesForAccount(accountId);
 
-  /// Stamps [profileId]'s transition `ulid` column (schema v38) — see
-  /// `ProfileDao.setUlid` and `learner_profiles.dart`'s `ulid` doc comment.
-  ///
-  /// NOT part of [ProfileRepository] — this is a Firestore-rewrite-
-  /// transition-only helper, called exclusively by
-  /// [FirestoreProfileRepositoryAdapter] below, never by
-  /// [ProfileRepositoryImpl]'s own methods. Keeping it off the interface
-  /// means every other [ProfileRepository] implementer (were one ever
-  /// written, e.g. for tests) is not forced to know about a column that
-  /// exists purely to bridge Drift and Firestore identity during this
-  /// migration.
-  Future<void> setProfileUlid({required int profileId, required String ulid}) =>
-      _db.profileDao.setUlid(profileId, ulid);
-
   @override
   Future<int> ensureDefaultProfile({
     required int accountId,
     required String defaultDisplayName,
+    String? ulid,
   }) async {
     // Fast path: account already owns a profile — nothing to heal.
     final existing = await _db.profileDao.getProfilesByAccount(accountId);
@@ -330,6 +334,11 @@ class ProfileRepositoryImpl implements ProfileRepository {
     final now = DateTimeFactory.nowUtc();
     final trimmedName = defaultDisplayName.trim();
     final displayName = trimmedName.isEmpty ? 'Me' : trimmedName;
+    // P2-2: eager, unconditional mint — see the matching comment in
+    // [createProfile]. Only reached on the self-heal path (the fast-path
+    // return above never gets here), so nothing is wasted minting on a
+    // no-op call.
+    final resolvedUlid = ulid ?? DocIds.mintProfileUlid();
 
     // Single transaction: create the profile, then re-parent any orphaned
     // `profile_id = 0` rows that were written before a profile existed (e.g. a
@@ -346,6 +355,7 @@ class ProfileRepositoryImpl implements ProfileRepository {
           mode: ProfileMode.adult.storageKey,
           createdAt: now,
           updatedAt: now,
+          ulid: Value(resolvedUlid),
         ),
       );
 
@@ -426,15 +436,17 @@ class ProfileRepositoryImpl implements ProfileRepository {
 /// (`ProfileModel.id`), and that int is threaded through a great many
 /// profile-scoped screens/providers/queries this task is not asked to
 /// convert. So this adapter does NOT swap Drift for Firestore; it does
-/// both: every write still goes through [_drift] first (unchanged
-/// behavior — the local row, and its existing legacy `_syncEngine` push,
-/// are exactly as before), and this class ADDITIONALLY mints a Firestore
-/// `learner_profiles` document for a profile that does not have one yet and
-/// activates it via [activeProfileDocIdProvider]. This is explicitly
-/// temporary: it goes away the moment [ProfileRepository] (and every
-/// caller keyed off `ProfileModel.id`) is converted to the ULID identity
-/// end-to-end — at that point [_drift] and the Drift-only creation path it
-/// wraps are deleted outright, not merged into this class.
+/// both: this class mints the profile's Firestore identity EAGERLY (P2-2
+/// — before [_drift]'s insert, not after it) and threads it through, so
+/// the write to [_drift] (unchanged behavior otherwise — the local row,
+/// and its existing legacy `_syncEngine` push, are exactly as before)
+/// lands WITH its `ulid` already set, then this class ensures the matching
+/// Firestore `learner_profiles` document exists and activates it via
+/// [activeProfileDocIdProvider]. This is explicitly temporary: it goes
+/// away the moment [ProfileRepository] (and every caller keyed off
+/// `ProfileModel.id`) is converted to the ULID identity end-to-end — at
+/// that point [_drift] and the Drift-only creation path it wraps are
+/// deleted outright, not merged into this class.
 ///
 /// ## Pairing the two identities: the `ulid` column, not a session cache
 ///
@@ -454,38 +466,43 @@ class ProfileRepositoryImpl implements ProfileRepository {
 /// unresolvable, which is not a bridge the next stage (rewiring every
 /// remaining feature) can stand on.
 ///
-/// ## Backfill policy for pre-existing profiles: lazy, on edit — not eager
+/// ## Identity policy (P2-2): eager and unconditional — never lazy
 ///
-/// A profile created before this adapter shipped has `ulid IS NULL` and
-/// stays that way until it is next mutated: [createProfile] and the
-/// self-heal branch of [ensureDefaultProfile] always mint (a profile that
-/// young cannot already have a `ulid`); [updateProfile] additionally mints
-/// one for the profile being edited IF it is still missing — see that
-/// method's doc comment for why an eager mass-backfill of every
-/// pre-existing profile at migration time was rejected. Profile
-/// *selection* ([SelectedProfileId.select]) only ever READS `ulid` back —
-/// it never triggers a mint, so merely switching to (or auto-selecting) an
-/// old profile does not silently create Firestore documents for every
-/// profile on the account.
+/// Every profile is minted a Firestore identity BEFORE its Drift row is
+/// ever inserted — [createProfile] and the self-heal branch of
+/// [ensureDefaultProfile] mint via `DocIds.mintProfileUlid()` first, then
+/// pass the same value into [_drift]'s insert, so the row and its `ulid`
+/// come into existence atomically. There is no longer a lazy, on-edit
+/// backfill path: [updateProfile] does not mint. A profile created before
+/// this policy shipped (schema v38, pre-P2-2) can still have `ulid IS
+/// NULL` — greenfield: that is not healed by this adapter; the remedy is
+/// wiping and reseeding the device, not a migration this class performs.
 ///
-/// **`ulid == null` is never "no profile."** Every method below still
-/// returns/operates on [ProfileModel]s exactly as [_drift] does; a `null`
-/// `ulid` on a real, existing profile means "not yet migrated to
-/// Firestore" (see the column's own doc comment) — callers must never treat
-/// it as the profile being invalid or absent.
+/// **`ulid == null` on a row created under this policy should never
+/// happen** — every method below still returns/operates on [ProfileModel]s
+/// exactly as [_drift] does, and a `null` `ulid` now means either a
+/// pre-P2-2 legacy row or (transiently) that a caller bypassed the eager
+/// mint contract; callers must never treat it as the profile being invalid
+/// or absent.
 ///
-/// ## `null`/non-fatal on Firestore failure — matches [_drift]'s own
-/// convention
+/// ## Non-fatal on Firestore failure, but identity activates regardless
 ///
 /// [_drift]'s `createProfile`/`ensureDefaultProfile` already treat a cloud
 /// push failure as non-fatal (logged, swallowed) so profile creation stays
-/// offline-first; this class's Firestore mint attempt (
-/// [_mintAndActivateFirestoreProfile]) follows the exact same shape,
-/// including for the expected, common case of a still-local-born account
-/// (`firestoreLearnerProfileRepositoryProvider` resolves `null` — no
-/// active cloud account yet) — see `docs/`'s offline-account-model notes.
-/// [activeProfileDocIdProvider] simply stays unset in that case, exactly
-/// its documented `null` == "not ready yet" contract.
+/// offline-first; [_ensureFirestoreProfile] follows the same shape for the
+/// remote `learner_profiles` document write — but unlike the old
+/// mint-then-activate design, [activeProfileDocIdProvider] is now set
+/// whenever a cloud account is active, REGARDLESS of whether that specific
+/// remote write succeeds: the identity is already real and local (eagerly
+/// minted, on the Drift row) the moment this runs, so there is nothing to
+/// gate activation on. [activeProfileDocIdProvider] stays unset only for
+/// the genuinely not-ready case — a still-local-born account
+/// (`firestoreLearnerProfileRepositoryProvider` resolves `null`, no active
+/// cloud account yet) — see `docs/`'s offline-account-model notes. A
+/// profile created while offline (cloud-born, network down) still gets its
+/// remote document the next time [_ensureFirestoreProfile] runs for it,
+/// since the write is unconditional (`SetOptions(merge: true)`), never a
+/// version gate or an existence check.
 class FirestoreProfileRepositoryAdapter implements ProfileRepository {
   FirestoreProfileRepositoryAdapter({
     required Ref ref,
@@ -520,17 +537,11 @@ class FirestoreProfileRepositoryAdapter implements ProfileRepository {
       mode: mode,
       avatarIndex: avatarIndex,
     );
-    // Lazy backfill (see class doc comment, "Backfill policy"): a
-    // pre-existing profile's `ulid` is still null until it is next edited.
-    // This IS that "next edited" moment — mint one now if still missing.
-    // Every OTHER caller of this method already had a `ulid` (or genuinely
-    // doesn't yet, and stays that way until edited or reactivated) —
-    // checking `updated.ulid == null` rather than unconditionally minting
-    // means a profile that already has a Firestore identity never gets a
-    // second, duplicate document on a routine rename.
-    if (updated.ulid == null) {
-      return await _mintAndActivateFirestoreProfile(updated) ?? updated;
-    }
+    // P2-2: no lazy backfill here anymore — every profile's `ulid` is
+    // minted eagerly at creation (see class doc comment, "Identity
+    // policy"). A pre-P2-2 legacy row can still have `ulid == null`; under
+    // the greenfield ruling that is not healed here — wipe and reseed the
+    // device is the remedy, not a mint-on-edit path.
     return updated;
   }
 
@@ -549,20 +560,32 @@ class FirestoreProfileRepositoryAdapter implements ProfileRepository {
     required String displayName,
     required String mode,
     int avatarIndex = 0,
+    String? ulid,
   }) async {
+    // P2-2: mint BEFORE the Drift insert (single site — this is the only
+    // production caller of `DocIds.mintProfileUlid()` for profiles) and
+    // thread the same value through to [_drift], so the local row and the
+    // eventual Firestore document always agree on the id. A caller-supplied
+    // [ulid] (tests only, in production this is always omitted here) is
+    // honored rather than re-minted, so two independent identities are
+    // never produced for the same creation.
+    final resolvedUlid = ulid ?? DocIds.mintProfileUlid();
     final model = await _drift.createProfile(
       accountId: accountId,
       displayName: displayName,
       mode: mode,
       avatarIndex: avatarIndex,
+      ulid: resolvedUlid,
     );
-    return await _mintAndActivateFirestoreProfile(model) ?? model;
+    await _ensureFirestoreProfile(model);
+    return model;
   }
 
   @override
   Future<int> ensureDefaultProfile({
     required int accountId,
     required String defaultDisplayName,
+    String? ulid,
   }) async {
     // [_drift.ensureDefaultProfile]'s own contract (see its doc comment):
     // a no-op fast path when the account already owns ≥1 profile, a real
@@ -571,55 +594,75 @@ class FirestoreProfileRepositoryAdapter implements ProfileRepository {
     // and minting a Firestore doc on every fast-path call would create a
     // duplicate `learner_profiles` document each time this runs (e.g.
     // every cold start) for an already-existing profile. The fast path
-    // does NOT backfill an old profile's missing `ulid` either — see the
-    // class doc comment, "Backfill policy": selection/self-heal only reads,
-    // it never mints.
+    // does NOT touch an old profile's missing `ulid` either — see the
+    // class doc comment, "Identity policy": nothing here backfills a
+    // pre-P2-2 legacy row.
     final existingBefore = await _drift.getProfilesByAccount(accountId);
+    final needsHeal = existingBefore.isEmpty;
+    // P2-2: mint only when a row is actually about to be created — see
+    // [createProfile]'s comment for why the mint happens before the
+    // insert and is threaded through rather than re-derived.
+    final resolvedUlid = needsHeal ? (ulid ?? DocIds.mintProfileUlid()) : null;
     final id = await _drift.ensureDefaultProfile(
       accountId: accountId,
       defaultDisplayName: defaultDisplayName,
+      ulid: resolvedUlid,
     );
-    if (existingBefore.isEmpty) {
+    if (needsHeal) {
       final model = await _drift.getProfileById(id);
-      if (model != null) await _mintAndActivateFirestoreProfile(model);
+      if (model != null) await _ensureFirestoreProfile(model);
     }
     return id;
   }
 
-  /// Mints a fresh Firestore `learner_profiles` document for [model],
-  /// persists the ULID onto its Drift row (`ProfileDao.setUlid`), and
-  /// activates it via [activeProfileDocIdProvider]. Non-fatal on any
-  /// failure — see the class doc comment. Returns the updated
-  /// [ProfileModel] (carrying the new [ProfileModel.ulid]) on success, or
-  /// `null` on failure/not-ready so callers can fall back to the
-  /// pre-mint [model] they already have.
-  Future<ProfileModel?> _mintAndActivateFirestoreProfile(
-    ProfileModel model,
-  ) async {
+  /// Idempotent create-if-missing write for [model]'s Firestore
+  /// `learner_profiles/{ulid}` document, then activates it via
+  /// [activeProfileDocIdProvider]. Replaces the old lazy backfill's other
+  /// job (P2-2): the backfill used to be the only path that ever created a
+  /// MISSING remote document; this method is that replacement, called
+  /// every time a profile is created/self-healed, using a single
+  /// unconditional `set(..., SetOptions(merge: true))` — not a version
+  /// gate, not a conditional existence check — inside
+  /// [FirestoreLearnerProfileRepository.createProfile]. This method NEVER
+  /// mints; [model.ulid] is always already set (eager mint, see
+  /// [createProfile]/[ensureDefaultProfile] above).
+  ///
+  /// Non-fatal on a Firestore failure — profiles are offline-first by
+  /// explicit contract (`tutor_invites.ts:59-60`), so a remote outage must
+  /// never block profile creation. But [activeProfileDocIdProvider] is
+  /// still set whenever a cloud account is active, REGARDLESS of whether
+  /// this specific write succeeds — see the class doc comment,
+  /// "Non-fatal on Firestore failure, but identity activates regardless."
+  /// It is left unset only in the genuinely not-ready case (no active
+  /// cloud account at all yet).
+  Future<void> _ensureFirestoreProfile(ProfileModel model) async {
+    final ulid = model.ulid;
+    if (ulid == null) return; // defensive only — eager mint guarantees this
+    final firestoreRepo = await _ref.read(
+      firestoreLearnerProfileRepositoryProvider.future,
+    );
+    if (firestoreRepo == null) return; // no active cloud account yet
     try {
-      final firestoreRepo = await _ref.read(
-        firestoreLearnerProfileRepositoryProvider.future,
-      );
-      if (firestoreRepo == null) return null; // no active cloud account yet
-      final entity = await firestoreRepo.createProfile(
+      await firestoreRepo.createProfile(
+        profileId: ulid,
         displayName: model.displayName,
         mode: model.profileMode,
         avatar: model.avatarIndex.toString(),
       );
-      await _drift.setProfileUlid(profileId: model.id, ulid: entity.profileId);
-      _ref.read(activeProfileDocIdProvider.notifier).set(entity.profileId);
-      return model.copyWith(ulid: entity.profileId);
     } catch (e, st) {
       // Non-fatal: mirrors _drift's own cloud-push failure handling above —
       // the local (Drift) profile already exists and is usable; this just
-      // means no Firestore identity exists for it yet.
+      // means the remote document write failed, e.g. a network outage. The
+      // identity is still activated below — a later call to this method
+      // (the next creation/self-heal that touches this profile) retries
+      // the unconditional merge write and heals it.
       _log.warning(
-        event: 'profile_repo_firestore_mint_failed',
+        event: 'profile_repo_firestore_ensure_failed',
         fields: {'profileId': model.id},
         exception: e,
         stackTrace: st,
       );
-      return null;
     }
+    _ref.read(activeProfileDocIdProvider.notifier).set(ulid);
   }
 }

@@ -1162,9 +1162,9 @@ void main() {
       });
 
       test('ensureDefaultProfile fast path (account already has a profile) '
-          'does NOT backfill that profile\'s missing ulid', () async {
-        // Simulate a profile that predates this adapter: inserted
-        // directly (bypassing createProfile), so ulid is NULL.
+          'does NOT touch that profile\'s missing ulid', () async {
+        // Simulate a profile that predates the P2-2 eager-mint policy:
+        // inserted directly (bypassing createProfile), so ulid is NULL.
         final preExistingId = await localDb.profileDao.insertProfile(
           LearnerProfilesCompanion.insert(
             accountId: 1,
@@ -1186,16 +1186,19 @@ void main() {
           profile?.ulid,
           isNull,
           reason:
-              'selection/self-heal only READS ulid — see the class doc '
-              'comment, "Backfill policy": it never mints one',
+              'the fast (no-op) path never mints — see the class doc '
+              'comment, "Identity policy": P2-2 mints eagerly at creation '
+              'only, there is no lazy backfill path left at all',
         );
       });
 
-      test('updateProfile lazily backfills a missing ulid for a pre-existing '
-          'profile — the "next created/edited" trigger', () async {
-        // Simulate a profile that predates this adapter: inserted
-        // directly (bypassing createProfile), so ulid is NULL, exactly
-        // like every profile that existed before schema v38 shipped.
+      test('updateProfile does NOT backfill a missing ulid for a pre-P2-2 '
+          'profile — the lazy backfill path is deleted (P2-2)', () async {
+        // Simulate a profile that predates the P2-2 eager-mint policy:
+        // inserted directly (bypassing createProfile), so ulid is NULL,
+        // exactly like every profile that existed before schema v38
+        // shipped, before this adapter shipped, or before P2-2 made
+        // minting eager.
         final preExistingId = await localDb.profileDao.insertProfile(
           LearnerProfilesCompanion.insert(
             accountId: 1,
@@ -1212,18 +1215,19 @@ void main() {
           displayName: 'New Name',
         );
 
+        // P2-2 deleted the lazy on-edit backfill (see
+        // FirestoreProfileRepositoryAdapter.updateProfile): under the
+        // greenfield ruling a pre-existing null ulid is never healed by
+        // this method anymore — wipe-and-reseed is the remedy.
         expect(updated.displayName, 'New Name');
-        expect(updated.ulid, isNotNull);
-        expect(container.read(activeProfileDocIdProvider), updated.ulid);
+        expect(updated.ulid, isNull);
+        expect(container.read(activeProfileDocIdProvider), isNull);
 
-        final doc = await firestore
+        final collection = firestore
             .collection('users')
             .doc(uid)
-            .collection('learner_profiles')
-            .doc(updated.ulid)
-            .get();
-        expect(doc.exists, isTrue);
-        expect(doc.data()?['display_name'], 'New Name');
+            .collection('learner_profiles');
+        expect((await collection.get()).docs, isEmpty);
       });
 
       test('updateProfile does NOT mint a second Firestore doc for a profile '

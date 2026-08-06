@@ -77,29 +77,21 @@ nothing on disk to diff against. This is the fix, binding from 2026-08-06
 
 ## CURRENT STATE
 
-**Head:** this commit (P2-1) — SHA unknowable within its own commit, same
-self-reference lag as before. Parent is `fe9b4a96` (verified via `git log
---oneline -1` at P2-1 start; the previously-recorded `d74e3829` was stale by
-two commits — `b076006c` (P2-0) and `fe9b4a96` (the second-stash finding) had
-already landed).
+**Head:** this commit (P2-2) — SHA unknowable within its own commit, same
+self-reference lag as before. Parent is `4877c7ef` (P2-1, verified via `git
+log --oneline -1` at P2-2 start).
 **Deployed:** unknown — nothing deployed this phase yet.
-**Phase:** 0 ✅ · 1 ✅ · **2 in progress** (P2-1 ✅, P2-2 through P2-7 not
-started).
-**Gates:** `make audit` green (**104** checks, up from 103). Check 104
-(PROFILE-ID-INT-SITES) baseline = **88 entries** across 5 patterns
-(`cf-int-guard` 17, `cf-string-profileid-doc` 5, `dart-int-profileid-param`
-61, `dart-tutoring-int-parse` 2, `dart-tutoring-id-tostring` 3) — see the
-entry below for the deviation from the plan's ~31 prediction. Check 103's OK
-line and split set are **unchanged**: 2 collections (bookmarks,
+**Phase:** 0 ✅ · 1 ✅ · **2 in progress** (P2-1 ✅, P2-2 ✅, P2-3 through
+P2-7 not started).
+**Gates:** `make audit` green (**104** checks, unchanged). Check 104
+(PROFILE-ID-INT-SITES) unchanged at **88 entries** — P2-2 touches profile
+identity, not the tracked int-keyed sites, so the count did not move. Check
+103's OK line and split set are **unchanged**: 2 collections (bookmarks,
 learning_order), 0 new violations. Full `make ci` last green at `5b4d7924`;
 batched to end of Phase 4 by owner decision (2026-08-06).
 
-**IN FLIGHT:** nothing. Tree is clean apart from pre-existing `_bmad/` config
-churn that predates this work. (Process note: this P2-1 session did not
-append an IN FLIGHT entry before its first edit, contrary to the protocol
-above — no interruption occurred, so nothing was left unrecoverable, but the
-ordering itself was not followed. Flagged here rather than silently
-corrected, per the log's own "report, don't quietly absorb" convention.)
+**IN FLIGHT:** nothing. P2-2 landed in the same commit that clears this
+entry.
 
 **Live on Firestore (4):** bookmarks · learning-order · profile identity ·
 scheduler learning-order read.
@@ -130,6 +122,118 @@ stage-definition · study-day-config · track-learning-order.
 ## Entries
 
 Newest first. Append; never rewrite history.
+
+### 2026-08-06 — P2-2 complete: eager unconditional ULID mint; lazy backfill deleted
+
+Per `docs/planning/firestore-phase2-plan.md` §4 P2-2. `ProfileRepositoryImpl.createProfile`/
+`ensureDefaultProfile` now mint via `DocIds.mintProfileUlid()` and write the
+`ulid` into the SAME Drift insert that creates the row — no more window
+where a row exists with `ulid IS NULL` on a path this adapter controls.
+`FirestoreProfileRepositoryAdapter` deleted `_mintAndActivateFirestoreProfile`
+and `setProfileUlid`/`ProfileDao.setUlid` entirely; replaced with
+`_ensureFirestoreProfile`, an idempotent create-if-missing
+`set(..., SetOptions(merge: true))` that never mints (the id is always
+already on the model it's handed). `FirestoreLearnerProfileRepository.createProfile`
+now takes a REQUIRED `profileId` and deleted its own internal mint, so
+exactly one site in the whole codebase mints a profile's identity — the
+adapter, which threads the same value into both the Drift row and the
+Firestore document, closing the "two independent mints for one profile"
+trap the brief called out. `ProfileDao.upsertTutoredProfile`'s insert branch
+now sets `ulid: Value(remoteChildProfileId)` — the tutored mirror records
+the remote child's own id, never mints a fresh one (T-31's decoupled line
+item). The two bare `select(id)` call sites
+(`notifications_bootstrap.dart`'s `onSwitchProfile`, `router_provider.dart`'s
+`ProfileGuard` wiring) now resolve the profile and pass `ulid:`.
+
+**Interface-change design, recorded because the brief flagged it as the
+trap to not improvise on:** `ProfileRepository.createProfile`/
+`ensureDefaultProfile` gained a new `String? ulid` parameter each —
+**optional, not required.** Dart's override rules (verified empirically:
+adding a new *required* named parameter in an implementing class, or
+promoting an *optional* interface parameter to *required* in an override,
+are both `invalid_override` compile errors; an override MAY relax
+required→optional but never the reverse) meant a `required` parameter on
+the abstract interface would have forced every caller reachable through
+that interface — including the two screens that call `createProfile`
+(`add_profile_dialog.dart`, `onboarding_profile_creation_step.dart`) and
+`profile_providers.dart:184`'s `ensureDefaultProfile` call — to supply a
+`ulid:` themselves. Those callers cannot legally mint one: `DocIds` lives
+at `lib/data/firestore/doc_ids.dart`, and `check_dependency_direction.dart`
+(audit check 102) forbids any `lib/features/**` file outside its own
+`data/repositories/` from importing `lib/data/**`. So the parameter is
+optional at the interface; `FirestoreProfileRepositoryAdapter` (which lives
+in an exempt `data/repositories/` directory) is the only real caller that
+ever supplies a value, and `ProfileRepositoryImpl` falls back to minting
+its own (`ulid ?? DocIds.mintProfileUlid()`) for any caller that bypasses
+the adapter (bare construction, some tests) — so the eager-mint invariant
+holds universally, not just on the adapter's path. This kept the blast
+radius to exactly what `dart analyze` needed to prove: zero screen
+call-site changes, one `_FakeProfileRepository` in
+`auto_selected_profile_id_test.dart` (explicit `implements ProfileRepository`
+override needed the new param — Mockito `Mock`-based fakes elsewhere in the
+suite needed nothing, since `noSuchMethod` fallback isn't checked against
+the interface shape the same way).
+
+**A second, separate override-rule consequence hit `ProfileGuard`'s
+`setSelectedProfileId` callback**, which is a plain closure VALUE, not a
+method call — Dart's function-subtyping rules (also verified empirically)
+do not let a shorter-arity closure (`void Function(int)`) satisfy a
+longer-arity function-typed parameter, even when the extra parameter is
+optional, the way a method call CAN omit an optional argument. So widening
+`setSelectedProfileId`'s type to `void Function(int, {String? ulid})`
+mechanically rippled into every test constructing
+`ProfileGuard(setSelectedProfileId: ...)` — 8 files, ~13 closures, each a
+one-line arity widening. `router_provider.dart`'s wiring stayed fully
+synchronous (`ProfileGuard` already holds the full Drift row —
+`profiles.first.ulid` — at its call site, so no extra DB read or async gap
+was needed, preserving the exact synchronous-only contract
+`SelectedProfileId.select`'s own doc comment requires of a route-guard
+caller). `notifications_bootstrap.dart`'s `onSwitchProfile` callback, by
+contrast, was made to resolve the profile asynchronously before selecting —
+its type stays `void Function(int)` (fire-and-forget, allowed because
+nothing downstream synchronously awaits a notification tap's selection the
+way a route guard's `resolver.next()` does).
+
+**Doc comments fixed in the same commit (their claims went false):**
+`learner_profiles.dart`'s `ulid` column comment ("NULL means not yet
+migrated" / lazy-backfill description); `profile_repository_impl.dart`'s
+`FirestoreProfileRepositoryAdapter` class comment ("Backfill policy... lazy,
+on edit — not eager"); `profile_providers.dart`'s `SelectedProfileId.select`
+comment ("a caller with only a bare int... omits ulid" — both such callers
+are fixed now); `firestore_learner_profile_repository.dart`'s "Doc-id"
+section (no longer mints) and its `tutorEditProfile` "SAME document" claim,
+annotated per R7 as verified false today and staying false through the rest
+of Phase 2 (tutoring re-keys in Phase 3, not this commit).
+
+**Test behavior deliberately changed, not just made to compile:** the
+"updateProfile lazily backfills a missing ulid" test in
+`profile_repository_impl_test.dart` pinned exactly the behavior this commit
+deletes; rewritten to assert the new reality (a pre-P2-2 legacy profile's
+`ulid` stays `null` through an edit — wipe-and-reseed is the remedy, not a
+mint-on-edit path). `firestore_learner_profile_repository_test.dart` was
+rewritten throughout: `createProfile` no longer mints, so its 15 call sites
+now pass explicit literal `profileId`s and the "two distinct ids" test
+asserts on caller-supplied ids rather than on minting uniqueness; added one
+new test for the create-if-missing idempotency this commit introduces
+(calling `createProfile` twice for the same id writes one document, not
+two).
+
+**Gates:** `dart analyze --fatal-infos` → `No issues found!` (after fixing
+30 analyzer-flagged sites — 15 in the Firestore-repo test file, 12 across
+the `ProfileGuard`-callback test files, 2 in `_FakeProfileRepository`, 1 the
+`router_provider.dart`/`profile_guard.dart` production wiring itself —
+matching the plan's prediction that the interface change would be
+analyzer-visible at every caller including under `test/`). Check 103's OK
+line and split set unchanged (`learner_profiles` is not in its registry).
+Check 104 unchanged at 88 tracked sites, 0 new, 0 stale (profile identity
+is outside its scan set by design). `make audit` green, 104 checks, `=== audit
+PASSED — all 68 greps clean ===`. No deviation from the plan's predicted
+gate table (§4 P2-2) — all four predictions held exactly.
+
+**Deferred (D1, per the plan's own table):** `make test` was not run
+(out of scope for this phase's gates). The rewritten/edited test files
+compile but were not executed; a green compile is not evidence the
+retired/rewritten assertions pass. Left for the end-of-cutover CI phase.
 
 ### 2026-08-06 — P2-1 complete: audit check 104, PROFILE-ID-INT-SITES
 

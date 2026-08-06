@@ -11,11 +11,24 @@ abstract class ProfileRepository {
 
   /// Create a new profile. Enforces max 10 profiles per account.
   /// Throws [MaxProfilesExceededException] if limit reached.
+  ///
+  /// [ulid] (P2-2): the profile's Firestore identity, minted eagerly
+  /// BEFORE the local row is ever inserted — never left null and lazily
+  /// backfilled on a later edit. Optional here, not required: the only
+  /// production caller that ever supplies it is
+  /// `FirestoreProfileRepositoryAdapter` (`profile_repository_impl.dart`),
+  /// which lives in `data/repositories/` and is therefore the one place
+  /// allowed to import `DocIds` (`check_dependency_direction.dart` / audit
+  /// check 102 forbids that import everywhere else under `lib/features/**`).
+  /// A caller that omits it (any bare `ProfileRepositoryImpl` construction,
+  /// e.g. in tests) still gets one — the implementation mints a fallback
+  /// rather than ever leaving the row's identity null.
   Future<ProfileModel> createProfile({
     required int accountId,
     required String displayName,
     required String mode,
     int avatarIndex = 0,
+    String? ulid,
   });
 
   /// Update an existing profile.
@@ -51,9 +64,14 @@ abstract class ProfileRepository {
   /// this per-account database (e.g. a track created before a profile existed)
   /// are re-parented onto the new profile so existing data is preserved rather
   /// than stranded. Runs in a single transaction.
+  ///
+  /// [ulid] (P2-2): see [createProfile]'s doc comment — same optional,
+  /// eager-mint-with-fallback contract, used only when this call actually
+  /// creates the healed profile (the no-op fast path ignores it).
   Future<int> ensureDefaultProfile({
     required int accountId,
     required String defaultDisplayName,
+    String? ulid,
   });
 }
 

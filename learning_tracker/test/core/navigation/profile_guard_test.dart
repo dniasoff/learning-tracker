@@ -68,7 +68,7 @@ void main() {
       profilePickerRoute: () => _FakePageRouteInfo(),
       getDatabase: () => db,
       getSelectedProfileId: () => selectedId,
-      setSelectedProfileId: (_) {},
+      setSelectedProfileId: (_, {String? ulid}) {},
       getAccountId: () => 1,
       isTutoredSession: () => true,
     );
@@ -106,7 +106,7 @@ void main() {
       profilePickerRoute: () => _FakePageRouteInfo(),
       getDatabase: () => db,
       getSelectedProfileId: () => null,
-      setSelectedProfileId: (_) {},
+      setSelectedProfileId: (_, {String? ulid}) {},
       getAccountId: () => 1,
       isTutoredSession: () => false,
     );
@@ -156,7 +156,7 @@ void main() {
         profilePickerRoute: () => _FakePageRouteInfo(),
         getDatabase: () => db,
         getSelectedProfileId: () => null,
-        setSelectedProfileId: (id) => selected.add(id),
+        setSelectedProfileId: (id, {String? ulid}) => selected.add(id),
         getAccountId: () => accountId,
         isTutoredSession: () => false,
       );
@@ -190,7 +190,7 @@ void main() {
             const PageRouteInfo('AUD_CORE_NAV_01_MARKER_ROUTE'),
         getDatabase: () => db,
         getSelectedProfileId: () => null,
-        setSelectedProfileId: (_) {},
+        setSelectedProfileId: (_, {String? ulid}) {},
         getAccountId: () => accountId,
         isTutoredSession: () => false,
       );
@@ -224,7 +224,7 @@ void main() {
         profilePickerRoute: () => _FakePageRouteInfo(),
         getDatabase: () => db,
         getSelectedProfileId: () => profileId,
-        setSelectedProfileId: (_) {},
+        setSelectedProfileId: (_, {String? ulid}) {},
         getAccountId: () => accountId,
         isTutoredSession: () => false,
       );
@@ -252,7 +252,7 @@ void main() {
           profilePickerRoute: () => _FakePageRouteInfo(),
           getDatabase: () => throw StateError('provider disposed mid-flight'),
           getSelectedProfileId: () => null,
-          setSelectedProfileId: (_) {},
+          setSelectedProfileId: (_, {String? ulid}) {},
           getAccountId: () => 1,
           isTutoredSession: () => false,
         );
