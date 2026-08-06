@@ -1,7 +1,17 @@
 # Firestore cutover plan
 
-**Status:** proposed, 2026-08-04
-**Baseline:** `5b4d7924` on `dev` — `make ci` green, 4 features on Firestore.
+**Status:** Phase 0 ✅ · Phase 1 ✅ · **Phase 2 next** · Phases 3–5 pending
+**Last updated:** 2026-08-06
+**Head:** `a2a21d0a` on `dev` — `make audit` green (103 checks), 4 features on
+Firestore, keying gate live.
+
+**Verification cadence (owner decision, 2026-08-06):** `dart analyze` and the
+keying gate run every stage (seconds); `make audit` runs at each phase
+boundary (~9 min); full `make ci` is **batched to the end of Phase 4**
+(~35 min). Rationale for keeping audit per-phase rather than batching it too:
+Phase 1's own defect — a duplicate `main()` in the libraries-only
+`test/helpers/` directory — was invisible to analyze and to the keying gate,
+and `make audit` caught it in minutes while only one phase had changed.
 
 This plan finishes the Drift→Firestore migration. It is written to be executed
 by a future session with no memory of how we got here, so every claim below
@@ -174,27 +184,52 @@ must land in the same commit).
 
 ---
 
-### Phase 1 — Make the boundary detectable
+### Phase 1 — Make the boundary detectable — **RESOLVED 2026-08-06** (`a2a21d0a`)
 
-**This is the phase that makes the rest reliable. Do it first.**
+**This is the phase that makes the rest reliable. It is done; everything below
+depends on it.**
 
-Today nothing detects a writer/reader path split. Build the gate that does.
+**Shipped:**
 
-**Deliverable:** an enforcement check (`tool/check_profile_path_keying.dart`,
-wired into `make audit` *and* the `make ci` lane) that, for each of the 14
-profile-scoped collections, enumerates every writer and every reader and fails
-if they do not agree on int-vs-ULID keying.
+- **`tool/check_profile_path_keying.dart`** — audit check 103. Classifies every
+  writer and reader of all **17** profile-scoped collections (the planned
+  figure of 14 was the count of collections on the int path specifically; 17 is
+  the full set) as int- or ULID-keyed across `lib/` and `functions/src/`, and
+  fails when a collection has both. Wired into **both** `make audit` and the
+  `make ci` lane.
+- **`tool/profile_path_keying_baseline.txt`** — exactly `bookmarks` and
+  `learning_order`, the only two collections with a live split. Nothing was
+  baselined to make anything pass.
+- **A WATCHLIST** for the five dormant collections (`points_ledger`,
+  `profile_programs`, `stage_definitions`, `streak_events`,
+  `study_day_configs`), naming per collection exactly what wiring trips the
+  gate — and what does **not** (intermediate factories, DI/service-locator
+  lookups, torn-off constructor refs). Phase 3 gets warned before it creates a
+  split, not after.
+- **`test/helpers/writer_reader_agreement.dart`** — asserts a collection's
+  production writer and reader resolve the same document, with the path coming
+  from production code on **both** sides. Its own test
+  (`test/writer_reader_agreement_helper_test.dart`) includes a deliberately
+  mis-wired case, so the helper is proven non-vacuous.
 
-**Plus:** a reusable test helper that asserts writer/reader agreement through
-the *real production providers* — not by seeding a path the test chose. Every
-collection migrated in Phase 3 gets one, and it must fail if the paths diverge.
+**Deviation from plan, deliberate:** the gate ships **green**, not red. The
+plan assumed it would be red on today's splits. It is not, because both live
+splits are baselined — which is the same information expressed as "0 new
+violations" rather than as a failure. The burn-down property is unchanged:
+Phase 2/3 remove baseline entries, and any NEW split fails immediately.
 
-**Exit:**
-- The check exists, runs under `make ci`, and is red — it should currently
-  report the known splits.
-- Its baseline records exactly today's known-bad set, so Phase 2/3 burn it
-  down and nothing new can be added.
-- Red demo: introduce a synthetic split, confirm the check catches it.
+**Verification found five defects, all fixed with reproductions** (see
+`a2a21d0a`'s message for the full list). The one worth carrying forward:
+reachability originally counted **doc comments and string literals** as
+evidence, and *both* baseline entries were classified live on the strength of
+a doc comment. They were live anyway — but the gate was right by luck. A
+dormant repository merely discussed in prose would have hard-failed an empty
+baseline.
+
+**Known blind spots** are documented in the checker's own class doc comment
+and restated in every watchlist line. A static check will always have them;
+the requirement is that they are stated, because an unstated blind spot
+manufactures exactly the false confidence this gate exists to remove.
 
 ---
 
@@ -317,10 +352,20 @@ signed off.
 
 ## 4. Execution notes
 
-- **Phases 0 and 1 are strictly sequential and strictly first.** Phase 1 is
-  what converts this migration's characteristic failure — a silent data-tree
-  split — from invisible into caught. Skipping it means repeating the
-  bookmarks experience seven more times.
+- **Phases 0 and 1 were strictly sequential and strictly first.** ✅ Both done.
+  Phase 1 is what converts this migration's characteristic failure — a silent
+  data-tree split — from invisible into caught. Everything below now runs with
+  that gate in place; do not disable or baseline around it.
+- **Open work items live in
+  [`firestore-cutover-tasks.md`](firestore-cutover-tasks.md)**, mapped to the
+  phase that owns each one. Update it in the same commit as the work.
+- **Agent recovery runs off
+  [`firestore-cutover-log.md`](firestore-cutover-log.md)**. Sessions die
+  mid-work — a session limit killed a workflow at 9/16 agents, and an interrupt
+  stopped 48 more. Every agent brief MUST require reading that log first and
+  following its recovery protocol; the coordinator appends an entry when a
+  phase lands, when a session dies (recording what was in flight), and when a
+  finding changes the plan.
 - Phase 2 is one unit; identity cannot be half-migrated.
 - Phase 3 parallelises *by collection*, but only after Phase 1 exists to
   catch the mistakes that parallelism causes.
