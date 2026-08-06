@@ -34,6 +34,7 @@ Run these in order. Do not skip to the code.
    cd learning_tracker
    dart analyze --fatal-infos                       # seconds
    dart run tool/check_profile_path_keying.dart     # ~1s — the keying gate
+   dart run tool/check_profile_id_int_sites.dart    # ~1s — int-keyed profile-identity sites (check 104)
    ```
 5. **Only then** read the plan and the task list.
 
@@ -76,17 +77,29 @@ nothing on disk to diff against. This is the fix, binding from 2026-08-06
 
 ## CURRENT STATE
 
-**Head:** `d74e3829` on `dev`, in sync with origin. (Verified via `git log
---oneline -1`; the previously-recorded `a2a21d0a` was stale by one commit —
-`d74e3829` is the doc-only commit that created this file, a self-reference lag
-that is unavoidable for whichever commit writes CURRENT STATE last.)
+**Head:** this commit (P2-1) — SHA unknowable within its own commit, same
+self-reference lag as before. Parent is `fe9b4a96` (verified via `git log
+--oneline -1` at P2-1 start; the previously-recorded `d74e3829` was stale by
+two commits — `b076006c` (P2-0) and `fe9b4a96` (the second-stash finding) had
+already landed).
 **Deployed:** unknown — nothing deployed this phase yet.
-**Phase:** 0 ✅ · 1 ✅ · **2 not started**.
-**Gates:** `make audit` green (103 checks). Full `make ci` last green at
-`5b4d7924`; batched to end of Phase 4 by owner decision (2026-08-06).
+**Phase:** 0 ✅ · 1 ✅ · **2 in progress** (P2-1 ✅, P2-2 through P2-7 not
+started).
+**Gates:** `make audit` green (**104** checks, up from 103). Check 104
+(PROFILE-ID-INT-SITES) baseline = **88 entries** across 5 patterns
+(`cf-int-guard` 17, `cf-string-profileid-doc` 5, `dart-int-profileid-param`
+61, `dart-tutoring-int-parse` 2, `dart-tutoring-id-tostring` 3) — see the
+entry below for the deviation from the plan's ~31 prediction. Check 103's OK
+line and split set are **unchanged**: 2 collections (bookmarks,
+learning_order), 0 new violations. Full `make ci` last green at `5b4d7924`;
+batched to end of Phase 4 by owner decision (2026-08-06).
 
 **IN FLIGHT:** nothing. Tree is clean apart from pre-existing `_bmad/` config
-churn that predates this work.
+churn that predates this work. (Process note: this P2-1 session did not
+append an IN FLIGHT entry before its first edit, contrary to the protocol
+above — no interruption occurred, so nothing was left unrecoverable, but the
+ordering itself was not followed. Flagged here rather than silently
+corrected, per the log's own "report, don't quietly absorb" convention.)
 
 **Live on Firestore (4):** bookmarks · learning-order · profile identity ·
 scheduler learning-order read.
@@ -117,6 +130,100 @@ stage-definition · study-day-config · track-learning-order.
 ## Entries
 
 Newest first. Append; never rewrite history.
+
+### 2026-08-06 — P2-1 complete: audit check 104, PROFILE-ID-INT-SITES
+
+Built `tool/check_profile_id_int_sites.dart` + `tool/profile_id_int_sites_baseline.txt`
+per `docs/planning/firestore-phase2-plan.md` §4 P2-1. Named-entry ratchet
+keyed by `<pattern-id> <file>:<enclosing-symbol>` (never a line number): a
+NEW entry fails, a STALE baseline entry (present in the baseline but absent
+from the current scan) also fails. Baseline carries the required sentinel
+(`# format: profile-id-int-sites v1` + a `# pattern-hash: <hex>` line); a
+missing/sentinel-less baseline exits 1, and — a strengthening beyond the
+plan's literal ask — the hash is also *verified* against the live pattern
+list on every run, not just recorded, so a scanner change without a matching
+`--update-baseline` fails closed too. Wired into `Makefile` immediately after
+the 103 block (no renumbering — denominators are per-group), added
+`check-profile-id-int-sites` to `ci:`, and added the gate to this log's Step
+4 in the same commit.
+
+**Deviation — measured count vs. the plan's prediction:**
+- **Predicted:** "~31 entries" (`firestore-phase2-plan.md` §4 P2-1, §8).
+- **Actual:** **88 entries** (`cf-int-guard` 17, `cf-string-profileid-doc` 5,
+  `dart-int-profileid-param` 61, `dart-tutoring-int-parse` 2,
+  `dart-tutoring-id-tostring` 3) — verified via `--report`'s per-pattern
+  counts, each matching an independent `grep -c`/`grep -n` count against the
+  live tree.
+- **Why the prediction was wrong (mechanism, not a person):** the plan's
+  `dart-int-profileid-param` pattern description named
+  `firestore_gateway.dart` and `outbox/push_pipeline.dart` as
+  "interface-level only" scan targets but did not state a per-file count,
+  unlike every other pattern in the same list (which all cite their
+  population explicitly — 17, 5, "all six"). Both files are genuinely
+  *pure* abstract interfaces (`abstract class FirestoreGateway`/
+  `PushPipeline`, zero implementation) with one `int profileId`-typed method
+  per collection-operation — 28 and 20 sites respectively, verified by
+  direct count, not estimate. Whoever wrote "~31" was almost certainly
+  eyeballing a smaller number of representative sites rather than expanding
+  each interface's full method list. The other four patterns' raw
+  occurrence counts (17, 5, 13-of-61, 2, 3) already sum past 31 on their
+  own before the interface files are even added, which the plan's own §7 R2
+  register anticipates in spirit ("179 `int profileId` occurrences under
+  `lib/core/sync/**` alone" is cited there as the reason NOT to demand an
+  empty end-state) — a large tracked count is consistent with the gate's
+  own design rationale, not a symptom of a broken scanner.
+- **Invariant unaffected:** the four load-bearing design corrections (named-
+  entry ratchet with no empty-state requirement; OK line prints its scan
+  set; baseline sentinel; pattern-vs-code commit separation) hold regardless
+  of N. Check 103's OK line and split set are confirmed byte-identical
+  before and after this commit (`PROFILE-KEY-SPLIT check OK: 2
+  collection(s) currently split (bookmarks, learning_order), all within the
+  tracked baseline (0 new violations).`). `make audit` is green with 104
+  checks.
+
+**Two implementation defects found and fixed during construction, before the
+baseline was ever generated** (same spirit as Phase 1's adversarial-
+verification list below — recorded because a ratchet whose own construction
+silently miscounted would be exactly the "gate reports a fix that never
+happened" failure mode §4 P2-1 warns against):
+1. **Premature scope-pop on multi-line signatures.** The brace-depth scope
+   stack popped a just-pushed function frame on the SAME line it was pushed
+   whenever that line's own net brace delta was zero — true for every
+   multi-line TS function signature (`async function verifyTutorGrant(` has
+   no brace at all; the body's `{` arrives 6 lines later) and every bare
+   single-line abstract Dart method ending in `;` with no body
+   (`Future<void> deleteLearnerProfile(int profileId);`). Fixed by adding an
+   `opened` flag to each frame, set only once depth genuinely exceeds the
+   frame's push-time depth, with a separate immediate-pop rule for a
+   still-unopened frame whose line ends in `;` (an abstract signature that
+   never opens a body at all). Caught by hand-tracing `verifyTutorGrant`
+   against independent debug scripts before the real baseline was ever
+   written.
+2. **Nullable generic return types silently failed the whole Dart
+   function-declaration regex.** `Stream<Map<String, dynamic>?>` and
+   `Future<Map<String, dynamic>?>` (both real return types in
+   `firestore_gateway.dart`) do not match a character class that omits `?`
+   — regex alternation doesn't partially match, so the entire alternative
+   failed and no frame was pushed for `listenToDocument`/`fetchDocument` at
+   all. Both `int profileId` sites then silently fell back to the same
+   bare `FirestoreGateway`-only symbol and **collapsed into one entry**,
+   dropping one real site from the count without any error. Fixed by adding
+   `?` to the generic-argument character class; verified by re-running
+   `--report` and diffing every file's reported line numbers against an
+   independent `grep -nE` count until all five patterns' printed counts
+   equal their raw `grep -c` counts exactly (17/5/61/2/3 — no further silent
+   collapses).
+
+**Ratchet verified to actually fire (§6 P2-1's required red-demo):** added a
+throwaway `typeof profileId !== "number"` guard in a scratch
+`functions/src/_scratch_ratchet_probe.ts`, ran the gate — `PROFILE-ID-INT-SITES
+FAILED — 1 NEW int-keyed profile-identity site(s)`, exit 1 — then deleted the
+scratch file and re-ran — `PROFILE-ID-INT-SITES OK: 88 tracked site(s) ...
+0 new, 0 stale`, exit 0. `git status --porcelain` confirmed the scratch file
+left no trace.
+
+**Process note:** this session did not append an IN FLIGHT entry before its
+first edit (see CURRENT STATE above) — flagged, not silently corrected.
 
 ### 2026-08-06 — Phase 1 complete (`a2a21d0a`)
 
