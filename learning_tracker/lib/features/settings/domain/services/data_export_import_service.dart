@@ -199,6 +199,11 @@ class DataExportImportService {
           .map(
             (p) => {
               'id': p.id,
+              // T-41: carried through both directions, mirroring the
+              // learningLedger block below — a restored backup must keep a
+              // profile's real identity, not drop it and let the next read
+              // crash (ProfileModel.fromDriftRow's StateError, P2-3).
+              'ulid': p.ulid,
               'accountId': p.accountId,
               'displayName': p.displayName,
               'mode': p.mode,
@@ -630,6 +635,12 @@ class DataExportImportService {
         learnerProfileRows.add(
           LearnerProfilesCompanion(
             id: originalId != null ? Value(originalId) : const Value.absent(),
+            // T-41: required, not `as String?` — mirrors the learningLedger
+            // block below. Greenfield: an export predating this fix (no
+            // `ulid` key) fails loudly here rather than restoring a profile
+            // this device can no longer safely read
+            // (ProfileModel.fromDriftRow's StateError, P2-3).
+            ulid: Value(map['ulid'] as String),
             accountId: Value(map['accountId'] as int),
             displayName: Value(map['displayName'] as String),
             mode: Value(map['mode'] as String),

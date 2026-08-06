@@ -12,6 +12,63 @@ part 'profile_dao.g.dart';
 typedef Profile = LearnerProfile;
 typedef ProfilesCompanion = LearnerProfilesCompanion;
 
+/// Thrown by [ProfileDao.upsertFromSync] when the row it was asked to
+/// insert has no local counterpart yet AND no `ulid` to give the new row
+/// (T-41).
+///
+/// The legacy int-keyed sync engine's `learner_profiles` wire format
+/// (`LearnerProfileCodec`, `lib/core/sync/codec/learner_profile_codec.dart`)
+/// has never carried a `ulid` field, in either `encode()` or `decode()` — it
+/// predates the ULID identity entirely. So when this device pulls a profile
+/// it has never locally seen before (typically: a profile created on a
+/// SIBLING device, first observed here on this device's own sync pull),
+/// there is no identity on the wire to carry onto the new local row.
+///
+/// Two tempting fixes were rejected on purpose:
+///  - **Insert with `ulid` left unset.** `ProfileModel.fromDriftRow` (P2-3)
+///    throws a hard `StateError` the next time ANYTHING reads this row —
+///    at whatever unrelated screen happens to touch it next, far from this
+///    call site and with no context linking the crash back to a sync pull.
+///  - **Mint a fresh ULID here.** The profile already has a real identity —
+///    whichever ULID its owning device minted for it under the eager-mint
+///    policy (P2-2). Minting a second one here would hand this device's
+///    copy of the SAME profile a different identity than the rest of the
+///    world uses for it — exactly the "two identities for one profile"
+///    defect class this whole phase exists to close, not a fix for it.
+///
+/// So this path refuses instead: fail loudly, here, with a message that
+/// names the actual cause, rather than manufacture a row that becomes a
+/// landmine for a random later reader. `LearnerProfileMerger.merge`
+/// (`lib/core/sync/merge/learner_profile_merger.dart`) wraps every row in
+/// `on Exception catch` — the same per-row isolation it already uses for a
+/// malformed or FK-violating remote row — so this exception fails only the
+/// one offending row (logged via `sync_learner_profile_merge_row_failed`),
+/// not the whole sync pull. Because `DriftMergeStore.upsert` runs inside
+/// that same per-row `runInTransaction` block, throwing here also rolls
+/// back anything `DriftMergeStore._resolveLocalAccountId` may have already
+/// written (e.g. a placeholder `accounts` row) for this same row — no
+/// partial state survives a refused insert.
+///
+/// A profile in this shape is not lost: the old int-keyed sync engine dies
+/// wholesale in Phase 4, and every profile this device creates ITSELF
+/// already carries a real ULID from the moment it exists (P2-2's eager
+/// mint) — this refusal only ever fires for a profile-identity value this
+/// device never legitimately had a way to represent in the first place.
+class ProfileSyncMissingUlidException implements Exception {
+  const ProfileSyncMissingUlidException(this.remoteProfileId);
+
+  /// The `learner_profiles.id` the sync pull tried to insert.
+  final int remoteProfileId;
+
+  @override
+  String toString() =>
+      'ProfileSyncMissingUlidException: remote learner_profiles id '
+      '$remoteProfileId has no local row yet, and the legacy int-keyed sync '
+      'payload carries no ulid to give a new one — refusing to insert an '
+      'unidentified profile row (T-41). This profile must already exist '
+      'locally (created here, or restored) for this sync pull to update it.';
+}
+
 /// DAO for the learner_profiles table (was: profiles table).
 @DriftAccessor(tables: [LearnerProfiles])
 class ProfileDao extends DatabaseAccessor<UserDatabase> with _$ProfileDaoMixin {
@@ -104,12 +161,21 @@ class ProfileDao extends DatabaseAccessor<UserDatabase> with _$ProfileDaoMixin {
   /// before calling (DriftMergeStore's `_resolveLocalAccountId` — the
   /// remote's `account_id` almost never matches the local autoincrement id).
   ///
-  /// Insert: full row (matches the prior `insertOnConflictUpdate` shape —
-  /// [id] is caller-supplied, not autoincrement, since profile ids are
-  /// server-assigned). Update: partial — only the fields a remote sync
-  /// payload can legitimately change ([displayName], [mode],
+  /// **Update only — this path can no longer INSERT (T-41).** When a local
+  /// row for [id] already exists, this updates only the fields a remote
+  /// sync payload can legitimately change ([displayName], [mode],
   /// [avatarIndex], [updatedAt]); [accountId]/[createdAt] are left
-  /// untouched on an existing row, matching the prior inline behavior.
+  /// untouched, matching the prior inline behavior — and `ulid` is never
+  /// touched either way, so whatever identity the existing row already
+  /// carries survives a sync update unchanged.
+  ///
+  /// When NO local row exists for [id], this throws
+  /// [ProfileSyncMissingUlidException] instead of inserting one — see that
+  /// class's doc comment for why. Before T-41, this branch inserted a full
+  /// row with no `ulid`, which read back fine at the time but crashed the
+  /// next time anything mapped it to the domain model
+  /// (`ProfileModel.fromDriftRow`'s `StateError`, added by P2-3) — at
+  /// whatever unrelated call site happened to read it next.
   Future<void> upsertFromSync({
     required int id,
     required int accountId,
@@ -121,27 +187,16 @@ class ProfileDao extends DatabaseAccessor<UserDatabase> with _$ProfileDaoMixin {
   }) async {
     final existing = await getProfileById(id);
     if (existing == null) {
-      await into(learnerProfiles).insertOnConflictUpdate(
-        LearnerProfilesCompanion.insert(
-          id: Value(id),
-          accountId: accountId,
-          displayName: displayName,
-          mode: mode,
-          avatarIndex: Value(avatarIndex),
-          createdAt: createdAt,
-          updatedAt: updatedAt,
-        ),
-      );
-    } else {
-      await (update(learnerProfiles)..where((t) => t.id.equals(id))).write(
-        LearnerProfilesCompanion(
-          displayName: Value(displayName),
-          mode: Value(mode),
-          avatarIndex: Value(avatarIndex),
-          updatedAt: Value(updatedAt),
-        ),
-      );
+      throw ProfileSyncMissingUlidException(id);
     }
+    await (update(learnerProfiles)..where((t) => t.id.equals(id))).write(
+      LearnerProfilesCompanion(
+        displayName: Value(displayName),
+        mode: Value(mode),
+        avatarIndex: Value(avatarIndex),
+        updatedAt: Value(updatedAt),
+      ),
+    );
   }
 
   /// Check if a profile with the given name (case-insensitive, trimmed)

@@ -135,6 +135,9 @@ void main() {
         ..['userProfiles'] = [userProfileMap(id: 1)]
         ..['learnerProfiles'] = [
           {
+            // T-41: required — importData's learnerProfiles insert now casts
+            // this straight to String (mirrors the learningLedger section).
+            'ulid': 'ulid-child-a',
             'accountId': 1,
             'displayName': 'Child A',
             'mode': 'child',
@@ -1025,6 +1028,9 @@ void main() {
               mode: 'adult',
               createdAt: DateTime.utc(2026, 1, 1),
               updatedAt: DateTime.utc(2026, 1, 1),
+              // T-41: exportData/importData round-trip ulid now (mirrors
+              // learningLedger); a real seeded profile always has one.
+              ulid: const Value('ulid-alice'),
             ),
           )
           .then((r) => r.id);
@@ -1050,6 +1056,7 @@ void main() {
               mode: 'child',
               createdAt: DateTime.utc(2026, 2, 1),
               updatedAt: DateTime.utc(2026, 2, 1),
+              ulid: const Value('ulid-bob'),
             ),
           )
           .then((r) => r.id);

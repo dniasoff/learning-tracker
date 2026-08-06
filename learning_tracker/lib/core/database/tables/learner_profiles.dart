@@ -60,8 +60,21 @@ class LearnerProfiles extends Table {
   /// `FirestoreProfileRepositoryAdapter.createProfile`/`ensureDefaultProfile`
   /// (`lib/features/profiles/data/repositories/profile_repository_impl.dart`)
   /// mint the identity first and pass it into the very insert that creates
-  /// this row, so a profile created under this policy is NEVER observed
+  /// this row, so a profile created THROUGH THAT PATH is never observed
   /// with `ulid IS NULL`.
+  ///
+  /// **T-41: every OTHER live inserter of this table now agrees.**
+  /// `ProfileDao.upsertTutoredProfile`'s insert branch records the remote
+  /// child's own id as `ulid` (P2-2). `ProfileDao.upsertFromSync` (the
+  /// legacy int-keyed sync-pull merge) refuses to insert at all when it has
+  /// no local row to update and no `ulid` to give a new one
+  /// (`ProfileSyncMissingUlidException` — see that class's doc comment).
+  /// `DataExportImportService` carries `ulid` through both the export and
+  /// the import side (mirroring the sibling `learningLedger` block), so a
+  /// restored backup's profiles keep their identity — and, per this whole
+  /// column's greenfield stance, importing an OLD backup that predates this
+  /// fix and has no `ulid` in its `learnerProfiles` section fails loudly
+  /// (a cast error on import) rather than silently inserting one with none.
   ///
   /// **`NULL` on a row that predates P2-2 means "created before the eager
   /// mint policy shipped" — still never "no profile".** Profile existence

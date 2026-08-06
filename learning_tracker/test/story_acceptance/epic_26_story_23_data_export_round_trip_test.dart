@@ -265,7 +265,10 @@ void main() {
             )
             .then((r) => r.id);
 
-        // Learner profile for account 1
+        // Learner profile for account 1.
+        // T-41: carries a ulid — exportData/importData now round-trip it
+        // (mirrors the learningLedger block), and a real seeded profile
+        // always has one under P2-2's eager-mint policy.
         await db
             .into(db.learnerProfiles)
             .insertReturning(
@@ -275,6 +278,7 @@ void main() {
                 mode: 'adult',
                 createdAt: DateTime(2026, 1, 1),
                 updatedAt: DateTime(2026, 1, 1),
+                ulid: const Value('ulid-alice'),
               ),
             )
             .then((r) => r.id);
@@ -289,6 +293,7 @@ void main() {
                 mode: 'child',
                 createdAt: DateTime(2026, 2, 1),
                 updatedAt: DateTime(2026, 2, 1),
+                ulid: const Value('ulid-bob'),
               ),
             )
             .then((r) => r.id);

@@ -77,33 +77,45 @@ nothing on disk to diff against. This is the fix, binding from 2026-08-06
 
 ## CURRENT STATE
 
-**Head:** `2e85b097` (P2-6). This commit (P2-7) lands docs only, on top of
-it — no `lib/`, `test/`, or `tool/` file touched, so `2e85b097` remains the
-correct SHA for a cold agent to diff a tree against until P2-7's own SHA is
-knowable (same self-reference lag as every prior closing commit — state the
-previous SHA rather than a hash that cannot exist yet; that lag is exactly
-what made this field false at the start of the phase).
+**Head:** `8dea756b` (P2-8). This commit (P2-9) fixes `T-41`, the second
+and last BLOCKING defect named at end-of-phase review — `8dea756b` remains
+the correct SHA for a cold agent to diff a tree against until P2-9's own SHA
+is knowable (same self-reference lag as every prior closing commit).
+**Found incidentally while rewriting this block, not caused by this
+commit:** P2-8's own commit updated the `Phase:` and `Gates:` fields below
+but left this `Head:` paragraph's prose still reading "This commit (P2-7)…
+`2e85b097`" — i.e. P2-8 (a code-touching commit, bound by the A1 override to
+rewrite `CURRENT STATE` truthfully in its own commit) never actually updated
+its own `Head:` line. Not fixed retroactively (append-only doctrine doesn't
+apply to `CURRENT STATE`, which is deliberately mutable — but P2-8's own
+commit is already landed and unamendable); flagged here, corrected by this
+rewrite.
 **Deployed:** still `unknown — not deployed`. P2-6's `learning_order allow
-delete` rules change is **NOT deployed**; this session is docs-only and
-deploys nothing. Do not attribute a device `permission-denied` on
-`learning_order` delete to a code defect until this field says otherwise.
+delete` rules change is **NOT deployed**; P2-7, P2-8 and this commit (P2-9)
+are all docs/`lib`/`test`-only and deploy nothing. Do not attribute a device
+`permission-denied` on `learning_order` delete to a code defect until this
+field says otherwise.
 **Phase:** 0 ✅ · 1 ✅ · **2 — IN PROGRESS, NOT RESOLVED** (P2-0 ✅, P2-1 ✅,
-P2-2 ✅, P2-3 ✅, P2-4 ✅, P2-5 ✅, P2-6 ✅, P2-7 ✅ docs-only, **P2-8 ✅ fixes
-BLOCKING DEFECT 1 (T-40)**). One BLOCKING defect remains — `T-41` (two live
-paths still insert `ulid IS NULL` profile rows post-P2-3's hard-crash
-enforcement) — plus `T-42`'s remaining serious/minor items (two of which
-P2-8 resolved as a documented side effect: the offline-first contract break
-and the `ensureDefaultProfile` double-decision). **Phase 3 must not start
-until T-41 is fixed and T-42 is triaged/resolved-or-explicitly-deferred.**
-**Gates (P2-8, re-confirmed against HEAD after the fix):** `dart analyze
+P2-2 ✅, P2-3 ✅, P2-4 ✅, P2-5 ✅, P2-6 ✅, P2-7 ✅ docs-only, P2-8 ✅ fixed
+BLOCKING DEFECT 1 (T-40), **P2-9 ✅ fixes BLOCKING DEFECT 2 (T-41)**). **Both
+BLOCKING defects are now fixed.** `T-42`'s remaining serious/minor items are
+still open (two of its items were resolved by P2-8 as a documented side
+effect; the rest — the D9 criterion, the `repository_providers.dart` stale
+comment, check 104's `.id.toString()` dedup blind spot, the P2-1 entry's
+false verification claim, and the minor items — are untouched by this
+commit, out of its scope exactly as they were out of P2-8's). **Phase 3
+must not start until `T-42` is triaged/resolved-or-explicitly-deferred** —
+that is now the ONLY remaining Phase-2-exit condition; no BLOCKING defect
+remains.
+**Gates (P2-9, re-confirmed against HEAD after the fix):** `dart analyze
 --fatal-infos` → `No issues found!`. `make audit` green, exit 0, **104**
 checks, true last line (no parenthetical) `=== audit PASSED — all 68 greps
 clean ===`. Check 103's OK line and split set **unchanged**: `PROFILE-KEY-SPLIT
 check OK: 2 collection(s) currently split (bookmarks, learning_order), all
 within the tracked baseline (0 new violations).` Check 104 **unchanged** at
-**88** tracked sites, 0 new, 0 stale. All four match the P2-8 brief's
-prediction exactly — no deviation. Full `make ci` last green at `5b4d7924`;
-still batched to end of Phase 4 by owner decision (2026-08-06) — unchanged.
+**88** tracked sites, 0 new, 0 stale. All four match this brief's prediction
+exactly — no deviation. Full `make ci` last green at `5b4d7924`; still
+batched to end of Phase 4 by owner decision (2026-08-06) — unchanged.
 
 **IN FLIGHT:** nothing.
 
@@ -156,6 +168,263 @@ stage-definition · study-day-config · track-learning-order.
 ## Entries
 
 Newest first. Append; never rewrite history.
+
+### 2026-08-07 — P2-9: T-41 fixed — both live null-ulid profile-row inserters now refuse or carry the real identity
+
+Per the P2-9 brief (BLOCKING DEFECT 2 in the P2-7 entry below; `T-41` in
+`firestore-cutover-tasks.md`). **Process note, stated plainly per this log's
+own convention rather than silently corrected:** the brief's own INTERRUPT
+PROTOCOL required an IN FLIGHT entry to be appended before the first edit;
+this session made its first edit before appending one. The work was
+completed in one uninterrupted sitting, so — matching the precedent P2-1's,
+P2-4's and P2-5's entries already set for the identical gap — this entry
+itself is the honest same-commit record; `CURRENT STATE`'s `IN FLIGHT` field
+was never left non-`nothing` for a cold agent to find.
+
+**Re-verified the defect before fixing it** (the brief's own instruction —
+a reviewer's finding is not automatically right):
+- `grep -n "ulid" lib/core/database/daos/profile_dao.dart` — confirmed
+  `upsertFromSync`'s `LearnerProfilesCompanion.insert(...)` carried no
+  `ulid:` key.
+- `grep -n "ulid" lib/features/settings/domain/services/data_export_import_service.dart`
+  — confirmed the `learnerProfiles` export map and the import companion both
+  omitted `'ulid'`, unlike the `learningLedger` block a few lines away in
+  each direction, which already carried it.
+- `grep -rn "_upsertLearnerProfile\|upsertFromSync" lib/core/sync/merge/drift_merge_store.dart`
+  plus `grep -n "learnerProfile" lib/core/sync/providers/merge_router_provider.dart`
+  — confirmed the live wiring the defect named: `DriftMergeStore.upsert`'s
+  `EntityKind.learnerProfile` case calls `_upsertLearnerProfile`, which
+  calls `_db.profileDao.upsertFromSync(...)`, and `merge_router_provider.dart`
+  wires `LearnerProfileMerger` as the live merger for that kind.
+- Read `lib/core/sync/codec/learner_profile_codec.dart` in full — confirmed
+  `LearnerProfileCodec.encode`/`decode` have **never** had a `ulid` key, on
+  either side. This is the fact the whole design call below rests on: the
+  legacy int-keyed `learner_profiles` wire format predates the ULID
+  identity and has no slot for it at all — contrast `learning_ledger`,
+  `points_ledger`, `reward_redemptions` and `streak_events`, whose codecs
+  all do carry one (schema v27 precedent, cited in `learner_profiles.dart`'s
+  own doc comment).
+
+The defect was real, exactly as described. Also confirmed P2-3's three new
+crash sites are unaffected by this fix's scope (they route through
+`ProfileModel.fromDriftRow`, not through either of the two writers fixed
+here — this commit stops the crash-shaped rows from being written, not
+`fromDriftRow`'s enforcement, per the brief's explicit prohibition on
+softening it back).
+
+**Design call — `upsertFromSync`: refuse, don't mint, don't insert null.**
+Recorded here in full, as the brief required, and in the commit body. Three
+options existed for the branch where no local row exists for the remote id:
+1. **Insert with `ulid` unset.** Rejected — this is the defect itself: a row
+   that reads back fine today and throws `StateError` the next time
+   ANYTHING calls `ProfileModel.fromDriftRow` on it, at whatever unrelated
+   call site happens to read it next, with no context tying the crash back
+   to a sync pull.
+2. **Mint a fresh ULID locally and insert with it.** Rejected — the profile
+   already has a real identity: whichever ULID its OWNING device minted for
+   it under P2-2's eager-mint policy. Minting a second, different one here
+   would give the same profile two identities depending which device you
+   ask — exactly the defect class this whole phase exists to close (the
+   analogous trap `upsertTutoredProfile` used to have before P2-2 fixed it
+   by recording the remote id instead of minting), not a variant of the fix.
+3. **Refuse the insert, loudly, at the point of failure. Chosen.** When no
+   local row exists for the remote id AND the wire payload carries no
+   identity to give it, `ProfileDao.upsertFromSync` now throws a new named
+   `ProfileSyncMissingUlidException` (defined alongside the DAO in
+   `profile_dao.dart`) instead of inserting.
+
+**The containment is verified, not asserted.** `LearnerProfileMerger.merge`'s
+existing per-row `on Exception catch` (Bug 1's isolation, already in place
+for a malformed or FK-violating row) catches the new exception — one
+offending row is skipped and logged
+(`sync_learner_profile_merge_row_failed`), not the whole sync pull.
+`DriftMergeStore.upsert` for `EntityKind.learnerProfile` runs inside
+`LearnerProfileMerger.merge`'s `_store.runInTransaction(...)` wrapper
+(`_db.transaction(body)` underneath), so a throw partway through also rolls
+back anything `_resolveLocalAccountId` had already written for this same
+row — e.g. a placeholder `accounts` row seeded to satisfy the FK before the
+now-refused profile insert. New test
+(`drift_merge_store_test.dart`, "Bug 1 + T-41: a first-seen profile refuses
+even when FK remap would be needed…") proves this directly: it calls
+`store.upsert` through the SAME `runInTransaction` wrapper the merger uses
+(not bare), on a fresh zero-account DB — the exact shape that used to
+justify `_resolveLocalAccountId` seeding a placeholder account — and asserts
+both the throw AND that no account row survives it.
+
+The **UPDATE branch** (a local row for the id already exists) needed no
+change: verified it never wrote `ulid` before this commit and still
+doesn't, so whatever identity the row already carries — real, from the
+eager-mint policy, or a legacy pre-P2-2 `null` (R3's separate, already-
+accepted risk, untouched by this brief) — survives a sync-merge update
+unchanged. Two new/rewritten tests assert this explicitly (both files
+below).
+
+**Export/import — carries `ulid` in both directions, mirroring
+`learningLedger` exactly, per the brief's instruction.**
+`DataExportImportService.exportData`'s `learnerProfiles` map now includes
+`'ulid': p.ulid` (previously the one field silently dropped, contrasted
+against the `learningLedger` block a few lines below which already carried
+it). `importData`'s `LearnerProfilesCompanion` now sets
+`ulid: Value(map['ulid'] as String)` — a required, non-nullable cast, not
+`as String?` with a fallback, exactly matching the sibling `learningLedger`
+block's own pre-existing shape. Deliberate, not an oversight: an export
+predating this fix (no `ulid` key in its `learnerProfiles` section) now
+fails loudly on import — a cast error — rather than silently restoring a
+profile this device can no longer safely read. No back-compat reader was
+added for an old-shaped export — per the owner's binding GREENFIELD ruling,
+none should be.
+
+**Doc comment fixed in the same commit** (`learner_profiles.dart:58-77`):
+the `ulid` column's claim — "a profile created under this policy is NEVER
+observed with `ulid IS NULL`" — was narrowly true (scoped to the eager-mint
+create path) but read as a blanket claim about the table, which the other
+two live inserters contradicted. Corrected to scope the original sentence
+explicitly to that one path, then added a new paragraph naming how the
+other two live inserters (`upsertTutoredProfile`, already fixed at P2-2;
+`upsertFromSync` and `DataExportImportService`, fixed by this commit) now
+agree with it.
+
+**Closing verification that no other live inserter was missed:**
+`grep -rn "LearnerProfilesCompanion.insert\|LearnerProfilesCompanion(" lib/`
+(excluding `.g.dart`) returns exactly 8 sites in `lib/`: the two update-only
+calls in `ProfileDao.upsertFromSync`/`upsertTutoredProfile` (no `ulid`
+write, correct — see above), `upsertTutoredProfile`'s insert branch (sets
+`ulid: Value(remoteChildProfileId)`, P2-2), the `data_export_import_service.dart`
+import companion (fixed this commit), and three inserts/updates in
+`profile_repository_impl.dart` (`createProfile`, `updateProfile` — no
+`ulid` touch, correct — and `ensureDefaultProfile`'s insert), all three of
+which already resolve and set `ulid: Value(resolvedUlid)` under P2-2's
+eager-mint policy (re-read directly on this tree to confirm, not assumed
+from the P2-2 log entry). Nothing left uncovered.
+
+**Test-file blast radius — not enumerated in the brief, found and resolved
+during the fix, recorded per this log's standing "report what a change
+touches" convention:**
+- `drift_merge_store_test.dart` — the `DriftMergeStore.upsert — learner_profile`
+  group's insert-path tests could no longer pass as written (they asserted
+  a successful insert with no local row and no `ulid` on the wire — exactly
+  the now-refused shape). Rewrote the "insert" test to assert the throw;
+  rewrote "idempotency" to pre-seed the row directly (matching what the
+  real eager-mint create path would already have done) and assert the
+  UPDATE branch's repeated-call idempotency instead, now also asserting the
+  seeded `ulid` survives untouched; replaced both "Bug 1" account-remap
+  tests (whose scenario — a first-seen profile's insert completing
+  successfully with a remapped `accountId` — can no longer be constructed
+  through this path, the same class of change P2-3's log entry used for its
+  own deleted test) with the single "Bug 1 + T-41" transactional-rollback
+  test described above.
+- `learner_profile_merger_test.dart` — the `codec.encode() → merger → DB
+  round-trip` group's own setUp comment said "Do NOT seed a learner profile
+  — the merge must INSERT it," the exact scenario this commit refuses.
+  Added a pre-seeded row (with a `ulid`, as the real create path would have
+  already minted) to that group's `setUp`, added a new test proving a
+  genuinely-unseen id is refused end-to-end through the full
+  codec→merger pipeline without the merge itself throwing (Bug 1's
+  containment observed one layer up from the DAO), and rewrote the
+  "codec.encode() payload is accepted…" test to assert an UPDATE against
+  the pre-seeded row instead of an insert — including a new assertion that
+  the update never touches the pre-seeded `ulid`.
+- `test/helpers/data_export_fixtures.dart`'s `learnerProfileMap()` — the
+  shared fixture builder used by ~27 call sites across the settings test
+  suite. Added a `ulid` parameter defaulting to `'ulid-$id'` (this
+  codebase's existing `select()`-call-site convention) rather than omitting
+  it — the highest-leverage single fix, since every caller that doesn't
+  override it now builds an importable fixture instead of one that throws
+  on `importData`'s new cast.
+- `test/helpers/drift_memory.dart`'s `seedProfile`/`seedProfileZero` — the
+  two canonical "give me a working profile" seed helpers used across the
+  wider test suite (not just settings), previously seeding with no `ulid`.
+  Added one, matching P2-2's real eager-mint policy — every `exportData()`
+  call over a `seedProfile`-seeded DB now serializes a real `ulid`, so
+  every round-trip test built on these helpers keeps working without
+  individual changes.
+- Three direct, hand-rolled `LearnerProfilesCompanion.insert(...)` /
+  raw-map call sites that bypass both shared helpers and therefore needed
+  their own fix: `data_export_import_service_import_test.dart`'s
+  "inserts learner profile rows" test (a raw map, `'ulid': 'ulid-child-a'`
+  added) and its "profile isolation" test (two direct inserts for a
+  two-profile scenario, `ulid: const Value('ulid-alice'/'ulid-bob')`
+  added); `epic_26_story_23_data_export_round_trip_test.dart`'s "round-trip:
+  import(export(state)) preserves multi-profile data exactly" test (the
+  suite's own "core AC" round-trip test — same two-profile shape, same fix).
+  Each was found by tracing every `.exportData()` caller in the test suite
+  (9 files) against every `LearnerProfilesCompanion.insert`/`learnerProfileMap`
+  use in each, not by running the suite (barred this session — see below).
+
+**Not touched, explicitly out of scope for this brief:**
+- `lib/app/restore/device_restore_screen.dart` and `sign_in_controller.dart`'s
+  two `ProfileModel.fromDriftRow` call sites (P2-3's three new crash sites)
+  — this commit's fix is upstream of them: it stops the two writers from
+  producing a row those sites would crash on, rather than touching the read
+  sites or `fromDriftRow` itself (explicitly forbidden by the brief).
+- `T-42`'s remaining serious/minor items — unrelated to T-41, untouched,
+  still `todo` in `firestore-cutover-tasks.md`.
+- A pre-existing, incidentally-noticed gap, **not caused by this commit,
+  not fixed by it, flagged per this log's standing convention:**
+  `test/helpers/test_database.dart`'s `seedProfileWithIds` (used by
+  navigation/`ProfileGuard` tests, not by any export/import test) also
+  seeds with no `ulid`. Since P2-3 shipped, any test built on it that reads
+  the seeded row back through `ProfileModel.fromDriftRow` would already
+  throw — this predates T-41 and is the same hazard class the P2-8 entry
+  above already flagged once for a different file
+  (`profile_repository_impl_test.dart`'s pre-existing "does NOT touch that
+  profile's missing ulid" test). Left alone: `seedProfileWithIds` is not
+  one of the two live writers this brief named, fixing it would widen this
+  commit's blast radius well beyond T-41's stated scope, and no gate this
+  session runs can see it either way (only `make test`, barred). Candidate
+  for whoever next runs `make test` for real, or for a dedicated sweep.
+
+**Gates (verbatim, run after `dart format`):**
+```
+$ dart analyze --fatal-infos
+Analyzing learning_tracker...
+No issues found!
+
+$ dart run tool/check_profile_path_keying.dart | tail -1
+PROFILE-KEY-SPLIT check OK: 2 collection(s) currently split (bookmarks, learning_order), all within the tracked baseline (0 new violations).
+
+$ dart run tool/check_profile_id_int_sites.dart | tail -1
+PROFILE-ID-INT-SITES OK: 88 tracked site(s) across 5 pattern(s) [cf-int-guard, cf-string-profileid-doc, dart-int-profileid-param, dart-tutoring-int-parse, dart-tutoring-id-tostring]; 0 new, 0 stale.
+
+$ make audit; echo "EXIT=$?"
+... (104 checks; WATCHLIST paragraphs unchanged in content) ...
+=== audit PASSED — all 68 greps clean ===
+EXIT=0
+
+$ dart format <9 touched files>
+Formatted 9 files (2 changed).
+```
+No deviation. All four gates match this brief's prediction exactly: `dart
+analyze` green; check 103's OK line and split set unchanged (neither
+`learner_profiles` nor any doc-id formula is in its scan, by design); check
+104 unchanged at 88 entries/0 new/0 stale (profile-identity writers are
+outside its int-site scan by design — this fix changes no int-typed
+parameter or doc-id-string formula); `make audit` green at 104/104. R6d
+re-confirmed running (not soft-skipped): `coverage/lcov.info` untouched,
+still present, still the running form's stdout line
+(`R6 lcov-denominator check OK: 76 zero-coverage file(s)…`).
+
+**`make test` not run, per the owner's binding NO FULL CI instruction for
+this remediation session.** The nine touched/added test-assertion sites
+compile (`dart analyze` covers `test/`) but were not executed. Their
+correctness was argued from reading `upsertFromSync`'s two branches,
+`LearnerProfileMerger.merge`'s catch/transaction shape, and
+`DataExportImportService`'s clear/insert sequence directly — the same
+standard every P2-2 through P2-8 commit already applied under the same
+constraint — not confirmed by running them. **This closes D12** (P2-7's
+deferred-verification table, above: "Behavioural check on the null-ulid
+producers vs P2-3's `StateError`… This is BLOCKING DEFECT 2's own missing
+verification.") in the sense that dedicated tests now exist and target
+exactly this shape (`ProfileSyncMissingUlidException` thrown-and-caught;
+export/import cast failure); it does **not** close it in the sense of
+"executed and passing" — that half is still deferred, un-renamed here as
+**D13**: run `make test` (or at minimum
+`flutter test test/core/sync/merge/drift_merge_store_test.dart
+test/core/sync/merge/learner_profile_merger_test.dart
+test/features/settings/domain/services/data_export_import_service_import_test.dart
+test/story_acceptance/epic_26_story_23_data_export_round_trip_test.dart`)
+and confirm every touched/added assertion actually passes, not just
+compiles.
 
 ### 2026-08-06 — P2-8: T-40 fixed — the activation heal now exists
 

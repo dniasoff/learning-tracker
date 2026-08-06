@@ -10,7 +10,7 @@
 /// mirroring lib/core/sync/merge/learner_profile_merger.dart.
 library;
 
-import 'package:drift/drift.dart' show driftRuntimeOptions;
+import 'package:drift/drift.dart' show Value, driftRuntimeOptions;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
@@ -499,7 +499,6 @@ void main() {
       merger = LearnerProfileMerger(store: store);
 
       // Seed an account row so _resolveLocalAccountId has a FK target to bind.
-      // Do NOT seed a learner profile — the merge must INSERT it.
       await db
           .into(db.accounts)
           .insert(
@@ -511,52 +510,104 @@ void main() {
               updatedAt: DateTimeFactory.nowUtc(),
             ),
           );
+
+      // T-41: LearnerProfileCodec has never carried a `ulid`, in either
+      // direction — the legacy int-keyed wire format predates the ULID
+      // identity entirely. So ProfileDao.upsertFromSync now refuses to
+      // INSERT a profile this device has never locally seen before (see
+      // the dedicated refusal test below, which deliberately does NOT use
+      // this pre-seeded row). Seed the row here instead — with a real
+      // ulid, exactly as the eager-mint create path (P2-2) would already
+      // have done before this profile's first push ever reached this
+      // device — so this group's remaining tests exercise the codec
+      // round-trip's UPDATE branch, the only branch this wire format can
+      // still legally reach.
+      await db.profileDao.insertProfile(
+        LearnerProfilesCompanion.insert(
+          id: const Value(_remoteProfileId),
+          accountId: 1,
+          displayName: 'Pre-seed',
+          mode: 'adult',
+          createdAt: _createdAt,
+          updatedAt: _createdAt,
+          ulid: const Value('ulid-preseed'),
+        ),
+      );
     });
 
     tearDown(() async {
       await db.close();
     });
 
-    test(
-      'codec.encode() payload is accepted by the merger and the row lands in DB',
-      () async {
-        // Build the canonical write payload via the codec — exactly as
-        // ProfileRepositoryImpl._toFirestorePayload now does.
-        final row = LearnerProfileRow(
-          profileId: _remoteProfileId,
-          accountId: 1,
-          displayName: 'Alice',
-          mode: 'adult',
-          avatarIndex: 3,
-          createdAt: _createdAt,
-          updatedAt: _updatedAt,
-        );
-        final payload = _codec.encode(row);
+    test('a codec.encode() payload for a profile this device has never seen '
+        'locally is refused, not inserted with no ulid (T-41)', () async {
+      const neverSeenProfileId = 999999;
+      final row = LearnerProfileRow(
+        profileId: neverSeenProfileId,
+        accountId: 1,
+        displayName: 'Nobody',
+        mode: 'adult',
+        avatarIndex: 0,
+        createdAt: _createdAt,
+        updatedAt: _updatedAt,
+      );
 
-        // The merger must accept the payload and write it to Drift.
-        await merger.merge(profileId: _remoteProfileId, rows: [payload]);
+      // LearnerProfileMerger's own per-row `on Exception catch` (Bug 1's
+      // isolation) contains ProfileSyncMissingUlidException — merge()
+      // itself completes without throwing.
+      await merger.merge(
+        profileId: neverSeenProfileId,
+        rows: [_codec.encode(row)],
+      );
 
-        // Assert: the profile row materialised in the DB — not skipped.
-        final profile = await db.profileDao.getProfileById(_remoteProfileId);
-        expect(
-          profile,
-          isNotNull,
-          reason:
-              'LearnerProfileMerger must INSERT the profile when codec.encode() '
-              'payload is fed in — if null, the merge read-keys diverge from the '
-              'codec write-keys (the bookmarks-class push↔merge key-contract bug).',
-        );
-        expect(profile!.displayName, 'Alice');
-        expect(profile.mode, 'adult');
-        expect(profile.avatarIndex, 3);
-        expect(
-          profile.updatedAt.toUtc(),
-          _updatedAt,
-          reason:
-              'updated_at must round-trip through the codec and be stored correctly',
-        );
-      },
-    );
+      expect(await db.profileDao.getProfileById(neverSeenProfileId), isNull);
+    });
+
+    test('codec.encode() payload is accepted by the merger and updates the '
+        'pre-existing row in DB', () async {
+      // Build the canonical write payload via the codec — exactly as
+      // ProfileRepositoryImpl._toFirestorePayload now does.
+      final row = LearnerProfileRow(
+        profileId: _remoteProfileId,
+        accountId: 1,
+        displayName: 'Alice',
+        mode: 'adult',
+        avatarIndex: 3,
+        createdAt: _createdAt,
+        updatedAt: _updatedAt,
+      );
+      final payload = _codec.encode(row);
+
+      // The merger must accept the payload and update the row in Drift.
+      await merger.merge(profileId: _remoteProfileId, rows: [payload]);
+
+      final profile = await db.profileDao.getProfileById(_remoteProfileId);
+      expect(
+        profile,
+        isNotNull,
+        reason:
+            'LearnerProfileMerger must UPDATE the pre-existing profile when '
+            'codec.encode() payload is fed in — if null, the merge read-keys '
+            'diverge from the codec write-keys (the bookmarks-class '
+            'push↔merge key-contract bug).',
+      );
+      expect(profile!.displayName, 'Alice');
+      expect(profile.mode, 'adult');
+      expect(profile.avatarIndex, 3);
+      expect(
+        profile.updatedAt.toUtc(),
+        _updatedAt,
+        reason:
+            'updated_at must round-trip through the codec and be stored correctly',
+      );
+      expect(
+        profile.ulid,
+        'ulid-preseed',
+        reason:
+            'the UPDATE branch never touches ulid — the pre-seeded identity '
+            'must survive a sync-merge update untouched',
+      );
+    });
 
     test('currentUpdatedAt is persisted after a successful merge', () async {
       final row = LearnerProfileRow(

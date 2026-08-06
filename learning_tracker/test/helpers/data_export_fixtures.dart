@@ -94,6 +94,14 @@ Map<String, dynamic> userProfileMap({
 };
 
 /// Returns a `learnerProfiles` row.
+///
+/// T-41: `ulid` defaults to a per-`id` value (`'ulid-$id'`, matching this
+/// codebase's `select()`-call-site convention — see
+/// `firestore-cutover-log.md`'s P2-3 entry) rather than being omitted.
+/// `DataExportImportService.importData` now requires it
+/// (`ulid: Value(map['ulid'] as String)`, mirroring the sibling
+/// `learningLedger` block) — an omitted/`null` `ulid` here would throw a
+/// cast error on import, not build a legitimately importable fixture.
 Map<String, dynamic> learnerProfileMap({
   int id = 1,
   int accountId = 1,
@@ -102,8 +110,10 @@ Map<String, dynamic> learnerProfileMap({
   int avatarIndex = 0,
   String createdAt = '2026-01-01T00:00:00.000Z',
   String updatedAt = '2026-01-01T00:00:00.000Z',
+  String? ulid,
 }) => {
   'id': id,
+  'ulid': ulid ?? 'ulid-$id',
   'accountId': accountId,
   'displayName': displayName,
   'mode': mode,

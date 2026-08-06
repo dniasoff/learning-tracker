@@ -47,6 +47,12 @@ UserDatabase inMemoryDb() => UserDatabase(NativeDatabase.memory());
 /// FK referencing `learner_profiles(id)` (e.g. completions,
 /// completion_events, streak_events). Call this at the top of each such
 /// test or in setUp before any FK-constrained insert.
+///
+/// T-41: carries a `ulid` (P2-2's eager-mint policy means a real seeded
+/// profile always has one) — required so this fixture round-trips through
+/// `DataExportImportService.exportData`/`importData` without hitting the
+/// hard `ulid` cast the import side now enforces, and so anything reading
+/// this row back through `ProfileModel.fromDriftRow` (P2-3) doesn't crash.
 Future<void> seedProfile(UserDatabase db) async {
   final accountId = await db
       .into(db.accounts)
@@ -68,6 +74,7 @@ Future<void> seedProfile(UserDatabase db) async {
           mode: 'adult',
           createdAt: DateTimeFactory.nowUtc(),
           updatedAt: DateTimeFactory.nowUtc(),
+          ulid: const Value('ulid-seed-profile'),
         ),
       );
 }
@@ -129,6 +136,8 @@ Future<void> wipeAllUserTables(UserDatabase db) => db.transaction(() async {
 /// Required by code that hardcodes profileId = 0 (e.g.
 /// [StageDefinitionRepositoryImpl.initializeDefaults] — DNI-322). Call
 /// this alongside [seedProfile] in any setUp that exercises such code.
+///
+/// T-41: carries a `ulid` — see [seedProfile]'s doc comment for why.
 Future<void> seedProfileZero(UserDatabase db) async {
   await db
       .into(db.accounts)
@@ -153,6 +162,7 @@ Future<void> seedProfileZero(UserDatabase db) async {
           mode: const Value('adult'),
           createdAt: Value(DateTimeFactory.nowUtc()),
           updatedAt: Value(DateTimeFactory.nowUtc()),
+          ulid: const Value('ulid-seed-profile-0'),
         ),
         mode: InsertMode.insertOrIgnore,
       );

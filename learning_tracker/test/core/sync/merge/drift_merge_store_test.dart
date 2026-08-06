@@ -25,6 +25,8 @@ library;
 import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:drift/native.dart';
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
+import 'package:learning_tracker/core/database/daos/profile_dao.dart'
+    show ProfileSyncMissingUlidException;
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/sync/merge/drift_merge_store.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
@@ -426,10 +428,18 @@ void main() {
     });
     tearDown(() => db.close());
 
-    test(
-      'insert: creates a new profile row when no local row exists',
-      () async {
-        await store.upsert(
+    // T-41: the legacy int-keyed learner_profiles wire format
+    // (LearnerProfileCodec) has never carried a `ulid`, in either direction.
+    // A profile this device has never locally seen before therefore cannot
+    // be safely INSERTED through this path any more — ProfileDao.upsertFromSync
+    // refuses (ProfileSyncMissingUlidException) rather than manufacture a
+    // row that crashes the next ProfileModel.fromDriftRow read. This
+    // replaces the old "insert: creates a new profile row when no local row
+    // exists" test, whose scenario can no longer be constructed.
+    test('insert (no local row, no ulid on the wire): refuses rather than '
+        'creating an unidentified profile row', () async {
+      await expectLater(
+        store.upsert(
           kind: EntityKind.learnerProfile,
           profileId: 99,
           fields: {
@@ -441,15 +451,12 @@ void main() {
             'updated_at': DateTime.utc(2026, 5, 15).toIso8601String(),
             'created_at': DateTime.utc(2026, 1, 1).toIso8601String(),
           },
-        );
+        ),
+        throwsA(isA<ProfileSyncMissingUlidException>()),
+      );
 
-        final row = await db.profileDao.getProfileById(99);
-        expect(row, isNotNull);
-        expect(row!.displayName, equals('Alice'));
-        expect(row.mode, equals('child'));
-        expect(row.avatarIndex, equals(3));
-      },
-    );
+      expect(await db.profileDao.getProfileById(99), isNull);
+    });
 
     test(
       'update: overwrites display_name, mode, avatarIndex for existing profile',
@@ -488,103 +495,98 @@ void main() {
       },
     );
 
-    test(
-      'idempotency: upsert same profile twice produces exactly one row',
-      () async {
-        final fields = {
-          'profile_id': 77,
-          'account_id': accountId,
-          'display_name': 'Carol',
-          'mode': 'adult',
-          'avatar_index': 1,
-          'updated_at': DateTime.utc(2026, 5, 10).toIso8601String(),
-          'created_at': DateTime.utc(2026, 1, 1).toIso8601String(),
-        };
-        await store.upsert(
-          kind: EntityKind.learnerProfile,
-          profileId: 77,
-          fields: fields,
-        );
-        await store.upsert(
-          kind: EntityKind.learnerProfile,
-          profileId: 77,
-          fields: fields,
-        );
+    test('idempotency: upsert twice on an EXISTING profile produces exactly '
+        'one row (T-41: the insert branch itself is no longer idempotent — it '
+        'refuses outright on the very first call for an unseen id; genuine '
+        'idempotency is only observable on the update branch now)', () async {
+      // Seed row 77 directly — as the real create path (eager mint,
+      // P2-2) would have already done before this profile's first sync
+      // pull ever reached this device.
+      await db
+          .into(db.learnerProfiles)
+          .insert(
+            LearnerProfilesCompanion(
+              id: const Value(77),
+              accountId: Value(accountId),
+              displayName: const Value('Carol Original'),
+              mode: const Value('adult'),
+              createdAt: Value(DateTime.utc(2026, 1, 1)),
+              updatedAt: Value(DateTime.utc(2026, 1, 1)),
+              ulid: const Value('ulid-carol'),
+            ),
+          );
 
-        final all = await (db.select(
-          db.learnerProfiles,
-        )..where((t) => t.id.equals(77))).get();
-        expect(all, hasLength(1));
-      },
-    );
+      final fields = {
+        'profile_id': 77,
+        'account_id': accountId,
+        'display_name': 'Carol',
+        'mode': 'adult',
+        'avatar_index': 1,
+        'updated_at': DateTime.utc(2026, 5, 10).toIso8601String(),
+      };
+      await store.upsert(
+        kind: EntityKind.learnerProfile,
+        profileId: 77,
+        fields: fields,
+      );
+      await store.upsert(
+        kind: EntityKind.learnerProfile,
+        profileId: 77,
+        fields: fields,
+      );
+
+      final all = await (db.select(
+        db.learnerProfiles,
+      )..where((t) => t.id.equals(77))).get();
+      expect(all, hasLength(1));
+      expect(all.single.displayName, equals('Carol'));
+      // The update branch never touches ulid — the seeded identity
+      // survives two repeated updates untouched.
+      expect(all.single.ulid, equals('ulid-carol'));
+    });
 
     // ── Bug 1 — FK-safe account resolution ───────────────────────────────────
 
-    test('Bug 1: remote account_id != local account id does NOT throw and '
-        'remaps the profile onto the single local account', () async {
-      // The remote row references account_id=999 (the cloud account id),
-      // but the only local account has the autoincrement id minted in setUp.
-      // Inserting the profile with 999 verbatim would violate the
-      // learner_profiles → accounts FK (SqliteException 787). The merge must
-      // remap onto the single local account instead.
-      expect(accountId, isNot(equals(999)));
+    test('Bug 1 + T-41: a first-seen profile refuses even when FK remap would '
+        'be needed, and the transactional wrapper leaves no placeholder '
+        'accounts row behind', () async {
+      // Fresh DB with zero accounts — reproduces the on-device state right
+      // after a (re)created account whose accounts row has not landed yet.
+      // This is exactly the shape that used to justify
+      // _resolveLocalAccountId seeding a placeholder accounts row before
+      // the (then-successful) profile insert.
+      final freshDb = UserDatabase(NativeDatabase.memory());
+      addTearDown(freshDb.close);
+      final freshStore = DriftMergeStore(freshDb);
 
-      await store.upsert(
-        kind: EntityKind.learnerProfile,
-        profileId: 1,
-        fields: {
-          'profile_id': 1,
-          'account_id': 999, // remote id, absent locally
-          'display_name': 'Family',
-          'mode': 'adult',
-          'updated_at': DateTime.utc(2026, 5, 15).toIso8601String(),
-          'created_at': DateTime.utc(2026, 1, 1).toIso8601String(),
-        },
+      final accountsBefore = await freshDb.userProfileDao.getAllUserProfiles();
+      expect(accountsBefore, isEmpty);
+
+      // Matches LearnerProfileMerger's real call shape: the write goes
+      // through runInTransaction, so a throw partway through rolls back
+      // everything _resolveLocalAccountId already wrote for this row —
+      // not just the refused profile insert itself.
+      await expectLater(
+        freshStore.runInTransaction(
+          () => freshStore.upsert(
+            kind: EntityKind.learnerProfile,
+            profileId: 1,
+            fields: {
+              'profile_id': 1,
+              'account_id': 1, // absent locally — would need a remap/seed
+              'display_name': 'Family',
+              'mode': 'adult',
+              'updated_at': DateTime.utc(2026, 5, 15).toIso8601String(),
+              'created_at': DateTime.utc(2026, 1, 1).toIso8601String(),
+            },
+          ),
+        ),
+        throwsA(isA<ProfileSyncMissingUlidException>()),
       );
 
-      final row = await db.profileDao.getProfileById(1);
-      expect(row, isNotNull);
-      expect(row!.displayName, equals('Family'));
-      // Remapped onto the existing local account — never the missing 999.
-      expect(row.accountId, equals(accountId));
+      expect(await freshDb.profileDao.getProfileById(1), isNull);
+      expect(await freshDb.userProfileDao.getAllUserProfiles(), isEmpty);
     });
-
-    test(
-      'Bug 1: with NO local account, the merge seeds a placeholder account so '
-      'the FK holds instead of crashing',
-      () async {
-        // Fresh DB with zero accounts — reproduces the on-device state right
-        // after a (re)created account whose accounts row has not landed yet.
-        final freshDb = UserDatabase(NativeDatabase.memory());
-        addTearDown(freshDb.close);
-        final freshStore = DriftMergeStore(freshDb);
-
-        final accountsBefore = await freshDb.userProfileDao
-            .getAllUserProfiles();
-        expect(accountsBefore, isEmpty);
-
-        await freshStore.upsert(
-          kind: EntityKind.learnerProfile,
-          profileId: 1,
-          fields: {
-            'profile_id': 1,
-            'account_id': 1,
-            'display_name': 'Family',
-            'mode': 'adult',
-            'updated_at': DateTime.utc(2026, 5, 15).toIso8601String(),
-            'created_at': DateTime.utc(2026, 1, 1).toIso8601String(),
-          },
-        );
-
-        final row = await freshDb.profileDao.getProfileById(1);
-        expect(row, isNotNull);
-        // The seeded account row exists, satisfying the FK.
-        final acct = await freshDb.userProfileDao.getUserProfileById(
-          row!.accountId,
-        );
-        expect(acct, isNotNull);
-      },
-    );
   });
 
   // ── upsert(track_config) ─────────────────────────────────────────────────
