@@ -77,43 +77,50 @@ nothing on disk to diff against. This is the fix, binding from 2026-08-06
 
 ## CURRENT STATE
 
-**Head:** `ed42c894` (P2-9). This commit (P2-10) fixes four of `T-42`'s
-still-open items — all from a follow-up adversarial review's
-`surviving_backcompat` findings, none of them BLOCKING — `ed42c894` remains
-the correct SHA for a cold agent to diff a tree against until P2-10's own
-SHA is knowable (same self-reference lag as every prior closing commit).
+**Head:** `6422b4d3` (P2-10). This commit (P2-11) hardens audit check 104
+against the fail-open a mid-phase review found (SERIOUS DEFECT 3 / T-42
+item 3, plus its two folded-in MINOR items) — `6422b4d3` remains the
+correct SHA for a cold agent to diff a tree against until P2-11's own SHA
+is knowable (same self-reference lag as every prior closing commit).
 **Deployed:** still `unknown — not deployed`. P2-6's `learning_order allow
-delete` rules change is **NOT deployed**; P2-7 through this commit (P2-10)
-are all docs/`lib`/`test`-only and deploy nothing. Do not attribute a device
-`permission-denied` on `learning_order` delete to a code defect until this
-field says otherwise.
+delete` rules change is **NOT deployed**; P2-7 through this commit (P2-11)
+are all docs/`tool`/`Makefile`-only and deploy nothing. Do not attribute a
+device `permission-denied` on `learning_order` delete to a code defect
+until this field says otherwise.
 **Phase:** 0 ✅ · 1 ✅ · **2 — IN PROGRESS, NOT RESOLVED** (P2-0 ✅, P2-1 ✅,
 P2-2 ✅, P2-3 ✅, P2-4 ✅, P2-5 ✅, P2-6 ✅, P2-7 ✅ docs-only, P2-8 ✅ fixed
-BLOCKING DEFECT 1 (T-40), P2-9 ✅ fixed BLOCKING DEFECT 2 (T-41), **P2-10 ✅
-fixes four of `T-42`'s minor items**). **Both BLOCKING defects remain
-fixed; no new one found this commit.** `T-42`'s remaining items are still
-open — two were resolved by P2-8 as a documented side effect, four more by
-this commit (P2-10; see its own entry below for exactly which), and the
-rest — the D9 criterion, the `repository_providers.dart` stale comment,
-check 104's `.id.toString()` dedup blind spot, the P2-1 entry's false
-verification claim, and the smaller items — are untouched by this commit,
-out of its scope exactly as they were out of P2-8's and P2-9's. **Phase 3
-must not start until `T-42` is triaged/resolved-or-explicitly-deferred** —
-that is still the ONLY remaining Phase-2-exit condition; no BLOCKING defect
-remains.
-**Gates (P2-10, re-confirmed against HEAD after the fix):** `dart analyze
+BLOCKING DEFECT 1 (T-40), P2-9 ✅ fixed BLOCKING DEFECT 2 (T-41), P2-10 ✅
+fixed four of `T-42`'s minor items, **P2-11 ✅ fixed `T-42` item 3 (check
+104's dedup fail-open) plus its two folded-in MINOR items (the
+`_patternListHash` overclaim and the silent-unreadable-file swallow)**).
+**Both BLOCKING defects remain fixed; no new one found this commit.**
+`T-42`'s remaining items — the D9 criterion, the `repository_providers.dart`
+stale reason, and the P2-1 entry's false verification claim — are
+untouched by this commit, out of its scope exactly as they were out of
+P2-8's, P2-9's and P2-10's. **Phase 3 must not start until `T-42` is
+triaged/resolved-or-explicitly-deferred** — that is still the ONLY
+remaining Phase-2-exit condition; no BLOCKING defect remains.
+**Gates (P2-11, re-confirmed against HEAD after the fix):** `dart analyze
 --fatal-infos` → `No issues found!`. `make audit` green, exit 0, **104**
 checks, true last line (no parenthetical) `=== audit PASSED — all 68 greps
-clean ===` — check 102 (the dependency-direction hard gate P2-10's fix
-had to stay inside) confirmed still green at `102/102` within that run.
-Check 103's OK line and split set **unchanged**: `PROFILE-KEY-SPLIT check
-OK: 2 collection(s) currently split (bookmarks, learning_order), all within
-the tracked baseline (0 new violations).` Check 104 **unchanged** at **88**
-tracked sites, 0 new, 0 stale. Both count-only ratchets (check 100 MCF-11,
-check 101 bare-Firebase-instance) also re-measured **unchanged** at their
-tracked baselines (39, 2). All six match this brief's prediction exactly —
-no deviation. Full `make ci` last green at `5b4d7924`; still batched to end
-of Phase 4 by owner decision (2026-08-06) — unchanged.
+clean ===`. Check 103's OK line and split set **unchanged**:
+`PROFILE-KEY-SPLIT check OK: 2 collection(s) currently split (bookmarks,
+learning_order), all within the tracked baseline (0 new violations).`
+Check 104's tracked **location set is unchanged** — the same 88
+`<pattern-id> <file>:<symbol>` locations as before this commit, verified by
+diffing the old baseline's location list against the new one with every
+` xN` suffix stripped, byte-identical — but the gate now reports it
+honestly as **88 entries covering 91 site(s)**, not "88 tracked site(s)"
+(the mislabel `T-42` item 3 flagged, and which disagreed with this very
+`CURRENT STATE` block's own prior "88 entries" wording). The extra 3 sites
+were always there, uncounted: `dart-tutoring-id-tostring`'s
+`_ChildGrantsSection.build` entry alone covers 4 raw
+`.id.toString()` occurrences (lines 206/293/298/312), not 1 — the exact
+undercounting the dedup fail-open produced. Both count-only ratchets
+(check 100 MCF-11, check 101 bare-Firebase-instance) re-measured
+**unchanged** at their tracked baselines (39, 2). Full `make ci` last
+green at `5b4d7924`; still batched to end of Phase 4 by owner decision
+(2026-08-06) — unchanged.
 
 **IN FLIGHT:** nothing.
 
@@ -166,6 +173,197 @@ stage-definition · study-day-config · track-learning-order.
 ## Entries
 
 Newest first. Append; never rewrite history.
+
+### 2026-08-07 — P2-11: audit check 104 hardened against its own fail-open (T-42 item 3)
+
+Per the P2-11 brief. An IN FLIGHT entry naming this commit and its full
+edit list (six items, plus a seventh Makefile-text item) was appended to
+`CURRENT STATE` **before the first edit**, per the log's own IN FLIGHT
+protocol (`:52-76`) — the first session to actually follow it rather than
+recording the same process gap P2-1/P2-4/P2-5/P2-9/P2-10 all had to flag.
+
+**Re-verified the defect before fixing it**, per the brief's own
+instruction that a reviewer's finding is not automatically right:
+`check_profile_id_int_sites.dart:540`'s
+`seen.putIfAbsent(entry.key, () => entry)` was read directly and confirmed
+to discard every match after the first inside a given `<pattern-id>
+<file>:<symbol>` location. Reproduced independently (not just trusted from
+the review JSON): `grep -rn --include='*.dart' -F '.id.toString()'
+lib/features/tutoring | wc -l` → **6**; the pre-fix baseline carried only
+**3** `dart-tutoring-id-tostring` entries. The defect was real, exactly as
+described — SERIOUS DEFECT 3 in the mid-phase review transcribed into this
+log's P2-7 entry above (`:1051-1061`), tracked as `T-42` item 3.
+
+**Fix 1 — occurrence count joins the ratchet identity.** The
+`seen.putIfAbsent` dedup in `_scan` was replaced with a per-location
+accumulator (`counts[loc] = (counts[loc] ?? 0) + 1`) that counts every
+matching raw line instead of keeping only the first. Every baseline entry
+is now `<pattern-id> <file>:<symbol> xN`, and comparison is two-layered:
+locations are diffed first (a location absent from the baseline is NEW, a
+baseline location absent from the current scan is STALE — both unchanged
+in spirit from the pre-fix two-way ratchet), and then, for every location
+present in BOTH, the counts are compared — a location whose `N` changed is
+reported as a third, distinct kind, **CHANGED**, printed as `baseline xA ->
+current xB` rather than as an unrelated NEW-here/STALE-there pair. The
+baseline format sentinel bumped `v1` → `v2` specifically so a stale
+pre-fix baseline (entries with no ` xN` suffix) fails as
+missing-sentinel/malformed rather than being silently misparsed as "0
+occurrences everywhere" — verified directly: running the new tool against
+the untouched `v1` baseline before regenerating printed the
+missing-sentinel FAILED message, not a false clean pass.
+
+**Fix 2 — the OK/`--report`/`--update-baseline` lines report entries and
+sites as two distinct, honestly-labelled numbers**, resolving the exact
+disagreement `T-42` item 3 named: this `CURRENT STATE` block has said "88
+entries" since P2-1, while the gate's own OK line said "88 tracked
+site(s)" — a claim about entries, worded as if it were a claim about raw
+occurrences. Post-fix: `PROFILE-ID-INT-SITES OK: 88 tracked entries
+covering 91 site(s) across 5 pattern(s) [...]; 0 new, 0 stale, 0 changed.`
+**Verified the location SET itself did not move**: the old baseline's 88
+`<pattern-id> <file>:<symbol>` lines, diffed against the new baseline's 88
+lines with every ` xN` suffix stripped, are byte-identical (`diff` empty,
+both files 88 non-comment lines). The extra 3 sites the new "91" surfaces
+were always present in the code, just uncounted — concretely,
+`dart-tutoring-id-tostring lib/features/tutoring/presentation/screens/
+manage_tutors_screen.dart:_ChildGrantsSection.build` is now recorded as
+`x4` (raw lines 206, 293, 298, 312), not the single, count-less entry it
+was before.
+
+**Fix 3 — `_patternListHash` now covers the matching logic, not just
+prose.** `_PatternDef`'s `fileScope`/`lineTest` closures were replaced
+with plain DATA fields — a `_ScopeKind` enum plus a scope directory or
+exact-file list, and a `needles`/`regex` pair — with `fileScope`/`lineTest`
+now ordinary methods computed FROM that data. `matchSignature` (new) is
+built directly from those same fields, and `_patternListHash` hashes
+`id|description|matchSignature` per pattern instead of `id|description`
+alone. **Verified the hash actually moves on a matching-logic edit, not
+just proven by inspection:** temporarily adding a second needle
+(`'int.parse'`) to the `dart-tutoring-int-parse` pattern changed the
+printed `pattern-hash:` from `b6cf82c3...` to `ff0584d8...`; reverting
+(diffed byte-identical against a pre-edit copy) restored the original hash
+exactly. Pre-fix, the equivalent edit would have left the hash unchanged —
+the exact "narrowed scanner" blind spot `T-42`'s MINOR list and the tool's
+own doc comment (then `:93-99`) both named.
+
+**Fix 4 — unreadable files abort loudly instead of silently dropping their
+contribution.** The bare `readAsLinesSync()` / `on FileSystemException {
+continue; }` around both the per-source-file read (then `:522-528`) and
+the baseline-file read (then `:572-578`) were replaced with the same
+`_readLinesVerified`/`_SuspectRead` machinery check 103 already carries
+(`check_profile_path_keying.dart:411-431` for the read, `:985-999` for
+`main`'s top-level handler) — ported, not reinvented: identical two
+signals (on-disk length changes mid-read; a nonzero-length file decoding
+to zero lines), identical "ABORTED, not FAILED" framing so a torn read is
+never mistaken for a genuine NEW/STALE/CHANGED finding. TOCTOU safety is
+preserved exactly as check 103's own comment describes it: a file deleted
+between directory listing and read raises a real `FileSystemException`
+(caught, skipped, correct), which is a structurally different exception
+type from `_SuspectRead` (uncaught at the read site, propagates to `main`)
+— the same "different exception, different handling" split check 103's
+own `_scanTouchesByFile` already relies on. Not device/CI-reproduced this
+session (a genuinely torn read needs a concurrent writer, the same
+practical constraint check 103's own F4 fix notes); the abort path's
+message plumbing was exercised indirectly via the malformed-baseline-line
+and pattern-hash-mismatch error paths instead (both real `exit(1)`
+branches in the same function), both confirmed to fire cleanly rather than
+crash with an unhandled exception.
+
+**Ratchet verified to fire all three ways, per the brief's explicit "a
+ratchet nobody has seen fail is a ratchet nobody has tested" instruction —
+each probe reverted immediately after, tree confirmed clean
+(`git status --porcelain | grep -v '^ M _bmad'` showed only the four
+intended-touched files after every revert):**
+1. **NEW** — added a scratch file
+   (`lib/features/tutoring/_scratch_ratchet_probe.dart`, a throwaway class
+   with a `profile.id.toString()` call) → `PROFILE-ID-INT-SITES FAILED — 1
+   NEW int-keyed profile-identity entry ... NEW:
+   dart-tutoring-id-tostring lib/features/tutoring/
+   _scratch_ratchet_probe.dart:_ScratchRatchetProbe.probe x1`, exit 1.
+   Deleted; re-run green.
+2. **STALE** — changed `invite_tutor_screen.dart`'s sole
+   `int.tryParse(widget.childProfileId)` call to `int.parse(...)`,
+   removing that location's only occurrence → `1 baseline entry is STALE
+   ... STALE: dart-tutoring-int-parse
+   lib/features/tutoring/presentation/screens/invite_tutor_screen.dart:
+   _InviteTutorScreenState._sendInvite x1`, exit 1. Reverted (byte-for-byte
+   diff against the pre-probe file confirmed empty); re-run green.
+3. **CHANGED — the fail-open this commit exists to close.** Added one
+   extra `profile.id.toString()` occurrence inside the already-baselined
+   `_ChildGrantsSection.build` (baseline `x4`) → `1 baseline entry has a
+   CHANGED occurrence count ... CHANGED: dart-tutoring-id-tostring
+   lib/features/tutoring/presentation/screens/manage_tutors_screen.dart:
+   _ChildGrantsSection.build baseline x4 -> current x5`, exit 1 — where the
+   pre-fix tool printed `OK: 88 tracked site(s) ... 0 new, 0 stale`, exit
+   0, for the exact same edit shape (per the review's own reproduction).
+   Reverted (byte-for-byte diff empty); re-run green.
+
+**`Makefile:1365`'s echo describing check 104** updated in the same commit
+to name the CHANGED-count failure mode and the `xN` occurrence-count
+suffix — a doc string this commit's own change made false, fixed here
+rather than left to rot (per this log's standing "doc comments go stale"
+rule, applied to a `Makefile` echo the same as anywhere else).
+
+**Baseline regenerated** (`--update-baseline`) against the new `v2`
+format. Measured, not predicted: **88 entries, 91 sites** — the entry
+count is unchanged from before this commit (same 88 locations, confirmed
+by the location-set diff in Fix 2 above); the site count (91) is a NEW
+metric this commit introduces and did not exist as a separately-printed
+number before, so there is nothing to diff it against.
+
+**Not touched, explicitly out of scope for this brief:** `T-42`'s three
+still-open items — the D9 device-check criterion, the
+`repository_providers.dart:138-142` stale "Drift-only" reason (P2-5's
+comment), and the P2-1 log entry's false "17/5/61/2/3" verification claim
+(already flagged as not-to-be-silently-corrected in the P2-7 entry above,
+`:1062-1070` — restated here rather than fixed, since P2-11's scope was
+check 104's own code and baseline, not this log's historical prose).
+
+**Gates (verbatim, run after `dart format`):**
+```
+$ dart analyze --fatal-infos
+Analyzing learning_tracker...
+No issues found!
+
+$ dart run tool/check_profile_path_keying.dart | tail -1
+PROFILE-KEY-SPLIT check OK: 2 collection(s) currently split (bookmarks, learning_order), all within the tracked baseline (0 new violations).
+
+$ dart run tool/check_profile_id_int_sites.dart
+PROFILE-ID-INT-SITES OK: 88 tracked entries covering 91 site(s) across 5 pattern(s) [cf-int-guard, cf-string-profileid-doc, dart-int-profileid-param, dart-tutoring-int-parse, dart-tutoring-id-tostring]; 0 new, 0 stale, 0 changed.
+
+$ make audit; echo "EXIT=$?"
+... (104 checks) ...
+104/104 — PROFILE-ID-INT-SITES (docs/planning/firestore-phase2-plan.md §4 P2-1, hardened at P2-11): ...
+PROFILE-ID-INT-SITES OK: 88 tracked entries covering 91 site(s) across 5 pattern(s) [...]; 0 new, 0 stale, 0 changed.
+=== audit PASSED — all 68 greps clean ===
+EXIT=0
+
+$ dart run tool/check_mcf11_autoincrement_id_in_payload_ratchet.dart | tail -1
+MCF-11 autoincrement-id-in-payload ratchet passed — 39 site(s) outside merge/ (tracked baseline: 39, AD-5/AD-28, docs/test-artifacts/mcf11-autoincrement-id-in-payload-sweep.md).
+
+$ dart run tool/check_bare_firebase_instance_ratchet.dart | tail -1
+Bare-Firebase-instance ratchet passed — 2 site(s) (tracked baseline: 2, AD-2/AD-28).
+
+$ dart format tool/check_profile_id_int_sites.dart
+Formatted tool/check_profile_id_int_sites.dart
+Formatted 1 file (1 changed) in 0.02 seconds.
+```
+
+**Deviation — the OK-line's printed number, four-part.** **Predicted**
+(this brief, verbatim): "check 104 green after baseline regeneration, at a
+MEASURED entry/occurrence count you report verbatim — this WILL differ
+from 88 and that is expected, not a deviation, because the entry format
+changed." **Actual:** the ENTRY count did NOT differ from 88 (still 88 —
+same 88 locations, confirmed by direct diff); what differs is that the
+gate now ALSO prints a second, previously-nonexistent number, 91 sites,
+alongside it. **Mechanism:** the pre-fix tool conflated two different
+quantities (deduped-location count and raw-occurrence count) into one
+printed number; the fix didn't change how many locations are tracked, it
+stopped hiding the occurrence count that was always there undercounted at
+3 of the 88 locations. **Invariant unaffected:** the brief's own point —
+that a changed printed number here is expected and not a sign of scope
+creep — holds regardless of which of the two numbers moved; check 103,
+`dart analyze`, and both count-only ratchets are all confirmed unchanged
+above.
 
 ### 2026-08-07 — P2-10: four surviving-back-compat items from a follow-up review cut (greenfield)
 

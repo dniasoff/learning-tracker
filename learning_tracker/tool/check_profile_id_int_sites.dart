@@ -43,14 +43,17 @@
 ///   being stringified to pass across a boundary that Phase 3 will make
 ///   ULID-native.
 ///
-/// ## NAMED-ENTRY RATCHET, keyed by `<pattern-id> <file>:<enclosing-symbol>`
+/// ## NAMED-ENTRY RATCHET, keyed by `<pattern-id> <file>:<enclosing-symbol>`,
+/// CARRYING AN OCCURRENCE COUNT
 ///
-/// This is corrections 1-4 from the plan's reviewer round, load-bearing —
-/// earlier drafts of this gate were killed over exactly these points:
+/// This is corrections 1-5 from the plan's reviewer round plus a P2-11
+/// hardening pass, load-bearing — earlier drafts of this gate were killed
+/// over exactly these points, and P2-11 closed a real fail-open a mid-phase
+/// review found in the first shipped version:
 ///
 /// 1. **Never line numbers.** A baseline keyed by line number breaks on the
 ///    next unrelated edit that shifts a line up or down. Every entry here is
-///    `<pattern-id> <file>:<enclosing-symbol>` — the pattern id first
+///    `<pattern-id> <file>:<enclosing-symbol> xN` — the pattern id first
 ///    (patterns are independent violation TYPES, not interchangeable; a
 ///    function flagged by two different patterns is two different facts
 ///    about it, not one), then the nearest enclosing NAMED Dart
@@ -58,14 +61,7 @@
 ///    `<top-level>` when there is no enclosing class) or TS top-level
 ///    function/`export const ... = ` binding, resolved by
 ///    [_buildSymbolIndex] via a brace-depth scope stack — never a raw line
-///    offset. Two different matching LINES that fall inside the same
-///    enclosing symbol under the same pattern collapse to ONE entry: the
-///    unit this ratchet tracks is "this function still has this kind of
-///    int-profileId site," not "this exact character offset." Concretely:
-///    all three of `manage_tutors_screen.dart`'s `.id.toString()` calls at
-///    lines 293/298/312 sit inside the same `_ChildGrantsSection.build`
-///    method and produce exactly one entry, not three — moving any of those
-///    call sites within that method changes no baseline line.
+///    offset — and finally `N`, the OCCURRENCE COUNT (see point 5).
 /// 2. **A new entry fails (exit 1). A baseline entry absent from the current
 ///    scan ALSO fails (exit 1).** There is no "must shrink to empty"
 ///    requirement anywhere in this file, and there must never be one added:
@@ -78,38 +74,93 @@
 ///    that violation's baseline line in the SAME commit (STALE, not just
 ///    "no longer new"), which is what makes a real fix and a widened
 ///    scanner distinguishable from each other in review.
-/// 3. **The OK line prints its scan set.** A gate whose reported number
-///    depends on which patterns it runs must publish those patterns in the
-///    same line that reports the number, or "N sites, 0 new, 0 stale" is a
-///    claim about the scanner, not about the code — see the OK-line format
-///    in [main]'s normal-mode branch.
+/// 3. **The OK line prints its scan set, its entry count, AND its raw site
+///    count, distinctly.** A gate whose reported number depends on which
+///    patterns it runs must publish those patterns in the same line that
+///    reports the number, or "N sites, 0 new, 0 stale" is a claim about the
+///    scanner, not about the code — see the OK-line format in [main]'s
+///    normal-mode branch. Because one entry can now cover several raw
+///    matching lines (point 5), "how many locations are tracked" (entries)
+///    and "how many raw lines matched" (sites) are two different numbers
+///    and this tool reports both, under those names, rather than letting
+///    one silently stand in for the other (the exact confusion a mid-phase
+///    review found: the first shipped version printed "N tracked site(s)"
+///    when N was actually an entry count).
 /// 4. **The baseline file REQUIRES a header sentinel**: `# format:
-///    profile-id-int-sites v1` plus a `# pattern-hash: <hex>` line covering
-///    the ordered pattern-id list (see [_patternListHash]). A baseline file
+///    profile-id-int-sites v2` plus a `# pattern-hash: <hex>` line covering
+///    the ordered pattern list, INCLUDING its matching logic, not just its
+///    prose (see [_patternListHash] and point 6 below). A baseline file
 ///    that is missing, empty, or present-but-missing either sentinel line
 ///    EXITS 1 rather than being read as "zero tracked entries" — for a gate
 ///    whose clean state is a small, humanly-editable text file, "absent"
-///    must never be silently indistinguishable from "verified empty."
-///    de facto strengthening: the pattern-hash is also VERIFIED against the
-///    scanner's live pattern list on every non-`--update-baseline` run
-///    (see [main]) — a baseline written against a different pattern set
-///    than the one currently running is exactly the "narrowed scanner"
-///    failure mode point 4 of the load-bearing corrections below exists to
-///    prevent, and printing the hash alone without checking it would make
-///    that check decorative rather than real.
+///    must never be silently indistinguishable from "verified empty." The
+///    format bumped `v1` → `v2` at P2-11 specifically so an old-format
+///    baseline (entries with no ` xN` suffix) is rejected outright as
+///    missing-sentinel rather than silently misparsed as "0 occurrences
+///    everywhere." De facto strengthening: the pattern-hash is also
+///    VERIFIED against the scanner's live pattern list on every
+///    non-`--update-baseline` run (see [main]) — a baseline written against
+///    a different pattern set than the one currently running is exactly the
+///    "narrowed scanner" failure mode point 6 exists to prevent, and
+///    printing the hash alone without checking it would make that check
+///    decorative rather than real.
+/// 5. **Occurrence count is part of the ratchet identity, not just the
+///    location — this is the P2-11 fix.** The first shipped version of this
+///    gate deduped every matching raw line down to ONE entry per
+///    `<pattern-id> <file>:<symbol>` location
+///    (`seen.putIfAbsent(entry.key, () => entry)`), which meant N matching
+///    lines inside one already-baselined symbol collapsed to the SAME single
+///    entry regardless of N: going from 2 int-keyed sites to 3 inside an
+///    already-baselined method printed no NEW line, and going from 3 to 1
+///    printed no STALE line — the gate stayed green through both, on the
+///    exact violation class Phase 3's ~96-file move will produce, which is
+///    this gate's entire stated reason to exist. Concretely, pre-fix: all
+///    three of `manage_tutors_screen.dart`'s `.id.toString()` calls at lines
+///    293/298/312 sat inside the same `_ChildGrantsSection.build` method and
+///    collapsed to one entry with no count attached at all — a fourth call
+///    added anywhere in that method changed nothing the gate could see.
+///    Post-fix, that location's entry is `dart-tutoring-id-tostring
+///    lib/features/tutoring/presentation/screens/manage_tutors_screen.dart:
+///    _ChildGrantsSection.build xN`: moving any of those call sites within
+///    the method still changes no baseline line (point 1's guarantee is
+///    unchanged), but ADDING or REMOVING an occurrence inside that same
+///    method changes `N`, which is now a THIRD ratchet-failure kind
+///    (CHANGED, alongside NEW and STALE) — the two-way ratchet in point 2
+///    becomes three-way. A CHANGED location is reported distinctly from an
+///    unrelated NEW+STALE pair precisely because it is the SAME location
+///    with a different count, not a site that moved.
+/// 6. **The pattern-hash covers the matching logic itself, not just
+///    hand-written prose — this is the other half of the P2-11 fix.** The
+///    first shipped version hashed only `<id>|<description>` — free-text
+///    written by whoever authored the pattern — while the actual matching
+///    behaviour lived in opaque `fileScope`/`lineTest` closures the hash
+///    never touched: editing a regex or narrowing a file-scope exclusion
+///    left the hash byte-identical, so the "narrowed scanner" failure mode
+///    point 4 above claims this sentinel catches was, in fact, undetectable
+///    by it. Fixed by removing the closures entirely: [_PatternDef] now
+///    carries its scope (a [_ScopeKind] plus a directory or an exact file
+///    list) and its match test (literal `needles` and/or a [RegExp]) as
+///    plain DATA fields. [_PatternDef.matchSignature] is built directly from
+///    those same fields — the ones [_PatternDef.fileScope] and
+///    [_PatternDef.lineTest] actually run against, not a second,
+///    independently-typed description of them — and [_patternListHash]
+///    hashes it alongside the id and the free-text description. There is no
+///    longer a code path that can change what a pattern matches without
+///    also changing the hash.
 ///
 /// ## The rule that keeps this gate honest across a commit
 ///
 /// **The commit that changes a scan pattern (adds, removes, or edits a
-/// regex/file-scope in [_patterns]) may NOT also change code that pattern
-/// covers.** A commit that narrows what the scanner looks for and, in the
-/// same diff, deletes the code the narrowed-away portion used to flag can
-/// make this gate report a fix that never happened — the gate would go
-/// green because it stopped looking, not because the site closed. Change
-/// the scanner in one commit (which will change `--update-baseline`'s
-/// output and must be reviewed as such); change the code the old scanner
-/// caught in a separate commit, where a STALE-entry failure proves the fix
-/// really happened.
+/// [_ScopeKind]/directory/file-list/needle/regex in [_patterns]) may NOT
+/// also change code that pattern covers.** A commit that narrows what the
+/// scanner looks for and, in the same diff, deletes the code the
+/// narrowed-away portion used to flag can make this gate report a fix that
+/// never happened — the gate would go green because it stopped looking, not
+/// because the site closed. Change the scanner in one commit (which will
+/// change `--update-baseline`'s output, including the pattern-hash, and
+/// must be reviewed as such); change the code the old scanner caught in a
+/// separate commit, where a STALE-entry or CHANGED-count failure proves the
+/// fix really happened.
 ///
 /// ## What this gate deliberately does NOT do
 ///
@@ -129,17 +180,41 @@
 /// number key, which is what point 1 above requires, even if the printed
 /// name is not the one a human would pick.
 ///
+/// ## Suspect-read hardening (P2-11)
+///
+/// Every line-read in this file — every scanned source file and the
+/// baseline file itself — goes through [_readLinesVerified], the same F4
+/// hardening `check_profile_path_keying.dart` (audit check 103) carries
+/// (`docs/planning/firestore-cutover-log.md:849-856` records the lesson):
+/// it throws [_SuspectRead] (never silently substituting empty/partial
+/// content) when a file's on-disk length changes mid-read, or a nonzero-
+/// length file decodes to zero lines. [main] aborts the ENTIRE run the
+/// moment this is thrown, printing "PROFILE-ID-INT-SITES ABORTED (not a
+/// real violation)" so a torn/concurrent read can never be mistaken for a
+/// genuine NEW/STALE/CHANGED finding. This replaces the first shipped
+/// version's bare `on FileSystemException { continue; }` around each read,
+/// which silently dropped that file's contribution from the scan and let a
+/// torn read silently reclassify a symbol's occurrence count as a code
+/// change. A file genuinely deleted between directory listing and read (a
+/// real `FileSystemException`, a different exception type from
+/// [_SuspectRead]) is still skipped, not aborted — that is a legitimate
+/// TOCTOU race, not a torn read.
+///
 /// Usage:
 ///   dart run tool/check_profile_id_int_sites.dart
 ///   dart run tool/check_profile_id_int_sites.dart --report
 ///   dart run tool/check_profile_id_int_sites.dart --update-baseline
 ///
 /// Exit codes (ratchet mode):
-///   0 — no NEW entry and no STALE baseline entry
-///   1 — a NEW entry, a STALE baseline entry, a missing/sentinel-less
-///       baseline, a pattern-hash mismatch, or a missing hardcoded scan
-///       file (pattern 3's three named files are asserted to exist; a
-///       silent rename there would silently zero out that pattern)
+///   0 — no NEW entry, no STALE baseline entry, and no baselined entry's
+///       occurrence count CHANGED
+///   1 — a NEW entry, a STALE baseline entry, a CHANGED occurrence count, a
+///       missing/sentinel-less baseline, a malformed baseline line, a
+///       pattern-hash mismatch, a missing hardcoded scan file (pattern 3's
+///       three named files are asserted to exist; a silent rename there
+///       would silently zero out that pattern), or a suspect (torn) read
+///       detected mid-scan (printed as ABORTED, not FAILED — see the
+///       "Suspect-read hardening" section above)
 library;
 
 import 'dart:convert';
@@ -148,31 +223,12 @@ import 'dart:io';
 import 'package:crypto/crypto.dart' show sha256;
 
 const _baselinePath = 'tool/profile_id_int_sites_baseline.txt';
-const _formatSentinel = '# format: profile-id-int-sites v1';
+const _formatSentinel = '# format: profile-id-int-sites v2';
 const _hashPrefix = '# pattern-hash: ';
 
 // ---------------------------------------------------------------------------
 // Pattern definitions — this list IS the scan set printed in every mode.
 // ---------------------------------------------------------------------------
-
-/// One tracked violation TYPE. [fileScope] enumerates candidate files given
-/// the `--root`; [lineTest] runs against the RAW (unstripped) line text —
-/// deliberately raw, not comment/string-stripped, because several patterns
-/// (`typeof profileId !== "number"`, `.doc(String(profileId))`) match
-/// through a string literal that stripping would blank out.
-class _PatternDef {
-  const _PatternDef({
-    required this.id,
-    required this.description,
-    required this.fileScope,
-    required this.lineTest,
-  });
-
-  final String id;
-  final String description;
-  final List<String> Function(String root) fileScope;
-  final bool Function(String rawLine) lineTest;
-}
 
 const _tutorWriteServicePath =
     'lib/features/tutoring/data/services/tutor_write_service.dart';
@@ -181,24 +237,112 @@ const _pushPipelinePath = 'lib/core/sync/outbox/push_pipeline.dart';
 
 final _intProfileIdParamRe = RegExp(r'\bint\s+profileId\b');
 
+/// How [_PatternDef.fileScope] enumerates candidate files. Kept as DATA
+/// (never a closure) so [_PatternDef.matchSignature] — and therefore
+/// [_patternListHash] — can see it; see the P2-11 doc section above.
+enum _ScopeKind { tsUnderDir, dartUnderDir, exactFiles }
+
+/// One tracked violation TYPE. Every field here is plain data, not a
+/// closure: [fileScope] and [lineTest] are ordinary methods computed FROM
+/// these fields, and [matchSignature] is built from the exact same fields —
+/// there is no second, independently-maintained description of what this
+/// pattern matches for the hash to drift away from (P2-11; see the library
+/// doc comment's point 6).
+///
+/// [lineTest] runs against the RAW (unstripped) line text — deliberately
+/// raw, not comment/string-stripped, because several patterns
+/// (`typeof profileId !== "number"`, `.doc(String(profileId))`) match
+/// through a string literal that stripping would blank out.
+class _PatternDef {
+  _PatternDef({
+    required this.id,
+    required this.description,
+    required this.scopeKind,
+    this.scopeDir,
+    this.scopeFiles,
+    this.needles = const [],
+    this.regex,
+  }) : assert(
+         scopeKind == _ScopeKind.exactFiles
+             ? (scopeFiles != null && scopeDir == null)
+             : (scopeDir != null && scopeFiles == null),
+         'exactFiles scope requires scopeFiles (and no scopeDir); '
+         'tsUnderDir/dartUnderDir scope requires scopeDir (and no '
+         'scopeFiles)',
+       ),
+       assert(
+         needles.isNotEmpty || regex != null,
+         'a pattern must test raw lines against at least one needle or '
+         'regex',
+       );
+
+  final String id;
+  final String description;
+  final _ScopeKind scopeKind;
+
+  /// Relative to `--root`, for [_ScopeKind.tsUnderDir]/
+  /// [_ScopeKind.dartUnderDir] only.
+  final String? scopeDir;
+
+  /// Relative to `--root`, for [_ScopeKind.exactFiles] only.
+  final List<String>? scopeFiles;
+
+  /// Raw-line substring tests — a line matches if it contains ANY of these.
+  final List<String> needles;
+
+  /// Raw-line regex test, ORed with [needles] if both are present.
+  final RegExp? regex;
+
+  List<String> fileScope(String root) {
+    switch (scopeKind) {
+      case _ScopeKind.tsUnderDir:
+        return _tsFilesUnder('$root/$scopeDir');
+      case _ScopeKind.dartUnderDir:
+        return _dartFilesUnder('$root/$scopeDir');
+      case _ScopeKind.exactFiles:
+        return [for (final f in scopeFiles!) '$root/$f'];
+    }
+  }
+
+  bool lineTest(String rawLine) {
+    if (needles.any(rawLine.contains)) return true;
+    return regex != null && regex!.hasMatch(rawLine);
+  }
+
+  /// Canonical text this pattern actually tests — built from the SAME data
+  /// [fileScope]/[lineTest] run against, never hand-typed prose that could
+  /// drift from them. Feeds [_patternListHash]: editing a needle, a regex,
+  /// or a scope directory/file list necessarily edits one of these fields,
+  /// which necessarily changes this string, which necessarily changes the
+  /// hash — there is no code path that can narrow what a pattern matches
+  /// without moving the hash (P2-11; see the library doc comment's point 6).
+  String get matchSignature =>
+      'scope=${scopeKind.name}:${scopeDir ?? scopeFiles!.join(",")}'
+      '|needles=${needles.join(",")}'
+      '|regex=${regex?.pattern ?? ""}';
+}
+
 List<_PatternDef> _patterns() => [
   _PatternDef(
     id: 'cf-int-guard',
     description:
         'functions/src/**/*.ts (excl *.test.ts): typeof profileId !== '
         '"number" / Number.isInteger(profileId) runtime guard',
-    fileScope: (root) => _tsFilesUnder('$root/functions/src'),
-    lineTest: (l) =>
-        l.contains('typeof profileId !== "number"') ||
-        l.contains('Number.isInteger(profileId)'),
+    scopeKind: _ScopeKind.tsUnderDir,
+    scopeDir: 'functions/src',
+    needles: const [
+      'typeof profileId !== "number"',
+      'Number.isInteger(profileId)',
+    ],
   ),
   _PatternDef(
     id: 'cf-string-profileid-doc',
     description:
         'functions/src/**/*.ts (excl *.test.ts): .doc(String(profileId)) '
         'doc-id formula against learner_profiles',
-    fileScope: (root) => _tsFilesUnder('$root/functions/src'),
-    lineTest: (l) => l.contains('.doc(String(profileId))'),
+    scopeKind: _ScopeKind.tsUnderDir,
+    scopeDir: 'functions/src',
+    needles: const ['.doc(String(profileId))'],
   ),
   _PatternDef(
     id: 'dart-int-profileid-param',
@@ -207,28 +351,31 @@ List<_PatternDef> _patterns() => [
         '$_pushPipelinePath: int profileId parameter (interface/service '
         'level only — not all 179 occurrences under lib/core/sync/**, '
         'which dies wholesale in Phase 4)',
-    fileScope: (root) => [
-      '$root/$_tutorWriteServicePath',
-      '$root/$_firestoreGatewayPath',
-      '$root/$_pushPipelinePath',
+    scopeKind: _ScopeKind.exactFiles,
+    scopeFiles: const [
+      _tutorWriteServicePath,
+      _firestoreGatewayPath,
+      _pushPipelinePath,
     ],
-    lineTest: (l) => _intProfileIdParamRe.hasMatch(l),
+    regex: _intProfileIdParamRe,
   ),
   _PatternDef(
     id: 'dart-tutoring-int-parse',
     description:
         'lib/features/tutoring/**/*.dart: int.tryParse (profile-id-as-int '
         'parsing)',
-    fileScope: (root) => _dartFilesUnder('$root/lib/features/tutoring'),
-    lineTest: (l) => l.contains('int.tryParse'),
+    scopeKind: _ScopeKind.dartUnderDir,
+    scopeDir: 'lib/features/tutoring',
+    needles: const ['int.tryParse'],
   ),
   _PatternDef(
     id: 'dart-tutoring-id-tostring',
     description:
         'lib/features/tutoring/**/*.dart: .id.toString() (int profile id '
         'stringified across a boundary)',
-    fileScope: (root) => _dartFilesUnder('$root/lib/features/tutoring'),
-    lineTest: (l) => l.contains('.id.toString()'),
+    scopeKind: _ScopeKind.dartUnderDir,
+    scopeDir: 'lib/features/tutoring',
+    needles: const ['.id.toString()'],
   ),
 ];
 
@@ -292,6 +439,65 @@ void _assertHardcodedScanFilesExist(String root) {
       exit(1);
     }
   }
+}
+
+// ---------------------------------------------------------------------------
+// Suspect-read hardening (P2-11) — mirrors
+// check_profile_path_keying.dart's _readLinesVerified/_SuspectRead
+// (audit check 103's F4 fix) exactly, so every line-read in THIS file is
+// also torn-read-safe. Deliberately NOT caught by any scanning helper
+// below — it propagates to `main`'s top-level handler and aborts the
+// whole run rather than silently scanning corrupted content.
+// ---------------------------------------------------------------------------
+
+/// Thrown by [_readLinesVerified] when a file read looks TORN rather than
+/// genuinely absent/deleted. See that function's doc comment.
+class _SuspectRead implements Exception {
+  _SuspectRead(this.path, this.reason);
+  final String path;
+  final String reason;
+
+  @override
+  String toString() => 'SUSPECT READ: $path — $reason';
+}
+
+/// Every line-read in this file goes through this function rather than a
+/// bare `file.readAsLinesSync()`. Two cheap, no-false-positive-on-a-
+/// quiescent-tree signals are checked, identical to check 103's own F4
+/// hardening:
+///   1. The file's on-disk length differs between immediately before and
+///      immediately after the read — another process wrote to it inside
+///      our own read window.
+///   2. The file is non-empty on disk but decoded to ZERO lines — no
+///      genuinely non-empty source/baseline file in this repo should ever
+///      decode to nothing; that combination is truncation, not content.
+/// Either signal throws [_SuspectRead], which aborts the whole run rather
+/// than silently treating truncated content as "this file has no
+/// int-keyed sites" (which could just as easily HIDE a real NEW site as
+/// fabricate a phantom CHANGED one, if the truncation happens to land
+/// mid-token). A genuinely missing/deleted file raises a real
+/// `FileSystemException` instead (a different exception type), which
+/// callers below catch and treat as TOCTOU-safe skip, not an abort.
+List<String> _readLinesVerified(File file) {
+  final lengthBefore = file.lengthSync();
+  final lines = file.readAsLinesSync();
+  final lengthAfter = file.lengthSync();
+  if (lengthBefore != lengthAfter) {
+    throw _SuspectRead(
+      file.path,
+      'on-disk length changed during read ($lengthBefore -> $lengthAfter '
+      'bytes) — another process wrote to this file while this checker was '
+      'reading it',
+    );
+  }
+  if (lengthBefore > 0 && lines.isEmpty) {
+    throw _SuspectRead(
+      file.path,
+      'file is $lengthBefore byte(s) on disk but decoded to ZERO lines — a '
+      'torn/truncated read, not a genuinely empty file',
+    );
+  }
+  return lines;
 }
 
 // ---------------------------------------------------------------------------
@@ -497,33 +703,64 @@ Map<int, String> _buildSymbolIndex(List<String> strippedLines, bool isDart) {
 // Scanning.
 // ---------------------------------------------------------------------------
 
+/// One tracked ratchet entry: a `<pattern-id> <file>:<enclosing-symbol>`
+/// LOCATION, plus [count] — how many raw lines under that pattern matched
+/// inside that one location (P2-11). [count] is part of what gets
+/// baselined and compared: a location whose count changes is a CHANGED
+/// violation, not a silently-absorbed no-op (the fail-open this class
+/// fixes — see the library doc comment's point 5).
 class _Entry implements Comparable<_Entry> {
-  _Entry(this.patternId, this.file, this.symbol, this.exampleLine);
+  _Entry(this.patternId, this.file, this.symbol, this.count, this.lines);
   final String patternId;
   final String file;
   final String symbol;
-  final int exampleLine; // first matching raw line, for --report only
+  final int count;
 
-  String get key => '$patternId $file:$symbol';
+  /// Every matching raw line number that fed [count], for `--report` only.
+  /// Never used as part of the ratchet identity — lines move.
+  final List<int> lines;
+
+  /// The LOCATION this entry identifies — pattern + file + symbol. Never
+  /// includes [count]: this is what a NEW/STALE/CHANGED comparison keys
+  /// off of, so a count change at the SAME location is recognised as one
+  /// CHANGED entry, not an unrelated NEW-here/STALE-there pair.
+  String get locationKey => '$patternId $file:$symbol';
+
+  /// The full baseline-file line: location plus its occurrence count.
+  String get baselineLine => '$locationKey x$count';
 
   @override
-  int compareTo(_Entry other) => key.compareTo(other.key);
+  int compareTo(_Entry other) => locationKey.compareTo(other.locationKey);
 
   @override
-  String toString() => key;
+  String toString() => baselineLine;
 }
 
 Map<String, List<_Entry>> _scan(String root) {
   final byPattern = <String, List<_Entry>>{};
   for (final pattern in _patterns()) {
-    final seen = <String, _Entry>{};
+    // locationKey -> accumulated count + example line numbers. Replaces the
+    // pre-P2-11 `seen.putIfAbsent(entry.key, () => entry)` dedup, which
+    // discarded every match after the first inside a given location instead
+    // of counting them — the fail-open this class exists to close.
+    final counts = <String, int>{};
+    final linesByLocation = <String, List<int>>{};
+    final fileByLocation = <String, String>{};
+    final symbolByLocation = <String, String>{};
+
     for (final path in pattern.fileScope(root)) {
       final file = File(path);
       if (!file.existsSync()) continue;
       List<String> rawLines;
       try {
-        rawLines = file.readAsLinesSync();
+        rawLines = _readLinesVerified(file);
       } on FileSystemException {
+        // TOCTOU-safe: the file was listed, then deleted/moved before we
+        // could read it. A real FileSystemException, not a _SuspectRead —
+        // skipping is correct, a file that no longer exists cannot
+        // contribute a site. A torn/truncated read is a DIFFERENT
+        // exception ([_SuspectRead]) and is deliberately not caught here —
+        // it propagates to `main` and aborts the whole run instead.
         continue;
       }
       final cleanPath = _cleanPath(path).replaceFirst('$root/', '');
@@ -536,11 +773,28 @@ Map<String, List<_Entry>> _scan(String root) {
         if (!pattern.lineTest(rawLines[i])) continue;
         final lineNo = i + 1;
         final symbol = symbolIndex[lineNo] ?? '<top-level>';
-        final entry = _Entry(pattern.id, cleanPath, symbol, lineNo);
-        seen.putIfAbsent(entry.key, () => entry);
+        final loc = '${pattern.id} $cleanPath:$symbol';
+        counts[loc] = (counts[loc] ?? 0) + 1;
+        (linesByLocation[loc] ??= []).add(lineNo);
+        fileByLocation[loc] = cleanPath;
+        symbolByLocation[loc] = symbol;
       }
     }
-    byPattern[pattern.id] = seen.values.toList()..sort();
+
+    final entries =
+        counts.keys
+            .map(
+              (loc) => _Entry(
+                pattern.id,
+                fileByLocation[loc]!,
+                symbolByLocation[loc]!,
+                counts[loc]!,
+                linesByLocation[loc]!,
+              ),
+            )
+            .toList()
+          ..sort();
+    byPattern[pattern.id] = entries;
   }
   return byPattern;
 }
@@ -551,28 +805,54 @@ Map<String, List<_Entry>> _scan(String root) {
 
 String _patternListHash() {
   final descriptor = _patterns()
-      .map((p) => '${p.id}|${p.description}')
+      .map((p) => '${p.id}|${p.description}|${p.matchSignature}')
       .join('\n');
   return sha256.convert(utf8.encode(descriptor)).toString();
 }
 
+/// One parsed baseline-file line: the location it names, and the
+/// occurrence count it was baselined at.
+class _ParsedBaselineLine {
+  _ParsedBaselineLine(this.locationKey, this.count);
+  final String locationKey;
+  final int count;
+}
+
+final _baselineLineRe = RegExp(r'^(.*) x(\d+)$');
+
+/// Parses one non-comment baseline line (`<pattern-id> <file>:<symbol>
+/// xN`). Returns `null` for anything that doesn't match that shape —
+/// callers must treat that as a hard baseline-format failure (a hand-edit
+/// gone wrong, or a stale pre-P2-11 `v1` line with no occurrence count),
+/// never as "0 occurrences" or a silently-skipped line.
+_ParsedBaselineLine? _parseBaselineLine(String line) {
+  final m = _baselineLineRe.firstMatch(line);
+  if (m == null) return null;
+  return _ParsedBaselineLine(m.group(1)!, int.parse(m.group(2)!));
+}
+
 class _Baseline {
-  _Baseline({required this.entries, required this.hash});
-  final Set<String> entries;
+  _Baseline({required this.byLocation, required this.hash});
+
+  /// locationKey -> its baselined entry (location + occurrence count).
+  final Map<String, _ParsedBaselineLine> byLocation;
   final String? hash;
 }
 
 /// Reads and validates the baseline file's required sentinel header
-/// (design correction 3). Returns `null` — never an empty-but-valid
-/// baseline — when the file is missing, unreadable, or missing either
-/// sentinel line; callers must treat `null` as a hard failure, not as
-/// "zero tracked entries."
+/// (design correction 3) and parses every entry line into its location and
+/// occurrence count (P2-11). Returns `null` — never an empty-but-valid
+/// baseline — when the file is missing or missing either sentinel line;
+/// callers must treat `null` as a hard failure, not as "zero tracked
+/// entries." A torn/truncated read of an EXISTING baseline file throws
+/// [_SuspectRead] (via [_readLinesVerified]), deliberately NOT caught
+/// here — it propagates to `main` and aborts the run.
 _Baseline? _readBaseline(String path) {
   final file = File(path);
   if (!file.existsSync()) return null;
   final List<String> lines;
   try {
-    lines = file.readAsLinesSync();
+    lines = _readLinesVerified(file);
   } on FileSystemException {
     return null;
   }
@@ -587,14 +867,28 @@ _Baseline? _readBaseline(String path) {
   }
   if (!hasFormatSentinel || hashLine == null) return null;
   final hash = hashLine.substring(_hashPrefix.length).trim();
-  final entries = lines
-      .map((l) => l.trim())
-      .where((l) => l.isNotEmpty && !l.startsWith('#'))
-      .toSet();
-  return _Baseline(entries: entries, hash: hash);
+
+  final byLocation = <String, _ParsedBaselineLine>{};
+  for (final raw in lines) {
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty || trimmed.startsWith('#')) continue;
+    final parsed = _parseBaselineLine(trimmed);
+    if (parsed == null) {
+      stderr.writeln(
+        'PROFILE-ID-INT-SITES FAILED: baseline line does not match the '
+        'required "<pattern-id> <file>:<symbol> xN" format ($path expects '
+        'every entry to carry its occurrence count under $_formatSentinel): '
+        '"$trimmed". Regenerate with --update-baseline — this is either a '
+        'hand-edit gone wrong or a stale pre-v2 line with no count.',
+      );
+      exit(1);
+    }
+    byLocation[parsed.locationKey] = parsed;
+  }
+  return _Baseline(byLocation: byLocation, hash: hash);
 }
 
-void _writeBaseline(String path, List<String> sortedEntries) {
+void _writeBaseline(String path, List<_Entry> sortedEntries) {
   final buffer = StringBuffer()
     ..writeln(_formatSentinel)
     ..writeln('$_hashPrefix${_patternListHash()}')
@@ -604,17 +898,26 @@ void _writeBaseline(String path, List<String> sortedEntries) {
     )
     ..writeln(
       '# Each line is one tracked entry: <pattern-id> <file>:'
-      '<enclosing-symbol> — never a line number (lines move).',
+      '<enclosing-symbol> xN — N is the occurrence count (how many',
     )
+    ..writeln('# matching raw lines collapsed into this one location). Never a')
+    ..writeln('# line number (lines move).')
     ..writeln('# A new entry NOT listed here fails `make audit`/`make ci`.')
     ..writeln('# A listed entry NO LONGER present in the scan ALSO fails —')
     ..writeln('# a fix must remove its line here in the same commit.')
-    ..writeln('# Widening this file (adding a NEW entry without a matching')
-    ..writeln('# code fix elsewhere) requires the same sign-off any other')
-    ..writeln('# ratchet widening requires.')
+    ..writeln('# A listed entry whose occurrence count N no longer matches the')
+    ..writeln(
+      '# current scan ALSO fails (CHANGED) — an int-keyed site added or',
+    )
+    ..writeln('# removed INSIDE an already-baselined symbol is not silently')
+    ..writeln('# absorbed.')
+    ..writeln('# Widening this file (adding a NEW entry, or raising an')
+    ..writeln('# existing entry\'s N, without a matching code fix elsewhere)')
+    ..writeln('# requires the same sign-off any other ratchet widening')
+    ..writeln('# requires.')
     ..writeln('# docs/planning/firestore-phase2-plan.md §4 P2-1 / §7 R2, R12.');
   for (final e in sortedEntries) {
-    buffer.writeln(e);
+    buffer.writeln(e.baselineLine);
   }
   File(path).writeAsStringSync(buffer.toString());
 }
@@ -623,7 +926,32 @@ void _writeBaseline(String path, List<String> sortedEntries) {
 // main.
 // ---------------------------------------------------------------------------
 
+/// The ENTIRE run is wrapped here so a [_SuspectRead] thrown anywhere
+/// (baseline file, any scanned source file) aborts loudly instead of
+/// letting [_run] finish on corrupted content — mirrors
+/// `check_profile_path_keying.dart`'s own top-level handler exactly
+/// (audit check 103's F4 fix). Deliberately NOT "exit code 1 == a real
+/// violation": the message says ABORTED, not FAILED, so a human or CI log
+/// reader re-runs rather than treating it as a fabricated production
+/// regression.
 void main(List<String> args) {
+  try {
+    _run(args);
+  } on _SuspectRead catch (e) {
+    stderr.writeln('PROFILE-ID-INT-SITES ABORTED (not a real violation): $e');
+    stderr.writeln(
+      'This is F4-style hardening (same fix check 103 already carries): a '
+      'torn/truncated read was detected mid-scan (almost certainly a '
+      'concurrent writer to the checkout this checker is scanning, not a '
+      'real NEW/STALE/CHANGED profile-identity site). Re-run once the tree '
+      'is quiescent — do NOT interpret this as a PROFILE-ID-INT-SITES '
+      'violation.',
+    );
+    exit(1);
+  }
+}
+
+void _run(List<String> args) {
   final root = _flagValue(args, '--root', '.');
   final report = args.contains('--report');
   final updateBaseline = args.contains('--update-baseline');
@@ -634,7 +962,8 @@ void main(List<String> args) {
   final byPattern = _scan(root);
   final allEntries = <_Entry>[for (final list in byPattern.values) ...list]
     ..sort();
-  final allKeys = allEntries.map((e) => e.key).toSet();
+  final entryCount = allEntries.length;
+  final siteCount = allEntries.fold<int>(0, (sum, e) => sum + e.count);
   final patternIds = _patterns().map((p) => p.id).toList();
   final scanSetDescription =
       '${patternIds.length} pattern(s) '
@@ -643,26 +972,35 @@ void main(List<String> args) {
   if (report) {
     for (final pattern in _patterns()) {
       final entries = byPattern[pattern.id]!;
-      stdout.writeln('--- ${pattern.id} (${entries.length}) ---');
+      final patternSites = entries.fold<int>(0, (sum, e) => sum + e.count);
+      stdout.writeln(
+        '--- ${pattern.id} (${entries.length} '
+        'entr${entries.length == 1 ? 'y' : 'ies'}, $patternSites '
+        'site(s)) ---',
+      );
       stdout.writeln('    ${pattern.description}');
       for (final e in entries) {
-        stdout.writeln('    ${e.file}:${e.exampleLine} [${e.symbol}]');
+        stdout.writeln(
+          '    ${e.file}:${e.symbol} x${e.count} '
+          '(lines ${e.lines.join(",")})',
+        );
       }
     }
     stdout.writeln();
     stdout.writeln(
-      'TOTAL: ${allEntries.length} tracked site(s) across $scanSetDescription',
+      'TOTAL: $entryCount tracked entr${entryCount == 1 ? 'y' : 'ies'} '
+      'covering $siteCount site(s) across $scanSetDescription',
     );
     stdout.writeln('pattern-hash: ${_patternListHash()}');
     return;
   }
 
   if (updateBaseline) {
-    final sorted = allKeys.toList()..sort();
-    _writeBaseline(baselinePath, sorted);
+    _writeBaseline(baselinePath, allEntries);
     stdout.writeln(
-      'Baseline updated: ${sorted.length} entr${sorted.length == 1 ? 'y' : 'ies'} '
-      'recorded in $baselinePath across $scanSetDescription.',
+      'Baseline updated: $entryCount entr${entryCount == 1 ? 'y' : 'ies'} '
+      'covering $siteCount site(s) recorded in $baselinePath across '
+      '$scanSetDescription.',
     );
     return;
   }
@@ -686,57 +1024,89 @@ void main(List<String> args) {
     stderr.writeln(
       'PROFILE-ID-INT-SITES FAILED: baseline pattern-hash mismatch. The '
       'baseline at $baselinePath was written against a different pattern '
-      'list than the one this run just scanned with (baseline: '
-      '${baseline.hash}, current: $currentHash). Per this tool\'s doc '
-      'comment, a commit that changes a scan pattern must not also change '
-      'code that pattern covers — re-run with --update-baseline to record '
-      'the new pattern list\'s baseline as its own reviewed step, in a '
-      'commit that changes only the scanner.',
+      'list (or matching logic — the hash now covers scope/needles/regex, '
+      'not just id/description) than the one this run just scanned with '
+      '(baseline: ${baseline.hash}, current: $currentHash). Per this '
+      'tool\'s doc comment, a commit that changes a scan pattern must not '
+      'also change code that pattern covers — re-run with '
+      '--update-baseline to record the new pattern list\'s baseline as its '
+      'own reviewed step, in a commit that changes only the scanner.',
     );
     exit(1);
   }
 
-  final newEntries = allKeys.difference(baseline.entries).toList()..sort();
-  final staleEntries = baseline.entries.difference(allKeys).toList()..sort();
+  final currentByLocation = <String, _Entry>{
+    for (final e in allEntries) e.locationKey: e,
+  };
+  final currentLocations = currentByLocation.keys.toSet();
+  final baselineLocations = baseline.byLocation.keys.toSet();
 
-  if (newEntries.isNotEmpty || staleEntries.isNotEmpty) {
-    if (newEntries.isNotEmpty) {
+  final newLocations = currentLocations.difference(baselineLocations).toList()
+    ..sort();
+  final staleLocations = baselineLocations.difference(currentLocations).toList()
+    ..sort();
+  final changedLocations =
+      currentLocations.intersection(baselineLocations).where((loc) {
+        return currentByLocation[loc]!.count != baseline.byLocation[loc]!.count;
+      }).toList()..sort();
+
+  if (newLocations.isNotEmpty ||
+      staleLocations.isNotEmpty ||
+      changedLocations.isNotEmpty) {
+    if (newLocations.isNotEmpty) {
       stderr.writeln(
-        'PROFILE-ID-INT-SITES FAILED — ${newEntries.length} NEW int-keyed '
-        'profile-identity site(s) not in the tracked baseline '
-        '($baselinePath):',
+        'PROFILE-ID-INT-SITES FAILED — ${newLocations.length} NEW '
+        'int-keyed profile-identity entr'
+        '${newLocations.length == 1 ? 'y' : 'ies'} not in the tracked '
+        'baseline ($baselinePath):',
       );
-      for (final k in newEntries) {
-        stderr.writeln('  NEW: $k');
+      for (final loc in newLocations) {
+        stderr.writeln('  NEW: ${currentByLocation[loc]!.baselineLine}');
       }
     }
-    if (staleEntries.isNotEmpty) {
+    if (staleLocations.isNotEmpty) {
       stderr.writeln(
-        '${newEntries.isEmpty ? 'PROFILE-ID-INT-SITES FAILED — ' : ''}'
-        '${staleEntries.length} baseline entr'
-        '${staleEntries.length == 1 ? 'y is' : 'ies are'} STALE (present in '
-        '$baselinePath, absent from the current scan) — a fix must remove '
-        'its baseline line in the same commit that lands it:',
+        '${staleLocations.length} baseline entr'
+        '${staleLocations.length == 1 ? 'y is' : 'ies are'} STALE (present '
+        'in $baselinePath, absent from the current scan) — a fix must '
+        'remove its baseline line in the same commit that lands it:',
       );
-      for (final k in staleEntries) {
-        stderr.writeln('  STALE: $k');
+      for (final loc in staleLocations) {
+        final b = baseline.byLocation[loc]!;
+        stderr.writeln('  STALE: $loc x${b.count}');
+      }
+    }
+    if (changedLocations.isNotEmpty) {
+      stderr.writeln(
+        '${changedLocations.length} baseline entr'
+        '${changedLocations.length == 1 ? 'y has' : 'ies have'} a CHANGED '
+        'occurrence count — an int-keyed site was added or removed INSIDE '
+        'an already-baselined symbol (this is what the pre-P2-11 dedup '
+        'silently absorbed as "0 new, 0 stale"; it now fails here instead):',
+      );
+      for (final loc in changedLocations) {
+        final before = baseline.byLocation[loc]!.count;
+        final after = currentByLocation[loc]!.count;
+        stderr.writeln('  CHANGED: $loc baseline x$before -> current x$after');
       }
     }
     stderr.writeln(
-      '\nIf a NEW entry is genuine and reviewed, widen the ratchet with '
-      '`dart run tool/check_profile_id_int_sites.dart --update-baseline` '
-      '(team sign-off required, same as any other ratchet widening) — '
-      'never to make a real regression disappear. If a STALE entry is a '
-      'real fix, the same command locks the win in — never left dangling '
-      'so a later regression could silently re-add the same site under a '
-      'different one that happens to net out even.',
+      '\nIf a NEW or CHANGED entry is genuine and reviewed, widen the '
+      'ratchet with `dart run tool/check_profile_id_int_sites.dart '
+      '--update-baseline` (team sign-off required, same as any other '
+      'ratchet widening) — never to make a real regression disappear. If a '
+      'STALE or a downward CHANGED entry is a real fix, the same command '
+      'locks the win in — never left dangling so a later regression could '
+      'silently re-add the same site under a count that happens to net out '
+      'even.',
     );
     exit(1);
   }
 
   stdout.writeln(
-    'PROFILE-ID-INT-SITES OK: ${allEntries.length} tracked site(s) across '
-    '$scanSetDescription; 0 new, 0 stale.',
+    'PROFILE-ID-INT-SITES OK: $entryCount tracked entr'
+    '${entryCount == 1 ? 'y' : 'ies'} covering $siteCount site(s) across '
+    '$scanSetDescription; 0 new, 0 stale, 0 changed.',
   );
 }
 
