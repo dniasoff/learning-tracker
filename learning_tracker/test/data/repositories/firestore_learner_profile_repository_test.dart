@@ -1,14 +1,17 @@
 /// Unit tests for
 /// `lib/data/repositories/firestore_learner_profile_repository.dart` —
-/// Epic B. Covers: `createProfile` writing to the caller-supplied
+/// Epic B. Covers: `ensureProfile` writing to the caller-supplied
 /// `profileId` (P2-2: this repository no longer mints one itself — see the
 /// class doc comment, "Doc-id" — so these tests supply distinct literal
-/// ids rather than asserting on minting behavior), `getProfiles`/
-/// `watchProfiles` listing every profile under the account unfiltered,
-/// `updateProfile`'s current-entity-plus-overrides semantics, model
-/// round-trip for both `ProfileMode`s, and the "one bad document doesn't
-/// blank the list" decode leniency (both the stream and the one-shot read)
-/// exactly like `firestore_stage_definition_repository_test.dart`.
+/// ids rather than asserting on minting behavior), that a SECOND call for an
+/// already-existing id never re-sends `created_at` (T-40 — the whole reason
+/// `createProfile` was replaced by this single create-if-missing/heal
+/// method; see [FirestoreLearnerProfileRepository.ensureProfile]'s own doc
+/// comment), `getProfiles`/`watchProfiles` listing every profile under the
+/// account unfiltered, `updateProfile`'s current-entity-plus-overrides
+/// semantics, model round-trip for both `ProfileMode`s, and the "one bad
+/// document doesn't blank the list" decode leniency (both the stream and the
+/// one-shot read) exactly like `firestore_stage_definition_repository_test.dart`.
 ///
 /// **What these tests cannot see**: same rules-evaluation limitation noted
 /// throughout this directory — `strictRules: false` throughout, so no
@@ -45,11 +48,11 @@ void main() {
       FirestoreLearnerProfileRepository(firestore: firestore, uid: _uid);
 
   group('doc-id — caller-supplied (P2-2: never minted here)', () {
-    test('createProfile writes to users/{uid}/learner_profiles/{profileId}, '
+    test('ensureProfile writes to users/{uid}/learner_profiles/{profileId}, '
         'exactly the id passed in', () async {
       final repo = buildRepo();
 
-      final profile = await repo.createProfile(
+      final profile = await repo.ensureProfile(
         profileId: 'ulid-yossi',
         displayName: 'Yossi',
         mode: ProfileMode.child,
@@ -64,12 +67,12 @@ void main() {
         'documents', () async {
       final repo = buildRepo();
 
-      final a = await repo.createProfile(
+      final a = await repo.ensureProfile(
         profileId: 'ulid-yossi',
         displayName: 'Yossi',
         mode: ProfileMode.child,
       );
-      final b = await repo.createProfile(
+      final b = await repo.ensureProfile(
         profileId: 'ulid-daniel',
         displayName: 'Daniel',
         mode: ProfileMode.adult,
@@ -78,16 +81,16 @@ void main() {
       expect(a.profileId, isNot(b.profileId));
     });
 
-    test('calling createProfile again for the SAME id is idempotent — a '
+    test('calling ensureProfile again for the SAME id is idempotent — a '
         'create-if-missing merge, not a duplicate', () async {
       final repo = buildRepo();
 
-      await repo.createProfile(
+      await repo.ensureProfile(
         profileId: 'ulid-devorah',
         displayName: 'Devorah',
         mode: ProfileMode.adult,
       );
-      await repo.createProfile(
+      await repo.ensureProfile(
         profileId: 'ulid-devorah',
         displayName: 'Devorah',
         mode: ProfileMode.adult,
@@ -97,10 +100,93 @@ void main() {
       expect(docs, hasLength(1));
     });
 
+    test('a fresh document DOES get a created_at on its first write — the '
+        'read-then-write never leaves it missing (T-40)', () async {
+      final repo = buildRepo();
+
+      await repo.ensureProfile(
+        profileId: 'ulid-fresh',
+        displayName: 'Fresh',
+        mode: ProfileMode.adult,
+      );
+
+      final snapshot = await rawProfiles().doc('ulid-fresh').get();
+      expect(snapshot.data(), contains('created_at'));
+      // getProfile round-trips it — LearnerProfileEntity.fromFirestore
+      // throws when created_at is missing (see that method's doc comment),
+      // so a successful read here is itself proof the field is present.
+      expect((await repo.getProfile('ulid-fresh'))?.createdAt, isNotNull);
+    });
+
+    test('T-40: calling ensureProfile AGAIN for an EXISTING id never '
+        're-sends created_at — the exact trap createProfile would have '
+        'been if reused as the activation heal', () async {
+      final repo = buildRepo();
+
+      final first = await repo.ensureProfile(
+        profileId: 'ulid-heal-target',
+        displayName: 'Original Name',
+        mode: ProfileMode.adult,
+      );
+      final originalCreatedAt = first.createdAt;
+
+      // Simulate time passing before the SAME profile activates again.
+      await Future<void>.delayed(const Duration(milliseconds: 5));
+      final healed = await repo.ensureProfile(
+        profileId: 'ulid-heal-target',
+        displayName: 'Original Name',
+        mode: ProfileMode.adult,
+      );
+
+      expect(
+        healed.createdAt,
+        originalCreatedAt,
+        reason:
+            'a second ensureProfile call for the same id (an activation '
+            'heal, not a fresh creation) must preserve the real creation '
+            'timestamp rather than clobbering it with "now"',
+      );
+      // created_at is stored as a plain ISO-8601 string (see
+      // LearnerProfileEntity.toFirestore's doc comment on encodeDateTime) —
+      // confirm the STORED value itself is untouched, not just the value
+      // this call happened to return.
+      final snapshot = await rawProfiles().doc('ulid-heal-target').get();
+      expect(
+        DateTime.parse(snapshot.data()!['created_at'] as String).toUtc(),
+        originalCreatedAt.toUtc(),
+      );
+    });
+
+    test(
+      'T-40: ensureProfile heals a document that a FIRST call never '
+      'created at all (offline creation, network back on activation)',
+      () async {
+        final repo = buildRepo();
+
+        // The document does not exist yet — models a profile whose original
+        // creation-time write never reached Firestore (network was down).
+        expect(
+          (await rawProfiles().doc('ulid-never-created').get()).exists,
+          isFalse,
+        );
+
+        final healed = await repo.ensureProfile(
+          profileId: 'ulid-never-created',
+          displayName: 'Healed Later',
+          mode: ProfileMode.child,
+        );
+
+        final snapshot = await rawProfiles().doc('ulid-never-created').get();
+        expect(snapshot.exists, isTrue);
+        expect(snapshot.data()?['display_name'], 'Healed Later');
+        expect(healed.createdAt, isNotNull);
+      },
+    );
+
     test('toFirestore never writes a track_id-shaped account/profile int '
         'field (MCF-11)', () async {
       final repo = buildRepo();
-      final profile = await repo.createProfile(
+      final profile = await repo.ensureProfile(
         profileId: 'ulid-yossi',
         displayName: 'Yossi',
         mode: ProfileMode.child,
@@ -116,7 +202,7 @@ void main() {
     test('a child profile with an avatar round-trips every field', () async {
       final repo = buildRepo();
 
-      final created = await repo.createProfile(
+      final created = await repo.ensureProfile(
         profileId: 'ulid-yossi',
         displayName: 'Yossi',
         mode: ProfileMode.child,
@@ -134,7 +220,7 @@ void main() {
       () async {
         final repo = buildRepo();
 
-        final created = await repo.createProfile(
+        final created = await repo.ensureProfile(
           profileId: 'ulid-daniel',
           displayName: 'Daniel',
           mode: ProfileMode.adult,
@@ -150,12 +236,12 @@ void main() {
   group('getProfiles / watchProfiles — unfiltered account listing', () {
     test('returns every profile for the account', () async {
       final repo = buildRepo();
-      await repo.createProfile(
+      await repo.ensureProfile(
         profileId: 'ulid-yossi',
         displayName: 'Yossi',
         mode: ProfileMode.child,
       );
-      await repo.createProfile(
+      await repo.ensureProfile(
         profileId: 'ulid-daniel',
         displayName: 'Daniel',
         mode: ProfileMode.adult,
@@ -185,12 +271,12 @@ void main() {
       final stream = repo.watchProfiles().map((profiles) => profiles.length);
       final done = expectLater(stream, emitsThrough(2));
 
-      await repo.createProfile(
+      await repo.ensureProfile(
         profileId: 'ulid-yossi',
         displayName: 'Yossi',
         mode: ProfileMode.child,
       );
-      await repo.createProfile(
+      await repo.ensureProfile(
         profileId: 'ulid-daniel',
         displayName: 'Daniel',
         mode: ProfileMode.adult,
@@ -203,7 +289,7 @@ void main() {
   group('updateProfile — current entity + optional overrides', () {
     test('changes only the given field, leaving the rest untouched', () async {
       final repo = buildRepo();
-      final profile = await repo.createProfile(
+      final profile = await repo.ensureProfile(
         profileId: 'ulid-yossi',
         displayName: 'Yossi',
         mode: ProfileMode.child,
@@ -224,7 +310,7 @@ void main() {
 
     test('updateProfile writes back to the SAME profileId', () async {
       final repo = buildRepo();
-      final profile = await repo.createProfile(
+      final profile = await repo.ensureProfile(
         profileId: 'ulid-yossi',
         displayName: 'Yossi',
         mode: ProfileMode.child,
@@ -244,12 +330,12 @@ void main() {
     test('getProfiles omits a document missing created_at but still '
         'returns the valid ones', () async {
       final repo = buildRepo();
-      final good = await repo.createProfile(
+      final good = await repo.ensureProfile(
         profileId: 'ulid-good',
         displayName: 'Yossi',
         mode: ProfileMode.child,
       );
-      final bad = await repo.createProfile(
+      final bad = await repo.ensureProfile(
         profileId: 'ulid-bad',
         displayName: 'Daniel',
         mode: ProfileMode.adult,
@@ -272,7 +358,7 @@ void main() {
 
       expect(await repo.getProfile('never-created'), isNull);
 
-      final created = await repo.createProfile(
+      final created = await repo.ensureProfile(
         profileId: 'ulid-yossi',
         displayName: 'Yossi',
         mode: ProfileMode.child,

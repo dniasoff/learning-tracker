@@ -1096,6 +1096,132 @@ void main() {
         expect(doc.data()?['display_name'], 'Devorah');
       });
 
+      // ── T-40: activation heals a document a failed creation-time write
+      // never created — the exact call path the missing device check
+      // (`firestore-cutover-log.md`'s D10) describes. ──────────────────────
+      group('ensureRemoteProfile (T-40 activation heal)', () {
+        test('heals a profile whose remote document never got written at '
+            'creation (network down), once called again — simulating the '
+            'network coming back and the profile being activated', () async {
+          final profile = await adapter.createProfile(
+            accountId: 1,
+            displayName: 'Offline Created',
+            mode: 'adult',
+          );
+          final docRef = firestore
+              .collection('users')
+              .doc(uid)
+              .collection('learner_profiles')
+              .doc(profile.ulid);
+          expect((await docRef.get()).exists, isTrue);
+
+          // Simulate "the creation-time push never reached Firestore" by
+          // deleting the document createProfile just wrote, leaving exactly
+          // the state a real network outage at creation would have left:
+          // a Drift row with a real ulid and NO remote document.
+          await docRef.delete();
+          expect((await docRef.get()).exists, isFalse);
+
+          // The activation call path: app_shell.dart's ref.listen fires
+          // this on every selectedProfileIdProvider change.
+          await adapter.ensureRemoteProfile(profile.id);
+
+          final healedDoc = await docRef.get();
+          expect(healedDoc.exists, isTrue);
+          expect(healedDoc.data()?['display_name'], 'Offline Created');
+        });
+
+        test('is a safe no-op for an id with no matching Drift row', () async {
+          await adapter.ensureRemoteProfile(999999);
+          // No throw — the assertion is simply that execution reaches here.
+        });
+
+        test('is a safe no-op for a legacy pre-P2-2 row with ulid IS NULL '
+            '(never crashes, unlike getProfileById)', () async {
+          final legacyId = await localDb.profileDao.insertProfile(
+            LearnerProfilesCompanion.insert(
+              accountId: 1,
+              displayName: 'Legacy',
+              mode: 'adult',
+              createdAt: DateTimeFactory.nowUtc(),
+              updatedAt: DateTimeFactory.nowUtc(),
+            ),
+          );
+
+          await adapter.ensureRemoteProfile(legacyId);
+          // No throw, and nothing written under this account beyond
+          // whatever creation this group's own setUp did not perform.
+          final collection = firestore
+              .collection('users')
+              .doc(uid)
+              .collection('learner_profiles');
+          expect((await collection.get()).docs, isEmpty);
+        });
+      });
+
+      // ── T-40: the offline-first contract — a genuine account-resolution
+      // failure must never escape createProfile/ensureDefaultProfile. ──────
+      test(
+        'a real firestoreLearnerProfileRepositoryProvider resolution '
+        'failure (AccountNotAuthenticatedException) does not propagate '
+        'out of createProfile — offline-first, not merely "not ready"',
+        () async {
+          final failingContainer = ProviderContainer(
+            overrides: [
+              activeAccountFirebaseProvider.overrideWith(
+                (ref) async =>
+                    throw const AccountNotAuthenticatedException('1'),
+              ),
+            ],
+          );
+          addTearDown(failingContainer.dispose);
+          final failingAdapter = buildAdapter(
+            failingContainer,
+            ProfileRepositoryImpl(localDb),
+          );
+
+          // Must complete — NOT throw AccountNotAuthenticatedException.
+          final profile = await failingAdapter.createProfile(
+            accountId: 1,
+            displayName: 'Still Created Offline',
+            mode: 'adult',
+          );
+
+          expect(profile.displayName, 'Still Created Offline');
+        },
+      );
+
+      // ── T-40: the adapter/impl double-decision is now a single decision
+      // made from the row ensureDefaultProfile actually returns — proven by
+      // showing the fast path NOW heals a pre-existing profile whose remote
+      // document had gone missing, which the old two-read design skipped
+      // whenever it believed (from its own stale pre-read) that no healing
+      // was needed. ─────────────────────────────────────────────────────────
+      test('ensureDefaultProfile\'s fast path (account already has a '
+          'profile) now heals that profile\'s missing remote document too '
+          '— not only a freshly-created one', () async {
+        final existing = await adapter.createProfile(
+          accountId: 1,
+          displayName: 'Already Had A Profile',
+          mode: 'adult',
+        );
+        final docRef = firestore
+            .collection('users')
+            .doc(uid)
+            .collection('learner_profiles')
+            .doc(existing.ulid);
+        await docRef.delete();
+        expect((await docRef.get()).exists, isFalse);
+
+        final id = await adapter.ensureDefaultProfile(
+          accountId: 1,
+          defaultDisplayName: 'unused — fast path',
+        );
+
+        expect(id, existing.id);
+        expect((await docRef.get()).exists, isTrue);
+      });
+
       test('a profile minted in one adapter instance still resolves its ULID '
           'through a BRAND NEW adapter over the same Drift database — the '
           'restart case the persisted column exists for', () async {

@@ -7,6 +7,7 @@
 library;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:learning_tracker/core/codec/firestore_codec.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
@@ -24,7 +25,9 @@ import 'package:learning_tracker/features/profiles/domain/models/learner_profile
 /// ensure/activate a Firestore `learner_profiles` document (P2-2: the
 /// adapter mints the identity eagerly, before its own Drift insert — this
 /// repository just persists whatever id it is handed) alongside every
-/// Drift-side profile create/update; `profileRepositoryProvider`
+/// Drift-side profile create/update, **and again at every profile
+/// ACTIVATION** (T-40 — see [ensureProfile]'s doc comment for why creation
+/// alone was not enough); `profileRepositoryProvider`
 /// (`profile_providers.dart`) resolves to that adapter. See that class's
 /// doc comment ("Dual-write, not cutover — and why") for why this is not
 /// yet the same full swap `FirestoreBookmarkRepository` made: the existing
@@ -47,9 +50,10 @@ import 'package:learning_tracker/features/profiles/domain/models/learner_profile
 /// ## Doc-id: a caller-supplied, pre-minted ULID (AD-24) — P2-2, never
 /// minted here
 ///
-/// [createProfile] takes a REQUIRED `profileId` rather than minting one
-/// itself. Before P2-2 this method called `DocIds.mintProfileUlid()`
-/// directly; that mint moved to `FirestoreProfileRepositoryAdapter`
+/// [ensureProfile] takes a REQUIRED `profileId` rather than minting one
+/// itself. Before P2-2 the (now-deleted) `createProfile` called
+/// `DocIds.mintProfileUlid()` directly; that mint moved to
+/// `FirestoreProfileRepositoryAdapter`
 /// (`lib/features/profiles/data/repositories/profile_repository_impl.dart`)
 /// so exactly ONE site in the whole codebase mints a profile's identity —
 /// the adapter needs the SAME value for both the Drift row (minted before
@@ -196,30 +200,55 @@ class FirestoreLearnerProfileRepository {
     );
   }
 
-  /// Creates (or idempotently re-writes) a learner profile document at the
-  /// caller-supplied [profileId] — see the class doc comment ("Doc-id") for
-  /// why this repository no longer mints the id itself (P2-2). The write
-  /// uses `SetOptions(merge: true)` unconditionally, so calling this again
-  /// for an already-existing [profileId] is a safe create-if-missing /
-  /// heal, not a duplicate-create hazard.
-  Future<LearnerProfileEntity> createProfile({
+  /// Idempotent create-if-missing write for the caller-supplied [profileId]
+  /// — see the class doc comment ("Doc-id") for why this repository never
+  /// mints the id itself (P2-2). Called from TWO distinct moments (T-40):
+  /// genuine first creation, and every later profile ACTIVATION (a heal —
+  /// see `FirestoreProfileRepositoryAdapter._ensureFirestoreProfile`'s doc
+  /// comment for the full call-path). Both share this ONE method rather
+  /// than a separate `createProfile`, because a second, unconditional-
+  /// `created_at` method would be a trap the moment anything called it more
+  /// than once for the same [profileId]: `SetOptions(merge: true)` still
+  /// REPLACES any field present in the payload, so a naive repeat write
+  /// would silently overwrite a real `created_at` with "now" on every
+  /// activation. This method reads the document first and OMITS
+  /// `created_at` from the write whenever one already exists — the value
+  /// already stored survives no matter how many times this is called for
+  /// the same id, while a document that genuinely does not exist yet still
+  /// gets a real `created_at` on its first write (never missing — see
+  /// [LearnerProfileEntity.fromFirestore], which throws on that shape).
+  /// Every other field ([displayName]/[mode]/[avatar]/`updated_at`) is
+  /// always written, matching the "one unconditional merge write" design
+  /// `firestore-phase2-plan.md` §4 P2-2 asked for — only `created_at`'s
+  /// inclusion is conditional.
+  Future<LearnerProfileEntity> ensureProfile({
     required String profileId,
     required String displayName,
     required ProfileMode mode,
     String avatar = '',
   }) async {
     final now = DateTimeFactory.nowUtc(); // P5: UTC timestamps
+    final ref = _doc(profileId);
+    final existingData = (await ref.get()).data();
+    final createdAt = existingData != null
+        ? (FirestoreCodec.parseDateTime(existingData['created_at']) ?? now)
+        : now;
     final entity = LearnerProfileEntity(
       profileId: profileId,
       displayName: displayName,
       mode: mode,
       avatar: avatar,
-      createdAt: now,
+      createdAt: createdAt,
       updatedAt: now,
     );
-    await _doc(
-      entity.profileId,
-    ).set(entity.toFirestore(), SetOptions(merge: true));
+    final payload = entity.toFirestore();
+    if (existingData != null) {
+      // Never re-send created_at once the document exists — see the doc
+      // comment above. Omitting the key (not writing FieldValue.delete()) is
+      // what leaves the stored value untouched under SetOptions(merge:true).
+      payload.remove('created_at');
+    }
+    await ref.set(payload, SetOptions(merge: true));
     return entity;
   }
 

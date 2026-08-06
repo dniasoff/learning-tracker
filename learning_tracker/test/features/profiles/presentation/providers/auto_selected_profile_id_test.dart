@@ -106,6 +106,9 @@ class _FakeProfileRepository implements ProfileRepository {
     String? mode,
     int? avatarIndex,
   }) => throw UnimplementedError();
+
+  @override
+  Future<void> ensureRemoteProfile(int id) async {}
 }
 
 const _signedIn = AuthState.signedIn(

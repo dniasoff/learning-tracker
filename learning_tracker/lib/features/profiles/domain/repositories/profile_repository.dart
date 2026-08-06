@@ -73,6 +73,23 @@ abstract class ProfileRepository {
     required String defaultDisplayName,
     String? ulid,
   });
+
+  /// Heals [id]'s remote Firestore mirror if it is missing (T-40) — a no-op
+  /// for a local-only account. The replacement for the lazy backfill P2-2
+  /// deleted: [createProfile]/[ensureDefaultProfile] already attempt this
+  /// once, at creation, but that is exactly the instant a network outage
+  /// would have caused the original failure, with no retry. Callers invoke
+  /// this again at every profile ACTIVATION (see
+  /// `FirestoreProfileRepositoryAdapter`'s class doc comment, "A profile
+  /// created while offline still gets its remote document", for the real
+  /// call path — `lib/app/router/app_shell.dart` fires it on every
+  /// `selectedProfileIdProvider` change) so a profile whose document is
+  /// still missing after creation keeps getting a fresh, idempotent attempt
+  /// every time it is selected again, until one succeeds. Never throws —
+  /// [id] not existing, or not yet carrying a `ulid` to heal onto, is a
+  /// silent no-op, same as any other non-fatal Firestore push in this
+  /// interface's implementations.
+  Future<void> ensureRemoteProfile(int id);
 }
 
 /// Thrown when attempting to create more than 10 profiles per account.

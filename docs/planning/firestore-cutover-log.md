@@ -88,23 +88,22 @@ delete` rules change is **NOT deployed**; this session is docs-only and
 deploys nothing. Do not attribute a device `permission-denied` on
 `learning_order` delete to a code defect until this field says otherwise.
 **Phase:** 0 ✅ · 1 ✅ · **2 — IN PROGRESS, NOT RESOLVED** (P2-0 ✅, P2-1 ✅,
-P2-2 ✅, P2-3 ✅, P2-4 ✅, P2-5 ✅, P2-6 ✅, **P2-7 ✅ docs-only — closes the
-phase's paperwork, not the phase**). An end-of-phase review found **two
-BLOCKING defects** no gate this phase runs can see — see the P2-7 entry
-below, and `T-40`/`T-41` in `firestore-cutover-tasks.md`. **Phase 3 must not
-start until both are fixed and re-verified.**
-**Gates:** `dart analyze --fatal-infos` → `No issues found!` (0 issues,
-`lib/` and `test/`). `make audit` green, **104** checks total
-(`=== audit PASSED — all 68 greps clean ===` — this is the **true** last
-line; four earlier entries in this log append a `(104/104 checks)`
-parenthetical that is not actually part of `make audit`'s output — flagged
-in the P2-7 entry, not retroactively edited into those append-only
-entries). Check 104 (PROFILE-ID-INT-SITES) baseline is **88 entries** — a
-**measured** first-run count, not the plan's "~31" prediction (P2-1's
-deviation). Check 103's OK line and split set unchanged all phase: **2**
-collections (`bookmarks`, `learning_order`), 0 new violations. Full
-`make ci` last green at `5b4d7924`; still batched to end of Phase 4 by owner
-decision (2026-08-06) — unchanged.
+P2-2 ✅, P2-3 ✅, P2-4 ✅, P2-5 ✅, P2-6 ✅, P2-7 ✅ docs-only, **P2-8 ✅ fixes
+BLOCKING DEFECT 1 (T-40)**). One BLOCKING defect remains — `T-41` (two live
+paths still insert `ulid IS NULL` profile rows post-P2-3's hard-crash
+enforcement) — plus `T-42`'s remaining serious/minor items (two of which
+P2-8 resolved as a documented side effect: the offline-first contract break
+and the `ensureDefaultProfile` double-decision). **Phase 3 must not start
+until T-41 is fixed and T-42 is triaged/resolved-or-explicitly-deferred.**
+**Gates (P2-8, re-confirmed against HEAD after the fix):** `dart analyze
+--fatal-infos` → `No issues found!`. `make audit` green, exit 0, **104**
+checks, true last line (no parenthetical) `=== audit PASSED — all 68 greps
+clean ===`. Check 103's OK line and split set **unchanged**: `PROFILE-KEY-SPLIT
+check OK: 2 collection(s) currently split (bookmarks, learning_order), all
+within the tracked baseline (0 new violations).` Check 104 **unchanged** at
+**88** tracked sites, 0 new, 0 stale. All four match the P2-8 brief's
+prediction exactly — no deviation. Full `make ci` last green at `5b4d7924`;
+still batched to end of Phase 4 by owner decision (2026-08-06) — unchanged.
 
 **IN FLIGHT:** nothing.
 
@@ -157,6 +156,271 @@ stage-definition · study-day-config · track-learning-order.
 ## Entries
 
 Newest first. Append; never rewrite history.
+
+### 2026-08-06 — P2-8: T-40 fixed — the activation heal now exists
+
+Per the P2-8 brief (BLOCKING DEFECT 1 in the P2-7 entry below). Re-verified
+the defect before fixing it: `grep -rn '_ensureFirestoreProfile' lib/`
+confirmed call sites only at `createProfile` and `ensureDefaultProfile`'s
+(then-)`needsHeal` branch — no activation call site anywhere. The defect was
+real.
+
+**What landed.**
+
+1. **A dedicated `ensureProfile` on `FirestoreLearnerProfileRepository`,
+   replacing `createProfile` entirely** (deleted, not kept alongside — its
+   only caller was `_ensureFirestoreProfile`, and `ensureProfile`'s
+   create-if-missing semantics are a strict superset of what `createProfile`
+   did). Avoids the trap the brief named explicitly: `createProfile` wrote
+   `created_at` unconditionally under `SetOptions(merge: true)`, so calling
+   it on every activation would have clobbered a real creation timestamp
+   with "now" on every single heal. `ensureProfile` instead reads the
+   document first; when it already exists, the write OMITS the `created_at`
+   key entirely (never re-sends it, so `SetOptions(merge: true)` cannot
+   touch the stored value); when it does not exist yet, `created_at` is
+   included, so a document created purely via a heal (the creation-time
+   write having failed outright) still gets a real timestamp on its first
+   write — `LearnerProfileEntity.fromFirestore` throws on a document missing
+   it, so this was not optional. Test coverage added directly on this
+   method: a fresh document gets `created_at`; a second call for the same id
+   preserves the stored value byte-for-byte (parsed back from the raw
+   Firestore field, not just the return value); a document with NO prior
+   write at all still gets healed with a real `created_at`.
+2. **The real activation call site: `ProfileRepository.ensureRemoteProfile(int
+   id)`**, a new interface method — no-op on the plain Drift
+   `ProfileRepositoryImpl` (local-born accounts have no Firestore mirror to
+   heal), and on `FirestoreProfileRepositoryAdapter` it re-reads the Drift
+   row and re-runs `_ensureFirestoreProfile`. Wired to fire on every
+   *activation*, not creation, from `lib/app/router/app_shell.dart`: a new
+   `ref.listen(selectedProfileIdProvider, …)` calls it, fire-and-forget via
+   `unawaited(...)`, whenever the value changes. **Deliberately NOT
+   `activeProfileIdProvider`** — that provider also carries the tutored
+   mirror's LOCAL Drift id during a tutored session
+   (`active_profile_provider.dart`), and healing that id would resolve
+   `firestoreLearnerProfileRepositoryProvider` off the TUTOR's own signed-in
+   account handles, writing into `users/{TUTOR}/learner_profiles/{talmid
+   ULID}` — the exact wrong-tree trap `firestore-phase2-plan.md` §4 P2-5
+   already warns about, and one of the traps a mid-phase review (SERIOUS
+   DEFECT 4, P2-7 entry below) flagged for whoever touches this seam next.
+   `selectedProfileIdProvider` is set ONLY by `SelectedProfileId.select()`/
+   `.clear()` (own-profile flows — creation, the switcher, the picker,
+   sign-in, `AutoSelectedProfileId`'s cold-start self-heal), never by
+   anything tutoring-related, so it is safe from that trap **by
+   construction**, not by an added runtime guard. One seam covers every
+   activation path in the app — no per-screen wiring needed.
+   **Why not inside `SelectedProfileId.select()` itself:** that method's own
+   doc comment records a real, previously-shipped regression from exactly
+   this shape of change — `select()` used to read `ulid` back via an
+   internal async DB call, and a widget test that tapped-and-asserted
+   without `pumpAndSettle` failed with "A Timer is still pending even after
+   the widget tree was disposed," a bug the comment states would "run in
+   production too, just silently." `select()` was deliberately kept `void`/
+   synchronous/no-I/O to close that hole; putting fire-and-forget Firestore
+   I/O back inside it — even via `unawaited` — reopens the same class of
+   risk in the same place it was fixed. The `app_shell.dart` listener reacts
+   to the STATE CHANGE `select()` produces instead, entirely outside
+   `select()`'s own call stack, at the same architectural layer
+   `AutoSelectedProfileId.ensureSelected()`'s post-frame-callback dispatch
+   already uses for this exact class of side effect (AUD-profiles-21 / SM-2:
+   provider `build()` must stay pure; side effects live in an explicit
+   method invoked from `app_shell.dart`). `ensureRemoteProfile` itself never
+   throws (internal try/catch, logged); a SEPARATE try/catch wraps
+   `ref.read(profileRepositoryProvider)` in the listener too, since that
+   provider's own construction — not `ensureRemoteProfile`'s contract —
+   could fail synchronously in an unconfigured container, and that must not
+   crash the listener either.
+3. **`ensureDefaultProfile`'s adapter/impl double-decision collapsed into
+   ONE decision.** The adapter used to pre-read `getProfilesByAccount` to
+   decide `needsHeal` itself, then call `_drift.ensureDefaultProfile`, which
+   re-read and re-decided independently — if the two reads ever disagreed
+   (a real, if narrow, race), the impl could mint and insert a new row while
+   the adapter, deciding from its own stale read, skipped the heal entirely,
+   stranding that profile's remote document forever. Fixed by removing the
+   adapter's pre-read altogether: it now always resolves a `ulid` (minting
+   is a pure local generator, free to waste — `firestore-phase2-plan.md` §4
+   P2-2's own reasoning) and always asks `_drift` to run, then makes its
+   heal decision from a NEW method, `ProfileRepositoryImpl.tryGetProfileById`,
+   applied to the id `_drift` actually returned — a single post-hoc read,
+   not a pre-read that can go stale. `tryGetProfileById` returns `null`
+   instead of throwing for a legacy pre-P2-2 row with `ulid IS NULL`
+   (`ProfileModel.fromDriftRow`'s hard `StateError` is correct for a genuine
+   read, wrong for "is there a ulid to heal onto") — verified this preserves
+   the existing test's fast-path-with-a-legacy-null-ulid-row scenario
+   (`profile_repository_impl_test.dart`'s "does NOT touch that profile's
+   missing ulid" test) without a crash. A new test proves the practical
+   payoff directly: the fast path (account already has a profile) now heals
+   that profile's remote document if it had gone missing — the old
+   two-read design skipped this whenever its own stale pre-read said no
+   healing was needed, which after this fix can no longer happen.
+4. **The offline-first contract, broken since `0d5d9125`, fixed.**
+   `_ensureFirestoreProfile`'s `await _ref.read(firestoreLearnerProfileRepositoryProvider.future)`
+   sat OUTSIDE the `try`/`catch` meant to collapse a resolution failure to a
+   non-fatal path. `repository_providers.dart`'s own doc comment says a real
+   resolution failure (e.g. `AccountNotAuthenticatedException`) is NOT
+   swallowed — it propagates as the `FutureProvider`'s `AsyncError` — so it
+   was escaping `_ensureFirestoreProfile` → `createProfile`/
+   `ensureDefaultProfile` → the calling screen, contradicting the method's
+   own doc comment and plan §4 P2-2 / §9 rejected-defect-4's explicit
+   prohibition ("a fatal remote write would break offline profile
+   creation"). `git show 0d5d9125` confirmed the read was inside the `try`
+   before that commit. Moved back inside. New test: overriding
+   `activeAccountFirebaseProvider` to throw `AccountNotAuthenticatedException`
+   and calling `createProfile` completes normally (profile created,
+   exception never surfaces).
+5. **Five load-bearing false statements corrected, all in this commit** (per
+   the brief's own list):
+   - The class doc comment (previously `:503-506`) — rewritten as a new "A
+     profile created while offline still gets its remote document (T-40)"
+     section naming the REAL call path (`app_shell.dart`'s listener →
+     `ensureRemoteProfile`), not "the next time `_ensureFirestoreProfile`
+     runs for it" (which was never true — nothing called it again for an
+     already-created profile).
+   - `_ensureFirestoreProfile`'s own method doc (previously `:619-629`) —
+     rewritten to describe THREE call sites (creation ×2, activation ×1 via
+     the new public `ensureRemoteProfile`) and to name `ensureProfile`
+     (never the deleted `createProfile`) as what it calls.
+   - Its catch-block comment (previously `:654-657`, "a later call to this
+     method... retries... and heals it") — corrected: nothing calls this
+     exact method again for the same profile; the real retry is
+     `ensureRemoteProfile`, fired at activation, not "the next time this
+     method happens to run."
+   - `updateProfile`'s post-commit comment (previously `:541-546`) —
+     clarified to distinguish the still-true gap (a missing `ulid` is never
+     healed here, or anywhere — greenfield, wipe and reseed) from the now-
+     false one (a row that already has a `ulid` but is missing its remote
+     document — that IS healed now, just not by this method).
+   - **This log's own P2-2 entry** (below, unchanged — append-only): its
+     "no more window where a row exists with `ulid IS NULL`... [and by
+     extension the implied 'heals via `_ensureFirestoreProfile` running
+     again']" framing is superseded by this entry per this file's own
+     convention (flag, don't rewrite history). Commit `0d5d9125`'s message
+     asserts the same false heal ("replaced by an idempotent create-if-
+     missing on activation... so a missing remote doc still heals") —
+     commit messages cannot be amended; this entry is that correction,
+     recorded per the brief's explicit instruction.
+
+**THE CALL PATH — verified, not asserted (per the brief's own "if you cannot
+name it, the defect is not fixed" instruction):** a profile is created while
+the network is down → `FirestoreProfileRepositoryAdapter.createProfile` →
+`_ensureFirestoreProfile(model)` → the Firestore write throws (network) →
+caught, logged, non-fatal → `activeProfileDocIdProvider` still set (identity
+is real and local) → `createProfile` returns normally; the Drift row has a
+real `ulid`, Firestore has no document. The network returns. The SAME
+profile is next **activated** — either the next app launch (auth-valid
+startup → `AutoSelectedProfileId.ensureSelected()` → `_resolveSelection()` →
+either the "already selected, still valid" branch or the `profiles.first`/
+self-heal branch → `SelectedProfileId.select(id, ulid: ...)` in every branch
+that needs a fresh selection, or a direct `activeProfileDocIdProvider.notifier.set(...)`
+in the "already valid" branch) or a manual switch (switcher sheet / picker /
+`add_profile_dialog.dart` / `profile_edit_delete_actions.dart` — all call
+`SelectedProfileId.select(...)` directly). Either way `selectedProfileIdProvider`'s
+value changes (from `null` on a true cold start, or to a different id on a
+manual switch) → `app_shell.dart`'s `ref.listen(selectedProfileIdProvider, …)`
+fires → `unawaited(ref.read(profileRepositoryProvider).ensureRemoteProfile(id))`
+→ `FirestoreProfileRepositoryAdapter.ensureRemoteProfile` →
+`_drift.tryGetProfileById(id)` (the Drift row, real `ulid`, no network
+needed) → `_ensureFirestoreProfile(model)` → `firestoreRepo.ensureProfile(...)`
+→ the document did not exist, so this write includes `created_at` → the
+document is created. **Named limitation, not overclaimed:** the "already
+selected, still valid" branch inside `_resolveSelection` only runs when
+`AutoSelectedProfileId.ensureSelected()` is invoked again with a
+non-`null` `selectedProfileIdProvider` already in memory — in production
+that is gated to once per signed-in session by `app_shell.dart`'s
+`_autoSelectRan` flag, so within a SINGLE continuous session (no app
+restart), a profile that was ALREADY selected before going offline and
+never gets explicitly re-selected does not re-trigger this path a second
+time on its own; it heals the next time it is genuinely (re-)selected —
+a fresh cold start, or an explicit switch away and back. This is a narrower
+guarantee than "every possible moment," but it is a real, always-eventually-
+true one, unlike the pre-fix state where the defect's own text was
+accurate: "permanently no remote document."
+
+**Gates (verbatim, run after `dart format`):**
+```
+$ dart analyze --fatal-infos
+Analyzing learning_tracker...
+No issues found!
+
+$ dart run tool/check_profile_path_keying.dart | tail -1
+PROFILE-KEY-SPLIT check OK: 2 collection(s) currently split (bookmarks, learning_order), all within the tracked baseline (0 new violations).
+
+$ dart run tool/check_profile_id_int_sites.dart | tail -1
+PROFILE-ID-INT-SITES OK: 88 tracked site(s) across 5 pattern(s) [cf-int-guard, cf-string-profileid-doc, dart-int-profileid-param, dart-tutoring-int-parse, dart-tutoring-id-tostring]; 0 new, 0 stale.
+
+$ make audit; echo "EXIT=$?"
+... (104 checks, WATCHLIST paragraphs unchanged in content — see the standing
+rule that only the OK line and split set are the pinned invariant) ...
+=== audit PASSED — all 68 greps clean ===
+EXIT=0
+
+$ dart format <7 touched .dart files>
+Formatted 7 files (3 changed).
+```
+No deviation. All four gates match this brief's prediction exactly: `dart
+analyze` green; check 103's OK line and split set unchanged (neither
+`learner_profiles` nor any doc-id formula is in its scan, by design); check
+104 unchanged at 88 entries/0 new/0 stale (profile-identity healing is
+outside its int-site scan by design); `make audit` green at 104/104.
+
+**Not touched, out of scope for this brief:** `T-41` (BLOCKING DEFECT 2 —
+`ProfileDao.upsertFromSync`/`DataExportImportService` still insert
+`ulid IS NULL` rows, which `ProfileModel.fromDriftRow` now hard-crashes on).
+Verified still present, unchanged by this commit:
+`grep -n "ulid" lib/core/database/daos/profile_dao.dart` shows no `ulid:` in
+`upsertFromSync`'s companion, exactly as the P2-7 entry recorded. Remains
+BLOCKING; Phase 3 must not start until it is fixed too. The other `T-42`
+items this brief did not name (D9's wrong criterion, the
+`repository_providers.dart` stale-reason comment, check 104's dedup blind
+spot on `.id.toString()`, the P2-1 log entry's false verification claim, and
+the remaining minor items) are also untouched — see `T-42` in
+`firestore-cutover-tasks.md`, updated in this same commit to record which
+two of its items this brief's required "ALSO FIX" list happened to resolve
+(offline-first, double-decision) and which remain open.
+
+**Deferred verification — the device check named D10, never run, recorded
+explicitly per this brief's instruction (no device access this session):**
+plan §6 P2-2's proving check — on a wiped emulator-5556 profile, create a
+profile with the network off, confirm a local ULID and no crash; restore the
+network, activate the profile (switcher or a fresh launch), read
+`users/{uid}/learner_profiles/` directly and confirm the 26-char Crockford
+ULID document now exists. This is the check that would have caught BLOCKING
+DEFECT 1 in the first place (`firestore-cutover-log.md`'s P2-7 entry, D10) —
+it still has not been run against this fix; the fix's correctness rests on
+the code trace above and the unit tests added alongside it (`fake_cloud_firestore`,
+not a real device/emulator), not on a device observation. Whoever next has
+device access should run it and record the result under `D10` in the
+attribution table, not silently mark it passed.
+
+**`make test` not run, per the owner's binding NO FULL CI instruction for
+this remediation session** — the touched/added test assertions (the four new
+`ensureProfile` tests in `firestore_learner_profile_repository_test.dart`,
+the five new tests in `profile_repository_impl_test.dart`'s
+`FirestoreProfileRepositoryAdapter` group, the one-line interface-conformance
+addition in `auto_selected_profile_id_test.dart`) compile
+(`dart analyze` covers `test/`) but were not executed. Their correctness was
+argued from reading `ensureProfile`'s read-then-write logic and
+`_ensureFirestoreProfile`'s try/catch shape directly, not confirmed by
+running them. **Also newly recorded here, found incidentally while reading
+this file (not caused by this commit, not fixed by it — flagged per this
+log's standing convention, not silently absorbed):**
+`profile_repository_impl_test.dart`'s pre-existing "ensureDefaultProfile fast
+path (account already has a profile) does NOT touch that profile's missing
+ulid" test (landed before this session) ends with
+`await adapter.getProfileById(id)` on a row it deliberately left with
+`ulid IS NULL` — but `FirestoreProfileRepositoryAdapter.getProfileById`
+delegates straight to `_drift.getProfileById`, the THROWING variant
+(`ProfileModel.fromDriftRow`'s hard `StateError`, landed in P2-3). As
+written, that test throws before reaching its own `expect(profile?.ulid,
+isNull, ...)` assertion — a latent break introduced by P2-3's own
+enforcement change, invisible because `make test` has not run once this
+whole phase (this log's own standing fact: "the test suite cannot see this
+class of defect" applies here in a new way — no CI run, not a fake-Firestore
+blind spot). Not this commit's defect to fix (T-40's scope was the
+activation heal); this commit's OWN new tests deliberately use the
+non-throwing `tryGetProfileById`/`ensureRemoteProfile` path instead of
+`getProfileById` for exactly this reason. Candidate for whoever next runs
+`make test` for real, or for folding into T-41/T-42's cleanup, since it is
+the same `ulid IS NULL` hazard class T-41 already tracks.
 
 ### 2026-08-06 — P2-7: Phase 2 docs pass lands — PHASE NOT RESOLVED, two blocking defects named
 
