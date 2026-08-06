@@ -55,22 +55,14 @@ final routerProvider = Provider<AppRouter>((ref) {
       // P2-2: forward the ULID ProfileGuard already resolved synchronously
       // — this used to be a bare `select(id)`, which cleared
       // activeProfileDocIdProvider to null on every auto-select redirect.
-      // P2-3: `ProfileGuard` reads the Drift row directly (its `ulid`
-      // column stays nullable, see `profile_model.dart`'s `fromDriftRow`
-      // doc comment), while `select`'s [ulid] is now compiler-enforced
-      // non-null — so this is a second enforcement point, not just the one
-      // at `fromDriftRow`. Same remedy, same message shape.
-      setSelectedProfileId: (id, {String? ulid}) {
-        final resolvedUlid =
-            ulid ??
-            (throw StateError(
-              'ProfileGuard.setSelectedProfileId: profile $id has no ulid — '
-              'pre-P2-2 profile row with no ULID — wipe and reseed the '
-              'device',
-            ));
-        ref
-            .read(selectedProfileIdProvider.notifier)
-            .select(id, ulid: resolvedUlid);
+      // P2-10: `ProfileGuard`'s own `setSelectedProfileId` field is now
+      // typed `{required String ulid}` — the resolve-or-throw on a legacy
+      // null-ulid Drift row happens inside `ProfileGuard` itself (the class
+      // that actually holds the nullable Drift row), so by the time this
+      // closure runs, `ulid` is already a proven non-null `String`; this
+      // closure has nothing left to enforce, only to forward.
+      setSelectedProfileId: (id, {required String ulid}) {
+        ref.read(selectedProfileIdProvider.notifier).select(id, ulid: ulid);
       },
       getAccountId: () => ref.read(currentAccountIdProvider),
       isTutoredSession: () =>

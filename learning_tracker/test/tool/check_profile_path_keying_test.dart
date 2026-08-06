@@ -953,10 +953,14 @@ void main() {
 
     test('a provider identifier mentioned ONLY inside a string literal '
         '(e.g. an exception message) outside data/repositories/ also stays '
-        'DEAD — reproduced against the real tree pre-fix: '
-        'bookmark_repository_impl.dart:408 embeds '
-        'firestoreBookmarkRepositoryProvider inside '
-        'BookmarkRepositoryNotReadyException.toString()', () async {
+        'DEAD — modeled on the real '
+        'BookmarkRepositoryNotReadyException.toString() in '
+        'bookmark_repository_impl.dart, which embeds '
+        'firestoreBookmarkRepositoryProvider inside a plain string message '
+        '(P2-10: no longer citing a specific line number here — the exact '
+        'line drifts every time that file is edited; the shape being '
+        'tested, a provider name inside an exception toString(), is the '
+        'durable fact)', () async {
       final tempDir = await buildDormantFixture(
         'profile_path_keying_f5_string_',
         'f5_string_coll',

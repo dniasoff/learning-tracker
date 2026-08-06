@@ -365,11 +365,20 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
 
 /// Thrown by [FirestoreBookmarkRepositoryAdapter]'s write methods
 /// (`setBookmark`, `initializeBookmark`, `advanceBookmark`) when
-/// `firestoreBookmarkRepositoryProvider` resolves to `null` — i.e. no
-/// account is active yet, or no learner profile is active yet (see that
-/// provider's doc comment in
+/// `firestoreBookmarkRepositoryProvider` resolves to `null` — for any of
+/// its three causes: no account is active yet, no learner profile is
+/// active yet, or (T-35) a tutor is acting inside a talmid's context and
+/// the tutored-write refusal has hoisted the resolution to `null` upstream
+/// before this adapter ever sees it (see
+/// [FirestoreBookmarkRepositoryAdapter]'s class doc comment, point 6, for
+/// why a tutored session is indistinguishable from "not ready" at this
+/// layer) — see that provider's doc comment in
 /// `lib/data/firestore/repository_providers.dart` for the null-vs-AsyncError
-/// contract this exception sits on top of).
+/// contract this exception sits on top of. **P2-10:** this doc comment and
+/// [toString] used to enumerate only the first two causes even after the
+/// tutored refusal (point 6, added earlier this phase) became a live third
+/// one — corrected here so a developer reading a raised instance of this
+/// exception is told the truth about why it fired.
 ///
 /// [FirestoreBookmarkRepositoryAdapter.getBookmark] deliberately does NOT
 /// throw this: its return type is already nullable, and the provider
@@ -390,8 +399,10 @@ class BookmarkRepositoryNotReadyException implements Exception {
   @override
   String toString() =>
       'BookmarkRepositoryNotReadyException: firestoreBookmarkRepositoryProvider '
-      'resolved to null (no active account, or no active learner profile, '
-      'yet) — cannot complete a bookmark write until one is active.';
+      'resolved to null (no active account, no active learner profile yet, '
+      'or a tutored session refusing the write — see '
+      'FirestoreBookmarkRepositoryAdapter\'s class doc comment, point 6) — '
+      'cannot complete a bookmark write until one is active.';
 }
 
 /// Firestore-backed [BookmarkRepository] adapter — the reference pattern

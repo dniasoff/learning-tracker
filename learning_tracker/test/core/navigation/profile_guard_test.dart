@@ -11,6 +11,7 @@
 library;
 
 import 'package:auto_route/auto_route.dart';
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/navigation/guards/profile_guard.dart';
@@ -27,6 +28,11 @@ class MockStackRouter extends Mock implements StackRouter {}
 // verify() matcher captures them without a registerFallbackValue error.
 class _FakePageRouteInfo extends Fake implements PageRouteInfo {}
 
+// P2-10: carries a `ulid` (matching the real eager-mint policy every own
+// profile has in production, P2-2) — ProfileGuard's single-profile
+// auto-select branch now resolves-or-throws on a row's `ulid` before
+// calling `setSelectedProfileId`, so an omitted `ulid` here would make
+// Branch 3's test below throw instead of auto-selecting.
 Future<int> _insertOwnProfile(UserDatabase db, {required int accountId}) {
   return db
       .into(db.learnerProfiles)
@@ -37,6 +43,7 @@ Future<int> _insertOwnProfile(UserDatabase db, {required int accountId}) {
           mode: 'adult',
           createdAt: DateTimeFactory.nowUtc(),
           updatedAt: DateTimeFactory.nowUtc(),
+          ulid: Value('ulid-own-learner-$accountId'),
         ),
       );
 }
@@ -151,23 +158,83 @@ void main() {
       final accountId = await seedAccount(db);
       final profileId = await _insertOwnProfile(db, accountId: accountId);
 
-      final selected = <int>[];
+      final selectedIds = <int>[];
+      final selectedUlids = <String>[];
       final guard = ProfileGuard(
         profilePickerRoute: () => _FakePageRouteInfo(),
         getDatabase: () => db,
         getSelectedProfileId: () => null,
-        setSelectedProfileId: (id, {String? ulid}) => selected.add(id),
+        setSelectedProfileId: (id, {required String ulid}) {
+          selectedIds.add(id);
+          selectedUlids.add(ulid);
+        },
         getAccountId: () => accountId,
         isTutoredSession: () => false,
       );
 
       await guard.onNavigation(resolver, router);
 
-      expect(selected, [profileId]);
+      expect(selectedIds, [profileId]);
+      // P2-10: proves the resolved, non-null ulid actually reaches the
+      // callback — not just that SOME call happened.
+      expect(selectedUlids, ['ulid-own-learner-$accountId']);
       verify(() => resolver.next()).called(1);
       verifyNever(() => resolver.next(false));
       verifyNever(() => router.replace(any()));
     });
+
+    // P2-10: closes the type-level seam a mid-phase review found — the raw
+    // Drift row's `ulid` column stays nullable (a legacy pre-P2-2 row), and
+    // ProfileGuard's `setSelectedProfileId` field is now `{required String
+    // ulid}`, so ProfileGuard itself must resolve-or-throw before ever
+    // calling it. Proves the throw is caught by onNavigation's own fail-open
+    // wrapper (same "not a security gate" contract every other unexpected
+    // throw in this guard already gets), NOT propagated to the caller, and
+    // that `setSelectedProfileId` is never called with a fabricated value.
+    test(
+      'a legacy null-ulid single profile fails OPEN (resolver.next(), no '
+      'setSelectedProfileId call) instead of crashing or fabricating a ulid',
+      () async {
+        // The catch/fail-open path this test exercises reads
+        // `resolver.isResolved` — every other test here that exercises that
+        // same path (see the "unexpected throw" group below) stubs it too.
+        when(() => resolver.isResolved).thenReturn(false);
+
+        final accountId = await seedAccount(db);
+        // Deliberately omits `ulid:` — LearnerProfilesCompanion.insert's
+        // `ulid` column stays nullable (pre-P2-2 legacy shape), unlike
+        // `_insertOwnProfile` above.
+        await db
+            .into(db.learnerProfiles)
+            .insert(
+              LearnerProfilesCompanion.insert(
+                accountId: accountId,
+                displayName: 'Legacy Learner',
+                mode: 'adult',
+                createdAt: DateTimeFactory.nowUtc(),
+                updatedAt: DateTimeFactory.nowUtc(),
+              ),
+            );
+
+        var setSelectedProfileIdCalled = false;
+        final guard = ProfileGuard(
+          profilePickerRoute: () => _FakePageRouteInfo(),
+          getDatabase: () => db,
+          getSelectedProfileId: () => null,
+          setSelectedProfileId: (_, {required String ulid}) =>
+              setSelectedProfileIdCalled = true,
+          getAccountId: () => accountId,
+          isTutoredSession: () => false,
+        );
+
+        await guard.onNavigation(resolver, router);
+
+        expect(setSelectedProfileIdCalled, isFalse);
+        verify(() => resolver.next()).called(1);
+        verifyNever(() => resolver.next(false));
+        verifyNever(() => router.replace(any()));
+      },
+    );
   });
 
   // ── 2+ profiles, none selected → redirect to picker ───────────────────────

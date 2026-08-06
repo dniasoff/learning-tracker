@@ -77,45 +77,43 @@ nothing on disk to diff against. This is the fix, binding from 2026-08-06
 
 ## CURRENT STATE
 
-**Head:** `8dea756b` (P2-8). This commit (P2-9) fixes `T-41`, the second
-and last BLOCKING defect named at end-of-phase review — `8dea756b` remains
-the correct SHA for a cold agent to diff a tree against until P2-9's own SHA
-is knowable (same self-reference lag as every prior closing commit).
-**Found incidentally while rewriting this block, not caused by this
-commit:** P2-8's own commit updated the `Phase:` and `Gates:` fields below
-but left this `Head:` paragraph's prose still reading "This commit (P2-7)…
-`2e85b097`" — i.e. P2-8 (a code-touching commit, bound by the A1 override to
-rewrite `CURRENT STATE` truthfully in its own commit) never actually updated
-its own `Head:` line. Not fixed retroactively (append-only doctrine doesn't
-apply to `CURRENT STATE`, which is deliberately mutable — but P2-8's own
-commit is already landed and unamendable); flagged here, corrected by this
-rewrite.
+**Head:** `ed42c894` (P2-9). This commit (P2-10) fixes four of `T-42`'s
+still-open items — all from a follow-up adversarial review's
+`surviving_backcompat` findings, none of them BLOCKING — `ed42c894` remains
+the correct SHA for a cold agent to diff a tree against until P2-10's own
+SHA is knowable (same self-reference lag as every prior closing commit).
 **Deployed:** still `unknown — not deployed`. P2-6's `learning_order allow
-delete` rules change is **NOT deployed**; P2-7, P2-8 and this commit (P2-9)
+delete` rules change is **NOT deployed**; P2-7 through this commit (P2-10)
 are all docs/`lib`/`test`-only and deploy nothing. Do not attribute a device
 `permission-denied` on `learning_order` delete to a code defect until this
 field says otherwise.
 **Phase:** 0 ✅ · 1 ✅ · **2 — IN PROGRESS, NOT RESOLVED** (P2-0 ✅, P2-1 ✅,
 P2-2 ✅, P2-3 ✅, P2-4 ✅, P2-5 ✅, P2-6 ✅, P2-7 ✅ docs-only, P2-8 ✅ fixed
-BLOCKING DEFECT 1 (T-40), **P2-9 ✅ fixes BLOCKING DEFECT 2 (T-41)**). **Both
-BLOCKING defects are now fixed.** `T-42`'s remaining serious/minor items are
-still open (two of its items were resolved by P2-8 as a documented side
-effect; the rest — the D9 criterion, the `repository_providers.dart` stale
-comment, check 104's `.id.toString()` dedup blind spot, the P2-1 entry's
-false verification claim, and the minor items — are untouched by this
-commit, out of its scope exactly as they were out of P2-8's). **Phase 3
+BLOCKING DEFECT 1 (T-40), P2-9 ✅ fixed BLOCKING DEFECT 2 (T-41), **P2-10 ✅
+fixes four of `T-42`'s minor items**). **Both BLOCKING defects remain
+fixed; no new one found this commit.** `T-42`'s remaining items are still
+open — two were resolved by P2-8 as a documented side effect, four more by
+this commit (P2-10; see its own entry below for exactly which), and the
+rest — the D9 criterion, the `repository_providers.dart` stale comment,
+check 104's `.id.toString()` dedup blind spot, the P2-1 entry's false
+verification claim, and the smaller items — are untouched by this commit,
+out of its scope exactly as they were out of P2-8's and P2-9's. **Phase 3
 must not start until `T-42` is triaged/resolved-or-explicitly-deferred** —
-that is now the ONLY remaining Phase-2-exit condition; no BLOCKING defect
+that is still the ONLY remaining Phase-2-exit condition; no BLOCKING defect
 remains.
-**Gates (P2-9, re-confirmed against HEAD after the fix):** `dart analyze
+**Gates (P2-10, re-confirmed against HEAD after the fix):** `dart analyze
 --fatal-infos` → `No issues found!`. `make audit` green, exit 0, **104**
 checks, true last line (no parenthetical) `=== audit PASSED — all 68 greps
-clean ===`. Check 103's OK line and split set **unchanged**: `PROFILE-KEY-SPLIT
-check OK: 2 collection(s) currently split (bookmarks, learning_order), all
-within the tracked baseline (0 new violations).` Check 104 **unchanged** at
-**88** tracked sites, 0 new, 0 stale. All four match this brief's prediction
-exactly — no deviation. Full `make ci` last green at `5b4d7924`; still
-batched to end of Phase 4 by owner decision (2026-08-06) — unchanged.
+clean ===` — check 102 (the dependency-direction hard gate P2-10's fix
+had to stay inside) confirmed still green at `102/102` within that run.
+Check 103's OK line and split set **unchanged**: `PROFILE-KEY-SPLIT check
+OK: 2 collection(s) currently split (bookmarks, learning_order), all within
+the tracked baseline (0 new violations).` Check 104 **unchanged** at **88**
+tracked sites, 0 new, 0 stale. Both count-only ratchets (check 100 MCF-11,
+check 101 bare-Firebase-instance) also re-measured **unchanged** at their
+tracked baselines (39, 2). All six match this brief's prediction exactly —
+no deviation. Full `make ci` last green at `5b4d7924`; still batched to end
+of Phase 4 by owner decision (2026-08-06) — unchanged.
 
 **IN FLIGHT:** nothing.
 
@@ -168,6 +166,266 @@ stage-definition · study-day-config · track-learning-order.
 ## Entries
 
 Newest first. Append; never rewrite history.
+
+### 2026-08-07 — P2-10: four surviving-back-compat items from a follow-up review cut (greenfield)
+
+Per the P2-10 brief, remediating four items from a follow-up adversarial
+end-of-phase review's `surviving_backcompat`/`defects` findings (JSON at
+`/tmp/.../p2-phase-review.json` this session, not durably stored —
+transcribed here in full per this log's standing convention: a reviewer's
+findings must be recorded in the durable log, not left only in an ephemeral
+artifact). **Process note, same gap as P2-1/P2-4/P2-5/P2-9 before it,
+stated plainly rather than silently corrected:** the brief's own INTERRUPT
+PROTOCOL required an IN FLIGHT entry before the first edit; this session's
+first edit landed before one was appended. The work was completed in one
+uninterrupted sitting, so — matching the established precedent — this entry
+is the honest same-commit record; `CURRENT STATE`'s `IN FLIGHT` field was
+never left non-`nothing` for a cold agent to find.
+
+**Re-verified each of the four before fixing it**, per the brief's own
+instruction that a reviewer's finding is not automatically right:
+
+- **Mint-fallback overclaim** — confirmed real. `grep -n "DocIds.mintProfileUlid()"
+  lib/features/profiles/data/repositories/profile_repository_impl.dart`
+  showed four call sites (then `:113,:355,:615,:647` — shifted from the
+  review's `:99,:341,:573,:606` because P2-8/P2-9 added code above them in
+  the meantime), plus a fifth, dormant, uncalled-from-`lib/` formula at
+  `doc_ids.dart:661`. `0d5d9125`'s commit message and this log's own P2-2
+  entry do say "exactly one site in the whole codebase mints a profile's
+  identity" — measurably false as written (true only about production
+  *reachability*, never about the literal source text).
+- **`FirestoreProfileRepositoryAdapter.updateProfile` dead-weight** —
+  confirmed real. Read `:567-589` directly: an `async` method whose only
+  content beyond the `_drift.updateProfile(...)` call was a five-line
+  comment restating ground the class doc comment's "Identity policy" and
+  "A profile created while offline still gets its remote document" sections
+  already cover.
+- **`ProfileGuard` nullable identity seam** — confirmed real. `grep -n
+  "setSelectedProfileId" lib/core/navigation/guards/profile_guard.dart
+  lib/app/router/router_provider.dart` showed the field typed
+  `void Function(int, {String? ulid})`, closed only by a runtime
+  `ulid ?? (throw StateError(...))` inside `router_provider.dart`'s
+  closure — nothing at the type level stopped a different wiring (a new
+  screen, a test double promoted into production, a future refactor) from
+  supplying `null` and having it silently accepted.
+- **`BookmarkRepositoryNotReadyException` incomplete causes** — confirmed
+  real. Read `bookmark_repository_impl.dart:366-395` directly: the doc
+  comment and `toString()` both still said "no active account, or no
+  active learner profile" — two causes — while the adapter's own class doc
+  comment (point 6, landed at P2-5/T-35) has described a third, a tutored
+  session's write refusal, since earlier this phase.
+
+**Also checked, per the brief's "if you conclude it is NOT a real defect,
+say so" instruction, and found already resolved by an earlier commit —
+not re-fixed here, flagged so nobody chases a phantom:** the review's
+`surviving_backcompat` array also lists (a) `ProfileDao.upsertFromSync` and
+(b) `DataExportImportService` still inserting `ulid IS NULL` rows, and (c)
+`ensureDefaultProfile`'s adapter/impl "double-decision" bridge. The review
+that produced this list ran against a tree at/before `2e85b097`; (a) and
+(b) were fixed by P2-9 (`ProfileSyncMissingUlidException`, export/import
+now carrying `ulid` both ways — see that entry above) and (c) was fixed by
+P2-8 (`ProfileRepositoryImpl.tryGetProfileById`, a single post-hoc
+decision) — both already landed by the time this session started. Verified
+directly on this tree, not assumed from either log entry: `grep -n "ulid"
+lib/core/database/daos/profile_dao.dart` shows `upsertFromSync`'s insert
+branch throwing `ProfileSyncMissingUlidException`, not inserting;
+`lib/features/profiles/data/repositories/profile_repository_impl.dart:601-625`
+(the adapter's `ensureDefaultProfile`) makes one decision from
+`_drift.tryGetProfileById`'s return, not two independent reads. The
+review's own `defects` array elsewhere lists the *drift* column staying
+nullable as explicitly "NOT a defect" (plan §4 P2-2 rules it in) — also
+untouched, correctly.
+
+**Fix 1 — mint fallback collapsed to one call site, for real.** Added a
+single top-level function, `_resolveProfileUlid(String? ulid) => ulid ??
+DocIds.mintProfileUlid()`, to `profile_repository_impl.dart` — the ONE
+place `DocIds.mintProfileUlid()` is called anywhere in `lib/` now
+(verified: `grep -rn "DocIds.mintProfileUlid()" lib/` returns exactly one
+line, the function's own body). All four prior call sites
+(`ProfileRepositoryImpl.createProfile`/`.ensureDefaultProfile`,
+`FirestoreProfileRepositoryAdapter.createProfile`/`.ensureDefaultProfile`)
+now call this function instead of the minter directly. **Why
+`ProfileRepositoryImpl`'s own two call sites could not simply become
+`required String ulid` instead** (the brief's preferred, stronger fix) —
+recorded here as the brief required, since a single site was genuinely
+unreachable for a stated structural reason: `ProfileRepositoryImpl`
+deliberately still `implements ProfileRepository` in full (not just as an
+adapter-wrapped implementation detail) so it can be used standalone as a
+local-only repository —
+`test/features/profiles/presentation/widgets/profile_edit_delete_actions_test.dart`'s
+AUD-profiles-02 test does exactly this
+(`profileRepositoryProvider.overrideWithValue(repo)` where `repo` is a bare
+`ProfileRepositoryImpl`, to prove `TutorWriteException` propagation without
+any Firestore machinery in the way) — and `ProfileRepository.createProfile`/
+`.ensureDefaultProfile` must keep `ulid` optional for every OTHER caller
+(screens can never supply one; check 102 forbids them importing `DocIds`).
+Verified directly, not assumed, that Dart forbids narrowing an inherited
+optional named parameter to required: a minimal repro
+(`abstract class A { void foo({String? x}); } class B implements A {
+@override void foo({required String x}) {} }`) produces `dart analyze`
+error `invalid_override`. `_resolveProfileUlid` is the compile-cheapest way
+to make the "one site" claim literally true regardless — a genuine
+improvement over the four-textual-call-sites state, not merely a
+re-recording of the same behavior, and it costs zero test-fixture churn
+(confirmed: the function's fallback behavior for a caller-omitted `ulid` is
+byte-identical to before, so nothing that previously worked without
+supplying `ulid:` explicitly changed shape).
+
+**Fix 2 — `updateProfile` collapsed to a plain pass-through**, matching the
+style `getProfilesByAccount`/`getProfileById`/`countProfilesForAccount`/
+`deleteProfile` already use in the same class: an expression-bodied
+one-liner delegating straight to `_drift.updateProfile(...)`, comment
+deleted (the ground it covered is already in the class doc comment).
+
+**Fix 3 — the `ProfileGuard`/`setSelectedProfileId` seam closed at the type
+level**, not just re-recorded. `ProfileGuard`'s own field is now `final
+void Function(int, {required String ulid}) _setSelectedProfileId` (was
+`{String? ulid}`) — the compiler, not a caller's discipline, now enforces
+that anything wired into this slot only ever gets called with a proven
+`String`. The resolve-or-throw moved to live INSIDE `ProfileGuard._resolve`
+itself, at its single-profile auto-select branch — the class that actually
+holds the nullable Drift row is the one that resolves it, rather than
+deferring the check into whichever closure a particular wiring (today,
+`router_provider.dart`; potentially something else tomorrow) happens to
+supply. Same message shape as `ProfileModel.fromDriftRow`'s existing
+enforcement ("pre-P2-2 profile row with no ULID — wipe and reseed the
+device"), and the throw is still caught by `ProfileGuard.onNavigation`'s
+own pre-existing fail-open wrapper (unchanged this commit) — a legacy
+null-ulid single profile now fails OPEN (`resolver.next()`, logged) rather
+than crashing the app, consistent with this guard's own stated "not a
+security gate" contract. `router_provider.dart`'s closure simplified to a
+pure forward (`ref.read(selectedProfileIdProvider.notifier).select(id,
+ulid: ulid)`) — its old inline `?? (throw StateError(...))` is now
+unreachable dead code (the type no longer admits `null` reaching it) and
+was deleted rather than left in place. **Verified this compiles against
+every existing caller without touching them:** eight files construct
+`ProfileGuard(...)` with a `setSelectedProfileId:` closure typed
+`{String? ulid}` (mostly no-op test doubles); Dart's assignment variance
+allows a closure that declares a parameter *optional* to satisfy a target
+function type that declares it *required* (the closure accepts every call
+the stricter type permits) — confirmed directly with a minimal repro
+before relying on it, not assumed. `dart analyze --fatal-infos` over the
+whole tree (which covers `test/`) returned `No issues found!`, confirming
+this for real, not just for the repro.
+
+**Test-file blast radius — the one real behavior change this commit makes,
+found and fixed in the same commit:** `test/core/navigation/profile_guard_test.dart`'s
+own `_insertOwnProfile` helper seeded a profile with no `ulid`, and its
+"auto-selects single profile and calls resolver.next()" test relied on that
+row reaching `setSelectedProfileId` successfully — exactly the case Fix 3
+now refuses. `_insertOwnProfile` now sets `ulid: Value('ulid-own-learner-
+$accountId')` (matching the real eager-mint policy every own profile
+carries in production since P2-2), and that test now also asserts the
+resolved `ulid` string actually reaches the callback, not just that some
+call happened. Every OTHER `ProfileGuard(...)` construction site across the
+other seven files was checked individually and found NOT to reach the
+ulid-check branch at all: five (`app_shell_test.dart`,
+`app_shell_an6_test.dart`, `run10_p0_switch_profile_locks_pin_guard_test.dart`,
+`e2e_harness.dart`, and `profile_guard_test.dart`'s own "valid profile
+already selected" test) pass `getSelectedProfileId: () => <the seeded
+id>`, which short-circuits at the guard's "already selected, valid" branch
+before ever reaching the single-profile auto-select code; one
+(`sign_in_local_signout_throws_test.dart`'s `_StubProfileGuard`) supplies a
+`getDatabase` that throws immediately, failing open before the profile
+fetch even runs; one (`parent_escalation_pin_gating_test.dart`'s Group 1)
+never invokes `onNavigation` at all (router-config inspection only) and its
+Group 2 chains `ChildModeGuard`+`PinGuard`, not `ProfileGuard`. **New test
+added**, proving the refusal itself: "a legacy null-ulid single profile
+fails OPEN (resolver.next(), no setSelectedProfileId call) instead of
+crashing or fabricating a ulid" — seeds a profile with no `ulid` directly
+(bypassing `_insertOwnProfile`), asserts `setSelectedProfileId` is never
+called and `resolver.next()` still fires (stubbing `resolver.isResolved`,
+matching this file's own pre-existing pattern for exercising the fail-open
+catch path).
+
+**Fix 4 — `BookmarkRepositoryNotReadyException` now names all three
+causes**, in both its doc comment and `toString()`: no active account, no
+active learner profile, or a tutored session's write refusal (pointing at
+the adapter's own class doc, point 6, rather than duplicating that
+explanation inline). `test/tool/check_profile_path_keying_test.dart:959`
+— **checked carefully, not assumed** — does NOT contain a functional
+assertion on the real exception's `toString()`; the only match in the
+whole file is a descriptive test-title string citing "bookmark_repository_
+impl.dart:408" as the historical inspiration for a *synthetic* fixture the
+test builds itself (confirmed via `git show HEAD` that line 408 was
+already part of an unrelated numbered-list doc comment, not the
+`toString()`, before this session touched anything — the citation was
+already stale, unrelated to this commit). The test's substantive claim
+(a provider name embedded inside an exception's `toString()`) stays true
+after this fix; the stale, rot-prone line-number citation was replaced
+with a citation-free description in the same commit anyway, since it sits
+directly next to code this commit touched and a future reader should not
+have to re-derive that the staleness predates P2-10.
+
+**`firestore-cutover-tasks.md` updated in the same commit** — `T-42`'s row
+now records these four sub-items as resolved by P2-10, names which of
+`surviving_backcompat`'s items were already resolved by P2-8/P2-9, and
+keeps the remaining open items enumerated (D9's criterion, the
+`repository_providers.dart` stale reason, check 104's dedup blind spot, the
+P2-1 false-verification claim, and the smaller items) — still `todo`,
+Phase 2 still not resolved.
+
+**Gates (verbatim, run after `dart format`):**
+```
+$ dart analyze --fatal-infos
+Analyzing learning_tracker...
+No issues found!
+
+$ dart run tool/check_profile_path_keying.dart | tail -1
+PROFILE-KEY-SPLIT check OK: 2 collection(s) currently split (bookmarks, learning_order), all within the tracked baseline (0 new violations).
+
+$ dart run tool/check_profile_id_int_sites.dart | tail -1
+PROFILE-ID-INT-SITES OK: 88 tracked site(s) across 5 pattern(s) [cf-int-guard, cf-string-profileid-doc, dart-int-profileid-param, dart-tutoring-int-parse, dart-tutoring-id-tostring]; 0 new, 0 stale.
+
+$ make audit; echo "EXIT=$?"
+... (104 checks; 102/102 — AD-23/AD-28 dependency-direction hard gate green;
+WATCHLIST paragraphs unchanged in content) ...
+=== audit PASSED — all 68 greps clean ===
+EXIT=0
+
+$ dart run tool/check_mcf11_autoincrement_id_in_payload_ratchet.dart | tail -1
+MCF-11 autoincrement-id-in-payload ratchet passed — 39 site(s) outside merge/ (tracked baseline: 39, AD-5/AD-28, docs/test-artifacts/mcf11-autoincrement-id-in-payload-sweep.md).
+
+$ dart run tool/check_bare_firebase_instance_ratchet.dart | tail -1
+Bare-Firebase-instance ratchet passed — 2 site(s) (tracked baseline: 2, AD-2/AD-28).
+
+$ dart format <7 touched files>
+Formatted 7 files (0 changed).
+```
+No deviation. All six gates match this brief's prediction exactly: `dart
+analyze` green; check 103's OK line and split set unchanged (none of this
+commit's changes touch a doc-id formula or a profile-path collection);
+check 104 unchanged at 88 entries/0 new/0 stale (nothing here is an
+int-typed profile-identity site); `make audit` green at 104/104 including
+check 102 (the hard gate this commit's own design had to respect —
+`ProfileRepositoryImpl` stays under `data/repositories/`, so check 102's
+scan never sees it either way, and no new `lib/features/**` file imports
+`DocIds`); both count-only ratchets unchanged at their tracked baselines
+(no new site outside `lib/core/sync/merge/` feeds an autoincrement id into
+a payload key, no new bare Firebase-instance access — this commit touches
+neither concern).
+
+**`make test` not run, per the owner's binding NO FULL CI instruction for
+this remediation session** (matching the standard every P2-2 through P2-9
+commit already applied under the same constraint) — not even narrowly on
+`test/core/navigation/profile_guard_test.dart`, the one file whose behavior
+this commit actually changes. **Deferred verification, D14 (new):** run
+`flutter test test/core/navigation/profile_guard_test.dart` (or `make
+test`) and confirm the new "legacy null-ulid single profile fails OPEN"
+test and the rewritten "auto-selects single profile" test both pass, not
+just compile. Correctness was argued from tracing `ProfileGuard._resolve`'s
+new branch directly against the test's mock setup (including the
+`resolver.isResolved` stub the fail-open path requires, matching this
+file's own pre-existing pattern for that exact path) — not confirmed by
+running it. The other three fixes (mint-fallback collapse,
+`updateProfile` pass-through, `BookmarkRepositoryNotReadyException`) change
+no test-observable behavior (traced directly: `_resolveProfileUlid`'s
+fallback behavior is byte-identical to the four call sites it replaces;
+`updateProfile`'s collapsed body calls the exact same `_drift.updateProfile`
+with the exact same arguments; the exception's `toString()`/doc-comment
+change touches no assertion anywhere in the suite, confirmed by the
+`check_profile_path_keying_test.dart` grep above) — lower-risk, but still
+unexecuted this session for the same reason.
 
 ### 2026-08-07 — P2-9: T-41 fixed — both live null-ulid profile-row inserters now refuse or carry the real identity
 

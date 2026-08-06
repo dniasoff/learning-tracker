@@ -9,9 +9,11 @@ import 'package:learning_tracker/core/utils/date_utils.dart';
 // P2-2: this file lives under `data/repositories/` — the directory
 // `check_dependency_direction.dart` (audit check 102) exempts from the
 // "no lib/features/** → lib/data/** import" rule — so it is the one place
-// allowed to mint a profile's Firestore identity directly. See
-// `ProfileRepository.createProfile`'s doc comment for why every OTHER
-// caller (screens, `profile_providers.dart`) never mints one itself.
+// allowed to import DocIds at all. P2-10: within this file, only
+// `_resolveProfileUlid` (below) ever calls `DocIds.mintProfileUlid()` — see
+// that function's own doc comment. See `ProfileRepository.createProfile`'s
+// doc comment for why every OTHER caller (screens, `profile_providers.dart`)
+// never mints one itself.
 import 'package:learning_tracker/data/firestore/doc_ids.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
@@ -22,6 +24,38 @@ import 'package:learning_tracker/features/profiles/domain/repositories/profile_r
 import 'package:learning_tracker/features/tutoring/tutoring.dart';
 
 final _log = AppLogger.instance;
+
+/// Resolves [ulid] to a value guaranteed non-null. **This is the ONE call
+/// site in the codebase that ever calls [DocIds.mintProfileUlid] — every
+/// place that used to call the minter directly (`ProfileRepositoryImpl`'s
+/// `createProfile`/`ensureDefaultProfile`, `FirestoreProfileRepositoryAdapter`'s
+/// same two methods) now routes through this function instead.** A prior
+/// version of this file made that claim about "exactly one site mints" while
+/// four separate lines each called `DocIds.mintProfileUlid()` directly —
+/// true only in the sense that production traffic always resolves through
+/// the adapter first (see [FirestoreProfileRepositoryAdapter.createProfile]),
+/// never a literal fact about the source text a reader could grep for. This
+/// function makes the grep and the claim agree: `grep -rn
+/// 'DocIds.mintProfileUlid()' lib/` now returns exactly one line, here.
+///
+/// [ProfileRepositoryImpl] still cannot make its own [ulid] parameter
+/// `required` — it deliberately keeps implementing the full
+/// [ProfileRepository] interface (not just the adapter-wrapped path) so a
+/// caller can use it standalone as a local-only repository, no Firestore
+/// adapter involved (`profile_edit_delete_actions_test.dart`'s
+/// AUD-profiles-02 test does exactly this, overriding
+/// `profileRepositoryProvider` with a bare `ProfileRepositoryImpl` to prove
+/// `TutorWriteException` propagation without any Firestore machinery in the
+/// way) — and [ProfileRepository.createProfile]/`.ensureDefaultProfile`
+/// declare [ulid] optional for every OTHER caller (screens can never supply
+/// one; check 102 forbids them importing [DocIds]). Dart's override rules
+/// forbid narrowing an inherited optional named parameter to required
+/// (verified directly: `dart analyze` on a minimal repro reports
+/// `invalid_override`), so as long as [ProfileRepositoryImpl] implements
+/// [ProfileRepository], its `ulid` parameter must stay `String?` too. This
+/// function is the compile-time-cheapest way to guarantee only one place
+/// ever manufactures a fresh value regardless.
+String _resolveProfileUlid(String? ulid) => ulid ?? DocIds.mintProfileUlid();
 
 /// Implementation of [ProfileRepository] using Drift database.
 ///
@@ -108,9 +142,9 @@ class ProfileRepositoryImpl implements ProfileRepository {
     // identity at creation, atomically with the Drift insert below, never
     // left null for a later edit to lazily backfill. [ulid] is normally
     // already minted by the caller (`FirestoreProfileRepositoryAdapter`);
-    // the fallback here only fires for a caller that bypasses the adapter
-    // (e.g. a test constructing this class directly).
-    final resolvedUlid = ulid ?? DocIds.mintProfileUlid();
+    // [_resolveProfileUlid]'s own fallback only fires for a caller that
+    // bypasses the adapter (e.g. a test constructing this class directly).
+    final resolvedUlid = _resolveProfileUlid(ulid);
     final id = await _db.profileDao.insertProfile(
       LearnerProfilesCompanion.insert(
         accountId: accountId,
@@ -352,7 +386,7 @@ class ProfileRepositoryImpl implements ProfileRepository {
     // [createProfile]. Only reached on the self-heal path (the fast-path
     // return above never gets here), so nothing is wasted minting on a
     // no-op call.
-    final resolvedUlid = ulid ?? DocIds.mintProfileUlid();
+    final resolvedUlid = _resolveProfileUlid(ulid);
 
     // Single transaction: create the profile, then re-parent any orphaned
     // `profile_id = 0` rows that were written before a profile existed (e.g. a
@@ -492,8 +526,10 @@ class ProfileRepositoryImpl implements ProfileRepository {
 ///
 /// Every profile is minted a Firestore identity BEFORE its Drift row is
 /// ever inserted — [createProfile] and the self-heal branch of
-/// [ensureDefaultProfile] mint via `DocIds.mintProfileUlid()` first, then
-/// pass the same value into [_drift]'s insert, so the row and its `ulid`
+/// [ensureDefaultProfile] mint via `_resolveProfileUlid` (this file's
+/// top-level function, the one place `DocIds.mintProfileUlid()` is ever
+/// called) first, then pass the same value into [_drift]'s insert, so the
+/// row and its `ulid`
 /// come into existence atomically. There is no longer a lazy, on-edit
 /// backfill path: [updateProfile] does not mint. A profile created before
 /// this policy shipped (schema v38, pre-P2-2) can still have `ulid IS
@@ -563,30 +599,25 @@ class FirestoreProfileRepositoryAdapter implements ProfileRepository {
   Future<int> countProfilesForAccount(int accountId) =>
       _drift.countProfilesForAccount(accountId);
 
+  // P2-10: was a verbose async pass-through whose only content was a
+  // comment explaining what it no longer does (no lazy ulid backfill on
+  // edit — see the class doc comment's "Identity policy" and "A profile
+  // created while offline still gets its remote document" sections, which
+  // already cover this ground). Collapsed to match the plain forwarding
+  // style [getProfilesByAccount]/[getProfileById]/[countProfilesForAccount]/
+  // [deleteProfile] already use above — [_drift] does the only real work.
   @override
   Future<ProfileModel> updateProfile({
     required int id,
     String? displayName,
     String? mode,
     int? avatarIndex,
-  }) async {
-    final updated = await _drift.updateProfile(
-      id: id,
-      displayName: displayName,
-      mode: mode,
-      avatarIndex: avatarIndex,
-    );
-    // P2-2: no lazy backfill here anymore — every profile's `ulid` is
-    // minted eagerly at creation (see class doc comment, "Identity
-    // policy"). A pre-P2-2 legacy row can still have `ulid == null`; under
-    // the greenfield ruling a missing ULID is not healed here — wipe and
-    // reseed the device is the remedy, not a mint-on-edit path. That is a
-    // DIFFERENT gap from a row that already has a ulid but is missing its
-    // remote document — T-40: that case IS healed, just not by this method
-    // — see the class doc comment, "A profile created while offline still
-    // gets its remote document", for the activation-triggered call path.
-    return updated;
-  }
+  }) => _drift.updateProfile(
+    id: id,
+    displayName: displayName,
+    mode: mode,
+    avatarIndex: avatarIndex,
+  );
 
   @override
   Future<void> deleteProfile(int id, {bool allowLast = false}) =>
@@ -605,14 +636,16 @@ class FirestoreProfileRepositoryAdapter implements ProfileRepository {
     int avatarIndex = 0,
     String? ulid,
   }) async {
-    // P2-2: mint BEFORE the Drift insert (single site — this is the only
-    // production caller of `DocIds.mintProfileUlid()` for profiles) and
-    // thread the same value through to [_drift], so the local row and the
-    // eventual Firestore document always agree on the id. A caller-supplied
-    // [ulid] (tests only, in production this is always omitted here) is
-    // honored rather than re-minted, so two independent identities are
-    // never produced for the same creation.
-    final resolvedUlid = ulid ?? DocIds.mintProfileUlid();
+    // P2-2: mint BEFORE the Drift insert — this is the only PRODUCTION
+    // caller of `_resolveProfileUlid` that ever actually needs its fallback
+    // to fire (see that function's own doc comment for why it, not this
+    // call site, is the literal one place `DocIds.mintProfileUlid()`
+    // appears in `lib/`) — and thread the same value through to [_drift],
+    // so the local row and the eventual Firestore document always agree on
+    // the id. A caller-supplied [ulid] (tests only, in production this is
+    // always omitted here) is honored rather than re-minted, so two
+    // independent identities are never produced for the same creation.
+    final resolvedUlid = _resolveProfileUlid(ulid);
     final model = await _drift.createProfile(
       accountId: accountId,
       displayName: displayName,
@@ -637,14 +670,15 @@ class FirestoreProfileRepositoryAdapter implements ProfileRepository {
     // disagreed, [_drift] could mint and insert a new row while this
     // adapter — deciding from its OWN stale read — believed no creation
     // happened and skipped the heal entirely. Minting eagerly and
-    // unconditionally costs nothing to waste (`DocIds.mintProfileUlid()` is
-    // a pure local generator, no I/O — see [createProfile]'s comment); the
+    // unconditionally costs nothing to waste (`_resolveProfileUlid`'s
+    // fallback is a pure local generator, no I/O — see [createProfile]'s
+    // comment); the
     // fast (no-op) path inside [_drift.ensureDefaultProfile] simply ignores
     // it. [_drift.tryGetProfileById] never throws for a legacy pre-P2-2
     // `ulid IS NULL` row — see its own doc comment — so the fast path
     // landing on such a row (never backfilled here, "Identity policy")
     // safely skips the heal instead of crashing.
-    final resolvedUlid = ulid ?? DocIds.mintProfileUlid();
+    final resolvedUlid = _resolveProfileUlid(ulid);
     final id = await _drift.ensureDefaultProfile(
       accountId: accountId,
       defaultDisplayName: defaultDisplayName,

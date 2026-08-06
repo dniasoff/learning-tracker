@@ -20,9 +20,15 @@ abstract class ProfileRepository {
   /// which lives in `data/repositories/` and is therefore the one place
   /// allowed to import `DocIds` (`check_dependency_direction.dart` / audit
   /// check 102 forbids that import everywhere else under `lib/features/**`).
-  /// A caller that omits it (any bare `ProfileRepositoryImpl` construction,
-  /// e.g. in tests) still gets one — the implementation mints a fallback
-  /// rather than ever leaving the row's identity null.
+  /// It must stay optional here — Dart forbids an overriding method from
+  /// narrowing an inherited optional named parameter to required — so
+  /// `ProfileRepositoryImpl` (the other implementation, used standalone as
+  /// a local-only repository by some tests) keeps the same optional shape.
+  /// A caller that omits it still gets one: both implementations resolve a
+  /// missing [ulid] through `profile_repository_impl.dart`'s
+  /// `_resolveProfileUlid` (P2-10) — the single place in the codebase that
+  /// ever calls `DocIds.mintProfileUlid()` — rather than ever leaving the
+  /// row's identity null.
   Future<ProfileModel> createProfile({
     required int accountId,
     required String displayName,
