@@ -77,30 +77,40 @@ nothing on disk to diff against. This is the fix, binding from 2026-08-06
 
 ## CURRENT STATE
 
-**Head:** this commit (P2-6) — SHA unknowable within its own commit, same
-self-reference lag as before. Parent is `30790fef` (P2-5, verified via `git
-log --oneline -1` at P2-6 start).
-**Deployed:** unknown — the rules change this commit makes (`learning_order`
-`allow delete`) is **NOT deployed**. The tree is ahead of the deployed rules;
-deployment is the owner's call, not this agent's. Do not attribute a device
-`permission-denied` on `learning_order` delete to a code defect until this
-field says otherwise.
-**Phase:** 0 ✅ · 1 ✅ · **2 in progress** (P2-1 ✅, P2-2 ✅, P2-3 ✅, P2-4 ✅,
-P2-5 ✅, P2-6 ✅, P2-7 not started).
-**Gates:** `dart analyze --fatal-infos` → `No issues found!` (0 issues in
-both `lib/` and `test/`). `make audit` green (**104** checks, unchanged;
-`=== audit PASSED — all 68 greps clean ===`). Check 104 (PROFILE-ID-INT-SITES)
-unchanged at **88 entries**, 0 new, 0 stale — P2-6 touches no int-keyed
-profile-identity site. Check 103's OK line and split set are **unchanged**: 2
-collections (bookmarks, learning_order), 0 new violations — adding a delete
-to an already-live-split ULID repo moves no bucket, exactly as predicted.
-Full `make ci` last green at `5b4d7924`; batched to end of Phase 4 by owner
-decision (2026-08-06).
+**Head:** `2e85b097` (P2-6). This commit (P2-7) lands docs only, on top of
+it — no `lib/`, `test/`, or `tool/` file touched, so `2e85b097` remains the
+correct SHA for a cold agent to diff a tree against until P2-7's own SHA is
+knowable (same self-reference lag as every prior closing commit — state the
+previous SHA rather than a hash that cannot exist yet; that lag is exactly
+what made this field false at the start of the phase).
+**Deployed:** still `unknown — not deployed`. P2-6's `learning_order allow
+delete` rules change is **NOT deployed**; this session is docs-only and
+deploys nothing. Do not attribute a device `permission-denied` on
+`learning_order` delete to a code defect until this field says otherwise.
+**Phase:** 0 ✅ · 1 ✅ · **2 — IN PROGRESS, NOT RESOLVED** (P2-0 ✅, P2-1 ✅,
+P2-2 ✅, P2-3 ✅, P2-4 ✅, P2-5 ✅, P2-6 ✅, **P2-7 ✅ docs-only — closes the
+phase's paperwork, not the phase**). An end-of-phase review found **two
+BLOCKING defects** no gate this phase runs can see — see the P2-7 entry
+below, and `T-40`/`T-41` in `firestore-cutover-tasks.md`. **Phase 3 must not
+start until both are fixed and re-verified.**
+**Gates:** `dart analyze --fatal-infos` → `No issues found!` (0 issues,
+`lib/` and `test/`). `make audit` green, **104** checks total
+(`=== audit PASSED — all 68 greps clean ===` — this is the **true** last
+line; four earlier entries in this log append a `(104/104 checks)`
+parenthetical that is not actually part of `make audit`'s output — flagged
+in the P2-7 entry, not retroactively edited into those append-only
+entries). Check 104 (PROFILE-ID-INT-SITES) baseline is **88 entries** — a
+**measured** first-run count, not the plan's "~31" prediction (P2-1's
+deviation). Check 103's OK line and split set unchanged all phase: **2**
+collections (`bookmarks`, `learning_order`), 0 new violations. Full
+`make ci` last green at `5b4d7924`; still batched to end of Phase 4 by owner
+decision (2026-08-06) — unchanged.
 
 **IN FLIGHT:** nothing.
 
 **Live on Firestore (4):** bookmarks · learning-order · profile identity ·
-scheduler learning-order read.
+scheduler learning-order read. **Unchanged this phase** — Phase 2 moved no
+feature; nothing here is promoted, that is Phase 3's line to move.
 **Dead adapters (7):** completion · curriculum-track · goal · progress ·
 stage-definition · study-day-config · track-learning-order.
 
@@ -122,12 +132,304 @@ stage-definition · study-day-config · track-learning-order.
   code.
 - **Doc comments here are load-bearing and go stale.** A stale comment caused
   the deletion of a live feature. Verify a claim against code before acting.
+- **Audit check 103 classifies INT writers by file location** (`lib/core/sync/**`,
+  `functions/src/**` — `check_profile_path_keying.dart:54-66`), not by
+  keying. It cannot register Phase 2 or Phase 3 progress until those
+  directories are deleted, and it cannot see `learner_profiles` itself,
+  `tutor_active_access`, or any doc-id formula. Check 104 exists to cover
+  the identity sites; **neither check covers doc-id formulas** (that gap is
+  what let T-34's divergent bookmark doc-id go undetected by every gate).
+- **`pushLearnerProfile` still writes an int-keyed `learner_profiles` twin**
+  on every profile create/update (`profile_repository_impl.dart:119,187,379`).
+  It is ungated by 103 (the parent collection, not a child, is outside its
+  scan) and out of 104's scope by design. It dies with the sync engine in
+  Phase 4 — not sooner.
+- **Tutoring's `profileId` is a live Firestore path segment** for 13 read
+  collections (`pull_pipeline.dart:73-98`) and 9 write collections
+  (`tutor_writes.ts:187` + 12 call sites). It is in **Phase 3's** migration
+  unit, not Phase 2's — re-keying it alone strands both directions,
+  silently, with every gate available this phase green. This is Q1's
+  ruling (§3 of `firestore-phase2-plan.md`), restated here as a standing
+  fact so it survives past the plan document itself.
 
 ---
 
 ## Entries
 
 Newest first. Append; never rewrite history.
+
+### 2026-08-06 — P2-7: Phase 2 docs pass lands — PHASE NOT RESOLVED, two blocking defects named
+
+**What this commit is and is not.** Per `docs/planning/firestore-phase2-plan.md`
+§8, this commit resolves the three planning documents' bookkeeping for
+Phase 2. **It does not resolve Phase 2 itself.** An end-of-phase review run
+against `HEAD = 2e85b097` (the full P2-0..P2-6 sequence below) returned
+verdict **incomplete**, naming two BLOCKING defects that survive every gate
+this phase runs. Per this log's own brief convention ("Report — not
+silently absorb — anything contradicting the standing facts"), this entry
+transcribes the review's findings **in full** rather than pointing at a
+document that lives nowhere durable. **Phase 3 must not start until both
+BLOCKING defects are fixed and re-verified — `T-40`/`T-41` below.**
+
+**Commit sequence landed this phase** (all on `dev`; gates for each are in
+that commit's own entry below): `b076006c`/`fe9b4a96` (P2-0, plan+log
+scaffolding — two commits, the second an unplanned stash-investigation
+follow-up), `4877c7ef` (P2-1, check 104), `0d5d9125` (P2-2, eager mint),
+`feefe34b` (P2-3, `ProfileModel.ulid` required), `b398bea5` (P2-4, T-34
+deletion), `30790fef` (P2-5, T-35 hoist), `2e85b097` (P2-6, T-33 owner
+delete).
+
+---
+
+#### BLOCKING DEFECT 1 — the replacement for the deleted lazy ULID backfill heals nothing
+
+Plan §4 P2-2 mandated an idempotent create-if-missing on profile
+**activation**; what landed (`_ensureFirestoreProfile`) runs only at
+**creation**. `grep -rn '_ensureFirestoreProfile' lib/` shows call sites
+only at `profile_repository_impl.dart:581` (inside `createProfile`) and
+`:614` (inside `ensureDefaultProfile`'s `needsHeal` branch) — no
+selection/activation call site anywhere. The deleted lazy backfill was the
+**only** path that ever created a MISSING remote document after the fact;
+its replacement fires at exactly the instant that already failed, with zero
+retry and zero later trigger. **A profile created while offline gets a
+local ULID and permanently no remote document.** Five separate load-bearing
+statements assert a heal that does not exist:
+`profile_repository_impl.dart:503-506` ("still gets its remote document the
+next time `[_ensureFirestoreProfile]` runs for it"), `:619-629`, the
+catch-block comment at `:654-657` ("a later call to this method... retries
+the unconditional merge write and heals it"), commit `0d5d9125`'s own
+message, and this log's own P2-2 entry below (`:644-647` in that entry's
+numbering — "no more window where a row exists with `ulid IS NULL` on a
+path this adapter controls," true only for one of the two paths, and
+irrelevant to *remote-doc* existence anyway). **A naive "call it from
+selection too" fix is unsafe as stated:**
+`FirestoreLearnerProfileRepository.createProfile` writes `created_at` under
+`SetOptions(merge:true)`; calling it on every activation would clobber the
+remote `created_at`. The fix needs a dedicated `ensureProfile` that omits
+`created_at`, not a reuse of `createProfile`. **Tracked as `T-40`.**
+
+#### BLOCKING DEFECT 2 — two live paths still insert `ulid IS NULL` rows, and P2-3 made that a hard crash
+
+`ProfileDao.upsertFromSync` (`profile_dao.dart:113-134`) — the sync-pull
+merge path, wired in production via `drift_merge_store.dart:325` →
+`merge_router_provider.dart:74`'s `LearnerProfileMerger` — builds its
+`LearnerProfilesCompanion.insert(...)` with no `ulid`.
+`DataExportImportService` does the same on both sides (export map
+`data_export_import_service.dart:198-210` carries no `'ulid'` key; import
+companion `:627-641` sets none) — unlike the sibling `learningLedger` block,
+which does carry `ulid` on both sides (`:358`, `:905`). A backup round-trip
+strips profile identity. Post-P2-3, `ProfileModel.fromDriftRow`
+(`profile_model.dart:57-64`) throws `StateError` on exactly that row shape
+— and **P2-3 itself added three NEW production call sites that route
+straight into the crash**: `device_restore_screen.dart`
+(`ProfileModel.fromDriftRow(profiles.first)`), `sign_in_controller.dart`
+(×2, `reconcileProfile`/`soleProfile`). `learner_profiles.dart:63-64`'s
+claim — "a profile created under this policy is NEVER observed with `ulid
+IS NULL`" — is false for these two paths; R3 in the plan's risk register
+covers only the *legacy pre-P2-2* null case, not a *live sync merge or
+import* manufacturing a fresh null row today. **Tracked as `T-41`.**
+
+---
+
+#### SERIOUS DEFECTS (do not block Phase 3 by themselves; unaddressed; collectively tracked as `T-42`)
+
+1. **P2-5's own recorded regression criterion is factually wrong**, and it
+   is the stated pass criterion for the one device check (D9) meant to
+   discriminate "hoist worked" from "was already empty for an unrelated
+   reason." Both the P2-5 commit body and this log's P2-5 entry (below)
+   state the talmid's scheduler "renders NOTHING" during a tutored session.
+   It does not: `scheduler_engine.dart:531-560` falls back to natural
+   `sortOrder` once `customOrder.isEmpty`, and content/completions/stages
+   are all Drift, keyed on `activeProfileIdProvider` — unaffected by the
+   hoist — so the talmid's scheduler renders the talmid's tasks in natural
+   order. What actually empties is the **whole-curriculum reorder screen**
+   (`learning_order_repository_impl.dart:369`,
+   `if (repo == null) return const [];`). A tester following the recorded
+   criterion sees a populated scheduler and wrongly concludes the hoist
+   failed. **Corrected criterion, recorded in D9 below.**
+2. **A doc comment made false by P2-2 was deleted from one file and
+   reintroduced, false, into another** — the exact file Phase 3's T-37 will
+   act on. P2-5's new comment at `repository_providers.dart:138-142` says
+   the tutored mirror "carries no ULID... because the tutored mirror row is
+   Drift-only" — false since P2-2 (`profile_dao.dart:251-256`,
+   `ulid: Value(remoteChildProfileId)`). The *conclusion* (refuse tutored
+   writes) is still correct; the stated *reason* is not, and it points an
+   agent implementing T-37 straight at the
+   `users/{TUTOR}/learner_profiles/{talmid ULID}` wrong-tree trap the plan
+   itself warns about (§4 P2-5).
+3. **Check 104 fails open on the exact violation class Phase 3 will
+   produce.** It dedupes on `<pattern-id> <file>:<enclosing-symbol>`
+   (`check_profile_id_int_sites.dart:540`,
+   `seen.putIfAbsent(entry.key, () => entry)`), so N matching lines inside
+   one already-baselined symbol collapse to one entry. Reproduced: raw
+   `.id.toString()` count under `lib/features/tutoring` is **6**
+   (`manage_tutors_screen.dart:163,173,206,293,298,312`); the baseline's
+   `dart-tutoring-id-tostring` entries number **3**. Going from 3 to 6 (or
+   6 to 3) inside that method prints no NEW/STALE line — the gate still
+   says "88 tracked site(s)... 0 new, 0 stale." "88" is a claim about
+   *entries*, not *sites*.
+4. **This log's own P2-1 entry contains a false verification claim.** It
+   states the collapse-defect fix was "verified... until all five
+   patterns' printed counts equal their raw `grep -c` counts exactly
+   (17/5/61/2/3)." The raw count for `dart-tutoring-id-tostring` is **6**,
+   not 3 (previous point) — that equality never held, and the tool's own
+   doc comment (`check_profile_id_int_sites.dart:64-68`) says those three
+   sites deliberately collapse by design. Not corrected in the append-only
+   entry below; flagged here so a cold agent does not chase a phantom
+   scanner bug.
+5. **No mid-phase verifier finding was ever written into this log before
+   this entry**, despite three separate mid-phase reviews all returning
+   "defective" (6, 6, and 4 findings respectively, one of the six matching
+   what is now BLOCKING DEFECT 1). This is the exact failure mode this
+   log's own brief convention forbids. This entry is the remedy, not
+   another instance.
+6. **The offline-first non-fatal contract was broken by P2-2 and is still
+   broken.** `_ensureFirestoreProfile`'s provider read
+   (`profile_repository_impl.dart:639-645`) sits **outside** the
+   `try {`/`catch` meant to collapse `AccountNotAuthenticatedException` to
+   a non-fatal path. `repository_providers.dart:12-19`'s own doc comment
+   says a real resolution failure "is NOT swallowed... it still propagates
+   as this FutureProvider's AsyncError" — so an auth-resolution failure now
+   escapes `_ensureFirestoreProfile` → `createProfile`/`ensureDefaultProfile`
+   → the calling screen, exactly what plan §4 P2-2 and §9 rejected-defect-4
+   forbid ("a fatal remote write would break offline profile creation").
+
+#### MINOR DEFECTS (recorded, not individually tracked — folded into `T-42`)
+
+- `0d5d9125`'s commit message and this log's own P2-2 entry both assert
+  "exactly one site in the whole codebase mints a profile's identity." Four
+  live `ulid ?? DocIds.mintProfileUlid()` fallbacks survive
+  (`profile_repository_impl.dart:99,341,573,606`) plus a dormant fifth
+  formula (`doc_ids.dart:661`, no `lib/` caller). Production routes through
+  the adapter, so the *invariant* holds in practice; the *claim* as written
+  overstates it.
+- **P2-3 silently fixed a bug P2-2 shipped, with no deviation record.**
+  `feefe34b` adds `ulid: resolvedUlid` to `ensureDefaultProfile`'s insert —
+  meaning at `0d5d9125`, that path could insert with `ulid` NULL, directly
+  contradicting P2-2's own log entry's present-tense claim. No four-part
+  deviation was ever written for this; recorded now, after the fact, per
+  this same standing rule.
+- **P2-3's `lib/`-side blast radius was 9 non-generated files, not the
+  plan's predicted 4** (beyond the 4 predicted:
+  `notifications_bootstrap.dart`, `device_restore_screen.dart`,
+  `router_provider.dart`, `sign_in_controller.dart`,
+  `profile_picker_screen.dart`, `profile_switcher_sheet.dart`). The
+  **test-side** 43→47/48-file deviation was recorded in P2-3's own entry in
+  full four-part form; the **lib-side** deviation, including the 4 new
+  production crash sites (3 of which feed BLOCKING DEFECT 2), was not.
+  Recorded now.
+- **Four "verbatim" gate blocks in this log are not verbatim.** The P2-3,
+  P2-4, P2-5 and P2-6 entries (below) print `make audit`'s last line as
+  `=== audit PASSED — all 68 greps clean ===   (104/104 checks)`; the true
+  last line has no parenthetical (re-confirmed by direct run this session).
+  Not edited into those append-only entries; flagged here.
+- Check 104's `_patternListHash` (`check_profile_id_int_sites.dart:552-557`)
+  hashes only `<id>|<description>` prose, not the regexes or scope
+  closures — a narrowed scanner leaves the hash unchanged, contrary to the
+  doc comment's claim that this is caught.
+- Check 104 swallows unreadable files silently
+  (`check_profile_id_int_sites.dart:522-528,572-578`,
+  `on FileSystemException { continue; }`) — the exact behavior Phase 1
+  deliberately removed from check 103, for the same reason: a
+  torn/concurrent read must not silently reclassify a symbol as NEW/STALE.
+- `BookmarkRepositoryNotReadyException`'s own doc comment/`toString()`
+  (`bookmark_repository_impl.dart:368-372,391-394`) still enumerate only
+  two causes; a tutored refusal is now a third and is undocumented at the
+  exception itself (only at the adapter's class doc, point 6).
+  `check_profile_path_keying_test.dart:959` asserts on `toString()` — any
+  fix must update it in the same commit.
+- `ensureDefaultProfile`'s adapter/impl double-decision
+  (`profile_repository_impl.dart:601-615` vs `:325-341`) can strand a
+  profile permanently if the two reads disagree — compounded by BLOCKING
+  DEFECT 1, since nothing would ever retry the heal either way.
+
+---
+
+#### Ratchets — measured for the first time this phase, at phase exit
+
+Plan §6's "Phase exit" row required re-running both count-only ratchets;
+no `P2-*n` step did so standalone. First measurement, this session:
+
+```
+$ dart run tool/check_mcf11_autoincrement_id_in_payload_ratchet.dart
+MCF-11 autoincrement-id-in-payload ratchet passed — 39 site(s) outside merge/ (tracked baseline: 39, AD-5/AD-28, docs/test-artifacts/mcf11-autoincrement-id-in-payload-sweep.md).
+
+$ dart run tool/check_bare_firebase_instance_ratchet.dart
+Bare-Firebase-instance ratchet passed — 2 site(s) (tracked baseline: 2, AD-2/AD-28).
+```
+
+Both `actual == baseline` — no drop, so the "lower the baseline in the same
+commit" obligation was never triggered. **Process defect, separate from the
+numbers:** no step ran or recorded either ratchet standalone; this entry is
+their first measurement, at phase exit rather than incrementally.
+
+**R8 tripwire, re-confirmed at phase exit:** check 103's `--report`
+WATCHLIST set is identical pre-phase (`d74e3829`) and post-phase
+(`2e85b097`) — 10 collections, unchanged, zero moved live→DORMANT. No
+`Firestore*` class was added, removed or renamed anywhere in
+`d74e3829..2e85b097`. R8's rule held.
+
+---
+
+#### Deferred verification — full attribution map for the end-of-cutover CI phase
+
+Supersedes the plan's own §6 table (which named only D1–D8); D9–D12 are new,
+found this session.
+
+| ID | Skipped ci-only / device check | What it would have covered | Commit | Recorded before this entry? |
+|---|---|---|---|---|
+| **D1** | `make test` (Dart suite) | Runtime behaviour of every touched Dart file across P2-2 through P2-6 — a green compile proves fixture shape changed, not that retained/rewritten assertions still pass. | P2-2, P2-3, P2-4, P2-5, P2-6 | Yes (×5) |
+| **D2** | `make test-rules` (emulator, 104-test matrix) | That `learning_order`'s `allow delete: if isOwner(uid)` permits the owner and denies a stranger. **Warning:** the matrix is green before/during/after any keying change — `{profileId}` is an unconstrained wildcard — so its green is never identity reassurance. | P2-6 | Yes |
+| **D3** | `make test-functions` (emulator) | Regression only — Phase 2 changes no Cloud Function; becomes load-bearing at Phase 3's T-30/T-31. **Standing warning:** `functions/test/_cf_helpers.mjs:31` shares one int constant `PROFILE = 5` across 9 files — swapping in a ULID literal reproduces the same self-consistent-fixture blindness one identity later. | — (Phase 3) | No |
+| **D4** | `make test-serial-tools` → `audit_and_arb_parity_test.dart` | That `make audit` still runs end-to-end and prints the strings the test greps for, now that check 104 was appended. Confirmed by hand this session (`1/15`…`15/15`, `16/17`, `17/17`, `25/26` all still print, summary unchanged); the parity test itself never ran. | P2-1 | No |
+| **D5** | `check_lcov_denominator.dart --strict` + 60% coverage floor (GitHub Actions `test` job only) | That the floor still holds after 85 `.dart` files changed. No new `lib/**` file was created this phase (only `tool/`), so per-file denominator risk is nil; only the floor is at issue. | P2-2, P2-3, P2-5 | No |
+| **D6** | `dart format --set-exit-if-changed` (GitHub Actions `format-check` job only) | Formatting of every touched file. **Closed this session:** `dart format --output=none --set-exit-if-changed` over all 85 touched `.dart` files → `Formatted 85 files (0 changed)`, exit 0. | all commits | No (now measured clean) |
+| **D7** | `make audit` exit-code assertion | The one test asserting `make audit` exits 0 is `skip:`-disabled with a now-false reason. Un-skipping is `T-38` (Phase 5). | whole phase | No |
+| **D8** | Writer/reader agreement for CF-mediated paths | No harness exists today. Highest-value CI-phase addition; prerequisite for Phase 3's T-31. | — (Phase 3) | No |
+| **D9** | Device: tutored session, every profile-scoped screen | **Its recorded pass criterion was wrong** — see SERIOUS DEFECT 1 above. **Corrected criterion:** the whole-curriculum reorder screen goes to `noItemsToOrder`/throws `LearningOrderRepositoryNotReadyException`, and task order reverts from the tutor's custom order to natural `sortOrder` — NOT "the scheduler renders nothing." | P2-5 | Yes, with a false criterion — corrected here |
+| **D10** *(new)* | Device: P2-2's own proving check + R4's mitigation (plan §6 P2-2, §7 R4) | On a wiped emulator-5556 profile: create a profile, read `users/{uid}/learner_profiles/` directly for a 26-char Crockford ULID doc id; kill the network, create a second profile, confirm a local ULID and no crash; restore the network, **activate** the offline-created profile, confirm the doc appears. **This is the check that would have caught BLOCKING DEFECT 1.** Never run, never recorded. | P2-2 | No |
+| **D11** *(new)* | Device: P2-6 deploy + reset + negative control | Deploy rules, reset a learning order to default on device, confirm the documents are gone; negative control = a signed-out/other-account client is denied. Recorded in prose in P2-6's entry below but assigned no ID, so it is invisible to an ID-indexed sweep. | P2-6 | Prose only, no ID |
+| **D12** *(new)* | Behavioural check on the null-ulid producers vs P2-3's `StateError` | No commit named a deferred check covering `ProfileDao.upsertFromSync` or `DataExportImportService` inserting `ulid IS NULL` rows after P2-3 made that a crash. `make test` alone will not surface it — no test seeds a synced/imported profile and reads it back through `fromDriftRow`. **This is BLOCKING DEFECT 2's own missing verification.** | P2-2, P2-3 | No |
+
+**Tests that will pass misleadingly, for the CI-phase reviewer:** all 14
+`test/data/repositories/firestore_*_test.dart` take `profileId` as a
+constructor argument and never touch identity resolution; `doc_ids_test.dart
+:244-249` cross-checks `DocIds.bookmarkDocId` against
+`FirestoreGatewayImpl.pushBookmark` — a **different method with the same
+name** as T-34's subject — and stays green either way; the 104-test rules
+matrix is green regardless of keying.
+
+---
+
+**Git hygiene, re-measured this session, unchanged from what P2-0/P2-1
+already recorded:** `git stash list` still shows exactly the two entries in
+"Known stashes" below (`stash@{0}` base `d74e3829`, `stash@{1}` base
+`8855b9b1`) — **neither popped, applied, nor dropped this session.** One
+consequence not previously stated plainly: `git status --porcelain` reads
+**empty** for the 8 `_bmad/**` files only because `stash@{0}` is holding
+that churn — the original plan's §1 recorded fact ("exactly 8 modified
+`_bmad` files") is therefore false on the live tree, and R10's discipline
+is being satisfied by an unrelated accident, not by agent behavior.
+Recorded, not fixed — nobody has ruled on either stash.
+
+**Gates run this session (docs-only commit; no code touched, run to
+re-confirm the tree before writing the above):**
+```
+$ dart analyze --fatal-infos
+Analyzing learning_tracker...
+No issues found!
+
+$ dart run tool/check_profile_path_keying.dart | tail -1
+PROFILE-KEY-SPLIT check OK: 2 collection(s) currently split (bookmarks, learning_order), all within the tracked baseline (0 new violations).
+
+$ dart run tool/check_profile_id_int_sites.dart | tail -1
+PROFILE-ID-INT-SITES OK: 88 tracked site(s) across 5 pattern(s) [cf-int-guard, cf-string-profileid-doc, dart-int-profileid-param, dart-tutoring-int-parse, dart-tutoring-id-tostring]; 0 new, 0 stale.
+
+$ make audit | tail -1
+=== audit PASSED — all 68 greps clean ===
+```
+No deviation — all three gates unchanged from P2-6, as expected for a
+docs-only commit that touches no `lib/`, `test/`, or `tool/` file.
 
 ### 2026-08-06 — P2-6 complete: T-33, `learning_order` owner delete (rules + code, one commit)
 
@@ -984,3 +1286,15 @@ every future step in this phase: **do not treat a `git status --porcelain`
 read as trustworthy for more than the instant it was taken.** Re-verify
 immediately before every `git add`, and if a just-written edit is missing on
 re-read, check `git stash list` before assuming the edit tool failed.
+
+**Re-verified at P2-7 (2026-08-06, end of phase):** `git stash list` shows
+the same two entries, same bases, same order — nothing changed across
+P2-1 through P2-6. Still **neither popped, applied, nor dropped.** One
+consequence stated plainly for the first time here: `git status --porcelain`
+reads empty for the 8 `_bmad/**` files for the whole rest of the phase
+**only because `stash@{0}` is holding that churn** — the original plan's
+§1 recorded fact ("exactly 8 modified `_bmad` files" in the working tree)
+has been false since P2-0, and R10's discipline ("never stage `_bmad`
+churn") has been satisfied by this accident, not by agent behavior, at
+every gate run since. Full write-up: `firestore-cutover-log.md`'s P2-7
+entry above.

@@ -1,9 +1,14 @@
 # Firestore cutover plan
 
-**Status:** Phase 0 ✅ · Phase 1 ✅ · **Phase 2 next** · Phases 3–5 pending
+**Status:** Phase 0 ✅ · Phase 1 ✅ · **Phase 2 IN PROGRESS — BLOCKED** (see
+`firestore-cutover-log.md`'s P2-7 entry: two blocking defects, `T-40`/`T-41`,
+survive every gate the phase ran) · Phase 3 cannot start until Phase 2's
+blockers clear · Phases 4–5 pending
 **Last updated:** 2026-08-06
-**Head:** `a2a21d0a` on `dev` — `make audit` green (103 checks), 4 features on
-Firestore, keying gate live.
+**Head:** `2e85b097` on `dev` (P2-6; the P2-7 docs commit lands on top, not
+yet reflected here — same self-reference lag as every prior closing commit)
+— `make audit` green (104 checks), 4 features on Firestore, both keying
+gates (103, 104) live.
 
 **Verification cadence (owner decision, 2026-08-06):** `dart analyze` and the
 keying gate run every stage (seconds); `make audit` runs at each phase
@@ -233,41 +238,95 @@ manufactures exactly the false confidence this gate exists to remove.
 
 ---
 
-### Phase 2 — Unify the identity (int → ULID)
+### Phase 2 — Unify the identity (int → ULID) — **IN PROGRESS, BLOCKED, 2026-08-06 (`2e85b097`)**
 
-Do this **before** wiring features, so features land on a stable identity
-rather than being rewired twice.
+**Not resolved.** The full execution plan is
+[`firestore-phase2-plan.md`](firestore-phase2-plan.md); six code commits
+(`4877c7ef`, `0d5d9125`, `feefe34b`, `b398bea5`, `30790fef`, `2e85b097`)
+landed the profile ULID as an eagerly-minted, compile-enforced,
+non-nullable identity at the source, plus audit check 104
+(`PROFILE-ID-INT-SITES`), plus three identity-adjacent fixes (T-33, T-34,
+T-35 — see `firestore-cutover-tasks.md`'s Done table). **An end-of-phase
+review then found two BLOCKING defects that no gate this phase runs can
+see** — full detail in `firestore-cutover-log.md`'s P2-7 entry:
 
-Scope, all verified:
+1. The replacement for the deleted lazy ULID backfill only fires at profile
+   **creation**, never at **activation** — a profile created offline
+   permanently never gets a remote document. Tracked as `T-40`.
+2. Two live paths (`ProfileDao.upsertFromSync`, `DataExportImportService`)
+   still insert `learner_profiles` rows with `ulid IS NULL`, and the new
+   compile-enforced non-nullable `ProfileModel.ulid` now hard-crashes on
+   exactly that shape. Tracked as `T-41`.
 
-- **3 owner-path Cloud Functions** (`functions/src/deletes.ts`):
+**Phase 3 does not start until both are fixed and re-verified.**
+
+**Why the original exit line below was unachievable, replaced by §6 of
+`firestore-phase2-plan.md`'s verification table:** Phase 1's check
+(103, `check_profile_path_keying.dart`) classifies INT writers by **file
+location** (`lib/core/sync/**`, `functions/src/**`), not by keying — it
+cannot register Phase 2 or Phase 3 progress until those directories are
+deleted wholesale in Phase 4, and it has no concept of `learner_profiles`
+itself or a doc-id formula. It was never going to "show the identity split
+closed" as a Phase 2 exit criterion; check 104 (built this phase, P2-1)
+covers what 103 structurally cannot, at the granularity a named-entry
+ratchet can offer. Separately, `make ci` green was never a realistic Phase 2
+exit gate — it is batched to the end of Phase 4 by owner decision
+(2026-08-06, `firestore-cutover-log.md`), and Phase 2's own gates are
+`dart analyze`, both keying checks, and `make audit` only.
+
+**Original scope, retained for history (T-30/T-31 — the owner-path CF
+deletes and tutoring's identity — moved to Phase 3 below, per Q1's ruling in
+`firestore-phase2-plan.md` §3):**
+
+- **Doc-id divergence** (T-34): `DocIds.bookmarkDocId` is bare
+  `{curriculum_id}` while `TutoredWriteRouter.pushBookmark` computed
+  `{curriculum_id}_{track_type}` — two writers, different documents, on a
+  two-writer collection. **Resolved by deletion, not reconciliation** — the
+  divergent writer was unreachable from production.
+- **Hoist the tutored guard** (T-35) into `_watchActiveAccountAndProfile` so
+  all 13 profile-scoped providers behave uniformly in one place, rather than
+  replicating the bookmark guard 13 times. **Done**, with a corrected
+  observable for its device check — see the log's P2-7 entry.
+
+---
+
+### Phase 3 — Wire and move
+
+**Moved here from Phase 2, per Q1's ruling (`firestore-phase2-plan.md` §3,
+2026-08-06) — landing with T-20 as one commit-unit, not before it, since the
+coupling evidence below is why they were re-phased in the first place:**
+
+- **T-30 — 3 owner-path Cloud Functions** (`functions/src/deletes.ts`):
   `deleteLearnerProfile` (:135), `deleteCurriculumTrack` (:214),
   `deleteBulkMarkedCompletions` (:406) — each validates `profileId` as a
   positive integer and addresses `learner_profiles/{String(profileId)}`
   (:225, :441). Post-cutover they address a path with no data: **delete
   nothing, report success.** `deleteBulkMarkedCompletions` implements the
-  owner's un-tick rule, so that feature would silently stop working. (#30)
-- **17 CF int-validations**: 13 in `tutor_writes.ts`, 3 in `deletes.ts`,
-  1 in `tutor_bulk_completions.ts`.
-- **Tutoring identity** (#31, per the Phase 0 decision): grant creation
-  (`profile.id.toString()`), `buildAccessId` / `tutor_active_access` keying,
-  `TutoredWriteRouter`'s `int.tryParse`, and `ProfileDao.upsertTutoredProfile`
-  minting no ULID.
-- **Doc-id divergence**: `DocIds.bookmarkDocId` is bare `{curriculum_id}`
-  while `TutoredWriteRouter.pushBookmark` computes
-  `{curriculum_id}_{track_type}` — two writers, different documents, on a
-  two-writer collection.
-- **Hoist the tutored guard** into `_watchActiveAccountAndProfile` so all 13
-  profile-scoped providers behave uniformly in one place, rather than
-  replicating the bookmark guard 13 times.
-
-**Exit:** Phase 1's check shows the identity split closed. `make ci` green.
-Firestore rules and CF tests updated together — the rules and the CF that
-writes through them must never be changed in separate commits.
-
----
-
-### Phase 3 — Wire and move
+  owner's un-tick rule, so that feature would silently stop working. Capture
+  the profile's ULID before the local delete removes the row — see
+  `firestore-cutover-tasks.md`'s T-30 entry for the exact ordering trap.
+- **T-31 — tutoring identity is Drift-int end-to-end.** Owner decision D1
+  (2026-08-04): re-file under the ULID; tutor reads the parent's tree
+  directly; the local mirror dies. **Coupling evidence (why this could not
+  land in Phase 2):** `TutoredProfileSelection.profileId` is a live
+  Firestore path segment for **13 read collections**
+  (`pull_pipeline.dart:73-98`) and **9 write collections**
+  (`tutor_writes.ts:187` + 12 call sites); for 11 of the 13 reads, the
+  owner-side writer is still the int-keyed sync engine. Re-keying tutoring
+  alone would make the tutor read a tree nothing writes and write a tree
+  nobody reads — silently, since no gate available through Phase 2 can see
+  a doc-id-formula mismatch. Full evidence and the corrected 6-site count
+  for `manage_tutors_screen.dart`: `firestore-cutover-tasks.md`'s T-31 row.
+- **T-37 (new) — the tutored read seam.** P2-5 (Phase 2) hoisted a uniform
+  refusal for all 13 profile-scoped providers during a tutored session, but
+  sourced `uid` from the signed-in account — substituting the ULID alone
+  without also substituting the owner's `uid` addresses
+  `users/{TUTOR}/learner_profiles/{talmid ULID}`, a brand-new wrong tree.
+  T-37 builds the owner-uid-scoped handle seam the rules already permit
+  (`firestore.rules:450` + 16 sibling lines).
+- **T-39 (new), prerequisite for T-20** — reconcile check 103's 10-collection
+  WATCHLIST against `firestore-cutover-log.md`'s 7-item "dead adapters"
+  list before wiring anything; they are not the same set today.
 
 7 adapters exist and are tested but are **never constructed**:
 `FirestoreCompletionRepositoryAdapter`, `FirestoreCurriculumTrackRepositoryAdapter`,
@@ -333,9 +392,13 @@ database.
 
 ### Phase 5 — Retarget the gates and verify on a device
 
-- **#23** — retarget enforcement gates to the new architecture. Many encode
-  the old sync engine's invariants and will be checking rules about deleted
-  code.
+- **#23 / T-38 (new, folded in)** — retarget enforcement gates to the new
+  architecture. Many encode the old sync engine's invariants and will be
+  checking rules about deleted code. T-38 adds: fold check 104
+  (`PROFILE-ID-INT-SITES`, built Phase 2) into this retarget; fix
+  `Makefile:1366`'s stale `all 68 greps clean` summary string; un-skip
+  `test/tool/audit_and_arb_parity_test.dart:112-125` (its `skip:` reason is
+  now false).
 - **#24** — verify `resolve()` cold-start re-attach on a real device. Mock-only
   today, and it runs every launch. Specifically: the route guard clears the
   ULID when auto-selecting a single profile by bare int; it self-heals on the
