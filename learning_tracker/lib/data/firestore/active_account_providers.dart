@@ -62,6 +62,29 @@ final activeAccountIdProvider = NotifierProvider<ActiveAccountId, String?>(
 /// happen: every production `.set()` call site (see the library doc
 /// comment) only ever activates an id right after establishing that
 /// account's session.
+///
+/// **`retry: (retryCount, error) => null` — auto-retry deliberately
+/// disabled (T-43).** Riverpod's per-provider default (`retry` unset here
+/// falls back to `ProviderContainer.defaultRetry`) treats every plain
+/// `Exception` a `FutureProvider`'s build throws — sync or async — as
+/// transient: 10 attempts, 200ms doubling to a 6.4s cap, and `.future`
+/// (what every caller of this provider actually awaits) does not settle
+/// until all retries exhaust, because Riverpod exposes the interim state as
+/// `AsyncLoading(..., retrying: true)`, not a terminal `AsyncError` — only
+/// the terminal state completes `.future`'s `Completer`
+/// (`package:riverpod`'s `element.dart`, `onLoading` vs `onError`).
+/// [AccountNotAuthenticatedException] is a structural mismatch — this
+/// [accountId] was never authenticated — not a transient failure; retrying
+/// with the identical id can never succeed on its own, only a fresh
+/// sign-in/sign-up call (which activates a DIFFERENT id) fixes it.
+/// Reproduced directly: without this override, a resolution failure here
+/// left `FirestoreProfileRepositoryAdapter._ensureFirestoreProfile`
+/// (reached from `createProfile`/`ensureDefaultProfile`, both documented
+/// offline-first and non-blocking) hung awaiting `.future`, timing out
+/// `profile_repository_impl_test.dart`'s "does not propagate out of
+/// createProfile" test at 2 minutes instead of completing — see
+/// `docs/planning/firestore-cutover-log.md`'s `T-43` entries for the full
+/// trace.
 final activeAccountFirebaseProvider = FutureProvider<AccountFirebaseHandles?>((
   ref,
 ) async {
@@ -69,4 +92,4 @@ final activeAccountFirebaseProvider = FutureProvider<AccountFirebaseHandles?>((
   if (accountId == null) return null;
   final registry = ref.watch(accountFirebaseRegistryProvider);
   return registry.resolve(accountId);
-});
+}, retry: (retryCount, error) => null);

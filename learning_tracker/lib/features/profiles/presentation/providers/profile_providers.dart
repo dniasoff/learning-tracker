@@ -1,3 +1,7 @@
+import 'dart:async';
+
+import 'package:learning_tracker/core/logging/logger.dart';
+import 'package:learning_tracker/core/providers/active_account_id_provider.dart';
 import 'package:learning_tracker/core/providers/active_profile_doc_id_provider.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
@@ -9,6 +13,8 @@ import 'package:learning_tracker/features/sync/presentation/providers/sync_provi
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'profile_providers.g.dart';
+
+final _log = AppLogger.instance;
 
 /// The active account's local `accounts.id` within the currently-mounted
 /// per-account user DB (FR22, Story 25.21).
@@ -79,6 +85,65 @@ class SelectedProfileId extends _$SelectedProfileId {
   void select(int id, {required String ulid}) {
     state = id;
     ref.read(activeProfileDocIdProvider.notifier).set(ulid);
+
+    // T-40: heal a profile's missing remote Firestore document at every
+    // ACTIVATION, not only at creation — see
+    // `FirestoreProfileRepositoryAdapter`'s class doc comment ("A profile
+    // created while offline still gets its remote document") for the full
+    // design. `select()` is deliberately the trigger, not a `ref.listen`
+    // mounted somewhere downstream: it is the ONE seam every activation
+    // path in the app already funnels through (this doc comment's own
+    // list, above, of every production caller — the route guard, the
+    // picker, the switcher, sign-in, onboarding, restore, a notification
+    // tap, and this class's own self-heal branch below) — so wiring the
+    // heal here covers all of them at once, including the cold-start,
+    // single-profile case, with no separate hook needed per path. A prior
+    // attempt (P2-8) instead hooked `ref.listen(selectedProfileIdProvider,
+    // …)` inside `AppShellScreen.build` — dead on every cold-start path,
+    // because `ProfileGuard` (a route guard on `AppShellRoute` itself)
+    // resolves selection by calling `select()` — right here — BEFORE the
+    // shell widget, and its listener, can ever build. See
+    // `docs/planning/firestore-cutover-log.md`'s `T-40` entries (P2-13/
+    // P2-14) for the full post-mortem.
+    //
+    // Gated on `activeAccountIdProvider` being set — the SAME precondition
+    // `activeAccountFirebaseProvider` itself already enforces (returns
+    // `null` immediately when it's unset), checked here first because it
+    // is cheap (an in-memory `Notifier<String?>`, no I/O), whereas
+    // `profileRepositoryProvider` is NOT: its build unconditionally
+    // `ref.watch`es `userDatabaseProvider`, which opens a REAL on-disk
+    // Drift database the first time anything reads it. Before this gate,
+    // `select()` did so unconditionally on every call — including from
+    // widget tests that override only `selectedProfileIdProvider` itself
+    // (bypassing the real DB/account stack entirely, as most narrow
+    // widget tests do) — and broke one outright: a real, on-disk-DB-backed
+    // query left "A Timer is still pending even after the widget tree was
+    // disposed" (measured: `profile_switcher_sheet_test.dart`'s "tapping a
+    // non-active profile switches the active profile" test, previously
+    // green). `activeAccountIdProvider` is documented as "wired into
+    // production" (`active_account_providers.dart`'s own doc comment) —
+    // bootstrap and every sign-in/sign-up/account-switch flow sets it
+    // before any profile selection can happen — so this gate changes
+    // nothing for a real cold start, only for a container/test that never
+    // established that seam at all.
+    if (ref.read(activeAccountIdProvider) == null) return;
+    // Fire-and-forget (`ensureRemoteProfile` never throws — see its own
+    // doc comment) so `select()` stays synchronous, per this method's own
+    // doc comment above. The outer try/catch is a SEPARATE guard:
+    // `ensureRemoteProfile`'s no-throw contract only covers the returned
+    // Future, not `profileRepositoryProvider` itself failing to resolve
+    // synchronously (e.g. an unconfigured dependency in a test container)
+    // — that must not crash a caller of `select()`.
+    try {
+      unawaited(ref.read(profileRepositoryProvider).ensureRemoteProfile(id));
+    } catch (e, st) {
+      _log.warning(
+        event: 'selected_profile_id_ensure_remote_profile_dispatch_failed',
+        fields: {'profileId': id},
+        exception: e,
+        stackTrace: st,
+      );
+    }
   }
 
   void clear() {

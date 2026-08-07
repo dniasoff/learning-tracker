@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/app/router/router_provider.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
-import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/navigation/root_scaffold_messenger.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
@@ -97,46 +96,17 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen> {
       }
     });
 
-    // T-40: heal a profile's missing remote Firestore document at every
-    // ACTIVATION, not only at creation — see profile_repository_impl.dart's
-    // class doc comment ("A profile created while offline still gets its
-    // remote document") for the full design. Listens on
-    // selectedProfileIdProvider specifically, never activeProfileIdProvider
-    // — the latter also carries the tutored mirror's LOCAL id during a
-    // tutored session (active_profile_provider.dart), and healing that id
-    // would write into the TUTOR's own uid namespace via
-    // firestoreLearnerProfileRepositoryProvider (keyed on the signed-in
-    // account, not the talmid's owner) — the exact
-    // `users/{TUTOR}/learner_profiles/{talmid ULID}` wrong-tree trap
-    // `firestore-phase2-plan.md` §4 P2-5 warns about.
-    // selectedProfileIdProvider is set ONLY by SelectedProfileId.select()/
-    // .clear() (own-profile flows), never by anything tutoring-related, so
-    // it is safe from that trap by construction. It changes on every
-    // cold-start re-select (AutoSelectedProfileId._resolveSelection calls
-    // select() whenever nothing was already selected) AND every manual
-    // profile switch (switcher sheet, picker, sign-in, ...) — one seam
-    // covers every activation path in the app. Fire-and-forget
-    // (`ensureRemoteProfile` never throws — see its own doc comment) so
-    // this listener never blocks the widget tree it's mounted in. The outer
-    // try/catch is a SEPARATE guard: `ensureRemoteProfile`'s no-throw
-    // contract only covers the returned Future, not `profileRepositoryProvider`
-    // itself failing to resolve synchronously (e.g. an unconfigured
-    // dependency in a test container) — that must not crash this listener.
-    ref.listen(selectedProfileIdProvider, (previous, next) {
-      if (next == null || next == previous) return;
-      try {
-        unawaited(
-          ref.read(profileRepositoryProvider).ensureRemoteProfile(next),
-        );
-      } catch (e, st) {
-        AppLogger.instance.warning(
-          event: 'app_shell_ensure_remote_profile_dispatch_failed',
-          fields: {'profileId': next},
-          exception: e,
-          stackTrace: st,
-        );
-      }
-    });
+    // T-40: the "heal a profile's missing remote Firestore document on
+    // activation" trigger used to live here (`ref.listen(selectedProfileIdProvider,
+    // …)`) — dead on every cold-start path, because `ProfileGuard` (a route
+    // guard on `AppShellRoute` itself) has already resolved selection
+    // before this widget — and a listener mounted inside it — can ever
+    // build. Moved to `SelectedProfileId.select()`
+    // (`profile_providers.dart`) itself: the one seam every activation path
+    // in the app already funnels through, so it fires on cold start too,
+    // not only an in-app switch. See that method's own doc comment and
+    // `docs/planning/firestore-cutover-log.md`'s `T-40` entries (P2-13/
+    // P2-14) for the full post-mortem.
 
     // R3o-C2 / R2o-H2: drive the tutor indicator from the ACTIVE tutored
     // selection (the tutor has actually entered a talmid's context after the

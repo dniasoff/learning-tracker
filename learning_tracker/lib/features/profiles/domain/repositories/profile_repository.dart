@@ -88,13 +88,14 @@ abstract class ProfileRepository {
   /// this again at every profile ACTIVATION (see
   /// `FirestoreProfileRepositoryAdapter`'s class doc comment, "A profile
   /// created while offline still gets its remote document", for the real
-  /// call path — `lib/app/router/app_shell.dart` fires it on every
-  /// `selectedProfileIdProvider` change) so a profile whose document is
-  /// still missing after creation keeps getting a fresh, idempotent attempt
-  /// every time it is selected again, until one succeeds. Never throws —
-  /// [id] not existing, or not yet carrying a `ulid` to heal onto, is a
-  /// silent no-op, same as any other non-fatal Firestore push in this
-  /// interface's implementations.
+  /// call path — `SelectedProfileId.select` in `profile_providers.dart`
+  /// fires it on every profile selection, the one seam every activation
+  /// path in the app funnels through) so a profile whose document is still
+  /// missing after creation keeps getting a fresh, idempotent attempt every
+  /// time it is selected again, until one succeeds. Never throws — [id] not
+  /// existing, or not yet carrying a `ulid` to heal onto, is a silent
+  /// no-op, same as any other non-fatal Firestore push in this interface's
+  /// implementations.
   Future<void> ensureRemoteProfile(int id);
 }
 

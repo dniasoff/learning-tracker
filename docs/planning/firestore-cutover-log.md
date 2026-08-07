@@ -77,78 +77,85 @@ nothing on disk to diff against. This is the fix, binding from 2026-08-06
 
 ## CURRENT STATE
 
-**Head:** `c06d942a` (P2-12) **(P2-13, this commit, not yet reflected —
-same self-reference lag as every prior closing commit)**. This commit is
-docs-only — no `lib/`, `test/`, or `tool/` file touched; `c06d942a` remains
-the correct SHA for a cold agent to diff a tree against until P2-13's own
-SHA is knowable.
-**Deployed:** still `unknown — not deployed`. P2-6's `learning_order allow
-delete` rules change is **NOT deployed**; every commit from P2-7 through
-this one is docs/`tool`/`Makefile`-only and deploys nothing. Do not
-attribute a device `permission-denied` on `learning_order` delete to a code
-defect until this field says otherwise.
-**Phase:** 0 ✅ · 1 ✅ · **2 — NOT RESOLVED (reopened, P2-13).** P2-12's
-`Phase 2 ✅` (its own entry, above, left unedited — append-only) is
-corrected here: a second-pass adversarial review re-verified the tree at
-`c06d942a` **directly** — gates plus targeted `flutter test` runs, not a
-re-read of this log — and found the ✅ false on its own stated terms.
-**Two BLOCKING defects are open:**
-1. **`T-40` (reopened).** P2-8's activation-heal listener
-   (`app_shell.dart:125`'s `ref.listen(selectedProfileIdProvider, …)`, no
-   `fireImmediately`) is registered on a route the guard has already
-   resolved selection on before the shell page — and the listener — can
-   build. It never fires on any cold-start path for a single-profile
-   account, which is the exact scenario the fix targets. Full evidence:
-   this entry's "BLOCKING DEFECT 3" section, below.
-2. **`T-43` (new).** P2-8's own new offline-first test is RED — not merely
-   leaking, but hanging to a 2-minute timeout
-   (`Cannot use the Ref of Provider<FirestoreProfileRepositoryAdapter>#6058a
-   after it has been disposed`) — and a residual escape survives at
-   `profile_repository_impl.dart:775`, still outside `_ensureFirestoreProfile`'s
-   `try`. Full evidence: "BLOCKING DEFECT 4", below.
-
-Four more open, non-blocking: `T-44`–`T-46` (MINOR — a relocated, not
-prevented, second-identity path; a dead-code export/import fix; a surviving
-ulid-less test seeder) and `T-47`–`T-48` (SERIOUS — 6 tests RED in the
-remediation's own most-touched files, unrecorded until this commit; a
-narrowed-not-closed `created_at` cache clobber). **`T-42`'s prior 15/16
-items are independently reconfirmed, not reopened** — see this entry's full
-KNOWN ISSUES table.
-
-**Phase 3 must not start** until `T-40` and `T-43` are fixed **and**
+**Head:** `5cdcb81c` (P2-13) **(P2-14, this commit, not yet reflected —
+same self-reference lag as every prior closing commit)**. `5cdcb81c`
+remains the correct SHA for a cold agent to diff a tree against until
+P2-14's own SHA is knowable.
+**Deployed:** still `unknown — not deployed`. Unchanged this commit — no
+rules file touched.
+**Phase:** 0 ✅ · 1 ✅ · **2 — both BLOCKING defects (`T-40`, `T-43`) fixed
+and independently re-verified at P2-14; T-44–T-46 (MINOR) and T-48
+(SERIOUS) remain open, non-blocking.** This entry deliberately does **not**
+write "Phase 2 ✅" — that exact declaration, self-certified by the agent
+that just landed the fix, is what falsely closed Phase 2 twice before
+(P2-8/P2-12). The facts: both defects the plan's own exit criterion names
+("Phase 3 must not start until `T-40` and `T-43` are fixed and
 independently re-verified by a passing test that exercises the real
-trigger (a widget/container test proving `app_shell.dart`'s listener
-reaches `ensureRemoteProfile` on a cold-start selection — no such test
-exists today, `grep -rn ensureRemoteProfile test/` hits only 3 direct
-adapter calls and one fake override) — not by a code trace, which is
-exactly the standard that let both defects ship invisibly the first time.
-Full detail, disposition table, and the D1–D19 deferred-verification table:
-this file's **P2-13** entry, below.
-**Gates (re-confirmed against `c06d942a` this session; unchanged from every
-prior measurement — green throughout the two new BLOCKING defects' entire
-life, which is the point):** `dart analyze --fatal-infos` → `No issues
-found!`. `make audit` green, exit 0, 104 checks, true last line (no
-parenthetical) `=== audit PASSED — all 68 greps clean ===`. Check 103's OK
-line and split set **unchanged**: `PROFILE-KEY-SPLIT check OK: 2
-collection(s) currently split (bookmarks, learning_order), all within the
-tracked baseline (0 new violations).` Check 104 **unchanged**: `88 tracked
-entries covering 91 site(s) ...; 0 new, 0 stale, 0 changed` — this
-entries/sites split is P2-11's format change (occurrence counts now
-ratchet), already recorded there as a four-part deviation, **not** a
-regression; restated here per that entry's own instruction not to
-re-derive it. Both count-only ratchets **unchanged** at their tracked
-baselines (39, 2). Full `make ci` last green at `5b4d7924`; still batched
-to end of Phase 4 by owner decision (2026-08-06) — unchanged. **Targeted
-`flutter test` runs (not `make test`/`make ci`; not barred by the NO FULL
-CI ruling) found what no gate above can see:** `profile_repository_impl_test.dart`
-+ `firestore_learner_profile_repository_test.dart` → `+52 -5`; the single
-new offline-first test alone → `+0 -1`, 2-minute timeout; a 6-file batch
-including `profile_edit_delete_actions_test.dart` → `+54 -1`. Full commands
-and output in the P2-13 entry below.
+trigger") are fixed, with that exact proof (below). Four non-blocking items
+from P2-13's table remain untouched by this commit — `T-44`, `T-45`, `T-46`
+(MINOR) and `T-48` (SERIOUS) — and `T-47` is narrowed, not closed (its
+`T-43` half is now green; its inherited-P2-3 half is unchanged, scoped OUT
+of this round by the owner). Whether that residual set still blocks Phase 3
+is a call for whoever reads this next, not asserted here either way.
 
-**IN FLIGHT:** nothing. (This field held the P2-13 edit list from before
+**`T-40` — FIXED.** The trigger moved from a dead `ref.listen` inside
+`AppShellScreen.build` to `SelectedProfileId.select()`
+(`profile_providers.dart`) itself — the ONE seam every activation path in
+the app funnels through (verified by enumerating every
+`selectedProfileIdProvider.notifier).select(` call site in `lib/`: the
+route guard, the picker, the switcher, sign-in, onboarding, restore, a
+notification tap, add/edit-profile, and the zero-profile self-heal — all of
+them, nothing else). Gated on `activeAccountIdProvider` being set (cheap,
+in-memory) before touching `profileRepositoryProvider` (which opens a REAL
+on-disk Drift database) — this gate was added mid-session after the
+ungated version broke a widget test; see the P2-14 entry for the full story
+and why it does not weaken production coverage. **Proof — a WIRING test,
+not a trace:** `test/features/profiles/presentation/providers/profile_activation_heal_wiring_test.dart`
+drives the REAL `ProfileGuard`, wired exactly as `router_provider.dart`
+wires it in production, through a cold-start single-profile auto-select
+whose remote document is missing — confirmed RED on the pre-fix code
+(reverted the trigger by hand, re-ran, got the predicted failure with the
+predicted reason), GREEN after. Full evidence: this file's **P2-14** entry.
+
+**`T-43` — FIXED.** Two independent defects: (1) the residual escape at
+`profile_repository_impl.dart`'s old `:775` (now inside the outer `try`,
+with a `_ref.mounted` guard on the outer `catch`'s own attempt); (2) the
+HANG's actual root cause, undiagnosed by the prior two rounds — Riverpod
+3's default per-provider auto-retry treated `AccountNotAuthenticatedException`
+(a structural, non-transient failure) as retryable, so `.future` never
+settled until all 10 retries exhausted. `activeAccountFirebaseProvider` and
+`firestoreLearnerProfileRepositoryProvider` (the ONE thing
+`_ensureFirestoreProfile` directly awaits) both now declare
+`retry: (retryCount, error) => null`. **Proof:** `flutter test
+.../profile_repository_impl_test.dart --plain-name "does not propagate out
+of createProfile"` → `00:00 +1` (was `02:00` timeout). Full mechanism and
+every sibling provider in `repository_providers.dart` sharing the same
+carried (not fixed, out-of-scope) risk: this file's **P2-14** entry.
+
+**Gates (re-confirmed against the P2-14 tree, after all edits, in this
+session):** `dart analyze --fatal-infos` → `No issues found!`. `make audit`
+green, exit 0, 104 checks, true last line `=== audit PASSED — all 68 greps
+clean ===`. Check 103's OK line and split set **unchanged**: `PROFILE-KEY-SPLIT
+check OK: 2 collection(s) currently split (bookmarks, learning_order), all
+within the tracked baseline (0 new violations).` Check 104 **unchanged**:
+`88 tracked entries covering 91 site(s) ...; 0 new, 0 stale, 0 changed`.
+`coverage/lcov.info` untouched (469235 bytes, same mtime as every prior
+measurement — never deleted). **Targeted `flutter test` runs (not `make
+test`/`make ci`; not barred by the NO FULL CI ruling):** the new wiring
+test alone → `+1 -0`, GREEN (confirmed RED on the pre-fix code first);
+`profile_repository_impl_test.dart` alone → `+37 -4`; that file +
+`firestore_learner_profile_repository_test.dart` → `+53 -4`; the targeted
+`--plain-name "does not propagate out of createProfile"` test alone →
+`+1 -0` in `00:00` (was `02:00` timeout); a 6-file batch including
+`profile_edit_delete_actions_test.dart` and `app_shell_test.dart` →
+`+54 -1`. All 4–5 remaining failures across these runs are the SAME
+pre-existing P2-3 `ProfileModel.fromDriftRow` `StateError`, out of this
+round's scope by owner ruling. Full commands and verbatim output: this
+file's **P2-14** entry.
+
+**IN FLIGHT:** nothing. (This field held the P2-14 edit list from before
 this commit's first edit until this commit landed; the completed record is
-the P2-13 entry itself, below, not this field.)
+the P2-14 entry itself, below, not this field.)
 
 **Live on Firestore (4):** bookmarks · learning-order · profile identity ·
 scheduler learning-order read. **Unchanged this phase** — Phase 2 moved no
@@ -227,6 +234,407 @@ stage-definition · study-day-config · track-learning-order.
 ## Entries
 
 Newest first. Append; never rewrite history.
+
+### 2026-08-07 — P2-14: T-40 and T-43 fixed for real — third attempt, both independently proven, one self-inflicted regression found and fixed in the same session
+
+**Brief: "YOU ARE P2-14. Fix T-40 for real: make the 'heal a missing remote
+profile document' path actually FIRE, and fix the hang the last attempt
+introduced. This has failed twice. Prove it this time."** Round three.
+Re-verified `p2-rereview.json`'s Defects A/B/C against the code directly
+before touching anything (all three confirmed real — see the repro
+transcripts below, taken BEFORE any edit). `git log --oneline -1` at start:
+`5cdcb81c` (P2-13). `git stash list`, `git status --porcelain` clean
+(`_bmad/**` only) — verified before the first edit and again below.
+
+#### Files changed
+
+- `lib/features/profiles/presentation/providers/profile_providers.dart` —
+  the T-40 heal trigger now lives inside `SelectedProfileId.select()`,
+  gated on `activeAccountIdProvider`.
+- `lib/app/router/app_shell.dart` — deleted the dead `ref.listen(selectedProfileIdProvider,
+  …)` block and its now-unused `logger.dart` import.
+- `lib/data/firestore/active_account_providers.dart` — `activeAccountFirebaseProvider`
+  now declares `retry: (retryCount, error) => null`.
+- `lib/data/firestore/repository_providers.dart` — `firestoreLearnerProfileRepositoryProvider`
+  now declares the same.
+- `lib/features/profiles/data/repositories/profile_repository_impl.dart` —
+  `_ensureFirestoreProfile` restructured: the `activeProfileDocIdProvider`
+  set moved inside the outer `try`; an outer `catch` (with a `_ref.mounted`
+  guard on its own activation attempt) now wraps the whole
+  `firestoreLearnerProfileRepositoryProvider.future` read. Class doc
+  comment and `ensureRemoteProfile`'s own doc comment corrected to name the
+  real trigger.
+- `lib/features/profiles/domain/repositories/profile_repository.dart` —
+  `ensureRemoteProfile`'s interface doc comment corrected (no longer cites
+  `app_shell.dart`).
+- `test/features/profiles/presentation/providers/profile_activation_heal_wiring_test.dart`
+  (new) — the WIRING test the brief demanded.
+- `docs/planning/firestore-cutover-tasks.md` — `T-40`, `T-43` → `done`;
+  `T-47` narrowed (its `T-43` half is green now).
+- `docs/planning/firestore-cutover-log.md` — this entry; `CURRENT STATE`
+  rewritten.
+
+#### Defect A (`T-40`) re-verified, then fixed
+
+Re-read `app_shell.dart:125`, `app_router.dart:132-133`,
+`profile_guard.dart:167`, `profile_providers.dart:159-166,208`,
+`profile_picker_screen.dart:212-217` directly — the review's claim held
+exactly as stated: the guard's `_setSelectedProfileId` call (→ `select()`)
+runs before the shell (and its listener) can ever build on a single-profile
+cold start, and the post-frame self-heal early-returns without calling
+`select()` once a selection already exists.
+
+**Fix: move the trigger to `SelectedProfileId.select()` itself.**
+`grep -rn "selectedProfileIdProvider.notifier).select(" lib/` (run before
+writing the fix, to build the "ONE seam" list, and re-run after touching
+nothing else, to confirm the set didn't move):
+
+```
+lib/app/restore/device_restore_screen.dart:127
+lib/app/bootstrap/notifications_bootstrap.dart:51
+lib/app/router/router_provider.dart:65
+lib/features/onboarding/presentation/screens/onboarding_screen.dart:183,286,331
+lib/features/onboarding/presentation/steps/onboarding_profile_creation_step.dart:141
+lib/features/account/presentation/notifiers/sign_in_controller.dart:695,713
+lib/features/profiles/presentation/screens/profile_picker_screen.dart:214
+lib/features/profiles/presentation/providers/profile_providers.dart:209 (AutoSelectedProfileId's own self-heal)
+lib/features/profiles/presentation/widgets/add_profile_dialog.dart:270
+lib/features/profiles/presentation/widgets/profile_switcher_sheet.dart:349
+lib/features/profiles/presentation/widgets/profile_edit_delete_actions.dart:149
+```
+
+Every production activation path funnels through this one method — cold
+start (via the guard), the ≥2-profile picker, an in-app switch, sign-in
+reconciliation, onboarding, restore, a notification tap, add/edit-profile.
+One hook, not three, per the brief's own preference.
+
+#### Defect B/C (`T-43`) re-verified, then fixed — and the hang's actual mechanism found
+
+Reproduced BEFORE any edit:
+
+```
+$ flutter test test/features/profiles/data/repositories/profile_repository_impl_test.dart \
+    --plain-name "does not propagate out of createProfile"
+[info] 2:33:52 profile_repo_create_start / profile_repo_create_done {profileId: 1}
+02:00 +0 -1: ... [E]
+  TimeoutException after 0:02:00.000000: Test timed out after 2 minutes.
+[warning] 2:35:51 924ms | profile_repo_firestore_ensure_failed {profileId: 1}
+  Bad state: The provider FutureProvider<AccountFirebaseHandles?>#3bf51 was disposed
+  during loading state, yet no value could be emitted.
+  Cannot use the Ref of Provider<FirestoreProfileRepositoryAdapter>#5257c after it has
+  been disposed.
+  package:learning_tracker/.../profile_repository_impl.dart 778:10  FirestoreProfileRepositoryAdapter._ensureFirestoreProfile
+```
+
+Confirmed both parts of the review's claim: the residual escape at the old
+`:775`/`:778` (outside the `try`), AND that `createProfile` does not merely
+leak — it hangs for the full 2-minute test timeout, only unblocking when
+`addTearDown(failingContainer.dispose)` force-disposes the still-pending
+`activeAccountFirebaseProvider` element.
+
+**The disposed-Ref error was a symptom, not the cause.** Fixing only the
+residual escape (moving `:775` inside the `try`) would still leave the
+2-minute hang, because the underlying `await` never settles in time to
+reach either `try` or `catch` before the test framework's own teardown
+forces it. Read `package:riverpod` 3.2.1's source directly
+(`~/.pub-cache/hosted/pub.dev/riverpod-3.2.1/lib/src/core/element.dart`,
+`foundation.dart`) to find why:
+
+- `ProviderContainer.defaultRetry` (`provider_container.dart:829-844`): 10
+  retries, 200ms doubling to a 6.4s cap, retries every plain `Exception`
+  (only exempts `ProviderException`/`Error`).
+- `triggerRetry` (`element.dart:697-730`), reached from BOTH a synchronous
+  build throw (`buildState`'s own `catch`) AND an async build failure
+  (`_handleAsync`'s `callOnError`, `element.dart:262,290`) — so an `async`
+  `FutureProvider` body that throws is retried exactly like a sync one.
+- While retrying, the returned value is `AsyncLoading<ValueT>._(...,
+  error: (err, stack, retrying: true))` — NOT a terminal `AsyncError`.
+  `onValue` (`element.dart:87-96`) routes `AsyncLoading` to `onLoading`,
+  which does **not** complete the provider's `.future` `Completer`
+  (`element.dart:79-85`); only `onError` (`element.dart:103-130`,
+  reached from a genuinely terminal `AsyncError`) does.
+- `hasError`/`error` on `AsyncValue` (`async_value.dart:125,601`) read
+  `true`/non-null on the INTERIM retrying-loading state too — which is why
+  `test/data/firestore/active_account_providers_test.dart`'s own
+  "surfaces AccountNotAuthenticatedException as an AsyncError" test passes
+  in `00:00`: it asserts `hasError`/`error`, which are satisfied by the
+  interim state, and never proves `.future` (what production code actually
+  awaits) ever settles. Re-ran it standalone to confirm it is still green
+  and still proves nothing about `.future`: `flutter test
+  test/data/firestore/active_account_providers_test.dart` →
+  `00:00 +6: All tests passed!`
+
+So `activeAccountFirebaseProvider` throwing `AccountNotAuthenticatedException`
+(a plain `Exception`, thrown from inside `AccountFirebase.resolve`,
+`account_firebase.dart:460` — a structural "this id was never
+authenticated" condition, not a transient one, by its own doc comment: "In
+practice that should not happen") got retried for the full backoff before
+`.future` ever rejected.
+
+**Fix attempt 1 — disable retry on `activeAccountFirebaseProvider` alone —
+insufficient, re-measured:**
+
+```
+$ flutter test .../profile_repository_impl_test.dart --plain-name "does not propagate out of createProfile"
+02:00 +0 -1: ... [E]
+  TimeoutException after 0:02:00.000000
+  Bad state: The provider FutureProvider<FirestoreLearnerProfileRepository?>#a601e
+  was disposed during loading state, yet no value could be emitted.
+```
+
+Still hung — now at the NEXT hop. `.future`'s rejection propagates the
+RAW original error (`ElementWithFuture.onError`'s `completer.completeError(value.error,
+...)` — unwrapped, not a `ProviderException`), so
+`firestoreLearnerProfileRepositoryProvider`'s own `await ref.watch(activeAccountFirebaseProvider.future)`
+receives a plain `AccountNotAuthenticatedException` too, and retries
+AGAIN, independently, on its own 200ms→6.4s schedule.
+
+**Fix attempt 2 — disable retry on BOTH providers — confirmed by
+reproduction:**
+
+```
+$ flutter test .../profile_repository_impl_test.dart --plain-name "does not propagate out of createProfile"
+[info] profile_repo_create_start / profile_repo_create_done {profileId: 1}
+[warning] profile_repo_firestore_ensure_failed {profileId: 1}
+  AccountNotAuthenticatedException: account "1" has no authenticated Firebase
+  session — call createAnonymousAccount or signInCloudAccount before resolve.
+00:00 +1: All tests passed!
+```
+
+Settles in the same test-clock tick it started in (`0:00`, not `2:00`) —
+the exception is caught, logged, and `createProfile` completes normally.
+Every OTHER provider in `repository_providers.dart` shares the identical
+`await ref.watch(activeAccountFirebaseProvider.future)` shape and
+therefore the same latent risk; only `firestoreLearnerProfileRepositoryProvider`
+is on T-40/T-43's actual call chain, so only it is fixed here — the rest
+are named, not touched, in that file's own new doc comment. **Not
+recorded as a new task** — none of them are reachable from any code this
+round touches, and inventing a task for a defect with no current trigger
+would be exactly the kind of unforced scope creep the brief's GREENFIELD
+ruling and the "smallest total surface" doctrine argue against; flagged
+here so a future agent who DOES wire one of those 12 providers into a new
+eager-`await` call site knows to check this before assuming the default is
+safe.
+
+#### DEVIATION — the fix broke a previously-green widget test; found and fixed in the same session
+
+**Predicted:** moving the T-40 trigger into `SelectedProfileId.select()`
+(no additional gating) would fix Defect A with no other behavioural
+change — `select()` already synchronously touches
+`activeProfileDocIdProvider`, and the new call is fire-and-forget.
+
+**Actual:** `flutter test` on the six files the brief names (`profile_switcher_sheet_test.dart`,
+`add_profile_dialog_test.dart`, `pp13_add_profile_selects_new_profile_test.dart`,
+`profile_edit_delete_actions_test.dart`, `profile_guard_test.dart`,
+`app_shell_test.dart`) → `00:04 +53 -2` — ONE MORE failure than the
+review's own prior measurement of this exact batch (`+54 -1`).
+`profile_switcher_sheet_test.dart`'s "tapping a non-active profile
+switches the active profile and reloads the shell" test, previously green,
+failed:
+
+```
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════
+The following assertion was thrown running a test:
+A Timer is still pending even after the widget tree was disposed.
+'package:flutter_test/src/binding.dart':
+Failed assertion: line 2542 pos 12: '!timersPending'
+```
+
+**Mechanism:** `profileRepositoryProvider`'s build (`profile_providers.dart:38-44`)
+unconditionally `ref.watch`es `userDatabaseProvider` — which, on first
+read in ANY container, opens a REAL on-disk Drift database
+(`database_provider.dart`'s `userDatabase`: `UserDatabase(driftDatabase(name:
+dbName))`). Before this fix, `select()` never touched `profileRepositoryProvider`
+at all, so no widget test calling `select()` needed to account for this.
+`profile_switcher_sheet_test.dart`'s `_wrap()` helper overrides only
+`profileListStreamProvider`, `selectedProfileIdProvider` (with a
+`build()`-only subclass — `select()` itself is inherited, unmodified) and
+`authStateProvider` — never `userDatabaseProvider`, `profileRepositoryProvider`,
+or `activeAccountFirebaseProvider`. My change made every tap-driven
+`select()` call in that test build a real on-disk database and issue a
+real Drift query (`ensureRemoteProfile`'s `_drift.tryGetProfileById`) for
+the first time, leaving background machinery the test's `pumpAndSettle`
+window never drained.
+
+**Fix:** gate the heal dispatch on `ref.read(activeAccountIdProvider) ==
+null` — a cheap, in-memory, already-"wired into production" precondition
+(`active_account_providers.dart`'s own doc comment: bootstrap and every
+sign-in/sign-up/account-switch flow sets it before any profile selection
+can happen) — BEFORE ever touching `profileRepositoryProvider`. This
+mirrors the exact short-circuit `activeAccountFirebaseProvider` already
+performs internally (`if (accountId == null) return null;`), just checked
+earlier so the expensive provider is never built for nothing.
+
+**Invariant unaffected:** a real cold start, sign-in, or account switch
+already sets `activeAccountIdProvider` before selecting any profile, so
+T-40's actual coverage (cold start, picker, switcher — see Defect A above)
+is unchanged. Only a container/test that never wired the Epic-B/C
+Firestore-handle seam at all (the vast majority of today's narrower widget
+tests, since it postdates most of them) now skips the heal attempt —
+exactly where it was already guaranteed to be a no-op, just without paying
+for a real database first.
+
+**Re-verified after the gate, own wiring test adjusted to set
+`activeAccountIdProvider` (matching what production bootstrap already
+does) and re-confirmed still RED-then-GREEN (see Defect A section):**
+
+```
+$ flutter test profile_switcher_sheet_test.dart add_profile_dialog_test.dart \
+    pp13_add_profile_selects_new_profile_test.dart profile_edit_delete_actions_test.dart \
+    profile_guard_test.dart app_shell_test.dart
+00:04 +54 -1: Some tests failed.
+Failing tests:
+  profile_edit_delete_actions_test.dart: AUD-profiles-02 — editProfileFlow surfaces
+  tutor-routed push failures a failed tutor-routed pushLearnerProfile shows the
+  tutorPermissionDenied snackbar instead of being silently swallowed
+```
+
+Exactly matches the review's own prior baseline for this batch (`+54 -1`,
+same single failure, same test, same P2-3-inherited `StateError` cause).
+**Recorded in this log per the brief's explicit instruction — a
+deviation found and corrected inside the same session is still a
+deviation, not something to quietly absorb.**
+
+#### PROOF REQUIRED — the wiring test
+
+`grep -rn ensureRemoteProfile test/` before this commit: 3 direct adapter
+calls (`profile_repository_impl_test.dart:1127,1135,1151`) + 1 fake
+override (`auto_selected_profile_id_test.dart:111`) — exactly what the
+brief and `p2-rereview.json`'s D15 said. New file:
+`test/features/profiles/presentation/providers/profile_activation_heal_wiring_test.dart`.
+It drives the REAL `ProfileGuard`, wired with the SAME closure shape
+`router_provider.dart` uses in production (`setSelectedProfileId` forwards
+into the real `SelectedProfileId.select()`, never a test-double callback),
+through a cold-start single-profile auto-select whose Firestore document
+starts out missing, then asserts the document exists after `pumpEventQueue()`
+drains the fire-and-forget heal.
+
+**Confirmed it fails on the pre-fix code** — temporarily reverted just the
+`select()` trigger (kept every other fix), re-ran:
+
+```
+$ flutter test test/features/profiles/presentation/providers/profile_activation_heal_wiring_test.dart
+00:00 +0 -1: ... [E]
+  Expected: true
+    Actual: <false>
+  ProfileGuard's cold-start single-profile auto-select must reach
+  ProfileRepository.ensureRemoteProfile via SelectedProfileId.select(). On the
+  broken (pre-fix) wiring this document is never created, because the only heal
+  trigger lived in a widget ref.listen that this guard-level cold-start path
+  never builds — see docs/planning/firestore-cutover-log.md's T-40 entries.
+```
+
+Restored the fix immediately, re-ran:
+
+```
+$ flutter test test/features/profiles/presentation/providers/profile_activation_heal_wiring_test.dart
+00:00 +1: All tests passed!
+```
+
+#### Item 3 — the whole of `profile_repository_impl_test.dart`
+
+```
+$ flutter test test/features/profiles/data/repositories/profile_repository_impl_test.dart
+00:00 +37 -4: Some tests failed.
+
+Failing tests:
+  AUD-profiles-02 — TutorWriteException from pushLearnerProfile propagates
+    updateProfile propagates TutorWriteException instead of swallowing it
+  AUD-profiles-16 — log-less catch: cloud push failures now log
+    updateProfile still succeeds offline-first AND logs the cloud push failure
+    via AppLogger
+  FirestoreProfileRepositoryAdapter ready (active account) ensureDefaultProfile
+    fast path (account already has a profile) does NOT touch that profile's
+    missing ulid
+  FirestoreProfileRepositoryAdapter ready (active account) updateProfile does
+    NOT backfill a missing ulid for a pre-P2-2 profile — the lazy backfill
+    path is deleted (P2-2)
+```
+
+**All 4 are the SAME pre-existing `ProfileModel.fromDriftRow: profile id …
+has no ulid — pre-P2-2 profile row with no ULID` `StateError`**, inherited
+from `feefe34b` (P2-3)'s enforcement — each test deliberately seeds a
+legacy null-`ulid` row, then calls `updateProfile`/`getProfileById`, which
+throws by design. **Named explicitly, per the brief's instruction — not
+fixed this round.** The owner scoped these OUT ("the owner scoped the
+inherited P2-3 StateError failures OUT of this round, so leaving those red
+is acceptable ONLY if you name them explicitly") — this is that naming.
+Was `+52 -5` before this session (5 failures, including the `T-43` hang
+counted as one failure at its 2-minute timeout); now `+37 -4` for this file
+alone (the `T-43` test moved to green; the file total differs from the
+review's combined-2-file `52` because that number spanned both files —
+`37 + 16 = 53`, matching the combined re-run below).
+
+Combined with `firestore_learner_profile_repository_test.dart` (the
+review's own pairing):
+
+```
+$ flutter test test/features/profiles/data/repositories/profile_repository_impl_test.dart \
+    test/data/repositories/firestore_learner_profile_repository_test.dart
+00:00 +53 -4: Some tests failed.
+```
+
+Same 4 failures, same cause, same disposition.
+`firestore_learner_profile_repository_test.dart` alone:
+`flutter test test/data/repositories/firestore_learner_profile_repository_test.dart`
+→ `00:00 +16: All tests passed!`
+
+#### Gates — re-measured on the final tree, after every edit
+
+```
+$ dart analyze --fatal-infos
+Analyzing learning_tracker...
+No issues found!
+
+$ dart run tool/check_profile_path_keying.dart | tail -1
+PROFILE-KEY-SPLIT check OK: 2 collection(s) currently split (bookmarks, learning_order), all within the tracked baseline (0 new violations).
+
+$ dart run tool/check_profile_id_int_sites.dart | tail -1
+PROFILE-ID-INT-SITES OK: 88 tracked entries covering 91 site(s) across 5 pattern(s) [cf-int-guard, cf-string-profileid-doc, dart-int-profileid-param, dart-tutoring-int-parse, dart-tutoring-id-tostring]; 0 new, 0 stale, 0 changed.
+
+$ make audit; echo "EXIT=$?"
+... R6d's own stdout (the RUNNING form): "R6 lcov-denominator check OK: 76
+    zero-coverage file(s), all within the tracked baseline (0 new violations)."
+    coverage/lcov.info present, 469235 bytes, mtime Aug 6 17:18 — UNCHANGED,
+    never deleted.
+=== audit PASSED — all 68 greps clean ===
+EXIT=0
+```
+
+Check 103's split set and check 104's count are byte-identical to every
+prior measurement this phase — **unsurprising and expected**: this
+round's edits touch identity ACTIVATION timing and provider retry policy,
+neither of which is a profile-identity KEYING site either checker scans
+for. Restated per this log's own standing lesson (§ "Check 104's
+occurrence-count fix"): a green gate here proves nothing about T-40/T-43
+specifically — the wiring test above is what proves it.
+
+#### `firestore-cutover-tasks.md` and `firestore-cutover-plan.md`
+
+- `T-40`, `T-43` → `done` (P2-14), full evidence in each row, pointing
+  here.
+- `T-47` narrowed: its `T-43`-hang half is green now; its inherited-P2-3
+  half is unchanged and still explicitly out of scope this round.
+- `firestore-cutover-plan.md` **not touched this commit** — its Phase 2
+  section already correctly reads "NOT RESOLVED (reopened P2-13)" from the
+  P2-13 commit; whether to flip it to resolved, given `T-44`–`T-46`/`T-48`
+  remain open non-blocking, is left to whoever reads this next (see
+  `CURRENT STATE`'s own explanation for why this entry does not make that
+  call unilaterally).
+
+#### Stash situation — re-verified again this session, unchanged
+
+```
+$ git stash list
+stash@{0}: WIP on dev: d74e3829 docs(planning): durable task list + recovery log; mark Phase 1 resolved
+stash@{1}: WIP on (no branch): 8855b9b1 fix(tracks): AUD-tracks-18 - de-duplicate Hebrew-script detection regex
+```
+
+Same two bases, same order as every prior record back to P2-0. Neither
+popped, applied, nor dropped this session — the wiring-test revert/restore
+above was done by direct `Edit` calls (old text ↔ new text), never a
+stash. `git status --porcelain | grep -v '^ M _bmad'` clean before every
+edit boundary this session.
 
 ### 2026-08-07 — P2-13: Phase 2 REOPENED — T-40's fix is inert, a second BLOCKING defect found, 6 red tests unrecorded
 

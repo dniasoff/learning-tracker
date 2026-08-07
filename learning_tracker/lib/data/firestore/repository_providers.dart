@@ -185,6 +185,30 @@ final firestoreAccountRepositoryProvider =
 /// Account-scoped, not profile-scoped: this repository manages the SET of
 /// profiles under an account, so — unlike every other provider below — it
 /// needs no *active* profile id.
+///
+/// **`retry: (retryCount, error) => null` (T-43).** `await
+/// ref.watch(activeAccountFirebaseProvider.future)` above propagates that
+/// provider's RAW error on failure — `ElementWithFuture.onError`
+/// (`package:riverpod`) completes `.future`'s `Completer` with the
+/// original exception, unwrapped, not a `ProviderException` — so
+/// Riverpod's default retry does not recognize it as "another provider's
+/// error" and retries it here too, independently of whatever
+/// [activeAccountFirebaseProvider] itself decided. Disabling retry on that
+/// provider alone (see its own doc comment) was not sufficient: this
+/// provider's OWN default retry still turned a fast upstream failure into
+/// another ~38+-second stall before `.future` — what
+/// `FirestoreProfileRepositoryAdapter._ensureFirestoreProfile` awaits —
+/// finally settled. Confirmed by reproduction: with only the upstream fix,
+/// `profile_repository_impl_test.dart`'s "does not propagate out of
+/// createProfile" test still hung to its 2-minute timeout, now reporting
+/// disposal of THIS provider instead. Every other provider in this file
+/// shares the identical `await ref.watch(activeAccountFirebaseProvider
+/// .future)` (directly or via [_watchActiveAccountAndProfile]) shape and
+/// therefore the same latent risk; only this one is reachable from T-40/
+/// T-43's call chain (`createProfile` → `ensureDefaultProfile` →
+/// `ensureRemoteProfile`), so only this one is fixed here — the rest are
+/// carried, not silently fixed, in `docs/planning/firestore-cutover-log.md`'s
+/// `T-43` entries.
 final firestoreLearnerProfileRepositoryProvider =
     FutureProvider<FirestoreLearnerProfileRepository?>((ref) async {
       final handles = await ref.watch(activeAccountFirebaseProvider.future);
@@ -193,7 +217,7 @@ final firestoreLearnerProfileRepositoryProvider =
         firestore: handles.firestore,
         uid: handles.uid,
       );
-    });
+    }, retry: (retryCount, error) => null);
 
 /// The two local, non-Firestore collaborators [FirestoreBookmarkRepository]
 /// needs, supplied by the caller. This file resolves Firestore handles and

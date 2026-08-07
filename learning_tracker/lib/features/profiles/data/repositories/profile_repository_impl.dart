@@ -563,21 +563,30 @@ class ProfileRepositoryImpl implements ProfileRepository {
 /// [_ensureFirestoreProfile] itself only ever runs at [createProfile]/
 /// [ensureDefaultProfile] — i.e. once, at the instant a cloud outage would
 /// have caused the failure in the first place, with no retry of its own.
-/// The actual heal is [ensureRemoteProfile]: a SEPARATE call site fired on
-/// every profile ACTIVATION (`lib/app/router/app_shell.dart`'s
-/// `ref.listen(selectedProfileIdProvider, …)` — every cold-start re-select
-/// AND every manual profile switch, since both set that provider), not only
-/// at creation. It re-reads the Drift row (cheap, local, always available)
-/// and re-runs the SAME idempotent merge write
+/// The actual heal is [ensureRemoteProfile]: fired from
+/// `SelectedProfileId.select` (`profile_providers.dart`), the ONE seam
+/// every profile-activation path in the app funnels through — the
+/// cold-start route guard (`ProfileGuard` → `router_provider.dart`'s
+/// `setSelectedProfileId`), the ≥2-profile picker
+/// (`profile_picker_screen.dart`), the zero-profile self-heal
+/// (`AutoSelectedProfileId._resolveSelection`), the switcher sheet, sign-in
+/// reconciliation, onboarding, device restore, and a notification tap all
+/// call `select()`, never `activeProfileDocIdProvider.notifier.set(...)`
+/// directly (verified: `grep -rn
+/// 'selectedProfileIdProvider.notifier).select(' lib/` returns every one of
+/// them and nothing else). This replaces a design that shipped at P2-8
+/// (`8dea756b`) hooking `ref.listen(selectedProfileIdProvider, …)` inside
+/// `AppShellScreen.build` instead — dead on every cold-start path, because
+/// the router's `ProfileGuard` resolves selection (calling `select()`)
+/// BEFORE the shell widget — and its listener — can ever build; see
+/// `docs/planning/firestore-cutover-log.md`'s `T-40` entries (P2-13/P2-14)
+/// for the full post-mortem. It re-reads the Drift row (cheap, local,
+/// always available) and re-runs the SAME idempotent merge write
 /// ([FirestoreLearnerProfileRepository.ensureProfile], never
 /// `created_at`-clobbering — see that method's own doc comment) every time
 /// the profile activates, so a document that was still missing after
 /// creation gets created the very next time its profile is selected with
-/// the network back — including the next app launch. This replaces a design
-/// that briefly shipped (`0d5d9125`) claiming [_ensureFirestoreProfile]
-/// alone would "heal it the next time it runs" — false, since nothing ever
-/// called it again for an already-created profile; see
-/// `docs/planning/firestore-cutover-log.md`'s P2-8 entry for the correction.
+/// the network back — including the next app launch.
 class FirestoreProfileRepositoryAdapter implements ProfileRepository {
   FirestoreProfileRepositoryAdapter({
     required Ref ref,
@@ -695,11 +704,14 @@ class FirestoreProfileRepositoryAdapter implements ProfileRepository {
   /// instant a network outage would have caused the original failure — with
   /// no retry, a profile created offline got a local ULID and permanently
   /// no remote document. This method is the real retry: called every time
-  /// [id]'s profile is ACTIVATED (`lib/app/router/app_shell.dart`'s
-  /// `ref.listen(selectedProfileIdProvider, …)`), not only at creation, so
-  /// the SAME idempotent merge write runs again on every cold start and
-  /// every manual profile switch until it succeeds. No-op (never throws)
-  /// when [id] has no matching row or no `ulid` yet to heal onto — see
+  /// [id]'s profile is ACTIVATED, from `SelectedProfileId.select`
+  /// (`profile_providers.dart`) — the one seam every activation path in the
+  /// app funnels through, see the class doc comment's "A profile created
+  /// while offline still gets its remote document" section for the full
+  /// list of call sites — not only at creation, so the SAME idempotent
+  /// merge write runs again on every cold start and every manual profile
+  /// switch until it succeeds. No-op (never throws) when [id] has no
+  /// matching row or no `ulid` yet to heal onto — see
   /// [ProfileRepositoryImpl.tryGetProfileById].
   @override
   Future<void> ensureRemoteProfile(int id) async {
@@ -755,26 +767,57 @@ class FirestoreProfileRepositoryAdapter implements ProfileRepository {
         firestoreLearnerProfileRepositoryProvider.future,
       );
       if (firestoreRepo == null) return; // no active cloud account yet
-      await firestoreRepo.ensureProfile(
-        profileId: model.ulid,
-        displayName: model.displayName,
-        mode: model.profileMode,
-        avatar: model.avatarIndex.toString(),
-      );
+      try {
+        await firestoreRepo.ensureProfile(
+          profileId: model.ulid,
+          displayName: model.displayName,
+          mode: model.profileMode,
+          avatar: model.avatarIndex.toString(),
+        );
+      } catch (e, st) {
+        // Non-fatal: mirrors _drift's own cloud-push failure handling
+        // above — the local (Drift) profile already exists and is usable;
+        // this just means the remote WRITE failed (e.g. a network
+        // outage). The identity is still activated below regardless —
+        // T-40's real retry is [ensureRemoteProfile], fired on the
+        // profile's next activation, not "the next time this exact
+        // method happens to run".
+        _log.warning(
+          event: 'profile_repo_firestore_ensure_failed',
+          fields: {'profileId': model.id},
+          exception: e,
+          stackTrace: st,
+        );
+      }
+      // T-43: this used to be the method's LAST statement, sitting after
+      // this try/catch's closing brace — outside BOTH try blocks, so a
+      // disposed `Ref` could escape uncaught out of
+      // createProfile/ensureDefaultProfile/ensureRemoteProfile
+      // (`profileRepositoryProvider` watches `userDatabaseProvider`,
+      // deliberately invalidated to swap the per-account DB mid
+      // sign-in/sign-up — `router_provider.dart:30-35`). Now inside the
+      // OUTER try, so the catch below guards it too.
+      _ref.read(activeProfileDocIdProvider.notifier).set(model.ulid);
     } catch (e, st) {
-      // Non-fatal: mirrors _drift's own cloud-push failure handling above —
-      // the local (Drift) profile already exists and is usable; this just
-      // means the remote resolve/write failed, e.g. a network outage or an
-      // auth-resolution error. The identity is still activated below; T-40's
-      // real retry is [ensureRemoteProfile], fired on the profile's next
-      // activation, not "the next time this exact method happens to run".
+      // Outer guard: the FIRESTORE-REPO-RESOLUTION await above can itself
+      // throw — a genuine account-resolution failure (e.g.
+      // [AccountNotAuthenticatedException] — see the class doc comment) or
+      // a disposed `Ref` racing a provider teardown. Non-fatal for the
+      // same reason as the inner catch: the local identity already
+      // exists. `_ref.mounted` (Riverpod's own documented remedy for "Ref
+      // used after dispose") gates the final activation attempt below —
+      // if the Ref itself is gone there is nothing left to write to, and
+      // touching it again would throw the exact disposed-Ref error this
+      // restructuring exists to stop.
       _log.warning(
         event: 'profile_repo_firestore_ensure_failed',
         fields: {'profileId': model.id},
         exception: e,
         stackTrace: st,
       );
+      if (_ref.mounted) {
+        _ref.read(activeProfileDocIdProvider.notifier).set(model.ulid);
+      }
     }
-    _ref.read(activeProfileDocIdProvider.notifier).set(model.ulid);
   }
 }
