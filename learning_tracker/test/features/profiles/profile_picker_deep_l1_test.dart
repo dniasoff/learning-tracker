@@ -60,6 +60,7 @@
 library;
 
 import 'package:auto_route/auto_route.dart';
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -339,6 +340,7 @@ void main() {
               LearnerProfilesCompanion.insert(
                 accountId: accountId,
                 displayName: 'OnlyOne',
+                ulid: const Value('ulid-picker-onlyone-2'),
                 mode: 'adult',
                 createdAt: _epoch,
                 updatedAt: _epoch,
@@ -554,6 +556,7 @@ void main() {
               LearnerProfilesCompanion.insert(
                 accountId: accountId,
                 displayName: 'Avi',
+                ulid: const Value('ulid-picker-avi-3'),
                 mode: 'adult',
                 createdAt: _epoch,
                 updatedAt: _epoch,
@@ -565,6 +568,7 @@ void main() {
               LearnerProfilesCompanion.insert(
                 accountId: accountId,
                 displayName: 'Yosef',
+                ulid: const Value('ulid-picker-yosef-3'),
                 mode: 'child',
                 createdAt: _epoch,
                 updatedAt: _epoch,
@@ -621,6 +625,7 @@ void main() {
             LearnerProfilesCompanion.insert(
               accountId: accountId,
               displayName: 'Avi',
+              ulid: const Value('ulid-picker-avi-2'),
               mode: 'adult',
               createdAt: _epoch,
               updatedAt: _epoch,
@@ -632,6 +637,7 @@ void main() {
             LearnerProfilesCompanion.insert(
               accountId: accountId,
               displayName: 'Yosef',
+              ulid: const Value('ulid-picker-yosef-2'),
               mode: 'child',
               createdAt: _epoch,
               updatedAt: _epoch,
@@ -695,6 +701,7 @@ void main() {
               LearnerProfilesCompanion.insert(
                 accountId: accountId,
                 displayName: 'OnlyOne',
+                ulid: const Value('ulid-picker-onlyone-1'),
                 mode: 'adult',
                 createdAt: _epoch,
                 updatedAt: _epoch,
@@ -769,6 +776,7 @@ void main() {
             LearnerProfilesCompanion.insert(
               accountId: accountId,
               displayName: 'Avi',
+              ulid: const Value('ulid-picker-avi-1'),
               mode: 'adult',
               createdAt: _epoch,
               updatedAt: _epoch,
@@ -780,6 +788,7 @@ void main() {
             LearnerProfilesCompanion.insert(
               accountId: accountId,
               displayName: 'Yosef',
+              ulid: const Value('ulid-picker-yosef-1'),
               mode: 'child',
               createdAt: _epoch,
               updatedAt: _epoch,

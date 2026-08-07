@@ -75,6 +75,16 @@ Future<void> seedProfileWithIds(
           mode: Value(mode),
           createdAt: Value(DateTimeFactory.nowUtc()),
           updatedAt: Value(DateTimeFactory.nowUtc()),
+          // T-45 / P2-19: P2-2's eager-mint policy means a real seeded
+          // profile always has a ulid; a null one now hard-throws out of
+          // `ProfileModel.fromDriftRow` (P2-3). Derived from [profileId] so
+          // callers seeding more than one profile per test (e.g.
+          // `stage_definition_repository_impl_26_26_test.dart`) still get
+          // distinct, meaningful ulids per profile rather than a shared
+          // literal — mirrors `seedProfile`/`seedProfileZero`
+          // (`drift_memory.dart`), which carry the equivalent fixed
+          // literals for the same reason (T-41).
+          ulid: Value('ulid-seed-profile-$profileId'),
         ),
       );
 }

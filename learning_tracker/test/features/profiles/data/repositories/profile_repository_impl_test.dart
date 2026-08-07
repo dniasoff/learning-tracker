@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -773,6 +774,13 @@ void main() {
         () async {
           // Seed the profile directly (bypassing createProfile, which would
           // also hit the tutor-routed facade and throw on the initial push).
+          // T-45 / P2-19: this test's own subject is exception propagation,
+          // not identity — but `updateProfile` unconditionally rebuilds a
+          // `ProfileModel` via `fromDriftRow` before it ever reaches the
+          // push (P2-3), so a ulid-less row here would hard-throw
+          // `StateError` before the facade's `TutorWriteException` is even
+          // raised. A real ulid is incidental setup, not the point under
+          // test.
           final now = DateTimeFactory.nowUtc();
           final id = await db
               .into(db.learnerProfiles)
@@ -783,6 +791,7 @@ void main() {
                   mode: 'child',
                   createdAt: now,
                   updatedAt: now,
+                  ulid: const Value('ulid-aud-profiles-02'),
                 ),
               );
 
@@ -895,6 +904,10 @@ void main() {
 
     test('updateProfile still succeeds offline-first AND logs the cloud push '
         'failure via AppLogger', () async {
+      // T-45 / P2-19: incidental setup, not the point under test (see the
+      // matching comment on AUD-profiles-02's `updateProfile` test above) —
+      // `updateProfile` rebuilds via `fromDriftRow` (P2-3) before it can
+      // reach the push whose failure this test is actually about.
       final now = DateTimeFactory.nowUtc();
       final id = await db
           .into(db.learnerProfiles)
@@ -905,6 +918,7 @@ void main() {
               mode: 'adult',
               createdAt: now,
               updatedAt: now,
+              ulid: const Value('ulid-aud-profiles-16'),
             ),
           );
 
@@ -1307,9 +1321,21 @@ void main() {
         );
 
         expect(id, preExistingId);
-        final profile = await adapter.getProfileById(id);
+        // T-45 / P2-19: restated, not re-targeted. This test's subject is
+        // "the fast path never backfills the row's ulid column" — that is
+        // still true and still worth asserting. What changed is HOW to
+        // observe it: `adapter.getProfileById` (the domain read) now
+        // hard-throws on a null-ulid row by design (P2-3's
+        // `fromDriftRow` — see `ensureRemoteProfile`'s doc comment, which
+        // names exactly this "crash on a genuine read, no-op on a heal
+        // decision" split and is why `tryGetProfileById` exists at all).
+        // Reading the raw Drift row via `localDb.profileDao` — the layer
+        // that actually still tolerates a null `ulid` column — observes
+        // the same fact this test always meant to check without tripping
+        // the intentional enforcement.
+        final row = await localDb.profileDao.getProfileById(id);
         expect(
-          profile?.ulid,
+          row?.ulid,
           isNull,
           reason:
               'the fast (no-op) path never mints — see the class doc '
@@ -1318,13 +1344,14 @@ void main() {
         );
       });
 
-      test('updateProfile does NOT backfill a missing ulid for a pre-P2-2 '
-          'profile — the lazy backfill path is deleted (P2-2)', () async {
-        // Simulate a profile that predates the P2-2 eager-mint policy:
-        // inserted directly (bypassing createProfile), so ulid is NULL,
-        // exactly like every profile that existed before schema v38
-        // shipped, before this adapter shipped, or before P2-2 made
-        // minting eager.
+      test('updateProfile hard-throws for a pre-P2-2 profile with a missing '
+          'ulid, instead of silently backfilling or succeeding without one '
+          '(P2-3 enforcement)', () async {
+        // T-45 / P2-19: restated, not re-targeted. Simulate a profile that
+        // predates the P2-2 eager-mint policy: inserted directly (bypassing
+        // createProfile), so ulid is NULL, exactly like every profile that
+        // existed before schema v38 shipped, before this adapter shipped,
+        // or before P2-2 made minting eager.
         final preExistingId = await localDb.profileDao.insertProfile(
           LearnerProfilesCompanion.insert(
             accountId: 1,
@@ -1334,21 +1361,44 @@ void main() {
             updatedAt: DateTimeFactory.nowUtc(),
           ),
         );
-        expect((await adapter.getProfileById(preExistingId))?.ulid, isNull);
-
-        final updated = await adapter.updateProfile(
-          id: preExistingId,
-          displayName: 'New Name',
+        expect(
+          (await localDb.profileDao.getProfileById(preExistingId))?.ulid,
+          isNull,
         );
 
-        // P2-2 deleted the lazy on-edit backfill (see
-        // FirestoreProfileRepositoryAdapter.updateProfile): under the
-        // greenfield ruling a pre-existing null ulid is never healed by
-        // this method anymore — wipe-and-reseed is the remedy.
-        expect(updated.displayName, 'New Name');
-        expect(updated.ulid, isNull);
-        expect(container.read(activeProfileDocIdProvider), isNull);
+        // The ORIGINAL version of this test (pre-P2-3 enforcement landing
+        // for real) asserted that `updateProfile` succeeded and simply left
+        // the ulid null — i.e. that the lazy backfill P2-2 deleted stayed
+        // deleted, without anything replacing it. That target no longer
+        // exists: `updateProfile` unconditionally rebuilds its return value
+        // via `ProfileModel.fromDriftRow` (`profile_repository_impl.dart`),
+        // which is P2-3's enforcement point — a null-ulid row now hard-fails
+        // there with a named `StateError` ("wipe and reseed the device"),
+        // for ANY field being updated, not only an attempted ulid backfill.
+        // Under the greenfield ruling (R3, `firestore-phase2-plan.md`) that
+        // crash is the intended behaviour, not a regression to route around
+        // — so the honest assertion is the throw itself.
+        await expectLater(
+          adapter.updateProfile(id: preExistingId, displayName: 'New Name'),
+          throwsA(isA<StateError>()),
+          reason:
+              'a legacy null-ulid row must hard-fail updateProfile via '
+              "fromDriftRow's \"wipe and reseed the device\" contract "
+              '(P2-3) — it must not silently succeed with the ulid left '
+              'null',
+        );
 
+        // The Drift UPDATE statement itself runs BEFORE the re-read that
+        // throws (see `updateProfile`'s body), so the local write still
+        // lands even though the method never returns normally — recorded
+        // here as a fact about the current implementation, not asserted as
+        // a virtue: the caller gets an unhandled exception with no
+        // indication the local row actually changed underneath it.
+        final row = await localDb.profileDao.getProfileById(preExistingId);
+        expect(row?.displayName, 'New Name');
+        expect(row?.ulid, isNull);
+
+        expect(container.read(activeProfileDocIdProvider), isNull);
         final collection = firestore
             .collection('users')
             .doc(uid)
