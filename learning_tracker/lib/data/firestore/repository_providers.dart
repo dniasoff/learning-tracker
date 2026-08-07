@@ -203,12 +203,30 @@ final firestoreAccountRepositoryProvider =
 /// createProfile" test still hung to its 2-minute timeout, now reporting
 /// disposal of THIS provider instead. Every other provider in this file
 /// shares the identical `await ref.watch(activeAccountFirebaseProvider
-/// .future)` (directly or via [_watchActiveAccountAndProfile]) shape and
-/// therefore the same latent risk; only this one is reachable from T-40/
-/// T-43's call chain (`createProfile` → `ensureDefaultProfile` →
-/// `ensureRemoteProfile`), so only this one is fixed here — the rest are
-/// carried, not silently fixed, in `docs/planning/firestore-cutover-log.md`'s
-/// `T-43` entries.
+/// .future)` (directly or via [_watchActiveAccountAndProfile]) shape, but
+/// **NOT the same live production risk (T-50, P2-20 — corrected in code;
+/// this comment previously claimed otherwise and that claim was FALSE for
+/// production).** `lib/app/bootstrap/bootstrap.dart:68-81` constructs the
+/// app's only [ProviderContainer] with a container-level `retry: (_, __) =>
+/// null` — verified: `grep -rn "ProviderContainer(" lib/` returns exactly
+/// one construction site — already disabling Riverpod's default auto-retry
+/// for EVERY provider, app-wide, before `main.dart:22`'s root
+/// [UncontrolledProviderScope] ever mounts it. (The only other
+/// [UncontrolledProviderScope] in `lib/`,
+/// `features/settings/presentation/utils/account_actions.dart:355`,
+/// re-parents that SAME container via `ProviderScope.containerOf` for a
+/// dialog pushed outside the route tree — it does not construct a second
+/// one.) So the other 12 providers in this file carry **no live production
+/// risk** from this shape; only a bare test [ProviderContainer] that never
+/// went through `bootstrap()` — the gap `T-40`/`T-43`'s own test harness hit
+/// — can observe the default-retry hang this provider's `retry:` line
+/// fixes. The per-provider `retry:` declaration here exists for
+/// bare-test-container parity with production, not to close a production
+/// gap on the other 12 — this correction was recorded docs-only at P2-16
+/// (three `.md` files; this comment was missed, then reopened as `T-50` at
+/// P2-17, then fixed here at P2-20) — see
+/// `docs/planning/firestore-cutover-log.md`'s `T-43`/`T-50`/`P2-20` entries
+/// for the full history.
 final firestoreLearnerProfileRepositoryProvider =
     FutureProvider<FirestoreLearnerProfileRepository?>((ref) async {
       final handles = await ref.watch(activeAccountFirebaseProvider.future);
