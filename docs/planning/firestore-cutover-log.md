@@ -77,51 +77,78 @@ nothing on disk to diff against. This is the fix, binding from 2026-08-06
 
 ## CURRENT STATE
 
-**Head:** `00db9af1` (P2-11). This commit (P2-12) is docs/comments-only —
-one doc-comment edit in `repository_providers.dart`, the rest is this log
-plus `firestore-cutover-tasks.md` — `00db9af1` remains the correct SHA for
-a cold agent to diff a tree against until P2-12's own SHA is knowable
-(same self-reference lag as every prior closing commit).
+**Head:** `c06d942a` (P2-12) **(P2-13, this commit, not yet reflected —
+same self-reference lag as every prior closing commit)**. This commit is
+docs-only — no `lib/`, `test/`, or `tool/` file touched; `c06d942a` remains
+the correct SHA for a cold agent to diff a tree against until P2-13's own
+SHA is knowable.
 **Deployed:** still `unknown — not deployed`. P2-6's `learning_order allow
-delete` rules change is **NOT deployed**; P2-7 through this commit (P2-12)
-are all docs/`tool`/`Makefile`-only (P2-12 also touches one doc comment)
-and deploy nothing. Do not attribute a device `permission-denied` on
-`learning_order` delete to a code defect until this field says otherwise.
-**Phase:** 0 ✅ · 1 ✅ · **2 ✅** (P2-0 ✅, P2-1 ✅, P2-2 ✅, P2-3 ✅, P2-4 ✅,
-P2-5 ✅, P2-6 ✅, P2-7 ✅ docs-only, P2-8 ✅ fixed BLOCKING DEFECT 1 (T-40),
-P2-9 ✅ fixed BLOCKING DEFECT 2 (T-41), P2-10 ✅ fixed four of `T-42`'s
-minor items, P2-11 ✅ fixed `T-42` item 3 (check 104's dedup fail-open)
-plus its two folded-in MINOR items, **P2-12 ✅ triaged `T-42`'s three
-remaining sub-items (D9 criterion, `repository_providers.dart`'s stale
-reason, the P2-1 false-verification claim) and added the full KNOWN
-ISSUES / CARRIED FINDINGS disposition table — see that entry, above**).
-**Both BLOCKING defects fixed; `T-42` has no open sub-item left; no new
-defect found this commit.** Per `CURRENT STATE`'s own long-standing exit
-condition ("`T-42` triaged/resolved-or-explicitly-deferred... is the ONLY
-remaining Phase-2-exit condition; no BLOCKING defect remains"), **Phase 2
-is resolved as of this commit** — meaning the documentation record is
-truthful and every raised finding has a disposition, matching how Phase 0
-and Phase 1 were marked resolved. It does **not** mean every deferred
-device check ran: D1–D14 (P2-12's consolidated table, above) remain open
-and are the end-of-cutover CI phase's problem, not a Phase-3-start blocker
-(Phase 3's own T-37/T-39 prerequisites are separate, tracked in
-`firestore-cutover-tasks.md`).
-**Gates (P2-12, re-confirmed against HEAD; no code-behavior change so no
-gate was expected to move and none did):** `dart analyze --fatal-infos` →
-`No issues found!`. `make audit` green, exit 0, **104** checks, true last
-line (no parenthetical) `=== audit PASSED — all 68 greps clean ===`. Check
-103's OK line and split set **unchanged**: `PROFILE-KEY-SPLIT check OK: 2
+delete` rules change is **NOT deployed**; every commit from P2-7 through
+this one is docs/`tool`/`Makefile`-only and deploys nothing. Do not
+attribute a device `permission-denied` on `learning_order` delete to a code
+defect until this field says otherwise.
+**Phase:** 0 ✅ · 1 ✅ · **2 — NOT RESOLVED (reopened, P2-13).** P2-12's
+`Phase 2 ✅` (its own entry, above, left unedited — append-only) is
+corrected here: a second-pass adversarial review re-verified the tree at
+`c06d942a` **directly** — gates plus targeted `flutter test` runs, not a
+re-read of this log — and found the ✅ false on its own stated terms.
+**Two BLOCKING defects are open:**
+1. **`T-40` (reopened).** P2-8's activation-heal listener
+   (`app_shell.dart:125`'s `ref.listen(selectedProfileIdProvider, …)`, no
+   `fireImmediately`) is registered on a route the guard has already
+   resolved selection on before the shell page — and the listener — can
+   build. It never fires on any cold-start path for a single-profile
+   account, which is the exact scenario the fix targets. Full evidence:
+   this entry's "BLOCKING DEFECT 3" section, below.
+2. **`T-43` (new).** P2-8's own new offline-first test is RED — not merely
+   leaking, but hanging to a 2-minute timeout
+   (`Cannot use the Ref of Provider<FirestoreProfileRepositoryAdapter>#6058a
+   after it has been disposed`) — and a residual escape survives at
+   `profile_repository_impl.dart:775`, still outside `_ensureFirestoreProfile`'s
+   `try`. Full evidence: "BLOCKING DEFECT 4", below.
+
+Four more open, non-blocking: `T-44`–`T-46` (MINOR — a relocated, not
+prevented, second-identity path; a dead-code export/import fix; a surviving
+ulid-less test seeder) and `T-47`–`T-48` (SERIOUS — 6 tests RED in the
+remediation's own most-touched files, unrecorded until this commit; a
+narrowed-not-closed `created_at` cache clobber). **`T-42`'s prior 15/16
+items are independently reconfirmed, not reopened** — see this entry's full
+KNOWN ISSUES table.
+
+**Phase 3 must not start** until `T-40` and `T-43` are fixed **and**
+independently re-verified by a passing test that exercises the real
+trigger (a widget/container test proving `app_shell.dart`'s listener
+reaches `ensureRemoteProfile` on a cold-start selection — no such test
+exists today, `grep -rn ensureRemoteProfile test/` hits only 3 direct
+adapter calls and one fake override) — not by a code trace, which is
+exactly the standard that let both defects ship invisibly the first time.
+Full detail, disposition table, and the D1–D19 deferred-verification table:
+this file's **P2-13** entry, below.
+**Gates (re-confirmed against `c06d942a` this session; unchanged from every
+prior measurement — green throughout the two new BLOCKING defects' entire
+life, which is the point):** `dart analyze --fatal-infos` → `No issues
+found!`. `make audit` green, exit 0, 104 checks, true last line (no
+parenthetical) `=== audit PASSED — all 68 greps clean ===`. Check 103's OK
+line and split set **unchanged**: `PROFILE-KEY-SPLIT check OK: 2
 collection(s) currently split (bookmarks, learning_order), all within the
 tracked baseline (0 new violations).` Check 104 **unchanged**: `88 tracked
-entries covering 91 site(s) ...; 0 new, 0 stale, 0 changed`. Both
-count-only ratchets **unchanged** at their tracked baselines (39, 2). Full
-`make ci` last green at `5b4d7924`; still batched to end of Phase 4 by
-owner decision (2026-08-06) — unchanged.
+entries covering 91 site(s) ...; 0 new, 0 stale, 0 changed` — this
+entries/sites split is P2-11's format change (occurrence counts now
+ratchet), already recorded there as a four-part deviation, **not** a
+regression; restated here per that entry's own instruction not to
+re-derive it. Both count-only ratchets **unchanged** at their tracked
+baselines (39, 2). Full `make ci` last green at `5b4d7924`; still batched
+to end of Phase 4 by owner decision (2026-08-06) — unchanged. **Targeted
+`flutter test` runs (not `make test`/`make ci`; not barred by the NO FULL
+CI ruling) found what no gate above can see:** `profile_repository_impl_test.dart`
++ `firestore_learner_profile_repository_test.dart` → `+52 -5`; the single
+new offline-first test alone → `+0 -1`, 2-minute timeout; a 6-file batch
+including `profile_edit_delete_actions_test.dart` → `+54 -1`. Full commands
+and output in the P2-13 entry below.
 
-**IN FLIGHT:** nothing. (This field held the full P2-12 edit-list — 12
-items — from before this commit's first edit until this commit landed the
-code, per the IN FLIGHT protocol above; the completed record is the P2-12
-entry itself, below, not this field.)
+**IN FLIGHT:** nothing. (This field held the P2-13 edit list from before
+this commit's first edit until this commit landed; the completed record is
+the P2-13 entry itself, below, not this field.)
 
 **Live on Firestore (4):** bookmarks · learning-order · profile identity ·
 scheduler learning-order read. **Unchanged this phase** — Phase 2 moved no
@@ -166,12 +193,455 @@ stage-definition · study-day-config · track-learning-order.
   silently, with every gate available this phase green. This is Q1's
   ruling (§3 of `firestore-phase2-plan.md`), restated here as a standing
   fact so it survives past the plan document itself.
+- **Check 104's occurrence-count fix (P2-11) closed a counting blind spot,
+  not a reachability blind spot.** After P2-11, an added or removed site
+  *inside* an already-baselined symbol fails the gate (`CHANGED`,
+  independently re-proved by three probes this session). It still has, and
+  by design always will have, **zero concept of whether a symbol is ever
+  called** — a location can be counted with perfect accuracy while being
+  provably unreachable from any UI trigger. `T-40`'s activation-heal listener
+  is the concrete case: `ensureRemoteProfile` itself is not an int-keyed
+  site at all (it takes no `profileId`-shaped parameter check 104 scans
+  for), so this specific defect was always outside check 104's scope by
+  design — but the general lesson generalizes to every gate this phase
+  runs: **an entry-count or occurrence-count gate proves the code exists
+  and is counted; it does not and cannot prove the code is wired into a
+  live trigger.** A green count-only or entry-only gate is not proof a fix
+  is reachable.
+- **The tutored hoist (P2-5) does not empty the talmid's scheduler.**
+  Corrected at P2-7, re-verified independently twice since (P2-12, and
+  again this session): `scheduler_engine.dart:557-560`'s `_buildOrderedRefs`
+  falls back to natural `sortOrder` once `customOrder.isEmpty` — it does not
+  render nothing. What actually empties is the **whole-curriculum reorder
+  screen** (`scheduler_learning_order_repository_impl.dart:137-138`,
+  `learning_order_repository_impl.dart:352-372` — `getOrder` returns
+  `const []` → `noItemsToOrder`; `saveOrder`/`resetToDefault` throw
+  `LearningOrderRepositoryNotReadyException`). The discriminating device
+  observation for D9 is the *disappearance of the tutor's own custom
+  order*, not an empty scheduler screen — this was already corrected in the
+  Deferred Verification table at P2-7; restated here as a standing fact so
+  a cold agent does not have to find it inside an entry.
 
 ---
 
 ## Entries
 
 Newest first. Append; never rewrite history.
+
+### 2026-08-07 — P2-13: Phase 2 REOPENED — T-40's fix is inert, a second BLOCKING defect found, 6 red tests unrecorded
+
+**Docs only, per the brief — no `lib/`, `test/`, or `tool/` file touched this
+commit.** This entry corrects P2-12's `**Phase 2 ✅**` verdict (above,
+unedited — append-only). A second-pass adversarial review re-verified the
+tree at `c06d942a` (P2-12's own HEAD) **directly** — running gates and
+targeted `flutter test` invocations itself, not trusting this log's prior
+entries — and returned verdict `"incomplete"`, `"safe_for_phase_3": false`,
+a non-empty `still_open_unrecorded` list (9 items), and **2 NEW BLOCKING
+defects**. The decision rule that assigned this entry, restated verbatim:
+*if the re-review verdict is "incomplete", OR `safe_for_phase_3` is false,
+OR `still_open_unrecorded` is non-empty, OR any new BLOCKING defect exists,
+Phase 2 is recorded NOT RESOLVED.* All four conditions hold, independently
+of one another. **Phase 2 is reopened as of this commit.**
+
+**The forbidden sentence never appears below, and here is exactly why it
+would have been wrong every time it was almost written:** every gate this
+phase runs — `dart analyze`, both keying checks, `make audit`, both
+count-only ratchets — was **green on this exact tree, `c06d942a`, both
+before and after** the two new BLOCKING defects were found underneath them
+(gate numbers below, re-measured independently this session, identical to
+the second-pass review's own). Green here proves this commit's docs edits
+change nothing a static gate can see. It never proved, and does not now
+prove, that `T-40`'s activation-heal listener reaches a real trigger, that
+`_ensureFirestoreProfile`'s own new test passes, or that the six tests named
+below are green. **A gate that stays green while a defect is present is not
+evidence the defect is absent — on this tree, it was the defect's cover.**
+
+#### Gates — re-measured independently this session, before any edit
+
+```
+$ git log --oneline -1
+c06d942a docs(planning): correct the Phase 2 record — false regression, false verification, carried findings
+
+$ git rev-list --left-right --count origin/dev...dev
+0	14
+
+$ dart analyze --fatal-infos
+Analyzing learning_tracker...
+No issues found!
+
+$ dart run tool/check_profile_path_keying.dart | tail -1
+PROFILE-KEY-SPLIT check OK: 2 collection(s) currently split (bookmarks, learning_order), all within the tracked baseline (0 new violations).
+
+$ dart run tool/check_profile_id_int_sites.dart | tail -1
+PROFILE-ID-INT-SITES OK: 88 tracked entries covering 91 site(s) across 5 pattern(s) [cf-int-guard, cf-string-profileid-doc, dart-int-profileid-param, dart-tutoring-int-parse, dart-tutoring-id-tostring]; 0 new, 0 stale, 0 changed.
+
+$ make audit; echo "EXIT=$?"
+... (104 checks; R6d's own stdout line — the RUNNING form, not the skip form:
+"R6 lcov-denominator check OK: 76 zero-coverage file(s), all within the
+tracked baseline (0 new violations)."; coverage/lcov.info present, 469235
+bytes, mtime Aug 6 17:18, read from stdout not the exit code) ...
+=== audit PASSED — all 68 greps clean ===
+EXIT=0
+
+$ dart run tool/check_mcf11_autoincrement_id_in_payload_ratchet.dart | tail -1
+MCF-11 autoincrement-id-in-payload ratchet passed — 39 site(s) outside merge/ (tracked baseline: 39, AD-5/AD-28, docs/test-artifacts/mcf11-autoincrement-id-in-payload-sweep.md).
+
+$ dart run tool/check_bare_firebase_instance_ratchet.dart | tail -1
+Bare-Firebase-instance ratchet passed — 2 site(s) (tracked baseline: 2, AD-2/AD-28).
+```
+
+**No deviation from the second-pass review's own numbers.** Check 104's
+entries/sites split (88/91, "0 changed") is P2-11's format change, already
+recorded as a four-part deviation in that entry — restated here, not
+re-derived, per this brief's explicit instruction to record the format
+change as a deviation, not a regression.
+
+**Targeted test runs — the second-pass review's own measurements, copied
+verbatim per this brief's instruction that its gate numbers are
+authoritative.** Single-file `flutter test` invocations are not `make test`
+or `make ci` and are not barred by the owner's binding NO FULL CI ruling for
+this session; not re-executed this session, since no code has changed since
+they were taken:
+
+```
+$ flutter test test/features/profiles/data/repositories/profile_repository_impl_test.dart \
+               test/data/repositories/firestore_learner_profile_repository_test.dart
+02:00 +52 -5: Some tests failed.        # all 5 failures in profile_repository_impl_test.dart
+
+$ flutter test .../profile_repository_impl_test.dart --plain-name "does not propagate out of createProfile"
+02:00 +0 -1  TimeoutException after 0:02:00.000000: Test timed out after 2 minutes.
+             Cannot use the Ref of Provider<FirestoreProfileRepositoryAdapter>#6058a after it has been disposed.
+EXIT=1
+
+$ flutter test profile_switcher_sheet_test.dart add_profile_dialog_test.dart \
+               pp13_add_profile_selects_new_profile_test.dart profile_edit_delete_actions_test.dart \
+               profile_guard_test.dart app_shell_test.dart
+00:04 +54 -1: Some tests failed.
+  FAIL: profile_edit_delete_actions_test.dart :: AUD-profiles-02 — StateError (ProfileModel.fromDriftRow class)
+```
+
+This is the load-bearing evidence for BLOCKING DEFECT 4 and SERIOUS DEFECT 7
+below, written into this durable log per this file's own brief convention
+("**Report** — not silently absorb") — P2-8's and P2-10's own entries (below,
+unedited) assert these exact tests are correct without ever having run them.
+
+---
+
+#### BLOCKING DEFECT 3 (reopens `T-40`) — the activation heal is wired to a seam that cannot fire on any cold-start path
+
+P2-8 built `ProfileRepository.ensureRemoteProfile` correctly and wired it to
+`ref.listen(selectedProfileIdProvider, …)` inside `AppShellScreen.build`
+(`lib/app/router/app_shell.dart:125`), **without `fireImmediately`**. The
+router attaches `profileGuard` to `AppShellRoute` **itself**
+(`lib/app/router/app_router.dart:132-133`), so `ProfileGuard._resolve`'s
+`_setSelectedProfileId(profile.id, ulid: ulid)`
+(`profile_guard.dart:167` → `router_provider.dart:65`'s
+`select(id, ulid: ulid)`) moves `selectedProfileIdProvider` from `null` to
+the resolved id **before** the shell page — and its listener — can be built.
+For a **single-profile account**, the exact D10/R4 "create offline, restore
+network, activate" scenario the fix exists for, `ensureRemoteProfile` never
+runs, on any launch, forever.
+
+The post-frame self-heal cannot rescue it either:
+`AutoSelectedProfileId._resolveSelection` (`profile_providers.dart:159-166`)
+early-returns **without** calling `select()` once a selection already
+exists, and only selects (`:208`) `if (ref.read(selectedProfileIdProvider) == null)`.
+The `>=2`-profile path is no better:
+`profile_guard.dart:183-184` does `router.replace(profilePickerRoute)` +
+`resolver.next(false)` — the shell is never built — and
+`profile_picker_screen.dart:212-217` calls `select(...)` and only **then**
+`replaceAll([AppShellRoute()])`. The one surviving live trigger is an
+in-app profile switch, which structurally requires two-or-more profiles to
+already exist.
+
+`grep -rn ensureRemoteProfile test/` hits only 3 direct adapter unit tests
+(`profile_repository_impl_test.dart:1127,1135,1151`) and one fake override
+(`auto_selected_profile_id_test.dart:111`) — **nothing exercises the
+listener**, which is why every gate this phase runs stayed green through
+this defect.
+
+**Consequence:** a profile created offline can be permanently missing its
+`users/{uid}/learner_profiles/{ULID}` document, on the exact single-profile
+account shape the whole fix targeted. This is the same class of load-bearing
+false claim P2-8 was chartered to delete (BLOCKING DEFECT 1, P2-7 entry),
+now re-created at larger scale — it is asserted true in **six places**, all
+landed by the remediation itself: this log's CURRENT STATE (before this
+commit), the P2-12 KNOWN ISSUES row 1, `firestore-cutover-tasks.md`'s `T-40`
+row, `firestore-cutover-plan.md`'s Phase 2 header, and two production doc
+comments (`app_shell.dart:114-118`, `profile_repository_impl.dart:566-571`
+and `:698-704`). **Tracked by reopening `T-40`** (its `firestore-cutover-tasks.md`
+row is rewritten in this same commit, below — not superseded by a new id,
+since it is literally the same unresolved task).
+
+**Write a widget/container test proving `app_shell.dart`'s `ref.listen`
+actually reaches `ensureRemoteProfile` on a cold-start selection before
+re-claiming `T-40` closed** — no such test exists today (confirmed by the
+`grep` above); this is the missing verification that let the defect ship
+invisibly the first time.
+
+#### BLOCKING DEFECT 4 (new — `T-43`) — the offline-first fix's own new test is RED; `createProfile` does not complete, it hangs
+
+P2-8's structural fix (moving the provider read back inside
+`_ensureFirestoreProfile`'s `try`) is real:
+`profile_repository_impl.dart:749-774` now reads
+`try { final firestoreRepo = await _ref.read(firestoreLearnerProfileRepositoryProvider.future); ... } catch (e, st) { _log.warning(...) }`.
+But **the method's own last statement still sits outside that `try`**:
+`:775` `_ref.read(activeProfileDocIdProvider.notifier).set(model.ulid);` is
+after the catch's closing brace at `:774` — a disposed `Ref` can still
+escape to the caller (`profileRepositoryProvider` watches
+`userDatabaseProvider`, deliberately invalidated mid sign-in/sign-up,
+`router_provider.dart:30-35`).
+
+**Worse, this is not merely "still leaks" — the reproduction shows
+`createProfile` never completes at all:**
+
+```
+$ flutter test .../profile_repository_impl_test.dart --plain-name "does not propagate out of createProfile"
+02:00 +0 -1  TimeoutException after 0:02:00.000000: Test timed out after 2 minutes.
+             Cannot use the Ref of Provider<FirestoreProfileRepositoryAdapter>#6058a after it has been disposed.
+```
+
+This is P2-8's **own** new test (overrides `activeAccountFirebaseProvider`
+to throw `AccountNotAuthenticatedException`, asserts `createProfile`
+completes) — landed as proof the offline-first contract was restored, and it
+is red on the exact tree that claims the fix. `firestore-cutover-log.md`'s
+P2-8 entry (below, unedited) and its KNOWN ISSUES row 8 (P2-12 entry) both
+present this as fully fixed with no residual. **Tracked as new task `T-43`.**
+
+---
+
+#### SERIOUS DEFECT 7 (new — `T-47`) — 6 tests are RED in the two files the remediation touched most, none recorded anywhere in this log
+
+```
+$ flutter test test/features/profiles/data/repositories/profile_repository_impl_test.dart \
+               test/data/repositories/firestore_learner_profile_repository_test.dart
+02:00 +52 -5: Some tests failed.
+```
+
+All 5 failures in `profile_repository_impl_test.dart`: AUD-profiles-02
+(`updateProfile` propagates `TutorWriteException`), AUD-profiles-16
+(`updateProfile` still succeeds offline-first AND logs), the new offline-first
+test (BLOCKING DEFECT 4 above), `ensureDefaultProfile` fast path "does NOT
+touch that profile's missing ulid", `updateProfile` "does NOT backfill a
+missing ulid". **4 of the 5 pre-date this remediation** — inherited from
+`feefe34b`'s (P2-3) `ProfileModel.fromDriftRow` `StateError` enforcement,
+which several of these tests read a legacy `ulid IS NULL` row back through.
+P2-8's own step report already flagged one of these (the "fast path... does
+NOT touch that profile's missing ulid" test) as a "surprise," by tracing —
+**not by running it** — and it stayed red through P2-9, P2-10, P2-11 and
+P2-12 without ever being executed. A sixth, in a different file:
+
+```
+$ flutter test test/features/profiles/presentation/widgets/profile_edit_delete_actions_test.dart --plain-name tutorPermissionDenied
++0 -1  StateError thrown running the test (ProfileModel.fromDriftRow), then a
+       widget-finder assertion failure once the StateError propagates.
+```
+
+This is `profile_edit_delete_actions_test.dart`'s **AUD-profiles-02** test —
+the exact test P2-10's own report cites as the reason
+`ProfileRepositoryImpl` must keep `implements ProfileRepository` in full
+(so it "stays usable standalone" by that test). **The design justification
+for a P2-10 fix rests on a test that does not pass.** Recorded here as a
+carried finding, per this log's own convention — not fixed this commit
+(docs-only scope). **Tracked as new task `T-47`.**
+
+#### SERIOUS DEFECT 8 (new — `T-48`) — the `created_at` clobber is narrowed, not closed; Firestore local persistence is explicitly ON
+
+`FirestoreLearnerProfileRepository.ensureProfile`
+(`firestore_learner_profile_repository.dart:224-250`) decides whether to
+re-send `created_at` from `(await ref.get()).data() != null` using the
+**default** `Source.serverAndCache`, with **no** `metadata.isFromCache`
+check and **no transaction**. Firestore local persistence is **explicitly
+enabled**: `lib/data/firestore/account_firebase.dart:668-669`,
+`firestore.settings = const Settings(persistenceEnabled: true, ...)`. A
+cold-cache offline read (fresh install/restore, or simply a cache miss)
+reports "no document" for a document that **does** exist on the server, and
+the subsequent `SetOptions(merge: true)` write then overwrites the real
+`created_at` with `now` — the exact trap the method's own doc comment claims
+is closed. Because P2-8 (once BLOCKING DEFECT 3 above is actually fixed)
+wires this to run on **every activation**, the exposure multiplies rather
+than staying at once-per-creation. `fake_cloud_firestore` has no
+cache/offline semantics, so the four new `ensureProfile` tests (all green)
+cannot see this. **Tracked as new task `T-48`.**
+
+#### MINOR DEFECT (new — `T-44`) — `upsertFromSync`'s refusal relocates the second-identity outcome instead of preventing it
+
+`ProfileDao.upsertFromSync`'s insert-branch refusal (P2-9,
+`ProfileSyncMissingUlidException`, `profile_dao.dart:188-191`) is caught
+per-row by `LearnerProfileMerger.merge`'s existing `on Exception catch`
+(`learner_profile_merger.dart:79-88`, warning-only log). On a device with no
+other profile, `AutoSelectedProfileId`'s zero-profile self-heal then calls
+`ensureDefaultProfile` → `_resolveProfileUlid(null)` →
+`DocIds.mintProfileUlid()` (`profile_repository_impl.dart:58,670`) — a
+**brand-new** identity for what may be the same logical profile the sync
+pull just refused. Net still better than pre-P2-9 (insert-then-crash), but
+`firestore-cutover-tasks.md`'s `T-41` row currently states "minting one here
+would hand the profile a second identity" as if the refusal *prevents* that
+outcome; it relocates it. **Tracked as new task `T-44`.**
+
+#### MINOR DEFECT (new — `T-45`) — a third ulid-less test seeder survives P2-9
+
+`test/helpers/test_database.dart`'s `seedProfileWithIds` still inserts a
+`LearnerProfilesCompanion` with no `ulid`; 14+ test files depend on it. P2-9's
+own step report named it as out-of-scope; it was never fixed. Measured
+exposure in 6 of those 14+ files (the batch above): 1 RED
+(`profile_edit_delete_actions_test.dart`, SERIOUS DEFECT 7). The remaining
+8+ dependants are unmeasured. **Tracked as new task `T-45`.**
+
+#### MINOR DEFECT (new — `T-46`) — the T-41 export/import half fixes code with no production caller
+
+`grep -rn 'DataExportImportService' lib/ --include=*.dart` outside its own
+file returns only doc-comment mentions; `exportData(`/`importData(` have no
+constructor call site anywhere in `lib/`. Correct hygiene, but it buys zero
+runtime safety, and `firestore-cutover-tasks.md`'s `T-41` row presents it as
+one of two *live* writers closed. **Tracked as new task `T-46`** (record-only
+— no code fix implied, the class is simply unreachable today).
+
+#### MINOR DEFECT (fixed in place, this commit, no new task) — `firestore-cutover-tasks.md`'s `T-24` row was stale in a load-bearing way
+
+`T-24`'s row still asserted *"`ProfileGuard`'s single-profile auto-select
+calls `.select(id)` without `ulid:` (`router_provider.dart:55-56`), which
+deliberately clears `activeProfileDocIdProvider`"* — false since P2-2, and
+doubly false since P2-10 made the parameter `{required String ulid}`
+(`router_provider.dart:65`, `profile_guard.dart:167`). Neither the file nor
+the line numbers match current code. A cold agent acting on `T-24` would be
+misdirected into re-deriving a seam that closed two remediation commits ago.
+**Fixed directly in `firestore-cutover-tasks.md`'s own row, this commit** —
+task rows are a living document, not append-only, so this is a correction in
+place, not a flag-only carry.
+
+---
+
+#### KNOWN ISSUES / CARRIED FINDINGS — full disposition, supersedes P2-12's table for findings 1 and 8
+
+The second-pass review re-verified **every one of the 18 findings from the
+original end-of-phase review** directly against `c06d942a`, not by trusting
+this log. Its disposition is authoritative and is transcribed here in full,
+correcting P2-12's table only where it disagrees (findings 1 and 8):
+
+| # | Finding | Disposition on `c06d942a` |
+|---|---|---|
+| 1 | Activation heal missing (fires only at creation) | **STILL OPEN, and now UNRECORDED-AS-OPEN before this commit.** P2-8 built the method correctly, then wired it to a seam that cannot fire on any cold-start path — BLOCKING DEFECT 3 above (reopens `T-40`). |
+| 2 | Two live paths insert `ulid IS NULL` rows; P2-3 made that a hard crash | **FIXED — `ed42c894` (P2-9).** Verified by full enumeration of all 7 `LearnerProfilesCompanion` constructions in `lib/`: no raw insert leaves `ulid` unset. Confirmed, not disputed. |
+| 3 | D9's device-check criterion was factually wrong | **FIXED — `d083df77` (P2-7) wrote the correction; `c06d942a` (P2-12) closed the item.** Independently re-derived from `scheduler_engine.dart:557-560`, `scheduler_learning_order_repository_impl.dart:137-138`, `learning_order_repository_impl.dart:352-372` — the correction is itself true. |
+| 4 | `repository_providers.dart` doc comment gives a false reason ("carries no ULID") | **FIXED — `c06d942a` (P2-12).** Comment now states the real reason (pairing the talmid's ULID with the tutor's own handles would still resolve the wrong tree). |
+| 5 | Check 104 dedups per symbol — an added site inside a baselined symbol fails open | **FIXED — `00db9af1` (P2-11).** Independently re-proved by three fresh probes (NEW/STALE/CHANGED), each exit 1, each reverted, gate re-confirmed green after. |
+| 6 | P2-1's "17/5/61/2/3 exact equality" verification claim is false | **CORRECTED — `c06d942a` (P2-12), append-only, durable.** Numbers re-verified exact: 17/17, 5/5, 61/61, 2/2, and `dart-tutoring-id-tostring` 3 entries/6 sites — TOTAL 88 entries/91 sites, matching the P2-12 text character-for-character. |
+| 7 | No mid-phase verifier finding was ever written into the durable log | **FIXED (mechanically) — `d083df77` transcription + `c06d942a`'s KNOWN ISSUES table.** But row 1 of that table asserted a fix that does not fire (finding 1 above) — the remedy itself carried a false entry, now corrected by this commit. |
+| 8 | Offline-first non-fatal contract broken — provider read outside the `try` | **PARTIALLY FIXED, STILL OPEN, and the fix's own test is RED.** Structural half genuinely landed (`profile_repository_impl.dart:749-774`); residual escape at `:775` and a hanging (not just leaking) `createProfile` — BLOCKING DEFECT 4 above (new `T-43`). |
+| 9 | "Exactly one site mints a profile's identity" is false (4 live + 1 dormant) | **FIXED/RECONCILED — `6422b4d3` (P2-10) + `c06d942a` (P2-12) caveat.** `grep -rn "DocIds.mintProfileUlid()" lib/` → exactly one line. Dormant, unreachable second formula at `doc_ids.dart:661` recorded, not fixed (correctly — unreachable). |
+| 10 | "P2-3 silently fixed a bug P2-2 shipped" | **REJECTED-WITH-REASON, and the reason is sound** — independently re-derived from `git diff 0d5d9125 feefe34b`: the one hunk touches a transient, never-persisted `ProfileModel` fed to a legacy sync-engine payload with no `ulid` field at all; the real Drift insert already carried `ulid` correctly at `0d5d9125`. Rejection stands. |
+| 11 | P2-3's lib-side blast radius (9 files, 4 new crash sites) unrecorded | **RECORDED — `c06d942a` (P2-12), proper four-part deviation.** All 9 files and 4 crash sites named. |
+| 12 | Four "verbatim" gate blocks print a `(104/104 checks)` parenthetical | **FIXED — `c06d942a` (P2-12).** Zero occurrences left inside any quoted gate block; own `make audit` re-run this commit confirms the true last line has no parenthetical. |
+| 13 | `_patternListHash` hashes only prose, not matching logic | **FIXED — `00db9af1` (P2-11).** Independently re-proved: adding one needle moves the hash; reverting restores it exactly. |
+| 14 | Check 104 swallows unreadable files silently | **FIXED — `00db9af1` (P2-11)**, structurally verified (`_SuspectRead`/`_readLinesVerified`); the torn-read path itself remains unexercisable this session (same standing limitation as check 103, needs a concurrent writer — D19 below). |
+| 15 | `BookmarkRepositoryNotReadyException` names only two of three causes | **FIXED — `6422b4d3` (P2-10).** Doc comment and `toString()` both name the tutored refusal as a third cause. |
+| 16 | `ensureDefaultProfile`'s adapter/impl double-decision can strand a profile | **FIXED — `8dea756b` (P2-8).** Pre-read removed; one post-hoc decision from `tryGetProfileById`. |
+| 17 | Commit `4877c7ef`'s "~31 sites baselined" was already false when written | **CARRIED with a durable correction pointer — `c06d942a` (P2-12).** Sound: commit messages cannot be amended. |
+| 18 | Git hygiene: two stashes, disclosure incomplete | **CARRIED / disclosed, re-verified unchanged again this session** — same two bases, same reflog SHAs (`9796dba5`/`d30884bd`) as every prior record. See "Stash situation" below. |
+
+**Every row above was independently re-derived this session against
+`c06d942a`, not copied from P2-12's table** — two rows (1, 8) disagree with
+P2-12's own disposition and are corrected here; the other sixteen are
+independently reconfirmed, not merely trusted.
+
+#### NEW DEFECTS found by the second-pass review, not present in the original 18
+
+| # | Defect | Severity | Task |
+|---|---|---|---|
+| 19 | Activation heal unreachable on cold start (same underlying fact as finding 1, stated as its own defect because it is newly discovered *mechanism*, not a re-statement) | BLOCKING | `T-40` (reopened) |
+| 20 | Offline-first fix's own test RED; `createProfile` hangs to timeout | BLOCKING | `T-43` |
+| 21 | 6 RED tests in the remediation's own most-touched files, unrecorded | SERIOUS | `T-47` |
+| 22 | `created_at` clobber narrowed, not closed; persistence explicitly ON | SERIOUS | `T-48` |
+| 23 | `upsertFromSync` refusal relocates, does not prevent, the second-identity outcome | MINOR | `T-44` |
+| 24 | T-41 export/import fix has no production caller | MINOR | `T-46` |
+| 25 | `seedProfileWithIds` still ulid-less; 14+ dependent files | MINOR | `T-45` |
+| 26 | `T-24`'s stale citation misdirects a cold implementer | MINOR | fixed in place, this commit |
+| 27 | Phase 2 marked resolved in 3 places on a false basis (T-40's dead fix + T-42's disputed row 8) | SERIOUS | corrected by this commit (CURRENT STATE, `firestore-cutover-tasks.md` header, `firestore-cutover-plan.md` status line) |
+
+---
+
+#### Deferred verification — D1–D19, full attribution map, supersedes P2-12's D1–D14 table
+
+D1–D14 are unchanged from P2-12's table (full text there); D15–D19 are new,
+found by the second-pass review, none previously recorded:
+
+| ID | Skipped ci-only / device check | Status on `c06d942a` |
+|---|---|---|
+| D1–D14 | (unchanged — see P2-12 entry, above, for full text) | Unchanged; D13/D14 closed by measurement (both green in the second-pass review's own targeted runs), the rest still deferred. |
+| **D15** *(new)* | A widget/container test proving `app_shell.dart`'s `ref.listen` actually reaches `ensureRemoteProfile` on a cold-start selection | **Open. This is the missing test for `T-40`'s entire wiring half** — write it before re-claiming `T-40` closed. `grep -rn ensureRemoteProfile test/` hits only 3 direct adapter calls + 1 fake override; nothing exercises the listener. |
+| **D16** *(new)* | `flutter test test/features/profiles/data/repositories/profile_repository_impl_test.dart` | **Closed by measurement, RED:** `02:00 +52 -5`. 5 named failures, 4 pre-dating this remediation (SERIOUS DEFECT 7 above). |
+| **D17** *(new)* | `flutter test` over the 14+ files depending on `test/helpers/test_database.dart`'s `seedProfileWithIds` | **Partially closed by measurement:** 6 of 14+ files run, `00:04 +54 -1` (1 RED, `profile_edit_delete_actions_test.dart`). Remaining 8+ files unmeasured. |
+| **D18** *(new)* | Device or an offline-cache integration test for `ensureProfile`'s `created_at` decision | **Open.** `fake_cloud_firestore` has no cache/offline semantics and cannot exercise this (SERIOUS DEFECT 8 above). |
+| **D19** *(new)* | A genuinely torn/concurrent read exercising check 104's new `_SuspectRead` abort path end-to-end | **Open**, consistent with existing repo precedent — check 103's own equivalent fix carries the same limitation (needs a concurrent writer to reproduce; sibling error paths were exercised directly instead, per the P2-11 entry). Not a new gap this commit introduces. |
+
+**Tests that will pass misleadingly, restated for the CI-phase reviewer
+(unchanged):** all 14 `test/data/repositories/firestore_*_test.dart` take
+`profileId` as a constructor argument and never touch identity resolution;
+`doc_ids_test.dart:244-249` cross-checks against a different method with the
+same name as T-34's subject; the 104-test rules matrix is green regardless
+of keying.
+
+---
+
+#### Stash situation — re-verified again this session, unchanged
+
+```
+$ git stash list
+stash@{0}: WIP on dev: d74e3829 docs(planning): durable task list + recovery log; mark Phase 1 resolved
+stash@{1}: WIP on (no branch): 8855b9b1 fix(tracks): AUD-tracks-18 - de-duplicate Hebrew-script detection regex
+
+$ git reflog show stash
+9796dba5 stash@{0}: WIP on dev: d74e3829 ...
+d30884bd stash@{1}: WIP on (no branch): 8855b9b1 ...
+```
+
+Same two bases, same order, same reflog SHAs as every prior record back to
+P2-0. **Neither popped, applied, nor dropped this session** — no destructive
+stash operation was performed at any point. Keyed by **base commit, not
+positional index**, per the "Known stashes" section below, which already
+states: the working tree reads clean for the 8 `_bmad/**` files only because
+`stash@{0}` is holding that churn (an accident, not agent discipline); the
+mechanism that created `stash@{0}` mid-P2-0-session is **unattributed** —
+"some process in this environment other than the executing agent creates
+stashes autonomously" — and remains a **live, unresolved hazard**, not a
+closed finding: nobody has ruled on either stash, and the mechanism has not
+been identified or disabled since P2-0 first observed it. A future agent
+must keep re-verifying `git status --porcelain` immediately before every
+`git add`, per that section's own standing instruction.
+
+---
+
+#### `T-42`'s disposition amended, not reopened wholesale
+
+`T-42` (the 16 non-blocking findings, i.e. findings 3–18 above) is **not**
+reopened in full — 15 of its 16 items are independently reconfirmed fixed or
+correctly-rejected by this session's own re-derivation, not merely trusted.
+**One item, finding 8 (offline-first contract), is amended**: its fix is
+real but incomplete, and its own new test is red. `firestore-cutover-tasks.md`'s
+`T-42` row is edited in this same commit to carry this caveat and point to
+new task `T-43`, rather than being marked `blocked` wholesale for a defect
+that lives in `T-40`/`T-43`'s territory, not the other 15 items'.
+
+#### `firestore-cutover-tasks.md` and `firestore-cutover-plan.md` updated in the same commit
+
+- `T-40`: status reverted from `done` to `blocked` (real disposition:
+  BLOCKING DEFECT 3 above — the fix exists but is wired to a dead trigger).
+- `T-42`: caveat added for finding 8's residual, pointing to `T-43`; status
+  otherwise unchanged (15 of 16 items hold).
+- New rows `T-43`–`T-48` added, one per new open defect above (§ "NEW
+  DEFECTS", `T-44`/`T-45`/`T-46` are record-only informational tasks, not
+  blocking — see their own rows for exact scope).
+- `T-24`'s row corrected in place (stale citation, see the MINOR DEFECT
+  write-up above).
+- Header line rewritten: Phase 2 is **NOT resolved**; Phase 3 must not
+  start until `T-40` and `T-43` are fixed and independently re-verified by
+  a passing test that exercises the real trigger, not a code trace.
+- `firestore-cutover-plan.md`: top status line and Phase 2 section header
+  corrected from `RESOLVED 2026-08-07 (P2-12)` back to **NOT RESOLVED**,
+  naming both open BLOCKING defects and pointing at this entry for full
+  detail; the already-correct T-30/T-31-moved-to-Phase-3 material is left
+  untouched (unrelated to this reopening).
 
 ### 2026-08-07 — P2-12: correct the Phase 2 record — false regression, false verification, carried findings
 

@@ -1,20 +1,34 @@
 # Firestore cutover plan
 
-**Status:** Phase 0 ✅ · Phase 1 ✅ · **Phase 2 ✅** (both BLOCKING defects,
-`T-40`/`T-41`, fixed at P2-8/P2-9; every other finding triaged —
-fixed-with-commit or rejected-with-evidence — at P2-10/P2-11/P2-12; full
-detail in `firestore-cutover-log.md`'s P2-7 through P2-12 entries and
-`firestore-cutover-tasks.md`'s `T-42` row) · Phase 3 may start; its own
-prerequisites (`T-37`, `T-39`) are unrelated to Phase 2's resolution ·
-Phases 4–5 pending. **This section's narrative below (commit list, blocked
-framing) predates P2-8 through P2-12 and is not rewritten here — treat the
-log entries above as authoritative over this paragraph's prose; only the
-status line and Head field are corrected in this pass.**
-**Last updated:** 2026-08-07 (P2-12; status line and Head field only)
-**Head:** `00db9af1` on `dev` (P2-11; the P2-12 docs commit lands on top,
+**Status:** Phase 0 ✅ · Phase 1 ✅ · **Phase 2 — NOT RESOLVED (reopened,
+P2-13).** P2-12's `Phase 2 ✅` (kept below, superseded) was corrected by a
+second-pass adversarial review that re-verified the tree at `c06d942a`
+directly — gates plus targeted `flutter test` runs, not a re-read of this
+plan or the log — and found it false on its own terms: **`T-40`'s fix
+(P2-8) never fires on any cold-start path** (its `ref.listen` is registered
+on `AppShellScreen.build`, but the route guard has already resolved
+profile selection before the shell — and the listener — can build), and **a
+second BLOCKING defect (new `T-43`) survives inside the offline-first fix
+P2-8 also shipped** (its own new test hangs to a 2-minute timeout instead
+of passing). Four more open, non-blocking: `T-44`–`T-46` (MINOR), `T-47`–
+`T-48` (SERIOUS). `T-41` and 15 of `T-42`'s 16 items are independently
+reconfirmed and stand. **Phase 3 must not start** until `T-40` and `T-43`
+are fixed and independently re-verified by a passing test exercising the
+real trigger — not a code trace. Full detail:
+`firestore-cutover-log.md`'s **P2-13** entry and
+`firestore-cutover-tasks.md`'s `T-40`/`T-43`–`T-48` rows. **This section's
+narrative below (commit list, blocked framing) predates P2-8 through P2-13
+and is not rewritten here — treat the log entries above as authoritative
+over this paragraph's prose; only the status line and Head field are
+corrected in this pass, plus the Phase 2 section header/summary
+immediately below §3.**
+**Last updated:** 2026-08-07 (P2-13; status line, Head field, and the
+Phase 2 section header/summary)
+**Head:** `c06d942a` on `dev` (P2-12; the P2-13 docs commit lands on top,
 not yet reflected here — same self-reference lag as every prior closing
 commit) — `make audit` green (104 checks), 4 features on Firestore, both
-keying gates (103, 104) live.
+keying gates (103, 104) live. **Green throughout the life of both new
+BLOCKING defects below — no gate this phase runs can see either one.**
 
 **Verification cadence (owner decision, 2026-08-06):** `dart analyze` and the
 keying gate run every stage (seconds); `make audit` runs at each phase
@@ -244,15 +258,24 @@ manufactures exactly the false confidence this gate exists to remove.
 
 ---
 
-### Phase 2 — Unify the identity (int → ULID) — **RESOLVED 2026-08-07 (P2-12)**
+### Phase 2 — Unify the identity (int → ULID) — **NOT RESOLVED (reopened P2-13, 2026-08-07)**
 
-**Both BLOCKING defects below were fixed and re-verified (P2-8 `T-40`,
-P2-9 `T-41`); every other finding this phase's reviews raised was triaged
-— fixed with a commit, or rejected with evidence — by P2-10/P2-11/P2-12.
-Full disposition table: `firestore-cutover-log.md`'s P2-12 entry.** The
-narrative immediately below describes the state as of the end-of-phase
-review that found them (P2-7) and is kept as the historical record, not
-rewritten. The full execution plan is
+**P2-12's "RESOLVED" marking (2026-08-07) is corrected by this same-date
+entry: a second-pass adversarial review re-verified the tree at `c06d942a`
+directly and found it false.** `T-40` (BLOCKING DEFECT 1, below) was
+believed fixed at P2-8 (`8dea756b`) and `T-41` (BLOCKING DEFECT 2) at P2-9
+(`ed42c894`); every other finding this phase's reviews raised was triaged
+by P2-10/P2-11/P2-12. **`T-41` and 15 of `T-42`'s 16 triaged items are
+independently reconfirmed and stand — this reopening is narrower than the
+original P2-7 finding, not a full regression to it.** What does not stand:
+`T-40`'s fix is real code that is wired to a trigger which cannot fire on
+any cold-start path (the exact scenario it exists for), and P2-8's
+offline-first fix shipped its own new test RED (a 2-minute timeout, not a
+pass) — tracked as new `T-43`. Full disposition table, evidence, and the
+D1–D19 deferred-verification table: `firestore-cutover-log.md`'s **P2-13**
+entry. The narrative immediately below describes the state as of the
+original end-of-phase review (P2-7) and is kept as the historical record,
+not rewritten. The full execution plan is
 [`firestore-phase2-plan.md`](firestore-phase2-plan.md); six code commits
 (`4877c7ef`, `0d5d9125`, `feefe34b`, `b398bea5`, `30790fef`, `2e85b097`)
 landed the profile ULID as an eagerly-minted, compile-enforced,
@@ -270,9 +293,14 @@ see** — full detail in `firestore-cutover-log.md`'s P2-7 entry:
    compile-enforced non-nullable `ProfileModel.ulid` now hard-crashes on
    exactly that shape. Tracked as `T-41`.
 
-**Phase 3 does not start until both are fixed and re-verified.** Both were
-— `T-40` at P2-8 (`8dea756b`), `T-41` at P2-9 (`ed42c894`). Phase 3 may
-start.
+**Phase 3 does not start until both are fixed and re-verified.** `T-41` was,
+at P2-9 (`ed42c894`), and stands. `T-40` was believed fixed at P2-8
+(`8dea756b`) but the fix does not reach a live trigger — see the reopened
+status line above and `firestore-cutover-tasks.md`'s `T-40` row. **A third
+BLOCKING defect (`T-43`, new) was found inside P2-8's own offline-first
+fix.** Phase 3 may **not** start until `T-40` and `T-43` are both fixed and
+independently re-verified by a passing test that exercises the real
+trigger, not a code trace.
 
 **Why the original exit line below was unachievable, replaced by §6 of
 `firestore-phase2-plan.md`'s verification table:** Phase 1's check
