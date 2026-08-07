@@ -86,13 +86,46 @@ void main() {
         // When there are violations, each hit must contain a colon
         // indicating file:line format. We verify this if any violation
         // output is present (i.e. a line that looks like a grep hit).
+        //
+        // A naive `.dart:` substring match is too loose: two categories of
+        // `.dart:`-bearing stdout lines reach `make audit`'s output that
+        // were never violations, and asserting file:line format on them
+        // is asserting a property nobody claimed:
+        //   1. `lint-rules-test`'s own `dart test` progress output, one
+        //      line per test case run inside packages/custom_lints/ (shelled
+        //      out to since AUD-guardrails-17, predating check 103), e.g.
+        //      `00:00 +0: test/no_hand_rolled_async_state_notifier_test.dart:
+        //      NoHandRolledAsyncStateNotifier violations — ...`. The `.dart:`
+        //      here is the test *file name* embedded in the runner's own
+        //      progress line, not a grep hit — recognisable because these
+        //      lines start with the runner's elapsed-time/tally prefix
+        //      (`MM:SS +N`, `MM:SS ~N`, `MM:SS -N`), which no `make audit`
+        //      grep hit or WATCHLIST line ever does.
+        //   2. Check 103's advisory WATCHLIST prose
+        //      (`tool/check_profile_path_keying.dart:1155`), printed every
+        //      run regardless of outcome and never a violation. Its format
+        //      is deliberately `file.dart:ClassName` (a class name, not a
+        //      line number) to point at the dormant repository class, e.g.
+        //      `WATCHLIST: completions — live INT writer ... at
+        //      lib/data/repositories/firestore_completion_repository.dart:
+        //      FirestoreCompletionRepository ...`.
+        // Excluding both (by the structural markers that identify them —
+        // a leading test-runner progress prefix, and the `WATCHLIST:` tag
+        // — not by pre-checking the file:line format itself) narrows the
+        // assertion to what it was written to test: that a genuine
+        // `make audit` violation hit is reported with a clickable
+        // file:line, without silently degrading into an assertion that
+        // is vacuously true regardless of what `make audit` prints.
+        final testRunnerProgressLine = RegExp(r'^\d+:\d{2} [+~-]');
         final hitLines = stdout
             .split('\n')
             .where(
               (line) =>
                   line.contains('.dart:') &&
                   !line.startsWith('[') &&
-                  line.isNotEmpty,
+                  line.isNotEmpty &&
+                  !line.contains('WATCHLIST:') &&
+                  !testRunnerProgressLine.hasMatch(line),
             )
             .toList();
 
