@@ -78,11 +78,13 @@ final activeAccountIdProvider = NotifierProvider<ActiveAccountId, String?>(
 /// with the identical id can never succeed on its own, only a fresh
 /// sign-in/sign-up call (which activates a DIFFERENT id) fixes it.
 /// Reproduced directly: without this override, a resolution failure here
-/// left `FirestoreProfileRepositoryAdapter._ensureFirestoreProfile`
-/// (reached from `createProfile`/`ensureDefaultProfile`, both documented
-/// offline-first and non-blocking) hung awaiting `.future`, timing out
-/// `profile_repository_impl_test.dart`'s "does not propagate out of
-/// createProfile" test at 2 minutes instead of completing — see
+/// left `FirestoreProfileRepositoryAdapter`'s shared Firestore-repo
+/// resolution point (`_resolveFirestoreProfileRepo` as of P2-23; the same
+/// `await` lived directly inside `_ensureFirestoreProfile` at the time of
+/// this reproduction — reached from `createProfile`/`ensureDefaultProfile`,
+/// both documented offline-first and non-blocking) hung awaiting `.future`,
+/// timing out `profile_repository_impl_test.dart`'s "does not propagate
+/// out of createProfile" test at 2 minutes instead of completing — see
 /// `docs/planning/firestore-cutover-log.md`'s `T-43` entries for the full
 /// trace.
 final activeAccountFirebaseProvider = FutureProvider<AccountFirebaseHandles?>((

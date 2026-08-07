@@ -203,9 +203,12 @@ class FirestoreLearnerProfileRepository {
   /// — see the class doc comment ("Doc-id") for why this repository never
   /// mints the id itself (P2-2). Called from TWO distinct moments (T-40):
   /// genuine first creation, and every later profile ACTIVATION (a heal —
-  /// see `FirestoreProfileRepositoryAdapter._ensureFirestoreProfile`'s doc
-  /// comment for the full call-path). Both share this ONE method rather
-  /// than a separate `createProfile`.
+  /// see `FirestoreProfileRepositoryAdapter`'s own class doc comment for
+  /// the full call-path; as of P2-23 both moments share this write via
+  /// that adapter's private `_writeFirestoreProfile`, reached from
+  /// `_ensureFirestoreProfile` for the heal and
+  /// `_activateThenEnsureFirestoreProfile` for creation). Both share this
+  /// ONE method rather than a separate `createProfile`.
   ///
   /// **`created_at` is never decided by reading this document — it is
   /// always the caller-supplied [createdAt] (P2-15).** An earlier version

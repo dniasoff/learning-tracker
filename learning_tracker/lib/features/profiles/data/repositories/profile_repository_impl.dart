@@ -16,6 +16,12 @@ import 'package:learning_tracker/core/utils/date_utils.dart';
 // never mints one itself.
 import 'package:learning_tracker/data/firestore/doc_ids.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
+// T-49 (P2-23): `_resolveFirestoreProfileRepo`'s return type and
+// `_writeFirestoreProfile`'s parameter type both name this class directly —
+// `repository_providers.dart` above only exposes it indirectly (as a
+// FutureProvider's value type), which is not enough for a type annotation.
+// Same exemption as the DocIds import above.
+import 'package:learning_tracker/data/repositories/firestore_learner_profile_repository.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
 // AUD-profiles-02: TutorWriteException must propagate out of pushLearnerProfile
@@ -544,38 +550,46 @@ class ProfileRepositoryImpl implements ProfileRepository {
 /// or absent.
 ///
 /// ## Non-fatal on Firestore failure, but identity activates regardless
-/// — for [createProfile]/[ensureDefaultProfile] ONLY (T-49, P2-18)
+/// — for [createProfile]/[ensureDefaultProfile] ONLY, and BEFORE the write,
+/// not after it (T-49, P2-18/P2-23)
 ///
 /// [_drift]'s `createProfile`/`ensureDefaultProfile` already treat a cloud
 /// push failure as non-fatal (logged, swallowed) so profile creation stays
 /// offline-first; [_ensureFirestoreProfile] follows the same shape for the
-/// remote `learner_profiles` document write — but unlike the old
-/// mint-then-activate design, [activeProfileDocIdProvider] is set
-/// whenever a cloud account is active, REGARDLESS of whether that specific
-/// remote write succeeds: the identity is already real and local (eagerly
-/// minted, on the Drift row) the moment this runs, so there is nothing to
-/// gate activation on. [activeProfileDocIdProvider] stays unset only for
-/// the genuinely not-ready case — a still-local-born account
+/// remote `learner_profiles` document write. [activeProfileDocIdProvider]
+/// is set whenever a cloud account is active, REGARDLESS of whether that
+/// specific remote write succeeds — the identity is already real and local
+/// (eagerly minted, on the Drift row) the moment this runs, so there is
+/// nothing to gate activation on — but that activation happens BEFORE
+/// [_ensureFirestoreProfile]'s write is even attempted, not after it
+/// settles: see [_activateThenEnsureFirestoreProfile]'s own doc comment for
+/// why "the caller awaits this" does not make a post-write activation safe.
+/// [activeProfileDocIdProvider] stays unset only for the genuinely
+/// not-ready case — a still-local-born account
 /// (`firestoreLearnerProfileRepositoryProvider` resolves `null`, no active
 /// cloud account yet) — see `docs/`'s offline-account-model notes.
 ///
 /// **This paragraph describes [createProfile]/[ensureDefaultProfile]'s OWN
-/// direct, awaited call into [_ensureFirestoreProfile] — it is NOT true of
-/// the activation-heal call from [ensureRemoteProfile].** That call passes
-/// `activateProvider: false` and never touches [activeProfileDocIdProvider]
-/// at all: `SelectedProfileId.select` (`profile_providers.dart`) already
-/// sets it synchronously, before dispatching the heal as `unawaited(...)`,
-/// so by the time a heal's `await` on a real `DocumentReference.set()`
-/// finally resolves, a DIFFERENT profile may already be the one selected.
+/// direct, awaited call into [_activateThenEnsureFirestoreProfile] — it is
+/// NOT true of the activation-heal call from [ensureRemoteProfile].** That
+/// call goes straight to [_ensureFirestoreProfile] (the write alone, no
+/// activation at all — there is no boolean flag to pass, the two concerns
+/// are two different methods): `SelectedProfileId.select`
+/// (`profile_providers.dart`) already sets [activeProfileDocIdProvider]
+/// synchronously, before dispatching the heal as `unawaited(...)`, so by
+/// the time a heal's `await` on a real `DocumentReference.set()` finally
+/// resolves, a DIFFERENT profile may already be the one selected.
 /// [ensureRemoteProfile]'s own doc comment below has the full account of
 /// why re-writing it there was a bug (`T-49`), not a feature.
 ///
 /// ## A profile created while offline still gets its remote document (T-40)
 ///
-/// [_ensureFirestoreProfile] itself only ever runs at [createProfile]/
-/// [ensureDefaultProfile] — i.e. once, at the instant a cloud outage would
-/// have caused the failure in the first place, with no retry of its own.
-/// The actual heal is [ensureRemoteProfile]: fired from
+/// [_writeFirestoreProfile] (the write itself) runs from all three
+/// callers — [ensureRemoteProfile] reaches it via [_ensureFirestoreProfile];
+/// [createProfile] and [ensureDefaultProfile]'s self-heal branch reach it
+/// via [_activateThenEnsureFirestoreProfile], once each, at the instant a
+/// cloud outage would have caused the original failure, with no retry of
+/// its own. The actual heal is [ensureRemoteProfile]: fired from
 /// `SelectedProfileId.select` (`profile_providers.dart`), the ONE seam
 /// every profile-activation path in the app funnels through — the
 /// cold-start route guard (`ProfileGuard` → `router_provider.dart`'s
@@ -674,11 +688,11 @@ class FirestoreProfileRepositoryAdapter implements ProfileRepository {
       avatarIndex: avatarIndex,
       ulid: resolvedUlid,
     );
-    // activateProvider: true — this is a direct, awaited call (the caller
-    // is blocked on this same Future), not the fire-and-forget activation
-    // heal, so there is no later selection it could race. See
-    // _ensureFirestoreProfile's own doc comment (T-49, P2-18).
-    await _ensureFirestoreProfile(model, activateProvider: true);
+    // T-49 (P2-23): activates activeProfileDocIdProvider BEFORE attempting
+    // the Firestore write, not after it — see
+    // _activateThenEnsureFirestoreProfile's own doc comment for why "this
+    // caller awaits it" does not mean "no later selection can race it."
+    await _activateThenEnsureFirestoreProfile(model);
     return model;
   }
 
@@ -710,18 +724,17 @@ class FirestoreProfileRepositoryAdapter implements ProfileRepository {
       ulid: resolvedUlid,
     );
     final model = await _drift.tryGetProfileById(id);
-    // activateProvider: true — same reasoning as createProfile above: this
-    // is the caller's own direct, awaited call, not the fire-and-forget
-    // activation heal (T-49, P2-18).
+    // T-49 (P2-23): same reasoning as createProfile above.
     if (model != null) {
-      await _ensureFirestoreProfile(model, activateProvider: true);
+      await _activateThenEnsureFirestoreProfile(model);
     }
     return id;
   }
 
   /// Activation-time heal (T-40): the replacement for the lazy backfill
   /// P2-2 deleted. [_ensureFirestoreProfile] alone (called only from
-  /// [createProfile]/[ensureDefaultProfile]) fires exactly once, at the
+  /// [createProfile]/[ensureDefaultProfile], via
+  /// [_activateThenEnsureFirestoreProfile]) fires exactly once, at the
   /// instant a network outage would have caused the original failure — with
   /// no retry, a profile created offline got a local ULID and permanently
   /// no remote document. This method is the real retry: called every time
@@ -735,8 +748,8 @@ class FirestoreProfileRepositoryAdapter implements ProfileRepository {
   /// matching row or no `ulid` yet to heal onto — see
   /// [ProfileRepositoryImpl.tryGetProfileById].
   ///
-  /// **Does NOT activate [activeProfileDocIdProvider] (T-49, P2-18).** The
-  /// ONE caller of this method is `SelectedProfileId.select`
+  /// **Does NOT activate [activeProfileDocIdProvider] (T-49, P2-18/P2-23).**
+  /// The ONE caller of this method is `SelectedProfileId.select`
   /// (`profile_providers.dart`), via `unawaited(...)` — a fire-and-forget
   /// dispatch. `select()` already sets [activeProfileDocIdProvider]
   /// synchronously, before dispatching this heal, so by the time this
@@ -752,17 +765,19 @@ class FirestoreProfileRepositoryAdapter implements ProfileRepository {
   /// `_watchActiveAccountAndProfile` keys ALL profile-scoped Firestore
   /// providers on, including the two live features (bookmarks,
   /// learning_order) — so the corrected behaviour is not cosmetic: this
-  /// path is passed `activateProvider: false` and simply never performs
-  /// that write, which is the only value of it that cannot race, per the
-  /// project's greenfield doctrine ("a write this path never performs
-  /// cannot race"). See `docs/planning/firestore-cutover-log.md`'s `T-49`
-  /// entry for the full failure scenario this replaces.
+  /// path calls [_ensureFirestoreProfile] directly — the write alone, with
+  /// no way to also activate, because activation is a SEPARATE method
+  /// ([_activateThenEnsureFirestoreProfile]) this path never calls — which
+  /// is the only value of it that cannot race, per the project's greenfield
+  /// doctrine ("a write this path never performs cannot race"). See
+  /// `docs/planning/firestore-cutover-log.md`'s `T-49` entry for the full
+  /// failure scenario this replaces.
   @override
   Future<void> ensureRemoteProfile(int id) async {
     try {
       final model = await _drift.tryGetProfileById(id);
       if (model == null) return;
-      await _ensureFirestoreProfile(model, activateProvider: false);
+      await _ensureFirestoreProfile(model);
     } catch (e, st) {
       // Defensive: _ensureFirestoreProfile already swallows the Firestore
       // write's own failures (see its doc comment); this catches anything
@@ -778,13 +793,41 @@ class FirestoreProfileRepositoryAdapter implements ProfileRepository {
     }
   }
 
+  /// Resolves the [FirestoreLearnerProfileRepository] for whatever cloud
+  /// account is active right now, or `null` when there is none — the ONE
+  /// place [_ensureFirestoreProfile] and
+  /// [_activateThenEnsureFirestoreProfile] each resolve it, so a genuine
+  /// account-resolution failure (e.g. [AccountNotAuthenticatedException],
+  /// which `firestoreLearnerProfileRepositoryProvider` propagates as an
+  /// `AsyncError` rather than swallowing into `null` — see
+  /// `repository_providers.dart`'s library doc comment) is caught and
+  /// logged exactly once, here, rather than once per caller. Non-fatal for
+  /// the same reason every write in this class is non-fatal: profiles are
+  /// offline-first by explicit contract (`tutor_invites.ts:59-60`), so
+  /// neither a remote outage nor a resolution failure may ever propagate
+  /// out of [createProfile]/[ensureDefaultProfile]/[ensureRemoteProfile].
+  Future<FirestoreLearnerProfileRepository?> _resolveFirestoreProfileRepo(
+    ProfileModel model,
+  ) async {
+    try {
+      return await _ref.read(firestoreLearnerProfileRepositoryProvider.future);
+    } catch (e, st) {
+      _log.warning(
+        event: 'profile_repo_firestore_ensure_failed',
+        fields: {'profileId': model.id},
+        exception: e,
+        stackTrace: st,
+      );
+      return null;
+    }
+  }
+
   /// Idempotent create-if-missing write for [model]'s Firestore
-  /// `learner_profiles/{ulid}` document, and — only when [activateProvider]
-  /// is `true` — activates it via [activeProfileDocIdProvider]. Called from
-  /// THREE places: [createProfile] and [ensureDefaultProfile]'s self-heal
-  /// branch (both pass `activateProvider: true` — see [ensureRemoteProfile]
-  /// above for why that is safe there but was NOT safe for `ensureRemoteProfile`
-  /// itself, which passes `false`, T-49/P2-18). Always goes through
+  /// `learner_profiles/{ulid}` document — the write alone, never
+  /// [activeProfileDocIdProvider]. Called from [ensureRemoteProfile]
+  /// directly (never activates — T-49, P2-18) and from
+  /// [_activateThenEnsureFirestoreProfile] (activates FIRST, then calls
+  /// this — T-49, P2-23). Always goes through
   /// [FirestoreLearnerProfileRepository.ensureProfile] (never the deleted
   /// `createProfile`), passing [model.createdAt] — the Drift row's own
   /// immutable local creation timestamp — as that method's `createdAt`.
@@ -797,94 +840,85 @@ class FirestoreProfileRepositoryAdapter implements ProfileRepository {
   /// already set (eager mint, see [createProfile]/[ensureDefaultProfile]
   /// above).
   ///
-  /// Non-fatal on a Firestore failure — profiles are offline-first by
-  /// explicit contract (`tutor_invites.ts:59-60`), so a remote outage must
-  /// never block profile creation, and a genuine account-resolution failure
-  /// (e.g. [AccountNotAuthenticatedException], which
-  /// `firestoreLearnerProfileRepositoryProvider` propagates as an
-  /// `AsyncError` rather than swallowing into `null` — see
-  /// `repository_providers.dart`'s library doc comment) must not escape
-  /// either, so the provider read below sits INSIDE the `try`, not before
-  /// it. When [activateProvider] is `true`, [activeProfileDocIdProvider] is
-  /// still set whenever a cloud account is active, REGARDLESS of whether
-  /// this specific write succeeds — see the class doc comment, "Non-fatal
-  /// on Firestore failure, but identity activates regardless." It is left
-  /// unset only in the genuinely not-ready case (no active cloud account at
-  /// all yet — the early `return` below, which is not a failure and must
-  /// not be caught) — or, always, when [activateProvider] is `false`.
-  Future<void> _ensureFirestoreProfile(
-    ProfileModel model, {
-    required bool activateProvider,
-  }) async {
+  /// Non-fatal on a Firestore failure — see
+  /// [_resolveFirestoreProfileRepo]'s doc comment for why account
+  /// resolution is non-fatal too; [_writeFirestoreProfile] (the write
+  /// itself) is where that same offline-first contract is enforced.
+  Future<void> _ensureFirestoreProfile(ProfileModel model) async {
+    final firestoreRepo = await _resolveFirestoreProfileRepo(model);
+    if (firestoreRepo == null) return; // no active cloud account yet
+    await _writeFirestoreProfile(firestoreRepo, model);
+  }
+
+  /// [createProfile] and [ensureDefaultProfile]'s self-heal branch — the
+  /// two DIRECT, awaited callers that also need to activate
+  /// [activeProfileDocIdProvider] — go through this instead of
+  /// [_ensureFirestoreProfile] directly (T-49, P2-23).
+  ///
+  /// **Activates BEFORE attempting the Firestore write, not after it —
+  /// this is the fix.** P2-18 activated after
+  /// `await firestoreRepo.ensureProfile(...)` settled, reasoning that
+  /// "this caller awaits [_ensureFirestoreProfile], so there is no later
+  /// selection to race" — that reasoning was false:
+  /// `onboarding_profile_creation_step.dart`'s own comment concedes
+  /// `createProfile`'s write "may still be in flight when the step widget
+  /// is popped", and its `if (!mounted) return;` means the follow-up
+  /// `select()` for the NEW profile then never runs — but the Future
+  /// createProfile returned is held by `_ref` (the keepAlive container's
+  /// Ref), not by the disposed widget, so it keeps running regardless, and
+  /// its old post-write activation would land whenever the network write
+  /// finally settled — possibly well after something else (a self-heal,
+  /// the router, a plain `add_profile_dialog.dart` adult-profile create
+  /// with no abandonment even needed) had already correctly selected a
+  /// DIFFERENT profile. An `await` inside one call does not stop a
+  /// DIFFERENT profile being selected elsewhere during the await window.
+  /// Activating BEFORE the write closes this: by the time anything could
+  /// select a different profile, this profile's activation has already
+  /// happened and is not repeated later, so a later `select()` always wins
+  /// and is never clobbered on the way back out. Still fire-independent —
+  /// [_writeFirestoreProfile]'s write below is non-fatal and never undoes
+  /// the activation above regardless of whether it succeeds (see the class
+  /// doc comment, "Non-fatal on Firestore failure, but identity activates
+  /// regardless").
+  ///
+  /// Activation is skipped only in the genuinely not-ready case — no
+  /// active cloud account at all yet (same predicate
+  /// [_resolveFirestoreProfileRepo] itself uses) — or when `_ref` is no
+  /// longer mounted (Riverpod's own documented remedy for "Ref used after
+  /// dispose"; there is nothing left to write to).
+  Future<void> _activateThenEnsureFirestoreProfile(ProfileModel model) async {
+    final firestoreRepo = await _resolveFirestoreProfileRepo(model);
+    if (firestoreRepo == null) return; // no active cloud account yet
+    if (_ref.mounted) {
+      _ref.read(activeProfileDocIdProvider.notifier).set(model.ulid);
+    }
+    await _writeFirestoreProfile(firestoreRepo, model);
+  }
+
+  /// The write half of [_ensureFirestoreProfile], factored out so
+  /// [_activateThenEnsureFirestoreProfile] can activate using the SAME
+  /// already-resolved [firestoreRepo] rather than resolving it a second
+  /// time. See [_ensureFirestoreProfile]'s own doc comment for what this
+  /// writes and why it is non-fatal.
+  Future<void> _writeFirestoreProfile(
+    FirestoreLearnerProfileRepository firestoreRepo,
+    ProfileModel model,
+  ) async {
     try {
-      final firestoreRepo = await _ref.read(
-        firestoreLearnerProfileRepositoryProvider.future,
+      await firestoreRepo.ensureProfile(
+        profileId: model.ulid,
+        displayName: model.displayName,
+        mode: model.profileMode,
+        avatar: model.avatarIndex.toString(),
+        createdAt: model.createdAt,
       );
-      if (firestoreRepo == null) return; // no active cloud account yet
-      try {
-        await firestoreRepo.ensureProfile(
-          profileId: model.ulid,
-          displayName: model.displayName,
-          mode: model.profileMode,
-          avatar: model.avatarIndex.toString(),
-          // P2-15: the Drift row's own immutable local creation timestamp
-          // — never re-derived from a Firestore read, so it can never be
-          // clobbered by a stale/offline cache. See ensureProfile's own
-          // doc comment.
-          createdAt: model.createdAt,
-        );
-      } catch (e, st) {
-        // Non-fatal: mirrors _drift's own cloud-push failure handling
-        // above — the local (Drift) profile already exists and is usable;
-        // this just means the remote WRITE failed (e.g. a network
-        // outage). The identity is still activated below regardless —
-        // T-40's real retry is [ensureRemoteProfile], fired on the
-        // profile's next activation, not "the next time this exact
-        // method happens to run".
-        _log.warning(
-          event: 'profile_repo_firestore_ensure_failed',
-          fields: {'profileId': model.id},
-          exception: e,
-          stackTrace: st,
-        );
-      }
-      // T-43: this used to be the method's LAST statement, sitting after
-      // this try/catch's closing brace — outside BOTH try blocks, so a
-      // disposed `Ref` could escape uncaught out of
-      // createProfile/ensureDefaultProfile/ensureRemoteProfile
-      // (`profileRepositoryProvider` watches `userDatabaseProvider`,
-      // deliberately invalidated to swap the per-account DB mid
-      // sign-in/sign-up — `router_provider.dart:30-35`). Now inside the
-      // OUTER try, so the catch below guards it too.
-      // T-49/P2-18: only when this call is NOT the fire-and-forget
-      // activation heal — see this method's own doc comment and
-      // [ensureRemoteProfile]'s. A write this path does not perform cannot
-      // re-point [activeProfileDocIdProvider] at a stale profile after a
-      // later `select()` already moved it on.
-      if (activateProvider) {
-        _ref.read(activeProfileDocIdProvider.notifier).set(model.ulid);
-      }
     } catch (e, st) {
-      // Outer guard: the FIRESTORE-REPO-RESOLUTION await above can itself
-      // throw — a genuine account-resolution failure (e.g.
-      // [AccountNotAuthenticatedException] — see the class doc comment) or
-      // a disposed `Ref` racing a provider teardown. Non-fatal for the
-      // same reason as the inner catch: the local identity already
-      // exists. `_ref.mounted` (Riverpod's own documented remedy for "Ref
-      // used after dispose") gates the final activation attempt below —
-      // if the Ref itself is gone there is nothing left to write to, and
-      // touching it again would throw the exact disposed-Ref error this
-      // restructuring exists to stop.
       _log.warning(
         event: 'profile_repo_firestore_ensure_failed',
         fields: {'profileId': model.id},
         exception: e,
         stackTrace: st,
       );
-      // T-49/P2-18: same guard as the inner write above.
-      if (activateProvider && _ref.mounted) {
-        _ref.read(activeProfileDocIdProvider.notifier).set(model.ulid);
-      }
     }
   }
 }

@@ -197,8 +197,11 @@ final firestoreAccountRepositoryProvider =
 /// provider alone (see its own doc comment) was not sufficient: this
 /// provider's OWN default retry still turned a fast upstream failure into
 /// another ~38+-second stall before `.future` — what
-/// `FirestoreProfileRepositoryAdapter._ensureFirestoreProfile` awaits —
-/// finally settled. Confirmed by reproduction: with only the upstream fix,
+/// `FirestoreProfileRepositoryAdapter._resolveFirestoreProfileRepo` awaits
+/// (the shared resolution point behind both `_ensureFirestoreProfile` and
+/// `_activateThenEnsureFirestoreProfile` as of P2-23; the same `await`
+/// lived directly inside `_ensureFirestoreProfile` at the time of this
+/// reproduction) — finally settled. Confirmed by reproduction: with only the upstream fix,
 /// `profile_repository_impl_test.dart`'s "does not propagate out of
 /// createProfile" test still hung to its 2-minute timeout, now reporting
 /// disposal of THIS provider instead. Every other provider in this file
