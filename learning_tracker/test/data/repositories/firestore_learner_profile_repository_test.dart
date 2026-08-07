@@ -3,14 +3,15 @@
 /// Epic B. Covers: `ensureProfile` writing to the caller-supplied
 /// `profileId` (P2-2: this repository no longer mints one itself — see the
 /// class doc comment, "Doc-id" — so these tests supply distinct literal
-/// ids rather than asserting on minting behavior), that a SECOND call for an
-/// already-existing id never re-sends `created_at` (T-40 — the whole reason
-/// `createProfile` was replaced by this single create-if-missing/heal
-/// method; see [FirestoreLearnerProfileRepository.ensureProfile]'s own doc
-/// comment), `getProfiles`/`watchProfiles` listing every profile under the
-/// account unfiltered, `updateProfile`'s current-entity-plus-overrides
-/// semantics, model round-trip for both `ProfileMode`s, and the "one bad
-/// document doesn't blank the list" decode leniency (both the stream and the
+/// ids rather than asserting on minting behavior); `ensureProfile` always
+/// writing the CALLER-SUPPLIED `created_at` (P2-15 — this repository no
+/// longer reads the document to decide whether `created_at` is safe to
+/// send, see [FirestoreLearnerProfileRepository.ensureProfile]'s own doc
+/// comment for why a read-based decision was the defect, not the fix);
+/// `getProfiles`/`watchProfiles` listing every profile under the account
+/// unfiltered; `updateProfile`'s current-entity-plus-overrides semantics;
+/// model round-trip for both `ProfileMode`s; and the "one bad document
+/// doesn't blank the list" decode leniency (both the stream and the
 /// one-shot read) exactly like `firestore_stage_definition_repository_test.dart`.
 ///
 /// **What these tests cannot see**: same rules-evaluation limitation noted
@@ -18,7 +19,16 @@
 /// assertion here proves `firestore.rules` grants/denies the right caller.
 /// The resubscribe-with-backoff behavior [watchProfile]/[watchProfiles]
 /// delegate to is covered directly in `resilient_doc_stream_test.dart` —
-/// not re-proven here.
+/// not re-proven here. **`fake_cloud_firestore` also has no cache/offline
+/// semantics** (no `Source.serverAndCache` vs `Source.server` distinction,
+/// no `metadata.isFromCache`), so no test in this file can reproduce the
+/// specific cache-miss scenario the old read-based `created_at` decision
+/// was vulnerable to — that scenario is a DEFERRED VERIFICATION, not
+/// something this file claims to cover. What this file proves instead is
+/// stronger for a unit test: that the write no longer depends on ANY
+/// Firestore read at all, by seeding a document with a deliberately WRONG
+/// stored `created_at` and confirming the write still uses the caller's
+/// value regardless (see "the caller-supplied value wins, always").
 ///
 /// TQ-6: no wall clock, no shared global state — every test builds its own
 /// fake Firestore instance.
@@ -33,6 +43,11 @@ import 'package:learning_tracker/data/repositories/firestore_learner_profile_rep
 import '../../helpers/firestore_fake.dart';
 
 const _uid = 'uid-1';
+
+/// A fixed, arbitrary "creation instant" for tests that don't care about
+/// the specific value — mirrors how a real caller always has one already
+/// (the Drift row's own `createdAt` column), never "now" at call time.
+final _createdAt = DateTime.utc(2024, 3, 1, 12);
 
 void main() {
   late FakeFirebaseFirestore firestore;
@@ -56,6 +71,7 @@ void main() {
         profileId: 'ulid-yossi',
         displayName: 'Yossi',
         mode: ProfileMode.child,
+        createdAt: _createdAt,
       );
 
       expect(profile.profileId, 'ulid-yossi');
@@ -71,11 +87,13 @@ void main() {
         profileId: 'ulid-yossi',
         displayName: 'Yossi',
         mode: ProfileMode.child,
+        createdAt: _createdAt,
       );
       final b = await repo.ensureProfile(
         profileId: 'ulid-daniel',
         displayName: 'Daniel',
         mode: ProfileMode.adult,
+        createdAt: _createdAt,
       );
 
       expect(a.profileId, isNot(b.profileId));
@@ -89,25 +107,27 @@ void main() {
         profileId: 'ulid-devorah',
         displayName: 'Devorah',
         mode: ProfileMode.adult,
+        createdAt: _createdAt,
       );
       await repo.ensureProfile(
         profileId: 'ulid-devorah',
         displayName: 'Devorah',
         mode: ProfileMode.adult,
+        createdAt: _createdAt,
       );
 
       final docs = (await rawProfiles().get()).docs;
       expect(docs, hasLength(1));
     });
 
-    test('a fresh document DOES get a created_at on its first write — the '
-        'read-then-write never leaves it missing (T-40)', () async {
+    test('a fresh document DOES get a created_at on its first write', () async {
       final repo = buildRepo();
 
       await repo.ensureProfile(
         profileId: 'ulid-fresh',
         displayName: 'Fresh',
         mode: ProfileMode.adult,
+        createdAt: _createdAt,
       );
 
       final snapshot = await rawProfiles().doc('ulid-fresh').get();
@@ -118,42 +138,72 @@ void main() {
       expect((await repo.getProfile('ulid-fresh'))?.createdAt, isNotNull);
     });
 
-    test('T-40: calling ensureProfile AGAIN for an EXISTING id never '
-        're-sends created_at — the exact trap createProfile would have '
-        'been if reused as the activation heal', () async {
+    test('P2-15: calling ensureProfile AGAIN for an EXISTING id with the SAME '
+        'caller-supplied created_at persists that value unchanged — this is '
+        'the actual shape every production caller uses '
+        '(FirestoreProfileRepositoryAdapter always passes model.createdAt, '
+        'the Drift row\'s own immutable creation timestamp, which never '
+        'changes between activations), so the write is idempotent by '
+        'construction rather than by an internal read-and-decide', () async {
       final repo = buildRepo();
 
       final first = await repo.ensureProfile(
         profileId: 'ulid-heal-target',
         displayName: 'Original Name',
         mode: ProfileMode.adult,
+        createdAt: _createdAt,
       );
-      final originalCreatedAt = first.createdAt;
 
-      // Simulate time passing before the SAME profile activates again.
-      await Future<void>.delayed(const Duration(milliseconds: 5));
       final healed = await repo.ensureProfile(
         profileId: 'ulid-heal-target',
         displayName: 'Original Name',
         mode: ProfileMode.adult,
+        createdAt: _createdAt,
       );
 
-      expect(
-        healed.createdAt,
-        originalCreatedAt,
-        reason:
-            'a second ensureProfile call for the same id (an activation '
-            'heal, not a fresh creation) must preserve the real creation '
-            'timestamp rather than clobbering it with "now"',
-      );
-      // created_at is stored as a plain ISO-8601 string (see
-      // LearnerProfileEntity.toFirestore's doc comment on encodeDateTime) —
-      // confirm the STORED value itself is untouched, not just the value
-      // this call happened to return.
+      expect(healed.createdAt, first.createdAt);
       final snapshot = await rawProfiles().doc('ulid-heal-target').get();
       expect(
         DateTime.parse(snapshot.data()!['created_at'] as String).toUtc(),
-        originalCreatedAt.toUtc(),
+        _createdAt,
+      );
+    });
+
+    test('P2-15: the caller-supplied created_at wins even when the STORED '
+        'document already disagrees — proof that the write no longer '
+        'depends on any Firestore read to decide created_at (the actual '
+        'defect: the old decision came from (await ref.get()).data(), which '
+        'a stale/offline cache can get wrong; this repository no longer '
+        'reads at all, so no cache state — real or simulated here — can '
+        'produce a wrong write). fake_cloud_firestore has no cache/offline '
+        'semantics to actually go stale, so this seeds a document whose '
+        'stored created_at is simply WRONG relative to what the caller now '
+        'supplies, which is the only way to distinguish "derived from a '
+        'read" from "always the caller\'s value" in this harness.', () async {
+      final repo = buildRepo();
+      final wrongStoredCreatedAt = DateTime.utc(1999, 1, 1);
+      final correctCallerCreatedAt = DateTime.utc(2024, 6, 15);
+
+      await rawProfiles().doc('ulid-caller-truth').set({
+        'display_name': 'Stale',
+        'mode': 'adult',
+        'avatar': '',
+        'created_at': wrongStoredCreatedAt.toIso8601String(),
+        'updated_at': wrongStoredCreatedAt.toIso8601String(),
+      });
+
+      final result = await repo.ensureProfile(
+        profileId: 'ulid-caller-truth',
+        displayName: 'Fresh Activation',
+        mode: ProfileMode.adult,
+        createdAt: correctCallerCreatedAt,
+      );
+
+      expect(result.createdAt, correctCallerCreatedAt);
+      final snapshot = await rawProfiles().doc('ulid-caller-truth').get();
+      expect(
+        DateTime.parse(snapshot.data()!['created_at'] as String).toUtc(),
+        correctCallerCreatedAt,
       );
     });
 
@@ -174,6 +224,7 @@ void main() {
           profileId: 'ulid-never-created',
           displayName: 'Healed Later',
           mode: ProfileMode.child,
+          createdAt: _createdAt,
         );
 
         final snapshot = await rawProfiles().doc('ulid-never-created').get();
@@ -190,6 +241,7 @@ void main() {
         profileId: 'ulid-yossi',
         displayName: 'Yossi',
         mode: ProfileMode.child,
+        createdAt: _createdAt,
       );
 
       final snapshot = await rawProfiles().doc(profile.profileId).get();
@@ -207,6 +259,7 @@ void main() {
         displayName: 'Yossi',
         mode: ProfileMode.child,
         avatar: 'bear',
+        createdAt: _createdAt,
       );
       final fetched = await repo.getProfile(created.profileId);
 
@@ -224,6 +277,7 @@ void main() {
           profileId: 'ulid-daniel',
           displayName: 'Daniel',
           mode: ProfileMode.adult,
+          createdAt: _createdAt,
         );
 
         expect(created.avatar, '');
@@ -240,11 +294,13 @@ void main() {
         profileId: 'ulid-yossi',
         displayName: 'Yossi',
         mode: ProfileMode.child,
+        createdAt: _createdAt,
       );
       await repo.ensureProfile(
         profileId: 'ulid-daniel',
         displayName: 'Daniel',
         mode: ProfileMode.adult,
+        createdAt: _createdAt,
       );
 
       final profiles = await repo.getProfiles();
@@ -275,11 +331,13 @@ void main() {
         profileId: 'ulid-yossi',
         displayName: 'Yossi',
         mode: ProfileMode.child,
+        createdAt: _createdAt,
       );
       await repo.ensureProfile(
         profileId: 'ulid-daniel',
         displayName: 'Daniel',
         mode: ProfileMode.adult,
+        createdAt: _createdAt,
       );
 
       await done;
@@ -294,6 +352,7 @@ void main() {
         displayName: 'Yossi',
         mode: ProfileMode.child,
         avatar: 'bear',
+        createdAt: _createdAt,
       );
 
       final updated = await repo.updateProfile(
@@ -314,6 +373,7 @@ void main() {
         profileId: 'ulid-yossi',
         displayName: 'Yossi',
         mode: ProfileMode.child,
+        createdAt: _createdAt,
       );
 
       final updated = await repo.updateProfile(
@@ -334,11 +394,13 @@ void main() {
         profileId: 'ulid-good',
         displayName: 'Yossi',
         mode: ProfileMode.child,
+        createdAt: _createdAt,
       );
       final bad = await repo.ensureProfile(
         profileId: 'ulid-bad',
         displayName: 'Daniel',
         mode: ProfileMode.adult,
+        createdAt: _createdAt,
       );
       await rawProfiles().doc(bad.profileId).update({
         'created_at': FieldValue.delete(),
@@ -362,6 +424,7 @@ void main() {
         profileId: 'ulid-yossi',
         displayName: 'Yossi',
         mode: ProfileMode.child,
+        createdAt: _createdAt,
       );
 
       final stream = repo

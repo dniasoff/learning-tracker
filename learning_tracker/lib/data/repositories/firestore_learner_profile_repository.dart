@@ -7,7 +7,6 @@
 library;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:learning_tracker/core/codec/firestore_codec.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
@@ -206,33 +205,39 @@ class FirestoreLearnerProfileRepository {
   /// genuine first creation, and every later profile ACTIVATION (a heal —
   /// see `FirestoreProfileRepositoryAdapter._ensureFirestoreProfile`'s doc
   /// comment for the full call-path). Both share this ONE method rather
-  /// than a separate `createProfile`, because a second, unconditional-
-  /// `created_at` method would be a trap the moment anything called it more
-  /// than once for the same [profileId]: `SetOptions(merge: true)` still
-  /// REPLACES any field present in the payload, so a naive repeat write
-  /// would silently overwrite a real `created_at` with "now" on every
-  /// activation. This method reads the document first and OMITS
-  /// `created_at` from the write whenever one already exists — the value
-  /// already stored survives no matter how many times this is called for
-  /// the same id, while a document that genuinely does not exist yet still
-  /// gets a real `created_at` on its first write (never missing — see
-  /// [LearnerProfileEntity.fromFirestore], which throws on that shape).
-  /// Every other field ([displayName]/[mode]/[avatar]/`updated_at`) is
+  /// than a separate `createProfile`.
+  ///
+  /// **`created_at` is never decided by reading this document — it is
+  /// always the caller-supplied [createdAt] (P2-15).** An earlier version
+  /// of this method read the document first and omitted `created_at` from
+  /// the write only when a document already existed
+  /// (`(await ref.get()).data() != null`). That read used the SDK default
+  /// `Source.serverAndCache`, and this app runs with Firestore local
+  /// persistence explicitly enabled
+  /// (`lib/data/firestore/account_firebase.dart`'s `Settings(persistenceEnabled:
+  /// true, ...)`), so a cold-cache offline read could report "no document"
+  /// for one that genuinely exists on the server — and the very next line
+  /// would then overwrite the real `created_at` with "now", on every
+  /// activation once T-40 made this run on every one, not just at
+  /// creation. There is no read left to get wrong: [createdAt] comes from
+  /// the caller's own already-authoritative local record — the Drift
+  /// `learner_profiles.created_at` column, set once at genuine local
+  /// insertion and never touched by any update
+  /// (`ProfileDao.upsertFromSync`'s doc comment: "accountId/createdAt are
+  /// left untouched") — so resending it on every heal call is always
+  /// correct, never "now", and needs no Firestore state to decide. Every
+  /// other field ([displayName]/[mode]/[avatar]/`updated_at`) is likewise
   /// always written, matching the "one unconditional merge write" design
-  /// `firestore-phase2-plan.md` §4 P2-2 asked for — only `created_at`'s
-  /// inclusion is conditional.
+  /// `firestore-phase2-plan.md` §4 P2-2 asked for — [createdAt] is no
+  /// longer a special case, it is simply always sent.
   Future<LearnerProfileEntity> ensureProfile({
     required String profileId,
     required String displayName,
     required ProfileMode mode,
+    required DateTime createdAt,
     String avatar = '',
   }) async {
     final now = DateTimeFactory.nowUtc(); // P5: UTC timestamps
-    final ref = _doc(profileId);
-    final existingData = (await ref.get()).data();
-    final createdAt = existingData != null
-        ? (FirestoreCodec.parseDateTime(existingData['created_at']) ?? now)
-        : now;
     final entity = LearnerProfileEntity(
       profileId: profileId,
       displayName: displayName,
@@ -241,14 +246,7 @@ class FirestoreLearnerProfileRepository {
       createdAt: createdAt,
       updatedAt: now,
     );
-    final payload = entity.toFirestore();
-    if (existingData != null) {
-      // Never re-send created_at once the document exists — see the doc
-      // comment above. Omitting the key (not writing FieldValue.delete()) is
-      // what leaves the stored value untouched under SetOptions(merge:true).
-      payload.remove('created_at');
-    }
-    await ref.set(payload, SetOptions(merge: true));
+    await _doc(profileId).set(entity.toFirestore(), SetOptions(merge: true));
     return entity;
   }
 

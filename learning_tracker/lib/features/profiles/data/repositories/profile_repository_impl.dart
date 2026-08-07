@@ -740,12 +740,16 @@ class FirestoreProfileRepositoryAdapter implements ProfileRepository {
   /// [ensureDefaultProfile]'s self-heal branch, and — T-40 — every profile
   /// activation via the public [ensureRemoteProfile] above. Always goes
   /// through [FirestoreLearnerProfileRepository.ensureProfile] (never the
-  /// deleted `createProfile`): that method's write never re-sends
-  /// `created_at` once a document exists, so calling this on every
-  /// activation cannot clobber a real creation timestamp with "now" — see
-  /// its own doc comment for the mechanism. This method NEVER mints;
-  /// [model.ulid] is always already set (eager mint, see
-  /// [createProfile]/[ensureDefaultProfile] above).
+  /// deleted `createProfile`), passing [model.createdAt] — the Drift row's
+  /// own immutable local creation timestamp — as that method's `createdAt`.
+  /// P2-15: that method no longer reads Firestore to decide whether
+  /// `created_at` is safe to (re-)send; it always sends [model.createdAt],
+  /// which can never be wrong regardless of activation count, because it
+  /// is never re-derived from a Firestore read (which could be a stale
+  /// offline cache — see that method's own doc comment for the mechanism
+  /// this replaced). This method NEVER mints; [model.ulid] is always
+  /// already set (eager mint, see [createProfile]/[ensureDefaultProfile]
+  /// above).
   ///
   /// Non-fatal on a Firestore failure — profiles are offline-first by
   /// explicit contract (`tutor_invites.ts:59-60`), so a remote outage must
@@ -773,6 +777,11 @@ class FirestoreProfileRepositoryAdapter implements ProfileRepository {
           displayName: model.displayName,
           mode: model.profileMode,
           avatar: model.avatarIndex.toString(),
+          // P2-15: the Drift row's own immutable local creation timestamp
+          // — never re-derived from a Firestore read, so it can never be
+          // clobbered by a stale/offline cache. See ensureProfile's own
+          // doc comment.
+          createdAt: model.createdAt,
         );
       } catch (e, st) {
         // Non-fatal: mirrors _drift's own cloud-push failure handling

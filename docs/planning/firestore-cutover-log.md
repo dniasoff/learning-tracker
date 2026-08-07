@@ -77,10 +77,10 @@ nothing on disk to diff against. This is the fix, binding from 2026-08-06
 
 ## CURRENT STATE
 
-**Head:** `5cdcb81c` (P2-13) **(P2-14, this commit, not yet reflected —
-same self-reference lag as every prior closing commit)**. `5cdcb81c`
+**Head:** `a3c92d6c` (P2-14) **(P2-15, this commit, not yet reflected —
+same self-reference lag as every prior closing commit)**. `a3c92d6c`
 remains the correct SHA for a cold agent to diff a tree against until
-P2-14's own SHA is knowable.
+P2-15's own SHA is knowable.
 **Deployed:** still `unknown — not deployed`. Unchanged this commit — no
 rules file touched.
 **Phase:** 0 ✅ · 1 ✅ · **2 — both BLOCKING defects (`T-40`, `T-43`) fixed
@@ -153,9 +153,21 @@ pre-existing P2-3 `ProfileModel.fromDriftRow` `StateError`, out of this
 round's scope by owner ruling. Full commands and verbatim output: this
 file's **P2-14** entry.
 
-**IN FLIGHT:** nothing. (This field held the P2-14 edit list from before
-this commit's first edit until this commit landed; the completed record is
-the P2-14 entry itself, below, not this field.)
+**`created_at` clobber (P2-15) — FIXED.** `FirestoreLearnerProfileRepository
+.ensureProfile` no longer reads Firestore at all to decide `created_at`; it
+takes the caller's already-authoritative `createdAt` (the Drift row's own
+immutable local creation timestamp) and always writes it — nothing left to
+derive from a cache-miss read. Full reasoning, the fake-transaction
+incompatibility this design avoids, and the proof: this file's **P2-15**
+entry. This is the ONLY item from `p2-rereview.json` closed this round —
+everything else in that review's `new_defects`/`still_open_unrecorded`
+lists (T-40 wiring is separately closed at P2-14 above; the six red tests,
+the second-identity-on-sync-refusal outcome, the dead `DataExportImportService`
+half, the third ulid-less test seeder, the stale T-24 row, T-44–T-46,
+T-48) is **untouched by this commit** and remains exactly as open as the
+review found it.
+
+**IN FLIGHT:** nothing.
 
 **Live on Firestore (4):** bookmarks · learning-order · profile identity ·
 scheduler learning-order read. **Unchanged this phase** — Phase 2 moved no
@@ -234,6 +246,277 @@ stage-definition · study-day-config · track-learning-order.
 ## Entries
 
 Newest first. Append; never rewrite history.
+
+### 2026-08-07 — P2-15: close the `created_at` clobber P2-8 attempted and P2-13's re-review found narrowed, not fixed (`T-48`)
+
+**Brief: "YOU ARE P2-15. Close the `created_at` clobber that P2-8 narrowed
+but did not fix."** Third-round remediation, per-defect assignment (round
+three overall for Phase 2; this is the first pass at `T-48` specifically —
+P2-8 built the read-then-decide logic, P2-13's re-review found it
+insufficient and opened `T-48`, this commit closes it). Started against
+`a3c92d6c` (P2-14). `git log --oneline -1`, `git status --porcelain | grep
+-v '^ M _bmad'`, `git stash list` all verified clean/unchanged before the
+first edit (see "Stash situation" below).
+
+#### Re-verification before touching anything
+
+Re-read `firestore_learner_profile_repository.dart:224-250` directly
+against `p2-rereview.json`'s defect 4 / `still_open_unrecorded` item 5
+before writing a line of code. The claim held exactly as stated: `ensureProfile`
+decided whether to omit `created_at` from
+`(await ref.get()).data() != null` — the SDK default `Source.serverAndCache`,
+no `metadata.isFromCache` guard, no transaction. And
+`account_firebase.dart:668-669` does explicitly set
+`firestore.settings = const Settings(persistenceEnabled: true, cacheSizeBytes:
+kAccountFirestoreCacheSizeBytes)` — confirmed by reading the file directly,
+not trusting the brief's own claim about it (the brief itself notes an
+earlier verifier got this backwards and reported no override). A cold-cache
+offline read can therefore report "no document" for one that exists on the
+server, and the following `SetOptions(merge: true)` write would then
+overwrite the real `created_at` with `now`. Defect confirmed real.
+
+#### Files changed
+
+- `lib/data/repositories/firestore_learner_profile_repository.dart` —
+  `ensureProfile`'s `(await ref.get())` read deleted entirely; `createdAt`
+  is now a caller-supplied `required DateTime`, always written. Doc
+  comment (`ensureProfile`, previously `:203-223`) rewritten to describe
+  the new mechanism and name the defect it replaces, instead of claiming
+  the trap is closed by logic that no longer exists. The now-unused
+  `firestore_codec.dart` import (only used by the deleted
+  `FirestoreCodec.parseDateTime(existingData['created_at'])` call) removed.
+- `lib/features/profiles/data/repositories/profile_repository_impl.dart`
+  — `_ensureFirestoreProfile`'s call site now passes `createdAt:
+  model.createdAt`. Its own doc comment (the one claiming `ensureProfile`
+  "never re-sends `created_at` once a document exists") corrected to
+  describe the caller-supplied mechanism instead.
+- `test/data/repositories/firestore_learner_profile_repository_test.dart`
+  — `createdAt:` added to every `ensureProfile(` call (16 pre-existing
+  tests); the "T-40: calling ensureProfile AGAIN... never re-sends
+  created_at" test renamed and its rationale rewritten (the new mechanism
+  does re-send `created_at` every time, just always with the correct
+  value — "never re-sends" is no longer an accurate description of the
+  guarantee); one new test added — see PROOF REQUIRED below. File-level
+  doc comment corrected to name the P2-15 mechanism and explain what this
+  harness can and cannot prove (see below).
+- `docs/planning/firestore-cutover-tasks.md` — `T-48` → `done`, header
+  updated.
+- `docs/planning/firestore-cutover-log.md` — this entry; `CURRENT STATE`
+  rewritten; `IN FLIGHT` cleared.
+
+#### Why "the caller supplies `createdAt`" over the brief's other two options
+
+The brief listed three options: never send `created_at` from this path at
+all (with "the create path already sets it" as the parenthetical
+justification); use a transaction; or read with `GetOptions(source:
+Source.server)` and handle the offline case explicitly.
+
+**Investigated first: is there actually a separate "create path"?** No —
+verified `grep -rn "ensureProfile(" lib/` before editing: exactly ONE
+production call site (`profile_repository_impl.dart:771`, inside
+`_ensureFirestoreProfile`), reached from THREE places
+(`createProfile`, `ensureDefaultProfile`'s self-heal, and the public
+`ensureRemoteProfile` activation heal — see that method's own doc
+comment). There is no separate method that ever wrote `created_at` for a
+genuinely fresh document. A literal "never send `created_at` from this
+path at all" would have left every document created via the T-40 heal
+path (offline creation, network restored later) permanently missing
+`created_at` — `LearnerProfileEntity.fromFirestore` throws on that shape
+by design. So the literal reading of that option was rejected as a new
+defect, not a fix.
+
+**What "the create path already sets it" pointed to instead, once traced
+one level up:** the Drift row's own `created_at` column
+(`lib/core/database/tables/learner_profiles.dart:25`), set once at genuine
+local INSERT and never touched by any subsequent UPDATE
+(`ProfileDao.upsertFromSync`'s own doc comment: "accountId/createdAt are
+left untouched, matching the prior inline behavior"). `ProfileModel.createdAt`
+(`profile_model.dart:20`, sourced from that column via `fromDriftRow`) is
+therefore already the single authoritative "when was this profile
+created" value BEFORE this repository is ever called — for both the
+genuine-first-creation call and every later heal call, since they all
+read the SAME Drift row. **Chosen fix: hoist `createdAt` to the caller,
+delete the Firestore read from this method entirely.** The field is
+always written, but the value written can never be wrong, because it is
+never derived from Firestore state — realizing the brief's own stated
+principle ("a field this path simply never writes cannot be clobbered")
+one level more precisely than the literal instruction: this path never
+DECIDES `created_at` from a read, so nothing this path reads can ever
+make the write wrong.
+
+**Transaction option — investigated, then rejected on a concrete
+incompatibility found by testing, not by reading.** A `runTransaction`
+read is guaranteed server-fresh on the real SDK (transactions never read
+from cache), which would also have closed the cache-miss hole. Read
+`fake_cloud_firestore-4.1.1`'s own source
+(`~/.pub-cache/hosted/pub.dev/fake_cloud_firestore-4.1.1/lib/src/fake_cloud_firestore_instance.dart:210-241`)
+before committing to this approach: `_DummyTransaction.set<T>(ref, data,
+[SetOptions? options])` calls `documentReference.set(data)` — **it drops
+the `options` parameter entirely.** `MockDocumentReference.set`
+(`mock_document_reference.dart:211-215`) defaults `merge` to `false` when
+no options are passed, which **clears the whole document** before writing
+just the transaction's payload. A transaction-based fix using
+`transaction.set(ref, payload, SetOptions(merge: true))` would have
+silently stopped merging under the fake specifically — every existing
+`updateProfile`/other-field-preserving test would still pass by
+coincidence (this repository's payload already contains every field it
+manages), but it would have been the wrong mechanism to build on, and
+untested. (`transaction.update()` does merge correctly in the fake — it
+was a viable workaround — but a transaction is unneeded complexity once
+`createdAt` is hoisted to the caller: there is no longer a read-then-write
+race to close, since there is no read.) Recording this finding here as a
+real, non-obvious trap for whoever next reaches for
+`FirebaseFirestore.runTransaction` in this codebase's test suite.
+
+**`GetOptions(source: Source.server)` — rejected as strictly worse than
+the chosen fix, not merely equivalent.** It would still require the doc
+to exist on the server for the decision to be trustworthy (an offline
+caller gets an explicit failure, which is fine — `_ensureFirestoreProfile`
+already treats any failure here as non-fatal), but it keeps a Firestore
+read as part of `created_at`'s correctness, and keeps the two-step
+read-then-decide-then-write shape (still not atomic, though the atomicity
+gap here is benign — see below). The chosen fix has no read at all in the
+`created_at` path, which is a strictly smaller surface.
+
+**Race consideration, addressed for completeness though not previously
+flagged:** two concurrent `ensureRemoteProfile` calls for the same profile
+(e.g. cold-start selection racing a near-simultaneous manual switch) now
+both compute the SAME `createdAt` (same source: the one Drift row), so a
+write race produces no divergence — unlike the old design, where two
+racing reads could each observe different `existingData` states.
+
+#### PROOF REQUIRED
+
+**The 4 T-40-focused pre-existing tests (of 16 total in the file before
+this commit) are structurally incapable of proving this, exactly as the
+brief states — recorded explicitly, not cited as evidence.**
+`fake_cloud_firestore` has no `Source`/cache/`metadata.isFromCache`
+concept at all (confirmed by reading its source — `MockDocumentReference.get`
+takes a `GetOptions?` but the fake never distinguishes `Source.server`
+from `Source.cache` from the default; there is no local persistence layer
+to go stale in the first place). Every one of those 4 tests was green
+before this fix and remains green after — that was true of the OLD
+broken code too, per P2-13's own re-review, which is exactly why they
+were insufficient proof then and are cited here only as regression
+coverage, not as proof of the fix.
+
+**Real proof written and run:** a new test, `'P2-15: the caller-supplied
+created_at wins even when the STORED document already disagrees'`, seeds
+the raw Firestore document with a `created_at` DIFFERENT from what the
+caller then supplies to `ensureProfile`, and asserts the write uses the
+caller's value, not the stored one. This is detectable in the fake
+because it does not depend on cache/offline semantics at all — it proves
+the write no longer depends on ANY existing Firestore state, which is the
+actual property that makes the cache-miss trap unreachable (not "the
+cache never misses," but "a miss cannot matter because nothing is decided
+from what's read").
+
+```
+$ flutter test test/data/repositories/firestore_learner_profile_repository_test.dart
+00:00 +17: All tests passed!
+```
+
+(16 tests before this commit, verified via `git show HEAD:learning_tracker/test/data/repositories/firestore_learner_profile_repository_test.dart
+| grep -c "^\s*test("` → `16`; +1 for the new proof test, 0 removed —
+matches exactly.)
+
+```
+$ flutter test test/features/profiles/data/repositories/profile_repository_impl_test.dart
+00:00 +37 -4: Some tests failed.
+
+Failing tests:
+  AUD-profiles-02 — TutorWriteException from pushLearnerProfile propagates
+    updateProfile propagates TutorWriteException instead of swallowing it
+  AUD-profiles-16 — log-less catch: cloud push failures now log
+    updateProfile still succeeds offline-first AND logs the cloud push failure
+    via AppLogger
+  FirestoreProfileRepositoryAdapter ready (active account) ensureDefaultProfile
+    fast path (account already has a profile) does NOT touch that profile's
+    missing ulid
+  FirestoreProfileRepositoryAdapter ready (active account) updateProfile does
+    NOT backfill a missing ulid for a pre-P2-2 profile — the lazy backfill
+    path is deleted (P2-2)
+```
+
+**Identical to the P2-14 baseline recorded above** (`+37 -4`, same 4
+tests, same names) — this commit's call-site edit (adding `createdAt:
+model.createdAt` to the one production `ensureProfile` call) introduced
+NO new failure in the file that owns that call site. These 4 remain the
+SAME pre-existing P2-3 `ProfileModel.fromDriftRow` `StateError` failures,
+out of this round's scope by owner ruling (unchanged from every prior
+measurement this phase) — named here explicitly, not silently absorbed,
+per this brief's own instruction.
+
+#### DEFERRED VERIFICATION — the cache-miss scenario itself
+
+**The actual "cold-cache offline read reports no document for one that
+exists on the server" trigger has NOT been exercised by any test in this
+commit, and cannot be, on this harness.** `fake_cloud_firestore` has no
+cache or offline model at all — there is no way to construct a
+"document exists on the server, but this read misses the cache" state in
+it, because it has no separate server/cache representations to diverge in
+the first place. This is not a gap in this commit's testing effort; it is
+a structural ceiling of the fake, restated from the brief. **What this
+commit's fix does instead of relying on that scenario being tested: it
+makes the scenario irrelevant to correctness** — since `createdAt` is no
+longer decided by any read, whether a hypothetical read would have hit
+cache or server no longer matters to whether the write is correct.
+Recorded as `D18` in `firestore-phase2-plan.md`'s deferred-verification
+table already covers this gap generically (device or an offline-cache
+integration test) — restated here as CLOSED-BY-DESIGN rather than
+closed-by-verification: a future device test could still exercise the
+scenario to confirm the write is skipped-or-correct under real offline
+conditions, but it is no longer load-bearing for `created_at`'s
+correctness the way it was before this commit.
+
+#### Gates — re-measured on the final tree, after every edit
+
+```
+$ dart analyze --fatal-infos
+Analyzing learning_tracker...
+No issues found!
+
+$ dart run tool/check_profile_path_keying.dart | tail -1
+PROFILE-KEY-SPLIT check OK: 2 collection(s) currently split (bookmarks, learning_order), all within the tracked baseline (0 new violations).
+
+$ dart run tool/check_profile_id_int_sites.dart | tail -1
+PROFILE-ID-INT-SITES OK: 88 tracked entries covering 91 site(s) across 5 pattern(s) [cf-int-guard, cf-string-profileid-doc, dart-int-profileid-param, dart-tutoring-int-parse, dart-tutoring-id-tostring]; 0 new, 0 stale, 0 changed.
+
+$ make audit; echo "EXIT=$?"
+... R6d's own stdout (the RUNNING form, not the skip form): "R6 lcov-denominator
+    check OK: 76 zero-coverage file(s), all within the tracked baseline (0 new
+    violations)." coverage/lcov.info present, 469235 bytes, mtime Aug 6 17:18 —
+    UNCHANGED, never deleted (verified via `ls -la` immediately after the run).
+=== audit PASSED — all 68 greps clean ===
+EXIT=0
+```
+
+Check 103's split set and check 104's count are byte-identical to every
+prior measurement this phase — expected: this commit's edits touch
+`created_at` write logic, not profile-identity KEYING (no `profileId`
+parameter, doc-id formula, or int/ULID site changed).
+
+#### `firestore-cutover-tasks.md` and `firestore-cutover-plan.md`
+
+- `T-48` → `done` (P2-15), evidence in its row, pointing here.
+- `firestore-cutover-plan.md` **not touched this commit** — same reasoning
+  as every prior non-closing commit this phase: whether the residual open
+  set (`T-44`–`T-46`, MINOR, still open) is enough to flip Phase 2's
+  status is left to whoever reads this next, not asserted here.
+
+#### Stash situation — re-verified again this session, unchanged
+
+```
+$ git stash list
+stash@{0}: WIP on dev: d74e3829 docs(planning): durable task list + recovery log; mark Phase 1 resolved
+stash@{1}: WIP on (no branch): 8855b9b1 fix(tracks): AUD-tracks-18 - de-duplicate Hebrew-script detection regex
+```
+
+Same two bases, same order as every prior record back to P2-0. Neither
+popped, applied, nor dropped this session. `git status --porcelain | grep
+-v '^ M _bmad'` showed exactly the 4 intended files (the two `lib/` files,
+the one `test/` file, and this log) before every commit-boundary check
+this session.
 
 ### 2026-08-07 — P2-14: T-40 and T-43 fixed for real — third attempt, both independently proven, one self-inflicted regression found and fixed in the same session
 
