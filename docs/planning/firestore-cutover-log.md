@@ -84,21 +84,14 @@ nothing on disk to diff against. This is the fix, binding from 2026-08-06
 
 ## CURRENT STATE
 
-**Head:** `c794cb35` (`test(tools): narrow the file:line assertion so
-advisory and sub-process output stop tripping it` — a CONCURRENT sibling
-session's own `T-58` fix, landed mid-session; zero file overlap with this
-round — see this file's **P2-23** entry, DEVIATION section, for the full
-account) **(P2-23, this commit, not yet reflected — same self-reference
-lag as every prior closing commit)**. `c794cb35` is the correct SHA for a
-cold agent to diff a tree against until P2-23's own SHA is knowable.
-`bb97707e` (P2-21) remains the last commit that touched any file this
-round's own `T-49` fix depends on; `d1d80e35` (P2-22, docs-only) sits
-between the two, superseded by this entry for `T-49`'s disposition.
-`git status --porcelain | grep -v '^ M _bmad'` showed exactly one
-pre-existing modified file at session start —
-`test/tool/audit_and_arb_parity_test.dart`, the concurrent sibling
-session's own in-progress `T-58` work, disclosed and untouched (see the
-**P2-23** entry) — not this session's uncommitted work, and not lost.
+**Head:** `bb704e07` (`fix(profiles): set the active profile doc id
+before the remote write, not after (T-49)` — P2-23's own commit, closing
+`T-49` for real) **(P2-24, this commit, not yet reflected — same
+self-reference lag as every prior closing commit)**. `bb704e07` is the
+correct SHA for a cold agent to diff a tree against until P2-24's own SHA
+is knowable. `git status --porcelain | grep -v '^ M _bmad'` was empty at
+this round's session start — a clean, write-quiet tree, no concurrent
+sibling session observed (`pgrep -af "flutter[ ]test"` clean).
 **Suites (new field, P2-22 — the owner's original "batch `make ci` to the
 end of the cutover" decision was already superseded in practice at Phase
 2, and that change is recorded here explicitly, not folded silently into
@@ -177,20 +170,22 @@ Phase 3.** This does
 **not** unwind what P2-14/P2-15/P2-16 independently verified about `T-40`,
 `T-43`, or `T-48` (below, unchanged), nor `T-50`/`T-51`/`T-52`/`T-53`/`T-54`
 (all genuinely closed or ruled, re-confirmed this round, unchanged).
-**Three further findings P2-22's review surfaced remain open, unaffected
-by this fix, none blocking Phase 3 on their own, all still tracked with
-task ids**: `T-56`
+**Two of the three further findings P2-22's review surfaced next to `T-49`
+are now CLOSED, by P2-24: `T-56`**
 (`AutoSelectedProfileId._resolveSelection`'s second, unguarded post-await
 write to `activeProfileDocIdProvider` — the sibling branch 43 lines below
-it in the same method already carries the re-check guard this one lacks),
-`T-57` (adult-profile creation deterministically, not racily, mis-keys all
-13 profile-scoped Firestore providers — `add_profile_dialog.dart` only
-calls `select()` for a child profile), and `T-58` (`test/tool/audit_and_arb_parity_test.dart`'s
-`'prints file:line paths for violations'` is CONFIRMED RED in the
-`make test-serial-tools` lane — pre-existing, NOT Phase-2-attributable, but
-previously only partially and inaccurately disclosed, with no task row).
-Full detail for all three: the **P2-22** entry, below (unchanged by this
-round — none of the three touch `_ensureFirestoreProfile`). **Two further
+it in the same method already carried the re-check guard this one
+lacked; now carries it too) **and `T-57`** (adult-profile creation
+deterministically, not racily, mis-keyed all 13 profile-scoped Firestore
+providers — `add_profile_dialog.dart` called `select()` only for a child
+profile while the repo activated unconditionally by mode; `select()` is
+now unconditional too, matching every other creation call site). Full
+detail, proof, and revert-proof for both: the **P2-24** entry, below.
+**The third, `T-58` (`test/tool/audit_and_arb_parity_test.dart`'s
+`'prints file:line paths for violations'`, CONFIRMED RED in the
+`make test-serial-tools` lane — pre-existing, NOT Phase-2-attributable),
+remains open**, unaffected by P2-24 (different file, different defect
+class) — full detail: the **P2-22** entry, below. **Two further
 stale-record defects were found and corrected at P2-22, both
 docs-only:** `firestore-cutover-plan.md`'s Status paragraph (materially
 false — named `T-49`/`T-50`/`T-51` as still gating Phase 3 when all three
@@ -481,6 +476,20 @@ standing fact). `flutter test test/features/profiles/` → `+428: All
 tests passed!` (425 baseline + 3 new). Full verbatim gate output, the
 `make test` full-suite number, and the revert/restore proof: the new
 **P2-23** entry, below.
+**Confirmed by P2-24 (code-touching — `profile_providers.dart`,
+`add_profile_dialog.dart`, two new permanent tests; `T-56`/`T-57`):**
+`dart analyze --fatal-infos` → `No issues found!`, exit 0. Both keying
+gates unchanged (neither `T-56` nor `T-57` touches a Firestore path or an
+int-keyed profile-identity site): `PROFILE-KEY-SPLIT check OK: 2
+collection(s) currently split ...`, `PROFILE-ID-INT-SITES OK: 88 tracked
+entries ...; 0 new, 0 stale, 0 changed`. `make audit` → `104/104` checks,
+`=== audit PASSED — all 68 greps clean ===`, exit 0, no concurrent
+session observed this round (clean at the first run). `flutter test
+test/features/profiles/` → `+430: All tests passed!` (428 baseline + 2
+new). `flutter test` (full suite) → `+11516 ~131: All tests passed!`
+(11514 baseline + 2 new), exit 0. Full verbatim gate output, both
+RED-before/GREEN-after proofs, and both revert/restore proofs: the new
+**P2-24** entry, below.
 **Directory note, `T-52`, `done` since P2-17 — CORRECTED THIS COMMIT, this
 paragraph itself was stale:** `make audit` means two different things
 depending on the working directory. `learning_tracker/Makefile:1378`'s
@@ -504,30 +513,38 @@ here as a `CURRENT STATE` self-consistency fix, not a re-opening of `T-52`
 P2-17, this was CURRENT STATE's own prose falling behind that fix in a
 later commit that copied it forward without checking it).
 
-**IN FLIGHT:** `P2-23` — closing `T-49` for real (all three
-`_ensureFirestoreProfile` callers, not just `ensureRemoteProfile`).
-Edit-list, per the brief and `firestore-cutover-log.md`'s own P2-22 entry's
-fix identification: (1) reproduce the reopening probe FIRST on the current
-tree and paste its RED output; (2) apply the fix —
-`lib/features/profiles/data/repositories/profile_repository_impl.dart`:
-hoist the `activeProfileDocIdProvider` activation write to before the
-Firestore network write it used to follow, for the `createProfile`/
-`ensureDefaultProfile` paths, and delete the `activateProvider` boolean
-parameter now that no caller needs to pass it; (3) make the probe a
-PERMANENT test file covering all three callers, not a throwaway; (4) run
-it GREEN; (5) prove the test is real — byte-exact `cp` backup (never `git
-stash`), revert, confirm RED, restore, md5-verify, confirm clean tree; (6)
-fix the doc comments this change makes false, in code, same commit; (7)
-run `flutter test test/features/profiles/` and `make test`; (8) correct
-`firestore-cutover-tasks.md`'s `T-49` row, this file's `CURRENT STATE` and
-D20, and (via an inline, non-destructive annotation, not a rewrite — see
-this file's own "never rewrite history" rule) the false "no later
-selection to race" justification recorded in the **P2-18** entry. A
-concurrent sibling session is separately working `T-58`
-(`test/tool/audit_and_arb_parity_test.dart`, uncommitted at session start)
-— out of this session's scope, not touched here.
+**IN FLIGHT:** nothing. P2-24's own edit list (guard `T-56`'s post-await
+write; make `T-57`'s `select()` unconditional; write both permanent
+tests RED-before/GREEN-after; revert-prove both byte-exact; run
+`flutter test test/features/profiles/` and `make test`; update
+`firestore-cutover-tasks.md`'s `T-56`/`T-57` rows and this file's
+`CURRENT STATE`) is fully landed in the commit that lands this entry —
+see the new **P2-24** entry, below, for the full record.
 
-(Superseded text below, from P2-22, left for the historical record — P2-22's edit list is fully landed in that commit:
+**PROCESS CORRECTION (found by P2-24, not judged, disclosed):** the
+`P2-23` IN FLIGHT block immediately below was never reset to `nothing` by
+`bb704e07` (P2-23's own commit) — contrary to this protocol's own step 2.
+Its content was still an accurate, fully-landed description of P2-23's
+finished work (nothing in it was abandoned or half-done, so no cold agent
+was misled about the tree's state), only the "reset to nothing"
+bookkeeping step itself was skipped. Left below, superseded rather than
+rewritten, per this file's own "never rewrite history" rule — full
+account in the new **P2-24** entry's own PROCESS CORRECTION section.
+
+(Superseded text below, from P2-23, left for the historical record — P2-23's edit list is fully landed in that commit:
+reproduced the reopening probe, applied the fix (hoisted the
+`activeProfileDocIdProvider` activation write before the Firestore
+network write for `createProfile`/`ensureDefaultProfile`, deleted the
+`activateProvider` boolean), made the probe a permanent test covering all
+three callers, revert-proved it, fixed the doc comments this change made
+false, ran `flutter test test/features/profiles/` and `make test`,
+corrected `firestore-cutover-tasks.md`'s `T-49` row and this file's
+`CURRENT STATE` — this field itself, per the note above, was the one item
+left undone. `T-56`/`T-57` were NOT part of P2-23's edit list — see the
+**P2-22** entry for their original identification and the new **P2-24**
+entry for their closure.)
+
+(Superseded text below that, from P2-22, left for the historical record — P2-22's edit list is fully landed in that commit:
 `T-49` reopened, `T-56`/`T-57`/`T-58` recorded, `CURRENT STATE` rewritten
 (`Head:`, `Phase:`, the new `Suites:` field, `Gates:`, the false
 non-`select()`-write enumeration corrected, this field reset to
@@ -741,6 +758,289 @@ stage-definition · study-day-config · track-learning-order.
 ## Entries
 
 Newest first. Append; never rewrite history.
+
+### 2026-08-07 — P2-24: closes `T-56` and `T-57` — the two sibling provider-clobber defects P2-22 found next to `T-49`
+
+**Brief: "YOU ARE P2-24. Close the two SIBLING provider-clobber defects
+round 4 found next to `T-49`. Both are pre-existing (they predate Phase
+2), both are unrecorded [as done], both sit directly on the surface Phase
+3 is about to move."** P2-23 landed while this task was framed, removing
+`activateProvider` from `profile_repository_impl.dart` — this round's
+first obligation was to re-verify `T-56`/`T-57` still existed on the
+POST-P2-23 tree before fixing anything, not to trust P2-22's pre-P2-23
+citations.
+
+```
+$ git log --oneline -5
+bb704e07 fix(profiles): set the active profile doc id before the remote write, not after (T-49)
+c794cb35 test(tools): narrow the file:line assertion so advisory and sub-process output stop tripping it
+d1d80e35 docs(planning): P2-22 — T-49 reopened by execution; Phase 2 NOT RESOLVED
+bb97707e fix: close the full-suite failures attributable to Phase 2
+f23a1af2 docs(planning): correct the records a docs-only pass left false; supersede the deferred table
+
+$ git status --porcelain | grep -v '^ M _bmad'
+(empty)
+
+$ git stash list
+stash@{0}: WIP on dev: d74e3829 docs(planning): durable task list + recovery log; mark Phase 1 resolved
+stash@{1}: WIP on (no branch): 8855b9b1 fix(tracks): AUD-tracks-18 - de-duplicate Hebrew-script detection regex
+```
+
+Identical stash bases, order and reflog SHAs to every prior round this
+phase. Neither popped, applied, nor dropped. `HEAD` is `bb704e07`
+(P2-23's own commit) — a clean, write-quiet tree, no concurrent sibling
+session observed this round (`pgrep -af "flutter[ ]test"` clean at
+session start).
+
+#### PROCESS CORRECTION found while reading CURRENT STATE — P2-23's own IN FLIGHT entry was never reset
+
+Before this round's own first edit, the committed `IN FLIGHT` field
+(`CURRENT STATE`, this file) still read `**IN FLIGHT:** \`P2-23\` —
+closing \`T-49\` for real...` verbatim — i.e. P2-23's commit `bb704e07`
+landed without resetting that field to `nothing`, contrary to the IN
+FLIGHT protocol's own step 2 ("The same commit that lands the code
+clears that entry"). Verified via `git show HEAD:docs/planning/firestore-cutover-log.md`
+that this is the actual committed state, not a stale local read.
+**Invariant unaffected:** the field's content was still an accurate,
+fully-landed description of P2-23's finished work (nothing in it was
+abandoned or half-done), so no cold agent following the recovery protocol
+would have been misled about the tree's state — only the field's own
+"reset to nothing" bookkeeping step was skipped. Corrected below, not
+rewritten: the stale block is left in place, superseded, exactly as this
+file's own convention already treats P2-22's superseded IN FLIGHT text.
+
+#### 1. Re-verified both defects BY EXECUTION on the POST-P2-23 tree before writing any fix
+
+**`T-56`** — read `profile_providers.dart` directly first: `_resolveSelection`'s
+"already selected" branch (`:224-235` on this tree — P2-23 touched a
+different file, so the line numbers P2-22 cited were still current)
+still wrote `ref.read(activeProfileDocIdProvider.notifier).set(existingProfile.ulid)`
+unconditionally after `await repo.getProfileById(current)`, with no
+re-check against `selectedProfileIdProvider`. The sibling branch 43 lines
+below (`:271-274`) still carried the guard. Confirmed unchanged from
+P2-22's citation.
+
+**`T-57`** — read `add_profile_dialog.dart` and `profile_repository_impl.dart`
+directly. **P2-23 changed the mechanism `T-57` depends on but not the
+defect itself:** `createProfile` (`profile_repository_impl.dart:667-697`)
+now activates `activeProfileDocIdProvider` via the new
+`_activateThenEnsureFirestoreProfile` (P2-23) instead of the old
+`activateProvider: true` flag P2-22 cited — but it still does so
+**unconditionally**, for every mode, whenever a cloud account is active.
+`add_profile_dialog.dart:264` still gated `select()` on
+`created.profileMode.isChild && context.mounted`. The defect survives
+P2-23 unchanged in effect: adult-profile creation still leaves
+`selectedProfileIdProvider` on the OLD profile while
+`activeProfileDocIdProvider` (and therefore all 13 profile-scoped
+Firestore providers) moves to the NEW one.
+
+Wrote both fixes' permanent tests FIRST, then ran each against the
+UNFIXED tree to reproduce by execution before touching any `lib/` file:
+
+```
+$ flutter test test/features/profiles/presentation/providers/auto_selected_profile_id_test.dart
+... (existing 6 tests) ...
+00:00 +6: autoSelectedProfileId (BUG D1) P2-24 (DEFECT 1): a late-settling "already selected" re-activation read does not clobber activeProfileDocIdProvider after a DIFFERENT profile has since been selected [E]
+  Expected: <8>
+    Actual: <7>
+  _resolveSelection's return value must reflect the CURRENT selection (8), not the stale one (7) it started reading.
+00:00 +6 -1: Some tests failed.
+```
+
+```
+$ flutter test test/features/profiles/presentation/widgets/add_profile_dialog_test.dart
+... (existing 6 tests) ...
+00:00 +3 -1: DEFECT 2: creating an ADULT profile also updates selectedProfileIdProvider (not just child profiles) [E]
+  Expected: <9>
+    Actual: <1>
+  DEFECT 2: creating an adult profile left selectedProfileIdProvider on the OLD profile (1) while the repo-level activeProfileDocIdProvider had already moved to the NEW one (9) ...
+00:00 +6 -1: Some tests failed.
+```
+
+Both RED, for exactly the predicted reason, on the tree as it stood
+before this round's edits.
+
+#### 2. Fix — `T-56`
+
+`lib/features/profiles/presentation/providers/profile_providers.dart`,
+`AutoSelectedProfileId._resolveSelection`'s "already selected" branch:
+after `await repo.getProfileById(current)` resolves, re-reads
+`ref.read(selectedProfileIdProvider)`. If it still equals `current`, the
+branch behaves exactly as before (activates `activeProfileDocIdProvider`
+from the model just fetched). If it does **not** — a different profile
+was selected while the read was in flight — the branch skips the write
+entirely and the method returns the LIVE `selectedProfileIdProvider`
+value instead of the stale `current`, mirroring the sibling guard 43
+lines below (comment: "Re-check after the await: the picker / sign-in
+flow may have selected a profile while we were fetching. Don't clobber
+an explicit choice.").
+
+#### 3. Fix — `T-57`
+
+**Decision, stated before applying it, per the brief's own instruction:**
+every OTHER production call site that creates a profile —
+`onboarding_profile_creation_step.dart:139-141` (unconditional `select()`
+after `createProfile`) and `AutoSelectedProfileId`'s self-heal branch
+(`profile_providers.dart:273-276`, unconditional `select()` after
+`ensureDefaultProfile`) — already selects the profile it just created
+regardless of mode. `add_profile_dialog.dart` was the one outlier. Since
+`FirestoreProfileRepositoryAdapter.createProfile` (T-49, P2-23) already
+activates `activeProfileDocIdProvider` unconditionally by mode, the two
+providers must agree for BOTH modes to stay consistent with each other
+and with the rest of the app. Under greenfield's "prefer removing the
+smallest total surface" and this round's own instruction to prefer
+removing the divergence over adding a branch: making `createProfile`
+itself mode-aware would add a branch to a repo method three unrelated
+callers share (onboarding, self-heal, this dialog); making
+`add_profile_dialog.dart` select() unconditionally removes the one
+outlier instead. Applied: the `select()` call that used to live only
+inside `if (created.profileMode.isChild && context.mounted)` now runs on
+every successful create (`if (context.mounted)`); only the follow-up
+`showParentPinSetupDialog` call — genuinely child-only, a Parent PIN
+gate — stays gated on `created.profileMode.isChild`.
+
+#### 4. Proof — both, GREEN after the fix
+
+```
+$ flutter test test/features/profiles/presentation/providers/auto_selected_profile_id_test.dart
+00:00 +7: All tests passed!
+
+$ flutter test test/features/profiles/presentation/widgets/add_profile_dialog_test.dart
+00:01 +7: All tests passed!
+```
+
+#### 5. Revert-proof — byte-exact `cp`, never `git stash`
+
+```
+$ md5sum lib/features/profiles/presentation/providers/profile_providers.dart   # FIXED
+602ebf51a07036dcaa35f66c2c75bbf7
+$ git show HEAD:learning_tracker/lib/features/profiles/presentation/providers/profile_providers.dart > /tmp/.../profile_providers.dart.ORIG
+$ cp .../profile_providers.dart.ORIG lib/.../profile_providers.dart
+$ md5sum lib/features/profiles/presentation/providers/profile_providers.dart
+730071beb5218c0566ac1cc237be3cc4   # matches every prior round's recorded pre-P2-24 value
+$ flutter test test/features/profiles/presentation/providers/auto_selected_profile_id_test.dart
+00:00 +6 -1: ... Expected: <8> / Actual: <7> ...   # RED again, identical failure
+$ cp <FIXED backup> lib/.../profile_providers.dart
+$ md5sum lib/features/profiles/presentation/providers/profile_providers.dart
+602ebf51a07036dcaa35f66c2c75bbf7   # byte-identical restore
+$ flutter test test/features/profiles/presentation/providers/auto_selected_profile_id_test.dart
+00:00 +7: All tests passed!
+```
+
+```
+$ md5sum lib/features/profiles/presentation/widgets/add_profile_dialog.dart   # FIXED
+33edf5826ab2e97ee4c4c3cd1014c380
+$ git show HEAD:learning_tracker/lib/features/profiles/presentation/widgets/add_profile_dialog.dart > /tmp/.../add_profile_dialog.dart.ORIG
+$ cp .../add_profile_dialog.dart.ORIG lib/.../add_profile_dialog.dart
+$ md5sum lib/features/profiles/presentation/widgets/add_profile_dialog.dart
+c9fb2c96353007555f68cb541412503b   # matches the pre-P2-24 committed value
+$ flutter test test/features/profiles/presentation/widgets/add_profile_dialog_test.dart
+00:00 +3 -1: ... Expected: <9> / Actual: <1> ...   # RED again, identical failure (and, as a side
+                                                     # effect of the thrown assertion skipping this
+                                                     # test's own trailing cleanup pumps, 3 later
+                                                     # tests in the SAME file also failed — a known
+                                                     # shape in this file, not a second defect: every
+                                                     # test here ends with delayed-dispose-timer
+                                                     # flush pumps that a mid-test exception skips)
+$ cp <FIXED backup> lib/.../add_profile_dialog.dart
+$ md5sum lib/features/profiles/presentation/widgets/add_profile_dialog.dart
+33edf5826ab2e97ee4c4c3cd1014c380   # byte-identical restore
+$ flutter test test/features/profiles/presentation/widgets/add_profile_dialog_test.dart
+00:01 +7: All tests passed!
+```
+
+Never `git stash` at any point in this round.
+
+#### 6. Regression checks
+
+```
+$ flutter test test/features/profiles/
+00:12 +430: All tests passed!    # was +428 (P2-23); +2 (this round's two new tests), 0 regressions
+```
+
+#### 7. Gates (from `learning_tracker/`, post-fix, on the committed tree)
+
+```
+$ dart analyze --fatal-infos
+Analyzing learning_tracker...
+No issues found!
+
+$ dart run tool/check_profile_path_keying.dart
+(10 WATCHLIST advisory lines, unchanged set: completions, curriculum_scopes,
+curriculum_tracks, goals, learning_ledger, points_ledger, profile_programs,
+stage_definitions, streak_events, study_day_configs)
+PROFILE-KEY-SPLIT check OK: 2 collection(s) currently split (bookmarks,
+learning_order), all within the tracked baseline (0 new violations).
+
+$ dart run tool/check_profile_id_int_sites.dart
+PROFILE-ID-INT-SITES OK: 88 tracked entries covering 91 site(s) across 5
+pattern(s) [...]; 0 new, 0 stale, 0 changed.
+
+$ dart format --output=none --set-exit-if-changed lib/features/profiles/presentation/providers/profile_providers.dart lib/features/profiles/presentation/widgets/add_profile_dialog.dart test/features/profiles/presentation/providers/auto_selected_profile_id_test.dart test/features/profiles/presentation/widgets/add_profile_dialog_test.dart
+Formatted 4 files (0 changed) in 0.0Xs.
+
+$ make audit
+104/104 checks. True last line: === audit PASSED — all 68 greps clean ===
+```
+
+Both keying gates unchanged, exactly as predicted — neither DEFECT
+touches an int-keyed profile-identity site or a Firestore collection
+path; both are pure provider-sequencing fixes.
+
+`make test` (full suite, run once to completion in the background while
+the other gates above ran, then read verbatim, not summarized from
+memory): `09:07 +11516 ~131: All tests passed!`, exit 0 — was `+11514
+~131` (P2-23's own recorded number) before this round's 2 new tests;
+`11514 + 2 = 11516` matches exactly, 0 failures.
+
+#### 8. Doc comments this change makes false — fixed in code, this commit
+
+No doc comment in `lib/` asserted either defect's premise as a virtue
+(unlike `T-49`'s "no later selection to race" claim) — `T-56`/`T-57` were
+both previously-unrecorded, unfixed defects with no code-level claim to
+correct. The one doc-level correction is CURRENT STATE itself (below):
+the paragraph naming `T-56`/`T-57` as open now names them `done`.
+
+#### KNOWN ISSUES / CARRIED FINDINGS — delta from P2-23, `T-56`/`T-57` rows only
+
+| Task | Status | What |
+|---|---|---|
+| **`T-56`** | **`done` (P2-24)** | Was `todo` (P2-22). `AutoSelectedProfileId._resolveSelection`'s "already selected" branch now re-checks `selectedProfileIdProvider` after the await, mirroring its sibling branch. Proof above. |
+| **`T-57`** | **`done` (P2-24)** | Was `todo` (P2-22). `add_profile_dialog.dart` now calls `select()` unconditionally on profile creation, matching every other creation call site and the repo's own unconditional activation. Proof above. |
+
+`T-39`, `T-44`, `T-46`, `T-55`, `T-58` — all unchanged from P2-23's table,
+unaffected by either fix. Not reproduced here in full; see P2-23's own
+KNOWN ISSUES table, above, for their rows verbatim.
+
+#### Deferred verification — delta from P2-23's table
+
+No row changes. Neither fix touches `test-rules`, `test-functions`,
+`test-serial-tools`, or `coverage/lcov.info`. See P2-23's table (above)
+for the current value of every D-row.
+
+#### Phase 3 ENTRY CRITERIA — supersedes P2-23's snapshot
+
+- [x] **`T-49` — CLOSED (P2-23).** Unchanged, unaffected by this round.
+- [x] `T-50` — unchanged, `done` (P2-20).
+- [x] `T-51` — unchanged, `done` — CARRIED-BY-RULING (P2-20).
+- [x] `T-52` — unchanged, `done` (P2-17).
+- [x] `T-53` — unchanged, `done` (P2-21).
+- [x] `T-54` — unchanged, `done` (P2-21).
+- [x] **`T-56` — CLOSED (P2-24).** This round.
+- [x] **`T-57` — CLOSED (P2-24).** This round.
+- [ ] `T-39` — unchanged, open, unrelated to `T-49`/`T-56`/`T-57`.
+- [ ] A fresh independent review of `bb704e07` (P2-23) — still required,
+      unaffected by this round; this round did not review P2-23's own
+      fix, it closed two DIFFERENT, sibling defects P2-22's review named
+      separately. **This round's own fix (P2-24) also awaits independent
+      review before being treated as final** — same standing warning as
+      every prior round: a round that fixes a defect is the least
+      qualified round to certify its own fix as the final word.
+
+**Phase 3 remains explicitly BLOCKED — now only on `T-39` and the two
+outstanding independent reviews (of `bb704e07` and of this round's own
+commit).** `T-58` remains recorded, non-blocking (MINOR), carried forward
+unchanged from P2-22/P2-23.
 
 ### 2026-08-07 — P2-23: closes `T-49` for real — all three `_ensureFirestoreProfile` callers, hoisted activation, permanent test, revert-proved
 

@@ -220,6 +220,115 @@ void main() {
     await tester.pump(Duration.zero);
   });
 
+  // P2-24 (DEFECT 2): creating an ADULT profile must select() it too, not
+  // just a child one. `repo.createProfile` (the real
+  // FirestoreProfileRepositoryAdapter, T-49/P2-23) activates
+  // `activeProfileDocIdProvider` to the NEW profile unconditionally,
+  // whenever a cloud account is active, regardless of mode. Before this
+  // fix, `showAddProfileDialog` only called `select()` — which updates
+  // `selectedProfileIdProvider`, the provider every profile-scoped screen
+  // actually reads — when `created.profileMode.isChild`. Creating an adult
+  // profile therefore left `selectedProfileIdProvider` on the OLD profile
+  // while the 13 profile-scoped Firestore providers re-keyed to the NEW
+  // one: a deterministic mis-key, reachable from `manage_learners_screen`,
+  // `profile_switcher_sheet`, and `profile_picker_screen`. This test uses
+  // the mock repo (like every other test in this file), so it proves only
+  // the dialog's own half of the fix — that `select()` now runs
+  // unconditionally on success — not the repo's activation, which
+  // `profile_repository_impl_t49_activation_ordering_test.dart` covers.
+  testWidgets('DEFECT 2: creating an ADULT profile also updates '
+      'selectedProfileIdProvider (not just child profiles)', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    final db = createTestDatabase();
+    await seedProfileWithIds(db, profileId: 1, accountId: 1);
+    addTearDown(() => db.close());
+
+    final repo = _MockProfileRepository();
+    when(
+      () => repo.createProfile(
+        accountId: any(named: 'accountId'),
+        displayName: any(named: 'displayName'),
+        mode: any(named: 'mode'),
+        avatarIndex: any(named: 'avatarIndex'),
+      ),
+    ).thenAnswer(
+      (_) async => ProfileModel(
+        id: 9,
+        ulid: 'ulid-9',
+        accountId: 1,
+        displayName: 'Co-Parent',
+        mode: 'adult',
+        avatarIndex: 0,
+        createdAt: DateTime.utc(2026, 1, 1),
+        updatedAt: DateTime.utc(2026, 1, 1),
+      ),
+    );
+
+    final container = ProviderContainer(
+      overrides: [
+        userDatabaseProvider.overrideWithValue(db),
+        currentAccountIdProvider.overrideWithValue(1),
+        profileRepositoryProvider.overrideWithValue(repo),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    // Sanity: profile 1 is the one currently selected, exactly as it
+    // would be before opening "Manage Learners" / the switcher / the
+    // picker to add a second (adult) profile.
+    container
+        .read(selectedProfileIdProvider.notifier)
+        .select(1, ulid: 'ulid-1');
+
+    await tester.pumpWidget(
+      pumpApp(
+        container: container,
+        child: Consumer(
+          builder: (ctx, ref, _) => Scaffold(
+            body: Center(
+              child: ElevatedButton(
+                key: const Key('open'),
+                onPressed: () => showAddProfileDialog(ctx, ref),
+                child: const Text('Open'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.byKey(const Key('open')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    // Name non-empty → Create enabled (mode defaults to adult — the
+    // dialog's own initial `mode` value, never changed by this test).
+    await tester.enterText(find.byType(TextField).first, 'Co-Parent');
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.tap(find.text('Create Profile'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(
+      container.read(selectedProfileIdProvider),
+      9,
+      reason:
+          'DEFECT 2: creating an adult profile left '
+          'selectedProfileIdProvider on the OLD profile (1) while the '
+          'repo-level activeProfileDocIdProvider had already moved to '
+          'the NEW one (9) — every profile-scoped Firestore provider '
+          '(bookmarks, learning_order) would silently read/write the '
+          'new profile\'s tree while every selectedProfileIdProvider-'
+          'keyed screen kept showing the old one.',
+    );
+
+    await tester.pump(const Duration(milliseconds: 350));
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(Duration.zero);
+  });
+
   // AUD-profiles-16 (EH-3 log-less catch): the live duplicate-name check's
   // `catch (_) { set(() => err = null); }` previously discarded a DB failure
   // with zero AppLogger call. This closes the db *before* pumping so

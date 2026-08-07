@@ -1,10 +1,11 @@
 # Firestore cutover plan
 
-**Status:** Phase 0 ✅ · Phase 1 ✅ · **Phase 2 — NOT RESOLVED, but `T-49`
-(the phase's sole BLOCKING code defect) is CLOSED (P2-23, all three
-`_ensureFirestoreProfile` callers, proven by a permanent test).** Phase 3
-remains explicitly BLOCKED, now only on `T-39` and a fresh independent
-review of P2-23's own commit — see `firestore-cutover-log.md`'s **P2-23**
+**Status:** Phase 0 ✅ · Phase 1 ✅ · **Phase 2 — NOT RESOLVED. `T-49` (the
+phase's sole BLOCKING code defect, P2-23) and its two sibling findings
+`T-56`/`T-57` (P2-24, both pre-existing, both unrecorded until P2-22) are
+ALL now CLOSED.** Phase 3 remains explicitly BLOCKED, now only on `T-39`
+and two outstanding independent reviews (of `bb704e07`/P2-23 and of this
+round's own commit/P2-24) — see `firestore-cutover-log.md`'s **P2-24**
 entry, "Phase 3 ENTRY CRITERIA," for the exact checklist. **This paragraph was
 found materially false at P2-22 and is corrected here, in this document,
 not only in `firestore-cutover-log.md`/`firestore-cutover-tasks.md` (the
@@ -50,7 +51,7 @@ commit (not self-certified).** `T-40` and `T-43` — the plan's own
 **original** stated exit criterion — remain fixed and independently
 verified; nothing above disputes that, and `T-50`–`T-54` remain
 closed/ruled, also undisturbed.
-Full detail: `firestore-cutover-log.md`'s **P2-14** through **P2-23**
+Full detail: `firestore-cutover-log.md`'s **P2-14** through **P2-24**
 entries, and `firestore-cutover-tasks.md`'s `T-40`–`T-58` rows. **This
 section's narrative below (commit list, blocked framing) predates P2-8
 through P2-23 and is not rewritten here — treat the log entries above as
@@ -60,22 +61,26 @@ corrected, at each closing commit — that convention itself is why this
 paragraph went three rounds stale, and is worth a future round's attention
 (no task id assigned; noting it here so the next stale-status discovery
 does not read as a new phenomenon).**
-**Last updated:** 2026-08-07 (P2-23; status line, Head field, the Phase 2
+**P2-24 addendum (does not restate the P2-23 paragraph above, which
+stands unedited):** `T-56` and `T-57` — the two sibling
+provider-clobber defects `T-49`'s own P2-22 reopening review found next
+to it, both pre-existing (predate Phase 2), both left `todo` through
+P2-23 — are now `done` (P2-24). See the Phase 2 section header/summary
+immediately below §3 for the fix shape and evidence pointer.
+**Last updated:** 2026-08-07 (P2-24; status line, Head field, the Phase 2
 section header/summary corrected — the verification-cadence paragraph
 needed no further change, re-verified accurate)
 **Head:** commit SHA not yet knowable — same self-reference lag as every
-prior closing commit; the true immediate parent is `c794cb35` (a
-concurrent sibling session's own `T-58` fix, landed mid-session, zero
-file overlap — see `firestore-cutover-log.md`'s **P2-23** entry,
-DEVIATION section); `d1d80e35` (P2-22, docs-only) is the last commit this
-plan document's own supersession chain names. This commit (P2-23) fixes
-`T-49` in
-`lib/features/profiles/data/repositories/profile_repository_impl.dart` —
-`make audit` green (104 checks, run from `learning_tracker/`), 4 features
-on Firestore, both keying gates (103, 104) live, `T-40`/`T-43`/`T-49`
-fixed and independently re-verified or (for `T-49`) verified-then-fixed
-this round, **Phase 2 closure blocked only on `T-39` and a fresh
-independent review.**
+prior closing commit; the true immediate parent is `bb704e07` (P2-23's
+own commit, closing `T-49`). This commit (P2-24) fixes `T-56`/`T-57` in
+`lib/features/profiles/presentation/providers/profile_providers.dart`
+and `lib/features/profiles/presentation/widgets/add_profile_dialog.dart`
+— `make audit` green (104 checks, run from `learning_tracker/`), 4
+features on Firestore, both keying gates (103, 104) live and unchanged,
+`T-40`/`T-43`/`T-49`/`T-56`/`T-57` all fixed and independently
+re-verified or verified-then-fixed on their own closing round, **Phase 2
+closure blocked only on `T-39` and two outstanding independent
+reviews.**
 
 **Verification cadence (owner decision, 2026-08-06):** `dart analyze` and the
 keying gate run every stage (seconds); `make audit` runs at each phase
@@ -312,7 +317,36 @@ manufactures exactly the false confidence this gate exists to remove.
 
 ---
 
-### Phase 2 — Unify the identity (int → ULID) — **NOT RESOLVED, but `T-49` is CLOSED (P2-23, 2026-08-07). Phase 3 blocked only on `T-39` + a fresh independent review.**
+### Phase 2 — Unify the identity (int → ULID) — **NOT RESOLVED. `T-49`, `T-56`, `T-57` are ALL CLOSED (P2-23/P2-24). Phase 3 blocked only on `T-39` + two outstanding independent reviews.**
+
+**P2-24 supersedes the P2-23 paragraph immediately below (kept as
+history, not rewritten) — without disputing what it correctly found.**
+`T-49`'s closure stands, unaffected. P2-24 re-verified `T-56` and `T-57`
+— the two sibling provider-clobber defects P2-22's review found next to
+`T-49` — BY EXECUTION on the post-P2-23 tree (a permanent test per
+defect, RED before / GREEN after / RED again on a byte-exact revert /
+restored and md5-verified, for each) and closed both. `T-56`:
+`AutoSelectedProfileId._resolveSelection`'s "already selected" branch now
+re-checks `selectedProfileIdProvider` after its await, mirroring the
+sibling guard 43 lines below it that already had one. `T-57`:
+`add_profile_dialog.dart` now calls `select()` unconditionally on profile
+creation — matching every other creation call site (onboarding, the
+zero-profile self-heal) and the repo's own unconditional activation
+(T-49, P2-23) — instead of only for child profiles; only the follow-up
+Parent PIN prompt stays child-only. **`T-56` and `T-57` are now `done`
+(P2-24).** Full mechanism, both fixes, both proofs, both revert-proofs:
+`firestore-cutover-log.md`'s **P2-24** entry and
+`firestore-cutover-tasks.md`'s `T-56`/`T-57` rows. `T-58` — recorded by
+the same P2-22 review — is unaffected by either fix and remains open,
+MINOR, non-blocking. **Phase 3 ENTRY CRITERIA now gates on `T-39`
+(pre-existing) and a fresh independent review of BOTH `bb704e07` (P2-23)
+and this round's own commit (P2-24) — neither self-certified.**
+
+---
+
+**Historical record, P2-23 (2026-08-07) — kept verbatim below, not
+rewritten, superseded by P2-24 above for `T-56`/`T-57`'s disposition
+only — `T-49`'s closure described below is unaffected and stands.**
 
 **P2-23 supersedes the P2-22 paragraph immediately below (kept as
 history, not rewritten) — without disputing what it correctly found.**

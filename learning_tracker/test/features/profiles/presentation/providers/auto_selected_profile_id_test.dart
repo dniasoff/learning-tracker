@@ -27,8 +27,12 @@
 /// inert.
 library;
 
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/data/firestore/repository_providers.dart'
+    show activeProfileDocIdProvider;
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
@@ -60,13 +64,27 @@ class _FakeProfileRepository implements ProfileRepository {
   int ensureCalls = 0;
   String? lastEnsureName;
 
+  /// P2-24 (DEFECT 1 — the `_resolveSelection` "already selected" branch's
+  /// unguarded post-await write): when set, [getProfileById] awaits this
+  /// gate before returning for [gatedId] only — modeling "the picker /
+  /// sign-in flow selects a DIFFERENT profile while this read is still in
+  /// flight," the identical shape `profile_activation_heal_race_test.dart`
+  /// and `profile_repository_impl_t49_activation_ordering_test.dart` use
+  /// for T-49's siblings.
+  Completer<void>? getProfileByIdGate;
+  int? gatedId;
+
   @override
   Future<List<ProfileModel>> getProfilesByAccount(int accountId) async =>
       _profiles;
 
   @override
-  Future<ProfileModel?> getProfileById(int id) async =>
-      _profiles.where((p) => p.id == id).firstOrNull;
+  Future<ProfileModel?> getProfileById(int id) async {
+    if (id == gatedId && getProfileByIdGate != null) {
+      await getProfileByIdGate!.future;
+    }
+    return _profiles.where((p) => p.id == id).firstOrNull;
+  }
 
   @override
   Future<int> countProfilesForAccount(int accountId) async => _profiles.length;
@@ -267,5 +285,80 @@ void main() {
         expect(container.read(selectedProfileIdProvider), 99);
       },
     );
+
+    test('P2-24 (DEFECT 1): a late-settling "already selected" re-activation '
+        'read does not clobber activeProfileDocIdProvider after a DIFFERENT '
+        'profile has since been selected', () async {
+      // Profile 7 is already selected when ensureSelected() starts its
+      // re-check read (`repo.getProfileById(7)`). While that read is
+      // still in flight, the picker / sign-in flow selects profile 8
+      // instead — the same "select something else during the await"
+      // shape T-49 closed for the create/heal paths, but here the await
+      // is a local Drift read, not a Firestore write, so the window is
+      // smaller but the defect shape is identical: the sibling branch 43
+      // lines below this one in `_resolveSelection` already carries the
+      // guard this one lacked.
+      final result = _container(
+        authState: _signedIn,
+        profiles: [_profile(id: 7), _profile(id: 8)],
+      );
+      final container = result.container;
+      final gate = Completer<void>();
+      result.repo
+        ..gatedId = 7
+        ..getProfileByIdGate = gate;
+
+      container
+          .read(selectedProfileIdProvider.notifier)
+          .select(7, ulid: 'ulid-7');
+      expect(container.read(activeProfileDocIdProvider), 'ulid-7');
+
+      final ensureFuture = container
+          .read(autoSelectedProfileIdProvider.notifier)
+          .ensureSelected();
+
+      // Let ensureSelected() reach the gated getProfileById(7) read.
+      await pumpEventQueue();
+
+      // Meanwhile a different profile becomes the one actually selected.
+      container
+          .read(selectedProfileIdProvider.notifier)
+          .select(8, ulid: 'ulid-8');
+      expect(
+        container.read(activeProfileDocIdProvider),
+        'ulid-8',
+        reason: 'sanity: still 8 while the profile-7 re-check is in flight',
+      );
+
+      // Now let the delayed read for 7 finally resolve.
+      gate.complete();
+      final selected = await ensureFuture;
+      await pumpEventQueue();
+
+      expect(
+        container.read(selectedProfileIdProvider),
+        8,
+        reason: 'sanity: 8 is still the selection',
+      );
+      expect(
+        selected,
+        8,
+        reason:
+            "_resolveSelection's return value must reflect the CURRENT "
+            'selection (8), not the stale one (7) it started reading.',
+      );
+      expect(
+        container.read(activeProfileDocIdProvider),
+        'ulid-8',
+        reason:
+            'DEFECT 1: activeProfileDocIdProvider must stay on the '
+            'CURRENTLY selected profile (8). A late-settling '
+            '"already selected" re-activation for 7 — a profile that is '
+            'no longer selected — re-pointing it back to 7 here is '
+            'exactly the clobber T-49 described for the create/heal '
+            'paths, reached through this third, previously-unguarded '
+            'write instead.',
+      );
+    });
   });
 }

@@ -261,13 +261,32 @@ Future<ProfileModel?> showAddProfileDialog(
       mode: result.m,
     );
     if (context.mounted) ref.invalidate(profileListProvider);
+    // P2-24: select() runs for EVERY newly-created profile, not just child
+    // ones. `repo.createProfile` above already activates
+    // `activeProfileDocIdProvider` to `created.ulid` unconditionally,
+    // whenever a cloud account is active (T-49, P2-23) — regardless of
+    // mode. Gating `select()` on `isChild` alone left `selectedProfileIdProvider`
+    // (and therefore every profile-scoped screen: bookmarks, learning_order)
+    // pointed at the OLD profile while the 13 profile-scoped Firestore
+    // providers (`_watchActiveAccountAndProfile`,
+    // `repository_providers.dart`) re-keyed to the NEW one on every adult
+    // profile creation — a deterministic mis-key, not a race. This matches
+    // every other creation call site in the app
+    // (`onboarding_profile_creation_step.dart`, `AutoSelectedProfileId`'s
+    // self-heal branch), which already select() the profile they just
+    // created regardless of mode.
+    if (context.mounted) {
+      ref
+          .read(selectedProfileIdProvider.notifier)
+          .select(created.id, ulid: created.ulid);
+    }
     if (created.profileMode.isChild && context.mounted) {
       // PP-13: update the active-profile context to the newly-created child
       // profile so the app-shell header shows the new profile's identity during
       // the forced PIN setup — not the previously-active profile's stale chrome.
-      ref
-          .read(selectedProfileIdProvider.notifier)
-          .select(created.id, ulid: created.ulid);
+      // (The select() call that used to live here, gated on isChild, moved
+      // above so BOTH modes select consistently; only the PIN dialog itself
+      // stays child-only.)
       await showParentPinSetupDialog(
         context,
         ref,

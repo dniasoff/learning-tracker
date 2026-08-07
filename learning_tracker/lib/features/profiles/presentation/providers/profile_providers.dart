@@ -225,10 +225,21 @@ class AutoSelectedProfileId extends _$AutoSelectedProfileId {
     if (current != null) {
       final existingProfile = await repo.getProfileById(current);
       if (existingProfile != null) {
-        // Already selected, still valid — just (re-)activate its Firestore
-        // identity from the model we already fetched to confirm it exists.
-        ref.read(activeProfileDocIdProvider.notifier).set(existingProfile.ulid);
-        return current;
+        // Re-check after the await: the picker / sign-in flow may have
+        // selected a DIFFERENT profile while we were fetching this one.
+        // Don't clobber an explicit choice — mirrors the guard 43 lines
+        // below in this same method (P2-24; the sibling defect the review
+        // that found T-49 also found here).
+        final stillCurrent = ref.read(selectedProfileIdProvider);
+        if (stillCurrent == current) {
+          // Already selected, still valid — just (re-)activate its
+          // Firestore identity from the model we already fetched to
+          // confirm it exists.
+          ref
+              .read(activeProfileDocIdProvider.notifier)
+              .set(existingProfile.ulid);
+        }
+        return stillCurrent;
       }
       // Stale id — clear it and fall through to the auto-select/self-heal path.
       ref.read(selectedProfileIdProvider.notifier).clear();
