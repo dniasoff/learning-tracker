@@ -1072,6 +1072,18 @@ void main() {
             ),
           ],
         );
+        // P2-28 (T-49): production only ever reaches
+        // `_activateThenEnsureFirestoreProfile` after a real sign-in/sign-up
+        // flow has already called `activeAccountIdProvider.notifier.set(...)`
+        // (see that provider's own doc comment, "wired into production") —
+        // the activation write's readiness gate now reads THIS provider
+        // synchronously, not `activeAccountFirebaseProvider`'s async
+        // resolution (see `_activateThenEnsureFirestoreProfile`'s doc
+        // comment for why). Set it here so this "ready" group's container
+        // matches what a real active-account session looks like, exactly as
+        // `profile_repository_impl_t49_activation_ordering_test.dart`'s
+        // containers already do.
+        container.read(activeAccountIdProvider.notifier).set('device-acct-1');
         adapter = buildAdapter(container, ProfileRepositoryImpl(localDb));
       });
 

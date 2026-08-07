@@ -14,6 +14,14 @@ import 'package:learning_tracker/core/utils/date_utils.dart';
 // that function's own doc comment. See `ProfileRepository.createProfile`'s
 // doc comment for why every OTHER caller (screens, `profile_providers.dart`)
 // never mints one itself.
+// P2-28 (T-49): the hoisted activation write in
+// `_activateThenEnsureFirestoreProfile` needs the SAME synchronous,
+// in-memory "is a cloud account active" check `SelectedProfileId.select()`
+// already uses (`profile_providers.dart:129`) — cheap, no I/O — so
+// activation can run before `_resolveFirestoreProfileRepo`'s await instead
+// of after it. Same `/data/repositories/` exemption as the imports above.
+import 'package:learning_tracker/data/firestore/active_account_providers.dart'
+    show activeAccountIdProvider;
 import 'package:learning_tracker/data/firestore/doc_ids.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
 // T-49 (P2-23): `_resolveFirestoreProfileRepo`'s return type and
@@ -550,8 +558,9 @@ class ProfileRepositoryImpl implements ProfileRepository {
 /// or absent.
 ///
 /// ## Non-fatal on Firestore failure, but identity activates regardless
-/// — for [createProfile]/[ensureDefaultProfile] ONLY, and BEFORE the write,
-/// not after it (T-49, P2-18/P2-23)
+/// — for [createProfile]/[ensureDefaultProfile] ONLY, and BEFORE either of
+/// [_activateThenEnsureFirestoreProfile]'s two awaits, not merely before
+/// the write (T-49, P2-18/P2-23/P2-28)
 ///
 /// [_drift]'s `createProfile`/`ensureDefaultProfile` already treat a cloud
 /// push failure as non-fatal (logged, swallowed) so profile creation stays
@@ -561,13 +570,21 @@ class ProfileRepositoryImpl implements ProfileRepository {
 /// specific remote write succeeds — the identity is already real and local
 /// (eagerly minted, on the Drift row) the moment this runs, so there is
 /// nothing to gate activation on — but that activation happens BEFORE
-/// [_ensureFirestoreProfile]'s write is even attempted, not after it
+/// [_resolveFirestoreProfileRepo]'s account-resolution await AND BEFORE
+/// [_ensureFirestoreProfile]'s write is even attempted, not after either
 /// settles: see [_activateThenEnsureFirestoreProfile]'s own doc comment for
-/// why "the caller awaits this" does not make a post-write activation safe.
+/// why "the caller awaits this" does not make a post-await activation safe,
+/// and why P2-23 closing only the write half of that method left the
+/// account-resolution half still racing (`T-49`, reopened a third time,
+/// closed for real at P2-28).
 /// [activeProfileDocIdProvider] stays unset only for the genuinely
-/// not-ready case — a still-local-born account
-/// (`firestoreLearnerProfileRepositoryProvider` resolves `null`, no active
-/// cloud account yet) — see `docs/`'s offline-account-model notes.
+/// not-ready case — no active cloud account yet, checked via the SAME
+/// synchronous, in-memory `activeAccountIdProvider != null` predicate
+/// [SelectedProfileId.select] itself already uses, not
+/// [_resolveFirestoreProfileRepo]'s async equivalent (that predicate is no
+/// longer available before the write is even reached — see
+/// [_activateThenEnsureFirestoreProfile]'s own doc comment) — see `docs/`'s
+/// offline-account-model notes.
 ///
 /// **This paragraph describes [createProfile]/[ensureDefaultProfile]'s OWN
 /// direct, awaited call into [_activateThenEnsureFirestoreProfile] — it is
@@ -853,45 +870,77 @@ class FirestoreProfileRepositoryAdapter implements ProfileRepository {
   /// [createProfile] and [ensureDefaultProfile]'s self-heal branch — the
   /// two DIRECT, awaited callers that also need to activate
   /// [activeProfileDocIdProvider] — go through this instead of
-  /// [_ensureFirestoreProfile] directly (T-49, P2-23).
+  /// [_ensureFirestoreProfile] directly (T-49, P2-23/P2-28).
   ///
-  /// **Activates BEFORE attempting the Firestore write, not after it —
-  /// this is the fix.** P2-18 activated after
-  /// `await firestoreRepo.ensureProfile(...)` settled, reasoning that
-  /// "this caller awaits [_ensureFirestoreProfile], so there is no later
-  /// selection to race" — that reasoning was false:
-  /// `onboarding_profile_creation_step.dart`'s own comment concedes
-  /// `createProfile`'s write "may still be in flight when the step widget
-  /// is popped", and its `if (!mounted) return;` means the follow-up
+  /// **Activates BEFORE either of this method's two awaits — not merely
+  /// before the write.** This method has two awaits:
+  /// [_resolveFirestoreProfileRepo]'s account resolution (a real,
+  /// sometimes-slow provider chain — `Firebase.initializeApp` + App Check +
+  /// an `authStateChanges()` read, documented stalling ~38+ seconds in the
+  /// `T-43` reproduction, `repository_providers.dart`) and
+  /// [_writeFirestoreProfile]'s network write.
+  ///
+  /// P2-18 activated after the WRITE await settled, reasoning "this caller
+  /// awaits [_ensureFirestoreProfile], so there is no later selection to
+  /// race" — false (`onboarding_profile_creation_step.dart`'s own comment
+  /// concedes `createProfile`'s write "may still be in flight when the step
+  /// widget is popped", and its `if (!mounted) return;` means the follow-up
   /// `select()` for the NEW profile then never runs — but the Future
-  /// createProfile returned is held by `_ref` (the keepAlive container's
-  /// Ref), not by the disposed widget, so it keeps running regardless, and
-  /// its old post-write activation would land whenever the network write
-  /// finally settled — possibly well after something else (a self-heal,
-  /// the router, a plain `add_profile_dialog.dart` adult-profile create
-  /// with no abandonment even needed) had already correctly selected a
-  /// DIFFERENT profile. An `await` inside one call does not stop a
-  /// DIFFERENT profile being selected elsewhere during the await window.
-  /// Activating BEFORE the write closes this: by the time anything could
-  /// select a different profile, this profile's activation has already
-  /// happened and is not repeated later, so a later `select()` always wins
-  /// and is never clobbered on the way back out. Still fire-independent —
+  /// `createProfile` returned is held by `_ref`, not the disposed widget,
+  /// so it keeps running regardless). P2-23 fixed that by activating before
+  /// the WRITE await — but restated the identical false reasoning one await
+  /// earlier ("by the time anything could select a different profile, this
+  /// profile's activation has already happened") about the RESOLUTION
+  /// await, which it left unguarded: a DIFFERENT profile could still be
+  /// selected while THIS call sat inside `_resolveFirestoreProfileRepo`,
+  /// and the old code's activation — sequenced after that await — would
+  /// then clobber the newer selection on the way back out. Reproduced by
+  /// execution before this fix: round 5's `R5-D`/`R5-E` probes, gating
+  /// `firestoreLearnerProfileRepositoryProvider` itself (not the write),
+  /// went RED (`Expected: 'ulid-r5d-b' / Actual: 'ulid-r5d-c'` and the
+  /// `-e-` equivalent) — see
+  /// `test/features/profiles/data/repositories/profile_repository_impl_t49_activation_ordering_test.dart`.
+  ///
+  /// The fix is not a second re-check after the resolution await — under
+  /// this project's greenfield doctrine, a re-check adds a second place the
+  /// same bug can be reintroduced. It removes the divergence instead:
+  /// [model.ulid] is already known synchronously the instant this method is
+  /// called (eagerly minted at creation — see the class doc comment's
+  /// "Identity policy"), so the activation write never actually needed
+  /// [firestoreRepo] to run. Moved above BOTH awaits, activation is
+  /// synchronous with respect to the caller, exactly like
+  /// [SelectedProfileId.select]'s own activation — nothing asynchronous
+  /// precedes it, so nothing can run between "decide to activate" and
+  /// "activate" for this call, and a write with no await above it cannot be
+  /// stale. Still fire-independent of the write that follows —
   /// [_writeFirestoreProfile]'s write below is non-fatal and never undoes
   /// the activation above regardless of whether it succeeds (see the class
   /// doc comment, "Non-fatal on Firestore failure, but identity activates
   /// regardless").
   ///
-  /// Activation is skipped only in the genuinely not-ready case — no
-  /// active cloud account at all yet (same predicate
-  /// [_resolveFirestoreProfileRepo] itself uses) — or when `_ref` is no
-  /// longer mounted (Riverpod's own documented remedy for "Ref used after
-  /// dispose"; there is nothing left to write to).
+  /// Activation is skipped only in the genuinely not-ready case — no active
+  /// cloud account yet — checked via the SAME synchronous, in-memory
+  /// `activeAccountIdProvider != null` predicate [SelectedProfileId.select]
+  /// itself already uses (`profile_providers.dart:129`). This is
+  /// deliberately NOT [_resolveFirestoreProfileRepo]'s async equivalent: by
+  /// the time that predicate would be available, the whole point of hoisting
+  /// above its await is gone. The two predicates agree in production
+  /// (`activeAccountFirebaseProvider` returns `null` immediately when
+  /// `activeAccountIdProvider` is `null`, so the deeper resolution would
+  /// have no-op'd anyway — same reasoning `select()`'s own gate documents),
+  /// which is what keeps this a removal of the race, not a behaviour
+  /// change. Also skipped when `_ref` is no longer mounted (Riverpod's own
+  /// documented remedy for "Ref used after dispose"; there is nothing left
+  /// to write to) — still meaningful here even though nothing inside this
+  /// method awaits before it: a caller (`createProfile`/`ensureDefaultProfile`)
+  /// can itself be disposed during ITS OWN earlier await (the Drift insert)
+  /// before this method is ever entered.
   Future<void> _activateThenEnsureFirestoreProfile(ProfileModel model) async {
-    final firestoreRepo = await _resolveFirestoreProfileRepo(model);
-    if (firestoreRepo == null) return; // no active cloud account yet
-    if (_ref.mounted) {
+    if (_ref.mounted && _ref.read(activeAccountIdProvider) != null) {
       _ref.read(activeProfileDocIdProvider.notifier).set(model.ulid);
     }
+    final firestoreRepo = await _resolveFirestoreProfileRepo(model);
+    if (firestoreRepo == null) return; // no active cloud account yet
     await _writeFirestoreProfile(firestoreRepo, model);
   }
 
