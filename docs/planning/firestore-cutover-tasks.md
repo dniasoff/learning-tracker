@@ -4,37 +4,50 @@ Durable companion to [`firestore-cutover-plan.md`](firestore-cutover-plan.md).
 Session task lists do not survive; this file does. **Update it in the same
 commit as the work it describes.**
 
-**Last updated:** 2026-08-07 · head at P2-16 (this commit; SHA not yet
+**Last updated:** 2026-08-07 · head at P2-17 (this commit; SHA not yet
 knowable — same self-reference lag as every prior closing commit).
-**Phase 2 is `✅ RESOLVED` (P2-16) — the first time that declaration is
-backed by independent re-verification, not self-certification by the
-round that shipped the fix.** Both BLOCKING defects — `T-40` and `T-43` —
-were fixed at P2-14 and are now independently re-verified at **P2-16**: a
-separate pass traced all three activation paths call-site to call-site,
-personally reproduced the wiring test's RED-before/GREEN-after toggle
-(md5-verified restore), and independently re-ran the directory-level test
-nets rather than trusting P2-14's own file list. `T-48` (SERIOUS — the
-`created_at` clobber) is fixed at **P2-15** and independently re-derived
-at P2-16: `ensureProfile` no longer reads Firestore to decide
-`created_at`; it always writes the caller's already-authoritative value,
-so no read state (cache-miss or otherwise) can produce a wrong write.
-**P2-16 also found and corrected two documentation defects, no code
-changed:** the inherited-red-test count `T-47` named was 5, not the
-actual 6 (`profile_picker_deep_l1_test.dart`'s F4, a second/different
-ulid-less inline seeder — see its row and `T-45`'s); and `T-43`'s claim
-that "every sibling provider shares the same risk" was a false production
-statement — the app's only `ProviderContainer` already disables default
-retry container-wide (`bootstrap.dart:68-81`), so the shared shape is a
-test-harness-only concern, not a live production one (see `T-43`'s row).
-Four items remain open, explicitly non-blocking (outside the plan's own
-stated exit criterion, which names only `T-40` and `T-43`): `T-44`–`T-46`
-(MINOR) and `T-47` (`blocked` — 6 inherited-P2-3 red tests, named in its
-row). `T-41` and 15 of `T-42`'s 16 items remain independently reconfirmed
-`done` (P2-13). Full disposition, evidence, mechanism and the wiring-test
-proof: `firestore-cutover-log.md`'s **P2-14** entry (T-40/T-43), **P2-15**
-entry (T-48), and **P2-16** entry (independent re-verification + the two
-documentation corrections). Phase 3's own prerequisites (`T-37`, `T-39`)
-remain `todo` below, unrelated to this closure.
+**Phase 2 is `NOT RESOLVED` (reopened, P2-17). Phase 3 is explicitly
+BLOCKED** — see `firestore-cutover-log.md`'s **P2-17** entry, "Phase 3
+ENTRY CRITERIA," for the exact checklist. This does **not** unwind P2-16's
+own verified work: `T-40` and `T-43` — the plan's own **original** named
+blocking exit criterion — were fixed at P2-14 and independently
+re-verified at P2-16 (a separate pass traced all three activation paths
+call-site to call-site, personally reproduced the wiring test's
+RED-before/GREEN-after toggle with an md5-verified restore, and
+independently re-ran the directory-level test nets rather than trusting
+P2-14's own file list), and `T-48` (SERIOUS — the `created_at` clobber)
+was fixed at P2-15 and independently re-derived at P2-16. **None of that
+is disputed.** What changed at P2-17: a further independent review, run
+fresh against P2-16's own HEAD rather than trusting P2-16's account of
+itself, found **four previously-unrecorded gaps and one new SERIOUS code
+defect**, and this project's own DECISION RULE for closing a phase (a
+disjunction over verdict / `safe_for_phase_3` / `still_open_unrecorded` /
+new-BLOCKING-defect, applied mechanically, no carve-out for "minor") does
+not permit `✅` while any of them stand unrecorded or unresolved — even
+though three of the four were individually MINOR. **`T-52` (MINOR — `make
+audit` had two different Makefile targets and no record stated which one
+every Phase 2 gate block means) was fixable docs-only and is `done`, this
+commit** (both the Recovery Protocol and the plan's verification-cadence
+paragraph now state the directory explicitly). **Three tasks remain open
+and block Phase 3:** `T-49` (SERIOUS, new code defect — the
+`activeProfileDocIdProvider` clobber race), `T-50` (MINOR —
+`repository_providers.dart`'s doc-comment fix was applied to the 3
+planning `.md` files but never to the code itself), and `T-51` (needs an
+explicit owner ruling — the v38 schema-migration `ulid IS NULL` producer
+on in-place app upgrade, unrecorded for three rounds). Each is owned,
+named, and gates a checkbox in P2-17's Phase 3 ENTRY CRITERIA list.
+`T-44`–`T-46` (MINOR) and `T-47` (`blocked` —
+6 inherited-P2-3 red tests, all named in that row below) remain open and
+are explicitly **not** new Phase 3 blockers — they were already carried,
+outside the plan's original T-40/T-43 criterion, and P2-17 changes nothing
+about their disposition. `T-41` and 15 of `T-42`'s 16 items remain
+independently reconfirmed `done`. Full disposition, evidence, mechanism
+and every proof: `firestore-cutover-log.md`'s **P2-14** entry (T-40/T-43),
+**P2-15** entry (T-48), **P2-16** entry (independent re-verification + two
+documentation corrections), and **P2-17** entry (the four unrecorded gaps,
+the new SERIOUS defect, the DECISION RULE applied, the Phase 3 checklist).
+Phase 3's own prerequisites (`T-37`, `T-39`) remain `todo` below,
+unrelated to this reopening.
 
 Status values: `todo` · `doing` · `done` · `blocked` (open, and something —
 usually evidence, not just effort — must land before it can move) ·
@@ -65,6 +78,10 @@ literally the same unresolved task.
 | T-46 | 2 | `todo` (new, P2-13) | **MINOR, informational — `T-41`'s export/import fix has no production caller.** `grep -rn 'DataExportImportService' lib/` outside its own file returns only doc-comment mentions; `exportData(`/`importData(` are never constructed in `lib/`. Correct hygiene, but it closes zero runtime risk today. Record-only — either wire the service to a real caller, or note in `T-41`'s row (done, above) that this half is dormant. |
 | T-47 | 2 | **`blocked`, narrowed (P2-14) — inherited P2-3 failures only; count corrected 5→6 (P2-16)** | **The `T-43` test (one of the original 6) is now GREEN — see `T-43`, above.** Re-measured at P2-14: `flutter test test/features/profiles/data/repositories/profile_repository_impl_test.dart test/data/repositories/firestore_learner_profile_repository_test.dart` → `00:00 +53 -4` (was `02:00 +52 -5`, and the `02:00` was itself the `T-43` hang, not a normal run). All 4 remaining failures in those two files are the SAME pre-existing `ProfileModel.fromDriftRow: profile id … has no ulid — pre-P2-2 profile row with no ULID — wipe and reseed the device` `StateError`, inherited from `feefe34b` (P2-3): (1) `AUD-profiles-02 — TutorWriteException from pushLearnerProfile propagates :: updateProfile propagates TutorWriteException instead of swallowing it`; (2) `AUD-profiles-16 — log-less catch: cloud push failures now log :: updateProfile still succeeds offline-first AND logs the cloud push failure via AppLogger`; (3) `ensureDefaultProfile fast path (account already has a profile) does NOT touch that profile's missing ulid`; (4) `updateProfile does NOT backfill a missing ulid for a pre-P2-2 profile — the lazy backfill path is deleted (P2-2)`. (5) `profile_edit_delete_actions_test.dart`'s `AUD-profiles-02 — editProfileFlow surfaces tutor-routed push failures :: a failed tutor-routed pushLearnerProfile shows the tutorPermissionDenied snackbar instead of being silently swallowed` — same `StateError`, same P2-3 origin — the exact test P2-10's own report cites as the reason `ProfileRepositoryImpl` must keep `implements ProfileRepository` in full; **that design justification still rests on a test that does not pass.** **(6) NEW, found at P2-16 by running `test/features/profiles/` as a directory instead of a hand-picked file list — neither P2-14 nor the review that assigned it ever did this:** `test/features/profiles/profile_picker_deep_l1_test.dart`'s `F: Delete flow F4: deleting the currently-selected profile via long-press auto-switches selectedProfileIdProvider to a remaining profile` — same `Bad state: ProfileModel.fromDriftRow: profile id 2 has no ulid` `StateError`, thrown from `ProfileRepositoryImpl.getProfilesByAccount` via `deleteProfileFlow` via `_ProfilePickerScreenState._showManageSheet`, plus a secondary `Expected: <2> / Actual: <1>` assertion at the test's own line 824. **Different seeder from the other 5:** this file builds its own inline `LearnerProfilesCompanion.insert(...)` rows (no `ulid:` argument) rather than calling `seedProfileWithIds` (`T-45`'s subject) — see `T-45`'s row. Proven not caused by any of this phase's commits: re-run with the `T-40` trigger disabled reproduces the identical `00:00 +0 -1`. Owner-scoped OUT of the P2-14/P2-15/P2-16 rounds (brief: "the owner scoped the inherited P2-3 StateError failures OUT of this round"). **Fix required (unchanged, not done here):** triage each of the 6 failures against P2-3's `fromDriftRow` enforcement and either fix the production code or the test/seeder feeding it a legacy null-ulid row (see `T-45`). **Disclosure baseline going forward:** run `flutter test test/features/profiles/` (and `test/app/`, `test/data/firestore/`) as directories, not a hand-picked file list — that is what surfaced the 6th test here. |
 | T-48 | 2 | **`done` (P2-15)** | **FIXED — the read that could be wrong is deleted, not narrowed.** `ensureProfile` no longer calls `ref.get()` at all to decide `created_at`; it takes `createdAt` as a caller-supplied `required DateTime`, sourced from the Drift row's own immutable local creation timestamp (`ProfileDao.upsertFromSync`'s doc comment: "accountId/createdAt are left untouched" by any update), and always writes it via `SetOptions(merge: true)`. This can never be wrong regardless of Firestore's cache state — real, offline, or otherwise — because the value written no longer depends on anything Firestore reports back. `FirestoreProfileRepositoryAdapter._ensureFirestoreProfile` now passes `createdAt: model.createdAt`. **Proof:** a new test in `firestore_learner_profile_repository_test.dart` seeds the raw document with a DIFFERENT `created_at` than the caller supplies and confirms the write uses the caller's value regardless — the real, fake-detectable proof, since `fake_cloud_firestore` has no cache/offline semantics and cannot reproduce the cache-miss scenario itself (recorded as a DEFERRED VERIFICATION, `D18`, unchanged — still needs a device or an offline-cache integration test to see the actual cache-miss trigger, though the fix no longer depends on that trigger being absent to be correct). File: `firestore_learner_profile_repository_test.dart` → `+17` (was `+16`), all green. `profile_repository_impl_test.dart` (the call site's own test file) unaffected: `+37 -4`, same 4 pre-existing P2-3 `StateError` failures as every prior measurement. Full evidence: `firestore-cutover-log.md`'s **P2-15** entry. |
+| T-49 | 2 | `todo` (new, P2-17) — **blocks Phase 3** | **SERIOUS — `_ensureFirestoreProfile`'s `activeProfileDocIdProvider` write has no check the healed profile is still selected; P2-14 made it run per-activation, not just per-creation.** `profile_repository_impl.dart:809` (inside the outer `try`) and `:828` (inside the outer `catch`'s `if (_ref.mounted)` guard) both do `_ref.read(activeProfileDocIdProvider.notifier).set(model.ulid);` unconditionally, with no comparison against the currently-selected profile. `activeProfileDocIdProvider` is what `repository_providers.dart`'s `_watchActiveAccountAndProfile` keys **all 13** profile-scoped Firestore providers on, including the two LIVE features (bookmarks, learning_order). Traced failure scenario: activate profile A offline (its `firestore_learner_profile_repository.dart:249` `.set()` queues, unresolved — `account_firebase.dart:668-669` has `persistenceEnabled: true`), switch to profile B (`select(B)` sets `docId=B`, dispatches heal B), heal B settles first, heal A's queued write acks later on reconnect and re-sets `docId` back to A — the provider tree now silently reads/writes profile A's data while the UI shows B, until the next `select()`. **Not reproduced** — `fake_cloud_firestore` resolves writes synchronously and has no offline model, so no test in this repo can exercise it; this is a structural trace of the code as it stands, confirmed by direct reading, not a report copied forward. Fix needs either a guard (compare the heal's target ULID against the currently-selected one before writing) or an owner-approved reason it cannot recur in practice, proven by a test that exercises the race. Deferred verification `D20`. Full evidence: `firestore-cutover-log.md`'s **P2-17** entry. |
+| T-50 | 2 | `todo` (new, P2-17) — **blocks Phase 3** | **MINOR — `repository_providers.dart`'s doc comment still carries the false production claim P2-16 corrected only in the three planning `.md` files.** Verbatim on `2c762abc`, `lib/data/firestore/repository_providers.dart:203-211`: "Every other provider in this file shares the identical `await ref.watch(activeAccountFirebaseProvider.future)` (directly or via [_watchActiveAccountAndProfile]) shape and therefore the same latent risk … so only this one is fixed here — the rest are carried, not silently fixed." `git show --name-only 2c762abc` confirms P2-16 touched exactly 3 files, all `.md` — the code comment was never touched. Fix: correct the comment in `lib/` to state what P2-16 established — the app's only `ProviderContainer` (`bootstrap.dart:68-81`) already disables Riverpod's default auto-retry container-wide, so the 12 sibling providers carry no live production risk from this shape; the per-provider `retry:` declarations exist for bare-test-container parity, not to close a production gap. Full evidence: `firestore-cutover-log.md`'s **P2-17** entry. |
+| T-51 | 2 | `blocked` (new, P2-17) — needs owner ruling, **blocks Phase 3** | **The v38 schema migration materialises `ulid IS NULL` on every in-place app upgrade from v26..v37, with no backfill, and P2-3's `fromDriftRow` hard-throws on it — unrecorded for three remediation rounds.** `lib/core/database/user/user_database.dart:795` (`if (from < 38) { … m.addColumn(learnerProfiles, learnerProfiles.ulid) … }`) adds the column as NULL for any existing `learner_profiles` row on an in-place upgrade; nothing in `lib/` backfills it. `ProfileModel.fromDriftRow` (P2-3, `feefe34b`) then throws `StateError: "... has no ulid — pre-P2-2 profile row with no ULID — wipe and reseed the device"`. The frozen plan's R3 (`firestore-phase2-plan.md:301`) rules this acceptable for a legacy row under the greenfield ruling — but that ruling was written about pre-existing seeded **dev** data, and nothing in the durable record states that the live producer of this shape is an app **upgrade**, i.e. every existing install crossing v37→v38, a materially different population than "wipe your dev device." **Not a mechanical fix** — greenfield stays in force (no backfill/dual-read/dual-write bridge), so this needs an explicit owner ruling on whether the wipe-and-reseed remedy is genuinely intended to cover a released build's upgrade path, not only a dev device. Deferred verification `D21`. Full evidence: `firestore-cutover-log.md`'s **P2-17** entry. |
+| T-52 | 2 | **`done` (P2-17)** | **MINOR — `make audit` named two different gates depending on the working directory, and no Phase 2 record stated which one was meant.** `learning_tracker/Makefile:1378`'s `audit` (104 checks) is what every gate block in this log and the phase plan means. The repo-root `/home/daniel/repos/learning-tracker/Makefile:112` also defines an `audit` target (12 enforcement greps) and it **fails today** — `10 non-baselined empty/comment-only catch block(s) found` → exit 2 — pre-existing (Makefile dated Jul 21, before this phase's first commit), unrelated to Phase 2. **FIXED, this commit (docs-only, no ambiguity resolvable in code):** `firestore-cutover-log.md`'s Recovery Protocol step 4 now states the directory explicitly and names the trap; `firestore-cutover-plan.md`'s verification-cadence paragraph does the same. Full evidence: `firestore-cutover-log.md`'s **P2-17** entry. |
 | T-20 | 3 | todo | **Wire the 7 dead adapters and move ~96 feature files.** Built-but-never-constructed: `FirestoreCompletionRepositoryAdapter`, `FirestoreCurriculumTrackRepositoryAdapter`, `FirestoreGoalRepositoryAdapter`, `FirestoreProgressRepositoryAdapter`, `FirestoreStageDefinitionRepositoryAdapter`, `FirestoreStudyDayConfigRepositoryAdapter`, `FirestoreTrackLearningOrderRepositoryAdapter`. Order by data dependency — **writers before readers** — and add a writer/reader agreement test per collection. Prerequisite: T-39. |
 | T-32 | 3 | decided | **Reorder amnesty is no longer stamped on any path.** Owner decision D2 (2026-08-04): restore both forgiveness paths. **The two are not equal cost.** Reorder stamp is cheap (`last_reorder_at` already permitted, `firestore.rules:412`); write it and move `daily_task_projection_service`'s read (`:443-446`) off Drift. **Content-reseed forgiveness needs a NEW mechanism** — the old detection used the Drift `learning_order.learningOrderVersion` column and the `learning_order` rules whitelist has no version field. Design explicitly; do not assume it comes free. |
 | T-21 | 4 | todo | **Demolish the sync engine and Drift user database.** `lib/core/sync` (62 files, 12,819 lines), `lib/core/database/user` (2, 25,774), `daos` (49, 5,991), `tables` (26, 1,111), `views` (1, 34), plus 85 sync test files. ≈45,700 lines. |
