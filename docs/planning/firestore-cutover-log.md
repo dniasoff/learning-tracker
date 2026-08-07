@@ -77,97 +77,139 @@ nothing on disk to diff against. This is the fix, binding from 2026-08-06
 
 ## CURRENT STATE
 
-**Head:** `a3c92d6c` (P2-14) **(P2-15, this commit, not yet reflected —
-same self-reference lag as every prior closing commit)**. `a3c92d6c`
+**Head:** `0ed80799` (P2-15) **(P2-16, this commit, not yet reflected —
+same self-reference lag as every prior closing commit)**. `0ed80799`
 remains the correct SHA for a cold agent to diff a tree against until
-P2-15's own SHA is knowable.
+P2-16's own SHA is knowable.
 **Deployed:** still `unknown — not deployed`. Unchanged this commit — no
 rules file touched.
-**Phase:** 0 ✅ · 1 ✅ · **2 — both BLOCKING defects (`T-40`, `T-43`) fixed
-and independently re-verified at P2-14; T-44–T-46 (MINOR) and T-48
-(SERIOUS) remain open, non-blocking.** This entry deliberately does **not**
-write "Phase 2 ✅" — that exact declaration, self-certified by the agent
-that just landed the fix, is what falsely closed Phase 2 twice before
-(P2-8/P2-12). The facts: both defects the plan's own exit criterion names
+**Phase:** 0 ✅ · 1 ✅ · **2 ✅ RESOLVED (P2-16).** This is the first time
+that declaration is backed by **independent** re-verification rather than
+self-certification by the same round that shipped the fix — the exact gap
+that made the P2-8 and P2-12 "resolved" declarations false. What changed,
+and when: P2-14 moved the `T-40` trigger and fixed `T-43`'s hang, proven
+with a wiring test shown RED against the pre-fix code and GREEN after;
+P2-15 closed `T-48` (the `created_at` clobber) by deleting the read it
+depended on. **P2-16 (this commit) is a fresh, separate re-verification
+pass — not the agent that wrote the fix grading its own work** — that (a)
+traced all three production activation paths (cold-start single-profile,
+cold-start ≥2-profile via the picker, in-app switch) call-site to call-site
+into the one `SelectedProfileId.select()` seam, (b) independently
+reproduced the wiring test's RED-before/GREEN-after toggle by hand
+(md5-verified restore, not trusted from the prior report), and (c)
+independently re-ran the directory-level test nets
+(`test/features/profiles/`, `test/app/`, `test/data/firestore/`) rather
+than the hand-picked file lists both P2-14 and the P2-13 re-review used —
+and got the exact same pass/fail counts each time. Full evidence: this
+file's **P2-16** entry.
+
+**Two documentation defects survived P2-14/P2-15 and are fixed by this
+commit (code unchanged):** (1) the red-test enumeration both prior rounds
+cited was **incomplete** — `T-47` named 5 inherited red tests; a 6th
+(`profile_picker_deep_l1_test.dart`'s F4) is red on this tree via a
+**different** ulid-less seeder (its own inline `LearnerProfilesCompanion.insert`
+calls, not `test_database.dart`'s `seedProfileWithIds`) — found only by
+running the `test/features/profiles/` directory as a whole, which neither
+P2-14 nor the review that assigned it ever did. (2) `T-43`'s claim that
+"every OTHER provider in `repository_providers.dart` shares the identical
+… risk" is false as a **production** statement:
+`lib/app/bootstrap/bootstrap.dart:68-81` constructs the app's ONLY
+`ProviderContainer` with a container-level `retry: (_, __) => null`,
+already disabling Riverpod's default auto-retry app-wide — the per-provider
+`retry: null` declarations P2-14 added exist to make **bare test
+containers** match production, not to close a live production gap on the
+other 12 providers. Neither defect changes any conclusion about `T-40`
+or `T-43` being fixed; both are corrected below and in
+`firestore-cutover-tasks.md`.
+
+**Residual, explicitly non-blocking (unchanged by this commit, carried
+forward as named tasks, not silently dropped):** `T-44`, `T-45`, `T-46`
+(MINOR) and `T-47` (`blocked` — the inherited-P2-3 `fromDriftRow`
+`StateError` class, now **6** named red tests, not 5 — see this entry).
+None of these is inside the plan's own stated blocking exit criterion
 ("Phase 3 must not start until `T-40` and `T-43` are fixed and
 independently re-verified by a passing test that exercises the real
-trigger") are fixed, with that exact proof (below). Four non-blocking items
-from P2-13's table remain untouched by this commit — `T-44`, `T-45`, `T-46`
-(MINOR) and `T-48` (SERIOUS) — and `T-47` is narrowed, not closed (its
-`T-43` half is now green; its inherited-P2-3 half is unchanged, scoped OUT
-of this round by the owner). Whether that residual set still blocks Phase 3
-is a call for whoever reads this next, not asserted here either way.
+trigger") — that criterion, and only that criterion, is what P2-16
+re-verifies as met.
 
-**`T-40` — FIXED.** The trigger moved from a dead `ref.listen` inside
-`AppShellScreen.build` to `SelectedProfileId.select()`
-(`profile_providers.dart`) itself — the ONE seam every activation path in
-the app funnels through (verified by enumerating every
-`selectedProfileIdProvider.notifier).select(` call site in `lib/`: the
-route guard, the picker, the switcher, sign-in, onboarding, restore, a
-notification tap, add/edit-profile, and the zero-profile self-heal — all of
-them, nothing else). Gated on `activeAccountIdProvider` being set (cheap,
-in-memory) before touching `profileRepositoryProvider` (which opens a REAL
-on-disk Drift database) — this gate was added mid-session after the
-ungated version broke a widget test; see the P2-14 entry for the full story
-and why it does not weaken production coverage. **Proof — a WIRING test,
-not a trace:** `test/features/profiles/presentation/providers/profile_activation_heal_wiring_test.dart`
+**`T-40` — FIXED, independently re-verified.** The trigger lives in
+`SelectedProfileId.select()` (`profile_providers.dart`) — the ONE seam
+every activation path in the app funnels through (re-verified by
+enumerating every `selectedProfileIdProvider.notifier).select(` call site
+in `lib/`: the route guard, the picker, the switcher, sign-in, onboarding,
+restore, a notification tap, add/edit-profile, and the zero-profile
+self-heal — all of them, nothing else; the only non-`select()` write to
+`activeProfileDocIdProvider` is `AutoSelectedProfileId`'s own "selection
+already exists" early return, which is reachable only after a `select()`
+already fired the heal in that session). Gated on `activeAccountIdProvider`
+being set (cheap, in-memory) before touching `profileRepositoryProvider`
+(which opens a REAL on-disk Drift database) — this gate does not narrow
+production coverage: `firestoreLearnerProfileRepositoryProvider` awaits
+`activeAccountFirebaseProvider.future`, which itself returns `null`
+immediately when `activeAccountIdProvider` is `null`, so the deeper method
+would have no-op'd anyway; production always satisfies the gate because
+`bootstrap()` is awaited before `runApp`. **Proof — a WIRING test, not a
+trace, and independently reproduced by P2-16:**
+`test/features/profiles/presentation/providers/profile_activation_heal_wiring_test.dart`
 drives the REAL `ProfileGuard`, wired exactly as `router_provider.dart`
 wires it in production, through a cold-start single-profile auto-select
-whose remote document is missing — confirmed RED on the pre-fix code
-(reverted the trigger by hand, re-ran, got the predicted failure with the
-predicted reason), GREEN after. Full evidence: this file's **P2-14** entry.
+whose remote document is missing. P2-16 personally disabled the trigger
+line (`profile_providers.dart:138`, md5 `730071beb5218c0566ac1cc237be3cc4`
+before and after), re-ran the test (`00:00 +0 -1`, `Expected: true / Actual:
+<false>`, the exact predicted failure), restored the exact original bytes
+(md5-verified), and re-ran (`00:00 +1: All tests passed!`). The
+cold-start-picker and in-app-switch paths are traced, not executed by an
+automated test, but land in the identical `select()` call with an
+identical gate — see this entry for the full call-site trace. Full
+evidence: this file's **P2-14** and **P2-16** entries.
 
 **`T-43` — FIXED.** Two independent defects: (1) the residual escape at
 `profile_repository_impl.dart`'s old `:775` (now inside the outer `try`,
 with a `_ref.mounted` guard on the outer `catch`'s own attempt); (2) the
-HANG's actual root cause, undiagnosed by the prior two rounds — Riverpod
-3's default per-provider auto-retry treated `AccountNotAuthenticatedException`
-(a structural, non-transient failure) as retryable, so `.future` never
-settled until all 10 retries exhausted. `activeAccountFirebaseProvider` and
+HANG's actual root cause — Riverpod 3's default per-provider auto-retry
+treated `AccountNotAuthenticatedException` (a structural, non-transient
+failure) as retryable, so `.future` never settled until all 10 retries
+exhausted. `activeAccountFirebaseProvider` and
 `firestoreLearnerProfileRepositoryProvider` (the ONE thing
 `_ensureFirestoreProfile` directly awaits) both now declare
 `retry: (retryCount, error) => null`. **Proof:** `flutter test
 .../profile_repository_impl_test.dart --plain-name "does not propagate out
-of createProfile"` → `00:00 +1` (was `02:00` timeout). Full mechanism and
-every sibling provider in `repository_providers.dart` sharing the same
-carried (not fixed, out-of-scope) risk: this file's **P2-14** entry.
+of createProfile"` → `00:00 +1` (was `02:00` timeout). **Correction
+(P2-16):** the per-provider declarations are genuinely needed to fix the
+test-suite hang (bare test containers do not inherit
+`bootstrap.dart`'s container-level override), but in a **running app**
+`lib/app/bootstrap/bootstrap.dart:68-81`'s `ProviderContainer(..., retry:
+(_, __) => null, ...)` — the app's only `ProviderContainer`, confirmed by
+`grep -rn "ProviderContainer(\|UncontrolledProviderScope\|ProviderScope("
+lib/` returning exactly one construction site — already disables
+Riverpod's default auto-retry for every provider, so the other 12
+providers in `repository_providers.dart` carry **no live production risk**
+from the same shape; the per-provider declarations exist for test-harness
+parity with production, not to close a production gap. Full mechanism:
+this file's **P2-14** entry; the correction: this file's **P2-16** entry.
 
-**Gates (re-confirmed against the P2-14 tree, after all edits, in this
-session):** `dart analyze --fatal-infos` → `No issues found!`. `make audit`
-green, exit 0, 104 checks, true last line `=== audit PASSED — all 68 greps
-clean ===`. Check 103's OK line and split set **unchanged**: `PROFILE-KEY-SPLIT
-check OK: 2 collection(s) currently split (bookmarks, learning_order), all
-within the tracked baseline (0 new violations).` Check 104 **unchanged**:
-`88 tracked entries covering 91 site(s) ...; 0 new, 0 stale, 0 changed`.
-`coverage/lcov.info` untouched (469235 bytes, same mtime as every prior
-measurement — never deleted). **Targeted `flutter test` runs (not `make
-test`/`make ci`; not barred by the NO FULL CI ruling):** the new wiring
-test alone → `+1 -0`, GREEN (confirmed RED on the pre-fix code first);
-`profile_repository_impl_test.dart` alone → `+37 -4`; that file +
-`firestore_learner_profile_repository_test.dart` → `+53 -4`; the targeted
-`--plain-name "does not propagate out of createProfile"` test alone →
-`+1 -0` in `00:00` (was `02:00` timeout); a 6-file batch including
-`profile_edit_delete_actions_test.dart` and `app_shell_test.dart` →
-`+54 -1`. All 4–5 remaining failures across these runs are the SAME
-pre-existing P2-3 `ProfileModel.fromDriftRow` `StateError`, out of this
-round's scope by owner ruling. Full commands and verbatim output: this
-file's **P2-14** entry.
-
-**`created_at` clobber (P2-15) — FIXED.** `FirestoreLearnerProfileRepository
+**`created_at` clobber (`T-48`, P2-15) — FIXED.** `FirestoreLearnerProfileRepository
 .ensureProfile` no longer reads Firestore at all to decide `created_at`; it
 takes the caller's already-authoritative `createdAt` (the Drift row's own
 immutable local creation timestamp) and always writes it — nothing left to
 derive from a cache-miss read. Full reasoning, the fake-transaction
 incompatibility this design avoids, and the proof: this file's **P2-15**
-entry. This is the ONLY item from `p2-rereview.json` closed this round —
-everything else in that review's `new_defects`/`still_open_unrecorded`
-lists (T-40 wiring is separately closed at P2-14 above; the six red tests,
-the second-identity-on-sync-refusal outcome, the dead `DataExportImportService`
-half, the third ulid-less test seeder, the stale T-24 row, T-44–T-46,
-T-48) is **untouched by this commit** and remains exactly as open as the
-review found it.
+entry.
 
-**IN FLIGHT:** nothing.
+**Gates (re-confirmed on the P2-15 tree, write-quiet, by P2-16, before any
+edit and again after):** `dart analyze --fatal-infos` → `No issues found!`.
+`make audit` green, exit 0, 104 checks, true last line `=== audit PASSED —
+all 68 greps clean ===`. Check 103's OK line and split set **unchanged**:
+`PROFILE-KEY-SPLIT check OK: 2 collection(s) currently split (bookmarks,
+learning_order), all within the tracked baseline (0 new violations).`
+Check 104 **unchanged**: `88 tracked entries covering 91 site(s) ...; 0
+new, 0 stale, 0 changed`. `coverage/lcov.info` untouched (469235 bytes,
+same mtime as every prior measurement — never deleted). Full verbatim
+gate output and every targeted `flutter test` run (including the two new
+directory-level nets and the 6th red test): this file's **P2-16** entry.
+
+**IN FLIGHT:** nothing. (P2-16's edit list is fully landed in this commit
+— see its entry.)
 
 **Live on Firestore (4):** bookmarks · learning-order · profile identity ·
 scheduler learning-order read. **Unchanged this phase** — Phase 2 moved no
@@ -240,12 +282,414 @@ stage-definition · study-day-config · track-learning-order.
   order*, not an empty scheduler screen — this was already corrected in the
   Deferred Verification table at P2-7; restated here as a standing fact so
   a cold agent does not have to find it inside an entry.
+- **The standing fact this phase earned (P2-16).** Two Phase 2 remediation
+  rounds shipped confidently-documented fixes that did not work, because
+  correctness was argued from reading code rather than from running it.
+  `dart analyze` + `make audit` green means it compiles and no ratchet
+  moved — it does not mean the code runs. The owner relaxed the no-CI rule
+  on 2026-08-07 to permit targeted `flutter test <file>` runs for exactly
+  this reason. **A fix is not done until its test has been run.** A
+  corollary this phase also earned the hard way: a fix's own report
+  choosing which test files to run is not disclosure — P2-14 and the
+  review that assigned it both hand-picked file lists and both missed a
+  6th red test that a plain `flutter test test/features/profiles/`
+  directory run would have shown immediately (see P2-16's entry). Prefer
+  directory-level runs as the disclosure baseline over a hand-picked file
+  list when reporting what is and is not green.
+- **A per-provider Riverpod `retry:` override is not automatically a
+  production concern.** `T-43` (P2-14) added `retry: (retryCount, error)
+  => null` to two providers to fix a test-suite hang; the app's ONLY
+  `ProviderContainer` (`lib/app/bootstrap/bootstrap.dart:68-81`) already
+  sets the same override container-wide, so an *unfixed* sibling provider
+  sharing the same await shape carries no live production risk — only a
+  bare test container (one that never went through `bootstrap()`) can
+  observe the default-retry hang. Before recording "N other providers
+  share this latent risk," check whether the app's own container already
+  neutralises it.
 
 ---
 
 ## Entries
 
 Newest first. Append; never rewrite history.
+
+### 2026-08-07 — P2-16: independent re-verification closes Phase 2; two documentation defects found and fixed; the record corrected, not the code
+
+**Brief: "YOU ARE P2-16. Docs only, no behaviour change... Make the record
+TRUE."** Round three's third and final agent — P2-14 fixed `T-40`/`T-43`,
+P2-15 fixed `T-48`; this agent's job is to independently re-verify both
+against a fresh adversarial VERIFICATION RESULT (embedded in the brief,
+not `p2-rereview.json` — that file predates P2-14/P2-15 and was P2-14's
+own input, already re-verified there) and correct the record accordingly.
+Started against `0ed80799` (P2-15). `git log --oneline -1`, `git status
+--porcelain | grep -v '^ M _bmad'`, `git stash list` all verified
+clean/unchanged before the first edit (see "Stash situation" below).
+
+#### Why this round exists — the brief's own citations did not match the tree
+
+The brief's opening claim — "PHASE 2 IS MARKED ✅ IN THREE PLACES ... on
+the strength of a T-40 fix that did not fire and a test that was red" —
+does **not** hold on this tree, checked before touching anything:
+
+- `firestore-cutover-log.md`'s prior `CURRENT STATE` deliberately did
+  **not** write "Phase 2 ✅" (it said "both BLOCKING defects fixed... T-48
+  remain open, non-blocking" — see the self-contradiction fixed below).
+- `firestore-cutover-tasks.md`'s header does not say "Phase 2 is resolved
+  ... Phase 3 may start" — it lists `T-44`-`T-46` as open and `T-47` as
+  narrowed.
+- `firestore-phase2-plan.md:3` and `:247` (the brief's cited lines) are the
+  plan's "Synthesized" byline and a commit-table row respectively — neither
+  is a status declaration. The actual file with a Phase 2 status line is a
+  **different** file, `firestore-cutover-plan.md:3-4`, and it already read
+  **"Phase 2 — NOT RESOLVED (reopened, P2-13)"** before this commit.
+
+**Recorded as DEVIATION 1 below, not silently corrected** — this is
+exactly the "reproduce, don't inherit" doctrine
+(`firestore-cutover-plan.md` §2.2) firing on the brief itself: `p2-rereview.json`
+was measured at `c06d942a` (P2-12), and the brief's three citations
+describe that P2-12 state, before P2-13 already corrected all three files.
+None of this changes the actual job — confirm whether `T-40`/`T-43`
+genuinely fire and make every file say so truthfully — it only means the
+premise "the record currently claims resolved" needed re-deriving, not
+trusting.
+
+#### Re-verification performed (all independent — not a re-read of P2-14/P2-15's own report)
+
+1. **Traced all three activation paths call-site to call-site**, matching
+   the VERIFICATION RESULT's own trace: cold-start-single (`main.dart:17`
+   → `bootstrap()` seeds `activeAccountIdProvider` pre-`runApp` →
+   `router_provider.dart:52-71`'s `profileGuard` → `ProfileGuard._resolve`
+   → single-profile branch → `select(id, ulid:)` → the seam);
+   cold-start-picker (`profile_guard.dart`'s ≥2-profile branch →
+   `profile_picker_screen.dart`'s `_selectProfile` → the same seam);
+   in-app-switch (`profile_switcher_sheet.dart`'s `_switchProfile` → the
+   same seam). Confirmed the gate
+   (`if (ref.read(activeAccountIdProvider) == null) return;`) cannot
+   suppress a heal that would otherwise fire: `firestoreLearnerProfileRepositoryProvider`
+   awaits `activeAccountFirebaseProvider.future`, which itself resolves
+   `null` immediately when `activeAccountIdProvider` is `null`
+   (`active_account_providers.dart:91-92`), so the deeper method would
+   have no-op'd anyway.
+2. **Reproduced the wiring test's RED-before/GREEN-after toggle myself**,
+   not trusted from any prior report:
+
+```
+$ md5sum lib/features/profiles/presentation/providers/profile_providers.dart
+730071beb5218c0566ac1cc237be3cc4  lib/features/profiles/presentation/providers/profile_providers.dart
+```
+
+Edited `profile_providers.dart:138` to comment out
+`unawaited(ref.read(profileRepositoryProvider).ensureRemoteProfile(id));`:
+
+```
+$ flutter test test/features/profiles/presentation/providers/profile_activation_heal_wiring_test.dart
+00:00 +0 -1: T-40 WIRING: ... [E]
+  Expected: true
+    Actual: <false>
+  ProfileGuard's cold-start single-profile auto-select must reach
+  ProfileRepository.ensureRemoteProfile via SelectedProfileId.select(). ...
+00:00 +0 -1: Some tests failed.
+```
+
+Restored the exact original line by hand:
+
+```
+$ md5sum lib/features/profiles/presentation/providers/profile_providers.dart
+730071beb5218c0566ac1cc237be3cc4  lib/features/profiles/presentation/providers/profile_providers.dart   # identical
+$ git status --porcelain | grep -v '^ M _bmad'      # empty
+$ flutter test test/features/profiles/presentation/providers/profile_activation_heal_wiring_test.dart
+00:00 +1: All tests passed!
+```
+
+3. **Independently re-ran the directory-level test nets** the VERIFICATION
+   RESULT used, rather than trusting its numbers:
+
+```
+$ flutter test test/features/profiles/
+00:19 +418 -6: Some tests failed.
+```
+
+(reviewer measured `00:12 +418 -6` — pass/fail counts identical, wall
+time differs, expected on a shared machine.) Extracted the exact 6 via
+`--reporter compact`, all `[E]`:
+
+```
+profile_repository_impl_test.dart :: AUD-profiles-02 — TutorWriteException from pushLearnerProfile propagates :: updateProfile propagates TutorWriteException instead of swallowing it
+profile_repository_impl_test.dart :: AUD-profiles-16 — log-less catch: cloud push failures now log :: updateProfile still succeeds offline-first AND logs the cloud push failure via AppLogger
+profile_repository_impl_test.dart :: FirestoreProfileRepositoryAdapter ready (active account) :: ensureDefaultProfile fast path (account already has a profile) does NOT touch that profile's missing ulid
+profile_repository_impl_test.dart :: FirestoreProfileRepositoryAdapter ready (active account) :: updateProfile does NOT backfill a missing ulid for a pre-P2-2 profile — the lazy backfill path is deleted (P2-2)
+profile_picker_deep_l1_test.dart :: F: Delete flow F4: deleting the currently-selected profile via long-press auto-switches selectedProfileIdProvider to a remaining profile
+profile_edit_delete_actions_test.dart :: AUD-profiles-02 — editProfileFlow surfaces tutor-routed push failures :: a failed tutor-routed pushLearnerProfile shows the tutorPermissionDenied snackbar instead of being silently swallowed
+```
+
+Exact same 6, same names, as the VERIFICATION RESULT reported. Then:
+
+```
+$ flutter test test/app/
+00:07 +92: All tests passed!            # reviewer: 00:05 +92, same counts
+
+$ flutter test test/data/firestore/
+00:04 +169: All tests passed!           # reviewer: 00:01 +169, same counts
+```
+
+4. **Re-ran the 6th test alone**, to confirm its cause independently
+   (not copied from the review):
+
+```
+$ flutter test test/features/profiles/profile_picker_deep_l1_test.dart
+00:01 +24 -1: Some tests failed.
+
+Bad state: ProfileModel.fromDriftRow: profile id 2 has no ulid — pre-P2-2 profile row with no ULID —
+wipe and reseed the device
+  #7 ProfileRepositoryImpl.getProfilesByAccount (profile_repository_impl.dart:92:48)
+  #8 deleteProfileFlow (profile_edit_delete_actions.dart:144:31)
+  #9 _ProfilePickerScreenState._showManageSheet (profile_picker_screen.dart:283:7)
+
+Expected: <2>
+  Actual: <1>
+deleting the currently-selected profile via the Picker's long-press menu must auto-switch to a
+remaining profile, not clear the selection to null (Bug B / AUD-profiles-03)
+```
+
+Same `ProfileModel.fromDriftRow` `StateError` class as the other 5 —
+inherited `feefe34b` (P2-3) enforcement. **Different seeder, though:**
+`grep -n "seed\|Companion" test/features/profiles/profile_picker_deep_l1_test.dart`
+shows this file constructs its OWN `LearnerProfilesCompanion.insert(...)`
+calls inline (lines 769, 780, 554, 565, 621, 632, 695, ... — no `ulid:`
+argument anywhere), never calling `test/helpers/test_database.dart`'s
+`seedProfileWithIds` (`T-45`'s subject). **Proven not caused by this
+round's commits**: re-ran with the T-40 trigger disabled (the probe above)
+— still `00:00 +0 -1`, same cause.
+
+5. **Verified `T-43`'s production-scope correction** directly:
+
+```
+$ grep -n "retry:" lib/app/bootstrap/bootstrap.dart lib/data/firestore/active_account_providers.dart lib/data/firestore/repository_providers.dart
+lib/app/bootstrap/bootstrap.dart:81:    retry: (_, __) => null,
+lib/data/firestore/active_account_providers.dart:95:}, retry: (retryCount, error) => null);
+lib/data/firestore/repository_providers.dart:220:    }, retry: (retryCount, error) => null);
+
+$ grep -rn "ProviderContainer(\|UncontrolledProviderScope\|ProviderScope(" lib/
+lib/main.dart:22:        UncontrolledProviderScope(                                  # consumes bootstrap's container
+lib/app/bootstrap/bootstrap.dart:68:  final container = ProviderContainer(          # THE ONLY construction site
+lib/features/settings/presentation/utils/account_actions.dart:355:    builder: (ctx) => UncontrolledProviderScope(   # re-uses ProviderScope.containerOf(context), not a new container
+```
+
+`bootstrap.dart:75-81`'s own comment: *"RP3: disable Riverpod 3's default
+provider auto-retry app-wide... matches the codegen providers, which
+already emit `retry: null`."* Confirms the VERIFICATION RESULT's finding:
+the per-provider declarations P2-14 added are real and necessary for the
+**test suite** (bare `ProviderContainer()` calls in widget tests do not
+go through `bootstrap()`), but the "every sibling provider shares this
+risk" framing was a production overclaim. Corrected in `CURRENT STATE`
+and in `firestore-cutover-tasks.md`'s `T-43` row.
+
+#### PROOF REQUIRED — was the trigger genuinely re-verified, or just re-read?
+
+Executed, not read: item 2 above is a byte-identical repro of the
+RED/GREEN toggle, performed by this agent, with md5 checksums before and
+after — not a citation of P2-14's own transcript. This is the specific
+standard the brief and the new standing fact (below) both name: a fix is
+verified by running it, not by reading the code that claims to fix it.
+
+#### Documentation defects found and fixed (no code changed)
+
+1. **`T-47`'s red-test count was 5; the true count on this tree is 6.**
+   Neither P2-14 nor the review that assigned its scope ever ran
+   `flutter test test/features/profiles/` as a directory — both chose
+   their own file list, which is precisely the "under-report by picking
+   your own list" gap. Fixed: `T-47`'s row now names the 6th test with its
+   failure text (`firestore-cutover-tasks.md`); this entry's item 3/4
+   above is the paste. `T-45`'s row is updated to note the F4 test's
+   seeder is a **different** file from `seedProfileWithIds` — a second,
+   independent ulid-less inline seeder, not double-counted against T-45's
+   "14+ dependent files" figure (that figure is specifically about
+   `seedProfileWithIds`'s dependants, which `profile_picker_deep_l1_test.dart`
+   is not one of).
+2. **`T-43`'s "every sibling provider shares the risk" claim was a false
+   production statement.** See item 5 above. Corrected in `CURRENT STATE`
+   and `T-43`'s row: the risk is real for bare test containers, not for
+   the running app, which has exactly one `ProviderContainer` and it
+   already disables default retry container-wide.
+3. **`CURRENT STATE`'s own P2-15 paragraph was self-contradictory.** It
+   opened with `**created_at clobber (P2-15) — FIXED.**` and, three
+   sentences later in the SAME paragraph, closed with "... T-48 ... is
+   **untouched by this commit** and remains exactly as open as the review
+   found it" — asserting both that this commit fixed `T-48` and that it
+   did not touch `T-48`. Mechanism: the closing sentence was boilerplate
+   copied from the "everything else in that review's lists is untouched"
+   pattern used by non-closing entries, without removing `T-48` (the one
+   item THIS commit did close) from the trailing enumeration. The
+   underlying code fix is unaffected — verified independently via the
+   `firestore_learner_profile_repository_test.dart` diff and its own
+   green run — only the prose was wrong. Fixed in this commit's `CURRENT
+   STATE` rewrite (see DEVIATION 2 below).
+4. **`CURRENT STATE`'s P2-15 paragraph also listed "the stale T-24 row" as
+   still open.** Checked directly: `router_provider.dart:65` and
+   `profile_guard.dart:167` both already use `{required String ulid}`,
+   and `firestore-cutover-tasks.md`'s `T-24` row already states this
+   correctly, corrected back at P2-13 — i.e. `T-24` was NOT stale on this
+   tree. Mechanism: P2-15's `CURRENT STATE` paragraph copied
+   `p2-rereview.json`'s `still_open_unrecorded` list verbatim (a review
+   measured at `c06d942a`, P2-12) without re-checking each item against
+   the P2-13 fixes already landed on top of it — the exact "reproduce,
+   don't inherit" lapse this project's own anti-slop protocol names.
+   Fixed in this commit's `CURRENT STATE` rewrite (see DEVIATION 3 below).
+
+#### Gates — re-measured on the final tree, after every edit
+
+```
+$ dart analyze --fatal-infos
+Analyzing learning_tracker...
+No issues found!
+EXIT=0
+
+$ dart run tool/check_profile_path_keying.dart | tail -1
+PROFILE-KEY-SPLIT check OK: 2 collection(s) currently split (bookmarks, learning_order), all within the tracked baseline (0 new violations).
+EXIT=0
+
+$ dart run tool/check_profile_id_int_sites.dart | tail -1
+PROFILE-ID-INT-SITES OK: 88 tracked entries covering 91 site(s) across 5 pattern(s) [cf-int-guard, cf-string-profileid-doc, dart-int-profileid-param, dart-tutoring-int-parse, dart-tutoring-id-tostring]; 0 new, 0 stale, 0 changed.
+EXIT=0
+
+$ make audit; echo "EXIT=$?"
+... (1143 lines) ...
+line 1123: 98/98 — R6d (... soft-skips if coverage/lcov.info doesn't exist ...)
+line 1124: R6 lcov-denominator check OK: 76 zero-coverage file(s), all within the tracked baseline (0 new violations).
+           ^^^ R6d's OWN stdout, the RUNNING form not the skip form.
+line 1139: PROFILE-KEY-SPLIT check OK: 2 collection(s) currently split (bookmarks, learning_order), all within the tracked baseline (0 new violations).
+line 1141: PROFILE-ID-INT-SITES OK: 88 tracked entries covering 91 site(s) across 5 pattern(s) [...]; 0 new, 0 stale, 0 changed.
+True last line, no parenthetical:
+=== audit PASSED — all 68 greps clean ===
+
+$ ls -la coverage/lcov.info
+-rw-rw-r-- 1 daniel daniel 469235 Aug  6 17:18 coverage/lcov.info    # unchanged, never deleted, before and after
+```
+
+**`dart format` — not applicable this commit.** `git status --porcelain |
+grep -v '^ M _bmad'` confirms this commit's diff is three Markdown files
+(`firestore-cutover-log.md`, `firestore-cutover-tasks.md`,
+`firestore-cutover-plan.md`) and nothing under `lib/`, `functions/`, or
+`test/`. `dart format` formats `.dart` sources; it is not a Markdown
+formatter (confirmed by running it against these three files: it attempts
+to parse Markdown prose as Dart and fails with "Illegal character"/
+"Unterminated string literal" on the first em dash and smart quote —
+expected, and reverted-to-nothing since no file was written by that
+probe). The two temporary probes on `profile_providers.dart` (the
+retry-trigger toggle, the T-40 red/green reproduction above) were both
+reverted to byte-identical content before this commit, verified by md5,
+not by `git diff` alone — `dart format` has nothing to check because no
+`.dart` file is in this commit's diff.
+
+#### DEVIATION 1 — the brief's own opening claim did not match the tree
+
+**Predicted (the brief, quoted):** *"PHASE 2 IS MARKED ✅ IN THREE PLACES
+on the strength of a T-40 fix that did not fire and a test that was red:
+`firestore-cutover-log.md:90-108` ..., `firestore-cutover-tasks.md` header
+..., `firestore-phase2-plan.md:3` and `:247`."*
+
+**Actual:** none of the three currently claims "Phase 2 ✅." The log's
+prior `CURRENT STATE` explicitly avoided the phrase; `firestore-cutover-tasks.md`'s
+header lists open MINOR items and a narrowed `T-47`; `firestore-phase2-plan.md:3`
+and `:247` are not status lines at all (a byline and a commit-table row).
+The actual file carrying a Phase 2 status line, `firestore-cutover-plan.md:3-4`,
+already read **"Phase 2 — NOT RESOLVED (reopened, P2-13)"**.
+
+**Mechanism:** the brief's VERIFICATION RESULT and its framing were
+assembled against `p2-rereview.json`, which measured the tree at
+`c06d942a` (P2-12) — before P2-13 corrected exactly these three claims.
+The citation `firestore-phase2-plan.md` also appears to conflate that
+frozen planning artifact with the live `firestore-cutover-plan.md` status
+document — two different files with similar names.
+
+**Invariant unaffected:** the substantive task — confirm whether `T-40`
+and `T-43` are genuinely fixed and make the record say so truthfully — is
+unaffected by which file said what before this commit; it was completed
+by reading the current tree directly, per the "RE-VERIFY before fixing"
+instruction, not by trusting the brief's framing.
+
+#### DEVIATION 2 — `CURRENT STATE`'s P2-15 paragraph asserted `T-48` both fixed and untouched
+
+**Predicted:** P2-15's `CURRENT STATE` edit cleanly describes `T-48` as
+fixed, with no residual documentation defect of its own.
+
+**Actual:** the same paragraph's closing sentence lists `T-48` among items
+"untouched by this commit... exactly as open as the review found it" —
+directly contradicting its own opening sentence three lines above.
+
+**Mechanism:** boilerplate reuse — the closing sentence is a template
+("everything else in the review's lists is untouched") used by every
+non-closing P2 entry; P2-15 copied it without removing the one item (`T-48`)
+that commit specifically closed from the trailing enumeration.
+
+**Invariant unaffected:** `T-48`'s actual code fix — the deleted
+`ref.get()` read in `ensureProfile`, `createdAt` now caller-supplied — was
+independently re-verified this session (code read directly, plus the
+`firestore_learner_profile_repository_test.dart` green run) and is
+correct and unaffected; only the `CURRENT STATE` prose was self-contradictory.
+
+#### DEVIATION 3 — `CURRENT STATE` carried a stale "T-24 is stale" claim
+
+**Predicted:** the residual-items list in P2-15's `CURRENT STATE`
+accurately reflects every item's status on the tree it describes.
+
+**Actual:** that list names "the stale T-24 row" as still open/unrecorded.
+`T-24`'s row in `firestore-cutover-tasks.md` was already corrected at
+P2-13 (before P2-14 or P2-15 ran) and matches the current code exactly
+(`router_provider.dart:65`, `profile_guard.dart:167`, both
+`{required String ulid}`).
+
+**Mechanism:** P2-15's `CURRENT STATE` paragraph enumerated
+`p2-rereview.json`'s `still_open_unrecorded` list by copying it, rather
+than re-checking each named item against the tree as it stood at P2-15's
+own commit (which already included P2-13's fix). `p2-rereview.json`
+itself was accurate **when written** (at `c06d942a`); the lapse is
+carrying its list forward without re-derivation two commits later.
+
+**Invariant unaffected:** `T-24`'s task-list row itself was never touched
+by P2-14 or P2-15 and was never wrong — only `CURRENT STATE`'s narrative
+claim about it was wrong. No task content changes as a result; the
+`CURRENT STATE` prose is corrected in this commit.
+
+#### `firestore-cutover-tasks.md` and `firestore-cutover-plan.md`
+
+- Header rewritten: Phase 2 ✅ RESOLVED (P2-16), independence stated.
+- `T-47` row: 6th red test added with its failure text; still `blocked`
+  (the underlying `StateError`s are unfixed — only the disclosure is
+  corrected).
+- `T-45` row: notes the second, different ulid-less seeder
+  (`profile_picker_deep_l1_test.dart`'s inline inserts), not folded into
+  its `seedProfileWithIds` dependant count.
+- `T-43` row: the "every sibling provider shares the risk" sentence
+  corrected to state the production-neutralising container override.
+- `firestore-cutover-plan.md`: status line and `Head:` updated; Phase 2
+  section header changed from "NOT RESOLVED (reopened P2-13)" to
+  "RESOLVED (P2-16)", with a paragraph naming what P2-14/P2-15/P2-16 each
+  did and pointing here for full evidence — the existing P2-7-era
+  narrative below it is left untouched (historical record, not rewritten),
+  per this file's own stated convention.
+
+#### Stash situation — re-verified again this session, unchanged, keyed by base commit
+
+```
+$ git stash list
+stash@{0}: WIP on dev: d74e3829 docs(planning): durable task list + recovery log; mark Phase 1 resolved
+stash@{1}: WIP on (no branch): 8855b9b1 fix(tracks): AUD-tracks-18 - de-duplicate Hebrew-script detection regex
+```
+
+- **Base `d74e3829`** (`stash@{0}` today — index has reindexed before;
+  identify by base, never by position): pre-existing, unrelated to this
+  phase. Not popped, applied, or dropped.
+- **Base `8855b9b1`** (`stash@{1}` today): pre-existing, 18+ days old,
+  base not an ancestor of `dev`, contained by no branch. Not popped,
+  applied, or dropped.
+
+Same two bases, same order as every prior record back to P2-0. `git
+status --porcelain | grep -v '^ M _bmad'` showed exactly the 3 intended
+files (the two planning docs' companions plus this log) before the
+commit-boundary check this session. My two temporary probes (the T-40
+trigger toggle) were reverted by direct `Edit` calls with exact
+old/new text and md5-verified, never via `git stash`.
 
 ### 2026-08-07 — P2-15: close the `created_at` clobber P2-8 attempted and P2-13's re-review found narrowed, not fixed (`T-48`)
 

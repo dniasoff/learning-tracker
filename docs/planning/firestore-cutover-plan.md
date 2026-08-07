@@ -1,34 +1,46 @@
 # Firestore cutover plan
 
-**Status:** Phase 0 ✅ · Phase 1 ✅ · **Phase 2 — NOT RESOLVED (reopened,
-P2-13).** P2-12's `Phase 2 ✅` (kept below, superseded) was corrected by a
-second-pass adversarial review that re-verified the tree at `c06d942a`
-directly — gates plus targeted `flutter test` runs, not a re-read of this
-plan or the log — and found it false on its own terms: **`T-40`'s fix
-(P2-8) never fires on any cold-start path** (its `ref.listen` is registered
-on `AppShellScreen.build`, but the route guard has already resolved
-profile selection before the shell — and the listener — can build), and **a
-second BLOCKING defect (new `T-43`) survives inside the offline-first fix
-P2-8 also shipped** (its own new test hangs to a 2-minute timeout instead
-of passing). Four more open, non-blocking: `T-44`–`T-46` (MINOR), `T-47`–
-`T-48` (SERIOUS). `T-41` and 15 of `T-42`'s 16 items are independently
-reconfirmed and stand. **Phase 3 must not start** until `T-40` and `T-43`
-are fixed and independently re-verified by a passing test exercising the
-real trigger — not a code trace. Full detail:
-`firestore-cutover-log.md`'s **P2-13** entry and
-`firestore-cutover-tasks.md`'s `T-40`/`T-43`–`T-48` rows. **This section's
-narrative below (commit list, blocked framing) predates P2-8 through P2-13
-and is not rewritten here — treat the log entries above as authoritative
-over this paragraph's prose; only the status line and Head field are
-corrected in this pass, plus the Phase 2 section header/summary
-immediately below §3.**
-**Last updated:** 2026-08-07 (P2-13; status line, Head field, and the
+**Status:** Phase 0 ✅ · Phase 1 ✅ · **Phase 2 ✅ RESOLVED (P2-16,
+2026-08-07).** P2-13 reopened Phase 2 (below, kept as history) after a
+second-pass adversarial review found P2-12's `Phase 2 ✅` false on its own
+terms: `T-40`'s fix (P2-8) never fired on any cold-start path, and a
+second BLOCKING defect (`T-43`) survived inside the offline-first fix
+P2-8 also shipped. **P2-14 fixed both**, proven with a wiring test shown
+RED against the pre-fix code and GREEN after (not a code trace). **P2-15
+fixed the remaining SERIOUS item, `T-48`** (the `created_at` clobber), by
+deleting the read it depended on. **P2-16 is a separate, independent
+re-verification pass — not the agent that shipped either fix grading its
+own work** — that traced all three production activation paths, personally
+reproduced the wiring test's RED/GREEN toggle (md5-verified restore), and
+independently re-ran the test suite's directory-level nets, confirming
+`T-40` and `T-43` are genuinely fixed. This is the first Phase 2
+resolution backed by that kind of independence — the exact thing missing
+from the two prior false closures (P2-8, P2-12). P2-16 also found and
+fixed two documentation defects (no code changed): `T-47`'s red-test count
+was 5, not the actual 6 (`profile_picker_deep_l1_test.dart`'s F4, found
+only by a directory-level `flutter test test/features/profiles/` run,
+which neither prior round performed); and `T-43`'s claim that 12 sibling
+providers share a live "risk" was a false production statement (the app's
+only `ProviderContainer` already disables default retry app-wide).
+`T-44`–`T-46` (MINOR) and `T-47` (`blocked`, 6 named red tests, inherited
+from P2-3, owner-scoped out of every round) remain open — explicitly
+outside the plan's own stated exit criterion, which names only `T-40` and
+`T-43`, both now independently verified fixed. `T-41` and 15 of `T-42`'s
+16 items remain independently reconfirmed. Full detail:
+`firestore-cutover-log.md`'s **P2-14**, **P2-15**, and **P2-16** entries,
+and `firestore-cutover-tasks.md`'s `T-40`/`T-43`–`T-48` rows. **This
+section's narrative below (commit list, blocked framing) predates P2-8
+through P2-16 and is not rewritten here — treat the log entries above as
+authoritative over this paragraph's prose; only the status line, Head
+field, and the Phase 2 section header/summary immediately below §3 are
+corrected, at each closing commit.**
+**Last updated:** 2026-08-07 (P2-16; status line, Head field, and the
 Phase 2 section header/summary)
-**Head:** `c06d942a` on `dev` (P2-12; the P2-13 docs commit lands on top,
+**Head:** `0ed80799` on `dev` (P2-15; the P2-16 docs commit lands on top,
 not yet reflected here — same self-reference lag as every prior closing
 commit) — `make audit` green (104 checks), 4 features on Firestore, both
-keying gates (103, 104) live. **Green throughout the life of both new
-BLOCKING defects below — no gate this phase runs can see either one.**
+keying gates (103, 104) live, both Phase 2 BLOCKING defects fixed and
+independently re-verified.
 
 **Verification cadence (owner decision, 2026-08-06):** `dart analyze` and the
 keying gate run every stage (seconds); `make audit` runs at each phase
@@ -258,8 +270,40 @@ manufactures exactly the false confidence this gate exists to remove.
 
 ---
 
-### Phase 2 — Unify the identity (int → ULID) — **NOT RESOLVED (reopened P2-13, 2026-08-07)**
+### Phase 2 — Unify the identity (int → ULID) — **RESOLVED (P2-16, 2026-08-07)**
 
+**P2-16 supersedes the P2-13 reopening below (kept as history, not
+rewritten).** `T-40` and `T-43` — the plan's own named blocking exit
+criterion — were fixed at P2-14 and are now **independently
+re-verified**: a separate pass (not the agent who shipped the fix) traced
+all three production activation paths call-site to call-site into the one
+`SelectedProfileId.select()` seam, personally reproduced the wiring test's
+RED-before/GREEN-after toggle (md5-verified restore of
+`profile_providers.dart`, not trusted from any report), and independently
+re-ran the directory-level test suite. `T-48` (the `created_at` clobber)
+was fixed at P2-15 by deleting the Firestore read it depended on,
+independently re-derived at P2-16 by reading the current code directly.
+**This is the first Phase 2 resolution backed by independent
+re-verification rather than self-certification by the same round that
+shipped the fix** — the specific gap that made the P2-8 and P2-12
+"resolved" declarations false. Two documentation defects survived
+P2-14/P2-15 and are corrected at P2-16, with no code change: the
+inherited-red-test count was 5, not the actual 6
+(`profile_picker_deep_l1_test.dart`'s F4, surfaced only by running
+`test/features/profiles/` as a directory instead of a hand-picked file
+list); and `T-43`'s claim that 12 sibling providers in
+`repository_providers.dart` share a live production risk was false — the
+app's only `ProviderContainer` (`bootstrap.dart:68-81`) already disables
+Riverpod's default auto-retry container-wide, so the shared shape is a
+test-harness-only concern. `T-44`–`T-46` (MINOR) and `T-47` (`blocked`, 6
+named inherited-P2-3 red tests) remain open, explicitly outside this
+phase's stated blocking criterion, carried forward as named tasks — not
+silently dropped, not treated as blocking Phase 3. Full evidence:
+`firestore-cutover-log.md`'s **P2-14**, **P2-15**, and **P2-16** entries.
+
+---
+
+**Historical record, P2-13 (2026-08-07) — kept verbatim, not rewritten.**
 **P2-12's "RESOLVED" marking (2026-08-07) is corrected by this same-date
 entry: a second-pass adversarial review re-verified the tree at `c06d942a`
 directly and found it false.** `T-40` (BLOCKING DEFECT 1, below) was
