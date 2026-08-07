@@ -1,12 +1,18 @@
 # Firestore cutover plan
 
-**Status:** Phase 0 ✅ · Phase 1 ✅ · **Phase 2 — NOT RESOLVED. `T-49` (the
-phase's sole BLOCKING code defect, P2-23) and its two sibling findings
-`T-56`/`T-57` (P2-24, both pre-existing, both unrecorded until P2-22) are
-ALL now CLOSED.** Phase 3 remains explicitly BLOCKED, now only on `T-39`
-and two outstanding independent reviews (of `bb704e07`/P2-23 and of this
-round's own commit/P2-24) — see `firestore-cutover-log.md`'s **P2-24**
-entry, "Phase 3 ENTRY CRITERIA," for the exact checklist. **This paragraph was
+**Status:** Phase 0 ✅ · Phase 1 ✅ · **Phase 2 — NOT RESOLVED. `T-49`
+(the phase's sole BLOCKING code defect) is REOPENED A THIRD TIME, at
+P2-26 — a fourth-round independent review found P2-23's fix (`bb704e07`)
+closed the race on only ONE of the two awaits inside
+`_activateThenEnsureFirestoreProfile`, and reproduced the identical
+clobber through the OTHER one by execution, against `734a6daa`.** Its two
+sibling findings, `T-56`/`T-57` (P2-24, both pre-existing, both
+unrecorded until P2-22), ARE genuinely closed — round 4 independently
+re-checked both and found neither defective. Phase 3 remains explicitly
+BLOCKED, now only on `T-39` and `T-49`'s real closure (needing a fix, and
+a permanent test, for BOTH internal awaits this time, not one) — see
+`firestore-cutover-log.md`'s **P2-26** entry, "Phase 3 ENTRY CRITERIA,"
+for the exact checklist. **This paragraph was
 found materially false at P2-22 and is corrected here, in this document,
 not only in `firestore-cutover-log.md`/`firestore-cutover-tasks.md` (the
 same "docs-only fix left one of three durable documents stale" defect this
@@ -67,20 +73,41 @@ provider-clobber defects `T-49`'s own P2-22 reopening review found next
 to it, both pre-existing (predate Phase 2), both left `todo` through
 P2-23 — are now `done` (P2-24). See the Phase 2 section header/summary
 immediately below §3 for the fix shape and evidence pointer.
-**Last updated:** 2026-08-07 (P2-24; status line, Head field, the Phase 2
-section header/summary corrected — the verification-cadence paragraph
-needed no further change, re-verified accurate)
+**P2-26 addendum (docs-only; supersedes the status line above and the
+Phase 2 section header/summary below §3 — does not restate or dispute
+the P2-24 paragraph above, which correctly closed `T-56`/`T-57` and
+stands unedited):** the "two outstanding independent reviews" P2-24
+predicted have now happened — a fourth-round independent review ran
+against `734a6daa`, re-confirmed `T-56`/`T-57` solid, found `T-58`'s
+"CONFIRMED RED" claim itself false (already fixed, unlogged, by
+`c794cb35`/P2-25 — recorded retroactively), and found `T-49` **NOT**
+actually closed: P2-23's fix closed the race through the
+Firestore-WRITE await inside `_activateThenEnsureFirestoreProfile` but
+left a DIFFERENT, earlier await on the same method
+(`_resolveFirestoreProfileRepo`, resolving
+`firestoreLearnerProfileRepositoryProvider` — account/App-Check/auth
+resolution) unguarded for the same two callers, reproduced by execution
+(two probes, RED). `T-49` is **REOPENED A THIRD TIME.** Full mechanism,
+the probes, and a suggested fix (not applied — P2-26 is docs-only):
+`firestore-cutover-log.md`'s **P2-26** entry and
+`firestore-cutover-tasks.md`'s `T-49` row. **Phase 3 ENTRY CRITERIA now
+gates on `T-39` (pre-existing) and `T-49`'s real closure — which now
+needs proof for BOTH internal awaits, not one, before any round
+self-certifies it again.**
+**Last updated:** 2026-08-07 (P2-26; status line, Head field, this Phase
+2 section addendum — the verification-cadence paragraph needed no
+further change, re-verified accurate)
 **Head:** commit SHA not yet knowable — same self-reference lag as every
-prior closing commit; the true immediate parent is `bb704e07` (P2-23's
-own commit, closing `T-49`). This commit (P2-24) fixes `T-56`/`T-57` in
-`lib/features/profiles/presentation/providers/profile_providers.dart`
-and `lib/features/profiles/presentation/widgets/add_profile_dialog.dart`
-— `make audit` green (104 checks, run from `learning_tracker/`), 4
-features on Firestore, both keying gates (103, 104) live and unchanged,
-`T-40`/`T-43`/`T-49`/`T-56`/`T-57` all fixed and independently
-re-verified or verified-then-fixed on their own closing round, **Phase 2
-closure blocked only on `T-39` and two outstanding independent
-reviews.**
+prior closing commit; the true immediate parent is `734a6daa` (P2-24's
+own commit, closing `T-56`/`T-57`). Commit order between P2-22 and P2-24
+also includes `c794cb35` (P2-25, fixes `T-58`, never logged — see
+`firestore-cutover-log.md`'s **P2-26** entry). This commit (P2-26) is
+docs-only — no `lib/`/`test/` file touched. `make audit` re-confirmed
+green (104 checks, run from `learning_tracker/`), 4 features on
+Firestore, both keying gates (103, 104) live and unchanged. `T-40`,
+`T-43`, `T-56`, `T-57` remain fixed and independently re-verified.
+**`T-49` is REOPENED A THIRD TIME — Phase 2 closure blocked on `T-49`
+(BLOCKING) and `T-39`.**
 
 **Verification cadence (owner decision, 2026-08-06):** `dart analyze` and the
 keying gate run every stage (seconds); `make audit` runs at each phase
@@ -317,7 +344,47 @@ manufactures exactly the false confidence this gate exists to remove.
 
 ---
 
-### Phase 2 — Unify the identity (int → ULID) — **NOT RESOLVED. `T-49`, `T-56`, `T-57` are ALL CLOSED (P2-23/P2-24). Phase 3 blocked only on `T-39` + two outstanding independent reviews.**
+### Phase 2 — Unify the identity (int → ULID) — **NOT RESOLVED. `T-49` REOPENED A THIRD TIME (P2-26) — still the phase's sole BLOCKING code defect. `T-56`, `T-57`, `T-58` are genuinely CLOSED. Phase 3 blocked on `T-39` + `T-49`'s real closure.**
+
+**P2-26 supersedes the P2-24 paragraph immediately below (kept as
+history, not rewritten) — without disputing what it correctly found for
+`T-56`/`T-57`.** The "fresh independent review of BOTH `bb704e07` and
+this round's own commit" that paragraph's last line called for has now
+happened (round 4, against `734a6daa`). It re-confirmed `T-56` and `T-57`
+solid — both genuinely `done`, unaffected, full evidence unchanged, see
+that paragraph below. It found `T-58`'s "remains open, MINOR" line in
+that same paragraph already stale: `c794cb35` (P2-25) had fixed it before
+P2-24 even ran, un-logged; recorded retroactively, now `done`
+(`firestore-cutover-tasks.md`'s `T-58` row). **And it found `T-49` NOT
+closed** — P2-23's fix (described two paragraphs below) genuinely closed
+the race through `_activateThenEnsureFirestoreProfile`'s Firestore-WRITE
+await, but left the SAME method's OTHER await
+(`_resolveFirestoreProfileRepo`, resolving
+`firestoreLearnerProfileRepositoryProvider`) unguarded for the same two
+callers (`createProfile`, `ensureDefaultProfile`'s self-heal branch) —
+reproduced by execution, two probes RED:
+`Expected: 'ulid-probe4-b' / Actual: 'ulid-probe4-c'` and
+`Expected: 'ulid-probe5-b' / Actual: 'ulid-probe5-d'`. P2-23's own
+justification for the design it shipped — "activating before the write
+closes this … a later `select()` always wins and is never clobbered" —
+is FALSE, the identical false-reachability-claim shape `T-49` was
+reopened for at P2-22, restated in weaker form. **`T-49` is `blocked`,
+reopened a THIRD time (P2-26).** Not fixed in code this round — P2-26 is
+docs-only; a suggested fix (gate the activation write on the same
+synchronous `activeAccountIdProvider` check `select()` already uses,
+before resolving the Firestore repo) is recorded but not applied. Full
+mechanism, both probes, and the suggested fix:
+`firestore-cutover-log.md`'s **P2-26** entry and
+`firestore-cutover-tasks.md`'s `T-49` row. **Phase 3 ENTRY CRITERIA now
+gates on `T-39` (pre-existing) and `T-49`'s real closure — which needs a
+fix AND a permanent test for BOTH internal awaits this time, followed by
+its own fresh independent review; not self-certifiable.**
+
+---
+
+**Historical record, P2-24 (2026-08-07) — kept verbatim below, not
+rewritten, superseded by P2-26 above for `T-49`'s disposition — its
+`T-56`/`T-57` closures stand, unaffected.**
 
 **P2-24 supersedes the P2-23 paragraph immediately below (kept as
 history, not rewritten) — without disputing what it correctly found.**
