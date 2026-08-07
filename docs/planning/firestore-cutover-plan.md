@@ -2,7 +2,7 @@
 
 **Status:** Phase 0 ✅ · Phase 1 ✅ · **Phase 2 — NOT RESOLVED. `T-49`
 (the phase's sole BLOCKING code defect) is REOPENED A THIRD TIME, at
-P2-26 — a fourth-round independent review found P2-23's fix (`bb704e07`)
+P2-26, RECONFIRMED UNCHANGED at P2-27 — a fourth-round independent review found P2-23's fix (`bb704e07`)
 closed the race on only ONE of the two awaits inside
 `_activateThenEnsureFirestoreProfile`, and reproduced the identical
 clobber through the OTHER one by execution, against `734a6daa`.** Its two
@@ -57,16 +57,18 @@ commit (not self-certified).** `T-40` and `T-43` — the plan's own
 **original** stated exit criterion — remain fixed and independently
 verified; nothing above disputes that, and `T-50`–`T-54` remain
 closed/ruled, also undisturbed.
-Full detail: `firestore-cutover-log.md`'s **P2-14** through **P2-24**
-entries, and `firestore-cutover-tasks.md`'s `T-40`–`T-58` rows. **This
+Full detail: `firestore-cutover-log.md`'s **P2-14** through **P2-27**
+entries, and `firestore-cutover-tasks.md`'s `T-40`–`T-62` rows. **This
 section's narrative below (commit list, blocked framing) predates P2-8
 through P2-23 and is not rewritten here — treat the log entries above as
 authoritative over this paragraph's prose; only the status line, Head
 field, and the Phase 2 section header/summary immediately below §3 are
 corrected, at each closing commit — that convention itself is why this
-paragraph went three rounds stale, and is worth a future round's attention
-(no task id assigned; noting it here so the next stale-status discovery
-does not read as a new phenomenon).**
+paragraph went three rounds stale, and is the exact mechanism `T-62`
+(P2-27) now names and tracks with a task id, generalized past this one
+field: a "state as of my immediate parent" self-reference citation must
+be re-derived at every commit of a multi-commit round, not only the
+round's first.**
 **P2-24 addendum (does not restate the P2-23 paragraph above, which
 stands unedited):** `T-56` and `T-57` — the two sibling
 provider-clobber defects `T-49`'s own P2-22 reopening review found next
@@ -94,20 +96,57 @@ the probes, and a suggested fix (not applied — P2-26 is docs-only):
 gates on `T-39` (pre-existing) and `T-49`'s real closure — which now
 needs proof for BOTH internal awaits, not one, before any round
 self-certifies it again.**
-**Last updated:** 2026-08-07 (P2-26; status line, Head field, this Phase
-2 section addendum — the verification-cadence paragraph needed no
-further change, re-verified accurate)
+**P2-27 addendum (docs-only; corrects two record-integrity defects round
+5's independent review found in P2-26's own output — does not restate or
+dispute the `T-49`/`T-56`/`T-57`/`T-58` findings in the P2-26 paragraph
+immediately above, which stand unedited):** round 5's review re-read
+`_activateThenEnsureFirestoreProfile` (`profile_repository_impl.dart:889-896`)
+directly against HEAD `981a8770` (P2-26's own three commits, `11c6fa3f`
+→ `bb1b53af` → `981a8770`) and found `T-49`'s residual byte-for-byte
+unchanged since P2-26 — **reconfirmed, not re-fixed.** It also found two
+NEW documentation defects, both fixed this commit: **`T-61`** (SERIOUS as
+a documentation defect) — `firestore-cutover-log.md` cited `+11511 ~131
+-0` as round 4's fresh `make test` measurement against `734a6daa`, which
+is arithmetically impossible on a tree already containing P2-23's 3 new
+tests and P2-24's 2 new tests on top of the `+11511` P2-22 baseline
+(`734a6daa`'s own commit message states the correct `+11516` directly);
+and **`T-62`** (MINOR) — `CURRENT STATE`'s `Head:` field (and
+`firestore-cutover-tasks.md`'s header) still named `734a6daa` even though
+P2-26 landed two further same-round commits after it. Full mechanism,
+both corrected numbers, and two new standing facts naming the
+mechanisms: `firestore-cutover-log.md`'s new **P2-27** entry and
+`firestore-cutover-tasks.md`'s `T-61`/`T-62` rows. **Phase 3 ENTRY
+CRITERIA is unchanged in substance by this addendum — still `T-39`
+(pre-existing) and `T-49`'s real closure (needing proof for BOTH internal
+awaits) — `T-61`/`T-62` are both closed and neither was ever blocking.**
+**Last updated:** 2026-08-07 (P2-27; status line, Head field, `Last
+updated:` field, this Phase 2 section addendum — the verification-cadence
+paragraph re-verified line by line this round, needed no further change)
 **Head:** commit SHA not yet knowable — same self-reference lag as every
-prior closing commit; the true immediate parent is `734a6daa` (P2-24's
-own commit, closing `T-56`/`T-57`). Commit order between P2-22 and P2-24
-also includes `c794cb35` (P2-25, fixes `T-58`, never logged — see
-`firestore-cutover-log.md`'s **P2-26** entry). This commit (P2-26) is
-docs-only — no `lib/`/`test/` file touched. `make audit` re-confirmed
-green (104 checks, run from `learning_tracker/`), 4 features on
-Firestore, both keying gates (103, 104) live and unchanged. `T-40`,
-`T-43`, `T-56`, `T-57` remain fixed and independently re-verified.
-**`T-49` is REOPENED A THIRD TIME — Phase 2 closure blocked on `T-49`
-(BLOCKING) and `T-39`.**
+prior closing commit; the true immediate parent is `981a8770`, the LAST
+of P2-26's own three commits (`11c6fa3f` → `bb1b53af` → `981a8770`).
+**Corrected this round (`T-62`) — this field previously named `734a6daa`,
+P2-24's commit and the correct self-reference-lag SHA for P2-26's FIRST
+commit only, three commits stale.** P2-26 landed as three commits, not
+one: `11c6fa3f` (the main docs rewrite), `bb1b53af` (a same-round
+follow-up correcting a fabricated `flutter test` timing figure),
+`981a8770` (a second same-round follow-up correcting a stray "T-49 CLOSED
+FOR REAL" claim left standing inside the historical P2-23 block's intro,
+below) — neither follow-up advanced this field past the first commit's
+citation, even though each had a now-knowable prior SHA to cite. Full
+mechanism: `firestore-cutover-log.md`'s new **P2-27** entry, §2, and its
+new standing fact on multi-commit self-reference lag. Commit order
+between P2-22 and P2-27 also includes `c794cb35` (P2-25, fixes `T-58`,
+never logged — see `firestore-cutover-log.md`'s **P2-26** entry). This
+commit (P2-27) is docs-only — no `lib/`/`test/` file touched. `make
+audit` re-confirmed green (104 checks, run from `learning_tracker/`), 4
+features on Firestore, both keying gates (103, 104) live and unchanged.
+`T-40`, `T-43`, `T-56`, `T-57` remain fixed and independently
+re-verified. `_activateThenEnsureFirestoreProfile`
+(`profile_repository_impl.dart:889-896`) re-read directly this round and
+confirmed byte-for-byte unchanged since P2-26 — `T-49` reconfirmed, not
+re-fixed (P2-27 is docs-only). **`T-49` is still REOPENED (a third time,
+P2-26) — Phase 2 closure blocked on `T-49` (BLOCKING) and `T-39`.**
 
 **Verification cadence (owner decision, 2026-08-06):** `dart analyze` and the
 keying gate run every stage (seconds); `make audit` runs at each phase
@@ -344,7 +383,33 @@ manufactures exactly the false confidence this gate exists to remove.
 
 ---
 
-### Phase 2 — Unify the identity (int → ULID) — **NOT RESOLVED. `T-49` REOPENED A THIRD TIME (P2-26) — still the phase's sole BLOCKING code defect. `T-56`, `T-57`, `T-58` are genuinely CLOSED. Phase 3 blocked on `T-39` + `T-49`'s real closure.**
+### Phase 2 — Unify the identity (int → ULID) — **NOT RESOLVED. `T-49` REOPENED A THIRD TIME (P2-26), RECONFIRMED UNCHANGED (P2-27) — still the phase's sole BLOCKING code defect. `T-56`, `T-57`, `T-58` are genuinely CLOSED. Phase 3 blocked on `T-39` + `T-49`'s real closure.**
+
+**P2-27 supersedes the P2-26 paragraph immediately below only for the two
+record-integrity corrections it names — does not restate or dispute
+anything P2-26 found about `T-49`/`T-56`/`T-57`/`T-58`, all of which
+stand unedited.** Round 5's independent review re-read
+`_activateThenEnsureFirestoreProfile` (`profile_repository_impl.dart:889-896`)
+directly against HEAD `981a8770` (P2-26's own three commits, below) and
+found `T-49`'s residual byte-for-byte unchanged — **reconfirmed, not
+re-fixed; P2-27 is docs-only, same charter as P2-26.** It found, and
+P2-27 fixed, two NEW record-integrity defects inside P2-26's own output:
+`T-61` (SERIOUS as a documentation defect — a `make test` count,
+`+11511 ~131 -0`, misattributed to `734a6daa`, whose real count is
+`+11516`, arithmetically confirmed by `734a6daa`'s own commit message)
+and `T-62` (MINOR — `CURRENT STATE`'s `Head:` field, and this file's own
+`Head:` field above, left three commits stale after P2-26 landed as
+three commits, not one, and only the first advanced the field). Neither
+defect touches `T-49`/`T-56`/`T-57`/`T-58`'s disposition. Full mechanism:
+`firestore-cutover-log.md`'s new **P2-27** entry and
+`firestore-cutover-tasks.md`'s `T-61`/`T-62` rows. **Phase 3 ENTRY
+CRITERIA is unchanged in substance — still `T-39` (pre-existing) and
+`T-49`'s real closure (needing a fix AND a permanent test for BOTH
+internal awaits), not self-certifiable by the round that fixes it.**
+
+**Historical record, P2-26 (2026-08-07) — kept verbatim below, not
+rewritten, superseded by P2-27 above only for the two record-integrity
+corrections it names.**
 
 **P2-26 supersedes the P2-24 paragraph immediately below (kept as
 history, not rewritten) — without disputing what it correctly found for
