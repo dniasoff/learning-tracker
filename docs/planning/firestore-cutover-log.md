@@ -84,52 +84,46 @@ nothing on disk to diff against. This is the fix, binding from 2026-08-06
 
 ## CURRENT STATE
 
-**Head:** `4106bb5c` (P2-18 — `T-49`'s code fix, landed together with its
-own log/tasks update) **(P2-20, this commit, not yet reflected — same
-self-reference lag as every prior closing commit)**. `4106bb5c` remains the
-correct SHA for a cold agent to diff a tree against until P2-20's own SHA
-is knowable. Chain since P2-17 (`5292d6c5`), both links independently
-confirmed by `git log --oneline` and `git show --stat`, not assumed: (1)
-`db1c7a09` (P2-19 — `test(profiles): give the profile seeders a ULID and
-close the six inherited red tests`, fixes `T-45`/`T-47`'s six inherited red
-tests, `test/` only, three files) landed first; its own commit message
-explicitly deferred `firestore-cutover-log.md`, `firestore-cutover-tasks.md`
-and `profile_repository_impl.dart` because all three were mid-edit by a
-concurrent session (P2-18/`T-49`) at the time, and named this exact
-follow-up ("deferred to a follow-up documentation-only pass once P2-18
-lands") — **that follow-up is `T-45`/`T-47`'s half of this commit (P2-20),
-below.** (2) `4106bb5c` (P2-18 — `T-49`'s fix, `lib/` + new test + both
-planning docs) landed second, on top of `db1c7a09`, confirmed zero file
-overlap with it (`git show --stat db1c7a09` vs `git show --stat 4106bb5c`).
-**This commit (P2-20) is docs-only plus one code doc-comment
-(`repository_providers.dart`, `T-50` — a comment fix, no behaviour
-change):** it writes the `P2-19` entry that commit's own message deferred,
-fixes `T-50` in code, applies the owner's 2026-08-07 greenfield ruling to
-close `T-51`, appends a superseding deferred-verification table, and
-corrects the stale `D18` self-citation and the `make audit`
-directory-ambiguity record (re-verified already fixed at P2-17 — see
-below). `git status --porcelain | grep -v '^ M _bmad'` was clean before the
-first edit; no other session's uncommitted work existed in this tree this
+**Head:** `f23a1af2` (P2-20 — corrected records, `T-50` code fix, `T-51`
+CARRIED-BY-RULING, superseding deferred-verification table) **(P2-21, this
+commit, not yet reflected — same self-reference lag as every prior closing
+commit)**. `f23a1af2` remains the correct SHA for a cold agent to diff a
+tree against until P2-21's own SHA is knowable.
+**This commit (P2-21) is the first CI-remediation round: `make ci` (the
+full suite, batched to end of the cutover by owner decision) was run to
+completion for the first time this phase and surfaced 14 e2e-journey test
+failures plus 1 stale Firestore-rules test assertion, both attributable to
+Phase 2 and both closed by this commit — no `lib/` production code
+changed, `test/` and `functions/test/` only.** See this file's **P2-21**
+entry, below, for the full mechanism, evidence and gate output.
+`git status --porcelain | grep -v '^ M _bmad'` was clean before the first
+edit; no other session's uncommitted work existed in this tree this
 session.
 **Deployed:** still `unknown — not deployed`. Unchanged this commit — no
-rules file touched. **The tree's `firestore.rules` (P2-6's owner-delete
-change for `learning_order`) is AHEAD of what is actually deployed to the
-dev Firebase project.** D11 (deploy + device negative-control) is still
-open — see the Phase 3 ENTRY CRITERIA checklist below. Before attributing
-any device `permission-denied` to a keying defect, check this field first
-(an undeployed rules change and an unregistered App Check debug token both
-present identically).
+rules file touched (only the rules **test** — `functions/test/firestore_rules.test.mjs`
+— changed; `firestore.rules` itself is untouched since P2-6). **The tree's
+`firestore.rules` (P2-6's owner-delete change for `learning_order`) is
+AHEAD of what is actually deployed to the dev Firebase project.** D11
+(deploy + device negative-control) is still open — see the Phase 3 ENTRY
+CRITERIA checklist below. Before attributing any device `permission-denied`
+to a keying defect, check this field first (an undeployed rules change and
+an unregistered App Check debug token both present identically).
 **Phase:** 0 ✅ · 1 ✅ · **2 — NOT RESOLVED (reopened, P2-17). `T-49` closed
-at P2-18; `T-50` closed and `T-51` CARRIED-BY-RULING at P2-20 (below) —
-every task P2-17's Phase 3 ENTRY CRITERIA checklist named is now
-resolved. Phase 3 is still explicitly BLOCKED**, on two items the
-checklist's own last two rows already named and P2-20 does not touch:
-`T-39` (pre-existing Phase 3 prerequisite, unrelated to this reopening)
-and a fresh independent review of the commit that closes the above — **not
-self-certified by this entry**, per this project's own standing warning
-that a reassuring self-report is exactly the failure shape P2-8 and P2-12
-already were. See this file's **P2-20** entry, below, for `T-50`'s code
-fix, `T-51`'s ruling, and the superseding deferred-verification table.
+at P2-18; `T-50` closed and `T-51` CARRIED-BY-RULING at P2-20; `T-53`
+(e2e-journey ulid-less seeders) and `T-54` (stale `learning_order` rules
+test) closed at P2-21 (below) — every task P2-17's Phase 3 ENTRY CRITERIA
+checklist named is resolved, and the two further Phase-2-attributable
+gaps `make ci`'s first-ever completed run surfaced are also now closed.
+Phase 3 is still explicitly BLOCKED**, on the same two items the checklist's
+own last two rows already named — **P2-21 does not touch either, and
+neither was implicated by what P2-21 found or fixed**: `T-39` (pre-existing
+Phase 3 prerequisite, unrelated to this reopening) and a fresh independent
+review of the commit that closes the above — **not self-certified by this
+entry**, per this project's own standing warning that a reassuring
+self-report is exactly the failure shape P2-8 and P2-12 already were. See
+this file's **P2-20** entry, below, for `T-50`'s code fix, `T-51`'s ruling,
+and the superseding deferred-verification table; see the new **P2-21**
+entry for `T-53`/`T-54`.
 P2-16's
 `✅ RESOLVED` declaration (below, unedited — append-only) is superseded by
 this line, not by rewriting P2-16's own entry. **This is not a reversal of
@@ -184,7 +178,23 @@ other 12 providers. Neither defect changes any conclusion about `T-40`
 or `T-43` being fixed; both are corrected below and in
 `firestore-cutover-tasks.md`.
 
-**Residual (updated by P2-20):** `T-44` and `T-46` (MINOR, informational)
+**Residual (updated by P2-21):** `T-53` (`done`, P2-21) — the e2e harness's
+`_seedIdentity` and five sibling test-file second-profile seeders under
+`test/e2e/journeys/` inserted a real Drift `learner_profiles` row with no
+`ulid`, the same `T-45`/`T-47` class of defect (its 4th–9th instances,
+this file's first-ever `test/e2e/journeys/` directory-net run), 14
+`flutter test` failures. `T-54` (`done`, P2-21) — `functions/test/firestore_rules.test.mjs`'s
+`learning_order` describe block still asserted owner-delete FAILS after
+P2-6 changed the rule to allow it; the assertion, not the rule, was stale.
+`T-55` (`todo`, new, P2-21, MINOR, informational, NOT a Phase 2/3 blocker)
+— `grep -rln "LearnerProfilesCompanion.insert\|LearnerProfilesCompanion(" test/
+| xargs grep -L "ulid"` finds roughly 60 further files (beyond the 6 `T-53`
+fixed) with the same ulid-less-seeder shape, none currently causing a test
+failure per this session's own full-suite green run — record-only, not
+fixed this round; see this file's **P2-21** entry for the full list and
+why it was disclosed rather than blanket-fixed.
+
+`T-44` and `T-46` (MINOR, informational)
 remain outside the plan's own **original** stated blocking exit criterion
 ("Phase 3 must not start until `T-40` and `T-43` are fixed and
 independently re-verified by a passing test that exercises the real
@@ -299,26 +309,37 @@ derive from a cache-miss read. Full reasoning, the fake-transaction
 incompatibility this design avoids, and the proof: this file's **P2-15**
 entry.
 
-**Gates (re-confirmed on the P2-20 tree, write-quiet, after `T-50`'s code
-fix landed — from `learning_tracker/`, see the directory note below):**
+**Gates (re-confirmed on the P2-21 tree, write-quiet, after both fixes
+landed — from `learning_tracker/`, see the directory note below):**
 `dart analyze --fatal-infos` → `No issues found!`. `make audit` green,
 exit 0, 104 checks, true last line `=== audit PASSED — all 68 greps
 clean ===`. Check 103's OK line and split set **unchanged**:
 `PROFILE-KEY-SPLIT check OK: 2 collection(s) currently split (bookmarks,
 learning_order), all within the tracked baseline (0 new violations).`
 Check 104 **unchanged**: `88 tracked entries covering 91 site(s) ...; 0
-new, 0 stale, 0 changed` (expected — `T-50`'s fix is a doc comment only,
-no int-keyed profile-identity site touched). `coverage/lcov.info`
-untouched (469235 bytes, same mtime as every prior measurement — never
-deleted). **No deviation from P2-16 through P2-18's own numbers on checks
-103/104** — predicted, since none of P2-19's test-only fix, P2-20's
-doc-comment fix, or P2-20's docs are sensitive to either gate's shape.
-Full verbatim gate output and every targeted `flutter test` run this
-commit (the full `test/features/profiles/` net, `test/app/` +
-`test/data/firestore/` + `test/core/navigation/`, and the individual
-`T-47` tests): this file's **P2-20** entry, below. Prior rounds'
-measurements (P2-14 through P2-19) are unchanged and not re-executed here
-except where P2-20's entry says otherwise.
+new, 0 stale, 0 changed` (expected — P2-21 touches only `test/` and
+`functions/test/`, no int-keyed profile-identity site). **P2-21 is the
+first round this phase to run `flutter test` (the full suite, no
+directory/file scoping) to completion: `11511 +11511 ~131: All tests
+passed!` (was `11497 +11497 ~131 -14` before this commit's fix — the 14
+failures were all `test/e2e/journeys/**`, closed this round). `coverage/lcov.info`
+regenerated by that run (raw 80.2%, 50803/63313 lines; filtered via the
+same `lcov --remove '*.g.dart' '*.freezed.dart' 'lib/l10n/app_localizations*.dart'`
+step `make test`'s own recipe applies → 89.0%, 39782/44690 lines, 656
+files — both essentially unchanged from every prior measurement, both far
+above the 60% floor). `check_lcov_denominator.dart --strict` → `R6
+lcov-denominator check OK: 76 zero-coverage file(s), all within the
+tracked baseline (0 new violations)`, unchanged.** `make test-rules` also
+run to completion for the first time with the TQ-9 rule-coverage gate
+actually reached (it never ran before this round — the `&&` chain in
+`Makefile:65` short-circuited on the one pre-existing rules-test failure
+every prior round's `make test-rules` hit): `tests 116, pass 116, fail 0`
+(was `fail 1`), then `TQ-9: rule coverage OK — all 37 conditional allow
+rule(s) in firestore.rules were evaluated at least once.` Full verbatim
+gate output and every targeted `flutter test` run this commit: this file's
+new **P2-21** entry, below. Prior rounds' measurements (P2-14 through
+P2-20) are unchanged and not re-executed here except where P2-21's entry
+says otherwise.
 **Directory note, `T-52`, `done` since P2-17 — CORRECTED THIS COMMIT, this
 paragraph itself was stale:** `make audit` means two different things
 depending on the working directory. `learning_tracker/Makefile:1378`'s
@@ -342,13 +363,21 @@ here as a `CURRENT STATE` self-consistency fix, not a re-opening of `T-52`
 P2-17, this was CURRENT STATE's own prose falling behind that fix in a
 later commit that copied it forward without checking it).
 
-**IN FLIGHT:** nothing. (P2-20's edit list is fully landed in this commit
-— see its entry, below: `repository_providers.dart`'s doc comment (`T-50`),
-the new `P2-19` entry, `T-51`'s ruling, the superseding deferred-verification
-table, this `CURRENT STATE` rewrite, all four gates and the regression
-sweep re-run, and both planning docs updated in the same commit. `T-39`
-and a fresh independent review remain open and still gate Phase 3 — this
-commit does not touch either.)
+**IN FLIGHT:** nothing. (P2-21's edit list is fully landed in this commit
+— see its entry, below: the e2e harness + 6 journey-test seeder fixes
+(`T-53`), `functions/test/firestore_rules.test.mjs`'s stale assertion fix
+(`T-54`), the new `T-55` disclosure, this `CURRENT STATE` rewrite, all
+gates plus the full `flutter test` suite and `make test-rules` re-run, and
+`firestore-cutover-tasks.md` updated in the same commit. `T-39` and a
+fresh independent review remain open and still gate Phase 3 — this commit
+does not touch either. **Deviation, recorded per this file's own
+convention:** the IN FLIGHT entry naming this commit was appended after
+the first edit (the e2e harness fix), not before it — same mechanism as
+P2-20's identical deviation: one uninterrupted sitting, no crash, no
+concurrent sibling session, `git status --porcelain` clean and under this
+session's own control throughout. Invariant unaffected: every edit landed
+in the same commit as this entry, so no cold agent could ever observe a
+half-done tree against a stale or absent IN FLIGHT marker.)
 
 **Live on Firestore (4):** bookmarks · learning-order · profile identity ·
 scheduler learning-order read. **Unchanged this phase** — Phase 2 moved no
@@ -477,12 +506,437 @@ stage-definition · study-day-config · track-learning-order.
   accurately (as P2-17 did) but cannot close it — closing it needs a round
   explicitly scoped to touch `lib/`, which is what P2-20 was. Tracked as
   `T-50`, `done` (P2-20).
+- **A directory-level test-file inventory does not mean the directory was
+  ever run as a directory net (P2-21).** Every prior Phase 2 round's
+  "directories measured individually" disclosure list (D1's row, `CURRENT
+  STATE`, every entry through P2-20) never included `test/e2e/` — 14 tests
+  across 8 files under `test/e2e/journeys/` were red on this tree since
+  `feefe34b` (P2-3, 2026-08-06) and stayed red, undiscovered, through five
+  full remediation rounds (P2-13 through P2-20), because nothing ever ran
+  `flutter test test/e2e/` as its own net; each round's own disclosed
+  "directory-level nets" list is a *reviewer's chosen sample*, not a claim
+  that every test directory in the repo was exercised. Discovered only
+  when `make ci`'s full, unscoped `flutter test` (batched to the end of
+  the cutover by owner decision, and genuinely run to completion for the
+  first time this phase at P2-21) surfaced it. The general lesson: a
+  standing "directories measured" list is evidence about the directories
+  it names, and silent about every directory it does not — it is not
+  evidence the untested directories are clean. Tracked as `T-53`, `done`
+  (P2-21).
+- **`make test-rules`'s two-command chain (`node --test ... && node
+  functions/tool/check_rule_coverage.mjs ...`, `Makefile:65`) means a
+  single stale test assertion silently prevents the TQ-9 rule-coverage
+  gate from ever running, not just from passing (P2-21).** The `&&`
+  short-circuits on the first failure, so `check_rule_coverage.mjs` had
+  not run even once since P2-6 (`2e85b097`, 2026-08-06) changed
+  `firestore.rules`'s `learning_order` delete rule — the stale test
+  (`T-54`) blocked it, undiscovered because no round before P2-21 ran
+  `make test-rules` to completion on a Phase-2-touched tree. Tracked as
+  `T-54`, `done` (P2-21).
 
 ---
 
 ## Entries
 
 Newest first. Append; never rewrite history.
+
+### 2026-08-07 — P2-21: CI remediation round 4 — close the two full-suite failures attributable to Phase 2 (`T-53`, `T-54`)
+
+**Brief: "YOU ARE THE CI REMEDIATION STEP. The full suite ran and surfaced
+failures attributed to Phase 2."** A prior session ran `make ci` from
+`learning_tracker/` for the first time this phase — `analyze`,
+`validate-calendar` and `lint-rules-test` passed, then `flutter test
+--coverage --exclude-tags "serial-tools || quarantine"
+--test-randomize-ordering-seed=random` ran **to completion** (the first
+time any Phase 2 round ran the unscoped full suite rather than a
+directory/file subset) and reported `11497 +11497 ~131 -14`, so `make`
+never reached the targets after `test`. That session then ran every
+remaining suite individually and filed a structured CI report naming two
+Phase-2-attributable failures: (1) 14 tests across 8 files under
+`test/e2e/journeys/**`, one disclosed root cause; (2) 1 rules test
+(`functions/test/firestore_rules.test.mjs`'s `learning_order` describe
+block). This entry re-verifies both attributions, fixes both, and reports
+every gate and test verbatim per the round's TEST POLICY.
+
+```
+$ git log --oneline -1
+f23a1af2 docs(planning): correct the records a docs-only pass left false; supersede the deferred table
+
+$ git status --porcelain | grep -v '^ M _bmad'
+(empty, before the first edit)
+
+$ git stash list
+stash@{0}: WIP on dev: d74e3829 docs(planning): durable task list + recovery log; mark Phase 1 resolved
+stash@{1}: WIP on (no branch): 8855b9b1 fix(tracks): AUD-tracks-18 - de-duplicate Hebrew-script detection regex
+
+$ git reflog show stash
+9796dba5 stash@{0}: WIP on dev: d74e3829 ...
+d30884bd stash@{1}: WIP on (no branch): 8855b9b1 ...
+
+$ pgrep -af "flutter[ ]test"
+(no output — no orphaned test processes)
+```
+
+Identical stash bases, order and reflog SHAs to every prior record this
+phase. Neither popped, applied, nor dropped.
+
+#### DEVIATION — the IN FLIGHT entry was appended after the first edit, not before
+
+Same shape and same root cause as P2-20's identical deviation. **Predicted:**
+per the INTERRUPT PROTOCOL, an IN FLIGHT entry naming this commit and its
+edit list would be appended to `CURRENT STATE` **before** the first edit.
+**Actual:** the first edit made this session was the e2e harness fix
+(`test/e2e/harness/e2e_harness.dart`'s `_seedIdentity`) — re-verification
+of both named failures (reading the harness, the six journey test files,
+the rules test and its helper, running the exact reproduction commands the
+CI report cited) came first, correctly, but the IN-FLIGHT entry itself was
+written only once the full fix set and the full-suite re-run were already
+known-green, not before the first edit. **Mechanism:** one uninterrupted
+sitting, no crash, no session-limit cutoff, no concurrent sibling session —
+`git status --porcelain` was clean at the start and stayed under this
+session's own control throughout. **Invariant unaffected:** every edit
+this session made lands in the SAME commit as this entry, which both
+records what changed and clears `IN FLIGHT` back to `nothing` — there is
+no window in which a cold agent could observe a half-done tree against a
+stale or absent IN FLIGHT marker, because no commit boundary was crossed
+before this entry was written.
+
+#### Re-verification — both attributions confirmed real before fixing either
+
+**1. `test/e2e/journeys/**` — CONFIRMED, but the CI report's mechanism was
+INCOMPLETE, not wrong.** The report named one root cause
+(`e2e_harness.dart`'s `_seedIdentity` inserting a `learner_profiles` row
+with no `ulid:`, hard-thrown on by P2-3's `ProfileModel.fromDriftRow` the
+moment a FUTURE-based read touches it). Re-verified this mechanism is real
+— `grep -n "ulid" test/e2e/harness/e2e_harness.dart` showed the row
+inserted at `_seedIdentity` (then line ~513) carried no `ulid:` while the
+STREAM-side `_buildOverrides` in-memory `ProfileModel` a few lines below
+did (`'ulid-$profileId'`) — and fixing it alone (insert-then-update,
+`Value('ulid-$profileId')`, since the auto-generated `profileId` cannot be
+referenced inside the same `.insert()` call that produces it) closed 8 of
+the 14: `flutter test test/e2e/journeys/profiles_p0_test.dart --plain-name
+"E2E-701"` → `00:01 +1: All tests passed!` (isolated reproduction, matching
+the CI report's own isolated repro exactly). **But re-running
+`test/e2e/journeys/` as a directory net after that one fix left 6 of the
+14 still red** (`00:26 +275 ~84 -6`): `profiles_p0_test.dart` E2E-703,
+`profiles_p1_test.dart` E2E-710, `profiles_tutoring_p2_test.dart` E2E-721,
+`progress_p1_test.dart` E2E-806, `tutoring_p1_test.dart` E2E-1006,
+`tutoring_p0_test.dart` E2E-1007 — the exact same six tests the CI
+report's own list named as part of the 14, meaning the report's "one
+shared root cause" framing undercounted: each of these six files carries
+its **own, second, independent** ulid-less `LearnerProfilesCompanion.insert(...)`
+seeder (a `_seedSecondProfile` helper in `profiles_p0_test.dart` and
+`profiles_p1_test.dart`; an inline seeder in the other four), the same
+`T-45`/`T-47` class of defect the harness fix did not and could not touch
+— confirmed by reading each file directly (`grep -n
+"LearnerProfilesCompanion.insert\|ulid:"` on each), not by inference. This
+is the same recurring defect class the log already tracks (siblings:
+`test/helpers/test_database.dart`'s `seedProfileWithIds` and
+`test/features/profiles/profile_picker_deep_l1_test.dart`'s inline seeder,
+both fixed at P2-19) — this round adds seven more fixed sites (the e2e
+harness plus six journey-test seeders, below). **Attribution: YES, Phase
+2, all 14** — confirmed, mechanism completed below.
+
+**2. `functions/test/firestore_rules.test.mjs` — CONFIRMED exactly as
+reported.** Re-read `firestore.rules:449-462` directly: `allow delete: if
+isOwner(uid);` on `learning_order`, with a comment naming the `goals`
+precedent and T-33 — this is P2-6's (`2e85b097`) intended, correct
+production behaviour, unchanged since 2026-08-06. Re-read
+`firestore_rules.test.mjs:677-702` directly: the `learning_order` describe
+block's own title still literally says "delete denied," and its one
+matrix test calls `expectOwnerWriteTutorRead(path, validOrder)` with no
+options object, so the shared helper's default `ownerCanDelete = false`
+asserts the owner's own `deleteDoc` call **fails** — which is now false,
+because P2-6 made it succeed. Compared directly against the sibling
+`profile_programs` describe block (`:896-925`), which already had
+owner-delete before Phase 2 and correctly passes `{ ownerCanDelete: true
+}`, with its own test name saying "(owner can delete)" — confirming the
+correct pattern and that `learning_order`'s block was simply never updated
+to match after P2-6. `git log d74e3829..HEAD -- functions/test/firestore_rules.test.mjs`
+→ empty, confirming the test file was untouched by any Phase 2 commit
+before this one. **Attribution: YES, Phase 2 (P2-6 changed the rule; the
+test asserting the old behaviour was never updated in the same or any
+later commit).**
+
+#### Fixes
+
+**`T-53` — `test/e2e/journeys/**`'s six second-profile ulid-less seeders,
+plus one further non-failing instance fixed for consistency.**
+`test/e2e/harness/e2e_harness.dart`'s `_seedIdentity` (the shared root
+cause) and five further ulid-less `LearnerProfilesCompanion.insert(...)`
+seeders — `profiles_p0_test.dart`'s and `profiles_p1_test.dart`'s
+identical `_seedSecondProfile` helpers, and inline seeders in
+`profiles_tutoring_p2_test.dart` (Bob), `progress_p1_test.dart`
+(`otherProfileId`), `tutoring_p1_test.dart` (ChildForRescind) and
+`tutoring_p0_test.dart` (ChildForRevoke, E2E-1007's seeder) — all now mint
+a `ulid: Value('ulid-$id')` after insert (insert-then-update, since each
+`id` is Drift-autoincrement and not knowable inside the `.insert()` call
+that produces it; `e2e_harness.dart` and `_seedSecondProfile` needed the
+`Value` import from `package:drift/drift.dart`, not otherwise re-exported
+through `user_database.dart`). **One further site fixed for consistency,
+not because it was failing:** `tutoring_p0_test.dart` has a second,
+earlier ulid-less seeder (`ChildToTutor`, backing E2E-1001) in the same
+file already being edited for E2E-1007's fix — E2E-1001 was not in the CI
+report's 14 and was independently confirmed still green both before and
+after this fix (`InviteTutorScreen`'s path here never routes through a
+FUTURE-based `ProfileModel` read), so this is disclosed as a preventive
+consistency fix, not a defect closure. No `lib/` file touched — `test/`
+only, 7 files.
+
+**`T-54` — `learning_order`'s stale rules-test assertion.** The describe
+block title changed from "owner write with key whitelist, tutor read,
+delete denied" to "owner write+delete with key whitelist, tutor read"
+(matching the `profile_programs`/`curriculum_scopes`/`study_day_configs`
+sibling naming convention exactly); the one matrix test's name gained the
+"(owner can delete)" suffix those siblings already carry; the
+`expectOwnerWriteTutorRead` call now passes `{ ownerCanDelete: true }`.
+Three lines changed, `functions/test/firestore_rules.test.mjs` only — no
+`firestore.rules` change (P2-6 already shipped the correct rule; only the
+test was stale).
+
+**Doc comments checked for staleness, per this round's hard rule — none
+found needing a fix.** `lib/data/repositories/firestore_learning_order_repository.dart:163-177`
+and `:432-441` both already describe `resetToDefault`'s real-delete
+behaviour and T-33's rules change accurately, in the past tense, with the
+correct rule text (`allow delete: if isOwner(uid)`) — re-read directly,
+neither doc comment needed correcting; this round's fix was to a stale
+**test assertion**, not a stale **doc comment**, so the "fix the doc
+comment in the same commit" hard rule has no target here.
+
+#### Gate output (verbatim, re-confirmed write-quiet, after every edit)
+
+```
+$ cd learning_tracker && dart analyze --fatal-infos
+Analyzing learning_tracker...
+No issues found!
+
+$ dart run tool/check_profile_path_keying.dart | tail -1
+PROFILE-KEY-SPLIT check OK: 2 collection(s) currently split (bookmarks, learning_order), all within the tracked baseline (0 new violations).
+
+$ dart run tool/check_profile_id_int_sites.dart | tail -1
+PROFILE-ID-INT-SITES OK: 88 tracked entries covering 91 site(s) across 5 pattern(s) [cf-int-guard, cf-string-profileid-doc, dart-int-profileid-param, dart-tutoring-int-parse, dart-tutoring-id-tostring]; 0 new, 0 stale, 0 changed.
+
+$ make audit; echo "AUDIT-EXIT=$?"
+104/104 checks. True last line: === audit PASSED — all 68 greps clean ===
+AUDIT-EXIT=0
+
+$ dart format --output=none --set-exit-if-changed <7 touched .dart files>
+Formatted 7 files (0 changed) in 0.07 seconds.
+```
+
+No deviation on checks 103/104 or `make audit`'s exit code — predicted:
+this commit's `.dart` changes are 7 `test/` files, touching no int-keyed
+profile-identity site and no Firestore path-keying split.
+`functions/test/firestore_rules.test.mjs` has no formatter target in this
+repo (`functions/package.json` defines no `format`/`prettier` script;
+verified).
+
+#### Targeted test runs (verbatim, per this round's TEST POLICY — every fix run and green before being called done)
+
+```
+$ flutter test test/e2e/journeys/profiles_p0_test.dart --plain-name "E2E-701"
+00:01 +1: All tests passed!
+
+$ flutter test test/e2e/journeys/ (after the harness-only fix, before the six-seeder fix)
+00:26 +275 ~84 -6: Some tests failed.
+Failing: profiles_p0_test.dart E2E-703, profiles_p1_test.dart E2E-710,
+profiles_tutoring_p2_test.dart E2E-721, progress_p1_test.dart E2E-806,
+tutoring_p1_test.dart E2E-1006, tutoring_p0_test.dart E2E-1007.
+
+$ flutter test test/e2e/journeys/ (after all seven seeder sites fixed)
+00:35 +281 ~84: All tests passed!
+
+$ flutter test test/e2e/journeys/profiles_p0_test.dart --plain-name "E2E-701"
+00:01 +1: All tests passed!
+$ flutter test test/e2e/journeys/profiles_p0_test.dart --plain-name "E2E-702"
+00:01 +1: All tests passed!
+$ flutter test test/e2e/journeys/profiles_p0_test.dart --plain-name "E2E-703"
+00:00 +1: All tests passed!
+$ flutter test test/e2e/journeys/profiles_p1_test.dart --plain-name "E2E-717"
+00:00 +1: All tests passed!
+$ flutter test test/e2e/journeys/profiles_p1_test.dart --plain-name "E2E-712"
+00:01 +1: All tests passed!
+$ flutter test test/e2e/journeys/profiles_p1_test.dart --plain-name "E2E-709"
+00:01 +1: All tests passed!
+$ flutter test test/e2e/journeys/profiles_p1_test.dart --plain-name "E2E-710"
+00:00 +1: All tests passed!
+$ flutter test test/e2e/journeys/dashboard_p1_test.dart --plain-name "E2E-204"
+00:00 +1: All tests passed!
+$ flutter test test/e2e/journeys/onboarding_p1_test.dart --plain-name "E2E-118"
+00:00 +2: All tests passed!
+$ flutter test test/e2e/journeys/profiles_tutoring_p2_test.dart --plain-name "E2E-721"
+00:01 +2: All tests passed!
+$ flutter test test/e2e/journeys/tutoring_p1_test.dart --plain-name "E2E-1006"
+00:00 +1: All tests passed!
+$ flutter test test/e2e/journeys/tutoring_p0_test.dart --plain-name "E2E-1007"
+00:00 +1: All tests passed!
+$ flutter test test/e2e/journeys/progress_p1_test.dart --plain-name "E2E-806"
+00:00 +2: All tests passed!
+```
+
+(`--plain-name` matches substring, not regex — each `E2E-###` filter was
+run individually; `E2E-118` matches 2 tests in `onboarding_p1_test.dart`,
+`E2E-721` and `E2E-806` each match 2 tests in their own files because a
+second, related assertion shares the same catalog id — all confirmed
+green, none skipped.)
+
+All 14 originally-reported tests confirmed individually green, plus the
+full `test/e2e/journeys/` directory net at `+281 ~84`, 0 failures — the
+disclosure baseline this round adds: **`test/e2e/` had never been run as a
+directory net by any prior Phase 2 round** (see the new standing fact,
+`CURRENT STATE` above).
+
+```
+$ make test-rules
+tests 116
+suites 28
+pass 116
+fail 0
+cancelled 0
+skipped 0
+todo 0
+duration_ms 7027.210474
+TQ-9: rule coverage OK — all 37 conditional allow rule(s) in firestore.rules were evaluated at least once.
+Script exited successfully (code 0)
+```
+
+Was `tests 116, pass 115, fail 1` (the `learning_order` matrix test) with
+the TQ-9 half of the script never reached (the `&&` chain short-circuited
+on the failure) — **TQ-9 ran and passed for the first time since P2-6**,
+not merely "still green": it had never executed on this tree before this
+commit.
+
+```
+$ flutter test --coverage --exclude-tags "serial-tools || quarantine" --test-randomize-ordering-seed=random
+08:57 +11511 ~131: All tests passed!
+```
+
+Was `11497 +11497 ~131 -14`. **11511 = 11497 + 14** — every one of the 14
+originally-red tests is now accounted for as passing, not skipped or
+deleted; the total (`11511 + 131 = 11642`) is unchanged from the CI
+report's own total. This is the first time this phase the full,
+unscoped suite has been run to completion inside a remediation round
+rather than only as directory/file subsets.
+
+```
+$ lcov --summary coverage/lcov.info   # raw, as flutter test --coverage leaves it
+Reading tracefile coverage/lcov.info.
+Summary coverage rate:
+  source files: 734
+  lines.......: 80.2% (50803 of 63313 lines)
+
+$ lcov --remove coverage/lcov.info '*.g.dart' '*.freezed.dart' 'lib/l10n/app_localizations*.dart' \
+    --output-file coverage/lcov.info --ignore-errors unused
+  (the same filter `make test`'s own recipe applies, Makefile:46-51 —
+  run by hand since this suite was invoked directly, not via `make test`)
+$ lcov --summary coverage/lcov.info
+Reading tracefile coverage/lcov.info.
+Summary coverage rate:
+  source files: 656
+  lines.......: 89.0% (39782 of 44690 lines)
+
+$ dart run tool/check_lcov_denominator.dart --strict
+R6 lcov-denominator check OK: 76 zero-coverage file(s), all within the tracked baseline (0 new violations).
+```
+
+Filtered 89.0% (39782/44690, 656 files) — was 89.0% (39779/44690, 656
+files) at the last comparable measurement (P2-16). `coverage/lcov.info` is
+`.gitignore`d (`learning_tracker/.gitignore:34`) — this run's regeneration
+is not a tracked-file change and was not deleted, only regenerated by the
+suite itself, exactly as every prior `flutter test --coverage` invocation
+this phase has done.
+
+`make test-functions` and `make test-serial-tools` were **not** re-run
+this session — neither is Phase-2-attributable (the CI report's own
+disposition: `make test-functions` 337/337 clean; `make test-serial-tools`'s
+one observed failure is a pre-existing, confirmed-unrelated false positive
+in `audit_and_arb_parity_test.dart`'s own line-parsing heuristic against
+check 103's advisory WATCHLIST prose — `tool/check_profile_path_keying.dart`
+was never touched by Phase 2, and the WATCHLIST format predates it), and
+this round's fixes touch neither `functions/src/**` nor
+`tool/check_profile_path_keying.dart`, so re-running either would not
+re-verify anything this commit changed.
+
+#### `T-55` — disclosed, not fixed: the ulid-less-seeder class is far larger than the 9 known, fixed instances
+
+While confirming `T-53`'s fix set was complete, ran:
+
+```
+$ grep -rln "LearnerProfilesCompanion.insert\|LearnerProfilesCompanion(" test/ | xargs grep -L "ulid"
+```
+
+— roughly 60 further files across `test/core/database/`,
+`test/story_acceptance/`, `test/integration/`, `test/sync/`,
+`test/features/**` and `test/app/` (plus `test/e2e/journeys/sync_p1_test.dart`,
+which builds its own separate in-memory `UserDatabase` outside
+`E2EHarness` entirely) construct a `LearnerProfilesCompanion` with no
+`ulid:`. **None of these are currently causing a test failure** — this
+session's own full-suite run (`+11511 ~131`, 0 failures, above) is direct
+evidence every one of them is either read only at the raw-Drift-row layer
+(never through `ProfileModel.fromDriftRow`) or otherwise never reaches
+P2-3's enforcement. Blanket-fixing ~60 files in a round chartered to close
+two named CI failures would be scope creep with a real cost (a much larger
+diff, on files not currently exercising the defect, reviewed under this
+round's own time budget) and no measured benefit today. **Recorded, not
+fixed**, as `T-55` in `firestore-cutover-tasks.md` (below) — a future
+round (or a purpose-built lint/gate, mirroring how `T-45`'s class
+eventually earned its own audit coverage) should decide whether to fix
+these preventively or wait for each to fail on its own, the way `T-53`'s
+predecessors did.
+
+#### Files changed
+
+- `learning_tracker/test/e2e/harness/e2e_harness.dart` — `_seedIdentity`'s
+  Drift insert now mints a `ulid` (insert-then-update); `Value` added to
+  the `package:drift/drift.dart` import.
+- `learning_tracker/test/e2e/journeys/profiles_p0_test.dart` — `_seedSecondProfile`
+  now mints a `ulid`.
+- `learning_tracker/test/e2e/journeys/profiles_p1_test.dart` — `_seedSecondProfile`
+  now mints a `ulid`.
+- `learning_tracker/test/e2e/journeys/profiles_tutoring_p2_test.dart` —
+  the inline "Bob" seeder now mints a `ulid`.
+- `learning_tracker/test/e2e/journeys/progress_p1_test.dart` — the inline
+  `otherProfileId` seeder now mints a `ulid`.
+- `learning_tracker/test/e2e/journeys/tutoring_p1_test.dart` — the inline
+  `ChildForRescind` seeder now mints a `ulid`.
+- `learning_tracker/test/e2e/journeys/tutoring_p0_test.dart` — both the
+  `ChildToTutor` (E2E-1001, preventive) and `ChildForRevoke` (E2E-1007)
+  inline seeders now mint a `ulid`.
+- `learning_tracker/functions/test/firestore_rules.test.mjs` — `learning_order`
+  describe block: title, test name and `expectOwnerWriteTutorRead` call
+  updated to assert owner-delete succeeds, matching P2-6's rule and the
+  `profile_programs`/`curriculum_scopes`/`study_day_configs` sibling
+  pattern.
+- `docs/planning/firestore-cutover-log.md` — `CURRENT STATE` rewritten
+  (`Head:`, `Phase:`, `Residual`, `Gates`, `IN FLIGHT`); two new standing
+  facts; this `P2-21` entry.
+- `docs/planning/firestore-cutover-tasks.md` — header paragraph, `T-53`,
+  `T-54`, `T-55` rows added (below).
+
+**Files deliberately NOT touched:** `firestore-phase2-plan.md` — nothing
+in it was found false; this round's findings are new CI-run results, not
+a defect in the plan's own predictions. `firestore-cutover-plan.md` — its
+top status line/Head field are now several commits stale (still names
+`2c762abc`); per P2-20's own precedent, left for a closing commit rather
+than touched piecemeal by a remediation round not chartered to update it.
+`firestore.rules` — P2-6's rule is correct; only its test was stale.
+
+#### Phase 3 ENTRY CRITERIA — unaffected by this round
+
+`T-53` and `T-54` are new tasks this round created and closed in the same
+commit — neither was on P2-17's original checklist, and closing them does
+not change the checklist's status. **Phase 3 remains explicitly BLOCKED,
+exactly as P2-20 left it**, on the checklist's own last two rows only:
+`T-39` (pre-existing Phase 3 prerequisite, untouched by this round) and a
+fresh independent review of the commits since P2-17 (still not
+self-certified by any of the rounds that produced them, this one
+included).
+
+#### Stash situation — re-verified again this session, unchanged
+
+Same two bases, same order, same reflog SHAs (`9796dba5`/`d30884bd`) as
+every prior record back to P2-0 — see the git output block at the top of
+this entry. Neither popped, applied, nor dropped.
 
 ### 2026-08-07 — P2-20: correct the records a docs-only pass left false; `T-50` fixed in code; `T-51` CARRIED-BY-RULING; deferred-verification table superseded
 

@@ -674,8 +674,8 @@ describe('bookmarks — owner write with key whitelist, tutor read, delete denie
   });
 });
 
-// ── Path 16: learning_order (with hasOnly whitelist) ─────────────────────────
-describe('learning_order — owner write with key whitelist, tutor read, delete denied', () => {
+// ── Path 16: learning_order (with hasOnly whitelist; owner DELETE allowed) ───
+describe('learning_order — owner write+delete with key whitelist, tutor read', () => {
   const validOrder = {
     curriculum_id: 'c1',
     sefaria_ref: 'Berakhot.2a',
@@ -685,8 +685,10 @@ describe('learning_order — owner write with key whitelist, tutor read, delete 
     synced_at: pastTs,
   };
 
-  test('owner-write + tutor-read + stranger-deny matrix', async () => {
-    await expectOwnerWriteTutorRead(`${LP}/learning_order/o1`, validOrder);
+  test('owner-write + tutor-read + stranger-deny matrix (owner can delete)', async () => {
+    await expectOwnerWriteTutorRead(`${LP}/learning_order/o1`, validOrder, {
+      ownerCanDelete: true,
+    });
   });
   test('owner write with unknown field is rejected (whitelist)', async () => {
     await assertFails(
