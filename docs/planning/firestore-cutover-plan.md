@@ -412,8 +412,10 @@ and this round's own commit (P2-24) — neither self-certified.**
 ---
 
 **Historical record, P2-23 (2026-08-07) — kept verbatim below, not
-rewritten, superseded by P2-24 above for `T-56`/`T-57`'s disposition
-only — `T-49`'s closure described below is unaffected and stands.**
+rewritten. P2-24 (above) correctly superseded this for `T-56`/`T-57`'s
+disposition only, saying `T-49`'s closure below was "unaffected and
+stands" — that sentence itself is now superseded by P2-26 (top of this
+section): `T-49`'s closure did NOT stand, reopened a third time.**
 
 **P2-23 supersedes the P2-22 paragraph immediately below (kept as
 history, not rewritten) — without disputing what it correctly found.**
