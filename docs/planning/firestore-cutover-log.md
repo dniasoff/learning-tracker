@@ -962,7 +962,7 @@ below it). Rather than edit blind, re-derived each claim fresh:
   $ flutter test test/tool/audit_and_arb_parity_test.dart --plain-name "prints file:line paths for violations" --concurrency=1
   00:00 +0: loading .../audit_and_arb_parity_test.dart
   00:00 +0: make audit (DNI-389 — Story 27.13 AC1) prints file:line paths for violations
-  01:31 +1: All tests passed!
+  01:27 +1: All tests passed!
   ```
   `git log --oneline -- test/tool/audit_and_arb_parity_test.dart` shows
   `c794cb35` as the only commit since `d1d80e35` (P2-22, which recorded it
