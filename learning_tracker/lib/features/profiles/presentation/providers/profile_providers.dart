@@ -38,8 +38,12 @@ int currentAccountId(Ref ref) {
 /// [ProfileRepositoryImpl] — see that adapter's class doc comment
 /// (`profile_repository_impl.dart`) for why every caller of this provider
 /// (add/edit-profile screens, onboarding, the self-heal path below) now
-/// also mints a Firestore identity for a genuinely new profile and
-/// activates it, with zero changes needed at any of those call sites.
+/// also mints a Firestore identity for a genuinely new profile and writes
+/// its remote document, with zero changes needed at any of those call
+/// sites. **The adapter does NOT activate that identity (T-49, P2-30)** —
+/// activation is [SelectedProfileId.select]'s own job, below, which is why
+/// every one of those same call sites also calls `select()` right after
+/// creation returns.
 // keepAlive: stateless repository facade over the DB, cheap to keep for the app's lifetime.
 @Riverpod(keepAlive: true)
 ProfileRepository profileRepository(Ref ref) {
@@ -82,6 +86,26 @@ class SelectedProfileId extends _$SelectedProfileId {
   /// pass `ulid:` too — every production call site passes it. P2-3: [ulid]
   /// is now `required` — the compiler, not just convention, makes a third
   /// bare call site impossible to write.
+  ///
+  /// **T-49/P2-30: this is now also the activation seam for CREATION, not
+  /// only for switching.** `FirestoreProfileRepositoryAdapter` (three
+  /// hoists across P2-23/P2-28) never closed the race between its own
+  /// activation write and a caller-side await it could not see; P2-30
+  /// deleted that write outright rather than relocating it a fourth time.
+  /// The three creation call sites — `onboarding_profile_creation_step.dart`,
+  /// `add_profile_dialog.dart`, and [AutoSelectedProfileId]'s own self-heal
+  /// branch below — already call this method right after creation returns,
+  /// so nothing new is wired; this method's own synchronous, no-await
+  /// write is simply the ONLY place a newly-created profile's identity now
+  /// activates. When one of those three call sites deliberately declines to
+  /// call this (the widget was unmounted before creation returned; a newer
+  /// selection already won) — nothing activates for that profile, by
+  /// design: an abandoned or superseded creation should not strand
+  /// [activeProfileDocIdProvider] on a profile nothing else agrees with.
+  /// **This method is not the sole writer of [activeProfileDocIdProvider]**
+  /// — [clear] below and [AutoSelectedProfileId]'s own guarded re-affirm
+  /// branch also write it; this is the activation seam for the
+  /// switch/create case, not the only code that ever touches the provider.
   void select(int id, {required String ulid}) {
     state = id;
     ref.read(activeProfileDocIdProvider.notifier).set(ulid);

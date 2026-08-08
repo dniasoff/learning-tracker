@@ -221,21 +221,28 @@ void main() {
   });
 
   // P2-24 (DEFECT 2): creating an ADULT profile must select() it too, not
-  // just a child one. `repo.createProfile` (the real
-  // FirestoreProfileRepositoryAdapter, T-49/P2-23) activates
-  // `activeProfileDocIdProvider` to the NEW profile unconditionally,
-  // whenever a cloud account is active, regardless of mode. Before this
-  // fix, `showAddProfileDialog` only called `select()` — which updates
-  // `selectedProfileIdProvider`, the provider every profile-scoped screen
-  // actually reads — when `created.profileMode.isChild`. Creating an adult
-  // profile therefore left `selectedProfileIdProvider` on the OLD profile
-  // while the 13 profile-scoped Firestore providers re-keyed to the NEW
-  // one: a deterministic mis-key, reachable from `manage_learners_screen`,
+  // just a child one. **Corrected at P2-30: `repo.createProfile` activates
+  // NOTHING (T-49/P2-30) — this dialog's own `select()` call, below, is
+  // the ONLY thing that ever moves `selectedProfileIdProvider` or
+  // `activeProfileDocIdProvider`, for either mode.** At the time this test
+  // was written (P2-24), the real `FirestoreProfileRepositoryAdapter`
+  // activated `activeProfileDocIdProvider` to the NEW profile
+  // unconditionally whenever a cloud account was active (T-49/P2-23), so
+  // gating `select()` on `isChild` alone genuinely split the two
+  // providers on every adult creation — that defect and its fix are
+  // unchanged. Before this fix, `showAddProfileDialog` only called
+  // `select()` — which updates `selectedProfileIdProvider`, the provider
+  // every profile-scoped screen actually reads — when
+  // `created.profileMode.isChild`. Creating an adult profile therefore
+  // left `selectedProfileIdProvider` on the OLD profile while the 13
+  // profile-scoped Firestore providers re-keyed to the NEW one: a
+  // deterministic mis-key, reachable from `manage_learners_screen`,
   // `profile_switcher_sheet`, and `profile_picker_screen`. This test uses
   // the mock repo (like every other test in this file), so it proves only
   // the dialog's own half of the fix — that `select()` now runs
-  // unconditionally on success — not the repo's activation, which
-  // `profile_repository_impl_t49_activation_ordering_test.dart` covers.
+  // unconditionally on success — not the repo's (now nonexistent)
+  // activation, which `profile_repository_impl_t49_activation_ordering_test.dart`'s
+  // CONTROL-1/CONTROL-3 cover.
   testWidgets('DEFECT 2: creating an ADULT profile also updates '
       'selectedProfileIdProvider (not just child profiles)', (tester) async {
     tester.view.physicalSize = const Size(1080, 2340);
@@ -315,13 +322,18 @@ void main() {
       container.read(selectedProfileIdProvider),
       9,
       reason:
-          'DEFECT 2: creating an adult profile left '
+          'DEFECT 2 (P2-24; premise corrected at P2-30): at the time this '
+          'defect was found, creating an adult profile left '
           'selectedProfileIdProvider on the OLD profile (1) while the '
           'repo-level activeProfileDocIdProvider had already moved to '
           'the NEW one (9) — every profile-scoped Firestore provider '
           '(bookmarks, learning_order) would silently read/write the '
-          'new profile\'s tree while every selectedProfileIdProvider-'
-          'keyed screen kept showing the old one.',
+          "new profile's tree while every selectedProfileIdProvider-"
+          'keyed screen kept showing the old one. The repo no longer '
+          'activates anything (T-49/P2-30), so today omitting this call '
+          'would leave BOTH providers on the OLD profile instead — still '
+          'wrong, for a different reason. Either way, select() must run '
+          'unconditionally on success.',
     );
 
     await tester.pump(const Duration(milliseconds: 350));

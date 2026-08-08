@@ -204,11 +204,13 @@ class FirestoreLearnerProfileRepository {
   /// mints the id itself (P2-2). Called from TWO distinct moments (T-40):
   /// genuine first creation, and every later profile ACTIVATION (a heal —
   /// see `FirestoreProfileRepositoryAdapter`'s own class doc comment for
-  /// the full call-path; as of P2-23 both moments share this write via
-  /// that adapter's private `_writeFirestoreProfile`, reached from
-  /// `_ensureFirestoreProfile` for the heal and
-  /// `_activateThenEnsureFirestoreProfile` for creation). Both share this
-  /// ONE method rather than a separate `createProfile`.
+  /// the full call-path; as of P2-30 both moments share this write via
+  /// that adapter's private `_ensureFirestoreProfile` — the ONE Firestore
+  /// write path on that class, reached directly from all three of its
+  /// public methods; a separate `_activateThenEnsureFirestoreProfile` P2-23
+  /// added existed from P2-23 through P2-28 but was deleted, never having
+  /// closed the activation race it existed for, T-49). Both share this ONE
+  /// method rather than a separate `createProfile`.
   ///
   /// **`created_at` is never decided by reading this document — it is
   /// always the caller-supplied [createdAt] (P2-15).** An earlier version

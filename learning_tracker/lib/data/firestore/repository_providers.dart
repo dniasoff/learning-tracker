@@ -31,11 +31,16 @@
 /// "which profile is active" seam, deliberately shaped like
 /// `ActiveAccountId` (`active_account_providers.dart`): a settable
 /// [Notifier] that starts at `null`. **Wired into production.**
-/// [ActiveProfileDocId.set] is called from
-/// `lib/features/profiles/presentation/providers/profile_providers.dart`
-/// (`SelectedProfileId.select`, and profile creation) and from
+/// [ActiveProfileDocId.set] is called ONLY from
+/// `lib/features/profiles/presentation/providers/profile_providers.dart` —
+/// two call sites, `SelectedProfileId.select`/`.clear`, plus
+/// `AutoSelectedProfileId`'s own guarded re-affirm branch. **Not** from
 /// `lib/features/profiles/data/repositories/profile_repository_impl.dart`
-/// — every profile-scoped provider below resolves once one of those call
+/// (T-49, P2-30) — that file's `FirestoreProfileRepositoryAdapter` used to
+/// be a third writer (P2-23 through P2-28) but never closed the race that
+/// motivated it; the write was deleted rather than relocated a fourth
+/// time, so `profile_providers.dart` is now this provider's only writer —
+/// every profile-scoped provider below resolves once one of ITS call
 /// sites has run.
 ///
 /// **Not `.autoDispose`.** [activeAccountFirebaseProvider] and
@@ -198,10 +203,12 @@ final firestoreAccountRepositoryProvider =
 /// provider's OWN default retry still turned a fast upstream failure into
 /// another ~38+-second stall before `.future` — what
 /// `FirestoreProfileRepositoryAdapter._resolveFirestoreProfileRepo` awaits
-/// (the shared resolution point behind both `_ensureFirestoreProfile` and
-/// `_activateThenEnsureFirestoreProfile` as of P2-23; the same `await`
-/// lived directly inside `_ensureFirestoreProfile` at the time of this
-/// reproduction) — finally settled. Confirmed by reproduction: with only the upstream fix,
+/// (`_ensureFirestoreProfile`'s single resolution point as of P2-30 — a
+/// sibling method, `_activateThenEnsureFirestoreProfile`, shared it from
+/// P2-23 through P2-28 but was deleted, never having closed the race it
+/// existed for, T-49; the same `await` lived directly inside
+/// `_ensureFirestoreProfile` at the time of this reproduction) — finally
+/// settled. Confirmed by reproduction: with only the upstream fix,
 /// `profile_repository_impl_test.dart`'s "does not propagate out of
 /// createProfile" test still hung to its 2-minute timeout, now reporting
 /// disposal of THIS provider instead. Every other provider in this file

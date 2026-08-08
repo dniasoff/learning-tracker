@@ -1,10 +1,41 @@
-/// T-49 (P2-18 partial, P2-23 partial, P2-28 complete): a late-settling
-/// `activeProfileDocIdProvider` write must never re-point it at a profile
-/// that is no longer the one selected — for ALL THREE
-/// `_ensureFirestoreProfile`-family callers, across BOTH of
-/// `_activateThenEnsureFirestoreProfile`'s awaits. Six cases total (the
-/// `R5-A`..`R5-F` matrix a round-5 review reproduced by execution and
-/// preserved as a throwaway probe; made permanent here).
+/// T-49 (P2-18 partial, P2-23 partial, P2-28 partial, P2-30 REMOVAL): four
+/// rounds hoisted the repository's own activation write progressively
+/// earlier, each time answering "is this write above the awaits I can see
+/// FROM INSIDE THIS METHOD?" — and each time a caller-side await the
+/// method's own body could not see was still sitting between "decide to
+/// activate" and "activate." **The question that actually terminates is
+/// "does this path perform this write at all?"** P2-30 answers it: the
+/// repository never writes `activeProfileDocIdProvider`, on any of its
+/// three public methods, full stop. GROUPs 1 and 2 below (six cases, P2-23/
+/// P2-28) are kept verbatim as regression guards for the two await
+/// boundaries those rounds each believed, wrongly, that they had closed.
+/// **GROUP 3 (P2-30) adds the THIRD boundary — the one all three prior
+/// rounds missed because it lives in the CALLER, not in
+/// `_activateThenEnsureFirestoreProfile`'s own body:** the `await`s inside
+/// `ProfileRepositoryImpl.createProfile`/`.ensureDefaultProfile` themselves
+/// (Drift round-trips, then a durable-outbox enqueue or, in a tutored
+/// session, a real Cloud Function RPC via
+/// `TutoredWriteRouter.pushLearnerProfile`) — that run BEFORE
+/// `FirestoreProfileRepositoryAdapter.createProfile`/`.ensureDefaultProfile`
+/// ever reach the (now-deleted) activation write. GROUP 1/2's own
+/// containers construct `ProfileRepositoryImpl(db)` with **no**
+/// `syncEngine`, which is exactly why they are structurally blind to this
+/// boundary — there is no awaited collaborator there to gate.
+///
+/// **Why GROUPs 1/2's six cases still pass, and why that is not vacuous.**
+/// After removal, `activeProfileDocIdProvider` cannot be re-pointed by
+/// ANY of the three boundaries, because there is no write left to race —
+/// every one of the nine race cases (GROUPs 1–3) is now **structurally**
+/// true, not decided by timing. That is the point of the fix, and also a
+/// hazard for this test file: a case that cannot fail is not proof the
+/// fix works, only proof it cannot be observed failing THIS way. The five
+/// CONTROLS at the bottom of this file carry the load GROUPs 1–3 no longer
+/// can — CONTROL-1/2 are the actual behavioural pin (a fully-ready,
+/// non-racing create still leaves `activeProfileDocIdProvider` null),
+/// CONTROL-3 proves that pin isn't green because activation is broken
+/// everywhere, CONTROL-4 is a source-scan that fails the moment anyone
+/// re-adds the write regardless of which method it lands in, and CONTROL-5
+/// pins `T-64`'s local-born case as a decision.
 ///
 /// **Why this file exists, and why it does not just extend
 /// `profile_activation_heal_race_test.dart`.** That file proves T-49 closed
@@ -60,6 +91,7 @@
 library;
 
 import 'dart:async';
+import 'dart:io';
 
 import 'package:drift/drift.dart' show Value;
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
@@ -68,9 +100,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/core/sync/sync_write_facade.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
+import 'package:learning_tracker/data/firestore/account_firebase.dart'
+    show AccountNotAuthenticatedException;
 import 'package:learning_tracker/data/firestore/active_account_providers.dart'
-    show activeAccountIdProvider;
+    show activeAccountFirebaseProvider, activeAccountIdProvider;
 import 'package:learning_tracker/data/firestore/repository_providers.dart'
     show activeProfileDocIdProvider, firestoreLearnerProfileRepositoryProvider;
 import 'package:learning_tracker/data/repositories/firestore_learner_profile_repository.dart';
@@ -79,8 +114,16 @@ import 'package:learning_tracker/features/account/presentation/providers/auth_st
 import 'package:learning_tracker/features/profiles/data/repositories/profile_repository_impl.dart';
 import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
+import 'package:mocktail/mocktail.dart';
 
 import '../../../../helpers/test_database.dart';
+
+/// The real seam `ProfileRepositoryImpl.createProfile`/`.ensureDefaultProfile`
+/// already await in production (`:198`/`:451` as of this round) — mocked
+/// here so GROUP 3 can gate it without subclassing either class under test.
+/// Mirrors `clear_overdue_button_test.dart`'s `_MockSyncWriteFacade` (same
+/// shape, different test).
+class _MockSyncWriteFacade extends Mock implements SyncWriteFacade {}
 
 /// Wraps a real [FirestoreLearnerProfileRepository] (backed by a
 /// [FakeFirebaseFirestore], so [ensureProfile]'s write really happens) and
@@ -751,6 +794,622 @@ void main() {
         reason:
             'T-49 (ensureRemoteProfile, RESOLUTION await): must stay fixed — '
             'this caller never activates the provider at all (P2-18).',
+      );
+    },
+  );
+
+  // ══ GROUP 3 (P2-30): the DRIFT+PUSH await boundary — INSIDE THE CALLER
+  // (`ProfileRepositoryImpl.createProfile`/`.ensureDefaultProfile`
+  // themselves), not inside the deleted `_activateThenEnsureFirestoreProfile`.
+  // The boundary all three prior rounds (P2-18/P2-23/P2-28) missed. Zero
+  // subclassing of either class under test: `ProfileRepositoryImpl(db,
+  // syncEngine: facade)` is wired exactly as `profile_providers.dart:48`
+  // wires it in production; the ONLY injected delay is on
+  // `SyncWriteFacade.pushLearnerProfile`, the collaborator
+  // `ProfileRepositoryImpl.createProfile`/`.ensureDefaultProfile` already
+  // await in production. ══
+
+  test('T-49 (createProfile, DRIFT+PUSH await — P30-G): a slow '
+      'SyncWriteFacade.pushLearnerProfile does not activate '
+      'activeProfileDocIdProvider — the repository is not a writer of this '
+      'provider on any path (P2-30)', () async {
+    final db = createTestDatabase();
+    addTearDown(db.close);
+    final accountId = await seedAccount(db);
+    const ulidB = 'ulid-p30g-b';
+    final idB = await db
+        .into(db.learnerProfiles)
+        .insert(
+          LearnerProfilesCompanion.insert(
+            accountId: accountId,
+            displayName: 'Profile B',
+            mode: 'adult',
+            createdAt: DateTimeFactory.nowUtc(),
+            updatedAt: DateTimeFactory.nowUtc(),
+            ulid: const Value(ulidB),
+          ),
+        );
+
+    final firestore = FakeFirebaseFirestore();
+    const ulidC = 'ulid-p30g-c';
+    final repo = FirestoreLearnerProfileRepository(
+      firestore: firestore,
+      uid: uid,
+    );
+    final pushGate = Completer<void>();
+    final facade = _MockSyncWriteFacade();
+    when(() => facade.pushLearnerProfile(any())).thenAnswer((_) async {
+      await pushGate.future;
+    });
+
+    final container = ProviderContainer(
+      overrides: [
+        userDatabaseProvider.overrideWithValue(db),
+        authStateProvider.overrideWithValue(const AuthState.initializing()),
+        firestoreLearnerProfileRepositoryProvider.overrideWith(
+          (ref) async => repo,
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+    container.read(activeAccountIdProvider.notifier).set('device-acct-1');
+    final adapter = buildAdapter(
+      container,
+      ProfileRepositoryImpl(db, syncEngine: facade),
+    );
+
+    final createFuture = adapter.createProfile(
+      accountId: accountId,
+      displayName: 'Profile C',
+      mode: 'adult',
+      ulid: ulidC,
+    );
+
+    await pumpEventQueue();
+
+    // Sanity 1: the gate is genuinely shut at the interleave.
+    expect(pushGate.isCompleted, isFalse);
+    // Sanity 2: the operation genuinely had not completed.
+    var done = false;
+    unawaited(createFuture.then((_) => done = true));
+    await pumpEventQueue();
+    expect(done, isFalse);
+
+    // The create flow was abandoned; the user is really on B.
+    container.read(selectedProfileIdProvider.notifier).select(idB, ulid: ulidB);
+    expect(
+      container.read(activeProfileDocIdProvider),
+      ulidB,
+      reason: "sanity: still B while C's push is in flight",
+    );
+
+    pushGate.complete();
+    final created = await createFuture;
+    await pumpEventQueue();
+
+    // Sanity 3: the gated collaborator was genuinely reached.
+    verify(() => facade.pushLearnerProfile(any())).called(1);
+
+    // Sanity 4: the remote document genuinely landed.
+    final docC = await firestore
+        .collection('users')
+        .doc(uid)
+        .collection('learner_profiles')
+        .doc(ulidC)
+        .get();
+    expect(
+      docC.exists,
+      isTrue,
+      reason:
+          "sanity: C's create must have actually completed and written its "
+          'document — otherwise this test would pass for the wrong reason',
+    );
+
+    // Sanity 5: the competing selection genuinely is the current one.
+    expect(container.read(selectedProfileIdProvider), idB);
+
+    // Sanity 6: the profile genuinely exists locally.
+    expect(
+      await ProfileRepositoryImpl(db).getProfileById(created.id),
+      isNotNull,
+    );
+
+    expect(
+      container.read(activeProfileDocIdProvider),
+      ulidB,
+      reason:
+          'T-49 (createProfile, DRIFT+PUSH await): activeProfileDocIdProvider '
+          'must stay on the CURRENTLY selected profile (B). This is the '
+          'boundary all three prior rounds (P2-18/P2-23/P2-28) missed — it '
+          "lives in the CALLER's own await, not inside the activation "
+          'method each of them hoisted the write within.',
+    );
+  });
+
+  test('T-49 (ensureDefaultProfile, DRIFT+PUSH await — P30-H): a slow '
+      'SyncWriteFacade.pushLearnerProfile during the self-heal branch does '
+      'not activate activeProfileDocIdProvider', () async {
+    final db = createTestDatabase();
+    addTearDown(db.close);
+    final accountIdB = await seedAccount(db);
+    const ulidB = 'ulid-p30h-b';
+    final idB = await db
+        .into(db.learnerProfiles)
+        .insert(
+          LearnerProfilesCompanion.insert(
+            accountId: accountIdB,
+            displayName: 'Profile B',
+            mode: 'adult',
+            createdAt: DateTimeFactory.nowUtc(),
+            updatedAt: DateTimeFactory.nowUtc(),
+            ulid: const Value(ulidB),
+          ),
+        );
+    final selfHealAccountId = await seedAccount2(db);
+    expect(
+      await db.profileDao.getProfilesByAccount(selfHealAccountId),
+      isEmpty,
+      reason:
+          'sanity: the self-heal account must start with zero rows so '
+          'ensureDefaultProfile takes the self-heal branch, not the fast '
+          'path',
+    );
+
+    final firestore = FakeFirebaseFirestore();
+    const ulidD = 'ulid-p30h-d';
+    final repo = FirestoreLearnerProfileRepository(
+      firestore: firestore,
+      uid: uid,
+    );
+    final pushGate = Completer<void>();
+    final facade = _MockSyncWriteFacade();
+    when(() => facade.pushLearnerProfile(any())).thenAnswer((_) async {
+      await pushGate.future;
+    });
+
+    final container = ProviderContainer(
+      overrides: [
+        userDatabaseProvider.overrideWithValue(db),
+        authStateProvider.overrideWithValue(const AuthState.initializing()),
+        firestoreLearnerProfileRepositoryProvider.overrideWith(
+          (ref) async => repo,
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+    container.read(activeAccountIdProvider.notifier).set('device-acct-1');
+    final adapter = buildAdapter(
+      container,
+      ProfileRepositoryImpl(db, syncEngine: facade),
+    );
+
+    final ensureDefaultFuture = adapter.ensureDefaultProfile(
+      accountId: selfHealAccountId,
+      defaultDisplayName: 'Healed D',
+      ulid: ulidD,
+    );
+
+    await pumpEventQueue();
+
+    expect(pushGate.isCompleted, isFalse);
+    var done = false;
+    unawaited(ensureDefaultFuture.then((_) => done = true));
+    await pumpEventQueue();
+    expect(done, isFalse);
+
+    container.read(selectedProfileIdProvider.notifier).select(idB, ulid: ulidB);
+    expect(
+      container.read(activeProfileDocIdProvider),
+      ulidB,
+      reason: "sanity: still B while D's push is in flight",
+    );
+
+    pushGate.complete();
+    final healedId = await ensureDefaultFuture;
+    await pumpEventQueue();
+
+    verify(() => facade.pushLearnerProfile(any())).called(1);
+
+    final docD = await firestore
+        .collection('users')
+        .doc(uid)
+        .collection('learner_profiles')
+        .doc(ulidD)
+        .get();
+    expect(
+      docD.exists,
+      isTrue,
+      reason:
+          "sanity: D's self-heal create must have actually completed and "
+          'written its document',
+    );
+
+    expect(container.read(selectedProfileIdProvider), idB);
+    expect(healedId, isNot(idB));
+    expect(await ProfileRepositoryImpl(db).getProfileById(healedId), isNotNull);
+
+    expect(
+      container.read(activeProfileDocIdProvider),
+      ulidB,
+      reason:
+          'T-49 (ensureDefaultProfile, DRIFT+PUSH await): '
+          'activeProfileDocIdProvider must stay on the CURRENTLY selected '
+          "profile (B), not the self-healed account's brand new profile "
+          '(D). This is the boundary all three prior rounds missed.',
+    );
+  });
+
+  test('T-49 (ensureRemoteProfile, DRIFT+PUSH await — P30-I, regression '
+      'guard): even with a production-shaped SyncWriteFacade wired in, '
+      'ensureRemoteProfile never touches it and never activates — '
+      'structurally immune to this boundary too, proven so all three '
+      'callers are covered at all three boundaries', () async {
+    final db = createTestDatabase();
+    addTearDown(db.close);
+    final accountId = await seedAccount(db);
+    const ulidA = 'ulid-p30i-a';
+    const ulidB = 'ulid-p30i-b';
+    final idA = await db
+        .into(db.learnerProfiles)
+        .insert(
+          LearnerProfilesCompanion.insert(
+            accountId: accountId,
+            displayName: 'Profile A',
+            mode: 'adult',
+            createdAt: DateTimeFactory.nowUtc(),
+            updatedAt: DateTimeFactory.nowUtc(),
+            ulid: const Value(ulidA),
+          ),
+        );
+    final idB = await db
+        .into(db.learnerProfiles)
+        .insert(
+          LearnerProfilesCompanion.insert(
+            accountId: accountId,
+            displayName: 'Profile B',
+            mode: 'adult',
+            createdAt: DateTimeFactory.nowUtc(),
+            updatedAt: DateTimeFactory.nowUtc(),
+            ulid: const Value(ulidB),
+          ),
+        );
+
+    final firestore = FakeFirebaseFirestore();
+    final releaseA = Completer<void>();
+    final delayableRepo = _DelayableFirestoreLearnerProfileRepository(
+      firestore: firestore,
+      uid: uid,
+      delayedProfileId: ulidA,
+      releaseGate: releaseA,
+    );
+    final facade = _MockSyncWriteFacade();
+    when(() => facade.pushLearnerProfile(any())).thenAnswer((_) async {});
+
+    final container = ProviderContainer(
+      overrides: [
+        userDatabaseProvider.overrideWithValue(db),
+        authStateProvider.overrideWithValue(const AuthState.initializing()),
+        firestoreLearnerProfileRepositoryProvider.overrideWith(
+          (ref) async => delayableRepo,
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+    container.read(activeAccountIdProvider.notifier).set('device-acct-1');
+    final adapter = buildAdapter(
+      container,
+      ProfileRepositoryImpl(db, syncEngine: facade),
+    );
+
+    container.read(selectedProfileIdProvider.notifier).select(idA, ulid: ulidA);
+    expect(container.read(activeProfileDocIdProvider), ulidA);
+
+    unawaited(adapter.ensureRemoteProfile(idA));
+    await pumpEventQueue();
+
+    container.read(selectedProfileIdProvider.notifier).select(idB, ulid: ulidB);
+    expect(container.read(activeProfileDocIdProvider), ulidB);
+
+    releaseA.complete();
+    await pumpEventQueue();
+
+    final docA = await firestore
+        .collection('users')
+        .doc(uid)
+        .collection('learner_profiles')
+        .doc(ulidA)
+        .get();
+    expect(docA.exists, isTrue, reason: "sanity: A's delayed heal DID land");
+
+    verifyNever(() => facade.pushLearnerProfile(any()));
+
+    expect(
+      container.read(activeProfileDocIdProvider),
+      ulidB,
+      reason:
+          'T-49 (ensureRemoteProfile, DRIFT+PUSH await): must stay fixed '
+          '— this caller never activates and never touches '
+          'SyncWriteFacade at all (P2-18/P2-30).',
+    );
+  });
+
+  // ══ CONTROLS (P2-30) — under this design the nine race cases above
+  // become STRUCTURALLY true (the repository has no write, so "stays on
+  // B" cannot fail). These five controls are what stop that from passing
+  // for the wrong reason. ══
+
+  test('CONTROL-1 (T-49/P2-30 behavioural pin, negative): a fully-ready, '
+      'non-racing createProfile leaves activeProfileDocIdProvider NULL — '
+      'the single assertion that goes RED the moment anyone reintroduces '
+      'the write', () async {
+    final db = createTestDatabase();
+    addTearDown(db.close);
+    final accountId = await seedAccount(db);
+
+    final firestore = FakeFirebaseFirestore();
+    final repo = FirestoreLearnerProfileRepository(
+      firestore: firestore,
+      uid: uid,
+    );
+
+    final container = ProviderContainer(
+      overrides: [
+        userDatabaseProvider.overrideWithValue(db),
+        authStateProvider.overrideWithValue(const AuthState.initializing()),
+        firestoreLearnerProfileRepositoryProvider.overrideWith(
+          (ref) async => repo,
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+    container.read(activeAccountIdProvider.notifier).set('device-acct-1');
+    final adapter = buildAdapter(container, ProfileRepositoryImpl(db));
+
+    final created = await adapter.createProfile(
+      accountId: accountId,
+      displayName: 'Devorah',
+      mode: 'adult',
+    );
+
+    expect(
+      container.read(activeProfileDocIdProvider),
+      isNull,
+      reason:
+          'T-49/P2-30: the repository is not a writer of '
+          'activeProfileDocIdProvider — select() is.',
+    );
+    expect(created.ulid, isNotEmpty);
+    final reread = await ProfileRepositoryImpl(db).getProfileById(created.id);
+    expect(reread?.ulid, created.ulid);
+
+    final doc = await firestore
+        .collection('users')
+        .doc(uid)
+        .collection('learner_profiles')
+        .doc(created.ulid)
+        .get();
+    expect(doc.exists, isTrue);
+  });
+
+  test('CONTROL-2 (T-49/P2-30 behavioural pin, ensureDefaultProfile): a '
+      'fully-ready, non-racing self-heal leaves activeProfileDocIdProvider '
+      'NULL too', () async {
+    final db = createTestDatabase();
+    addTearDown(db.close);
+    final selfHealAccountId = await seedAccount2(db);
+    expect(
+      await db.profileDao.getProfilesByAccount(selfHealAccountId),
+      isEmpty,
+      reason:
+          'sanity: must start with zero rows so ensureDefaultProfile '
+          'takes the self-heal branch',
+    );
+
+    final firestore = FakeFirebaseFirestore();
+    final repo = FirestoreLearnerProfileRepository(
+      firestore: firestore,
+      uid: uid,
+    );
+
+    final container = ProviderContainer(
+      overrides: [
+        userDatabaseProvider.overrideWithValue(db),
+        authStateProvider.overrideWithValue(const AuthState.initializing()),
+        firestoreLearnerProfileRepositoryProvider.overrideWith(
+          (ref) async => repo,
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+    container.read(activeAccountIdProvider.notifier).set('device-acct-1');
+    final adapter = buildAdapter(container, ProfileRepositoryImpl(db));
+
+    final healedId = await adapter.ensureDefaultProfile(
+      accountId: selfHealAccountId,
+      defaultDisplayName: 'Healed',
+    );
+
+    expect(
+      container.read(activeProfileDocIdProvider),
+      isNull,
+      reason:
+          'T-49/P2-30: the repository is not a writer of '
+          'activeProfileDocIdProvider — select() is.',
+    );
+    final healed = await ProfileRepositoryImpl(db).getProfileById(healedId);
+    expect(healed, isNotNull);
+    expect(healed!.ulid, isNotEmpty);
+
+    final doc = await firestore
+        .collection('users')
+        .doc(uid)
+        .collection('learner_profiles')
+        .doc(healed.ulid)
+        .get();
+    expect(doc.exists, isTrue);
+  });
+
+  test(
+    'CONTROL-3 (positive control): select() DOES activate — proves '
+    'CONTROL-1/2 are not green because activation is broken everywhere',
+    () async {
+      final db = createTestDatabase();
+      addTearDown(db.close);
+      final accountId = await seedAccount(db);
+
+      final firestore = FakeFirebaseFirestore();
+      final repo = FirestoreLearnerProfileRepository(
+        firestore: firestore,
+        uid: uid,
+      );
+
+      final container = ProviderContainer(
+        overrides: [
+          userDatabaseProvider.overrideWithValue(db),
+          authStateProvider.overrideWithValue(const AuthState.initializing()),
+          firestoreLearnerProfileRepositoryProvider.overrideWith(
+            (ref) async => repo,
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      container.read(activeAccountIdProvider.notifier).set('device-acct-1');
+      final adapter = buildAdapter(container, ProfileRepositoryImpl(db));
+
+      // Deliberately NOT asserting activeProfileDocIdProvider's state here
+      // — that is CONTROL-1's job. This control must hold regardless of
+      // whether the repository itself activates (revert-proof: it stays
+      // GREEN even against the pre-P2-30 tree), so it only asserts what
+      // `select()` guarantees.
+      final created = await adapter.createProfile(
+        accountId: accountId,
+        displayName: 'Positive Control',
+        mode: 'adult',
+      );
+
+      container
+          .read(selectedProfileIdProvider.notifier)
+          .select(created.id, ulid: created.ulid);
+
+      expect(
+        container.read(activeProfileDocIdProvider),
+        created.ulid,
+        reason:
+            'CONTROL-3: select() activates correctly — CONTROL-1/2 are '
+            'green because the repository never writes this provider, not '
+            'because activation is broken app-wide.',
+      );
+    },
+  );
+
+  test('CONTROL-4 (structural gate): activeProfileDocIdProvider.notifier) '
+      'write sites in lib/**.dart appear ONLY in profile_providers.dart '
+      '(T-49/P2-30) — the check that makes a fifth reopening structurally '
+      'impossible, not just another dynamic race case', () {
+    // Run from learning_tracker/ — the convention every audit check and
+    // source-scanning test in this repo assumes
+    // (tool/check_profile_path_keying.dart and siblings).
+    final libDir = Directory('lib');
+    expect(
+      libDir.existsSync(),
+      isTrue,
+      reason:
+          'expected to run from learning_tracker/ (cwd = '
+          '${Directory.current.path})',
+    );
+
+    // `activeProfileDocIdProvider.notifier)` directly followed (allowing
+    // whitespace/line-breaks, e.g. a chained `.read(...)\n  .set(...)`)
+    // by `.set(` — matches a real call site. Full-line comments (`//` or
+    // `///`, including this file's own and repository_providers.dart's
+    // library doc comment, which quotes the exact call shape in prose)
+    // are stripped first so a doc-comment MENTION of the pattern is not
+    // mistaken for a write SITE.
+    final writeCallPattern = RegExp(
+      r'activeProfileDocIdProvider\.notifier\)[\s\S]{0,40}?\.set\(',
+    );
+
+    final dartFiles =
+        libDir
+            .listSync(recursive: true)
+            .whereType<File>()
+            .where((f) => f.path.endsWith('.dart'))
+            .toList()
+          ..sort((a, b) => a.path.compareTo(b.path));
+    expect(
+      dartFiles,
+      isNotEmpty,
+      reason: 'expected to find .dart files under lib/',
+    );
+
+    final filesWithWriteSites = <String>{};
+    for (final file in dartFiles) {
+      final lines = file.readAsStringSync().split('\n');
+      final codeOnly = lines
+          .where((l) => !l.trim().startsWith('//'))
+          .join('\n');
+      if (writeCallPattern.hasMatch(codeOnly)) {
+        filesWithWriteSites.add(file.path.replaceAll(r'\', '/'));
+      }
+    }
+
+    expect(
+      filesWithWriteSites,
+      {'lib/features/profiles/presentation/providers/profile_providers.dart'},
+      reason:
+          'T-49/P2-30: activeProfileDocIdProvider must be written ONLY '
+          'from profile_providers.dart (SelectedProfileId.select/.clear, '
+          "AutoSelectedProfileId's guarded re-affirm). A write site found "
+          'anywhere else — most likely a reintroduced activation inside '
+          'FirestoreProfileRepositoryAdapter — is exactly the regression '
+          'four prior rounds each produced. Found: $filesWithWriteSites',
+    );
+  });
+
+  test(
+    'CONTROL-5 (T-64, local-born case pinned): createProfile still '
+    'succeeds locally (offline-first) when activeAccountIdProvider is set '
+    'but activeAccountFirebaseProvider has no authenticated session to '
+    'resolve — the credential-less signup shape (signup_screen.dart:226 '
+    'before :231) — and activeProfileDocIdProvider stays null throughout',
+    () async {
+      final db = createTestDatabase();
+      addTearDown(db.close);
+      final accountId = await seedAccount(db);
+
+      final container = ProviderContainer(
+        overrides: [
+          userDatabaseProvider.overrideWithValue(db),
+          authStateProvider.overrideWithValue(const AuthState.initializing()),
+          activeAccountFirebaseProvider.overrideWith(
+            (ref) async =>
+                throw const AccountNotAuthenticatedException('device-acct-1'),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      // The local-born case: an id IS active (signup sets it before any
+      // authenticated Firebase session necessarily exists), but there is
+      // no session to resolve it to.
+      container.read(activeAccountIdProvider.notifier).set('device-acct-1');
+      final adapter = buildAdapter(container, ProfileRepositoryImpl(db));
+
+      final created = await adapter.createProfile(
+        accountId: accountId,
+        displayName: 'Local Born',
+        mode: 'adult',
+      );
+
+      expect(created.displayName, 'Local Born');
+      expect(
+        container.read(activeProfileDocIdProvider),
+        isNull,
+        reason:
+            'T-64 (P2-30): the repository never writes '
+            'activeProfileDocIdProvider on ANY path, so the local-born '
+            'case needs no special-cased gate to stay unset — it stays '
+            'unset the same way the fully-ready case does (CONTROL-1): '
+            'because there is no write to gate.',
       );
     },
   );

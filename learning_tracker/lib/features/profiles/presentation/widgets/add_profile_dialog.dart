@@ -262,16 +262,19 @@ Future<ProfileModel?> showAddProfileDialog(
     );
     if (context.mounted) ref.invalidate(profileListProvider);
     // P2-24: select() runs for EVERY newly-created profile, not just child
-    // ones. `repo.createProfile` above already activates
-    // `activeProfileDocIdProvider` to `created.ulid` unconditionally,
-    // whenever a cloud account is active (T-49, P2-23) — regardless of
-    // mode. Gating `select()` on `isChild` alone left `selectedProfileIdProvider`
-    // (and therefore every profile-scoped screen: bookmarks, learning_order)
-    // pointed at the OLD profile while the 13 profile-scoped Firestore
-    // providers (`_watchActiveAccountAndProfile`,
-    // `repository_providers.dart`) re-keyed to the NEW one on every adult
-    // profile creation — a deterministic mis-key, not a race. This matches
-    // every other creation call site in the app
+    // ones. **`repo.createProfile` above activates NOTHING (T-49, P2-30) —
+    // this `select()` call is the ONLY thing that moves either
+    // `selectedProfileIdProvider` or `activeProfileDocIdProvider`, for
+    // either mode.** That is exactly WHY it must run unconditionally: P2-24's
+    // conclusion (gating on `isChild` alone was wrong) is unchanged, but its
+    // premise (P2-23's repo-side activation) is inverted — the repo used to
+    // activate `activeProfileDocIdProvider` unconditionally while this
+    // `select()` call, gated on `isChild`, moved `selectedProfileIdProvider`
+    // only for a child profile, splitting the two providers on every adult
+    // creation; P2-30 removed the repo-side write entirely, so today,
+    // omitting this call for an adult profile would leave BOTH providers on
+    // the OLD profile instead — still wrong, for a different reason. This
+    // matches every other creation call site in the app
     // (`onboarding_profile_creation_step.dart`, `AutoSelectedProfileId`'s
     // self-heal branch), which already select() the profile they just
     // created regardless of mode.

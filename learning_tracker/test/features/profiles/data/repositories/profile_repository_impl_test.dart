@@ -1021,8 +1021,18 @@ void main() {
         await localDb.close();
       });
 
-      test('createProfile still succeeds locally (offline-first) and leaves '
-          'activeProfileDocIdProvider unset', () async {
+      // T-49/P2-30: these two tests still pass, but for a DIFFERENT reason
+      // than before this round — previously the readiness gate declined to
+      // write (no active account); now the repository never writes
+      // `activeProfileDocIdProvider` on any path, ready or not (see the
+      // "ready" group's own test, above, and CONTROL-1/2 in
+      // `profile_repository_impl_t49_activation_ordering_test.dart`).
+      // Kept, not deleted — they now pin the LOCAL-BORN case specifically
+      // (no active account at all), distinct from CONTROL-5's "account
+      // active but unauthenticated" case.
+      test('createProfile still succeeds locally (offline-first) with no '
+          'active account, and leaves activeProfileDocIdProvider unset '
+          '(no writer, not a declined gate)', () async {
         final profile = await adapter.createProfile(
           accountId: 1,
           displayName: 'Yosef',
@@ -1033,8 +1043,9 @@ void main() {
         expect(container.read(activeProfileDocIdProvider), isNull);
       });
 
-      test('ensureDefaultProfile still self-heals locally and leaves '
-          'activeProfileDocIdProvider unset', () async {
+      test('ensureDefaultProfile still self-heals locally with no active '
+          'account, and leaves activeProfileDocIdProvider unset (no '
+          'writer, not a declined gate)', () async {
         final id = await adapter.ensureDefaultProfile(
           accountId: 1,
           defaultDisplayName: 'Healed',
@@ -1072,17 +1083,17 @@ void main() {
             ),
           ],
         );
-        // P2-28 (T-49): production only ever reaches
-        // `_activateThenEnsureFirestoreProfile` after a real sign-in/sign-up
-        // flow has already called `activeAccountIdProvider.notifier.set(...)`
-        // (see that provider's own doc comment, "wired into production") —
-        // the activation write's readiness gate now reads THIS provider
-        // synchronously, not `activeAccountFirebaseProvider`'s async
-        // resolution (see `_activateThenEnsureFirestoreProfile`'s doc
-        // comment for why). Set it here so this "ready" group's container
-        // matches what a real active-account session looks like, exactly as
+        // T-49/P2-30: this provider is no longer load-bearing for the
+        // adapter itself — the adapter never reads `activeAccountIdProvider`
+        // on any path since the P2-28-era readiness gate (and the write it
+        // guarded) was deleted, not re-guarded. Set it anyway so this
+        // "ready" group's container still matches what a real
+        // active-account session looks like end-to-end (production always
+        // sets it via sign-in/sign-up before any profile creation, see that
+        // provider's own doc comment, "wired into production"), and so it
+        // stays consistent with
         // `profile_repository_impl_t49_activation_ordering_test.dart`'s
-        // containers already do.
+        // containers.
         container.read(activeAccountIdProvider.notifier).set('device-acct-1');
         adapter = buildAdapter(container, ProfileRepositoryImpl(localDb));
       });
@@ -1092,31 +1103,38 @@ void main() {
         await localDb.close();
       });
 
-      test('createProfile mints a Firestore doc, activates it, and '
-          'PERSISTS the ULID onto the Drift row (survives beyond this '
-          'adapter instance)', () async {
+      test('createProfile mints a Firestore doc and PERSISTS the ULID onto '
+          'the Drift row (survives beyond this adapter instance) — but '
+          'does NOT activate it (T-49/P2-30)', () async {
         final profile = await adapter.createProfile(
           accountId: 1,
           displayName: 'Devorah',
           mode: 'adult',
         );
 
-        final activeUlid = container.read(activeProfileDocIdProvider);
-        expect(activeUlid, isNotNull);
-        // The returned model already carries it...
-        expect(profile.ulid, activeUlid);
+        // T-49/P2-30: the repository is not a writer of
+        // activeProfileDocIdProvider on any path — select() is (see
+        // profile_repository_impl_t49_activation_ordering_test.dart's
+        // CONTROL-1, which pins this same invariant permanently).
+        expect(
+          container.read(activeProfileDocIdProvider),
+          isNull,
+          reason:
+              'T-49/P2-30: the repository is not a writer of this '
+              'provider — select() is.',
+        );
         // ...and so does a completely fresh read of the SAME Drift row,
         // proving the pairing is durable, not held only in memory.
         final reread = await ProfileRepositoryImpl(
           localDb,
         ).getProfileById(profile.id);
-        expect(reread?.ulid, activeUlid);
+        expect(reread?.ulid, profile.ulid);
 
         final doc = await firestore
             .collection('users')
             .doc(uid)
             .collection('learner_profiles')
-            .doc(activeUlid)
+            .doc(profile.ulid)
             .get();
         expect(doc.exists, isTrue);
         expect(doc.data()?['display_name'], 'Devorah');

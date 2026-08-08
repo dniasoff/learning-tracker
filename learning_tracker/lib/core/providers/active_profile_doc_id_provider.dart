@@ -16,10 +16,18 @@
 /// library doc comment, "The active-profile bridge..."). Splitting or
 /// moving that file is out of scope for wiring this one provider.
 ///
-/// This file exists solely so `lib/features/**` call sites — the profile
-/// repository adapter's own creation path, and `SelectedProfileId.select`/
-/// `.clear` (`lib/features/profiles/presentation/providers/
-/// profile_providers.dart`) — can reach `activeProfileDocIdProvider` without
+/// This file exists solely so `lib/features/**` call sites —
+/// `SelectedProfileId.select`/`.clear` and `AutoSelectedProfileId`'s own
+/// guarded re-affirm branch (`lib/features/profiles/presentation/providers/
+/// profile_providers.dart`, this provider's only writers as of T-49/P2-30
+/// — the profile repository adapter's own creation path was a writer from
+/// P2-23 through P2-28 but never closed the race that motivated it, and
+/// the write was deleted rather than relocated a fourth time; that adapter
+/// lives under `data/repositories/` and always imported
+/// `repository_providers.dart` directly under check 102's own exemption
+/// for that directory, never through this re-export, so this file's writer
+/// set was never actually reachable through it in the first place) — can
+/// reach `activeProfileDocIdProvider` without
 /// importing `package:learning_tracker/data/firestore/...` directly, which
 /// `tool/check_dependency_direction.dart` (AD-23/AD-28, `make audit` check
 /// 102) forbids for any `lib/features/**` file outside its own

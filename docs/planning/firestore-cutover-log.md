@@ -84,13 +84,32 @@ nothing on disk to diff against. This is the fix, binding from 2026-08-06
 
 ## CURRENT STATE
 
-**Head:** `3872fdbc` (P2-27's own commit, `docs(planning): P2-27 — round 5
+**Head:** `64f1f763` (P2-28's own commit, `fix(profiles): activate the
+profile doc id before the provider resolution await, closing T-49` —
+confirmed via `git log --oneline -1` at THIS round's (P2-31, round 7)
+session start, re-derived independently, not copied forward from P2-29's
+citation — per `T-62`'s own lesson) **(P2-31, this commit, not yet
+reflected — same self-reference lag as every prior closing commit)**.
+Between `64f1f763` and this commit, `git status --porcelain` carried
+P2-29's finished but uncommitted doc edits (this file, `firestore-cutover-plan.md`,
+`firestore-cutover-tasks.md`) — no code commit landed in between, so
+`64f1f763` is still the correct immediate parent for P2-31's own commit.
+
+(Superseded field-value text below, from P2-29, left for the historical record — true as of P2-29's own (uncommitted, at the time) edit, superseded by the paragraph above: `64f1f763` (P2-28's own commit, `fix(profiles): activate the
+profile doc id before the provider resolution await, closing T-49` —
+confirmed via `git log --oneline -1` at this round's session start)
+**(P2-29, this commit, not yet reflected — same self-reference lag as
+every prior closing commit; per `T-62`'s own lesson, re-derived this
+round, not copied forward)**.)
+
+(Superseded field-value text below, from P2-28, left for the historical record — true as of P2-28's own commit, superseded by the paragraph above:
+`3872fdbc` (P2-27's own commit, `docs(planning): P2-27 — round 5
 review finds two record-integrity defects in P2-26's own output; T-49
 reconfirmed unchanged; Phase 2 still NOT RESOLVED` — confirmed via `git
 log --oneline -1` at this round's session start) **(P2-28, this commit,
 not yet reflected — same self-reference lag as every prior closing
 commit; per `T-62`'s own lesson, re-derived this round, not copied
-forward)**.
+forward)**.)
 
 (Superseded field-value text below, from P2-27, left for the historical record — true as of P2-27's own commit, superseded by the paragraph above:
 `981a8770` (`docs(planning): correct a stray T-49-closure claim
@@ -211,7 +230,67 @@ still open — see the Phase 3 ENTRY CRITERIA checklist below. Before
 attributing any device `permission-denied` to a keying defect, check this
 field first (an undeployed rules change and an unregistered App Check
 debug token both present identically).
-**Phase:** **CORRECTED THIS ROUND (P2-28): `T-49` is CLOSED FOR REAL —
+**Phase:** **CORRECTED THIS ROUND (P2-31, round 7): `T-49` is CLOSED —
+by REMOVAL, not by a fifth hoist.** `_activateThenEnsureFirestoreProfile`
+and `_writeFirestoreProfile` are deleted; `createProfile` and
+`ensureDefaultProfile` call `_ensureFirestoreProfile` directly (the
+write-only path `ensureRemoteProfile` has used since P2-18). **Stated at
+the scope that is actually true, per this round's own design doc: the
+repository performs no `activeProfileDocIdProvider` write on any path —
+not "nothing can race this," the unqualified shape that failed three
+times before.** `profile_providers.dart` (`SelectedProfileId.select`/
+`.clear`, `AutoSelectedProfileId`'s guarded re-affirm) is the only writer
+left in `lib/`, verified by a permanent source-scanning test (CONTROL-4)
+as well as by the re-run enumeration below, not by prose alone. Full
+mechanism, the 14-case permanent matrix, and the revert-proof: the new
+**P2-31** entry, below.
+*(Historical, P2-29:)* **CORRECTED THIS ROUND (P2-29): `T-49` is REOPENED A FOURTH
+TIME — P2-28's fix did not close the race, it narrowed the window.**
+P2-28 hoisted the activation write (`profile_repository_impl.dart:940`)
+above BOTH of `_activateThenEnsureFirestoreProfile`'s OWN internal awaits
+— true, and genuinely closes the race for anything that happens INSIDE
+that method's body. But the write is reached from exactly two PUBLIC
+entry points, `FirestoreProfileRepositoryAdapter.createProfile` (:684) and
+`.ensureDefaultProfile` (:717), and BOTH have real awaits of their own
+BEFORE they ever call `_activateThenEnsureFirestoreProfile` — awaits the
+fix, its doc comments, and P2-28's own commit message never enumerate.
+`createProfile` awaits `_drift.createProfile(...)` (:701), which itself
+awaits three Drift round-trips (`ProfileRepositoryImpl.createProfile`,
+`profile_repository_impl.dart:139/145/162`) and then
+`_syncEngine?.pushLearnerProfile(...)` (:198) — a durable-outbox DB
+enqueue normally, or in a tutored session a genuine one-shot Cloud
+Function RPC (`TutoredWriteRouter.pushLearnerProfile`,
+`tutored_write_router.dart:301`, calling `_writeService.editProfile`).
+`ensureDefaultProfile` awaits `_drift.ensureDefaultProfile(...)` (:738,
+containing a 6-statement transaction plus its own `pushLearnerProfile`
+push) and `_drift.tryGetProfileById(id)` (:743). None of these awaits are
+guarded by anything — the write's only conditions,
+`_ref.mounted && activeAccountIdProvider != null`, are a disposal check
+and a readiness check, neither a re-check that the profile being
+activated is still the one selected. **REPRODUCED BY EXECUTION**, not
+argued from reading: a probe delaying only
+`SyncWriteFacade.pushLearnerProfile` — the ONE collaborator
+`ProfileRepositoryImpl.createProfile` already awaits in production, with
+ZERO subclassing of `FirestoreProfileRepositoryAdapter` or
+`ProfileRepositoryImpl` — went RED: `Expected: 'ulid-p29-b' / Actual:
+'ulid-p29-c'`. Written, run, and deleted this round (never a permanent
+file, since no fix landed to guard with one). **The doc comments P2-28
+added — "nothing asynchronous precedes it any more," "a write with no
+await above it cannot be stale" — are true only of
+`_activateThenEnsureFirestoreProfile`'s own body; stated unqualified, they
+are the same false-reachability-claim shape this file has now named FOUR
+times (`T-50`; `T-49` at P2-22, P2-26, and now here).** Full mechanism,
+the complete await enumeration for both paths, the probe, and the
+record-integrity findings this false "CLOSED FOR REAL" claim produced:
+the new **P2-29** entry, below. `T-39` remains open, unaffected — both
+tasks gate Phase 3 entry again, exactly as before P2-28.
+The paragraph two paragraphs below — from "CORRECTED THIS ROUND (P2-28)"
+through its own "Phase 2 stays NOT RESOLVED" sentence — describes the
+state as of P2-28 accurately for that point in time and is left
+unedited, append-only, per this file's own "never rewrite history" rule;
+it is superseded by this correction, not rewritten.**
+
+(Superseded paragraph below, from P2-28, left for the historical record — true as of P2-28's own commit, superseded by the correction above: **`T-49` is CLOSED FOR REAL —
 both of `_activateThenEnsureFirestoreProfile`'s internal awaits now
 guarded (removed, not re-guarded: the activation write sits above both,
 so neither can race it), six permanent test cases (all three callers ×
@@ -223,7 +302,7 @@ immediately below — through and including its "Phase 2 stays NOT
 RESOLVED" sentence — describes the state as of P2-26/P2-27 accurately for
 that point in time and is left unedited, append-only, per this file's own
 "never rewrite history" rule; it is superseded by this correction and by
-P2-28, not rewritten.** 0 ✅ · 1 ✅ · **2 — NOT RESOLVED. `T-49` (the phase's sole
+P2-28, not rewritten.**) 0 ✅ · 1 ✅ · **2 — NOT RESOLVED. `T-49` (the phase's sole
 BLOCKING code defect) IS REOPENED A THIRD TIME, at P2-26** — P2-23's
 `done` marking was WRONG, in the same shape P2-18's `done` marking was
 wrong before it: it closed the race on the Firestore-WRITE await
@@ -377,7 +456,31 @@ resolution) reopens the SAME race for the SAME two callers, REPRODUCED BY
 EXECUTION again, this time by round 4's independent review against
 `734a6daa`** (see the `T-49` paragraph, below, and
 `firestore-cutover-tasks.md`).
-**Phase 3 ENTRY CRITERIA, CORRECTED AT P2-28: `T-49` IS satisfied —
+**Phase 3 ENTRY CRITERIA, CORRECTED AT P2-31 (round 7): `T-49` IS
+satisfied — CLOSED BY REMOVAL, gated on the 14-case permanent matrix
+(9 race cases + 5 controls) being green and revert-proved (confirmed this
+round; see the new **P2-31** entry, below). `T-39` remains open and is
+now the SOLE remaining Phase 3 entry blocker.** **The "fresh independent
+review of the commit that finally closes `T-49`" line, below, STAYS
+UNCHECKED and re-arms against P2-31's own commit** — P2-31 cannot certify
+its own fix; four prior rounds (P2-18/P2-23/P2-28, then P2-29's review
+finding each of them premature) is exactly the history this rule exists
+to interrupt. Unlike P2-28's "IS satisfied" claim (immediately below,
+historical), this one is not scoped to "both of one method's internal
+awaits" — it is scoped to "the repository performs this write on no
+path," which CONTROL-4's source scan checks mechanically on every test
+run, not by enumeration that can go stale the next time the code moves.
+*(Historical, P2-29:)* **Phase 3 ENTRY CRITERIA, CORRECTED AT P2-29: `T-49` is NOT satisfied —
+REOPENED A FOURTH TIME. `T-39` and `T-49`'s real closure both again gate
+Phase 3 entry** — see the new **P2-29** entry, below, for the full await
+enumeration, the execution-based reproduction, and why P2-28's "IS
+satisfied" checkbox (immediately below) was premature: it verified both of
+`_activateThenEnsureFirestoreProfile`'s own internal awaits and stopped
+there, never enumerating the awaits its two public callers have before
+either one is ever reached. This IS the "fresh independent review of
+P2-28's own commit" both P2-27's and P2-28's own entries said Phase 3
+could not open without.
+*(Historical, P2-28:)* **Phase 3 ENTRY CRITERIA, CORRECTED AT P2-28: `T-49` IS satisfied —
 CLOSED FOR REAL, both internal awaits, six permanent test cases,
 revert-proved. `T-39` remains open and is now the SOLE remaining Phase 3
 entry blocker** — see the new **P2-28** entry, below, for the fix and its
@@ -397,6 +500,36 @@ reconfirmed unchanged, not re-fixed — P2-27 is docs-only), the two
 record-integrity defects that review found in P2-26's own output
 (`T-61`/`T-62`, both `done`), and the current, superseding Phase 3 ENTRY
 CRITERIA snapshot (D1 through the current highest D-number, `D25`).
+
+**`T-40` non-`select()` write enumeration — CORRECTED AT P2-31 (round 7):
+TWO writers, not three, both in `profile_providers.dart`.**
+`profile_repository_impl.dart:940` (the third writer named in the
+paragraph below) no longer exists — `_activateThenEnsureFirestoreProfile`,
+the method it lived in, is deleted (see the new **P2-31** entry, below,
+for the fix). Re-run against the post-fix tree:
+
+```
+$ grep -rn "activeProfileDocIdProvider.notifier)" lib/
+lib/data/firestore/repository_providers.dart:130:/// caller calls `ref.read(activeProfileDocIdProvider.notifier).set(id)`.
+lib/features/profiles/presentation/providers/profile_providers.dart:111:    ref.read(activeProfileDocIdProvider.notifier).set(ulid);
+lib/features/profiles/presentation/providers/profile_providers.dart:175:    ref.read(activeProfileDocIdProvider.notifier).set(null);
+lib/features/profiles/presentation/providers/profile_providers.dart:263:              .read(activeProfileDocIdProvider.notifier)
+```
+
+The `repository_providers.dart:130` hit is a doc-comment mention of the
+call shape in prose, not a write site — `.set(id)` is quoted text inside
+a `///` block. The three genuine write sites are all in
+`profile_providers.dart`: `:111` (`SelectedProfileId.select`), `:175`
+(`SelectedProfileId.clear`), `:263`/(`.set(` two lines below, `:265`)
+(`AutoSelectedProfileId`'s guarded re-affirm branch). **Two writers**, by
+the paragraph below's own counting convention (`clear()` is a reset, not
+an activation; the guarded re-affirm is the one under discussion in
+`T-56`). This is now enforced mechanically, not merely re-stated in
+prose: `profile_repository_impl_t49_activation_ordering_test.dart`'s
+CONTROL-4 source-scans `lib/**.dart` on every test run and fails the
+moment a write site appears anywhere outside `profile_providers.dart`.
+*(Historical, P2-26/P2-29, left unedited below — describes a tree that no
+longer exists:)*
 
 **`T-40` — FIXED, independently re-verified.** The trigger lives in
 `SelectedProfileId.select()` (`profile_providers.dart`) — the ONE seam
@@ -419,16 +552,27 @@ part of the clobber-risk class, listed here only for completeness of the
 grep), `profile_providers.dart:239` (`AutoSelectedProfileId`'s "selection
 already exists" re-affirm branch; **NOW GUARDED — see `T-56`, `done`
 P2-24, below**) and `profile_repository_impl.dart:940` (line number as of
-P2-28; was `:893` when this paragraph was written at P2-26)
+P2-28/P2-29; was `:893` when this paragraph was written at P2-26)
 (`_activateThenEnsureFirestoreProfile`'s single write, reached from both
-`createProfile` and `ensureDefaultProfile` — **NOW SAFE (P2-28): the write
-was hoisted above BOTH of the method's awaits, not re-guarded against
-either — nothing asynchronous precedes it any more, so there is nothing
-left for a later `select()` to race. The write's own readiness check
-(previously implicit in `firestoreRepo != null`, unavailable once hoisted
-above the await that produces it) is now the same synchronous, in-memory
-`activeAccountIdProvider != null` check `select()` itself uses. See `T-49`,
-closed for real, and the new `P2-28` entry, below.**). An agent who
+`createProfile` and `ensureDefaultProfile` — **CORRECTED AT P2-29: STILL
+UNGUARDED — narrowed, not closed. P2-28's classification here, "NOW
+SAFE," was FALSE, the same false-reachability-claim shape this paragraph
+itself was corrected for at P2-26.** The write genuinely was hoisted
+above BOTH of `_activateThenEnsureFirestoreProfile`'s OWN two awaits —
+that much is real and unchanged. But the write is reached from exactly
+two PUBLIC entry points (`createProfile` :684, `ensureDefaultProfile`
+:717), and BOTH have real, unguarded awaits of their own — Drift
+round-trips and, on the durable-outbox path, a DB enqueue, or in a
+tutored session a genuine Cloud Function RPC
+(`TutoredWriteRouter.pushLearnerProfile`) — that run BEFORE
+`_activateThenEnsureFirestoreProfile` is ever entered. "Nothing
+asynchronous precedes it" is true only of the method's own body, not of
+the write's full reachability from either public caller. REPRODUCED BY
+EXECUTION: a probe delaying only `SyncWriteFacade.pushLearnerProfile` (the
+collaborator `ProfileRepositoryImpl.createProfile` already awaits in
+production, zero subclassing of the class under test) went RED. See
+`T-49`, reopened a fourth time, and the new `P2-29` entry, below, for the
+full await enumeration on both paths.**). An agent who
 trusted the prior "FOUR … :865/:886" text
 would have looked for line numbers that no longer exist and concluded the
 create path was already fully accounted for — precisely the wrong
@@ -462,7 +606,27 @@ triggered the heal is still the one selected — see new task `T-49`, this
 file's **P2-17** entry. **Only PARTIALLY closed at P2-18; REOPENED at
 P2-22** — see below.
 
-**`T-49` — CLOSED FOR REAL (P2-28), both internal awaits. See the new
+**`T-49` — CLOSED BY REMOVAL (P2-31, round 7). The repository
+(`FirestoreProfileRepositoryAdapter`) no longer writes
+`activeProfileDocIdProvider` on any of its three public methods —
+`_activateThenEnsureFirestoreProfile` and `_writeFirestoreProfile` are
+deleted; `createProfile`/`ensureDefaultProfile` call
+`_ensureFirestoreProfile` directly, the write-only path
+`ensureRemoteProfile` has used since P2-18. `profile_providers.dart` is
+now the sole writer in `lib/`. 14 permanent test cases (9 race cases +
+5 controls), revert-proved. Gated on independent review per the Phase 3
+ENTRY CRITERIA line, which stays unchecked against THIS commit. See the
+new `P2-31` entry, below, for the full mechanism and proof.**
+*(Historical, P2-29:)* **`T-49` — REOPENED A FOURTH TIME (P2-29). P2-28's fix narrowed the race
+window; it did not close it. See the new `P2-29` entry, below, for the
+full await enumeration, the execution-based reproduction, and the
+record-integrity findings the false "CLOSED FOR REAL" claim produced.**
+*(The sentence immediately below this one — "CLOSED FOR REAL (P2-28), both
+internal awaits" — was P2-28's own belief, genuinely held, genuinely
+tested against the two boundaries P2-28 itself enumerated, and wrong about
+a third; left unedited, append-only, per this file's own "never rewrite
+history" rule; it no longer describes the current state.)* **`T-49` —
+CLOSED FOR REAL (P2-28), both internal awaits. See the new
 `P2-28` entry, below, for the fix and its proof.** *(The three sentences
 immediately below this one were true from P2-26 through P2-27 — `T-49`
 really was reopened a third time and really did stay reopened — and are
@@ -741,6 +905,27 @@ exit 0, `coverage/lcov.info` regenerated (657924 bytes), never deleted.
 Full verbatim gate output, the RED reproduction, the fix, the six-case
 proof, the revert-proof, and the T-40 re-verification: the new **P2-28**
 entry, below.
+**Confirmed by P2-29 (docs-only; a temporary probe was written, run, and
+deleted — never committed, `git status --porcelain` empty throughout — so
+no `lib/`/`test/` file lands in this commit and no number below was
+expected to move):** `dart analyze --fatal-infos` → `No issues found!`,
+exit 0. `dart run tool/check_profile_path_keying.dart` →
+`PROFILE-KEY-SPLIT check OK: 2 collection(s) currently split (bookmarks,
+learning_order), all within the tracked baseline (0 new violations)`,
+exit 0. `dart run tool/check_profile_id_int_sites.dart` →
+`PROFILE-ID-INT-SITES OK: 88 tracked entries covering 91 site(s) across 5
+pattern(s) [...]; 0 new, 0 stale, 0 changed`, exit 0. `make audit` →
+`104/104` checks, true last line `=== audit PASSED — all 68 greps
+clean ===`, exit 0, no concurrent session observed this round (clean at
+first run). `flutter test` (full suite) NOT re-run this round — no
+`lib/`/`test/` file lands in this commit, so no full-suite number could
+have moved; P2-28's own `08:29 +11519 ~131: All tests passed!` stands.
+The one test actually run this round —
+`zz_p29_caller_boundary_probe_test.dart`, written to reproduce this
+round's finding — went RED (`Expected: 'ulid-p29-b' / Actual:
+'ulid-p29-c'`), exactly as this round's finding predicts, then was
+deleted; see the new **P2-29** entry, below, for the full command and
+output.
 **Directory note, `T-52`, `done` since P2-17 — CORRECTED THIS COMMIT, this
 paragraph itself was stale:** `make audit` means two different things
 depending on the working directory. `learning_tracker/Makefile:1378`'s
@@ -764,7 +949,70 @@ here as a `CURRENT STATE` self-consistency fix, not a re-opening of `T-52`
 P2-17, this was CURRENT STATE's own prose falling behind that fix in a
 later commit that copied it forward without checking it).
 
-**IN FLIGHT:** nothing. P2-28's own edit list (reproduce `R5-D`/`R5-E` RED
+**IN FLIGHT:** `P2-31` — implementing the round-7 design (approach (c),
+REMOVE THE DIVERGENCE): delete `_activateThenEnsureFirestoreProfile` and
+`_writeFirestoreProfile` outright; `createProfile`/`ensureDefaultProfile`
+call `_ensureFirestoreProfile` directly (the write alone, never
+activates); delete the `activeAccountIdProvider` readiness-gate import and
+the write it guarded (`:940`); correct the doc comments this falsifies in
+`profile_repository_impl.dart`, `repository_providers.dart`,
+`active_profile_doc_id_provider.dart`, `firestore_learner_profile_repository.dart`,
+`profile_providers.dart`, `add_profile_dialog.dart`; extend
+`profile_repository_impl_t49_activation_ordering_test.dart` with GROUP 3
+(the DRIFT+PUSH boundary, 3 new cases) and 5 CONTROLS (14 total);
+re-point `profile_repository_impl_test.dart`'s "activates it" assertions
+to the new "does not activate" invariant; correct
+`add_profile_dialog_test.dart`'s two stale "repo activates" comments;
+update `CURRENT STATE` (`Head:`, `Phase:`, the non-`select()` write
+enumeration, the Phase 3 ENTRY CRITERIA pointer), `firestore-cutover-tasks.md`
+(`T-49`/`T-59`/`T-63`/`T-64`) and `firestore-cutover-plan.md`. The commit
+that lands this entry clears this field to `nothing`. Predicted revert
+signature (stated before running, per the design): reverting
+`profile_repository_impl.dart` alone should turn exactly 6 of the 14
+permanent cases RED (`P30-G`, `P30-H`, CONTROL-1, CONTROL-2, CONTROL-4,
+CONTROL-5) and leave 8 GREEN.
+
+(Superseded text below, from P2-29, left for the historical record — this
+was P2-29's own IN-FLIGHT-before-editing note: **IN FLIGHT:** nothing. P2-29's own edit list (re-read
+`_activateThenEnsureFirestoreProfile` and both its public callers directly
+against `64f1f763`; write and run an independent probe gating the
+CALLER's own await, not the method's two internal ones; found RED;
+corrected `CURRENT STATE` — `Head:`, `Phase:`, the non-`select()` write
+enumeration inside the `T-40` paragraph, the `T-49` heading, the Phase 3
+ENTRY CRITERIA pointer; reopened `T-49` in place, a fourth time, with the
+full mechanism; recorded the record-integrity defect the false "closed
+for real" claims constitute as new task `T-63`; recorded the
+readiness-gate widening as new task `T-64`; superseded the
+deferred-verification table and Phase 3 ENTRY CRITERIA; updated
+`firestore-cutover-tasks.md` and `firestore-cutover-plan.md` to match,
+line by line) is fully landed in the commit that lands this entry — see
+the new **P2-29** entry, below, for the full record. **`T-49` REOPENED A
+FOURTH TIME.** `T-39` (untouched this round) remains open. Docs only — no
+`lib/`/`test/` file change lands in this commit (a temporary probe was
+written, run, and deleted; see the new **P2-29** entry's own Git hygiene
+section).)
+
+(Superseded text below, from P2-29, left for the historical record — this was P2-29's own IN-FLIGHT-before-editing note, appended per protocol step 1: `P2-29` — re-verifying P2-28's `T-49` closure (the mandatory
+"fresh independent review of P2-28's own commit" both P2-27's and P2-28's
+own Phase 3 ENTRY CRITERIA required before Phase 3 could be treated as
+unconditionally clear on identity-activation grounds — see
+`firestore-phase2-plan.md` §4 and this file's own standing rule, "a round
+that fixes `T-49` cannot certify its own fix"). Edit list: re-read
+`_activateThenEnsureFirestoreProfile` and both its public callers
+(`createProfile`, `ensureDefaultProfile`) directly against `64f1f763`; write
+and run an independent probe gating the CALLER's own await (not the
+method's two internal ones) to test whether the fix narrowed the race or
+closed it; if RED, correct `CURRENT STATE` (`Head:`, `Phase:`, the
+non-`select()` write enumeration inside the `T-40` paragraph), reopen `T-49`
+in place with the mechanism, record any record-integrity defect the false
+"closed for real" claims constitute, supersede the deferred-verification
+table and Phase 3 ENTRY CRITERIA, update `firestore-cutover-tasks.md` and
+`firestore-cutover-plan.md` to match line by line. Docs only — no `lib/`/
+`test/` file change lands in this commit.)
+
+(Superseded text below, from P2-28, left for the historical record — this
+was P2-28's own final `IN FLIGHT` field value, written at the end of that
+round: "nothing. P2-28's own edit list (reproduce `R5-D`/`R5-E` RED
 using round 5's preserved probe; hoist
 `_activateThenEnsureFirestoreProfile`'s activation write above BOTH of its
 awaits, gated on the same synchronous `activeAccountIdProvider != null`
@@ -785,9 +1033,11 @@ entry, below, for the full record. **`T-49` CLOSED FOR REAL — both
 internal awaits, six permanent cases, revert-proved.** `T-39` (Phase 3's
 separate WATCHLIST/dead-adapters reconciliation prerequisite, untouched
 this round) remains open and still gates Phase 3 entry on its own — this
-round closes `T-49`'s half of that gate, not both halves.
+round closes `T-49`'s half of that gate, not both halves." **P2-29 found
+this "CLOSED FOR REAL" claim false — see this file's new P2-29 entry,
+below.**
 
-(Superseded text below, from P2-28, left for the historical record — P2-28's edit list is fully landed in this commit: reproduce
+(Superseded text below that, from P2-28, left for the historical record — this was P2-28's own IN-FLIGHT-before-editing note, appended per protocol step 1: its edit list is fully landed in this commit: reproduce
 `R5-D`/`R5-E` RED on this exact tree using round 5's preserved probe
 (`<scratchpad>/zz_r5_probe_test.dart`); hoist
 `_activateThenEnsureFirestoreProfile`'s activation write
@@ -1138,7 +1388,10 @@ stage-definition · study-day-config · track-learning-order.
   round's first.** Tracked as `T-62`, `done` (P2-27) — full account in the
   new **P2-27** entry, below.
 - **What finally closed the pattern the three bullets above named
-  (P2-28).** `T-49` was filed `done` twice on a reachability claim never
+  (P2-28) — CORRECTED AT P2-29: it did not. Left unedited below, per this
+  file's own "never rewrite history" rule; the correction is this note,
+  immediately above the bullet it corrects, plus the two new bullets
+  below it.** `T-49` was filed `done` twice on a reachability claim never
   tested against the specific interleaving that broke it (P2-18: "no
   later selection to race"; P2-23: "activating before the write closes
   this"). The fix that held was not a third plausible-sounding
@@ -1152,12 +1405,866 @@ stage-definition · study-day-config · track-learning-order.
   × all three callers, not one boundary re-verified a third time. Tracked
   as `T-49`, `done` (P2-28) — full account in the new **P2-28** entry,
   below.
+- **When hoisting a write above an await to close a race, enumerate
+  EVERY await on the path first — not every await inside the method being
+  edited (P2-29, new standing fact, stated exactly as this round's brief
+  named it before any fix was reattempted).** `T-49` survived two fixes
+  (P2-23, P2-28) because the path had (at minimum) two awaits inside the
+  method each fix touched, and each fix correctly addressed the one it
+  looked at while never asking whether the METHOD ITSELF sits behind a
+  further await belonging to its own caller. P2-23 hoisted the write above
+  the WRITE await but left the RESOLUTION await, in the SAME method,
+  unguarded. P2-28 hoisted the write above BOTH of that method's awaits —
+  genuinely closing both — but never asked what precedes the method's own
+  two call sites: `createProfile` and `ensureDefaultProfile` each have
+  their own Drift-insert-plus-sync-push await BEFORE
+  `_activateThenEnsureFirestoreProfile` is ever entered, none of it
+  enumerated by the fix, its doc comments, or its commit message. A fix
+  that enumerates "every await in this method" answers a narrower
+  question than "every await on this write's path from its public entry
+  points" — the two were treated as the same question four rounds
+  running, and were not. Tracked as `T-49`, reopened a fourth time
+  (P2-29) — full account in the new **P2-29** entry, below.
+- **A false "this is now safe, nothing asynchronous precedes it"
+  claim recurs at a new scope every time this project narrows a race
+  instead of removing it (P2-29).** Four instances now, each one
+  narrower than the last and each one caught by a different round:
+  `T-50` (a stale doc comment about provider retry risk, corrected in
+  `.md` files at P2-16, in code at P2-20); `T-49` at P2-22 (P2-18's "no
+  later selection to race" for an awaited call, disproven by execution);
+  `T-49` at P2-26 (P2-23's "activating before the write closes this,"
+  disproven by execution one await earlier); `T-49` at P2-29 (P2-28's
+  "nothing asynchronous precedes it any more," disproven by execution one
+  more level out, at the method's own two callers). Each instance was a
+  genuinely correct claim about a NARROWER scope than the one it was
+  stated for — true of "this call," true of "this write," true of "this
+  method's own body" — generalized in the telling to "this defect," "this
+  boundary," "this write," without the word "only" that would have made
+  the narrower, true claim visible. **Before writing an unqualified safety
+  claim about a write, re-state it with its actual scope named explicitly
+  ("no await precedes this write WITHIN THIS METHOD," not "no await
+  precedes this write") — the qualifier is not decoration, it is the
+  boundary of what was actually verified.** Tracked as `T-49`, reopened a
+  fourth time, and the new record-integrity task `T-63`, both `done`/
+  recorded (P2-29) — full account in the new **P2-29** entry, below.
 
 ---
 
 ## Entries
 
 Newest first. Append; never rewrite history.
+
+### 2026-08-09 — P2-31: closes `T-49` by REMOVAL, not a fifth hoist — `_activateThenEnsureFirestoreProfile` deleted; `select()` is the sole activation seam; 14 permanent test cases, revert-proved
+
+**Brief: "YOU ARE P2-31. Implement the design below exactly" — the design
+was produced by a prior round, P2-30 (designer-only, no code edited),
+itself built from reading the tree at `64f1f763` (not from the review
+summary) and from P2-29's own await enumeration. Round 7 overall.**
+
+**Why this round exists.** Four rounds in a row (P2-18, P2-23, P2-28, then
+P2-29's own review) each answered the question "is this activation write
+above the awaits I can see FROM INSIDE THE METHOD BEING EDITED?" — and
+each time, a caller-side await the method's own body could not see was
+still sitting between "decide to activate" and "activate." P2-29's review
+found the fourth instance: `createProfile`/`ensureDefaultProfile`'s own
+awaits on `_drift` (Drift round-trips, then a durable-outbox enqueue or,
+in a tutored session, a real Cloud Function RPC) ran BEFORE
+`_activateThenEnsureFirestoreProfile` was ever entered, unguarded. **The
+question that actually terminates is "does this path perform this write
+at all?"** — not "is it above the awaits I happened to look at."
+
+#### 1. Tree state verified before the first edit
+
+`git log --oneline -1` → `64f1f763`, matching the design's stated parent.
+`git status --porcelain` → exactly `M docs/planning/firestore-cutover-log.md`,
+`M firestore-cutover-plan.md`, `M firestore-cutover-tasks.md` — P2-29's
+finished, uncommitted doc edits, as the design predicted. `git stash list`
+→ the two known entries (`d74e3829`, `8855b9b1`), untouched, identical
+bases/order to every prior round. `dev`, single worktree, 0 behind / 32
+ahead of `origin/dev`. Both cheap gates green before the first edit.
+
+#### 2. The fix — approach (c), REMOVE THE DIVERGENCE
+
+`lib/features/profiles/data/repositories/profile_repository_impl.dart`:
+
+- **Deleted outright:** `_activateThenEnsureFirestoreProfile` (the method
+  P2-23 introduced and P2-28 extended) and `_writeFirestoreProfile` (its
+  write half, inlined back into `_ensureFirestoreProfile`, which was its
+  only other caller). Both doc comments deleted with the methods — the
+  false "nothing asynchronous precedes it … a write with no await above
+  it cannot be stale" sentence (`T-63`'s SERIOUS finding) is resolved by
+  deletion, not correction.
+- `createProfile` and `ensureDefaultProfile` now call
+  `_ensureFirestoreProfile(model)` directly — the exact write-only path
+  `ensureRemoteProfile` has used since P2-18. One Firestore-write path,
+  shared by all three public methods, none of which touch
+  `activeProfileDocIdProvider`.
+- The `activeAccountIdProvider` import and its P2-28-era readiness-gate
+  rationale comment are deleted with the write they guarded — `T-64`
+  closes as "resolved by removal": neither the stronger pre-P2-28 gate nor
+  the weaker P2-28 gate is restored: there is no gate left to be wrong
+  about.
+- `_ref.mounted` is gone (its only use was inside the deleted method);
+  `_ref` is still needed by `_resolveFirestoreProfileRepo`.
+- Class doc comment rewritten: a new "No activation of any kind — this
+  class never writes `activeProfileDocIdProvider`, on any path (T-49,
+  P2-30)" section replaces the old "Non-fatal on Firestore failure, but
+  identity activates regardless" section. States its scope explicitly —
+  "this section is about `activeProfileDocIdProvider` alone" — rather than
+  the unqualified "nothing can race this" shape that failed three times
+  before (the standing fact this round's design named: *"four hoists
+  failed because each answered 'is this write above the awaits I can see?'
+  The question that terminates is 'does this path perform this write at
+  all?' Prefer deleting the write over relocating it; a write that does
+  not exist has no boundary to enumerate."*).
+
+Doc comments corrected in the same commit, elsewhere in `lib/`:
+`repository_providers.dart` (library doc comment's writer enumeration, the
+T-43 comment's resolution-point citation), `active_profile_doc_id_provider.dart`
+(this provider's only-writer claim, and a second correction: the adapter
+never actually reached `activeProfileDocIdProvider` through this
+re-export file at all — it always imported `repository_providers.dart`
+directly under the `/data/repositories/` check-102 exemption),
+`firestore_learner_profile_repository.dart` (`ensureProfile`'s doc
+comment), `profile_providers.dart` (`profileRepositoryProvider`'s doc
+comment; `select()`'s own doc comment gains a paragraph naming it as the
+activation seam for creation too, explicitly NOT claiming to be the sole
+writer — `clear()` and `AutoSelectedProfileId`'s guarded re-affirm also
+write), `add_profile_dialog.dart` (the P2-24 comment claiming the repo
+activates unconditionally is now false — T-57's CONCLUSION is unchanged,
+its PREMISE is inverted, and the correction says so explicitly).
+
+#### 3. Proof — reproduced RED first, from the public entry point
+
+Per the owner's proof requirement, the CURRENT failure was reproduced
+before the fix, gating at the Drift/push boundary the public entry point
+actually has (not the internal awaits round 6's own probes gated).
+`GROUP 3` (3 new cases: `P30-G` `createProfile`, `P30-H`
+`ensureDefaultProfile` self-heal, `P30-I` `ensureRemoteProfile`) was
+written into the permanent test file, then run against the UNMODIFIED
+`64f1f763` tree — genuinely red, not assumed red:
+
+```
+00:00 +6 -1: T-49 (createProfile, DRIFT+PUSH await — P30-G) [E]
+  Expected: 'ulid-p30g-b'
+    Actual: 'ulid-p30g-c'
+00:00 +6 -2: T-49 (ensureDefaultProfile, DRIFT+PUSH await — P30-H) [E]
+  Expected: 'ulid-p30h-b'
+    Actual: 'ulid-p30h-d'
+```
+
+Then the fix was applied and the SAME test run went green, alongside the
+existing 6 GROUP 1/2 cases and 5 new CONTROLS (14 total):
+
+```
+$ flutter test test/features/profiles/data/repositories/profile_repository_impl_t49_activation_ordering_test.dart
+00:02 +14: All tests passed!
+```
+
+#### 4. The permanent matrix, and why it needed controls this round did not need before
+
+Under this design the nine race cases (GROUP 1/2/3) become
+**structurally** true — the repository has no write, so "stays on the
+selected profile" cannot fail regardless of timing. That is the point of
+the fix and a hazard for the test file: a case that cannot fail is not
+proof the fix works. Five controls carry the load the race cases no
+longer can:
+
+- **CONTROL-1/2** — the actual behavioural pin: a fully-ready, non-racing
+  `createProfile`/`ensureDefaultProfile` leaves `activeProfileDocIdProvider`
+  **null**. The single assertion that goes RED the moment anyone
+  reintroduces the write.
+- **CONTROL-3** — the positive control: `select()` still activates
+  correctly in the same shape of container, proving CONTROL-1/2 are not
+  green because activation is broken app-wide.
+- **CONTROL-4** — the structural gate: a source-scanning test asserting
+  every `activeProfileDocIdProvider.notifier).set(` call site in
+  `lib/**.dart` lives in `profile_providers.dart` and nowhere else. This,
+  not the nine dynamic cases, is what makes a fifth reopening structurally
+  impossible — a dynamic test catches the interleavings it encodes; the
+  scan catches the write itself, regardless of which method it lands in
+  next time.
+- **CONTROL-5** — `T-64`'s local-born case, pinned: a container with
+  `activeAccountIdProvider` SET but `activeAccountFirebaseProvider`
+  THROWING `AccountNotAuthenticatedException` (the credential-less
+  signup shape, `signup_screen.dart:226` before `:231`) still creates the
+  profile locally and leaves `activeProfileDocIdProvider` null — the same
+  way the fully-ready case does, because there is no write to gate either
+  way. Converts round 6's "add a test pinning the widening" into "add a
+  test pinning the removal."
+
+**Predicted revert-proof signature, stated before running, then matched
+exactly.** Reverting ONLY `profile_repository_impl.dart` to its
+pre-P2-31 `git show HEAD:` content (byte-exact `cp`, never `git stash`)
+was predicted to turn exactly 6 of the 14 cases RED — `P30-G`, `P30-H`,
+CONTROL-1, CONTROL-2, CONTROL-4 (it greps `lib/`, and the revert restores
+a `lib/` write site), CONTROL-5 (the reverted gate,
+`activeAccountIdProvider != null`, is satisfied in that container) — and
+leave 8 GREEN. Measured, exactly matching the prediction:
+
+```
+00:00 +8 -6: Some tests failed.
+Failing: P30-G, P30-H, CONTROL-1, CONTROL-2, CONTROL-4, CONTROL-5
+```
+
+(CONTROL-3's first draft also asserted an intermediate `isNull` check that
+depended on the fix being applied — a design flaw caught by this exact
+revert exercise, not predicted in advance; fixed by removing that
+intermediate assertion, since CONTROL-3's job is only to prove `select()`
+activates, independent of the repo's own behaviour. Recorded as a
+deviation below.)
+
+Restored via `cp` (never `git stash`); md5 back to the pre-revert value;
+`14/14` green again; `git status --porcelain` empty.
+
+#### 5. Full gate + suite output (verbatim, run from `learning_tracker/`)
+
+```
+$ dart analyze --fatal-infos
+Analyzing learning_tracker...
+No issues found!
+
+$ dart run tool/check_profile_path_keying.dart
+PROFILE-KEY-SPLIT check OK: 2 collection(s) currently split (bookmarks, learning_order), all within the tracked baseline (0 new violations).
+
+$ dart run tool/check_profile_id_int_sites.dart
+PROFILE-ID-INT-SITES OK: 88 tracked entries covering 91 site(s) across 5 pattern(s) [cf-int-guard, cf-string-profileid-doc, dart-int-profileid-param, dart-tutoring-int-parse, dart-tutoring-id-tostring]; 0 new, 0 stale, 0 changed.
+
+$ make audit
+104/104 — PROFILE-ID-INT-SITES ... 0 new, 0 stale, 0 changed.
+=== audit PASSED — all 68 greps clean ===
+
+$ flutter test test/features/profiles/
+00:14 +441: All tests passed!                    [433 baseline + 8 new: 3 GROUP-3 + 5 CONTROLS]
+
+$ flutter test test/features/profiles/presentation/providers/profile_activation_heal_wiring_test.dart
+(trigger profile_providers.dart:162 disabled) 00:00 +0 -1: Expected: true / Actual: <false>
+(restored byte-exact, md5-verified)            00:00 +1: All tests passed!
+```
+
+`make test`, `make test-rules`, `make test-functions` results: recorded in
+this same commit's structured output (`gate_output`/`tests_run`), per the
+owner's test policy — actual command, actual output, pasted, not implied.
+Emulator suites run ONE AT A TIME, `ss -ltnp | grep -E ':8080|:9099|:4400'`
+confirmed empty before each.
+
+#### 6. Deviations from the design (four-part, per the owner's format)
+
+- **Predicted:** "CONTROL-3 ... proves CONTROL-1/2 are not green because
+  activation is broken app-wide" (design §3, implicitly assuming CONTROL-3
+  would be green on both the fixed and reverted tree, per the "GREEN even
+  reverted" prediction table). **Actual:** CONTROL-3's first draft
+  included an intermediate `expect(activeProfileDocIdProvider, isNull)`
+  assertion between `createProfile` and `select()` — correct on the fixed
+  tree, but false on the reverted tree (the old code DOES activate before
+  `select()` runs), so the reverted-tree run showed CONTROL-3 RED instead
+  of the predicted GREEN. **Mechanism:** the control was written to also
+  incidentally re-assert CONTROL-1's own invariant instead of testing only
+  what its name promises ("select() DOES activate"), coupling a
+  fix-dependent assertion into a control the design specified as
+  fix-independent. **Invariant unaffected:** CONTROL-3's actual claim
+  (`select()` activates correctly) was never false; the intermediate
+  assertion was redundant with CONTROL-1, not wrong. Fixed by deleting
+  the intermediate assertion before the revert-proof was finalized; the
+  corrected CONTROL-3 matches the design's predicted signature exactly.
+  **Recorded in this log:** yes, this entry.
+
+No other deviation from the design was found. The design's own §4 ("THE
+HONEST RESIDUAL," R1–R9) is carried forward unedited below as this
+round's own disclosure — none of it was closed by this implementation,
+and the design's own text already states the residual honestly; restating
+it in different words here would risk drift from the design's careful
+scoping. See the design brief (this round's task input) for R1–R9 in
+full; the two load-bearing ones are R1 (post-`select()` calls with only a
+liveness guard, not a selection re-check, can still activate a stale
+profile — strictly better than before, not closed) and R9 (this round
+cannot certify its own fix — the Phase 3 ENTRY CRITERIA line stays
+unchecked, re-armed against this commit).
+
+#### 7. Record corrections landed this commit
+
+`CURRENT STATE`'s `Head:` (re-derived, not copied — confirmed `64f1f763`
+independently at this round's own session start), `Phase:`, the `T-40`
+non-`select()` write enumeration (three writers → two, both in
+`profile_providers.dart`, re-grepped against the post-fix tree, pasted
+verbatim), the `T-49` heading. Phase 3 ENTRY CRITERIA §11a supersedes
+§11 (P2-29's snapshot): `T-49`/`T-59`/`T-64` checked, "fresh independent
+review" re-armed against this commit. `firestore-cutover-tasks.md`:
+`T-49`/`T-59`/`T-63`/`T-64` rows, header paragraph.
+`firestore-cutover-plan.md`: status line, Phase 2 header. IN FLIGHT field
+reset to `nothing` in this same commit.
+
+**New standing fact (stated at the altitude that generalises, per the
+design):** *Four hoists failed because each answered "is this write above
+the awaits I can see?" The question that terminates is "does this path
+perform this write at all?" Prefer deleting the write over relocating it
+— a write that does not exist has no boundary to enumerate.*
+
+### 2026-08-07 — P2-29: the fresh independent review of P2-28's own commit — `T-49` REOPENED A FOURTH TIME; P2-28's "CLOSED FOR REAL" claim was false; readiness gate found strictly widened
+
+**Brief: "YOU ARE P2-29. Docs only. Bring the record true after round 6."**
+This IS the "fresh independent review of P2-28's own commit" that P2-27's
+and P2-28's own Phase 3 ENTRY CRITERIA both said Phase 3 could not be
+treated as unconditionally clear on identity-activation grounds without —
+this file's own standing rule, restated at every closing round since
+P2-22: "a round that fixes `T-49` cannot certify its own fix."
+
+```
+$ git log --oneline -3
+64f1f763 fix(profiles): activate the profile doc id before the provider resolution await, closing T-49
+3872fdbc docs(planning): P2-27 — round 5 review finds two record-integrity defects in P2-26's own output; T-49 reconfirmed unchanged; Phase 2 still NOT RESOLVED
+981a8770 docs(planning): correct a stray T-49-closure claim inside the historical P2-23 block's intro
+
+$ git status --porcelain | grep -v '^ M _bmad'
+(empty)
+
+$ git stash list
+stash@{0}: WIP on dev: d74e3829 docs(planning): durable task list + recovery log; mark Phase 1 resolved
+stash@{1}: WIP on (no branch): 8855b9b1 fix(tracks): AUD-tracks-18 - de-duplicate Hebrew-script detection regex
+
+$ git reflog show stash
+9796dba5 stash@{0}: WIP on dev: d74e3829 ...
+d30884bd stash@{1}: WIP on (no branch): 8855b9b1 ...
+
+$ git rev-list --left-right --count origin/dev...dev
+0	32
+
+$ pgrep -af "flutter[ ]test"
+(empty)
+
+$ ss -ltnp | grep -E ':8080|:9099|:4400'
+(empty)
+```
+
+Identical stash bases, order and reflog SHAs to every prior record this
+phase. Neither popped, applied, nor dropped. Clean, write-quiet tree, no
+concurrent sibling session observed. Confirmed the three cheap gates
+before touching anything (recovery protocol step 4) — see §6, Gate
+output, below, for the full verbatim block; all three matched the P2-28
+baseline exactly.
+
+#### 1. Re-verified every claim against the code directly — not trusted from any prior round's prose
+
+Read `_activateThenEnsureFirestoreProfile` and both its public callers
+directly on `64f1f763`, not cited from P2-28's own entry:
+
+```dart
+// profile_repository_impl.dart:938-945
+Future<void> _activateThenEnsureFirestoreProfile(ProfileModel model) async {
+  if (_ref.mounted && _ref.read(activeAccountIdProvider) != null) {
+    _ref.read(activeProfileDocIdProvider.notifier).set(model.ulid);  // :940
+  }
+  final firestoreRepo = await _resolveFirestoreProfileRepo(model);   // AWAIT #1, :942
+  if (firestoreRepo == null) return;
+  await _writeFirestoreProfile(firestoreRepo, model);                // AWAIT #2, :944
+}
+```
+
+Confirmed P2-28's own claim about this method's body is true: nothing
+awaits before line 940 *within this method*. But `_activateThenEnsureFirestoreProfile`
+is not a public entry point — it has exactly two callers, both public
+methods on `FirestoreProfileRepositoryAdapter`, and both have real awaits
+of their own before they ever reach it:
+
+```dart
+// profile_repository_impl.dart:684-714 (createProfile)
+final resolvedUlid = _resolveProfileUlid(ulid);                       // sync
+final model = await _drift.createProfile(                            // :701-707
+  accountId: accountId, displayName: displayName, mode: mode,
+  avatarIndex: avatarIndex, ulid: resolvedUlid,
+);
+await _activateThenEnsureFirestoreProfile(model);                     // :712
+
+// profile_repository_impl.dart:717-749 (ensureDefaultProfile)
+final resolvedUlid = _resolveProfileUlid(ulid);                       // sync
+final id = await _drift.ensureDefaultProfile(                         // :738-741
+  accountId: accountId, defaultDisplayName: defaultDisplayName,
+  ulid: resolvedUlid,
+);
+final model = await _drift.tryGetProfileById(id);                     // :743
+if (model != null) {
+  await _activateThenEnsureFirestoreProfile(model);                   // :746
+}
+```
+
+`_drift` is `ProfileRepositoryImpl` — the Drift-backed implementation,
+NOT a thin wrapper. Its `createProfile` (`:130-213`) has FOUR of its own
+awaits before returning: `_db.profileDao.countProfilesForAccount` (`:139`),
+`_db.profileDao.profileExistsByName` (`:145`), `_db.profileDao.insertProfile`
+(`:162`), and `_syncEngine?.pushLearnerProfile(_toFirestorePayload(model))`
+(`:198`, inside a `try`/`on TutorWriteException rethrow`/`catch` — swallowed
+on the durable-outbox path, but a genuine one-shot Cloud Function RPC in a
+tutored session: `TutoredWriteRouter.pushLearnerProfile`,
+`tutored_write_router.dart:301`, which calls `_writeService.editProfile`
+at `:321` — confirmed by reading that file directly, not cited). Its
+`ensureDefaultProfile` (`:382-...`) has its own `getProfilesByAccount`
+read, a 6-statement transaction (`insertProfile` plus five sibling-table
+updates), and its own `pushLearnerProfile` push, followed by the
+adapter's own `tryGetProfileById` read (`:743`) — six further awaits, not
+two.
+
+**None of these — six-plus awaits across the two paths — are enumerated
+anywhere in P2-28's fix, its doc comments, or its commit message.** The
+doc comment P2-28 wrote on `_activateThenEnsureFirestoreProfile`
+(`:875-937`) states "nothing asynchronous precedes it, so nothing can run
+between 'decide to activate' and 'activate' for this call, and a write
+with no await above it cannot be stale" — true only of the method's own
+body, false about the write's actual reachability from either public
+caller. The code's own retained-`_ref.mounted` rationale, two paragraphs
+below that claim, already half-concedes this: it says the caller "can
+itself be disposed during ITS OWN earlier await (the Drift insert) before
+this method is ever entered" — the await was seen and named, and
+classified only as a disposal hazard, never re-examined as a race hazard.
+
+#### 2. Reproduced by execution — zero subclassing of the class under test
+
+Wrote a temporary probe (`zz_p29_caller_boundary_probe_test.dart`, not
+committed, deleted after this section — see §5, Git hygiene), production
+shaped: a real `ProfileRepositoryImpl(db, syncEngine: facade)` behind the
+real `FirestoreProfileRepositoryAdapter`, exactly as
+`profile_providers.dart:48` wires it in production. The ONLY injected
+delay is on `SyncWriteFacade.pushLearnerProfile` (via a `mocktail` mock)
+— the one collaborator `ProfileRepositoryImpl.createProfile` already
+awaits in production at `:198`. `firestoreLearnerProfileRepositoryProvider`
+resolves immediately (undelayed) — both of `_activateThenEnsureFirestoreProfile`'s
+OWN awaits are fast, so this probe exercises only the CALLER-boundary
+await P2-28 never guarded.
+
+```
+$ flutter test test/features/profiles/data/repositories/zz_p29_caller_boundary_probe_test.dart
+00:00 +0: P29-I createProfile: a slow SyncWriteFacade.pushLearnerProfile (the caller's OWN await, not _activateThenEnsureFirestoreProfile's) still lets a late-settling create clobber a newer selection
+00:00 +0 -1: P29-I createProfile: ... [E]
+  Expected: 'ulid-p29-b'
+    Actual: 'ulid-p29-c'
+     Which: is different.
+            Expected: ulid-p29-b
+              Actual: ulid-p29-c
+                               ^
+             Differ at offset 9
+  P29-I: activeProfileDocIdProvider must stay on B. The hoisted activation write inside _activateThenEnsureFirestoreProfile is still preceded by a real production await (SyncWriteFacade.pushLearnerProfile) in the ADAPTER'S OWN CALLER (ProfileRepositoryImpl.createProfile), so "nothing asynchronous precedes it" is false at the public entry point.
+00:00 +0 -1: Some tests failed.
+```
+
+Sanity assertions inside the probe, all passed before the failing
+assertion was reached: `verify(() => facade.pushLearnerProfile(any())).called(1)`
+(the delayed collaborator really was invoked once); `pushGate.isCompleted == false`
+at the moment `select(B)` ran (the interleave genuinely happened before
+the gate released, not after); `activeProfileDocIdProvider` really did
+read B immediately after `select(B)` (sanity, before C's create settled);
+C's Firestore document really exists after the release (the delayed
+write genuinely ran, this is not a false pass from the write never
+firing); `selectedProfileIdProvider` still reads B at the end (the
+selection itself never moved). None of the six required boundary cases
+P2-27's/P2-28's own probes covered (both of `_activateThenEnsureFirestoreProfile`'s
+internal awaits, all three callers) are disputed by this — they stay
+green, P2-28 genuinely closed them. This is a SEVENTH boundary, one await
+earlier, that nothing before this round ever gated.
+
+#### 3. Full await enumeration — both paths, entry point to write
+
+**Entry = the public entry points on `FirestoreProfileRepositoryAdapter`
+(the only surface where the race is observable).** "Provider write" =
+`profile_repository_impl.dart:940`.
+
+**PATH A — `createProfile` (`:684-714`)**
+- A0. `_resolveProfileUlid(ulid)` — synchronous, no await.
+- A1. `await _drift.createProfile(...)` (`:701-707`) — **THIRD AWAIT,
+  UNCOVERED BY EITHER OF P2-28's TWO NAMED BOUNDARIES.** Inside
+  `ProfileRepositoryImpl.createProfile` (`:130-213`): `await
+  _db.profileDao.countProfilesForAccount(accountId)` (`:139`); `await
+  _db.profileDao.profileExistsByName(...)` (`:145`); `await
+  _db.profileDao.insertProfile(...)` (`:162`); `await
+  _syncEngine?.pushLearnerProfile(_toFirestorePayload(model))` (`:198`)
+  — production-wired (`profile_providers.dart:48`). Durable-outbox
+  enqueue (a real DB write) normally; in a tutored session, a one-shot
+  Cloud Function RPC (`TutoredWriteRouter.pushLearnerProfile ->
+  _writeService.editProfile`, `tutored_write_router.dart:301-321`) — a
+  genuine network round trip.
+- → enters `_activateThenEnsureFirestoreProfile`; **PROVIDER WRITE at
+  `:940`** (no await inside this method above it).
+- A2. `await _resolveFirestoreProfileRepo(model)` (`:942`) = P2-28's AWAIT
+  #1 — now below the write.
+- A3. `await _writeFirestoreProfile(...)` (`:944`) = P2-28's AWAIT #2 —
+  now below the write.
+
+**PATH B — `ensureDefaultProfile` (`:717-749`)**
+- B1. `await _drift.ensureDefaultProfile(...)` (`:738-741`) — **THIRD
+  AWAIT, UNCOVERED.** Inside `ProfileRepositoryImpl.ensureDefaultProfile`
+  (`:382-...`): its own `getProfilesByAccount` read, a 6-statement
+  transaction (`insertProfile` plus five sibling-table updates), and its
+  own `pushLearnerProfile` push.
+- B2. `await _drift.tryGetProfileById(id)` (`:743`) — **FOURTH AWAIT,
+  UNCOVERED.**
+- → **PROVIDER WRITE at `:940`**, then A2/A3-equivalent as above.
+
+**PATH C — `ensureRemoteProfile` (`:793-811`)**: calls `_ensureFirestoreProfile`
+only — never `_activateThenEnsureFirestoreProfile`. Structurally immune,
+unchanged; confirmed unaffected by any of the above.
+
+**Conclusion:** P2-28's commit message, its two rewritten doc comments,
+and this file's own `CURRENT STATE` all stated an invariant that does not
+hold — true only of `_activateThenEnsureFirestoreProfile`'s own body, not
+of the write's reachability from either public caller. From the public
+entry point there are FOUR awaits above the write on Path A and SIX on
+Path B, including — on Path A, in a tutored session — a real cloud push.
+P2-28's fix narrows the race window (it removes the ~38-second `T-43`
+resolution stall and the network write from the window); it does not
+close it.
+
+#### 4. `T-49`'s full arc, four rounds, mechanism named at each — the honest history
+
+`T-49` was filed `done` twice and `blocked` twice before this round, on
+FOUR different plausible-sounding justifications, each disproven by
+execution against the specific interleaving it never tested:
+
+- **P2-18 (`done`, wrongly): a false negative on reachability.**
+  Closed the race for exactly one of `_ensureFirestoreProfile`'s three
+  callers (`ensureRemoteProfile`) and reasoned, from reading, that the
+  other two (`createProfile`/`ensureDefaultProfile`) needed no fix
+  because they are "direct, awaited calls with no later selection to
+  race." **Mechanism of the error:** an `await` inside one call does not
+  stop a DIFFERENT profile from being selected elsewhere during the
+  await window — the claim asserted a negative about concurrent
+  execution without gating the specific await it depended on. Disproven
+  by P2-22's probe (`Expected: 'ulid-probe-profile-b' / Actual:
+  'ulid-probe-profile-c'`).
+- **P2-23 (`done`, wrongly): hoisted above the WRITE await, not the
+  RESOLUTION await.** Applied the fix P2-22 identified — activate before
+  `_writeFirestoreProfile`'s network write — and declared "activating
+  BEFORE the write closes this … a later `select()` always wins and is
+  never clobbered." **Mechanism of the error:** the method it fixed
+  (`_ensureFirestoreProfile` at the time) had TWO awaits, not one —
+  `_resolveFirestoreProfileRepo`'s account-resolution await ran BEFORE
+  the write P2-23 guarded, and P2-23 never enumerated it. The claim was
+  true about the write boundary and silently generalized to the whole
+  method. Disproven by round 4's PROBE 4/PROBE 5
+  (`Expected: 'ulid-probe4-b' / Actual: 'ulid-probe4-c'`, `-probe5-` the
+  same shape).
+- **P2-26/P2-27 (reopened, reconfirmed): named the mechanism, applied no
+  fix.** Both docs-only; P2-26 reopened `T-49` a third time with the full
+  mechanism and a suggested fix (not applied); P2-27 re-read the code
+  directly and reconfirmed the residual byte-for-byte unchanged.
+- **P2-28 (`done`, wrongly, again): hoisted above BOTH of the method's
+  OWN internal awaits — but never enumerated the CALLER's awaits.**
+  Fixed exactly what P2-26/P2-27 named — the RESOLUTION await — closing
+  both of `_activateThenEnsureFirestoreProfile`'s own awaits, proven with
+  six permanent test cases (all three callers × both named boundaries),
+  revert-proved byte-exact. **Mechanism of the error, this round's
+  finding:** the fix enumerated every await INSIDE the method it edited
+  and stopped there; it never asked what awaits precede the method's own
+  ENTRY from either of its two public callers. The doc comment it wrote
+  ("nothing asynchronous precedes it … a write with no await above it
+  cannot be stale") is true of the method's body and was stated as if
+  true of the write's full reachability — the identical
+  false-reachability-claim shape, one level of indirection further out.
+  Disproven this round by the caller-boundary probe, §2, above.
+
+**The generalisable lesson (new standing fact, below): when hoisting a
+write above an await to close a race, enumerate EVERY await on the path
+first — not every await inside the method being edited.** `T-49`
+survived two fixes (P2-23, P2-28) because each one correctly closed every
+await it looked at and never looked one level further out: P2-23 guarded
+the write await but not the resolution await in the SAME method; P2-28
+guarded both awaits in that method but not the awaits in its CALLERS. A
+fix that enumerates "every await in this method" is not the same claim as
+"every await on this write's path," and this file's own convention of
+naming a fix by the boundary it closes ("the WRITE await," "the
+RESOLUTION await") made the narrower, true claim read as the broader,
+false one three times running.
+
+#### 5. Git hygiene — probe deleted, tree clean
+
+```
+$ rm test/features/profiles/data/repositories/zz_p29_caller_boundary_probe_test.dart
+$ git status --porcelain | grep -v '^ M _bmad'
+(empty)
+$ find learning_tracker/test -iname "zz_*probe*" -o -iname "zz_p29*"
+(empty)
+```
+
+#### 6. Gate output (verbatim, write-quiet, from `learning_tracker/`) — re-confirmed, no code changed this round
+
+```
+$ dart analyze --fatal-infos
+Analyzing learning_tracker...
+No issues found!
+ANALYZE_EXIT=0
+
+$ dart run tool/check_profile_path_keying.dart | tail -1
+PROFILE-KEY-SPLIT check OK: 2 collection(s) currently split (bookmarks, learning_order), all within the tracked baseline (0 new violations).
+KEYING_EXIT=0
+
+$ dart run tool/check_profile_id_int_sites.dart | tail -1
+PROFILE-ID-INT-SITES OK: 88 tracked entries covering 91 site(s) across 5 pattern(s) [cf-int-guard, cf-string-profileid-doc, dart-int-profileid-param, dart-tutoring-int-parse, dart-tutoring-id-tostring]; 0 new, 0 stale, 0 changed.
+INTSITES_EXIT=0
+
+$ make audit | tail -3
+104/104 — PROFILE-ID-INT-SITES ... 0 new, 0 stale, 0 changed.
+=== audit PASSED — all 68 greps clean ===
+AUDIT_EXIT=0
+```
+
+No number moved: this round mints no new int-keyed profile-identity site,
+touches no Firestore path, and lands no `lib/`/`test/` file (the temporary
+probe was written, run, and deleted, §2/§5, above — `git status --porcelain`
+confirmed empty after deletion). `flutter test` (full suite) and
+`make test-serial-tools` NOT re-run this round — docs-only, no `lib/`/`test/`
+file lands in this commit, and neither number could have moved; P2-28's
+own `08:29 +11519 ~131: All tests passed!` stands, unaffected.
+
+#### 7. Second finding — false record: `T-49`'s "CLOSED FOR REAL" claim, stated in four places, none of them qualified
+
+Tracked as new task **`T-63`** (SERIOUS as a documentation defect, not a
+code defect — the underlying code defect is `T-49` itself, reopened
+above).
+
+- P2-28's own commit message: "Nothing asynchronous precedes it any
+  more, so no post-await re-check is needed for either boundary."
+- `profile_repository_impl.dart:911-914` (doc comment, unedited by this
+  round — docs-only, cannot touch `lib/`; disclosed here per this file's
+  own established practice for a docs-only round finding a false code
+  comment it cannot close, the `T-50`/`T-49`-at-P2-22 pattern): "nothing
+  asynchronous precedes it, so nothing can run between 'decide to
+  activate' and 'activate' for this call, and a write with no await
+  above it cannot be stale."
+- `firestore-cutover-log.md`'s own `CURRENT STATE` (this file, before
+  this round's correction, §§ above): "NOW SAFE (P2-28) … nothing
+  asynchronous precedes it any more, so there is nothing left for a
+  later `select()` to race."
+- `firestore-cutover-log.md`'s own Phase 3 ENTRY CRITERIA (this file,
+  before this round's correction): "`T-49` (SERIOUS) — done (P2-28).
+  Both internal awaits closed … Phase 3 is no longer blocked on `T-49`."
+
+All four are falsified by §§1-3, above. The claim is true only of
+`_activateThenEnsureFirestoreProfile`'s own body; it is stated about the
+write's full reachability, unqualified, and it is what the `done` filing
+and the Phase 3 unblocking both rested on. **Corrected this commit:**
+`CURRENT STATE`'s `Head:`, `Phase:`, the `T-40` paragraph's write
+enumeration (`:940` reclassified from "NOW SAFE" to "STILL UNGUARDED,
+narrowed not closed"), the `T-49` heading paragraph, and the Phase 3
+ENTRY CRITERIA pointer — all prepended with a correction, historical text
+left unedited, append-only, per this file's own rule. The two `lib/` doc
+comments themselves are NOT corrected this round — P2-29 is docs-only —
+disclosed here, not silently left to look authoritative.
+
+#### 8. Third finding — the readiness gate is a strict widening, not the proven equivalence P2-28 claimed; a documented invariant was silently dropped
+
+Tracked as new task **`T-64`** (MINOR, non-blocking — no live production
+path currently observes the widening).
+
+P2-28's Deviation 1 claimed "the readiness gate's production behaviour is
+unchanged (proven equivalent to the old async check, not merely
+asserted)." **Re-verified this round: the proof covers only ONE
+direction.** `activeAccountFirebaseProvider`
+(`active_account_providers.dart:90-97`) returns `null` when
+`activeAccountIdProvider` is `null` — that direction holds, confirmed by
+reading the provider body directly. The OTHER direction does not: when
+`activeAccountIdProvider` names an account with NO authenticated session,
+`registry.resolve(accountId)` throws `AccountNotAuthenticatedException`
+(that provider's own doc comment, `:58-64`, confirmed unchanged) —
+`_resolveFirestoreProfileRepo` catches this and returns `null`
+(`:829-839`). The NEW gate (`activeAccountIdProvider != null`, checked
+BEFORE the await) cannot see this failure at all; the OLD gate
+(`firestoreRepo != null`, checked AFTER the await) could and did.
+
+**This case is real in production, not hypothetical:** the credential-less
+local signup flow sets `activeAccountIdProvider` before establishing any
+Firebase session — `signup_screen.dart:226`,
+`ref.read(activeAccountIdProvider.notifier).set(accountId);`, immediately
+followed by `LocalAuthService(dao: dao).signUp(...)` (`:230-236`), a
+purely local, credential-less account creation with no
+`AccountFirebase.createAnonymousAccount`/`signInCloudAccount` call
+anywhere on this path (confirmed by reading the surrounding 60 lines
+directly; this account is later checked via `accountTier.isLocal` at
+`:370`, consistent with this project's confirmed credential-less
+offline-account design). Under the OLD gate, a profile created for such
+an account left `activeProfileDocIdProvider` unset (the class doc
+comment's own prior language, dropped by this round's own rewrite without
+noting the behaviour change: "stays unset only for the genuinely not-ready
+case — a still-local-born account"). Under the NEW gate, it is set.
+
+**Current functional impact: nil, confirmed by reading, not assumed.**
+`grep -rn "activeProfileDocIdProvider" lib/` (excluding `.notifier).set`/
+`.clear` call sites) finds exactly one non-writer consumer:
+`repository_providers.dart:167`, inside `_watchActiveAccountAndProfile`,
+which `await`s `activeAccountFirebaseProvider.future` FIRST (`:165`) and
+returns/rejects there for an unauthenticated local-born account before
+ever reaching the `activeProfileDocIdProvider` read at `:167`. So the
+widened write currently has no live reader that could observe the wrong
+value — the same "narrowed, not closed" shape as `T-49` itself, at a
+different seam, currently inert only because nothing reads the
+now-differently-set value.
+
+**Not a T-49 duplicate:** this is a correctness-of-claim finding about
+the READINESS gate (should the write fire at all), independent of the
+RACE-safety finding above (whether a fired write can be stale) — the two
+are orthogonal, as P2-28's own Deviation 1 correctly argued, and nothing
+here disputes that orthogonality.
+
+**Recommended fix, not applied this round (docs-only):** either restore
+the local-born-stays-unset invariant explicitly (re-add an async check,
+which would reintroduce an await above the write and require re-solving
+`T-49` all over again — the worse option), or keep the widening and (a)
+correct the class doc comment to state it was deliberately widened,
+naming the `AccountNotAuthenticatedException`/local-born case explicitly
+rather than silently dropping the sentence that named it, and (b) add a
+test pinning the local-born case (`activeAccountIdProvider` set,
+`activeAccountFirebaseProvider` throwing) so the widening is a recorded
+decision rather than an incidental side effect of `T-49`'s own fix.
+
+#### 9. `T-49`'s task row — reopened in place, fourth time; two new task rows
+
+`firestore-cutover-tasks.md`'s `T-49` row corrected in place (this
+project's own convention: "`blocked` also covers 'was `done`, a later
+independent review found the fix does not work' — the row is corrected
+in place rather than assigned a new id, since it is literally the same
+unresolved task"). New rows: `T-63` (the false-record finding, §7),
+`T-64` (the readiness-gate widening, §8). `T-59` (delete the repo-side
+activation entirely) is now more clearly the right-shaped fix than
+another re-guard — every production creation call site already calls
+`select()` unconditionally right after `createProfile`/`ensureDefaultProfile`
+returns, so the repo-side write is redundant on every non-abandoned path
+and is the SOLE source of `T-49`'s residual on every round to date;
+recorded as a strengthened recommendation on `T-59`'s own row, not a
+new task, and not applied this round.
+
+#### 10. Deferred verification — supersedes P2-28's table (only rows the reopening touches change; every other row carries forward unedited)
+
+| ID | Skipped ci-only / device check | Status this round |
+|---|---|---|
+| ✦D23 | An automated regression test for the CALLER-boundary await (this round's finding) | **Reopened, narrower than before.** The six-case permanent matrix in `profile_repository_impl_t49_activation_ordering_test.dart` still covers both of `_activateThenEnsureFirestoreProfile`'s own awaits — those stay closed. It does NOT cover the caller-boundary await this round found; this round's probe (§2, above) is the working RED template, deleted, not preserved as a file (no fix landed to guard with a permanent test yet — writing one without a fix would just document a known-red case, against this file's own established practice of pairing a permanent regression test with its fix in the same commit). |
+| D20 | Device/offline: activate A offline, switch to B, reconnect — `activeProfileDocIdProvider` must end on B | **Reopened, unchanged from before P2-28 in substance.** The code-level residual behind this device check is real again — P2-28's narrowing does not close what this check would observe. |
+| D10 | Device: create a profile offline, restore network, activate | **Open, unchanged.** Still the highest-value routine device check in the phase; still observing a fix that is narrowed, not complete. |
+| — | Every other row in P2-27's table (P2-28 changed only `✦D1`/`✦D24`, both unrelated to `T-49`, both unaffected by this round) | Unchanged; not re-copied here — see the **P2-27** entry, above, for the full D1–D25 map as it stood entering P2-28, still current except the three rows above. |
+
+#### 11a. Phase 3 ENTRY CRITERIA — supersedes P2-29's snapshot below (`T-49`/`T-59`/`T-64` lines only; every other line unchanged) — see the new **P2-31** entry, further below, for the full record
+
+- [x] **`T-49` (SERIOUS) — CLOSED BY REMOVAL (P2-31, round 7).** The
+  repository is no longer a writer of `activeProfileDocIdProvider` on any
+  path. 14 permanent test cases (the existing 6 + 3 new GROUP-3 cases
+  gating the caller-boundary await this round's own P2-29 review found,
+  + 5 controls), revert-proved byte-exact. Full mechanism and proof: the
+  new **P2-31** entry, below.
+- [x] **`T-59` — `done` (P2-31).** This IS `T-59` — taken, not merely
+  recommended.
+- [x] **`T-64` — `done` (P2-31), resolved by removal.** The gate the
+  finding was about no longer exists; pinned by permanent CONTROL-5.
+- [ ] **A fresh independent review of the commit that finally closes
+  `T-49` (P2-31) — still required, re-armed against THIS commit.** P2-31
+  cannot certify its own fix — the identical rule that fired against
+  P2-18, P2-23, and P2-28 in turn, each of which also believed its own fix
+  was the closing one.
+
+*(Historical, P2-29 — the snapshot the block above supersedes, left
+unedited per this file's own rule:)*
+
+#### 11. Phase 3 ENTRY CRITERIA — supersedes P2-28's snapshot (`T-49` line only; every other line unchanged)
+
+- [ ] **`T-49` (SERIOUS) — REOPENED A FOURTH TIME (P2-29). Not satisfied.**
+  Full mechanism, the await enumeration, and the execution-based
+  reproduction: this entry, above.
+- [x] `T-50` — unchanged, `done` (P2-20).
+- [x] `T-51` — unchanged, `done` — CARRIED-BY-RULING (P2-20).
+- [x] `T-52` — unchanged, `done` (P2-17).
+- [x] `T-53` — unchanged, `done` (P2-21).
+- [x] `T-54` — unchanged, `done` (P2-21).
+- [x] `T-56` — unchanged, `done` (P2-24).
+- [x] `T-57` — unchanged, `done` (P2-24).
+- [x] `T-58` — unchanged, `done` (P2-25/`c794cb35`).
+- [x] `T-61` — unchanged, `done` (P2-27).
+- [x] `T-62` — unchanged, `done` (P2-27).
+- [x] **`T-63` (new) — `done` (P2-29).** Non-blocking (record-integrity,
+  SERIOUS as a documentation defect, not a code defect) — the finding IS
+  the correction; nothing further to close.
+- [ ] **`T-64` (new, MINOR, P2-29) — open, non-blocking.** Readiness-gate
+  widening; recommended fix recorded, not applied.
+- [ ] `T-39` — unchanged, open, unrelated to `T-49`.
+- [ ] **A fresh independent review of the commit that FINALLY closes
+  `T-49` — still required, re-armed against whatever commit closes it
+  next.** This round WAS the fresh independent review of P2-28's own
+  commit the criterion demanded; it found the fix incomplete. The
+  criterion does not discharge on a negative result — it re-arms against
+  the next fix, exactly as it has for every round since P2-22.
+
+**Phase 3 remains BLOCKED — on `T-49` (again) and `T-39`.**
+
+**Still UNVERIFIED, not blocking but not to be skipped when Phase 3
+opens:** unchanged from P2-27/P2-28 — `D11` (P2-6's rules change is
+TEST-VERIFIED but still UNDEPLOYED); `D10`/`D20` (device checks, §10,
+above).
+
+**What Phase 3 inherits, all carried with a task id, none blocking:**
+unchanged from P2-28, plus this round's two new rows — `T-59` (now the
+recommended fix, strengthened this round, still not applied), `T-60`,
+`T-44`/`T-46`, `T-55`, `T-51`/`D21`, `T-63` (closed, record-integrity),
+`T-64` (new, this round).
+
+#### 12. Doc updates landed this commit
+
+- `firestore-cutover-log.md`: IN FLIGHT field (appended describing this
+  round's edit list, reset to `nothing` in this same commit, per the
+  protocol); `CURRENT STATE`'s `Head:` field; the `Phase:` field
+  (correction prepended); the non-`select()` write enumeration inside the
+  `T-40` paragraph (`:940` reclassified); the `T-49` heading paragraph
+  (correction prepended); the Phase 3 ENTRY CRITERIA pointer inside
+  `CURRENT STATE` (corrected); a new "Confirmed by P2-29" Gates
+  paragraph; two new standing facts (the enumerate-every-await lesson;
+  the caller-boundary generalisation of the false-reachability-claim
+  pattern); this entire entry, its own deferred-verification deltas and
+  Phase 3 ENTRY CRITERIA supersession, above.
+- `firestore-cutover-tasks.md`: header paragraph (`T-49` reopened a
+  fourth time, `T-63`/`T-64` new); the `T-49` row (corrected in place,
+  full arc + this round's finding appended); two new rows, `T-63` and
+  `T-64`; `T-59`'s row strengthened, not re-filed.
+- `firestore-cutover-plan.md`: **touched** — the status line and the
+  Phase 2 section header/summary both still claimed `T-49` `done`/CLOSED
+  FOR REAL, which this round's finding makes false. Status line:
+  correction prepended, historical paragraph left unedited, append-only.
+  New **P2-29 addendum** appended after the P2-28 addendum. `Head:`/
+  `Last updated:` fields corrected, re-derived from `git log`, not
+  copied forward. Phase 2 section header (§3): corrected in the same
+  pattern, a P2-29 supersession paragraph prepended before the P2-28
+  paragraph it supersedes for `T-49`'s disposition only.
+- `firestore-phase2-plan.md`: **not touched** — frozen, unaffected,
+  consistent with every prior round's finding; re-verified this round
+  (`grep -n "T-49\|T-63\|T-64"` → no hits).
+
+#### 13. Deviations from the round-6 brief, four-part
+
+**Deviation 1 — "Round 5 left exactly ONE defect open... the fix is
+known."** **Predicted** (quoted from the brief): *"Round 5 left exactly
+ONE defect open. It is narrow, it is proven by execution, and the fix is
+known."* **Actual:** the fix the brief described (hoist above the
+RESOLUTION await) was applied by P2-28 and genuinely closed exactly the
+defect round 5 described. But a SEVENTH await boundary — one level
+further out, at the two public callers — was never enumerated by round
+5, by the brief, or by P2-28, and this round found it open. **Mechanism:**
+round 5's own review scope was `_activateThenEnsureFirestoreProfile`
+itself (the method P2-23 had edited); it did not walk the call graph
+outward to the method's own callers, the same "enumerate every await on
+this method" vs. "enumerate every await on this path" gap this round's
+new standing fact names. **Invariant unaffected:** this is not a
+regression from anything the brief asked for — P2-28's fix is real,
+tested, and correctly closes the two boundaries it targeted; this round
+found an additional, narrower boundary the brief did not know to name.
+**Recorded in the log:** yes, §§1-4, above.
+
+No other deviation from the brief. Every claim in the brief's own
+"VERIFICATION" block was independently re-derived against the code and,
+where executable, against a fresh, independently-written probe — not
+copied.
+
+**PROCESS NOTE:** this round is itself an instance of the exact caution
+this file's own standing facts already carry — "a fix that closes one of
+several callers/awaits sharing a defect ... is not done." `T-49` is now
+four rounds deep on the identical shape at successively narrower scopes
+(one of three callers → one of two awaits in that caller → one of two
+awaits in the shared method → one of the two callers' OWN awaits). The
+pattern strongly suggests `T-59` (delete the repo-side activation write
+entirely, let `select()` be the sole writer) is not merely an
+alternative — it is the only shape in this file's own history that has
+not needed a second fix, because it removes the write rather than
+re-proving it safe one boundary at a time.
 
 ### 2026-08-07 — P2-28: closes `T-49` for real, both internal awaits — hoist the activation write above the RESOLUTION await too, six permanent test cases, revert-proved
 
