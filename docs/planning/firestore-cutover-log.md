@@ -949,28 +949,32 @@ here as a `CURRENT STATE` self-consistency fix, not a re-opening of `T-52`
 P2-17, this was CURRENT STATE's own prose falling behind that fix in a
 later commit that copied it forward without checking it).
 
-**IN FLIGHT:** `P2-31` — implementing the round-7 design (approach (c),
-REMOVE THE DIVERGENCE): delete `_activateThenEnsureFirestoreProfile` and
-`_writeFirestoreProfile` outright; `createProfile`/`ensureDefaultProfile`
-call `_ensureFirestoreProfile` directly (the write alone, never
-activates); delete the `activeAccountIdProvider` readiness-gate import and
-the write it guarded (`:940`); correct the doc comments this falsifies in
-`profile_repository_impl.dart`, `repository_providers.dart`,
-`active_profile_doc_id_provider.dart`, `firestore_learner_profile_repository.dart`,
-`profile_providers.dart`, `add_profile_dialog.dart`; extend
-`profile_repository_impl_t49_activation_ordering_test.dart` with GROUP 3
-(the DRIFT+PUSH boundary, 3 new cases) and 5 CONTROLS (14 total);
-re-point `profile_repository_impl_test.dart`'s "activates it" assertions
-to the new "does not activate" invariant; correct
-`add_profile_dialog_test.dart`'s two stale "repo activates" comments;
-update `CURRENT STATE` (`Head:`, `Phase:`, the non-`select()` write
-enumeration, the Phase 3 ENTRY CRITERIA pointer), `firestore-cutover-tasks.md`
-(`T-49`/`T-59`/`T-63`/`T-64`) and `firestore-cutover-plan.md`. The commit
-that lands this entry clears this field to `nothing`. Predicted revert
-signature (stated before running, per the design): reverting
-`profile_repository_impl.dart` alone should turn exactly 6 of the 14
-permanent cases RED (`P30-G`, `P30-H`, CONTROL-1, CONTROL-2, CONTROL-4,
-CONTROL-5) and leave 8 GREEN.
+**IN FLIGHT:** nothing. P2-31's own edit list (implementing the round-7
+design, approach (c), REMOVE THE DIVERGENCE: delete
+`_activateThenEnsureFirestoreProfile` and `_writeFirestoreProfile`
+outright; `createProfile`/`ensureDefaultProfile` call
+`_ensureFirestoreProfile` directly; delete the `activeAccountIdProvider`
+readiness-gate import and the write it guarded; correct the doc comments
+this falsifies across six `lib/` files; extend
+`profile_repository_impl_t49_activation_ordering_test.dart` from 6 to 14
+cases; correct `profile_repository_impl_test.dart`'s and
+`add_profile_dialog_test.dart`'s stale "repo activates" assertions/comments;
+update `CURRENT STATE`, `firestore-cutover-tasks.md`, and
+`firestore-cutover-plan.md`) landed in commit `17134b43`. **Process note:**
+this field itself was NOT reset to `nothing` inside that same commit — the
+commit that landed the code committed this field still reading the
+pre-landing "P2-31 — implementing..." text, violating the protocol's own
+"the commit that lands the code clears it" rule (the same slip this log
+has recorded for several prior rounds, e.g. the P2-14/P2-17 DEVIATION
+entries, below). Caught and corrected in this follow-up, same-session
+commit, per the established remedy: a same-session IN-FLIGHT-then-clear
+across two commits is the honest record when the omission is caught
+before the session ends, rather than silently back-filling a false claim
+that it was done correctly the first time. Predicted revert signature
+(stated before running, matched exactly): reverting
+`profile_repository_impl.dart` alone turned exactly 6 of the 14 permanent
+cases RED (`P30-G`, `P30-H`, CONTROL-1, CONTROL-2, CONTROL-4, CONTROL-5)
+and left 8 GREEN.
 
 (Superseded text below, from P2-29, left for the historical record — this
 was P2-29's own IN-FLIGHT-before-editing note: **IN FLIGHT:** nothing. P2-29's own edit list (re-read
