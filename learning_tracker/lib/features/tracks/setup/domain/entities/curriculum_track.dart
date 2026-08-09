@@ -23,6 +23,7 @@ class CurriculumTrackEntity {
     required this.stateChangedAt,
     required this.activatedAt,
     this.paceResetDate,
+    this.lastReorderAt,
     this.progressSchemaVersion,
     this.progressComputedAt,
     this.progressModel,
@@ -79,6 +80,7 @@ class CurriculumTrackEntity {
   /// .trackingStartDate` there is no `FieldValue.delete()` field-clearing
   /// case to handle on this field.
   final DateTime? paceResetDate;
+  final DateTime? lastReorderAt;
 
   // ── Decode-only passthrough fields ───────────────────────────────────
   //
@@ -140,6 +142,8 @@ class CurriculumTrackEntity {
     'activated_at': FirestoreCodec.encodeDateTime(activatedAt),
     if (paceResetDate != null)
       'pace_reset_date': FirestoreCodec.encodeDateTime(paceResetDate),
+    if (lastReorderAt != null)
+      'last_reorder_at': FirestoreCodec.encodeDateTime(lastReorderAt),
   };
 }
 
@@ -205,6 +209,7 @@ CurriculumTrackEntity curriculumTrackFromFirestore(Map<String, dynamic> data) {
     stateChangedAt: stateChangedAt,
     activatedAt: activatedAt,
     paceResetDate: FirestoreCodec.parseDateTime(data['pace_reset_date']),
+    lastReorderAt: FirestoreCodec.parseDateTime(data['last_reorder_at']),
     progressSchemaVersion: FirestoreCodec.parseInt(
       data['progress_schema_version'],
     ),

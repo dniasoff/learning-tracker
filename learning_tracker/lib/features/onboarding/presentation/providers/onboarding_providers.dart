@@ -7,7 +7,6 @@ import 'package:learning_tracker/features/learning/presentation/providers/comple
 import 'package:learning_tracker/features/onboarding/domain/services/bulk_prior_completion_service.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/curriculum_import_service.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/scheduler/scheduler.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
@@ -23,19 +22,11 @@ final curriculumImportServiceProvider = Provider<CurriculumImportService>((
 
 /// Provider for GoalRepository used during onboarding goal setup.
 ///
-/// `syncEngine` MUST be wired here — without it `GoalRepositoryImpl._syncGoal`
-/// bails on its first line (`if (_syncEngine == null) return;`) and every
-/// goal create/update/delete silently never reaches Firestore. `syncEngine`
-/// is null for local-born accounts, which is the intended no-op.
+/// **Firestore-backed** via [FirestoreGoalRepositoryAdapter] (wired
+/// Phase 3, T-20). The Drift-backed [GoalRepositoryImpl] is
+/// deprecated and will be removed in Phase 4.
 final goalRepositoryProvider = Provider<GoalRepository>((ref) {
-  final db = ref.watch(userDatabaseProvider);
-  final profileId = ref.watch(activeProfileIdProvider);
-  final syncFacade = ref.watch(syncWriteFacadeProvider);
-  return GoalRepositoryImpl(
-    database: db,
-    profileId: profileId,
-    syncEngine: syncFacade,
-  );
+  return FirestoreGoalRepositoryAdapter(ref: ref);
 });
 
 /// Provider for BulkPriorCompletionService used during onboarding.

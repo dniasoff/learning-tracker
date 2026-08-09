@@ -8,10 +8,11 @@ import 'package:learning_tracker/features/tracks/whole_curriculum_order/domain/m
 
 final trackLearningOrderRepositoryProvider =
     Provider<TrackLearningOrderRepository>((ref) {
-      return TrackLearningOrderRepositoryImpl(
-        database: ref.watch(userDatabaseProvider),
-      );
-    });
+  return FirestoreTrackLearningOrderRepositoryAdapter(
+    ref: ref,
+    database: ref.watch(userDatabaseProvider),
+  );
+});
 
 typedef _TrackCurriculumArgs = ({int trackId, CurriculumId curriculumId});
 
@@ -23,26 +24,26 @@ typedef _TrackCurriculumArgs = ({int trackId, CurriculumId curriculumId});
 
 final trackSedarimOrderProvider =
     FutureProvider.family<List<LearningOrderItem>, _TrackCurriculumArgs>((
-      ref,
-      args,
-    ) async {
-      final allItems = await ref
-          .watch(contentRepositoryProvider)
-          .getContentForCurriculum(args.curriculumId);
-      return ref
-          .watch(trackLearningOrderRepositoryProvider)
-          .getSedarimOrder(args.trackId, allItems);
-    });
+  ref,
+  args,
+) async {
+  final allItems = await ref
+      .watch(contentRepositoryProvider)
+      .getContentForCurriculum(args.curriculumId);
+  return ref
+      .watch(trackLearningOrderRepositoryProvider)
+      .getSedarimOrder(args.trackId, allItems);
+});
 
 final trackMasechtosOrderProvider =
     FutureProvider.family<List<LearningOrderItem>, _TrackCurriculumArgs>((
-      ref,
-      args,
-    ) async {
-      final allItems = await ref
-          .watch(contentRepositoryProvider)
-          .getContentForCurriculum(args.curriculumId);
-      return ref
-          .watch(trackLearningOrderRepositoryProvider)
-          .getMasechtosOrder(args.trackId, allItems);
-    });
+  ref,
+  args,
+) async {
+  final allItems = await ref
+      .watch(contentRepositoryProvider)
+      .getContentForCurriculum(args.curriculumId);
+  return ref
+      .watch(trackLearningOrderRepositoryProvider)
+      .getMasechtosOrder(args.trackId, allItems);
+});

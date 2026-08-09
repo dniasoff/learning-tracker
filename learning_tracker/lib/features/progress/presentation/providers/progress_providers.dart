@@ -7,7 +7,7 @@ import 'package:learning_tracker/features/content_browsing/presentation/provider
 import 'package:learning_tracker/features/learning/domain/entities/completion_entity.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
-import 'package:learning_tracker/features/progress/data/repositories/progress_repository_impl.dart';
+import 'package:learning_tracker/features/progress/data/repositories/firestore_progress_repository_adapter.dart';
 import 'package:learning_tracker/features/progress/domain/models/curriculum_progress_data.dart';
 import 'package:learning_tracker/features/progress/domain/repositories/progress_repository.dart';
 import 'package:learning_tracker/features/progress/domain/services/curriculum_progress_service.dart';
@@ -30,11 +30,13 @@ class ProgressOverviewStats {
 }
 
 /// Provider for the progress repository instance.
+///
+/// **Firestore-backed** via [FirestoreProgressRepositoryAdapter] (wired
+/// Phase 3, T-20). The Drift-backed [ProgressRepositoryImpl] is
+/// deprecated and will be removed in Phase 4.
 @riverpod
 ProgressRepository progressRepository(Ref ref) {
-  final database = ref.watch(userDatabaseProvider);
-  final profileId = ref.watch(activeProfileIdProvider);
-  return ProgressRepositoryImpl(database: database, profileId: profileId);
+  return FirestoreProgressRepositoryAdapter(ref: ref);
 }
 
 /// Provider for completion counts by curriculum, scoped to the active profile.

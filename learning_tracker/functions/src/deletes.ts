@@ -122,7 +122,7 @@ export const onUserDeleted = auth.user().onDelete(async (user) => {
  * Uses Admin SDK recursiveDelete so the client never needs to enumerate or
  * read subcollection documents — zero client reads, one server-side call.
  *
- * Expects: { profileId: number }
+ * Expects: { profileId: string } (ULID)
  * Returns: { success: true }
  */
 export const deleteLearnerProfile = onCall(CALL_OPTS, async (request) => {
@@ -132,15 +132,15 @@ export const deleteLearnerProfile = onCall(CALL_OPTS, async (request) => {
   }
 
   const profileId = request.data?.profileId;
-  if (typeof profileId !== "number" || !Number.isInteger(profileId) || profileId <= 0) {
-    throw new HttpsError("invalid-argument", "profileId must be a positive integer");
+  if (typeof profileId !== "string" || !profileId) {
+    throw new HttpsError("invalid-argument", "profileId must be a non-empty string (ULID)");
   }
 
   const profileRef = db
     .collection("users")
     .doc(uid)
     .collection("learner_profiles")
-    .doc(String(profileId));
+    .doc(profileId);
 
   logger.info(`deleteLearnerProfile: uid=${uid} profileId=${profileId}`);
   await db.recursiveDelete(profileRef);
@@ -203,7 +203,7 @@ const PROFILE_PROGRAMS_COLLECTION = "profile_programs";
  * into the client's existing error-handling path, and retrying is safe
  * because the whole operation is idempotent.
  *
- * Expects: { profileId: number, curriculumId: string }
+ * Expects: { profileId: string, curriculumId: string } (profileId is ULID)
  * Returns: { success: true, deleted: Record<string, number> }
  */
 export const deleteCurriculumTrack = onCall(CALL_OPTS, async (request) => {
@@ -211,8 +211,8 @@ export const deleteCurriculumTrack = onCall(CALL_OPTS, async (request) => {
   if (!uid) throw new HttpsError("unauthenticated", "Must be signed in");
 
   const { profileId, curriculumId } = request.data ?? {};
-  if (typeof profileId !== "number" || !Number.isInteger(profileId) || profileId <= 0) {
-    throw new HttpsError("invalid-argument", "profileId must be a positive integer");
+  if (typeof profileId !== "string" || !profileId) {
+    throw new HttpsError("invalid-argument", "profileId must be a non-empty string (ULID)");
   }
   if (typeof curriculumId !== "string" || !curriculumId) {
     throw new HttpsError("invalid-argument", "curriculumId must be a non-empty string");
@@ -222,7 +222,7 @@ export const deleteCurriculumTrack = onCall(CALL_OPTS, async (request) => {
   const docId = curriculumId;
   const profileRef = db
     .collection("users").doc(uid)
-    .collection("learner_profiles").doc(String(profileId));
+    .collection("learner_profiles").doc(profileId);
   const trackRef = profileRef.collection("curriculum_tracks").doc(docId);
 
   const deleted: Record<string, number> = {};
@@ -394,8 +394,8 @@ export const deleteCurriculumTrack = onCall(CALL_OPTS, async (request) => {
  * Idempotent: every operation is delete-if-exists; re-running after a
  * partial failure converges without erroring (mirrors [deleteCurriculumTrack]).
  *
- * Expects: { profileId: number, curriculumId: string, sefariaRefs: string[],
- *            unitIdentifiers: string[] }
+* Expects: { profileId: string (ULID), curriculumId: string, sefariaRefs: string[],
+*            unitIdentifiers: string[] }
  * Returns: { success: true, deleted: Record<string, number> }
  */
 export const deleteBulkMarkedCompletions = onCall(CALL_OPTS, async (request) => {
@@ -403,8 +403,8 @@ export const deleteBulkMarkedCompletions = onCall(CALL_OPTS, async (request) => 
   if (!uid) throw new HttpsError("unauthenticated", "Must be signed in");
 
   const { profileId, curriculumId, sefariaRefs, unitIdentifiers } = request.data ?? {};
-  if (typeof profileId !== "number" || !Number.isInteger(profileId) || profileId <= 0) {
-    throw new HttpsError("invalid-argument", "profileId must be a positive integer");
+  if (typeof profileId !== "string" || !profileId) {
+    throw new HttpsError("invalid-argument", "profileId must be a non-empty string (ULID)");
   }
   if (typeof curriculumId !== "string" || !curriculumId) {
     throw new HttpsError("invalid-argument", "curriculumId must be a non-empty string");
@@ -438,7 +438,7 @@ export const deleteBulkMarkedCompletions = onCall(CALL_OPTS, async (request) => 
 
   const profileRef = db
     .collection("users").doc(uid)
-    .collection("learner_profiles").doc(String(profileId));
+    .collection("learner_profiles").doc(profileId);
 
   const deleted: Record<string, number> = {};
   const failures: string[] = [];

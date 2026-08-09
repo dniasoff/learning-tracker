@@ -4,12 +4,22 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/tracks/setup/data/repositories/curriculum_track_repository_impl.dart';
 
 /// Stream provider for active tracks for the current profile.
 final activeTracksProvider = StreamProvider<List<CurriculumTrack>>((ref) {
   final db = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
   return db.trackDao.watchActiveTracksForProfile(profileId);
+});
+
+/// Firestore-backed adapter for curriculum-track lifecycle (activate/retire/
+/// archive/query) — **wired Phase 3, T-20**.
+/// The Drift DAO-backed CurriculumActivationService is deprecated and will
+/// be refactored in Phase 4.
+final curriculumTrackRepositoryAdapterProvider =
+    Provider<FirestoreCurriculumTrackRepositoryAdapter>((ref) {
+  return FirestoreCurriculumTrackRepositoryAdapter(ref: ref);
 });
 
 /// Resolves the display title for a track.

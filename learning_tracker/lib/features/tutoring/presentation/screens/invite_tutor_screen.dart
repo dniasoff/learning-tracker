@@ -109,9 +109,9 @@ class _InviteTutorScreenState extends ConsumerState<InviteTutorScreen> {
       // Snapshot human-readable names onto the grant so the tutor sees the
       // child's name (and inviting parent) instead of a raw id / generic label.
       final profiles = ref.read(profileListProvider).asData?.value ?? const [];
-      final childIdInt = int.tryParse(widget.childProfileId);
+      final childProfileUlid = widget.childProfileId;
       final childName = profiles
-          .where((p) => p.id == childIdInt)
+          .where((p) => p.ulid == childProfileUlid)
           .map((p) => p.displayName)
           .firstOrNull;
       final parentName = profiles

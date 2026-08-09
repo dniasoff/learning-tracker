@@ -97,7 +97,7 @@ class TutorWriteService {
   Future<TutorWriteResult> resetCompletion({
     required String grantId,
     required String ownerUid,
-    required int profileId,
+    required String profileId,
     required String completionId,
   }) => _call('tutorResetCompletion', {
     'grantId': grantId,
@@ -112,7 +112,7 @@ class TutorWriteService {
   Future<TutorWriteResult> upsertGoal({
     required String grantId,
     required String ownerUid,
-    required int profileId,
+    required String profileId,
     required String goalId,
     required Map<String, dynamic> goalData,
   }) => _call('tutorUpsertGoal', {
@@ -127,7 +127,7 @@ class TutorWriteService {
   Future<TutorWriteResult> deleteGoal({
     required String grantId,
     required String ownerUid,
-    required int profileId,
+    required String profileId,
     required String goalId,
   }) => _call('tutorDeleteGoal', {
     'grantId': grantId,
@@ -142,7 +142,7 @@ class TutorWriteService {
   Future<TutorWriteResult> upsertTrack({
     required String grantId,
     required String ownerUid,
-    required int profileId,
+    required String profileId,
     required String trackId,
     required Map<String, dynamic> trackData,
   }) => _call('tutorUpsertTrack', {
@@ -157,7 +157,7 @@ class TutorWriteService {
   Future<TutorWriteResult> deleteTrack({
     required String grantId,
     required String ownerUid,
-    required int profileId,
+    required String profileId,
     required String trackId,
   }) => _call('tutorDeleteTrack', {
     'grantId': grantId,
@@ -172,7 +172,7 @@ class TutorWriteService {
   Future<TutorWriteResult> upsertStageDefinition({
     required String grantId,
     required String ownerUid,
-    required int profileId,
+    required String profileId,
     required String stageId,
     required Map<String, dynamic> stageData,
   }) => _call('tutorUpsertStageDefinition', {
@@ -189,7 +189,7 @@ class TutorWriteService {
   Future<TutorWriteResult> upsertStudyDayConfig({
     required String grantId,
     required String ownerUid,
-    required int profileId,
+    required String profileId,
     required String configId,
     required Map<String, dynamic> configData,
   }) => _call('tutorUpsertStudyDayConfig', {
@@ -204,7 +204,7 @@ class TutorWriteService {
   Future<TutorWriteResult> deleteStudyDayConfig({
     required String grantId,
     required String ownerUid,
-    required int profileId,
+    required String profileId,
     required String configId,
   }) => _call('tutorDeleteStudyDayConfig', {
     'grantId': grantId,
@@ -221,7 +221,7 @@ class TutorWriteService {
   Future<TutorWriteResult> updateGamificationSettings({
     required String grantId,
     required String ownerUid,
-    required int profileId,
+    required String profileId,
     required String permKey,
     required Map<String, dynamic> settingsData,
   }) => _call('tutorUpdateGamificationSettings', {
@@ -238,7 +238,7 @@ class TutorWriteService {
   Future<TutorWriteResult> upsertBookmark({
     required String grantId,
     required String ownerUid,
-    required int profileId,
+    required String profileId,
     required String bookmarkId,
     required Map<String, dynamic> bookmarkData,
   }) => _call('tutorUpsertBookmark', {
@@ -255,7 +255,7 @@ class TutorWriteService {
   Future<TutorWriteResult> setProfileProgram({
     required String grantId,
     required String ownerUid,
-    required int profileId,
+    required String profileId,
     required String programId,
     required Map<String, dynamic> programData,
   }) => _call('tutorSetProfileProgram', {
@@ -272,7 +272,7 @@ class TutorWriteService {
   Future<TutorWriteResult> upsertCurriculumScope({
     required String grantId,
     required String ownerUid,
-    required int profileId,
+    required String profileId,
     required String scopeId,
     required Map<String, dynamic> scopeData,
   }) => _call('tutorUpsertCurriculumScope', {
@@ -290,7 +290,7 @@ class TutorWriteService {
   Future<TutorWriteResult> editProfile({
     required String grantId,
     required String ownerUid,
-    required int profileId,
+    required String profileId,
     String? displayName,
     String? avatar,
     String? mode,

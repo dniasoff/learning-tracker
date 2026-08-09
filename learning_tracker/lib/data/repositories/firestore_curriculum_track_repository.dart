@@ -397,4 +397,13 @@ class FirestoreCurriculumTrackRepository {
       'pace_reset_date': FirestoreCodec.encodeDateTime(now),
     }, SetOptions(merge: true));
   }
+
+  /// Stamps the reorder timestamp for [curriculumId] (Reorder Amnesty).
+  /// Sets `last_reorder_at` to now. Mirrors `TrackDao.stampReorderAt`.
+  Future<void> stampReorderAt(CurriculumId curriculumId) async {
+    final now = DateTimeFactory.nowUtc(); // P5: UTC timestamps
+    await _doc(curriculumId).set({
+      'last_reorder_at': FirestoreCodec.encodeDateTime(now),
+    }, SetOptions(merge: true));
+  }
 }

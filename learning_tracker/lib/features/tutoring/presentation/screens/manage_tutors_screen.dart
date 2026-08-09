@@ -160,7 +160,7 @@ class _PerChildGrantsListState extends ConsumerState<_PerChildGrantsList>
   void _refreshAll() {
     if (!mounted) return;
     for (final profile in widget.profiles) {
-      ref.invalidate(outgoingTutorGrantsProvider(profile.id.toString()));
+      ref.invalidate(outgoingTutorGrantsProvider(profile.id));
     }
   }
 
@@ -170,7 +170,7 @@ class _PerChildGrantsListState extends ConsumerState<_PerChildGrantsList>
     // spinner stays until fresh data is in (or an error surfaces).
     await Future.wait([
       for (final profile in widget.profiles)
-        ref.read(outgoingTutorGrantsProvider(profile.id.toString()).future),
+        ref.read(outgoingTutorGrantsProvider(profile.id).future),
     ]).catchError((_) => const <List<TutorGrant>>[]);
   }
 
@@ -203,7 +203,7 @@ class _ChildGrantsSection extends ConsumerWidget {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
     final grantsAsync = ref.watch(
-      outgoingTutorGrantsProvider(profile.id.toString()),
+      outgoingTutorGrantsProvider(profile.id),
     );
 
     return Column(
@@ -290,12 +290,12 @@ class _ChildGrantsSection extends ConsumerWidget {
                     isActive
                         ? _TutorGrantRow.active(
                             grant: grant,
-                            childProfileId: profile.id.toString(),
+                            childProfileId: profile.id,
                             childName: profile.displayName,
                           )
                         : _TutorGrantRow.pending(
                             grant: grant,
-                            childProfileId: profile.id.toString(),
+                            childProfileId: profile.id,
                             childName: profile.displayName,
                           ),
                 };
@@ -309,7 +309,7 @@ class _ChildGrantsSection extends ConsumerWidget {
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
           child: OutlinedButton.icon(
             onPressed: () => context.pushRoute(
-              InviteTutorRoute(childProfileId: profile.id.toString()),
+              InviteTutorRoute(childProfileId: profile.id),
             ),
             icon: const Icon(Icons.person_add_rounded, size: 18),
             label: Text(l10n.manageTutorsInviteButton),

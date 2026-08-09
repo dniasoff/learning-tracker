@@ -13,6 +13,10 @@ part of 'completion_providers.dart';
 /// decision 1). See [completionOrchestratorProvider] for where order
 /// validation, points, siyum detection, bookmark advance and streak now
 /// live.
+///
+/// **Firestore-backed** via [FirestoreCompletionRepositoryAdapter] (wired
+/// Phase 3, T-20). The Drift-backed [CompletionRepositoryImpl] is
+/// deprecated and will be removed in Phase 4.
 
 @ProviderFor(completionRepository)
 final completionRepositoryProvider = CompletionRepositoryProvider._();
@@ -22,6 +26,10 @@ final completionRepositoryProvider = CompletionRepositoryProvider._();
 /// decision 1). See [completionOrchestratorProvider] for where order
 /// validation, points, siyum detection, bookmark advance and streak now
 /// live.
+///
+/// **Firestore-backed** via [FirestoreCompletionRepositoryAdapter] (wired
+/// Phase 3, T-20). The Drift-backed [CompletionRepositoryImpl] is
+/// deprecated and will be removed in Phase 4.
 
 final class CompletionRepositoryProvider
     extends
@@ -36,6 +44,10 @@ final class CompletionRepositoryProvider
   /// decision 1). See [completionOrchestratorProvider] for where order
   /// validation, points, siyum detection, bookmark advance and streak now
   /// live.
+  ///
+  /// **Firestore-backed** via [FirestoreCompletionRepositoryAdapter] (wired
+  /// Phase 3, T-20). The Drift-backed [CompletionRepositoryImpl] is
+  /// deprecated and will be removed in Phase 4.
   CompletionRepositoryProvider._()
     : super(
         from: null,
@@ -71,7 +83,7 @@ final class CompletionRepositoryProvider
 }
 
 String _$completionRepositoryHash() =>
-    r'af632af656e64af2a9af8bca8f61fe314f7c391d';
+    r'50a66b9ac044d5347a9d015c7b7c346fff3a641b';
 
 /// Drift-backed [CompletionPointsPort] — see that class's doc comment.
 

@@ -1,40 +1,27 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/profiles/profiles.dart';
-import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:learning_tracker/features/tracks/stages/data/repositories/stage_definition_repository_impl.dart';
 import 'package:learning_tracker/features/tracks/stages/domain/models/stage_definition.dart';
 import 'package:learning_tracker/features/tracks/stages/domain/repositories/stage_definition_repository.dart';
 
 /// Provider for [StageDefinitionRepository], scoped per [CurriculumId].
+///
+/// **Firestore-backed** via [FirestoreStageDefinitionRepositoryAdapter] (wired
+/// Phase 3, T-20). The Drift-backed [StageDefinitionRepositoryImpl] is
+/// deprecated and will be removed in Phase 4.
 final stageDefinitionRepositoryProvider =
     Provider.family<StageDefinitionRepository, CurriculumId>((ref, curriculum) {
-      final database = ref.watch(userDatabaseProvider);
-      final syncFacade = ref.watch(syncWriteFacadeProvider);
-      return StageDefinitionRepositoryImpl(
-        stageDao: database.stageDao,
-        completionDao: database.completionDao,
-        // Plan §F Phase 5 deliverable 6 — dedicated stage_definition outbox
-        // kind replaces the legacy pushSettings piggyback.
-        pushStageDefinitions: syncFacade?.pushStageDefinitions,
-      );
-    });
+  return FirestoreStageDefinitionRepositoryAdapter(ref: ref);
+});
 
 /// Global (non-curriculum-scoped) provider for [StageDefinitionRepository].
 ///
-/// Use when the caller has a [trackId] but not a [CurriculumId], or when
-/// performing cross-curriculum operations such as data export.
-final globalStageRepositoryProvider = Provider<StageDefinitionRepository>((
-  ref,
-) {
-  final database = ref.watch(userDatabaseProvider);
-  final syncFacade = ref.watch(syncWriteFacadeProvider);
-  return StageDefinitionRepositoryImpl(
-    stageDao: database.stageDao,
-    completionDao: database.completionDao,
-    pushStageDefinitions: syncFacade?.pushStageDefinitions,
-  );
+/// **Firestore-backed** via [FirestoreStageDefinitionRepositoryAdapter] (wired
+/// Phase 3, T-20). The Drift-backed [StageDefinitionRepositoryImpl] is
+/// deprecated and will be removed in Phase 4.
+final globalStageRepositoryProvider = Provider<StageDefinitionRepository>((ref) {
+  return FirestoreStageDefinitionRepositoryAdapter(ref: ref);
 });
 
 /// Provider for the list of stages for a curriculum, ordered by stageOrder.

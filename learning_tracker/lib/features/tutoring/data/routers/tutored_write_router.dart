@@ -165,7 +165,7 @@ class TutoredWriteRouter implements SyncWriteFacade {
       );
     }
 
-    final profileIdInt = _profileIdOrThrow(sel);
+    final profileId = _profileIdOrThrow(sel);
     // AUD-tutoring-07: track which stages already committed so a mid-loop
     // CF failure can name them instead of throwing an opaque exception —
     // see the class header for the accepted-risk decision.
@@ -182,7 +182,7 @@ class TutoredWriteRouter implements SyncWriteFacade {
       final result = await _writeService.upsertStageDefinition(
         grantId: sel.grantId,
         ownerUid: sel.ownerUid,
-        profileId: profileIdInt,
+        profileId: profileId,
         stageId: stageId,
         stageData: payload,
       );
@@ -254,7 +254,7 @@ class TutoredWriteRouter implements SyncWriteFacade {
     if (builder == null) return _delegate.pushGamificationSettingsSnapshot();
 
     final settingsData = await builder();
-    final profileIdInt = _profileIdOrThrow(sel);
+    final profileId = _profileIdOrThrow(sel);
 
     // R3-H2 fix: call CF twice — once per permission key — so a tutor with
     // only can_edit_points or only can_edit_rewards is not locked out.
@@ -276,7 +276,7 @@ class TutoredWriteRouter implements SyncWriteFacade {
       final result = await _writeService.updateGamificationSettings(
         grantId: sel.grantId,
         ownerUid: sel.ownerUid,
-        profileId: profileIdInt,
+        profileId: profileId,
         permKey: 'can_edit_rewards',
         settingsData: rewardsSlice,
       );
@@ -289,7 +289,7 @@ class TutoredWriteRouter implements SyncWriteFacade {
       final result = await _writeService.updateGamificationSettings(
         grantId: sel.grantId,
         ownerUid: sel.ownerUid,
-        profileId: profileIdInt,
+        profileId: profileId,
         permKey: 'can_edit_points',
         settingsData: pointsSlice,
       );
@@ -382,7 +382,7 @@ class TutoredWriteRouter implements SyncWriteFacade {
   );
 
   @override
-  Future<void> deleteLearnerProfile(int profileId) =>
+  Future<void> deleteLearnerProfile(String profileId) =>
       _delegate.deleteLearnerProfile(profileId);
 
   // ── Helper ─────────────────────────────────────────────────────────────────
@@ -397,15 +397,14 @@ class TutoredWriteRouter implements SyncWriteFacade {
     }
   }
 
-  /// AUD-tutoring-17 — parses [sel.profileId] to an int, matching this
+  /// AUD-tutoring-17 — validates [sel.profileId] as a non-empty string (ULID), matching this
   /// class's documented error contract (see header): a malformed profileId
   /// is logged via [AppLogger] and re-thrown as a [TutorWriteException]
-  /// rather than propagating a raw [FormatException] that callers catching
+  /// rather than propagating a raw error that callers catching
   /// `on TutorWriteException` would not see.
-  int _profileIdOrThrow(TutoredProfileSelection sel) {
+  String _profileIdOrThrow(TutoredProfileSelection sel) {
     final raw = sel.profileId;
-    final parsed = int.tryParse(raw);
-    if (parsed == null) {
+    if (raw.isEmpty) {
       AppLogger.instance.error(
         event: 'tutored_write_router_invalid_profile_id',
         fields: {'profileId': raw},
@@ -415,6 +414,6 @@ class TutoredWriteRouter implements SyncWriteFacade {
         code: 'invalid-profile-id',
       );
     }
-    return parsed;
+    return raw;
   }
 }

@@ -63,18 +63,13 @@ final isStageCompletedProvider = FutureProvider.autoDispose
 /// decision 1). See [completionOrchestratorProvider] for where order
 /// validation, points, siyum detection, bookmark advance and streak now
 /// live.
+///
+/// **Firestore-backed** via [FirestoreCompletionRepositoryAdapter] (wired
+/// Phase 3, T-20). The Drift-backed [CompletionRepositoryImpl] is
+/// deprecated and will be removed in Phase 4.
 @riverpod
 CompletionRepository completionRepository(Ref ref) {
-  final database = ref.watch(userDatabaseProvider);
-  final profileId = ref.watch(activeProfileIdProvider);
-  final stageRepository = ref.watch(globalStageRepositoryProvider);
-
-  return CompletionRepositoryImpl(
-    database: database,
-    activeProfileId: profileId,
-    completionWriter: ref.watch(completionWriterProvider),
-    stageRepository: stageRepository,
-  );
+  return FirestoreCompletionRepositoryAdapter(ref: ref);
 }
 
 /// Drift-backed [CompletionPointsPort] — see that class's doc comment.
