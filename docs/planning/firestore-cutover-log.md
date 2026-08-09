@@ -280,6 +280,28 @@ this file — this section states the rule and cites the incident by name only.
 
 ## CURRENT STATE
 
+**Head:** `677262fd` (P2-34's own commit, `docs(planning): land Phase 2's
+lessons as standing facts, a working protocol, and per-phase traps` —
+confirmed via `git log --oneline -1` at THIS round's (P2-35, "round 9" —
+the Phase 3 handoff-authoring round) session start, re-derived
+independently, not copied forward from any prior citation, per `T-62`'s
+own lesson) **(P2-35, this commit, not yet reflected — same self-reference
+lag as every prior closing commit)**. `git status --porcelain` empty at
+session start except this session's own in-progress edits to this file;
+`git diff --stat 677262fd..HEAD -- learning_tracker/lib learning_tracker/test`
+is not applicable — this round touches neither directory (docs only: this
+file, plus a new file, `docs/planning/phase3-handoff.md`, which is not
+under `lib/` or `test/`). No code commit landed between `677262fd` and
+this one. **This round's own charter, per the owner's brief:** author
+`docs/planning/phase3-handoff.md` — the self-contained Phase 3 handoff
+prompt, from Phase 2's own measured state, per Working Protocol rule 15
+("each phase's CLOSING step authors the NEXT phase's handoff ... never
+speculatively, in advance"). This is Phase 2's final deliverable; Phase 3
+begins with a fresh agent reading that file.
+
+(Superseded paragraph below, from P2-34, left for the historical record —
+true as of P2-34's own commit, superseded by the paragraph above:)
+
 **Head:** `14860643` (P2-33's own commit, `docs(planning): P2-33 — Phase 2
 recorded NOT RESOLVED; T-49 closed but T-39 still blocks Phase 3` —
 confirmed via `git log --oneline -1` at THIS round's (P2-34, "round 8" per
@@ -1282,6 +1304,41 @@ here as a `CURRENT STATE` self-consistency fix, not a re-opening of `T-52`
 P2-17, this was CURRENT STATE's own prose falling behind that fix in a
 later commit that copied it forward without checking it).
 
+**IN FLIGHT:** nothing. P2-35 (round 9)'s own edit list — authoring the
+Phase 3 handoff prompt, per the owner's brief ("YOU ARE THE HANDOFF
+AUTHOR... write the Phase 3 handoff prompt for a FRESH agent with no
+memory of this session") — is fully landed in the commit that lands this
+entry. Docs-only; owner directive (2026-08-07, invoked again this round)
+waived all gate/test runs — this step changes no code, so no gate could
+regress; this round's own read-only verification (`git diff --stat
+677262fd..HEAD -- learning_tracker/lib learning_tracker/test`, empty) is
+recorded in `Gates`, below. Wrote `docs/planning/phase3-handoff.md` (new
+file) — a self-contained, copy-pasteable prompt for a fresh Phase 3 agent
+covering: the owner's standing operating instructions (§0); the read-first
+order, including the two structural quirks in how this file supersedes
+tables and Head/IN-FLIGHT paragraphs in place (§1); a FIRST-ACTION section
+instructing the fresh agent to re-run the recovery protocol and re-measure
+the suite baselines itself before trusting any inherited number, with the
+full "last known" gate/suite table, each row attributed to its source
+commit (§2); where Phase 2 landed — the split verdict, the Live-on-
+Firestore(4)/Dead-adapters(7) split, and the full known-issues table,
+task id per item (§3); Phase 3's scope — `T-39` first, then `T-30`, `T-31`,
+`T-37`, the Riverpod-retry and adapter-await traps, with evidence per task
+id, cited from this file, `firestore-cutover-tasks.md`, and
+`firestore-cutover-plan.md`'s own Phase 3 section (§4); Phase 2's 16
+traps, restated as direct instructions with incident citations and a
+"bites Phase 3" pointer for each (§5); the test policy (§6); the gate map
+(§7); the git/stash hazards, by base commit (§8); what is deliberately
+owner-deferred — the undeployed `firestore.rules` change and the device
+checks (§9); and a Phase 3 entry-criteria checklist the fresh agent
+checks off before its first edit (§10). Then, in this same commit:
+advanced `CURRENT STATE`'s `Head:` to `677262fd` (this round's own true
+parent) and reset this field to `nothing`, per this file's own IN FLIGHT
+protocol.
+
+(Superseded paragraph below, from P2-34, left for the historical record —
+true as of P2-34's own commit, superseded by the paragraph above:)
+
 **IN FLIGHT:** nothing. P2-34's own edit list — landing Phase 2's lessons as
 a durable, forward-applying record for Phases 3, 4 and 5, per the owner's
 lesson-landing brief (docs only; owner directive waived all gate/test runs,
@@ -2073,6 +2130,147 @@ not re-learn the hard way:**
   seven rounds used `cp` with md5 verification. Two unattributed stash
   entries have sat untouched since before this cutover began; never pop,
   apply, drop, or reference either by positional index.
+
+---
+
+### 2026-08-09 — P2-35: docs-only, "round 9" — writes and lands `docs/planning/phase3-handoff.md`, the self-contained Phase 3 handoff prompt, per Working Protocol rule 15; this is Phase 2's final deliverable
+
+**Charter (owner brief, verbatim intent):** "YOU ARE THE HANDOFF AUTHOR.
+Write the Phase 3 handoff prompt for a FRESH agent with no memory of this
+session." Docs-only; owner directive (2026-08-07, invoked again this
+round) waived all gate/test runs — this step changes no code, so no gate
+could regress. No probe, no test, no gate run this round; every claim in
+the new file is either a standing owner instruction, a fact re-derived
+from the repo this session (`grep`, `git log`, direct file reads), or a
+number carried forward from the log/tasks/plan docs with its source
+commit named — never presented as freshly measured.
+
+**§1 — Read first, in full, per this file's own recovery protocol and the
+brief's own instruction:** the whole of this file (Recovery/IN FLIGHT/
+Working protocols, `CURRENT STATE` — including its still-nested
+Head/IN-FLIGHT supersession chains, left uncollapsed per Working Protocol
+rule 8's own carve-out — Standing Facts, the PHASE 2 RETROSPECTIVE, and
+the newest dated entries through P2-33/P2-34); `firestore-cutover-plan.md`
+in full, including the Phase 3/4/5 "Entry criteria and traps" subsections
+P2-34 added; `firestore-cutover-tasks.md`, cross-checking every task id
+this handoff cites (`T-39`, `T-30`, `T-31`, `T-37`, `T-65`–`T-69`, `T-44`,
+`T-46`, `T-55`, `T-60`, `T-38`) against its own row, not against a prior
+round's summary of that row; `firestore-cutover-plan.md`'s Phase 3 section
+specifically, verbatim-checked against the new handoff's own §4 to avoid
+restating it inconsistently. Re-derived, not copied forward: `git log
+--oneline -15` (true tip `677262fd`, P2-34's own commit — matches
+`CURRENT STATE`'s own citation, no drift found); `git status --porcelain`
+(empty); `git stash list` (same two entries, same bases `d74e3829`/
+`8855b9b1`, unchanged).
+
+**§2 — Structural discovery, worth recording so a future round does not
+re-derive it from scratch:** this file's numbered sub-tables (the
+deferred-verification table, the Phase 3 ENTRY CRITERIA checklist) are
+versioned with letter suffixes (`§10`→`§10c`, `§11`→`§11c`) and, per this
+file's own "supersede in place at the point of the original claim"
+convention, a LATER round's superseding table is physically inserted
+INSIDE an EARLIER round's dated entry — immediately above the table it
+supersedes — not appended at the bottom of the file in chronological
+position. Concretely: `§10c`/`§11c`, both written by P2-33 (a round-8-
+chronologically-later entry), live inside the **P2-29** entry's body
+(between its own original `§10`/`§11` and the next entry's header),
+because that is where the table they supersede physically sits. A cold
+reader who assumes file position tracks chronology will read `§10c`/
+`§11c` as though they were P2-29's own work. The new handoff document's
+own §1 names this explicitly and tells the fresh Phase 3 agent to grep
+for the highest letter rather than trust position.
+
+**§3 — Content written into `docs/planning/phase3-handoff.md` (new file,
+~450 lines):** the owner's standing operating instructions (§0 there);
+the read-first order with the structural quirk from §2 above (§1); a
+FIRST-ACTION section instructing the fresh agent to re-run the recovery
+protocol and re-measure every suite baseline itself before trusting any
+number in the document, with a full "last known" gate/suite table, each
+row attributed to its measuring commit (§2 there — the specific fact the
+owner's brief required: full suites were last run at `6655f184`, and
+every re-confirmation since, through `677262fd`, has been a read-only
+tree-identity check, never a fresh run); the split Phase 2 verdict, the
+Live-on-Firestore(4)/Dead-adapters(7) split, and a complete known-issues
+table with task ids, re-derived from this file's own §2 (P2-33's KNOWN
+ISSUES table) and cross-checked against `firestore-cutover-tasks.md`'s
+rows directly rather than copied (§3 there); Phase 3's scope — `T-39`
+first, `T-30`, `T-31`, `T-37`, the Riverpod-retry and adapter-await traps,
+each with file:line evidence pulled from `firestore-cutover-tasks.md`'s
+own rows (§4 there); Phase 2's 16 traps restated as direct imperative
+instructions, each with its incident named and a Phase-3-specific
+application, consolidating the Working Protocol's 12 rules, the round-7
+FINAL REVIEW's `traps_proven_real` list (12 items, supplied with this
+round's brief), and Working Protocol rules 13/14/15 (§5 there); the test
+policy, gate map, and git/stash hazards, each restated as a fresh
+Recovery-Protocol-style runnable checklist rather than a cross-reference
+(§6-§8 there); what stays the owner's call — the undeployed
+`firestore.rules` change and the device checks `D10`/`D11`/`D20` (§9
+there); and a Phase 3 entry-criteria checklist the fresh agent checks off
+before its first edit (§10 there).
+
+**§4 — Git hygiene, verified this pass, read-only:**
+
+```
+$ git log --oneline -3
+677262fd docs(planning): land Phase 2's lessons as standing facts, a working protocol, and per-phase traps
+14860643 docs(planning): P2-33 — Phase 2 recorded NOT RESOLVED; T-49 closed but T-39 still blocks Phase 3
+f2f59e6e docs(planning): P2-32 — round 7's independent review recorded ...
+$ git status --porcelain
+ M docs/planning/firestore-cutover-log.md   # this session's own in-progress edit
+$ git diff --stat 677262fd..HEAD -- learning_tracker/lib learning_tracker/test
+# (empty — no code commit landed this round)
+$ git stash list
+stash@{0}: WIP on dev: d74e3829 docs(planning): durable task list + recovery log; mark Phase 1 resolved
+stash@{1}: WIP on (no branch): 8855b9b1 fix(tracks): AUD-tracks-18 - de-duplicate Hebrew-script detection regex
+```
+
+Both stash entries unchanged, identical bases/order to every prior round's
+record. Neither popped, applied, or dropped; neither referenced by
+positional index anywhere in this entry or in the new handoff document.
+
+**§5 — Gates, this pass:** `SKIPPED BY OWNER DIRECTIVE (docs-only step,
+2026-08-07, invoked again 2026-08-09)`. No suite, gate, or probe was run.
+Every number the new handoff document states as "last known" is
+attributed to its measuring commit (`6655f184` for the seven suites/gates
+that have been re-run since Phase 2's code landed; `~3872fdbc` for the two
+that have not, `make validate-calendar`/`make test-serial-tools`, `T-69`);
+none is presented as freshly measured by this round. The one number this
+round DID verify itself, read-only: `git diff --stat 677262fd..HEAD --
+learning_tracker/lib learning_tracker/test` is empty, both before and
+after this commit — confirming this round changed no code, so no suite
+number could have moved on its account.
+
+**§6 — Doc updates landed this commit:** `firestore-cutover-log.md` — IN
+FLIGHT field (appended before the first edit, reset to `nothing` and
+rewritten to describe this round's own landed work, per protocol);
+`CURRENT STATE`'s `Head:` field (advanced to `677262fd`, this round's own
+true parent, per `T-62`'s own lesson — re-derived, not copied forward);
+this **P2-35** entry itself. `docs/planning/phase3-handoff.md` — new file,
+Phase 2's final deliverable. No other file touched this round; `T-39`
+remains untouched and open, exactly as every round before this one left
+it — this round's charter was authoring the handoff, not closing Phase
+3's own entry blocker.
+
+**§7 — Deviations.** **Predicted:** none stated explicitly by this
+round's own brief beyond "write the handoff and commit it." **Actual:**
+none found — this round's own charter was narrow and fully executed as
+stated; the one thing worth flagging as a process note rather than a
+deviation is §2 above (the sub-table physical-location discovery), which
+is new information surfaced by this pass, not a contradiction of anything
+a prior round claimed.
+
+**Not done, explicitly, per this round's own charter:** `T-39` itself —
+untouched, exactly as stated in the new handoff document's own §10 as the
+first thing the fresh Phase 3 agent must reconcile before wiring anything.
+`T-65`–`T-69`, `T-44`, `T-46`, `T-55`, `T-60`, `T-38`'s underlying code-level
+fixes — all remain `todo`, unchanged; this round only cited them, in the
+new handoff document, with their existing evidence. `make validate-
+calendar`/`make test-serial-tools` — still not re-run against the current
+code; the new handoff document's §2 instructs the fresh agent to do this
+as its own first action, rather than this round attempting it under an
+owner directive that forbade it. Phase 4's and Phase 5's handoff prompts —
+deliberately NOT written; per Working Protocol rule 15, that is Phase 3's
+and Phase 4's own closing rounds' job, from their own measured state.
 
 ---
 
