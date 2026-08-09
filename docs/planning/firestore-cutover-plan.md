@@ -12,11 +12,15 @@ each failed to ask: not "is this write above the awaits I can see?" but
 existing 6 + 3 new cases gating the caller-boundary await P2-29's review
 found + 5 controls, including a source-scanning structural gate), revert-
 proved byte-exact. `T-39` (pre-existing, unrelated) remains the sole
-Phase 3 entry blocker, plus — per this document's own standing rule, "the
-round that fixes `T-49` cannot certify its own fix" — a fresh independent
-review of P2-31's own commit, which stays unchecked and re-arms exactly
-as it has after every prior round's fix. See `firestore-cutover-log.md`'s
-new **P2-31** entry for the full mechanism and proof.
+Phase 3 entry blocker. **CONFIRMED by a fresh independent review (P2-32)**
+— per this document's own standing rule, "the round that fixes `T-49`
+cannot certify its own fix," a review independent of P2-31 itself
+re-derived the call-tree enumeration, ran its own probe matrix, and found
+the code sound; it found six record-integrity/test-quality defects in the
+round's own written output (none reopening `T-49`, all dispositioned as
+`T-65`–`T-68` plus two in-place corrections). See `firestore-cutover-log.md`'s
+**P2-31** entry for the fix and mechanism, and its new **P2-32** entry for
+the independent review and the corrections it required.
 *(Historical, P2-29:)* **Phase 2 — NOT RESOLVED. `T-49` is
 REOPENED A FOURTH TIME (P2-29) — the mandatory fresh independent review of
 P2-28's own commit found P2-28's fix narrows the race window, it does not
@@ -234,7 +238,25 @@ every await inside the method being edited.** Full mechanism, the full
 await enumeration for both paths, the probe, and both new tasks:
 `firestore-cutover-log.md`'s new **P2-29** entry; `firestore-cutover-tasks.md`'s
 `T-49`/`T-63`/`T-64` rows.
-**Last updated:** 2026-08-07 (P2-29; status line, Head field, `Last
+**Last updated:** 2026-08-09 (P2-32; this `Last updated:`/`Head:` block
+specifically — **found stale this round**, see the correction below; the
+status line and the Phase 2 section header/summary below §3 were already
+correctly updated at P2-31 and are unaffected)
+**Head:** `6655f184` (P2-31's own same-session follow-up commit,
+confirmed via `git log --oneline -1` at this round's (P2-32) session
+start, per `T-62`'s own lesson — re-derived, not copied forward).
+**Corrected this round — the `T-62` mechanism recurring in a THIRD file:**
+this block still read "2026-08-07 (P2-29 ...)" / "true immediate parent
+is `64f1f763`, P2-28's own commit" up to and including P2-31's own commit
+`17134b43`. P2-31's edit list updated the top-of-file status line (`:3`)
+and the Phase 2 section header further down (§3, below), but never
+reached this separate mid-document field — the identical "advances the
+field its own narrative cites but not every sibling citation of the same
+fact" pattern `T-62` already named, now found in a second field inside a
+second file. `T-49` is CLOSED BY REMOVAL (P2-31), independently
+re-confirmed (P2-32) — see the status line and §3, below, both current
+and correct; this field was simply never told.
+*(Historical, P2-29:)* **Last updated:** 2026-08-07 (P2-29; status line, Head field, `Last
 updated:` field, this Phase 2 section addendum and the header/summary
 below §3 — the verification-cadence paragraph re-verified, needed no
 further change)
@@ -503,7 +525,7 @@ manufactures exactly the false confidence this gate exists to remove.
 
 ---
 
-### Phase 2 — Unify the identity (int → ULID) — **RESOLVED for `T-49` 2026-08-09 (P2-31, round 7) — CLOSED BY REMOVAL. `T-56`, `T-57`, `T-58`, `T-59`, `T-63`, `T-64` all genuinely CLOSED. Phase 3 blocked only on `T-39` and a fresh independent review of P2-31's own commit.**
+### Phase 2 — Unify the identity (int → ULID) — **RESOLVED for `T-49` 2026-08-09 (P2-31, round 7) — CLOSED BY REMOVAL, CONFIRMED by an independent review (P2-32). `T-56`, `T-57`, `T-58`, `T-59`, `T-63`, `T-64` all genuinely CLOSED. Phase 3 blocked only on `T-39`.**
 
 **P2-31 supersedes the P2-29 paragraph immediately below — `T-49` is no
 longer reopened, it is closed, by deleting the write four prior rounds
@@ -522,8 +544,11 @@ byte-exact (reverting `profile_repository_impl.dart` alone predicted,
 then measured, exactly 6 of 14 permanent cases RED, 8 GREEN). Per this
 plan's own standing rule ("the round that fixes `T-49` cannot certify its
 own fix"), the Phase 3 ENTRY CRITERIA line for a fresh independent review
-stays UNCHECKED and re-arms against P2-31's own commit. Full mechanism
-and proof: `firestore-cutover-log.md`'s new **P2-31** entry.**
+was CHECKED at **P2-32** — a review independent of P2-31 itself confirmed
+the fix and found six record-integrity/test-quality defects in the
+round's own record, none of them a code defect and none reopening `T-49`
+(`T-65`–`T-68`, plus two in-place corrections). Full mechanism and proof:
+`firestore-cutover-log.md`'s new **P2-31** and **P2-32** entries.**
 *(Historical, P2-29:)* **P2-29 supersedes the P2-28 paragraph immediately below for `T-49`'s
 disposition only — does not restate or dispute anything else in it, and
 this IS the "fresh independent review of P2-28's own commit" that

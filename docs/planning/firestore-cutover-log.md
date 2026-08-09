@@ -84,7 +84,32 @@ nothing on disk to diff against. This is the fix, binding from 2026-08-06
 
 ## CURRENT STATE
 
-**Head:** `64f1f763` (P2-28's own commit, `fix(profiles): activate the
+**Head:** `6655f184` (a same-session follow-up to `17134b43`, P2-31's own
+code-landing commit, `docs(planning): reset IN FLIGHT to nothing — P2-31's
+landing commit (17134b43) missed this per protocol` — confirmed via `git
+log --oneline -1` at THIS round's (P2-32) session start, re-derived
+independently, not copied forward from any prior citation — per `T-62`'s
+own lesson) **(P2-32, this commit, not yet reflected — same
+self-reference lag as every prior closing commit)**.
+
+**Corrected this round (`T-62` recurring a THIRD time): this field sat
+stale by TWO commits, not one.** The paragraph immediately below (P2-31's
+own) correctly cited `64f1f763` as Head while `17134b43` — P2-31's own
+code-landing commit — was still in flight; that was correct at the moment
+it was written. But `17134b43` itself landed with this same field still
+reading the pre-landing IN FLIGHT text (the process failure `6655f184`
+exists to correct — see the IN FLIGHT field, above), and `6655f184`, a
+further same-session commit that edited this very file to fix that IN
+FLIGHT field, had `17134b43` available as a now-knowable prior SHA and did
+not advance this `Head:` field past it either — the identical `T-62`
+mechanism ("a multi-part closing round advances the field for its own
+narrative paragraph but not for this top-line citation") recurring a
+THIRD time, now inside a two-commit same-round sequence rather than across
+rounds. Neither `17134b43` nor `6655f184` is a code regression; both are
+doc-field staleness. Re-derived from `git log --oneline -3` this round
+(`6655f184` → `17134b43` → `64f1f763`), not copied forward.
+
+(Superseded field-value text below, from P2-31, left for the historical record — true as of P2-31's own (intended) commit `17134b43`, at the moment it was written, superseded by the paragraph above: `64f1f763` (P2-28's own commit, `fix(profiles): activate the
 profile doc id before the provider resolution await, closing T-49` —
 confirmed via `git log --oneline -1` at THIS round's (P2-31, round 7)
 session start, re-derived independently, not copied forward from P2-29's
@@ -93,7 +118,7 @@ reflected — same self-reference lag as every prior closing commit)**.
 Between `64f1f763` and this commit, `git status --porcelain` carried
 P2-29's finished but uncommitted doc edits (this file, `firestore-cutover-plan.md`,
 `firestore-cutover-tasks.md`) — no code commit landed in between, so
-`64f1f763` is still the correct immediate parent for P2-31's own commit.
+`64f1f763` is still the correct immediate parent for P2-31's own commit.)
 
 (Superseded field-value text below, from P2-29, left for the historical record — true as of P2-29's own (uncommitted, at the time) edit, superseded by the paragraph above: `64f1f763` (P2-28's own commit, `fix(profiles): activate the
 profile doc id before the provider resolution await, closing T-49` —
@@ -456,7 +481,24 @@ resolution) reopens the SAME race for the SAME two callers, REPRODUCED BY
 EXECUTION again, this time by round 4's independent review against
 `734a6daa`** (see the `T-49` paragraph, below, and
 `firestore-cutover-tasks.md`).
-**Phase 3 ENTRY CRITERIA, CORRECTED AT P2-31 (round 7): `T-49` IS
+**Phase 3 ENTRY CRITERIA, CORRECTED AT P2-32 (round 7): `T-49` IS
+satisfied — CLOSED BY REMOVAL, gated on the 14-case permanent matrix
+(9 race cases + 5 controls) being green and revert-proved (confirmed at
+P2-31; independently re-confirmed by round 7's own independent
+verification, P2-32 — see the new **P2-32** entry, below, and §11b,
+above). `T-39` remains open and is now the SOLE remaining Phase 3 entry
+blocker.** **The "fresh independent review of the commit that finally
+closes `T-49`" line is now CHECKED (P2-32)** — a review independent of
+P2-31 itself confirmed the fix (§11b, above); it also found six
+record-integrity/test-quality defects in the round's own record, all
+dispositioned in the new **P2-32** entry, none reopening `T-49`. Unlike
+P2-28's "IS satisfied" claim (historical, below), this one is not scoped
+to "both of one method's internal awaits" — it is scoped to "the
+repository performs this write on no path," which CONTROL-4's source scan
+checks mechanically on every test run (with a disclosed, narrower-than-
+advertised blind spot — `T-67`), not by enumeration that can go stale the
+next time the code moves.
+*(Historical, P2-31:)* **Phase 3 ENTRY CRITERIA, CORRECTED AT P2-31 (round 7): `T-49` IS
 satisfied — CLOSED BY REMOVAL, gated on the 14-case permanent matrix
 (9 race cases + 5 controls) being green and revert-proved (confirmed this
 round; see the new **P2-31** entry, below). `T-39` remains open and is
@@ -520,7 +562,12 @@ The `repository_providers.dart:130` hit is a doc-comment mention of the
 call shape in prose, not a write site — `.set(id)` is quoted text inside
 a `///` block. The three genuine write sites are all in
 `profile_providers.dart`: `:111` (`SelectedProfileId.select`), `:175`
-(`SelectedProfileId.clear`), `:263`/(`.set(` two lines below, `:265`)
+(`SelectedProfileId.clear`), `:263`/(`.set(` **one** line below, `:264`
+— corrected P2-32; the paragraph as originally written said "two lines
+below, `:265`," but `:264` is `.set(existingProfile.ulid);` and `:265` is
+only the enclosing `}`; the stale-citation class this project's own
+standing facts warn against, recurring inside an enumeration titled
+"CORRECTED THIS ROUND")
 (`AutoSelectedProfileId`'s guarded re-affirm branch). **Two writers**, by
 the paragraph below's own counting convention (`clear()` is a reset, not
 an activation; the guarded re-affirm is the one under discussion in
@@ -949,6 +996,30 @@ here as a `CURRENT STATE` self-consistency fix, not a re-opening of `T-52`
 P2-17, this was CURRENT STATE's own prose falling behind that fix in a
 later commit that copied it forward without checking it).
 
+**IN FLIGHT:** nothing. P2-32's own edit list (docs only, no
+`lib/`/`test/` file touched — recording round 7's independent
+verification into the planning docs: fixed `CURRENT STATE`'s `Head:`
+field, stale by TWO commits, a `T-62` recurrence; appended a correction,
+not an in-place rewrite, to the **P2-31** entry's §7, which falsely
+claimed the IN FLIGHT field was reset to `nothing` inside `17134b43`
+itself; appended a correction qualifying **P2-31** §4's and
+`firestore-cutover-tasks.md`'s unqualified "makes a fifth reopening
+structurally impossible" claim for CONTROL-4, whose regex has a
+demonstrated 40-character blind spot; fixed the `T-40` enumeration's stale
+`:265` citation (actual `:264`); opened four new non-blocking tasks —
+`T-65`–`T-68`; added §11b marking the Phase 3 ENTRY CRITERIA "fresh
+independent review" line satisfied, credited to this round's independent
+verification, not to P2-31 itself; fixed the same Head/`Last updated:`
+staleness pattern inside `firestore-cutover-plan.md` (a THIRD,
+previously-undetected location) and `firestore-cutover-tasks.md`'s own
+header) landed in this commit. See the new **P2-32** entry, below, for
+the full record.
+
+(Superseded text below, from P2-31, left for the historical record — this
+was P2-31's own now-corrected IN-FLIGHT-then-clear note, its process note
+about the `17134b43`/`6655f184` split now itself superseded by the new
+`Head:` correction above, not rewritten:
+
 **IN FLIGHT:** nothing. P2-31's own edit list (implementing the round-7
 design, approach (c), REMOVE THE DIVERGENCE: delete
 `_activateThenEnsureFirestoreProfile` and `_writeFirestoreProfile`
@@ -974,7 +1045,7 @@ that it was done correctly the first time. Predicted revert signature
 (stated before running, matched exactly): reverting
 `profile_repository_impl.dart` alone turned exactly 6 of the 14 permanent
 cases RED (`P30-G`, `P30-H`, CONTROL-1, CONTROL-2, CONTROL-4, CONTROL-5)
-and left 8 GREEN.
+and left 8 GREEN.)
 
 (Superseded text below, from P2-29, left for the historical record — this
 was P2-29's own IN-FLIGHT-before-editing note: **IN FLIGHT:** nothing. P2-29's own edit list (re-read
@@ -1458,6 +1529,267 @@ stage-definition · study-day-config · track-learning-order.
 
 Newest first. Append; never rewrite history.
 
+### 2026-08-09 — P2-32: round 7's independent verification recorded — `T-49` CONFIRMED closed by an agent independent of P2-31; six record-integrity/test-quality defects found in the round's own output, none reopening `T-49`; four new non-blocking tasks opened (`T-65`–`T-68`)
+
+**Brief: "YOU ARE P2-32. Docs only. Make the record true after round 7."**
+Round 7 = P2-30 (design, no code) + P2-31 (implementation) + P2-32 (this
+entry). Input to this round: the P2-30 design, P2-31's own structured
+implementation report, and a **separate, independent verification** —
+produced by an agent given only the tree at HEAD `6655f184` and P2-31's
+claims, not P2-31's own reasoning — that re-derived the call-tree
+enumeration itself, built and ran its own 17-case sentinel probe matrix
+(distinct from the permanent 14-case matrix; a different, independently
+designed probe), and ran every gate and suite fresh. **This independent
+verification IS the "fresh independent review of the commit that finally
+closes `T-49`" the Phase 3 ENTRY CRITERIA has required, unsatisfied,
+since P2-22.**
+
+#### 1. Tree state verified before the first edit
+
+`git log --oneline -1` → `6655f184`. `git status --porcelain` → empty
+(clean tree — P2-31's commit `17134b43` and its same-session follow-up
+`6655f184` are both landed). `git stash list` → the two known entries
+(`d74e3829`, `8855b9b1`), untouched, identical bases/order/reflog SHAs to
+every prior round's record. `dev`, single worktree, 0 behind / 34 ahead
+of `origin/dev` (nothing pushed). No orphaned `flutter test`.
+
+#### 2. What the independent verification found — the code
+
+**`T-49` IS CLOSED.** The reviewing agent's own comment-stripped scan of
+every `.dart` file under `lib/` finds exactly three writes to
+`activeProfileDocIdProvider`, all in `profile_providers.dart`;
+`FirestoreProfileRepositoryAdapter` performs no such write on any of its 8
+public methods (all 8 enumerated, not only the 3 the design names —
+`createProfile`, `ensureDefaultProfile`, `ensureRemoteProfile`,
+`updateProfile`, `deleteProfile`, and the three pure reads). Its own
+17-case probe matrix — sentinel-based (pre-set
+`activeProfileDocIdProvider` to a value no code under test could produce,
+assert byte-identical afterwards, catching a write of `null` as well as a
+write of a real ULID) — is green on the fixed tree and, reverting
+`profile_repository_impl.dart` to `git show 64f1f763:` via `cp` (never
+`git stash`), goes RED on exactly the cases the permanent matrix's own
+revert-proof also predicts, with two results worth naming in the
+independent verifier's own words: (1) its `E2-fast` case (the
+`ensureDefaultProfile` FAST path — an account that already owns a
+profile) goes RED on the reverted tree, confirming design residual **R8**
+by execution rather than by reading — and this is a path the permanent
+matrix's GROUP-3 gate structurally cannot reach, since it returns before
+`ProfileRepositoryImpl.createProfile`'s push boundary is ever entered; (2)
+the permanent matrix's own GROUP-1/GROUP-2 race cases stay GREEN on the
+reverted tree in two sub-cases where the independent verifier's own
+sentinel probes go RED, because GROUP-1/2 interleave a `select(B)` and
+assert only the FINAL value — on the pre-fix tree the repo's write landed
+BEFORE that `select(B)`, so `select(B)` silently overwrote it and the
+assertion held anyway. **Not a defect** (this file's own class doc
+comment already states the nine race cases are now structurally true and
+the five controls carry the load), but it means the six inherited
+GROUP-1/2 cases are worth nothing as guards against a re-added write —
+only CONTROL-1/2/4/5 are, and CONTROL-4 has a disclosed blind spot (`T-67`,
+below). Every suite and gate the verification re-ran independently
+matched P2-31's own reported test/check COUNTS exactly: `+14` targeted,
+`+441` `test/features/profiles/`, `make test` `+11527 ~131` exit 0 (wall
+time `08:54` vs P2-31's own `08:27` — the verifier's own disclosed
+mechanism is concurrent CPU load from its own parallel targeted runs, not
+a count discrepancy), `make audit` `104/104` plus `68` greps, `analyze`
+clean, checks 103/104 clean and byte-identical to baseline, `make
+test-rules` `116/116` with `TQ-9` `37/37`, `make test-functions`
+`337/337` (emulator suites run one at a time, ports confirmed free first —
+neither moved, nothing here touches `firestore.rules` or `functions/`).
+Tree hygiene intact throughout: no
+branch, no worktree, nothing pushed, nothing staged, no `_bmad` file
+touched at any checkpoint; every probe file backed up and restored via
+`cp` only, md5-identical; the throwaway probe file itself moved out of the
+repo tree, leaving no residue.
+
+**Verdict on the code: sound.** `T-49` is genuinely closed. The
+verification's overall `"verdict": "defective"` is about the ROUND'S
+RECORD, not the fix — every defect it found is a documentation or
+test-quality gap, none of them a production code defect, and none of
+them reopens `T-49`. This entry exists to correct the record, as P2-32's
+brief requires.
+
+#### 3. The six defects found, and their disposition this round
+
+1. **CONTROL-4's advertised guarantee is overbroad.** Its regex,
+   `activeProfileDocIdProvider\.notifier\)[\s\S]{0,40}?\.set\(`, is a
+   bounded 40-character window; a re-added write whose notifier read and
+   `.set(` sit further apart than that passes the scan undetected
+   (demonstrated by injection: a padded variable name plus an
+   intervening log call evades CONTROL-4 while CONTROL-1/CONTROL-5
+   correctly go RED; restored via `cp`, md5-identical). The claim that
+   CONTROL-4 alone "makes a fifth reopening structurally impossible ...
+   regardless of which method it lands in" is false as stated in the
+   **P2-31** entry §4 and in `firestore-cutover-tasks.md`'s `T-49` row.
+   **Disposition:** corrected in place with an appended bracketed note in
+   both locations (append-only — the original sentences are not deleted),
+   downgrading the claim to its true scope: CONTROL-4 catches the
+   idiomatic single-expression write shape; CONTROL-1/2/5 are the actual
+   backstop for anything wider. **Filed as `T-67`** (§4, below); not
+   fixed in code this round (docs only), matching this file's own
+   `T-50`/`T-63` precedent for a docs-only round disclosing rather than
+   editing a `lib/`/`test/` file.
+2. **`CURRENT STATE`'s `Head:` field was stale by TWO commits — a `T-62`
+   recurrence, a THIRD instance of the same mechanism.** It read
+   `64f1f763` with a note scoped to `17134b43` ("this commit, not yet
+   reflected"), but `17134b43` landed and was then followed, in the same
+   session, by `6655f184` — which edited this same file (to fix the IN
+   FLIGHT omission, see item 3) without advancing `Head:` past
+   `17134b43`, even though `17134b43` was by then a knowable prior SHA.
+   **Disposition:** fixed — `Head:` now reads `6655f184`, correctly
+   re-derived from `git log --oneline -1` this round, with the P2-31
+   value preserved as superseded/historical and the recurrence disclosed
+   in place, per this file's established convention.
+3. **The P2-31 entry's §7 states a false claim its own IN FLIGHT
+   paragraph, a few hundred lines above in the same file, already
+   contradicts.** §7 says "IN FLIGHT field reset to `nothing` in this
+   same commit" — true of `6655f184`, false of `17134b43` (the commit §7
+   is actually describing). **Disposition:** an append-only correction
+   note added immediately after the false sentence in §7 (the sentence
+   itself is not deleted or rewritten), naming it false and pointing at
+   `6655f184`.
+4. **Design residual R1 (post-`select()` calls guarded only by widget
+   liveness, not a selection re-check — 6 sites: `add_profile_dialog.dart`,
+   `onboarding_profile_creation_step.dart`, `notifications_bootstrap.dart`,
+   `router_provider.dart`, `device_restore_screen.dart`,
+   `sign_in_controller.dart`) was never given its own task id**, though
+   the P2-30 design says verbatim it "should get its own task id, not be
+   folded into `T-49`'s closure." **Disposition: opened `T-65`** (§4,
+   below).
+5. **The permanent matrix has no case for `ensureDefaultProfile`'s FAST
+   path** (design R8) — a structurally distinct path GROUP-3's gate
+   cannot reach by construction, genuinely exercised as an activation
+   site on the pre-fix tree (item 2, §2, above). **Disposition: opened
+   `T-66`** (§4, below); the independent verifier's own `E2-fast` case is
+   a ready-made template for the 15th permanent case, not reproduced here
+   (docs-only round).
+6. **A stale line citation inside the round's own "CORRECTED THIS ROUND"
+   `T-40` write enumeration.** It cited `AutoSelectedProfileId`'s `.set(`
+   as "`.set(` two lines below, `:265`"; the actual call is at `:264`
+   (one line below), and `:265` is the closing brace. **Disposition:**
+   fixed in place with the corrected line number and a short note, per
+   this file's `T-52`-era precedent for a same-paragraph self-consistency
+   fix (not a full historical-supersession block — this is a citation
+   typo inside an already-current paragraph, not a change of claim).
+
+**A seventh item, pre-existing and not attributable to round 7, found by
+the same independent verification and carried forward here rather than
+silently absorbed:** `profile_repository_impl.dart:617-619`'s class doc
+comment claims "(verified: `grep -rn
+'selectedProfileIdProvider.notifier).select(' lib/` returns every one of
+them and nothing else)." Re-run this round: that exact command returns
+**3** lines (`router_provider.dart:65`, `profile_providers.dart:309`,
+`profile_switcher_sheet.dart:349`), not "every one of them" — at least 9
+further real `select(id, ulid: ...)` call sites use a multi-line
+`ref\n.read(...)\n.select(...)` form the quoted pattern cannot match
+(`onboarding_screen.dart:183/286/331`,
+`onboarding_profile_creation_step.dart:141`,
+`sign_in_controller.dart:695/713`, `device_restore_screen.dart:127`,
+`profile_picker_screen.dart:214`, `add_profile_dialog.dart:284`,
+`profile_edit_delete_actions.dart:149`, `notifications_bootstrap.dart:51`).
+`git log -S "returns every one of"` dates it to `a3c92d6c`, well before
+this round. **Disposition: opened `T-68`** (§4, below); not fixed in code
+this round.
+
+#### 4. New tasks opened
+
+- **`T-65` (design R1, own task id per the P2-30 design's explicit
+  instruction, MINOR, non-blocking).** Six post-await `select()` call
+  sites are guarded only by widget/screen liveness (`mounted`/
+  `context.mounted`) or, for `notifications_bootstrap.dart:37-52`, by
+  nothing at all — none re-check that the selection they are about to
+  make is still the intended one. Strictly better than the pre-P2-30
+  split (both providers now agree on the wrong profile rather than
+  disagreeing), not closed. Only `AutoSelectedProfileId`'s guarded
+  re-affirm (`profile_providers.dart:258`) carries a real re-check.
+  Recommended fix: a per-call-site wiring test, the shape
+  `profile_activation_heal_wiring_test.dart` already uses for `T-40`.
+- **`T-66` (`ensureDefaultProfile` FAST path has no permanent test case —
+  design R8, MINOR, non-blocking).** `ProfileRepositoryImpl.ensureDefaultProfile`
+  returns early (`:380`, before `AutoSelectedProfileId` calls it, an
+  account that already owns a profile) — GROUP-3's gate is unreachable on
+  this path by construction, so nothing in the 14-case permanent matrix
+  exercises it. Recommended fix: a 15th case mirroring the independent
+  verifier's own `E2-fast` — existing profile in the account, a
+  speculative/wasted mint passed in, gated at the WRITE boundary, asserting
+  `activeProfileDocIdProvider` untouched and the wasted mint gets no
+  remote document.
+- **`T-67` (CONTROL-4's regex has a demonstrated 40-character blind spot,
+  MINOR as a code defect / SERIOUS as an unqualified-guarantee claim,
+  non-blocking).** §3 item 1, above. Recommended fix, per the independent
+  verification: either widen the scan to flag ANY
+  `activeProfileDocIdProvider.notifier` reference outside
+  `profile_providers.dart` regardless of whether a `.set(` follows within
+  N characters (there is no legitimate reason to read the notifier
+  elsewhere), or leave the regex as-is and make the qualified-scope
+  wording (§3 item 1) the permanent state of the record in all four
+  locations, including the test file's own doc comment and CONTROL-4's
+  own failure-reason string — not fixed in code this round (docs only).
+- **`T-68` (pre-existing false "verified by grep" doc-comment claim,
+  `profile_repository_impl.dart:617-619`, MINOR, non-blocking, predates
+  Phase 2 at `a3c92d6c`).** §3, seventh item, above. Recommended fix:
+  either correct the quoted grep command to one that actually returns the
+  full call-site set, or delete the parenthetical claim entirely.
+
+#### 5. Two further staleness recurrences found and fixed, beyond the independent verification's own list
+
+The independent verification scoped its review to `firestore-cutover-log.md`
+and the code; this round additionally line-checked
+`firestore-cutover-plan.md` and `firestore-cutover-tasks.md`'s own
+self-reference fields against the tree, per the P2-30 design's own §5
+instruction ("`firestore-cutover-plan.md` has been left false twice while
+the other two were corrected — check it line by line") — carried forward
+as standing practice for whichever round finally checks it, since P2-31's
+commit did not.
+
+- **`firestore-cutover-plan.md`'s mid-document `Last updated:`/`Head:`
+  block (inside the Phase 3 ENTRY CRITERIA discussion, distinct from the
+  top-of-file status line, which P2-31 DID update) still read `2026-08-07
+  (P2-29 ...)` / "true immediate parent is `64f1f763`, P2-28's own
+  commit" — untouched by `17134b43`.** P2-31's edit list updated the
+  status line (`:3`) and the Phase 2 section header further down, but
+  never reached this separate field. **Fixed this round**, re-derived
+  from `git log`, not copied forward; historical value preserved,
+  superseded in place.
+- **`firestore-cutover-tasks.md`'s own header `Last updated:` field
+  (`:31-32`) still read "head at P2-29"** — same omission, same file,
+  same round. **Fixed this round.**
+
+Both are the identical `T-62` mechanism (a multi-commit or multi-file
+round advances the field its own narrative cites but not every sibling
+citation of the same fact) recurring in files the independent
+verification did not scope-check. Recorded here rather than opened as a
+fifth `T-62` instance, since the fix is mechanical and lands in this same
+commit.
+
+#### 6. Record corrections landed this commit
+
+`CURRENT STATE`'s `Head:` (re-derived: `6655f184`), a new §11b
+superseding §11a's independent-review checkbox (now checked, credited to
+this review, not to P2-31), the Phase 3 ENTRY CRITERIA pointer paragraph
+inside `CURRENT STATE`'s `Phase:` field, the `T-40` enumeration's `:265`→
+`:264` citation, an append-only correction to the **P2-31** entry's §7 and
+§4 (CONTROL-4 scope). `firestore-cutover-tasks.md`: four new rows
+(`T-65`–`T-68`), header paragraph note, `Last updated:` field.
+`firestore-cutover-plan.md`: mid-document `Last updated:`/`Head:` block.
+IN FLIGHT field reset to `nothing` in this same commit (verified before
+writing this sentence, not assumed — see the IN FLIGHT field itself,
+above).
+
+**New standing fact:** *A guarantee stated by a source-scanning test is
+only as strong as its regex's window. "Catches every write site" and
+"catches every write site within N characters of the pattern anchor" are
+different claims; a test's own failure-reason string and every place that
+cites it must state which one is actually true, or the next round will
+copy the stronger claim forward as if it had been checked.*
+
+**New standing fact:** *A round that touches `firestore-cutover-log.md`'s
+self-reference fields is not thereby excused from checking the same
+fields in `firestore-cutover-plan.md` and `firestore-cutover-tasks.md` —
+this project has now independently duplicated the `T-62` staleness
+mechanism into a second and third file, both times inside the file
+believed already fixed because a DIFFERENT field in the SAME file had
+just been corrected.*
+
 ### 2026-08-09 — P2-31: closes `T-49` by REMOVAL, not a fifth hoist — `_activateThenEnsureFirestoreProfile` deleted; `select()` is the sole activation seam; 14 permanent test cases, revert-proved
 
 **Brief: "YOU ARE P2-31. Implement the design below exactly" — the design
@@ -1584,10 +1916,20 @@ longer can:
 - **CONTROL-4** — the structural gate: a source-scanning test asserting
   every `activeProfileDocIdProvider.notifier).set(` call site in
   `lib/**.dart` lives in `profile_providers.dart` and nowhere else. This,
-  not the nine dynamic cases, is what makes a fifth reopening structurally
-  impossible — a dynamic test catches the interleavings it encodes; the
-  scan catches the write itself, regardless of which method it lands in
-  next time.
+  not the nine dynamic cases, is meant to be what makes a fifth reopening
+  structurally impossible — a dynamic test catches the interleavings it
+  encodes; the scan catches the write itself, regardless of which method
+  it lands in next time. **[CORRECTED P2-32, not edited in place —
+  round 7's independent verification demonstrated this claim is
+  overbroad, filed as `T-67`: the regex is `activeProfileDocIdProvider\.notifier\)[\s\S]{0,40}?\.set\(`,
+  a bounded 40-character window. A re-added write whose notifier read and
+  `.set(` are more than 40 characters apart (verified by injection: a
+  padded variable name plus a log call between them) passes the scan
+  undetected — CONTROL-4 goes GREEN on a tree that reintroduces the write,
+  while CONTROL-1/CONTROL-5 correctly go RED. The true, narrower scope:
+  CONTROL-4 catches the idiomatic single-expression write shape;
+  CONTROL-1/2/5 are the actual backstop for anything wider. Not fixed in
+  code this round (docs only) — see `T-67`, below.]**
 - **CONTROL-5** — `T-64`'s local-born case, pinned: a container with
   `activeAccountIdProvider` SET but `activeAccountFirebaseProvider`
   THROWING `AccountNotAuthenticatedException` (the credential-less
@@ -1696,7 +2038,21 @@ verbatim), the `T-49` heading. Phase 3 ENTRY CRITERIA §11a supersedes
 review" re-armed against this commit. `firestore-cutover-tasks.md`:
 `T-49`/`T-59`/`T-63`/`T-64` rows, header paragraph.
 `firestore-cutover-plan.md`: status line, Phase 2 header. IN FLIGHT field
-reset to `nothing` in this same commit.
+reset to `nothing` in this same commit. **[CORRECTED P2-32, not edited in
+place, per this file's append-only rule for entries: the sentence
+immediately above is FALSE as a statement about `17134b43`.** The IN
+FLIGHT field was NOT reset inside `17134b43` — it landed still reading the
+pre-landing "P2-31 — implementing..." text. The reset happened only in the
+same-session follow-up commit `6655f184`, whose own commit message says so
+directly ("P2-31's landing commit (17134b43) missed this per protocol").
+`6655f184`'s own IN FLIGHT paragraph (above, in this file) discloses the
+slip; this §7 sentence was left standing uncorrected, so the record
+briefly asserted both "reset in this same commit" (here) and "NOT reset in
+that same commit" (the IN FLIGHT field's own process note) a few hundred
+lines apart — the `T-63` false-claim-standing-in-the-record class,
+reproduced by the very round chartered to close `T-63`. Found by round 7's
+independent verification; corrected here, by appending this note, not by
+rewriting §7's own text.]**
 
 **New standing fact (stated at the altitude that generalises, per the
 design):** *Four hoists failed because each answered "is this write above
@@ -2140,6 +2496,38 @@ new task, and not applied this round.
 | D20 | Device/offline: activate A offline, switch to B, reconnect — `activeProfileDocIdProvider` must end on B | **Reopened, unchanged from before P2-28 in substance.** The code-level residual behind this device check is real again — P2-28's narrowing does not close what this check would observe. |
 | D10 | Device: create a profile offline, restore network, activate | **Open, unchanged.** Still the highest-value routine device check in the phase; still observing a fix that is narrowed, not complete. |
 | — | Every other row in P2-27's table (P2-28 changed only `✦D1`/`✦D24`, both unrelated to `T-49`, both unaffected by this round) | Unchanged; not re-copied here — see the **P2-27** entry, above, for the full D1–D25 map as it stood entering P2-28, still current except the three rows above. |
+
+#### 11b. Phase 3 ENTRY CRITERIA — supersedes §11a below (the independent-review line only; every other line unchanged) — see the new **P2-32** entry, further below, for the full record
+
+- [x] **`T-49` (SERIOUS) — CLOSED BY REMOVAL (P2-31, round 7).** Unchanged
+  from §11a.
+- [x] **`T-59` — `done` (P2-31).** Unchanged from §11a.
+- [x] **`T-64` — `done` (P2-31), resolved by removal.** Unchanged from
+  §11a.
+- [x] **A fresh independent review of the commit that finally closes
+  `T-49` — SATISFIED (P2-32, round 7).** A review independent of P2-31
+  itself (its output is this round's input, reproduced under
+  `docs/planning/firestore-cutover-log.md`'s brief for **P2-32**) re-read
+  every one of `FirestoreProfileRepositoryAdapter`'s 8 public entry
+  points against HEAD `6655f184`, ran its own 17-case sentinel probe
+  matrix and a comment-stripped whole-`lib/` scan, and confirmed
+  independently: `t49_closed: true`, zero unguarded post-await writes to
+  `activeProfileDocIdProvider` on any path, the permanent matrix's
+  revert-proof signature matches exactly. **The review found no code
+  defect** — it found six record-integrity/test-quality defects in the
+  round's own written output (CONTROL-4's bounded-window regex; the
+  `Head:`-field staleness recurrence; a false "reset in this same commit"
+  claim standing in §7; a stale `:265`/`:264` citation; `T-40`'s R1
+  residual missing its own task id; a pre-existing false "verified by
+  grep" doc-comment claim) — all recorded and dispositioned in the new
+  **P2-32** entry, none of them reopening `T-49` or blocking Phase 3.
+  This checkbox does not re-arm against a future commit the way it did
+  for P2-18/P2-23/P2-28 (each of which believed ITS OWN fix was the
+  closing one and asked to be re-checked): P2-31 is not the round making
+  this claim about itself — a separate review is.
+
+*(Historical, P2-31 — the snapshot the block above supersedes for the
+independent-review line only, left unedited per this file's own rule:)*
 
 #### 11a. Phase 3 ENTRY CRITERIA — supersedes P2-29's snapshot below (`T-49`/`T-59`/`T-64` lines only; every other line unchanged) — see the new **P2-31** entry, further below, for the full record
 
