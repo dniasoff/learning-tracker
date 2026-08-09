@@ -1,6 +1,27 @@
 # Firestore cutover plan
 
-**Status:** Phase 0 ✅ · Phase 1 ✅ · **Phase 2 — `T-49` CLOSED BY REMOVAL
+**Status:** Phase 0 ✅ · Phase 1 ✅ · **Phase 2 — `T-49` CLOSED, Phase 2 AS
+A WHOLE recorded NOT RESOLVED (P2-33, 2026-08-09).** `T-49` (the phase's
+sole SERIOUS *code* defect) is closed for real, by removal, confirmed by
+a review independent of the fixing round — full detail in the paragraph
+immediately below, unedited, correct for `T-49`'s own disposition. **But
+this project's own DECISION RULE is a disjunction, and `T-39`
+(pre-existing, untouched throughout every round of this saga, the
+project's own declared sole remaining Phase 3 entry blocker) is still
+`todo` — one open blocker is sufficient to force `NOT RESOLVED` no matter
+how many other findings a round closes.** A round-7 FINAL REVIEW (its own
+verdict: `resolved-with-deviations`, `safe_for_phase_3: false`) found
+three further record-integrity gaps beyond `T-39` — a two-round-stale
+deferred-verification table, a fifth uncaveated CONTROL-4 claim, and two
+`make ci` targets unrun since round 5 — **all three closed or explicitly
+named this round (P2-33)**, none of them ever a code defect. **Phase 3
+remains explicitly BLOCKED, on `T-39` at minimum, plus the standing
+device checks `D10`/`D11`/`D20` and four MINOR non-blocking residuals
+(`T-65`–`T-69`).** See the new PHASE 3 ENTRY CRITERIA checklist below §3,
+and `firestore-cutover-log.md`'s new **P2-33** entry (including a PHASE 2
+RETROSPECTIVE: seven rounds, one failure mechanism per line) for the full
+record.
+*(Historical, P2-32:)* **Phase 2 — `T-49` CLOSED BY REMOVAL
 (P2-31, round 7).** `_activateThenEnsureFirestoreProfile` and
 `_writeFirestoreProfile` are deleted; `createProfile`/`ensureDefaultProfile`
 now call `_ensureFirestoreProfile` directly — the write-only path
@@ -238,24 +259,27 @@ every await inside the method being edited.** Full mechanism, the full
 await enumeration for both paths, the probe, and both new tasks:
 `firestore-cutover-log.md`'s new **P2-29** entry; `firestore-cutover-tasks.md`'s
 `T-49`/`T-63`/`T-64` rows.
-**Last updated:** 2026-08-09 (P2-32; this `Last updated:`/`Head:` block
-specifically — **found stale this round**, see the correction below; the
-status line and the Phase 2 section header/summary below §3 were already
-correctly updated at P2-31 and are unaffected)
-**Head:** `6655f184` (P2-31's own same-session follow-up commit,
-confirmed via `git log --oneline -1` at this round's (P2-32) session
-start, per `T-62`'s own lesson — re-derived, not copied forward).
-**Corrected this round — the `T-62` mechanism recurring in a THIRD file:**
-this block still read "2026-08-07 (P2-29 ...)" / "true immediate parent
-is `64f1f763`, P2-28's own commit" up to and including P2-31's own commit
-`17134b43`. P2-31's edit list updated the top-of-file status line (`:3`)
-and the Phase 2 section header further down (§3, below), but never
-reached this separate mid-document field — the identical "advances the
-field its own narrative cites but not every sibling citation of the same
-fact" pattern `T-62` already named, now found in a second field inside a
-second file. `T-49` is CLOSED BY REMOVAL (P2-31), independently
+**Last updated:** 2026-08-09 (P2-33; this `Last updated:`/`Head:` block
+specifically — **found stale AGAIN this round, a FOURTH file/field
+combination the `T-62` mechanism has now hit**, see the correction below;
+the status line above and the Phase 2 section header/summary below §3
+were updated together with this field in this same commit, so all three
+now agree)
+**Head:** `f2f59e6e` (P2-32's own commit, confirmed via `git log
+--oneline -1` at this round's (P2-33) session start, per `T-62`'s own
+lesson — re-derived, not copied forward).
+**Corrected this round — the `T-62` mechanism recurring a FOURTH time in
+this file:** this block still read `6655f184`/"P2-31's own same-session
+follow-up commit" even though P2-32 landed a further commit (`f2f59e6e`)
+after it and confirmed `T-49`'s fix independently. P2-32's own edit list
+updated the top-of-file status line and the Phase 2 section header
+further down (§3, below), but never reached this separate mid-document
+field a second time — the identical "advances the field its own
+narrative cites but not every sibling citation of the same fact" pattern
+this file's own text (immediately below) already named once, recurring
+against itself. `T-49` is CLOSED BY REMOVAL (P2-31), independently
 re-confirmed (P2-32) — see the status line and §3, below, both current
-and correct; this field was simply never told.
+and correct; this field was simply never told, twice running.
 *(Historical, P2-29:)* **Last updated:** 2026-08-07 (P2-29; status line, Head field, `Last
 updated:` field, this Phase 2 section addendum and the header/summary
 below §3 — the verification-cadence paragraph re-verified, needed no
@@ -525,7 +549,53 @@ manufactures exactly the false confidence this gate exists to remove.
 
 ---
 
-### Phase 2 — Unify the identity (int → ULID) — **RESOLVED for `T-49` 2026-08-09 (P2-31, round 7) — CLOSED BY REMOVAL, CONFIRMED by an independent review (P2-32). `T-56`, `T-57`, `T-58`, `T-59`, `T-63`, `T-64` all genuinely CLOSED. Phase 3 blocked only on `T-39`.**
+### Phase 2 — Unify the identity (int → ULID) — **`T-49` RESOLVED 2026-08-09 (P2-31, round 7) — CLOSED BY REMOVAL, CONFIRMED by an independent review (P2-32). `T-56`, `T-57`, `T-58`, `T-59`, `T-63`, `T-64` all genuinely CLOSED. PHASE 2 AS A WHOLE recorded NOT RESOLVED (P2-33) — `T-39` (pre-existing, untouched throughout Phase 2) is the sole declared Phase 3 entry blocker; the DECISION RULE is a disjunction and one open blocker is enough. See the PHASE 3 ENTRY CRITERIA checklist immediately below for the complete, current blocker set.**
+
+**P2-33 addendum (docs-only; restates the verdict at the correct scope —
+does not restate or dispute anything the P2-31/P2-32 paragraphs below
+found about `T-49` itself, both of which stand unedited):** `T-49` being
+closed answers only the question this section's own name asks about
+identity-clobber safety — it does not by itself resolve Phase 2, because
+Phase 2's exit gate (stated in this plan's own §4 and the log's Phase 3
+ENTRY CRITERIA convention) is the FULL blocker set, not `T-49` alone.
+`T-39` — the WATCHLIST/dead-adapters reconciliation, pre-existing,
+unrelated to `T-49`, untouched by any of Phase 2's seven `T-49` rounds —
+remains `todo` and is, on the record's own repeated statement across
+P2-22 through P2-32, the sole OTHER declared Phase 3 entry blocker. A
+round-7 FINAL REVIEW additionally found (and this round closed or named)
+three record-integrity gaps: the log's deferred-verification table had
+not been superseded since the fix that invalidated its two most
+load-bearing rows (fixed, `firestore-cutover-log.md` §10c); a fifth,
+uncaveated copy of the disproven CONTROL-4 "structurally impossible"
+claim sat in the log's own highest-traffic field (fixed, in place); and
+two of `make ci`'s nine targets have not run against the code since round
+5 (named as `T-69`, not run this pass either — owner directive forbids
+gate runs for this docs-only step). **PHASE 3 ENTRY CRITERIA — new,
+added this round (this document previously had none of its own; the
+authoritative checklist lived only in the log):**
+
+- [x] `T-49` (SERIOUS) — CLOSED BY REMOVAL, independently confirmed.
+- [x] `T-59`, `T-63`, `T-64` — all `done`, genuinely.
+- [x] A fresh independent review of the commit that closes `T-49` —
+  SATISFIED (the round-7 verifier, independent of P2-31).
+- [ ] **`T-39` — STILL OPEN, `todo`. The sole declared Phase 3 entry
+  blocker.**
+- [x] The deferred-verification table superseded (P2-33; was two rounds
+  stale).
+- [x] The fifth CONTROL-4 claim caveated (P2-33).
+- [x] `make validate-calendar`/`make test-serial-tools`'s absence named
+  as an explicit task, `T-69` (P2-33) — not run, per owner directive, but
+  no longer silently glossed as a batching decision.
+
+**VERDICT: Phase 2 NOT RESOLVED. Phase 3 explicitly BLOCKED, on `T-39` at
+minimum**, plus the standing device checks `D10`/`D11`/`D20` (see
+`firestore-cutover-log.md`'s §10c) and four MINOR, non-blocking code
+residuals (`T-65`–`T-68`). Full record: `firestore-cutover-log.md`'s new
+**P2-33** entry.
+
+*(Historical, P2-32 — the paragraph immediately below, unedited, stands
+for `T-49`'s own disposition; this addendum restates only the WHOLE-PHASE
+verdict at its correct, wider scope:)*
 
 **P2-31 supersedes the P2-29 paragraph immediately below — `T-49` is no
 longer reopened, it is closed, by deleting the write four prior rounds

@@ -84,13 +84,21 @@ nothing on disk to diff against. This is the fix, binding from 2026-08-06
 
 ## CURRENT STATE
 
-**Head:** `6655f184` (a same-session follow-up to `17134b43`, P2-31's own
-code-landing commit, `docs(planning): reset IN FLIGHT to nothing — P2-31's
-landing commit (17134b43) missed this per protocol` — confirmed via `git
-log --oneline -1` at THIS round's (P2-32) session start, re-derived
-independently, not copied forward from any prior citation — per `T-62`'s
-own lesson) **(P2-32, this commit, not yet reflected — same
-self-reference lag as every prior closing commit)**.
+**Head:** `f2f59e6e` (P2-32's own commit, `docs(planning): P2-32 — round
+7's independent review recorded; T-49 CONFIRMED closed, six
+record-integrity defects fixed, T-65..T-68 opened` — confirmed via `git
+log --oneline -1` at THIS round's (P2-33) session start, re-derived
+independently from `git log`, not copied forward from any prior citation
+— per `T-62`'s own lesson) **(P2-33, this commit, not yet reflected — same
+self-reference lag as every prior closing commit)**. **This closes the
+paragraph immediately below's own self-reference gap** — P2-32 correctly
+advanced `Head:` to `6655f184` (its own true immediate parent) but, per
+the identical `T-62` mechanism recurring a FOURTH time, never advanced it
+past its own eventual commit `f2f59e6e` — which no round could do inside
+`f2f59e6e` itself, since a commit cannot cite its own SHA before it
+exists; that is what "not yet reflected" names, and P2-33 is the first
+commit that CAN state it. Re-derived from `git log --oneline -2`
+(`f2f59e6e` → `6655f184`) this round, not copied forward.
 
 **Corrected this round (`T-62` recurring a THIRD time): this field sat
 stale by TWO commits, not one.** The paragraph immediately below (P2-31's
@@ -265,10 +273,17 @@ repository performs no `activeProfileDocIdProvider` write on any path —
 not "nothing can race this," the unqualified shape that failed three
 times before.** `profile_providers.dart` (`SelectedProfileId.select`/
 `.clear`, `AutoSelectedProfileId`'s guarded re-affirm) is the only writer
-left in `lib/`, verified by a permanent source-scanning test (CONTROL-4)
-as well as by the re-run enumeration below, not by prose alone. Full
-mechanism, the 14-case permanent matrix, and the revert-proof: the new
-**P2-31** entry, below.
+left in `lib/`, verified by a permanent source-scanning test (CONTROL-4
+— **CAVEATED AT P2-33: CONTROL-4's regex has a demonstrated 40-character
+blind spot AND an unnamed aliased-notifier evasion — see `T-67`. It
+catches the idiomatic single-expression write shape; it is not an
+unbounded guarantee. This field itself was the FIFTH place carrying the
+uncaveated "structurally impossible" claim, found by the round-7 FINAL
+REVIEW after P2-32 had already caveated the other four — the highest-
+traffic one, since Recovery Protocol step 1 sends a cold agent here
+first**) as well as by the re-run enumeration below, not by prose alone.
+Full mechanism, the 14-case permanent matrix, and the revert-proof: the
+new **P2-31** entry, below.
 *(Historical, P2-29:)* **CORRECTED THIS ROUND (P2-29): `T-49` is REOPENED A FOURTH
 TIME — P2-28's fix did not close the race, it narrowed the window.**
 P2-28 hoisted the activation write (`profile_repository_impl.dart:940`)
@@ -799,6 +814,66 @@ derive from a cache-miss read. Full reasoning, the fake-transaction
 incompatibility this design avoids, and the proof: this file's **P2-15**
 entry.
 
+**Suites — CORRECTED/RE-STATED AT P2-33 (docs-only; no gate or test run
+this round, owner directive, 2026-08-07, invoked again 2026-08-09 —
+every figure below is INHERITED, attributed to who measured it and at
+which commit, never re-measured by this round):** The historical `Suites:`
+narrative embedded inside the superseded Head paragraphs above (P2-22
+through P2-27) is left unedited, append-only, per this file's own rule.
+**What it does not say, and what this correction adds:** `make
+validate-calendar` and `make test-serial-tools` **have not run since
+round 5's review (~`3872fdbc`) — two code commits before the code that
+finally closed `T-49` (`17134b43`).** `make test`'s green `+11527 ~131`
+(measured by the round-7 verifier at `6655f184`, code-identical to
+`17134b43`) does **not** cover the serial-tools lane — `Makefile:9`'s
+recipe passes `--exclude-tags "serial-tools || quarantine"`, so that
+green figure is structurally silent about it. P2-31 changed `lib/` and
+`test/`; neither of these two lanes has seen that code. Every prior
+round's own disclosure (including P2-31's `not_done` list) framed this as
+"full end-to-end `make ci` in one invocation was not run this round" —
+true, but it reads as the owner's standing batching policy, not as "two
+of `make ci`'s nine targets never executed against the current code."
+**Naming it plainly, per the round-7 FINAL REVIEW's own finding:** seven
+of nine `make ci` targets ran standalone at `6655f184` (`analyze`,
+`lint-rules-test` via `make audit`'s prerequisite, `test`, `test-rules`,
+`test-functions`, `check-profile-path-keying`, `check-profile-id-int-sites`);
+`validate-calendar` and `test-serial-tools` did not run at any point in
+round 7. This is a genuine gap, not merely a disclosed one — see the new
+KNOWN ISSUES table, below, `T-69`. **Everything else measured by the
+round-7 verifier at `6655f184` (code-identical to `17134b43`, confirmed
+by `git diff --stat 17134b43..HEAD -- learning_tracker/lib learning_tracker/test`
+returning EMPTY, re-checked this round):** `dart analyze --fatal-infos` →
+`No issues found!`, exit 0. Check 103 → `PROFILE-KEY-SPLIT check OK: 2
+collection(s) currently split ..., 0 new violations`, exit 0. Check 104 →
+`PROFILE-ID-INT-SITES OK: 88 tracked entries ...; 0 new, 0 stale, 0
+changed`, exit 0. `make audit` → `104/104 checks; === audit PASSED — all
+68 greps clean ===`, exit 0. `make test` → `08:54 +11527 ~131: All tests
+passed!`, exit 0 (+8 over the P2-31 baseline of `+11519`, matching the 8
+new GROUP-3/control tests exactly). `make test-rules` (alone, ports
+confirmed free) → `pass 116, fail 0`; `TQ-9: rule coverage OK — all 37
+conditional allow rule(s) ... evaluated at least once`, exit 0. `make
+test-functions` (alone, ports confirmed free) → `pass 337, fail 0`, exit
+0. `dart format --output=none --set-exit-if-changed` (9 touched files) →
+`0 changed`, exit 0. `coverage/lcov.info` + `check_lcov_denominator.dart
+--strict` — **last explicit measurement P2-21** (`469470` bytes,
+2026-08-07 07:25); `make test` regenerates the file but no round since
+has reported a fresh R6d line — recorded as `not measured at this
+commit`, not estimated. **P2-33 itself ran NO gate and NO test — not even
+the three cheap ones or `make audit`.** This departs from every prior
+docs-only round's own practice (P2-22/P2-26/P2-27/P2-29/P2-32 each
+re-ran the cheap gates to confirm nothing moved) **on explicit, written
+owner directive, 2026-08-07, invoked again 2026-08-09: "DO NOT RUN: `make
+test`, `make test-rules`, `make test-functions`, `make test-serial-tools`,
+`make audit`, `make validate-calendar`, `flutter test`, `dart analyze`,
+or any probe."** This round's own tree-fact check was limited to
+read-only `git` commands: `git status --porcelain` empty at session
+start; `git diff --stat 17134b43..HEAD -- learning_tracker/lib
+learning_tracker/test` empty, confirming P2-32's tree is still
+code-identical to the landing commit, which is the one fact that makes
+every inherited number above still attributable to the current code.
+No number in this field was measured by P2-33; every one is inherited
+and labelled with its true source.
+
 **Gates (re-confirmed on the P2-21 tree, write-quiet, after both fixes
 landed — from `learning_tracker/`, see the directory note below):**
 `dart analyze --fatal-infos` → `No issues found!`. `make audit` green,
@@ -996,6 +1071,42 @@ here as a `CURRENT STATE` self-consistency fix, not a re-opening of `T-52`
 P2-17, this was CURRENT STATE's own prose falling behind that fix in a
 later commit that copied it forward without checking it).
 
+**IN FLIGHT:** nothing. P2-33's own edit list — bringing all three
+planning documents to their TRUE final state for Phase 2, per the
+round-7 FINAL REVIEW (authoritative, verdict `resolved-with-deviations`,
+`safe_for_phase_3: false`); docs only, owner directive (2026-08-07,
+invoked again this round) waived all gate/test runs, this step changes
+no code so no gate could regress: superseded the deferred-verification
+table (§10c supersedes §10) — its `✦D23`/`D20` rows had asserted the
+opposite of the truth, two rounds stale; superseded the Phase 3 ENTRY
+CRITERIA snapshot (§11c supersedes §11b) with the FINAL REVIEW's own
+checklist, `T-39` and one record item left unchecked, three record items
+newly closed; corrected `CURRENT STATE`'s `Phase:` field — a fifth,
+previously-uncaveated CONTROL-4 "structurally impossible" claim sat in
+the highest-traffic field a cold agent reads first; corrected the
+`Suites:` field — `make validate-calendar`/`make test-serial-tools`
+disclosed as not having run since round 5 (two code commits back),
+opened as `T-69` rather than left as an implicit batching gloss; added a
+complete KNOWN ISSUES table, task id per item; added a new standing fact
+naming round 7's own entry-point-enumeration rule, plus one further
+standing fact naming the deferred-table finding itself; prepended a
+PHASE 2 RETROSPECTIVE atop `## Entries` — seven rounds, one failure
+mechanism per line, the standing facts the phase earned; appended the
+new **P2-33** entry; mirrored every correction into
+`firestore-cutover-tasks.md` and `firestore-cutover-plan.md`, the latter
+verified line by line per the brief's own instruction (left false twice
+before this round; found true, not false, this time) — landed in this
+commit. **Record the TRUE verdict, not a softened one: `T-49` (the
+phase's sole SERIOUS code defect) IS closed, by removal, confirmed by a
+review independent of the fixing round. Phase 2 AS A WHOLE is recorded
+NOT RESOLVED — `T-39` (pre-existing, untouched, the project's own
+declared sole remaining Phase 3 entry blocker) is still `todo`; Phase 3
+is explicitly BLOCKED.** See the new **P2-33** entry, below, for the full
+record.
+
+(Superseded text below, from P2-32, left for the historical record — this
+was P2-32's own now-finished IN-FLIGHT-then-clear note:
+
 **IN FLIGHT:** nothing. P2-32's own edit list (docs only, no
 `lib/`/`test/` file touched — recording round 7's independent
 verification into the planning docs: fixed `CURRENT STATE`'s `Head:`
@@ -1013,7 +1124,7 @@ verification, not to P2-31 itself; fixed the same Head/`Last updated:`
 staleness pattern inside `firestore-cutover-plan.md` (a THIRD,
 previously-undetected location) and `firestore-cutover-tasks.md`'s own
 header) landed in this commit. See the new **P2-32** entry, below, for
-the full record.
+the full record.)
 
 (Superseded text below, from P2-31, left for the historical record — this
 was P2-31's own now-corrected IN-FLIGHT-then-clear note, its process note
@@ -1522,12 +1633,426 @@ stage-definition · study-day-config · track-learning-order.
   boundary of what was actually verified.** Tracked as `T-49`, reopened a
   fourth time, and the new record-integrity task `T-63`, both `done`/
   recorded (P2-29) — full account in the new **P2-29** entry, below.
+- **The question that finally terminated `T-49`: verify a "this write is
+  safe" claim from every PUBLIC ENTRY POINT of the class that can reach
+  the write, not from inside the one method where the write lives
+  (round 7's entry-point enumeration rule, P2-33).** Three rounds
+  (P2-18/P2-23/P2-28) each enumerated every await visible from wherever
+  the round's own author was looking — inside one method, or that method
+  plus its two internal awaits — and each was falsified by an await one
+  level further out, at the method's own callers, found by the NEXT
+  round's independent review. "Is this write above the awaits I can see
+  from here?" has no terminating answer, because there is always one
+  more caller to check; "does this path perform this write at all, from
+  any of its public entry points?" does terminate. Round 7 (P2-30/P2-31)
+  is the round that finally asked the terminating question — by deleting
+  the write rather than relocating it, so there was no boundary left to
+  enumerate — and the round-7 independent verifier confirmed it by
+  enumerating all 8 of `FirestoreProfileRepositoryAdapter`'s public entry
+  points, not only the ones the fix touched. Tracked as `T-49`, `done`
+  (P2-31) — full account in the new **P2-31** and **P2-33** entries,
+  below.
+- **A round that closes a defect leaves record-integrity artifacts a
+  SIBLING round can still get wrong, and a table is exactly as
+  vulnerable as a field (P2-33).** `T-62`'s mechanism — a closing round
+  advances the field its own narrative cites but not every sibling
+  artifact asserting the same fact — has now recurred SEVEN times:
+  `CURRENT STATE`'s `Head:` field (three times), the plan's mid-document
+  `Head:` block, the tasks header, the `T-40` enumeration's line
+  citations, and — found only by a read-only pass with no charter to
+  touch code — the deferred-verification table itself, whose two most
+  load-bearing rows asserted the opposite of the truth for two full
+  rounds after the fix that invalidated them landed. After any closing
+  commit: grep every planning doc for every field, table row, and
+  citation that names a SHA, a line number, or a claim about "the only
+  writer"/"the only path"/"structurally impossible," and re-derive each
+  one independently — do not trust that fixing the narrative paragraph
+  fixed every artifact that repeats the same fact.
 
 ---
 
 ## Entries
 
 Newest first. Append; never rewrite history.
+
+## PHASE 2 RETROSPECTIVE (added P2-33, 2026-08-09 — read this before any dated entry below)
+
+**A cold agent starting Phase 3 should be able to read this section alone
+and avoid repeating everything Phase 2 already paid to learn.** `T-49`
+(`FirestoreProfileRepositoryAdapter` clobbering `activeProfileDocIdProvider`
+with a stale profile after a race) took **seven rounds** to close for
+real. Three of those rounds shipped a confidently-documented fix that did
+not work. Here is each round's failure mechanism, one line each, in
+order:
+
+1. **P2-18 — closed `T-49` for one of three callers, reasoned instead of
+   tested.** Fixed `ensureRemoteProfile`'s race, declared `done`, and
+   excused `createProfile`/`ensureDefaultProfile` as "direct, awaited
+   calls with no later selection to race" — never written, never run
+   against those two callers. The reasoning was false: an `await` inside
+   one call does not stop a different profile being selected during the
+   await window.
+2. **P2-22 (independent review) — reopened it by execution, not by
+   re-reading.** A probe mirroring P2-18's own proof test but driving
+   `createProfile` instead went RED. The lesson this round earned:
+   closing one of N callers sharing a defect and calling the task `done`
+   is one case examined and N−1 asserted by inference.
+3. **P2-23 — hoisted the write above the WRITE await only, missed the
+   RESOLUTION await one line up in the SAME method.** Declared "closes
+   this … a later `select()` always wins," unqualified. True of the write
+   await; false of the method's other await, never enumerated.
+4. **Round 4 (→ P2-26) — reopened a third time, same method, different
+   await.** An independent review re-ran the reachability question
+   against the current tree instead of trusting P2-23's prose and found
+   the identical clobber one await earlier. The lesson: a claim that a
+   race "cannot happen" must be verified by enumeration or an executable
+   probe gating the SPECIFIC await it depends on — not accepted because it
+   reads as well-argued.
+5. **Round 5 (→ P2-27) — reconfirmed `T-49` unchanged; found the failure
+   mode had spread from prose to numbers.** No code fix attempted (docs
+   charter). Found `T-61` (a `make test` count misattributed to a tree it
+   was never measured against — arithmetically impossible, caught by
+   adding up what changed since the last trusted count) and `T-62` (a
+   `Head:` field left stale for TWO follow-up commits inside one
+   "closing" round). The generalized lesson: a measured NUMBER goes stale
+   exactly like a written CLAIM, and is easier to miss because it still
+   "looks like" evidence.
+6. **P2-28 → P2-29 — hoisted the write above BOTH of the method's own
+   awaits and declared "CLOSED FOR REAL, nothing asynchronous precedes it
+   any more"; the independent review (P2-29) found the write still
+   reachable one level further out, at the method's TWO PUBLIC CALLERS'
+   own awaits, never entered by the fix's enumeration.** This is the
+   round that finally produced the generalizable rule: enumerate every
+   await on the write's path from its public entry points, not every
+   await inside the method being edited — "is this write above the
+   awaits I can see from inside this method?" is a question that never
+   terminates, because there is always one more caller.
+7. **Round 7 (P2-30 design → P2-31 implementation → P2-32 independent
+   review) — asked the question that terminates, and got the code right;
+   the RECORD still needed a further round.** Instead of hoisting a fifth
+   time, P2-31 DELETED `_activateThenEnsureFirestoreProfile` and
+   `_writeFirestoreProfile` outright — a write that does not exist has no
+   boundary to enumerate and no doc comment that can go stale. The
+   round-7 independent verifier (P2-32's input) confirmed the code sound
+   by both static enumeration and a fresh 17-case sentinel probe matrix —
+   and STILL found six record-integrity defects in the round's own
+   output, headlined by an unqualified "CONTROL-4 makes a fifth reopening
+   structurally impossible" claim that the same verifier disproved by
+   execution in minutes. P2-32 fixed what it could reach in docs; a
+   round-7 FINAL REVIEW (this entry's own input) then found the
+   deferred-verification table itself had not been superseded — the T-62
+   mechanism recurring a SEVENTH time, now against a table instead of a
+   field — plus a fifth uncaveated copy of the CONTROL-4 claim sitting in
+   the single highest-traffic field in this file, plus two `make ci`
+   targets that have not run against the code since round 5. This entry
+   (P2-33) is the round that closes those.
+
+**The standing facts this phase earned, distilled to what Phase 3 must
+not re-learn the hard way:**
+
+- **Hoisting a write above the awaits you can see is not a fix — it is a
+  round of the same game.** The question that terminates is "does this
+  path perform this write at all?", not "is this write above the awaits I
+  can see from here?" Prefer deleting a write to relocating it — this
+  project's own greenfield doctrine, applied to a race instead of a
+  backfill.
+- **An unqualified safety claim is a defect even when the code is
+  correct.** Every failed round stated its result at a scope wider than
+  it had verified. Round 7 got the code right and still produced one
+  ("CONTROL-4 makes a fifth reopening structurally impossible"). State
+  the scope actually checked: "this path performs no such write," not
+  "nothing can race this."
+- **A guard that watches for a competing selection cannot detect the
+  absence of one.** The design that finally held enumerated all four race
+  states before choosing a fix shape — do this before reaching for a
+  post-await re-check anywhere in Phase 3.
+- **A source-scanning structural gate is only as good as its pattern, and
+  the pattern will be optimistic.** CONTROL-4's bounded 40-character
+  window is evaded by a longer variable name; its aliased-notifier gap is
+  evaded regardless of window width. When a structural gate is the thing
+  making a defect class unreachable, attack the gate's pattern before
+  trusting it.
+- **A test that passes on the broken tree is worth nothing as a
+  regression guard.** The six inherited GROUP-1/GROUP-2 race cases stayed
+  GREEN on the reverted (pre-fix) tree in exactly the sub-cases where the
+  verifier's own sentinel probes went RED, because they assert only the
+  final value after an interleave that happened to complete first. Assert
+  the intermediate state, not only the outcome.
+- **Use a sentinel value, not `isNull`, to prove "never written."**
+  `expect(provider, isNull)` cannot distinguish "never touched" from
+  "written to null." Pre-set a sentinel string no code under test could
+  produce and assert byte-identity afterward.
+- **Multi-field self-reference staleness (`T-62`) is the single most
+  persistent defect in this project — it recurred SEVEN times across
+  Phase 2.** Correcting one field that cites "current HEAD" does not
+  correct its siblings elsewhere in the same file, in a companion file,
+  or in a table. After any closing commit: grep every planning doc for
+  every field that cites a SHA, a line number, or a test count, and
+  re-derive each one independently — do not trust that fixing the
+  narrative paragraph fixed every field that says the same thing.
+- **A round cannot certify its own fix, and the review must be
+  adversarial, not confirmatory.** Round 7 held because its verifier
+  separated "is the code right?" from "is the record true?" and answered
+  them independently — `t49_closed: true` and `defective` (on the record)
+  in the same report. Keep that split in Phase 3.
+- **Read-only passes still find real defects.** This entry ran no test
+  and no gate and still found a two-round-stale deferred-verification
+  table, a fifth uncaveated claim, and two silently-unrun `make ci`
+  targets — all missed by the fix round, the independent verifier, and
+  the recording round before it. Static enumeration plus cross-checking
+  every document against every other is cheap and catches a class
+  execution cannot.
+- **`git stash` is never the tool.** Every revert and restore across all
+  seven rounds used `cp` with md5 verification. Two unattributed stash
+  entries have sat untouched since before this cutover began; never pop,
+  apply, drop, or reference either by positional index.
+
+---
+
+### 2026-08-09 — P2-33: docs-only — the round-7 FINAL REVIEW recorded across all three planning documents; Phase 2 recorded NOT RESOLVED (`T-39` blocks Phase 3); deferred-verification table superseded; a fifth CONTROL-4 claim caveated; two unrun `make ci` targets named (`T-69`); PHASE 2 RETROSPECTIVE added
+
+**Brief: "YOU ARE P2-33. Docs only. Bring the THREE planning documents to
+their TRUE final state for Phase 2."** Owner directive (2026-08-07,
+invoked again 2026-08-09) explicitly waived all test and gate runs for
+this step: it changes no code, so no gate can regress. **DO NOT RUN** was
+explicit and followed literally — no `flutter test`, `dart analyze`,
+`make audit`, or any probe this round. Read-only commands only: `git
+log`, `git show`, `git status --porcelain`, `git stash list`, `grep`,
+`ls`, file reads.
+
+#### 1. What this round found, that no prior round in this saga recorded
+
+The round-7 FINAL REVIEW (this entry's own input, an independent pass
+distinct from both P2-31/the fix and P2-32/the code-correctness review)
+found `t49_closed: true` and `safe_for_phase_3: false` in the SAME
+report — confirming the code and disputing the record are two different
+questions, exactly the split this phase's own standing facts (above)
+recommend. Its `still_open_unrecorded` and `new_defects` lists, condensed
+to what this pass actually changed:
+
+1. **The deferred-verification table was never superseded by the round
+   that invalidated it.** §10 (P2-29's table, inside this file) asserts
+   on its two most load-bearing rows the OPPOSITE of the truth: `✦D23`
+   says no permanent test guards the caller-boundary await (P2-31 landed
+   exactly that test); `D20` says the code-level residual "is real
+   again" (P2-31 deleted the code that made it real). Neither the P2-31
+   entry nor the P2-32 entry contains a deferred-verification section or
+   references a single D-number — confirmed by re-running the review's
+   own `awk`-over-line-ranges check. **Fixed this round: §10c, above,
+   supersedes §10.**
+2. **A fifth, uncaveated copy of the disproven "CONTROL-4 makes a fifth
+   reopening structurally impossible" claim sat in `CURRENT STATE`'s
+   `Phase:` field — the highest-traffic field in this file, since
+   Recovery Protocol step 1 sends every cold agent there first.** T-67
+   already enumerated four locations carrying this claim; P2-32 caveated
+   the two it reached in docs. This field was the fifth, missed by
+   P2-32's own edit list. **Fixed this round, in place, above.**
+3. **Two of `make ci`'s nine targets have not run against the code since
+   round 5, and the record's own disclosure read as a batching decision
+   rather than as two targets that never executed.** `make
+   validate-calendar` and `make test-serial-tools` last ran at round 5's
+   review (`~3872fdbc`), two code commits before `17134b43`. P2-31's own
+   `not_done` said only "full end-to-end `make ci` in one invocation was
+   not run this round" — technically true, but it conceals that these
+   two specific targets never ran at all against the new code, and that
+   the serial-tools lane is structurally excluded from `make test`'s
+   green `+11527` by `Makefile:9`'s `--exclude-tags`. **Named this round
+   as an explicit task, `T-69`, rather than left as an implicit gloss —
+   see `firestore-cutover-tasks.md`'s new row.** Per the owner directive,
+   this pass could not RUN either target; naming the gap honestly is the
+   docs-only-round's correct move, the same disclose-don't-silently-close
+   pattern this project has used since `T-50`.
+4. **`T-67`'s CODE half is live in the tree, including in text that
+   prints on every single test run.** The CONTROL-4 test's own NAME
+   string (`profile_repository_impl_t49_activation_ordering_test.dart:1305-1308`)
+   still reads "…the check that makes a fifth reopening structurally
+   impossible, not just another dynamic race case" — false, disproven by
+   the verifier's own injection experiment. This is a CODE fix (a test
+   rename), out of scope for a docs-only round; recorded here so it is
+   not silently missed a second time. Not fixed this round; `T-67`'s row
+   in `firestore-cutover-tasks.md` is enriched (below) to name this
+   specific, highest-visibility instance.
+5. **`T-67`'s recommended fix (widen the 40-character window) would not
+   close a second, independent evasion class: an aliased notifier.**
+   `final n = ref.read(activeProfileDocIdProvider.notifier); n.set(x);`
+   carries no matched token pair the regex can see, regardless of window
+   width — the alias name supplies neither `activeProfileDocIdProvider
+   .notifier)` nor `.set(` in the same span. A trailing comment on a code
+   line is the mirror false-positive risk (the comment-stripper only
+   filters lines whose TRIMMED text starts with `//`). `T-67`'s row is
+   enriched (below) to name the class, not just the constant, so a future
+   fix does not close the window and leave the alias open.
+
+**None of the above reopens `T-49` or finds a new code defect in the
+fix.** All five are record-integrity/test-quality findings, the same
+category every round since P2-27 has produced on top of a sound fix.
+
+#### 2. KNOWN ISSUES / CARRIED FINDINGS — full disposition, task id per item, supersedes P2-20's residual list (the last full table in this file)
+
+Every open item as of this commit, one line each. Full mechanism,
+evidence, and proof for every `done` item: `firestore-cutover-tasks.md`'s
+own row (all detail lives there, not duplicated here) and the log entry
+its row cites.
+
+| ID | Phase | Status | One-line note |
+|---|---|---|---|
+| `T-39` | 3 | **`todo` — SOLE DECLARED PHASE 3 ENTRY BLOCKER** | Reconcile check 103's WATCHLIST against CURRENT STATE's "dead adapters" list before wiring anything; 5 gate names / 2 log names unmatched. Prerequisite for `T-20`. Untouched by all of Phase 2. |
+| `T-69` | 2 | `todo` (new, P2-33) | Re-run `make validate-calendar` and `make test-serial-tools` against the current code (post-`17134b43`) — neither has run since round 5 (`~3872fdbc`), two code commits back. Not run this pass either (owner directive forbids gate runs); named so the gap cannot be silently re-glossed as a batching decision. |
+| `T-65` | 3 | `todo`, MINOR (P2-32) | Design residual R1 — six post-await `select()` call sites guarded only by widget/screen liveness, not a selection re-check. Strictly better than pre-P2-31 (both providers now agree, even if on the wrong profile, rather than silently disagreeing) — not closed. |
+| `T-66` | 2 | `todo`, MINOR (P2-32) | The 14-case permanent matrix has no case for `ensureDefaultProfile`'s FAST path; GROUP-3's gate is unreachable on it by construction. Verifier's `E2-fast` probe went RED on the reverted tree, confirming a real, previously-unprobed site. |
+| `T-67` | 2 | `todo`, MINOR as code / SERIOUS as an unqualified claim (P2-32, enriched P2-33) | CONTROL-4's regex has a demonstrated 40-character blind spot, PLUS an unnamed aliased-notifier evasion and a trailing-comment false-positive (§1 items 4–5, above — the class, not just the constant, needs fixing). The overbroad guarantee still stands in 4 code/doc locations, including the test's own printed NAME (emits on every run) and (until this commit) `CURRENT STATE`'s `Phase:` field (now caveated). |
+| `T-68` | 2 | `todo`, MINOR, pre-existing, dates to `a3c92d6c` (P2-32) | `profile_repository_impl.dart:617-619`'s doc comment claims a grep "returns every one of them and nothing else" for ~9 activation call sites; re-run, it returns 3 (a multi-line `ref\n.read(...)\n.select(...)` form the pattern cannot match accounts for the rest). |
+| `T-44` | 2 | `todo`, MINOR (P2-13) | `T-41`'s refusal relocates the second-identity outcome (a fresh ULID mint) instead of preventing it. Needs a product decision, not a mechanical fix. |
+| `T-46` | 2 | `todo`, MINOR, informational (P2-13) | `T-41`'s export/import fix has no production caller — correct hygiene, closes zero runtime risk today. |
+| `T-55` | 2 | `todo`, MINOR, informational (P2-21) | ~60 further ulid-less test seeders beyond the 9 known/fixed instances, none currently failing. Needs a decision: fix preventively or wait. |
+| `T-60` | 5 | `todo`, MINOR (P2-26) | `T-58`'s fix excludes `WATCHLIST:` lines by bare substring match, not anchored like its sibling exclusion. Narrow today, not currently triggered. |
+| `T-37` | 3 | `todo` | Tutored read seam — owner-uid-scoped handles. Blocks D1's completion. Untouched by Phase 2. |
+| `T-38` | 5 | `todo` | Gate retarget + housekeeping, folded together (check 104 into `T-23`, stale summary string, un-skip a now-false `skip:`). |
+| `T-30` | 3 | `re-phased` | Owner-path CF deletes still key `learner_profiles` by the Drift int — moves with `T-20`. |
+| `T-31` | 3 | `re-phased` | Tutoring identity is Drift-int end-to-end — coupling evidence in `firestore-cutover-tasks.md`. |
+| `T-20` | 3 | `todo` | Wire the 7 dead adapters, move ~96 feature files. Prerequisite: `T-39`. |
+| `T-32` | 3 | `decided` | Reorder amnesty — both forgiveness paths restored by owner ruling; content-reseed half needs a NEW mechanism (no Firestore version field). |
+| `T-21` | 4 | `todo` | Demolish the sync engine and Drift user database (~45,700 lines). |
+| `T-29` | 4 | `todo` | ISO→Timestamp conversion dies with `core/sync` — re-verify before deleting; `fake_cloud_firestore` cannot catch a regression here. |
+| `T-36` | 4 | `todo` | Remove Rule 5 allow-list entries as pairs. |
+| `T-23` | 5 | `todo` | Retarget enforcement gates that police the old sync engine's invariants. |
+| `T-24` | 5 | `todo` | Verify `resolve()` cold-start re-attach on a real device — overlaps `T-40`'s device verification, execute together. |
+| `T-25` | 5 | `todo` | Add a gate rejecting non-text source files (one NUL byte disables all 103+ checks on that file). |
+
+**Device checks, not task ids (§10c, above, for the full deferred-verification map):** `D10` (create offline, restore, activate — highest-value remaining device check), `D11` (deploy P2-6's rules change + reset + negative control — TEST-VERIFIED 116/116 but still UNDEPLOYED, the owner's call), `D20` (code-level subject CLOSED by removal this phase; the device observation itself stays open — `fake_cloud_firestore` cannot model an offline queue plus reconnect ack).
+
+**Everything else — `T-01` through `T-64` not listed above, all of Phase
+0/1, and `T-40`–`T-64`'s full four-attempt `T-49` arc — is `done`,
+`re-phased`, or `decided`, unaffected by this pass. Full detail:
+`firestore-cutover-tasks.md`'s Open/Done tables, the single source of
+truth for task status; not re-derived or duplicated here beyond the
+summary above.**
+
+#### 3. New standing fact — round 7's entry-point enumeration rule
+
+Added to "Standing facts an agent must not re-derive," above (full text
+there): **verify a "this write is safe" claim from every PUBLIC ENTRY
+POINT of the class that can reach the write, not from inside the one
+method where the write lives.** Three rounds (P2-18/P2-23/P2-28) each
+enumerated every await the round's own author could see FROM WHERE THEY
+WERE LOOKING — inside one method, or inside that method plus its
+immediate two internal awaits — and each was falsified by an await one
+level further out, at the method's own callers. The question "is this
+write above the awaits I can see?" has no terminating answer, because
+there is always one more caller; the question "does this path perform
+this write at all, from any of its public entry points?" does terminate,
+and is the one round 7 finally asked (P2-31, by deleting the write
+rather than relocating it) and the one the round-7 verifier confirmed by
+enumerating `FirestoreProfileRepositoryAdapter`'s all 8 public entry
+points, not just the ones the fix touched.
+
+#### 4. Cross-document verification (`firestore-cutover-plan.md` checked line by line, per the brief's own instruction — it has been left false twice before)
+
+Read the full file this round, not scoped-checked. **Found true, not
+false, this time — the first round since P2-20 this file's own status
+line, `Head:` block, and Phase 2 section header were internally
+consistent with each other and with the code at session start.** Verified
+independently, not trusted from P2-32's own "fixed it" claim:
+
+- Status line (`:3-23`): "Phase 2 — `T-49` CLOSED BY REMOVAL (P2-31,
+  round 7)… CONFIRMED by a fresh independent review (P2-32)" — matches
+  the code (re-verified this round via the same `git diff` empty-tree
+  check used throughout this entry).
+- Mid-document `Last updated:`/`Head:` block (`:241-258`): named
+  `6655f184`, correctly, with the P2-32-era self-reference-lag note.
+  **Corrected this round** to `f2f59e6e` (P2-32's own commit, now fully
+  knowable) — the identical `T-62` mechanism, a FOURTH file/field
+  combination it has now hit.
+- Phase 2 section header (`:528`): "RESOLVED for `T-49` 2026-08-09
+  (P2-31, round 7)… Phase 3 blocked only on `T-39`" — accurate for
+  `T-49`'s own disposition, but did not state the overall Phase 2
+  verdict at the DECISION RULE's own resolution (NOT RESOLVED, on `T-39`
+  at minimum). **Corrected this round** — see the new P2-33 addendum
+  there.
+- **No PHASE 3 ENTRY CRITERIA checklist existed in this document at all**
+  — every prior round put the authoritative checklist only in
+  `firestore-cutover-log.md`. **Added this round**, mirroring §11c above,
+  so a reader of the plan alone (not just the log) sees the same
+  blocker set.
+
+#### 5. Git hygiene, verified this pass, read-only
+
+```
+$ git status --porcelain
+ M docs/planning/firestore-cutover-log.md   # this session's own in-progress edit
+$ git log --oneline -3
+f2f59e6e docs(planning): P2-32 — round 7's independent review recorded ...
+6655f184 docs(planning): reset IN FLIGHT to nothing — P2-31's landing commit (17134b43) missed this per protocol
+17134b43 fix(profiles): delete the T-49 activation write instead of hoisting it a fifth time ...
+$ git diff --stat 17134b43..HEAD -- learning_tracker/lib learning_tracker/test
+# (empty)
+$ git stash list
+stash@{0}: WIP on dev: d74e3829 docs(planning): durable task list + recovery log; mark Phase 1 resolved
+stash@{1}: WIP on (no branch): 8855b9b1 fix(tracks): AUD-tracks-18 - de-duplicate Hebrew-script detection regex
+```
+
+Both stash entries unchanged, identical bases/order to every prior
+round's record. Neither popped, applied, or dropped; neither referenced
+by positional index anywhere in this entry.
+
+#### 6. Doc updates landed this commit
+
+- `firestore-cutover-log.md`: IN FLIGHT field (appended before the first
+  edit, reset to describe this commit's own landed work at the end, per
+  protocol); `CURRENT STATE`'s `Head:` field (advanced to `f2f59e6e`);
+  the `Phase:` field (fifth CONTROL-4 claim caveated, in place); a new
+  `Suites — CORRECTED/RE-STATED AT P2-33` field (the two unrun `make ci`
+  targets named honestly, `T-69` opened); §10c superseding §10 (the
+  deferred-verification table); §11c superseding §11b (the Phase 3 ENTRY
+  CRITERIA checklist, three new record-integrity checkboxes, the overall
+  verdict restated per the DECISION RULE); a complete KNOWN ISSUES table
+  (§2, this entry); a new standing fact (§3, this entry; also appended to
+  "Standing facts an agent must not re-derive," above); a PHASE 2
+  RETROSPECTIVE prepended atop `## Entries`; this **P2-33** entry itself.
+- `firestore-cutover-tasks.md`: header paragraph (Phase 2 recorded NOT
+  RESOLVED overall, `T-39` named as the blocker, `Head:`/`Last updated:`
+  advanced); `T-67`'s row enriched with the second evasion class and the
+  test-output-republishing note (§1 items 4–5, above); new row `T-69`.
+- `firestore-cutover-plan.md`: verified line by line (§4, above); the
+  mid-document `Last updated:`/`Head:` block corrected (a fourth
+  file/field hit by the `T-62` mechanism); the Phase 2 section header's
+  overall verdict corrected; a new PHASE 3 ENTRY CRITERIA checklist
+  section added (did not exist before this commit).
+
+#### 7. Deviations
+
+**Predicted (this round's own brief):** "COMMIT: a message stating the
+real verdict plainly." **Actual:** the real verdict is a split one — the
+phase's SERIOUS code defect (`T-49`) is genuinely closed, but Phase 2 as
+a whole is recorded NOT RESOLVED because `T-39` (never assigned to any
+round of this saga, untouched throughout) is the project's own declared
+sole remaining Phase 3 entry blocker. **Mechanism:** the DECISION RULE is
+a disjunction — ANY one trigger condition (verdict incomplete,
+`safe_for_phase_3` false, `still_open_unrecorded` non-empty, an
+unguarded post-await write, a new blocking defect) forces NOT RESOLVED,
+and `T-39` alone satisfies it regardless of how many of the round-7
+FINAL REVIEW's other findings this pass closed. **Invariant unaffected:**
+this is the DECISION RULE working as designed, applied mechanically, not
+softened — the same rule that correctly forced P2-17's and P2-22's
+"NOT RESOLVED" verdicts on a code defect nobody had closed yet now forces
+one on a task nobody has closed yet, for a different reason. **Recorded
+in this entry:** yes, §1 and §6 (KNOWN ISSUES), the commit message, and
+`firestore-cutover-tasks.md`'s header.
+
+#### 8. Not done this round (docs-only; none of these are gate/test runs, all explicitly out of this pass's charter)
+
+- `T-39` itself — untouched; requires reconciling check 103's WATCHLIST
+  against CURRENT STATE's dead-adapters list, likely code-level
+  investigation, not a docs correction. Not this round's charter.
+- `T-65`–`T-68`'s code-level fixes — all remain `todo`, correctly, per
+  their own rows; this round only enriched `T-67`'s description with the
+  second evasion class, it did not touch `lib/` or `test/`.
+- `make validate-calendar` / `make test-serial-tools` — named as `T-69`,
+  not run; owner directive forbids gate runs this pass.
+- `D10`/`D11`/`D20`'s device halves — all require an actual device, not a
+  docs pass.
+
+---
 
 ### 2026-08-09 — P2-32: round 7's independent verification recorded — `T-49` CONFIRMED closed by an agent independent of P2-31; six record-integrity/test-quality defects found in the round's own output, none reopening `T-49`; four new non-blocking tasks opened (`T-65`–`T-68`)
 
@@ -2488,6 +3013,34 @@ and is the SOLE source of `T-49`'s residual on every round to date;
 recorded as a strengthened recommendation on `T-59`'s own row, not a
 new task, and not applied this round.
 
+#### 10c. Deferred verification — supersedes §10 below (`✦D23`, `D20`, `✦D1`, `✦D24`, `D25` rows; every other row carries forward unedited from P2-29's own D1–D25 map, referenced there)
+
+**Why this supersession exists:** §10 (below) is P2-29's table, written when
+`T-49` was still reopened a fourth time. It was never superseded by either
+the P2-31 entry (the fix) or the P2-32 entry (the independent review) —
+neither contains a deferred-verification section or references a single
+D-number, confirmed by `awk` over both entries' line ranges finding zero
+`D\d+`/`Deferred` hits. On its two most load-bearing rows, §10 currently
+asserts the **opposite of the truth**: `✦D23` says no permanent test
+guards the caller-boundary await; P2-31 landed exactly that test
+(GROUP-3, P30-G/P30-H). `D20` says the code-level residual behind the
+device check "is real again"; P2-31 deleted the code that made it real.
+This is the `T-62` mechanism recurring against a table instead of a
+`Head:` field — found by the round-7 FINAL REVIEW, superseded here.
+
+| ID | Item | Status at HEAD `f2f59e6e` (this commit's own parent; code-identical to `17134b43`) | Measured by / at |
+|---|---|---|---|
+| **✦D23** | Automated regression test for the CALLER-boundary await | **CLOSED.** P2-31 landed exactly that permanent test: GROUP 3 (P30-G/P30-H/P30-I) gates the DRIFT+PUSH caller boundary via a `mocktail` `SyncWriteFacade` in production wiring; kept as a file, not deleted; revert-proved (P30-G and P30-H are 2 of the 6 predicted RED on a byte-exact revert of `profile_repository_impl.dart` alone). | Verifier @ `6655f184` (code-identical to `17134b43`) |
+| **D20** | Device/offline: activate A offline, switch to B, reconnect — `activeProfileDocIdProvider` must end on B | **CODE-LEVEL SUBJECT CLOSED BY REMOVAL; the DEVICE observation itself stays open.** The residual behind this check was the repository's write; that write no longer exists on any path (static re-enumeration this round + the verifier's independent 17-case sentinel probe). `fake_cloud_firestore` still cannot model an offline queue plus reconnect ack, so no in-repo test substitutes for the device check — it is downgraded from "reopened, code residual real" to "open, device-only," not closed outright. | Static: P2-33, this round, read-only. Execution: verifier @ `6655f184` |
+| D10 | Device: create a profile offline, restore network, activate | **STILL OPEN, unchanged.** Highest-value remaining routine device check in the phase. | not measured at this commit |
+| D11 | Device: P2-6 deploy + reset + negative control | **STILL OPEN.** `Deployed:` still `unknown — not deployed`; `make test-rules` 116/116, TQ-9 37/37 (re-confirmed by the verifier @ `6655f184`) proves the rule text internally consistent, not what is live. Deployment is the owner's call, not taken. | Verifier @ `6655f184` (test half only) |
+| **✦D1** | `make test` (full Dart suite) | **STILL CLOSED, number moved.** `08:54 +11527 ~131: All tests passed!`, exit 0 — +8 over the P2-31 baseline of `+11519`, matching the 8 new GROUP-3/control tests exactly (arithmetic checked against the diff, per `T-61`'s own standing lesson). | Verifier @ `6655f184` |
+| **✦D24** | `make test-serial-tools` run to completion | **REOPENED AS A GAP, this round's own finding, corrected from a false "closed" framing.** Closed as a one-time event at round 5's review (`32:16 +38 ~1`, tree `~3872fdbc`) — but NOT re-run since. Two code commits back. Structurally excluded from `make test` by `Makefile:9`'s `--exclude-tags "serial-tools \|\| quarantine"`. P2-31 changed `lib/`/`test/`; this lane has not seen that code. Tracked as `T-69`, `todo` (P2-33). | not measured at this commit |
+| — | `make validate-calendar` | **REOPENED AS A GAP, this round's own finding.** Not run since `~3872fdbc` (round 5's review), two code commits back. Low risk (no seed/calendar data touched by `T-49`'s fix), but it is one of `make ci`'s nine targets and it did not execute in round 7 at all. Tracked as `T-69`, `todo` (P2-33), same task as `✦D24` — both need one re-run against current code, or an owner ruling that the risk is acceptable to defer further. | not measured at this commit |
+| **D25** | `make ci` in a single invocation | **STILL OPEN, restated precisely: never run as ONE invocation, this cutover, by owner policy (batched to the end of Phase 4).** Seven of nine targets have each run standalone at `6655f184` (`analyze`, `lint-rules-test` via `make audit`'s prerequisite, `test`, `test-rules`, `test-functions`, `check-profile-path-keying`, `check-profile-id-int-sites`); the remaining two (`validate-calendar`, `test-serial-tools`) are `✦D24`/the row above, both open. The ordering interactions between targets inside one real `make ci` invocation (e.g. `test` regenerating `coverage/lcov.info` underneath R6d) remain untested as a chain. | Verifier @ `6655f184` (the seven-of-nine count) |
+| — | R6d coverage-denominator (`check_lcov_denominator.dart --strict`) | **not measured at this commit.** Last explicit result P2-21 (`76` zero-coverage files, `0` new violations). `make test` regenerates `coverage/lcov.info` but no round since has reported a fresh R6d line. Per standing memory, R6d soft-skips without lcov — lcov exists here, so it is live, not dormant; simply not re-run. | not measured at this commit |
+| — | Every other row of P2-29's D1–D25 map, below | Carried forward unedited; nothing in round 7 or this round touched their subjects. | inherited |
+
 #### 10. Deferred verification — supersedes P2-28's table (only rows the reopening touches change; every other row carries forward unedited)
 
 | ID | Skipped ci-only / device check | Status this round |
@@ -2496,6 +3049,81 @@ new task, and not applied this round.
 | D20 | Device/offline: activate A offline, switch to B, reconnect — `activeProfileDocIdProvider` must end on B | **Reopened, unchanged from before P2-28 in substance.** The code-level residual behind this device check is real again — P2-28's narrowing does not close what this check would observe. |
 | D10 | Device: create a profile offline, restore network, activate | **Open, unchanged.** Still the highest-value routine device check in the phase; still observing a fix that is narrowed, not complete. |
 | — | Every other row in P2-27's table (P2-28 changed only `✦D1`/`✦D24`, both unrelated to `T-49`, both unaffected by this round) | Unchanged; not re-copied here — see the **P2-27** entry, above, for the full D1–D25 map as it stood entering P2-28, still current except the three rows above. |
+
+#### 11c. Phase 3 ENTRY CRITERIA — supersedes §11b below (adds three new record-integrity checkboxes and restates the verdict as a whole; every `T-49`-adjacent line unchanged) — see the new **P2-33** entry, further below, for the full record
+
+**Copied verbatim from the round-7 FINAL REVIEW (authoritative), not
+re-derived by this round except where explicitly marked:**
+
+- [x] **`T-49` (SERIOUS) — CLOSED BY REMOVAL.** Static half re-derived
+  independently by the FINAL REVIEW at HEAD `f2f59e6e`; execution half
+  measured by the round-7 verifier at `6655f184` (code-identical to the
+  landing commit `17134b43`). The repository writes
+  `activeProfileDocIdProvider` on no path; the only three writers in
+  `lib/` are in `profile_providers.dart` and none is an unguarded
+  post-await write.
+- [x] **`T-59` — done (P2-31).** The removal shape was taken, not merely
+  recommended.
+- [x] **`T-64` — done (P2-31), resolved by removal.** The P2-28 readiness
+  gate no longer exists because the write it guarded no longer exists.
+  Pinned by CONTROL-5.
+- [x] **`T-63` — done, and its CODE half genuinely closed by deletion:**
+  the two false "nothing asynchronous precedes it … cannot be stale" doc
+  comments died with the method they annotated.
+- [x] **A fresh independent review of the commit that finally closes
+  `T-49` — SATISFIED** by the round-7 verifier, independent of P2-31,
+  which re-derived the call tree across all 8 public entry points, ran
+  its own 17-case sentinel probe matrix, and found the code sound.
+  Correctly credited to the review, not to the round that wrote the fix.
+  This checkbox does NOT re-arm against `f2f59e6e` or against this pass:
+  both are docs-only, and `git diff 17134b43..HEAD -- learning_tracker/lib
+  learning_tracker/test` is empty (re-verified by P2-33 this round), so
+  the reviewed code IS the current code.
+- [ ] **`T-39` — STILL OPEN.** `todo`. The project's own declared sole
+  remaining Phase 3 entry blocker, and it genuinely blocks: Phase 3's
+  wiring order would otherwise be built on a wrong inventory.
+- [x] **NEW, ADDED AND CLOSED THIS PASS (P2-33) — supersede the
+  deferred-verification table.** It was two rounds stale and its `✦D23`
+  and `D20` rows asserted the opposite of the truth. Done: §10c, above.
+- [x] **NEW, ADDED AND DISCLOSED THIS PASS (P2-33) — `make
+  validate-calendar` and `make test-serial-tools` have not run against
+  the current code; recorded as an accepted, NAMED gap (`T-69`), not as a
+  `make ci` batching decision.** Round 7 changed `lib/` and `test/`;
+  these two targets have not seen that code. The serial-tools lane is
+  tag-excluded from `make test`, so the green `+11527` is not evidence
+  about it. **Not run this pass either** — owner directive forbids gate
+  runs this round; the honest disposition is "named and tracked," not
+  "closed."
+- [x] **NEW, ADDED AND CLOSED THIS PASS (P2-33) — caveat the fifth
+  CONTROL-4 claim in `CURRENT STATE`'s `Phase:` field.** Done, above —
+  the field a cold agent reads first (Recovery Protocol step 1) no longer
+  asserts an unqualified guarantee the record has already disproved
+  elsewhere.
+
+**VERDICT — DECISION RULE applied mechanically, not softened:** the
+round-7 FINAL REVIEW's own verdict was `resolved-with-deviations`,
+`safe_for_phase_3: false`, `still_open_unrecorded` non-empty (four
+items). Per the DECISION RULE ("if the verdict is 'incomplete', OR
+`safe_for_phase_3` is false, OR `still_open_unrecorded` is non-empty …
+Phase 2 is recorded NOT RESOLVED, blockers named and owned by task id,
+Phase 3 explicitly blocked"): **three of those four items are now closed
+by this pass** (the deferred table, the fifth CONTROL-4 claim, and the
+framing of the two unrun `make ci` targets — now a named task, `T-69`,
+rather than a silent gloss). **`T-39` is not one of them, was never
+assigned to this pass, and remains open.** `T-39` alone is sufficient to
+keep the DECISION RULE's trigger condition true. **Phase 2 is recorded
+NOT RESOLVED. Phase 3 is explicitly BLOCKED, on `T-39` at minimum, plus
+the standing device checks `D10`/`D11` and the four MINOR code residuals
+`T-65`–`T-68`/`T-69`, none individually blocking but all real and
+undischarged.** This is a narrower, more honest blocker set than any
+prior round recorded: `T-49` — the phase's only SERIOUS *code* defect —
+is genuinely closed; what remains is one pre-existing Phase-3-inventory
+task, two device checks no in-repo test can substitute for, one
+undeployed rules change, and a small set of disclosed, non-blocking
+residuals.
+
+*(Historical, P2-32 — the snapshot the block above supersedes, left
+unedited per this file's own rule:)*
 
 #### 11b. Phase 3 ENTRY CRITERIA — supersedes §11a below (the independent-review line only; every other line unchanged) — see the new **P2-32** entry, further below, for the full record
 
