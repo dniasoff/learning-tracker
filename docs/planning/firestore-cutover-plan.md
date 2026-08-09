@@ -977,6 +977,102 @@ deletes and tutoring's identity — moved to Phase 3 below, per Q1's ruling in
 
 ### Phase 3 — Wire and move
 
+**Entry criteria and traps (lesson-mining pass, added 2026-08-09 from Phase
+2's seven-round `T-49` saga — verify each claim against the code before
+relying on it, per this project's own "reproduce, don't inherit" rule; full
+incident evidence is in `firestore-cutover-log.md`'s Working Protocol and
+PHASE 2 RETROSPECTIVE sections):**
+
+- **Entry criteria, restated from `firestore-cutover-log.md`'s Phase 3 ENTRY
+  CRITERIA checklist — read it there, do not re-derive from scratch:** `T-49`
+  closed and independently confirmed; `T-39` (below) still `todo` and the
+  sole other declared blocker; the deferred-verification table current as of
+  the last entry. Device checks `D10`/`D11`/`D20` are standing work, not
+  phase gates — read them before touching profile-activation code a second
+  time, but they do not block Phase 3's start.
+- **`T-39` first, before wiring anything — the WATCHLIST and the "dead
+  adapters" list are not the same set.** Check 103's dynamically-computed
+  WATCHLIST (`tool/check_profile_path_keying.dart --report`) is every one of
+  the 17 profile-scoped collections with a live INT writer opposite a
+  DORMANT ULID repo file; `CURRENT STATE`'s "Dead adapters (7)" line
+  (`completion · curriculum-track · goal · progress · stage-definition ·
+  study-day-config · track-learning-order`) is a hand-maintained adapter-
+  class list. They are drawn from different populations. Reconcile them by
+  running the actual `--report` output against the current tree before
+  treating either as the wiring order — per `T-39`'s own row in
+  `firestore-cutover-tasks.md`, five WATCHLIST collection names have no
+  counterpart in the dead-adapters list and two dead-adapters entries have
+  no WATCHLIST counterpart.
+- **Check 104's baseline (`tool/profile_id_int_sites_baseline.txt`, 88
+  entries) is baselined almost entirely against the exact files Phase 3 will
+  edit — verified by re-reading the baseline directly, not inherited.**
+  Every `cf-int-guard`/`cf-string-profileid-doc` entry sits in
+  `functions/src/deletes.ts` (T-30) or `functions/src/tutor_writes.ts` /
+  `tutor_bulk_completions.ts` (T-31); every `dart-tutoring-*` entry sits in
+  `lib/features/tutoring/**` (T-31). The `dart-int-profileid-param` entries
+  against `lib/core/sync/firestore_gateway.dart` and
+  `lib/core/sync/outbox/push_pipeline.dart` are interface-level and belong
+  to **Phase 4**, not Phase 3 — do not touch those baseline lines here.
+  **Editing a T-30/T-31 file WILL change check 104's output** (a baselined
+  symbol disappearing, a new pattern appearing, an occurrence count moving
+  inside a kept symbol) — expected, not a regression, but the fix and the
+  matching `tool/profile_id_int_sites_baseline.txt` edit must land in the
+  SAME commit (the tool's own P2-1 doc comment: narrowing the scanner and
+  changing the code it covers may not land together).
+- **T-30/T-31's 13-read/9-write coupling is why they were re-phased out of
+  Phase 2 in the first place — do not re-key one direction without the
+  other, and do not re-key one of the 13 read collections without checking
+  whether its owner-side writer is still int-keyed.**
+  `TutoredProfileSelection.profileId` is a live Firestore path segment:
+  `PullPipeline.pullForTutoredProfile` (`lib/core/sync/pull_pipeline.dart:73-98`)
+  pulls 13 collections + 3 preference docs; `verifyTutorGrant`
+  (`functions/src/tutor_writes.ts:187` + 12 call sites) writes 9. As of
+  Phase 2's close, 11 of the 13 reads still have an int-keyed owner-side
+  writer. Re-keying tutoring's identity alone makes the tutor read a tree
+  nothing writes and write a tree nobody reads — silently:
+  `pullForTutoredProfile` counts no failures on an empty collection, so the
+  pull "succeeds" into an empty talmid, and no gate through Phase 3 can see
+  a doc-id-formula mismatch (neither check 103 nor 104 covers doc-id
+  formulas).
+- **T-37 repairs a regression Phase 2 deliberately created, and it needs a
+  NEW seam, not a value substitution.** P2-5 hoisted a uniform refusal into
+  `_watchActiveAccountAndProfile` for all 13 profile-scoped providers during
+  a tutored session — correct, closing a live latent corruption — but it
+  sources `uid` from the signed-in account (the tutor's own). Setting the
+  profile ULID alone, without also substituting the owner's `uid`, addresses
+  `users/{TUTOR}/learner_profiles/{talmid ULID}` — a brand-new wrong tree,
+  not the parent's. The rules already permit the correct read
+  (`firestore.rules:450` + 16 sibling `allow read: if isOwner(uid) ||
+  hasActiveTutorAccess(uid, profileId)` lines); T-37 is an owner-uid-scoped
+  handles seam — feature wiring, not a config flip.
+- **Every new provider chain Phase 3 wires — the 7 currently-dead adapters,
+  T-37's owner-scoped handles — is a fresh Riverpod chain that may await
+  `activeAccountFirebaseProvider.future` or similar. Declare `retry: (_,
+  __) => null` on it, or verify its test container came through
+  `bootstrap()`.** Riverpod 3's default per-provider retry treats a
+  structural exception (e.g. an unauthenticated-account error) as retryable
+  for up to ~38 seconds before `.future` ever settles. The app's one
+  production `ProviderContainer` (`lib/app/bootstrap/bootstrap.dart:68-81`)
+  already disables this container-wide, so the risk is test-harness-only,
+  not production — but a bare test container for a newly-wired adapter will
+  hang for the full backoff if this is missed, exactly as it did for two
+  providers earlier in this cutover before the container-wide fix was
+  found.
+- **An "adapter" in this codebase is not a thin wrapper — expect 4-6 awaits
+  behind each one you wire, and check whether any of them is a genuine
+  network RPC, not a local DB enqueue.** `FirestoreProfileRepositoryAdapter
+  .createProfile`'s own chain — not discovered until Phase 2's sixth round —
+  hid four of `ProfileRepositoryImpl`'s own awaits plus a durable-outbox
+  enqueue that is a **one-shot Cloud Function RPC** in a tutored session.
+  None of it was visible from the adapter's own signature or doc comments.
+  Enumerate every await transitively reachable from each of the 7 adapters'
+  public methods before wiring them, not just the adapter's own body — per
+  this section's Working Protocol rule 2, from the PUBLIC ENTRY POINT.
+- **Order by data dependency, writers before readers, per collection**
+  (below) — **and the writer/reader pairs this project has already learned
+  move together:** track-creation → bookmarks; learning-order → bookmarks
+  *and* the scheduler's daily-task projection; completion → bookmarks.
+
 **Moved here from Phase 2, per Q1's ruling (`firestore-phase2-plan.md` §3,
 2026-08-06) — landing with T-20 as one commit-unit, not before it, since the
 coupling evidence below is why they were re-phased in the first place:**
@@ -1043,6 +1139,62 @@ baseline is empty. `make ci` green.
 
 ### Phase 4 — Demolish
 
+**Entry criteria and traps (lesson-mining pass, added 2026-08-09):**
+
+- **Check 103 (`PROFILE-KEY-SPLIT`) is file-location-based
+  (`lib/core/sync/**`, `functions/src/**`), not keying-based, by design
+  (`check_profile_path_keying.dart:54-66`) — it stays green and MEANINGLESS
+  for identity progress until `lib/core/sync/**` is actually deleted. **Phase
+  4 is the first phase where this check finally becomes an informative
+  signal rather than a structural green.** Do not read check 103's OK line
+  during Phase 3, or at the start of Phase 4, as evidence the identity split
+  is closing — the split set only shrinks when the int-side files it scans
+  are deleted, which is this phase's own act, not a side effect of Phase 3's
+  moves.
+- **`pushLearnerProfile` still writes an int-keyed `learner_profiles` twin on
+  every profile create/update**
+  (`lib/features/profiles/data/repositories/profile_repository_impl.dart:119,187,379`
+  → `outbox_sync_write_facade.dart:146` → `outbox_processor.dart:671` →
+  `firestore_gateway_impl.dart:466`) — ungated by check 103 (the parent
+  collection, not a child, is outside its scan) and out of check 104's scope
+  by design. It dies here, not sooner, and only as part of the whole
+  `lib/core/sync` deletion — stopping it in isolation would strand the old
+  sync engine's own `learner_profiles` pull/merge while any int-keyed
+  collection still lives on that tree.
+- **The ~179 `int profileId` occurrences under `lib/core/sync/**` die here.**
+  Verified by direct count (`grep -rn "int profileId" lib/core/sync/ | wc -l`
+  → `179`). Check 104 deliberately tracks only the INTERFACE-level
+  occurrences, in `firestore_gateway.dart` and `outbox/push_pipeline.dart`
+  (plus the three `functions/src` files), as a ratchet — the other ~150+
+  implementation-level occurrences were never tracked individually, because
+  they die wholesale with the directory and tracking them one by one would
+  have been noise, not signal (check 104's own P2-1 design rationale).
+- **Deleting `lib/core/sync` is where check 104's baseline finally shrinks
+  toward its own genuinely-reachable end state.** Every
+  `dart-int-profileid-param` entry currently baselined against
+  `firestore_gateway.dart` / `push_pipeline.dart` must be removed from
+  `tool/profile_id_int_sites_baseline.txt` in the SAME commit that deletes
+  those files — a baseline entry present but no longer found in the scan
+  fails the gate by the tool's own fail-closed-in-both-directions design.
+- **Re-verify the ISO→Timestamp conversion before deleting the gateway that
+  performs it.** `firestore.rules` enforces `is timestamp` on three fields
+  (`streak_events.created_at`, `completions`/`learning_ledger.completed_at`,
+  `points_ledger.created_at`); the dying `FirestoreGatewayImpl
+  ._timestampifyField` converts the outbox's ISO strings to real
+  `Timestamp`s before each write lands. `fake_cloud_firestore` cannot catch
+  a regression here — a wrong type surfaces only as `permission-denied` on a
+  real device, indistinguishable at first glance from an undeployed-rules or
+  App-Check-token failure. Confirm all three fields are written as real
+  Timestamps by the NEW repositories (not the dying gateway) before this
+  deletion lands, and check the `Deployed:` field and the App Check debug
+  token before attributing any resulting device denial to this change
+  specifically.
+- **`make audit` means two different things depending on directory (`T-52`)
+  — this remains true after this phase's deletion.** A large deletion
+  landing does not make the repo-root `Makefile`'s independent,
+  currently-failing `audit` target relevant; keep running gates from
+  `learning_tracker/`.
+
 Delete, in one change:
 
 | Target | Files | Lines |
@@ -1076,6 +1228,57 @@ database.
 ---
 
 ### Phase 5 — Retarget the gates and verify on a device
+
+**Entry criteria and traps (lesson-mining pass, added 2026-08-09):**
+
+- **`T-38` — fold check 104 (`PROFILE-ID-INT-SITES`, built Phase 2) into
+  this retarget, in the same pass that retargets check 103 and the other
+  `#23`-numbered gates.** By Phase 5, check 104's own reason to exist
+  (tracking int-keyed sites during the migration) has been discharged by
+  Phase 4's deletion; decide explicitly whether it becomes permanently
+  empty-baseline, is deleted outright, or is repurposed — do not leave it
+  running against a codebase with nothing left for it to track without a
+  recorded decision.
+- **The `all 68 greps clean` summary string
+  (`learning_tracker/Makefile:1365,1378`) is stale TODAY, not just
+  eventually — verified: the audit gate is already `104/104` checks, not
+  68.** Fixing the string is explicitly deferred to this phase / `T-23` (not
+  Phase 2's problem, per P2-1's own commit note) — do not read the stale
+  "68" as a check count; the true count prints on the line immediately
+  above it (`104/104 — PROFILE-ID-INT-SITES ...`).
+- **Un-skip `test/tool/audit_and_arb_parity_test.dart`'s `'exits 0 when
+  codebase is fully clean'` case — verified its skip reason is already
+  false.** The skip text reads *"Pre-existing violations from Epics 25–26
+  not yet resolved; re-enable once `make audit` is fully clean"*
+  (`audit_and_arb_parity_test.dart:155-157`), but `make audit` has exited 0
+  (`104/104 checks`, `PASSED`) on every measurement taken across all of
+  Phase 2. Un-skipping it is not blocked on any further code work — only on
+  running it, confirming it stays green, and removing the `skip:`
+  parameter.
+- **Verify `resolve()`'s cold-start re-attach on a real device — it is
+  mock-only today and runs every launch.** The route guard clears the ULID
+  when auto-selecting a single profile by bare int and self-heals on the
+  next frame via `ensureSelected()`; whether anything can fire inside that
+  window is not statically determinable. Phase 2's own `T-40` saga
+  demonstrated exactly this class of gap surviving multiple rounds of
+  static reasoning before a wiring test caught it — do not accept a trace as
+  proof here either.
+- **Add the NUL-byte gate (`#25`) before trusting any of the retargeted
+  checks.** A single NUL byte in a source file makes `grep` treat it as
+  binary, silently disabling every audit check on that one file — this has
+  already happened once in this codebase, undetected by any of the other
+  100+ checks, because none of them checks text-file validity as a
+  precondition.
+- **Device verification here is where `D10`/`D11`/`D20` — the highest-value
+  checks never closed across Phase 2 — finally get a chance to run for
+  real, if they were not picked up earlier:** `D10` (create a profile
+  offline, restore network, activate — `fake_cloud_firestore` cannot model
+  the offline queue or reconnect ack, so no in-repo test substitutes); `D11`
+  (deploy `firestore.rules` + negative control — check the `Deployed:`
+  field in `CURRENT STATE` first, in case this happened earlier); `D20`'s
+  device half (activate A offline, switch to B, reconnect, confirm the
+  provider ends on B — its code-level subject closed in Phase 2, this is
+  the remaining device-only half).
 
 - **#23 / T-38 (new, folded in)** — retarget enforcement gates to the new
   architecture. Many encode the old sync engine's invariants and will be

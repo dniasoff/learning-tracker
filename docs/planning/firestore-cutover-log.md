@@ -82,7 +82,218 @@ nothing on disk to diff against. This is the fix, binding from 2026-08-06
 
 ---
 
+## Working protocol — binding for Phases 3, 4, 5
+
+**Read together with the Recovery and IN FLIGHT protocols above — deliberately
+placed beside them so it is impossible to read one without the other.** Phase
+2 took seven rounds to close one defect (`T-49`) because each round answered a
+question that does not terminate. These rules are what finally terminated it,
+generalized past that one defect. Full incident evidence for every rule below
+lives in the PHASE 2 RETROSPECTIVE and Standing Facts sections, further down
+this file — this section states the rule and cites the incident by name only.
+
+1. **Probe, don't read.** A negative claim ("there is no path that…", "the
+   only writer is…", "nothing can race this") is verified by (a) a re-run
+   enumeration against the CURRENT tree, or (b) an executable probe gating
+   the SPECIFIC await/branch the claim depends on — never by re-reading the
+   same code more carefully. Every one of `T-49`'s false closures (P2-18,
+   P2-23, P2-28, and CONTROL-4's own overbroad claim found at the round-7
+   FINAL REVIEW) was a well-argued reading; every reopening was an execution
+   result.
+2. **Enumerate awaits from the PUBLIC ENTRY POINT of the class, not from
+   inside the method holding the write.** "Is this write above the awaits I
+   can see from here?" has no terminating answer — there is always one more
+   caller. "Does this path perform this write at all, from any public entry
+   point?" does terminate. Enumerate every public method of the class under
+   review, not only the ones the fix touches — the round-7 verifier found
+   `T-66` (a real, previously-unprobed activation site) only by enumerating
+   all 8 of `FirestoreProfileRepositoryAdapter`'s public methods, where the
+   design that shipped the fix had named 3.
+3. **Never delete a probe — make it permanent.** A throwaway probe that
+   finds a defect and is then deleted lets the SAME defect survive to be
+   rediscovered by the next round from scratch. This happened at least
+   three times this phase (P2-22's probe, P2-26's PROBE 4/PROBE 5, P2-29's
+   probe were each written, run, and deleted — each documented as such in
+   its own entry) and a fourth time even inside the round that finally
+   closed `T-49`: the round-7 verifier's own 17-case sentinel probe matrix
+   was itself removed from the tree after use. If a probe is disposable by
+   charter (a docs-only round with no fix yet to guard), say so explicitly
+   and open a task for a future round to make it permanent — do not let
+   "written, run, deleted" become the default shape for a probe that found
+   something real.
+4. **A test that passes against broken code is worthless as a regression
+   guard.** Before trusting any new permanent test: disable the fix (or
+   revert the file via `cp`, **never** `git stash`), confirm the test goes
+   RED with the specific predicted failure signature, then restore
+   byte-exactly and md5-verify. **Publish the predicted revert signature —
+   which cases go RED, which stay GREEN — before running the revert**; a
+   mismatch is a defect in the test, not noise (the design that finally
+   held predicted exactly 6 RED / 8 GREEN, named each case, and matched
+   the prediction exactly on the first real run — that discipline is what
+   every earlier round skipped). The six inherited GROUP-1/GROUP-2 race
+   cases stayed GREEN on the reverted (pre-fix) tree in exactly the
+   sub-cases where the verifier's own sentinel probes went RED, because
+   they asserted only the FINAL value after an interleave that happened to
+   complete first — assert the intermediate state, not only the outcome.
+   **Use a SENTINEL value, never `expect(..., isNull)`, to prove "never
+   written."** `isNull` cannot distinguish "untouched" from "written to
+   null."
+5. **A record correction applied only to a `.md` file leaves the false
+   claim live in the code — fix both, same commit.** `T-50` and `T-49`'s
+   doc comments both recurred this way: a docs-only round can and must
+   DISCLOSE a false code comment it finds, with a named task, but cannot
+   CLOSE it — closing needs a round explicitly scoped to touch
+   `lib/`/`functions/src/`. Never let disclosure substitute for the fix,
+   and never let a docs-only charter's scope silently absorb the
+   correction as "already handled."
+6. **Check ALL THREE planning docs after every change**, not just the one
+   the brief names. `firestore-cutover-plan.md`'s status line and
+   mid-document `Head:`/`Last updated:` block have both been left false
+   while `firestore-cutover-log.md` was corrected, more than once
+   (`T-62`). `firestore-cutover-tasks.md`'s header is a third, independent
+   copy of the same facts. After any closing commit, grep all three for
+   every SHA, line number, count, and "only writer"/"structurally
+   impossible"/"no path" claim, and re-derive each one — do not trust that
+   fixing the narrative paragraph in one file fixed the same fact stated
+   in another.
+7. **Any step that runs a deferred check supersedes the
+   deferred-verification table IN THE SAME COMMIT.** The table went stale
+   repeatedly this phase — worst, two full rounds after `T-49`'s removal
+   fix landed, when neither the fixing round nor the round recording its
+   independent review touched a single D-row, so the table's two most
+   load-bearing rows (✦D23, D20) asserted the opposite of the truth until
+   a read-only pass caught it. A round that does not touch the table must
+   say so explicitly ("this round changes no D-row"); a round that
+   invalidates a row must regenerate the table in the same commit, not
+   merely disclose the drift for a later round to fix.
+8. **`CURRENT STATE` is a single-valued field, rewritten in place — it is
+   NOT part of the append-only `## Entries` history below it.** Re-read
+   the WHOLE block before editing it, and rewrite it fresh; do not append
+   a new "(Superseded text below, from P2-N…)" paragraph on top of the
+   last one. Seven rounds did exactly that: by the close of Phase 2, a
+   cold agent reading `CURRENT STATE` top-down had to traverse **four
+   superseded field values** before reaching the true one. History
+   belongs in `## Entries`, which IS append-only by design; `CURRENT
+   STATE` is a snapshot, not a ledger. (This rule is not exempt from its
+   own logic — if a future round finds `CURRENT STATE` has grown another
+   nested-supersede chain, collapsing it to one current statement, with
+   the removed history intact in `## Entries`, is IN SCOPE for that
+   round, not scope creep.)
+9. **Test policy.** A fix is not done until its test has been run and
+   PASSES, with the actual command and actual output pasted — never imply
+   a test is green without running it (a fabricated `01:31 +1` test
+   timing in one round's own entry had to be corrected by a follow-up
+   commit that actually ran the suite). Prefer a directory-level run over
+   a hand-picked file list as the disclosure baseline — a hand-picked
+   list missed a 6th red test twice (once inside `test/features/
+   profiles/`, once for all 14 failures under `test/e2e/journeys/**`,
+   invisible for five rounds because no round ever ran `flutter test
+   test/e2e/` as its own net). **Before reading a suite's failure count,
+   check for a `Terminated` line and an explicit `EXIT=` code** — a
+   killed run (a session limit, a timeout) manufactures fake red tests
+   (sink-close errors, teardown `PathNotFoundException`s) that are
+   process artifacts, not code failures. A `make test-serial-tools`
+   attempt this phase ended `09:14 +19 ~1 -1` with a `Bad state: Cannot
+   close sink while adding stream` error and **no `EXIT=` line at all** —
+   read naively, that tail looks like one red test; it is a killed
+   process, and the lane is still not discharged (`T-69`).
+   **Measured baselines as of `17134b43` (the commit that closed `T-49`;
+   re-verify with `git diff --stat 17134b43..HEAD --
+   learning_tracker/lib learning_tracker/test` returning EMPTY before
+   trusting these as still current for the code you are looking at):**
+   `make test` → `+11527 ~131`, exit 0. `make test-rules` → `pass 116 fail
+   0`, TQ-9 37/37 rules evaluated. `make test-functions` → `pass 337 fail
+   0`. `make audit` → `104/104 checks`, `all 68 greps clean` (the string
+   itself is stale — see Phase 5 in `firestore-cutover-plan.md`). Check
+   103 → `2 collection(s) currently split (bookmarks, learning_order), 0
+   new violations`. Check 104 → `88 tracked entries covering 91 site(s)
+   across 5 pattern(s); 0 new, 0 stale, 0 changed`. `dart format` → 9
+   touched files, 0 changed. **NOT measured since round 5 (`~3872fdbc`),
+   two code commits back — name this explicitly, do not gloss it as a
+   batching decision (`T-69`):** `make validate-calendar`, `make
+   test-serial-tools`. `make ci` in a single invocation has never run,
+   this cutover or any prior phase.
+10. **Gate map.** `make audit` (the 104-check gate every entry in this log
+    means) MUST run from `learning_tracker/`. The repo root
+    (`/home/daniel/repos/learning-tracker/Makefile`) defines a DIFFERENT,
+    12-grep `audit` target that fails today on unrelated pre-existing
+    violations (`T-52`) — a red result from the repo root is not a Phase
+    3/4/5 regression. `make audit` is a SUBSET of `make ci` — checks exist
+    in only one lane (TQ-9 rule coverage is `make ci`/`make
+    test-rules`-only, chained with `&&` behind a `node --test` step that
+    can itself silently block it from ever running — confirm the chain
+    actually reached the second command, not merely that it exited 0).
+    R6d (`coverage/lcov.info`) soft-skips and still exits 0 when the file
+    is absent — read the stdout line above the exit code, never the exit
+    code alone; never delete `coverage/lcov.info` to make a gate green.
+11. **Emulator suites ONE AT A TIME**, on port 8080 — confirm free first:
+    `ss -ltnp | grep -E ':8080|:9099|:4400'`. Running `make test-rules`
+    and `make test-functions` concurrently has already produced one
+    self-inflicted port collision this cutover.
+12. **Git hazards.** Two stashes exist, identified by BASE COMMIT
+    (`8855b9b1`, `d74e3829`) — never by `stash@{N}` index, which reorders
+    on every push/pop. Neither is popped, applied, or dropped; neither is
+    ruled on. One of the two appeared mid-session with no `git stash`
+    command ever run by the agent that found it — the mechanism is still
+    unidentified. **A clean `git status --porcelain` is not proof nothing
+    is wrong** — re-verify immediately before every `git add`, and if a
+    just-written edit is missing on re-read, check `git stash list`
+    before assuming the edit tool failed. Full measured facts: "Known
+    stashes — UNDISPOSITIONED-REPORTED", near the end of this file.
+13. **Never run two agent sessions against the same planning documents
+    concurrently.** Three separate incidents this phase: one round had to
+    exclude files mid-edit because a concurrent sibling session was
+    writing them, and defer its own log entry to the next round; another
+    round's commit landed with NO log entry at all because
+    `docs/planning/**` was dirty from a sibling session at the moment it
+    tried to write one, recorded retroactively three rounds later; a
+    third round's `dart analyze`/`make audit` both went red transiently
+    from a concurrent sibling session's mid-write state (a stray untracked
+    fixture, a partial write) and had to be re-run in a write-quiet window
+    to rule out a false regression. A gate or test result collected while
+    another session is writing describes nothing.
+14. **A "verified by grep" claim must embed the reproducible command, and
+    any round citing it must RE-RUN it, not trust it.** Single-line grep
+    patterns systematically miss Dart's multi-line chained-call
+    formatting — one doc comment (`profile_repository_impl.dart:617-619`,
+    predating this phase) claims a pattern "returns every one of them and
+    nothing else" for ~9 activation paths (`T-68`, still open); re-run: 3
+    real hits out of 12+, the rest use the `ref\n  .read(...)\n
+    .select(...)` multi-line form the single-line pattern cannot match.
+15. **The handoff rule.** Each phase's CLOSING step authors the NEXT
+    phase's handoff prompt, from that phase's OWN measured state — never
+    speculatively, in advance. Phase 4's and Phase 5's handoff prompts are
+    deliberately NOT written yet: their content depends on what Phase 3
+    actually does (which WATCHLIST collections convert, what check 104's
+    baseline looks like after the tutoring re-key, which of the ~96 files
+    move cleanly), and a handoff written today would be stale before
+    Phase 3 finishes — exactly the shape `T-62` already names for every
+    other kind of forward-looking citation. Phase 3's own closing round is
+    responsible for authoring Phase 4's handoff; Phase 4's closing round
+    for Phase 5's. Do not treat an earlier phase's speculative notes about
+    a later phase (the "Bites Phase N" pointers scattered through Standing
+    Facts, or the per-phase traps in `firestore-cutover-plan.md`) as a
+    substitute for that handoff — they are inputs the closing round should
+    read, not the handoff itself.
+
+---
+
 ## CURRENT STATE
+
+**Head:** `14860643` (P2-33's own commit, `docs(planning): P2-33 — Phase 2
+recorded NOT RESOLVED; T-49 closed but T-39 still blocks Phase 3` —
+confirmed via `git log --oneline -1` at THIS round's (P2-34, "round 8" per
+the brief that opened it) session start, re-derived independently, not
+copied forward from any prior citation, per `T-62`'s own lesson) **(P2-34,
+this commit, not yet reflected — same self-reference lag as every prior
+closing commit)**. `git status --porcelain` empty at session start; `git
+diff --stat 14860643..HEAD -- learning_tracker/lib learning_tracker/test`
+is not applicable — this round touches neither directory (docs only,
+`docs/planning/**` exclusively). No code commit landed between `14860643`
+and this one.
+
+(Superseded paragraph below, from P2-33, left for the historical record —
+true as of P2-33's own commit, superseded by the paragraph above:)
 
 **Head:** `f2f59e6e` (P2-32's own commit, `docs(planning): P2-32 — round
 7's independent review recorded; T-49 CONFIRMED closed, six
@@ -1071,6 +1282,62 @@ here as a `CURRENT STATE` self-consistency fix, not a re-opening of `T-52`
 P2-17, this was CURRENT STATE's own prose falling behind that fix in a
 later commit that copied it forward without checking it).
 
+**IN FLIGHT:** nothing. P2-34's own edit list — landing Phase 2's lessons as
+a durable, forward-applying record for Phases 3, 4 and 5, per the owner's
+lesson-landing brief (docs only; owner directive waived all gate/test runs,
+this step changes no code so no gate can regress; append-only per this
+file's own convention — no `docs/planning/**` file was rewritten from
+scratch, only added to and, for the two Head/IN-FLIGHT fields, superseded
+in place following the SAME append pattern every prior round used, a
+pattern this round's own new Working Protocol rule 8 names as something a
+FUTURE round should collapse, not this one — mid-task self-consistency
+tension disclosed, not silently resolved): added a **Working protocol**
+section to this file, alongside the Recovery/IN FLIGHT protocols, codifying
+12 rules the brief required (probe-don't-read; enumerate awaits from the
+PUBLIC ENTRY POINT; never delete a probe; a test green on broken code is
+worthless; a `.md`-only correction doesn't fix code; check all three
+planning docs; the deferred-verification table supersedes same-commit;
+`CURRENT STATE` is rewritten in place, not appended — see the disclosure
+above for this round's own partial compliance; test policy + measured
+baselines; the gate map; emulator suites one at a time; git hazards by base
+commit) plus 3 further rules this pass's own cross-document check
+surfaced as evidenced but not yet codified (never run two sessions against
+the same planning docs concurrently; a "verified by grep" claim must be
+re-run, not trusted, and single-line patterns miss Dart's multi-line
+chained calls; the handoff rule — each phase's closing round authors the
+NEXT phase's handoff from measured state, never speculatively). Verified
+the existing **Standing facts** section and **PHASE 2 RETROSPECTIVE**
+(added P2-33) already carry the substance of nearly every mined lesson from
+both source passes — cross-checked line by line against the two mined-
+lesson documents supplied with this round's brief; no standing fact
+duplicated, none found missing badly enough to add net-new (the genuinely
+new items landed in the Working Protocol section instead, each with its
+own incident citation, per this round's own read of "don't bloat the
+standing facts list"). Added **PER-PHASE ENTRY CRITERIA AND TRAPS**
+subsections to `firestore-cutover-plan.md`'s Phase 3, 4 and 5 sections,
+each verified against the code this round, not inherited: Phase 3's
+`T-39` WATCHLIST-vs-dead-adapters mismatch (re-confirmed against
+`firestore-cutover-tasks.md`'s own `T-39` row), check 104's 88-entry
+baseline shown to sit almost entirely inside the exact files T-30/T-31
+touch (re-read `tool/profile_id_int_sites_baseline.txt` directly), the
+13-read/9-write tutoring coupling, T-37's owner-uid-scoped seam, a new
+Riverpod-retry trap for the 7 dead adapters, and an "adapter hides 4-6
+awaits" trap; Phase 4's check-103-stays-meaningless-until-deletion point,
+the int-keyed `learner_profiles` twin, the ~179 `int profileId` count
+(re-counted this round: `grep -rn "int profileId" lib/core/sync/ | wc -l`
+→ `179`, exact match to the inherited figure), and the ISO→Timestamp
+re-verify-before-delete trap; Phase 5's `T-38` fold, the stale `all 68
+greps clean` string (re-confirmed live at `Makefile:1365,1378`), and the
+disabled `audit_and_arb_parity_test.dart` skip (re-confirmed its stated
+reason is false — `make audit` has exited 0 on every measurement this
+phase). Landed all in one commit, per the owner's docs-only-step
+authorization; `gate_output` for this round is a single `SKIPPED BY OWNER
+DIRECTIVE` entry per the brief's own instruction, naming every inherited
+number's source commit, never presented as freshly measured.
+
+(Superseded paragraph below, from P2-33, left for the historical record —
+true as of P2-33's own commit, superseded by the paragraph above:)
+
 **IN FLIGHT:** nothing. P2-33's own edit list — bringing all three
 planning documents to their TRUE final state for Phase 2, per the
 round-7 FINAL REVIEW (authoritative, verdict `resolved-with-deviations`,
@@ -1806,6 +2073,175 @@ not re-learn the hard way:**
   seven rounds used `cp` with md5 verification. Two unattributed stash
   entries have sat untouched since before this cutover began; never pop,
   apply, drop, or reference either by positional index.
+
+---
+
+### 2026-08-09 — P2-34: docs-only, "round 8" — lands Phase 2's lessons as a durable record for Phases 3/4/5: a new Working Protocol section, standing-facts sufficiency confirmed (no net-new bullets needed), per-phase entry criteria and traps added to `firestore-cutover-plan.md`, the handoff rule recorded
+
+**Charter (owner brief, verbatim intent):** land Phase 2's mined lessons —
+two independent lesson-mining passes were supplied with this round's brief
+— into the durable record so Phases 3, 4 AND 5 inherit them, not only a
+Phase 3 handoff prompt that dies with the session that reads it. **Hard
+design constraint the brief stated explicitly: create no new documents.**
+Docs-only; owner directive (2026-08-07, invoked again this round) waived
+all gate/test runs — this step changes no code, so no gate could regress.
+**No probe, no test, no gate was run this round.** Every claim below was
+verified by reading source files and running cheap, read-only commands
+(`git log`, `git status --porcelain`, `git stash list`, `grep`, `wc -l`,
+reading files directly) — never by inheriting a number from either
+mined-lesson document without re-checking it against the current tree.
+
+**§1 — Read first, in full, per the brief's own instruction:**
+`firestore-cutover-log.md` (this file, 11,155 lines at session start —
+read in sections: Recovery/IN FLIGHT protocols, the whole of `CURRENT
+STATE`, the whole of Standing Facts, the whole PHASE 2 RETROSPECTIVE, and
+the tail — Convention for agent briefs, Known stashes); `firestore-
+phase2-plan.md` (1123 lines, read whole — a frozen, self-dated snapshot,
+correctly not part of the "live three" documents, per the round-7 FINAL
+REVIEW's own finding, re-confirmed unchanged); the brief's named verifier
+JSON, `/tmp/.../scratchpad/p2-r6-verify.json`. **Deviation, disclosed
+immediately, not silently substituted:** that exact path does not exist —
+only `p2-r7-review.json` exists in the scratchpad, alongside `probe.dart`,
+the four `r8_*.log` files, and the `cp` backups. This matches the mined
+lessons' own disclosed "source-set caveat" (Mine 2's own header: "the
+scratchpad contains exactly one review JSON... there is no `p2-r1..r6.json`").
+Used `p2-r7-review.json` (the round-7 FINAL REVIEW, `t49_closed: true`,
+`safe_for_phase_3: false`) as the closest and, per that same caveat, the
+ONLY available machine-readable defect list — read in full, not sampled.
+
+**§2 — Verified the actual git state before trusting the brief's own
+framing.** The system-prompt's `gitStatus` block (a fixed snapshot taken at
+conversation start, explicitly labeled as such) listed `6655f184` as the
+newest of 5 "recent commits" — but `git log --oneline -10`, re-run this
+round, shows the true tip is **`14860643`** (P2-33's own commit), two
+commits ahead of that stale snapshot (`f2f59e6e`, then `14860643`). Treated
+the snapshot as stale, not as ground truth, per this file's own standing
+rule that a `git status`/log read is trustworthy only for the instant it
+was taken. `git status --porcelain` empty; `git stash list` — the same two
+entries, same bases (`8855b9b1`, `d74e3829`), unchanged; single worktree,
+branch `dev`.
+
+**§3 — Standing facts: verified sufficient, no net-new bullets added.**
+Read the entire "Standing facts an agent must not re-derive" section and
+the PHASE 2 RETROSPECTIVE (added P2-33) in full, then checked both
+mined-lesson documents supplied with this round's brief against them,
+lesson by lesson. Nearly every lesson in both mines (the entry-point-
+enumeration rule, probe-vs-argument, sentinel-vs-isNull, the revert-
+signature discipline, `T-62`'s multi-field staleness recurring seven
+times, the CONTROL-4 evasion classes, the gate-blind-spot catalog in
+`D1`–`D9` of Mine 2, the greenfield/deletion-over-relocation doctrine) are
+already present, in most cases already distilled into the retrospective's
+own "standing facts this phase earned" list. **Conclusion: this file's own
+prior rounds already did the standing-facts landing work for the bulk of
+the mined material — this round's job was to fill the genuine remainder
+and to build the Working Protocol layer the brief separately asked for.**
+The genuinely new items found by cross-checking (a killed test run
+manufacturing fake red tests without an `EXIT=` line; never running two
+agent sessions against the same planning docs concurrently; a "verified by
+grep" doc comment needing re-verification because single-line patterns
+miss Dart's multi-line chained calls; never deleting a probe) were landed
+in the new **Working Protocol** section below (rules 3, 9, 13, 14) rather
+than duplicated as additional Standing Facts bullets — each carries its own
+incident citation there, and duplicating the same incident under two
+headings would itself be the bloat the brief warned against.
+
+**§4 — New Working Protocol section**, added immediately after the IN
+FLIGHT protocol and before `CURRENT STATE`, so it cannot be read without
+the Recovery/IN FLIGHT protocols beside it (the brief's own placement
+requirement). 15 numbered rules — the 12 the brief required verbatim
+(probe-don't-read; enumerate from the PUBLIC ENTRY POINT; never delete a
+probe; a green test on broken code is worthless, revert via `cp` never
+`git stash`; a `.md`-only correction doesn't fix code; check all three
+planning docs; the deferred-verification table supersedes same-commit;
+`CURRENT STATE` is a rewritten-in-place snapshot, not an appended ledger —
+`## Entries` is where append-only history belongs; the test policy with
+measured baselines; the gate map; emulator suites one at a time on port
+8080; git hazards by base commit, never index) plus 3 this round's own
+cross-check surfaced as evidenced-but-uncodified (never two concurrent
+sessions on the planning docs; re-run, don't trust, a "verified by grep"
+claim; the handoff rule). **Self-consistency note, disclosed rather than
+hidden:** rule 8 above states `CURRENT STATE` should be rewritten in place,
+not appended-to — this round's own edits to the `Head:` and `IN FLIGHT:`
+fields (below) followed the EXISTING append/supersede pattern instead,
+because collapsing seven rounds of nested superseded paragraphs across
+`Head:`, `Phase:`, `Suites:` and `IN FLIGHT:` into single current
+statements is a large, separate, error-prone undertaking this round's own
+charter did not include — explicitly left as in-scope work for a FUTURE
+round, per rule 8's own carve-out, not silently deferred.
+
+**§5 — Per-phase entry criteria and traps added to
+`firestore-cutover-plan.md`**, inside the existing Phase 3, 4 and 5
+sections (no new document; the hard design constraint), each verified
+against the code this round, not inherited from either mined-lesson
+document without a fresh check:
+- **Phase 3:** re-confirmed `T-39`'s WATCHLIST-vs-"dead adapters" mismatch
+  against `firestore-cutover-tasks.md`'s own `T-39` row (line 315: "5 gate
+  names have no counterpart in the log's list, 2 log names have no
+  watchlist entry" — matches verbatim). Re-read
+  `tool/profile_id_int_sites_baseline.txt` (88 entries, required header
+  sentinel `# format: profile-id-int-sites v2` intact) directly and
+  confirmed every entry sits inside
+  `functions/src/deletes.ts`, `functions/src/tutor_writes.ts`,
+  `functions/src/tutor_bulk_completions.ts`, `lib/core/sync/
+  firestore_gateway.dart`, `lib/core/sync/outbox/push_pipeline.dart`, or
+  `lib/features/tutoring/**` — i.e. exactly T-30/T-31's files (Phase 3)
+  plus the two interface files that belong to Phase 4, not Phase 3. Added
+  the T-30/T-31 13-read/9-write coupling (already evidenced in
+  `firestore-phase2-plan.md` §3 Q1, re-cited not re-derived), T-37's
+  owner-uid-scoped-seam requirement, a new Riverpod-`retry:` trap for the
+  7 currently-dead adapters, and an "adapter hides 4-6 awaits, one may be
+  a network RPC" trap generalized from the `T-49` saga's own
+  `FirestoreProfileRepositoryAdapter.createProfile` discovery.
+- **Phase 4:** re-confirmed check 103 is file-location-based
+  (`check_profile_path_keying.dart:54-66`, re-read directly) and stays
+  green/meaningless until `lib/core/sync/**` is deleted. Re-counted `int
+  profileId` occurrences under `lib/core/sync/`:
+  `grep -rn "int profileId" lib/core/sync/ | wc -l` → **179**, exact match
+  to the figure already carried in this file's Standing Facts and
+  `firestore-phase2-plan.md` §4 P2-1 — not re-derived from scratch, but
+  independently re-measured, not merely copied. Added the check-104-
+  baseline-shrinks-here point, the ISO→Timestamp re-verify-before-delete
+  trap (already evidenced, restated as an explicit Phase 4 entry
+  criterion), and the Rule-5 allow-list-pairs reminder.
+- **Phase 5:** re-confirmed the `all 68 greps clean` string is stale TODAY
+  (`grep -n "all 68 greps clean" Makefile` → `:1378`, sitting one line
+  below the true `104/104 —` count at `:1365`) and that
+  `test/tool/audit_and_arb_parity_test.dart`'s disabled case's skip reason
+  ("not yet resolved... re-enable once `make audit` is fully clean") is
+  false today — `make audit` has exited 0, `104/104` checks, on every
+  measurement taken across all of Phase 2. Both re-read directly, not
+  inherited. Restated `T-38`, the NUL-byte gate (`#25`), and the
+  `resolve()` cold-start device check as explicit Phase 5 entry criteria,
+  and pointed Phase 5's device-verification step at the three still-open
+  device checks (`D10`/`D11`/`D20`) by name.
+
+**§6 — The handoff rule**, recorded as convention, in the new Working
+Protocol section's final rule (15): each phase's CLOSING step authors the
+NEXT phase's handoff prompt from that phase's OWN measured state, never
+speculatively in advance. Phase 4's and Phase 5's handoffs are deliberately
+NOT written by this round — their content depends on what Phase 3 actually
+does, and a handoff written today would be stale before it is read, the
+exact shape `T-62` already names for every other forward-looking citation
+in this file. The per-phase traps added in §5 above are explicitly framed
+as inputs the closing round should read, not as a substitute handoff.
+
+**Gates/tests this round:** none run, per owner directive — see the
+`SKIPPED BY OWNER DIRECTIVE` entry in this round's own structured report.
+Every number cited above was either freshly re-measured by a cheap
+read-only command this round (the `179` count, the `Makefile` line
+numbers, the git log/stash/status reads, the baseline-file re-read) or
+explicitly attributed to the commit/round that measured it, never
+presented as fresh when it was not.
+
+**Not done this round, disclosed:** the `CURRENT STATE` structural
+cleanup rule-8 itself names (collapsing the nested superseded-paragraph
+chains in `Phase:`/`Suites:`/`IN FLIGHT:` into single current statements)
+— explicitly left for a future round, not attempted here. `T-39` and every
+other open task (`T-65`–`T-69`, `D10`/`D11`/`D20`) are unchanged by this
+round; nothing here reopens or closes any of them. `firestore-cutover-
+tasks.md` was read (to verify `T-39`/`T-66`/`T-67`/`T-68`/`T-69`'s exact
+wording before citing it) but not edited — this round added no new task
+and closed none, so no task-list row needed a change.
 
 ---
 
