@@ -74,30 +74,33 @@ this project. Follow them without being asked again.
 
 Read in this order, before writing any code:
 
-1. **`docs/planning/firestore-cutover-log.md` — IN FULL.** It is large
-   (roughly 12,000 lines as of this handoff — too big for a single read
-   call in most harnesses; read it in chunks, but read the WHOLE file, not
-   just the head). It is the recovery log: recovery protocol, IN FLIGHT
-   protocol, the Working Protocol (binding for Phases 3/4/5 — **15**
-   numbered rules — if you count and get 12, you stopped at an old copy;
-   re-grep `^[0-9]\+\. \*\*` under `## Working protocol` to confirm you
-   have all 15), `CURRENT STATE`, Standing Facts, the PHASE 2 RETROSPECTIVE,
-   then the dated `### ` entries. **Three structural quirks to know before
-   you read it:**
-   - **Dated entries are PREPENDED, not appended at the end of the file.**
-     "`## Entries` is append-only" means "history is never rewritten," NOT
-     "new entries go at the bottom." The newest entry sits immediately below
-     the PHASE 2 RETROSPECTIVE block (which itself sits immediately below
-     the `## Entries` heading); the oldest entry (`### 2026-08-03`) is at
-     the bottom of an 11,000+ line file. Confirm the current shape with
-     `grep -n "^## Entries$\|^### 20"
-     docs/planning/firestore-cutover-log.md | head -5` — the first `### `
-     line after `## Entries` is the newest. **Your own entry goes there,
-     at the top**, headed exactly `### YYYY-MM-DD — P3-N: <one-line summary
-     of what this commit did and what it closed>`, continuing this file's
-     existing `P2-1`...`P2-36` sequence as `P3-1`, `P3-2`, … (grep
-     `^### 20.* — P[0-9]\+-[0-9]\+` for the highest number in use before
-     picking yours).
+1. **`docs/planning/firestore-cutover-log.md` — IN FULL.** It is large and
+   grows every round — run `wc -l docs/planning/firestore-cutover-log.md`
+   yourself for today's exact count rather than trust a number here (one
+   was cited and already wrong by the commit that added it, corrected
+   2026-08-09/P2-37 by removing the number rather than re-measuring it
+   again) — too big for a single read call in most harnesses; read it in
+   chunks, but read the WHOLE file, not just the head. It is the recovery
+   log: recovery protocol, IN FLIGHT protocol,
+   the Working Protocol (binding for Phases 3/4/5 — **16** numbered rules
+   as of P2-37 — if you count and get 15 or 12, you stopped at an old
+   copy; re-grep `^[0-9]\+\. \*\*` under `## Working protocol` to confirm
+   you have all 16), `CURRENT STATE`, Standing Facts, the PHASE 2
+   RETROSPECTIVE, then the dated `### ` entries.
+   **How this file's own entries, numbered sub-tables, and heading
+   conventions work is now specified DURABLY in the log's own Working
+   Protocol rule 16 — read it there, not here, so this handoff does not
+   drift from it the way its own predecessor did (an audit found the
+   convention fully written into `phase3-handoff.md`'s P2-36 version but
+   never landed in the log itself, giving it a one-phase lifespan; P2-37
+   moved it).** Two pieces of state specific to reading THIS handoff at
+   THIS commit, not part of the durable convention itself:
+   - As of this handoff the highest lettered-table variants are **§10c**
+     (deferred verification) and **§11c** (Phase 3 ENTRY CRITERIA) —
+     re-grep `grep -n "^#### [0-9]\+[a-z]*\."
+     docs/planning/firestore-cutover-log.md` before trusting that this is
+     still true; neither P2-36 nor P2-37 added a `§10d` or `§11d` (both
+     changed no D-row and no checkbox — see rule 16's own last bullet).
    - `CURRENT STATE` is a single-valued snapshot, NOT part of the
      append-only history below it — always read it fresh, not
      incrementally, and note that by the end of Phase 2 it still contained
@@ -105,27 +108,6 @@ Read in this order, before writing any code:
      that a future round is explicitly invited to collapse (Working
      Protocol rule 8) — don't mistake a superseded paragraph for the
      current one.
-   - Numbered sub-tables inside individual dated entries (the
-     deferred-verification table, the Phase 3 ENTRY CRITERIA checklist) are
-     versioned with letter suffixes as they get superseded — `§10`, `§10a`,
-     `§10b`, `§10c`... and `§11`, `§11a`, `§11b`, `§11c`... — **always read
-     the HIGHEST-lettered variant**, and note that a superseding table is
-     sometimes placed physically inside an OLDER dated entry (immediately
-     above the table it supersedes — "supersede in place at the point of
-     the original claim"), not inside the new entry that created it. Grep
-     for the highest letter with `grep -n "^#### [0-9]\+[a-z]*\."
-     docs/planning/firestore-cutover-log.md` — do not assume
-     position-in-file means recency, and do not assume the newest dated
-     entry contains the newest table. As of this handoff the highest
-     variants are **§10c** (deferred verification) and **§11c** (Phase 3
-     ENTRY CRITERIA) — re-grep before trusting that this is still true;
-     P2-36 added neither a `§10d` nor an `§11d` (it changed no D-row and no
-     checkbox — see the **P2-36** entry's own §7).
-   - **Any commit that runs a deferred check must supersede the
-     deferred-verification table IN THE SAME COMMIT (Working Protocol rule
-     7) — a round that changes no D-row must say so explicitly.** This is
-     the one rule in the Working Protocol that P2-35's original version of
-     this handoff omitted from its own trap list; see trap 17 in §5.
 2. **`docs/planning/firestore-cutover-plan.md`** — the phases and the
    anti-slop protocol. Phase 3/4/5 each carry their own "Entry criteria and
    traps" subsection (added 2026-08-09, hardened 2026-08-09 at P2-36),
@@ -142,7 +124,10 @@ Read in this order, before writing any code:
 3. **`docs/planning/firestore-cutover-tasks.md`** — the durable, single
    source of truth for task status. Every task id this handoff cites has
    its full evidence in that file's own row; this handoff does not
-   duplicate it, only points at it.
+   duplicate it, only points at it — **with one deliberate exception:
+   §3's known-issues table below carries a `Status` column, a point-in-time
+   SNAPSHOT, not a second source of truth; see §3's own note for why that
+   is not a contradiction of this sentence.**
 4. **`docs/planning/firestore-phase2-plan.md`** — read this only as a
    WORKED EXAMPLE of what a frozen phase plan looks like (a numbered,
    per-commit edit list, `P2-1` … `P2-N`). It is self-stamped "tree
@@ -158,7 +143,7 @@ Read in this order, before writing any code:
 5. **This document**, `phase3-handoff.md` — you're reading it.
 
 The recovery protocol (log.md's own `## Recovery protocol` section — as of
-this handoff, lines 15-56, covering both the numbered steps and the "If a
+this handoff, lines 15-71, covering both the numbered steps and the "If a
 session died mid-build" subsection; re-grep `^## Recovery protocol$` and
 `^## IN FLIGHT protocol$` for the current bounds rather than trusting these
 line numbers, which will drift) says to run it BEFORE reading the plan or
@@ -182,6 +167,16 @@ This matters specifically to you: inheriting an unmeasured baseline means you
 cannot tell YOUR first regression from one you inherited unmeasured. Do not
 start editing code on the strength of the numbers in this document — they
 are LAST KNOWN, not a warranty.
+
+**This section describes the state as of commit `e5a97f6b` (P2-35) and its
+subsequent docs-only re-confirmations through P2-37. It becomes false the
+moment YOUR OWN FIRST ACTION below completes** — at that point you, not
+this document, hold the current baseline. Do not "fix" this section
+afterward to reflect what you just measured; record your own numbers in
+your own commit's log entry instead (per the placement convention, Working
+Protocol rule 16), and let this document be superseded wholesale by Phase
+3's own closing round writing Phase 4's handoff, per Working Protocol rule
+15 — that is the mechanism that retires this section, not an edit to it.
 
 Run this now, before any edit:
 
@@ -210,9 +205,15 @@ dart analyze --fatal-infos
 dart run tool/check_profile_path_keying.dart
 dart run tool/check_profile_id_int_sites.dart
 make audit                       # MUST run from learning_tracker/, never the repo root — see §7
-make test                        # ~8.5 min
-make validate-calendar           # ~1 min — this is YOUR first action too, not a Phase-4 problem: see below
-make test-serial-tools           # ~32 min, serial lane, run it alone
+make test                        # ~8.5 min (per the LAST KNOWN `08:54` timing in
+                                  # the table below, @ 6655f184 — not a guarantee,
+                                  # time your own run)
+make validate-calendar           # duration not recorded anywhere in this project's
+                                  # history — do not assume a number; this is YOUR
+                                  # first action too, not a Phase-4 problem: see below
+make test-serial-tools           # ~32 min (per the LAST KNOWN `32:16` timing in the
+                                  # table below, @ ~3872fdbc, NOT re-measured since —
+                                  # T-69), serial lane, run it alone
 ```
 
 Then, ONE AT A TIME with ports confirmed free first (`ss -ltnp | grep -E
@@ -388,9 +389,18 @@ Phase 3 removes call sites.
 **Full known-issues table, task id per item, one line each** (reproduced
 from `firestore-cutover-log.md`'s §2 in the P2-33 entry — read each row's
 own task-file entry in `firestore-cutover-tasks.md` for full mechanism and
-evidence, not duplicated here):
+evidence, not duplicated here). **This table, INCLUDING its `Status`
+column, is a SNAPSHOT as of `e5a97f6b`/P2-36, unchanged at P2-37 — do NOT
+maintain it as you close tasks, and do not treat it as authoritative the
+moment any status here diverges from `firestore-cutover-tasks.md`'s own
+row (which it will, as soon as you close anything). `firestore-cutover-
+tasks.md` remains the sole durable source of truth for CURRENT status;
+this column exists only to save you a lookup on your first read, not to
+be kept in sync — corrected 2026-08-09, P2-37, per §1 point 3's own
+"does not duplicate it" claim, which this table was the one place that
+claim did not hold.**
 
-| ID | Phase | Status | One-line note |
+| ID | Phase | Status (snapshot @ `e5a97f6b`/P2-36 — NOT maintained; see `firestore-cutover-tasks.md` for current) | One-line note |
 |---|---|---|---|
 | `T-39` | 3 | **`todo` — SOLE DECLARED PHASE 3 ENTRY BLOCKER** | Reconcile check 103's WATCHLIST against the dead-adapters list before wiring anything — see §4, do not trust a specific count from any document, re-derive it. Prerequisite for `T-20`. |
 | `T-69` | 2 | `todo` (new, P2-33) | Re-run `make validate-calendar` and `make test-serial-tools` against the current code — this is your FIRST ACTION, §2, not a Phase 4 problem. |
@@ -465,19 +475,35 @@ completion → bookmarks.
   `lib/features/**` that import Drift, §3 — the exit criterion as literally
   worded does not cover them, decide explicitly whether each one needs to
   move too).
-- `make audit` 104/104 green and `make test` green, run fresh by you (not
-  inherited), with `T-69`'s two targets (`make validate-calendar`, `make
-  test-serial-tools`) discharged as your FIRST ACTION (§2).
+- `make audit` 104/104 green, `make test` green, `dart analyze --fatal-infos`
+  clean, `make test-rules` and `make test-functions` green — all run fresh
+  by you (not inherited), with `T-69`'s two targets (`make
+  validate-calendar`, `make test-serial-tools`) discharged as your FIRST
+  ACTION (§2). These are the same six standalone targets named in the
+  bullet immediately below, restated here so the exit state matches the
+  entry state §2 required.
 - **`make ci` is NOT this phase's exit criterion — it is Phase 4's.** Do
   not chase a green `make ci` this phase; it has never been run in one
   invocation, by standing owner policy, and running it here would
-  contradict that policy for no benefit (`make audit` + `make test` +
-  the two `T-69` targets, run individually, already cover everything `make
-  ci`'s nine targets cover: `analyze validate-calendar lint-rules-test
-  test test-serial-tools test-rules test-functions
-  check-profile-path-keying check-profile-id-int-sites` — verified this
-  round by reading the `ci:` recipe in `learning_tracker/Makefile`
-  directly).
+  contradict that policy for no benefit. **Precisely what covers `make
+  ci`'s nine targets (`analyze validate-calendar lint-rules-test test
+  test-serial-tools test-rules test-functions check-profile-path-keying
+  check-profile-id-int-sites`) without running it as one invocation —
+  corrected 2026-08-09 (P2-37): the prior version of this bullet claimed
+  `make audit` + `make test` + `T-69`'s two targets alone "already cover
+  everything," which is FALSE — `make audit`'s own recipe
+  (`learning_tracker/Makefile:359`, `audit: lint-rules-test`) covers only
+  `lint-rules-test` plus, inside its own body, `check-profile-path-keying`
+  and `check-profile-id-int-sites` (`Makefile:1357`/`:1366`) — three of
+  the nine. `make test` covers `test`. `T-69`'s two targets cover
+  `validate-calendar`/`test-serial-tools`. That is six of nine. The
+  remaining three — `analyze`, `test-rules`, `test-functions` — are NOT
+  covered by `make audit` or `make test` at all; they are separately,
+  individually required by §2's FIRST ACTION block (`dart analyze
+  --fatal-infos`, `make test-rules`, `make test-functions`) and restated
+  as exit criteria in the bullet immediately above. Nothing is actually
+  left ungated — but no single command or pair of commands subsumes all
+  nine; you need all six standalone targets, not three.**
 - **Check 103's baseline (`tool/profile_path_keying_baseline.txt`) will
   still contain exactly `bookmarks` and `learning_order` at Phase 3's exit,
   and that is CORRECT, not a leftover.** Check 103 classifies an INT
@@ -550,9 +576,23 @@ Owner decision D1 (2026-08-04): re-file under the ULID; the tutor reads
 the parent's tree directly; the local mirror dies. **Coupling evidence,
 why this could not land in Phase 2:** `TutoredProfileSelection.profileId`
 is a live Firestore path segment on both sides — **13 read collections**
-(`pull_pipeline.dart:73-98`) and **9 write collections**
-(`tutor_writes.ts:187` + 12 call sites). As of Phase 2's close, 11 of the
-13 read collections still have an int-keyed owner-side writer.
+(`pull_pipeline.dart:73-98`: completions, bookmarks, curriculum_tracks,
+settings, goals, learning_ledger, stage_definitions, streak_events,
+study_day_configs, profile_programs, learning_order, points_ledger,
+reward_redemptions) and **9 write collections** (`tutor_writes.ts:187`
+builds one `profilePath`, written through at 12 call sites — completions
+`:285`, goals `:346,:399`, curriculum_tracks `:455,:506`,
+stage_definitions `:562`, study_day_configs `:621,:672`,
+preferences/gamification_settings `:744`, bookmarks `:804`,
+profile_programs `:864`, curriculum_scopes `:927` — re-verified this
+round, P2-37; full breakdown also in `firestore-cutover-tasks.md`'s
+`T-31` row). **11 of the 13 read collections still have an int-keyed
+owner-side writer** — derived, not independently re-checked
+collection-by-collection this round: 13 total minus the 2 already live
+as ULID per `CURRENT STATE`'s "What's live on Firestore" list (§3,
+above — `bookmarks`, `learning_order`) = 11; re-verify this arithmetic
+against the CURRENT dead-adapters/live list before trusting it, since
+which collections are "live" changes as Phase 3 wires adapters.
 Re-keying tutoring's identity ALONE makes the tutor read a tree nothing
 writes and write a tree nobody reads — **silently**: `pullForTutoredProfile`
 counts no failures on an empty collection, so the pull "succeeds" into an
@@ -643,7 +683,14 @@ __) => null` on it, or verify its test container came through
 `bootstrap()`.** Riverpod 3's default per-provider retry
 (`ProviderContainer.defaultRetry`) treats a structural exception (e.g. an
 unauthenticated-account error) as retryable for up to ~6.4s per attempt,
-~38s total backoff, before `.future` ever settles — and while retrying,
+~38s total backoff, before `.future` ever settles (attributed 2026-08-09,
+P2-37: the formula itself, `maxRetries: 10, maxDelay: 6400ms, minDelay:
+200ms`, doubling each retry and capping at `maxDelay`, is in the pinned
+`riverpod` package source, `defaultRetry` in `provider_container.dart:
+831-845` of `riverpod-3.2.1` per this repo's own `pubspec.lock` —
+summing the 10 capped delays, `200+400+800+1600+3200+6400×5`ms, gives
+`38.2s`, i.e. "~38s"; re-derive against whatever `riverpod` version
+`pubspec.lock` pins if it has changed since) — and while retrying,
 `AsyncLoading(retrying: true)` routes to `onLoading`, which does NOT
 complete the `.future` Completer, so a bare test container hangs for the
 full backoff. The app's ONE production `ProviderContainer`
@@ -684,17 +731,34 @@ become a fourth/fifth recurrence of the `T-50`/`T-49` pattern.
   gate (§5 trap 6).
 - **`T-68`:** `lib/features/profiles/data/repositories/
   profile_repository_impl.dart`'s doc comment (near line 618 as of this
-  handoff — it will move; find it by searching for "returns every one of
-  them and nothing else") claims a single-line grep pattern
+  handoff — it will move) claims a single-line grep pattern
   (`selectedProfileIdProvider.notifier).select(`) "returns every one of
-  them and nothing else" for the profile-activation call sites. Re-run it
-  yourself — as of this handoff (P2-36) it returns 4 raw matches, one of
-  which is the doc comment quoting its own pattern (so 3 real call sites),
-  against **14** real call sites total; the other 11 use the multi-line
-  `.read(selectedProfileIdProvider.notifier)\n.select(...)` form the
-  single-line pattern can't match. Fix the comment IN CODE (state the true
-  scope, or use a pattern/command that actually finds all 14, e.g. one that
-  tolerates the line break).
+  them and nothing else" for the profile-activation call sites. **Finding
+  the comment by grepping its own claimed phrase does not work — corrected
+  2026-08-09 (P2-37): the phrase itself is line-wrapped by the doc comment's
+  own formatting (`/// ... returns every one of` ends one source line,
+  `/// them and nothing else)...` starts the next), so
+  `grep -rn 'every one of them and nothing else' lib/` returns ZERO hits —
+  this is Working Protocol rule 14's own lesson recurring inside the fix
+  for the defect that lesson describes. Find it instead with
+  `grep -n 'returns every one of'
+  lib/features/profiles/data/repositories/profile_repository_impl.dart`
+  (the fragment before the wrap, confirmed on one line).** Re-run the
+  pattern itself yourself — as of this handoff (P2-36) it returns 4 raw
+  matches, one of which is the doc comment quoting its own pattern (so 3
+  real call sites), against **14** real call sites total; the other 11
+  use the multi-line `.read(selectedProfileIdProvider.notifier)\n
+  .select(...)` form the single-line pattern can't match. **Command that
+  actually finds all 14 (added P2-37, tolerates the line break via Perl's
+  `/s` flag, one file at a time):**
+  `for f in $(grep -rl 'selectedProfileIdProvider.notifier)' lib/
+  --include='*.dart'); do perl -0777 -ne '$n = () =
+  /selectedProfileIdProvider\.notifier\)\s*\.select\(/gs; print "$f: $n\n"
+  if $n' "$f"; done` — sums to 15 matches across the codebase; subtract 1
+  for the doc comment's own self-quoting match (in
+  `profile_repository_impl.dart`) to get the 14 real call sites. Fix the
+  comment IN CODE — state the true scope, or replace the pattern the
+  comment itself describes with one shaped like the command above.
 
 ---
 
@@ -702,8 +766,10 @@ become a fourth/fifth recurrence of the `T-50`/`T-49` pattern.
 
 Each rule below cost at least one full round of Phase 2 (some cost four).
 Full incident evidence for every one lives in `firestore-cutover-log.md`'s
-Working Protocol section (**15** numbered rules, at the top of the file —
-not 12; if a document anywhere in this project says 12, it is stale) and
+Working Protocol section (**16** numbered rules as of P2-37, at the top
+of the file — not 12, not 15; if a document anywhere in this project says
+12 or 15, it is stale — re-grep `^[0-9]\+\. \*\*` under
+`^## Working protocol$` to confirm) and
 PHASE 2 RETROSPECTIVE (prepended atop `## Entries`) — this list restates
 them as direct instructions with the incident cited by name and where each
 one bites in Phase 3.
@@ -724,7 +790,12 @@ one bites in Phase 3.
    round-7 verifier found `T-66` (a real, previously-unprobed activation
    site) only by enumerating all 8 of `FirestoreProfileRepositoryAdapter`'s
    public methods, where the design that shipped the original fix had
-   named only 3.
+   named only 3. Recompute this count yourself rather than trusting "8":
+   `sed -n '/class FirestoreProfileRepositoryAdapter/,$p'
+   lib/features/profiles/data/repositories/profile_repository_impl.dart |
+   grep -c '@override'` (valid as long as that class stays the last one in
+   the file, true as of 2026-08-09/P2-37 — if it stops being last, bound
+   the `sed` range at the class's own closing `}` instead).
 3. **A negative claim is verified by (a) re-run enumeration against the
    CURRENT tree, or (b) an executable probe gating the specific
    await/branch — never by re-reading the code more carefully.** A defect
@@ -987,10 +1058,22 @@ one bites in Phase 3.
   consistent against `fake_cloud_firestore`'s emulation; proves NOTHING
   about what is live on the dev Firebase project, which only a real
   deploy changes. **You are instructed never to deploy** (§0, standing
-  instruction #3) — this stays the owner's call. Before attributing any
-  device `permission-denied` to a keying defect, check this field first:
-  an undeployed rules change and an unregistered App Check debug token
-  present IDENTICALLY.
+  instruction #3) — this stays the owner's call. **Requalified 2026-08-09
+  (P2-37): `Deployed:` is the last thing an AGENT wrote to a text file —
+  it is not an observation of the live Firebase project, and it can go
+  stale silently the moment the owner deploys or resets something outside
+  this repo, with no commit to record it. The only ways to actually know
+  what is live: ask the owner, or read the Firebase console yourself
+  (read-only — you are still forbidden from changing anything there).**
+  Before attributing any device `permission-denied` to a keying defect,
+  rule out BOTH of the following independently, not just the first one
+  this field happens to suggest: (1) an undeployed rules change (this
+  field, itself unverified — see above) and (2) an unregistered App Check
+  debug token (a wipe or fresh install regenerates the debug token; a
+  stale registered token or a missing registration produces the identical
+  403/`permission-denied` symptom, unrelated to keying or deployment) —
+  the two present IDENTICALLY on-device and neither is ruled out by the
+  other.
 - **`D10`/`D11`/`D20` (device checks) require an actual device**, not a
   docs pass or a code change — `fake_cloud_firestore` cannot model an
   offline queue plus a reconnect ack. They are standing work, not phase

@@ -222,8 +222,15 @@ this file — this section states the rule and cites the incident by name only.
    itself is stale — see Phase 5 in `firestore-cutover-plan.md`). Check
    103 → `2 collection(s) currently split (bookmarks, learning_order), 0
    new violations`. Check 104 → `88 tracked entries covering 91 site(s)
-   across 5 pattern(s); 0 new, 0 stale, 0 changed`. `dart format` → 9
-   touched files, 0 changed. **NOT measured since round 5 (`~3872fdbc`),
+   across 5 pattern(s); 0 new, 0 stale, 0 changed`. `dart format
+   --output=none --set-exit-if-changed` → `0` changed, run against
+   whatever files each round's own commit touches — its "N files
+   checked" count is a PER-ROUND figure (it scales with that round's own
+   diff, not with the phase), not a phase baseline; do not carry a
+   specific file count forward from any past round, including this one
+   (corrected 2026-08-09, P2-37 — a stale `9 touched files` figure from
+   P2-31's own commit was sitting here as if it were a baseline).
+   **NOT measured since round 5 (`~3872fdbc`),
    two code commits back — name this explicitly, do not gloss it as a
    batching decision (`T-69`):** `make validate-calendar`, `make
    test-serial-tools`. `make ci` in a single invocation has never run,
@@ -280,7 +287,10 @@ this file — this section states the rule and cites the incident by name only.
     speculatively, in advance. Phase 4's and Phase 5's handoff prompts are
     deliberately NOT written yet: their content depends on what Phase 3
     actually does (which WATCHLIST collections convert, what check 104's
-    baseline looks like after the tutoring re-key, which of the ~96 files
+    baseline looks like after the tutoring re-key, which of the 90 files
+    under `lib/features/**` — plus the 13 outside it, re-derive with the
+    four `grep -rl 'import .*core/database' ...` commands in the P2-36
+    entry's §2, below, they will have moved by the time you read this —
     move cleanly), and a handoff written today would be stale before
     Phase 3 finishes — exactly the shape `T-62` already names for every
     other kind of forward-looking citation. Phase 3's own closing round is
@@ -290,10 +300,115 @@ this file — this section states the rule and cites the incident by name only.
     Facts, or the per-phase traps in `firestore-cutover-plan.md`) as a
     substitute for that handoff — they are inputs the closing round should
     read, not the handoff itself.
+16. **The log-entry placement convention itself — where a new dated entry
+    goes, how to number it, and how to write a superseding lettered
+    sub-table — lives HERE, durably, so it survives every handoff's own
+    supersession (rule 15, above) instead of being re-explained from
+    scratch inside each phase's handoff and drifting from this file.**
+    Added 2026-08-09 (P2-37) after an audit of `phase3-handoff.md`'s own
+    hardening pass found the convention fully written into the handoff
+    but never landed here — meaning it had a one-phase lifespan and the
+    NEXT phase's handoff author would have inherited the same ambiguity
+    the P2-36 hardening pass was supposed to close for good.
+    - **Placement.** `## Entries`, below, is append-only in the sense that
+      history is never rewritten — but "append" means PREPEND at the top,
+      not add at the bottom. A new dated entry goes immediately below the
+      newest `## PHASE N RETROSPECTIVE` block (itself immediately below
+      the `## Entries` heading), i.e. immediately above the
+      currently-newest `### ` entry. Confirm the current shape first:
+      `grep -n "^## Entries$\|^### 20"
+      docs/planning/firestore-cutover-log.md | head -5` — the first
+      `### ` line after `## Entries` is what your entry supersedes as
+      "newest."
+    - **Heading format.** `### YYYY-MM-DD — P{phase}-{N}: <one-line
+      summary of what this commit did and what it closed>` — match the
+      exact punctuation of any existing entry above.
+    - **Numbering.** `{N}` continues that PHASE's own sequence, not a
+      file-wide entry count. Find the highest `{N}` in use for the
+      CURRENT phase with `grep -n "^### 20.* — P{phase}-[0-9]\+"
+      docs/planning/firestore-cutover-log.md` (substitute the phase
+      number) and use the next integer; a phase's first entry starts at
+      1. **A round that is still hardening a PRIOR phase's own
+      deliverable — e.g. correcting that phase's handoff after the fact,
+      before the NEXT phase's first code-touching commit — continues the
+      PRIOR phase's sequence, not the next one's.** `P2-35` (wrote the
+      Phase 3 handoff), `P2-36` and `P2-37` (hardened it further) are all
+      Phase-2-numbered even though their subject is Phase 3, because
+      Phase 3 itself had not yet started (no code edit had landed) when
+      any of them ran. A round's number changes to `P3-N` only once a
+      round actually does Phase 3's own work (touches `lib/`/
+      `functions/src/` under Phase 3's charter, or is that phase's first
+      docs-only commit after such a commit has landed).
+    - **Numbered sub-tables** (`#### 10[a-z]*.`, `#### 11[a-z]*.`, and any
+      future table of the same shape) **are versioned with letter
+      suffixes, and a NEW letter is written PHYSICALLY ABOVE the table it
+      supersedes, inside whichever dated entry currently HOUSES that
+      table — usually an OLDER entry than the one you are writing, not
+      your own new entry.** This is "supersede in place at the point of
+      the original claim": a reader who lands anywhere in the file and
+      scrolls up from a stale table finds its replacement immediately,
+      without first having to know which later round wrote it. Steps: (1)
+      find the current highest letter — `grep -n "^#### [0-9]\+[a-z]*\."
+      docs/planning/firestore-cutover-log.md`; (2) open the entry that
+      physically CONTAINS that block (not your own new entry); (3) insert
+      your `#### 10{next letter}.`/`#### 11{next letter}.` block
+      immediately above it, with a one-line "supersedes §10{prior letter}
+      below" pointer in its own heading — exactly how `§10c`/`§11c`
+      (written by P2-33) sit immediately above `§10`/`§11` (P2-29's own
+      table) inside the P2-29 entry, not inside P2-33's. Your OWN dated
+      entry then states in prose which letter you added, to which table,
+      and why — it does not duplicate the table itself.
+    - **Any commit that runs a deferred check or touches a Phase-N
+      entry-criteria checkbox supersedes the relevant table IN THE SAME
+      COMMIT, per rule 7, above — write the new letter then, not in a
+      later commit.** A commit that touches neither must say so
+      explicitly ("this round changes no D-row, no checkbox") rather than
+      staying silent, which reads as an oversight to the next round.
+    This rule is itself an instance of what it describes: it was added by
+    appending a new rule 16 after rule 15, not by rewriting any rule
+    above it — the correct move for closing a genuine gap in a living,
+    directly-editable section. (Working Protocol, like `CURRENT STATE`
+    above it and unlike `## Entries` below it, is a snapshot that gets
+    corrected in place, not append-only history — rule 8's own carve-out
+    makes the same distinction for `CURRENT STATE`.)
 
 ---
 
 ## CURRENT STATE
+
+**Head:** P2-37's own commit — not yet reflected, same self-reference lag
+as every prior closing commit; the true immediate parent is `8f6f7978`
+(P2-36's own commit, `docs(planning): harden the Phase 3 handoff and
+protocol against the red-team and cold-read findings`, confirmed via
+`git log --oneline -1` at THIS round's (P2-37, docs-only, closing the
+gaps a follow-up audit found in P2-36's own hardening pass) session
+start, re-derived independently, not copied forward — per `T-62`'s own
+lesson). `git status --porcelain` empty at session start except this
+session's own in-progress edits; `git stash list` showed exactly 2
+entries, same bases (`d74e3829`, `8855b9b1`) as every prior round.
+**This round touches neither `lib/` nor `test/`** — docs only:
+`docs/planning/phase3-handoff.md` (revised per the audit's findings),
+`docs/planning/firestore-cutover-plan.md` (§2.1 and the Phase 3
+subsection's check-104 breakdown corrected), and this file (new Working
+Protocol rule 16, corrections to the P2-36 entry, this new entry). No
+code commit landed between `8f6f7978` and this one. **This round's own
+charter:** close every `not_landed` finding from an audit of P2-36's own
+hardening pass (8 items), resolve every `new_contradictions` finding on
+the side that was wrong (5 items), attribute or give a recompute command
+for every `unattributed_numbers` item where possible (7 items, one
+number deleted where neither was possible), and re-confirm the audit's
+one `rejected_soundly` finding still holds. Full change list: the new
+**P2-37** entry, below. `T-49`'s and `T-39`'s dispositions are UNCHANGED
+by this round — `T-39` is still `todo` and still the sole declared Phase
+3 entry blocker; Phase 2 as a whole is still recorded NOT RESOLVED,
+exactly as P2-33 left it. **This round touches no D-row and no Phase 3
+ENTRY CRITERIA checkbox** — `§10c`/`§11c` are unchanged and remain the
+highest-lettered variants; Working Protocol rule 7 does not require a
+new `§10d`/`§11d` here (see this round's own §5, further below, in the
+P2-37 entry).
+
+(Superseded paragraph below, from P2-36, left for the historical record —
+true as of P2-36's own commit, superseded by the paragraph above:)
 
 **Head:** P2-36's own commit — not yet reflected, same self-reference lag
 as every prior closing commit; the true immediate parent is `e5a97f6b`
@@ -1350,6 +1465,26 @@ here as a `CURRENT STATE` self-consistency fix, not a re-opening of `T-52`
 P2-17, this was CURRENT STATE's own prose falling behind that fix in a
 later commit that copied it forward without checking it).
 
+**IN FLIGHT:** nothing. P2-37's own edit list — closing every
+`not_landed`/`new_contradictions` finding (and attributing or giving a
+recompute command for every `unattributed_numbers` item where possible)
+from a follow-up audit of P2-36's own hardening pass, citing
+`firestore-cutover-plan.md` § Phase 3 — Wire and move as the plan section
+this work comes from (the same citation P2-36 used, per the
+`rejected_soundly` disposition, §4 of the new **P2-37** entry, below) —
+is fully landed in the commit that lands this entry. Docs-only; owner
+directive (invoked again this round) waived all gate/test runs — this
+step changes no code, so no gate could regress; this round's own
+read-only verification (`git status --porcelain`, `git stash list`) is
+recorded in `Gates`, below. Full itemized change list: the new **P2-37**
+entry, below. Then, in this same commit: advanced `CURRENT STATE`'s
+`Head:` to this round's own commit (not yet reflected — see `Head:`,
+above) and reset this field to `nothing`, per this file's own IN FLIGHT
+protocol.
+
+(Superseded paragraph below, from P2-36, left for the historical record —
+true as of P2-36's own commit, superseded by the paragraph above:)
+
 **IN FLIGHT:** nothing. P2-36's own edit list — hardening
 `docs/planning/phase3-handoff.md` against a red-team review and an
 independent cold-read (both run against P2-35's as-shipped version) — is
@@ -2076,7 +2211,11 @@ stage-definition · study-day-config · track-learning-order.
 
 ## Entries
 
-Newest first. Append; never rewrite history.
+Newest first — new entries are PREPENDED here, immediately below the
+newest `## PHASE N RETROSPECTIVE` block, never appended at the bottom.
+Append; never rewrite history. **Full placement convention (where a new
+entry goes, its heading format, per-phase numbering, and the lettered
+sub-table supersede-in-place rule): Working Protocol rule 16, above.**
 
 ## PHASE 2 RETROSPECTIVE (added P2-33, 2026-08-09 — read this before any dated entry below)
 
@@ -2212,6 +2351,297 @@ not re-learn the hard way:**
 
 ---
 
+### 2026-08-09 — P2-37: docs-only — closes the gaps a follow-up audit found in P2-36's own hardening pass (8 `not_landed` findings, 5 `new_contradictions`, 7 `unattributed_numbers`); adds the log-entry placement convention to the Working Protocol durably (rule 16), which is the one `not_landed` finding that required a NEW durable rule rather than a fix in place
+
+**Charter:** an independent audit re-read `phase3-handoff.md` after P2-36's
+hardening pass, checked every one of P2-36's own claims against the
+current tree, and found: 8 findings P2-36 had claimed to fix but had not
+(`not_landed`); 1 finding P2-36 had correctly declined, with the decision
+still holding (`rejected_soundly`, no action needed); 5 places where
+P2-36's OWN output introduced a new false claim (`new_contradictions`);
+7 numbers still lacking an attribution or a recompute command
+(`unattributed_numbers`). Owner directive for this round: docs-only, no
+test or gate runs (cheap read-only commands — `grep`, `sed`, `wc`, direct
+file reads, `git log`/`git show`/`git status`/`git stash list` — used for
+every claim below instead). This entry's own job, per Working Protocol
+rule 1 ("probe, don't read") applied to the audit itself, not just to
+code claims: verify each of the audit's findings against the current
+tree rather than trust the audit's own assertions, then fix, or reject
+with a reason recorded so the next reader does not re-raise it.
+
+#### 1. Every `not_landed` finding — disposition
+
+1. **Log-entry placement convention written into the handoff but never
+   landed durably** — fixed by adding **Working Protocol rule 16**
+   (above, in this file) as the durable home for the prepend-location,
+   heading-format, per-phase-numbering, and letter-suffix
+   supersede-in-place rules; the `## Entries` heading now points at it
+   in one line instead of restating it. `phase3-handoff.md` §1 now
+   points at rule 16 instead of restating the convention (trimmed from a
+   ~40-line restatement to a ~15-line pointer plus the two pieces of
+   state — the current highest letters, `§10c`/`§11c` — that are
+   genuinely handoff-specific, not protocol).
+2. **Recovery protocol "lines 15-56" citation, wrong at the very commit
+   that "re-measured" it** — fixed in both places: `phase3-handoff.md`
+   §1 now reads "lines 15-71"; `firestore-cutover-log.md`'s own P2-36
+   entry (§2, below in that entry) is corrected in place with a note
+   naming the mechanism (P2-36's own same-commit edit to the Recovery
+   Protocol section shifted its bounds after the citation was measured).
+   True bounds re-verified this round: `## Recovery protocol` at line 15,
+   `### If a session died mid-build` at 63, section ends 71 (blank line,
+   then `---` at 72, `## IN FLIGHT protocol` at 74).
+3. **§2's "no agent has re-run the suites" premise, self-invalidating
+   the instant the reading agent finishes its first action, with no
+   sentence saying so** — fixed: `phase3-handoff.md` §2 now states
+   explicitly that the section describes state as of `e5a97f6b`/P2-37,
+   becomes false the moment the reading agent's own FIRST ACTION
+   completes, that the agent should record its own numbers in its own
+   log entry rather than edit this document, and that the document is
+   superseded wholesale by Phase 3's own closing round per Working
+   Protocol rule 15. The DURABLE record's own false claim that this text
+   already existed (`firestore-cutover-log.md`'s P2-36 entry, §4) is
+   corrected in place — see `new_contradictions` #4, below.
+4. **`dart format` "9 touched files" sitting inside the Working
+   Protocol's phase-baseline block** — fixed: Working Protocol rule 9
+   (above) no longer states a specific file count; it now says a
+   per-round figure is not a phase baseline and instructs formatting
+   whatever the current commit touches, matching what `phase3-handoff.md`
+   §2 already said. This was the one `not_landed` item where the
+   HANDOFF had it right and the DURABLE record (Working Protocol rule 9
+   itself) still carried the defect the handoff had already fixed a copy
+   of.
+5. **"~96 feature files" surviving inside Working Protocol rule 15's own
+   prose** (the handoff rule, ironically) — fixed: rule 15 (above) now
+   says "90 files under `lib/features/**` — plus the 13 outside it,
+   re-derive with the four `grep -rl` commands in this entry's own §2,
+   below — they will have moved by the time you read this" instead of
+   the stale "~96."
+6. **`make ci` "is the only gate, applies to every phase" stated
+   unqualified in `firestore-cutover-plan.md` §2.1**, upstream of Phase
+   3's own subsection that correctly forbids it — fixed: §2.1 now
+   carries the same Phase-2/3 carve-out the Phase 3 subsection states
+   (`make audit` + `make test` + the individually-run targets; `make ci`
+   in one invocation batched to Phase 4's end, Working Protocol rule 9 /
+   deferred-table row `D25`), so a front-to-back reader does not meet the
+   unqualified claim first.
+7. **The 13 `tutor_write_service.dart` entries in check 104's baseline,
+   present in the handoff but omitted from `firestore-cutover-plan.md`'s
+   own cross-check of the same baseline** — fixed: `firestore-cutover-
+   plan.md`'s Phase 3 subsection now names the 13 explicitly as `T-31`'s,
+   in Phase 3, with the same `awk`-based re-derivation command the
+   handoff already gave, next to the 28/20 that stay Phase 4's.
+8. **§3's known-issues table duplicating a `Status` column with nothing
+   telling the reader not to maintain it, contradicting §1 point 3's "does
+   not duplicate it" claim** — fixed: the table now carries an explicit
+   note that it is a snapshot at `e5a97f6b`/P2-36, not maintained, not
+   authoritative the moment it diverges from `firestore-cutover-tasks.md`;
+   §1 point 3 now names this table as its one deliberate exception instead
+   of asserting an absolute that the table itself broke.
+9. **§9 treating the in-repo `Deployed:` field as an observation of the
+   live Firebase project** — fixed: requalified as "the last thing an
+   agent wrote to a text file, not an observation of the live project";
+   added an explicit instruction to rule out an unregistered/stale App
+   Check debug token INDEPENDENTLY, not merely as a footnote, since the
+   two presentations are identical on-device and neither rules out the
+   other.
+
+(Nine items above; the audit's own `not_landed` array carried 8 — its
+first two items, the placement convention and the recovery-protocol line
+citation, are listed together as one JSON object in the audit but are
+two independent fixes above, matching how they were actually landed.)
+
+#### 2. Every `new_contradictions` finding — resolved on the side that was wrong
+
+1. **Self-inflicted line-number drift, three sites, all caused by
+   P2-36's own same-commit edit to the Recovery Protocol section** —
+   resolved by correcting the WRONG side (the citations, not the code):
+   `phase3-handoff.md:161`'s recovery-protocol range → "15-71"; the
+   log's own P2-36 entry corrected in place at both sites ("85-277" →
+   "100-292" describing bounds true AT `8f6f7978`, before this round's
+   own further Working Protocol edits — rule 16's addition moves the
+   section's CURRENT end further still, which is exactly why the
+   handoff no longer hardcodes this bound at all, only rule count; "rule
+   7 exists ... at lines 159-168" → "174-183", same commit, same
+   mechanism).
+2. **False gate-coverage claim, `phase3-handoff.md`'s exit-criteria
+   bullet** — resolved on the side that was wrong (the claim): `make
+   audit` covers `lint-rules-test` + `check-profile-path-keying` +
+   `check-profile-id-int-sites` (`learning_tracker/Makefile:359` for the
+   prerequisite, `:1357`/`:1366` for the two checks' invocation inside
+   `audit`'s own recipe body, re-verified this round); `make test`
+   covers `test`; `T-69`'s two targets cover `validate-calendar`/
+   `test-serial-tools` — six of nine. `analyze`, `test-rules`,
+   `test-functions` are NOT covered by either `make audit` or `make
+   test` and were never claimed to be skipped (§2's FIRST ACTION already
+   requires all three) — but the sentence claiming `make audit` + `make
+   test` + `T-69` alone "already cover everything" was false and is
+   rewritten to state the six-of-nine split precisely. The exit-criteria
+   bullet immediately above it now also names `analyze`/`test-rules`/
+   `test-functions` explicitly, matching the entry-state requirement.
+3. **`T-68`'s own FIND instruction unrunnable by the exact mechanism
+   `T-68` is about** — resolved: `grep -rn 'every one of them and
+   nothing else' lib/` returns zero hits (re-confirmed this round,
+   `profile_repository_impl.dart:618-619`'s doc comment wraps the phrase
+   across two source lines) — replaced with `grep -n 'returns every one
+   of' lib/features/profiles/data/repositories/profile_repository_impl.dart`
+   (the pre-wrap fragment, confirmed on one line) for FINDING the
+   comment, and a Perl multi-line-tolerant loop for RE-DERIVING the "14
+   real call sites" count (in `phase3-handoff.md`'s `T-67`/`T-68`
+   section) — 15 total multi-line matches across the codebase minus 1 for
+   the doc comment's own self-quoting match = 14, confirmed this round.
+4. **The durable record asserted a fix that was not in the document** —
+   resolved on the side that was wrong: `firestore-cutover-log.md`'s
+   P2-36 entry (§4) claimed the handoff had been made "explicitly
+   self-invalidating." It had not — corrected in place there, with a
+   note that P2-37 is what actually added the text (see `not_landed` #3,
+   above).
+5. **The hardening undercounted its own input** — resolved by correcting
+   P2-36's own §1 header and this project's own commit-message-derived
+   count from "All 12 fixed" to "All 13 fixed," adding the missing
+   disposition item (check 103's dual-meaning output, item 13, which had
+   already landed in the handoff but was never added to the numbered
+   list). **The other three categories' undercounts
+   (`unevidenced_claims`/`protocol_mismatches`/`will_go_stale`, each
+   short by one relative to the audit's own re-derived totals) are NOT
+   individually correctable this round** — the original red-team output
+   was a prompt input to P2-36's own session, never committed to this
+   repo, so this round has no way to identify which specific further
+   item each of those three categories is missing. Named as an open,
+   honest gap in the corrected P2-36 text rather than inventing a
+   plausible-sounding fourth/tenth item to make a count match. This
+   entry does not claim `13`/`7`/`9`/`9` are now all verified — only
+   that `would_get_wrong`'s count is now correct and the other three are
+   explicitly flagged as unverifiable from this repo's own records.
+
+#### 3. Every `unattributed_numbers` item — attributed, given a recompute command, or (nowhere needed this round) deleted
+
+- **§1's "roughly 12,000 lines as of this handoff"** — the specific
+  number is DELETED rather than re-measured-and-hardcoded-again (this
+  round measured `12225` at one point in its own edit sequence and
+  `12706` by the time all of this round's own edits had landed — proof
+  that hardcoding it here would repeat the exact mechanism being fixed);
+  replaced with only the `wc -l docs/planning/firestore-cutover-log.md`
+  command and an explicit note that a previously-cited number was itself
+  already stale by the commit that added it.
+- **T-31's "9 write collections"/"12 call sites"** — attributed:
+  `tutor_writes.ts:187` (builds `profilePath`) plus the 12 call sites by
+  collection and line (`:285,:346,:399,:455,:506,:562,:621,:672,:744,
+  :804,:864,:927`), all re-verified this round against the current file.
+  **"11 of the 13 read collections"** — given a recompute basis rather
+  than left a bare assertion: 13 total (`pull_pipeline.dart:73-98`) minus
+  the 2 already live as ULID per `CURRENT STATE`'s "What's live on
+  Firestore" list (`bookmarks`, `learning_order`) = 11 — flagged as a
+  set-subtraction derivation, not an independent per-collection
+  re-check, since which collections are "live" changes as Phase 3 wires
+  adapters.
+- **The Riverpod "~6.4s per attempt, ~38s total backoff" figures** —
+  attributed to the pinned package source: `riverpod-3.2.1`'s
+  `ProviderContainer.defaultRetry`
+  (`provider_container.dart:831-845`, confirmed against this repo's own
+  `pubspec.lock`), formula `maxRetries: 10, maxDelay: 6400ms, minDelay:
+  200ms`, doubling per retry capped at `maxDelay`; the 10 capped delays
+  sum to 38.2s.
+- **"8 of `FirestoreProfileRepositoryAdapter`'s public methods"** — given
+  a recompute command (`sed`+`grep -c '@override'` over the class body,
+  confirmed to return 8 against the current tree this round).
+- **The FIRST ACTION block's "~8.5 min"/"~1 min"/"~32 min" runtime
+  comments** — "~8.5 min" and "~32 min" now cross-reference the LAST
+  KNOWN timing table below them in the same section (`08:54` @
+  `6655f184`; `32:16` @ `~3872fdbc`) instead of floating as bare
+  estimates; "~1 min" (`make validate-calendar`) had no source anywhere
+  in this project's history and is DELETED per this project's own "if
+  neither is possible, delete the number, do not invent one" rule,
+  replaced with an explicit "duration not recorded" statement.
+- **Recovery-protocol "lines 15-56"** — see `not_landed` #2 and
+  `new_contradictions` #1, above; now correctly attributed as "15-71,"
+  stable regardless of later edits to sections further down the file.
+- **T-68's "3 of 14"/"14 real call sites total"** — see
+  `new_contradictions` #3, above; now carries an actual reproducing
+  command instead of the broken single-line grep the doc comment itself
+  names.
+
+#### 4. `rejected_soundly` — unchanged, re-confirmed, no action
+
+The audit's own `rejected_soundly` entry (the `firestore-phase3-plan.md`
+non-existence objection) was already correctly declined by P2-36, with
+the reason recorded in both `firestore-cutover-log.md` (P2-36 §3) and
+`phase3-handoff.md` §1. Re-read both this round: the reasoning still
+holds (`firestore-cutover-plan.md`'s "### Phase 3 — Wire and move"
+section is a real, citable, numbered plan section; the IN FLIGHT
+protocol's own citation example was illustrative, not a requirement for
+a numbered file to exist). No change made; recorded here only so this
+entry's own disposition list is complete against the audit that drove
+it.
+
+#### 5. Working Protocol rule 7 — this round's own D-row/checkbox statement
+
+**This round changes no D-row and no Phase 3 entry-criteria checkbox.**
+`§10c` (deferred verification) and `§11c` (Phase 3 ENTRY CRITERIA) remain
+the highest-lettered variants; no `§10d`/`§11d` is added by this commit.
+`T-39` is still `todo`; Phase 2 is still recorded NOT RESOLVED, per
+P2-33's own verdict, unchanged by this round. Stated explicitly per
+Working Protocol rule 7 and the new rule 16's own last bullet.
+
+#### 6. Doc updates landed this commit
+
+- `docs/planning/firestore-cutover-log.md`: new **Working Protocol rule
+  16** (the log-entry placement convention, durably); rule 9's `dart
+  format` clause requalified; rule 15's "~96 files" corrected; the `##
+  Entries` heading now points at rule 16; the P2-36 entry corrected in
+  three places for self-inflicted line-number drift, once for its
+  undercounted `would_get_wrong` disposition (item 13 added), and once
+  for its false claim that the handoff's self-invalidating text already
+  existed; this **P2-37** entry itself; `CURRENT STATE` advanced (above,
+  at the top of this file).
+- `docs/planning/phase3-handoff.md`: extensively revised per §1-§3,
+  above — the full itemized list against the audit's own three
+  categories.
+- `docs/planning/firestore-cutover-plan.md`: §2.1's `make ci` carve-out
+  added; the Phase 3 subsection's check-104 baseline breakdown now names
+  the 13 `tutor_write_service.dart` entries.
+- `docs/planning/firestore-cutover-tasks.md`: not edited this round — no
+  `not_landed`/`new_contradictions`/`unattributed_numbers` item named it,
+  and this round's own re-grep of all three live planning docs (Working
+  Protocol rule 6) found no further drift introduced by today's edits
+  into that file specifically.
+
+#### 7. Deviations, four-part
+
+**Predicted (owner directive for this round):** docs-only, no test or
+gate runs; cheap read-only commands only (`git log`, `git show`, `git
+status`, `git stash list`, `grep`, `sed`, `wc`, direct file reads).
+**Actual:** exactly that — every number in this entry is either a
+grep/sed/wc measurement against static, already-checked-out files
+(reproducible, command cited) or an attribution to a pinned package's
+own source under `~/.pub-cache` (also static, also read-only). No `dart
+analyze`, `flutter test`, `dart run tool/*.dart`, `make audit`, `make
+test`, or any emulator suite was run. **Mechanism:** none — this round's
+actual scope matched the predicted scope exactly, unlike P2-36's own
+deviation (which had to justify reading beyond the letter of a similar
+instruction). **Invariant unaffected:** no code, test, or gate result is
+asserted anywhere in this round's output; every claim is either
+re-derived from static files this round or explicitly named as
+unverifiable from this repo's own records (the three undercounted
+review categories, §2 item 5, above). **Recorded in this entry:** yes,
+this section.
+
+#### 8. Not done this round (docs-only; explicitly out of this pass's charter)
+
+- `T-39` itself — still untouched; this round corrected instructions and
+  attributions around it, not the reconciliation itself (owner directive
+  forbids tool/gate runs for docs-only rounds).
+- `T-65`-`T-69`'s code-level fixes — still `todo`; untouched, docs-only.
+- The `unevidenced_claims`/`protocol_mismatches`/`will_go_stale` count
+  discrepancies for the three categories other than `would_get_wrong` —
+  named as an open gap (§2 item 5, above), not resolved, because the
+  original red-team output needed to resolve them is not in this repo.
+- `CURRENT STATE`'s nested superseded-paragraph collapse (Working
+  Protocol rule 8's own carve-out) — still not attempted, consistent with
+  every prior round's choice on this tradeoff.
+- `D10`/`D11`/`D20` — untouched, require an actual device.
+
+---
+
 ### 2026-08-09 — P2-36: docs-only — hardens `phase3-handoff.md` (and the plan/log sections it points at) against a red-team pass and an independent cold-read; every finding fixed, rejected with a reason, or converted from a hardcoded number into a recompute command
 
 **Charter:** P2-35's handoff (`phase3-handoff.md`, committed `e5a97f6b`) was
@@ -2227,7 +2657,24 @@ rule 1) applied to the reviews themselves, not just to code claims.
 
 #### 1. Every `would_get_wrong` finding — disposition
 
-All 12 fixed in `phase3-handoff.md` (and, where the same fact was
+**CORRECTED 2026-08-09 (P2-37): this section originally said "All 12
+fixed" and this commit's own message said "12 would_get_wrong findings."
+Both undercounted by at least one — item 13, below (check 103's
+dual-meaning output), landed in the handoff (§4, `phase3-handoff.md:
+493-498`) but was never added to this disposition list, so the count
+this entry itself reported never matched what it actually shipped. Fixed
+by adding item 13 below and correcting the count to 13. A subsequent
+audit also found this same commit's own message undercounted the other
+three review categories (`unevidenced_claims`, `protocol_mismatches`,
+`will_go_stale`) by one each relative to the original red-team output —
+that original output was never committed to this repo (it was a prompt
+input, not a file under version control), so P2-37 cannot re-derive
+which specific further item(s) those three categories are each missing
+one of; naming that as an honest open gap, not inventing a matching
+item, per this project's own "if neither is possible, delete the number,
+do not invent one" rule.**
+
+All 13 fixed in `phase3-handoff.md` (and, where the same fact was
 duplicated, in `firestore-cutover-plan.md`'s Phase 3 subsection too — see
 §3, below); none rejected outright, though several were fixed differently
 than the red-team's own suggested replacement text once re-measured
@@ -2315,6 +2762,17 @@ against the current tree:
     sites (a 4th match is the doc comment quoting its own pattern) against
     14 total call sites, 11 of which use the multi-line form — matches the
     red-team's "3 of 12+" finding, refined to an exact count.
+13. **Check 103's output changes in two opposite-meaning ways when an
+    adapter is wired, and nothing said so** — fixed: `phase3-handoff.md`
+    §4's exit-criteria block now states both explicitly — the WATCHLIST
+    line disappearing is progress (expected), the collection appearing in
+    `newViolations` is a hard failure (writer still int-keyed while the
+    reader went ULID) — and warns never to treat the second as something
+    to baseline around. **Added to this disposition list 2026-08-09
+    (P2-37) — it had already landed in the handoff when this entry was
+    first written, but was omitted from this numbered list, which is why
+    the "All 12 fixed" count above never matched what actually shipped;
+    see the correction note above this list.**
 
 #### 2. Every `unevidenced_claim` — measured or cut, per the brief's own rule
 
@@ -2350,6 +2808,17 @@ against the current tree:
   15-56 (the numbered steps AND the "If a session died mid-build"
   subsection the old citation excluded). Fixed: cited as "15-56, re-grep
   the section headers to confirm" rather than a bare number pair.
+  **CORRECTED 2026-08-09 (P2-37): "15-56" was itself wrong — this round's
+  own `git rev-list` comment edit (§3, below in this same P2-36 entry)
+  added 15 lines to the Recovery protocol section IN THE SAME COMMIT,
+  moving its true end from 56 to 71 (`### If a session died mid-build`
+  ends at line 71, right before the `---` separator and `## IN FLIGHT
+  protocol` at 74) — "15-56" was the PRE-EDIT measurement, published
+  POST-EDIT, truncating before step 4's tail, step 5, and the entire "If
+  a session died mid-build" subsection. The exact `T-62` mechanism this
+  entry's own §5 exists to name, recurring inside the entry that names
+  it. `phase3-handoff.md`'s copy of this figure was corrected the same
+  way, same commit (P2-37).**
 - **`make ci`'s "nine targets," never previously enumerated** — confirmed
   this round by reading the `ci:` recipe directly in `learning_tracker/
   Makefile`: `analyze validate-calendar lint-rules-test test
@@ -2367,11 +2836,21 @@ against the current tree:
   re-confirmed this round by reading the section: lines 85-277, numbered 1
   through 15). Fixed the handoff's two stale "12" citations (§5 preamble,
   the trap-list intro) to 15, with a self-checking instruction ("if you
-  count 12, you have a stale copy").
+  count 12, you have a stale copy"). **LINE NUMBERS CORRECTED 2026-08-09
+  (P2-37): "85-277" was itself wrong — this same commit's own edits (this
+  same §3 section's own "git rev-list" bullet, below) shifted the section; its true bounds
+  at THIS commit (`8f6f7978`) were `## Working protocol` at 100 through
+  rule 15's own last line at 292, not 85-277 — another instance of the
+  identical pre-edit-measurement-published-post-edit mechanism as the
+  Recovery Protocol citation, above. (A further rule, 16, was added by
+  P2-37 itself — re-grep `^## Working protocol$` before trusting even
+  these corrected bounds.)**
 - **Working Protocol rule 7 absent from the handoff** — the log is right
   (rule 7 exists, correctly, at lines 159-168); the handoff was missing it.
   Fixed by adding trap 17 (§1, above) — no change needed to the log's own
-  Working Protocol section.
+  Working Protocol section. **LINE NUMBERS CORRECTED 2026-08-09 (P2-37):
+  rule 7's true bounds at this commit (`8f6f7978`) were 174-183, not
+  159-168 — same mechanism as the two corrections immediately above.**
 - **§10 not referencing log §11c** — the log's §11c is the authority;
   fixed the handoff to say so (§1, above).
 - **`git rev-list ... # 0 0 = in sync` (log) vs. `want: 0 <n> — never push`
@@ -2424,12 +2903,19 @@ same way: the specific number was either cut (if it had no durable value)
 or kept ONLY alongside the exact command that reproduces it, explicitly
 labeled with the commit it was measured at, so the NEXT reader knows to
 re-run the command rather than trust the number. This applies to: the
-`§10c`/`§11c` letter-suffix pointers (now grep-derived); the "no agent has
-re-run the suites" framing (now explicitly self-invalidating — the
-document says outright that it becomes false the moment the reading agent
-completes its own FIRST ACTION, and to not bother "fixing" this document
-afterward, since the NEXT phase's closing round supersedes it entirely
-per Working Protocol rule 15); `CURRENT STATE`'s `Head:` field (already
+`§10c`/`§11c` letter-suffix pointers (now grep-derived); **the "no agent
+has re-run the suites" framing — CORRECTED 2026-08-09 (P2-37): this
+sentence was FALSE when written. No such self-invalidating text existed
+in `phase3-handoff.md` at this commit (`8f6f7978`) — `§2` still only
+carried the unchanged sentence "No agent has actually re-run the full
+suites since `6655f184`," with no statement that it goes stale the
+moment the reading agent's own FIRST ACTION completes, no instruction to
+record the agent's own numbers in its own log entry rather than editing
+the handoff, and no explicit pointer to Working Protocol rule 15's
+supersession. This entry asserted a fix that had not landed. P2-37
+actually added that text to §2, and separately confirms nothing further
+here was ever true retroactively — the disposition above (this bullet)
+described work this round had not done.**; `CURRENT STATE`'s `Head:` field (already
 governed by the existing self-reference-lag convention, left as-is — see
 §6, below, on why a full collapse of the nested chain is still out of
 scope); every stale line-number citation this round could re-verify

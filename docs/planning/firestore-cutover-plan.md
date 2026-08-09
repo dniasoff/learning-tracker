@@ -406,6 +406,19 @@ real defect during the bookmarks slice.
   `lib/` and `test/` before running a gate. A verdict collected while agents
   are still writing describes nothing.
 - **Never run two `make ci` concurrently.**
+- **Carve-out for Phases 2-3, added 2026-08-09 (P2-37):** the "`make ci` is
+  the only gate" rule above is the project's general default, but standing
+  owner policy (Working Protocol rule 9 / `firestore-cutover-log.md`
+  deferred-table row `D25`) batches `make ci` in a single invocation to the
+  END of Phase 4 specifically — it has never been run as one invocation
+  this cutover. For Phases 2 and 3, the operative gate set is `make audit`
+  + `make test` + the individually-run targets (`dart analyze
+  --fatal-infos`, `make test-rules`, `make test-functions`, `make
+  validate-calendar`, `make test-serial-tools`) — run standalone, not
+  chained through one `make ci` call. A reader who reaches this bullet
+  before reaching Phase 3's own "Entry criteria and traps" subsection
+  should not treat "make ci is the only gate, applies to every phase"
+  (above) as still unqualified by the time they get there.
 
 ### 2.2 Evidence
 
@@ -1044,9 +1057,21 @@ PHASE 2 RETROSPECTIVE sections):**
   `functions/src/deletes.ts` (T-30) or `functions/src/tutor_writes.ts` /
   `tutor_bulk_completions.ts` (T-31); every `dart-tutoring-*` entry sits in
   `lib/features/tutoring/**` (T-31). The `dart-int-profileid-param` entries
-  against `lib/core/sync/firestore_gateway.dart` and
-  `lib/core/sync/outbox/push_pipeline.dart` are interface-level and belong
-  to **Phase 4**, not Phase 3 — do not touch those baseline lines here.
+  split by FILE, not just by pattern (61 total; re-derive with
+  `grep -v '^#' tool/profile_id_int_sites_baseline.txt | grep -v '^$' |
+  grep dart-int-profileid-param | awk '{print $2}' | sed 's/:.*//' | sort |
+  uniq -c`) — **28** against `lib/core/sync/firestore_gateway.dart` and
+  **20** against `lib/core/sync/outbox/push_pipeline.dart` are
+  interface-level and belong to **Phase 4**, not Phase 3 — do not touch
+  those baseline lines here. **The remaining 13 are against
+  `lib/features/tutoring/data/services/tutor_write_service.dart` and ARE
+  `T-31`'s, in Phase 3 — added 2026-08-09, P2-37, correcting an omission
+  the prior version of this bullet carried forward from the handoff's own
+  P2-35 version** (found by a cross-check audit of `phase3-handoff.md`'s
+  P2-36 hardening pass: the handoff itself lists this 13 correctly, §4,
+  but this plan section — the document the handoff's §1 point 2 sends the
+  reader to for Phase 3 detail — omitted it, so a reader who trusted this
+  section alone would have missed 13 of `T-31`'s own required edits).
   **Editing a T-30/T-31 file WILL change check 104's output** (a baselined
   symbol disappearing, a new pattern appearing, an occurrence count moving
   inside a kept symbol) — expected, not a regression, but the fix and the
