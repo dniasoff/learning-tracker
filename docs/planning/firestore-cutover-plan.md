@@ -259,15 +259,29 @@ every await inside the method being edited.** Full mechanism, the full
 await enumeration for both paths, the probe, and both new tasks:
 `firestore-cutover-log.md`'s new **P2-29** entry; `firestore-cutover-tasks.md`'s
 `T-49`/`T-63`/`T-64` rows.
-**Last updated:** 2026-08-09 (P2-33; this `Last updated:`/`Head:` block
-specifically — **found stale AGAIN this round, a FOURTH file/field
-combination the `T-62` mechanism has now hit**, see the correction below;
-the status line above and the Phase 2 section header/summary below §3
-were updated together with this field in this same commit, so all three
-now agree)
+**Last updated:** 2026-08-09 (P2-36; this `Last updated:`/`Head:` block
+specifically — **found stale a FIFTH time by this round** (three docs-only
+commits, P2-34/P2-35/P2-36 itself, had each landed since the field below
+was last touched, and none reached this specific field — the same `T-62`
+mechanism recurring against itself yet again). This round is docs-only
+(hardening `phase3-handoff.md` against a red-team pass and a cold-read;
+see the new **P2-36** entry in `firestore-cutover-log.md` for the full
+change list) and touches no `T-49`/`T-39` fact — the status line above and
+§3's Phase 2 section header are UNCHANGED and still correct, only this
+field needed advancing.
+**Head:** P2-36's own commit — not yet knowable, same self-reference lag
+as every prior closing commit; the true immediate parent is `e5a97f6b`
+(P2-35's own commit, `docs(planning): Phase 3 handoff prompt for a fresh
+agent`, confirmed via `git log --oneline -1` at this round's session
+start).
+*(Historical, P2-33:)* **Last updated:** 2026-08-09 (P2-33; this `Last
+updated:`/`Head:` block specifically — found stale a FOURTH time that
+round, see the correction below; the status line above and the Phase 2
+section header/summary below §3 were updated together with this field in
+that commit, so all three agreed as of P2-33)
 **Head:** `f2f59e6e` (P2-32's own commit, confirmed via `git log
---oneline -1` at this round's (P2-33) session start, per `T-62`'s own
-lesson — re-derived, not copied forward).
+--oneline -1` at P2-33's session start, per `T-62`'s own lesson —
+re-derived, not copied forward).
 **Corrected this round — the `T-62` mechanism recurring a FOURTH time in
 this file:** this block still read `6655f184`/"P2-31's own same-session
 follow-up commit" even though P2-32 landed a further commit (`f2f59e6e`)
@@ -516,12 +530,17 @@ depends on it.**
 - **`tool/profile_path_keying_baseline.txt`** — exactly `bookmarks` and
   `learning_order`, the only two collections with a live split. Nothing was
   baselined to make anything pass.
-- **A WATCHLIST** for the five dormant collections (`points_ledger`,
-  `profile_programs`, `stage_definitions`, `streak_events`,
-  `study_day_configs`), naming per collection exactly what wiring trips the
+- **A WATCHLIST**, naming per dormant collection exactly what wiring trips the
   gate — and what does **not** (intermediate factories, DI/service-locator
   lookups, torn-off constructor refs). Phase 3 gets warned before it creates a
-  split, not after.
+  split, not after. **At Phase 1's own shipping commit this covered five
+  collections** (`points_ledger`, `profile_programs`, `stage_definitions`,
+  `streak_events`, `study_day_configs`); the WATCHLIST is COMPUTED, not a
+  fixed list, and its membership has very likely grown since (more Firestore
+  repository classes have been built dormant, e.g. for `completions`,
+  `goals`, `curriculum_tracks` — see Phase 3's own `T-39` entry criterion,
+  below) — do not treat "five" as current. Run `dart run
+  tool/check_profile_path_keying.dart --report` for the live count.
 - **`test/helpers/writer_reader_agreement.dart`** — asserts a collection's
   production writer and reader resolve the same document, with the path coming
   from production code on **both** sides. Its own test
@@ -983,26 +1002,41 @@ relying on it, per this project's own "reproduce, don't inherit" rule; full
 incident evidence is in `firestore-cutover-log.md`'s Working Protocol and
 PHASE 2 RETROSPECTIVE sections):**
 
-- **Entry criteria, restated from `firestore-cutover-log.md`'s Phase 3 ENTRY
-  CRITERIA checklist — read it there, do not re-derive from scratch:** `T-49`
-  closed and independently confirmed; `T-39` (below) still `todo` and the
-  sole other declared blocker; the deferred-verification table current as of
-  the last entry. Device checks `D10`/`D11`/`D20` are standing work, not
-  phase gates — read them before touching profile-activation code a second
-  time, but they do not block Phase 3's start.
+- **Entry criteria — the AUTHORITATIVE checklist is
+  `firestore-cutover-log.md`'s highest-lettered `#### 11[a-z]*.` block
+  (`§11c` as of 2026-08-09; re-grep `^#### 1[01][a-z]*\.`, do not assume
+  the letter here is still current) — read it there, do not re-derive from
+  scratch:** `T-49` closed and independently confirmed; `T-39` (below)
+  still `todo` and the sole other declared blocker; the
+  deferred-verification table current as of the last entry (Working
+  Protocol rule 7 — any commit that touches a D-row or an entry-criteria
+  checkbox must supersede both tables in the SAME commit, or say
+  explicitly that it changed neither). Device checks `D10`/`D11`/`D20` are
+  standing work, not phase gates — read them before touching
+  profile-activation code a second time, but they do not block Phase 3's
+  start.
 - **`T-39` first, before wiring anything — the WATCHLIST and the "dead
-  adapters" list are not the same set.** Check 103's dynamically-computed
-  WATCHLIST (`tool/check_profile_path_keying.dart --report`) is every one of
-  the 17 profile-scoped collections with a live INT writer opposite a
-  DORMANT ULID repo file; `CURRENT STATE`'s "Dead adapters (7)" line
-  (`completion · curriculum-track · goal · progress · stage-definition ·
-  study-day-config · track-learning-order`) is a hand-maintained adapter-
-  class list. They are drawn from different populations. Reconcile them by
-  running the actual `--report` output against the current tree before
-  treating either as the wiring order — per `T-39`'s own row in
-  `firestore-cutover-tasks.md`, five WATCHLIST collection names have no
-  counterpart in the dead-adapters list and two dead-adapters entries have
-  no WATCHLIST counterpart.
+  adapters" list are not the same set, and name two different class
+  layers.** Check 103's dynamically-computed WATCHLIST
+  (`tool/check_profile_path_keying.dart --report`) draws from
+  `_kCollections`, the full 17-entry profile-scoped registry (verified
+  2026-08-09 by reading the constant), but the WATCHLIST's own size is NOT
+  17 — it is however many of those 17 currently have a live INT writer
+  opposite a DORMANT ULID repo file, which changes as code moves; run
+  `--report` yourself and read the `--- WATCHLIST (N) ---` line rather than
+  trusting a number written down in any document, including this one.
+  `CURRENT STATE`'s "Dead adapters (7)" line (`completion ·
+  curriculum-track · goal · progress · stage-definition · study-day-config
+  · track-learning-order`) is a hand-maintained list of FEATURE names,
+  corresponding to `Firestore*RepositoryAdapter` classes under
+  `lib/features/**/data/repositories/`; the WATCHLIST names the LOWER
+  layer it wraps, `Firestore*Repository` (no `Adapter` suffix) under
+  `lib/data/repositories/`. Reconcile them BY COLLECTION, not by class
+  name, by running the actual `--report` output against the current tree —
+  do not infer or copy forward a specific "N unmatched" count from
+  `firestore-cutover-tasks.md`'s `T-39` row or from this plan; neither one
+  carries an attributed `--report` run as of 2026-08-09, so neither is
+  trustworthy on that specific number.
 - **Check 104's baseline (`tool/profile_id_int_sites_baseline.txt`, 88
   entries) is baselined almost entirely against the exact files Phase 3 will
   edit — verified by re-reading the baseline directly, not inherited.**
@@ -1041,10 +1075,11 @@ PHASE 2 RETROSPECTIVE sections):**
   sources `uid` from the signed-in account (the tutor's own). Setting the
   profile ULID alone, without also substituting the owner's `uid`, addresses
   `users/{TUTOR}/learner_profiles/{talmid ULID}` — a brand-new wrong tree,
-  not the parent's. The rules already permit the correct read
-  (`firestore.rules:450` + 16 sibling `allow read: if isOwner(uid) ||
-  hasActiveTutorAccess(uid, profileId)` lines); T-37 is an owner-uid-scoped
-  handles seam — feature wiring, not a config flip.
+  not the parent's. The rules already permit the correct read — 13 lines of
+  the shape `allow read: if isOwner(uid) || hasActiveTutorAccess(uid,
+  profileId);` as of 2026-08-09 (re-count with `grep -c` before trusting
+  this); T-37 is an owner-uid-scoped handles seam — feature wiring, not a
+  config flip.
 - **Every new provider chain Phase 3 wires — the 7 currently-dead adapters,
   T-37's owner-scoped handles — is a fresh Riverpod chain that may await
   `activeAccountFirebaseProvider.future` or similar. Declare `retry: (_,
@@ -1077,37 +1112,69 @@ PHASE 2 RETROSPECTIVE sections):**
 2026-08-06) — landing with T-20 as one commit-unit, not before it, since the
 coupling evidence below is why they were re-phased in the first place:**
 
-- **T-30 — 3 owner-path Cloud Functions** (`functions/src/deletes.ts`):
-  `deleteLearnerProfile` (:135), `deleteCurriculumTrack` (:214),
-  `deleteBulkMarkedCompletions` (:406) — each validates `profileId` as a
-  positive integer and addresses `learner_profiles/{String(profileId)}`
-  (:225, :441). Post-cutover they address a path with no data: **delete
-  nothing, report success.** `deleteBulkMarkedCompletions` implements the
-  owner's un-tick rule, so that feature would silently stop working. Capture
-  the profile's ULID before the local delete removes the row — see
-  `firestore-cutover-tasks.md`'s T-30 entry for the exact ordering trap.
+- **T-30 — 3 owner-path Cloud Functions** (`functions/src/deletes.ts`,
+  line numbers re-verified 2026-08-09 at P2-36/`e5a97f6b` — re-grep before
+  editing, they were already stale once before this correction):
+  `deleteLearnerProfile` (:128), `deleteCurriculumTrack` (:209),
+  `deleteBulkMarkedCompletions` (:401) — each validates `profileId` as a
+  positive integer and addresses `learner_profiles/{String(profileId)}`.
+  **Three** `.doc(String(profileId))` sites, not two: `:143` (inside
+  `deleteLearnerProfile`), `:225`, `:441`. Post-cutover they address a path
+  with no data: **delete nothing, report success.**
+  `deleteBulkMarkedCompletions` implements the owner's un-tick rule, so
+  that feature would silently stop working. Capture the profile's ULID
+  before the local delete removes the row — see
+  `firestore-cutover-tasks.md`'s T-30 entry and `phase3-handoff.md` §4 for
+  the exact ordering trap and its (also re-verified) line numbers.
 - **T-31 — tutoring identity is Drift-int end-to-end.** Owner decision D1
   (2026-08-04): re-file under the ULID; tutor reads the parent's tree
   directly; the local mirror dies. **Coupling evidence (why this could not
   land in Phase 2):** `TutoredProfileSelection.profileId` is a live
   Firestore path segment for **13 read collections**
   (`pull_pipeline.dart:73-98`) and **9 write collections**
-  (`tutor_writes.ts:187` + 12 call sites); for 11 of the 13 reads, the
-  owner-side writer is still the int-keyed sync engine. Re-keying tutoring
+  (`tutor_writes.ts:187` + 12 call sites); as of Phase 2's close, 11 of the
+  13 reads had an owner-side writer still int-keyed. Re-keying tutoring
   alone would make the tutor read a tree nothing writes and write a tree
   nobody reads — silently, since no gate available through Phase 2 can see
-  a doc-id-formula mismatch. Full evidence and the corrected 6-site count
-  for `manage_tutors_screen.dart`: `firestore-cutover-tasks.md`'s T-31 row.
+  a doc-id-formula mismatch. Full evidence, the corrected 6-site count for
+  `manage_tutors_screen.dart`, and check 104's baseline breakdown (which of
+  its 88 entries are T-31's to fix vs. Phase 4's): `firestore-cutover-
+  tasks.md`'s T-31 row and `phase3-handoff.md` §4.
 - **T-37 (new) — the tutored read seam.** P2-5 (Phase 2) hoisted a uniform
   refusal for all 13 profile-scoped providers during a tutored session, but
   sourced `uid` from the signed-in account — substituting the ULID alone
   without also substituting the owner's `uid` addresses
   `users/{TUTOR}/learner_profiles/{talmid ULID}`, a brand-new wrong tree.
-  T-37 builds the owner-uid-scoped handle seam the rules already permit
-  (`firestore.rules:450` + 16 sibling lines).
-- **T-39 (new), prerequisite for T-20** — reconcile check 103's 10-collection
-  WATCHLIST against `firestore-cutover-log.md`'s 7-item "dead adapters"
-  list before wiring anything; they are not the same set today.
+  T-37 builds the owner-uid-scoped handle seam the rules already permit —
+  `firestore.rules` has 13 lines of the shape `allow read: if isOwner(uid)
+  || hasActiveTutorAccess(uid, profileId);` as of 2026-08-09
+  (`grep -c 'allow read: if isOwner(uid) || hasActiveTutorAccess(uid,
+  profileId)' firestore.rules` — re-run, do not copy this count forward).
+- **T-32 (decided) — reorder amnesty, both halves.** Not a collection-move;
+  rides along with the `learning_order`/`curriculum_tracks` move. The
+  reorder-stamp half is cheap (`last_reorder_at` already whitelisted,
+  `firestore.rules:412`); the content-reseed half needs a NEW mechanism —
+  the old Drift `learningOrderVersion` detection has no Firestore
+  equivalent today. Full detail: `firestore-cutover-tasks.md`'s T-32 row
+  and `phase3-handoff.md` §4 (easy to miss — it's not in the T-20/T-30/
+  T-31/T-37/T-39 list below).
+- **T-39 (new), prerequisite for T-20** — reconcile check 103's WATCHLIST
+  against the "dead adapters" list before wiring anything; **do not trust
+  a specific collection-count for either side from any document, including
+  this one** — run `dart run tool/check_profile_path_keying.dart --report`
+  yourself and read the `--- WATCHLIST (N) ---` line. The two lists also
+  name different class layers (`Firestore*Repository` under
+  `lib/data/repositories/` for the WATCHLIST vs. `Firestore*RepositoryAdapter`
+  under `lib/features/**/data/repositories/` for the dead-adapters list) —
+  reconcile by COLLECTION, not by class name. Full detail:
+  `phase3-handoff.md` §3/§4.
+- **`T-67`/`T-68` (carried from Phase 2, MINOR, but close them here)** — two
+  live false claims in code today (a test name overclaiming "structurally
+  impossible," a doc comment overclaiming what a single-line grep returns).
+  Phase 3 is the first code-touching phase since they were found; close
+  them in the same commit that touches their respective files, per this
+  project's own rule against disclosure substituting for a fix. Detail:
+  `phase3-handoff.md` §4.
 
 7 adapters exist and are tested but are **never constructed**:
 `FirestoreCompletionRepositoryAdapter`, `FirestoreCurriculumTrackRepositoryAdapter`,
@@ -1116,24 +1183,55 @@ coupling evidence below is why they were re-phased in the first place:**
 `FirestoreStudyDayConfigRepositoryAdapter`,
 `FirestoreTrackLearningOrderRepositoryAdapter`.
 
-135 files import the Drift database or its DAOs. Net of `core/database` (25,
-the Drift layer itself) and `core/sync` (14, deleted in Phase 4), that is
-**~96 feature files** to move.
+**Re-measured 2026-08-09 (P2-36) — the previous `135 files / ~96 feature
+files` figures here were wrong, do not use them; re-derive with these
+commands, they will keep changing as files move:**
+
+```
+grep -rl 'import .*core/database' lib --include=*.dart | wc -l          # 166 total
+grep -rl 'import .*core/database' lib/core/database --include=*.dart | wc -l  # 49 (the Drift layer itself)
+grep -rl 'import .*core/database' lib/core/sync --include=*.dart | wc -l      # 14 (dies in Phase 4)
+grep -rl 'import .*core/database' lib/features --include=*.dart | wc -l      # 90 (closest to "files to move")
+```
+
+166 − 49 − 14 = 103, not 90 — 13 further files import Drift from OUTSIDE
+`lib/core/database`, `lib/core/sync`, AND `lib/features` (`lib/app/**`,
+`lib/core/providers/database_provider.dart`, `lib/core/analytics/
+parent_analytics_repository.dart`, `lib/core/navigation/guards/*`,
+`lib/data/firestore/*`). The "zero files under `lib/features/**` import
+Drift" exit criterion below does not cover those 13 by construction —
+decide explicitly, per file, whether each needs to move too.
 
 **Order by data dependency, not by feature convenience: writers before
 readers.** For each collection:
 
 1. Move every writer.
 2. Move every reader.
-3. Add the Phase 1 writer/reader agreement test.
-4. Run `make ci`. Not `make audit`.
+3. Add the Phase 1 writer/reader agreement test — use `expectWriterReaderAgree`
+   from `test/helpers/writer_reader_agreement.dart`, never a hand-rolled
+   `fake_cloud_firestore` test that seeds its own fixture (that shape is
+   exactly what let the 2026-08-03 bookmarks/learning-order split stay
+   green for 144 tests).
+4. Run `make audit` (from `learning_tracker/`) plus a targeted `flutter
+   test` against the collection's own test directory. **Not `make ci`** —
+   `make ci` in a single invocation is owner policy, batched to the end of
+   Phase 4 (Working Protocol rule 9 / deferred-table row `D25`); running it
+   per collection here would contradict that policy for no benefit. Use
+   `make test` (the full suite) as the per-commit net instead.
 
 Known reader/writer pairs that must move together (learned the hard way):
 track-creation → bookmarks; learning-order → bookmarks *and* the scheduler's
 daily-task projection; completion → bookmarks.
 
-**Exit:** zero files under `lib/features/**` import Drift. Phase 1's check
-baseline is empty. `make ci` green.
+**Exit:** zero files under `lib/features/**` import Drift (see the 13-file
+caveat above). `make audit` and `make test` green, `T-69`'s two targets
+(`make validate-calendar`, `make test-serial-tools`) discharged. **Phase
+1's check-103 baseline is NOT expected to be empty at Phase 3's exit** —
+`bookmarks`/`learning_order` stay baselined until `lib/core/sync/**` is
+deleted in Phase 4, because check 103 classifies by file location, not by
+whether anything still reads the int-keyed path; do not edit the baseline
+file to force it empty. **`make ci` green is Phase 4's exit criterion, not
+this phase's** — do not chase it here.
 
 ---
 
