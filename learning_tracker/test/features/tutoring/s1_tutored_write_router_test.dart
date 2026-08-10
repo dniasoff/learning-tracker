@@ -126,7 +126,7 @@ class _FakeDelegate implements SyncWriteFacade {
       pushLearnerProfileCount++;
 
   @override
-  Future<void> deleteLearnerProfile(int profileId) async =>
+  Future<void> deleteLearnerProfile(String profileUlid) async =>
       deleteLearnerProfileCount++;
 
   @override
@@ -221,7 +221,7 @@ void main() {
       expect(record.lastCall!.fn, 'tutorUpsertGoal');
       expect(record.lastCall!.args['grantId'], _grantId);
       expect(record.lastCall!.args['ownerUid'], _ownerUid);
-      expect(record.lastCall!.args['profileId'], 42);
+      expect(record.lastCall!.args['profileId'], '42');
       expect(record.lastCall!.args['goalId'], 'goal_xyz');
       expect(record.lastCall!.args['goalData'], containsPair('id', 'goal_xyz'));
 
@@ -246,7 +246,7 @@ void main() {
         expect(record.lastCall!.fn, 'tutorDeleteGoal');
         expect(record.lastCall!.args['grantId'], _grantId);
         expect(record.lastCall!.args['ownerUid'], _ownerUid);
-        expect(record.lastCall!.args['profileId'], 42);
+        expect(record.lastCall!.args['profileId'], '42');
         expect(record.lastCall!.args['goalId'], 'goal_to_delete');
 
         expect(delegate.deleteGoalCount, 0);
@@ -272,7 +272,7 @@ void main() {
         expect(record.lastCall!.fn, 'tutorUpsertTrack');
         expect(record.lastCall!.args['grantId'], _grantId);
         expect(record.lastCall!.args['ownerUid'], _ownerUid);
-        expect(record.lastCall!.args['profileId'], 42);
+        expect(record.lastCall!.args['profileId'], '42');
         expect(record.lastCall!.args['trackId'], 'mishnayos');
         expect(
           record.lastCall!.args['trackData'],
@@ -315,7 +315,7 @@ void main() {
       for (final call in record.calls) {
         expect(call.args['grantId'], _grantId);
         expect(call.args['ownerUid'], _ownerUid);
-        expect(call.args['profileId'], 42);
+        expect(call.args['profileId'], '42');
       }
 
       expect(delegate.pushStageDefinitionsCount, 0);
@@ -341,7 +341,7 @@ void main() {
         expect(record.lastCall!.fn, 'tutorUpsertStudyDayConfig');
         expect(record.lastCall!.args['grantId'], _grantId);
         expect(record.lastCall!.args['ownerUid'], _ownerUid);
-        expect(record.lastCall!.args['profileId'], 42);
+        expect(record.lastCall!.args['profileId'], '42');
         expect(record.lastCall!.args['configId'], 'daf_yomi_1_3');
         expect(
           record.lastCall!.args['configData'],
@@ -428,64 +428,71 @@ void main() {
   });
 
   // ────────────────────────────────────────────────────────────────────────────
-  // AUD-tutoring-17: a malformed (non-numeric) profileId must surface the
-  // class's documented TutorWriteException contract, never a raw
-  // FormatException that callers catching TutorWriteException won't see.
+  // AUD-tutoring-17: an empty profileId must surface the class's documented
+  // TutorWriteException contract (code: 'invalid-profile-id'), never a raw
+  // error. ULID profileIds (alphanumeric) are valid and not parsed as integers.
   // ────────────────────────────────────────────────────────────────────────────
 
-  group(
-    'AUD-tutoring-17 — malformed profileId guarded (not raw FormatException)',
-    () {
-      test('pushGoal with non-numeric profileId → TutorWriteException, not '
-          'FormatException', () async {
-        final record = _FakeInvokerRecord();
-        final delegate = _FakeDelegate();
-        const badSelection = TutoredProfileSelection(
-          profileId: 'not-a-number',
-          ownerUid: _ownerUid,
-          grantId: _grantId,
-          permissions: _fullPerms,
-        );
-        final router = TutoredWriteRouter(
-          delegate: delegate,
-          writeService: TutorWriteService(invoker: record.call),
-          selection: badSelection,
-        );
-
-        await expectLater(
-          () => router.pushGoal({'id': 'goal_xyz'}),
-          throwsA(isA<TutorWriteException>()),
-        );
-        // The CF must never be reached with an unparseable profileId.
-        expect(record.wasCalled, isFalse);
-      });
-
-      test(
-        'deleteCompletion with non-numeric profileId → TutorWriteException',
-        () async {
-          final record = _FakeInvokerRecord();
-          final delegate = _FakeDelegate();
-          const badSelection = TutoredProfileSelection(
-            profileId: 'nan',
-            ownerUid: _ownerUid,
-            grantId: _grantId,
-            permissions: _fullPerms,
-          );
-          final router = TutoredWriteRouter(
-            delegate: delegate,
-            writeService: TutorWriteService(invoker: record.call),
-            selection: badSelection,
-          );
-
-          await expectLater(
-            () => router.deleteCompletion('comp_1'),
-            throwsA(isA<TutorWriteException>()),
-          );
-          expect(record.wasCalled, isFalse);
-        },
+  group('AUD-tutoring-17 — empty profileId throws TutorWriteException '
+      '(code: invalid-profile-id)', () {
+    test('pushGoal with empty profileId → TutorWriteException '
+        '(code: invalid-profile-id)', () async {
+      final record = _FakeInvokerRecord();
+      final delegate = _FakeDelegate();
+      const badSelection = TutoredProfileSelection(
+        profileId: '',
+        ownerUid: _ownerUid,
+        grantId: _grantId,
+        permissions: _fullPerms,
       );
-    },
-  );
+      final router = TutoredWriteRouter(
+        delegate: delegate,
+        writeService: TutorWriteService(invoker: record.call),
+        selection: badSelection,
+      );
+
+      await expectLater(
+        () => router.pushGoal({'id': 'goal_xyz'}),
+        throwsA(
+          isA<TutorWriteException>().having(
+            (e) => e.code,
+            'code',
+            'invalid-profile-id',
+          ),
+        ),
+      );
+      expect(record.wasCalled, isFalse);
+    });
+
+    test('deleteCompletion with empty profileId → TutorWriteException '
+        '(code: invalid-profile-id)', () async {
+      final record = _FakeInvokerRecord();
+      final delegate = _FakeDelegate();
+      const badSelection = TutoredProfileSelection(
+        profileId: '',
+        ownerUid: _ownerUid,
+        grantId: _grantId,
+        permissions: _fullPerms,
+      );
+      final router = TutoredWriteRouter(
+        delegate: delegate,
+        writeService: TutorWriteService(invoker: record.call),
+        selection: badSelection,
+      );
+
+      await expectLater(
+        () => router.deleteCompletion('comp_1'),
+        throwsA(
+          isA<TutorWriteException>().having(
+            (e) => e.code,
+            'code',
+            'invalid-profile-id',
+          ),
+        ),
+      );
+      expect(record.wasCalled, isFalse);
+    });
+  });
 
   // ────────────────────────────────────────────────────────────────────────────
   // AC2: non-tutored session → delegate called, CF NOT invoked
@@ -706,7 +713,7 @@ void main() {
         expect(record.lastCall!.fn, 'tutorSetProfileProgram');
         expect(record.lastCall!.args['grantId'], _grantId);
         expect(record.lastCall!.args['ownerUid'], _ownerUid);
-        expect(record.lastCall!.args['profileId'], 42);
+        expect(record.lastCall!.args['profileId'], '42');
         // C1 fix: doc-id is curriculum_id (matches parent-side gateway).
         expect(record.lastCall!.args['programId'], 'daf_yomi');
         expect(
@@ -817,7 +824,7 @@ void main() {
 
         expect(rewardsCall.args['grantId'], _grantId);
         expect(rewardsCall.args['ownerUid'], _ownerUid);
-        expect(rewardsCall.args['profileId'], int.parse(_profileId));
+        expect(rewardsCall.args['profileId'], _profileId);
         expect(
           (rewardsCall.args['settingsData']
               as Map<String, dynamic>)['reward_settings'],
@@ -993,7 +1000,7 @@ void main() {
       expect(args['completionId'], 'completion_xyz_123');
       expect(args['grantId'], _grantId);
       expect(args['ownerUid'], _ownerUid);
-      expect(args['profileId'], int.parse(_profileId));
+      expect(args['profileId'], _profileId);
       expect(delegate.deleteCompletionCount, 0);
     });
 
@@ -1105,7 +1112,7 @@ void main() {
         final delegate = _FakeDelegate();
         final router = _tutored(record, delegate);
 
-        await router.deleteLearnerProfile(42);
+        await router.deleteLearnerProfile('01TESTPROFILEULID000000000');
 
         expect(delegate.deleteLearnerProfileCount, 1);
         expect(record.wasCalled, isFalse);

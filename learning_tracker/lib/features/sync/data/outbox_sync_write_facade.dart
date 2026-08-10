@@ -150,10 +150,10 @@ class OutboxSyncWriteFacade implements SyncWriteFacade, PointsSyncSink {
   );
 
   @override
-  Future<void> deleteLearnerProfile(int profileId) => _enqueue(
+  Future<void> deleteLearnerProfile(String profileUlid) => _enqueue(
     OutboxEntityKind.learnerProfileDelete,
-    profileId.toString(),
-    {'profile_id': profileId},
+    profileUlid,
+    {'profile_id': profileUlid},
     // Account-level op: enqueue under profile 0 (the account-level sweep that
     // _doDrain always runs alongside the active profile), NOT under the
     // profile being deleted. Stamping it with the target profile id orphans

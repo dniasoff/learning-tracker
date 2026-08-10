@@ -90,7 +90,7 @@ class _TutorRoutedFailingFacade implements SyncWriteFacade {
   }
 
   @override
-  Future<void> deleteLearnerProfile(int profileId) async {}
+  Future<void> deleteLearnerProfile(String profileUlid) async {}
   @override
   Future<void> pushGamificationSettingsSnapshot() async {}
   @override

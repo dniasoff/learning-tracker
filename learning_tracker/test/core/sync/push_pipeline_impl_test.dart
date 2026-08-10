@@ -43,7 +43,7 @@ class _FakeGateway implements FirestoreGateway {
   Future<void> Function(int profileId, String firestoreId)? onDeleteGoal;
   Future<void> Function(int profileId, Map<String, dynamic> data)?
   onPushLearnerProfile;
-  Future<void> Function(int profileId)? onDeleteLearnerProfile;
+  Future<void> Function(String profileUlid)? onDeleteLearnerProfile;
   Future<void> Function(int profileId, Map<String, dynamic> data)?
   onPushGamificationSettings;
   Future<void> Function(int profileId, Map<String, dynamic> data)?
@@ -193,9 +193,15 @@ class _FakeGateway implements FirestoreGateway {
   }
 
   @override
-  Future<void> deleteLearnerProfile(int profileId) async {
-    calls.add(_GatewayCall('deleteLearnerProfile', profileId: profileId));
-    await onDeleteLearnerProfile?.call(profileId);
+  Future<void> deleteLearnerProfile(String profileUlid) async {
+    calls.add(
+      _GatewayCall(
+        'deleteLearnerProfile',
+        profileId: 0,
+        data: {'profileUlid': profileUlid},
+      ),
+    );
+    await onDeleteLearnerProfile?.call(profileUlid);
   }
 
   @override
@@ -746,28 +752,37 @@ void main() {
         final pl = _pipeline(gw);
         // payload carries a different profile_id than the outer profileId arg.
         await pl.deleteLearnerProfile(
-          profileId: 99,
+          profileId: _pid,
           entityKey: _key,
-          payload: {'profile_id': 42},
+          payload: {'profile_id': '01TESTPAYLOADULID0000000'},
         );
         expect(gw.calls.single.method, 'deleteLearnerProfile');
-        // Gateway must receive the payload's profile_id (42), not the outer 99.
-        expect(gw.calls.single.profileId, 42);
+        // Gateway must receive the payload's profile_id, not the outer one.
+        expect(
+          gw.calls.single.data?['profileUlid'],
+          '01TESTPAYLOADULID0000000',
+        );
       },
     );
 
-    test('deleteLearnerProfile falls back to outer profileId when '
-        'profile_id absent from payload', () async {
-      final gw = _FakeGateway();
-      final pl = _pipeline(gw);
-      await pl.deleteLearnerProfile(
-        profileId: _pid,
-        entityKey: _key,
-        payload: <String, dynamic>{},
-      );
-      expect(gw.calls.single.method, 'deleteLearnerProfile');
-      expect(gw.calls.single.profileId, _pid);
-    });
+    test(
+      'deleteLearnerProfile throws StateError when payload lacks profile_id (no valid ULID fallback exists)',
+      () async {
+        final gw = _FakeGateway();
+        final pl = _pipeline(gw);
+
+        expect(
+          () => pl.deleteLearnerProfile(
+            profileId: _pid,
+            entityKey: _key,
+            payload: <String, dynamic>{},
+          ),
+          throwsA(isA<StateError>()),
+        );
+
+        expect(gw.calls, isEmpty);
+      },
+    );
   });
 
   // ── Single-flight serialisation ────────────────────────────────────────────

@@ -52,7 +52,7 @@ abstract class SyncWriteFacade {
   Future<void> pushLearnerProfile(Map<String, dynamic> profile);
 
   /// Delete a learner profile from Firestore (tombstones locally first).
-  Future<void> deleteLearnerProfile(int profileId);
+  Future<void> deleteLearnerProfile(String profileUlid);
 
   /// Plan §F Phase 5 deliverable 6 — push stage definitions via the
   /// dedicated `stage_definition` outbox kind. Replaces the legacy

@@ -55,7 +55,7 @@ const _cloudBornAuthState = AuthState.signedIn(
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-const _childProfileId = '42';
+const _childProfileId = 'ulid-42';
 
 ProfileModel _profile({
   required int id,

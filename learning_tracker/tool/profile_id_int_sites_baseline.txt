@@ -16,9 +16,6 @@
 # requires the same sign-off any other ratchet widening
 # requires.
 # docs/planning/firestore-phase2-plan.md §4 P2-1 / §7 R2, R12.
-cf-int-guard functions/src/deletes.ts:deleteBulkMarkedCompletions x1
-cf-int-guard functions/src/deletes.ts:deleteCurriculumTrack x1
-cf-int-guard functions/src/deletes.ts:deleteLearnerProfile x1
 cf-int-guard functions/src/tutor_bulk_completions.ts:tutorBulkPriorCompletions x1
 cf-int-guard functions/src/tutor_writes.ts:tutorDeleteGoal x1
 cf-int-guard functions/src/tutor_writes.ts:tutorDeleteStudyDayConfig x1
@@ -33,13 +30,9 @@ cf-int-guard functions/src/tutor_writes.ts:tutorUpsertGoal x1
 cf-int-guard functions/src/tutor_writes.ts:tutorUpsertStageDefinition x1
 cf-int-guard functions/src/tutor_writes.ts:tutorUpsertStudyDayConfig x1
 cf-int-guard functions/src/tutor_writes.ts:tutorUpsertTrack x1
-cf-string-profileid-doc functions/src/deletes.ts:deleteBulkMarkedCompletions x1
-cf-string-profileid-doc functions/src/deletes.ts:deleteCurriculumTrack x1
-cf-string-profileid-doc functions/src/deletes.ts:deleteLearnerProfile x1
 cf-string-profileid-doc functions/src/tutor_bulk_completions.ts:tutorBulkPriorCompletions x1
 cf-string-profileid-doc functions/src/tutor_writes.ts:verifyTutorGrant x1
 dart-int-profileid-param lib/core/sync/firestore_gateway.dart:FirestoreGateway.deleteGoal x1
-dart-int-profileid-param lib/core/sync/firestore_gateway.dart:FirestoreGateway.deleteLearnerProfile x1
 dart-int-profileid-param lib/core/sync/firestore_gateway.dart:FirestoreGateway.fetchAll x1
 dart-int-profileid-param lib/core/sync/firestore_gateway.dart:FirestoreGateway.fetchDocument x1
 dart-int-profileid-param lib/core/sync/firestore_gateway.dart:FirestoreGateway.fetchPage x1
@@ -86,21 +79,3 @@ dart-int-profileid-param lib/core/sync/outbox/push_pipeline.dart:PushPipeline.pu
 dart-int-profileid-param lib/core/sync/outbox/push_pipeline.dart:PushPipeline.pushStudyDayConfig x1
 dart-int-profileid-param lib/core/sync/outbox/push_pipeline.dart:PushPipeline.pushTrack x1
 dart-int-profileid-param lib/core/sync/outbox/push_pipeline.dart:PushPipeline.pushUiPreferences x1
-dart-int-profileid-param lib/features/tutoring/data/services/tutor_write_service.dart:TutorWriteService.deleteGoal x1
-dart-int-profileid-param lib/features/tutoring/data/services/tutor_write_service.dart:TutorWriteService.deleteStudyDayConfig x1
-dart-int-profileid-param lib/features/tutoring/data/services/tutor_write_service.dart:TutorWriteService.deleteTrack x1
-dart-int-profileid-param lib/features/tutoring/data/services/tutor_write_service.dart:TutorWriteService.editProfile x1
-dart-int-profileid-param lib/features/tutoring/data/services/tutor_write_service.dart:TutorWriteService.resetCompletion x1
-dart-int-profileid-param lib/features/tutoring/data/services/tutor_write_service.dart:TutorWriteService.setProfileProgram x1
-dart-int-profileid-param lib/features/tutoring/data/services/tutor_write_service.dart:TutorWriteService.updateGamificationSettings x1
-dart-int-profileid-param lib/features/tutoring/data/services/tutor_write_service.dart:TutorWriteService.upsertBookmark x1
-dart-int-profileid-param lib/features/tutoring/data/services/tutor_write_service.dart:TutorWriteService.upsertCurriculumScope x1
-dart-int-profileid-param lib/features/tutoring/data/services/tutor_write_service.dart:TutorWriteService.upsertGoal x1
-dart-int-profileid-param lib/features/tutoring/data/services/tutor_write_service.dart:TutorWriteService.upsertStageDefinition x1
-dart-int-profileid-param lib/features/tutoring/data/services/tutor_write_service.dart:TutorWriteService.upsertStudyDayConfig x1
-dart-int-profileid-param lib/features/tutoring/data/services/tutor_write_service.dart:TutorWriteService.upsertTrack x1
-dart-tutoring-id-tostring lib/features/tutoring/presentation/screens/manage_tutors_screen.dart:_ChildGrantsSection.build x4
-dart-tutoring-id-tostring lib/features/tutoring/presentation/screens/manage_tutors_screen.dart:_PerChildGrantsListState._onRefresh x1
-dart-tutoring-id-tostring lib/features/tutoring/presentation/screens/manage_tutors_screen.dart:_PerChildGrantsListState._refreshAll x1
-dart-tutoring-int-parse lib/features/tutoring/data/routers/tutored_write_router.dart:TutoredWriteRouter._profileIdOrThrow x1
-dart-tutoring-int-parse lib/features/tutoring/presentation/screens/invite_tutor_screen.dart:_InviteTutorScreenState._sendInvite x1

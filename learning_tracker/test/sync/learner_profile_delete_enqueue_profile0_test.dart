@@ -44,8 +44,11 @@ void main() {
       );
 
       // Delete a DIFFERENT profile than the active one — the orphan scenario.
-      const targetProfileId = 999;
-      await facade.deleteLearnerProfile(targetProfileId);
+      const targetProfileUlid = '01TESTPROFILEULID000000000';
+      // Outbox routing id for the target profile's lane (not the active profile).
+      // 999 was the original value before the type migration.
+      const targetProfileOutboxId = 999;
+      await facade.deleteLearnerProfile(targetProfileUlid);
 
       // The row is swept by the profile-0 account-level drain...
       final profile0Rows = await db.outboxDao.getPendingByKind(
@@ -61,7 +64,7 @@ void main() {
       // ...and NOT stranded under the target (or active) profile.
       final targetRows = await db.outboxDao.getPendingByKind(
         OutboxEntityKind.learnerProfileDelete,
-        targetProfileId,
+        targetProfileOutboxId,
       );
       expect(targetRows, isEmpty, reason: 'must not orphan under target id');
       final activeRows = await db.outboxDao.getPendingByKind(
@@ -71,8 +74,11 @@ void main() {
       expect(activeRows, isEmpty, reason: 'must not orphan under active id');
 
       // The payload still names the correct profile for the CF to delete.
-      expect(profile0Rows.single.entityKey, '999');
-      expect(profile0Rows.single.payload, contains('"profile_id":999'));
+      expect(profile0Rows.single.entityKey, targetProfileUlid);
+      expect(
+        profile0Rows.single.payload,
+        contains('"profile_id":"$targetProfileUlid"'),
+      );
     },
   );
 }

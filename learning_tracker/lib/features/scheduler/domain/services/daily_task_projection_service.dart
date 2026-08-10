@@ -24,12 +24,12 @@
 /// it is not removed.
 library;
 
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/core/utils/pace_derivation.dart';
-import 'package:learning_tracker/data/repositories/firestore_curriculum_track_repository.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/domain/projection/projection.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/calendar_program_registry.dart';
@@ -55,23 +55,25 @@ import 'package:learning_tracker/features/tracks/stages/domain/repositories/stag
 /// (architecture §10.3).
 Future<List<DailyTask>> buildProjectionTasks({
   required String Function(CurriculumId) trackLabelFor,
-  required FirestoreCurriculumTrackRepository trackRepository,
+  required UserDatabase db,
   required StageDefinitionRepository stageRepository,
   required SchedulerEngine engine,
-  required String profileUlid,
+  required int profileId,
   required DateTime now,
   required CalendarProgramService calendarService,
   required Future<List<ContentItem>> Function(CurriculumId) getScopedContent,
   required LearningProgramRepository programRepository,
 }) async {
-  final activeCurriculumIds = await trackRepository.getActiveCurriculumIds();
+  final activeKeys = await db.activeCurriculumDao.getActiveCurriculaByProfile(
+    profileId,
+  );
   final activeCurricula = <CurriculumId>[
-    for (final key in activeCurriculumIds)
+    for (final key in activeKeys)
       ...CurriculumId.values.where((c) => c.storageKey == key).take(1),
   ];
 
-  final activeTracks = await trackRepository.getActiveTracks();
-  final trackIds = <CurriculumId, String>{};
+  final activeTracks = await db.trackDao.getActiveTracksForProfile(profileId);
+  final trackIds = <CurriculumId, int>{};
   final trackLabels = <CurriculumId, String>{};
   final trackStartedAtMap = <CurriculumId, DateTime>{};
   // §10.1 / reorder-amnesty: the projection filters out overdue items whose
@@ -86,7 +88,7 @@ Future<List<DailyTask>> buildProjectionTasks({
     if (tracksForCurriculum.isEmpty) continue;
     // W3.22: trackType dropped — one track per curriculum per profile.
     final preferred = tracksForCurriculum.first;
-    trackIds[curriculum] = preferred.curriculumId.storageKey;
+    trackIds[curriculum] = preferred.id;
     // Rule-7 (no track types): the track label is the curriculum's localized
     // display name (never an internal track storage key like "personal").
     trackLabels[curriculum] = trackLabelFor(curriculum);

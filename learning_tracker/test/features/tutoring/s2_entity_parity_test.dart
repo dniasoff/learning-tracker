@@ -67,7 +67,7 @@ class _NoopDelegate implements SyncWriteFacade {
   @override
   Future<void> pushLearnerProfile(Map<String, dynamic> p) async {}
   @override
-  Future<void> deleteLearnerProfile(int profileId) async {}
+  Future<void> deleteLearnerProfile(String profileUlid) async {}
   @override
   Future<void> deleteCompletion(String completionId) async {}
   @override

@@ -173,7 +173,7 @@ class _ThrowingSyncFacade implements SyncWriteFacade {
   @override
   Future<void> pushLearnerProfile(Map<String, dynamic> profile) async {}
   @override
-  Future<void> deleteLearnerProfile(int profileId) async {}
+  Future<void> deleteLearnerProfile(String profileUlid) async {}
   @override
   Future<void> pushStageDefinitions({
     required int trackId,
@@ -224,7 +224,7 @@ class _GatedSyncFacade implements SyncWriteFacade {
   @override
   Future<void> pushLearnerProfile(Map<String, dynamic> profile) async {}
   @override
-  Future<void> deleteLearnerProfile(int profileId) async {}
+  Future<void> deleteLearnerProfile(String profileUlid) async {}
   @override
   Future<void> pushStageDefinitions({
     required int trackId,

@@ -108,7 +108,7 @@ TutorGrant _activeGrant({String tutorEmail = 'tutor@example.com'}) {
   final doc = TutorGrantDoc(
     grantId: 'grant_active_1',
     parentUid: 'parent_uid',
-    childProfileId: '1',
+    childProfileId: 'ulid-1',
     tutorEmail: tutorEmail,
     state: TutorGrantState.active,
     invitedAt: now,
@@ -124,7 +124,7 @@ TutorGrant _pendingGrant({String tutorEmail = 'pending@example.com'}) {
   final doc = TutorGrantDoc(
     grantId: 'grant_pending_1',
     parentUid: 'parent_uid',
-    childProfileId: '1',
+    childProfileId: 'ulid-1',
     tutorEmail: tutorEmail,
     state: TutorGrantState.pending,
     invitedAt: now,
@@ -373,7 +373,7 @@ void main() {
       _buildApp(
         router: router,
         profilesState: AsyncData([child, adult]),
-        grantsPerChild: {'1': const AsyncData([])},
+        grantsPerChild: {'ulid-1': const AsyncData([])},
       ),
     );
     await tester.pump();
@@ -397,7 +397,7 @@ void main() {
       _buildApp(
         router: router,
         profilesState: AsyncData([child]),
-        grantsPerChild: {'1': const AsyncData([])},
+        grantsPerChild: {'ulid-1': const AsyncData([])},
       ),
     );
     await tester.pump();
@@ -418,7 +418,7 @@ void main() {
       _buildApp(
         router: router,
         profilesState: AsyncData([child]),
-        grantsPerChild: {'1': const AsyncData([])},
+        grantsPerChild: {'ulid-1': const AsyncData([])},
       ),
     );
     await tester.pump();
@@ -442,7 +442,10 @@ void main() {
       _buildApp(
         router: router,
         profilesState: AsyncData([child1, child2]),
-        grantsPerChild: {'1': const AsyncData([]), '3': const AsyncData([])},
+        grantsPerChild: {
+          'ulid-1': const AsyncData([]),
+          'ulid-3': const AsyncData([]),
+        },
       ),
     );
     await tester.pump();
@@ -464,7 +467,7 @@ void main() {
         _buildApp(
           router: router,
           profilesState: AsyncData([child]),
-          grantsPerChild: {'1': const AsyncData([])},
+          grantsPerChild: {'ulid-1': const AsyncData([])},
         ),
       );
       await tester.pump();
@@ -496,7 +499,7 @@ void main() {
         router: router,
         profilesState: AsyncData([child]),
         grantsPerChild: {
-          '1': AsyncData([grant]),
+          'ulid-1': AsyncData([grant]),
         },
       ),
     );
@@ -519,7 +522,7 @@ void main() {
         router: router,
         profilesState: AsyncData([child]),
         grantsPerChild: {
-          '1': AsyncData([grant]),
+          'ulid-1': AsyncData([grant]),
         },
       ),
     );
@@ -541,7 +544,7 @@ void main() {
         router: router,
         profilesState: AsyncData([child]),
         grantsPerChild: {
-          '1': AsyncData([grant]),
+          'ulid-1': AsyncData([grant]),
         },
       ),
     );
@@ -565,7 +568,7 @@ void main() {
         router: router,
         profilesState: AsyncData([child]),
         grantsPerChild: {
-          '1': AsyncData([grant]),
+          'ulid-1': AsyncData([grant]),
         },
       ),
     );
@@ -594,7 +597,7 @@ void main() {
         router: router,
         profilesState: AsyncData([child]),
         grantsPerChild: {
-          '1': AsyncData([grant]),
+          'ulid-1': AsyncData([grant]),
         },
       ),
     );
@@ -622,7 +625,7 @@ void main() {
         router: router,
         profilesState: AsyncData([child]),
         grantsPerChild: {
-          '1': AsyncData([grant]),
+          'ulid-1': AsyncData([grant]),
         },
       ),
     );
@@ -651,7 +654,7 @@ void main() {
           router: router,
           profilesState: AsyncData([child]),
           grantsPerChild: {
-            '1': AsyncData([grant]),
+            'ulid-1': AsyncData([grant]),
           },
           revoke: mockRevoke,
         ),
@@ -710,7 +713,7 @@ void main() {
           router: router,
           profilesState: AsyncData([child]),
           grantsPerChild: {
-            '1': AsyncData([grant]),
+            'ulid-1': AsyncData([grant]),
           },
           revoke: mockRevoke,
           authRepository: auth,
@@ -803,7 +806,7 @@ void main() {
           overrides: [
             profileListProvider.overrideWith((ref) => Future.value([child])),
             outgoingTutorGrantsProvider(
-              '1',
+              'ulid-1',
             ).overrideWith((ref) => Future.value([grant])),
             authRepositoryProvider.overrideWithValue(auth),
             revokeTutorGrantUseCaseProvider.overrideWithValue(mockRevoke),
@@ -899,7 +902,7 @@ void main() {
         overrides: [
           profileListProvider.overrideWith((ref) => Future.value([child])),
           outgoingTutorGrantsProvider(
-            '1',
+            'ulid-1',
           ).overrideWith((ref) => Future.value([grant])),
           authRepositoryProvider.overrideWithValue(auth),
           revokeTutorGrantUseCaseProvider.overrideWithValue(mockRevoke),
@@ -973,7 +976,7 @@ void main() {
         router: router,
         profilesState: AsyncData([child]),
         grantsPerChild: {
-          '1': AsyncData([grant]),
+          'ulid-1': AsyncData([grant]),
         },
       ),
     );
@@ -996,7 +999,7 @@ void main() {
         router: router,
         profilesState: AsyncData([child]),
         grantsPerChild: {
-          '1': AsyncData([grant]),
+          'ulid-1': AsyncData([grant]),
         },
       ),
     );
@@ -1020,7 +1023,7 @@ void main() {
         router: router,
         profilesState: AsyncData([child]),
         grantsPerChild: {
-          '1': AsyncData([grant]),
+          'ulid-1': AsyncData([grant]),
         },
       ),
     );
@@ -1044,7 +1047,7 @@ void main() {
         router: router,
         profilesState: AsyncData([child]),
         grantsPerChild: {
-          '1': AsyncData([grant]),
+          'ulid-1': AsyncData([grant]),
         },
       ),
     );
@@ -1071,7 +1074,7 @@ void main() {
         router: router,
         profilesState: AsyncData([child]),
         grantsPerChild: {
-          '1': AsyncData([grant]),
+          'ulid-1': AsyncData([grant]),
         },
       ),
     );
@@ -1100,7 +1103,7 @@ void main() {
           router: router,
           profilesState: AsyncData([child]),
           grantsPerChild: {
-            '1': AsyncData([grant]),
+            'ulid-1': AsyncData([grant]),
           },
           rescind: mockRescind,
         ),
@@ -1136,7 +1139,7 @@ void main() {
           router: router,
           profilesState: AsyncData([child]),
           grantsPerChild: {
-            '1': AsyncData([grant]),
+            'ulid-1': AsyncData([grant]),
           },
           rescind: mockRescind,
         ),
@@ -1173,7 +1176,7 @@ void main() {
           router: router,
           profilesState: AsyncData([child]),
           grantsPerChild: {
-            '1': AsyncData([grant]),
+            'ulid-1': AsyncData([grant]),
           },
         ),
       );
@@ -1199,7 +1202,7 @@ void main() {
           router: router,
           profilesState: AsyncData([child]),
           grantsPerChild: {
-            '1': AsyncData([grant]),
+            'ulid-1': AsyncData([grant]),
           },
         ),
       );
@@ -1226,7 +1229,7 @@ void main() {
           router: router,
           profilesState: AsyncData([child]),
           grantsPerChild: {
-            '1': AsyncData([active, pending]),
+            'ulid-1': AsyncData([active, pending]),
           },
         ),
       );
@@ -1254,7 +1257,7 @@ void main() {
         _buildApp(
           router: router,
           profilesState: AsyncData([child]),
-          grantsPerChild: {'1': const AsyncLoading()},
+          grantsPerChild: {'ulid-1': const AsyncLoading()},
         ),
       );
       await tester.pump();
@@ -1289,7 +1292,7 @@ void main() {
           overrides: [
             profileListProvider.overrideWith((ref) => Future.value([child])),
             outgoingTutorGrantsProvider(
-              '1',
+              'ulid-1',
             ).overrideWith((ref) => completer.future),
             authRepositoryProvider.overrideWithValue(auth),
             revokeTutorGrantUseCaseProvider.overrideWithValue(_MockRevoke()),
@@ -1370,7 +1373,7 @@ void main() {
         router: router,
         profilesState: AsyncData([child]),
         grantsPerChild: {
-          '1': AsyncData([grant]),
+          'ulid-1': AsyncData([grant]),
         },
         revoke: mockRevoke,
       ),
@@ -1412,7 +1415,7 @@ void main() {
         router: router,
         profilesState: AsyncData([child]),
         grantsPerChild: {
-          '1': AsyncData([grant]),
+          'ulid-1': AsyncData([grant]),
         },
         revoke: mockRevoke,
       ),
@@ -1451,7 +1454,7 @@ void main() {
         router: router,
         profilesState: AsyncData([child]),
         grantsPerChild: {
-          '1': AsyncData([grant]),
+          'ulid-1': AsyncData([grant]),
         },
         rescind: mockRescind,
       ),
@@ -1533,7 +1536,7 @@ void main() {
         ProviderScope(
           overrides: [
             profileListProvider.overrideWith((ref) => Future.value([child])),
-            outgoingTutorGrantsProvider('1').overrideWith((ref) {
+            outgoingTutorGrantsProvider('ulid-1').overrideWith((ref) {
               fetchCount++;
               return Future.value([grant]);
             }),
@@ -1620,7 +1623,7 @@ void main() {
         ProviderScope(
           overrides: [
             profileListProvider.overrideWith((ref) => Future.value([child])),
-            outgoingTutorGrantsProvider('1').overrideWith((ref) {
+            outgoingTutorGrantsProvider('ulid-1').overrideWith((ref) {
               fetchCount++;
               return Future.value([grant]);
             }),
@@ -1694,7 +1697,7 @@ void main() {
         router: router,
         profilesState: AsyncData([child]),
         grantsPerChild: {
-          '1': AsyncData([grant]),
+          'ulid-1': AsyncData([grant]),
         },
         revoke: mockRevoke,
         notifications: notifGw,
@@ -1759,7 +1762,7 @@ void main() {
           router: router,
           profilesState: AsyncData([child]),
           grantsPerChild: {
-            '1': AsyncData([grant]),
+            'ulid-1': AsyncData([grant]),
           },
           revoke: mockRevoke,
           authRepository: auth,
@@ -1805,7 +1808,7 @@ void main() {
           retry: (_, __) => null,
           overrides: [
             profileListProvider.overrideWith((ref) => Future.value([child])),
-            outgoingTutorGrantsProvider('1').overrideWith(
+            outgoingTutorGrantsProvider('ulid-1').overrideWith(
               (ref) => Future.error(
                 Exception('Firestore unavailable'),
                 StackTrace.empty,
@@ -1874,7 +1877,7 @@ void main() {
           retry: (_, __) => null,
           overrides: [
             profileListProvider.overrideWith((ref) => Future.value([child])),
-            outgoingTutorGrantsProvider('1').overrideWith(
+            outgoingTutorGrantsProvider('ulid-1').overrideWith(
               (ref) => Future.error(
                 Exception(
                   'PERMISSION_DENIED: Missing or insufficient permissions',
@@ -1946,7 +1949,7 @@ void main() {
         router: router,
         profilesState: AsyncData([child]),
         grantsPerChild: {
-          '1': AsyncData([active]),
+          'ulid-1': AsyncData([active]),
         },
         locale: const Locale('he'),
       ),
@@ -1979,7 +1982,7 @@ void main() {
           router: router,
           profilesState: AsyncData([child]),
           grantsPerChild: {
-            '1': AsyncData([grant]),
+            'ulid-1': AsyncData([grant]),
           },
         ),
       );
@@ -2010,7 +2013,7 @@ void main() {
         ProviderScope(
           overrides: [
             profileListProvider.overrideWith((ref) => Future.value([child])),
-            outgoingTutorGrantsProvider('1').overrideWith((ref) {
+            outgoingTutorGrantsProvider('ulid-1').overrideWith((ref) {
               buildCount++;
               return Future.value(<TutorGrant>[]);
             }),
@@ -2069,7 +2072,10 @@ void main() {
         _buildApp(
           router: router,
           profilesState: AsyncData([child1, child2]),
-          grantsPerChild: {'1': const AsyncData([]), '2': const AsyncData([])},
+          grantsPerChild: {
+            'ulid-1': const AsyncData([]),
+            'ulid-2': const AsyncData([]),
+          },
         ),
       );
       await tester.pump();
@@ -2105,7 +2111,7 @@ void main() {
             TutorGrantDoc(
               grantId: 'grant_$i',
               parentUid: 'parent_uid',
-              childProfileId: '1',
+              childProfileId: 'ulid-1',
               tutorEmail: 'tutor$i@example.com',
               state: TutorGrantState.active,
               invitedAt: now,
@@ -2120,7 +2126,7 @@ void main() {
         _buildApp(
           router: router,
           profilesState: AsyncData([child]),
-          grantsPerChild: {'1': AsyncData(grants)},
+          grantsPerChild: {'ulid-1': AsyncData(grants)},
         ),
       );
       await tester.pump();

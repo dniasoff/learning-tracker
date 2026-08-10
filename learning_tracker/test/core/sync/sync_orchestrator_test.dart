@@ -188,7 +188,7 @@ class _FakeGateway implements FirestoreGateway {
   }) async {}
 
   @override
-  Future<void> deleteLearnerProfile(int profileId) async {}
+  Future<void> deleteLearnerProfile(String profileUlid) async {}
 
   @override
   Future<void> pushLedgerEntry({

@@ -115,7 +115,7 @@ abstract class FirestoreGateway {
     required Map<String, dynamic> data,
   });
 
-  Future<void> deleteLearnerProfile(int profileId);
+  Future<void> deleteLearnerProfile(String profileUlid);
 
   // ── P2c additions ──────────────────────────────────────────────────────────
 

@@ -59,7 +59,7 @@ class _RecordingGoalSyncFacade implements SyncWriteFacade {
   @override
   Future<void> pushLearnerProfile(Map<String, dynamic> profile) async {}
   @override
-  Future<void> deleteLearnerProfile(int profileId) async {}
+  Future<void> deleteLearnerProfile(String profileUlid) async {}
   @override
   Future<void> pushStageDefinitions({
     required int trackId,

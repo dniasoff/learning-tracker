@@ -755,14 +755,14 @@ class _ToggleableFakeGateway extends NoOpFirestoreGateway {
   }
 
   @override
-  Future<void> deleteLearnerProfile(int profileId) async {
+  Future<void> deleteLearnerProfile(String profileUlid) async {
     pushAttempts++;
     if (!online) throw Exception('offline');
     await _fs
         .collection('users')
         .doc(uid)
         .collection('learner_profiles')
-        .doc(profileId.toString())
+        .doc(profileUlid)
         .delete();
   }
 

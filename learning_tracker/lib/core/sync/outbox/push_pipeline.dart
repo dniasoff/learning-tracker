@@ -111,8 +111,8 @@ abstract class PushPipeline {
   });
 
   /// Trigger the cloud delete of a learner profile. The payload carries
-  /// `profile_id` so the dispatcher can extract it without a separate
-  /// `profileId` argument.
+  /// `profile_id` (the target profile's ULID string) so the dispatcher can
+  /// extract it without a separate `profileId` argument.
   Future<void> deleteLearnerProfile({
     required int profileId,
     required String entityKey,

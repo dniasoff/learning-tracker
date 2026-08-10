@@ -95,7 +95,7 @@ TutorGrant _pendingGrant() {
   final doc = TutorGrantDoc(
     grantId: 'grant_1',
     parentUid: 'parent_uid',
-    childProfileId: '1',
+    childProfileId: 'ulid-1',
     tutorEmail: 'tutor@loop.test',
     state: TutorGrantState.pending,
     invitedAt: now,
@@ -110,7 +110,7 @@ TutorGrant _activeGrant() {
   final doc = TutorGrantDoc(
     grantId: 'grant_1',
     parentUid: 'parent_uid',
-    childProfileId: '1',
+    childProfileId: 'ulid-1',
     tutorEmail: 'tutor@loop.test',
     state: TutorGrantState.active,
     invitedAt: now,
@@ -152,7 +152,7 @@ void main() {
 
     // Phase 1: repository returns a pending grant (before acceptance).
     when(
-      () => grantRepo.listOutgoingGrants(childProfileId: '1'),
+      () => grantRepo.listOutgoingGrants(childProfileId: 'ulid-1'),
     ).thenAnswer((_) async => [_pendingGrant()]);
 
     // Build a persistent ProviderScope (matches app root scope in production).
@@ -222,7 +222,7 @@ void main() {
 
     // Phase 3: tutor accepts server-side — update the repository stub.
     when(
-      () => grantRepo.listOutgoingGrants(childProfileId: '1'),
+      () => grantRepo.listOutgoingGrants(childProfileId: 'ulid-1'),
     ).thenAnswer((_) async => [_activeGrant()]);
 
     // Phase 4: parent navigates BACK to Manage Tutors.

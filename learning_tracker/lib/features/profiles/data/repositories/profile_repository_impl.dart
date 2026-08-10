@@ -279,14 +279,14 @@ class ProfileRepositoryImpl implements ProfileRepository {
       event: 'profile_repo_delete_start',
       fields: {'profileId': id, 'allowLast': allowLast},
     );
+    // Read the profile first to capture its ULID before the transaction deletes the row.
+    final existing = await _db.profileDao.getProfileById(id);
+    final profileUlid = existing?.ulid;
     // Guard: by default we refuse to leave the account with zero profiles —
     // the picker would have nothing to show. Callers can opt in via
     // `allowLast: true` after a strong confirmation; the empty-state UI in
     // ProfilePicker will route the user to add a fresh profile.
     if (!allowLast) {
-      // Read the account from the profile we're about to delete so the
-      // last-profile guard scopes to the right account (DNI-342).
-      final existing = await _db.profileDao.getProfileById(id);
       if (existing != null) {
         final count = await countProfilesForAccount(existing.accountId);
         if (count <= 1) {
@@ -358,7 +358,17 @@ class ProfileRepositoryImpl implements ProfileRepository {
       fields: {'profileId': id},
     );
 
-    await _syncEngine?.deleteLearnerProfile(id);
+    if (profileUlid != null) {
+      await _syncEngine?.deleteLearnerProfile(profileUlid);
+    } else {
+      _log.error(
+        event: 'profile_repo_delete_missing_ulid',
+        fields: {
+          'profileId': id,
+          'reason': 'ULID was null, cloud delete skipped',
+        },
+      );
+    }
     _log.info(
       event: 'profile_repo_delete_sync_notified',
       fields: {'profileId': id},

@@ -46,11 +46,10 @@
 // committed before the failing one so the caller can decide whether to
 // retry just the remaining subset instead of losing state silently.
 //
-// AUD-tutoring-17 — every method above parses [_selection.profileId] via
-// the private [TutoredWriteRouter._profileIdOrThrow] helper (not a bare
-// `int.parse`) so a malformed profileId honors the same documented
-// TutorWriteException contract instead of leaking a raw FormatException
-// that `on TutorWriteException` callers would miss.
+// AUD-tutoring-17 — every method above validates [_selection.profileId] via
+// the private [TutoredWriteRouter._profileIdOrThrow] helper: it rejects an
+// EMPTY profileId with TutorWriteException(code: 'invalid-profile-id') and
+// returns the raw string unchanged. ULID profileIds are NOT parsed as integers.
 
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/sync/sync_write_facade.dart';

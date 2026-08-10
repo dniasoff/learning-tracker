@@ -146,12 +146,17 @@ class OutboxPushPipeline implements PushPipeline {
     required int profileId,
     required String entityKey,
     required Map<String, dynamic> payload,
-  }) => _run(
-    OutboxEntityKind.learnerProfileDelete,
-    () => _gateway.deleteLearnerProfile(
-      payload['profile_id'] as int? ?? profileId,
-    ),
-  );
+  }) {
+    final profileUlid = payload['profile_id'] as String?;
+    if (profileUlid == null || profileUlid.isEmpty) {
+      throw StateError(
+        'Outbox payload for learnerProfileDelete missing required String profile_id (ULID)',
+      );
+    }
+    return _run(OutboxEntityKind.learnerProfileDelete, () {
+      return _gateway.deleteLearnerProfile(profileUlid);
+    });
+  }
 
   @override
   Future<void> pushGamificationSettings({

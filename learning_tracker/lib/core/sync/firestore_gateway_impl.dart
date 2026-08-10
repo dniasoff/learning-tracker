@@ -482,7 +482,7 @@ class FirestoreGatewayImpl implements FirestoreGateway {
   }
 
   @override
-  Future<void> deleteLearnerProfile(int profileId) async {
+  Future<void> deleteLearnerProfile(String profileUlid) async {
     // The Firestore delete uses a server-side Cloud Function that runs
     // recursiveDelete on the profile document and all its subcollections.
     // The SharedPreferences tombstone is intentionally NOT written here —
@@ -495,7 +495,7 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     // errors (Cloud Functions surfaces gRPC-style status codes, including
     // 'permission-denied', identically to Firestore).
     await _guardPermission(
-      () => callable.call<Map<String, dynamic>>({'profileId': profileId}),
+      () => callable.call<Map<String, dynamic>>({'profileId': profileUlid}),
       collection: 'learner_profiles',
       operation: 'delete',
     );

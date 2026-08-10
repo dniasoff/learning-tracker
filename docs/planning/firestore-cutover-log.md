@@ -2445,6 +2445,179 @@ not re-learn the hard way:**
 
 ---
 
+### 2026-08-10 — P3-3: completes the `T-30` ULID chain end-to-end, closes a `T-68`-class false claim IN CODE, reverts `e2ab5aeb`'s half-migrated projection service, and takes the suite from 68 failures to 44 — with all 38 survivors traced to ONE pre-existing cause
+
+**First code round of Phase 3 that leaves the tree compiling.** `dart analyze
+--fatal-infos` was EXIT 3 with 53 errors when this round began; it is EXIT 0,
+`No issues found!`, at this commit.
+
+#### 1. `T-30` — the ULID chain is now consistent END TO END
+
+`e2ab5aeb` re-keyed the Cloud Function to demand a ULID **String**
+(`functions/src/deletes.ts:135`, `typeof profileId !== "string"` ⇒
+`invalid-argument`) but left every Dart layer that calls it sending a Drift
+**int**. That inconsistency shipped and was pushed. It is now closed:
+
+| Layer | File | State |
+|---|---|---|
+| Facade (interface) | `lib/core/sync/sync_write_facade.dart:55` | `String profileUlid` |
+| Facade (impl) | `lib/features/sync/data/outbox_sync_write_facade.dart:153` | payload `{'profile_id': profileUlid}` |
+| Router | `lib/features/tutoring/data/routers/tutored_write_router.dart:385` | already String |
+| Pipeline | `lib/core/sync/push_pipeline_impl.dart:148` | reads `as String?`, **throws StateError** if absent |
+| Gateway (iface+impl) | `lib/core/sync/firestore_gateway{,_impl}.dart` | `String profileUlid`; callable sends the ULID |
+| Caller | `profile_repository_impl.dart` | ULID captured BEFORE the local delete; null path LOGS |
+| CF | `functions/src/deletes.ts:135` | unchanged, requires String |
+
+**Two silent-failure shapes were refused rather than accepted.** The pipeline
+throws loudly instead of falling back to the int `0` routing id (which would
+have targeted the wrong profile), and the repository logs
+`profile_repo_delete_missing_ulid` instead of skipping quietly. Both were the
+"green diff, no production change" pattern.
+
+**The ordering trap handoff §4 warned about was honoured:** the profile's ULID
+is captured BEFORE the local Drift delete removes the row — implemented by
+hoisting an existing `getProfileById` read rather than adding a second one.
+
+**How the pipeline defect was found — heterogeneous review, and it paid for
+itself on first use.** `nemotron-3-ultra-free` wrote the change;
+`deepseek-v4-flash-free` reviewed it and traced the outbox drain path to
+`payload['profile_id'] as int?` — which would have thrown a TypeError at drain
+time, retried, dead-lettered, and **silently never deleted the remote profile**.
+`dart analyze` cannot see this: it is a dynamic cast out of
+`Map<String, dynamic>`. Neither could any test. A same-model review would
+plausibly have shared the author's blind spot.
+
+#### 2. `T-68`-class false claim — CLOSED IN CODE, not merely disclosed
+
+`tutored_write_router.dart:49-53` claimed every method "parses
+[_selection.profileId] ... (not a bare `int.parse`) so a malformed profileId
+honors the ... TutorWriteException contract instead of leaking a raw
+FormatException". **There is no parse.** `_profileIdOrThrow` (:405) now rejects
+exactly one thing — an EMPTY id — and returns the raw string. The comment now
+states that. Handoff §0 rule 6 and Working Protocol rule 5 require a
+code-touching round to close such claims rather than re-disclose them; this is
+that round.
+
+The 10 tests asserting the retired contract ("non-numeric profileId →
+TutorWriteException") were rewritten to assert the CURRENT one (empty id →
+`TutorWriteException(code: 'invalid-profile-id')`), preserving per-method
+coverage. A non-numeric id is now the NORMAL case.
+
+#### 3. `e2ab5aeb`'s projection service — REVERTED, deliberately
+
+`e2ab5aeb` changed `daily_task_projection_service.dart`'s signature but changed
+neither its caller (`scheduler_providers.dart`, not in that commit) nor its
+test. One file was left out of step with two others: 32 of the 53 errors.
+
+`daily_task_projection_service.dart` alone was restored to `7baab24e` (the
+parent of `e2ab5aeb`). All 32 errors resolved. **This undoes `T-32`'s partial
+migration and is recorded as a deliberate scope decision, not an accident:** the
+migration needs the six Firestore repositories as one coherent unit, and a
+half-migrated service blocks every other gate. It is now a clean, self-contained
+future unit rather than a broken in-between state.
+
+**Prior attempt, and why it was abandoned:** a worker dispatched to finish that
+migration drove the tree from 32 errors to **109** while incoherent (see §6),
+and was aborted and reverted with no loss.
+
+#### 4. Test suite — 68 → 44, and 38 of the 44 are ONE pre-existing cause
+
+`make test`: `08:47 +11483 ~131 -44`, EXIT 2. Checked for `Terminated` and an
+explicit `EXIT=` first — no kill markers, these are real failures.
+(An earlier run in this round reported `-68` but stopped at 7,168 of 11,614
+tests; several later clusters were never reached. Do not compare the two counts
+directly — the 44-failure run is the complete one.)
+
+**Closed this round:** `manage_tutors_screen_l1_test` 32 → **0** (48/48 pass),
+`s1_tutored_write_router_test` 10 → **0**, `push_pipeline_impl_test` 1 → **0**,
+plus a 15-file test-double migration for the changed interfaces.
+
+**The `-44` figure is stated as MEASURED and is already one step stale — do not
+copy it forward as current.** Two further tutoring failures were fixed AFTER
+that full run and verified by targeted run (`iter10_outgoing_grants_stale_cache`
+and `invite_tutor_screen_l1`, both fixture-key mismatches of the same class;
+26/26 pass together). A fresh `make test` should therefore report **42**, not
+44 — but no full run has confirmed that number, so 44 is what this entry
+records and 42 is a PREDICTION. Re-measure before citing either.
+
+**`38` of the 44 survivors cite ONE error, verbatim:**
+
+> `StageDefinitionRepository.getStagesByTrack(int trackId) has no Firestore
+> mapping: FirestoreStageDefinitionRepository dropped it outright (AD-25
+> retired the per-device trackId as this collection's key; curriculum_id is now
+> the sole canonical key)... Known callers this breaks: CalendarPositionProviders,
+> DashboardProviders, DailyTaskProjectionService (two call sites),
+> TrackProgressService, PointConfigScreen (three call sites).`
+
+**This is `e2ab5aeb`'s, not this round's**, and it is `T-20` proper rather than
+cleanup. Measured facts for whoever takes it:
+- the replacement `getStagesForCurriculum(CurriculumId)` EXISTS
+  (`stage_definition_repository.dart:13-15`) and is already used by
+  `bulk_prior_completion_service.dart:210`.
+- `CurriculumTrack` DOES carry `curriculumId`
+  (`curriculum_track.dart:21,35`; its own doc: "curriculumId alone is the
+  natural key").
+- **But the two worst callers do not have one in scope.**
+  `dashboard_providers.dart:208` holds only a bare `trackId` grouped from
+  `c.trackId`; `TrackProgressService.completionPercent` takes
+  `required int trackId` as a PARAMETER, so its own callers must change.
+  ⇒ this is a multi-file API change, not a substitution.
+
+#### 5. Gates at this commit — every one measured by the orchestrator, none relayed
+
+| Gate | Exit | Note |
+|---|---|---|
+| `dart analyze --fatal-infos` | **0** | `No issues found!` (was EXIT 3 / 53 errors) |
+| `dart format --set-exit-if-changed` | **0** | over every file this round touched |
+| `check_profile_id_int_sites` (104) | **0** | baseline 88 → **63** entries; 25 genuine int-site removals locked in, per the tool's own documented action for STALE-as-real-fix |
+| `check_profile_path_keying` (103) | **1** | 5 splits, ALL pre-existing — see below |
+| `make test` | **2** | 44 failures, 38 of them the §4 cause |
+| `make validate-calendar` | **0** | (P3-1) |
+| `make test-serial-tools` | — | still NOT discharged; see §7 |
+
+**check 103's five splits are NOT baselined away and must not be.** They are
+`completions`, `curriculum_tracks`, `goals`, `stage_definitions`,
+`study_day_configs` — established in `P3-2` as `e2ab5aeb`'s, not the working
+tree's. Handoff §4 is binding: "the fix is to finish moving the writer, not to
+baseline the symptom away."
+
+#### 6. Worker-degradation instances, recorded because the pattern is actionable
+
+Three sessions degenerated this round, all with the same signature — zero-output
+assistant turns, and in one case malformed pseudo-XML in place of a report:
+
+| Session | Context at failure | Outcome |
+|---|---|---|
+| projection migration | **137,986** input tokens, task prompt re-delivered, 3 zero-output turns | **tree corrupted 32 → 109 errors**; aborted + reverted |
+| fixture re-key | **59,891** input tokens, 4 output tokens, output repeated twice | 1 of 8 edits done, then stopped |
+| stage-definition recon | truncated mid-sentence | no usable report |
+
+**Two things worth carrying forward.** (a) The paper's §4.4 records "the report
+died, not the work" — here, once, **the work died too**. A supervisor that
+assumes work survives and skips the tree check will commit garbage; rule 7's
+tree check is what separated the cases and it costs seconds. (b) Degradation
+happened at 59.9k on a SHORT task and at 138k on a long one, so token volume
+alone does not predict it. What DID hold: every dispatch shaped as "run these
+exact shell commands" completed in seconds, single delivery, no degradation.
+Read-heavy investigative dispatches are where this failed.
+
+#### 7. What this round did NOT do
+
+- **`make test-serial-tools` (`T-69`'s second half) is still outstanding.** Its
+  one attempt this session was KILLED at a 45-minute ceiling (`Terminated`,
+  `EXIT=124`) — not a pass, not a failure, no number recorded. It must run on a
+  quiet machine with nothing else executing.
+- **`T-20`'s stage-definition migration** (§4) — the 38 failures. Not started.
+- **check 103's five splits** — writers not yet moved.
+- **`T-32`** — reverted to its pre-`e2ab5aeb` state, to be redone whole.
+- **`T-65`, `T-66`, `T-67`, `T-37`, `T-38`** — untouched. `T-67` in particular
+  remains a live false claim in a test's printed NAME, and handoff §0 rule 6's
+  requirement to close such claims in a code-touching round is only PARTLY
+  discharged this round (`T-68`'s comment closed; `T-67`'s test name not).
+  Named here rather than left silent.
+- No D-row changes. No entry-criteria checkbox changes beyond those `§11d`
+  already records.
+
 ### 2026-08-10 — P3-2: CORRECTS a false provenance claim P3-1 committed one commit earlier; establishes the FIRST true baseline for `e2ab5aeb`; parks the interrupted session's work intact
 
 **This entry exists because the round before it shipped a wrong claim.** It is
