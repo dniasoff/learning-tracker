@@ -177,6 +177,7 @@ void main() {
     test('returns 0.0 when no completions exist (liveOnly)', () async {
       await seedStages(db, trackId: trackId);
       final pct = await service.completionPercent(
+        curriculumId: CurriculumId.mishnayos,
         trackId: trackId,
         profileId: _profileId,
         tier: CompletionTierFilter.liveOnly,
@@ -188,6 +189,7 @@ void main() {
     test('returns 0.0 when no completions exist (trackAchievement)', () async {
       await seedStages(db, trackId: trackId);
       final pct = await service.completionPercent(
+        curriculumId: CurriculumId.mishnayos,
         trackId: trackId,
         profileId: _profileId,
         tier: CompletionTierFilter.trackAchievement,
@@ -199,6 +201,7 @@ void main() {
     test('returns 0.0 when no completions exist (lifetime)', () async {
       await seedStages(db, trackId: trackId);
       final pct = await service.completionPercent(
+        curriculumId: CurriculumId.mishnayos,
         trackId: trackId,
         profileId: _profileId,
         tier: CompletionTierFilter.lifetime,
@@ -211,6 +214,7 @@ void main() {
       await seedStages(db, trackId: trackId);
       await seedLive(db, trackId: trackId, sefariaRef: 'ref1');
       final pct = await service.completionPercent(
+        curriculumId: CurriculumId.mishnayos,
         trackId: trackId,
         profileId: _profileId,
         tier: CompletionTierFilter.lifetime,
@@ -231,6 +235,7 @@ void main() {
         await seedBulkInTrack(db, trackId: trackId, sefariaRef: 'ref2');
 
         final pct = await service.completionPercent(
+          curriculumId: CurriculumId.mishnayos,
           trackId: trackId,
           profileId: _profileId,
           tier: CompletionTierFilter.liveOnly,
@@ -246,6 +251,7 @@ void main() {
       await seedBulkInTrack(db, trackId: trackId, sefariaRef: 'ref2');
 
       final pct = await service.completionPercent(
+        curriculumId: CurriculumId.mishnayos,
         trackId: trackId,
         profileId: _profileId,
         tier: CompletionTierFilter.trackAchievement,
@@ -263,6 +269,7 @@ void main() {
       await seedBulkInTrack(db, trackId: trackId, sefariaRef: 'ref1');
 
       final pct = await service.completionPercent(
+        curriculumId: CurriculumId.mishnayos,
         trackId: trackId,
         profileId: _profileId,
         tier: CompletionTierFilter.lifetime,
@@ -278,6 +285,7 @@ void main() {
         await seedLifetimeOnly(db, trackId: trackId, sefariaRef: 'ref1');
 
         final pct = await service.completionPercent(
+          curriculumId: CurriculumId.mishnayos,
           trackId: trackId,
           profileId: _profileId,
           tier: CompletionTierFilter.liveOnly,
@@ -292,6 +300,7 @@ void main() {
       await seedLifetimeOnly(db, trackId: trackId, sefariaRef: 'ref1');
 
       final pct = await service.completionPercent(
+        curriculumId: CurriculumId.mishnayos,
         trackId: trackId,
         profileId: _profileId,
         tier: CompletionTierFilter.trackAchievement,
@@ -309,6 +318,7 @@ void main() {
       await seedLifetimeOnly(db, trackId: trackId, sefariaRef: 'ref1');
 
       final pct = await service.completionPercent(
+        curriculumId: CurriculumId.mishnayos,
         trackId: trackId,
         profileId: _profileId,
         tier: CompletionTierFilter.lifetime,
@@ -329,18 +339,21 @@ void main() {
 
       const totalItems = 10;
       final liveOnlyPct = await service.completionPercent(
+        curriculumId: CurriculumId.mishnayos,
         trackId: trackId,
         profileId: _profileId,
         tier: CompletionTierFilter.liveOnly,
         totalItems: totalItems,
       );
       final achievePct = await service.completionPercent(
+        curriculumId: CurriculumId.mishnayos,
         trackId: trackId,
         profileId: _profileId,
         tier: CompletionTierFilter.trackAchievement,
         totalItems: totalItems,
       );
       final lifetimePct = await service.completionPercent(
+        curriculumId: CurriculumId.mishnayos,
         trackId: trackId,
         profileId: _profileId,
         tier: CompletionTierFilter.lifetime,
@@ -378,6 +391,7 @@ void main() {
       await seedLive(db, trackId: trackId, sefariaRef: 'ref2', stageId: 1);
 
       final pct = await service.completionPercent(
+        curriculumId: CurriculumId.mishnayos,
         trackId: trackId,
         profileId: _profileId,
         tier: CompletionTierFilter.liveOnly,
@@ -392,6 +406,7 @@ void main() {
       await seedLive(db, trackId: trackId, sefariaRef: 'ref2', stageId: 1);
 
       final pct = await service.completionPercent(
+        curriculumId: CurriculumId.mishnayos,
         trackId: trackId,
         profileId: _profileId,
         tier: CompletionTierFilter.liveOnly,
@@ -422,6 +437,7 @@ void main() {
       );
 
       final pct = await service.completionPercent(
+        curriculumId: CurriculumId.mishnayos,
         trackId: trackId,
         profileId: _profileId,
         tier: CompletionTierFilter.liveOnly,

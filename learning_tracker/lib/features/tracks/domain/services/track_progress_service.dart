@@ -53,6 +53,7 @@ class TrackProgressService {
   ///   track's curriculum; if omitted or 0 the method returns 0.0.
   Future<double> completionPercent({
     required int trackId,
+    required CurriculumId curriculumId,
     required int profileId,
     required CompletionTierFilter tier,
     required int totalItems,
@@ -61,7 +62,7 @@ class TrackProgressService {
   }) async {
     if (totalItems == 0) return 0.0;
 
-    final stages = await _stageRepo.getStagesByTrack(trackId);
+    final stages = await _stageRepo.getStagesForCurriculum(curriculumId);
     if (stages.isEmpty) return 0.0;
 
     final completions = await _dao.getCompletionsByTier(

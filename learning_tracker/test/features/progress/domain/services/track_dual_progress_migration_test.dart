@@ -20,6 +20,7 @@ library;
 import 'package:drift/drift.dart' show InsertMode, Value;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_tier_filter.dart';
 import 'package:learning_tracker/features/tracks/domain/services/track_progress_service.dart';
 import 'package:learning_tracker/features/tracks/stages/data/repositories/stage_definition_repository_impl.dart';
@@ -156,6 +157,7 @@ void main() {
 
         // Migrated path.
         final migratedPct = await service.completionPercent(
+          curriculumId: CurriculumId.mishnayos,
           trackId: trackId,
           profileId: _profileId,
           tier: CompletionTierFilter.trackAchievement,
@@ -188,6 +190,7 @@ void main() {
         );
 
         final migratedPct = await service.completionPercent(
+          curriculumId: CurriculumId.mishnayos,
           trackId: trackId,
           profileId: _profileId,
           tier: CompletionTierFilter.trackAchievement,
@@ -216,6 +219,7 @@ void main() {
         );
 
         final migratedPct = await service.completionPercent(
+          curriculumId: CurriculumId.mishnayos,
           trackId: trackId,
           profileId: _profileId,
           tier: CompletionTierFilter.trackAchievement,

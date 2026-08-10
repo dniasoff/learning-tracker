@@ -156,6 +156,7 @@ Future<double> dashboardTrackCompletionPercentage(Ref ref, int trackId) async {
   );
   return service.completionPercent(
     trackId: trackId,
+    curriculumId: curriculum,
     profileId: profileId,
     tier: CompletionTierFilter.trackAchievement,
     totalItems: totalItems,
@@ -205,7 +206,7 @@ Future<double> dashboardCompletionPercentage(
   final byTrack = <int, TrackEntry>{};
   for (final trackId in completionsByTrack.keys) {
     if (trackId == 0) continue; // bulk-mark sentinel — skip
-    final stages = await stageRepository.getStagesByTrack(trackId);
+    final stages = await stageRepository.getStagesForCurriculum(curriculum);
     if (stages.isEmpty) {
       AppLogger.instance.warning(
         event:

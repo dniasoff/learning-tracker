@@ -1,3 +1,4 @@
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/providers/calendar_providers.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
@@ -91,7 +92,13 @@ Future<CalendarPosition> programCalendarPosition(Ref ref, int trackId) async {
   final totalDays = cycleEntries.isNotEmpty ? cycleEntries.length : 1;
 
   // 5. Count unique first-stage completions (learn-stage progress).
-  final stages = await stageRepository.getStagesByTrack(trackId);
+  final curriculumId = CurriculumId.fromStorageKey(track.curriculumId);
+  if (curriculumId == null) {
+    throw StateError(
+      'Track $trackId has unresolvable curriculum ${track.curriculumId}',
+    );
+  }
+  final stages = await stageRepository.getStagesForCurriculum(curriculumId);
   final firstStage = stages.isEmpty
       ? null
       : (stages.toList()..sort((a, b) => a.stageOrder.compareTo(b.stageOrder)))

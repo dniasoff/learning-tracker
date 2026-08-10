@@ -188,6 +188,7 @@ void main() {
 
       // Migrated path: trackAchievement.
       final migratedPct = await service.completionPercent(
+        curriculumId: CurriculumId.mishnayos,
         trackId: trackId,
         profileId: _profileId,
         tier: CompletionTierFilter.trackAchievement,
@@ -211,6 +212,7 @@ void main() {
         await _seedBulkInTrack(db, trackId: trackId, ref: 'ref3');
 
         final migratedPct = await service.completionPercent(
+          curriculumId: CurriculumId.mishnayos,
           trackId: trackId,
           profileId: _profileId,
           tier: CompletionTierFilter.trackAchievement,
@@ -241,6 +243,7 @@ void main() {
 
         // Migrated: live + bulkInTrack only → 2/10.
         final migratedPct = await service.completionPercent(
+          curriculumId: CurriculumId.mishnayos,
           trackId: trackId,
           profileId: _profileId,
           tier: CompletionTierFilter.trackAchievement,

@@ -586,6 +586,7 @@ Future<TrackDualProgressMetric?> _computeTrackDualProgressMetric({
   // trackAchievement excludes lifetimeOnly rows (correct per B1 policy).
   final currentCyclePct = await progressSvc.completionPercent(
     trackId: track.id,
+    curriculumId: curriculum,
     profileId: profileId,
     tier: CompletionTierFilter.trackAchievement,
     totalItems: denominator,

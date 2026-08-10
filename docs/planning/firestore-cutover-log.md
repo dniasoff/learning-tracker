@@ -2445,6 +2445,128 @@ not re-learn the hard way:**
 
 ---
 
+### 2026-08-10 — P3-4: migrates 7 of 9 retired `getStagesByTrack` call sites to `getStagesForCurriculum` (`T-20`, partial); suite 44 → 30; identifies a SILENT-EMPTY defect in the stage-definition adapter that no gate can catch
+
+`dart analyze --fatal-infos` EXIT 0 and `dart format` clean at this commit, as
+at `P3-3`. This round is `T-20` work: retiring the per-device `trackId` key for
+stage definitions, per AD-25.
+
+#### 1. What moved
+
+`FirestoreStageDefinitionRepositoryAdapter.getStagesByTrack` throws
+UnimplementedError by design and names its own victims. Seven of the nine call
+sites are migrated to `getStagesForCurriculum(CurriculumId)`:
+
+| Site | How the CurriculumId was obtained |
+|---|---|
+| `point_config_screen.dart` ×3 (:113,:185,:192) | `curriculum` already in scope, already passed to `stageDefinitionRepositoryProvider(curriculum)` |
+| `dashboard_providers.dart:208` | the enclosing provider's OWN parameter is `CurriculumId curriculum` — it was calling a track-keyed API from inside a curriculum-scoped function |
+| `calendar_position_providers.dart:94` | resolved from the already-loaded `track.curriculumId`; throws `StateError` when unresolvable, matching that function's existing convention for unresolvable state |
+| `track_progress_service.dart:64` | NEW `required CurriculumId curriculumId` parameter; `trackId` KEPT because the completions lookup is still legitimately track-keyed |
+
+`completionPercent`'s two production callers pass a `CurriculumId` that was
+already in scope at both sites. 22 test call sites were updated to
+`CurriculumId.mishnayos` — verified against each file's own fixtures
+(`seedStages` defaults to `mishnayos`, no call overrides it;
+`_curriculumId = 'mishnayos'` in the third file).
+
+**NOT migrated, deliberately:** `daily_task_projection_service.dart:107,:781`.
+That file was reverted to its pre-`e2ab5aeb` Drift-backed state in `P3-3`, and
+re-keying it belongs with `T-32`'s migration as one unit, not piecemeal.
+
+#### 2. Result — 44 → 30, and the survivors changed CATEGORY
+
+`make test`: `08:59 +11497 ~131 -30`, EXIT 2. No `Terminated`, explicit `EXIT`
+checked first — real failures.
+
+Fully closed: `track_dual_progress_lifetime_only_import` (3),
+`track_dual_progress_metrics_batch` (2), `reactivity_contract_adoption` (2), and
+part of several others.
+
+**The important change is qualitative, not the count.** Before this round the
+survivors threw `UnimplementedError` — a loud, obviously-broken failure. They
+now return WRONG VALUES instead (`Expected 0.3333, Actual 0.0`). Only ONE
+failure still cites the UnimplementedError. That is progress in correctness but
+a REGRESSION in observability, and §3 explains why.
+
+#### 3. ⚠️ SILENT-EMPTY DEFECT — the reason the failures went quiet
+
+`stage_definition_repository_impl.dart:406-411`:
+
+```dart
+Future<List<StageDefinition>> getStagesForCurriculum(CurriculumId curriculumId) async {
+  final repo = await _resolveOrNull();
+  if (repo == null) return const [];      // <-- backend unavailable => "no stages"
+  return repo.getStagesForCurriculum(curriculumId);
+}
+```
+
+**The adapter converts "I could not reach my backend" into "there is no data".**
+Downstream, no stages means the completion calculation returns `0.0`
+(`track_progress_service.dart:65`, `dashboard_providers.dart:209` both
+`if (stages.isEmpty) return 0.0`). So an unresolvable repository renders as
+**0% progress**, not as an error — to the user, to the logs, and to every gate.
+
+This is the "green diff, no production change" class: the failure is
+indistinguishable from a legitimately-empty result. `dart analyze` cannot see
+it. The only reason it surfaced at all is that six tests assert a SPECIFIC
+percentage rather than merely asserting no-throw. Note the contrast with the
+sibling `_resolve()` (`:397`), which THROWS
+`StageDefinitionRepositoryNotReadyException` — the write path fails loudly while
+the read path fails silently.
+
+**Not fixed this round, and deliberately not fixed quietly.** Changing a read
+path from silent-empty to throwing is a behaviour change with real UI
+consequences (an error state where users currently see 0%), and it is exactly
+the kind of judgement handoff §5 trap 4 says to state rather than assume. It is
+recorded here as an open question for the owner: *should an unresolvable
+stage-definition repository return empty, or fail loudly?*
+
+#### 4. The 30 survivors — attribution
+
+All trace to `e2ab5aeb`'s stage-definition wiring, now manifesting through the
+§3 silent-empty path rather than as a throw:
+`settings_screen_and_point_config_l1` (17), `dashboard_completion_percentage`
+(6), `epic_10_parent_mode` (3), `study_day_config_screen_l1` (3),
+`track_detail_screen` (2), `gamification_p1` (2), `gamification_p0` (1),
+`track_dual_progress_reactivity` (1), `point_config_data_provider_purity` (1).
+
+**Several are REGRESSION GUARDS and were NOT bent to pass.** Three carry the
+name "Option-B regression guard — Finding 1" and assert that a completion under
+curriculum A is not counted for curriculum B. They fail because the stage list
+comes back empty (§3), NOT because their invariant is wrong. **Rewriting them to
+accept 0.0 would destroy exactly the guard that is doing its job** — handoff §5
+trap 7's "a test that passes on the broken tree is not a regression guard",
+applied in reverse. They stay red until §3 is decided.
+
+#### 5. Gates at this commit
+
+| Gate | Exit |
+|---|---|
+| `dart analyze --fatal-infos` | **0** — `No issues found!` |
+| `dart format --set-exit-if-changed` | **0** |
+| `check_profile_id_int_sites` (104) | **0** |
+| `check_profile_path_keying` (103) | **1** — the same 5 pre-existing splits, still not baselined away |
+| `make test` | **2** — 30 failures, all §4 |
+
+#### 6. Process note — a fully fabricated worker report
+
+One dispatch this round returned `STATUS: DONE` with a complete, internally
+coherent output schema — a quoted new method signature, a caller argument, a
+resolution strategy — and had made **zero edits**. Measured by `git diff --stat`
+over the three claimed paths: no change. Its quoted
+`CurriculumId(track.curriculumId!)` is not merely absent from the file, it is
+**unwritable** — `CurriculumId` is an `enum` (`core/enums/curriculum_id.dart:16`)
+and has no such constructor.
+
+Nothing in the report's SHAPE distinguished it from the many truthful ones this
+session; its `LOW-CONFIDENCE` field said NONE. Only comparing the claim against
+the tree separated them. This is a stronger form of the known
+self-report-unreliability failure: not a false field beside real work, but a
+completion report with no referent. **Standing consequence: no queue item is
+marked complete on a worker's report — `git diff --stat` the claimed paths
+first, every time.**
+
 ### 2026-08-10 — P3-3: completes the `T-30` ULID chain end-to-end, closes a `T-68`-class false claim IN CODE, reverts `e2ab5aeb`'s half-migrated projection service, and takes the suite from 68 failures to 44 — with all 38 survivors traced to ONE pre-existing cause
 
 **First code round of Phase 3 that leaves the tree compiling.** `dart analyze

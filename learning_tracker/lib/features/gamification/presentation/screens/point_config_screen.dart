@@ -110,7 +110,7 @@ final pointConfigDataProvider = FutureProvider.autoDispose<List<_TrackPointData>
       if (curriculum == null) continue;
 
       final stageRepo = ref.read(stageDefinitionRepositoryProvider(curriculum));
-      final stages = await stageRepo.getStagesByTrack(track.id);
+      final stages = await stageRepo.getStagesForCurriculum(curriculum);
       // Nothing to show yet -- the maintenance action seeds this track's
       // stage definitions and will invalidate this provider once it does.
       if (stages.isEmpty) continue;
@@ -182,14 +182,14 @@ class PointConfigMaintenanceController extends Notifier<void> {
       if (curriculum == null) continue;
 
       final stageRepo = ref.read(stageDefinitionRepositoryProvider(curriculum));
-      var stages = await stageRepo.getStagesByTrack(track.id);
+      var stages = await stageRepo.getStagesForCurriculum(curriculum);
       if (stages.isEmpty) {
         await stageRepo.initializeDefaults(
           curriculum,
           profileId: profileId,
           trackId: track.id,
         );
-        stages = await stageRepo.getStagesByTrack(track.id);
+        stages = await stageRepo.getStagesForCurriculum(curriculum);
         wrote = true;
       }
       if (stages.isEmpty) continue;
