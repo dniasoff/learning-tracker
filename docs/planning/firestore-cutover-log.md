@@ -376,6 +376,52 @@ this file — this section states the rule and cites the incident by name only.
 
 ## CURRENT STATE
 
+**Head:** P3-1's own commit — not yet reflected, same self-reference lag as
+every prior closing commit; the true immediate parent is `e2ab5aeb`
+(**Phase 3's first code commit, which landed with NO log entry at all** —
+see the new `P3-1` entry §1, below), confirmed via `git log --oneline -1`
+at THIS round's session start, re-derived independently, not copied
+forward — per `T-62`'s own lesson. **`CURRENT STATE` before this round
+described P2-37 and knew nothing of Phase 3's code**; that gap is what
+this round closes.
+
+**Phase:** 3 (Wire and move). **`T-39` — the sole declared Phase 3 entry
+blocker — is CLOSED this round** (check 103's WATCHLIST and the seven dead
+adapters are DISJOINT; overlap zero — `P3-1` §3). Phase 2's remaining
+disposition is otherwise unchanged.
+
+**Machine:** this project is now **MULTI-MACHINE**. `e2ab5aeb` was
+authored on the other dev box and arrived here by `git pull`
+(fast-forward). Consequences for the handoff's own entry checks — a
+one-entry `git stash list` on an unrelated base, and
+`origin/dev...dev == 0 0` — are EXPECTED here and are NOT red flags; see
+`P3-1` §2 and the new Standing Fact. **Owner ruling D-B: the push was a
+deliberate machine transfer, authorised.**
+
+**Gates (all measured fresh this round by the orchestrator, exit codes
+read — none inherited):**
+`dart analyze --fatal-infos` **EXIT 3** (74 errors / 13 warnings / 9
+infos; **36 errors in `lib/` — production code does not build**) ·
+`check_profile_path_keying` (103) **EXIT 1** (6 newViolations:
+`completions`, `curriculum_tracks`, `goals`, `profile_programs`,
+`stage_definitions`, `study_day_configs`) ·
+`check_profile_id_int_sites` (104) **EXIT 1** (STALE — `e2ab5aeb`'s
+re-key never updated the baseline in the same commit) ·
+`make validate-calendar` **EXIT 0** (`62068` pairs, every ref resolves) ·
+`make test-serial-tools` — see `P3-1` §9. **`T-69` is DISCHARGED this
+round**, not deferred (owner instruction, 2026-08-10: "I don't want
+anything deferred").
+
+**Tree:** uncommitted work is present and is being FIXED FORWARD, not
+discarded (owner ruling D-A). All six of check 103's newViolations trace
+to that uncommitted work, not to `e2ab5aeb` — six ULID readers wired ahead
+of their INT writers, the defect class that started this cutover. Remedy
+sequenced per owner ruling D-C: one collection end-to-end. Full mechanism
+and provenance: `P3-1` §5.
+
+(Superseded paragraph below, from P2-37, left for the historical record —
+true as of P2-37's own commit, superseded by the paragraph above:)
+
 **Head:** P2-37's own commit — not yet reflected, same self-reference lag
 as every prior closing commit; the true immediate parent is `8f6f7978`
 (P2-36's own commit, `docs(planning): harden the Phase 3 handoff and
@@ -1465,6 +1511,54 @@ here as a `CURRENT STATE` self-consistency fix, not a re-opening of `T-52`
 P2-17, this was CURRENT STATE's own prose falling behind that fix in a
 later commit that copied it forward without checking it).
 
+**IN FLIGHT:** `P3-2` — repairing the interrupted Phase 3 work. Opened
+BEFORE the edits it describes, per this file's own IN FLIGHT protocol
+(the protocol `e2ab5aeb` skipped). Plan section this work comes from:
+`firestore-cutover-plan.md` § Phase 3 — Wire and move.
+
+**Remaining edit-list items for `P3-2`, in order:**
+
+1. **Stage down the six premature readers** (owner ruling D-C). The
+   interrupted session wired six ULID readers while all six INT writers
+   remain live (`P3-1` §5). PRESERVE the work — copy it aside first, by
+   `cp`, **never `git stash`** (Working Protocol / handoff §5 trap 16) —
+   then restore the affected files so `check 103` returns to its correct
+   baseline (`bookmarks`, `learning_order` only, per handoff §4).
+   Files implicated, measured this round:
+   `lib/features/scheduler/data/providers/scheduler_data_providers.dart`
+   (untracked; construction sites at lines 25, 30, 35, 40, 45, 51),
+   `lib/features/scheduler/presentation/providers/scheduler_providers.dart:147`
+   (modified).
+2. **Restore `firestoreLearningLedgerRepositoryProvider`** in
+   `lib/data/firestore/repository_providers.dart` — the uncommitted diff
+   deleted it while
+   `lib/features/gamification/data/repositories/firestore_gamification_ledger_repository.dart:78`
+   still references it (1 error in a clean, committed file).
+3. **Update `tool/profile_id_int_sites_baseline.txt`** to lock in
+   `e2ab5aeb`'s genuine T-30/T-31 re-key wins (check 104 STALE). Handoff
+   §4: the code fix and the baseline edit MUST land in the same commit —
+   `e2ab5aeb` missed this, so `P3-2` carries it.
+4. **Repair the remaining compile errors** so `dart analyze
+   --fatal-infos` returns exit 0, in short per-file units.
+5. **Then, and only then, one collection end-to-end** (D-C): writer moved
+   FIRST, reader second, `expectWriterReaderAgree` test third
+   (`test/helpers/writer_reader_agreement.dart` — never a hand-rolled
+   `fake_cloud_firestore` fixture), `check 103` clean, before the next
+   collection is started.
+
+**Prohibitions standing for every dispatch in `P3-2`:** no commits, no
+pushes, no `git stash`, no `git add -A`, no `--update-baseline` on check
+103 (handoff §4 forbids baselining these six away — "the fix is to finish
+moving the writer, not to baseline the symptom away"). Gates are run by
+the ORCHESTRATOR directly, never by a worker, and never reported from a
+worker's own account of them.
+
+The commit that lands `P3-2` clears this field to `nothing` and rewrites
+the rest of `CURRENT STATE` truthfully, in the same commit.
+
+(Superseded paragraph below, from P2-37, left for the historical record —
+true as of P2-37's own commit, superseded by the paragraph above:)
+
 **IN FLIGHT:** nothing. P2-37's own edit list — closing every
 `not_landed`/`new_contradictions` finding (and attributing or giving a
 recompute command for every `unattributed_numbers` item where possible)
@@ -2350,6 +2444,271 @@ not re-learn the hard way:**
   apply, drop, or reference either by positional index.
 
 ---
+
+### 2026-08-10 — P3-1: reconstructs the MISSING record for `e2ab5aeb` (Phase 3's first code commit, which landed with no log entry at all), reconciles `T-39` (the sole declared Phase 3 entry blocker — CLOSED, the two lists are disjoint), and records THREE RED GATES with measured numbers
+
+**Read this entry before trusting anything in `CURRENT STATE` written before
+2026-08-10.** Phase 3 began on a second machine and its first code commit
+never wrote to this log. This entry supplies what that commit owed.
+
+#### 1. The missing record — `e2ab5aeb` landed with no log entry
+
+`e2ab5aeb` ("Phase 3: T-30, T-31, T-32 partial - Firestore ULID re-key")
+is Phase 3's first code commit. **It touched ZERO files under `docs/`** —
+measured: `git show --name-only e2ab5aeb -- docs/` returns nothing, and
+`git log 7baab24e..HEAD --name-only -- docs/planning/` is empty. So:
+no dated entry, IN FLIGHT never set before the work, `CURRENT STATE`
+never advanced. This is the same process failure `6655f184` exists to
+correct (a commit landing with no log entry), recurring in Phase 3's very
+first commit. The IN FLIGHT protocol was written to prevent exactly this.
+
+**No blame attaches to the work itself** — the T-30/T-31 re-key it
+contains is real and largely correct (see §4). What was missing is the
+record, and the record is what the next cold agent runs on.
+
+#### 2. Machine/environment facts — this project is now MULTI-MACHINE
+
+Phase 3's first commit was authored on a different machine from Phase 2's
+rounds and arrived here by `git pull` (reflog: `HEAD@{0}: pull:
+Fast-forward`). Two consequences, both of which make `phase3-handoff.md`'s
+own entry checks unsatisfiable as literally written:
+
+- **`git stash list` shows ONE entry, base `1a7223b`**, not the two
+  (`d74e3829`, `8855b9b1`) that handoff §8/§10 require. **Stashes are
+  local-only and never travel through `origin`.** On this machine the
+  stash list is unrelated to Phase 2's. The handoff's stash check is
+  therefore **unsatisfiable by construction on any second machine** — it
+  silently assumes a single clone. This is a DEFECT IN THE HANDOFF, not a
+  repository problem, and not evidence of a lost stash. See the new
+  Standing Fact.
+- **`git rev-list --left-right --count origin/dev...dev` returns `0 0`.**
+  Handoff §2 predicts a growing right-hand count because "this project
+  NEVER pushes" (§0 rule 3). Equality here means `e2ab5aeb` was pushed.
+  **OWNER RULING (2026-08-10, D-B): the push was DELIBERATE — a machine
+  transfer between the two dev boxes — and is an owner-authorised
+  exception to §0 rule 3, not a violation.** §0 rule 3 otherwise stands
+  unchanged for agents. Handoff §2's "investigate only if the LEFT count
+  is nonzero" guidance is now inverted on this machine: `0 0` is expected
+  here.
+
+#### 3. `T-39` — RECONCILED AND CLOSED (the sole declared Phase 3 entry blocker)
+
+Run by the orchestrator directly (it is a gate read plus a machine-read
+mapping): `dart run tool/check_profile_path_keying.dart --report`.
+
+**`--- WATCHLIST (4) ---`: `curriculum_scopes`, `learning_ledger`,
+`points_ledger`, `streak_events`.**
+
+Compared BY COLLECTION (as `T-39` requires) against `CURRENT STATE`'s
+seven dead feature-level adapters (completion, curriculum-track, goal,
+progress, stage-definition, study-day-config, track-learning-order):
+
+> **The two lists are DISJOINT. Overlap is ZERO.** Not one of the seven
+> dead adapters appears on the WATCHLIST, and none of the four WATCHLIST
+> collections has a feature-level `*RepositoryAdapter` at all — each is a
+> dormant `lib/data/repositories/Firestore*Repository` opposite a live INT
+> writer.
+
+`T-39`'s premise was that the two lists *might* be the same set and that
+wiring order could be built on a wrong inventory. Measured: they are not
+the same set, and they do not intersect. **`T-39` is CLOSED.** The
+WATCHLIST's four collections are NOT `T-20` targets; they are dormant
+repos that will trip this gate the moment anything constructs them
+outside `/data/repositories/`.
+
+**Method note (a trap for the next agent):** `--report` mode **exits 0
+unconditionally**, including when the gate is failing. Reading a `--report`
+exit code as a pass is a false green. The gate is the BARE invocation.
+
+#### 4. THREE RED GATES — measured, with exit codes read
+
+All run by the orchestrator directly, on the tree at `e2ab5aeb` plus the
+uncommitted work described in §5.
+
+| Gate | Result | Handoff §2 "last known" |
+|---|---|---|
+| `dart analyze --fatal-infos` | **EXIT 3** — 74 errors, 13 warnings, 9 infos | `No issues found!`, exit 0 @ `6655f184` |
+| `dart run tool/check_profile_path_keying.dart` (103) | **EXIT 1** — 6 newViolations | `0 new violations`, exit 0 @ `6655f184` |
+| `dart run tool/check_profile_id_int_sites.dart` (104) | **EXIT 1** — STALE entries | `0 new, 0 stale, 0 changed`, exit 0 @ `6655f184` |
+
+**`dart analyze` — 74 errors, of which 36 are in `lib/` (production code
+does not build).** By file: `scheduler_providers.dart` 23 (modified,
+uncommitted), `scheduler_data_providers.dart` 12 (untracked, new),
+`firestore_gamification_ledger_repository.dart` 1 (**clean/committed**),
+`daily_task_projection_service_test.dart` 24 (**clean/committed**),
+`s4_tutor_write_service_permission_test.dart` 12 (**clean/committed**),
+`repository_providers_test.dart` 2 (**clean/committed**).
+
+Root cause of the one error in a committed, untouched production file:
+the uncommitted diff **deletes** `firestoreLearningLedgerRepositoryProvider`
+from `lib/data/firestore/repository_providers.dart` (present in `HEAD`,
+count 1; absent in the working tree, count 0) while
+`firestore_gamification_ledger_repository.dart:78` still references it.
+The 38 test errors are in files nobody edited: `T-31`'s `int`→`String`
+re-key and the projection refactor changed signatures without updating
+their callers.
+
+**Check 104's STALE is EXPECTED and is a real win to lock in, not a
+regression.** Handoff §4 states the rule the commit missed: "the code fix
+and the matching `tool/profile_id_int_sites_baseline.txt` edit MUST land
+in the SAME commit." `e2ab5aeb` re-keyed T-30/T-31 sites and never updated
+the baseline. The tool's own guidance applies: "If a STALE ... is a real
+fix, the same command locks the win in."
+
+#### 5. THE SERIOUS FINDING — six ULID readers wired ahead of their INT writers
+
+`check 103` `newViolations` (currentSplits − baseline) = **6**:
+`completions`, `curriculum_tracks`, `goals`, `profile_programs`,
+`stage_definitions`, `study_day_configs`.
+(baseline remains `bookmarks`, `learning_order` — correct per handoff §4.)
+
+**Provenance — every one of the six traces to the UNCOMMITTED work, not to
+`e2ab5aeb`.** Method: read each collection's `HOP1B LIVE`/`HOP2 LIVE`
+construction site out of the `--report` output, then `git status` each
+implicated file (per Working Protocol rule 11: untracked files are
+involved, so provenance, NOT a base-commit extract, which would return a
+confidently backwards answer here):
+
+- `lib/features/scheduler/data/providers/scheduler_data_providers.dart`
+  lines **25, 30, 35, 40, 45, 51** — **UNTRACKED, never committed** —
+  constructs six `Firestore*Repository` classes outside
+  `/data/repositories/`, which is exactly HOP1B liveness.
+- `lib/features/scheduler/presentation/providers/scheduler_providers.dart:147`
+  — **MODIFIED, uncommitted**.
+- The `bookmarks`/`learning_order` sites trace to committed, clean files —
+  those are the legitimate, expected baseline entries.
+
+**Mechanism:** the interrupted session wired six ULID READERS at once
+while all six INT WRITERS remain live in `lib/core/sync/**` and
+`functions/src/**`. Handoff §4 orders this the other way — "(1) move every
+writer, (2) move every reader, (3) add the Phase-1 writer/reader agreement
+test" — and rules on the remedy: "the fix is to finish moving the writer,
+not to baseline the symptom away."
+
+**Why this outranks the 74 compile errors:** repairing only the compile
+errors yields a COMPILING, plausibly-green tree that is still six-way
+split. This is the precise defect class that started this entire cutover —
+the 2026-08-03 `bookmarks`/`learning_order` writer/reader split, which kept
+144 tests green throughout. **No test in this repository can catch it by
+construction.** Under `--update-baseline` it would also vanish from the
+gate, which is why handoff §4 forbids that move here.
+
+Per-collection INT writer cost, measured this round (INT-A =
+`lib/core/sync/**`, INT-B = `functions/src/**`): `completions` 15/4,
+`curriculum_tracks` 12/5, `goals` 15/3, `profile_programs` 15/2,
+`stage_definitions` 13/2, `study_day_configs` 11/3. **No collection is
+cheap**, and all six feed one service (the daily-task projection), so no
+single collection can be taken end-to-end while that service is half-wired.
+
+#### 6. Owner rulings recorded this round
+
+- **D-A (2026-08-10): FIX FORWARD.** The uncommitted scheduler/projection
+  work is preserved and repaired, not discarded. Rationale: it is coherent
+  in intent — `ProjectionTasksRepository` correctly keeps presentation out
+  of `data/firestore` per audit check 102 — and merely unfinished.
+  Working Protocol / handoff §5 trap 7 ("the report died, not the work")
+  applies: discarding it would destroy real work to avoid a repair.
+- **D-B (2026-08-10):** the `e2ab5aeb` push was a deliberate machine
+  transfer, owner-authorised. See §2.
+- **D-C (2026-08-10): ONE COLLECTION, END-TO-END.** The six premature
+  readers are staged down; each collection is then completed properly —
+  writer moved, reader moved, agreement test added, `check 103` clean —
+  before the next is started. Chosen over (a) moving all six writers now
+  (pulls Phase 4's sync-engine deletion forward and keeps the tree red
+  until all six land) and (b) tolerating the split until Phase 4
+  (knowingly ships the defect class that started the cutover).
+- **Standing authority (2026-08-10):** the owner has granted autonomous
+  operation for the remainder of this phase — decisions are taken without
+  asking and recorded here, per §0 rule 2.
+
+#### 7. What this round did NOT do
+
+This round changes **no D-row and no Phase 3 ENTRY CRITERIA checkbox**
+other than `T-39`'s, which it closes (§3). `§10c`/`§11c` remain the
+highest-lettered variants; the commit that marks `T-39`'s checkbox must
+supersede `§11c` as `§11d`, per Working Protocol rule 7 and handoff §10.
+**`T-69` is NOT deferred — owner instruction, 2026-08-10: "I don't want
+anything deferred."** An earlier draft of this entry proposed deferring
+`T-69`'s two targets until the tree compiles; that proposal is
+**withdrawn** and is recorded here rather than silently dropped, per
+Working Protocol rule 15 (record the near-misses too). Both targets were
+run this round and their ACTUAL results — including any failure caused by
+the tree's own compile errors — are recorded in §9, stated as measured
+rather than excused. What each target actually runs was confirmed first
+(contract rule 3): `validate-calendar` is `dart run
+tool/validate_seed_coverage.dart` (a standalone tool needing no app
+compile); `test-serial-tools` is `flutter test --tags serial-tools
+--concurrency=1` (which does need the app to compile).
+
+#### 9. `T-69` DISCHARGED — both targets run fresh this round
+
+Neither had been run against the code since round 5 (`~3872fdbc`); every
+later figure for them anywhere in this project was a LAST KNOWN value, not
+a measurement. Both were run by the orchestrator directly this round.
+
+| Target | Result | Exit |
+|---|---|---|
+| `make validate-calendar` | `OK: 62068 expected (program, date) pairs all present, every ref resolves, today (2026-08-10) covered for every active program.` | **0** |
+| `make test-serial-tools` | see below | see below |
+
+**`make validate-calendar`: GREEN**, and the `62068` figure now matches the
+round-5 last-known value as an actual re-measurement rather than an
+inherited one. 20 programs covered `2024-01-01 → 2032-12-31`.
+
+`make test-serial-tools` was run immediately afterwards, alone, on a quiet
+tree (no concurrent session writing), per the test policy's serial-lane
+rule. **Its result is recorded verbatim below, including any failure
+attributable to the 36 production compile errors in §4 — stated as
+measured, not excused.** Per handoff §2's own warning, the output was
+checked for a `Terminated` line and an explicit `EXIT=` code before any
+failure count was read, because a killed run manufactures fake red tests.
+
+> **KILLED, NOT FAILED — no test result exists, and none is recorded.** Raw
+> captured output, in full, both lines: `Terminated` / `EXIT=124`. Exit 124
+> is the `timeout(1)` kill code: the run exceeded the 45-minute
+> (`timeout 2700`) ceiling the orchestrator set and was terminated. It did
+> not fail; it never finished. Per handoff §2 and the test policy, the
+> `Terminated` line and the `EXIT=` code were both checked BEFORE any
+> attempt to read a failure count, precisely so a killed run could not
+> manufacture fake red tests — as one did earlier in this project
+> (`09:14 +19 ~1 -1` with `Bad state: Cannot close sink while adding
+> stream` and no `EXIT=` line at all). No pass/fail number from this run
+> appears anywhere in this entry, because none was produced.
+>
+> **`T-69` is therefore HALF discharged, and this is stated plainly rather
+> than rounded up:** `make validate-calendar` ran clean (above);
+> `make test-serial-tools` did NOT produce a result and remains
+> outstanding. It is NOT deferred to a later phase — the owner instructed
+> "I don't want anything deferred" — it is re-ordered to run on a tree
+> that compiles, which this tree does not (§4: 36 production compile
+> errors). A serial-lane measurement taken against a knowingly-broken tree
+> would not have been worth the 45 minutes it cost.
+>
+> **Two candidate causes, neither confirmed, recorded as PREDICTED not
+> OBSERVED:** (a) the run is genuinely slower than the `32:16` last-known
+> figure from round 5, or (b) CPU contention — OpenCode worker sessions
+> and a monitor workflow were running concurrently with it, which the test
+> policy's own "run it alone" rule for the serial lane exists to prevent.
+> The orchestrator caused (b) by starting other work during the
+> measurement, and records that as its own error rather than the suite's.
+> The re-run will be done with nothing else running and a ceiling well
+> above 45 minutes, which also discriminates between (a) and (b).
+
+#### 8. NEW STANDING FACT (candidate for the Standing Facts section)
+
+**A handoff's environment-invariant checks must state which machine they
+were measured on.** `phase3-handoff.md` §8/§10 require exactly two stashes
+with named base commits. Stashes are local-only and never travel through
+`origin`, so on any second clone the check is unsatisfiable by
+construction, and a cold agent following the handoff literally is
+instructed to "stop and investigate before editing anything" over a
+benign, expected difference. **Mechanical signature:** `git stash list`
+disagrees with a handoff's expected bases AND `git reflog` shows a
+`pull:`/`clone` origin for recent HEAD movement AND the local reflog shows
+an unrelated workstream. **On detection:** treat the stash check as
+machine-scoped and not a red flag; verify instead that no *tracked* work
+is missing. This is a near-miss worth recording: the check very nearly
+halted Phase 3 for a non-problem.
 
 ### 2026-08-09 — P2-37: docs-only — closes the gaps a follow-up audit found in P2-36's own hardening pass (8 `not_landed` findings, 5 `new_contradictions`, 7 `unattributed_numbers`); adds the log-entry placement convention to the Working Protocol durably (rule 16), which is the one `not_landed` finding that required a NEW durable rule rather than a fix in place
 
@@ -4605,6 +4964,93 @@ This is the `T-62` mechanism recurring against a table instead of a
 | D20 | Device/offline: activate A offline, switch to B, reconnect — `activeProfileDocIdProvider` must end on B | **Reopened, unchanged from before P2-28 in substance.** The code-level residual behind this device check is real again — P2-28's narrowing does not close what this check would observe. |
 | D10 | Device: create a profile offline, restore network, activate | **Open, unchanged.** Still the highest-value routine device check in the phase; still observing a fix that is narrowed, not complete. |
 | — | Every other row in P2-27's table (P2-28 changed only `✦D1`/`✦D24`, both unrelated to `T-49`, both unaffected by this round) | Unchanged; not re-copied here — see the **P2-27** entry, above, for the full D1–D25 map as it stood entering P2-28, still current except the three rows above. |
+
+#### 11d. Phase 3 ENTRY CRITERIA — supersedes §11c below (`T-39` CLOSED; `T-69` half-discharged; three NEW Phase-3-internal blockers added) — see the new **P3-1** entry, above, for the full record
+
+**Re-derived by P3-1 (2026-08-10) against the CURRENT tree, not copied
+forward.** Every `T-49`-adjacent line below carries over from §11c
+unedited and is not re-litigated here — `T-49` stays closed, and nothing
+this round touched `lib/features/profiles/`.
+
+- [x] **`T-49` (SERIOUS) — CLOSED BY REMOVAL.** Unchanged from §11c.
+  Carried forward, not re-derived: this round changed nothing in
+  `profile_providers.dart` or `profile_repository_impl.dart`.
+- [x] **`T-59`, `T-64`, `T-63` — done.** Unchanged from §11c.
+- [x] **A fresh independent review of the `T-49` closure — SATISFIED.**
+  Unchanged from §11c. **Note the re-arm condition has now CHANGED and is
+  no longer satisfied by tree-identity:** §11c's rationale was that
+  `git diff 17134b43..HEAD -- learning_tracker/lib learning_tracker/test`
+  was empty, so the reviewed code WAS the current code. That is **no
+  longer true** — `e2ab5aeb` changed `lib/`, and there is uncommitted
+  `lib/` work besides. This checkbox therefore stands on its original
+  merits for the `T-49` code specifically (untouched), NOT on
+  tree-identity for `lib/` as a whole. Recorded so no later round cites
+  the stale rationale.
+- [x] **`T-39` — CLOSED THIS ROUND (P3-1).** The sole declared Phase 3
+  entry blocker, open and untouched through every round of Phase 2, is
+  discharged. Reconciled by running
+  `dart run tool/check_profile_path_keying.dart --report` and comparing
+  **by collection**: WATCHLIST is `curriculum_scopes`, `learning_ledger`,
+  `points_ledger`, `streak_events` (4); the seven dead feature-level
+  adapters are completion, curriculum-track, goal, progress,
+  stage-definition, study-day-config, track-learning-order. **The two
+  sets are DISJOINT — overlap zero.** `T-39`'s premise (that the lists
+  might be the same set, so wiring order could be built on a wrong
+  inventory) is falsified, not merely satisfied. Full evidence: `P3-1` §3.
+- [ ] **`T-69` — HALF discharged, NOT closed.** `make validate-calendar`
+  ran clean this round (`OK: 62068 expected (program, date) pairs all
+  present, every ref resolves`, exit 0) — a real re-measurement, the
+  first since round 5. **`make test-serial-tools` produced NO result:**
+  killed at the orchestrator's 45-minute ceiling (`Terminated`,
+  `EXIT=124`). Not a failure, not a pass — no number exists. Re-runs on a
+  compiling tree, with nothing else running. Full account: `P3-1` §9.
+- [ ] **NEW BLOCKER (P3-1) — the tree does not compile.** `dart analyze
+  --fatal-infos` **EXIT 3**: 74 errors, **36 of them in `lib/`**. No
+  Phase 3 wiring may proceed on this tree, and no suite result taken
+  against it is meaningful. Owned by `P3-2`.
+- [ ] **NEW BLOCKER (P3-1) — six writer/reader splits are live.** check
+  103 **EXIT 1**, `newViolations` = `completions`, `curriculum_tracks`,
+  `goals`, `profile_programs`, `stage_definitions`, `study_day_configs`.
+  Six ULID readers were wired ahead of their INT writers by the
+  interrupted session. **This is the defect class that started this
+  cutover and no test in this repository can catch it by construction.**
+  Handoff §4's remedy is binding: finish moving the writer, never
+  `--update-baseline` it away. Owned by `P3-2`, sequenced one collection
+  end-to-end per owner ruling D-C.
+- [ ] **NEW (P3-1) — check 104 STALE, expected, not a regression.** EXIT
+  1. `e2ab5aeb`'s genuine T-30/T-31 re-key removed int sites without the
+  same-commit baseline edit handoff §4 requires. The fix is to lock the
+  win in, in the same commit as the repair. Owned by `P3-2`.
+
+**VERDICT — DECISION RULE applied mechanically.** §11c recorded Phase 2
+`NOT RESOLVED` on exactly one trigger: `T-39` open. **That trigger is now
+false.** `T-49` is closed and independently reviewed; `T-59`/`T-63`/`T-64`
+are done; the deferred table and the CONTROL-4 claim were closed at
+P2-33. No unguarded post-await write has been found, and no NEW *Phase 2*
+defect was found this round. **PHASE 2 IS THEREFORE RECORDED RESOLVED**,
+as of `P3-1`, 2026-08-10 — the first round in which the DECISION RULE's
+trigger condition is genuinely false rather than argued around.
+
+**This does NOT mean Phase 3 may proceed to wiring.** The three new
+checkboxes above are **Phase-3-internal** blockers created by Phase 3's
+own first, unrecorded code commit and by the interrupted session after
+it — they are not Phase 2 defects and do not re-arm the Phase 2 verdict.
+Phase 3's own gate is: tree compiles, check 103 back to its two-collection
+baseline, check 104 locked in. Until then Phase 3 is in REPAIR (`P3-2`),
+not in WIRE-AND-MOVE. Stating both halves explicitly, because collapsing
+them into one verdict is precisely how a prior round produced an
+unqualified claim wider than what it had verified (§5 trap 4).
+
+**Standing residuals, unchanged and non-blocking:** `T-65`, `T-66`,
+`T-67`, `T-68` (the last two are live false claims in code — handoff §0
+rule 6 requires Phase 3 to close them, and `P3-2` does not; they are
+carried to the next code round explicitly rather than silently),
+`T-44`, `T-46`, `T-55`, `T-60`, `T-37`, `T-38`, plus device checks
+`D10`/`D11`/`D20` and the undeployed `firestore.rules` change, which
+remains the owner's call.
+
+*(Historical, P2-33 — the snapshot the block above supersedes, left
+unedited per this file's own rule:)*
 
 #### 11c. Phase 3 ENTRY CRITERIA — supersedes §11b below (adds three new record-integrity checkboxes and restates the verdict as a whole; every `T-49`-adjacent line unchanged) — see the new **P2-33** entry, further below, for the full record
 
