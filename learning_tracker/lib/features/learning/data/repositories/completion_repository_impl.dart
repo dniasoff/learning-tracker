@@ -281,26 +281,84 @@ class FirestoreCompletionRepositoryAdapter implements CompletionRepository {
   }) async {
     final repo = await _resolve();
     final curriculum = _curriculumFor(request.curriculumId);
+    final now = DateTimeFactory.nowUtc(); // P5: UTC timestamps
+    final source = CompletionSourceX.fromCredits(
+      awardGamificationPoints: awardGamificationPoints,
+      creditsAchievement: creditsAchievement,
+    );
 
     // Idempotency guard: SR-1 permits `update` only as a byte-identical
-    // replay. A genuine re-mark of an already-completed stage would compute
-    // a fresh DateTimeFactory.nowUtc() below and get rules-denied as a
-    // non-identical replay in production — this is the single-item analogue
-    // of CompletionRepositoryImpl.markComplete's own duplicate check
-    // ("existing != null → return existing"), needed here for the same
-    // idempotency reason, not merely to save a write.
-    final existing = await _findExisting(
-      repo,
-      curriculum: curriculum,
-      stageId: request.stageId,
+    // replay, so a genuine re-mark computing a fresh `now` would be
+    // rules-denied in production. This pre-check exists for that reason, not
+    // merely to save a write.
+    //
+    // It MUST route through `getCompletion`, never through a list read:
+    // `getCompletionsForContent` decodes via `_decodeAll`, which drops
+    // tombstoned documents (D-L). A purged completion would therefore look
+    // ABSENT here, and the create below would hit an existing document and be
+    // denied. `getCompletion` deliberately bypasses the tombstone filter so
+    // this path can tell "absent" from "purged".
+    final existing = await repo.getCompletion(
+      curriculumId: curriculum,
       sefariaRef: request.sefariaRef,
-      trackType: request.trackType,
+      stageId: request.stageId,
     );
+
     if (existing != null) {
-      return MarkCompletionResult(
-        completion: existing,
-        isNew: false,
-      );
+      if (existing.purgedAt != null) {
+        // Re-mark after expunge: resurrect rather than create, and report
+        // isNew = true — matching the Drift writer's H1 behaviour exactly,
+        // where a resurrected tombstone counted as new.
+        await repo.restoreCompletion(
+          curriculumId: curriculum,
+          sefariaRef: request.sefariaRef,
+          stageId: request.stageId,
+          completedAt: now,
+        );
+        return MarkCompletionResult(
+          completion: CompletionEntity(
+            curriculumId: existing.curriculumId,
+            sefariaRef: existing.sefariaRef,
+            stageId: existing.stageId,
+            trackType: existing.trackType,
+            source: existing.source,
+            completedAt: now,
+            points: existing.points,
+          ),
+          isNew: true,
+        );
+      }
+
+      // B8: a bulk-imported row hit by real learning is UPGRADED in place, not
+      // duplicated. `isNew` stays FALSE — the completion already existed, so
+      // points, streak, siyum detection and bookmark advance must not fire a
+      // second time. This replaces the Drift writer's `_upgradePriorMarkRow`,
+      // which deleted a `prior_completion_imports` row; provenance now lives on
+      // the document itself, so an upgraded row is invisible to expunge purely
+      // because its `source` is no longer `bulkInTrack`.
+      if (existing.source == CompletionSource.bulkInTrack &&
+          source == CompletionSource.live) {
+        await repo.upgradeSourceToLive(
+          curriculumId: curriculum,
+          sefariaRef: request.sefariaRef,
+          stageId: request.stageId,
+          completedAt: now,
+        );
+        return MarkCompletionResult(
+          completion: CompletionEntity(
+            curriculumId: existing.curriculumId,
+            sefariaRef: existing.sefariaRef,
+            stageId: existing.stageId,
+            trackType: existing.trackType,
+            source: CompletionSource.live,
+            completedAt: now,
+            points: existing.points,
+          ),
+          isNew: false,
+        );
+      }
+
+      return MarkCompletionResult(completion: existing, isNew: false);
     }
 
     final entity = CompletionEntity(
@@ -308,15 +366,16 @@ class FirestoreCompletionRepositoryAdapter implements CompletionRepository {
       sefariaRef: request.sefariaRef,
       stageId: request.stageId,
       trackType: request.trackType,
-      source: CompletionSourceX.fromCredits(
-        awardGamificationPoints: awardGamificationPoints,
-        creditsAchievement: creditsAchievement,
-      ),
-      completedAt: DateTimeFactory.nowUtc(), // P5: UTC timestamps
+      source: source,
+      completedAt: now,
       points: request.points,
     );
-    final recorded = await repo.recordCompletion(entity);
-    return MarkCompletionResult(completion: recorded);
+    // Transactional create-if-absent rather than exists-then-write. `isNew`
+    // gates points, streak, siyum detection AND bookmark advance (see
+    // MarkCompletionResult's doc comment), so losing this race would
+    // double-credit all four.
+    final created = await repo.recordCompletionIfAbsent(entity);
+    return MarkCompletionResult(completion: entity, isNew: created);
   }
 
   @override
@@ -396,29 +455,5 @@ class FirestoreCompletionRepositoryAdapter implements CompletionRepository {
     return entities.any(
       (e) => e.trackType == trackType && e.stageId == stageId,
     );
-  }
-
-  /// Finds an existing completion matching the natural key, if any — see
-  /// [markComplete]'s doc comment for why this pre-check exists.
-  /// [FirestoreCompletionRepository] has no direct-by-key read; this filters
-  /// [FirestoreCompletionRepository.getCompletionsForContent]'s result
-  /// (already scoped to [sefariaRef]) client-side instead of adding a new
-  /// method to that repository, which is out of this file's scope.
-  Future<CompletionEntity?> _findExisting(
-    FirestoreCompletionRepository repo, {
-    required CurriculumId curriculum,
-    required int stageId,
-    required String sefariaRef,
-    required String trackType,
-  }) async {
-    final candidates = await repo.getCompletionsForContent(sefariaRef);
-    for (final c in candidates) {
-      if (c.curriculumId == curriculum &&
-          c.stageId == stageId &&
-          c.trackType == trackType) {
-        return c;
-      }
-    }
-    return null;
   }
 }

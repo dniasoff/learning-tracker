@@ -2445,6 +2445,77 @@ not re-learn the hard way:**
 
 ---
 
+### 2026-08-10 — P3-12: the adapter is WIRED — resurrect, B8 upgrade and a transactional `isNew`; `_findExisting` deleted because it could not see tombstones
+
+`dart analyze --fatal-infos` EXIT 0 on the touched file. No test run — D-G.
+
+#### 1. What `markComplete` now does
+
+```
+existing = repo.getCompletion(key)          // NOT a list read — see §2
+  existing == null              -> recordCompletionIfAbsent(entity), isNew = created
+  existing.purgedAt != null     -> restoreCompletion(...),           isNew = TRUE
+  existing.source == bulkInTrack
+    && incoming == live         -> upgradeSourceToLive(...),         isNew = FALSE
+  otherwise                     -> no write at all,                  isNew = FALSE
+```
+
+`isNew` semantics are preserved exactly from the Drift writer: brand-new **and**
+resurrected are `true`; duplicate and B8-upgrade are `false`. This matters because
+`MarkCompletionResult`'s own doc comment records that `isNew` gates **points,
+streak, siyum detection AND bookmark advance** — four side effects, one flag.
+
+The create is `recordCompletionIfAbsent`, which runs inside
+`FirebaseFirestore.runTransaction`, rather than exists-then-write. A lost race on
+an exists-then-write would double-credit all four.
+
+#### 2. ⚠️ `_findExisting` had to go, and the reason is subtle
+
+The old pre-check read through
+`FirestoreCompletionRepository.getCompletionsForContent` and filtered client-side.
+That read decodes via `_decodeAll` — which, as of D-L, **drops tombstoned
+documents**.
+
+So a purged completion would have looked **ABSENT** to `markComplete`, which would
+then have attempted a create against a document that still exists, and been
+**denied server-side** once the rules deploy. The re-mark-after-expunge path would
+have failed in production while passing locally against `fake_cloud_firestore`.
+
+`getCompletion` exists precisely to bypass the tombstone filter, and is the only
+read on this path that may be used for the existence check. That constraint is now
+written at the call site.
+
+Its own doc comment had already recorded why it existed:
+*"[FirestoreCompletionRepository] has no direct-by-key read"*. Adding
+`getCompletion` in `P3-8` falsified that sentence, and a helper whose stated
+justification is no longer true is exactly the `T-68` class of stale claim — so it
+was deleted rather than left as a second, tombstone-blind way to ask the same
+question.
+
+#### 3. Deliberately NOT done in this round — `expungePriorCompletions`
+
+`bulk_prior_completion_service.dart:375` still queries the archived Drift
+`prior_completion_imports` table. It is NOT a mechanical port, for two reasons
+that must be settled before anyone starts:
+
+1. **The service's dependency set changes.** It holds `UserDatabase _database` and
+   `OutboxDao? _outboxDao`, both archived, and neither the `CompletionRepository`
+   interface nor the orchestrator exposes a purge. Either the interface gains one
+   or the service takes `FirestoreCompletionRepository` directly — and the
+   constructor change lands on ~10 existing test call sites.
+2. **Which siyum does a retraction retract?** D-M settles THAT one is retracted,
+   not WHICH. Expunge is keyed by `sefariaRef`; siyums are keyed by UNIT. The
+   defensible rule is recompute-based — after purging, re-run siyum detection and
+   purge every ledger entry no longer justified — but that is a design step with a
+   real dependency on the detection service, not a rename.
+
+The completion-purge half is straightforward and already supported
+(`purgeCompletion` on completions whose `source == bulkInTrack`; a B8-upgraded row
+is `live` and therefore invisible to expunge, which reproduces the old
+`prior_completion_imports` semantics with no second table). The ledger half is what
+needs the design.
+
+---
 ### 2026-08-10 — P3-11: two pure-function services move to `CompletionEntity`; the remaining `List<Completion>` holders are NOT type swaps and are triaged here
 
 `dart analyze --fatal-infos` EXIT 0 on both touched files. No test run — D-G.
