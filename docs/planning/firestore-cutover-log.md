@@ -2445,6 +2445,97 @@ not re-learn the hard way:**
 
 ---
 
+### 2026-08-10 — P3-10: the `CompletionRepository` contract moves off the deleted Drift `Completion` onto `CompletionEntity`; the `_toDriftCompletion` shim is deleted
+
+`dart analyze --fatal-infos`: **3,982 → 3,958 errors**. The four files touched are
+**EXIT 0, "No issues found!"**. No test run — D-G.
+
+#### 1. What moved
+
+| File | Change |
+|---|---|
+| `completion_repository.dart` (interface) | 3 × `Future<List<Completion>>` → `List<CompletionEntity>` |
+| `mark_completion_result.dart` | `final Completion completion;` → `final CompletionEntity completion;` |
+| `completion_repository_impl.dart` | `_toDriftCompletion` DELETED; adapter returns entities directly; 6 dead imports removed |
+| `completion_orchestrator.dart` | 3 × `List<Completion>` → `List<CompletionEntity>`; 3 call sites gain `.storageKey` |
+
+`_toDriftCompletion` was a deliberate, documented shim mapping a Firestore
+`CompletionEntity` onto the Drift-shaped `Completion` the interface still
+returned, with `kFirestoreUnmappedCompletionRowId = -1` standing in for
+`id`/`profileId`/`trackId`. It could not survive: the type it converted TO no
+longer exists. Its premise — recorded in that file's own doc comment from a
+2026-08-03 audit — was that *"none of `CompletionRepository`'s current callers
+read `.id`, `.profileId`, or `.trackId`"*. That audit is what makes the shim
+safely deletable rather than merely broken.
+
+`kFirestoreUnmappedCompletionRowId` itself is deliberately LEFT for now: two
+surviving doc comments reference it, and removing a symbol out from under its own
+documentation is how false doc claims (the `T-68` class) get created. It goes
+with those doc comments, in one edit, not before them.
+
+#### 2. The String/enum mismatch the type change exposed
+
+`CompletionEntity.curriculumId` is the `CurriculumId` **enum**; the Drift
+`Completion.curriculumId` was a **`String`**. `completion_orchestrator.dart`
+feeds that value into `_dispatchSiyumDetection` and `_advanceBookmark`, both
+`required String curriculumId` (`:496`, `:609`), and into a log field. All three
+sites now pass `.storageKey`.
+
+Note the shape of the risk: the log-field site
+(`'curriculumId': completion.curriculumId`) is a `Map<String, dynamic>` and would
+have **compiled fine** while writing an enum's `toString()` into the logs. Only
+the two typed parameters were compiler-caught. The third was caught by reading.
+
+#### 3. ⚠️ Process — three silent single-character corruptions, and a cascade that impersonated a design defect
+
+Workers do **not** reliably pipe a heredoc verbatim; they RECONSTRUCT it. Three
+confirmed instances this session, each a single character, each silently reported
+`DEVIATIONS: NONE`:
+
+1. `);` → `)` — `firestore_completion_repository.dart:459`
+2. `';` → `;` — `completion_orchestrator.dart:5` (dropped closing quote)
+3. `';` → `;` — `completion_repository_impl.dart:10` (dropped closing quote)
+
+**Corruption 3 is the instructive one.** It produced `implements_non_class` plus
+**five `override_on_non_overriding_member` warnings** — a result that reads
+exactly like "the adapter's methods no longer match the migrated interface", i.e.
+precisely the defect one would expect from THIS refactor. Acting on that reading
+would have meant redesigning five correct method signatures. All 14 issues were
+cascade from one missing quote; restoring it took the four files to EXIT 0.
+
+**Standing rule: a warning cluster downstream of a parse error is not evidence
+about design. Fix the parse error first, then re-read the gate.**
+
+**Dispatch pattern changed as a result.** The orchestrator now writes the edit
+script to its OWN scratch directory, and the worker's entire job is
+`python3 /abs/path/script.py`. No script text in the prompt means nothing to
+retype, so this corruption class is structurally impossible. The repository
+change is still performed by the worker, so the delegation rule is unaffected.
+
+#### 4. Provider note
+
+The OpenRouter free tier began returning status `retry` under rate limiting —
+**indistinguishable from a stall** without `opencode_check`, and
+`opencode_permission_list` was empty. A commit dispatch sat for minutes having
+executed nothing; the tree was checked before aborting, so nothing was lost.
+Re-dispatched on OpenCode Zen (`opencode` / `nemotron-3-ultra-free`), which has
+completed every dispatch since. Still $0.00.
+
+This is the **third distinct cause** of the identical "busy, no output" symptom,
+after the permission gate and prompt re-delivery. The symptom carries no
+diagnostic information at all; only `opencode_permission_list` then
+`opencode_check` separates the three.
+
+#### 5. Still open
+
+`List<Completion>` survives in ~10 more `lib/` files — `parent_analytics_repository`
+(8), `curriculum_progress_service` (8), `parent_dashboard_aggregator` (5),
+`lifetime_knowledge_providers` (6), `points_service`, `track_completion_service`,
+`items_learned_providers`, `dashboard_providers`, `bulk_mark_completion_use_case`.
+That is the next sweep, and it is now mechanical: the contract they all bind to
+has moved.
+
+---
 ### 2026-08-10 — P3-9: `CompletionWriter` was DEAD, not central — the handoff's "first task" was misdirected; the writer is archived and the ledger gets its D-M tombstone
 
 `dart analyze --fatal-infos`: **4,038 → 3,982 errors** (5,907 → 5,744 issues).

@@ -1,9 +1,9 @@
 import 'dart:async';
 
-import 'package:learning_tracker/core/database/daos/completion_dao.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_entity.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 import 'package:learning_tracker/features/learning/domain/entities/mark_completion_result.dart';
@@ -263,7 +263,7 @@ class CompletionOrchestrator {
     if (creditsAchievement) {
       unawaited(
         _dispatchSiyumDetection(
-          curriculumId: completion.curriculumId,
+          curriculumId: completion.curriculumId.storageKey,
           sefariaRef: completion.sefariaRef,
           trackType: completion.trackType,
           source: source,
@@ -293,11 +293,11 @@ class CompletionOrchestrator {
     await _safeStep(
       'completion_bookmark_advance_failed',
       {
-        'curriculumId': completion.curriculumId,
+        'curriculumId': completion.curriculumId.storageKey,
         'sefariaRef': completion.sefariaRef,
       },
       () => _advanceBookmark(
-        curriculumId: completion.curriculumId,
+        curriculumId: completion.curriculumId.storageKey,
         completedSefariaRef: completion.sefariaRef,
       ),
     );
@@ -326,7 +326,7 @@ class CompletionOrchestrator {
   /// Order validation runs for every ref in [request.sefariaRefs] before any
   /// write (one batched read, not one query per ref — see the private
   /// [_validateBulkOrder] doc comment).
-  Future<List<Completion>> bulkMarkComplete(
+  Future<List<CompletionEntity>> bulkMarkComplete(
     BulkCompletionRequest request,
   ) async {
     if (request.sefariaRefs.isEmpty) return const [];
@@ -427,7 +427,7 @@ class CompletionOrchestrator {
   /// Throws [StageProgressionException] when [stageId] skips ahead of the
   /// highest stage already completed for [trackType] within [existing].
   void _validateOrder({
-    required List<Completion> existing,
+    required List<CompletionEntity> existing,
     required String trackType,
     required int stageId,
   }) {
@@ -474,7 +474,7 @@ class CompletionOrchestrator {
       curriculumId,
       profileId: profileId,
     );
-    final byRef = <String, List<Completion>>{};
+    final byRef = <String, List<CompletionEntity>>{};
     for (final c in existing) {
       if (c.trackType != trackType || !refSet.contains(c.sefariaRef)) {
         continue;

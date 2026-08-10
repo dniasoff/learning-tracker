@@ -1,5 +1,5 @@
-import 'package:learning_tracker/core/database/daos/completion_dao.dart';
 import 'package:learning_tracker/core/exceptions/app_exception.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_entity.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
 import 'package:learning_tracker/features/learning/domain/entities/mark_completion_result.dart';
 
@@ -53,18 +53,18 @@ abstract class CompletionRepository {
   /// fails, the entire transaction is rolled back.
   ///
   /// Returns the list of created completions.
-  Future<List<Completion>> bulkMarkComplete(BulkCompletionRequest request);
+  Future<List<CompletionEntity>> bulkMarkComplete(BulkCompletionRequest request);
 
   /// Get all completions for a specific curriculum.
   ///
   /// [profileId] defaults to the repository's session profile when omitted.
-  Future<List<Completion>> getCompletionsByCurriculum(
+  Future<List<CompletionEntity>> getCompletionsByCurriculum(
     String curriculumId, {
     int? profileId,
   });
 
   /// Get all completions for a specific content item by sefariaRef.
-  Future<List<Completion>> getCompletionsForContentItem(String sefariaRef);
+  Future<List<CompletionEntity>> getCompletionsForContentItem(String sefariaRef);
 
   /// Check if a specific stage has been completed for a content item by sefariaRef.
   Future<bool> isStageCompleted({

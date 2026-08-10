@@ -1,21 +1,13 @@
-import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/database/daos/completion_dao.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
 import 'package:learning_tracker/data/repositories/firestore_completion_repository.dart';
-import 'package:learning_tracker/features/learning/data/completion_writer.dart';
-import 'package:learning_tracker/features/learning/domain/entities/completion_command.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_entity.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 import 'package:learning_tracker/features/learning/domain/entities/mark_completion_result.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
-import 'package:learning_tracker/features/tracks/stages/domain/models/stage_definition.dart'
-    as stage_model;
-import 'package:learning_tracker/features/tracks/stages/domain/repositories/stage_definition_repository.dart';
 
 /// Storage-only implementation of [CompletionRepository] over Drift.
 ///
@@ -281,24 +273,6 @@ class FirestoreCompletionRepositoryAdapter implements CompletionRepository {
         orElse: () => throw ArgumentError('Unknown curriculumId: $storageKey'),
       );
 
-  /// Maps a Firestore [CompletionEntity] onto the Drift-shaped [Completion]
-  /// the interface still returns. See [kFirestoreUnmappedCompletionRowId]'s
-  /// doc comment for the sentinel `id`/`profileId`/`trackId`.
-  static Completion _toDriftCompletion(CompletionEntity entity) => Completion(
-    id: kFirestoreUnmappedCompletionRowId,
-    profileId: kFirestoreUnmappedCompletionRowId,
-    curriculumId: entity.curriculumId.storageKey,
-    sefariaRef: entity.sefariaRef,
-    stageId: entity.stageId,
-    trackType: entity.trackType,
-    trackId: kFirestoreUnmappedCompletionRowId,
-    completedAt: entity.completedAt,
-    points: entity.points,
-    // Every Firestore completion's stageId is a stage_order value by
-    // construction — see CompletionEntity's class doc comment.
-    stageIdFormat: 'stageOrder',
-  );
-
   @override
   Future<MarkCompletionResult> markComplete(
     CompletionRequest request, {
@@ -324,7 +298,7 @@ class FirestoreCompletionRepositoryAdapter implements CompletionRepository {
     );
     if (existing != null) {
       return MarkCompletionResult(
-        completion: _toDriftCompletion(existing),
+        completion: existing,
         isNew: false,
       );
     }
@@ -342,11 +316,11 @@ class FirestoreCompletionRepositoryAdapter implements CompletionRepository {
       points: request.points,
     );
     final recorded = await repo.recordCompletion(entity);
-    return MarkCompletionResult(completion: _toDriftCompletion(recorded));
+    return MarkCompletionResult(completion: recorded);
   }
 
   @override
-  Future<List<Completion>> bulkMarkComplete(
+  Future<List<CompletionEntity>> bulkMarkComplete(
     BulkCompletionRequest request,
   ) async {
     if (request.sefariaRefs.isEmpty) return const [];
@@ -380,11 +354,11 @@ class FirestoreCompletionRepositoryAdapter implements CompletionRepository {
         )
         .toList();
     final recorded = await repo.recordCompletionsBatch(entities);
-    return recorded.map(_toDriftCompletion).toList();
+    return recorded;
   }
 
   @override
-  Future<List<Completion>> getCompletionsByCurriculum(
+  Future<List<CompletionEntity>> getCompletionsByCurriculum(
     String curriculumId, {
     int? profileId,
   }) async {
@@ -397,17 +371,17 @@ class FirestoreCompletionRepositoryAdapter implements CompletionRepository {
     if (repo == null) return const [];
     final curriculum = _curriculumFor(curriculumId);
     final entities = await repo.getCompletionsForCurriculum(curriculum);
-    return entities.map(_toDriftCompletion).toList();
+    return entities;
   }
 
   @override
-  Future<List<Completion>> getCompletionsForContentItem(
+  Future<List<CompletionEntity>> getCompletionsForContentItem(
     String sefariaRef,
   ) async {
     final repo = await _resolveOrNull();
     if (repo == null) return const [];
     final entities = await repo.getCompletionsForContent(sefariaRef);
-    return entities.map(_toDriftCompletion).toList();
+    return entities;
   }
 
   @override
