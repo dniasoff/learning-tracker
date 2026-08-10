@@ -1,6 +1,6 @@
-import 'package:learning_tracker/core/database/daos/completion_dao.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_entity.dart';
 import 'package:learning_tracker/features/progress/domain/models/curriculum_progress_data.dart';
 import 'package:learning_tracker/features/tracks/stages/domain/models/stage_definition.dart'
     as domain_stage;
@@ -20,7 +20,7 @@ class CurriculumProgressService {
   static CurriculumProgressData compute({
     required String curriculumId,
     required List<ContentItem> contentItems,
-    required List<Completion> completions,
+    required List<CompletionEntity> completions,
     required List<domain_stage.StageDefinition> stageDefinitions,
     required List<String> levelLabels,
   }) {
@@ -94,7 +94,7 @@ class CurriculumProgressService {
   /// See [TrackProgressService.completionPercent] for the canonical aggregator.
   static double computeCompletionPercentage({
     required List<ContentItem> leafItems,
-    required List<Completion> completions,
+    required List<CompletionEntity> completions,
   }) {
     if (leafItems.isEmpty) return 0.0;
     final completedRefs = completions.map((c) => c.sefariaRef).toSet();
@@ -113,7 +113,7 @@ class CurriculumProgressService {
   static List<HierarchyLevelProgress> _buildLevel1Progress({
     required CurriculumId curriculumEnum,
     required List<ContentItem> leafItems,
-    required List<Completion> completions,
+    required List<CompletionEntity> completions,
     required List<domain_stage.StageDefinition> stageDefinitions,
     required List<String> levelLabels,
   }) {
@@ -128,7 +128,7 @@ class CurriculumProgressService {
     for (final item in leafItems) {
       refToLevel1[item.sefariaRef] = item.level1;
     }
-    final completionsByLevel1 = <String, List<Completion>>{};
+    final completionsByLevel1 = <String, List<CompletionEntity>>{};
     for (final c in completions) {
       final l1 = refToLevel1[c.sefariaRef];
       if (l1 != null) {
@@ -174,7 +174,7 @@ class CurriculumProgressService {
   static List<HierarchyLevelProgress> _buildLevel2Progress({
     required CurriculumId curriculumEnum,
     required List<ContentItem> leafItems,
-    required List<Completion> completions,
+    required List<CompletionEntity> completions,
     required List<domain_stage.StageDefinition> stageDefinitions,
   }) {
     final grouped = <String, List<ContentItem>>{};
@@ -187,7 +187,7 @@ class CurriculumProgressService {
     for (final item in leafItems) {
       refToLevel2[item.sefariaRef] = item.level2 ?? 'Unknown';
     }
-    final completionsByLevel2 = <String, List<Completion>>{};
+    final completionsByLevel2 = <String, List<CompletionEntity>>{};
     for (final c in completions) {
       final l2 = refToLevel2[c.sefariaRef];
       if (l2 != null) {
@@ -223,7 +223,7 @@ class CurriculumProgressService {
     required int level,
     required String levelName,
     required List<ContentItem> leafItems,
-    required List<Completion> completions,
+    required List<CompletionEntity> completions,
     required List<domain_stage.StageDefinition> stageDefinitions,
     List<HierarchyLevelProgress>? subLevels,
   }) {

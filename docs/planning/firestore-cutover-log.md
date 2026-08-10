@@ -2445,6 +2445,46 @@ not re-learn the hard way:**
 
 ---
 
+### 2026-08-10 — P3-11: two pure-function services move to `CompletionEntity`; the remaining `List<Completion>` holders are NOT type swaps and are triaged here
+
+`dart analyze --fatal-infos` EXIT 0 on both touched files. No test run — D-G.
+
+#### 1. Migrated
+
+| File | Fields it reads | Why it was safe |
+|---|---|---|
+| `track_completion_service.dart` | `sefariaRef`, `stageId` | both on `CompletionEntity`; pure function over an injected list |
+| `curriculum_progress_service.dart` | `sefariaRef`, `stageId`, `trackType` | same; its only `.id` occurrence is inside a COMMENT (`sd.id`), so nothing depends on the absent row id |
+
+#### 2. Triage of what is left — the rest are NOT renames
+
+The remaining `List<Completion>` holders each fail for a specific, recorded
+reason. **Do not batch them as a type swap.**
+
+| File | Blocker |
+|---|---|
+| `points_service.dart` | reads `c.trackId` as a **track-eligibility map key** (`eligibility[c.trackId]`, `:135,:152,:166`). `CompletionEntity` has no `trackId`. Needs a decision on how eligibility is keyed once completions are no longer track-keyed — this is the same `trackId`-is-gone question AD-25 raised for stage definitions. |
+| `items_learned_providers.dart` | still issues **Drift queries** (`t.profileId.equals(...)`, `:338,:393`) against the archived user DB. Needs a real repository migration. |
+| `parent_dashboard_aggregator.dart` | imports the archived `user_database.dart`, 6 Drift call sites, and compares `c.curriculumId == curriculum.storageKey` (`:160`) — a String comparison that becomes enum-to-enum. Real migration. |
+| `lifetime_knowledge_providers.dart` | reads `c.trackId` (`:343`) via `db.completionDao`. Same blocker as `points_service`, plus Drift. |
+| `scheduler_completion_repository_impl.dart` | reads `c.stageIdFormat` (`:70`) — absent from `CompletionEntity` by design (every Firestore completion is `stageOrder` by construction). |
+| `parent_analytics_repository.dart` | 8 sites; interface + impl pair, needs its own pass |
+| `dashboard_providers.dart`, `bulk_mark_completion_use_case.dart` | smaller, unexamined |
+
+#### 3. Process note — the count guard earned its keep
+
+The first attempt at this edit **ABORTed with zero changes**: the script asserted
+`List<Completion>` appeared 3 times in `track_completion_service.dart`; it appears
+twice. The same script over-counted `curriculum_progress_service.dart` as 8 where
+it is 7. Both numbers were mine, estimated from a `grep -n` listing I had read
+rather than a `grep -o | wc -l` I had run.
+
+Nothing was corrupted, because every substitution in these scripts carries an
+expected-occurrence assertion and the script exits before writing if any one of
+them is wrong. **An edit script that asserts its own match counts converts an
+orchestrator miscount into a clean no-op instead of a silent partial edit.**
+
+---
 ### 2026-08-10 — P3-10: the `CompletionRepository` contract moves off the deleted Drift `Completion` onto `CompletionEntity`; the `_toDriftCompletion` shim is deleted
 
 `dart analyze --fatal-infos`: **3,982 → 3,958 errors**. The four files touched are

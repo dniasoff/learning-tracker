@@ -1,4 +1,4 @@
-import 'package:learning_tracker/core/database/daos/completion_dao.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_entity.dart';
 import 'package:learning_tracker/features/tracks/stages/domain/models/stage_definition.dart'
     as domain_stage;
 
@@ -27,7 +27,7 @@ class TrackCompletionService {
   /// Returns 0.0 when [stages] or [totalItems] is zero.
   double computeTrackPercentage({
     required List<domain_stage.StageDefinition> stages,
-    required List<Completion> completions,
+    required List<CompletionEntity> completions,
     required int totalItems,
   }) {
     if (stages.isEmpty || totalItems == 0) return 0.0;
@@ -98,5 +98,5 @@ class TrackEntry {
   const TrackEntry({required this.stages, required this.completions});
 
   final List<domain_stage.StageDefinition> stages;
-  final List<Completion> completions;
+  final List<CompletionEntity> completions;
 }
