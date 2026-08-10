@@ -53,6 +53,7 @@ class CompletionEntity {
     required this.source,
     required this.completedAt,
     this.points = 0,
+    this.purgedAt,
   });
 
   final CurriculumId curriculumId;
@@ -81,6 +82,17 @@ class CompletionEntity {
   /// <= 100` *when the field is present* — always written here (defaulting
   /// to `0`, matching the Drift column's default) rather than omitted.
   final int points;
+
+  /// Tombstone timestamp — `null` for an active completion (owner ruling D-L,
+  /// 2026-08-10). Erasure on this collection is ALWAYS a tombstone and never a
+  /// delete: `firestore.rules` denies `delete` on `completions`
+  /// unconditionally, so un-ticking a bulk-marked item stamps this field
+  /// instead. `firestore.rules` permits `purged_at` to change (it is inside
+  /// D-L's mutable allowlist alongside `source` and `completed_at`); every
+  /// other field stays immutable after create.
+  ///
+  /// NOT part of the document id — see `DocIds.completionDocIdForProfile`.
+  final DateTime? purgedAt;
 }
 
 /// Firestore document codec for `completions/{completionId}`. Self-contained
@@ -113,6 +125,11 @@ extension CompletionEntityFirestoreCodec on CompletionEntity {
     'source': source.name,
     'completed_at': completedAt.toUtc(),
     'points': points,
+    // ALWAYS emitted, `null` while active, so every document carries the
+    // field. A Firestore `where('purged_at', isNull: true)` does NOT match
+    // documents where the field is ABSENT, so writing it unconditionally keeps
+    // a later switch to server-side filtering possible without a backfill.
+    'purged_at': purgedAt?.toUtc(),
   };
 }
 
@@ -182,5 +199,6 @@ CompletionEntity completionEntityFromFirestore(Map<String, dynamic> data) {
     source: source,
     completedAt: completedAt,
     points: FirestoreCodec.parseInt(data['points']) ?? 0,
+    purgedAt: FirestoreCodec.parseDateTime(data['purged_at']),
   );
 }

@@ -311,11 +311,22 @@ class FirestoreCompletionRepository {
   /// "`completed_at` round-trips through a real `Timestamp`" section. Every
   /// read call site routes through this before decoding.
   Map<String, dynamic> _normalizeForDecode(Map<String, dynamic> raw) {
-    final completedAt = raw['completed_at'];
+    var out = raw;
+    final completedAt = out['completed_at'];
     if (completedAt is Timestamp) {
-      return {...raw, 'completed_at': completedAt.toDate().toUtc()};
+      out = {...out, 'completed_at': completedAt.toDate().toUtc()};
     }
-    return raw;
+    // D-L: `purged_at` round-trips as a real Firestore `Timestamp` exactly as
+    // `completed_at` does, and `FirestoreCodec.parseDateTime` has NO
+    // `Timestamp` branch (firestore_codec.dart:34-51) — handed one it returns
+    // null, which would silently decode a PURGED completion as ACTIVE. That is
+    // a silent-corruption path no gate can see, so normalize here and never
+    // rely on parseDateTime to recognise a raw Timestamp.
+    final purgedAt = out['purged_at'];
+    if (purgedAt is Timestamp) {
+      out = {...out, 'purged_at': purgedAt.toDate().toUtc()};
+    }
+    return out;
   }
 
   /// Decodes every document in [docs], skipping (and logging) any single
@@ -328,9 +339,16 @@ class FirestoreCompletionRepository {
     final results = <CompletionEntity>[];
     for (final doc in docs) {
       try {
-        results.add(
-          completionEntityFromFirestore(_normalizeForDecode(doc.data())),
+        final entity = completionEntityFromFirestore(
+          _normalizeForDecode(doc.data()),
         );
+        // D-L: a tombstoned completion is invisible to every reader. This is
+        // the SINGLE choke point for that rule — every list read and all four
+        // client-side aggregates funnel through here, so filtering once covers
+        // them all. `getCompletion` deliberately bypasses this helper, because
+        // the writer must SEE a tombstone in order to resurrect it.
+        if (entity.purgedAt != null) continue;
+        results.add(entity);
       } catch (error, stackTrace) {
         _logger.warning(
           event: 'firestore_completions_decode_error',
@@ -428,6 +446,154 @@ class FirestoreCompletionRepository {
     return entities;
   }
 
+  /// Returns the stored completion for this natural key, or `null` when no
+  /// document exists.
+  ///
+  /// Unlike [completionExists] this DOES return tombstoned completions. The
+  /// writer must tell "absent" apart from "purged" in order to resurrect the
+  /// latter (owner ruling D-L), and a `bool` cannot carry that distinction —
+  /// nor the `source`, which decides whether a bulkInTrack row is being
+  /// upgraded to live (B8).
+  Future<CompletionEntity?> getCompletion({
+    required CurriculumId curriculumId,
+    required String sefariaRef,
+    required int stageId,
+  }) async {
+    final docId = _docIdFromKey(
+      curriculumId: curriculumId,
+      sefariaRef: sefariaRef,
+      stageId: stageId,
+    );
+    final snapshot = await _completions.doc(docId).get();
+    if (!snapshot.exists) return null;
+    final data = snapshot.data();
+    if (data == null) return null;
+    return completionEntityFromFirestore(_normalizeForDecode(data));
+  }
+
+  /// Atomically creates the completion document ONLY when it is absent,
+  /// returning `true` when THIS call created it.
+  ///
+  /// [recordCompletion]'s `set(merge: true)` cannot answer "did I create it?",
+  /// and a [completionExists] + [recordCompletion] pair is a read-then-write
+  /// race. That race is not cosmetic: `isNew` gates points, streak, siyum
+  /// detection AND bookmark advance (see [MarkCompletionResult]'s doc
+  /// comment), so two concurrent marks of the same item would double-credit
+  /// all four. The transaction closes it.
+  ///
+  /// A tombstoned document counts as PRESENT here and is left untouched —
+  /// resurrecting it belongs to [restoreCompletion], so that the caller's
+  /// `isNew` reports a resurrection rather than a create.
+  Future<bool> recordCompletionIfAbsent(CompletionEntity entity) async {
+    if (entity.source == CompletionSource.lifetimeOnly) {
+      throw ArgumentError(
+        'CompletionSource.lifetimeOnly must never be written to the '
+        'completions collection — it writes only a learning_ledger entry. '
+        "See FirestoreCompletionRepository's class doc comment.",
+      );
+    }
+    final ref = _doc(entity);
+    return _firestore.runTransaction<bool>((txn) async {
+      final snapshot = await txn.get(ref);
+      if (snapshot.exists) return false;
+      txn.set(ref, entity.toFirestore());
+      return true;
+    });
+  }
+
+  /// Tombstones an existing completion by stamping `purged_at` — the erasure
+  /// path used when a previously bulk-marked item is un-ticked.
+  ///
+  /// `firestore.rules` denies `delete` on this collection unconditionally, so
+  /// erasure is ALWAYS a tombstone (owner ruling D-L, 2026-08-10). Uses
+  /// `update` rather than `set` so that exactly one key is affected and D-L's
+  /// `affectedKeys().hasOnly([...])` guard is satisfied — a `set` would resend
+  /// every field and be denied.
+  Future<void> purgeCompletion({
+    required CurriculumId curriculumId,
+    required String sefariaRef,
+    required int stageId,
+    required DateTime purgedAt,
+  }) => _updateStatusFields(
+    curriculumId: curriculumId,
+    sefariaRef: sefariaRef,
+    stageId: stageId,
+    fields: {'purged_at': purgedAt.toUtc()},
+    operation: 'purgeCompletion',
+  );
+
+  /// Clears `purged_at` and re-stamps `completed_at` — the re-mark-after-
+  /// expunge path, replacing the Drift writer's `_resurrectTombstone`.
+  ///
+  /// Both keys are inside D-L's mutable allowlist. The caller reports
+  /// `isNew = true` for a resurrection, matching the Drift behaviour exactly.
+  Future<void> restoreCompletion({
+    required CurriculumId curriculumId,
+    required String sefariaRef,
+    required int stageId,
+    required DateTime completedAt,
+  }) => _updateStatusFields(
+    curriculumId: curriculumId,
+    sefariaRef: sefariaRef,
+    stageId: stageId,
+    fields: {'purged_at': null, 'completed_at': completedAt.toUtc()},
+    operation: 'restoreCompletion',
+  );
+
+  /// B8: promotes a bulk-imported completion to real learning by moving
+  /// `source` from `bulkInTrack` to `live` and re-stamping `completed_at`
+  /// (the bulk sentinel date is replaced by the real moment).
+  ///
+  /// This replaces the Drift writer's `_upgradePriorMarkRow`, which deleted a
+  /// row from the `prior_completion_imports` table. That table is GONE: the
+  /// provenance now lives on the completion document itself, so an upgraded
+  /// completion is invisible to expunge simply because its `source` is no
+  /// longer `bulkInTrack`. Both keys are inside D-L's mutable allowlist.
+  Future<void> upgradeSourceToLive({
+    required CurriculumId curriculumId,
+    required String sefariaRef,
+    required int stageId,
+    required DateTime completedAt,
+  }) => _updateStatusFields(
+    curriculumId: curriculumId,
+    sefariaRef: sefariaRef,
+    stageId: stageId,
+    fields: {
+      'source': CompletionSource.live.name,
+      'completed_at': completedAt.toUtc(),
+    },
+    operation: 'upgradeSourceToLive',
+  );
+
+  /// Shared body for the three D-L status transitions above.
+  ///
+  /// Throws [StateError] when the document is absent: per owner ruling D-E a
+  /// path that cannot do its job must fail LOUDLY rather than silently no-op.
+  /// A no-op here would leave a user's un-tick looking successful while the
+  /// record survived — exactly the silent divergence D-E exists to prevent.
+  Future<void> _updateStatusFields({
+    required CurriculumId curriculumId,
+    required String sefariaRef,
+    required int stageId,
+    required Map<String, Object?> fields,
+    required String operation,
+  }) async {
+    final docId = _docIdFromKey(
+      curriculumId: curriculumId,
+      sefariaRef: sefariaRef,
+      stageId: stageId,
+    );
+    final ref = _completions.doc(docId);
+    final snapshot = await ref.get();
+    if (!snapshot.exists) {
+      throw StateError(
+        '$operation: no completion document at $docId. A status change on a '
+        'completion that does not exist must fail loudly, never no-op (D-E).',
+      );
+    }
+    await ref.update(fields);
+  }
+
   // ── Reads ─────────────────────────────────────────────────────────────
 
   /// Returns every completion for [curriculumId] — the direct replacement
@@ -473,6 +639,11 @@ class FirestoreCompletionRepository {
         stackTrace: stackTrace,
         fields: {'curriculum_id': curriculumId.storageKey},
       ),
+    ).map(
+      // D-L: tombstoned completions are invisible to readers. This stream
+      // decodes per-document and so cannot route through `_decodeAll`; the
+      // filter is applied to each emitted list instead.
+      (entities) => entities.where((e) => e.purgedAt == null).toList(),
     );
   }
 
@@ -510,7 +681,15 @@ class FirestoreCompletionRepository {
       stageId: stageId,
     );
     final snapshot = await _completions.doc(docId).get();
-    return snapshot.exists;
+    if (!snapshot.exists) return false;
+    final data = snapshot.data();
+    if (data == null) return false;
+    // D-L: a tombstoned completion does NOT exist for idempotency purposes —
+    // re-marking it must resurrect it and report isNew = true. This mirrors the
+    // Drift writer's H1 fix, where tombstoned rows were deliberately excluded
+    // from the pre-insert existence check so a re-mark after expunge was not
+    // silently swallowed.
+    return _normalizeForDecode(data)['purged_at'] == null;
   }
 
   /// Returns `true` if any completion references [curriculumId] +
@@ -523,12 +702,16 @@ class FirestoreCompletionRepository {
     required CurriculumId curriculumId,
     required int stageOrder,
   }) async {
-    final snapshot = await _completions
-        .where('curriculum_id', isEqualTo: curriculumId.storageKey)
-        .where('stage_id', isEqualTo: stageOrder)
-        .limit(1)
-        .get();
-    return snapshot.docs.isNotEmpty;
+    // D-L: `limit(1)` would answer `true` for a purely tombstoned stage, so
+    // this can no longer short-circuit — it pages and decodes, because
+    // `_decodeAll` is what applies the tombstone filter. Costs a full scan of
+    // the stage's completions in exchange for a correct answer.
+    final docs = await _fetchAllPagesByDocId(
+      _completions
+          .where('curriculum_id', isEqualTo: curriculumId.storageKey)
+          .where('stage_id', isEqualTo: stageOrder),
+    );
+    return _decodeAll(docs).isNotEmpty;
   }
 
   /// Returns completions in `[start, end]` inclusive, across every
@@ -577,15 +760,14 @@ class FirestoreCompletionRepository {
     required DateTime start,
     required DateTime end,
   }) async {
-    // Two chained `.where()` calls — see [getCompletionsByDateRange]'s doc
-    // comment for the `fake_cloud_firestore` bug this avoids.
-    final snapshot = await _completions
-        .where('completed_at', isGreaterThanOrEqualTo: start.toUtc())
-        .where('completed_at', isLessThanOrEqualTo: end.toUtc())
-        .orderBy('completed_at')
-        .limit(1)
-        .get();
-    return snapshot.docs.isNotEmpty;
+    // D-L: `limit(1)` would answer `true` for a range containing only
+    // tombstoned completions, so this delegates to the paging read whose
+    // `_decodeAll` applies the tombstone filter. Costs a full range scan in
+    // exchange for a correct answer; the `fake_cloud_firestore` two-chained-
+    // `.where()` shape that [getCompletionsByDateRange]'s doc comment
+    // describes is preserved because this now IS that query.
+    final inRange = await getCompletionsByDateRange(start: start, end: end);
+    return inRange.isNotEmpty;
   }
 
   /// Returns completions filtered by [tier], optionally narrowed to

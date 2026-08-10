@@ -266,7 +266,22 @@ service cloud.firestore {
           // overwriting points/completed_at on an existing completion is
           // exactly the record-tampering SR-1 exists to prevent). A tutor
           // (different uid) is still rejected by isOwner.
-          allow update: if isOwner(uid) && request.resource.data == resource.data;
+          // D-L (owner ruling 2026-08-10): key fields stay immutable, but a
+          // narrow status allowlist may change so that un-ticking a bulk-marked
+          // item can tombstone it (`purged_at`), a re-mark can clear that
+          // tombstone, and a bulkInTrack row can be upgraded to `live` (B8).
+          // An idempotent identical replay still passes: affectedKeys() is
+          // empty and hasOnly([]) is true. `points` is deliberately NOT in the
+          // allowlist. SR-3's time bound is re-asserted here so `completed_at`
+          // cannot be back- or forward-dated by an update.
+          allow update: if isOwner(uid)
+            && request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['purged_at', 'source', 'completed_at'])
+            && (
+              !('completed_at' in request.resource.data)
+                || (request.resource.data.completed_at is timestamp
+                    && request.resource.data.completed_at <= request.time)
+            );
           allow delete: if false;
         }
 
@@ -321,7 +336,13 @@ service cloud.firestore {
           // SR-1 (append-only): update is allowed ONLY for the idempotent
           // identical re-push, matching points_ledger below — a
           // changed-value update is denied.
-          allow update: if isOwner(uid) && request.resource.data == resource.data;
+          // D-M (owner ruling 2026-08-10): retracting a bulk-marked completion
+          // must also retract the siyum it earned, so `purged_at` — and only
+          // `purged_at` — may change here. Identical replay still passes
+          // (affectedKeys() is empty). Every other field remains immutable.
+          allow update: if isOwner(uid)
+            && request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['purged_at']);
           allow delete: if false;
         }
 

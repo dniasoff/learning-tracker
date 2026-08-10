@@ -2445,6 +2445,181 @@ not re-learn the hard way:**
 
 ---
 
+### 2026-08-10 — P3-8: `completions` becomes tombstone-capable — TWO owner rulings (D-L, D-M) unblock a migration that the security rules had made impossible, and a silent-corruption path is closed before it could land
+
+Design round for `T-CW` (`CompletionWriter`'s replacement, handoff §6). No test
+run — D-G. `dart analyze --fatal-infos` EXIT 0 on every file touched.
+
+#### 1. The blocker the handoff did not know about
+
+Handoff §6 framed `_resurrectTombstone` and `_upgradePriorMarkRow` as *"decide
+whether each maps to a Firestore document update or is obsolete."* Neither
+option was available. `firestore.rules` (pre-change, lines 269/270) said:
+
+```
+allow update: if isOwner(uid) && request.resource.data == resource.data;
+allow delete: if false;
+```
+
+**Updates were permitted only when the new data was byte-identical to the old.**
+On `completions`: nothing deletable, no field ever changeable. So both paths were
+not obsolete — they were **unimplementable**, and so was
+`BulkPriorCompletionService.expungePriorCompletions`, which is reached from a
+LIVE user path (`bulk_mark_screen.dart:322`, un-ticking a previously bulk-marked
+item during onboarding).
+
+Worse, `bulk_mark_screen.dart`'s `_expungeRefs` already **catches and logs**
+expunge failures without blocking. Under Firestore every expunge would have
+failed `permission-denied`, been logged, and left the UI showing the item
+un-ticked while the record survived — silent divergence, invisible to every gate.
+
+A third consequence, easy to miss: Drift's `INSERT OR IGNORE` silently no-oped a
+duplicate. Firestore does not. An unconditional `set(merge: true)` carrying a
+fresh `completedAt` is a *changed value* on an existing document and is
+**denied server-side**. So the writer MUST check existence and skip the write —
+`completionExists()` is load-bearing for correctness, not merely for `isNew`.
+
+#### 2. Owner rulings
+
+- **D-L** — `completions` keeps immutable key fields, but a narrow allowlist
+  (`purged_at`, `source`, `completed_at`) may change. `allow delete: if false`
+  unchanged. Erase = stamp `purged_at`; re-mark = clear it; B8 = `source`
+  `bulkInTrack → live`. This mirrors the Drift design exactly — Drift used a
+  `purgedAt` tombstone. Nothing was invented.
+- **D-M** — the same treatment for `learning_ledger` (`purged_at` only), because
+  bulk-marking runs with `creditsAchievement: true`
+  (`bulk_prior_completion_service.dart:293-294`) and therefore earns a siyum
+  ledger entry. Without D-M, un-ticking a masechta would purge its completions
+  while the siyum it earned survived forever.
+
+`firestore.rules` now carries both. **The deploy remains the owner's (D-K); it
+has NOT been deployed.**
+
+Four collections shared the identical-replay line; only two were changed. A
+string-replace would have silently relaxed `streak_events` and `points_ledger`
+too, so the edit was line-anchored and the result verified per collection:
+
+| line | collection | state |
+|---|---|---|
+| 279 | `completions` | `hasOnly(['purged_at','source','completed_at'])` |
+| 345 | `learning_ledger` | `hasOnly(['purged_at'])` |
+| 312 | `streak_events` | **unchanged** |
+| 369 | `points_ledger` | **unchanged** |
+
+#### 3. ⚠️ A silent-corruption path, caught before it landed
+
+`FirestoreCodec.parseDateTime` (`firestore_codec.dart:34-51`) handles `null`,
+`DateTime`, `String`, `int` and `Map` — but has **no branch for a
+`cloud_firestore` `Timestamp`**. It falls through to `return null`.
+
+`purged_at` round-trips as a real `Timestamp`. Decoded naively, **every purged
+completion would have come back `purgedAt: null` — i.e. silently ACTIVE.** The
+un-tick would appear to work and the item would reappear. `dart analyze` cannot
+see it; no test asserts it; it is indistinguishable from correct data. Exactly
+the class of defect §10 of the handoff describes.
+
+The repository already dodged this for `completed_at` via `_normalizeForDecode`.
+That helper now normalises `purged_at` too, and the reason is written at the site
+so it is not "simplified" away later.
+
+#### 4. What landed
+
+| File | Change |
+|---|---|
+| `firestore.rules` | D-L + D-M allowlists (§2) |
+| `completion_entity.dart` | `purgedAt` field, always-emitted `purged_at` encode, decode |
+| `firestore_completion_repository.dart` | `_normalizeForDecode` covers `purged_at`; `completionExists` reports a tombstone as ABSENT; new `getCompletion`, `recordCompletionIfAbsent`, `purgeCompletion`, `restoreCompletion`, `upgradeSourceToLive`; tombstone filtering |
+
+Two decisions taken at the engineering level, recorded so they can be overruled:
+
+- **`purged_at` is filtered CLIENT-SIDE**, at the single `_decodeAll` choke point
+  through which every list read and all four client-side aggregates already pass.
+  A `where('purged_at', isNull: true)` does NOT match documents where the field is
+  absent, and adding an equality filter to the existing compound queries would
+  force new composite indexes. Per-child volumes are small and every read already
+  paginates. `getCompletion` deliberately BYPASSES the filter — the writer must
+  see a tombstone in order to resurrect it.
+- **`purged_at` is always written on create, as `null`**, so the field shape is
+  uniform and a later switch to server-side filtering needs no backfill.
+
+Cost of correctness, stated rather than hidden: `hasCompletionsForStage` and
+`hasCompletionsInDateRange` both dropped their `limit(1)` short-circuit. A
+`limit(1)` probe answers `true` for a purely-tombstoned result set, so both now
+page and decode.
+
+`isNew` is derived inside a Firestore transaction (`recordCompletionIfAbsent`),
+not by a bare exists-then-write. This is not fastidiousness:
+`MarkCompletionResult`'s own doc comment records that `isNew` gates **points,
+streak, siyum detection AND bookmark advance** — a lost race double-credits all
+four.
+
+#### 5. `prior_completion_imports` is deleted, not ported
+
+Its entire job was letting expunge target only imported rows. That is now a field
+on the completion document (`source == bulkInTrack`); a B8-upgraded row has
+`source == live` and is invisible to expunge for that reason alone. Same
+semantics, one fewer table. This is what D-L's `source` mutability buys.
+
+#### 6. Two narrowings recorded, neither introduced by this round
+
+1. **The natural key lost a component.** Drift keyed completions on
+   `(profileId, sefariaRef, stageId, trackType, curriculumId)`.
+   `DocIds.completionDocIdForProfile` (`doc_ids.dart:170`) composes
+   `profileId_sefariaRef_stageId_curriculumId` — **`trackType` is absent**. Two
+   completions differing only in `trackType` collide onto one document. Safe
+   while `trackType == 'personal'` in v1; it must be revisited before any second
+   track type ships.
+2. **`completionDocIdForProfile` defaults every component to `''`.** A missing
+   `curriculum_id` yields an empty component and a colliding doc id rather than an
+   error. Not reachable through `toFirestore()` (which always emits every key), so
+   it is recorded, not fixed.
+
+#### 7. Process notes
+
+- **A worker reported `OK` / `DEVIATIONS: NONE` on a file it had broken.** The
+  authored script contained `);`; the file came out with a bare `)` at line 459
+  and would not parse. The report was clean because the script *it* believed it
+  had run printed `OK`. Cause is unproven — mangled heredoc, or retyping instead
+  of piping. Caught by `dart analyze` on the two touched files, in seconds.
+  **Standing consequence: run the analyzer on every file a worker edits, before
+  the next dispatch. `git diff --stat` proves a change happened; only the gate
+  proves it parses.** Subsequent dispatches carry an explicit "pipe the heredoc
+  exactly, do not retype" instruction.
+- **Two orchestrator contract defects, both mine.** One predicted a post-edit
+  grep would show "exactly two lines, 297 and 348" — forgetting both a comment
+  match and that inserting 23 lines shifts every line below. One failed to tell a
+  worker that `firestore.rules` was *already* dirty, so it correctly but
+  needlessly flagged it as a deviation. Both workers reported honestly; the
+  contracts were wrong.
+- **`grep -c '^  warning'` returns 0 against a true count of 893.** `dart analyze`
+  RIGHT-ALIGNS the severity column: `  error` (2 spaces), `warning` (0), `   info`
+  (3). Count with `awk '{print $1}' | sort | uniq -c`, never a fixed-indent grep.
+- **The gate target is not what the handoff says.** `dart analyze --fatal-infos`
+  reports **5,907 issues = 4,038 error + 893 warning + 976 info**, and
+  `--fatal-infos` makes all of them fatal. The handoff frames the queue as "4,038
+  errors"; 0 errors is not the finish line, 0 issues is. Of the 180 files carrying
+  warnings/infos, 175 also carry errors — mostly `inference_failure_on_*`
+  collapsing because types are unresolvable, so most should evaporate as the
+  errors close. Five files carry warnings with no errors and are genuine
+  standalone work.
+- **Both Claude sub-agents dispatched this round vanished without returning** (two
+  spawns, no notification, `No reachable agents`). The work was redone with direct
+  greps. Not diagnosed.
+
+#### 8. Still open on `T-CW`
+
+`LearningLedgerEntry` + its repository need the D-M `purged_at` treatment;
+`CompletionWriter` itself and `MarkCompletionResult` still hold the deleted Drift
+`Completion` type; `expungePriorCompletions` still queries the archived Drift
+table. Four test assertions read fields `CompletionEntity` does not have
+(`completion_writer_test.dart:135` reads `profileId`; `:212`, `:721` and
+`epic_25_story_15_completion_writer_test.dart:142` read `id`). Their intent is
+idempotency, for which `id` was only ever a proxy — the replacements are
+`isNew == false` plus natural-key equality, and they are authored in
+`SPEC-completion-writer.md` §8 rather than left to a worker. **Any other test a
+worker rewrites is a deviation.**
+
+---
 ### 2026-08-10 — P3-4: migrates 7 of 9 retired `getStagesByTrack` call sites to `getStagesForCurriculum` (`T-20`, partial); suite 44 → 30; identifies a SILENT-EMPTY defect in the stage-definition adapter that no gate can catch
 
 `dart analyze --fatal-infos` EXIT 0 and `dart format` clean at this commit, as
