@@ -426,8 +426,9 @@ class FirestoreCompletionRepositoryAdapter implements CompletionRepository {
     }
     // Not-ready reads as "nothing to show yet" rather than an exception —
     // see CompletionRepositoryNotReadyException's doc comment.
-    final repo = await _resolveOrNull();
-    if (repo == null) return const [];
+    // D-E: completions are achievement data — an empty list here is
+    // indistinguishable from a learner who has completed nothing.
+    final repo = await _resolve();
     final curriculum = _curriculumFor(curriculumId);
     final entities = await repo.getCompletionsForCurriculum(curriculum);
     return entities;
@@ -437,8 +438,9 @@ class FirestoreCompletionRepositoryAdapter implements CompletionRepository {
   Future<List<CompletionEntity>> getCompletionsForContentItem(
     String sefariaRef,
   ) async {
-    final repo = await _resolveOrNull();
-    if (repo == null) return const [];
+    // D-E: completions are achievement data — an empty list here is
+    // indistinguishable from a learner who has completed nothing.
+    final repo = await _resolve();
     final entities = await repo.getCompletionsForContent(sefariaRef);
     return entities;
   }

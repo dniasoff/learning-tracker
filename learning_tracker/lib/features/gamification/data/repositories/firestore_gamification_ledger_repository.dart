@@ -65,6 +65,23 @@ import 'package:learning_tracker/features/learning/domain/entities/learning_ledg
 /// `recordCompletionsBatch`) belongs to whichever call site actually
 /// records a completion (the `learning` feature's completion-recording
 /// flow), not here.
+/// Thrown by [FirestoreGamificationLedgerRepository]'s reads when the
+/// underlying ledger repository resolves to `null`.
+///
+/// Owner ruling D-E for achievement-shaped reads: an empty lifetime ledger, or
+/// all-zero completion stats, is indistinguishable from a learner who has
+/// genuinely achieved nothing.
+class GamificationLedgerNotReadyException implements Exception {
+  const GamificationLedgerNotReadyException();
+
+  @override
+  String toString() =>
+      'GamificationLedgerNotReadyException: '
+      'the learning-ledger repository resolved to null (no active account, or '
+      'no active learner profile, yet) — refusing to report a lifetime total '
+      'that would be indistinguishable from a real zero.';
+}
+
 class FirestoreGamificationLedgerRepository {
   FirestoreGamificationLedgerRepository({required Ref ref}) : _ref = ref;
 
@@ -74,6 +91,16 @@ class FirestoreGamificationLedgerRepository {
   /// `null` exactly when it does (no active account, or no active learner
   /// profile). Re-resolved on every call rather than cached — see
   /// `FirestoreBookmarkRepositoryAdapter`'s class doc comment (point 3).
+  /// Like [_resolveOrNull], but throws — see
+  /// [GamificationLedgerNotReadyException].
+  Future<FirestoreLearningLedgerRepository> _resolve() async {
+    final repo = await _resolveOrNull();
+    if (repo == null) {
+      throw const GamificationLedgerNotReadyException();
+    }
+    return repo;
+  }
+
   Future<FirestoreLearningLedgerRepository?> _resolveOrNull() {
     return _ref.read(firestoreLearningLedgerRepositoryProvider.future);
   }
@@ -83,8 +110,7 @@ class FirestoreGamificationLedgerRepository {
   /// every other adapter in this rewire uses for a non-nullable `List`
   /// return type.
   Future<List<LearningLedgerEntry>> getLifetimeLedger() async {
-    final repo = await _resolveOrNull();
-    if (repo == null) return const [];
+    final repo = await _resolve();
     return repo.getLifetimeLedger();
   }
 
@@ -92,8 +118,7 @@ class FirestoreGamificationLedgerRepository {
   /// mirroring [FirestoreLearningLedgerRepository.getCompletionStats]'s
   /// shape exactly. Not-ready reduces to all-zero counts.
   Future<Map<String, int>> getCompletionStats(CurriculumId curriculumId) async {
-    final repo = await _resolveOrNull();
-    if (repo == null) return const {'total': 0, 'manual': 0, 'auto': 0};
+    final repo = await _resolve();
     return repo.getCompletionStats(curriculumId);
   }
 }

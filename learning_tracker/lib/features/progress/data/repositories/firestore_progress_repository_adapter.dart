@@ -61,6 +61,30 @@ import 'package:learning_tracker/features/progress/domain/repositories/progress_
 /// `allCompletionHistoryProvider`) never read `.id`/`.profileId`/`.trackId`
 /// — they pass the list straight through. Both methods below now delegate
 /// directly, the same shape as [getTrackBreakdown]/[getAggregateCount].
+/// Thrown by [FirestoreProgressRepositoryAdapter]'s reads when
+/// `firestoreCompletionRepositoryProvider` resolves to `null`.
+///
+/// Owner ruling D-E, applied to ACHIEVEMENT-shaped reads. Every method here
+/// answers "how much has this learner completed", where `0` / `[]` / `{}` is
+/// indistinguishable from a truthful answer — so a not-ready backend previously
+/// rendered as "you have achieved nothing", invisibly, to the learner and to
+/// every gate.
+///
+/// This deliberately does NOT extend to configuration-shaped adapters
+/// (curriculum tracks, learning order, study-day configs, goals): an empty
+/// CONFIGURATION list is a legitimate state the UI already renders, whereas a
+/// fabricated achievement total is not.
+class ProgressRepositoryNotReadyException implements Exception {
+  const ProgressRepositoryNotReadyException();
+
+  @override
+  String toString() =>
+      'ProgressRepositoryNotReadyException: '
+      'firestoreCompletionRepositoryProvider resolved to null (no active '
+      'account, or no active learner profile, yet) — refusing to report a '
+      'progress figure that would be indistinguishable from a real zero.';
+}
+
 class FirestoreProgressRepositoryAdapter implements ProgressRepository {
   FirestoreProgressRepositoryAdapter({required Ref ref}) : _ref = ref;
 
@@ -71,25 +95,45 @@ class FirestoreProgressRepositoryAdapter implements ProgressRepository {
   /// profile). Re-resolved on every call rather than cached — see
   /// `FirestoreBookmarkRepositoryAdapter`'s class doc comment (point 3) for
   /// why.
+  /// Like [_resolveOrNull], but throws — see
+  /// [ProgressRepositoryNotReadyException] for why every read here throws.
+  Future<FirestoreCompletionRepository> _resolve() async {
+    final repo = await _resolveOrNull();
+    if (repo == null) {
+      throw const ProgressRepositoryNotReadyException();
+    }
+    return repo;
+  }
+
+  /// Resolves a storage key to its [CurriculumId], THROWING on an unknown key.
+  ///
+  /// Previously an unrecognised key silently produced `0` / `[]` / `{}` — the
+  /// same fabricated-achievement defect as a not-ready backend, but caused by a
+  /// programming error rather than timing. Mis-attributing a learner's progress
+  /// to "nothing" must never be the quiet path.
+  static CurriculumId _curriculumFor(String storageKey) {
+    final id = CurriculumId.fromStorageKey(storageKey);
+    if (id == null) {
+      throw ArgumentError('Unknown curriculumId: $storageKey');
+    }
+    return id;
+  }
+
   Future<FirestoreCompletionRepository?> _resolveOrNull() {
     return _ref.read(firestoreCompletionRepositoryProvider.future);
   }
 
   @override
   Future<Map<String, int>> getTrackBreakdown(String curriculumId) async {
-    final repo = await _resolveOrNull();
-    if (repo == null) return const {};
-    final id = CurriculumId.fromStorageKey(curriculumId);
-    if (id == null) return const {};
+    final repo = await _resolve();
+    final id = _curriculumFor(curriculumId);
     return repo.getTrackTypeBreakdownForCurriculum(id);
   }
 
   @override
   Future<int> getAggregateCount(String curriculumId) async {
-    final repo = await _resolveOrNull();
-    if (repo == null) return 0;
-    final id = CurriculumId.fromStorageKey(curriculumId);
-    if (id == null) return 0;
+    final repo = await _resolve();
+    final id = _curriculumFor(curriculumId);
     return repo.getAggregateCountForCurriculum(id);
   }
 
@@ -97,17 +141,14 @@ class FirestoreProgressRepositoryAdapter implements ProgressRepository {
   Future<List<CompletionEntity>> getCompletionsByCurriculum(
     String curriculumId,
   ) async {
-    final repo = await _resolveOrNull();
-    if (repo == null) return const [];
-    final id = CurriculumId.fromStorageKey(curriculumId);
-    if (id == null) return const [];
+    final repo = await _resolve();
+    final id = _curriculumFor(curriculumId);
     return repo.getCompletionsForCurriculum(id);
   }
 
   @override
   Future<List<CompletionEntity>> getAllCompletions() async {
-    final repo = await _resolveOrNull();
-    if (repo == null) return const [];
+    final repo = await _resolve();
     // No curriculumId filter + CompletionTierFilter.lifetime == every
     // completion in the collection (see
     // FirestoreCompletionRepository.getCompletionsByTier's doc comment:

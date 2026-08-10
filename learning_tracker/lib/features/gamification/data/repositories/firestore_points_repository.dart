@@ -53,6 +53,29 @@ import 'package:learning_tracker/data/repositories/firestore_points_ledger_repos
 /// same `int trackId` reason documented in this task's report). Even once
 /// `curriculum_id` lands on `points_ledger`, [getDerivedTotal] would still
 /// need that eligibility answer from somewhere.
+/// Thrown when the points-ledger repository cannot be resolved — no active
+/// account, or no active learner profile, yet.
+///
+/// Owner ruling D-E for achievement-shaped reads: a points total of `0` is
+/// indistinguishable from a real balance of zero, so a not-ready backend must
+/// not answer at all.
+///
+/// Deliberately NOT [PointsRepositoryUnavailableException], which means
+/// something entirely different — that this COLLECTION cannot answer a
+/// per-curriculum question because `PointsLedgerEntry` carries no
+/// `curriculumId`. That is a schema limitation, not a readiness one, and
+/// conflating them would emit a misleading diagnosis.
+class PointsRepositoryNotReadyException implements Exception {
+  const PointsRepositoryNotReadyException();
+
+  @override
+  String toString() =>
+      'PointsRepositoryNotReadyException: '
+      'the points-ledger repository resolved to null (no active account, or '
+      'no active learner profile, yet) — refusing to report a points total '
+      'that would be indistinguishable from a real zero.';
+}
+
 class PointsRepositoryUnavailableException implements Exception {
   const PointsRepositoryUnavailableException(this.method);
 
@@ -135,8 +158,13 @@ class FirestorePointsRepository {
   /// natural-empty-value convention `FirestoreProgressRepositoryAdapter`
   /// uses for its `int`-returning methods, rather than throwing.
   Future<int> getGlobalTotal() async {
+    // D-E: a points total of 0 is indistinguishable from a real balance of
+    // zero. Reuses this file's existing unavailable-exception rather than
+    // introducing a parallel type.
     final repo = await _resolveOrNull();
-    if (repo == null) return 0;
+    if (repo == null) {
+      throw const PointsRepositoryNotReadyException();
+    }
     return repo.getBalance();
   }
 

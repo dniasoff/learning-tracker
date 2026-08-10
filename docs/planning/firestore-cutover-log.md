@@ -2445,6 +2445,92 @@ not re-learn the hard way:**
 
 ---
 
+### 2026-08-11 — P3-16: D-E resolved as a RULE, not a file — achievement reads throw, configuration reads may return empty (9 sites, 4 files)
+
+`dart analyze --fatal-infos` EXIT 0 on all four touched files.
+`check_dependency_direction` EXIT 0. No test run — D-G.
+
+#### 1. The question, and why it was bigger than it looked
+
+A verifier flagged `FirestoreProgressRepositoryAdapter` returning `const []` on a
+not-ready backend as a D-E violation, while that class's own doc comment defends
+it as *"the same not-ready-yet, show a loading/empty state contract every
+provider there documents, not a stub"*.
+
+Measurement turned one file into a convention: **17 sites across 10 adapters**
+follow "reads return empty, writes throw". Two of those had already been changed
+under D-E this session (stage definitions, streak), so the tree was inconsistent.
+
+The owner delegated the call: *"we need to make this work reliably and i will
+trust your call."*
+
+#### 2. Two hypotheses tested and DISCARDED before deciding
+
+**(a) "Throw everywhere."** Rejected. `_resolveOrNull()` returns `null` only for
+"no active account / no active profile / a tutor is acting in a talmid's
+context" — never for a network failure, which throws from the Firestore call
+itself. So D-E's literal trigger ("cannot resolve its backend") does not even
+fire here.
+
+**(b) "Fix it at the seam — make `_watchActiveAccountAndProfile` return a
+discriminated result instead of `null`."** Rejected after reading the resolver's
+own doc comment, which shows the tutor-context `null` is ITSELF a deliberate bug
+fix: *"before this, only the bookmark adapter carried its own copy of this
+guard, so the other 12 profile-scoped providers silently served the tutor's own
+tree during a tutored session."* Refusing is correct — it prevents a
+cross-profile leak. And `dashboard_body.dart:165` /
+`child_redemption_screen.dart:80` show the UI ALREADY branches on tutor context.
+The main justification for touching 13 providers evaporated on inspection.
+
+#### 3. The rule adopted
+
+> **A read that answers "how much has this child ACHIEVED" must throw when it
+> cannot resolve. A read that answers "what is CONFIGURED" may return empty.**
+
+A fabricated `0` / `[]` / `{}` achievement is indistinguishable from a truthful
+one and lands in front of a learner. An empty CONFIGURATION list ("no tracks set
+up yet") is a legitimate, recoverable state the app already renders during
+startup, and converting those would add error states to startup paths to fix no
+observed defect.
+
+**Changed (9 sites, achievement):** `firestore_progress_repository_adapter`
+(getTrackBreakdown, getAggregateCount, getCompletionsByCurriculum,
+getAllCompletions), `completion_repository_impl` (2 completion reads),
+`firestore_points_repository` (getGlobalTotal),
+`firestore_gamification_ledger_repository` (getLifetimeLedger,
+getCompletionStats). Plus the two already done (stage definitions, streak), which
+this makes consistent rather than anomalous.
+
+**Deliberately UNCHANGED (configuration):** `curriculum_track` (4),
+`track_learning_order` (2), `goal`, `study_day_config`,
+`scheduler_learning_order`, `learning_order`. Verified after the change that the
+remaining silent-empty reads are exactly these six files.
+
+Also folded in: `if (id == null) return 0/[]/{}` for an UNKNOWN CURRICULUM KEY
+now throws `ArgumentError` via a shared `_curriculumFor`. Same defect class —
+mis-attributing a learner's progress to "nothing" must never be the quiet path —
+but caused by a programming error rather than timing.
+
+#### 4. Two orchestrator errors in this round, both mine
+
+- **Incomplete grep, again.** The first count said 7 sites; the pattern only
+  matched `[]` and `0`, missing `getTrackBreakdown` (`const {}`) and
+  `getCompletionStats` (`{'total': 0, ...}`). Both are achievement-shaped. Real
+  count 9. Trap 1 recurring: a negative result from a partial pattern reads as
+  evidence.
+- **Chose an exception by NAME instead of by reading it.** Reused
+  `PointsRepositoryUnavailableException` for not-ready; it actually means "this
+  COLLECTION cannot answer a per-curriculum question because `PointsLedgerEntry`
+  has no `curriculumId`" — a schema limitation whose `toString()` says so.
+  Caught by the analyzer (its constructor takes a required positional argument).
+  Replaced with a purpose-built `PointsRepositoryNotReadyException`, whose doc
+  comment now states the distinction so the two are not merged later.
+
+#### 5. Filed, not fixed
+
+A tutored session makes 13 profile-scoped providers refuse. The UI guards the
+paths checked here, but whether EVERY tutored path renders an explicit state
+(rather than an empty one) was not exhaustively verified. Worth a dedicated pass.
 ### 2026-08-10 — P3-15: fixes a dependency-direction violation P3-13 introduced, found by an adversarial verifier running a gate that was not on the gate list
 
 `dart analyze --fatal-infos` EXIT 0 on both touched files.
