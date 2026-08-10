@@ -2445,6 +2445,85 @@ not re-learn the hard way:**
 
 ---
 
+### 2026-08-10 — P3-13: the learning ledger gets the Firestore adapter it never had — interface, adapter and provider wiring, all three EXIT 0
+
+`dart analyze --fatal-infos` EXIT 0 on all three touched files. No test run — D-G.
+
+#### 1. Why this one was different from the completion vertical
+
+`LearningLedgerRepositoryImpl` was **live**, not dead — constructed at
+`learning_ledger_providers.dart:51` plus six test files. And unlike completions,
+**no adapter existed** bridging `FirestoreLearningLedgerRepository` (which has
+existed in `lib/data/repositories/` all along) to the domain
+`LearningLedgerRepository` interface. So this was genuinely new code, not a
+rewiring.
+
+Half the design was already built and simply unused:
+`LedgerEntryDraft` was already in `learning_ledger_entry.dart`, documented as
+*"the Firestore-shaped replacement for the Drift-era `LedgerManualBatchItem`"* —
+`CurriculumId` enum, `markedBy` a profile ULID `String`, no `trackId`.
+`firestore_gamification_ledger_repository.dart` already exposed
+`getLifetimeLedger()` with no `profileId` and `getCompletionStats(CurriculumId)`.
+**The target shape was demonstrated in the codebase before it was designed here**;
+it was read off, not invented.
+
+#### 2. What changed
+
+| File | Change |
+|---|---|
+| `learning_ledger_repository.dart` (interface) | `LearningLedgerData` → `LearningLedgerEntry`; `LedgerManualBatchItem` DELETED in favour of `LedgerEntryDraft`; every `int profileId` argument dropped; `markedBy` `int` → ULID `String`; `curriculumId` `String` → `CurriculumId`; `trackId` dropped |
+| `learning_ledger_repository_impl.dart` | Drift implementation REPLACED by `FirestoreLearningLedgerRepositoryAdapter` |
+| `learning_ledger_providers.dart` | provider constructs the adapter; three read providers drop their `profileId` argument |
+
+**The outbox is gone and is not replaced.** The Drift version wrote a ledger row
+and an outbox row in one transaction so a crash could not strand one without the
+other. With Firestore the write IS the cloud write — one row, nothing to keep in
+step. A failed write throws (D-E) rather than queueing for a drain that no longer
+exists.
+
+**`profileId` disappears from every signature** because the Firestore ledger lives
+at `learner_profiles/{profileId}/learning_ledger` — the profile is the collection
+path. It was removed as a consequence of the storage model, not as a
+simplification.
+
+#### 3. Two decisions worth stating
+
+- **The permission gate runs BEFORE `_resolve()`.** `_assertManualMarkPermission`
+  is evaluated first so a child self-marking without a parent PIN gets
+  `ChildSelfMarkException` whether or not the backend happens to be reachable.
+  Ordering it the other way would surface a permission failure as a connectivity
+  failure.
+- **`activeProfileUlid` is nullable, and the gate is inert when it is null.** A
+  null active profile can never equal a real `markedBy`, so no exception fires —
+  which is correct, because `_resolve()` then throws
+  `LearningLedgerRepositoryNotReadyException` before any write happens. **No write
+  can slip through un-gated.** This is written at the field so nobody "fixes" the
+  null case later.
+
+The three family providers keep a `String` family key, converting to
+`CurriculumId` at the boundary via a local `_curriculumFor`, so their ~8 existing
+watchers are untouched. That helper THROWS on an unknown key rather than
+defaulting — silently substituting a curriculum would mis-attribute a learner's
+ledger.
+
+#### 4. Noted, not fixed — a name collision
+
+`learningLedgerProvider` is declared in BOTH
+`learning_ledger_providers.dart:83` and `journey_providers.dart:106`. They are
+different providers with the same name, disambiguated only by import. Recorded
+here; not touched in this round.
+
+#### 5. Provider note — the direct NVIDIA endpoint
+
+`nvidia/nemotron-3-ultra-550b-a55b` is reachable on the **`nvidia`** provider
+directly (`NVIDIA_API_KEY`), not only through OpenRouter's rate-limited `:free`
+mirror. It is measurably faster — the dispatch returned inline where Zen
+dispatches had been going to background — but it **BILLS**: `$0.0041` for a
+single one-command dispatch, against `$0.0000` on Zen and OpenRouter `:free`.
+At this session's dispatch volume that is roughly $0.33. Kilo is NOT a configured
+provider; only `nvidia`, `opencode` (Zen) and `openrouter` are.
+
+---
 ### 2026-08-10 — P3-12: the adapter is WIRED — resurrect, B8 upgrade and a transactional `isNew`; `_findExisting` deleted because it could not see tombstones
 
 `dart analyze --fatal-infos` EXIT 0 on the touched file. No test run — D-G.
