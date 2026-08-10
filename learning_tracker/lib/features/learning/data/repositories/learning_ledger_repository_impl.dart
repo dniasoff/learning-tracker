@@ -53,23 +53,27 @@ class FirestoreLearningLedgerRepositoryAdapter
     implements LearningLedgerRepository {
   FirestoreLearningLedgerRepositoryAdapter({
     required Ref ref,
-    required String? activeProfileUlid,
     required ProfileMode activeProfileMode,
     this.parentPinSessionMatchesActiveProfile = false,
   }) : _ref = ref,
-       _activeProfileUlid = activeProfileUlid,
        _activeProfileMode = activeProfileMode;
 
   final Ref _ref;
 
   /// The ACTIVE profile's ULID (AD-24) — a `String`, not a Drift row id.
   ///
+  /// Read here rather than injected, because `activeProfileDocIdProvider` lives
+  /// in the data-access ring and `check_dependency_direction` (AD-23/AD-28)
+  /// forbids `features/**/presentation/**` from importing that ring. This class
+  /// sits under `features/learning/data/repositories/`, which the check exempts,
+  /// so the dependency belongs here and not in the provider that builds it.
+  ///
   /// `null` when no profile is active. A null value can never equal a real
   /// `markedBy`, so the permission gate below is inert in that state — which is
   /// correct, because [_resolve] then throws
   /// [LearningLedgerRepositoryNotReadyException] before any write happens. No
   /// write can slip through un-gated.
-  final String? _activeProfileUlid;
+  String? get _activeProfileUlid => _ref.read(activeProfileDocIdProvider);
 
   final ProfileMode _activeProfileMode;
 

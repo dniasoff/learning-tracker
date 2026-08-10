@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/data/firestore/repository_providers.dart';
 import 'package:learning_tracker/features/learning/data/repositories/learning_ledger_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/entities/learning_ledger_entry.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/learning_ledger_repository.dart';
@@ -50,13 +49,11 @@ LearningLedgerRepository learningLedgerRepository(Ref ref) {
   final parentPinSessionMatches =
       pinSessionProfileId != null && pinSessionProfileId == profileId;
 
+  // The adapter reads the profile's ULID doc-id itself: that seam lives in the
+  // data-access ring, which `check_dependency_direction` (AD-23/AD-28) forbids
+  // presentation from importing. See the adapter's `_activeProfileUlid`.
   return FirestoreLearningLedgerRepositoryAdapter(
     ref: ref,
-    // The Firestore ledger is addressed by the profile's ULID doc-id, NOT the
-    // Drift row id. `activeProfileDocIdProvider` is the existing seam that
-    // holds it (see repository_providers.dart's library doc comment on why the
-    // two id spaces are bridged rather than converted).
-    activeProfileUlid: ref.watch(activeProfileDocIdProvider),
     activeProfileMode: profileMode,
     parentPinSessionMatchesActiveProfile: parentPinSessionMatches,
   );

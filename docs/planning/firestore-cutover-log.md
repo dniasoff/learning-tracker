@@ -2445,6 +2445,66 @@ not re-learn the hard way:**
 
 ---
 
+### 2026-08-10 — P3-15: fixes a dependency-direction violation P3-13 introduced, found by an adversarial verifier running a gate that was not on the gate list
+
+`dart analyze --fatal-infos` EXIT 0 on both touched files.
+`dart run tool/check_dependency_direction.dart` **EXIT 0 — was EXIT 1**.
+
+#### 1. The defect, and how it was found
+
+P3-13 wired the ledger provider by importing
+`package:learning_tracker/data/firestore/repository_providers.dart` into
+`features/learning/presentation/providers/learning_ledger_providers.dart`, to
+reach `activeProfileDocIdProvider`. That violates AD-23/AD-28: a
+`features/**`/`domain/**` file may not import the data-access ring directly.
+
+**`tool/check_dependency_direction.dart` is not in handoff-2's gate map**, so it
+was never run. It was surfaced by an adversarial verifier in a parallel spec
+batch that ran it while checking an unrelated file, and reported it as a
+pre-existing violation at HEAD. An independent hand-check reproduced it at the
+same file and line.
+
+**Consequence: the gate list in the handoff is INCOMPLETE. Run
+`check_dependency_direction` alongside `dart analyze` after any provider or
+import change.** The audit checks are not all named in the handoff; prefer
+enumerating `learning_tracker/tool/check_*.dart` over trusting the list.
+
+#### 2. The fix
+
+The adapter — `FirestoreLearningLedgerRepositoryAdapter`, which lives under
+`features/learning/data/repositories/` and is therefore EXEMPT from the check —
+already holds a `Ref` and already imports the ring for
+`firestoreLearningLedgerRepositoryProvider`. So it now reads
+`activeProfileDocIdProvider` itself via a getter, and the presentation provider
+neither imports the ring nor passes the ULID down.
+
+The dependency did not move; it moved to the layer that is allowed to hold it.
+
+#### 3. Process — adversarial verification paid for itself
+
+Batch 1 ran 10 specs each with an independent refuter: **20 agents, 0 errors**.
+The verifiers refuted **5 of 9** specs and caught, among others: a spec asserting
+a D-E violation that had already been fixed in the working tree; a spec claiming
+`grep` returned hits in only one file when it returned three; a spec calling an
+`archiveTrack` swap "mechanical" when the two methods differ in both semantics
+(`deactivate` HARD-DELETES the config, `archive` preserves it) and exception
+contract; and the `ALREADY_DEAD` false-evidence problem also found by hand.
+
+**A spec and its refutation cost roughly the same as the spec alone would cost to
+debug after it was applied wrong — and the refutations were the higher-value
+half.**
+
+#### 4. Escalation raised by a verifier, NOT resolved here
+
+`FirestoreProgressRepositoryAdapter` returns `const []` / `0` on an unresolvable
+backend at `:101`, `:103`, `:110` — and its class doc comment frames this as a
+DELIBERATE contract: *"the same not-ready-yet, show a loading/empty state
+contract every provider there documents, not a stub"*. That directly contradicts
+owner ruling D-E. The sibling ledger adapter throws, with the D-E rationale
+written out at `:12-22`.
+
+Two documented intentions disagree. **This needs an owner ruling and was not
+changed unilaterally.**
 ### 2026-08-10 — P3-14: D-E applied to streak + stage definitions; `journey_providers` migrated from a parallel-generated spec; 7 unreachable legacy files archived
 
 Batched round — parallelised because the serial per-file design pass was the
