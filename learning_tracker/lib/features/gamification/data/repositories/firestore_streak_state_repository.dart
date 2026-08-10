@@ -89,6 +89,23 @@ import 'package:learning_tracker/features/gamification/streak/streak_reducer.dar
 /// glossed over — the fix is a "watch everything, paginated" stream on
 /// [FirestoreStreakEventRepository] itself, out of this class's scope to
 /// add (that repository is owned by `lib/data/repositories/`).
+/// Thrown when `firestoreStreakEventRepositoryProvider` resolves to `null` —
+/// no active account, or no active learner profile, yet.
+///
+/// Owner ruling D-E: a read path that cannot resolve its backend must fail
+/// LOUDLY. For a streak the natural empty value is a streak of ZERO, which
+/// looks exactly like a real answer to the learner, to the logs, and to every
+/// gate. Mirrors `CompletionRepositoryNotReadyException`'s shape.
+class StreakStateRepositoryNotReadyException implements Exception {
+  const StreakStateRepositoryNotReadyException();
+
+  @override
+  String toString() =>
+      'StreakStateRepositoryNotReadyException: '
+      'the streak-event repository resolved to null (no active account, or no '
+      'active learner profile, yet) — cannot derive streak state.';
+}
+
 class FirestoreStreakStateRepository {
   FirestoreStreakStateRepository({required Ref ref, LocalDayClock? clock})
     : _ref = ref,
@@ -101,6 +118,19 @@ class FirestoreStreakStateRepository {
   /// exactly when it does (no active account, or no active learner
   /// profile). Re-resolved on every call rather than cached — see
   /// `FirestoreBookmarkRepositoryAdapter`'s class doc comment (point 3).
+  /// Like [_resolveOrNull], but throws instead of returning `null`.
+  ///
+  /// Every read on this class routes through this, per owner ruling D-E: a read
+  /// path that cannot reach its backend fails LOUDLY rather than returning a
+  /// natural-looking empty value.
+  Future<FirestoreStreakEventRepository> _resolve() async {
+    final repo = await _resolveOrNull();
+    if (repo == null) {
+      throw const StreakStateRepositoryNotReadyException();
+    }
+    return repo;
+  }
+
   Future<FirestoreStreakEventRepository?> _resolveOrNull() {
     return _ref.read(firestoreStreakEventRepositoryProvider.future);
   }
@@ -114,16 +144,17 @@ class FirestoreStreakStateRepository {
     clientDeviceId: entry.clientDeviceId,
   );
 
-  /// Returns the current [StreakState], derived from the FULL event log —
-  /// not ready (no active account/profile) reduces the empty event list,
-  /// which [StreakReducer.reduce] maps to [StreakState.empty] — the same
-  /// natural-empty-value convention `FirestoreProgressRepositoryAdapter`
-  /// uses for its Map/int-returning methods.
+  /// Returns the current [StreakState], derived from the FULL event log.
+  ///
+  /// Throws [StreakStateRepositoryNotReadyException] when the backend cannot
+  /// be resolved (owner ruling D-E). It deliberately does NOT reduce an empty
+  /// event list: that maps to [StreakState.empty], i.e. a streak of ZERO, which
+  /// is indistinguishable from a learner who genuinely has no streak. A child
+  /// seeing their streak silently reset to 0 because a provider was not ready
+  /// is precisely the failure D-E exists to prevent, and no gate can see it.
   Future<StreakState> getStreak() async {
-    final repo = await _resolveOrNull();
-    final events = repo == null
-        ? const <StreakEventEntry>[]
-        : await repo.getAllEvents();
+    final repo = await _resolve();
+    final events = await repo.getAllEvents();
     return const StreakReducer().reduce(
       events.map(_asLogEvent),
       today: _clock.today(),
@@ -150,8 +181,9 @@ class FirestoreStreakStateRepository {
     required DateTime startUtc,
     required DateTime endUtc,
   }) async {
-    final repo = await _resolveOrNull();
-    if (repo == null) return {};
+    // D-E: an unresolvable backend must not render as "no active days" — an
+    // empty calendar is indistinguishable from a learner who has never studied.
+    final repo = await _resolve();
 
     final events = await repo.getAllEvents();
     final startLocal = LocalDayUtils.extractLocalDate(startUtc);
@@ -175,11 +207,11 @@ class FirestoreStreakStateRepository {
   /// a caller that needs to react to the provider becoming ready later
   /// should re-watch after observing that.
   Stream<StreakState> watchStreak() async* {
-    final repo = await _resolveOrNull();
-    if (repo == null) {
-      yield StreakState.empty;
-      return;
-    }
+    // D-E: yielding StreakState.empty here would publish a streak of ZERO to
+    // every listener whenever the provider was not yet ready. Throwing inside
+    // an `async*` surfaces as a stream error, which a consumer can observe and
+    // react to — a silent zero cannot be.
+    final repo = await _resolve();
     yield* repo
         .watchRecentEvents(limit: 500)
         .map(

@@ -2445,6 +2445,86 @@ not re-learn the hard way:**
 
 ---
 
+### 2026-08-10 — P3-14: D-E applied to streak + stage definitions; `journey_providers` migrated from a parallel-generated spec; 7 unreachable legacy files archived
+
+Batched round — parallelised because the serial per-file design pass was the
+bottleneck. All touched files `dart analyze --fatal-infos` EXIT 0. No test run — D-G.
+
+#### 1. D-E applied where it had been decided but never done
+
+**Stage definitions** (`stage_definition_repository_impl.dart`) — handoff-2 §10's
+recorded defect, finally fixed. `getStagesForCurriculum` and
+`getAllStageDefinitions` returned `const []` when the backend was unresolvable;
+downstream `if (stages.isEmpty) return 0.0` turned that into **0% progress** shown
+to the learner. Both now route through the already-throwing `_resolve()`.
+`return const [];` no longer appears in that file.
+
+**Streak** (`firestore_streak_state_repository.dart`) — the same defect in code
+that was written before D-E existed and is **not yet wired**. `getStreak` reduced
+an empty event list, `getStreakCalendar` returned `{}`, `watchStreak` yielded
+`StreakState.empty`. All three rendered "backend not ready" as **a streak of
+ZERO** — a child-facing number silently resetting. Now throws
+`StreakStateRepositoryNotReadyException`. Fixed BEFORE wiring, deliberately:
+wiring first would have made the defect live.
+
+#### 2. Parallel spec generation — the process change
+
+Ten Drift-coupled files were spec'd concurrently, each with an adversarial
+verifier, instead of one serial design pass each. Verdicts: **1 MECHANICAL,
+2 dead, 4 NEEDS_DESIGN, 1 BLOCKED** (2 unreturned). That distribution is itself
+the finding: **most remaining files genuinely need design**, so parallelism helps
+throughput but does not convert this into mechanical work.
+
+The MECHANICAL spec (`journey_providers.dart`, 9 edits, 20 errors) applied cleanly
+to EXIT 0 — including the `LearningLedgerData` → `LearningLedgerEntry` type moves,
+the `e.curriculumId == curriculum.storageKey` → enum comparison, and deletion of
+the local Drift `learningLedgerProvider` family, which resolves the
+`learningLedgerProvider` NAME COLLISION recorded in P3-13 §4.
+
+**The edits were applied by reading the spec JSON directly** — no edit string
+passed through the orchestrator's hands, so the transcription-corruption class
+recorded in P3-10 §3 cannot occur.
+
+#### 3. ⚠️ A worker told me to delete LIVE production code
+
+`ParentDashboardAggregator` came back `ALREADY_DEAD` with the stated evidence
+"ZERO live production consumers". It is constructed at
+`parent_dashboard_providers.dart:14`. The verdict was *accidentally* right — the
+provider that constructs it has no watchers, so it is dead TRANSITIVELY — but the
+evidence given was false, and acting on that evidence would have been acting on a
+falsehood that happened to point the right way.
+
+**Standing consequence: a deletion verdict is never acted on from a worker's
+reasoning. Re-derive deadness independently.**
+
+#### 4. Reachability sweep — hypothesis mostly WRONG, recorded as such
+
+Hypothesis: a large share of the remaining errors sit in unreachable code, so
+deleting beats migrating. **Measured: only 41 of 613 `lib/` errors are in
+unreachable files. 572 are in code the app genuinely reaches.** The sweep is a
+deterministic static import walk from `lib/main.dart` (no model judgement, cannot
+fabricate) — 730 lib files, 659 reachable, 71 not.
+
+It paid for itself anyway: it independently confirmed the two dead-code verdicts
+by measurement rather than by a worker's word, and found three more.
+
+**The unreachable list is NOT a delete list**, and this nearly went wrong. It also
+contains the not-yet-wired REPLACEMENTS —
+`firestore_streak_state_repository.dart`, `firestore_gamification_ledger_repository.dart`,
+`firestore_points_repository.dart` — plus feature barrels. Deleting by
+reachability alone would have destroyed the very code the migration is moving
+toward. Archived set was restricted to Drift-era LEGACY that is also unreachable:
+
+`parent_dashboard_aggregator` (+`.freezed`), `parent_dashboard_providers`,
+`parent_analytics_repository`, `progress_repository_impl`, `user_profile_service`,
+`text_download_service`.
+
+The sweep also re-verified the PROTECTED list: `content_database.dart` and
+`tables/calendar_cycles.dart` both come back REACHABLE, so the handoff's warning
+about `tables/` being shared still holds. The other 22 `tables/*.dart` are
+unreachable orphans carrying zero errors — baggage for a later sweep.
+
+---
 ### 2026-08-10 — P3-13: the learning ledger gets the Firestore adapter it never had — interface, adapter and provider wiring, all three EXIT 0
 
 `dart analyze --fatal-infos` EXIT 0 on all three touched files. No test run — D-G.

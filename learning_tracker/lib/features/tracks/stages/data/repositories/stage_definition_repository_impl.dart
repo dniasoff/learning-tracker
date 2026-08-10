@@ -403,11 +403,20 @@ class FirestoreStageDefinitionRepositoryAdapter
   }
 
   @override
+  /// Throws [StageDefinitionRepositoryNotReadyException] when the backend
+  /// cannot be resolved (owner ruling D-E). It deliberately does NOT return an
+  /// empty list: downstream, no stages means the completion calculation returns
+  /// 0.0 (`track_progress_service.dart`, `dashboard_providers.dart` both
+  /// `if (stages.isEmpty) return 0.0`), so an unresolvable repository rendered
+  /// as **0% progress** — to the learner, to the logs, and to every gate,
+  /// indistinguishable from a legitimately empty result.
+  ///
+  /// Note the sibling [_resolve] has always thrown: the WRITE path failed
+  /// loudly while this READ path failed silently.
   Future<List<StageDefinition>> getStagesForCurriculum(
     CurriculumId curriculumId,
   ) async {
-    final repo = await _resolveOrNull();
-    if (repo == null) return const [];
+    final repo = await _resolve();
     return repo.getStagesForCurriculum(curriculumId);
   }
 
@@ -484,9 +493,11 @@ class FirestoreStageDefinitionRepositoryAdapter
   }
 
   @override
+  /// Throws [StageDefinitionRepositoryNotReadyException] when the backend
+  /// cannot be resolved — see [getStagesForCurriculum] for why an empty list is
+  /// the wrong answer here (D-E).
   Future<List<StageDefinition>> getAllStageDefinitions() async {
-    final repo = await _resolveOrNull();
-    if (repo == null) return const [];
+    final repo = await _resolve();
     return repo.getAllStageDefinitions();
   }
 }

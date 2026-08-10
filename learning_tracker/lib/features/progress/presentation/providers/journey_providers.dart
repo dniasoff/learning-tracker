@@ -1,14 +1,15 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
+import 'package:learning_tracker/features/learning/domain/entities/learning_ledger_entry.dart';
 import 'package:learning_tracker/features/learning/domain/services/completion_detection_service.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/learning_ledger_providers.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/progress/domain/models/journey_view_model.dart';
 import 'package:learning_tracker/features/progress/domain/siyum_granularity_filter.dart';
@@ -22,17 +23,17 @@ part 'journey_providers.g.dart';
 // ---------------------------------------------------------------------------
 
 /// Entry scope: the ledger's [entryScope] string verbatim (e.g. `'masechta'`).
-String _entryScope(LearningLedgerData e) => e.entryScope;
+String _entryScope(LearningLedgerEntry e) => e.entryScope;
 
 /// Entry key: the ledger's [unitIdentifier] verbatim.
-String _entryKey(LearningLedgerData e) => e.unitIdentifier;
+String _entryKey(LearningLedgerEntry e) => e.unitIdentifier;
 
 /// Look up the level-1 parent of a level-2 entry from the content item list.
 ///
 /// The ledger row doesn't store the parent explicitly. We scan the loaded
 /// content for the first item whose [level2] matches the entry's identifier
 /// and return its [level1]. Returns `null` for level-1 scope types.
-String? _parentL1Key(LearningLedgerData e, List<ContentItem> content) {
+String? _parentL1Key(LearningLedgerEntry e, List<ContentItem> content) {
   const level2Types = {'masechta', 'sefer', 'parsha', 'book'};
   if (!level2Types.contains(e.entryScope)) return null;
   for (final item in content) {
@@ -102,20 +103,58 @@ final profileByIdProvider = FutureProvider.autoDispose
       return repo.getProfileById(profileId);
     });
 
-/// Provider for learning ledger entries for a given profile.
-final learningLedgerProvider = FutureProvider.autoDispose
-    .family<List<LearningLedgerData>, int>((ref, profileId) async {
-      final database = ref.watch(userDatabaseProvider);
-      return database.learningLedgerDao.getEntriesByProfile(profileId);
-    });
+/// Thrown when [journeyViewModel] is asked for a profile that is not the
+/// ACTIVE one.
+///
+/// The Firestore learning ledger lives at
+/// `learner_profiles/{profileId}/learning_ledger`, and `learningLedgerProvider`
+/// is built for the ACTIVE profile only — there is no way to read another
+/// profile's ledger from here. Owner ruling D-E: fail LOUDLY rather than
+/// quietly serve the active profile's siyumim under someone else's name.
+/// `SiyumimMilestonesScreen` renders the OTHER profile's `displayName` in its
+/// AppBar when deep-linked with `?profileId=`, so a silent substitution would
+/// be invisible mis-attribution, not a visibly empty screen.
+class JourneyProfileNotActiveException implements Exception {
+  const JourneyProfileNotActiveException({
+    required this.requestedProfileId,
+    required this.activeProfileId,
+  });
+
+  final int requestedProfileId;
+  final int activeProfileId;
+
+  @override
+  String toString() =>
+      'JourneyProfileNotActiveException: journeyViewModel was asked for '
+      'profile $requestedProfileId but the active profile is $activeProfileId '
+      '— the Firestore learning ledger is scoped to the active profile and '
+      'cannot be read for another one.';
+}
 
 /// Computes the full JourneyViewModel for a given profile.
+///
+/// [profileId] stays in the signature — every call site already passes it and
+/// it remains the family cache key — but it is now a GUARD rather than a
+/// selector: the ledger is profile-scoped by its Firestore collection path, so
+/// the argument can only be checked, never used to choose whose ledger to read.
 @riverpod
 Future<JourneyViewModel> journeyViewModel(Ref ref, int profileId) async {
   ref.watch<int>(completionCommittedProvider);
-  final ledgerEntries = await ref.watch(
-    learningLedgerProvider(profileId).future,
-  );
+  final activeProfileId = ref.watch(activeProfileIdProvider);
+  if (profileId != activeProfileId) {
+    throw JourneyProfileNotActiveException(
+      requestedProfileId: profileId,
+      activeProfileId: activeProfileId,
+    );
+  }
+  // `learningLedgerProvider` (learning_ledger_providers.dart) is the existing
+  // Firestore replacement for the local Drift provider this file used to
+  // declare. It delegates to `LearningLedgerRepository.getLifetimeLedger()`,
+  // which drops D-M tombstones (`purged_at != null`) at the repository's decode
+  // choke point and throws `LearningLedgerRepositoryNotReadyException` when no
+  // account/profile is active — it never returns an empty list to mean
+  // "backend unreachable" (D-E).
+  final ledgerEntries = await ref.watch(learningLedgerProvider.future);
   final activeCurricula = await ref.watch(activeCurriculaProvider.future);
 
   final curricula = <CurriculumJourney>[];
@@ -127,7 +166,7 @@ Future<JourneyViewModel> journeyViewModel(Ref ref, int profileId) async {
 
   for (final curriculum in activeCurricula) {
     final entriesForCurriculum = ledgerEntries
-        .where((e) => e.curriculumId == curriculum.storageKey)
+        .where((e) => e.curriculumId == curriculum)
         .toList();
 
     // Get total available units from content repository
@@ -300,7 +339,7 @@ int _countTotalUnits(List<ContentItem> content, CurriculumId curriculum) {
 /// and richer metadata on each row).
 List<MilestoneAchievement> _detectMilestones(
   Ref ref,
-  List<LearningLedgerData> entries,
+  List<LearningLedgerEntry> entries,
   List<ContentItem> content,
   CurriculumId curriculum,
 ) {
@@ -320,7 +359,7 @@ List<MilestoneAchievement> _detectMilestones(
   final unitLevelEntriesAll = entries
       .where((e) => unitScopes.contains(e.entryScope))
       .toList();
-  final byUnit = <String, LearningLedgerData>{};
+  final byUnit = <String, LearningLedgerEntry>{};
   for (final e in unitLevelEntriesAll) {
     final existing = byUnit[e.unitIdentifier];
     if (existing == null || e.completedAt.isAfter(existing.completedAt)) {
