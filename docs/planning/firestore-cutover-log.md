@@ -2445,6 +2445,133 @@ not re-learn the hard way:**
 
 ---
 
+### 2026-08-10 — P3-2: CORRECTS a false provenance claim P3-1 committed one commit earlier; establishes the FIRST true baseline for `e2ab5aeb`; parks the interrupted session's work intact
+
+**This entry exists because the round before it shipped a wrong claim.** It is
+filed as a correction, not folded silently into a later narrative, per
+Working Protocol rule 5 / §5 trap 13.
+
+#### 1. THE CORRECTION — `P3-1` §5's provenance claim is FALSE
+
+`P3-1` (commit `72837af1`) states, in its §5 and in its own commit message:
+
+> "**Provenance — every one of the six traces to the UNCOMMITTED work, not to
+> `e2ab5aeb`.**"
+
+**That is wrong, and it is wrong in the direction that matters.** Measured
+after the uncommitted work was parked and the tree restored to `e2ab5aeb`:
+
+```
+currentSplits: bookmarks, completions, curriculum_tracks, goals,
+               learning_order, stage_definitions, study_day_configs
+baseline:      bookmarks, learning_order
+newViolations: completions, curriculum_tracks, goals, stage_definitions,
+               study_day_configs          <- FIVE, on a CLEAN tree
+```
+
+**FIVE of the six splits are `e2ab5aeb`'s own.** Only `profile_programs` —
+one — belonged to the uncommitted session. The committed, pushed commit
+carries the other five.
+
+**How the error was made, stated plainly so it is not repeated.** The
+provenance method used in `P3-1` read each collection's `HOP1B LIVE`/
+`HOP2 LIVE` construction site out of the `--report` output, then `git
+status`-ed *that one file*. For all five, the site the report happened to
+surface was in the untracked `scheduler_data_providers.dart` — so each
+looked like it originated there. **A collection can be made live by more
+than one construction site.** Finding one site in untracked code does not
+establish that no committed site exists. The enumeration was never re-run
+against a tree with the untracked file removed, which is the only thing
+that could have falsified it — and doing so took under a minute once
+attempted.
+
+This is **§5 trap 3 exactly** ("a negative claim is verified by re-run
+enumeration against the CURRENT tree, or an executable probe — never by
+re-reading the code more carefully"), committed by the orchestrator, in the
+same round that quoted trap 3 approvingly. Recorded per Working Protocol
+rule 15's requirement to log when a defect originates in the orchestrator's
+own work rather than a delegate's: **no worker was involved in this claim.
+It was authored, verified and committed by the orchestrator alone.**
+
+`P3-1`'s other findings are unaffected and stand: `T-39`'s closure (an
+independent measurement), the three red gate results, `T-69`'s half
+discharge, and the machine/stash findings. Only the provenance attribution
+in §5 is retracted.
+
+#### 2. FIRST TRUE BASELINE for `e2ab5aeb` — it does not compile
+
+No round has ever measured `e2ab5aeb` alone; it landed with no log entry and
+the tree was dirty from the moment it was pulled. Measured now, on a tree
+restored to exactly that commit (plus `72837af1`, docs-only):
+
+| Gate | Result |
+|---|---|
+| `dart analyze --fatal-infos` | **EXIT 3** — 53 errors, 5 warnings, 10 infos |
+| `check_profile_path_keying` (103) | **EXIT 1** — 5 newViolations |
+| `check_profile_id_int_sites` (104) | **EXIT 1** — STALE entries |
+
+**28 of the 53 errors are in `lib/` — production code does not build at
+`e2ab5aeb`.** By file: `daily_task_projection_service.dart` 16,
+`manage_tutors_screen.dart` 6, `scheduler_providers.dart` 4,
+`tutored_write_router.dart` 2. Test errors (25):
+`s4_tutor_write_service_permission_test.dart` 12,
+`daily_task_projection_service_test.dart` 12,
+`s1_tutored_write_router_test.dart` 1.
+
+**Consequence for the record:** `e2ab5aeb` is not a "partial but sound"
+commit. It is a commit that does not compile, does not pass its own gates,
+was pushed to `origin`, and was never recorded. The T-30/T-31 re-key inside
+it is still believed to be directionally right — but it was landed
+mid-flight, and the earlier characterisation of it as "real and largely
+correct" (`P3-1` §1) is downgraded here to "directionally right, but
+incomplete and unbuildable as committed."
+
+#### 3. `P3-2a` — the interrupted session's work is PARKED, not lost
+
+Preserved BEFORE any deletion, verified by the orchestrator by extracting
+the archives and byte-comparing against the live files:
+
+- `/home/daniel/.phase3-parked-2026-08-10/modified-tracked.tar` — the 7
+  modified tracked files, verified to list exactly 7 paths.
+- `/home/daniel/.phase3-parked-2026-08-10/untracked-new.tar` — the 2 new
+  files (`scheduler_data_providers.dart`,
+  `projection_tasks_repository.dart`) plus their directory.
+
+Then `git checkout -- learning_tracker/lib` restored the 7, and only the two
+new paths were removed. **`git stash` was not used at any point** (§5 trap
+16). **Near-miss worth recording:** the obvious removal command
+(`rm -rf .../scheduler/data`) would have destroyed **eight TRACKED,
+committed files** that live in `scheduler/data/repositories/` alongside the
+one new file. Checked with `git ls-files` before deleting; the removal was
+narrowed to `data/providers/` plus the single file. Post-restore:
+9 tracked / 9 on disk under `scheduler/data`, working tree clean.
+
+#### 4. NEW STANDING FACT — a permission gate is indistinguishable from a slow worker
+
+**OBSERVED, n=2 this session.** Two OpenCode worker sessions hung with no
+output. Both were blocked on unanswered `external_directory` permission
+requests (`opencode_permission_list`), not working. One of them had been
+diagnosed by the orchestrator as a duration-driven prompt re-delivery, and a
+rule was written on that basis; the rule's causal claim was retracted once
+the gate was found. **A blocked session and a slow session present
+identically: status `busy`, minutes elapsed, zero output.**
+
+*Mechanical signature:* worker `busy` with no tool progress, especially on a
+trivial task.
+*On detection:* run `opencode_permission_list` FIRST, before any other
+diagnosis. *Prevention:* keep worker file access inside the project
+directory — a path argument inside a shell command does NOT arm the gate,
+while the agent's own `read` tool on the same path DOES.
+
+#### 5. What this round changes
+
+No D-row changes. `§11d`'s three new Phase-3-internal blockers all stand,
+with one corrected: the six splits are now **five from `e2ab5aeb` plus one
+from the parked work**, and the five must be resolved against the committed
+commit, not against a discarded working tree. Phase 3 remains in REPAIR, not
+WIRE-AND-MOVE. `T-69`'s serial-tools half remains outstanding and will be
+run once the tree compiles, per the owner's "nothing deferred" instruction.
+
 ### 2026-08-10 — P3-1: reconstructs the MISSING record for `e2ab5aeb` (Phase 3's first code commit, which landed with no log entry at all), reconciles `T-39` (the sole declared Phase 3 entry blocker — CLOSED, the two lists are disjoint), and records THREE RED GATES with measured numbers
 
 **Read this entry before trusting anything in `CURRENT STATE` written before
