@@ -82,6 +82,7 @@ class LearningLedgerEntry {
     required this.markedBy,
     required this.isManual,
     required this.source,
+    this.purgedAt,
   });
 
   /// This entry's identity — also its Firestore doc-id
@@ -131,6 +132,20 @@ class LearningLedgerEntry {
   /// replay only" update rule (SR-1) to keep accepting it. See the class
   /// doc comment's "[source] is new" section for why this exists.
   final CompletionSource source;
+
+  /// Tombstone timestamp — `null` for an active entry (owner ruling D-M,
+  /// 2026-08-10). `firestore.rules` denies `delete` on `learning_ledger`
+  /// unconditionally, so retraction is a tombstone.
+  ///
+  /// This exists because bulk-marking runs with `creditsAchievement: true`
+  /// and therefore earns a siyum ledger entry. Without a tombstone here,
+  /// un-ticking a bulk-marked masechta would purge its completions while the
+  /// siyum it earned survived forever — the two collections would disagree.
+  ///
+  /// `purged_at` is the ONLY key `firestore.rules` permits to change on this
+  /// collection; every other field stays immutable, so the SR-1 identical-
+  /// replay guarantee is unaffected (an identical replay affects no keys).
+  final DateTime? purgedAt;
 }
 
 /// One row for [FirestoreLearningLedgerRepository.recordCompletionsBatch] —
@@ -231,6 +246,12 @@ extension LearningLedgerEntryFirestoreCodec on LearningLedgerEntry {
     'marked_by': markedBy,
     'is_manual': isManual,
     'source': source.name,
+    // ALWAYS emitted, `null` while active, so every document carries the
+    // field — matching CompletionEntity. A Firestore
+    // `where('purged_at', isNull: true)` does NOT match documents where the
+    // field is ABSENT, so writing it unconditionally keeps a later switch to
+    // server-side filtering possible without a backfill.
+    'purged_at': purgedAt?.toUtc(),
   };
 }
 
@@ -297,6 +318,7 @@ LearningLedgerEntry learningLedgerEntryFromFirestore(
     markedBy: markedBy,
     isManual: FirestoreCodec.parseBool(data['is_manual']) ?? false,
     source: _parseSource(data['source']),
+    purgedAt: FirestoreCodec.parseDateTime(data['purged_at']),
   );
 }
 

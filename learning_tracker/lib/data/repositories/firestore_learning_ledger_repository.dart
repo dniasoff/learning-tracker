@@ -214,11 +214,21 @@ class FirestoreLearningLedgerRepository {
   /// first; a raw map built directly in a test (already a [DateTime]) is
   /// left untouched.
   Map<String, dynamic> _normalizeForDecode(Map<String, dynamic> raw) {
-    final completedAt = raw['completed_at'];
+    var out = raw;
+    final completedAt = out['completed_at'];
     if (completedAt is Timestamp) {
-      return {...raw, 'completed_at': completedAt.toDate().toUtc()};
+      out = {...out, 'completed_at': completedAt.toDate().toUtc()};
     }
-    return raw;
+    // D-M: `purged_at` round-trips as a real `Timestamp` exactly as
+    // `completed_at` does, and `FirestoreCodec.parseDateTime` has NO
+    // `Timestamp` branch (firestore_codec.dart:34-51) — handed one it returns
+    // null, which would silently decode a RETRACTED siyum as active. Normalize
+    // it here for the same reason.
+    final purgedAt = out['purged_at'];
+    if (purgedAt is Timestamp) {
+      out = {...out, 'purged_at': purgedAt.toDate().toUtc()};
+    }
+    return out;
   }
 
   /// Decodes every document in [docs], skipping (and logging) any single
@@ -230,9 +240,19 @@ class FirestoreLearningLedgerRepository {
     final results = <LearningLedgerEntry>[];
     for (final doc in docs) {
       try {
-        results.add(
-          learningLedgerEntryFromFirestore(_normalizeForDecode(doc.data())),
+        final entry = learningLedgerEntryFromFirestore(
+          _normalizeForDecode(doc.data()),
         );
+        // D-M: a retracted siyum is invisible to every reader. This is the
+        // single choke point — `getLifetimeLedger`, `getLedgerForCurriculum`
+        // and `getCompletionStats` all funnel through here.
+        //
+        // NOTE the deliberate asymmetry: `_countAll` / `_nextCompletionNumber`
+        // do NOT filter tombstones. `completionNumber` must stay monotonic, so
+        // a retracted entry still consumes its number and no later entry ever
+        // reuses one. Do not "fix" that to match this filter.
+        if (entry.purgedAt != null) continue;
+        results.add(entry);
       } catch (error, stackTrace) {
         _logger.warning(
           event: 'firestore_learning_ledger_decode_error',
@@ -463,6 +483,34 @@ class FirestoreLearningLedgerRepository {
   /// feature itself. Paginated internally (see the class doc comment's
   /// "500-item list cap" section) so a long lifetime history costs multiple
   /// round trips rather than being silently truncated.
+  /// Tombstones a ledger entry by stamping `purged_at` (owner ruling D-M,
+  /// 2026-08-10).
+  ///
+  /// Used when a bulk-marked unit is un-ticked: the completions are purged and
+  /// the siyum entry they earned must be retracted with them, or the two
+  /// collections disagree permanently. `firestore.rules` denies `delete` on
+  /// this collection unconditionally, so retraction is a tombstone.
+  ///
+  /// `purged_at` is the ONLY key the rules permit to change here, so this uses
+  /// `update` with exactly that key — a `set` would resend every field and be
+  /// denied. Throws [StateError] when the entry is absent: per owner ruling
+  /// D-E a retraction that cannot find its target must fail LOUDLY, never
+  /// silently no-op.
+  Future<void> purgeEntry({
+    required String ulid,
+    required DateTime purgedAt,
+  }) async {
+    final ref = _doc(ulid);
+    final snapshot = await ref.get();
+    if (!snapshot.exists) {
+      throw StateError(
+        'purgeEntry: no learning_ledger entry at $ulid. A retraction that '
+        'cannot find its target must fail loudly, never no-op (D-E).',
+      );
+    }
+    await ref.update({'purged_at': purgedAt.toUtc()});
+  }
+
   Future<List<LearningLedgerEntry>> getLifetimeLedger() async {
     final docs = await _fetchAllPages(_ledger);
     return _decodeAll(docs);
@@ -515,6 +563,11 @@ class FirestoreLearningLedgerRepository {
         stackTrace: stackTrace,
         fields: {'profile_id': _profileId},
       ),
+    ).map(
+      // D-M: retracted siyums are invisible to readers. This stream decodes
+      // per-document and so cannot route through `_decodeAll`; the filter is
+      // applied to each emitted list instead.
+      (entries) => entries.where((e) => e.purgedAt == null).toList(),
     );
   }
 }

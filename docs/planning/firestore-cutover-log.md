@@ -2445,6 +2445,123 @@ not re-learn the hard way:**
 
 ---
 
+### 2026-08-10 — P3-9: `CompletionWriter` was DEAD, not central — the handoff's "first task" was misdirected; the writer is archived and the ledger gets its D-M tombstone
+
+`dart analyze --fatal-infos`: **4,038 → 3,982 errors** (5,907 → 5,744 issues).
+No test run — D-G.
+
+#### 1. The correction
+
+Handoff §6 opens: *"YOUR FIRST TASK — design `CompletionWriter`'s replacement.
+This is the architectural centre and everything else is downstream of it"*, and
+records it as *"depended on by 24 files"*.
+
+**Both claims are false.** Measured:
+
+- `completionWriterProvider` is referenced **only inside its own generated
+  `.g.dart`** — the provider's own definition. **Zero consumers in `lib/`. Zero
+  in `test/`.**
+- `CompletionWriter(...)` is constructed only by that unused provider and by 8
+  test files.
+- **No `lib/` file constructs a `CompletionCommand` at all.**
+- `completion_repository_impl.dart` *imports* `completion_writer.dart` but
+  references `CompletionWriter` only in a doc comment. The import is dead.
+
+The "24 files" came from a `grep -l` that counted **doc-comment mentions**. This
+is the same failure the handoff itself documents as trap 1 — *a negative (or
+positive) claim from an incomplete search reads as evidence* — and it was
+inherited from the previous session's own handoff. **A dependency count from
+`grep -l` is not a dependency count; it must exclude comments before it means
+anything.**
+
+The live write path was already on Firestore:
+`FirestoreCompletionRepositoryAdapter.markComplete`
+(`completion_repository_impl.dart:254,:303`) → `FirestoreCompletionRepository`.
+`CompletionWriter` is not in it, and has not been for some time.
+
+**Two workers degenerated on this task in the previous session.** That was read
+as model unreliability. At least part of it is that they were asked to port a
+class with no consumer, against a spec whose premise did not hold.
+
+#### 2. What was archived
+
+`git mv` to `docs/_archive/drift-user-db/completion-writer/` — history preserved,
+nothing destroyed:
+
+| File | Why |
+|---|---|
+| `completion_writer.dart` | Drift-bound, zero production consumers |
+| `completion_writer_test.dart` | writer-specific |
+| `epic_25_story_15_completion_writer_test.dart` | writer-specific |
+| `v15_to_v16_test.dart`, `v17_to_v18_test.dart` | Drift **schema-migration** gates for the archived user DB |
+
+The dead `completionWriter` provider was removed from
+`completion_writer_providers.dart`. **The FILE stays** — it also holds
+`CompletionCommitted`, whose `completionCommittedProvider` has **43 `lib/` call
+sites**. Archiving the file wholesale would have taken all 43 with it. Its
+generated part was edited to match; `*.g.dart` is gitignored
+(`learning_tracker/.gitignore:52`) and untracked, so that edit is local-only and
+`build_runner` will regenerate it correctly from the now-absent annotation.
+
+**Deliberately NOT archived**, both mixed-purpose:
+`regression_invariants_test.dart` (487 lines, ONE writer mention) and
+`bulk_prior_completion_b6_b8_test.dart` (1,123 lines, five). They encode B6/B8
+behaviour that must survive as a guard against the ADAPTER. Archiving them
+wholesale would have destroyed working guards — handoff §4's warning, applied.
+
+Worth recording: `v17_to_v18_test.dart` existed to verify *"completion_events has
+the purgedAt nullable column"*. D-L reintroduces exactly that concept on
+Firestore. The tombstone is not a new invention; it is the original design
+returning after a detour.
+
+#### 3. D-M landed on the ledger
+
+`learning_ledger_entry.dart` gains `purgedAt`; `purged_at` is always emitted
+(null while active) so the field shape is uniform.
+`firestore_learning_ledger_repository.dart` gains `purgeEntry`, normalises
+`purged_at` out of a raw `Timestamp` (the same silent-corruption path P3-8 §3
+describes — an unnormalised value decodes to null, i.e. a retracted siyum reads
+as active), and filters tombstones at its own `_decodeAll` choke point plus the
+watch stream.
+
+**A deliberate asymmetry, commented at the site so it is not "fixed" later:**
+`_countAll` / `_nextCompletionNumber` do **NOT** filter tombstones.
+`completionNumber` must stay monotonic — a retracted entry still consumes its
+number so no later entry ever reuses one.
+
+#### 4. What the adapter still needs
+
+`FirestoreCompletionRepositoryAdapter.markComplete` already does the idempotency
+pre-check, and its own comment gives the right reason: SR-1 permits `update`
+only as a byte-identical replay, so a genuine re-mark computing a fresh
+`nowUtc()` would be rules-denied. It still needs:
+
+1. `_toDriftCompletion` removed — it converts to the DELETED Drift `Completion`
+   type. `MarkCompletionResult.completion` must become `CompletionEntity`.
+2. Tombstone resurrection via `restoreCompletion` — `completionExists` now
+   reports a purged document as ABSENT, so without this a re-mark after expunge
+   would attempt a create against an existing document and be denied.
+3. The B8 upgrade via `upgradeSourceToLive`.
+4. `recordCompletionIfAbsent` in place of exists-then-write, closing the race on
+   `isNew` (which gates points, streak, siyum detection and bookmark advance).
+
+`bulkMarkComplete` has no per-item existing-check; its own comment explains that
+every current call site supplies the fixed `kBulkPriorSentinelDate`, making a
+retry a byte-identical replay. That reasoning survives D-L unchanged.
+
+#### 5. Process note — the gate, not the report, is what proves an edit
+
+A worker returned `SCRIPT_OUT: OK` / `DEVIATIONS: NONE` having produced a file
+that would not parse: the authored script contained `);` and the file came out
+with a bare `)`. `git diff --stat` showed a plausible insertion count and told me
+nothing. `dart analyze` on the two touched files found it in seconds.
+
+**Rule: `git diff --stat` proves a change happened; only the gate proves it
+parses. Run the analyzer on every file a worker edits, before the next
+dispatch.** Every subsequent dispatch also carries an explicit "pipe the heredoc
+exactly as written, do not retype" instruction.
+
+---
 ### 2026-08-10 — P3-8: `completions` becomes tombstone-capable — TWO owner rulings (D-L, D-M) unblock a migration that the security rules had made impossible, and a silent-corruption path is closed before it could land
 
 Design round for `T-CW` (`CompletionWriter`'s replacement, handoff §6). No test

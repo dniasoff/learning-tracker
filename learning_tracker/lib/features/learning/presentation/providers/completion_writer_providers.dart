@@ -1,18 +1,13 @@
-import 'package:learning_tracker/core/analytics/analytics_provider.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
-import 'package:learning_tracker/features/learning/data/completion_writer.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'completion_writer_providers.g.dart';
 
-/// Riverpod entry point for [CompletionWriter] — the single authoritative
-/// completion-write path (FR15).
-@riverpod
-CompletionWriter completionWriter(Ref ref) {
-  final db = ref.watch(userDatabaseProvider);
-  final analytics = ref.watch(analyticsServiceProvider);
-  return CompletionWriter(db, analytics: analytics);
-}
+// NOTE: this file no longer provides a completion WRITER. `CompletionWriter`
+// was Drift-bound and had zero production consumers — the live write path is
+// `FirestoreCompletionRepositoryAdapter.markComplete`
+// (`features/learning/data/repositories/completion_repository_impl.dart`).
+// The file keeps its name only because 43 call sites import
+// `completionCommittedProvider` from this path.
 
 /// Monotonically-increasing counter that increments once per successfully
 /// committed completion (Story 26.13 — DNI-356).
