@@ -112,7 +112,7 @@ The core layer (`lib/core/`) provides shared infrastructure that all feature mod
 ### Navigation
 
 - **Router:** `auto_route` with 40+ typed routes (no string-based navigation).
-- **Guards (5):** `AuthGuard`, `RestoreGuard`, `ProfileGuard`, `ChildModeGuard`, and `PinGuard` — parameterized by `PinScope` (parent) so adding a PIN-gated route is one line.
+- **Guards (4):** `AuthGuard`, `ProfileGuard`, `ChildModeGuard`, and `PinGuard` — parameterized by `PinScope` (parent) so adding a PIN-gated route is one line. (`RestoreGuard` was deleted along with the rest of the Drift-era sync engine — see the SyncEngine section below, which is stale pending a post-migration rewrite.)
 - **Shell:** `AppShell` with 4-tab bottom navigation.
 
 ### SyncEngine (7 classes — core/sync/, built but not yet production)
