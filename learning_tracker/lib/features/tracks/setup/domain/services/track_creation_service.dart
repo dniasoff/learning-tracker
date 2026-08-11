@@ -1,19 +1,20 @@
 import 'dart:async';
 
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/domain/value_objects/program_starting_position.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
-import 'package:learning_tracker/core/sync/firestore_gateway.dart';
-import 'package:learning_tracker/core/sync/sync_write_facade.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/bookmark_repository.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/day_type.dart';
 import 'package:learning_tracker/features/scheduler/scheduler.dart';
 import 'package:learning_tracker/features/tracks/domain/services/curriculum_activation_service.dart';
+import 'package:learning_tracker/features/tracks/setup/data/repositories/curriculum_track_repository_impl.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/add_track_result.dart';
-import 'package:learning_tracker/features/tracks/stages/domain/repositories/stage_definition_repository.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/repositories/curriculum_scope_write_repository.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/repositories/profile_program_repository.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/repositories/study_day_write_repository.dart';
 
 /// Default study days: all 7 days active (Sun–Shabbos).
 ///
@@ -28,175 +29,130 @@ const kDefaultStudyDays = <int, String>{
   6: 'study', // Shabbos (Saturday)
 };
 
-/// Creates a track in the database from an [AddTrackResult].
+/// Creates a track from an [AddTrackResult].
 ///
-/// All core DB writes (stages, study days, scopes, point seeds) run in one
-/// transaction. Goals are removed first (with sync), then re-created after if
-/// the flow includes a goal. Program enrollment is set or cleared after.
+/// AD-25: a track IS a curriculum (one track per curriculum per profile) —
+/// every write here is keyed on [CurriculumId] alone, there is no separate
+/// per-device track id to thread through or resolve.
+///
+/// Not atomic across the stage/study-day/scope/goal/program-enrolment
+/// writes (Firestore has no cross-collection transaction reachable through
+/// the plain repository calls this whole migration already uses elsewhere —
+/// same disclosed trade-off as `TrackEditService`/`LearningProcessWizardService`).
 class TrackCreationService {
   TrackCreationService({
-    required UserDatabase database,
     required CurriculumActivationService activationService,
     required LearningProcessWizardService wizardService,
     required GoalRepository goalRepository,
-    required StageDefinitionRepository stageRepository,
+    required FirestoreCurriculumTrackRepositoryAdapter trackRepository,
+    required StudyDayWriteRepository studyDayRepository,
+    required CurriculumScopeWriteRepository scopeRepository,
+    required ProfileProgramRepository profileProgramRepository,
     required BookmarkRepository bookmarkRepository,
-    FirestoreGateway? gateway,
-    SyncWriteFacade? syncFacade,
     AnalyticsService? analytics,
-  }) : _database = database,
-       _activationService = activationService,
+  }) : _activationService = activationService,
        _wizardService = wizardService,
        _goalRepository = goalRepository,
-       _stageRepository = stageRepository,
+       _trackRepository = trackRepository,
+       _studyDayRepository = studyDayRepository,
+       _scopeRepository = scopeRepository,
+       _profileProgramRepository = profileProgramRepository,
        _bookmarkRepository = bookmarkRepository,
-       _gateway = gateway,
-       _syncFacade = syncFacade,
        _analytics = analytics ?? const NullAnalyticsService();
 
-  final UserDatabase _database;
   final CurriculumActivationService _activationService;
   final LearningProcessWizardService _wizardService;
   final GoalRepository _goalRepository;
-  final StageDefinitionRepository _stageRepository;
+  final FirestoreCurriculumTrackRepositoryAdapter _trackRepository;
+  final StudyDayWriteRepository _studyDayRepository;
+  final CurriculumScopeWriteRepository _scopeRepository;
+  final ProfileProgramRepository _profileProgramRepository;
   // The SAME repository the rest of the app reads bookmarks through
   // (Firestore-backed, ULID-profile-keyed — see bookmark_providers.dart).
-  // The initial program-track bookmark MUST be written here, not via the
-  // Drift DAO or the int-keyed outbox gateway, or it lands on a document
-  // nothing reads (see createTrack's doc comment).
   final BookmarkRepository _bookmarkRepository;
-  final FirestoreGateway? _gateway;
-  // All routable writes (bookmark, study-day, profile-program) go through the
-  // tutored router when a tutor session is active.
-  final SyncWriteFacade? _syncFacade;
   final AnalyticsService _analytics;
 
   /// Persist all track configuration from the AddTrackFlow result.
-  ///
-  /// D7: the track row, stage seeding, study days, scopes, point seeds and the
-  /// LOCAL program-enrolment row all run in a SINGLE transaction, so a
-  /// stage-seed failure (e.g. an FK error on a profile-less account) rolls back
-  /// the track row AND the program row together — no orphaned 0-stage track or
-  /// dangling enrolment. Network / idempotent work (curriculum activation, goal
-  /// sync, cloud pushes) runs AFTER commit so the transaction is never held
-  /// open on a network round.
-  ///
-  /// The initial bookmark for a program track is one of those post-commit
-  /// writes (see the `bookmarkRef != null` branch below): [BookmarkRepository]
-  /// is Firestore-backed, so it cannot participate in the Drift transaction
-  /// above, and it can throw (e.g. [BookmarkRepositoryNotReadyException] via
-  /// the adapter) or fail on the network. That failure is deliberately left
-  /// unhandled here, exactly like the `_syncFacade?.pushProfileProgram` push
-  /// beside it: the LOCAL track/program row (the source of truth for
-  /// `trackingStartRef`) is already durable by that point, so a failed
-  /// bookmark push is a retriable cloud-sync gap, not data loss — the caller
-  /// surfaces the error, and re-opening the track (or a future explicit
-  /// retry) re-attempts the same idempotent `setBookmark` call. Writing the
-  /// bookmark BEFORE commit was rejected: it would mean either holding the
-  /// Drift transaction open across a network round-trip, or writing the
-  /// bookmark first and then rolling back the local row on a later DAO
-  /// failure while the remote bookmark stays set — a worse inconsistency than
-  /// the one this method already accepts for the sibling cloud pushes.
-  Future<void> createTrack({
-    required AddTrackResult result,
-    required int profileId,
-  }) async {
+  Future<void> createTrack({required AddTrackResult result}) async {
     final curriculum = result.curriculumId;
     final (:bookmarkRef, :trackingStartDate) = result.programId == null
         ? (bookmarkRef: null, trackingStartDate: null)
         : _parseProgramStartingRef(result.startingRef);
 
-    late int trackId;
-    var clearedProgram = false;
+    // Restore any soft-deleted/archived track (avoids a duplicate doc on
+    // re-add) or create fresh — idempotent, matching the old restoreOrCreate.
+    await _trackRepository.activateTrack(curriculum);
 
-    await _database.transaction(() async {
-      // Restore any soft-deleted track row (avoids UNIQUE violation on re-add).
-      trackId = await _database.trackDao.restoreOrCreate(
-        profileId: profileId,
+    // Stages are seeded from the learning-process (chazara) wizard. When the
+    // add-track flow skipped that step (wizardResult == null — e.g. a track
+    // created without configuring chazara), fall back to a לימוד-only
+    // ("no review") configuration. Every track MUST carry at least the
+    // primary learning stage: the scheduler's projection does
+    // `if (stages.isEmpty) continue;`, so a stage-less track is skipped
+    // entirely and the dashboard shows "No projection" / 0 due despite a
+    // valid goal + computed pace. A noReview result seeds ONLY the learn
+    // stage — no chazara rounds — honouring the per-track chazara rule.
+    // applyWizardResult overwrites the curriculum's whole stage set in place.
+    final wizardResult =
+        result.wizardResult?.wizardResult ??
+        WizardResult(curriculumId: curriculum, choice: WizardChoice.noReview);
+    await _wizardService.applyWizardResult(wizardResult);
+
+    await _studyDayRepository.replaceAllForCurriculum(
+      curriculumId: curriculum,
+      studyDays: result.studyDays.map(
+        (day, type) => MapEntry(day, type == 'study' ? DayType.study : DayType.review),
+      ),
+    );
+
+    await _scopeRepository.clearScopes(curriculum);
+    if (result.scopeSelections != null && result.scopeSelections!.isNotEmpty) {
+      await _scopeRepository.insertScopes(
         curriculumId: curriculum,
+        scopes: [
+          for (final scope in result.scopeSelections!)
+            (level: scope.level, value: scope.value),
+        ],
       );
+    }
 
-      // Clear any prior stage rows for this (possibly soft-deleted then
-      // restored) track before reseeding below.
-      await _stageRepository.deleteStagesForTrack(trackId);
-      // Stages are seeded from the learning-process (chazara) wizard. When the
-      // add-track flow skipped that step (wizardResult == null — e.g. a track
-      // created without configuring chazara), fall back to a לימוד-only
-      // ("no review") configuration. Every track MUST carry at least the
-      // primary learning stage: the scheduler's projection does
-      // `if (stages.isEmpty) continue;`, so a stage-less track is skipped
-      // entirely and the dashboard shows "No projection" / 0 due despite a
-      // valid goal + computed pace. A noReview result seeds ONLY the learn
-      // stage — no chazara rounds — honouring the per-track chazara rule.
-      // applyWizardResult clears existing stages first (clearFirst: true).
-      final wizardResult =
-          result.wizardResult?.wizardResult ??
-          WizardResult(curriculumId: curriculum, choice: WizardChoice.noReview);
-      await _wizardService.applyWizardResult(
-        wizardResult,
-        profileId: profileId,
-        trackId: trackId,
+    // TODO(task-4): point-config seeding (per-curriculum point overrides)
+    // was dropped from this rewrite — it's explicitly task #4's territory
+    // ("Restore per-curriculum point overrides", owner-approved). The old
+    // Drift _seedPointConfigsIfNeeded is not translated here; a child
+    // profile's track currently gets no seeded point-config row until that
+    // task lands.
+
+    // Program enrolment — set or clear.
+    if (result.programId == null) {
+      await _profileProgramRepository.removeProgram(curriculum);
+    } else {
+      await _profileProgramRepository.setProgram(
+        curriculumId: curriculum,
+        programId: result.programId!,
+        trackingStartDate: trackingStartDate,
+        trackingStartRef: bookmarkRef,
       );
-
-      await _database.studyDayConfigDao.replaceAllForTrack(
-        profileId: profileId,
-        curriculumId: curriculum.storageKey,
-        trackId: trackId,
-        studyDays: result.studyDays,
-      );
-
-      await _database.curriculumScopeDao.clearScopesForTrack(trackId);
-      if (result.scopeSelections != null &&
-          result.scopeSelections!.isNotEmpty) {
-        await _database.curriculumScopeDao.insertScopesForTrack(
-          profileId: profileId,
-          curriculum: curriculum,
-          trackId: trackId,
-          scopes: [
-            for (final scope in result.scopeSelections!)
-              (level: scope.level, value: scope.value),
-          ],
+      // The bookmark itself is a SEPARATE Firestore write (below) — not
+      // part of setProgram's payload. `trackingStartRef` above is the
+      // durable record of the chosen starting ref; it is not read as a
+      // bookmark by anything.
+      if (bookmarkRef != null && bookmarkRef.isNotEmpty) {
+        await _bookmarkRepository.setBookmark(
+          curriculumId: curriculum,
+          sefariaRef: bookmarkRef,
         );
       }
+    }
 
-      await _seedPointConfigsIfNeeded(
-        profileId: profileId,
-        curriculumId: curriculum,
-        trackId: trackId,
-      );
-
-      // Program-enrolment LOCAL row (or clear) — in the SAME transaction so a
-      // stage-seed failure above rolls it back too.
-      if (result.programId == null) {
-        final removed = await _database.profileProgramDao
-            .clearProgramForProfileAndCurriculum(
-              profileId,
-              curriculum.storageKey,
-            );
-        clearedProgram = removed > 0;
-      } else {
-        await _database.profileProgramDao.setProfileProgram(
-          profileId: profileId,
-          curriculumType: curriculum.storageKey,
-          programId: result.programId!,
-          trackingStartDate: trackingStartDate,
-          trackingStartRef: bookmarkRef,
-        );
-        // The bookmark itself is NOT written here. It is a Firestore write
-        // (via [_bookmarkRepository], post-commit below) and cannot
-        // participate in this Drift transaction — see createTrack's doc
-        // comment for the full reasoning. `trackingStartRef` above is the
-        // durable LOCAL record of the chosen starting ref; it is not read as
-        // a bookmark by anything.
-      }
-    });
-
-    // ── post-commit: idempotent activation, goal sync, cloud pushes ──────────
-
-    // Activate the curriculum in active_curricula (idempotent). A soft-deleted
-    // track can exist without an active_curricula row, so we always attempt it.
+    // Activate the curriculum in active_curricula (idempotent) — kept as a
+    // best-effort call matching the original's tolerance for "likely
+    // already active".
     try {
-      await _activationService.activateForProfile(curriculum, profileId);
+      // profileId is provably unused (see activateForProfile's own doc
+      // comment: "intentionally not used... the only honest behaviour is
+      // to activate for the already-scoped active profile") — passed as 0.
+      await _activationService.activateForProfile(curriculum, 0);
     } catch (_) {
       AppLogger.instance.debug(
         event:
@@ -205,86 +161,25 @@ class TrackCreationService {
       );
     }
 
-    // Push the seeded stages to Firestore (network) — the wizard/noReview seed
-    // is LOCAL-only, so without this the stage_definitions subcollection stays
-    // empty and a tutor mirror (or any second device) pulls zero stages and
-    // shows "No projection" for the track. The owner projects fine from the
-    // local seed; this closes the cloud gap.
-    await _stageRepository.pushStagesForTrack(
-      trackId: trackId,
-      curriculumId: curriculum,
-    );
-
-    await _deleteExistingGoals(trackId);
-    await _recreateGoal(
-      result: result,
-      profileId: profileId,
-      curriculum: curriculum,
-      trackId: trackId,
-    );
-
-    // Cloud pushes (network) — fire after the local state is durable.
-    await _pushStudyDaysCloud(
-      profileId: profileId,
-      curriculumId: curriculum,
-      trackId: trackId,
-      studyDays: result.studyDays,
-    );
-    if (result.programId == null) {
-      if (clearedProgram) {
-        await _gateway?.removeProfileProgramAssignment(
-          profileId: profileId,
-          curriculumStorageKey: curriculum.storageKey,
-        );
-      }
-    } else {
-      if (bookmarkRef != null && bookmarkRef.isNotEmpty) {
-        // Route the initial bookmark through the SAME repository every
-        // other bookmark read/write in the app uses (Firestore-backed,
-        // ULID-profile-keyed — see bookmark_providers.dart). The old outbox
-        // path (`_syncFacade?.pushBookmark`) wrote through
-        // `FirestoreGatewayImpl`'s int-profileId-keyed doc path, which the
-        // reader never looks at — the bookmark landed on a document nothing
-        // reads. See createTrack's doc comment for why this call is here
-        // (post-commit) rather than inside the Drift transaction above.
-        await _bookmarkRepository.setBookmark(
-          curriculumId: curriculum,
-          sefariaRef: bookmarkRef,
-        );
-      }
-      // Phase 1 — route the profile-program assignment through syncFacade so
-      // tutored sessions call tutorSetProfileProgram instead of the outbox.
-      await _syncFacade?.pushProfileProgram({
-        'profile_id': profileId,
-        'curriculum_id': curriculum.storageKey,
-        'program_id': result.programId,
-        'tracking_start_date': trackingStartDate?.toIso8601String(),
-        'tracking_start_ref': bookmarkRef,
-        'updated_at': DateTimeFactory.nowUtc().toIso8601String(),
-      });
-    }
+    await _deleteExistingGoals(curriculum);
+    await _recreateGoal(result: result, curriculum: curriculum);
 
     AppLogger.instance.info(
       event:
           'TrackCreationService: track "${result.label}" created for '
-          '${curriculum.storageKey} (profile=$profileId)',
+          '${curriculum.storageKey}',
     );
 
     // Story 27.14 (DNI-390): fire analytics event after successful track creation.
     unawaited(_analytics.logTrackAdded(curriculumId: curriculum.storageKey));
   }
 
-  /// Delete all existing goals for [trackId], syncing tombstones so
+  /// Delete all existing goals for [curriculum], syncing tombstones so
   /// re-add does not stack duplicates.
-  ///
-  /// [GoalRepository.deleteGoal] takes the goal by value (owner decision 4,
-  /// `docs/firestore-rewrite-map.md`), not a Drift row id — this method
-  /// already holds the Drift rows from [GoalDao.getGoalsByTrack], so
-  /// converting each via [goalEntityFromRow] costs nothing extra.
-  Future<void> _deleteExistingGoals(int trackId) async {
-    final existingGoals = await _database.goalDao.getGoalsByTrack(trackId);
+  Future<void> _deleteExistingGoals(CurriculumId curriculum) async {
+    final existingGoals = await _goalRepository.getGoals(curriculum);
     for (final g in existingGoals) {
-      await _goalRepository.deleteGoal(goalEntityFromRow(g));
+      await _goalRepository.deleteGoal(g);
     }
   }
 
@@ -295,21 +190,21 @@ class TrackCreationService {
   /// fixed and any code path that does not seed [GoalEntity.description].
   Future<void> _recreateGoal({
     required AddTrackResult result,
-    required int profileId,
     required CurriculumId curriculum,
-    required int trackId,
   }) async {
     if (result.goalResult == null) return;
     final goal = result.goalResult!;
-    // Use the track label as the description when the goal entity has none
-    // (belt-and-suspenders: step_goal seeds it, but older flows may not).
     final description = goal.description.isNotEmpty
         ? goal.description
         : result.label;
     await _goalRepository.createGoal(
-      profileId: profileId,
+      // profileId/trackId are both provably unused by the underlying
+      // implementation (confirmed this session, track_detail_screen.dart's
+      // identical call) — passed as 0, not invented from a value that no
+      // longer exists.
+      profileId: 0,
       curriculumId: curriculum,
-      trackId: trackId,
+      trackId: 0,
       targetPercent: goal.targetPercent,
       paceTarget: goal.paceTarget,
       description: description,
@@ -370,51 +265,5 @@ class TrackCreationService {
     }
 
     return (bookmarkRef: bookmarkRef, trackingStartDate: trackingStartDate);
-  }
-
-  /// Push the study-day configs to the cloud (network — runs AFTER commit).
-  ///
-  /// The cloud doc-id is derived from (curriculum_id, day_of_week, track_id)
-  /// so repeated upserts collapse to one document, matching the local PK.
-  Future<void> _pushStudyDaysCloud({
-    required int profileId,
-    required CurriculumId curriculumId,
-    required int trackId,
-    required Map<int, String> studyDays,
-  }) async {
-    final facade = _syncFacade;
-    if (facade == null) return;
-    for (final entry in studyDays.entries) {
-      await facade.pushStudyDayConfig({
-        'profile_id': profileId,
-        'curriculum_id': curriculumId.storageKey,
-        'track_id': trackId,
-        'day_of_week': entry.key,
-        'day_type': entry.value,
-        'updated_at': DateTimeFactory.nowUtc().toIso8601String(),
-      });
-    }
-  }
-
-  Future<void> _seedPointConfigsIfNeeded({
-    required int profileId,
-    required CurriculumId curriculumId,
-    required int trackId,
-  }) async {
-    final profile = await _database.profileDao.getProfileById(profileId);
-    if (profile?.mode != 'child') return;
-
-    final existing = await _database.pointConfigDao.getConfigsByCurriculum(
-      curriculumId.storageKey,
-      profileId: profileId,
-      trackId: trackId,
-    );
-    if (existing.isEmpty) {
-      await _database.pointConfigDao.seedDefaults(
-        curriculumId.storageKey,
-        trackId,
-        profileId: profileId,
-      );
-    }
   }
 }

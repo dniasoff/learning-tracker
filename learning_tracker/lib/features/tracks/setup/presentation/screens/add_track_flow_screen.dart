@@ -619,10 +619,7 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
 
     try {
       final creationService = ref.read(trackCreationServiceProvider);
-      await creationService.createTrack(
-        result: result,
-        profileId: effectiveProfileId,
-      );
+      await creationService.createTrack(result: result);
 
       await invalidateAfterTrackDataChange(ref, effectiveProfileId);
 

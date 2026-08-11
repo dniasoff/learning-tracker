@@ -59,4 +59,13 @@ class FirestoreProfileProgramRepositoryAdapter
       trackingStartRef: trackingStartRef,
     );
   }
+
+  @override
+  Future<void> removeProgram(CurriculumId curriculumId) async {
+    final repo = await _ref.read(firestoreProfileProgramRepositoryProvider.future);
+    if (repo == null) {
+      throw const ProfileProgramRepositoryNotReadyException();
+    }
+    await repo.removeProgram(curriculumId);
+  }
 }

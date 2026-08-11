@@ -26,4 +26,7 @@ abstract class ProfileProgramRepository {
     DateTime? trackingStartDate,
     String? trackingStartRef,
   });
+
+  /// Clears [curriculumId]'s program assignment (back to self-paced).
+  Future<void> removeProgram(CurriculumId curriculumId);
 }
