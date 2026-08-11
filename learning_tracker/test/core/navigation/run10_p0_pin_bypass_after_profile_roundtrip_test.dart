@@ -62,8 +62,8 @@ class _MockPinService extends Mock implements PinService {}
 
 class _FakePageRouteInfo extends Fake implements PageRouteInfo {}
 
-const _childProfileId = 7;
-const _adultProfileId = 9;
+const _childProfileId = 'child-profile-7';
+const _adultProfileId = 'adult-profile-9';
 
 void main() {
   setUpAll(() {

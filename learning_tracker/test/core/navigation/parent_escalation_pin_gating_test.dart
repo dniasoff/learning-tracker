@@ -26,21 +26,33 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/app/router/guards/auth_guard.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/navigation/guards/child_mode_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/pin_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/profile_guard.dart';
 import 'package:learning_tracker/core/navigation/pin_scope.dart';
-import 'package:learning_tracker/core/utils/date_utils.dart';
+import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
 import 'package:mocktail/mocktail.dart';
-
-import '../../helpers/drift_memory.dart' show inMemoryDb;
-import '../../helpers/test_database.dart' show seedAccount;
 
 // ─── Group 1 fixtures ───────────────────────────────────────────────────────
 
 class _MockPinService extends Mock implements PinService {}
+
+final _epoch = DateTime.utc(2026, 1, 1);
+
+LearnerProfileEntity _profileFixture({
+  required String profileId,
+  required ProfileMode mode,
+}) {
+  return LearnerProfileEntity(
+    profileId: profileId,
+    displayName: 'Test Profile',
+    mode: mode,
+    createdAt: _epoch,
+    updatedAt: _epoch,
+  );
+}
 
 class _NeverError extends Error {
   _NeverError(this.message);
@@ -60,16 +72,15 @@ AppRouter _buildRouterForInspection() {
   return AppRouter(
     authGuard: AuthGuard(),
     profileGuard: ProfileGuard(
-      getDatabase: () => _never('ProfileGuard.getDatabase'),
+      getProfiles: () => _never('ProfileGuard.getProfiles'),
       getSelectedProfileId: () => _never('ProfileGuard.getSelectedProfileId'),
-      setSelectedProfileId: (_, {String? ulid}) =>
+      setSelectedProfileId: (_) =>
           _never('ProfileGuard.setSelectedProfileId'),
-      getAccountId: () => _never('ProfileGuard.getAccountId'),
       isTutoredSession: () => _never('ProfileGuard.isTutoredSession'),
       profilePickerRoute: () => _never('ProfileGuard.profilePickerRoute'),
     ),
     childModeGuard: ChildModeGuard(
-      getDatabase: () => _never('ChildModeGuard.getDatabase'),
+      getProfileById: (_) => _never('ChildModeGuard.getProfileById'),
       getSelectedProfileId: () => _never('ChildModeGuard.getSelectedProfileId'),
     ),
     pinGuard: PinGuard(
@@ -230,19 +241,15 @@ void main() {
       pinService = _MockPinService();
     });
 
-    Future<int> insertProfile(UserDatabase db, String mode) async {
-      final accountId = await seedAccount(db);
-      return db
-          .into(db.learnerProfiles)
-          .insert(
-            LearnerProfilesCompanion.insert(
-              accountId: accountId,
-              displayName: 'Test Profile',
-              mode: mode,
-              createdAt: DateTimeFactory.nowUtc(),
-              updatedAt: DateTimeFactory.nowUtc(),
-            ),
-          );
+    /// Resolves [profileId] via a single-entry in-memory lookup — mirrors
+    /// what `router_provider.dart` wires ChildModeGuard's `getProfileById`
+    /// to (`profileRepositoryProvider.getProfileById`) without needing a
+    /// real repository/Firestore fixture.
+    ChildModeGuard childGuardFor(LearnerProfileEntity profile) {
+      return ChildModeGuard(
+        getProfileById: (id) async => id == profile.profileId ? profile : null,
+        getSelectedProfileId: () => profile.profileId,
+      );
     }
 
     /// Runs [guards] in sequence exactly as AutoRoute's real guarded
@@ -281,19 +288,17 @@ void main() {
     test(
       'adult active profile is blocked before the PIN is ever considered',
       () async {
-        final db = inMemoryDb();
-        addTearDown(db.close);
-        final adultId = await insertProfile(db, 'adult');
-        final childGuard = ChildModeGuard(
-          getDatabase: () => db,
-          getSelectedProfileId: () => adultId,
+        final adult = _profileFixture(
+          profileId: 'adult-profile',
+          mode: ProfileMode.adult,
         );
+        final childGuard = childGuardFor(adult);
         final pinGuard = PinGuard(
           pinService: pinService,
           pinSetupRoute: () => _FakePageRouteInfo(),
           // Would succeed if ever reached — proves it is NOT reached.
           promptForPin: () async => true,
-          getScope: () => PinScope.parent(adultId),
+          getScope: () => PinScope.parent(adult.profileId),
         );
 
         final allowed = await runChain([childGuard, pinGuard]);
@@ -311,21 +316,19 @@ void main() {
     );
 
     test('child active profile with correct PIN is allowed through', () async {
-      final db = inMemoryDb();
-      addTearDown(db.close);
-      final childId = await insertProfile(db, 'child');
-      when(
-        () => pinService.hasProfilePin(childId),
-      ).thenAnswer((_) async => true);
-      final childGuard = ChildModeGuard(
-        getDatabase: () => db,
-        getSelectedProfileId: () => childId,
+      final child = _profileFixture(
+        profileId: 'child-profile',
+        mode: ProfileMode.child,
       );
+      when(
+        () => pinService.hasProfilePin(child.profileId),
+      ).thenAnswer((_) async => true);
+      final childGuard = childGuardFor(child);
       final pinGuard = PinGuard(
         pinService: pinService,
         pinSetupRoute: () => _FakePageRouteInfo(),
         promptForPin: () async => true, // correct PIN entered
-        getScope: () => PinScope.parent(childId),
+        getScope: () => PinScope.parent(child.profileId),
       );
 
       final allowed = await runChain([childGuard, pinGuard]);
@@ -340,21 +343,19 @@ void main() {
     });
 
     test('child active profile with wrong/cancelled PIN is blocked', () async {
-      final db = inMemoryDb();
-      addTearDown(db.close);
-      final childId = await insertProfile(db, 'child');
-      when(
-        () => pinService.hasProfilePin(childId),
-      ).thenAnswer((_) async => true);
-      final childGuard = ChildModeGuard(
-        getDatabase: () => db,
-        getSelectedProfileId: () => childId,
+      final child = _profileFixture(
+        profileId: 'child-profile',
+        mode: ProfileMode.child,
       );
+      when(
+        () => pinService.hasProfilePin(child.profileId),
+      ).thenAnswer((_) async => true);
+      final childGuard = childGuardFor(child);
       final pinGuard = PinGuard(
         pinService: pinService,
         pinSetupRoute: () => _FakePageRouteInfo(),
         promptForPin: () async => false, // wrong / cancelled
-        getScope: () => PinScope.parent(childId),
+        getScope: () => PinScope.parent(child.profileId),
       );
 
       final allowed = await runChain([childGuard, pinGuard]);
@@ -370,16 +371,14 @@ void main() {
 
     test('child active profile with no PIN configured yet still gates '
         'through the setup flow — never bypasses', () async {
-      final db = inMemoryDb();
-      addTearDown(db.close);
-      final childId = await insertProfile(db, 'child');
-      when(
-        () => pinService.hasProfilePin(childId),
-      ).thenAnswer((_) async => false);
-      final childGuard = ChildModeGuard(
-        getDatabase: () => db,
-        getSelectedProfileId: () => childId,
+      final child = _profileFixture(
+        profileId: 'child-profile',
+        mode: ProfileMode.child,
       );
+      when(
+        () => pinService.hasProfilePin(child.profileId),
+      ).thenAnswer((_) async => false);
+      final childGuard = childGuardFor(child);
       var setupRoutePushed = false;
       final pinGuard = PinGuard(
         pinService: pinService,
@@ -388,7 +387,7 @@ void main() {
           return _FakePageRouteInfo();
         },
         promptForPin: () async => false, // must not be reached
-        getScope: () => PinScope.parent(childId),
+        getScope: () => PinScope.parent(child.profileId),
       );
 
       // router.push<bool> must return the setup outcome, not skip it.

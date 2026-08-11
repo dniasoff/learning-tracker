@@ -48,8 +48,8 @@ void _stubRouterPush(MockStackRouter router, bool? returnValue) {
 }
 
 /// Default scope used across most tests (parent, profileId=1).
-const _parentScope = PinScopeParent(1);
-const _tutorScope = PinScopeTutor(1);
+const _parentScope = PinScopeParent('1');
+const _tutorScope = PinScopeTutor('1');
 
 /// Creates a fresh resolver whose next/next(bool) calls are silenced.
 MockNavigationResolver _resolver() {
@@ -152,7 +152,7 @@ void main() {
 
   group('B3 — no PIN set, setup returns true', () {
     test('pushes setup route, caches scope, calls next(true)', () async {
-      when(() => pinService.hasProfilePin(1)).thenAnswer((_) async => false);
+      when(() => pinService.hasProfilePin('1')).thenAnswer((_) async => false);
       _stubRouterPush(router, true);
 
       final authenticated = <PinScope>[];
@@ -181,7 +181,7 @@ void main() {
         // app-layer route class directly). Prove the push route is now
         // fully caller-controlled by injecting a distinctive marker route
         // that the guard could not possibly have constructed on its own.
-        when(() => pinService.hasProfilePin(1)).thenAnswer((_) async => false);
+        when(() => pinService.hasProfilePin('1')).thenAnswer((_) async => false);
         _stubRouterPush(router, true);
 
         final guard = PinGuard(
@@ -215,7 +215,7 @@ void main() {
     test(
       'pushes setup route, does NOT cache scope, calls next(false)',
       () async {
-        when(() => pinService.hasProfilePin(1)).thenAnswer((_) async => false);
+        when(() => pinService.hasProfilePin('1')).thenAnswer((_) async => false);
         _stubRouterPush(router, false);
 
         final authenticated = <PinScope>[];
@@ -241,7 +241,7 @@ void main() {
 
   group('B5 — no PIN set, setup returns null', () {
     test('treats null as false — next(false), scope not cached', () async {
-      when(() => pinService.hasProfilePin(1)).thenAnswer((_) async => false);
+      when(() => pinService.hasProfilePin('1')).thenAnswer((_) async => false);
       _stubRouterPush(router, null);
 
       final authenticated = <PinScope>[];
@@ -266,7 +266,7 @@ void main() {
 
   group('B6 — PIN set, correct PIN entered', () {
     test('parent scope: caches scope, calls next(true)', () async {
-      when(() => pinService.hasProfilePin(1)).thenAnswer((_) async => true);
+      when(() => pinService.hasProfilePin('1')).thenAnswer((_) async => true);
 
       final authenticated = <PinScope>[];
       final guard = PinGuard(
@@ -286,7 +286,7 @@ void main() {
     });
 
     test('tutor scope: caches scope, calls next(true)', () async {
-      when(() => pinService.hasTutorPin(1)).thenAnswer((_) async => true);
+      when(() => pinService.hasTutorPin('1')).thenAnswer((_) async => true);
 
       final authenticated = <PinScope>[];
       final guard = PinGuard(
@@ -305,7 +305,7 @@ void main() {
     });
 
     test('subsequent navigation skips prompt (cache hit)', () async {
-      when(() => pinService.hasProfilePin(1)).thenAnswer((_) async => true);
+      when(() => pinService.hasProfilePin('1')).thenAnswer((_) async => true);
 
       var promptCalls = 0;
       final guard = PinGuard(
@@ -335,7 +335,7 @@ void main() {
 
   group('B7 — PIN set, wrong/cancelled PIN', () {
     test('parent scope: next(false), scope NOT cached', () async {
-      when(() => pinService.hasProfilePin(1)).thenAnswer((_) async => true);
+      when(() => pinService.hasProfilePin('1')).thenAnswer((_) async => true);
 
       final authenticated = <PinScope>[];
       final guard = PinGuard(
@@ -355,7 +355,7 @@ void main() {
     });
 
     test('tutor scope: next(false), scope NOT cached', () async {
-      when(() => pinService.hasTutorPin(1)).thenAnswer((_) async => true);
+      when(() => pinService.hasTutorPin('1')).thenAnswer((_) async => true);
 
       final authenticated = <PinScope>[];
       final guard = PinGuard(
@@ -378,7 +378,7 @@ void main() {
 
   group('S1 — lock()', () {
     test('clears authenticated scope so next navigation re-prompts', () async {
-      when(() => pinService.hasProfilePin(1)).thenAnswer((_) async => true);
+      when(() => pinService.hasProfilePin('1')).thenAnswer((_) async => true);
 
       var promptCalls = 0;
       final guard = PinGuard(
@@ -450,7 +450,7 @@ void main() {
         getScope: () => _parentScope,
       );
 
-      guard.markAuthenticated(1); // profileId=1 matches _parentScope
+      guard.markAuthenticated('1'); // profileId=1 matches _parentScope
 
       await guard.onNavigation(resolver, router);
 
@@ -468,9 +468,9 @@ void main() {
         onSessionAuthenticated: authenticated.add,
       );
 
-      guard.markAuthenticated(1);
+      guard.markAuthenticated('1');
 
-      expect(authenticated, [const PinScopeParent(1)]);
+      expect(authenticated, [const PinScopeParent('1')]);
     });
   });
 
@@ -517,7 +517,7 @@ void main() {
 
   group('G1 — PinScopeParent routes to hasProfilePin', () {
     test('calls pinService.hasProfilePin, not hasTutorPin', () async {
-      when(() => pinService.hasProfilePin(1)).thenAnswer((_) async => true);
+      when(() => pinService.hasProfilePin('1')).thenAnswer((_) async => true);
 
       final guard = PinGuard(
         pinSetupRoute: () => _FakePageRouteInfo(),
@@ -528,14 +528,14 @@ void main() {
 
       await guard.onNavigation(resolver, router);
 
-      verify(() => pinService.hasProfilePin(1)).called(1);
-      verifyNever(() => pinService.hasTutorPin(any<int>()));
+      verify(() => pinService.hasProfilePin('1')).called(1);
+      verifyNever(() => pinService.hasTutorPin(any<String>()));
     });
   });
 
   group('G2 — PinScopeTutor routes to hasTutorPin', () {
     test('calls pinService.hasTutorPin, not hasProfilePin', () async {
-      when(() => pinService.hasTutorPin(1)).thenAnswer((_) async => true);
+      when(() => pinService.hasTutorPin('1')).thenAnswer((_) async => true);
 
       final guard = PinGuard(
         pinSetupRoute: () => _FakePageRouteInfo(),
@@ -546,8 +546,8 @@ void main() {
 
       await guard.onNavigation(resolver, router);
 
-      verify(() => pinService.hasTutorPin(1)).called(1);
-      verifyNever(() => pinService.hasProfilePin(any<int>()));
+      verify(() => pinService.hasTutorPin('1')).called(1);
+      verifyNever(() => pinService.hasProfilePin(any<String>()));
     });
   });
 
@@ -557,7 +557,7 @@ void main() {
     test(
       'parent-scoped session does not short-circuit a tutor-scoped guard',
       () async {
-        when(() => pinService.hasTutorPin(1)).thenAnswer((_) async => true);
+        when(() => pinService.hasTutorPin('1')).thenAnswer((_) async => true);
 
         var promptCalls = 0;
         final guard = PinGuard(
@@ -571,7 +571,7 @@ void main() {
         );
 
         // Mark parent scope as authenticated — must NOT satisfy tutor check.
-        guard.markAuthenticated(1); // sets PinScopeParent(1)
+        guard.markAuthenticated('1'); // sets PinScopeParent('1')
 
         await guard.onNavigation(resolver, router);
 
@@ -588,7 +588,7 @@ void main() {
     test(
       'tutor-scoped session does not short-circuit a parent-scoped guard',
       () async {
-        when(() => pinService.hasProfilePin(1)).thenAnswer((_) async => true);
+        when(() => pinService.hasProfilePin('1')).thenAnswer((_) async => true);
 
         var promptCalls = 0;
         final guard = PinGuard(
@@ -627,11 +627,11 @@ void main() {
       'different profileId is treated as a different scope (cache miss)',
       () async {
         when(
-          () => pinService.hasProfilePin(any<int>()),
+          () => pinService.hasProfilePin(any<String>()),
         ).thenAnswer((_) async => true);
 
         var promptCalls = 0;
-        var currentProfileId = 1;
+        var currentProfileId = '1';
         final guard = PinGuard(
           pinSetupRoute: () => _FakePageRouteInfo(),
           pinService: pinService,
@@ -647,7 +647,7 @@ void main() {
         expect(promptCalls, 1);
 
         // Switch profile and navigate again — different scope, must prompt again.
-        currentProfileId = 2;
+        currentProfileId = '2';
         final resolver2 = _resolver();
 
         await guard.onNavigation(resolver2, router);
@@ -672,7 +672,7 @@ void main() {
   group('unexpected throw (fail-closed, no dead-end)', () {
     test('promptForPin throwing → next(false), no throw, no hang', () async {
       when(() => resolver.isResolved).thenReturn(false);
-      when(() => pinService.hasProfilePin(1)).thenAnswer((_) async => true);
+      when(() => pinService.hasProfilePin('1')).thenAnswer((_) async => true);
       final guard = PinGuard(
         pinSetupRoute: () => _FakePageRouteInfo(),
         pinService: pinService,
@@ -689,7 +689,7 @@ void main() {
     test('hasPin throwing → next(false), fails closed', () async {
       when(() => resolver.isResolved).thenReturn(false);
       when(
-        () => pinService.hasProfilePin(1),
+        () => pinService.hasProfilePin('1'),
       ).thenThrow(Exception('secure storage boom'));
       final guard = PinGuard(
         pinSetupRoute: () => _FakePageRouteInfo(),
