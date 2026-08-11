@@ -1,10 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
-import 'package:learning_tracker/core/utils/date_utils.dart';
-import 'package:learning_tracker/features/dashboard/presentation/providers/calendar_position_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
-import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/progress_providers.dart';
 import 'package:learning_tracker/features/scheduler/scheduler.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
@@ -18,42 +14,42 @@ import 'package:learning_tracker/features/tracks/setup/presentation/providers/tr
 /// use [onTrackChanged] rather than maintaining their own ad-hoc invalidation
 /// lists.
 ///
-/// [Daily plans are snapshotted once per local day]. Adding a track does not
-/// change the active-curriculum guard in [allDailyTasks] (same curriculum can
-/// already be active), so the frozen snapshot would otherwise miss the new
-/// track until the next day — we clear **today's** plan rows for [profileId]
-/// so the next read rebuilds the task list.
+/// [profileId] is currently UNUSED internally — kept only so the 9 existing
+/// call sites across 5 files (several of which still hold the pre-AD-25
+/// Drift `CurriculumTrack` type with a real `.profileId` field, and are
+/// outside this pass's scope) do not all need to change signature together.
+/// Every invalidation that genuinely needed it (the daily-plan-snapshot
+/// clear, and every `lifetime_knowledge_providers.dart`/
+/// `calendar_position_providers.dart` provider) is stripped below with a
+/// TODO — each is blocked on a separate, already-broken cluster (see the
+/// module's fix-script doc comment / task tracker #19 for what's blocking
+/// them), not something to half-fix here.
 Future<void> onTrackChanged(WidgetRef ref, int profileId) async {
-  final now = ref.read(clockProvider);
-  final planDate = LocalDayUtils.extractLocalDate(now);
-  final db = ref.read(userDatabaseProvider);
-
   // Rebuild track lists first so dashboard/hub show the new row without waiting
-  // on daily-plan deletion and the broad invalidation sweep below.
+  // on the broad invalidation sweep below.
   ref.invalidate(dashboardActiveTracksStreamProvider);
   ref.invalidate(activeTracksProvider);
 
-  await db.dailyPlanDao.deletePlanForDay(
-    profileId: profileId,
-    planDate: planDate,
-  );
-
+  // TODO(scheduler-daily-plan-cluster): db.dailyPlanDao.deletePlanForDay
+  // used to force the day's cached plan to rebuild here so a new/changed
+  // track shows up immediately instead of waiting for the next local day.
+  // scheduler_providers.dart's allDailyTasksProvider is itself still
+  // Drift-dependent (`ref.watch(userDatabaseProvider)`) and
+  // DailyPlanRepository.getOrSnapshotPlan/rebuildPlan both still require an
+  // `int profileId` this file has no live value for post-AD-24 — a
+  // separate, already-broken cluster, not fixed here.
   ref.invalidate(allDailyTasksProvider);
   ref.invalidate(dashboardActiveCurriculaStreamProvider);
-  ref.invalidate(trackDualProgressMetricsProvider(profileId));
+  // TODO(task-19): trackDualProgressMetricsProvider is a deliberate
+  // throw-stub (lifetime_knowledge_providers.dart) blocked on task #5/#19.
   ref.invalidate(dashboardChildNextRewardProvider);
   ref.invalidate(dashboardStreakProvider);
   ref.invalidate(dashboardGlobalPointsProvider);
-  ref.invalidate(lifetimeTotalsAcrossAllCurriculaProvider(profileId));
-  ref.invalidate(lifetimeSummariesProvider(profileId));
-  // ignore: deprecated_member_use
-  ref.invalidate(globalLifetimeCurriculaProvider(profileId));
+  // TODO(task-19): lifetimeTotalsAcrossAllCurriculaProvider /
+  // lifetimeSummariesProvider / globalLifetimeCurriculaProvider /
+  // lifetimeDataProvider are all still `int profileId`-keyed in
+  // lifetime_knowledge_providers.dart — blocked on task #19.
   ref.invalidate(progressOverviewStatsProvider);
-  for (final c in CurriculumId.all) {
-    ref.invalidate(
-      lifetimeDataProvider((profileId: profileId, curriculumId: c)),
-    );
-  }
 
   for (final c in CurriculumId.all) {
     ref.invalidate(dashboardCompletionPercentageProvider(c));
@@ -65,10 +61,19 @@ Future<void> onTrackChanged(WidgetRef ref, int profileId) async {
     ref.invalidate(curriculumScopeSummaryProvider(c));
   }
 
-  final tracks = await db.trackDao.getActiveTracksForProfile(profileId);
-  for (final t in tracks) {
-    ref.invalidate(dashboardTrackCompletionPercentageProvider(t.id));
-    ref.invalidate(programCalendarPositionProvider(t.id));
+  // ref.read(...), not a direct FirestoreCurriculumTrackRepositoryAdapter(ref:
+  // ref) construction: this function is called with a WidgetRef (from
+  // screens), which does not implement Ref the way an @riverpod function's
+  // Ref does — going through the already-built dashboardActiveCurriculaProvider
+  // avoids that mismatch and reuses the same resolution dashboard_providers.dart
+  // itself uses.
+  final activeCurricula = await ref.read(dashboardActiveCurriculaProvider.future);
+  for (final c in activeCurricula) {
+    ref.invalidate(dashboardTrackCompletionPercentageProvider(c));
+    // TODO(task-19): programCalendarPositionProvider(t.id) used to also be
+    // invalidated per track here — calendar_position_providers.dart is
+    // itself still Drift-dependent (confirmed via dart analyze:
+    // "Undefined name 'userDatabaseProvider'"), blocked on task #19.
   }
 }
 
