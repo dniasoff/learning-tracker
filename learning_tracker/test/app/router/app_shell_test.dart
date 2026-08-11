@@ -19,7 +19,6 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/navigation/guards/child_mode_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/pin_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/profile_guard.dart';
-import 'package:learning_tracker/core/navigation/guards/restore_guard.dart';
 import 'package:learning_tracker/core/navigation/pin_scope.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
@@ -89,12 +88,6 @@ Future<AppRouter> _createAuthenticatedRouter({
   // the current DB before short-circuiting (R1o-C2), so the guard DB must hold
   // a profile whose id matches getSelectedProfileId() → 1.
   await seedProfileWithIds(testDb, profileId: 1, accountId: 1);
-  final restoreGuard = RestoreGuard(
-    deviceRestoreRoute: () => const DeviceRestoreRoute(),
-    getDatabase: () => testDb,
-    hasCloudAccount: () => false,
-  );
-  restoreGuard.markRestoreComplete();
 
   return AppRouter(
     // BUG E3 follow-up: the persistent switcher bar (rendered above the
@@ -103,7 +96,6 @@ Future<AppRouter> _createAuthenticatedRouter({
     // bind the router to that same global key, mirroring production.
     navigatorKey: navigatorKey,
     authGuard: AuthGuard(),
-    restoreGuard: restoreGuard,
     profileGuard: ProfileGuard(
       profilePickerRoute: () => const ProfilePickerRoute(),
       getDatabase: () => testDb,
@@ -130,16 +122,9 @@ Future<AppRouter> _createUnauthenticatedRouter() async {
   when(() => mockPinService.hasParentPin()).thenAnswer((_) async => false);
 
   final testDb = createTestDatabase();
-  final restoreGuard = RestoreGuard(
-    deviceRestoreRoute: () => const DeviceRestoreRoute(),
-    getDatabase: () => testDb,
-    hasCloudAccount: () => false,
-  );
-  restoreGuard.markRestoreComplete();
 
   return AppRouter(
     authGuard: AuthGuard(),
-    restoreGuard: restoreGuard,
     profileGuard: ProfileGuard(
       profilePickerRoute: () => const ProfilePickerRoute(),
       getDatabase: () => testDb,

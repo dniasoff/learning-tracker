@@ -1,33 +1,11 @@
 /// E2E Wave 2 P1 journeys — Navigation / Guards area.
 ///
 /// Journeys implemented:
-///   E2E-1405  Restore guard — fresh device triggers restore screen
 ///   E2E-1406  Guard fail-safe — no lockout on guard exception
 ///   E2E-1408  No-profile auto-jump to Settings; switcher sheet has Skip to Settings
 ///   E2E-1409  Guard chain: auth→profile→child→pin all pass in sequence
 ///
 /// ## Guard behaviour notes
-///
-/// ### E2E-1405 — RestoreGuard: fresh device
-///
-/// The harness's [RestoreGuard] is always built with `hasCloudAccount=false`
-/// and `markRestoreComplete()` called before pumpApp — so the guard never
-/// redirects to /restore in normal harness usage.  To observe the guard's
-/// REDIRECT path we would need to inject a guard with `hasCloudAccount=true`
-/// and an empty DB, which requires a custom router build outside the harness.
-///
-/// Instead, this test exercises the DeviceRestoreScreen's *checking → complete
-/// → navigate to shell* flow directly from `/restore`, which is exactly the
-/// path a guard-redirected user would follow.  The DeviceRestoreScreen has no
-/// guards (`AutoRoute(path: '/restore', page: DeviceRestoreRoute.page)` — no
-/// guards list), so it is always reachable from the harness.
-///
-/// The null `deviceRestoreServiceProvider` triggers initState's SY-2 blank-
-/// screen escape: `_navigateToApp()` fires immediately and calls
-/// `context.router.replaceAll([AppShellRoute()])`.  We override
-/// `routerProvider` with `h.router` so the headless replaceAll succeeds.
-/// A completing status injected via `restoreStatusProvider` lets build()
-/// momentarily render the "Restore complete!" card before navigation occurs.
 ///
 /// ### E2E-1406 — Guard fail-safe
 ///
@@ -72,21 +50,15 @@
 @Tags(['e2e', 'journey'])
 library;
 
-import 'package:flutter/material.dart' show Key, Scaffold;
+import 'package:flutter/material.dart' show Key;
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/app/restore/restore_providers.dart'
-    show deviceRestoreServiceProvider, restoreStatusProvider;
 import 'package:learning_tracker/app/router/app_router.dart'
     show ParentSettingsRoute;
-import 'package:learning_tracker/app/router/router_provider.dart'
-    show routerProvider;
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart'
     show profileListStreamProvider;
 import 'package:learning_tracker/features/profiles/presentation/screens/parent_settings_screen.dart'
     show activeProfilePointsBalanceProvider, pendingRedemptionsCountProvider;
-import 'package:learning_tracker/features/sync/domain/models/restore_status.dart'
-    show RestoreStatus;
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart'
     show activeTutoredProfileSelectionProvider;
 
@@ -109,92 +81,6 @@ List<Override> _fullSilenceOverrides(E2EHarness h) => [
 
 void main() {
   setUpAll(e2eSetUpAll);
-
-  // ── E2E-1405 ─────────────────────────────────────────────────────────────────
-
-  group('E2E-1405 — Restore guard: fresh device triggers restore screen', () {
-    // Key assertions (catalog §2 Area 14):
-    //  • RestoreGuard triggers when hasCloudAccount=true AND DB is empty
-    //    (no completions, no profiles).
-    //  • DeviceRestoreScreen is shown at /restore.
-    //  • After markRestoreComplete() → app navigates to the shell.
-    //
-    // Harness limitation: [RestoreGuard] in the harness is always built with
-    // `hasCloudAccount=false` + `markRestoreComplete()` called, so the guard's
-    // redirect path cannot be triggered from pumpApp('/').
-    //
-    // Instead we navigate directly to /restore (no guards on that route) and
-    // exercise the screen's complete → navigate-to-shell flow.
-    // The null deviceRestoreServiceProvider fires initState's SY-2 escape
-    // (_navigateToApp): we inject restoreStatusProvider=complete so build()
-    // renders the success card before navigation replaces the tree.
-    // routerProvider is overridden with h.router so the headless replaceAll works.
-
-    testWidgets(
-      'DeviceRestoreScreen shows at /restore and navigates to shell when '
-      'restore completes (null-service → markRestoreComplete path)',
-      (tester) async {
-        final identity = E2EIdentity.localBorn(
-          email: 'restore1405@test.com',
-          displayName: 'RestoreUser1405',
-        );
-        final h = E2EHarness(tester, identity: identity);
-        addTearDown(h.dispose);
-
-        const completeStatus = RestoreStatus.complete(collectionsRestored: 2);
-
-        await h.pumpApp(
-          path: '/restore',
-          extraOverrides: [
-            sacredWindowNullOverride(),
-            ...h.dashboardSilenceOverrides,
-            // Null service triggers SY-2 blank-screen escape in initState.
-            deviceRestoreServiceProvider.overrideWithValue(null),
-            // Inject a completing status so build() renders the success card.
-            restoreStatusProvider.overrideWithValue(completeStatus),
-            // routerProvider must resolve to h.router so the headless
-            // context.router.replaceAll([AppShellRoute()]) in _navigateToApp
-            // doesn't throw (context.router reads routerProvider).
-            routerProvider.overrideWith((ref) => h.router),
-          ],
-        );
-
-        // Extra pumps: DeviceRestoreScreen initState posts a microtask before
-        // calling _navigateToApp. Settle microtasks + the replaceAll navigation.
-        await h.pump(const Duration(milliseconds: 200));
-        await h.pump();
-        await h.pump(const Duration(milliseconds: 300));
-        await h.pump();
-
-        // Key assertions:
-        //  • The /restore screen rendered (we are in the restore context).
-        //  • OR the shell is now visible (replaceAll succeeded → dashboard).
-        // Either indicates the DeviceRestoreScreen was mounted and the
-        // restore→shell path was exercised without hang.
-        final onRestoreOrShell =
-            tester.any(find.text('Restore complete!')) ||
-            tester.any(find.text('DASHBOARD')) ||
-            tester.any(find.text('SETTINGS')) ||
-            tester.any(find.byType(Scaffold));
-        expect(
-          onRestoreOrShell,
-          isTrue,
-          reason:
-              'E2E-1405: DeviceRestoreScreen must render from /restore and '
-              'either show the complete card or navigate to the shell.',
-        );
-      },
-    );
-
-    testWidgets(
-      'SKIP device/harness: RestoreGuard redirect-to-/restore from "/" '
-      '(hasCloudAccount=true + empty DB) — harness always builds RestoreGuard '
-      'with hasCloudAccount=false + markRestoreComplete(); guard redirect path '
-      'cannot be triggered from pumpApp("/"); requires a device integration test',
-      skip: true,
-      (tester) async {},
-    );
-  });
 
   // ── E2E-1406 ─────────────────────────────────────────────────────────────────
 
@@ -369,8 +255,8 @@ void main() {
     () {
       // Key assertions (catalog §2 Area 14):
       //  • Child profile seeded and selected
-      //  • Full cold-start: pumpApp('/') resolves authGuard → restoreGuard →
-      //    profileGuard → shell mounts → child profile active
+      //  • Full cold-start: pumpApp('/') resolves authGuard → profileGuard →
+      //    shell mounts → child profile active
       //  • markPinAuthenticated() primes the PinGuard cache for the child profile
       //  • Navigate to /parent-mode/settings (guards: authGuard, childModeGuard,
       //    pinGuard)
@@ -400,7 +286,7 @@ void main() {
           final h = E2EHarness(tester, identity: identity);
           addTearDown(h.dispose);
 
-          // Boot the app shell first (authGuard + restoreGuard + profileGuard).
+          // Boot the app shell first (authGuard + profileGuard).
           await h.pumpApp(
             path: '/dashboard',
             extraOverrides: [
@@ -426,8 +312,7 @@ void main() {
           // Verify the shell mounted with the child profile.
           h.expectOnScreen(
             'DASHBOARD',
-            routeName:
-                'E2E-1409: shell mounted after auth+restore+profile guards',
+            routeName: 'E2E-1409: shell mounted after auth+profile guards',
           );
 
           // Prime the PinGuard session cache for the child profile.

@@ -59,11 +59,11 @@
 /// built the real notifier or switched the live provider. R-IC5: extra pump
 /// after the switch.
 ///
-/// ### E2E-1111 — Device restore: local-born account skips restore
-/// The harness RestoreGuard is built with hasCloudAccount=false (harness default),
-/// so RestoreGuard never redirects to /restore for a local-born account.
-/// Navigate to '/' and verify the app lands on the dashboard — DeviceRestoreScreen
-/// is never shown.
+/// ### E2E-1111 (REMOVED — Phase 3 P3-7, commit 5677d6fb)
+/// Tested "a local-born account never redirects to the restore screen" —
+/// both RestoreGuard/DeviceRestoreScreen and local-born accounts are gone
+/// (see also the local-born-removal owner decision, 2026-08-11). No
+/// successor: there is no restore flow left to skip.
 ///
 /// ### E2E-1112 — Sync status indicator: online/offline transitions
 /// Navigates to SettingsScreen and overrides [syncStatusProvider] to each
@@ -670,64 +670,10 @@ void main() {
     },
   );
 
-  // ── E2E-1111 ─────────────────────────────────────────────────────────────────
-
-  group('E2E-1111 — Device restore: local-born account skips restore', () {
-    // Key assertions (catalog §2 Area 11):
-    //  • hasCloudAccount=false in RestoreGuard (harness default: line 529)
-    //  • Navigating from "/" routes to dashboard, NOT to /restore
-    //  • DeviceRestoreScreen is never shown
-    //
-    // The "skip restore" behaviour lives in the RestoreGuard, not the screen.
-    // Since the harness always sets hasCloudAccount=false and markRestoreComplete(),
-    // this test confirms the guard never redirects to /restore for local-born.
-
-    testWidgets(
-      'Local-born account (hasCloudAccount=false): navigating from "/" '
-      'routes to dashboard; DeviceRestoreScreen is never shown',
-      (tester) async {
-        final identity = E2EIdentity.localBorn(
-          email: 'localborn1111@test.com',
-          displayName: 'LocalBornUser',
-        );
-        final h = E2EHarness(tester, identity: identity);
-        addTearDown(h.dispose);
-
-        await h.pumpApp(path: '/', extraOverrides: [..._infraSilences(h)]);
-
-        // Allow guards to resolve fully.
-        await h.pump(const Duration(milliseconds: 500));
-        await h.pump(const Duration(milliseconds: 300));
-        await h.pump();
-
-        // DeviceRestoreScreen must NOT be shown.
-        // 'Restore complete!' is the success heading; 'Restore failed' is the
-        // error heading. Neither should appear for a local-born account.
-        expect(
-          find.textContaining('Restore complete'),
-          findsNothing,
-          reason:
-              'DeviceRestoreScreen must NOT be shown for a local-born account',
-        );
-        expect(
-          find.textContaining('Restore failed'),
-          findsNothing,
-          reason:
-              'DeviceRestoreScreen error state must NOT be shown for local-born',
-        );
-
-        // Dashboard bottom-nav tabs (LEARN) must be visible, confirming the
-        // router resolved to dashboard rather than /restore.
-        expect(
-          find.text('LEARN'),
-          findsWidgets,
-          reason:
-              'Dashboard LEARN tab must be visible, confirming app routed to '
-              'dashboard (not /restore) for a local-born account',
-        );
-      },
-    );
-  });
+  // ── E2E-1111 removed (Phase 3 P3-7, commit 5677d6fb) ────────────────────────
+  // Tested "a local-born account never redirects to the restore screen" —
+  // both RestoreGuard/DeviceRestoreScreen and local-born accounts are gone.
+  // No successor: there is no restore flow left to skip.
 
   // ── E2E-1112 ─────────────────────────────────────────────────────────────────
 

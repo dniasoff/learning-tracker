@@ -1,4 +1,4 @@
-/// E2E overflow-guard sweep — all 48 @RoutePage screens, en + he locales.
+/// E2E overflow-guard sweep — all 47 @RoutePage screens, en + he locales.
 ///
 /// Strategy: each screen is pumped via [E2EHarness.pumpApp] (which gives the
 /// real router + providers) then checked across the standard device/text-scale
@@ -16,7 +16,6 @@
 ///   05 UpgradeToCloudScreen
 ///   06 OnboardingScreen
 ///   07 EmptyLoginScreen
-///   08 DeviceRestoreScreen
 ///   09 ProfilePickerScreen (skip: BUG-NEW, separate fix)
 ///   10 ManageLearnersScreen
 ///   11 DashboardScreen (en)
@@ -378,26 +377,6 @@ void main() {
 
   testWidgets('07 EmptyLoginScreen — no overflow', (tester) async {
     await _sweepPath(tester, label: 'EmptyLoginScreen', path: '/empty-login');
-  });
-
-  // ── 08: DeviceRestoreScreen ─────────────────────────────────────────────────
-
-  testWidgets('08 DeviceRestoreScreen — no overflow', (tester) async {
-    // The harness RestoreGuard is already marked complete; the router navigates
-    // away from /restore to the authenticated shell which activates
-    // dashboardStreakProvider (15-min periodic timer). Silence it so the timer
-    // does not outlive the test's FakeAsync scope.
-    await _sweepPath(
-      tester,
-      label: 'DeviceRestoreScreen',
-      path: '/restore',
-      identityFactory: () => null,
-      extraOverrides: [
-        dashboardStreakProvider.overrideWith(
-          (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
-        ),
-      ],
-    );
   });
 
   // ── 09: ProfilePickerScreen ─────────────────────────────────────────────────

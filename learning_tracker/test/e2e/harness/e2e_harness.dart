@@ -2,13 +2,13 @@
 ///
 /// ## Design intent
 ///
-/// Boots the REAL router (AppRouter with its auth/profile/restore guards), the
+/// Boots the REAL router (AppRouter with its auth/profile guards), the
 /// REAL screens and the REAL Riverpod providers — but with a controllable
 /// in-memory Drift [UserDatabase] + [ContentDatabase] and a null / no-op
 /// Firebase back-end.
 ///
 /// ## What is real
-/// - AppRouter + all route guards (AuthGuard, RestoreGuard, ProfileGuard, …)
+/// - AppRouter + all route guards (AuthGuard, ProfileGuard, …)
 /// - All Riverpod providers that are wired into LearningTrackerApp
 /// - NavigationResolver / AutoRoute deep-link mechanics
 ///
@@ -106,7 +106,6 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/navigation/guards/child_mode_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/pin_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/profile_guard.dart';
-import 'package:learning_tracker/core/navigation/guards/restore_guard.dart';
 import 'package:learning_tracker/core/navigation/pin_scope.dart';
 import 'package:learning_tracker/core/navigation/root_scaffold_messenger.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
@@ -541,13 +540,6 @@ class E2EHarness {
   AppRouter _buildRouter() {
     final profileId = _identity?._resolvedProfileId;
 
-    final restoreGuard = RestoreGuard(
-      getDatabase: () => _db,
-      // Never has a cloud account in headless tests — skip restore screen.
-      hasCloudAccount: () => false,
-      deviceRestoreRoute: () => const DeviceRestoreRoute(),
-    )..markRestoreComplete();
-
     _pinGuard = PinGuard(
       pinService: _NullPinService(),
       promptForPin: () async => false,
@@ -556,7 +548,6 @@ class E2EHarness {
     );
     return AppRouter(
       authGuard: AuthGuard(),
-      restoreGuard: restoreGuard,
       profileGuard: ProfileGuard(
         getDatabase: () => _db,
         getSelectedProfileId: () => profileId,

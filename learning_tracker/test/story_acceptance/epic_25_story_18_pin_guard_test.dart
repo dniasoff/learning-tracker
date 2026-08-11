@@ -10,9 +10,9 @@
 ///         field on [AppRouter] (no separate `parentPinGuard`/`tutorPinGuard`
 ///         fields). Guarded routes still reference it.
 ///   AC4 — The count of distinct guards in `lib/core/navigation/guards/` is
-///         audited (5 = AuthGuard, RestoreGuard, ProfileGuard, ChildModeGuard,
-///         PinGuard) and matches the architecture-doc claim that was rewritten
-///         as part of this story.
+///         audited (4 = AuthGuard, ProfileGuard, ChildModeGuard, PinGuard) and
+///         matches the architecture-doc claim that was rewritten as part of
+///         this story.
 ///   AC5 — Route declarations are fully typed — no `pushNamed`,
 ///         `context.go(...)`, `navigateNamed`, or `context.push("...")` string
 ///         calls in `lib/`.
@@ -46,26 +46,26 @@ void main() {
 
   group('Story 25.18 — PinScope sealed class', tags: ['story_25_18'], () {
     test('AC1: PinScope.parent(id) carries profileId', () {
-      const scope = PinScope.parent(42);
-      expect(scope.profileId, 42);
+      const scope = PinScope.parent('42');
+      expect(scope.profileId, '42');
       expect(scope, isA<PinScopeParent>());
     });
 
     test('AC1: PinScope.tutor(id) carries profileId', () {
-      const scope = PinScope.tutor(7);
-      expect(scope.profileId, 7);
+      const scope = PinScope.tutor('7');
+      expect(scope.profileId, '7');
       expect(scope, isA<PinScopeTutor>());
     });
 
     test('AC1: parent and tutor with same profileId are not equal', () {
-      const a = PinScope.parent(1);
-      const b = PinScope.tutor(1);
+      const a = PinScope.parent('1');
+      const b = PinScope.tutor('1');
       expect(a, isNot(equals(b)));
     });
 
     test('AC1: equal variants of same scope with same profileId are equal', () {
-      const a = PinScope.parent(5);
-      const b = PinScope.parent(5);
+      const a = PinScope.parent('5');
+      const b = PinScope.parent('5');
       expect(a, equals(b));
     });
   });
@@ -101,13 +101,13 @@ void main() {
     test(
       'AC2: parent — pushes PIN setup when profile has no PIN yet',
       () async {
-        when(() => pinSvc.hasProfilePin(42)).thenAnswer((_) async => false);
+        when(() => pinSvc.hasProfilePin('42')).thenAnswer((_) async => false);
 
         final guard = PinGuard(
           pinSetupRoute: () => _FakePageRouteInfo(),
           pinService: pinSvc,
           promptForPin: () async => false,
-          getScope: () => const PinScope.parent(42),
+          getScope: () => const PinScope.parent('42'),
         );
 
         await guard.onNavigation(resolver, router);
@@ -120,13 +120,13 @@ void main() {
     test(
       'AC2: parent — allows navigation after successful PIN dialog',
       () async {
-        when(() => pinSvc.hasProfilePin(42)).thenAnswer((_) async => true);
+        when(() => pinSvc.hasProfilePin('42')).thenAnswer((_) async => true);
 
         final guard = PinGuard(
           pinSetupRoute: () => _FakePageRouteInfo(),
           pinService: pinSvc,
           promptForPin: () async => true,
-          getScope: () => const PinScope.parent(42),
+          getScope: () => const PinScope.parent('42'),
         );
 
         await guard.onNavigation(resolver, router);
@@ -136,13 +136,13 @@ void main() {
     );
 
     test('AC2: parent — blocks when user cancels the PIN dialog', () async {
-      when(() => pinSvc.hasProfilePin(42)).thenAnswer((_) async => true);
+      when(() => pinSvc.hasProfilePin('42')).thenAnswer((_) async => true);
 
       final guard = PinGuard(
         pinSetupRoute: () => _FakePageRouteInfo(),
         pinService: pinSvc,
         promptForPin: () async => false,
-        getScope: () => const PinScope.parent(42),
+        getScope: () => const PinScope.parent('42'),
       );
 
       await guard.onNavigation(resolver, router);
@@ -153,7 +153,7 @@ void main() {
     test(
       'AC2: parent — session cache short-circuits re-prompt for same profile',
       () async {
-        when(() => pinSvc.hasProfilePin(42)).thenAnswer((_) async => true);
+        when(() => pinSvc.hasProfilePin('42')).thenAnswer((_) async => true);
 
         var prompts = 0;
         final guard = PinGuard(
@@ -163,7 +163,7 @@ void main() {
             prompts++;
             return true;
           },
-          getScope: () => const PinScope.parent(42),
+          getScope: () => const PinScope.parent('42'),
         );
 
         await guard.onNavigation(resolver, router);
@@ -177,7 +177,7 @@ void main() {
     test(
       'AC2: parent — lock() invalidates session, forcing re-prompt',
       () async {
-        when(() => pinSvc.hasProfilePin(42)).thenAnswer((_) async => true);
+        when(() => pinSvc.hasProfilePin('42')).thenAnswer((_) async => true);
 
         var prompts = 0;
         final guard = PinGuard(
@@ -187,7 +187,7 @@ void main() {
             prompts++;
             return true;
           },
-          getScope: () => const PinScope.parent(42),
+          getScope: () => const PinScope.parent('42'),
         );
 
         await guard.onNavigation(resolver, router);
@@ -201,7 +201,7 @@ void main() {
     test(
       'AC2: parent — markAuthenticated(profileId) primes the session cache',
       () async {
-        when(() => pinSvc.hasProfilePin(42)).thenAnswer((_) async => true);
+        when(() => pinSvc.hasProfilePin('42')).thenAnswer((_) async => true);
 
         var prompts = 0;
         final guard = PinGuard(
@@ -211,10 +211,10 @@ void main() {
             prompts++;
             return true;
           },
-          getScope: () => const PinScope.parent(42),
+          getScope: () => const PinScope.parent('42'),
         );
 
-        guard.markAuthenticated(42);
+        guard.markAuthenticated('42');
         await guard.onNavigation(resolver, router);
 
         expect(prompts, 0);
@@ -238,20 +238,20 @@ void main() {
     test(
       'AC2: tutor — dispatches to hasTutorPin / verifyTutorPin on PinService',
       () async {
-        when(() => pinSvc.hasTutorPin(7)).thenAnswer((_) async => true);
+        when(() => pinSvc.hasTutorPin('7')).thenAnswer((_) async => true);
 
         final guard = PinGuard(
           pinSetupRoute: () => _FakePageRouteInfo(),
           pinService: pinSvc,
           promptForPin: () async => true,
-          getScope: () => const PinScope.tutor(7),
+          getScope: () => const PinScope.tutor('7'),
         );
 
         await guard.onNavigation(resolver, router);
 
         // Tutor path must NOT call parent-scope methods.
         verifyNever(() => pinSvc.hasProfilePin(any()));
-        verify(() => pinSvc.hasTutorPin(7)).called(1);
+        verify(() => pinSvc.hasTutorPin('7')).called(1);
         verify(() => resolver.next(true)).called(1);
       },
     );
@@ -259,13 +259,13 @@ void main() {
     test(
       'AC2: tutor — pushes PIN setup when tutor PIN is not yet configured',
       () async {
-        when(() => pinSvc.hasTutorPin(7)).thenAnswer((_) async => false);
+        when(() => pinSvc.hasTutorPin('7')).thenAnswer((_) async => false);
 
         final guard = PinGuard(
           pinSetupRoute: () => _FakePageRouteInfo(),
           pinService: pinSvc,
           promptForPin: () async => false,
-          getScope: () => const PinScope.tutor(7),
+          getScope: () => const PinScope.tutor('7'),
         );
 
         await guard.onNavigation(resolver, router);
@@ -276,12 +276,12 @@ void main() {
 
     test('AC2: parent session cache does NOT authorize tutor scope for same '
         'profileId (scopes are isolated)', () async {
-      when(() => pinSvc.hasProfilePin(7)).thenAnswer((_) async => true);
-      when(() => pinSvc.hasTutorPin(7)).thenAnswer((_) async => true);
+      when(() => pinSvc.hasProfilePin('7')).thenAnswer((_) async => true);
+      when(() => pinSvc.hasTutorPin('7')).thenAnswer((_) async => true);
 
       var tutorPrompts = 0;
       // ignore: omit_local_variable_types
-      PinScope currentScope = const PinScope.parent(7);
+      PinScope currentScope = const PinScope.parent('7');
       final guard = PinGuard(
         pinSetupRoute: () => _FakePageRouteInfo(),
         pinService: pinSvc,
@@ -295,7 +295,7 @@ void main() {
       // Authenticate the parent scope first.
       await guard.onNavigation(resolver, router);
       // Now navigate as tutor for the same profileId — must still prompt.
-      currentScope = const PinScope.tutor(7);
+      currentScope = const PinScope.tutor('7');
       await guard.onNavigation(resolver, router);
 
       expect(tutorPrompts, 1);
@@ -315,7 +315,7 @@ void main() {
       throw StateError('Could not locate repo root');
     }
 
-    test('AC4: exactly four distinct guard files exist under '
+    test('AC4: exactly three distinct guard files exist under '
         'lib/core/navigation/guards/', () {
       final root = repoRoot();
       final dir = Directory(
@@ -331,7 +331,6 @@ void main() {
       expect(
         guards,
         equals({
-          'restore_guard.dart',
           'profile_guard.dart',
           'child_mode_guard.dart',
           'pin_guard.dart',
@@ -342,7 +341,9 @@ void main() {
             'AUD-core-navigation-01, this directory\'s own auth_guard.dart '
             '(a dead re-export shim) is deleted; the real AuthGuard has '
             'lived under lib/app/router/guards/ since the W1.2 refactor, '
-            'and is intentionally NOT a core/navigation-owned guard.',
+            'and is intentionally NOT a core/navigation-owned guard. After '
+            'P3-7, restore_guard.dart is deleted with the rest of the '
+            'device-restore subsystem — signing in IS restore.',
       );
     });
 

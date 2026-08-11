@@ -33,7 +33,6 @@ import 'package:learning_tracker/app/router/router_provider.dart' as rp;
 import 'package:learning_tracker/core/navigation/guards/child_mode_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/pin_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/profile_guard.dart';
-import 'package:learning_tracker/core/navigation/guards/restore_guard.dart';
 import 'package:learning_tracker/core/navigation/pin_scope.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
@@ -112,19 +111,12 @@ void main() {
       // PinGuard.onSessionLocked, which only fires from PinGuard.lock().
       var lockedCount = 0;
 
-      final restoreGuard = RestoreGuard(
-        deviceRestoreRoute: () => const DeviceRestoreRoute(),
-        getDatabase: () => db,
-        hasCloudAccount: () => false,
-      )..markRestoreComplete();
-
       // A real AppRouter, constructed exactly like router_provider.dart's
       // production wiring, so ref.read(routerProvider).pinGuard is the SAME
       // kind of object _switchProfile calls .lock() on in production — only
       // onSessionLocked additionally increments the spy counter.
       final spyRouter = AppRouter(
         authGuard: AuthGuard(),
-        restoreGuard: restoreGuard,
         profileGuard: ProfileGuard(
           profilePickerRoute: () => const ProfilePickerRoute(),
           getDatabase: () => db,

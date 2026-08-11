@@ -30,7 +30,6 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/navigation/guards/child_mode_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/pin_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/profile_guard.dart';
-import 'package:learning_tracker/core/navigation/guards/restore_guard.dart';
 import 'package:learning_tracker/core/navigation/pin_scope.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
@@ -52,7 +51,7 @@ class _NeverError extends Error {
 
 Never _never(String label) => throw _NeverError(label);
 
-/// Builds the REAL [AppRouter] with its 5 real guard TYPES (so `guards`
+/// Builds the REAL [AppRouter] with its 4 real guard TYPES (so `guards`
 /// membership checks below compare against genuine [PinGuard]/
 /// [ChildModeGuard] instances) but throwing closures for every dependency —
 /// this group only reads the router's static `routes` config; none of these
@@ -60,11 +59,6 @@ Never _never(String label) => throw _NeverError(label);
 AppRouter _buildRouterForInspection() {
   return AppRouter(
     authGuard: AuthGuard(),
-    restoreGuard: RestoreGuard(
-      getDatabase: () => _never('RestoreGuard.getDatabase'),
-      hasCloudAccount: () => _never('RestoreGuard.hasCloudAccount'),
-      deviceRestoreRoute: () => _never('RestoreGuard.deviceRestoreRoute'),
-    ),
     profileGuard: ProfileGuard(
       getDatabase: () => _never('ProfileGuard.getDatabase'),
       getSelectedProfileId: () => _never('ProfileGuard.getSelectedProfileId'),

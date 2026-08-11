@@ -75,7 +75,6 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/navigation/guards/child_mode_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/pin_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/profile_guard.dart';
-import 'package:learning_tracker/core/navigation/guards/restore_guard.dart';
 import 'package:learning_tracker/core/navigation/pin_scope.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
@@ -110,16 +109,9 @@ Future<AppRouter> _createAuthenticatedRouter() async {
   // before short-circuiting, so the guard DB must hold a profile whose id
   // matches getSelectedProfileId() → 1.
   await seedProfileWithIds(testDb, profileId: 1, accountId: 1);
-  final restoreGuard = RestoreGuard(
-    deviceRestoreRoute: () => const DeviceRestoreRoute(),
-    getDatabase: () => testDb,
-    hasCloudAccount: () => false,
-  );
-  restoreGuard.markRestoreComplete();
 
   return AppRouter(
     authGuard: AuthGuard(),
-    restoreGuard: restoreGuard,
     profileGuard: ProfileGuard(
       profilePickerRoute: () => const ProfilePickerRoute(),
       getDatabase: () => testDb,

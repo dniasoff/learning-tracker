@@ -12,50 +12,12 @@
 library;
 
 import 'package:drift/drift.dart' show Value, Variable;
-import 'package:learning_tracker/app/restore/device_restore_service.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/logging/logger.dart';
-import 'package:learning_tracker/core/sync/sync_orchestrator.dart';
-import 'package:learning_tracker/core/utils/date_utils.dart';
-import 'package:learning_tracker/features/onboarding/domain/services/curriculum_import_service.dart';
-import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
-import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:talker/talker.dart';
 import 'package:test/test.dart';
 
 import '../helpers/drift_memory.dart';
-
-class _MockCurriculumImportService extends Mock
-    implements CurriculumImportService {}
-
-class _StubSyncOrchestrator implements SyncOrchestrator {
-  @override
-  Future<void> pullOnLaunch({bool triggeredFromResume = false}) async {}
-
-  @override
-  Future<void> retryPull() async {}
-
-  @override
-  Future<void> pushAllLocalData() async {}
-
-  @override
-  Future<void> stopListeners() async {}
-
-  @override
-  void restartListeners() {}
-
-  @override
-  SyncStatus get currentStatus =>
-      SyncStatus.synced(lastSyncedAt: DateTimeFactory.nowUtc());
-
-  @override
-  Stream<SyncStatus> get statusStream => const Stream.empty();
-
-  @override
-  Future<void> recordDrainAttempt() async {}
-}
 
 void main() {
   setUp(() {
@@ -147,12 +109,8 @@ void main() {
     tags: ['story_25_22'],
     () {
       late UserDatabase db;
-      late AppLogger logger;
 
-      setUp(() {
-        db = inMemoryDb();
-        logger = AppLogger(Talker());
-      });
+      setUp(() => db = inMemoryDb());
 
       tearDown(() => db.close());
 
@@ -209,21 +167,6 @@ void main() {
           tracks.first.curriculumId,
           equals(CurriculumId.mishnayos.storageKey),
         );
-      });
-
-      test('DeviceRestoreService with unauthenticated Firestore skips '
-          'restore without throwing', () async {
-        final svc = DeviceRestoreService(
-          database: db,
-          syncOrchestrator: _StubSyncOrchestrator(),
-          profileId: 1,
-          isAuthenticated: false,
-          curriculumImportService: _MockCurriculumImportService(),
-          logger: logger,
-        );
-        addTearDown(() => svc.dispose());
-
-        await expectLater(() => svc.restore(), returnsNormally);
       });
     },
   );

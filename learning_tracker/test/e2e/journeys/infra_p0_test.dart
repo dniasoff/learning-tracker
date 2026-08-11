@@ -65,8 +65,6 @@ library;
 import 'package:flutter/material.dart' show Key, Switch, TextField;
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/app/restore/restore_providers.dart'
-    show deviceRestoreServiceProvider, restoreStatusProvider;
 import 'package:learning_tracker/app/router/router_provider.dart'
     show routerProvider;
 import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart'
@@ -85,10 +83,6 @@ import 'package:learning_tracker/features/sacred_time/domain/models/city.dart'
     show City;
 import 'package:learning_tracker/features/sacred_time/presentation/providers/cities_provider.dart'
     show citySearchProvider;
-import 'package:learning_tracker/features/sync/domain/models/restore_status.dart'
-    show RestoreStatus;
-import 'package:learning_tracker/features/sync/domain/models/sync_error_code.dart'
-    show SyncErrorCode;
 import 'package:shared_preferences/shared_preferences.dart'
     show SharedPreferences;
 
@@ -354,117 +348,11 @@ void main() {
     });
   });
 
-  // ── E2E-1109 ─────────────────────────────────────────────────────────────────
-
-  group('E2E-1109 — Device restore: new cloud device happy path', () {
-    // Key assertions (catalog §2 Area 11):
-    //  • DeviceRestoreScreen renders from /restore
-    //  • When restoreStatusProvider = complete → "Restore complete!" shown
-    //
-    // The harness RestoreGuard is pre-completed so we navigate to /restore
-    // directly.  routerProvider is overridden with h.router so the screen's
-    // _navigateToApp call resolves in the headless environment.
-    //
-    // deviceRestoreServiceProvider = null makes initState's null check fire
-    // immediately (SY-2 blank-screen fix: calls _navigateToApp).  We inject
-    // restoreStatusProvider = complete so build() renders the success card
-    // regardless of the null-service navigation path.
-
-    testWidgets(
-      'DeviceRestoreScreen renders Restore complete state when status is complete',
-      (tester) async {
-        final identity = E2EIdentity.localBorn(
-          email: 'restore1109@test.com',
-          displayName: 'RestoreUser',
-        );
-        final h = E2EHarness(tester, identity: identity);
-        addTearDown(h.dispose);
-
-        const completeStatus = RestoreStatus.complete(collectionsRestored: 3);
-
-        await h.pumpApp(
-          path: '/restore',
-          extraOverrides: [
-            sacredWindowNullOverride(),
-            ...h.dashboardSilenceOverrides,
-            // null service → initState null-path → _navigateToApp called.
-            deviceRestoreServiceProvider.overrideWithValue(null),
-            // Override status to complete so the build() method renders
-            // the success card while we pump.
-            restoreStatusProvider.overrideWithValue(completeStatus),
-            // routerProvider must resolve to h.router so _navigateToApp's
-            // ref.read(routerProvider) works headlessly.
-            routerProvider.overrideWith((ref) => h.router),
-          ],
-        );
-
-        await h.pump(const Duration(milliseconds: 300));
-        await h.pump();
-
-        // DeviceRestoreScreen must render the complete state.
-        // l10n.deviceRestoreComplete = 'Restore complete!'
-        h.expectOnScreen('Restore complete!', routeName: 'DeviceRestoreScreen');
-      },
-    );
-  });
-
-  // ── E2E-1110 ─────────────────────────────────────────────────────────────────
-
-  group('E2E-1110 — Device restore: error then retry', () {
-    // Key assertions (catalog §2 Area 11):
-    //  • restoreStatusProvider = error → "Restore failed" heading shown
-    //  • Error message body visible
-    //  • Retry button (l10n.retry = "Retry") visible
-    //  • "Skip & continue" TextButton visible
-
-    testWidgets(
-      'DeviceRestoreScreen shows error card with Retry and Skip buttons when '
-      'restore fails',
-      (tester) async {
-        final identity = E2EIdentity.localBorn(
-          email: 'restore1110@test.com',
-          displayName: 'RestoreUserError',
-        );
-        final h = E2EHarness(tester, identity: identity);
-        addTearDown(h.dispose);
-
-        // AUD-sync-01 (EH-5): RestoreStatus.error carries a stable code —
-        // debugDetail below is technical-only and must never render.
-        const errorStatus = RestoreStatus.error(
-          code: SyncErrorCode.timeout,
-          debugDetail: 'Network timeout. Please check your connection.',
-        );
-
-        await h.pumpApp(
-          path: '/restore',
-          extraOverrides: [
-            sacredWindowNullOverride(),
-            ...h.dashboardSilenceOverrides,
-            deviceRestoreServiceProvider.overrideWithValue(null),
-            restoreStatusProvider.overrideWithValue(errorStatus),
-            routerProvider.overrideWith((ref) => h.router),
-          ],
-        );
-
-        await h.pump(const Duration(milliseconds: 300));
-        await h.pump();
-
-        // Error state: "Restore failed" heading.
-        // l10n.deviceRestoreFailed = 'Restore failed'
-        h.expectOnScreen('Restore failed', routeName: 'DeviceRestoreScreen');
-
-        // Error message body: the LOCALIZED subtitle for SyncErrorCode.timeout
-        // (l10n.deviceRestoreErrorTimeout), never the raw debugDetail text.
-        h.expectOnScreen(
-          'The restore timed out. Check your connection and try again.',
-        );
-
-        // Retry button (l10n.retry = 'Retry').
-        h.expectOnScreen('Retry');
-
-        // Skip & continue link (l10n.skipAndContinue = 'Skip & continue').
-        h.expectOnScreen('Skip & continue');
-      },
-    );
-  });
+  // ── E2E-1109 / E2E-1110 removed (Phase 3 P3-7, commit 5677d6fb) ────────────
+  // Both groups exercised DeviceRestoreScreen directly ("device restore: new
+  // cloud device happy path" / "error then retry"). The whole device-restore
+  // subsystem — the screen, its service, RestoreGuard, /restore — was
+  // archived: "with Firestore as the only store, a user's data is already in
+  // the cloud; signing in retrieves it." There is no successor screen to
+  // point these at.
 }
