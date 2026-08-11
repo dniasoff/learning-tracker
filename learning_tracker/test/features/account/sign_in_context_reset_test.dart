@@ -36,14 +36,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:learning_tracker/app/router/router_provider.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/navigation/guards/pin_guard.dart';
 import 'package:learning_tracker/core/navigation/pin_scope.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
-import 'package:learning_tracker/core/sync/providers/outbox_providers.dart'
-    show firestoreGatewayProvider;
-import 'package:learning_tracker/core/sync/providers/sync_orchestrator_providers.dart';
+import 'package:learning_tracker/data/firestore/repository_providers.dart';
+import 'package:learning_tracker/data/repositories/firestore_account_repository.dart';
+import 'package:learning_tracker/features/account/domain/models/account_entity.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/presentation/notifiers/sign_in_controller.dart';
@@ -52,6 +51,8 @@ import 'package:learning_tracker/features/account/presentation/providers/auth_st
     show AuthStateNotifier, authStateProvider;
 import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart';
 import 'package:learning_tracker/features/account/presentation/screens/account_picker_screen.dart';
+import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
+import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/parent_pin_session_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
@@ -81,6 +82,77 @@ class _MockTutorGrantRepository extends Mock implements TutorGrantRepository {}
 class _MockStackRouter extends Mock implements StackRouter {}
 
 class _FakePageRouteInfo extends Fake implements PageRouteInfo<Object?> {}
+
+/// Stands in for the `users/{uid}` account document behind
+/// [FirestoreAccountRepositoryAdapter]. Both wiring tests below establish a
+/// session through that adapter (`setCloudBornSessionFromFirebaseUser` in the
+/// sign-in funnel, `ensureAccountForFirebaseUser` in the picker), so the
+/// adapter must resolve to a predictable record instead of reaching live
+/// Firestore. Stubbing `getAccount()` non-null is enough — the adapter
+/// short-circuits before `createAccount`.
+class _MockFirestoreAccountRepository extends Mock
+    implements FirestoreAccountRepository {}
+
+/// The profile list the sign-in funnel routes on. Replaces the old in-memory
+/// Drift `UserDatabase` fixture: post-P3-5 `_navigateAfterSignIn` reads
+/// `profileRepositoryProvider.getProfiles()` (Firestore-direct) rather than
+/// a locally materialised profile table, so "this account has N profiles" is
+/// now controlled by the list handed to this fake.
+class _FakeProfileRepository implements ProfileRepository {
+  _FakeProfileRepository(this._profiles);
+
+  final List<LearnerProfileEntity> _profiles;
+
+  @override
+  Future<List<LearnerProfileEntity>> getProfiles() async => _profiles;
+
+  @override
+  Stream<List<LearnerProfileEntity>> watchProfiles() => Stream.value(_profiles);
+
+  @override
+  Future<LearnerProfileEntity?> getProfileById(String profileId) async =>
+      _profiles.where((p) => p.profileId == profileId).firstOrNull;
+
+  @override
+  Future<int> countProfiles() async => _profiles.length;
+
+  @override
+  Future<LearnerProfileEntity> createProfile({
+    required String displayName,
+    required ProfileMode mode,
+    String avatar = '',
+  }) => throw UnimplementedError();
+
+  @override
+  Future<LearnerProfileEntity> updateProfile({
+    required String profileId,
+    String? displayName,
+    ProfileMode? mode,
+    String? avatar,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<void> deleteProfile(String profileId, {bool allowLast = false}) =>
+      throw UnimplementedError();
+}
+
+LearnerProfileEntity _profile(String profileId, String displayName) =>
+    LearnerProfileEntity(
+      profileId: profileId,
+      displayName: displayName,
+      mode: ProfileMode.adult,
+      createdAt: DateTime.utc(2026, 1, 1),
+      updatedAt: DateTime.utc(2026, 1, 1),
+    );
+
+AccountEntity _account(String uid, String email, String displayName) =>
+    AccountEntity(
+      uid: uid,
+      email: email,
+      displayName: displayName,
+      createdAt: DateTime.utc(2026, 1, 1),
+      updatedAt: DateTime.utc(2026, 1, 1),
+    );
 
 /// A stub AuthStateNotifier that does NOT call `_init()` so it never
 /// schedules async work that would race container disposal. The sign-in
@@ -171,7 +243,7 @@ void main() {
           canViewProgress: true,
           canViewContent: true,
         ),
-        tutorOwnProfileId: 7,
+        tutorOwnProfileId: 'tutor-own-1',
       );
 
       // Simulate a leftover talmid session from before sign-out.
@@ -203,7 +275,7 @@ void main() {
         pinSetupRoute: () => _FakePageRouteInfo(),
         pinService: _StubPinService(),
         promptForPin: () async => true,
-        getScope: () => const PinScope.parent(3),
+        getScope: () => const PinScope.parent('profile-p1'),
         onSessionAuthenticated: (scope) {
           if (scope is PinScopeParent) {
             container
@@ -219,11 +291,11 @@ void main() {
       );
 
       // Simulate parent mode already unlocked before sign-out.
-      guard.markAuthenticated(3);
+      guard.markAuthenticated('profile-p1');
       expect(
         container.read(parentPinAuthenticatedProfileIdProvider),
-        3,
-        reason: 'precondition: parent mode unlocked for profile 3',
+        'profile-p1',
+        reason: 'precondition: parent mode unlocked for profile-p1',
       );
 
       // The reset that every sign-in chokepoint performs.
@@ -247,17 +319,15 @@ void main() {
         // Stale id from the previous account.
         container
             .read(selectedProfileIdProvider.notifier)
-            .select(999, ulid: 'ulid-999');
+            .select('ulid-stale-999');
         // Sign-in chokepoints clear it, then select the own primary.
         container.read(selectedProfileIdProvider.notifier).clear();
         expect(container.read(selectedProfileIdProvider), isNull);
 
-        container
-            .read(selectedProfileIdProvider.notifier)
-            .select(1, ulid: 'ulid-1');
+        container.read(selectedProfileIdProvider.notifier).select('ulid-own-1');
         expect(
           container.read(selectedProfileIdProvider),
-          1,
+          'ulid-own-1',
           reason:
               'after sign-in the selected profile must be the own primary, '
               'never a stale id or a tutored mirror',
@@ -292,8 +362,15 @@ void main() {
         final authRepo = MockAuthRepository();
         final checker = _MockInternetConnectionChecker();
         final tutorGrantRepo = _MockTutorGrantRepository();
-        final db = UserDatabase(NativeDatabase.memory());
+        final accountRepo = _MockFirestoreAccountRepository();
 
+        when(() => accountRepo.getAccount()).thenAnswer(
+          (_) async => _account(
+            'fb-uid-reset-1',
+            'reset-cloud@example.com',
+            'Reset Cloud User',
+          ),
+        );
         when(() => checker.hasConnection).thenAnswer((_) async => true);
         when(
           () => authRepo.signInWithEmail(any<String>(), any<String>()),
@@ -319,10 +396,19 @@ void main() {
             authRepositoryProvider.overrideWithValue(authRepo),
             deviceRegistryProvider.overrideWithValue(registry),
             internetConnectionCheckerProvider.overrideWithValue(checker),
-            syncOrchestratorProvider.overrideWithValue(null),
-            firestoreGatewayProvider.overrideWithValue(null),
             tutorGrantRepositoryProvider.overrideWithValue(tutorGrantRepo),
-            userDatabaseProvider.overrideWithValue(db),
+            // The funnel establishes the session through
+            // FirestoreAccountRepositoryAdapter and then routes on the
+            // Firestore profile list — both are faked so the chain resolves
+            // without touching live Firebase. One profile = the signed-in
+            // user's own primary, the "lands in the own profile" case this
+            // suite is about.
+            firestoreAccountRepositoryProvider.overrideWith(
+              (ref) async => accountRepo,
+            ),
+            profileRepositoryProvider.overrideWithValue(
+              _FakeProfileRepository([_profile('ulid-own-1', 'Own Profile')]),
+            ),
             authStateProvider.overrideWith(_NoInitAuthStateNotifier.new),
           ],
         );
@@ -338,7 +424,7 @@ void main() {
             canViewProgress: true,
             canViewContent: true,
           ),
-          tutorOwnProfileId: 7,
+          tutorOwnProfileId: 'tutor-own-leak-1',
         );
         container
             .read(activeTutoredProfileSelectionProvider.notifier)
@@ -346,7 +432,10 @@ void main() {
         // routerProvider is NOT overridden — this drives the SAME PinGuard
         // instance sign_in_controller.dart's _resetSessionContextForFreshSignIn
         // calls .lock() on in production.
-        container.read(routerProvider).pinGuard.markAuthenticated(3);
+        container
+            .read(routerProvider)
+            .pinGuard
+            .markAuthenticated('profile-prior-1');
         expect(
           container.read(activeTutoredProfileSelectionProvider),
           isNotNull,
@@ -356,7 +445,7 @@ void main() {
         );
         expect(
           container.read(parentPinAuthenticatedProfileIdProvider),
-          3,
+          'profile-prior-1',
           reason:
               'precondition: the parent-PIN gate is unlocked from a '
               'prior session',
@@ -397,7 +486,6 @@ void main() {
 
         await _disposeAndPump(tester, container);
         await registry.close();
-        await db.close();
       },
     );
 
@@ -416,9 +504,17 @@ void main() {
       );
 
       final registry = DeviceRegistryDatabase(NativeDatabase.memory());
-      final userDb = UserDatabase(NativeDatabase.memory());
       final auth = MockAuthRepository();
       final router = _MockStackRouter();
+      final accountRepo = _MockFirestoreAccountRepository();
+
+      // The Firestore account record _activateCloudAccountFromLocalData
+      // resolves through firestoreAccountRepositoryAdapterProvider. It must
+      // be non-null: a null entity short-circuits the method at the
+      // "local data missing" snackbar, BEFORE the resets under test.
+      when(() => accountRepo.getAccount()).thenAnswer(
+        (_) async => _account(targetUid, targetEmail, 'Cloud Switch'),
+      );
 
       when(() => auth.currentUser).thenReturn(cloudUser);
       when(
@@ -441,32 +537,18 @@ void main() {
           lastUsedAt: DateTime.utc(2026, 1, 4),
         ),
       );
-      await userDb
-          .into(userDb.accounts)
-          .insert(
-            AccountsCompanion.insert(
-              email: targetEmail,
-              tier: 'cloudBorn',
-              displayName: 'Cloud Switch',
-              firebaseUid: const Value(targetUid),
-              createdAt: DateTime.utc(2026, 1, 4),
-              updatedAt: DateTime.utc(2026, 1, 4),
-            ),
-          );
 
       final container = ProviderContainer(
         overrides: [
           deviceRegistryProvider.overrideWithValue(registry),
           authRepositoryProvider.overrideWithValue(auth),
-          userDatabaseProvider.overrideWith((ref) => userDb),
-          syncOrchestratorProvider.overrideWithValue(null),
+          firestoreAccountRepositoryProvider.overrideWith(
+            (ref) async => accountRepo,
+          ),
         ],
       );
       addTearDown(container.dispose);
-      addTearDown(() async {
-        await registry.close();
-        await userDb.close();
-      });
+      addTearDown(registry.close);
 
       // Leaked cross-account context this switch must clear.
       const selection = TutoredProfileSelection(
@@ -477,14 +559,20 @@ void main() {
           canViewProgress: true,
           canViewContent: true,
         ),
-        tutorOwnProfileId: 9,
+        tutorOwnProfileId: 'tutor-own-switch-1',
       );
       container
           .read(activeTutoredProfileSelectionProvider.notifier)
           .enter(selection);
-      container.read(routerProvider).pinGuard.markAuthenticated(4);
+      container
+          .read(routerProvider)
+          .pinGuard
+          .markAuthenticated('profile-prev-account-1');
       expect(container.read(activeTutoredProfileSelectionProvider), isNotNull);
-      expect(container.read(parentPinAuthenticatedProfileIdProvider), 4);
+      expect(
+        container.read(parentPinAuthenticatedProfileIdProvider),
+        'profile-prev-account-1',
+      );
 
       await tester.pumpWidget(
         _buildPickerApp(container: container, router: router),
@@ -514,6 +602,5 @@ void main() {
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(Duration.zero);
     });
-
   });
 }

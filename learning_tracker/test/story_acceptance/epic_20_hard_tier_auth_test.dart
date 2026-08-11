@@ -1,13 +1,8 @@
-import 'package:drift/drift.dart' hide isNotNull, isNull;
-import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/data/firestore/conflict.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_log_event.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_reducer.dart';
-
-import '../helpers/drift_memory.dart' show seedProfile;
 
 /// End-to-end story acceptance tests for Epic 20 — v2 hard-tier
 /// auth refactor. Covers the contract promised by the v2 architecture
@@ -15,39 +10,18 @@ import '../helpers/drift_memory.dart' show seedProfile;
 /// 20.3 through 20.12.
 void main() {
   group('Epic 20 — v2 hard-tier auth', () {
-    late UserDatabase db;
-
-    setUp(() async {
-      db = UserDatabase(NativeDatabase.memory());
-      await seedProfile(db);
-    });
-
-    tearDown(() => db.close());
-
-    // ─── Story 20.3: DB schema ─────────────────────────────────────
-    group('Story 20.3 — v2 schema', () {
-      test('UserProfiles has email, firebaseUid, passwordHash, tier', () async {
-        await db
-            .into(db.accounts)
-            .insert(
-              UserProfilesCompanion.insert(
-                email: 'cloud@test.local',
-                firebaseUid: const Value('fbuid-1'),
-                tier: 'cloudBorn',
-                displayName: 'Cloudy',
-                createdAt: DateTime.utc(2026, 1, 1),
-                updatedAt: DateTime.utc(2026, 1, 1),
-              ),
-            );
-        final row = await (db.select(
-          db.accounts,
-        )..where((t) => t.email.equals('cloud@test.local'))).getSingle();
-        expect(row.email, 'cloud@test.local');
-        expect(row.firebaseUid, 'fbuid-1');
-        expect(row.tier, 'cloudBorn');
-        expect(row.passwordHash, isNull);
-      });
-    });
+    // ─── Story 20.3 removed (Phase 3 Drift archival, 04897ebc) ─────
+    // The old "v2 schema" group here asserted directly on the Drift
+    // `UserProfiles` table — that email/firebaseUid/passwordHash/tier
+    // were real columns. The whole `lib/core/database/**` Drift layer is
+    // now archived under `docs/_archive/drift-user-db/`, and Firestore
+    // documents are schemaless, so there is no table to assert on. The
+    // successor coverage is split in two: the persisted document shape is
+    // owned by test/data/repositories/firestore_account_repository_test.dart
+    // (via the AccountEntity codec), and the writable-field whitelist is
+    // enforced by `firestore.rules`' `.hasOnly()` clause on
+    // `match /users/{uid}`. This group was structurally obsolete, not
+    // portable.
 
     // ─── Story 20.5: Unified AuthState ──────────────────────────────
     group('Story 20.5 — AuthState', () {
@@ -58,8 +32,12 @@ void main() {
         expect(signedOut.isLocalBorn, isFalse);
 
         const signedInLocal = AuthState.signedIn(
-          user: AuthUser(profileId: 1, email: 'a@test.local', displayName: 'A'),
-          tier: Tier.localBorn,
+          user: AuthUser(
+            uid: 'acct-local-1',
+            email: 'a@test.local',
+            displayName: 'A',
+          ),
+          tier: Tier.local,
         );
         expect(signedInLocal.isSignedIn, isTrue);
         expect(signedInLocal.isLocalBorn, isTrue);
@@ -146,44 +124,24 @@ void main() {
       });
     });
 
-    // ─── Story 20.11 gap: completion tee + reducer integration ─────
-    group('Story 20.11 — completion tee pipeline', () {
-      test('idempotent tee: same completion twice → one event row', () async {
-        // streak_events.profileId has a FK → learner_profiles(id).
-        // Insert a placeholder profile with id=99 to satisfy the FK.
-        await db
-            .into(db.learnerProfiles)
-            .insert(
-              LearnerProfilesCompanion.insert(
-                id: const Value(99),
-                accountId: 1,
-                displayName: 'Profile 99',
-                mode: 'adult',
-                createdAt: DateTime.utc(2026, 1, 1),
-                updatedAt: DateTime.utc(2026, 1, 1),
-              ),
-            );
-
-        final at = DateTime.utc(2026, 3, 1);
-        final day = DateTime.utc(at.year, at.month, at.day);
-        for (var i = 0; i < 3; i++) {
-          await db
-              .into(db.streakEvents)
-              .insert(
-                StreakEventsCompanion.insert(
-                  profileId: 99,
-                  eventType: 'completion',
-                  dayUtc: day,
-                  eventTimestamp: at,
-                ),
-                mode: InsertMode.insertOrIgnore,
-              );
-        }
-        final rows = await (db.select(
-          db.streakEvents,
-        )..where((t) => t.profileId.equals(99))).get();
-        expect(rows, hasLength(1));
-      });
-    });
+    // ─── Story 20.11 completion-tee group removed (Phase 3) ────────
+    // The old "idempotent tee: same completion twice → one event row"
+    // test pinned a property that was never application logic: it was the
+    // Drift `StreakEvents` table's `UNIQUE (profileId, dayUtc, eventType)`
+    // index combined with `InsertMode.insertOrIgnore`. The dedup WAS the
+    // index, so there is no pure function left to feed once the table is
+    // archived.
+    //
+    // More importantly the behaviour itself is deliberately gone, not
+    // merely relocated: `DocIds.streakEventDocId` keys `streak_events` by
+    // ULID alone, so two independently-triggered completions for the same
+    // day now write TWO documents and a caller needing "already logged
+    // today?" must check `FirestoreStreakEventRepository.getEventsForDay`
+    // first. That change is documented on [StreakEventEntry] in
+    // lib/features/gamification/streak/streak_event_entry.dart and pinned
+    // by test/data/repositories/firestore_streak_event_repository_test.dart
+    // ('two documents, not one' + the getEventsForDay group). Rewriting
+    // this assertion to expect two rows would leave a story banner
+    // promising an idempotency guarantee the system no longer makes.
   });
 }

@@ -10,8 +10,9 @@
 //   A. cloudBorn account + online  → Firebase signInWithEmail called,
 //                                     email-verified user navigates.
 //   B. cloudBorn account + offline → _tryOfflineCloudRestore invoked,
-//                                     navigates when local profile exists.
-//   C. cloudBorn account + offline + no local data
+//                                     navigates when the cached users/{uid}
+//                                     account record resolves.
+//   C. cloudBorn account + offline + account record unresolvable
 //                                 → authLocalDataMissing shown, SignInError.
 //   F. email-verification guard   → cloudBorn+online, unverified password
 //                                   account shows dialog; dialog returns false
@@ -36,13 +37,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
-import 'package:learning_tracker/core/sync/providers/outbox_providers.dart'
-    show firestoreGatewayProvider;
-import 'package:learning_tracker/core/sync/providers/sync_orchestrator_providers.dart';
+import 'package:learning_tracker/data/firestore/repository_providers.dart';
+import 'package:learning_tracker/data/repositories/firestore_account_repository.dart';
+import 'package:learning_tracker/features/account/domain/models/account_entity.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/presentation/notifiers/sign_in_controller.dart';
@@ -50,6 +49,9 @@ import 'package:learning_tracker/features/account/presentation/providers/auth_pr
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart'
     show AuthStateNotifier, authStateProvider;
 import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart';
+import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
+import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/tutoring/domain/use_cases/tutor_invite_use_cases.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_grant_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -64,6 +66,11 @@ class _MockInternetConnectionChecker extends Mock
     implements InternetConnectionChecker {}
 
 class _MockTutorGrantRepository extends Mock implements TutorGrantRepository {}
+
+class _MockProfileRepository extends Mock implements ProfileRepository {}
+
+class _MockFirestoreAccountRepository extends Mock
+    implements FirestoreAccountRepository {}
 
 // ── Stub AuthStateNotifier ────────────────────────────────────────────────────
 
@@ -99,13 +106,26 @@ class _SpyRouter implements StackRouter {
   dynamic noSuchMethod(Invocation invocation) => null;
 }
 
-// ── In-memory UserDatabase ────────────────────────────────────────────────────
-
-class _InMemoryUserDatabase extends UserDatabase {
-  _InMemoryUserDatabase() : super(NativeDatabase.memory());
-}
-
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+/// A `users/{uid}` account repository that already holds a document — the
+/// post-Drift stand-in for "this account has cached local data".
+FirestoreAccountRepository _accountRepoWithExistingDoc({
+  String uid = 'fb-uid-1',
+  String email = 'cloud@example.com',
+}) {
+  final repo = _MockFirestoreAccountRepository();
+  when(repo.getAccount).thenAnswer(
+    (_) async => AccountEntity(
+      uid: uid,
+      email: email,
+      displayName: 'Cloud User',
+      createdAt: DateTime.utc(2026, 1, 1),
+      updatedAt: DateTime.utc(2026, 1, 1),
+    ),
+  );
+  return repo;
+}
 
 /// A GlobalKey<FormState> whose FormState.validate() always returns true
 /// because the Form has no validators.
@@ -158,23 +178,34 @@ Future<DeviceAccount> _seedCloudAccount(
 /// disposal. The sign-in controller reads .notifier to mutate session state,
 /// so overrideWith() is used (overrideWithValue() would give a non-mutable
 /// _SyncValueProviderElement and cause a type-cast failure).
+///
+/// [profiles] is what `_navigateAfterSignIn` sees from
+/// `profileRepositoryProvider.getProfiles()` and therefore drives the 0/1/many
+/// routing branch. [accountRepo] backs both
+/// `setCloudBornSessionFromFirebaseUser` and `_tryOfflineCloudRestore`; leaving
+/// it null makes `FirestoreAccountRepositoryAdapter` throw
+/// AccountRepositoryNotReadyException — the post-Drift analogue of "this
+/// device has no cached data for the account".
 ProviderContainer _makeContainer({
   required MockAuthRepository authRepo,
   required DeviceRegistryDatabase registry,
   required _MockInternetConnectionChecker checker,
   required _MockTutorGrantRepository tutorGrantRepo,
-  _InMemoryUserDatabase? userDb,
+  List<LearnerProfileEntity> profiles = const [],
+  FirestoreAccountRepository? accountRepo,
 }) {
-  final db = userDb ?? _InMemoryUserDatabase();
+  final profileRepo = _MockProfileRepository();
+  when(profileRepo.getProfiles).thenAnswer((_) async => profiles);
   return ProviderContainer(
     overrides: [
       authRepositoryProvider.overrideWithValue(authRepo),
       deviceRegistryProvider.overrideWithValue(registry),
       internetConnectionCheckerProvider.overrideWithValue(checker),
-      syncOrchestratorProvider.overrideWithValue(null),
-      firestoreGatewayProvider.overrideWithValue(null),
       tutorGrantRepositoryProvider.overrideWithValue(tutorGrantRepo),
-      userDatabaseProvider.overrideWithValue(db),
+      profileRepositoryProvider.overrideWithValue(profileRepo),
+      firestoreAccountRepositoryProvider.overrideWith(
+        (ref) async => accountRepo,
+      ),
       authStateProvider.overrideWith(_NoInitAuthStateNotifier.new),
     ],
   );
@@ -229,7 +260,6 @@ void main() {
           final authRepo = MockAuthRepository();
           final checker = _MockInternetConnectionChecker();
           final tutorGrantRepo = _MockTutorGrantRepository();
-          final db = _InMemoryUserDatabase();
 
           // Online.
           when(() => checker.hasConnection).thenAnswer((_) async => true);
@@ -261,7 +291,7 @@ void main() {
             registry: registry,
             checker: checker,
             tutorGrantRepo: tutorGrantRepo,
-            userDb: db,
+            accountRepo: _accountRepoWithExistingDoc(),
           );
 
           final router = _SpyRouter();
@@ -294,7 +324,6 @@ void main() {
 
           await _tearDownContainer(tester, container);
           await registry.close();
-          await db.close();
         },
       );
     },
@@ -306,8 +335,8 @@ void main() {
     'Branch B — cloudBorn account, offline: offline-cloud-restore navigates',
     () {
       testWidgets(
-        '_tryOfflineCloudRestore navigates to AppShellRoute when local '
-        'cloud-born profile is present in the user DB',
+        '_tryOfflineCloudRestore navigates to AppShellRoute when the cached '
+        'users/{uid} account record resolves',
         (tester) async {
           final formKey = await _buildValidFormKey(tester);
           final registry = DeviceRegistryDatabase(NativeDatabase.memory());
@@ -316,28 +345,22 @@ void main() {
           final authRepo = MockAuthRepository();
           final checker = _MockInternetConnectionChecker();
           final tutorGrantRepo = _MockTutorGrantRepository();
-          final db = _InMemoryUserDatabase();
 
           // Offline.
           when(() => checker.hasConnection).thenAnswer((_) async => false);
           when(() => authRepo.currentUser).thenReturn(null);
           when(() => authRepo.signOut()).thenAnswer((_) async {});
 
-          // Seed a cloud-born user profile row so the offline restore helper
-          // can find it via the DAO.
-          await db.userProfileDao.upsertProfile(
-            firebaseUid: 'fb-uid-1',
-            email: 'cloud@example.com',
-            displayName: 'Cloud User',
-            updatedAt: DateTime.utc(2026, 1, 1),
-          );
-
+          // The offline restore helper now reads the account record through
+          // FirestoreAccountRepositoryAdapter — Firestore's own offline
+          // persistence serves the cached users/{uid} doc, which this mock
+          // stands in for.
           final container = _makeContainer(
             authRepo: authRepo,
             registry: registry,
             checker: checker,
             tutorGrantRepo: tutorGrantRepo,
-            userDb: db,
+            accountRepo: _accountRepoWithExistingDoc(),
           );
 
           final router = _SpyRouter();
@@ -357,7 +380,8 @@ void main() {
             router.replaceCalls,
             isNotEmpty,
             reason:
-                'Offline cloud restore must navigate when profile is present',
+                'Offline cloud restore must navigate when the account record '
+                'resolves',
           );
 
           // State must be Idle.
@@ -365,7 +389,6 @@ void main() {
 
           await _tearDownContainer(tester, container);
           await registry.close();
-          await db.close();
         },
       );
     },
@@ -374,13 +397,14 @@ void main() {
   // ── Branch C: cloudBorn offline + no local data → error ───────────────────
 
   group(
-    'Branch C — cloudBorn account, offline, no local profile: shows error',
+    'Branch C — cloudBorn account, offline, no account record: shows error',
     () {
       testWidgets(
         'SignInError(authLocalDataMissing) when offline-restore finds nothing',
         (tester) async {
           final formKey = await _buildValidFormKey(tester);
-          // Registry has the cloud account but user DB is empty (no profile).
+          // Registry has the cloud account, but no account repository resolves
+          // (see _makeContainer's accountRepo doc).
           final registry = DeviceRegistryDatabase(NativeDatabase.memory());
           await _seedCloudAccount(registry);
 
@@ -393,6 +417,9 @@ void main() {
           when(() => authRepo.currentUser).thenReturn(null);
           when(() => authRepo.signOut()).thenAnswer((_) async {});
 
+          // accountRepo intentionally omitted: the adapter then throws
+          // AccountRepositoryNotReadyException, the post-Drift analogue of
+          // "no cached data on this device for the account".
           final container = _makeContainer(
             authRepo: authRepo,
             registry: registry,
@@ -424,8 +451,8 @@ void main() {
             (state as SignInError).message,
             l10n.authLocalDataMissing,
             reason:
-                'offline cloudBorn with no local data must show '
-                'authLocalDataMissing',
+                'offline cloudBorn with no resolvable account record must '
+                'show authLocalDataMissing',
           );
 
           // Error callback must have fired.
@@ -571,7 +598,6 @@ void main() {
       final authRepo = MockAuthRepository();
       final checker = _MockInternetConnectionChecker();
       final tutorGrantRepo = _MockTutorGrantRepository();
-      final db = _InMemoryUserDatabase();
 
       when(() => checker.hasConnection).thenAnswer((_) async => true);
       when(
@@ -599,7 +625,7 @@ void main() {
         registry: registry,
         checker: checker,
         tutorGrantRepo: tutorGrantRepo,
-        userDb: db,
+        accountRepo: _accountRepoWithExistingDoc(),
       );
 
       final states = <SignInState>[];
@@ -625,7 +651,6 @@ void main() {
 
       await _tearDownContainer(tester, container);
       await registry.close();
-      await db.close();
     });
   });
 }

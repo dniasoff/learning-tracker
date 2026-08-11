@@ -9,8 +9,8 @@ import 'package:google_sign_in/google_sign_in.dart'
     show GoogleSignInException, GoogleSignInExceptionCode;
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
+import 'package:learning_tracker/data/firestore/repository_providers.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/account/presentation/notifiers/sign_in_controller.dart';
@@ -739,8 +739,8 @@ void main() {
         '(replaces the previously swallowed empty catch)', () async {
       final container = ProviderContainer(
         overrides: [
-          userDatabaseProvider.overrideWith(
-            (ref) => throw const _StubDatabaseFailure('offline db swap failed'),
+          firestoreAccountRepositoryProvider.overrideWith(
+            (ref) => throw const _StubDatabaseFailure('offline restore failed'),
           ),
         ],
       );
