@@ -2445,6 +2445,59 @@ not re-learn the hard way:**
 
 ---
 
+### 2026-08-11 — P3-25: the track-delete gap is CLOSED — the Cloud Function is wired to the client, with a contract test on the seam that has broken twice
+
+`dart analyze --fatal-infos` EXIT 0 on both touched files.
+`check_dependency_direction` EXIT 0. lib errors **515 → 505**.
+
+#### 1. The gap, and the owner ruling
+
+A worker refused to migrate `CurriculumActivationService` and explained why:
+`deactivate` HARD-DELETES the track config, while Firestore exposes only soft
+`retireTrack` / `archiveTrack` — both PRESERVE it. `curriculum_tracks` is
+`allow delete: if false`, so a client cannot delete directly BY DESIGN; deletion
+lives in the `deleteCurriculumTrack` Cloud Function, and **nothing in the app
+ever called it**. "Remove this track and its data" had no client path at all.
+
+Owner ruling: wire the Cloud Function. Done —
+`FirestoreCurriculumTrackRepositoryAdapter.deleteTrackPermanently`.
+
+Placed on the ADAPTER (`features/tracks/setup/data/repositories/`), the layer
+allowed to hold data-ring dependencies, so domain and presentation reach it
+through the repository rather than importing `FirebaseFunctions` themselves.
+
+The contract was READ from `functions/src/deletes.ts:209-226`, not assumed:
+`{profileId: <ULID string>, curriculumId: <string>}`. Both are already
+string-typed post-re-key, so this does not reintroduce the P3-17 mismatch.
+
+Failures are deliberately NOT swallowed — a delete that silently does nothing is
+indistinguishable from one that worked.
+
+#### 2. Testing it — the seam that had no coverage
+
+The Cloud Function itself was already well covered against the emulator: happy
+path, idempotent re-delete, and full argument validation. **What had no coverage
+was the CLIENT CALL** — and that is exactly the seam that has broken twice:
+
+- `e2ab5aeb` — the CF demanded a ULID string while every Dart layer sent an int
+- `P3-17` — 14 CF guards still demanded `typeof profileId === "number"`
+
+Both were invisible to `dart analyze` (each side internally consistent) AND to
+the CF tests (the fixture supplied whatever shape the bug expected).
+
+Two tests are WRITTEN that pin the shape the Dart adapter actually sends and
+assert that a `CurriculumId`-like object is REJECTED rather than silently
+coerced. **They are deliberately NOT in this commit** — the emulator run had not
+finished when it was made, and an unexecuted test is an unverified claim. They
+land in the next entry, with their run output.
+
+#### 3. Also landed
+
+`scheduler_completion_repository_impl.dart` migrated (11 → 0). It handled the
+`stageIdFormat` question correctly rather than inventing a field: every Firestore
+completion's `stageId` is a `stage_order` value by construction, so there is no
+legacy format to disambiguate and `stageOrder` maps directly. Audited for
+silent-value stubs — none.
 ### 2026-08-11 — P3-24: reward-milestone service migrated to curriculum-keyed eligibility — and two SILENT-ZERO stubs rejected
 
 `dart analyze --fatal-infos` EXIT 0 on the touched file. `check_dependency_direction`

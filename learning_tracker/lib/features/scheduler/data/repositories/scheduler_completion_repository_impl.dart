@@ -1,82 +1,94 @@
-import 'package:learning_tracker/core/database/daos/completion_dao.dart';
-import 'package:learning_tracker/core/database/daos/stage_dao.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/data/firestore/repository_providers.dart';
+import 'package:learning_tracker/data/repositories/firestore_completion_repository.dart';
 import 'package:learning_tracker/features/scheduler/domain/repositories/scheduler_completion_repository.dart';
 
-/// Adapts [CompletionDao] for scheduler consumption.
+/// Thrown by [SchedulerFirestoreCompletionRepositoryAdapter] when
+/// `firestoreCompletionRepositoryProvider` resolves to `null` — i.e. no
+/// active account, or no active learner profile, yet.
 ///
-/// Scoped to a single profile so daily task generation reflects only the
-/// active profile's completion history.
-class SchedulerCompletionRepositoryImpl
-    implements SchedulerCompletionRepository {
-  SchedulerCompletionRepositoryImpl({
-    required CompletionDao completionDao,
-    required StageDao stageDao,
-    int profileId = 0,
-  }) : _completionDao = completionDao,
-       _stageDao = stageDao,
-       _profileId = profileId;
+/// Owner ruling D-E: completions are achievement data. Returning `[]` when
+/// the provider is unresolved would be indistinguishable from a learner who
+/// has completed nothing, so daily-task generation would wrongly schedule
+/// every item as new learning. Mirrors
+/// `CompletionRepositoryNotReadyException`
+/// (`lib/features/learning/data/repositories/completion_repository_impl.dart`),
+/// which makes the same D-E call for the same data.
+class SchedulerCompletionRepositoryNotReadyException implements Exception {
+  const SchedulerCompletionRepositoryNotReadyException();
 
-  final CompletionDao _completionDao;
-  final StageDao _stageDao;
-  final int _profileId;
+  @override
+  String toString() =>
+      'SchedulerCompletionRepositoryNotReadyException: '
+      'firestoreCompletionRepositoryProvider resolved to null (no active '
+      'account, or no active learner profile, yet) — cannot read '
+      'completions until one is active.';
+}
+
+/// Firestore-backed [SchedulerCompletionRepository] adapter.
+///
+/// Replaces the Drift-backed `CompletionDao`/`StageDao` implementation the
+/// Drift user DB deletion removed (archived under
+/// `docs/_archive/drift-user-db/`). Built to the same resolved-`Ref`-per-call
+/// pattern as `SchedulerFirestoreLearningOrderRepositoryAdapter`
+/// (`scheduler_learning_order_repository_impl.dart`) and
+/// `FirestoreCompletionRepositoryAdapter`
+/// (`lib/features/learning/data/repositories/completion_repository_impl.dart`)
+/// — see those class doc comments for the pattern in full.
+///
+/// ## No stage-id/stage-order reconciliation (AUD-scheduler-15 is obsolete)
+///
+/// The Drift implementation carried `resolveStageOrder`: a Drift
+/// `completion_events.stageId` could mean either a `stage_definitions.id` or
+/// a `stageOrder` ordinal, disambiguated by the v37 `stageIdFormat` marker.
+/// Every Firestore [CompletionEntity.stageId] is a `stage_order` value by
+/// construction (see that class's class doc comment) — there is no legacy
+/// format to disambiguate, so `SchedulerCompletion.stageOrder` maps directly
+/// from [CompletionEntity.stageId], and no completion can be dropped for an
+/// unresolvable stage.
+///
+/// ## Not-ready reads throw, not `[]` (D-E)
+///
+/// Completions are achievement data: an empty list is indistinguishable from
+/// a learner who has completed nothing and would silently skew the daily
+/// schedule. [getCompletions] therefore throws
+/// [SchedulerCompletionRepositoryNotReadyException] when the provider is
+/// unresolved, rather than returning `[]`.
+class SchedulerFirestoreCompletionRepositoryAdapter
+    implements SchedulerCompletionRepository {
+  SchedulerFirestoreCompletionRepositoryAdapter({required Ref ref})
+    : _ref = ref;
+
+  final Ref _ref;
+
+  /// Resolves `firestoreCompletionRepositoryProvider`, re-read on every call
+  /// rather than cached so a profile switch is picked up without rebuilding
+  /// this adapter — same rationale as the sibling adapters above. Throws
+  /// [SchedulerCompletionRepositoryNotReadyException] when it resolves to
+  /// `null` (no active account, or no active learner profile).
+  Future<FirestoreCompletionRepository> _resolve() async {
+    final repo = await _ref.read(firestoreCompletionRepositoryProvider.future);
+    if (repo == null) {
+      throw const SchedulerCompletionRepositoryNotReadyException();
+    }
+    return repo;
+  }
 
   @override
   Future<List<SchedulerCompletion>> getCompletions(
     CurriculumId curriculumId,
   ) async {
-    final completions = await _completionDao
-        .getCompletionsByCurriculumAndProfile(
-          curriculumId.storageKey,
-          _profileId,
-        );
-    final stages = await _stageDao.getStageDefinitionsByCurriculum(
-      curriculumId.storageKey,
-    );
-
-    final stageOrderMap = {for (final s in stages) s.id: s.stageOrder};
-    final knownStageOrders = {for (final s in stages) s.stageOrder};
-
-    // AUD-scheduler-15: `stage_definitions.id` (a global autoincrement) and
-    // `stageOrder` (a small 1..10 per-curriculum ordinal) are both small
-    // positive integers that can coincide — especially once
-    // StageDefinitionRepository.reorderStages moves a stage's order away
-    // from its id. Guessing the format from value coincidence (does
-    // rawStageId happen to match a CURRENT stageOrder?) can silently
-    // resolve to the WRONG stage when it does. `stageIdFormat` (v37)
-    // removes the guess: it is an explicit marker stamped at write time
-    // (CompletionWriter always writes 'stageOrder'; the v37 migration
-    // backfilled pre-existing rows it could classify with certainty).
-    // Only a row with no marker at all (a pre-v37 row the migration could
-    // not classify, or a row inserted by a path that predates this column)
-    // falls back to the historical best-effort guess.
-    int? resolveStageOrder(int rawStageId, String? stageIdFormat) {
-      switch (stageIdFormat) {
-        case 'stageOrder':
-          return knownStageOrders.contains(rawStageId) ? rawStageId : null;
-        case 'legacyId':
-          return stageOrderMap[rawStageId];
-        default:
-          // Unmarked row — no explicit signal available. Preserve the
-          // pre-v37 behaviour exactly (no regression for already-synced or
-          // not-yet-migrated data).
-          if (knownStageOrders.contains(rawStageId)) return rawStageId;
-          return stageOrderMap[rawStageId];
-      }
-    }
-
-    return completions
-        .map((c) {
-          final stageOrder = resolveStageOrder(c.stageId, c.stageIdFormat);
-          if (stageOrder == null) return null;
-          return SchedulerCompletion(
-            sefariaRef: c.sefariaRef,
-            stageOrder: stageOrder,
-            trackType: c.trackType,
-            completedAt: c.completedAt,
-          );
-        })
-        .whereType<SchedulerCompletion>()
-        .toList();
+    final repo = await _resolve();
+    final completions = await repo.getCompletionsForCurriculum(curriculumId);
+    return [
+      for (final c in completions)
+        SchedulerCompletion(
+          sefariaRef: c.sefariaRef,
+          stageOrder: c.stageId,
+          trackType: c.trackType,
+          completedAt: c.completedAt,
+        ),
+    ];
   }
 }

@@ -6,6 +6,7 @@
 /// class doc comment for what THIS file wraps).
 library;
 
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
@@ -243,6 +244,41 @@ class FirestoreCurriculumTrackRepositoryAdapter {
   Future<void> retireTrack(CurriculumId curriculumId) async {
     final repo = await _resolve();
     await repo.retireTrack(curriculumId);
+  }
+
+  /// Permanently deletes a curriculum track and its dependent data.
+  ///
+  /// ## Why this goes through a Cloud Function
+  ///
+  /// `firestore.rules` sets `allow delete: if false` on `curriculum_tracks`, so
+  /// a client CANNOT delete one directly — that is deliberate, not an
+  /// oversight. Deletion also has to fan out across sibling collections keyed
+  /// by `curriculum_id`, which is not something a client should attempt
+  /// non-atomically. `functions/src/deletes.ts` owns it.
+  ///
+  /// This is NOT interchangeable with [retireTrack] or `archiveTrack`. Both of
+  /// those are soft and PRESERVE the config; this destroys it. The distinction
+  /// is deliberate — see `CurriculumActivationService`'s doc comments, which
+  /// warn that `deactivate` should be used "only where hard-deleting the config
+  /// on deactivation is actually intended".
+  ///
+  /// Throws whatever the callable throws — notably `invalid-argument` if the
+  /// profile ULID or curriculum key is empty, and `permission-denied` if the
+  /// caller does not own the profile. Deliberately NOT swallowed: a delete that
+  /// silently does nothing is indistinguishable from one that worked.
+  Future<void> deleteTrackPermanently(CurriculumId curriculumId) async {
+    final profileUlid = _ref.read(activeProfileDocIdProvider);
+    if (profileUlid == null || profileUlid.isEmpty) {
+      throw const CurriculumTrackRepositoryNotReadyException();
+    }
+    await FirebaseFunctions.instance
+        .httpsCallable('deleteCurriculumTrack')
+        .call<Map<String, dynamic>>({
+          // Both are STRINGS on the function side (deletes.ts:214-219) — it
+          // was migrated to ULIDs already, so this must not pass an int.
+          'profileId': profileUlid,
+          'curriculumId': curriculumId.storageKey,
+        });
   }
 
   /// Archives [curriculumId]'s track. Throws
