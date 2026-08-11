@@ -150,24 +150,7 @@ class _RewardConfigurationScreenState
                       Navigator.pop(ctx);
                       await _confirmDelete(m, l10n);
                     },
-                    onToggle: (m) async {
-                      try {
-                        await notifier.toggleEnabled(m);
-                      } on TutorWriteException catch (e) {
-                        if (!mounted) return;
-                        if (e.code == 'permission-denied') {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                AppLocalizations.of(
-                                  context,
-                                )!.tutorPermissionDenied,
-                              ),
-                            ),
-                          );
-                        }
-                      }
-                    },
+                    onToggle: (m) => notifier.toggleEnabled(m),
                   ),
                 ),
               ],
@@ -200,38 +183,14 @@ class _RewardConfigurationScreenState
       ),
     );
     if (go != true || !mounted) return;
-    try {
-      await ref
-          .read(rewardConfigControllerProvider.notifier)
-          .deleteMilestone(milestone);
-      _refreshRewards();
-    } on TutorWriteException catch (e) {
-      if (!mounted) return;
-      if (e.code == 'permission-denied') {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context)!.tutorPermissionDenied),
-          ),
-        );
-      }
-    }
+    await ref.read(rewardConfigControllerProvider.notifier).deleteMilestone(milestone);
+    _refreshRewards();
   }
 
   Future<void> _saveReward(AppLocalizations l10n) async {
-    final RewardSaveResult result;
-    try {
-      result = await ref
-          .read(rewardConfigControllerProvider.notifier)
-          .saveReward();
-    } on TutorWriteException catch (e) {
-      if (!mounted) return;
-      if (e.code == 'permission-denied') {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(l10n.tutorPermissionDenied)));
-      }
-      return;
-    }
+    final result = await ref
+        .read(rewardConfigControllerProvider.notifier)
+        .saveReward();
     if (!mounted) return;
 
     switch (result) {
@@ -343,18 +302,7 @@ class _RewardConfigurationScreenState
                     l10n: l10n,
                     onEdit: notifier.applyMilestoneToForm,
                     onDelete: (m) => _confirmDelete(m, l10n),
-                    onToggle: (m) async {
-                      try {
-                        await notifier.toggleEnabled(m);
-                      } on TutorWriteException catch (e) {
-                        if (!context.mounted) return;
-                        if (e.code == 'permission-denied') {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text(l10n.tutorPermissionDenied)),
-                          );
-                        }
-                      }
-                    },
+                    onToggle: (m) => notifier.toggleEnabled(m),
                   ),
                   DecoratedBox(
                     decoration: BoxDecoration(

@@ -888,7 +888,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
       );
     }
 
-    await onTrackChanged(ref, 0);
+    await onTrackChanged(ref);
     ref.invalidate(_trackGoalProvider(track.curriculumId));
     ref.invalidate(_trackPaceCalcProvider(track));
 
@@ -980,7 +980,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
         await ref
             .read(curriculumActivationServiceProvider)
             .deactivate(curriculumToArchive);
-        await onTrackChanged(ref, 0);
+        await onTrackChanged(ref);
         if (mounted) context.router.pop();
       } on LastActiveCurriculumException {
         if (!mounted) return;
@@ -1003,7 +1003,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     // purgeHistory, not a narrower stand-in.
     final trackRepo = ref.read(_curriculumTrackRepositoryProvider);
     await trackRepo.deleteTrackPermanently(track.curriculumId);
-    await onTrackChanged(ref, 0);
+    await onTrackChanged(ref);
     if (mounted) context.router.pop();
   }
 

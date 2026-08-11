@@ -18,7 +18,6 @@ import 'package:learning_tracker/features/onboarding/domain/models/wizard_result
 import 'package:learning_tracker/features/onboarding/domain/services/bulk_prior_completion_service.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/scheduler/scheduler.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/services/track_creation_service.dart';
@@ -33,7 +32,6 @@ import 'package:learning_tracker/features/tracks/setup/presentation/steps/step_s
 import 'package:learning_tracker/features/tracks/setup/presentation/steps/step_study_days.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/widgets/curriculum_picker_step.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/widgets/program_selection_step.dart';
-import 'package:learning_tracker/features/tutoring/tutoring.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -119,14 +117,12 @@ const _kAddTrackLabel = 'add_track_label';
 /// Program-aware: auto-fills/skips steps based on selected program.
 class AddTrackFlow extends ConsumerStatefulWidget {
   const AddTrackFlow({
-    required this.profileId,
     required this.isOnboarding,
     this.onComplete,
     this.onCancel,
     super.key,
   });
 
-  final int profileId;
   final bool isOnboarding;
   final ValueChanged<AddTrackResult>? onComplete;
   final VoidCallback? onCancel;
@@ -610,25 +606,15 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
       startingRef: _state.startingRef,
     );
 
-    // D1: widget.profileId may be 0 if selectedProfileIdProvider was null
-    // at build time (cold start / force-stop before ProfileGuard ran).
-    // Re-read the current activeProfileId so the write uses the correct FK.
-    final effectiveProfileId = widget.profileId != 0
-        ? widget.profileId
-        : ref.read(activeProfileIdProvider);
-
     try {
       final creationService = ref.read(trackCreationServiceProvider);
       await creationService.createTrack(result: result);
 
-      await invalidateAfterTrackDataChange(ref, effectiveProfileId);
+      await onTrackChanged(ref);
 
       if (!_isProgramTrack && priorSelections != null) {
         unawaited(
-          _applySelfPacedPriorCompletions(
-            priorSelections,
-            profileId: effectiveProfileId,
-          ).then(
+          _applySelfPacedPriorCompletions(priorSelections).then(
             (_) {
               // Bulk marking completed in background.
             },
@@ -642,15 +628,6 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
 
       await _clearSavedState();
       widget.onComplete?.call(result);
-    } on TutorWriteException catch (e) {
-      if (!mounted) return;
-      if (e.code == 'permission-denied') {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context)!.tutorPermissionDenied),
-          ),
-        );
-      }
     } catch (e, st) {
       AppLogger.instance.error(
         event: 'track_creation_failed',
@@ -672,24 +649,12 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
     }
   }
 
-  /// [profileId] is used only for post-write invalidation ([onTrackChanged])
-  /// below — NOT for the bulk-mark identity itself. `service.execute()` no
-  /// longer accepts a profileId (owner decision 2,
+  /// `service.execute()` doesn't take a profileId (owner decision 2,
   /// `docs/firestore-rewrite-map.md`): bulk-marking always targets the
-  /// CURRENTLY ACTIVE profile now. During onboarding, [profileId] here is
-  /// `_createdProfileId` — a newly-created CHILD profile
-  /// (`onboarding_screen.dart`'s `_ScreenPhase.addTrack` phase). It now
-  /// matches `activeProfileIdProvider` at this point in the flow:
-  /// `onboarding_screen.dart`'s `_onProfileCreated` selects the just-created
-  /// profile (`selectedProfileIdProvider.notifier.select`) immediately after
-  /// creation, before the flow ever reaches this step. See
-  /// `bulk_prior_completion_service.dart`'s `execute` doc comment for the
-  /// storage-layer side of the same fix.
+  /// CURRENTLY ACTIVE profile. See `bulk_prior_completion_service.dart`'s
+  /// `execute` doc comment for the storage-layer side of the same fix.
   Future<({int itemCount, int completionCount})>
-  _applySelfPacedPriorCompletions(
-    Set<HierarchySelection> selections, {
-    required int profileId,
-  }) async {
+  _applySelfPacedPriorCompletions(Set<HierarchySelection> selections) async {
     if (selections.isEmpty) return (itemCount: 0, completionCount: 0);
 
     final service = ref.read(bulkPriorCompletionServiceProvider);
@@ -710,7 +675,7 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
     );
 
     // Refresh dashboard/progress/task views immediately.
-    await onTrackChanged(ref, profileId);
+    await onTrackChanged(ref);
 
     // onTrackChanged() above hand-invalidates the track/dashboard surfaces
     // but does not fire completionCommittedProvider, so any watcher of that

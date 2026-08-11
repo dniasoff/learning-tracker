@@ -2,14 +2,12 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/settings/domain/exceptions/last_active_curriculum_exception.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/add_track_result.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/after_track_change_invalidation.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/screens/add_track_flow_screen.dart';
@@ -66,7 +64,6 @@ class _TrackManagementBodyState extends ConsumerState<TrackManagementBody> {
     if (_addingTrack) {
       return Scaffold(
         body: AddTrackFlow(
-          profileId: ref.watch(activeProfileIdProvider),
           isOnboarding: false,
           onComplete: _onAddTrackComplete,
           onCancel: () => setState(() => _addingTrack = false),
@@ -269,7 +266,7 @@ class _TrackManagementBodyState extends ConsumerState<TrackManagementBody> {
     ).showSnackBar(SnackBar(content: Text(l10n.trackCreated(result.label))));
   }
 
-  Future<void> _showDeleteDialog(CurriculumTrack track) async {
+  Future<void> _showDeleteDialog(CurriculumTrackEntity track) async {
     final l10n = AppLocalizations.of(context)!;
 
     // TS-16: Pre-check whether Archive/Delete is allowed before showing the
@@ -326,21 +323,17 @@ class _TrackManagementBodyState extends ConsumerState<TrackManagementBody> {
     // (which throws LastActiveCurriculumException for the last curriculum)
     // rather than calling the DAO directly to bypass the invariant.
     if (choice == 'archive') {
-      final curriculum = CurriculumId.values
-          .where((c) => c.storageKey == track.curriculumId)
-          .firstOrNull;
-      if (curriculum != null) {
-        try {
-          await ref
-              .read(curriculumActivationServiceProvider)
-              .deactivate(curriculum);
-          await onTrackChanged(ref, track.profileId);
-        } on LastActiveCurriculumException {
-          if (!mounted) return;
-          _showLastCurriculumError(l10n);
-        }
-        return;
+      final curriculum = track.curriculumId;
+      try {
+        await ref
+            .read(curriculumActivationServiceProvider)
+            .deactivate(curriculum);
+        await onTrackChanged(ref);
+      } on LastActiveCurriculumException {
+        if (!mounted) return;
+        _showLastCurriculumError(l10n);
       }
+      return;
     }
 
     // Wipe path: use the already-fetched active count (canDelete was true
@@ -359,8 +352,8 @@ class _TrackManagementBodyState extends ConsumerState<TrackManagementBody> {
     try {
       await ref
           .read(curriculumActivationServiceProvider)
-          .purgeTrackHistory(track.id);
-      await onTrackChanged(ref, track.profileId);
+          .purgeTrackHistory(track.curriculumId);
+      await onTrackChanged(ref);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(

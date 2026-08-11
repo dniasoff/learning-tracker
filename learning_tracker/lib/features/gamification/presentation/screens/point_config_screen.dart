@@ -189,10 +189,7 @@ class _PointConfigScreenState extends ConsumerState<PointConfigScreen> {
     } catch (e) {
       if (mounted) setState(() => _saving = false);
       if (mounted) {
-        final l10nMsg =
-            (e is TutorWriteException && e.code == 'permission-denied')
-            ? AppLocalizations.of(context)!.tutorPermissionDenied
-            : AppLocalizations.of(context)!.errorGeneric(e.toString());
+        final l10nMsg = AppLocalizations.of(context)!.errorGeneric(e.toString());
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(l10nMsg)));

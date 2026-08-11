@@ -5,7 +5,6 @@ import 'package:learning_tracker/features/gamification/presentation/providers/ac
 import 'package:learning_tracker/features/gamification/presentation/providers/gamification_service_providers.dart';
 import 'package:learning_tracker/features/gamification/presentation/screens/child_redemption_screen.dart';
 import 'package:learning_tracker/features/gamification/presentation/widgets/reward_form.dart';
-import 'package:learning_tracker/features/tutoring/tutoring.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'reward_config_controller.g.dart';
@@ -49,7 +48,7 @@ final class RewardSaveInvalidInput extends RewardSaveResult {
 
 /// SM-5 (AUD-gamification-10): returned when [RewardConfigController.saveReward]'s
 /// underlying I/O (the milestone write or the sync push inside
-/// `_persistAndSync`) threw anything other than [TutorWriteException]. The
+/// `_persistAndSync`) throws. The
 /// screen doesn't switch on this result for its own feedback — `state.error`
 /// (set by [RewardConfigController._handleMutationError] before this is
 /// returned) is what drives the full-screen error UI — but keeping
@@ -285,24 +284,14 @@ class RewardConfigController extends _$RewardConfigController {
   /// Shared failure handling for the 3 mutation methods above (SM-5,
   /// AUD-gamification-10).
   ///
-  /// [TutorWriteException] is rethrown, NOT surfaced through `state.error`
-  /// -- the screen's own `on TutorWriteException catch` around every call
-  /// site already shows the permission-denied snackbar; surfacing it here
-  /// too would additionally replace the whole screen with the full-screen
-  /// error state for what is a normal, expected outcome of a restricted
-  /// tutor session. Any OTHER exception (a corrupted SharedPreferences
-  /// write, a failed sync push) sets `state.error` so the screen's dead
-  /// error branch (now wired) shows real feedback instead of a silent
-  /// no-op.
+  /// Sets `state.error` so the screen's error branch shows real feedback
+  /// instead of a silent no-op (a corrupted SharedPreferences write, a
+  /// failed sync push).
   ///
   /// Returns [RewardSaveFailed] so [saveReward] can use this as its
   /// `AsyncError` case body via `return _handleMutationError(...)`; the
   /// void-returning mutation methods simply discard the return value.
   RewardSaveFailed _handleMutationError(Object error, StackTrace stackTrace) {
-    if (error is TutorWriteException) {
-      state = state.copyWith(loading: false);
-      Error.throwWithStackTrace(error, stackTrace);
-    }
     state = state.copyWith(loading: false, error: error.toString());
     return const RewardSaveFailed();
   }

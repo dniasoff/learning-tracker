@@ -439,7 +439,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 },
               ),
               _ScreenPhase.addTrack => AddTrackFlow(
-                profileId: _createdProfileId ?? 0,
                 isOnboarding: true,
                 onComplete: _onAddTrackComplete,
                 onCancel: _onAddTrackCancel,

@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/calendar_position_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
+import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/progress_providers.dart';
 import 'package:learning_tracker/features/scheduler/scheduler.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
@@ -15,17 +16,12 @@ import 'package:learning_tracker/features/tracks/setup/presentation/providers/tr
 /// use [onTrackChanged] rather than maintaining their own ad-hoc invalidation
 /// lists.
 ///
-/// [profileId] is currently UNUSED internally — kept only so the 9 existing
-/// call sites across 5 files (several of which still hold the pre-AD-25
-/// Drift `CurriculumTrack` type with a real `.profileId` field, and are
-/// outside this pass's scope) do not all need to change signature together.
-/// Every invalidation that genuinely needed it (the daily-plan-snapshot
-/// clear, and every `lifetime_knowledge_providers.dart`/
-/// `calendar_position_providers.dart` provider) is stripped below with a
-/// TODO — each is blocked on a separate, already-broken cluster (see the
-/// module's fix-script doc comment / task tracker #19 for what's blocking
-/// them), not something to half-fix here.
-Future<void> onTrackChanged(WidgetRef ref, int profileId) async {
+/// Every invalidation that genuinely needed a profile identity (the
+/// daily-plan-snapshot clear, and every `lifetime_knowledge_providers.dart`/
+/// `calendar_position_providers.dart` provider) resolves the CURRENTLY
+/// ACTIVE profile internally via `Ref` (AD-24) rather than taking one as a
+/// parameter — there is no "invalidate for another profile" use case.
+Future<void> onTrackChanged(WidgetRef ref) async {
   // Rebuild track lists first so dashboard/hub show the new row without waiting
   // on the broad invalidation sweep below.
   ref.invalidate(dashboardActiveTracksStreamProvider);
@@ -41,15 +37,12 @@ Future<void> onTrackChanged(WidgetRef ref, int profileId) async {
   // separate, already-broken cluster, not fixed here.
   ref.invalidate(allDailyTasksProvider);
   ref.invalidate(dashboardActiveCurriculaStreamProvider);
-  // TODO(task-19): trackDualProgressMetricsProvider is a deliberate
-  // throw-stub (lifetime_knowledge_providers.dart) blocked on task #5/#19.
+  ref.invalidate(trackDualProgressMetricsProvider);
   ref.invalidate(dashboardChildNextRewardProvider);
   ref.invalidate(dashboardStreakProvider);
   ref.invalidate(dashboardGlobalPointsProvider);
-  // TODO(task-19): lifetimeTotalsAcrossAllCurriculaProvider /
-  // lifetimeSummariesProvider / globalLifetimeCurriculaProvider /
-  // lifetimeDataProvider are all still `int profileId`-keyed in
-  // lifetime_knowledge_providers.dart — blocked on task #19.
+  ref.invalidate(lifetimeTotalsAcrossAllCurriculaProvider);
+  ref.invalidate(lifetimeSummariesProvider);
   ref.invalidate(progressOverviewStatsProvider);
 
   for (final c in CurriculumId.all) {
@@ -60,6 +53,7 @@ Future<void> onTrackChanged(WidgetRef ref, int profileId) async {
     ref.invalidate(scopedCurriculumContentProvider(c));
     ref.invalidate(scopedItemCountProvider(c));
     ref.invalidate(curriculumScopeSummaryProvider(c));
+    ref.invalidate(lifetimeDataProvider(c));
   }
 
   // ref.read(...), not a direct FirestoreCurriculumTrackRepositoryAdapter(ref:
@@ -81,5 +75,5 @@ Future<void> onTrackChanged(WidgetRef ref, int profileId) async {
 /// so existing call sites (add_track_flow, track_management_body,
 /// track_detail_screen) continue to compile without changes.
 @Deprecated('Use onTrackChanged instead')
-Future<void> invalidateAfterTrackDataChange(WidgetRef ref, int profileId) =>
-    onTrackChanged(ref, profileId);
+Future<void> invalidateAfterTrackDataChange(WidgetRef ref) =>
+    onTrackChanged(ref);

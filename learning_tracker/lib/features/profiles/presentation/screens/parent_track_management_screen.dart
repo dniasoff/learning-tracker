@@ -2,15 +2,12 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/settings/domain/exceptions/last_active_curriculum_exception.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/add_track_result.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/after_track_change_invalidation.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart'
     as tm;
@@ -40,7 +37,6 @@ class _ParentTrackManagementScreenState
     if (_addingTrack) {
       return Scaffold(
         body: AddTrackFlow(
-          profileId: ref.watch(activeProfileIdProvider),
           isOnboarding: false,
           onComplete: _onAddTrackComplete,
           onCancel: () => setState(() => _addingTrack = false),
@@ -235,17 +231,21 @@ class _ParentTrackManagementScreenState
     ).showSnackBar(SnackBar(content: Text(l10n.trackCreated(result.label))));
   }
 
-  Future<void> _showDeleteDialog(CurriculumTrack track) async {
+  Future<void> _showDeleteDialog(CurriculumTrackEntity track) async {
     final l10n = AppLocalizations.of(context)!;
 
     // R-TR2 / TS-16: Pre-check whether Archive/Delete is allowed before
     // showing the dialog. When this track is the only active curriculum for
     // the child profile, surfacing the destructive actions would leave the
     // profile with zero active curricula (dashboard dead-end).
+    //
+    // AUD-tracks-14 (DB-1): routed through curriculumActivationServiceProvider
+    // (same provider the 'archive' branch below uses) instead of reading
+    // userDatabaseProvider/activeCurriculumDao directly from this widget —
+    // mirrors track_management_body.dart's identical fix.
     final activeCurricula = await ref
-        .read(userDatabaseProvider)
-        .activeCurriculumDao
-        .getActiveCurriculaByProfile(track.profileId);
+        .read(curriculumActivationServiceProvider)
+        .getActiveCurricula();
     if (!mounted) return;
 
     final canDelete = activeCurricula.length > 1;
@@ -293,33 +293,42 @@ class _ParentTrackManagementScreenState
     }
 
     if (choice == 'archive') {
-      final curriculum = CurriculumId.values
-          .where((c) => c.storageKey == track.curriculumId)
-          .firstOrNull;
-      if (curriculum != null) {
-        try {
-          // AUD-profiles-01: route through the archive path — not
-          // deactivate(), which hard-deletes goals/stages/point config via
-          // deleteTrackAndData and would make "Archive (keep history)"
-          // behave exactly like "Delete and wipe history". archive() still
-          // enforces the last-curriculum invariant (throws
-          // LastActiveCurriculumException).
-          await ref
-              .read(curriculumActivationServiceProvider)
-              .archive(curriculum);
-          await invalidateAfterTrackDataChange(ref, track.profileId);
-        } on LastActiveCurriculumException {
-          if (!mounted) return;
-          _showLastCurriculumError(l10n);
-        }
-        return;
+      final curriculum = track.curriculumId;
+      try {
+        // AUD-profiles-01: route through the archive path — not
+        // deactivate(), which hard-deletes goals/stages/point config via
+        // deleteTrackAndData and would make "Archive (keep history)"
+        // behave exactly like "Delete and wipe history". archive() still
+        // enforces the last-curriculum invariant (throws
+        // LastActiveCurriculumException).
+        await ref
+            .read(curriculumActivationServiceProvider)
+            .archive(curriculum);
+        await onTrackChanged(ref);
+      } on LastActiveCurriculumException {
+        if (!mounted) return;
+        _showLastCurriculumError(l10n);
       }
+      return;
     }
 
-    // Wipe path: hard-delete the track and its history.
-    final dao = ref.read(userDatabaseProvider).trackDao;
-    await dao.purgeHistory(track.id);
-    await invalidateAfterTrackDataChange(ref, track.profileId);
+    // Wipe path: hard-delete the track and its history. AUD-tracks-14
+    // (DB-1): routed through curriculumActivationServiceProvider — same
+    // service the 'archive' branch above uses — instead of pulling trackDao
+    // out of userDatabaseProvider directly, including try/catch + a
+    // localized error SnackBar for parity with the archive path's error
+    // handling (mirrors track_management_body.dart's identical fix).
+    try {
+      await ref
+          .read(curriculumActivationServiceProvider)
+          .purgeTrackHistory(track.curriculumId);
+      await onTrackChanged(ref);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.errorGeneric(e.toString()))));
+    }
   }
 
   void _showLastCurriculumError(AppLocalizations l10n) {

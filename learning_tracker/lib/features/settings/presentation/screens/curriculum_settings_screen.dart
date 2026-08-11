@@ -6,14 +6,13 @@ import 'package:learning_tracker/core/constants/app_constants.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/bulk_mark_screen.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/learning_process_wizard_screen.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/scheduler/scheduler.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/siyum_granularity_selector.dart';
+import 'package:learning_tracker/features/tracks/setup/data/repositories/profile_program_repository_impl.dart';
 import 'package:learning_tracker/features/tracks/tracks.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -56,11 +55,14 @@ class _CurriculumSettingsScreenState
     // (trackDisplayTitle / commit 00048c68).
     final activeTracksAsync = ref.watch(activeTracksProvider);
     final matchingTrack = activeTracksAsync.asData?.value
-        .where((t) => t.curriculumId == _curriculum.storageKey)
+        .where((t) => t.curriculumId == _curriculum)
         .firstOrNull;
     final trackCustomName = matchingTrack == null
         ? null
-        : ref.watch(trackCustomNameProvider(matchingTrack.id)).asData?.value;
+        : ref
+              .watch(trackCustomNameProvider(matchingTrack.curriculumId))
+              .asData
+              ?.value;
     final titleText = resolveTrackTitle(
       customName: trackCustomName,
       curriculumFallback: curriculumLabelText(ref, curriculum: _curriculum),
@@ -191,21 +193,7 @@ class _CurriculumSettingsScreenState
     if (result == null || !context.mounted) return;
 
     // Apply the wizard result (deletes old stages, creates new ones).
-    final profileId = ref.read(activeProfileIdProvider);
-    final db = ref.read(userDatabaseProvider);
-    // AUD-settings-06: reuse TrackDao's (profileId, curriculumId) -> track
-    // lookup instead of re-implementing it inline (see the DAO method's doc
-    // comment for the tutored-mirror id-resolution rule this centralizes).
-    final track = await db.trackDao.getTrackByProfileAndCurriculum(
-      profileId,
-      _curriculum.storageKey,
-    );
-    final trackId = track?.id ?? 0;
-    await wizardService.applyWizardResult(
-      result.wizardResult,
-      profileId: profileId,
-      trackId: trackId,
-    );
+    await wizardService.applyWizardResult(result.wizardResult);
 
     // Invalidate providers so UI reflects new stages.
     ref.invalidate(stageListProvider(_curriculum));
@@ -252,6 +240,14 @@ class _CurriculumSettingsScreenState
   }
 }
 
+/// See track_detail_screen.dart's identical `_curriculumTrackRepositoryProvider`
+/// doc comment for why this is a top-level `Provider` rather than an inline
+/// construction inside a `WidgetRef`-scoped method.
+final _profileProgramRepositoryProvider =
+    Provider<FirestoreProfileProgramRepositoryAdapter>(
+      (ref) => FirestoreProfileProgramRepositoryAdapter(ref: ref),
+    );
+
 /// Provider that fetches the current program for a curriculum.
 ///
 /// Returns null if the user has a custom schedule (no preset program).
@@ -260,10 +256,9 @@ final _currentProgramProvider =
       ref,
       curriculum,
     ) async {
-      final userDb = ref.watch(userDatabaseProvider);
-      final profileId = ref.watch(activeProfileIdProvider);
-      final profileProgram = await userDb.profileProgramDao
-          .getProgramForProfileAndCurriculum(profileId, curriculum.storageKey);
+      final profileProgram = await ref
+          .watch(_profileProgramRepositoryProvider)
+          .getProgram(curriculum);
       if (profileProgram == null) return null;
       return ref
           .read(learningProgramRepositoryProvider)
