@@ -3,26 +3,27 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/learning/completion_constants.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/core/utils/hebrew_calendar_utils.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_tier_filter.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/bulk_mark_screen.dart';
+import 'package:learning_tracker/features/progress/data/repositories/firestore_chart_data_repository_adapter.dart';
 import 'package:learning_tracker/features/progress/domain/services/pace_calculator.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 import 'package:learning_tracker/features/scheduler/scheduler.dart';
 import 'package:learning_tracker/features/settings/domain/exceptions/last_active_curriculum_exception.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
-import 'package:learning_tracker/features/tracks/setup/domain/entities/add_track_result.dart';
+import 'package:learning_tracker/features/tracks/setup/data/repositories/curriculum_track_repository_impl.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/after_track_change_invalidation.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/screens/edit_track_screen.dart';
@@ -68,7 +69,7 @@ String formatTrackDate({
 /// inputs required to compute a projection are missing or non-positive.
 @visibleForTesting
 DateTime? estimatedFinishDate({
-  required Goal? goal,
+  required GoalEntity? goal,
   required int? remainingInPaceUnit,
 }) {
   if (goal == null) return null;
@@ -90,25 +91,34 @@ DateTime? estimatedFinishDate({
   return null;
 }
 
-final _trackGoalProvider = FutureProvider.autoDispose.family<Goal?, int>(
-  (ref, trackId) =>
-      ref.watch(userDatabaseProvider).goalDao.getGoalByTrack(trackId),
-);
+final _trackGoalProvider = FutureProvider.autoDispose
+    .family<GoalEntity?, CurriculumId>((ref, curriculum) async {
+      final repo = FirestoreGoalRepositoryAdapter(ref: ref);
+      final goals = await repo.getGoals(curriculum);
+      if (goals.isEmpty) return null;
+      // Most recently created — defends against a stale row from an
+      // earlier track setup outliving a re-add (same reasoning
+      // dashboard_providers.dart's dashboardPaceStatus already uses).
+      return goals.reduce(
+        (a, b) => a.createdAt.isAfter(b.createdAt) ? a : b,
+      );
+    });
 
-/// Computes a [ProgressPaceCalculator] for the given [CurriculumTrack].
+/// Computes a [ProgressPaceCalculator] for the given [CurriculumTrackEntity].
 ///
 /// Live completions: `completedAt >= track.activatedAt` (excluding sentinel).
 /// Bulk baseline: completions with the sentinel date (2000-01-01).
-/// Total items: from [scopedItemCountProvider] (0 when curriculum unknown).
+/// Total items: from [scopedItemCountProvider].
 /// targetDate: deadline-goal date when available; otherwise today (so
 ///   requiredVelocity returns 0 — not meaningful for pace goals).
 final _trackPaceCalcProvider = FutureProvider.autoDispose
-    .family<ProgressPaceCalculator, CurriculumTrack>((ref, track) async {
-      final db = ref.watch(userDatabaseProvider);
-      final profileId = track.profileId;
-
-      final allCompletions = await db.completionDao
-          .getCompletionsByTrackAndProfile(track.id, profileId);
+    .family<ProgressPaceCalculator, CurriculumTrackEntity>((ref, track) async {
+      final curriculum = track.curriculumId;
+      final chartData = FirestoreChartDataRepositoryAdapter(ref: ref);
+      final allCompletions = await chartData.getCompletionsByTier(
+        tier: CompletionTierFilter.trackAchievement,
+        curriculumId: curriculum,
+      );
 
       final trackStart = track.activatedAt.toLocal();
 
@@ -128,15 +138,11 @@ final _trackPaceCalcProvider = FutureProvider.autoDispose
           )
           .length;
 
-      final curriculum = CurriculumId.values
-          .where((c) => c.storageKey == track.curriculumId)
-          .firstOrNull;
+      final totalItems = await ref.watch(
+        scopedItemCountProvider(curriculum).future,
+      );
 
-      final totalItems = curriculum != null
-          ? await ref.watch(scopedItemCountProvider(curriculum).future)
-          : 0;
-
-      final goal = await db.goalDao.getGoalByTrack(track.id);
+      final goal = await ref.watch(_trackGoalProvider(curriculum).future);
       final clock = ref.watch(localDayClockProvider);
       final targetDate =
           (goal?.goalType == 'deadline' && goal?.targetDate != null)
@@ -155,11 +161,23 @@ final _trackPaceCalcProvider = FutureProvider.autoDispose
       );
     });
 
+/// Adapter providers -- constructed here (top-level `Provider`) rather than
+/// inline inside a `WidgetRef`-scoped method: `WidgetRef` does not
+/// implement `Ref` the way an `@riverpod`/`Provider` callback's `Ref` does,
+/// so a Firestore adapter needing a real `Ref` must be reached through a
+/// provider (`ref.read(...)`), never constructed directly inside a screen
+/// method (lesson from after_track_change_invalidation.dart, fixed earlier
+/// this session).
+final _curriculumTrackRepositoryProvider =
+    Provider<FirestoreCurriculumTrackRepositoryAdapter>(
+      (ref) => FirestoreCurriculumTrackRepositoryAdapter(ref: ref),
+    );
+
 @RoutePage()
 class TrackDetailScreen extends ConsumerStatefulWidget {
   const TrackDetailScreen({super.key, required this.track});
 
-  final CurriculumTrack track;
+  final CurriculumTrackEntity track;
 
   @override
   ConsumerState<TrackDetailScreen> createState() => _TrackDetailScreenState();
@@ -169,9 +187,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final track = widget.track;
-    final curriculum = CurriculumId.values
-        .where((c) => c.storageKey == track.curriculumId)
-        .firstOrNull;
+    final curriculum = track.curriculumId;
     // B-EDIT-NAME fix: the header must surface the user's custom track name
     // (stored in Goal.description) when set, falling back to the curriculum
     // label otherwise — it previously always showed the curriculum name,
@@ -185,10 +201,10 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     // in English, Hebrew script when the toggle is on (or in Hebrew locale).
     final chazaraTerm = domainTermLabels(ref).chazara;
     final trackHasChazara =
-        ref.watch(trackHasChazaraProvider(track.id)).asData?.value ?? false;
+        ref.watch(trackHasChazaraProvider(curriculum)).asData?.value ?? false;
 
     final completionAsync = ref.watch(
-      dashboardTrackCompletionPercentageProvider(track.id),
+      dashboardTrackCompletionPercentageProvider(curriculum),
     );
     final cycleFraction = completionAsync.asData?.value ?? 0.0;
     final cyclePercentDisplay = formatFractionAsPercent(cycleFraction);
@@ -197,11 +213,13 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     // and Lifetime (all-time) — sourced from [trackDualProgressMetricsProvider]
     // so the Track Detail header matches the same numbers shown on the
     // Dashboard active-track card and the Progress hub per-track rows.
-    final dualMetricsAsync = ref.watch(
-      trackDualProgressMetricsProvider(track.profileId),
-    );
+    // trackDualProgressMetricsProvider is a deliberate throw-stub (task
+    // #5/#19); the placeholder 0 below is never read by it (it always
+    // throws before touching the argument) and CurriculumTrackEntity has
+    // no .profileId to pass instead.
+    final dualMetricsAsync = ref.watch(trackDualProgressMetricsProvider(0));
     final dualMetricMatches = dualMetricsAsync.asData?.value
-        .where((m) => m.trackId == track.id)
+        .where((m) => m.curriculumId == curriculum)
         .toList();
     final dualMetric = (dualMetricMatches == null || dualMetricMatches.isEmpty)
         ? null
@@ -215,23 +233,17 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
         ? '…'
         : formatFractionAsPercent(lifetimePct);
 
-    final hasProgramEnrollment = curriculum != null
-        ? (ref
-                  .watch(dashboardHasProgramEnrollmentProvider(curriculum))
-                  .asData
-                  ?.value ??
-              false)
-        : false;
+    final hasProgramEnrollment =
+        ref.watch(dashboardHasProgramEnrollmentProvider(curriculum)).asData?.value ??
+        false;
 
-    final curriculumBarColor = context.colors.curriculumForKey(
-      track.curriculumId,
-    );
+    final curriculumBarColor = context.colors.curriculumFor(curriculum);
     // W3.22: trackType column dropped — all tracks are now 'personal'.
     final accent = context.colors.blueMedium;
     const icon = Icons.menu_book_rounded;
     final locale = Localizations.localeOf(context).toString();
 
-    final goal = ref.watch(_trackGoalProvider(track.id)).asData?.value;
+    final goal = ref.watch(_trackGoalProvider(curriculum)).asData?.value;
 
     // P1 (iter-2): the Track-Detail "Goal" config row previously read
     // "{n} · Per week" with no unit noun, while the Required-pace row in
@@ -247,15 +259,13 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
             curriculum: curriculum,
             goalType: goal.goalType,
             paceValue: goal.paceValue,
-            paceGranularity: goal.paceGranularity,
+            paceGranularity: goal.paceGranularity?.storageKey,
             useHebrew: useHebrewTerms,
             variant: paceVariant,
           );
 
-    final totalScopeAsync = curriculum != null
-        ? ref.watch(scopedItemCountProvider(curriculum))
-        : null;
-    final totalScope = totalScopeAsync?.asData?.value;
+    final totalScopeAsync = ref.watch(scopedItemCountProvider(curriculum));
+    final totalScope = totalScopeAsync.asData?.value;
     final itemsRemaining = totalScope != null
         ? (totalScope * (1 - cycleFraction)).ceil().clamp(0, totalScope)
         : null;
@@ -264,10 +274,8 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     // pace in those units, so the completion-date estimate must divide the
     // coarse-unit remaining count — NOT the leaf (amudim/pesukim) count. Dividing
     // leaf-by-daf-rate previously doubled the projected timeline vs the wizard.
-    final paceIsCoarse =
-        goal != null &&
-        PaceGranularity.fromStorageKey(goal.paceGranularity) != null;
-    final coarseTotal = (curriculum != null && paceIsCoarse)
+    final paceIsCoarse = goal != null && goal.paceGranularity != null;
+    final coarseTotal = paceIsCoarse
         ? ref.watch(scopedCoarseUnitCountProvider(curriculum)).asData?.value
         : null;
     final remainingInPaceUnit = (paceIsCoarse && coarseTotal != null)
@@ -359,7 +367,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     BuildContext context,
     ThemeData theme,
     AppLocalizations l10n,
-    CurriculumTrack track,
+    CurriculumTrackEntity track,
     Color accent,
     IconData icon,
     String activatedDate,
@@ -375,7 +383,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     required bool trackHasChazara,
     required String locale,
     required bool useHebrewCalendar,
-    Goal? goal,
+    GoalEntity? goal,
     String? goalPaceUnitNoun,
     int? itemsRemaining,
     String? estimatedFinish,
@@ -554,7 +562,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
   }
 
   String? _goalLabel(
-    Goal? goal,
+    GoalEntity? goal,
     AppLocalizations l10n,
     String locale, {
     required bool useHebrewCalendar,
@@ -592,7 +600,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
   }
 
   String? _estimatedFinish(
-    Goal? goal,
+    GoalEntity? goal,
     // Remaining scope expressed in the SAME unit as the goal's pace
     // (coarse units for daf/perek/seif goals, leaf items otherwise) so the
     // division below matches the add-track wizard's projection.
@@ -620,7 +628,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
   Widget _buildActionsCard(
     BuildContext context,
     ThemeData theme,
-    CurriculumTrack track,
+    CurriculumTrackEntity track,
     CurriculumId? curriculum, {
     required bool hasProgramEnrollment,
   }) {
@@ -702,7 +710,6 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
                     ? () => Navigator.of(context).push<void>(
                         MaterialPageRoute<void>(
                           builder: (_) => TrackLearningOrderScreen(
-                            trackId: track.id,
                             curriculumId: curriculum,
                           ),
                         ),
@@ -718,7 +725,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
                   final canEditGoals =
                       tutorPerms == null || tutorPerms.canEditGoals;
                   final hasGoal =
-                      ref.watch(_trackGoalProvider(track.id)).asData?.value !=
+                      ref.watch(_trackGoalProvider(track.curriculumId)).asData?.value !=
                       null;
                   return ListTile(
                     key: const ValueKey('trackDetail.goalTile'),
@@ -777,11 +784,11 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
                   ),
                 );
                 if (mounted) {
-                  ref.invalidate(_trackGoalProvider(track.id));
+                  ref.invalidate(_trackGoalProvider(track.curriculumId));
                   ref.invalidate(_trackPaceCalcProvider(track));
                   // B-EDIT-NAME: refresh the resolved title so an edited name
                   // surfaces immediately in the header on return.
-                  ref.invalidate(trackCustomNameProvider(track.id));
+                  ref.invalidate(trackCustomNameProvider(track.curriculumId));
                 }
               },
             ),
@@ -818,17 +825,18 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
   /// then persists via [goalRepositoryProvider] so the write reaches Drift and
   /// is queued for Firestore sync.
   Future<void> _openGoalEdit(
-    CurriculumTrack track,
+    CurriculumTrackEntity track,
     CurriculumId curriculum,
   ) async {
     final l10n = AppLocalizations.of(context)!;
     final navigator = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
 
-    final existingGoal = await ref.read(_trackGoalProvider(track.id).future);
-    final existingEntity = existingGoal == null
-        ? null
-        : _goalRowToEntity(existingGoal);
+    // The provider already returns a GoalEntity -- nothing left to convert
+    // (see the module doc comment: _goalRowToEntity was deleted).
+    final existingEntity = await ref.read(
+      _trackGoalProvider(track.curriculumId).future,
+    );
     final totalItems = await ref.read(
       scopedItemCountProvider(curriculum).future,
     );
@@ -850,11 +858,15 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     final repo = ref.read(goalRepositoryProvider);
     final paceTarget = result.paceTarget;
 
-    if (existingGoal == null) {
+    if (existingEntity == null) {
       await repo.createGoal(
-        profileId: track.profileId,
+        // profileId/trackId are both provably unused by the underlying
+        // implementation (FirestoreGoalRepositoryAdapter.createGoal never
+        // forwards either) -- passed as 0, not invented from a
+        // CurriculumTrackEntity field that doesn't exist.
+        profileId: 0,
         curriculumId: curriculum,
-        trackId: track.id,
+        trackId: 0,
         targetPercent: result.targetPercent,
         paceTarget: paceTarget,
         description: result.description,
@@ -863,7 +875,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
       );
     } else {
       await repo.updateGoal(
-        goal: existingEntity!,
+        goal: existingEntity,
         targetPercent: result.targetPercent,
         paceTarget: paceTarget,
         // 'none' goals clear the pace target entirely.
@@ -874,8 +886,8 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
       );
     }
 
-    await onTrackChanged(ref, track.profileId);
-    ref.invalidate(_trackGoalProvider(track.id));
+    await onTrackChanged(ref, 0);
+    ref.invalidate(_trackGoalProvider(track.curriculumId));
     ref.invalidate(_trackPaceCalcProvider(track));
 
     if (mounted) {
@@ -883,55 +895,33 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     }
   }
 
-  /// Maps a Drift [Goal] row to the [GoalEntity] the goal-setup form consumes.
-  GoalEntity _goalRowToEntity(Goal goal) {
-    final granularity = PaceGranularity.fromStorageKey(goal.paceGranularity);
-    return GoalEntity(
-      id: goal.id,
-      curriculumId: CurriculumId.values.firstWhere(
-        (c) => c.storageKey == goal.curriculumId,
-      ),
-      trackId: goal.trackId,
-      targetPercent: goal.targetPercent,
-      targetDate: goal.targetDate?.toUtc(),
-      description: goal.description,
-      dateType: goal.dateType,
-      goalType: goal.goalType,
-      paceValue: goal.paceValue,
-      pacePeriod: goal.pacePeriod,
-      paceGranularity: granularity,
-      rawLearningUnit: granularity == null ? goal.paceGranularity : null,
-      createdAt: goal.createdAt.toUtc(),
-      updatedAt: goal.updatedAt.toUtc(),
-    );
-  }
-
   Future<void> _openBulkMark(
-    CurriculumTrack track,
+    CurriculumTrackEntity track,
     CurriculumId curriculum,
   ) async {
     final navigator = Navigator.of(context);
-    final scopes = await ref
-        .read(userDatabaseProvider)
-        .curriculumScopeDao
-        .getScopesByTrack(track.id);
-    final scopeEntries = scopes
-        .map((s) => ScopeEntry(level: s.scopeLevel, value: s.scopeValue))
-        .toList();
-
+    // TODO(curriculum-scope-write-adapter): no domain-legal seam exists
+    // yet for a presentation-layer read of a track's configured scope
+    // (FirestoreCurriculumScopeRepository is data-ring-only; AD-23 forbids
+    // presentation/** from reaching it directly, and building a new
+    // adapter just for this one lookup was judged out of proportion to
+    // this pass). scopeConstraints: null is an existing, legal code path
+    // (the old ternary already produced null when no scopes were set) --
+    // bulk-mark simply won't auto-narrow to the track's configured scope
+    // until that adapter is built. A real, disclosed gap, not a guess.
     if (!mounted) return;
     await navigator.push<BulkMarkResult>(
       MaterialPageRoute(
         builder: (_) => BulkMarkScreen(
           curriculumId: curriculum,
-          scopeConstraints: scopeEntries.isEmpty ? null : scopeEntries,
+          scopeConstraints: null,
         ),
       ),
     );
   }
 
   Future<void> _showDeleteDialog(
-    CurriculumTrack track,
+    CurriculumTrackEntity track,
     CurriculumId? curriculum,
   ) async {
     final l10n = AppLocalizations.of(context)!;
@@ -941,10 +931,9 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     // surface the explanation up-front, instead of offering an Archive/Delete
     // dialog whose every option would be refused after the tap (the resweep's
     // "offered then refused" + Track-vs-curriculum-wording confusion).
-    final activeCurricula = await ref
-        .read(userDatabaseProvider)
-        .activeCurriculumDao
-        .getActiveCurriculaByProfile(track.profileId);
+    final activeCurricula = await ref.read(
+      dashboardActiveCurriculaProvider.future,
+    );
     if (activeCurricula.length <= 1) {
       if (!mounted) return;
       _showLastCurriculumError(l10n);
@@ -986,38 +975,35 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
 
     // TRK-HUB-04: guard — every profile must keep at least one active curriculum.
     if (choice == 'archive') {
-      final curriculum = CurriculumId.values
-          .where((c) => c.storageKey == track.curriculumId)
-          .firstOrNull;
-      if (curriculum != null) {
-        try {
-          await ref
-              .read(curriculumActivationServiceProvider)
-              .deactivate(curriculum);
-          await onTrackChanged(ref, track.profileId);
-          if (mounted) context.router.pop();
-        } on LastActiveCurriculumException {
-          if (!mounted) return;
-          _showLastCurriculumError(AppLocalizations.of(context)!);
-        }
-        return;
+      final curriculumToArchive = track.curriculumId;
+      try {
+        await ref
+            .read(curriculumActivationServiceProvider)
+            .deactivate(curriculumToArchive);
+        await onTrackChanged(ref, 0);
+        if (mounted) context.router.pop();
+      } on LastActiveCurriculumException {
+        if (!mounted) return;
+        _showLastCurriculumError(AppLocalizations.of(context)!);
       }
+      return;
     }
 
     // Wipe path: check last-curriculum guard before purging.
-    final activeCount = await ref
-        .read(userDatabaseProvider)
-        .activeCurriculumDao
-        .getActiveCurriculaByProfile(track.profileId);
+    final activeCount = await ref.read(dashboardActiveCurriculaProvider.future);
     if (activeCount.length <= 1) {
       if (!mounted) return;
       _showLastCurriculumError(AppLocalizations.of(context)!);
       return;
     }
 
-    final dao = ref.read(userDatabaseProvider).trackDao;
-    await dao.purgeHistory(track.id);
-    await onTrackChanged(ref, track.profileId);
+    // Cloud Function sweep — confirmed (functions/src/deletes.ts) to
+    // delete completions/learning_ledger/streak_events/points_ledger/
+    // preferences alongside the track doc itself, a superset of Drift's
+    // purgeHistory, not a narrower stand-in.
+    final trackRepo = ref.read(_curriculumTrackRepositoryProvider);
+    await trackRepo.deleteTrackPermanently(track.curriculumId);
+    await onTrackChanged(ref, 0);
     if (mounted) context.router.pop();
   }
 

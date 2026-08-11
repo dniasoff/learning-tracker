@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
@@ -13,6 +12,7 @@ import 'package:learning_tracker/core/utils/hebrew_calendar_utils.dart';
 import 'package:learning_tracker/features/progress/domain/services/pace_calculator.dart';
 import 'package:learning_tracker/features/scheduler/scheduler.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/steps/goal_helpers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
@@ -79,10 +79,10 @@ class TrackInfoCard extends ConsumerWidget {
     required this.useHebrewCalendar,
   });
 
-  final CurriculumTrack track;
+  final CurriculumTrackEntity track;
 
   /// Nullable — no goal has been set for this track yet.
-  final Goal? goal;
+  final GoalEntity? goal;
 
   /// Pre-computed pace metrics for the track.
   final ProgressPaceCalculator? paceCalc;
@@ -123,9 +123,7 @@ class TrackInfoCard extends ConsumerWidget {
     // 2c — pace velocity in the track's unit. ProgressPaceCalculator velocities are in
     // LEAF units (amudim). For a daf-paced track, convert to daf/day using the
     // daf-per-amud ratio (coarse count ÷ leaf count) and label it "daf/day".
-    final curriculum = CurriculumId.values
-        .where((c) => c.storageKey == track.curriculumId)
-        .firstOrNull;
+    final curriculum = track.curriculumId;
     // 5: the pace-goal row previously read "{n} · Per week" with no unit noun.
     // Resolve the unit noun for the goal's stored granularity (e.g. "daf",
     // "mishnayos", "halachos") through the same domain-term / nusach renderer
@@ -136,14 +134,14 @@ class TrackInfoCard extends ConsumerWidget {
       curriculum: curriculum,
       goalType: goal?.goalType ?? 'deadline',
       paceValue: goal?.paceValue,
-      paceGranularity: goal?.paceGranularity,
+      paceGranularity: goal?.paceGranularity?.storageKey,
       useHebrew: useHebrewTerms,
       variant: paceVariant,
     );
-    final isDafPaced = goal?.paceGranularity == PaceGranularity.daf.storageKey;
+    final isDafPaced = goal?.paceGranularity == PaceGranularity.daf;
     var unitPerLeaf = 1.0;
     var paceUnit = l10n.trackInfoItemsPerDay;
-    if (isDafPaced && curriculum != null) {
+    if (isDafPaced) {
       final leafTotal = ref
           .watch(scopedItemCountProvider(curriculum))
           .asData
@@ -240,7 +238,7 @@ class TrackInfoCard extends ConsumerWidget {
 
   String _requiredPaceLabel(
     AppLocalizations l10n,
-    Goal goal,
+    GoalEntity goal,
     ProgressPaceCalculator? paceCalc,
     DateTime today, {
     required double unitPerLeaf,

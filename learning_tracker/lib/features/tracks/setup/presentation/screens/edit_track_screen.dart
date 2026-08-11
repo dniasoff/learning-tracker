@@ -1,31 +1,31 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/providers/calendar_providers.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/core/utils/text_input_formatters.dart';
 import 'package:learning_tracker/core/widgets/learning_date_picker_theme.dart';
+import 'package:learning_tracker/features/dashboard/data/repositories/firestore_study_day_reader_adapter.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/day_type.dart';
 import 'package:learning_tracker/features/scheduler/scheduler.dart';
-import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
-import 'package:learning_tracker/features/tracks/setup/domain/services/track_creation_service.dart';
+import 'package:learning_tracker/features/tracks/setup/data/repositories/profile_program_repository_impl.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/services/track_creation_service.dart'
+    show kDefaultStudyDays;
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/after_track_change_invalidation.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_edit_providers.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/steps/step_chazara.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/steps/step_study_days.dart';
+import 'package:learning_tracker/features/tracks/stages/presentation/providers/stage_providers.dart';
 import 'package:learning_tracker/features/tutoring/tutoring.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
@@ -46,10 +46,33 @@ bool validateTrackName(String name) => name.trim().isNotEmpty;
 int studyDayCount(Map<int, String> studyDays) =>
     studyDays.values.where((v) => v == 'study').length;
 
+final _editTrackGoalProvider = FutureProvider.autoDispose
+    .family<GoalEntity?, CurriculumId>((ref, curriculum) async {
+      final repo = FirestoreGoalRepositoryAdapter(ref: ref);
+      final goals = await repo.getGoals(curriculum);
+      if (goals.isEmpty) return null;
+      return goals.reduce(
+        (a, b) => a.createdAt.isAfter(b.createdAt) ? a : b,
+      );
+    });
+
+/// See track_detail_screen.dart's identical `_curriculumTrackRepositoryProvider`
+/// doc comment for why this is a top-level `Provider` rather than an
+/// inline construction inside a `WidgetRef`-scoped method.
+final _profileProgramRepositoryProvider =
+    Provider<FirestoreProfileProgramRepositoryAdapter>(
+      (ref) => FirestoreProfileProgramRepositoryAdapter(ref: ref),
+    );
+
+final _studyDayConfigRepositoryProvider =
+    Provider<FirestoreStudyDayReaderAdapter>(
+      (ref) => FirestoreStudyDayReaderAdapter(ref: ref),
+    );
+
 class EditTrackScreen extends ConsumerStatefulWidget {
   const EditTrackScreen({required this.track, super.key});
 
-  final CurriculumTrack track;
+  final CurriculumTrackEntity track;
 
   @override
   ConsumerState<EditTrackScreen> createState() => _EditTrackScreenState();
@@ -64,7 +87,7 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
   // has tried to save an empty/whitespace-only name; cleared as they type.
   String? _nameError;
 
-  Goal? _goal;
+  GoalEntity? _goal;
 
   late TextEditingController _nameController;
   late Map<int, String> _editedStudyDays;
@@ -96,16 +119,15 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
   }
 
   Future<void> _loadData() async {
-    final db = ref.read(userDatabaseProvider);
-    final results = await Future.wait([
-      db.goalDao.getGoalByTrack(widget.track.id),
-      db.studyDayConfigDao.getConfigsByTrack(widget.track.id),
-      db.stageDao.getStagesByTrack(widget.track.id),
-    ]);
+    final curriculum = widget.track.curriculumId;
+    final stageRepo = ref.read(globalStageRepositoryProvider);
+    final studyDayReader = ref.read(_studyDayConfigRepositoryProvider);
 
-    final goal = results[0] as Goal?;
-    final studyDayList = results[1] as List<StudyDayConfig>;
-    final stages = results[2] as List<StageDefinition>;
+    final goal = await ref.read(_editTrackGoalProvider(curriculum).future);
+    final stages = await stageRepo.getStagesForCurriculum(curriculum);
+    final studyDayList = await studyDayReader.getConfigsForCurriculum(
+      curriculum,
+    );
 
     // F-H1: Read overdue state from the projection — the authoritative source
     // after the projection cutover. daily_plans.isOverdue is stale and must
@@ -113,38 +135,31 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
     final allTasks = await ref.read(allDailyTasksProvider.future);
     final hasOverdue = allTasks.any(
       (t) =>
-          t.trackId == widget.track.id &&
+          t.curriculumId == curriculum &&
           t.priority == DailyTaskPriority.overdueProgram,
     );
 
     final studyDays = <int, String>{};
     for (final d in studyDayList) {
-      studyDays[d.dayOfWeek] = d.dayType;
+      studyDays[d.dayOfWeek] = d.dayType == DayType.study ? 'study' : 'review';
     }
     if (studyDays.isEmpty) {
       studyDays.addAll(kDefaultStudyDays);
     }
 
     // Chazarah delays = delayDays of stages with stageOrder > 1 (skip learn).
-    // W3.27: schedule quartet replaced by JSON column; decode delay_days here.
-    final delays = stages.where((s) => s.stageOrder > 1).map((s) {
-      try {
-        final sched = jsonDecode(s.schedule) as Map<String, dynamic>;
-        return (sched['delay_days'] as num?)?.toInt() ?? 0;
-      } catch (_) {
-        return 0;
-      }
-    }).toList();
+    // The domain StageDefinition model already carries delayDays as a typed
+    // field (StageDefinitionScheduleSpec) -- no JSON decode needed any more.
+    final delays = stages
+        .where((s) => s.stageOrder > 1)
+        .map((s) => s.delayDays)
+        .toList();
 
     if (!mounted) return;
     // Fallback: when the stored goal has no description (tracks created before
     // B4 was fixed), show the curriculum's display name so the field is never
     // blank. Uses the current Hebrew Terms toggle to pick the right language.
-    final curriculum = _curriculumId;
-    var nameDefault = '';
-    if (curriculum != null) {
-      nameDefault = curriculumLabelText(ref, curriculum: curriculum);
-    }
+    final nameDefault = curriculumLabelText(ref, curriculum: curriculum);
     setState(() {
       _goal = goal;
       final desc = goal?.description ?? '';
@@ -156,7 +171,7 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
       if (goal != null) {
         _paceValue = goal.paceValue ?? 1;
         _pacePeriod = goal.pacePeriod ?? 'per_week';
-        _paceGranularity = goal.paceGranularity;
+        _paceGranularity = goal.paceGranularity?.storageKey;
         _targetDate = goal.targetDate?.toLocal();
       }
 
@@ -165,18 +180,14 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
   }
 
   bool get _isProgramTrack {
-    final curriculum = _curriculumId;
-    if (curriculum == null) return false;
     return ref
-            .watch(dashboardHasProgramEnrollmentProvider(curriculum))
+            .watch(dashboardHasProgramEnrollmentProvider(_curriculumId))
             .asData
             ?.value ??
         false;
   }
 
-  CurriculumId? get _curriculumId => CurriculumId.values
-      .where((c) => c.storageKey == widget.track.curriculumId)
-      .firstOrNull;
+  CurriculumId get _curriculumId => widget.track.curriculumId;
 
   Future<void> _save() async {
     final l10n = AppLocalizations.of(context)!;
@@ -231,9 +242,8 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
     try {
       final goal = _goal;
       final curriculum = _curriculumId;
-      if (goal == null || curriculum == null) return;
+      if (goal == null) return;
 
-      final profileId = ref.read(activeProfileIdProvider);
       final service = ref.read(trackEditServiceProvider);
 
       // Determine goal value changes.
@@ -280,9 +290,7 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
 
       try {
         await service.editTrack(
-          trackId: widget.track.id,
-          goal: goalEntityFromRow(goal),
-          profileId: profileId,
+          goal: goal,
           curriculum: curriculum,
           label: newLabel,
           studyDays: _isProgramTrack ? null : _editedStudyDays,
@@ -322,7 +330,7 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
         return;
       }
 
-      await onTrackChanged(ref, profileId);
+      await onTrackChanged(ref, 0);
       if (mounted) Navigator.of(context).pop();
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -352,10 +360,8 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
     if (confirmed != true || !mounted) return;
 
     final curriculum = _curriculumId;
-    if (curriculum == null) return;
 
-    final db = ref.read(userDatabaseProvider);
-    final profileId = ref.read(activeProfileIdProvider);
+    final programRepo = ref.read(_profileProgramRepositoryProvider);
     final calendarService = await ref.read(
       calendarProgramServiceProvider.future,
     );
@@ -366,8 +372,7 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
     final todayUtc = DateTime.utc(today.year, today.month, today.day);
 
     // Resolve the enrollment and its calendar program key.
-    final enrollment = await db.profileProgramDao
-        .getProgramForProfileAndCurriculum(profileId, curriculum.storageKey);
+    final enrollment = await programRepo.getProgram(curriculum);
     if (enrollment == null) return;
 
     final program = ref
@@ -391,37 +396,22 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
     // Re-anchor: move tracking_start_date to today (UTC midnight).
     // tracking_start_ref is today's calendar unit (or null if the calendar
     // engine cannot resolve it — the projection uses the date, not the ref).
-    await db.profileProgramDao.setProfileProgram(
-      profileId: profileId,
-      curriculumType: curriculum.storageKey,
+    // TODO(task-22): the old cloud push for this write
+    // (syncFacade?.pushProfileProgram) is dead code now -- setProgram()
+    // already writes directly to Firestore, there is no separate push
+    // step left to perform (every SyncWriteFacade caller for data with a
+    // native Firestore*Repository is now obsolete the same way, see task
+    // tracker #22's resolution). The tutored-session routing
+    // (tutorSetProfileProgram) the old push comment mentions still needs
+    // its own resolution -- not rebuilt here.
+    await programRepo.setProgram(
+      curriculumId: curriculum,
       programId: enrollment.programId,
       trackingStartDate: todayUtc,
       trackingStartRef: todayRef,
     );
 
-    // F-C1: Push the updated profile_program row to Firestore so the
-    // new anchor survives reinstall / sync pull. Routes through
-    // syncWriteFacadeProvider so a tutored session calls tutorSetProfileProgram
-    // instead of the local outbox (which the isProfileTutored guard blocks).
-    try {
-      final syncFacade = ref.read(syncWriteFacadeProvider);
-      await syncFacade?.pushProfileProgram({
-        'profile_id': profileId,
-        'curriculum_id': curriculum.storageKey,
-        'program_id': enrollment.programId,
-        'tracking_start_date': todayUtc.toIso8601String(),
-        'tracking_start_ref': todayRef,
-        'updated_at': todayUtc.toIso8601String(),
-      });
-    } catch (e, st) {
-      AppLogger.instance.warning(
-        event: 'clear_overdue_push_failed: curriculum=${curriculum.storageKey}',
-        exception: e,
-        stackTrace: st,
-      );
-    }
-
-    await onTrackChanged(ref, profileId);
+    await onTrackChanged(ref, 0);
 
     if (mounted) setState(() => _hasOverdue = false);
   }
@@ -537,7 +527,7 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
             // want to add chazara to a learn-only track recreate it via
             // Add Track.
             if (ref
-                    .watch(trackHasChazaraProvider(widget.track.id))
+                    .watch(trackHasChazaraProvider(widget.track.curriculumId))
                     .asData
                     ?.value ??
                 false) ...[

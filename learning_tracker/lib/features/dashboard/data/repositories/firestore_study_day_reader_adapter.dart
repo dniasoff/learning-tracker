@@ -28,7 +28,17 @@ class FirestoreStudyDayReaderAdapter {
 
   final Ref _ref;
 
-  Future<List<StudyDayConfigEntry>> _configs(CurriculumId curriculumId) async {
+  Future<List<StudyDayConfigEntry>> _configs(CurriculumId curriculumId) =>
+      getConfigsForCurriculum(curriculumId);
+
+  /// The raw, unaggregated config list for [curriculumId] — the same list
+  /// [countStudyDaysInInclusiveDateRange]/[studyDaysPerWeek] derive from,
+  /// exposed directly for callers (e.g. edit_track_screen.dart) that need
+  /// to render/edit the per-weekday study/review choice itself, not just a
+  /// count.
+  Future<List<StudyDayConfigEntry>> getConfigsForCurriculum(
+    CurriculumId curriculumId,
+  ) async {
     final repo = await _ref.read(firestoreStudyDayConfigRepositoryProvider.future);
     if (repo == null) return const [];
     return repo.getConfigsForCurriculum(curriculumId);
