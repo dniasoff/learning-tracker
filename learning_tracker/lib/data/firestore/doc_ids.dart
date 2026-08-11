@@ -486,6 +486,16 @@ final class DocIds {
   /// curriculumId, stageOrder)`; AD-25 collapses `(profileId, trackId)` out
   /// entirely (profile is already the collection-path scope, and
   /// `trackId == curriculumId`), leaving this identical two-part key.
+  ///
+  /// Percent-encodes each component via [encodeKeyComponent] before joining
+  /// — unlike [stageDefinitionDocId]'s legacy raw join, which predates this
+  /// convention. This matters because two [CurriculumId] storage keys embed
+  /// a literal `_`: `mishnehTorah` ('mishneh_torah') and `mishnaBerurah`
+  /// ('mishna_berurah') — exactly the split-ambiguity
+  /// [learningOrderDocId] warns never to reopen. `stage_order` is always a
+  /// plain non-negative int today, so no current pair actually collides,
+  /// but an unencoded join is one future stage-order format change away
+  /// from silently overwriting the wrong document.
   static String pointConfigDocId(Map<String, dynamic> data) {
     final curriculumId = data['curriculum_id']?.toString() ?? '';
     final stageOrder = data['stage_order']?.toString() ?? '';
@@ -494,7 +504,10 @@ final class DocIds {
         'pointConfigDocId requires non-empty curriculum_id and stage_order',
       );
     }
-    return '${curriculumId}_$stageOrder';
+    return [
+      encodeKeyComponent(curriculumId),
+      encodeKeyComponent(stageOrder),
+    ].join('_');
   }
 
   // ── stage_definitions (legacy, pre-AD-25 shape) ──────────────────────
