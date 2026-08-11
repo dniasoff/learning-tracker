@@ -18,19 +18,6 @@
 //                                   → signOut called, state returns to Idle.
 //   G. Submitting state is observed during async execution.
 //
-// Branches skipped (argon2id path):
-//   D. no registry entry + local fallback misses + online → Firebase.
-//      SKIP: _tryLocalFallbackSignIn calls LocalAuthService.signIn which
-//      calls PasswordHasher.dummyVerify (full argon2id) even when no profile
-//      exists — blocks the event loop >30 s in a test environment.
-//   E. no registry entry + local fallback misses + offline
-//      → authEmailOfflineUnreachable.
-//      SKIP: same argon2id path as D.
-//
-// These skipped branches are covered by design review (the typed `else` clause
-// at sign_in_controller.dart:679 is the only entry to that error message, and
-// the dummyVerify call is an intentional timing-attack mitigation).
-//
 // NOTE on testWidgets vs test:
 //   We use testWidgets for every case because the controller needs a real
 //   GlobalKey<FormState> (validate() must return true before the controller
@@ -454,46 +441,7 @@ void main() {
     },
   );
 
-  // ── Branches D & E: no-registry paths → SKIPPED (argon2id) ───────────────
-
-  group('Branch D — no registry entry, online [SKIPPED — argon2id]', () {
-    test(
-      // BUG: Not a bug — intentional test limitation. When no registry entry
-      // exists, signInWithEmail calls _tryLocalFallbackSignIn which calls
-      // LocalAuthService.signIn which calls PasswordHasher.dummyVerify (full
-      // argon2id) even when no local profile exists. This is an intentional
-      // timing-attack mitigation but blocks the test event loop for >30 s.
-      // The "no registry, online → Firebase" routing is correct by code
-      // review of sign_in_controller.dart:679-710.
-      'no-registry + online → Firebase path cannot be tested due to argon2id '
-      'dummyVerify in LocalAuthService.signIn (timing-attack mitigation)',
-      () {
-        expect(true, isTrue); // placeholder so the test file has this group
-      },
-      skip:
-          'argon2id dummyVerify blocks the event loop when no local profile '
-          'exists; covers sign_in_controller.dart:679 else-branch',
-    );
-  });
-
-  group('Branch E — no registry entry, offline [SKIPPED — argon2id]', () {
-    test(
-      // Same reason as Branch D.
-      'no-registry + offline → authEmailOfflineUnreachable path cannot be '
-      'tested due to argon2id dummyVerify in LocalAuthService.signIn',
-      () {
-        expect(true, isTrue);
-      },
-      skip:
-          'argon2id dummyVerify blocks the event loop; '
-          'covers sign_in_controller.dart:704 authEmailOfflineUnreachable',
-    );
-  });
-
   // ── Branch F: email-verification guard ─────────────────────────────────────
-  //
-  // Uses a cloudBorn registry entry so we take the cloudBorn+online path
-  // (no _tryLocalFallbackSignIn) and exercise _ensureCloudEmailVerified.
   //
   // _waitForVerified(maxAttempts:3) contains Future.delayed(350ms) calls.
   // testWidgets uses FakeAsync which won't advance timers during a direct
@@ -509,8 +457,6 @@ void main() {
         'called; returning false signs the user out and leaves state Idle',
         (tester) async {
           final formKey = await _buildValidFormKey(tester);
-          // cloudBorn registry entry — takes the cloudBorn+online path,
-          // no _tryLocalFallbackSignIn, no argon2id.
           final registry = DeviceRegistryDatabase(NativeDatabase.memory());
           await _seedCloudAccount(
             registry,

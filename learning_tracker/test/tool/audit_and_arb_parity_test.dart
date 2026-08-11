@@ -441,22 +441,14 @@ void main() {
     );
 
     test(
-      'regression: pending_local_signup.dart and onboarding_screen.dart '
-      'account imports no longer flagged (AUD-guardrails-02 fix sites)',
+      'regression: onboarding_screen.dart account imports no longer flagged '
+      '(AUD-guardrails-02 fix site)',
       () async {
         final result = await Process.run('make', [
           'audit',
         ], workingDirectory: packageDir);
-        final stdout = result.stdout.toString();
         expect(
-          stdout,
-          isNot(contains('pending_local_signup.dart:11')),
-          reason:
-              'pending_local_signup.dart now imports currentAccountIdProvider '
-              'via features/profiles/profiles.dart, not the deep provider path',
-        );
-        expect(
-          stdout,
+          result.stdout.toString(),
           allOf(
             isNot(contains('onboarding_screen.dart:10')),
             isNot(contains('onboarding_screen.dart:11')),

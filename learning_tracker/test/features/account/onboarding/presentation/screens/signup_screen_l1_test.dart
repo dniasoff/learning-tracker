@@ -4,17 +4,15 @@
 //   • Render — form fields + labels + CTA button present
 //   • Validation — empty fields, invalid email, short password, missing name
 //   • Online state — cloud card, Sign Up CTA, OR divider, Google button
-//   • Offline state — warning cards, checkbox, "Create Offline Account" CTA
-//     (Google button + OR divider absent offline)
+//   • Offline state — no-connection warning card, no form fields, retry
+//     affordance (Google button + OR divider absent offline)
 //   • Prefilled name / email from route args
 //   • Password visibility toggle
 //   • Submit → loading spinner shown, fields disabled
 //   • Cloud signup path — happy path: calls signUp + sendEmailVerification
 //     + signOut; shows snackbar; navigates to SignInRoute
-//   • Cloud signup path — DuplicateEmailException: shows snackbar error
 //   • Cloud signup path — generic error: shows snackbar error
 //   • Cloud signup path — [email-already-in-use] Firebase code: mapped message
-//   • Offline path — credential-less explicit "Create Offline Account"
 //   • "Log In" link — not tappable while loading
 //   • He-locale smoke — renders without overflow in Hebrew RTL locale
 @Tags(['l1', 'signup', 'account'])
@@ -28,7 +26,6 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
-import 'package:learning_tracker/features/account/domain/services/local_auth_service.dart';
 import 'package:learning_tracker/features/account/onboarding/presentation/screens/signup_screen.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
     show authRepositoryProvider;
@@ -238,29 +235,13 @@ void main() {
 
   // ── Offline state UI ───────────────────────────────────────────────────────
 
-  testWidgets('offline: CTA button reads "Create Offline Account"', (
-    tester,
-  ) async {
+  testWidgets('offline: shows no-connection warning card', (tester) async {
     await tester.pumpWidget(_buildApp(online: false));
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
 
     expect(
-      find.widgetWithText(FilledButton, 'Create Offline Account'),
-      findsOneWidget,
-    );
-
-    await tester.pumpWidget(const SizedBox.shrink());
-    await tester.pump(Duration.zero);
-  });
-
-  testWidgets('offline: shows local-only warning cards', (tester) async {
-    await tester.pumpWidget(_buildApp(online: false));
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
-
-    expect(
-      find.textContaining('Local account only'),
+      find.textContaining('No connection'),
       findsOneWidget,
       reason: 'offline warning card must be shown when offline',
     );
@@ -269,17 +250,20 @@ void main() {
     await tester.pump(Duration.zero);
   });
 
-  testWidgets('offline: credential-less — no checkbox and no email/password/'
-      'name fields; shows explanation + retry', (tester) async {
+  testWidgets('offline: no signup form is offered — no checkbox, no email/'
+      'password/name fields; shows explanation + retry', (tester) async {
     await tester.pumpWidget(_buildApp(online: false));
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
 
-    // Offline accounts collect nothing: no ack checkbox, no input fields.
+    // Signing up requires a connection: no ack checkbox, no input fields.
     expect(find.byType(Checkbox), findsNothing);
     expect(find.byType(TextFormField), findsNothing);
-    // The explicit-offline explanation + retry affordance are shown.
-    expect(find.textContaining('offline account'), findsWidgets);
+    // The no-connection explanation + retry affordance are shown.
+    expect(
+      find.textContaining('Check your internet connection'),
+      findsOneWidget,
+    );
     expect(find.widgetWithText(TextButton, 'Retry connection'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox.shrink());
@@ -301,7 +285,7 @@ void main() {
   });
 
   testWidgets('loading (probe in flight): defaults to the offline variant — '
-      'coral warning + Create Offline Account, no Google button / OR divider '
+      'coral warning + no form, no Google button / OR divider '
       '(offline-until-proven-online)', (tester) async {
     // A never-emitting stream keeps connectivity in its loading state so we
     // exercise the orElse fallback (lastKnownOnline, default false).
@@ -346,10 +330,8 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
 
-    expect(
-      find.widgetWithText(FilledButton, 'Create Offline Account'),
-      findsOneWidget,
-    );
+    expect(find.textContaining('No connection'), findsOneWidget);
+    expect(find.byType(TextFormField), findsNothing);
     expect(find.byType(Checkbox), findsNothing);
     expect(find.text('Sign Up with Google'), findsNothing);
     expect(find.text('OR'), findsNothing);
@@ -746,78 +728,6 @@ void main() {
     },
   );
 
-  // ── Cloud signup — DuplicateEmailException ─────────────────────────────────
-
-  testWidgets(
-    'cloud signup: DuplicateEmailException shows "account already exists" snackbar',
-    (tester) async {
-      final auth = MockAuthRepository();
-      when(() => auth.currentUser).thenReturn(null);
-      when(
-        () => auth.signUp(any(), any(), any()),
-      ).thenThrow(const DuplicateEmailException('test@example.com'));
-
-      await tester.pumpWidget(_buildApp(online: true, authRepo: auth));
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 1));
-
-      await _fillValidCredentials(tester);
-
-      final button = find.widgetWithText(FilledButton, 'Sign Up');
-      await tester.ensureVisible(button);
-      await tester.pump();
-      await tester.tap(button);
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 1));
-
-      expect(find.textContaining('account already exists'), findsOneWidget);
-
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump(Duration.zero);
-    },
-  );
-
-  // ── Cloud signup — InvalidInputException ──────────────────────────────────
-
-  testWidgets(
-    'cloud signup: InvalidInputException resolves code via AppLocalizations '
-    '(AUD-account-17) — never shows the raw English reason',
-    (tester) async {
-      final auth = MockAuthRepository();
-      when(() => auth.currentUser).thenReturn(null);
-      when(() => auth.signUp(any(), any(), any())).thenThrow(
-        const InvalidInputException(
-          'email',
-          InvalidInputCode.invalidEmail,
-          'invalid format',
-        ),
-      );
-
-      await tester.pumpWidget(_buildApp(online: true, authRepo: auth));
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 1));
-
-      await _fillValidCredentials(tester);
-
-      final button = find.widgetWithText(FilledButton, 'Sign Up');
-      await tester.ensureVisible(button);
-      await tester.pump();
-      await tester.tap(button);
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 1));
-
-      // The localized message shows — NOT the raw, log-only `reason` string.
-      expect(
-        find.textContaining('Please enter a valid email address'),
-        findsOneWidget,
-      );
-      expect(find.textContaining('invalid format'), findsNothing);
-
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump(Duration.zero);
-    },
-  );
-
   // ── Cloud signup — Firebase error code mapping ─────────────────────────────
 
   testWidgets(
@@ -977,11 +887,6 @@ void main() {
     await tester.pump(Duration.zero);
   });
 
-  // (The offline "acknowledgement gate" was removed: offline accounts are now
-  // credential-less and created via an explicit "Create Offline Account"
-  // button — there is no checkbox/email/password to gate. See the offline
-  // credential-less UI test above.)
-
   // ── Loading state disables Google button ─────────────────────────────────
 
   testWidgets('Sign Up with Google button disabled while loading', (
@@ -1056,9 +961,9 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
 
     // Offline warning text must still be shown in RTL — now via l10n (iter9 fix).
-    // Hebrew ARB value for authModeLocalTitle contains "חשבון מקומי בלבד".
-    expect(find.textContaining('חשבון מקומי בלבד'), findsOneWidget);
-    // Credential-less offline: no acknowledgement checkbox, no input fields.
+    // Hebrew ARB value for appErrorViewNoConnectionTitle is "אין חיבור".
+    expect(find.textContaining('אין חיבור'), findsOneWidget);
+    // Offline offers no signup form: no acknowledgement checkbox, no fields.
     expect(find.byType(Checkbox), findsNothing);
     expect(find.byType(TextFormField), findsNothing);
 

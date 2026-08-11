@@ -1,63 +1,28 @@
-// Mixed tests: PendingLocalSignupStore (logic) + SignInModeCard (widget)
-//
-// PendingLocalSignupStore — covered behaviours:
-//   A. Payload round-trip: write → read returns stored data
-//   B. Payload clear: write → clear → read returns null
-//   C. readPayload returns null on empty store
-//   D. writePayload overwrites an existing payload
-//   E. Email reservation: reserve new email → returns true
-//   F. Email reservation: reserve duplicate email (case-insensitive) → false
-//   G. Email reservation: case-insensitive comparison (mixed-case input)
-//   H. Release email → allows re-reservation
-//   I. Release unknown email is a no-op (no throw)
-//   J. Multiple distinct emails reserved simultaneously
-//   K. releaseEmail removes only the matching email, leaves others
-//   L. tryReserveEmail strips whitespace from input
-//   M. clearPayload is idempotent (clear on empty store does not throw)
-//   N. PendingLocalRegistration.tryParse: null input → null
-//   O. PendingLocalRegistration.tryParse: empty string → null
-//   P. PendingLocalRegistration.tryParse: invalid JSON → null
-//   Q. PendingLocalRegistration.tryParse: missing field (accountId) → null
-//   R. PendingLocalRegistration.tryParse: all fields present → parses correctly
-//   S. PendingLocalRegistration.toJson → tryParse round-trip preserves all fields
-//   T. writePayload serialises displayName correctly (read back verifies it)
+// SignInModeCard widget tests
 //
 // SignInModeCard — covered behaviours:
 //   1. mode=cloud renders cloud icon + cloud text
 //   2. mode=cloud does NOT render warning icon or cloudOffline text
 //   3. mode=cloudOffline renders cloud-off icon + offline text
 //   4. mode=cloudOffline does NOT render cloud-done icon
-//   5. mode=local renders warning icon + local title text
-//   6. mode=local renders a SINGLE card (redundant duplicate body card removed)
 //   7. mode=unknown renders SizedBox.shrink (no visible content)
 //   8. mode=cloud → mode=cloudOffline rebuild replaces cloud icon with cloud-off
 //   9. Hebrew locale smoke: mode=cloud renders Hebrew l10n text without crash
-//  10. Hebrew locale smoke: mode=local renders the single Hebrew local notice
+//  10. Hebrew locale smoke: mode=cloudOffline renders the Hebrew offline notice
 //
 // BUG LOG: None.
 
-@Tags(['account', 'pending_signup', 'sign_in_mode_card'])
+@Tags(['account', 'sign_in_mode_card'])
 library;
-
-import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/features/account/domain/services/pending_local_signup.dart';
 import 'package:learning_tracker/features/account/presentation/widgets/sign_in_mode_card.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
-
-const _kRegA = PendingLocalRegistration(
-  accountId: 'acc-a1',
-  dbFileName: 'lt_a1.sqlite',
-  email: 'alice@example.com',
-  displayName: 'Alice Wonderland',
-);
 
 /// Builds a [SignInModeCard] wrapped in a minimal ProviderScope + MaterialApp
 /// with the 4 required localisation delegates.
@@ -95,266 +60,6 @@ Future<void> _tearDownWidget(WidgetTester tester) async {
 // ── Tests ────────────────────────────────────────────────────────────────────
 
 void main() {
-  // ════════════════════════════════════════════════════════════════════════════
-  // PendingLocalSignupStore — logic tests
-  // ════════════════════════════════════════════════════════════════════════════
-
-  group('PendingLocalSignupStore — payload', () {
-    late SharedPreferences prefs;
-
-    setUp(() async {
-      SharedPreferences.setMockInitialValues({});
-      prefs = await SharedPreferences.getInstance();
-    });
-
-    // A. write → read
-    test('A. write then read returns stored registration', () async {
-      await PendingLocalSignupStore.writePayload(prefs, _kRegA);
-      final result = await PendingLocalSignupStore.readPayload(prefs);
-
-      expect(result, isNotNull);
-      expect(result!.accountId, _kRegA.accountId);
-      expect(result.dbFileName, _kRegA.dbFileName);
-      expect(result.email, _kRegA.email);
-      expect(result.displayName, _kRegA.displayName);
-    });
-
-    // B. write → clear → read is null
-    test('B. clear removes the payload', () async {
-      await PendingLocalSignupStore.writePayload(prefs, _kRegA);
-      await PendingLocalSignupStore.clearPayload(prefs);
-      final result = await PendingLocalSignupStore.readPayload(prefs);
-
-      expect(result, isNull);
-    });
-
-    // C. empty store → read is null
-    test('C. readPayload on empty store returns null', () async {
-      final result = await PendingLocalSignupStore.readPayload(prefs);
-      expect(result, isNull);
-    });
-
-    // D. overwrite existing payload
-    test('D. writePayload overwrites previous payload', () async {
-      await PendingLocalSignupStore.writePayload(prefs, _kRegA);
-
-      const regB = PendingLocalRegistration(
-        accountId: 'acc-b2',
-        dbFileName: 'lt_b2.sqlite',
-        email: 'bob@example.com',
-        displayName: 'Bob Builder',
-      );
-      await PendingLocalSignupStore.writePayload(prefs, regB);
-
-      final result = await PendingLocalSignupStore.readPayload(prefs);
-      expect(result!.accountId, 'acc-b2');
-      expect(result.email, 'bob@example.com');
-    });
-
-    // M. clearPayload is idempotent on empty store
-    test('M. clearPayload on empty store does not throw', () async {
-      // No exception should be thrown.
-      await PendingLocalSignupStore.clearPayload(prefs);
-      final result = await PendingLocalSignupStore.readPayload(prefs);
-      expect(result, isNull);
-    });
-
-    // T. displayName preserved through round-trip
-    test('T. writePayload preserves displayName in stored JSON', () async {
-      const reg = PendingLocalRegistration(
-        accountId: 'acc-t',
-        dbFileName: 'lt_t.sqlite',
-        email: 'tova@example.com',
-        displayName: 'Tova Ben-David',
-      );
-      await PendingLocalSignupStore.writePayload(prefs, reg);
-      final result = await PendingLocalSignupStore.readPayload(prefs);
-      expect(result!.displayName, 'Tova Ben-David');
-    });
-  });
-
-  // ── Email reservation ──────────────────────────────────────────────────────
-
-  group('PendingLocalSignupStore — email reservation', () {
-    late SharedPreferences prefs;
-
-    setUp(() async {
-      SharedPreferences.setMockInitialValues({});
-      prefs = await SharedPreferences.getInstance();
-    });
-
-    // E. reserve new email succeeds
-    test('E. tryReserveEmail returns true for a new email', () async {
-      final ok = await PendingLocalSignupStore.tryReserveEmail(
-        prefs,
-        'eve@example.com',
-      );
-      expect(ok, isTrue);
-    });
-
-    // F. duplicate reservation fails (same case)
-    test(
-      'F. tryReserveEmail returns false for already-reserved email',
-      () async {
-        await PendingLocalSignupStore.tryReserveEmail(prefs, 'eve@example.com');
-        final ok = await PendingLocalSignupStore.tryReserveEmail(
-          prefs,
-          'eve@example.com',
-        );
-        expect(ok, isFalse);
-      },
-    );
-
-    // G. case-insensitive duplicate detection
-    test('G. tryReserveEmail is case-insensitive', () async {
-      await PendingLocalSignupStore.tryReserveEmail(prefs, 'FRANK@EXAMPLE.COM');
-      final ok = await PendingLocalSignupStore.tryReserveEmail(
-        prefs,
-        'frank@example.com',
-      );
-      expect(ok, isFalse);
-    });
-
-    // H. release then re-reserve
-    test('H. releaseEmail allows re-reservation', () async {
-      await PendingLocalSignupStore.tryReserveEmail(prefs, 'grace@example.com');
-      await PendingLocalSignupStore.releaseEmail(prefs, 'grace@example.com');
-      final ok = await PendingLocalSignupStore.tryReserveEmail(
-        prefs,
-        'grace@example.com',
-      );
-      expect(ok, isTrue);
-    });
-
-    // I. release unknown email is a no-op
-    test('I. releaseEmail for unknown email does not throw', () async {
-      // Should complete without error.
-      await PendingLocalSignupStore.releaseEmail(prefs, 'nobody@example.com');
-    });
-
-    // J. multiple distinct emails
-    test(
-      'J. multiple distinct emails can be reserved simultaneously',
-      () async {
-        final ok1 = await PendingLocalSignupStore.tryReserveEmail(
-          prefs,
-          'alice@x.com',
-        );
-        final ok2 = await PendingLocalSignupStore.tryReserveEmail(
-          prefs,
-          'bob@x.com',
-        );
-        final dupA = await PendingLocalSignupStore.tryReserveEmail(
-          prefs,
-          'alice@x.com',
-        );
-        expect(ok1, isTrue);
-        expect(ok2, isTrue);
-        expect(dupA, isFalse);
-      },
-    );
-
-    // K. release only removes the matching email, leaves others intact
-    test('K. releaseEmail only removes the targeted email', () async {
-      await PendingLocalSignupStore.tryReserveEmail(prefs, 'alice@x.com');
-      await PendingLocalSignupStore.tryReserveEmail(prefs, 'bob@x.com');
-      await PendingLocalSignupStore.releaseEmail(prefs, 'alice@x.com');
-
-      // alice can be re-reserved
-      final reAlice = await PendingLocalSignupStore.tryReserveEmail(
-        prefs,
-        'alice@x.com',
-      );
-      expect(reAlice, isTrue);
-
-      // bob is still reserved
-      final reBob = await PendingLocalSignupStore.tryReserveEmail(
-        prefs,
-        'bob@x.com',
-      );
-      expect(reBob, isFalse);
-    });
-
-    // L. whitespace stripping in tryReserveEmail
-    test('L. tryReserveEmail strips leading/trailing whitespace', () async {
-      await PendingLocalSignupStore.tryReserveEmail(prefs, 'henry@x.com');
-      final ok = await PendingLocalSignupStore.tryReserveEmail(
-        prefs,
-        '  henry@x.com  ',
-      );
-      expect(
-        ok,
-        isFalse,
-        reason: 'Email with spaces should match trimmed version',
-      );
-    });
-  });
-
-  // ── PendingLocalRegistration.tryParse ──────────────────────────────────────
-
-  group('PendingLocalRegistration.tryParse', () {
-    // N. null input
-    test('N. null input returns null', () {
-      expect(PendingLocalRegistration.tryParse(null), isNull);
-    });
-
-    // O. empty string
-    test('O. empty string returns null', () {
-      expect(PendingLocalRegistration.tryParse(''), isNull);
-    });
-
-    // P. invalid JSON
-    test('P. invalid JSON returns null', () {
-      expect(PendingLocalRegistration.tryParse('not-json-{{{'), isNull);
-    });
-
-    // Q. missing field: accountId
-    test('Q. missing accountId field returns null', () {
-      final json = jsonEncode({
-        'dbFileName': 'db.sqlite',
-        'email': 'a@b.com',
-        'displayName': 'Alice',
-      });
-      expect(PendingLocalRegistration.tryParse(json), isNull);
-    });
-
-    // R. all fields present → parses correctly
-    test('R. complete JSON parses into correct registration', () {
-      final json = jsonEncode({
-        'accountId': 'acc-xyz',
-        'dbFileName': 'lt_xyz.sqlite',
-        'email': 'zara@example.com',
-        'displayName': 'Zara Doe',
-      });
-
-      final result = PendingLocalRegistration.tryParse(json);
-      expect(result, isNotNull);
-      expect(result!.accountId, 'acc-xyz');
-      expect(result.dbFileName, 'lt_xyz.sqlite');
-      expect(result.email, 'zara@example.com');
-      expect(result.displayName, 'Zara Doe');
-    });
-
-    // S. toJson round-trip
-    test('S. toJson → tryParse round-trip preserves all fields', () {
-      const reg = PendingLocalRegistration(
-        accountId: 'acc-round',
-        dbFileName: 'lt_round.sqlite',
-        email: 'roundtrip@example.com',
-        displayName: 'Round Trip',
-      );
-
-      final json = jsonEncode(reg.toJson());
-      final restored = PendingLocalRegistration.tryParse(json);
-
-      expect(restored, isNotNull);
-      expect(restored!.accountId, reg.accountId);
-      expect(restored.dbFileName, reg.dbFileName);
-      expect(restored.email, reg.email);
-      expect(restored.displayName, reg.displayName);
-    });
-  });
-
   // ════════════════════════════════════════════════════════════════════════════
   // SignInModeCard — widget tests
   // ════════════════════════════════════════════════════════════════════════════
@@ -425,52 +130,6 @@ void main() {
 
       await _tearDownWidget(tester);
     });
-  });
-
-  group('SignInModeCard — local mode', () {
-    // 5. local mode shows warning icon + local title text
-    testWidgets('5. local mode shows warning icon and local-title text', (
-      tester,
-    ) async {
-      await tester.pumpWidget(_buildCard(SignInModeHint.local));
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 1));
-
-      expect(find.byIcon(Icons.warning_amber_rounded), findsOneWidget);
-      expect(
-        find.textContaining('Local account'),
-        findsWidgets,
-        reason: 'local mode must display the local account title',
-      );
-
-      await _tearDownWidget(tester);
-    });
-
-    // 6. local mode shows ONE card only — the redundant duplicate "No cloud
-    // backup / no device sync" body card was removed. The title card alone
-    // conveys the local-account notice.
-    testWidgets(
-      '6. local mode renders a single card (no redundant body card)',
-      (tester) async {
-        await tester.pumpWidget(_buildCard(SignInModeHint.local));
-        await tester.pump();
-        await tester.pump(const Duration(seconds: 1));
-
-        // The second (danger) icon + duplicate body text must be gone.
-        expect(find.byIcon(Icons.dangerous_rounded), findsNothing);
-        expect(
-          find.textContaining('No cloud backup'),
-          findsNothing,
-          reason:
-              'the redundant duplicate local-account body card must be removed',
-        );
-        // The single title card remains.
-        expect(find.byIcon(Icons.warning_amber_rounded), findsOneWidget);
-        expect(find.textContaining('Local account'), findsOneWidget);
-
-        await _tearDownWidget(tester);
-      },
-    );
   });
 
   group('SignInModeCard — unknown mode', () {
@@ -545,28 +204,23 @@ void main() {
       },
     );
 
-    // 10. Hebrew + local mode renders the single Hebrew local-account notice
+    // 10. Hebrew + cloudOffline mode renders the Hebrew offline notice
     testWidgets(
-      '10. Hebrew locale + local mode renders the single Hebrew local notice',
+      '10. Hebrew locale + cloudOffline mode renders the Hebrew offline notice',
       (tester) async {
         await tester.pumpWidget(
-          _buildCard(SignInModeHint.local, locale: const Locale('he')),
+          _buildCard(SignInModeHint.cloudOffline, locale: const Locale('he')),
         );
         await tester.pump();
         await tester.pump(const Duration(seconds: 1));
 
         expect(tester.takeException(), isNull);
-        // Hebrew local title contains 'מקומי'
+        expect(find.byIcon(Icons.cloud_off_rounded), findsOneWidget);
+        // Hebrew cloudOffline text contains 'לא מקוון'
         expect(
-          find.textContaining('מקומי'),
+          find.textContaining('לא מקוון'),
           findsOneWidget,
-          reason: 'Hebrew local mode must render the local account title',
-        );
-        // The redundant duplicate body card is gone.
-        expect(
-          find.byIcon(Icons.dangerous_rounded),
-          findsNothing,
-          reason: 'the redundant local-account body card must be removed',
+          reason: 'Hebrew cloudOffline mode must render the offline notice',
         );
 
         await _tearDownWidget(tester);

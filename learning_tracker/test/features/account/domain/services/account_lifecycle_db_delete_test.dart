@@ -55,38 +55,6 @@ void main() {
       });
 
       test(
-        'deleteLocalAccount deletes the drift_flutter .sqlite file',
-        () async {
-          const accountId = 'acc-del-local';
-          const dbFileName = 'user_acc_local.db';
-          // drift_flutter creates the file with a .sqlite suffix
-          final driftFile = File('${tempDir.path}/$dbFileName.sqlite');
-          await driftFile.create();
-
-          when(() => registry.findById(accountId)).thenAnswer(
-            (_) async => _makeAccount(
-              accountId: accountId,
-              tier: 'localBorn',
-              dbFileName: dbFileName,
-            ),
-          );
-          when(
-            () => registry.removeAccount(accountId),
-          ).thenAnswer((_) async => 1);
-
-          await service.deleteLocalAccount(accountId);
-
-          expect(
-            driftFile.existsSync(),
-            isFalse,
-            reason:
-                'deleteLocalAccount must delete the .sqlite-suffixed drift file',
-          );
-          verify(() => registry.removeAccount(accountId)).called(1);
-        },
-      );
-
-      test(
         'removeCloudFromDevice deletes the drift_flutter .sqlite file',
         () async {
           const accountId = 'acc-del-cloud';

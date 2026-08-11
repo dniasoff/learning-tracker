@@ -1,12 +1,9 @@
 import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/data/firestore/conflict.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
-import 'package:learning_tracker/features/account/domain/services/local_auth_service.dart';
-import 'package:learning_tracker/features/account/domain/services/password_hasher.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_log_event.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_reducer.dart';
 
@@ -19,15 +16,10 @@ import '../helpers/drift_memory.dart' show seedProfile;
 void main() {
   group('Epic 20 — v2 hard-tier auth', () {
     late UserDatabase db;
-    late LocalAuthService localAuth;
 
     setUp(() async {
       db = UserDatabase(NativeDatabase.memory());
       await seedProfile(db);
-      localAuth = LocalAuthService(
-        dao: db.userProfileDao,
-        hasher: PasswordHasher(params: Argon2idParams.test),
-      );
     });
 
     tearDown(() => db.close());
@@ -54,87 +46,6 @@ void main() {
         expect(row.firebaseUid, 'fbuid-1');
         expect(row.tier, 'cloudBorn');
         expect(row.passwordHash, isNull);
-      });
-
-      test('DAO.findByTier + findLocalBornByEmail isolate tiers', () async {
-        await db.userProfileDao.insertUserProfile(
-          UserProfilesCompanion.insert(
-            email: 'a@test.local',
-            firebaseUid: const Value('a-fb'),
-            tier: 'cloudBorn',
-            displayName: 'A',
-            createdAt: DateTime.utc(2026, 1, 1),
-            updatedAt: DateTime.utc(2026, 1, 1),
-          ),
-        );
-        await db.userProfileDao.insertUserProfile(
-          UserProfilesCompanion.insert(
-            email: 'b@test.local',
-            tier: 'localBorn',
-            passwordHash: const Value(r'argon2id$hash'),
-            displayName: 'B',
-            createdAt: DateTime.utc(2026, 1, 1),
-            updatedAt: DateTime.utc(2026, 1, 1),
-          ),
-        );
-
-        final locals = await db.userProfileDao.findByTier(UserTier.localBorn);
-        // seedProfile adds 1 localBorn account; this test adds another ('b')
-        expect(locals, hasLength(2));
-        expect(locals.any((l) => l.email == 'b@test.local'), isTrue);
-
-        expect(
-          await db.userProfileDao.findLocalBornByEmail('a@test.local'),
-          isNull,
-        );
-      });
-
-      test('upgradeLocalToCloud is atomic', () async {
-        final profile = await localAuth.signUp(
-          email: 'upgrade@test.local',
-          password: 'hunter2hunter2',
-          displayName: 'U',
-        );
-
-        await db.userProfileDao.upgradeLocalToCloud(
-          profileId: profile.id,
-          firebaseUid: 'new-fb',
-          updatedAt: DateTime.utc(2026, 2, 1),
-        );
-
-        final after = await db.userProfileDao.getUserProfileById(profile.id);
-        expect(after!.tier, 'cloudBorn');
-        expect(after.firebaseUid, 'new-fb');
-        expect(after.passwordHash, isNull);
-      });
-    });
-
-    // ─── Story 20.4: Local auth service ─────────────────────────────
-    group('Story 20.4 — LocalAuthService', () {
-      test('sign-up + sign-in round-trip', () async {
-        await localAuth.signUp(
-          email: 'alice@test.local',
-          password: 'correcthorse',
-          displayName: 'Alice',
-        );
-        final profile = await localAuth.signIn(
-          email: 'alice@test.local',
-          password: 'correcthorse',
-        );
-        expect(profile.email, 'alice@test.local');
-        expect(profile.tier, 'localBorn');
-      });
-
-      test('wrong password throws InvalidCredentialsException', () async {
-        await localAuth.signUp(
-          email: 'alice@test.local',
-          password: 'correcthorse',
-          displayName: 'Alice',
-        );
-        expect(
-          () => localAuth.signIn(email: 'alice@test.local', password: 'wrong'),
-          throwsA(isA<InvalidCredentialsException>()),
-        );
       });
     });
 
@@ -272,34 +183,6 @@ void main() {
           db.streakEvents,
         )..where((t) => t.profileId.equals(99))).get();
         expect(rows, hasLength(1));
-      });
-    });
-
-    // ─── Story 20.9 gap: upgrade DAO operations ────────────────────
-    group('Story 20.9 — collision-path DAO operations', () {
-      test('upgradeLocalToCloud preserves profile identity', () async {
-        final profile = await localAuth.signUp(
-          email: 'collide@test.local',
-          password: 'hunter2hunter2',
-          displayName: 'Collide',
-        );
-        expect(profile.tier, 'localBorn');
-        expect(profile.passwordHash, isNotNull);
-
-        await db.userProfileDao.upgradeLocalToCloud(
-          profileId: profile.id,
-          firebaseUid: 'existing-cloud-uid',
-          updatedAt: DateTime.utc(2026, 2, 1),
-        );
-
-        final after = await db.userProfileDao.getUserProfileById(profile.id);
-        expect(after!.tier, 'cloudBorn');
-        expect(after.firebaseUid, 'existing-cloud-uid');
-        expect(after.passwordHash, isNull);
-        // Identity survives: email, displayName, createdAt all unchanged.
-        expect(after.email, 'collide@test.local');
-        expect(after.displayName, 'Collide');
-        expect(after.createdAt, profile.createdAt);
       });
     });
   });

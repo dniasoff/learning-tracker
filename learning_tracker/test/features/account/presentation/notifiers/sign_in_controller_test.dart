@@ -629,26 +629,6 @@ void main() {
     );
   });
 
-  // ── signInWithEmail — local account error paths ────────────────────────────
-
-  // ── tryLocalFallbackSignIn — InvalidCredentials path ─────────────────────
-  //
-  // InvalidCredentialsException from LocalAuthService.signIn is caught by
-  // the typed `on InvalidCredentialsException` branch in _tryLocalFallbackSignIn,
-  // which returns false silently (no AppLogger entry). This distinguishes a
-  // bad-password user error from a system failure.
-  //
-  // Note: when the *provider* itself throws (rather than LocalAuthService),
-  // Riverpod wraps the exception in a ProviderException, which does NOT match
-  // the typed catch and falls to the generic catch → warning is logged.
-  // The F19-logging test above covers that code path.
-  // Testing the pure InvalidCredentialsException path requires a real
-  // UserDatabase + real LocalAuthService chain, which belongs in an
-  // integration test. The typed-catch contract is verified by the
-  // source-level code review: the `on InvalidCredentialsException` guard is
-  // present at line 709 of sign_in_controller.dart and tested implicitly via
-  // the absence of a warning in the credentials-error user-flow.
-
   // ── setCallbacks ──────────────────────────────────────────────────────────
 
   group('SignInController.setCallbacks', () {
@@ -752,58 +732,7 @@ void main() {
     });
   });
 
-  // ── F19: empty-catch logging in offline / local-fallback paths ─────────────
-
-  group('SignInController.tryLocalFallbackSignInForTest — F19 logging', () {
-    test('logs a warning via AppLogger when an unexpected exception is thrown '
-        '(replaces the previously swallowed empty catch)', () async {
-      final container = ProviderContainer(
-        overrides: [
-          userDatabaseProvider.overrideWith(
-            (ref) => throw const _StubDatabaseFailure('user db unavailable'),
-          ),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      final controller = container.read(signInControllerProvider.notifier);
-
-      final result = await controller.tryLocalFallbackSignInForTest(
-        email: 'test@example.com',
-        password: 'whatever',
-        router: _StubRouter(),
-        l10n: await _stubL10n(),
-      );
-
-      expect(
-        result,
-        isFalse,
-        reason:
-            'helper must return false when an unexpected exception is '
-            'caught (matches the legacy contract — the only change is the '
-            'log emission).',
-      );
-
-      final entries = _entriesMentioning(
-        'try_local_fallback_sign_in_failed',
-      ).toList();
-      expect(
-        entries,
-        isNotEmpty,
-        reason:
-            'Expected AppLogger.warning(event: "try_local_fallback_sign_in_failed") '
-            'to be emitted. Talker history: '
-            '${AppLogger.instance.talker.history.map((e) => e.generateTextMessage()).toList()}',
-      );
-      expect(
-        entries.any((m) => m.contains('user db unavailable')),
-        isTrue,
-        reason:
-            'Expected the underlying exception message to be attached. '
-            'Captured entries: $entries',
-      );
-    });
-  });
+  // ── F19: empty-catch logging in the offline cloud-restore path ─────────────
 
   group('SignInController.tryOfflineCloudRestoreForTest — F19 logging', () {
     test('logs a warning via AppLogger when an unexpected exception is thrown '

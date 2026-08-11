@@ -6,7 +6,7 @@
 ///   E2E-1202  Sign in — wrong password error — error snackbar appears and
 ///             button re-enables; no navigation away from SignInScreen.
 ///   E2E-1203  Sign-up new account — adult — SignupScreen renders the creation
-///             form when online; the offline path shows the credential-less CTA.
+///             form when online.
 ///   E2E-1206  Google Sign-In — new user — Google Sign-Up button visible on
 ///             SignupScreen when online; full SDK flow is device-only.
 ///
@@ -257,8 +257,6 @@ void main() {
       'SignupScreen (online) renders Create Account heading, email/password '
       'fields and Sign Up CTA',
       (tester) async {
-        // Force online so the email/password form renders (offline shows the
-        // credential-less "Create offline account" path instead).
         debugSetLastKnownOnline(true);
         addTearDown(() => debugSetLastKnownOnline(false));
 
@@ -280,46 +278,12 @@ void main() {
       },
     );
 
-    testWidgets(
-      'SignupScreen (offline) renders credential-less "Create Offline Account" '
-      'CTA instead of the email/password form',
-      (tester) async {
-        // Force offline — both the stream and the loading-state fallback must
-        // read false so the offline branch renders (not the online form).
-        debugSetLastKnownOnline(false);
-        addTearDown(() => debugSetLastKnownOnline(false));
-
-        final h = E2EHarness(tester);
-        addTearDown(h.dispose);
-
-        await h.pumpApp(
-          path: '/create-account',
-          extraOverrides: [
-            connectivityStreamProvider.overrideWith(
-              (ref) => Stream.value(false),
-            ),
-          ],
-        );
-
-        // Heading is still shown in both modes.
-        h.expectOnScreen('Create Account', routeName: 'SignupScreen');
-        // Offline path shows "Create Offline Account" CTA (createOfflineAccount
-        // l10n key), not the "Sign Up" button.
-        h.expectOnScreen('Create Offline Account');
-        // No Google button when offline.
-        h.expectNotOnScreen('Sign Up with Google');
-      },
-    );
-
-    // SKIP: device-test required — the online sign-up path calls
-    // authRepo.signUp (Firebase Auth platform channel), sends a verification
-    // email (Firebase), then routes to OnboardingRoute.  The offline sign-up
-    // path calls path_provider.getApplicationDocumentsDirectory() for
-    // PendingLocalSignupStore.rollbackIfIncomplete and opens a drift_flutter
-    // NativeDatabase file — neither is available in the headless harness.
+    // SKIP: device-test required — the sign-up path calls authRepo.signUp
+    // (Firebase Auth platform channel), sends a verification email (Firebase),
+    // then routes to OnboardingRoute — not available in the headless harness.
     testWidgets(
       'SKIP device-test-required: fill form → Sign Up → onboarding flow '
-      'starts → account row in Drift',
+      'starts → account created',
       skip: true,
       (tester) async {},
     );

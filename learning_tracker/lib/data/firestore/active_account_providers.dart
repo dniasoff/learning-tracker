@@ -12,10 +12,10 @@
 /// `lib/app/bootstrap/bootstrap.dart` (restore the last-active account on
 /// cold start), and from the sign-in/sign-up/account-switch flows —
 /// `signup_screen.dart`, `account_picker_screen.dart`,
-/// `sign_in_controller.dart`, `account_actions.dart`, and
-/// `pending_local_signup.dart`. [activeAccountIdProvider] therefore holds a
-/// real account id for the whole app session once one of those has run,
-/// and [activeAccountFirebaseProvider] resolves its handles alongside it.
+/// `sign_in_controller.dart`, and `account_actions.dart`.
+/// [activeAccountIdProvider] therefore holds a real account id for the
+/// whole app session once one of those has run, and
+/// [activeAccountFirebaseProvider] resolves its handles alongside it.
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';

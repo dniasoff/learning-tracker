@@ -8,13 +8,8 @@ import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart'
     hide expect, group, setUp, setUpAll, tearDown, tearDownAll, test;
-import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/domain/services/account_lifecycle_service.dart';
-import 'package:learning_tracker/features/account/domain/services/local_auth_service.dart';
-import 'package:learning_tracker/features/account/domain/services/password_hasher.dart';
 import 'package:learning_tracker/features/account/domain/services/session_persistence_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:test/test.dart' hide isNotNull, isNull;
@@ -63,7 +58,7 @@ void main() {
               accountId: 'acc-$i',
               email: 'user$i@test.local',
               displayName: 'User $i',
-              tier: 'localBorn',
+              tier: 'cloudBorn',
               dbFileName: 'user_acc_acc-$i.db',
               createdAt: DateTime.utc(2026, 1, 1),
               lastUsedAt: DateTime.utc(2026, 1, 1),
@@ -77,7 +72,7 @@ void main() {
               accountId: 'acc-5',
               email: 'user5@test.local',
               displayName: 'User 5',
-              tier: 'localBorn',
+              tier: 'cloudBorn',
               dbFileName: 'user_acc_acc-5.db',
               createdAt: DateTime.utc(2026, 1, 1),
               lastUsedAt: DateTime.utc(2026, 1, 1),
@@ -123,7 +118,7 @@ void main() {
             accountId: 'acc-1',
             email: 'a@test.local',
             displayName: 'A',
-            tier: 'localBorn',
+            tier: 'cloudBorn',
             dbFileName: 'user_acc_acc-1.db',
             createdAt: DateTime.utc(2026, 1, 1),
             lastUsedAt: DateTime.utc(2026, 1, 1),
@@ -134,7 +129,7 @@ void main() {
             accountId: 'acc-2',
             email: 'b@test.local',
             displayName: 'B',
-            tier: 'localBorn',
+            tier: 'cloudBorn',
             dbFileName: 'user_acc_acc-2.db',
             createdAt: DateTime.utc(2026, 1, 1),
             lastUsedAt: DateTime.utc(2026, 1, 1),
@@ -147,54 +142,6 @@ void main() {
         expect(remaining.first.accountId, 'acc-2');
       });
     });
-
-    // ─── Story 21.2: Per-Account Database Isolation ─────────────
-    group(
-      'Story 21.2 — Per-Account Database Isolation',
-      tags: ['story_21_2'],
-      () {
-        test('AC1: each account gets isolated data in its own DB', () async {
-          final aliceDb = UserDatabase(NativeDatabase.memory());
-          addTearDown(aliceDb.close);
-          final bobDb = UserDatabase(NativeDatabase.memory());
-          addTearDown(bobDb.close);
-
-          final aliceAuth = LocalAuthService(
-            dao: aliceDb.userProfileDao,
-            hasher: PasswordHasher(params: Argon2idParams.test),
-          );
-          final bobAuth = LocalAuthService(
-            dao: bobDb.userProfileDao,
-            hasher: PasswordHasher(params: Argon2idParams.test),
-          );
-
-          await aliceAuth.signUp(
-            email: 'alice@test.local',
-            password: 'password1',
-            displayName: 'Alice',
-          );
-          await bobAuth.signUp(
-            email: 'bob@test.local',
-            password: 'password2',
-            displayName: 'Bob',
-          );
-
-          // Alice's DB has only Alice
-          final aliceProfiles = await aliceDb.userProfileDao.findByTier(
-            UserTier.localBorn,
-          );
-          expect(aliceProfiles, hasLength(1));
-          expect(aliceProfiles.first.email, 'alice@test.local');
-
-          // Bob's DB has only Bob
-          final bobProfiles = await bobDb.userProfileDao.findByTier(
-            UserTier.localBorn,
-          );
-          expect(bobProfiles, hasLength(1));
-          expect(bobProfiles.first.email, 'bob@test.local');
-        });
-      },
-    );
 
     // ─── Story 21.3: Session Auto-Resume ────────────────────────
     group('Story 21.3 — Session Auto-Resume', tags: ['story_21_3'], () {
@@ -224,7 +171,7 @@ void main() {
             accountId: 'acc-2',
             email: 'b@test.local',
             displayName: 'B',
-            tier: 'localBorn',
+            tier: 'cloudBorn',
             dbFileName: 'user_acc_acc-2.db',
             createdAt: DateTime.utc(2026, 1, 1),
             lastUsedAt: DateTime.utc(2026, 1, 1),
@@ -261,7 +208,7 @@ void main() {
             accountId: 'acc-1',
             email: 'a@test.local',
             displayName: 'A',
-            tier: 'localBorn',
+            tier: 'cloudBorn',
             dbFileName: 'user_acc_acc-1.db',
             createdAt: DateTime.utc(2026, 1, 1),
             lastUsedAt: DateTime.utc(2026, 1, 1),
@@ -287,7 +234,7 @@ void main() {
             accountId: 'acc-1',
             email: 'a@test.local',
             displayName: 'A',
-            tier: 'localBorn',
+            tier: 'cloudBorn',
             dbFileName: 'user_acc_acc-1.db',
             createdAt: DateTime.utc(2026, 1, 1),
             lastUsedAt: DateTime.utc(2026, 1, 1),
@@ -315,7 +262,7 @@ void main() {
             accountId: 'acc-real',
             email: 'real@test.local',
             displayName: 'Real',
-            tier: 'localBorn',
+            tier: 'cloudBorn',
             dbFileName: 'user_acc_acc-real.db',
             createdAt: DateTime.utc(2026, 1, 1),
             lastUsedAt: DateTime.utc(2026, 1, 1),
@@ -337,104 +284,6 @@ void main() {
       });
     });
 
-    // ─── Story 21.5: Unified Sign-Up Email/Password ─────────────
-    group(
-      'Story 21.5 — Unified Sign-Up Email/Password',
-      tags: ['story_21_5'],
-      () {
-        test(
-          'AC2: offline path creates local-born with argon2id hash',
-          () async {
-            final db = UserDatabase(NativeDatabase.memory());
-            addTearDown(db.close);
-            final service = LocalAuthService(
-              dao: db.userProfileDao,
-              hasher: PasswordHasher(params: Argon2idParams.test),
-            );
-
-            final profile = await service.signUp(
-              email: 'offline@test.local',
-              password: 'securepass',
-              displayName: 'Offline User',
-            );
-
-            expect(profile.tier, 'localBorn');
-            expect(profile.passwordHash, isNotNull);
-            expect(profile.email, 'offline@test.local');
-          },
-        );
-
-        test('AC4: duplicate email throws DuplicateEmailException', () async {
-          final db = UserDatabase(NativeDatabase.memory());
-          addTearDown(db.close);
-          final service = LocalAuthService(
-            dao: db.userProfileDao,
-            hasher: PasswordHasher(params: Argon2idParams.test),
-          );
-
-          await service.signUp(
-            email: 'dupe@test.local',
-            password: 'password1',
-            displayName: 'First',
-          );
-
-          expect(
-            () => service.signUp(
-              email: 'dupe@test.local',
-              password: 'password2',
-              displayName: 'Second',
-            ),
-            throwsA(isA<DuplicateEmailException>()),
-          );
-        });
-      },
-    );
-
-    // ─── Story 21.7: Sign-In Smart Routing ──────────────────────
-    group('Story 21.7 — Sign-In Smart Routing', tags: ['story_21_7'], () {
-      test('AC1: local-born sign-in via argon2id', () async {
-        final db = UserDatabase(NativeDatabase.memory());
-        addTearDown(db.close);
-        final service = LocalAuthService(
-          dao: db.userProfileDao,
-          hasher: PasswordHasher(params: Argon2idParams.test),
-        );
-
-        await service.signUp(
-          email: 'local@test.local',
-          password: 'mypassword',
-          displayName: 'Local',
-        );
-
-        final profile = await service.signIn(
-          email: 'local@test.local',
-          password: 'mypassword',
-        );
-        expect(profile.tier, 'localBorn');
-      });
-
-      test('AC8: wrong password throws InvalidCredentialsException', () async {
-        final db = UserDatabase(NativeDatabase.memory());
-        addTearDown(db.close);
-        final service = LocalAuthService(
-          dao: db.userProfileDao,
-          hasher: PasswordHasher(params: Argon2idParams.test),
-        );
-
-        await service.signUp(
-          email: 'local@test.local',
-          password: 'rightpass',
-          displayName: 'Local',
-        );
-
-        expect(
-          () =>
-              service.signIn(email: 'local@test.local', password: 'wrongpass'),
-          throwsA(isA<InvalidCredentialsException>()),
-        );
-      });
-    });
-
     // ─── Story 21.9: Account Picker ─────────────────────────────
     group('Story 21.9 — Account Picker', tags: ['story_21_9'], () {
       test('AC7: accounts ordered by lastUsedAt descending', () async {
@@ -446,7 +295,7 @@ void main() {
             accountId: 'acc-old',
             email: 'old@test.local',
             displayName: 'Old',
-            tier: 'localBorn',
+            tier: 'cloudBorn',
             dbFileName: 'user_acc_old.db',
             createdAt: DateTime.utc(2026, 1, 1),
             lastUsedAt: DateTime.utc(2026, 1, 1),
@@ -482,7 +331,7 @@ void main() {
             accountId: 'acc-1',
             email: 'a@test.local',
             displayName: 'A',
-            tier: 'localBorn',
+            tier: 'cloudBorn',
             dbFileName: 'user_acc_1.db',
             createdAt: DateTime.utc(2026, 1, 1),
             lastUsedAt: DateTime.utc(2026, 1, 1),
@@ -529,7 +378,7 @@ void main() {
               accountId: 'acc-$i',
               email: 'user$i@test.local',
               displayName: 'User $i',
-              tier: 'localBorn',
+              tier: 'cloudBorn',
               dbFileName: 'user_acc_$i.db',
               createdAt: DateTime.utc(2026, 1, 1),
               lastUsedAt: DateTime.utc(2026, 1, 1),
@@ -546,7 +395,7 @@ void main() {
               accountId: 'acc-overflow',
               email: 'overflow@test.local',
               displayName: 'Overflow',
-              tier: 'localBorn',
+              tier: 'cloudBorn',
               dbFileName: 'user_acc_overflow.db',
               createdAt: DateTime.utc(2026, 1, 1),
               lastUsedAt: DateTime.utc(2026, 1, 1),
@@ -554,56 +403,6 @@ void main() {
           ),
           throwsA(isA<MaxAccountsReachedException>()),
         );
-      });
-    });
-
-    // ─── Story 21.12: Upgrade in Multi-Account Context ──────────
-    group('Story 21.12 — Upgrade Multi-Account', tags: ['story_21_12'], () {
-      test('AC1: updateAccountTier updates registry', () async {
-        final registry = DeviceRegistryDatabase(NativeDatabase.memory());
-        addTearDown(registry.close);
-
-        await registry.addAccount(
-          DeviceAccountsCompanion.insert(
-            accountId: 'acc-local',
-            email: 'local@test.local',
-            displayName: 'Local',
-            tier: 'localBorn',
-            dbFileName: 'user_acc_local.db',
-            createdAt: DateTime.utc(2026, 1, 1),
-            lastUsedAt: DateTime.utc(2026, 1, 1),
-          ),
-        );
-
-        await registry.updateAccountTier(
-          'acc-local',
-          'cloudBorn',
-          firebaseUid: 'new-fb-uid',
-        );
-
-        final updated = await registry.findById('acc-local');
-        expect(updated!.tier, 'cloudBorn');
-        expect(updated.firebaseUid, 'new-fb-uid');
-      });
-
-      test('AC3: cloud-born account has isLocalBorn == false, the flag '
-          'the upgrade button is gated on', () {
-        const cloudState = AuthState.signedIn(
-          user: AuthUser(
-            profileId: 1,
-            email: 'cloud@test.local',
-            displayName: 'Cloud',
-            firebaseUid: 'fb-1',
-          ),
-          tier: Tier.cloudBorn,
-        );
-        // This domain-layer test verifies the flag itself. The upgrade
-        // button is only rendered `if (isLocalAuth)` in
-        // BackupSyncSection._buildLocalOnlyCard, where `isLocalAuth:
-        // authState.isLocalBorn` -- see backup_sync_section.dart. That
-        // conditional render is covered by code review of
-        // BackupSyncSection, not by this test.
-        expect(cloudState.isLocalBorn, isFalse);
       });
     });
 
@@ -683,125 +482,6 @@ void main() {
           );
         },
       );
-
-      test('AC5: local-born rejects removeCloudFromDevice', () async {
-        final registry = DeviceRegistryDatabase(NativeDatabase.memory());
-        addTearDown(registry.close);
-
-        await registry.addAccount(
-          DeviceAccountsCompanion.insert(
-            accountId: 'acc-local',
-            email: 'local@test.local',
-            displayName: 'Local',
-            tier: 'localBorn',
-            dbFileName: 'user_acc_local.db',
-            createdAt: DateTime.utc(2026, 1, 1),
-            lastUsedAt: DateTime.utc(2026, 1, 1),
-          ),
-        );
-
-        final service = AccountLifecycleService(
-          registry: registry,
-          databasesPath: '/tmp',
-        );
-
-        expect(
-          () => service.removeCloudFromDevice('acc-local'),
-          throwsA(isA<StateError>()),
-        );
-      });
-    });
-
-    // ─── Story 21.14: Delete Local-Born Account ─────────────────
-    group('Story 21.14 — Delete Local Account', tags: ['story_21_14'], () {
-      test('AC2: deletion removes file + registry entry', () async {
-        final tempDir = await Directory.systemTemp.createTemp('epic21_test_');
-        addTearDown(() => tempDir.delete(recursive: true));
-        final registry = DeviceRegistryDatabase(NativeDatabase.memory());
-        addTearDown(registry.close);
-
-        await registry.addAccount(
-          DeviceAccountsCompanion.insert(
-            accountId: 'acc-local',
-            email: 'local@test.local',
-            displayName: 'Local',
-            tier: 'localBorn',
-            dbFileName: 'user_acc_local.db',
-            createdAt: DateTime.utc(2026, 1, 1),
-            lastUsedAt: DateTime.utc(2026, 1, 1),
-          ),
-        );
-
-        File('${tempDir.path}/user_acc_local.db').createSync();
-
-        final service = AccountLifecycleService(
-          registry: registry,
-          databasesPath: tempDir.path,
-        );
-
-        await service.deleteLocalAccount('acc-local');
-
-        expect(File('${tempDir.path}/user_acc_local.db').existsSync(), isFalse);
-        expect(await registry.findById('acc-local'), isNull);
-        expect(await registry.getAllAccounts(), isEmpty);
-      });
-
-      test('AC5: deletion works offline (no network calls)', () async {
-        final tempDir = await Directory.systemTemp.createTemp('epic21_test_');
-        addTearDown(() => tempDir.delete(recursive: true));
-        final registry = DeviceRegistryDatabase(NativeDatabase.memory());
-        addTearDown(registry.close);
-
-        await registry.addAccount(
-          DeviceAccountsCompanion.insert(
-            accountId: 'acc-local',
-            email: 'local@test.local',
-            displayName: 'Local',
-            tier: 'localBorn',
-            dbFileName: 'user_acc_local.db',
-            createdAt: DateTime.utc(2026, 1, 1),
-            lastUsedAt: DateTime.utc(2026, 1, 1),
-          ),
-        );
-
-        File('${tempDir.path}/user_acc_local.db').createSync();
-
-        final service = AccountLifecycleService(
-          registry: registry,
-          databasesPath: tempDir.path,
-        );
-
-        await service.deleteLocalAccount('acc-local');
-        expect(await registry.getAllAccounts(), isEmpty);
-      });
-
-      test('cloud-born rejects deleteLocalAccount', () async {
-        final registry = DeviceRegistryDatabase(NativeDatabase.memory());
-        addTearDown(registry.close);
-
-        await registry.addAccount(
-          DeviceAccountsCompanion.insert(
-            accountId: 'acc-cloud',
-            email: 'cloud@test.local',
-            displayName: 'Cloud',
-            tier: 'cloudBorn',
-            firebaseUid: const Value('fb-uid'),
-            dbFileName: 'user_acc_cloud.db',
-            createdAt: DateTime.utc(2026, 1, 1),
-            lastUsedAt: DateTime.utc(2026, 1, 1),
-          ),
-        );
-
-        final service = AccountLifecycleService(
-          registry: registry,
-          databasesPath: '/tmp',
-        );
-
-        expect(
-          () => service.deleteLocalAccount('acc-cloud'),
-          throwsA(isA<StateError>()),
-        );
-      });
     });
 
     // ─── Story 21.15: Delete Cloud Account (service contract) ───
@@ -857,7 +537,7 @@ void main() {
               accountId: 'acc-lifecycle',
               email: 'lifecycle@test.local',
               displayName: 'Lifecycle',
-              tier: 'localBorn',
+              tier: 'cloudBorn',
               dbFileName: 'user_acc_lifecycle.db',
               createdAt: DateTime.utc(2026, 1, 1),
               lastUsedAt: DateTime.utc(2026, 1, 1),
@@ -893,7 +573,8 @@ void main() {
               accountId: id,
               email: '$id@test.local',
               displayName: id,
-              tier: 'localBorn',
+              tier: 'cloudBorn',
+              firebaseUid: Value('fb-$id'),
               dbFileName: 'user_acc_$id.db',
               createdAt: DateTime.utc(2026, 1, 1),
               lastUsedAt: DateTime.utc(2026, 1, 1),
@@ -907,7 +588,7 @@ void main() {
           registry: registry,
           databasesPath: tempDir.path,
         );
-        await lifecycleService.deleteLocalAccount('acc-a');
+        await lifecycleService.removeCloudFromDevice('acc-a');
         await sessionService.clearActiveAccount();
 
         // Resolve should fall back to acc-b
@@ -925,7 +606,7 @@ void main() {
         // must leave both accounts' registry entries and Drift data intact.
         // This domain-layer test verifies the data-persistence side of the
         // invariant — the UI enforcement (no signOut() call) is covered by
-        // code review of account_picker_screen.dart:_activateLocalAccountFromLocalData.
+        // code review of account_picker_screen.dart:_activateCloudAccountFromLocalData.
 
         test(
           'switching active account leaves both accounts in registry',
@@ -956,7 +637,7 @@ void main() {
                 accountId: 'acc-bob',
                 email: 'bob@test.local',
                 displayName: 'Bob',
-                tier: 'localBorn',
+                tier: 'cloudBorn',
                 dbFileName: 'user_acc_bob.db',
                 createdAt: DateTime.utc(2026, 1, 2),
                 lastUsedAt: DateTime.utc(2026, 1, 2),
@@ -1017,7 +698,7 @@ void main() {
                   accountId: id,
                   email: '$id@test.local',
                   displayName: id,
-                  tier: 'localBorn',
+                  tier: 'cloudBorn',
                   dbFileName: 'user_$id.db',
                   createdAt: DateTime.utc(2026, 1, 1),
                   lastUsedAt: DateTime.utc(2026, 1, 1),
