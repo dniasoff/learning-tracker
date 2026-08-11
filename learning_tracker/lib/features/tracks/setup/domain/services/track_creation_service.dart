@@ -116,12 +116,13 @@ class TrackCreationService {
       );
     }
 
-    // TODO(task-4): point-config seeding (per-curriculum point overrides)
-    // was dropped from this rewrite — it's explicitly task #4's territory
-    // ("Restore per-curriculum point overrides", owner-approved). The old
-    // Drift _seedPointConfigsIfNeeded is not translated here; a child
-    // profile's track currently gets no seeded point-config row until that
-    // task lands.
+    // Point-config seeding (Drift's _seedPointConfigsIfNeeded) is
+    // deliberately NOT translated here, or anywhere: point_configs is
+    // configuration-shaped (D-E) — an absent override document truthfully
+    // means "use FirestorePointConfigRepository.defaultPointsForStage's
+    // ladder", so a track with no seeded point-config row is the correct,
+    // intended steady state, not a gap to close. See that repository
+    // class's doc comment ("nothing is ever seeded").
 
     // Program enrolment — set or clear.
     if (result.programId == null) {

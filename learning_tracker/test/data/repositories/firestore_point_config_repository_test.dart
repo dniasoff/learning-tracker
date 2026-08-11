@@ -4,10 +4,11 @@
 /// `FirestoreStageDefinitionRepository` pattern (composite `curriculum_id`
 /// + `stage_order` key); see that repository's own test file for the
 /// pattern this mirrors. Covers: doc-id correctness, the query shape,
-/// model round-trip, `getPointsForStage`'s present/absent cases,
-/// `upsertConfig`, `ensureDefaultConfigs`' idempotent seed-only-missing
-/// behavior, and decode-failure leniency (skip one bad document, not the
-/// whole read).
+/// model round-trip, `getPointsForStage`'s present/absent/decode-failure
+/// cases (D-E: the single-doc read PROPAGATES a decode failure — Branch C
+/// — unlike the list read's per-document leniency below), `upsertConfig`'s
+/// 1..100 range assertion, `clearOverride`, and the list read's
+/// decode-failure leniency (skip one bad document, not the whole read).
 ///
 /// TQ-6: no wall clock, no shared global state — every test builds its own
 /// fake Firestore instance.
@@ -144,6 +145,32 @@ void main() {
 
       expect(points, isNull);
     });
+
+    test(
+      'PROPAGATES a decode failure instead of returning null (D-E Branch '
+      'C) — a single-doc read has no other document to fall back to, so '
+      'swallowing this would be indistinguishable from "no override"',
+      () async {
+        final repo = buildRepo();
+        await repo.upsertConfig(
+          curriculumId: CurriculumId.mishnayos,
+          stageOrder: 1,
+          points: 10,
+        );
+        await rawDoc(
+          curriculumId: CurriculumId.mishnayos,
+          stageOrder: 1,
+        ).update({'curriculum_id': 'not-a-real-curriculum'});
+
+        expect(
+          () => repo.getPointsForStage(
+            curriculumId: CurriculumId.mishnayos,
+            stageOrder: 1,
+          ),
+          throwsA(isA<ArgumentError>()),
+        );
+      },
+    );
   });
 
   group('upsertConfig — update path', () {
@@ -169,64 +196,99 @@ void main() {
     });
   });
 
-  group('ensureDefaultConfigs — seeds only missing stages', () {
-    test('seeds the default ladder when no overrides exist', () async {
+  group('upsertConfig — range validation', () {
+    test('throws ArgumentError for points below the minimum (0)', () {
       final repo = buildRepo();
-
-      await repo.ensureDefaultConfigs(
-        curriculumId: CurriculumId.mishnayos,
-        stageOrders: [1, 2, 3],
+      expect(
+        () => repo.upsertConfig(
+          curriculumId: CurriculumId.mishnayos,
+          stageOrder: 1,
+          points: 0,
+        ),
+        throwsA(isA<ArgumentError>()),
       );
-
-      final configs = await repo.getConfigsForCurriculum(
-        CurriculumId.mishnayos,
-      );
-      expect(configs, hasLength(3));
-      final byOrder = {for (final c in configs) c.stageOrder: c.points};
-      expect(byOrder[1], defaultPointsForStage(1));
-      expect(byOrder[2], defaultPointsForStage(2));
-      expect(byOrder[3], defaultPointsForStage(3));
     });
 
-    test('leaves an existing override untouched and only fills the gap', () async {
+    test('throws ArgumentError for points above the maximum (101)', () {
       final repo = buildRepo();
-      await repo.upsertConfig(
-        curriculumId: CurriculumId.mishnayos,
-        stageOrder: 1,
-        points: 999, // a parent-configured override
+      expect(
+        () => repo.upsertConfig(
+          curriculumId: CurriculumId.mishnayos,
+          stageOrder: 1,
+          points: 101,
+        ),
+        throwsA(isA<ArgumentError>()),
       );
-
-      await repo.ensureDefaultConfigs(
-        curriculumId: CurriculumId.mishnayos,
-        stageOrders: [1, 2],
-      );
-
-      final configs = await repo.getConfigsForCurriculum(
-        CurriculumId.mishnayos,
-      );
-      final byOrder = {for (final c in configs) c.stageOrder: c.points};
-      expect(byOrder[1], 999, reason: 'existing override must survive');
-      expect(byOrder[2], defaultPointsForStage(2));
     });
 
-    test('is a no-op when every stage already has an override', () async {
+    test('accepts the boundary values 1 and 100', () async {
       final repo = buildRepo();
       await repo.upsertConfig(
         curriculumId: CurriculumId.mishnayos,
         stageOrder: 1,
         points: 1,
       );
+      await repo.upsertConfig(
+        curriculumId: CurriculumId.bavli,
+        stageOrder: 1,
+        points: 100,
+      );
 
-      await repo.ensureDefaultConfigs(
+      expect(
+        await repo.getPointsForStage(
+          curriculumId: CurriculumId.mishnayos,
+          stageOrder: 1,
+        ),
+        1,
+      );
+      expect(
+        await repo.getPointsForStage(
+          curriculumId: CurriculumId.bavli,
+          stageOrder: 1,
+        ),
+        100,
+      );
+    });
+  });
+
+  group('clearOverride', () {
+    test('deletes the doc so getPointsForStage reports no override again', () async {
+      final repo = buildRepo();
+      await repo.upsertConfig(
         curriculumId: CurriculumId.mishnayos,
-        stageOrders: [1],
+        stageOrder: 1,
+        points: 25,
+      );
+
+      await repo.clearOverride(
+        curriculumId: CurriculumId.mishnayos,
+        stageOrder: 1,
+      );
+
+      final points = await repo.getPointsForStage(
+        curriculumId: CurriculumId.mishnayos,
+        stageOrder: 1,
+      );
+      expect(points, isNull);
+      final snapshot = await rawDoc(
+        curriculumId: CurriculumId.mishnayos,
+        stageOrder: 1,
+      ).get();
+      expect(snapshot.exists, isFalse);
+    });
+
+    test('is a no-op when no override exists', () async {
+      final repo = buildRepo();
+
+      await repo.clearOverride(
+        curriculumId: CurriculumId.mishnayos,
+        stageOrder: 1,
       );
 
       final configs = await repo.getConfigsForCurriculum(
         CurriculumId.mishnayos,
       );
-      expect(configs, hasLength(1));
-      expect(configs.single.points, 1);
+      expect(configs, isEmpty);
     });
   });
 

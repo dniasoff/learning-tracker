@@ -47,14 +47,14 @@ import 'package:learning_tracker/features/learning/domain/services/completion_or
 ///
 /// Behaviour changes from the Drift original (each deliberate, none a
 /// fabrication or a silent skip):
-///   1. `point_configs` row lookup is GONE — there is no Firestore
-///      `point_configs` table (it was a Drift-only table, retired with the
-///      user DB). The original fell back to its hardcoded ladder anyway
-///      whenever no config row existed; this adapter applies that ladder
-///      directly, preserving the `Learn=10, Chazara1=5, Chazara2=3, else 1`
-///      values verbatim. Per-curriculum point overrides therefore no longer
-///      apply on the Firestore path — a real `point_configs` Firestore table
-///      would be the separate task to restore them.
+///   1. `point_configs` row lookup now goes through
+///      `firestorePointConfigRepositoryProvider`
+///      (`FirestorePointConfigRepository`, Phase 3 task #4) — a real
+///      Firestore-backed override, not the Drift table. See
+///      [calculatePoints]'s own inline comment for the D-E branch contract
+///      (repository-not-ready THROWS; an absent override document falls
+///      back to `pointsForStage`'s `Learn=10, Chazara1=5, Chazara2=3, else
+///      1` ladder, preserved verbatim from the Drift original).
 ///   2. `creditCompletion`'s fire-and-forget `SyncWriteFacade` gamification-
 ///      settings snapshot push is dropped: `SyncWriteFacade` is deleted, and
 ///      the migratory successors (`FirestoreCompletionStreakRecorder` in this
@@ -114,9 +114,16 @@ class FirestoreCompletionPointsAwarder implements CompletionPointsPort {
       // silently not happening. A warning log does not close it — nothing
       // downstream can distinguish "earned nothing" from "we could not tell".
       //
-      // Safe to throw: `CompletionOrchestrator._safeStep` wraps this call, so
-      // the already-durable completion write is not rolled back; only the
-      // missed credit is surfaced.
+      // NOT safe-to-throw the way `creditCompletion` below is:
+      // `calculatePoints` runs at `completion_orchestrator.dart:230`/`:344`,
+      // BEFORE the completion write and NOT wrapped in `_safeStep` (which
+      // only wraps `_creditPointsIfAny`, the `creditCompletion` call). This
+      // throw therefore aborts the whole `markComplete`/`bulkMarkComplete`
+      // — the completion is never recorded at all. That is the correct
+      // trade under D-E (a loud, retriable failure beats an invisible,
+      // permanent under-credit), but callers must not assume the
+      // already-durable-write framing `creditCompletion`'s comment below
+      // uses.
       throw UnsupportedError(
         'FirestoreCompletionPointsAwarder.calculatePoints: cannot determine '
         'the award for profileId=$profileId — '
@@ -160,16 +167,38 @@ class FirestoreCompletionPointsAwarder implements CompletionPointsPort {
     if (!hasGoal) return 0;
 
     // --- Point value: configured override, falling back to the default
-    // ladder (Phase 3 task #4). Configuration-shaped (D-E): a not-ready
-    // point-configs repository or an absent override for this
-    // (curriculum, stage) both fall back to pointsForStage — the SAME
-    // fallback the codebase has always used, so a not-yet-configured or
-    // not-yet-reachable override never blocks or under/over-awards a
-    // completion.
+    // ladder (Phase 3 task #4). D-E, branch-granularity:
+    //   Branch A — pointConfigRepository resolves null (not ready): THROW.
+    //     Same reasoning as the profile/goal gates above — control is
+    //     already past both, so an active account and profile are provably
+    //     present and a null repository here is contradictory, not empty.
+    //     Falling back to the ladder would silently under-credit a child
+    //     whose parent set an override — and PERMANENTLY: the returned
+    //     value is stamped into the completion doc's `points` AND into the
+    //     points_ledger delta, and neither is ever recomputed. Nothing
+    //     downstream can distinguish "no override was ever set" from "we
+    //     could not read the overrides".
+    //   Branch B — repository resolved, no document for this
+    //     (curriculum, stage): return pointsForStage(stageOrder). This IS
+    //     the configuration branch — absence of a doc truthfully means
+    //     "this parent never set an override".
+    //   Branch C — the read itself fails (permission-denied, offline
+    //     error, malformed document): PROPAGATES out of
+    //     getPointsForStage (that method does not catch a single-doc decode
+    //     failure — see its own doc comment). Same reasoning as Branch A.
     final pointConfigRepository = await _ref.read(
       firestorePointConfigRepositoryProvider.future,
     );
-    final configured = await pointConfigRepository?.getPointsForStage(
+    if (pointConfigRepository == null) {
+      throw UnsupportedError(
+        'FirestoreCompletionPointsAwarder.calculatePoints: the '
+        'point_configs repository resolved to null while computing an '
+        'award for curriculumId=$curriculumId, profileId=$profileId; '
+        'refusing to silently fall back to the default ladder when a '
+        'configured override could not be read.',
+      );
+    }
+    final configured = await pointConfigRepository.getPointsForStage(
       curriculumId: curriculum,
       stageOrder: stageOrder,
     );

@@ -52,15 +52,19 @@ class FirestorePointConfigRepositoryAdapter {
     );
   }
 
-  Future<void> ensureDefaultConfigs({
+  Future<void> clearOverride({
     required CurriculumId curriculumId,
-    required List<int> stageOrders,
+    required int stageOrder,
   }) async {
     final repo = await _ref.read(firestorePointConfigRepositoryProvider.future);
-    if (repo == null) return;
-    await repo.ensureDefaultConfigs(
-      curriculumId: curriculumId,
-      stageOrders: stageOrders,
-    );
+    if (repo == null) {
+      throw StateError(
+        'FirestorePointConfigRepositoryAdapter.clearOverride: '
+        'firestorePointConfigRepositoryProvider resolved to null (no '
+        'active account, or no active learner profile, yet) — refusing to '
+        'silently drop a parent-entered point-value edit.',
+      );
+    }
+    await repo.clearOverride(curriculumId: curriculumId, stageOrder: stageOrder);
   }
 }

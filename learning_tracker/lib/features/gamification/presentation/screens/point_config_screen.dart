@@ -1,4 +1,3 @@
-import 'dart:async' show unawaited;
 import 'dart:math' as math;
 
 import 'package:auto_route/auto_route.dart';
@@ -11,7 +10,7 @@ import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/empty_state.dart';
 import 'package:learning_tracker/data/repositories/firestore_point_config_repository.dart'
-    show defaultPointsForStage;
+    show defaultPointsForStage, kMaxPointConfigPoints, kMinPointConfigPoints;
 import 'package:learning_tracker/features/gamification/data/repositories/point_config_repository_impl.dart';
 import 'package:learning_tracker/features/gamification/domain/models/point_config.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart';
@@ -67,20 +66,22 @@ _StagePointConfig _primaryStageRow(_TrackPointData data) {
   );
 }
 
-/// SM-2 (AUD-gamification-03): a pure read of the current point-config rows
-/// for every active track. Stage-definition seeding and default PointConfig
-/// seeding used to happen inline here as a side effect of simply watching
-/// this provider (on every rebuild, e.g. whenever [activeTracksProvider]
-/// emits) -- that write/sync-push work now lives exclusively in
-/// [PointConfigMaintenanceController.seedMissingDefaultsIfNeeded], invoked
-/// explicitly once from [PointConfigScreen]'s `initState`.
+/// A pure read of the current point-config rows for every active track.
+/// Nothing is ever seeded here or anywhere else in this file (D-E:
+/// `point_configs` is configuration-shaped — a missing override document
+/// truthfully means "this parent never set one", not "not ready yet"; see
+/// `FirestorePointConfigRepository`'s class-level doc comment). Stage
+/// definitions are seeded once, on track creation, by
+/// `TrackCreationService.createTrack` → `LearningProcessWizardService
+/// .applyWizardResult` -- every active track reaching this screen already
+/// has them.
 ///
-/// A track whose stage definitions haven't been seeded yet (or a stage
-/// whose PointConfig row hasn't been seeded yet) is rendered with an
-/// in-memory-only default (`PointConfig(id: -1, ...)`, never persisted) so
-/// the screen still has something sensible to show/edit before the
-/// maintenance action's write lands; `_savePending`'s upsert doesn't read
-/// `.id`, so editing a synthetic default round-trips correctly.
+/// A stage with no override document is rendered with an in-memory-only
+/// default (`defaultPointsForStage`, never persisted) so the screen has
+/// something sensible to show/edit; `_savePending`'s upsert doesn't read an
+/// id, so editing a synthetic default round-trips correctly, and saving the
+/// ladder's own value back clears the (nonexistent) override instead of
+/// pinning it.
 final pointConfigDataProvider = FutureProvider.autoDispose<List<_TrackPointData>>(
   (ref) async {
     final activeTracks = await ref.watch(activeTracksProvider.future);
@@ -92,8 +93,9 @@ final pointConfigDataProvider = FutureProvider.autoDispose<List<_TrackPointData>
 
       final stageRepo = ref.read(stageDefinitionRepositoryProvider(curriculum));
       final stages = await stageRepo.getStagesForCurriculum(curriculum);
-      // Nothing to show yet -- the maintenance action seeds this track's
-      // stage definitions and will invalidate this provider once it does.
+      // A track legitimately has no stage definitions yet only in the
+      // narrow window mid-creation before applyWizardResult lands -- skip
+      // it rather than fabricate rows for stages that do not exist.
       if (stages.isEmpty) continue;
 
       final configs = await pointConfigRepo.getConfigsForCurriculum(curriculum);
@@ -122,66 +124,6 @@ final pointConfigDataProvider = FutureProvider.autoDispose<List<_TrackPointData>
   },
 );
 
-// ─── Maintenance action (AUD-gamification-03) ──────────────────────────────
-
-/// One-shot, idempotent action that seeds any missing stage definitions and
-/// default [PointConfig] rows for the active profile's active tracks, then
-/// pushes the updated snapshot if anything was actually written.
-///
-/// SM-2: this is the ONLY place `pointConfigDataProvider`'s former inline
-/// seeding writes now happen. It must be invoked explicitly (see
-/// [PointConfigScreen]'s `initState`) -- never as a side effect of watching
-/// a read provider.
-class PointConfigMaintenanceController extends Notifier<void> {
-  @override
-  void build() {}
-
-  Future<void> seedMissingDefaultsIfNeeded() async {
-    final activeTracks = await ref.read(activeTracksProvider.future);
-    final pointConfigRepo = ref.read(_pointConfigRepositoryProvider);
-
-    var wrote = false;
-    for (final track in activeTracks) {
-      final curriculum = track.curriculumId;
-
-      final stageRepo = ref.read(stageDefinitionRepositoryProvider(curriculum));
-      var stages = await stageRepo.getStagesForCurriculum(curriculum);
-      if (stages.isEmpty) {
-        // profileId/trackId are both vestigial on this call — the
-        // resolved repository is already profile-scoped, and AD-25
-        // makes curriculumId the sole canonical track key (see
-        // FirestoreStageDefinitionRepositoryAdapter.initializeDefaults's
-        // own doc comment).
-        await stageRepo.initializeDefaults(curriculum, profileId: 0, trackId: 0);
-        stages = await stageRepo.getStagesForCurriculum(curriculum);
-        wrote = true;
-      }
-      if (stages.isEmpty) continue;
-
-      final beforeCount =
-          (await pointConfigRepo.getConfigsForCurriculum(curriculum)).length;
-      await pointConfigRepo.ensureDefaultConfigs(
-        curriculumId: curriculum,
-        stageOrders: [for (final s in stages) s.stageOrder],
-      );
-      final afterCount =
-          (await pointConfigRepo.getConfigsForCurriculum(curriculum)).length;
-      if (afterCount > beforeCount) wrote = true;
-    }
-
-    if (!wrote) return;
-    // SM-4: the screen that triggered this can be disposed while the seeding
-    // writes above are in flight.
-    if (!ref.mounted) return;
-    ref.invalidate(pointConfigDataProvider);
-  }
-}
-
-final pointConfigMaintenanceControllerProvider =
-    NotifierProvider<PointConfigMaintenanceController, void>(
-      PointConfigMaintenanceController.new,
-    );
-
 @RoutePage()
 class PointConfigScreen extends ConsumerStatefulWidget {
   const PointConfigScreen({super.key});
@@ -196,25 +138,6 @@ class _PointConfigScreenState extends ConsumerState<PointConfigScreen> {
   /// this map on any more).
   final Map<CurriculumId, int> _pendingPrimaryByCurriculum = {};
   bool _saving = false;
-
-  @override
-  void initState() {
-    super.initState();
-    // SM-2 (AUD-gamification-03): pointConfigDataProvider is a pure read;
-    // the one-shot default-seeding write is triggered explicitly here
-    // instead. Deferred to post-frame + mounted-checked, matching the
-    // established bootstrap() pattern in reward_configuration_screen.dart
-    // (calling it synchronously during initState/build trips Riverpod's
-    // "modify a provider while the widget tree was building").
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      unawaited(
-        ref
-            .read(pointConfigMaintenanceControllerProvider.notifier)
-            .seedMissingDefaultsIfNeeded(),
-      );
-    });
-  }
 
   int _effectivePrimaryPoints(_TrackPointData data) {
     final pending = _pendingPrimaryByCurriculum[data.curriculum];
@@ -235,11 +158,22 @@ class _PointConfigScreenState extends ConsumerState<PointConfigScreen> {
         final pending = _pendingPrimaryByCurriculum[track.curriculum];
         if (pending == null) continue;
         final primary = _primaryStageRow(track);
-        await pointConfigRepo.upsertConfig(
-          curriculumId: track.curriculum,
-          stageOrder: primary.stage.stageOrder,
-          points: pending,
-        );
+        // Saving back the ladder's own default clears the override instead
+        // of pinning it as a doc that would no longer track the ladder if
+        // it ever changes (see FirestorePointConfigRepository.clearOverride's
+        // doc comment).
+        if (pending == defaultPointsForStage(primary.stage.stageOrder)) {
+          await pointConfigRepo.clearOverride(
+            curriculumId: track.curriculum,
+            stageOrder: primary.stage.stageOrder,
+          );
+        } else {
+          await pointConfigRepo.upsertConfig(
+            curriculumId: track.curriculum,
+            stageOrder: primary.stage.stageOrder,
+            points: pending,
+          );
+        }
       }
 
       if (mounted) {
@@ -268,7 +202,10 @@ class _PointConfigScreenState extends ConsumerState<PointConfigScreen> {
 
   void _bumpPrimary(_TrackPointData data, int delta) {
     final current = _effectivePrimaryPoints(data);
-    final next = math.max(1, math.min(9999, current + delta));
+    final next = math.max(
+      kMinPointConfigPoints,
+      math.min(kMaxPointConfigPoints, current + delta),
+    );
     setState(() => _pendingPrimaryByCurriculum[data.curriculum] = next);
   }
 

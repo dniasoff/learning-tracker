@@ -1,334 +1,231 @@
-/// Tests for [DriftCompletionPointsAwarder] — the Drift-backed
-/// [CompletionPointsPort] implementation.
+/// Unit tests for [FirestoreCompletionPointsAwarder] — the Firestore-backed
+/// [CompletionPointsPort] implementation `CompletionOrchestrator` is wired
+/// against today.
 ///
-/// Relocated from `CompletionRepositoryImpl.markComplete`'s inline points
-/// calculation as part of the completion-orchestrator lift
-/// (`docs/firestore-rewrite-map.md`, owner decision 1): child-profile
-/// gating, track reward-eligibility, and the `point_configs`
-/// lookup-with-fallback-ladder all lived there before; they live only here
-/// now — see [CompletionPointsPort]'s doc comment for why the repository no
-/// longer knows about points at all.
+/// Replaces the Drift-era `DriftCompletionPointsAwarder` test file (removed:
+/// that class, `UserDatabase`, and `SyncWriteFacade` no longer exist —
+/// `docs/firestore-rewrite-map.md`, owner decision 1). This file focuses on
+/// `calculatePoints`' point-value branch (D-E, `docs/planning/phase3-wave-
+/// plan.md`'s point_configs restoration spec):
+///   Branch A — `firestorePointConfigRepositoryProvider` resolves null: THROW.
+///   Branch B — resolved, no override document: fall back to the ladder.
+///   configured — resolved, override document present: return it.
+/// plus the pre-existing child-profile / reward-eligibility gates.
 library;
 
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/core/sync/sync_write_facade.dart';
-import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
-import 'package:learning_tracker/features/learning/data/completion_points_awarder.dart';
-import 'package:mocktail/mocktail.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
+import 'package:learning_tracker/data/firestore/repository_providers.dart';
+import 'package:learning_tracker/data/repositories/firestore_goal_repository.dart';
+import 'package:learning_tracker/data/repositories/firestore_learner_profile_repository.dart';
+import 'package:learning_tracker/data/repositories/firestore_point_config_repository.dart';
+import 'package:learning_tracker/features/learning/data/repositories/completion_points_awarder.dart';
+import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 
-import '../../../helpers/drift_memory.dart';
+import '../../../helpers/firestore_fake.dart';
 
-class _MockSyncEngine extends Mock implements SyncWriteFacade {}
+const _uid = 'uid-1';
+const _profileId = 'profile-ulid-1';
+
+/// [FirestoreCompletionPointsAwarder] takes a [Ref], not a [WidgetRef] or a
+/// bare [ProviderContainer] — wrapping it in a top-level provider and
+/// reading it back is the established pattern for handing a real `Ref` to a
+/// `Ref`-only constructor from a test (mirrors
+/// `firestore_streak_state_repository_test.dart`'s `adapterProvider`).
+final _awarderProvider = Provider<FirestoreCompletionPointsAwarder>(
+  (ref) => FirestoreCompletionPointsAwarder(ref: ref),
+);
 
 void main() {
-  late UserDatabase db;
-  late DriftCompletionPointsAwarder awarder;
-  late _MockSyncEngine syncEngine;
+  late FakeFirebaseFirestore firestore;
 
-  RewardMilestoneService rewardServiceFor(int profileId) =>
-      RewardMilestoneService(db, profileId: profileId);
-
-  setUp(() async {
-    db = inMemoryDb();
-    addTearDown(db.close);
-    syncEngine = _MockSyncEngine();
-    when(
-      () => syncEngine.pushGamificationSettingsSnapshot(),
-    ).thenAnswer((_) async {});
-    awarder = DriftCompletionPointsAwarder(
-      database: db,
-      rewardMilestoneServiceFactory: rewardServiceFor,
-      syncEngine: syncEngine,
-    );
+  setUp(() {
+    firestore = createFakeFirestore(authenticatedUid: _uid);
   });
 
-  /// Seeds an account + a profile (child or adult) + a reward-eligible
-  /// curriculum track (a Goal row makes `trackCountsTowardRewardPoints`
-  /// return true). Returns the profile id.
-  Future<int> seedEligibleProfile({required String mode}) async {
-    final now = DateTime.utc(2026, 6, 1);
-    final accountId = await db
-        .into(db.accounts)
-        .insert(
-          AccountsCompanion.insert(
-            email: 'test@example.com',
-            tier: 'localBorn',
-            displayName: 'Test',
-            createdAt: now,
-            updatedAt: now,
-          ),
-        );
-    final profile = await db
-        .into(db.learnerProfiles)
-        .insertReturning(
-          LearnerProfilesCompanion.insert(
-            accountId: accountId,
-            displayName: 'Test',
-            mode: mode,
-            createdAt: now,
-            updatedAt: now,
-          ),
-        );
-    final track = await db
-        .into(db.curriculumTracks)
-        .insertReturning(
-          CurriculumTracksCompanion.insert(
-            profileId: profile.id,
-            curriculumId: 'mishnayos',
-            stateChangedAt: now,
-            activatedAt: now,
-          ),
-        );
-    await db
-        .into(db.goals)
-        .insert(
-          GoalsCompanion.insert(
-            profileId: profile.id,
-            curriculumId: 'mishnayos',
-            trackId: track.id,
-            createdAt: now,
-            updatedAt: now,
-          ),
-        );
-    return profile.id;
+  Future<void> seedProfile({required ProfileMode mode}) async {
+    final now = DateTimeFactory.nowUtc();
+    final profile = LearnerProfileEntity(
+      profileId: _profileId,
+      displayName: 'Test',
+      mode: mode,
+      createdAt: now,
+      updatedAt: now,
+    );
+    await firestore
+        .collection('users')
+        .doc(_uid)
+        .collection('learner_profiles')
+        .doc(_profileId)
+        .set(profile.toFirestore());
   }
 
-  group('calculatePoints', () {
-    test('returns 0 for an adult profile — points are child-only', () async {
-      final profileId = await seedEligibleProfile(mode: 'adult');
+  Future<void> seedGoal(CurriculumId curriculumId) async {
+    await FirestoreGoalRepository(
+      firestore: firestore,
+      uid: _uid,
+      profileId: _profileId,
+    ).createGoal(curriculumId: curriculumId, targetPercent: 100);
+  }
 
-      final points = await awarder.calculatePoints(
-        curriculumId: 'mishnayos',
-        stageOrder: 1,
-        profileId: profileId,
-      );
-
-      expect(points, 0);
-    });
-
-    test('returns 0 for a child profile on a non-reward-eligible track '
-        '(no program, no goal)', () async {
-      final now = DateTime.utc(2026, 6, 1);
-      final accountId = await db
-          .into(db.accounts)
-          .insert(
-            AccountsCompanion.insert(
-              email: 'test@example.com',
-              tier: 'localBorn',
-              displayName: 'Test',
-              createdAt: now,
-              updatedAt: now,
-            ),
-          );
-      final profile = await db
-          .into(db.learnerProfiles)
-          .insertReturning(
-            LearnerProfilesCompanion.insert(
-              accountId: accountId,
-              displayName: 'Test',
-              mode: 'child',
-              createdAt: now,
-              updatedAt: now,
-            ),
-          );
-      // Track exists but has no Goal / ProfileProgram row — a
-      // momentum-only/browse track.
-      await db
-          .into(db.curriculumTracks)
-          .insert(
-            CurriculumTracksCompanion.insert(
-              profileId: profile.id,
-              curriculumId: 'mishnayos',
-              stateChangedAt: now,
-              activatedAt: now,
-            ),
-          );
-
-      final points = await awarder.calculatePoints(
-        curriculumId: 'mishnayos',
-        stageOrder: 1,
-        profileId: profile.id,
-      );
-
-      expect(points, 0);
-    });
-
-    test('returns 0 (not a thrown StateError) when the curriculum track does '
-        'not exist at all', () async {
-      final now = DateTime.utc(2026, 6, 1);
-      final accountId = await db
-          .into(db.accounts)
-          .insert(
-            AccountsCompanion.insert(
-              email: 'test@example.com',
-              tier: 'localBorn',
-              displayName: 'Test',
-              createdAt: now,
-              updatedAt: now,
-            ),
-          );
-      final profile = await db
-          .into(db.learnerProfiles)
-          .insertReturning(
-            LearnerProfilesCompanion.insert(
-              accountId: accountId,
-              displayName: 'Test',
-              mode: 'child',
-              createdAt: now,
-              updatedAt: now,
-            ),
-          );
-
-      final points = await awarder.calculatePoints(
-        curriculumId: 'mishnayos',
-        stageOrder: 1,
-        profileId: profile.id,
-      );
-
-      expect(
-        points,
-        0,
-        reason:
-            'a missing track is "not eligible," not an error — the '
-            'write path (CompletionRepositoryImpl._resolveTrackId) is '
-            'still the one that throws StateError for a genuinely '
-            'missing track',
-      );
-    });
-
-    test('returns the default fallback ladder (10/5/3/1) for an eligible '
-        'child when no point_configs row exists', () async {
-      final profileId = await seedEligibleProfile(mode: 'child');
-
-      final stage1 = await awarder.calculatePoints(
-        curriculumId: 'mishnayos',
-        stageOrder: 1,
-        profileId: profileId,
-      );
-      final stage2 = await awarder.calculatePoints(
-        curriculumId: 'mishnayos',
-        stageOrder: 2,
-        profileId: profileId,
-      );
-      final stage3 = await awarder.calculatePoints(
-        curriculumId: 'mishnayos',
-        stageOrder: 3,
-        profileId: profileId,
-      );
-      final stage4 = await awarder.calculatePoints(
-        curriculumId: 'mishnayos',
-        stageOrder: 4,
-        profileId: profileId,
-      );
-
-      expect(stage1, 10, reason: 'Learn');
-      expect(stage2, 5, reason: 'Chazara 1');
-      expect(stage3, 3, reason: 'Chazara 2');
-      expect(stage4, 1, reason: 'any additional stage');
-    });
-
-    test('returns the configured point_configs value, overriding the default '
-        'ladder', () async {
-      final profileId = await seedEligibleProfile(mode: 'child');
-      final track = await (db.select(
-        db.curriculumTracks,
-      )..where((t) => t.profileId.equals(profileId))).getSingle();
-
-      await db.pointConfigDao.insertConfig(
-        PointConfigsCompanion.insert(
-          profileId: profileId,
-          curriculumId: 'mishnayos',
-          trackId: track.id,
-          stageOrder: 1,
-          points: 99,
+  /// Builds a real [FirestoreCompletionPointsAwarder] wired against
+  /// [firestore], with `firestorePointConfigRepositoryProvider` overridden
+  /// to [pointConfigRepo] (pass `null` to exercise Branch A) and
+  /// `firestoreGoalRepositoryProvider` overridden to [goalRepo] (defaults
+  /// to the real repository against the same fake instance).
+  FirestoreCompletionPointsAwarder buildAwarder({
+    FirestorePointConfigRepository? Function()? pointConfigRepo,
+    FirestoreGoalRepository? Function()? goalRepo,
+  }) {
+    final container = ProviderContainer(
+      overrides: [
+        firestoreLearnerProfileRepositoryProvider.overrideWith(
+          (ref) async => FirestoreLearnerProfileRepository(
+            firestore: firestore,
+            uid: _uid,
+          ),
         ),
-      );
+        firestoreGoalRepositoryProvider.overrideWith(
+          (ref) async =>
+              goalRepo?.call() ??
+              FirestoreGoalRepository(
+                firestore: firestore,
+                uid: _uid,
+                profileId: _profileId,
+              ),
+        ),
+        firestorePointConfigRepositoryProvider.overrideWith(
+          (ref) async =>
+              pointConfigRepo?.call() ??
+              FirestorePointConfigRepository(
+                firestore: firestore,
+                uid: _uid,
+                profileId: _profileId,
+              ),
+        ),
+      ],
+    );
+    container.read(activeProfileDocIdProvider.notifier).set(_profileId);
+    addTearDown(container.dispose);
+    return container.read(_awarderProvider);
+  }
+
+  group('calculatePoints — gates', () {
+    test('returns 0 for an adult profile — points are child-only', () async {
+      await seedProfile(mode: ProfileMode.adult);
+      await seedGoal(CurriculumId.mishnayos);
+      final awarder = buildAwarder();
 
       final points = await awarder.calculatePoints(
-        curriculumId: 'mishnayos',
+        curriculumId: CurriculumId.mishnayos.storageKey,
         stageOrder: 1,
-        profileId: profileId,
+        profileId: _profileId,
+      );
+
+      expect(points, 0);
+    });
+
+    test('returns 0 for a child profile with no goal for the curriculum '
+        '(not reward-eligible)', () async {
+      await seedProfile(mode: ProfileMode.child);
+      final awarder = buildAwarder();
+
+      final points = await awarder.calculatePoints(
+        curriculumId: CurriculumId.mishnayos.storageKey,
+        stageOrder: 1,
+        profileId: _profileId,
+      );
+
+      expect(points, 0);
+    });
+  });
+
+  group('calculatePoints — point value (D-E)', () {
+    test('returns the default fallback ladder (10/5/3/1) for an eligible '
+        'child when no point_configs override exists', () async {
+      await seedProfile(mode: ProfileMode.child);
+      await seedGoal(CurriculumId.mishnayos);
+      final awarder = buildAwarder();
+
+      final points = <int, int>{};
+      for (final stageOrder in [1, 2, 3, 4]) {
+        points[stageOrder] = await awarder.calculatePoints(
+          curriculumId: CurriculumId.mishnayos.storageKey,
+          stageOrder: stageOrder,
+          profileId: _profileId,
+        );
+      }
+
+      expect(points[1], 10, reason: 'Learn');
+      expect(points[2], 5, reason: 'Chazara 1');
+      expect(points[3], 3, reason: 'Chazara 2');
+      expect(points[4], 1, reason: 'any additional stage');
+    });
+
+    test('returns the configured point_configs override, not the ladder', () async {
+      await seedProfile(mode: ProfileMode.child);
+      await seedGoal(CurriculumId.mishnayos);
+      await FirestorePointConfigRepository(
+        firestore: firestore,
+        uid: _uid,
+        profileId: _profileId,
+      ).upsertConfig(
+        curriculumId: CurriculumId.mishnayos,
+        stageOrder: 1,
+        points: 99,
+      );
+      final awarder = buildAwarder();
+
+      final points = await awarder.calculatePoints(
+        curriculumId: CurriculumId.mishnayos.storageKey,
+        stageOrder: 1,
+        profileId: _profileId,
       );
 
       expect(points, 99);
     });
 
-    test('honors an injected rewardMilestoneServiceFactory over the real '
-        'Drift-backed service (AUD-learning-10)', () async {
-      final profileId = await seedEligibleProfile(mode: 'child');
-      final fakeReward = _FakeIneligibleRewardService();
-      final awarderWithFake = DriftCompletionPointsAwarder(
-        database: db,
-        rewardMilestoneServiceFactory: (profileId) => fakeReward,
-        syncEngine: syncEngine,
-      );
-
-      final points = await awarderWithFake.calculatePoints(
-        curriculumId: 'mishnayos',
-        stageOrder: 1,
-        profileId: profileId,
-      );
-
-      expect(
-        points,
-        0,
-        reason:
-            'the injected factory reports ineligible; the real Drift '
-            'service (which would see the seeded Goal and report '
-            'eligible=true) must not be consulted instead',
-      );
-    });
-  });
-
-  group('creditCompletion', () {
     test(
-      'credits the points balance and pushes the gamification snapshot',
+      'Branch A: THROWS instead of silently falling back to the ladder '
+      'when the point_configs repository resolves to null — a not-ready '
+      'backend is contradictory here (an active account/profile is '
+      'provably present), not "no override configured"',
       () async {
-        final profileId = await seedEligibleProfile(mode: 'child');
+        await seedProfile(mode: ProfileMode.child);
+        await seedGoal(CurriculumId.mishnayos);
+        final awarder = buildAwarder(pointConfigRepo: () => null);
 
-        await awarder.creditCompletion(
-          profileId: profileId,
-          points: 10,
-          note: 'test-note',
+        expect(
+          () => awarder.calculatePoints(
+            curriculumId: CurriculumId.mishnayos.storageKey,
+            stageOrder: 1,
+            profileId: _profileId,
+          ),
+          throwsA(isA<UnsupportedError>()),
         );
-
-        final balance = await db.pointsBalanceDao.getBalance(profileId);
-        expect(balance, 10);
-        // pushGamificationSettingsSnapshot is fire-and-forget
-        // (unawaited) inside creditCompletion — give the event loop a
-        // turn before verifying.
-        await Future<void>.delayed(Duration.zero);
-        verify(() => syncEngine.pushGamificationSettingsSnapshot()).called(1);
       },
     );
 
-    test('credits the balance even with no syncEngine wired (local-born '
-        'account) — no crash', () async {
-      final profileId = await seedEligibleProfile(mode: 'child');
-      final localAwarder = DriftCompletionPointsAwarder(
-        database: db,
-        rewardMilestoneServiceFactory: rewardServiceFor,
-      );
+    test(
+      'Branch A (goal repository): THROWS when the goal repository '
+      'resolves to null, same reasoning as the point_configs branch',
+      () async {
+        await seedProfile(mode: ProfileMode.child);
+        final awarder = buildAwarder(goalRepo: () => null);
 
-      await localAwarder.creditCompletion(
-        profileId: profileId,
-        points: 5,
-        note: 'test-note',
-      );
-
-      final balance = await db.pointsBalanceDao.getBalance(profileId);
-      expect(balance, 5);
-    });
+        expect(
+          () => awarder.calculatePoints(
+            curriculumId: CurriculumId.mishnayos.storageKey,
+            stageOrder: 1,
+            profileId: _profileId,
+          ),
+          throwsA(isA<UnsupportedError>()),
+        );
+      },
+    );
   });
-}
-
-class _FakeIneligibleRewardService implements RewardMilestoneService {
-  @override
-  Future<bool> trackCountsTowardRewardPoints(int trackId) async => false;
-
-  @override
-  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError(
-    '_FakeIneligibleRewardService only implements trackCountsTowardRewardPoints',
-  );
 }

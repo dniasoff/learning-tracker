@@ -419,16 +419,41 @@ service cloud.firestore {
         // two-part key stage_definitions uses (AD-25 collapses the old
         // Drift (profileId, trackId, curriculumId, stageOrder) key down to
         // this: profile is already the collection-path scope, and
-        // trackId == curriculumId). Deny delete like every other config
-        // collection in this file — an override is cleared by overwriting
-        // it back to a default value, not by removing the document.
+        // trackId == curriculumId).
+        //
+        // `points` is range-checked 1..100 on BOTH create and update:
+        // CompletionOrchestrator.markComplete stamps calculatePoints'
+        // result straight onto the completion document, and this same
+        // file's `completions.points <= 100` cap would otherwise
+        // PERMISSION_DENY every completion write for a stage whose
+        // override exceeds it.
+        //
+        // Unlike stage_definitions/study_day_configs, delete IS allowed:
+        // an attacker who can already set points to 1 via the
+        // owner-writable update gains no new attack surface from delete,
+        // and it is the only honest "remove the override, resume the
+        // client-side default ladder" operation (the client never
+        // overwrites an override back to the ladder's own value — see
+        // FirestorePointConfigRepository.clearOverride).
         match /point_configs/{configId} {
           allow read: if isOwner(uid) || hasActiveTutorAccess(uid, profileId);
-          allow create, update: if isOwner(uid)
+          allow create: if isOwner(uid)
             && request.resource.data.keys().hasOnly([
               'curriculum_id', 'stage_order', 'points', 'updated_at', 'synced_at'
-            ]);
-          allow delete: if false;
+            ])
+            && request.resource.data.stage_order is int
+            && request.resource.data.stage_order >= 1
+            && request.resource.data.points is int
+            && request.resource.data.points >= 1
+            && request.resource.data.points <= 100;
+          allow update: if isOwner(uid)
+            && request.resource.data.keys().hasOnly([
+              'curriculum_id', 'stage_order', 'points', 'updated_at', 'synced_at'
+            ])
+            && request.resource.data.points is int
+            && request.resource.data.points >= 1
+            && request.resource.data.points <= 100;
+          allow delete: if isOwner(uid);
         }
 
         match /curriculum_tracks/{trackId} {
