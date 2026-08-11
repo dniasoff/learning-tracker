@@ -23,6 +23,17 @@ abstract class StageDefinitionRepository {
     required int trackId,
   });
 
+  /// Overwrites a curriculum's full stage set with [stages] (already
+  /// ordered 1..N by the caller). See
+  /// FirestoreStageDefinitionRepository.replaceStagesForCurriculum's doc
+  /// comment for why a REDUCTION in stage count can leave orphaned
+  /// higher-order documents behind (Firestore denies delete on this
+  /// collection) -- flagged there, not silently diverged from.
+  Future<void> replaceStagesForCurriculum(
+    CurriculumId curriculumId,
+    List<StageDefinition> stages,
+  );
+
   /// Removes all stages and restores the 3 defaults.
   Future<void> resetToDefaults(
     CurriculumId curriculumId, {

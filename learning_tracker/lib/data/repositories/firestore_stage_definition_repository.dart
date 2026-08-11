@@ -243,6 +243,48 @@ class FirestoreStageDefinitionRepository {
     await _writeDefaults(curriculumId);
   }
 
+  /// Overwrites [curriculumId]'s stage set with [stages] (already ordered
+  /// 1..N by the caller -- typically the chazara wizard's
+  /// LearningProcessWizardService).
+  ///
+  /// **Cannot truly "replace" -- see the class doc comment's
+  /// "resetToDefaults" entry.** firestore.rules denies delete on this
+  /// collection unconditionally, so this can only overwrite doc-ids
+  /// `{curriculumId}_1` through `{curriculumId}_{stages.length}`. If the
+  /// curriculum previously had MORE stages than [stages.length], the
+  /// excess higher-`stageOrder` documents survive un-deleted -- this
+  /// method logs a warning naming the orphaned count so that is loud in
+  /// the logs, not silently wrong. Same trade-off [resetToDefaults] already
+  /// accepts, generalized from "always exactly 3" to an arbitrary caller
+  /// list.
+  Future<void> replaceStagesForCurriculum(
+    CurriculumId curriculumId,
+    List<StageDefinition> stages,
+  ) async {
+    final existing = await getStagesForCurriculum(curriculumId);
+    if (existing.length > stages.length) {
+      _logger.warning(
+        event: 'firestore_stage_definitions_replace_orphans',
+        fields: {
+          'curriculum_id': curriculumId.storageKey,
+          'previous_count': existing.length,
+          'new_count': stages.length,
+          'orphaned_count': existing.length - stages.length,
+        },
+      );
+    }
+
+    final now = DateTimeFactory.nowUtc();
+    final batch = _firestore.batch();
+    for (final stage in stages) {
+      batch.set(
+        _doc(curriculumId: curriculumId, stageOrder: stage.stageOrder),
+        stage.toFirestore(updatedAt: now),
+      );
+    }
+    await batch.commit().orQueuedOffline;
+  }
+
   Future<void> _writeDefaults(CurriculumId curriculumId) async {
     final now = DateTimeFactory.nowUtc(); // P5: UTC timestamps
     final batch = _firestore.batch();

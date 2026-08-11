@@ -138,6 +138,15 @@ class FirestoreStageDefinitionRepositoryAdapter
   }
 
   @override
+  Future<void> replaceStagesForCurriculum(
+    CurriculumId curriculumId,
+    List<StageDefinition> stages,
+  ) async {
+    final repo = await _resolve();
+    await repo.replaceStagesForCurriculum(curriculumId, stages);
+  }
+
+  @override
   Future<void> resetToDefaults(
     CurriculumId curriculumId, {
     required int profileId,
