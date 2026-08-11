@@ -67,9 +67,21 @@ class FirestoreCompletionStreakRecorder implements CompletionStreakPort {
         return;
       }
       final dayUtc = DateTime.utc(at.year, at.month, at.day);
+      // `eventTimestamp` is the normalised DAY, not the instant `at`.
+      //
+      // The deterministic doc id makes the second mark of a day an UPDATE, and
+      // `streak_events` permits an update only when the payload is unchanged
+      // (`firestore.rules` SR-1, `request.resource.data == resource.data`).
+      // Sending the instant would make each mark's payload differ, so the
+      // write would be DENIED — silently, since this tee swallows. Sending the
+      // day makes every same-day write byte-identical, which is exactly the
+      // idempotent re-push SR-1 exists to allow.
+      //
+      // No precision is lost that this tee uses: the doc id is already
+      // day-granular and it answers only "did this profile study today".
       await repository.append(
         eventType: 'completion',
-        eventTimestamp: at,
+        eventTimestamp: dayUtc,
         ulid: studyDayDocId(eventType: 'completion', dayUtc: dayUtc),
       );
     } on Exception catch (e, stackTrace) {

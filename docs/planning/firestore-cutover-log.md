@@ -2445,6 +2445,72 @@ not re-learn the hard way:**
 
 ---
 
+### 2026-08-11 — P3-28: wiring the streak tee armed two latent defects in the same call — both closed before they could fire
+
+`dart analyze --fatal-infos` EXIT 0 on both files. `check_dependency_direction`
+EXIT 0. **`flutter test test/data/repositories/` — 306/306 pass.**
+
+P3-27 reconnected the streak tee, which was the right fix. But reconnecting it
+moved `FirestoreStreakEventRepository.append` from dead code onto the completion
+write path, where `CompletionOrchestrator` **awaits it inline**
+(`completion_orchestrator.dart:285` and `:402`). Two problems that were harmless
+while the tee was a no-op became live the instant it was wired.
+
+Worth stating plainly: **P3-27 did not introduce these bugs, it armed them.** A
+migration that reconnects long-dead code should assume that code was never
+exercised under the new backend and re-audit it as if it were new. Neither
+defect was reachable before, so no gate had ever had the chance to catch either.
+
+#### Defect 1 — an offline completion could HANG
+
+`append` opened with a bare `await ref.get()`: no timeout, no `unavailable`
+handling. The on-device probe built earlier this phase **refuted** the assumption
+that `get()` falls back to the cache — that refutation is why
+`FirestoreCompletionRepository.recordCompletionIfAbsent` already carries a
+timeout and an `unavailable` catch. `append` has the identical shape and now
+gets the identical treatment.
+
+The degradation direction is deliberate: a failed existence check assumes
+**absent**, so the write is attempted, and the write is already
+`.orQueuedOffline`, so Firestore's own queue replays it. The failure mode is a
+redundant write — which the deterministic doc id makes idempotent anyway — never
+a lost one. Assuming *present* would have silently dropped the event.
+
+#### Defect 2 — ⚠️ that queued write would then have been DENIED by SR-1
+
+This is the subtler one, and it only exists BECAUSE P3-27 made the doc id
+deterministic.
+
+`streak_events` permits an update only when
+`request.resource.data == resource.data` (`firestore.rules:312` — the
+identical-replay clause). With a per-day doc id, the second mark of a day is an
+UPDATE, not a create. The recorder was passing the *instant* of that mark as
+`event_timestamp`, so the payload differed from the stored one and the write
+would have been **rejected — silently**, because the tee swallows exceptions by
+design.
+
+That is the full silent-failure chain: deterministic id → update instead of
+create → payload differs → rules deny → tee swallows → no streak, no error, no
+gate. Every step individually defensible.
+
+The recorder now passes the normalised **day** as `eventTimestamp`. Same-day
+writes then serialise byte-identically — `toFirestore` emits only `ulid`,
+`event_type`, `day_utc`, `event_timestamp` and an optional `client_device_id`,
+with **no `serverTimestamp()` anywhere**, which is what makes exact equality
+achievable at all — so SR-1's identical-replay clause is *satisfied* rather than
+violated. The rule now works with the design instead of against it.
+
+No precision is lost that anything uses: the doc id is already day-granular,
+`day_utc` is unchanged, and the tee answers exactly one question — "did this
+profile study today".
+
+#### Housekeeping
+
+Deleted an untracked duplicate of the recorder left at its pre-P3-27 path by an
+earlier agent. It was an unreferenced alternative implementation that derived a
+deterministic ULID via `package:cryptography`. Reading it prompted the SR-1 check
+above, so it earned its keep on the way out — but the committed version needs no
+crypto dependency to achieve the same idempotence.
 ### 2026-08-11 — P3-27: the streak tee was a NO-OP, and its idempotence comment described behaviour the code did not have
 
 `dart analyze --fatal-infos` EXIT 0 on both touched files.

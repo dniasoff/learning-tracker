@@ -8,6 +8,8 @@
 /// different for `streak_events`.
 library;
 
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:learning_tracker/core/codec/firestore_codec.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
@@ -213,8 +215,28 @@ class FirestoreStreakEventRepository {
     final id = ulid ?? newUlid();
     final ref = _doc(id);
 
-    final existingSnapshot = await ref.get();
-    final existingData = existingSnapshot.data();
+    // Offline-safe existence check. A bare `get()` here would hang an offline
+    // completion: the orchestrator awaits this tee inline
+    // (`completion_orchestrator.dart:285`, `:402`), and the on-device probe
+    // built in this phase refuted the belief that `get()` falls back to the
+    // cache. Same treatment as
+    // `FirestoreCompletionRepository.recordCompletionIfAbsent`.
+    //
+    // Degrading to "assume absent" is the SAFE direction: it costs a redundant
+    // write, which the deterministic doc id makes idempotent anyway, whereas
+    // degrading to "assume present" would silently drop the event.
+    Map<String, dynamic>? existingData;
+    try {
+      final existingSnapshot = await ref.get().timeout(
+        kFirestoreWriteAckTimeout,
+      );
+      existingData = existingSnapshot.data();
+    } on TimeoutException {
+      existingData = null;
+    } on FirebaseException catch (e) {
+      if (e.code != 'unavailable') rethrow;
+      existingData = null;
+    }
     if (existingData != null) {
       return streakEventEntryFromFirestore(existingData);
     }
