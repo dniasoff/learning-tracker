@@ -89,24 +89,16 @@ Future<BootstrapResult> bootstrap() async {
     ],
   );
 
-  // Seed the resolved account DB file name + Firestore account id into their
-  // providers. bootstrapAccount completed before runApp so this is
-  // effectively synchronous from the provider tree's perspective. The two
-  // providers are seeded from the same BootstrapAccountResult (see its doc
-  // comment) so a DB file is never swapped in without the matching
-  // activeAccountIdProvider value, or vice versa.
-  if (accountBootstrap.dbFileName != 'learning_tracker') {
-    container
-        .read(accountDbFileNameProvider.notifier)
-        .setFileName(accountBootstrap.dbFileName);
-  }
+  // Seed the resolved Firestore account id into its provider.
+  // bootstrapAccount completed before runApp so this is effectively
+  // synchronous from the provider tree's perspective.
   if (accountBootstrap.accountId != null) {
     container
         .read(activeAccountIdProvider.notifier)
         .set(accountBootstrap.accountId);
   }
 
-  container.listen<int?>(selectedProfileIdProvider, (_, id) {
+  container.listen<String?>(selectedProfileIdProvider, (_, id) {
     crashlytics.setUserIdentifier(id);
   }, fireImmediately: true);
 

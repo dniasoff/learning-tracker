@@ -56,18 +56,17 @@ void main() {
         },
       );
 
-      // AC3+AC4: setUserIdentifier uses numeric profileId — no PII.
+      // AC3+AC4: setUserIdentifier uses the profileId ULID (AD-24) — no PII.
       //
       // AUD-t-story-acceptance-21: these three tests exercise the REAL
       // FirebaseCrashlyticsService.setUserIdentifier (via a mocked
       // FirebaseCrashlytics SDK object) instead of a hand-duplicated
       // ternary on the fake below. _CapturingCrashlyticsService.
       // setUserIdentifier independently re-implements the same
-      // `profileId == null ? '' : '$profileId'` encoding as
-      // FirebaseCrashlyticsService -- if the real class's encoding ever
-      // diverged (e.g. an email fallback on a null check gone wrong), the
-      // fake's copy would keep this PII-safety suite green while the
-      // production Crashlytics identifier leaked PII.
+      // `profileId ?? ''` encoding as FirebaseCrashlyticsService -- if the
+      // real class's encoding ever diverged (e.g. an email fallback on a
+      // null check gone wrong), the fake's copy would keep this PII-safety
+      // suite green while the production Crashlytics identifier leaked PII.
       group('AC3/AC4: setUserIdentifier — exercises the real service', () {
         late MockFirebaseCrashlytics mockCrashlytics;
         late FirebaseCrashlyticsService realService;
@@ -81,34 +80,45 @@ void main() {
         });
 
         test(
-          'AC3: setUserIdentifier sends numeric profileId as string',
+          'AC3: setUserIdentifier sends the profileId ULID as-is',
           () async {
-            await realService.setUserIdentifier(5);
-            verify(() => mockCrashlytics.setUserIdentifier('5')).called(1);
+            await realService.setUserIdentifier('01ARZ3NDEKTSV4RRFFQ69G5FAV');
+            verify(
+              () => mockCrashlytics.setUserIdentifier(
+                '01ARZ3NDEKTSV4RRFFQ69G5FAV',
+              ),
+            ).called(1);
           },
         );
 
         test(
           'AC4: setUserIdentifier(null) clears identifier (no PII fallback)',
           () async {
-            await realService.setUserIdentifier(42); // simulate login
+            await realService.setUserIdentifier(
+              '01ARZ3NDEKTSV4RRFFQ69G5FAV',
+            ); // simulate login
             await realService.setUserIdentifier(null); // simulate logout
-            verify(() => mockCrashlytics.setUserIdentifier('42')).called(1);
+            verify(
+              () => mockCrashlytics.setUserIdentifier(
+                '01ARZ3NDEKTSV4RRFFQ69G5FAV',
+              ),
+            ).called(1);
             verify(() => mockCrashlytics.setUserIdentifier('')).called(1);
           },
         );
 
-        test('AC4: no email or non-numeric PII in identifier', () async {
-          await realService.setUserIdentifier(99);
+        test('AC4: no email or other PII shape in identifier', () async {
+          await realService.setUserIdentifier('01ARZ3NDEKTSV4RRFFQ69G5FAV');
           final captured = verify(
             () => mockCrashlytics.setUserIdentifier(captureAny()),
           ).captured;
           final id = captured.single as String;
           expect(
-            RegExp(r'^[0-9]*$').hasMatch(id),
+            RegExp(r'^[0-9A-Z]*$').hasMatch(id),
             isTrue,
-            reason: 'Identifier must be purely numeric. Got: "$id"',
+            reason: 'Identifier must be a plain ULID. Got: "$id"',
           );
+          expect(id.contains('@'), isFalse);
         });
       });
 
@@ -141,7 +151,7 @@ void main() {
             StackTrace.current,
             fatal: true,
           );
-          await nullService.setUserIdentifier(1);
+          await nullService.setUserIdentifier('01ARZ3NDEKTSV4RRFFQ69G5FAV');
           await nullService.setUserIdentifier(null);
         },
       );
@@ -185,8 +195,8 @@ class _CapturingCrashlyticsService implements CrashlyticsService {
   }
 
   @override
-  Future<void> setUserIdentifier(int? profileId) async {
-    lastIdentifier = profileId == null ? '' : '$profileId';
+  Future<void> setUserIdentifier(String? profileId) async {
+    lastIdentifier = profileId ?? '';
   }
 }
 

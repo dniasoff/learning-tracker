@@ -43,7 +43,7 @@ abstract class NotificationPreferencesRepository {
   static const String _lastPushedSettingsHashBase =
       'notification_settings_last_pushed_hash';
 
-  static String lastPushedSettingsHashKey(int profileId) =>
+  static String lastPushedSettingsHashKey(String profileId) =>
       keyForProfile(_lastPushedSettingsHashBase, profileId);
 
   // ---------------------------------------------------------------------------
@@ -58,28 +58,28 @@ abstract class NotificationPreferencesRepository {
   /// Returns the per-profile namespaced SharedPreferences key for [baseKey].
   ///
   /// Example: `keyForProfile('daily_reminder_enabled', 42)` → `'daily_reminder_enabled_42'`.
-  static String keyForProfile(String baseKey, int profileId) =>
+  static String keyForProfile(String baseKey, String profileId) =>
       '${baseKey}_$profileId';
 
   // Per-profile key helpers — use these everywhere instead of the raw constants.
 
-  static String reminderEnabledKey(int profileId) =>
+  static String reminderEnabledKey(String profileId) =>
       keyForProfile(_reminderEnabledBase, profileId);
-  static String reminderHourKey(int profileId) =>
+  static String reminderHourKey(String profileId) =>
       keyForProfile(_reminderHourBase, profileId);
-  static String reminderMinuteKey(int profileId) =>
+  static String reminderMinuteKey(String profileId) =>
       keyForProfile(_reminderMinuteBase, profileId);
 
-  static String streakAlertEnabledKey(int profileId) =>
+  static String streakAlertEnabledKey(String profileId) =>
       keyForProfile(_streakAlertEnabledBase, profileId);
-  static String streakAlertHourKey(int profileId) =>
+  static String streakAlertHourKey(String profileId) =>
       keyForProfile(_streakAlertHourBase, profileId);
-  static String streakAlertMinuteKey(int profileId) =>
+  static String streakAlertMinuteKey(String profileId) =>
       keyForProfile(_streakAlertMinuteBase, profileId);
 
-  static String rewardNotificationEnabledKey(int profileId) =>
+  static String rewardNotificationEnabledKey(String profileId) =>
       keyForProfile(_rewardNotificationEnabledBase, profileId);
 
-  static String notificationSettingsUpdatedAtMsKey(int profileId) =>
+  static String notificationSettingsUpdatedAtMsKey(String profileId) =>
       keyForProfile(_notificationSettingsUpdatedAtMsBase, profileId);
 }

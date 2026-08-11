@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/analytics/analytics_provider.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
+import 'package:learning_tracker/core/preferences/profile_scoped_preference.dart';
 import 'package:learning_tracker/features/notifications/data/repositories/firestore_notifications_completion_adapter.dart';
 import 'package:learning_tracker/features/notifications/data/services/sacred_window_repository.dart';
 import 'package:learning_tracker/features/notifications/domain/models/reminder_preferences.dart';
@@ -90,7 +91,8 @@ class ReminderEnabled extends _$ReminderEnabled {
     // or switches, build() is re-invoked and re-reads under the correct
     // profile id. Fixes the cold-start race where ref.read returned 0 before
     // the real profile id was available (iter10/iter11).
-    final profileId = ref.watch(activeProfileIdProvider);
+    final profileId =
+        ref.watch(activeProfileIdProvider) ?? kNoProfilePreferenceSentinel;
     final prefs = await SharedPreferences.getInstance();
     return prefs.getBool(
           NotificationPreferencesRepository.reminderEnabledKey(profileId),
@@ -100,7 +102,8 @@ class ReminderEnabled extends _$ReminderEnabled {
 
   Future<void> toggle() async {
     final next = !(state.value ?? true);
-    final profileId = ref.read(activeProfileIdProvider);
+    final profileId =
+        ref.read(activeProfileIdProvider) ?? kNoProfilePreferenceSentinel;
     // AUD-core-preferences-04 (SM-5): derive the terminal state from a single
     // guarded call instead of optimistically assigning `state = AsyncData(next)`
     // and then awaiting an unguarded SharedPreferences write — see
@@ -137,7 +140,8 @@ class ReminderTime extends _$ReminderTime {
     // Watch so that when the profile resolves (e.g. 0 → real id on cold start)
     // or switches, build() is re-invoked and re-reads under the correct
     // profile id.  Matches the pattern used by [ReminderEnabled].
-    final profileId = ref.watch(activeProfileIdProvider);
+    final profileId =
+        ref.watch(activeProfileIdProvider) ?? kNoProfilePreferenceSentinel;
     final prefs = await SharedPreferences.getInstance();
     final hour =
         prefs.getInt(
@@ -153,7 +157,8 @@ class ReminderTime extends _$ReminderTime {
   }
 
   Future<void> setTime(TimeOfDay time) async {
-    final profileId = ref.read(activeProfileIdProvider);
+    final profileId =
+        ref.read(activeProfileIdProvider) ?? kNoProfilePreferenceSentinel;
     // AUD-core-preferences-04 (SM-5): see [ReminderEnabled.toggle].
     state = await _guardedPersist('reminder_time_set_persist_failed', () async {
       final prefs = await SharedPreferences.getInstance();
@@ -183,7 +188,8 @@ class StreakAlertEnabled extends _$StreakAlertEnabled {
   Future<bool> build() async {
     // Watch so that a cold-start profile-id change (0 → real id) or a profile
     // switch triggers a rebuild and re-reads prefs under the correct id.
-    final profileId = ref.watch(activeProfileIdProvider);
+    final profileId =
+        ref.watch(activeProfileIdProvider) ?? kNoProfilePreferenceSentinel;
     final prefs = await SharedPreferences.getInstance();
     return prefs.getBool(
           NotificationPreferencesRepository.streakAlertEnabledKey(profileId),
@@ -193,7 +199,8 @@ class StreakAlertEnabled extends _$StreakAlertEnabled {
 
   Future<void> toggle() async {
     final next = !(state.value ?? true);
-    final profileId = ref.read(activeProfileIdProvider);
+    final profileId =
+        ref.read(activeProfileIdProvider) ?? kNoProfilePreferenceSentinel;
     // AUD-core-preferences-04 (SM-5): see [ReminderEnabled.toggle].
     state = await _guardedPersist(
       'streak_alert_enabled_toggle_persist_failed',
@@ -227,7 +234,8 @@ class StreakAlertTime extends _$StreakAlertTime {
     // Watch so that when the profile resolves (e.g. 0 → real id on cold start)
     // or switches, build() is re-invoked and re-reads under the correct
     // profile id.  Matches the pattern used by [StreakAlertEnabled].
-    final profileId = ref.watch(activeProfileIdProvider);
+    final profileId =
+        ref.watch(activeProfileIdProvider) ?? kNoProfilePreferenceSentinel;
     final prefs = await SharedPreferences.getInstance();
     final hour =
         prefs.getInt(
@@ -243,7 +251,8 @@ class StreakAlertTime extends _$StreakAlertTime {
   }
 
   Future<void> setTime(TimeOfDay time) async {
-    final profileId = ref.read(activeProfileIdProvider);
+    final profileId =
+        ref.read(activeProfileIdProvider) ?? kNoProfilePreferenceSentinel;
     // AUD-core-preferences-04 (SM-5): see [ReminderEnabled.toggle].
     state = await _guardedPersist(
       'streak_alert_time_set_persist_failed',
@@ -276,7 +285,8 @@ class RewardNotificationEnabled extends _$RewardNotificationEnabled {
   Future<bool> build() async {
     // Watch so that a cold-start profile-id change (0 → real id) or a profile
     // switch triggers a rebuild and re-reads prefs under the correct id.
-    final profileId = ref.watch(activeProfileIdProvider);
+    final profileId =
+        ref.watch(activeProfileIdProvider) ?? kNoProfilePreferenceSentinel;
     final prefs = await SharedPreferences.getInstance();
     return prefs.getBool(
           NotificationPreferencesRepository.rewardNotificationEnabledKey(
@@ -288,7 +298,8 @@ class RewardNotificationEnabled extends _$RewardNotificationEnabled {
 
   Future<void> toggle() async {
     final next = !(state.value ?? true);
-    final profileId = ref.read(activeProfileIdProvider);
+    final profileId =
+        ref.read(activeProfileIdProvider) ?? kNoProfilePreferenceSentinel;
     // AUD-core-preferences-04 (SM-5): see [ReminderEnabled.toggle].
     state = await _guardedPersist(
       'reward_notification_enabled_toggle_persist_failed',
@@ -428,6 +439,8 @@ Future<void> reminderSyncEffect(Ref ref) async {
   ref.watch(isSacredTimeActiveProvider);
   final scheduler = ref.watch(notificationSchedulerProvider);
   final profileId = ref.watch(activeProfileIdProvider);
+  // No active profile yet (cold start) — nothing to schedule for.
+  if (profileId == null) return;
 
   // AUD-notifications-02: await the AsyncNotifiers' resolved values directly
   // instead of watching the bare (formerly synchronous-default) providers and
@@ -512,7 +525,7 @@ Future<void> reminderSyncEffect(Ref ref) async {
 /// instance. A test overriding this family for a specific inactive profileId
 /// now observably changes bootstrap's behavior for that profile.
 @riverpod
-StreakAlertService streakAlertService(Ref ref, int profileId) {
+StreakAlertService streakAlertService(Ref ref, String profileId) {
   final notifService = ref.watch(notificationServiceProvider);
   final analytics = ref.watch(analyticsServiceProvider);
   // The date-range read is injected rather than resolved inside the service:
@@ -584,7 +597,7 @@ Future<void> allProfilesReminderBootstrap(Ref ref) async {
 
   final prefs = await SharedPreferences.getInstance();
 
-  final presentIds = profiles.map((p) => p.id).toSet();
+  final presentIds = profiles.map((p) => p.profileId).toSet();
 
   // (H3) Reconcile against the previously-scheduled set: cancel reminders +
   // streak alerts for any profile that has since been removed, so a deleted
@@ -596,8 +609,8 @@ Future<void> allProfilesReminderBootstrap(Ref ref) async {
               ) ??
               '')
           .split(',')
-          .map((s) => int.tryParse(s.trim()))
-          .whereType<int>()
+          .map((s) => s.trim())
+          .where((s) => s.isNotEmpty)
           .toSet();
 
   for (final removedId in previousIds.difference(presentIds)) {
@@ -606,7 +619,7 @@ Future<void> allProfilesReminderBootstrap(Ref ref) async {
   }
 
   for (final profile in profiles) {
-    final profileId = profile.id;
+    final profileId = profile.profileId;
 
     // (H1) The active profile's daily reminder is owned by
     // [reminderSyncEffect], which schedules under the same per-profile batch ID
@@ -711,6 +724,8 @@ Future<void> streakAlertSyncEffect(Ref ref) async {
   final time = await ref.watch(streakAlertTimeProvider.future);
   if (!ref.mounted) return;
   final profileId = ref.watch(activeProfileIdProvider);
+  // No active profile yet (cold start) — nothing to evaluate for.
+  if (profileId == null) return;
   final service = ref.watch(streakAlertServiceProvider(profileId));
   final sacredTimeActive = ref.watch(isSacredTimeActiveProvider);
 

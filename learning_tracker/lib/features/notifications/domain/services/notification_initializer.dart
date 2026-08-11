@@ -9,9 +9,9 @@ import 'package:timezone/timezone.dart' as tz;
 ///
 /// WS5.per-profile: the tap handler needs to be able to switch into the
 /// profile whose reminder was tapped, so the caller wires in this callback
-/// from the provider / router layer. Receives the profileId parsed from
-/// the notification payload.
-typedef ProfileSwitchCallback = void Function(int profileId);
+/// from the provider / router layer. Receives the profileId (AD-24 ULID
+/// string) parsed from the notification payload.
+typedef ProfileSwitchCallback = void Function(String profileId);
 
 /// Initializes the notification system at app startup.
 ///
@@ -69,8 +69,8 @@ class NotificationInitializer {
         payload.startsWith('$streakAlertPayload:')) {
       final parts = payload.split(':');
       if (parts.length == 2) {
-        final profileId = int.tryParse(parts[1]);
-        if (profileId != null && onSwitchProfile != null) {
+        final profileId = parts[1];
+        if (profileId.isNotEmpty && onSwitchProfile != null) {
           onSwitchProfile!(profileId);
         }
       }

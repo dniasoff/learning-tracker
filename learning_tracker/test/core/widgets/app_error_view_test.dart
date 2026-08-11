@@ -47,7 +47,7 @@ class _RecordingCrashlyticsService implements CrashlyticsService {
   }
 
   @override
-  Future<void> setUserIdentifier(int? profileId) async {}
+  Future<void> setUserIdentifier(String? profileId) async {}
 }
 
 // ─── Concrete test exceptions ────────────────────────────────────────────────

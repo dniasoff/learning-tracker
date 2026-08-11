@@ -131,7 +131,7 @@ final class ReminderEnabledProvider
   ReminderEnabled create() => ReminderEnabled();
 }
 
-String _$reminderEnabledHash() => r'd919185b747bcec28ca5e0be51e00de58d18587a';
+String _$reminderEnabledHash() => r'0e52353ee3985ccb5cff5ec10f87400d8bcd0fb0';
 
 /// Manages the daily reminder enabled state.
 ///
@@ -225,7 +225,7 @@ final class ReminderTimeProvider
   ReminderTime create() => ReminderTime();
 }
 
-String _$reminderTimeHash() => r'1f0a2fa04cf1664f4bd070b7f150c0d08c3305f7';
+String _$reminderTimeHash() => r'38289429f8a4162d4e4da4024931a5d282a4c910';
 
 /// Manages the daily reminder time.
 ///
@@ -304,7 +304,7 @@ final class StreakAlertEnabledProvider
 }
 
 String _$streakAlertEnabledHash() =>
-    r'b9d39cd1b363a5358e0869288e5890d6d038308a';
+    r'c0e234c4c2c3354693a0447b823dc4030aab3f46';
 
 /// Manages the streak alert enabled state.
 ///
@@ -390,7 +390,7 @@ final class StreakAlertTimeProvider
   StreakAlertTime create() => StreakAlertTime();
 }
 
-String _$streakAlertTimeHash() => r'2a01d82c08349b58339ec6ad128c583ce0e6cb86';
+String _$streakAlertTimeHash() => r'fb889e31aa2fb8415f37c0e382d37613f0e7d36b';
 
 /// Manages the streak alert time.
 ///
@@ -469,7 +469,7 @@ final class RewardNotificationEnabledProvider
 }
 
 String _$rewardNotificationEnabledHash() =>
-    r'7da2d0c377fa503adfd95619101c44453798cf3d';
+    r'3e8d91d16b625d180f0c1e8b79ad7c3afeae36b6';
 
 /// Manages the reward notification enabled state.
 ///
@@ -777,7 +777,7 @@ final class ReminderSyncEffectProvider
 }
 
 String _$reminderSyncEffectHash() =>
-    r'fdaaf0ac3f6331fe7eb38ccbb31290a62d8cf4c2';
+    r'c8cf840ec63d19de1bf71df655308993c948d159';
 
 /// Provides the [StreakAlertService] instance for [profileId].
 ///
@@ -818,7 +818,7 @@ final class StreakAlertServiceProvider
   /// now observably changes bootstrap's behavior for that profile.
   StreakAlertServiceProvider._({
     required StreakAlertServiceFamily super.from,
-    required int super.argument,
+    required String super.argument,
   }) : super(
          retry: null,
          name: r'streakAlertServiceProvider',
@@ -845,7 +845,7 @@ final class StreakAlertServiceProvider
 
   @override
   StreakAlertService create(Ref ref) {
-    final argument = this.argument as int;
+    final argument = this.argument as String;
     return streakAlertService(ref, argument);
   }
 
@@ -869,7 +869,7 @@ final class StreakAlertServiceProvider
 }
 
 String _$streakAlertServiceHash() =>
-    r'537382123b12e710821b43ffac983c9027338f47';
+    r'3581f9c1156dab696c25245ec594dcd3c04968c0';
 
 /// Provides the [StreakAlertService] instance for [profileId].
 ///
@@ -881,7 +881,7 @@ String _$streakAlertServiceHash() =>
 /// now observably changes bootstrap's behavior for that profile.
 
 final class StreakAlertServiceFamily extends $Family
-    with $FunctionalFamilyOverride<StreakAlertService, int> {
+    with $FunctionalFamilyOverride<StreakAlertService, String> {
   StreakAlertServiceFamily._()
     : super(
         retry: null,
@@ -900,7 +900,7 @@ final class StreakAlertServiceFamily extends $Family
   /// instance. A test overriding this family for a specific inactive profileId
   /// now observably changes bootstrap's behavior for that profile.
 
-  StreakAlertServiceProvider call(int profileId) =>
+  StreakAlertServiceProvider call(String profileId) =>
       StreakAlertServiceProvider._(argument: profileId, from: this);
 
   @override
@@ -966,7 +966,7 @@ final class AllProfilesReminderBootstrapProvider
 }
 
 String _$allProfilesReminderBootstrapHash() =>
-    r'151499711b34a302a529628b96f0f2967f2c5d72';
+    r'28d6ddea76dc1740b759fb5863b412a8d803068f';
 
 /// Watches streak alert settings and evaluates whether to schedule or cancel
 /// the streak protection alert.
@@ -1023,4 +1023,4 @@ final class StreakAlertSyncEffectProvider
 }
 
 String _$streakAlertSyncEffectHash() =>
-    r'11c2bf2a4e12459c883390a1e00f1a3aebb4d3ef';
+    r'68b537efedd8e33c0e4145e1d7a750fa0c56aead';

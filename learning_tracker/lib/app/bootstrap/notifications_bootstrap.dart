@@ -27,28 +27,22 @@ Future<void> bootstrapNotifications({
       // WS5.per-profile: tap handler switches into the tapped profile before
       // opening the Scheduler so the user lands in the right profile.
       //
-      // P2-2: resolves the tapped profile's Firestore ULID before
-      // selecting. `select` used to be called bare here, which cleared
-      // `activeProfileDocIdProvider` to null on every notification tap —
-      // blanking every profile-scoped Firestore provider (`ProfileSwitchCallback`
-      // stays `void Function(int)`, so this closure runs fire-and-forget;
-      // that is fine here — unlike a route guard's `resolver.next()`,
-      // nothing downstream is synchronously waiting on this selection).
+      // AD-24: profileId is already the Firestore ULID (both the payload and
+      // `selectedProfileIdProvider.notifier.select` use it directly, no
+      // separate int/ulid split). `ProfileSwitchCallback` runs
+      // fire-and-forget; that is fine here — unlike a route guard's
+      // `resolver.next()`, nothing downstream is synchronously waiting on
+      // this selection.
       onSwitchProfile: (profileId) async {
-        final model = await container
+        final profile = await container
             .read(profileRepositoryProvider)
             .getProfileById(profileId);
-        // P2-3: [model] is `ProfileModel?` (the profile may have been
-        // deleted between the notification being scheduled and tapped);
-        // [ProfileModel.ulid] itself is compiler-guaranteed non-null once a
-        // model exists (`ProfileModel.fromDriftRow` is the enforcement
-        // point, and `getProfileById` routes through it). No model to
-        // switch to means nothing to select — leave the current selection
-        // untouched rather than switching into an id with no data.
-        if (model == null) return;
-        container
-            .read(selectedProfileIdProvider.notifier)
-            .select(profileId, ulid: model.ulid);
+        // The profile may have been deleted between the notification being
+        // scheduled and tapped. No profile to switch to means nothing to
+        // select — leave the current selection untouched rather than
+        // switching into an id with no data.
+        if (profile == null) return;
+        container.read(selectedProfileIdProvider.notifier).select(profileId);
       },
     );
     await notificationInitializer.initialize();

@@ -43,7 +43,7 @@ void main() {
     });
 
     test('setUserIdentifier with profileId does not throw', () async {
-      await service.setUserIdentifier(5);
+      await service.setUserIdentifier('01ARZ3NDEKTSV4RRFFQ69G5FAV');
     });
 
     test('setUserIdentifier with null does not throw', () async {
@@ -51,14 +51,15 @@ void main() {
     });
   });
 
-  group('CrashlyticsService contract — numeric identifier only', () {
-    // Verify that the service encodes profileId as a plain integer string,
-    // which is a PII-safe identifier per the story acceptance criteria.
+  group('CrashlyticsService contract — opaque ULID identifier only', () {
+    // Verify that the service passes profileId through as its opaque ULID
+    // string (AD-24) — a PII-safe identifier per the story acceptance
+    // criteria (it is a random id, not derived from any personal data).
     // We use a spy/recorder to capture what would be sent.
-    test('setUserIdentifier(5) encodes as "5"', () async {
+    test('setUserIdentifier(ulid) encodes as that same ulid', () async {
       final recorder = _RecordingCrashlyticsService();
-      await recorder.setUserIdentifier(5);
-      expect(recorder.lastIdentifier, '5');
+      await recorder.setUserIdentifier('01ARZ3NDEKTSV4RRFFQ69G5FAV');
+      expect(recorder.lastIdentifier, '01ARZ3NDEKTSV4RRFFQ69G5FAV');
     });
 
     test('setUserIdentifier(null) encodes as empty string', () async {
@@ -69,14 +70,15 @@ void main() {
 
     test('setUserIdentifier does not include email or PII', () async {
       final recorder = _RecordingCrashlyticsService();
-      await recorder.setUserIdentifier(42);
+      await recorder.setUserIdentifier('01ARZ3NDEKTSV4RRFFQ69G5FAV');
       final id = recorder.lastIdentifier!;
-      // Must be purely numeric — no "@", no letters that suggest an email
+      // Must be a plain ULID (Crockford base32) — no "@", no email shape.
       expect(
-        RegExp(r'^[0-9]*$').hasMatch(id),
+        RegExp(r'^[0-9A-Z]*$').hasMatch(id),
         isTrue,
-        reason: 'Identifier must be numeric only, got: "$id"',
+        reason: 'Identifier must be a plain ULID, got: "$id"',
       );
+      expect(id.contains('@'), isFalse);
     });
   });
 
@@ -217,9 +219,9 @@ class _RecordingCrashlyticsService implements CrashlyticsService {
   }) async {}
 
   @override
-  Future<void> setUserIdentifier(int? profileId) async {
+  Future<void> setUserIdentifier(String? profileId) async {
     // Mirror the encoding from FirebaseCrashlyticsService
-    lastIdentifier = profileId == null ? '' : '$profileId';
+    lastIdentifier = profileId ?? '';
   }
 }
 

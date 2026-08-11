@@ -27,10 +27,10 @@ abstract class CrashlyticsService {
     bool fatal = false,
   });
 
-  /// Sets the numeric user identifier (profileId).
+  /// Sets the user identifier (profileId — an AD-24 ULID string).
   ///
   /// Pass [null] to clear the identifier (user signed out).
-  Future<void> setUserIdentifier(int? profileId);
+  Future<void> setUserIdentifier(String? profileId);
 }
 
 /// Production implementation backed by [FirebaseCrashlytics].
@@ -98,8 +98,8 @@ class FirebaseCrashlyticsService implements CrashlyticsService {
   }
 
   @override
-  Future<void> setUserIdentifier(int? profileId) =>
-      _crashlytics.setUserIdentifier(profileId == null ? '' : '$profileId');
+  Future<void> setUserIdentifier(String? profileId) =>
+      _crashlytics.setUserIdentifier(profileId ?? '');
 }
 
 /// No-op implementation used when Crashlytics is unavailable (tests, CI).
@@ -120,7 +120,7 @@ class NullCrashlyticsService implements CrashlyticsService {
   }) async {}
 
   @override
-  Future<void> setUserIdentifier(int? profileId) async {}
+  Future<void> setUserIdentifier(String? profileId) async {}
 }
 
 /// Crashlytics service backed by a [NullAnalyticsService] analytics instance.

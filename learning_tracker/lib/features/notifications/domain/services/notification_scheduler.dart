@@ -10,6 +10,13 @@ import 'package:timezone/timezone.dart' as tz;
 /// Number of days in the rolling one-shot batch (DNI-367, Story 26.24).
 const int kBatchDays = 14;
 
+/// Fixed placeholder profile id used only by the profile-less
+/// [NotificationScheduler.scheduleReminder] (zero production callers — kept
+/// for its existing test coverage). AD-24 retired the old "profile 0" int
+/// identity this used to route through; this string plays the same "always
+/// the same stable ID block" role for [stableProfileHash] instead.
+const String _legacyProfileId = 'legacy';
+
 /// Orchestrates scheduling/cancelling the daily reminder notification.
 ///
 /// DNI-367 (Story 26.24): scheduleReminder() replaces the old repeating
@@ -55,15 +62,14 @@ class NotificationScheduler {
       fromDay: null,
     );
 
-    // (AUD-notifications-04) Routed through the profile-0 block of the
+    // (AUD-notifications-04) Routed through a fixed placeholder block of the
     // *ForProfile gateway API — the non-profile scheduleBatchReminders /
     // cancelBatchReminders / cancelDailyReminder methods this used to call
     // were deleted as dead code (WS5.per-profile's *ForProfile equivalents
     // are the sole production call sites; see scheduleReminderForProfile
-    // below). Profile 0's ID block is numerically identical to the old
-    // singleton IDs (dailyReminderIdForProfile(0) == 0, etc.).
+    // below).
     await service.scheduleBatchRemindersForProfile(
-      profileId: 0,
+      profileId: _legacyProfileId,
       fireTimes: fireTimes,
       title: title,
       body: body,
@@ -83,7 +89,7 @@ class NotificationScheduler {
   /// two competing schedules in different ID spaces. Each fire-time is filtered
   /// against Sacred Time windows exactly like [scheduleReminder] (L2 fix).
   Future<void> scheduleReminderForProfile({
-    required int profileId,
+    required String profileId,
     required TimeOfDay time,
     required String title,
     required String body,
@@ -111,13 +117,13 @@ class NotificationScheduler {
 
   /// Cancel the daily reminder for [profileId] (per-profile batch + legacy
   /// single-shot id within the profile's block).
-  Future<void> cancelForProfile(int profileId) async {
+  Future<void> cancelForProfile(String profileId) async {
     await service.cancelDailyReminderForProfile(profileId);
     await service.cancelBatchRemindersForProfile(profileId);
   }
 
   /// Cancel due to sacred time for [profileId] — fire suppression event.
-  Future<void> cancelForProfileSacredTime(int profileId) async {
+  Future<void> cancelForProfileSacredTime(String profileId) async {
     await service.cancelDailyReminderForProfile(profileId);
     await service.cancelBatchRemindersForProfile(profileId);
     unawaited(

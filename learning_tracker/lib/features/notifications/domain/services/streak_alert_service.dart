@@ -22,7 +22,7 @@ class StreakAlertService {
   StreakAlertService({
     required Ref ref,
     required NotificationGateway notificationService,
-    required int profileId,
+    required String profileId,
     DateTime Function()? clock,
     AnalyticsService? analytics,
     LocalDayClock? streakClock,
@@ -49,7 +49,7 @@ class StreakAlertService {
   final Future<bool> Function(DateTime start, DateTime end)
   _hasCompletionsInRange;
   final NotificationGateway _notificationService;
-  final int _profileId;
+  final String _profileId;
   final DateTime Function() _clock;
   final AnalyticsService _analytics;
   final StreakStateService _streakProvider;

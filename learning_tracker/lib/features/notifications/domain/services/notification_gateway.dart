@@ -13,16 +13,29 @@ const String _channelDescription = 'Daily learning reminder notifications';
 // Per-profile notification ID allocation (WS5.key-prefs)
 //
 // Each profile is allocated a block of 1000 IDs:
-//   profile 0: IDs 0–999    → daily=0, streak=1, batch=10–23
-//   profile 1: IDs 1000–1999 → daily=1000, streak=1001, batch=1010–1023
-//   profile N: IDs N*1000 … N*1000+999
+//   block 1: IDs 1000–1999 → daily=1000, streak=1001, batch=1010–1023
+//   block N: IDs N*1000 … N*1000+999
 //
-// This guarantees no collisions across profiles (up to 1000 profiles, well
-// beyond any real-world use). The block scheme is the sole source of
-// notification IDs — the old singleton constants (dailyReminderId=0,
-// streakAlertId=1, batchBaseId=10) and their non-profile scheduling methods
-// were removed once WS5.per-profile's *ForProfile equivalents took over
-// every production call site (AUD-notifications-04).
+// AD-24: profile identity is a ULID string, not a small sequential Drift int,
+// so the block number can no longer be the profileId itself — it is now
+// `1 + (stableProfileHash(profileId) % _maxBlocks)`. [stableProfileHash] is
+// a hand-rolled FNV-1a, deliberately NOT `String.hashCode` — Dart does not
+// guarantee `hashCode` is stable across Dart/Flutter versions or platforms,
+// and a scheduled notification's ID must be re-derivable identically on a
+// LATER app run purely to cancel it (there is no persisted ULID→ID map to
+// consult — see the class doc comment above `NotificationGateway` for why
+// a stateless hash was chosen over a persisted registry). Block 0 is
+// reserved/unused (never produced by `1 + hash % _maxBlocks`) purely so a
+// hash of 0 doesn't collide with any future singleton/global notification.
+// `_maxBlocks` keeps every ID within Android's 32-bit signed range even at
+// the largest offset: 2,000,000 * 1000 + 999 = 2,000,000,999 < 2^31-1.
+//
+// This does NOT guarantee zero collisions the way the old sequential-int
+// scheme did — two profiles could theoretically hash to the same block —
+// but the collision probability across the handful of profiles a real
+// family device has is negligible, and a collision only means one profile's
+// reminder silently overwrites another's until the family reports it, not a
+// crash or data-safety issue.
 // ---------------------------------------------------------------------------
 
 /// Offset for the daily reminder ID within a profile's block.
@@ -40,21 +53,45 @@ const int _batchSize = 14;
 /// IDs per profile block (must be > _batchBaseOffset + _batchSize).
 const int _idsPerProfile = 1000;
 
+/// Number of possible non-zero blocks a profile can hash into.
+const int _maxBlocks = 2000000;
+
+/// Deterministic, cross-version-stable 32-bit hash of [profileId] (FNV-1a).
+///
+/// Exposed (not private) so tests can assert a pinned known-ULID → known-ID
+/// canary — if this algorithm ever changes, every notification already
+/// scheduled on a user's device becomes uncancellable (the whole reason it
+/// is hand-rolled instead of `String.hashCode`, see the block comment
+/// above), so a silent behavioural change here must fail a test.
+int stableProfileHash(String profileId) {
+  var hash = 0x811c9dc5;
+  for (final codeUnit in profileId.codeUnits) {
+    hash ^= codeUnit;
+    hash = (hash * 0x01000193) & 0xFFFFFFFF;
+  }
+  return hash;
+}
+
+/// Returns the deterministic notification-id block number for [profileId].
+/// Never 0 (see the block comment above).
+int _blockForProfile(String profileId) =>
+    1 + (stableProfileHash(profileId) % _maxBlocks);
+
 // ---------------------------------------------------------------------------
 // Per-profile ID helpers — used instead of the old singleton constants.
 // ---------------------------------------------------------------------------
 
 /// Returns the notification ID for the daily reminder of [profileId].
-int dailyReminderIdForProfile(int profileId) =>
-    profileId * _idsPerProfile + _dailyReminderOffset;
+int dailyReminderIdForProfile(String profileId) =>
+    _blockForProfile(profileId) * _idsPerProfile + _dailyReminderOffset;
 
 /// Returns the notification ID for the streak alert of [profileId].
-int streakAlertIdForProfile(int profileId) =>
-    profileId * _idsPerProfile + _streakAlertOffset;
+int streakAlertIdForProfile(String profileId) =>
+    _blockForProfile(profileId) * _idsPerProfile + _streakAlertOffset;
 
 /// Returns the base notification ID for the batch reminders of [profileId].
-int batchBaseIdForProfile(int profileId) =>
-    profileId * _idsPerProfile + _batchBaseOffset;
+int batchBaseIdForProfile(String profileId) =>
+    _blockForProfile(profileId) * _idsPerProfile + _batchBaseOffset;
 
 /// Payload used when a streak protection notification is tapped.
 const String streakAlertPayload = 'streak_protection';
@@ -161,7 +198,7 @@ class NotificationGateway {
   /// `daily_reminder:<profileId>` so the tap handler can switch to the
   /// correct profile.
   Future<void> scheduleDailyReminderForProfile({
-    required int profileId,
+    required String profileId,
     required int hour,
     required int minute,
     required String title,
@@ -191,13 +228,13 @@ class NotificationGateway {
   }
 
   /// Cancel the daily reminder for [profileId].
-  Future<void> cancelDailyReminderForProfile(int profileId) async {
+  Future<void> cancelDailyReminderForProfile(String profileId) async {
     await _plugin.cancel(id: dailyReminderIdForProfile(profileId));
   }
 
   /// Schedule a rolling 14-day batch of reminders for [profileId].
   Future<void> scheduleBatchRemindersForProfile({
-    required int profileId,
+    required String profileId,
     required List<tz.TZDateTime> fireTimes,
     required String title,
     required String body,
@@ -228,7 +265,7 @@ class NotificationGateway {
   }
 
   /// Cancel all batch reminder notifications for [profileId].
-  Future<void> cancelBatchRemindersForProfile(int profileId) async {
+  Future<void> cancelBatchRemindersForProfile(String profileId) async {
     final baseId = batchBaseIdForProfile(profileId);
     for (var i = 0; i < _batchSize; i++) {
       await _plugin.cancel(id: baseId + i);
@@ -242,7 +279,7 @@ class NotificationGateway {
   /// `streak_protection:<profileId>` payload so the tap handler can switch to
   /// the correct profile. Mirrors [scheduleDailyReminderForProfile].
   Future<void> scheduleStreakAlertForProfile({
-    required int profileId,
+    required String profileId,
     required int hour,
     required int minute,
     required String body,
@@ -272,7 +309,7 @@ class NotificationGateway {
   }
 
   /// Cancel the streak protection alert for [profileId].
-  Future<void> cancelStreakAlertForProfile(int profileId) async {
+  Future<void> cancelStreakAlertForProfile(String profileId) async {
     await _plugin.cancel(id: streakAlertIdForProfile(profileId));
   }
 
