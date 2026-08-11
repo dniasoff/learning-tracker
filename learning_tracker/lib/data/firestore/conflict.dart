@@ -1,18 +1,33 @@
-/// The **single canonical conflict-resolution module** (AD-7, MCF-1).
+/// The canonical conflict-resolution module (AD-7, MCF-1) — **currently
+/// UNUSED, and unused by design.**
 ///
-/// Every reconciliation path in the app — every LWW merger, every DAO-level
-/// remote-row upsert, the listener cache-echo guard — routes its ordering
-/// decision through this file. There is **no per-merger exception**: a
-/// bespoke second predicate anywhere else is, by construction, a drift
-/// hazard.
+/// ⚠️ This header previously claimed that "every reconciliation path in the
+/// app — every LWW merger, every DAO-level remote-row upsert, the listener
+/// cache-echo guard — routes its ordering decision through this file". That
+/// is false of EVERY path: nothing in `lib/` imports this module at all.
 ///
-/// Why this module exists: a hand-copied test double of the LWW rule
-/// (`_FakeMergeStore.remoteIsNewer`) re-derived the algorithm, omitted the
-/// D15 fallback, and shipped a silent lost-update bug — an older un-pushed
-/// local edit inside the clock-skew window was clobbered by an OLDER remote
-/// value (AUD-t-cross-68). Concentrating the decision here, and pinning
-/// every branch with golden cases, makes that class of drift structurally
-/// impossible rather than merely unlikely.
+/// It is false by DESIGN, not by oversight. `docs/firestore-rewrite-map.md`
+/// lists `conflict.dart` among the machinery Firestore makes unnecessary —
+/// beside the merge routers, mergers, codecs, outbox/push pipeline and sync
+/// orchestrator — with the rationale **"one writer per account"**. Firestore
+/// resolves concurrent writes server-side, so the client has no merge
+/// pipeline whose ordering needs deciding. The paths the old claim named are
+/// exactly the deleted ones: "DAO-level remote-row upsert" is Drift, and the
+/// outbox listener that needed the cache-echo guard no longer exists.
+/// `docs/planning/epics-firestore-migration-phase2.md` had already recorded
+/// this module as "called by nothing outside its own unit tests today".
+///
+/// Kept rather than deleted because removing it — and the two test files
+/// pinning it, which Phase 0 lists as deliverables (CAP-3, AD-7, AD-29) — is
+/// an owner decision, not a migration side-effect. If a genuine second writer
+/// ever appears on a collection, the algorithm here is still correct and
+/// still tested; wire it then. Until then, treat it as dormant.
+///
+/// The original rationale, still worth preserving: a hand-copied test double
+/// of the LWW rule re-derived the algorithm, omitted the D15 fallback, and
+/// shipped a silent lost-update bug (AUD-t-cross-68). If this is ever
+/// reactivated, it must stay the ONLY implementation — a bespoke second
+/// predicate elsewhere is, by construction, a drift hazard.
 ///
 /// **This module is deliberately pure.** It takes plain `DateTime` / `bool`
 /// / `Duration` values and imports nothing from `cloud_firestore`: callers
