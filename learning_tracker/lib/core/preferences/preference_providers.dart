@@ -15,8 +15,6 @@ import 'package:learning_tracker/core/utils/guarded_persist.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/progress/domain/models/journey_view_model.dart'
     show MilestoneLevel;
-import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart'
-    show syncWriteFacadeProvider;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'preference_providers.g.dart';
@@ -78,10 +76,16 @@ SiyumGranularityPreference siyumGranularityPreference(
   return pref;
 }
 
+/// Fixed storage bucket used for every profile-scoped preference before any
+/// real profile has ever been selected (AD-24 replacement for the old `0`
+/// int sentinel — [ProfileScopedPreference]'s key space is non-nullable, so
+/// "no profile yet" still needs SOME concrete bucket to read/write).
+const _kNoProfileSentinel = '_no_profile_';
+
 void _bindObserver<T>(
   Ref ref,
   ProfileScopedPreference<T> pref,
-  int profileId,
+  String profileId,
   void Function(T value) onValue,
 ) {
   // SM-4: guard the post-await state write. `pref.read(...)` awaits
@@ -102,14 +106,14 @@ void _bindObserver<T>(
 /// `build()` follows the `ref.watch(activeProfileIdProvider)` +
 /// `_bindObserver(...)` shape.
 ///
-/// `activeProfileIdProvider` transiently emits the sentinel value 0 whenever
-/// `userDatabaseProvider` is invalidated (e.g. during the offline-signup DB
-/// switch), before settling back to the real profile id moments later.
-/// Without this guard, `build()` re-fires with id==0, `_bindObserver` reads
-/// no stored pref for the sentinel, falls back to `pref.defaultValue`, and
+/// `activeProfileIdProvider` transiently emits `null` whenever the active
+/// profile is being re-resolved (e.g. during an account switch), before
+/// settling back to the real profile id moments later. Without this guard,
+/// `build()` re-fires with a null id, `_bindObserver` reads no stored pref
+/// for [_kNoProfileSentinel], falls back to `pref.defaultValue`, and
 /// overwrites the user's explicit choice — visibly flipping the setting and
-/// silently misfiling any toggle tapped inside that window under profile
-/// 0's SharedPreferences key.
+/// silently misfiling any toggle tapped inside that window under the
+/// sentinel bucket.
 ///
 /// Mix this in and call [sentinelBlocksRebind] as the first statement of
 /// `build()`:
@@ -120,45 +124,43 @@ void _bindObserver<T>(
 ///   final profileId = ref.watch(activeProfileIdProvider);
 ///   if (sentinelBlocksRebind(profileId)) return state;
 ///   final pref = ref.watch(hebrewDatePreferenceProvider);
-///   _bindObserver(ref, pref, profileId, (value) {
+///   _bindObserver(ref, pref, profileId ?? _kNoProfileSentinel, (value) {
 ///     if (value != state) state = value;
 ///   });
 ///   return pref.defaultValue;
 /// }
 /// ```
 ///
-/// On cold-start the profileId may be 0 from the beginning (before any
+/// On cold-start [profileId] may be `null` from the beginning (before any
 /// profile is loaded); [sentinelBlocksRebind] returns false in that case so
-/// callers bind normally and let the profile-0 pref (or default) drive the
-/// initial state. The guard ONLY activates when transitioning FROM a
-/// non-zero id back to 0.
+/// callers bind normally and let the sentinel-bucket pref (or default) drive
+/// the initial state. The guard ONLY activates when transitioning FROM a
+/// real id back to `null`.
 mixin _SentinelGuardedPreference<T> {
-  /// Tracks whether we have bound a non-sentinel (>0) profile's observer at
+  /// Tracks whether we have bound a non-sentinel (real) profile's observer at
   /// least once.
   bool _hasBindingForRealProfile = false;
 
-  /// Returns true when [profileId] is the transient sentinel and `build()`
-  /// should bail out early, preserving the notifier's current state instead
-  /// of re-binding the observer.
-  bool sentinelBlocksRebind(int profileId) {
-    if (profileId == 0 && _hasBindingForRealProfile) {
+  /// Returns true when [profileId] is `null` (the transient sentinel) and
+  /// `build()` should bail out early, preserving the notifier's current
+  /// state instead of re-binding the observer.
+  bool sentinelBlocksRebind(String? profileId) {
+    if (profileId == null && _hasBindingForRealProfile) {
       return true;
     }
-    if (profileId != 0) {
+    if (profileId != null) {
       _hasBindingForRealProfile = true;
     }
     return false;
   }
 }
 
-Future<void> _writeAndPushSnapshot<T>(
-  Ref ref,
+Future<void> _writeAndPersist<T>(
   ProfileScopedPreference<T> pref,
-  int profileId,
+  String profileId,
   T value,
 ) async {
   await pref.write(profileId, value);
-  await ref.read(syncWriteFacadeProvider)?.pushUiPreferencesSnapshot();
 }
 
 /// Whether to render Jewish learning terms in Hebrew script for the active
@@ -172,18 +174,18 @@ class UseHebrewTerms extends _$UseHebrewTerms
   bool build() {
     final profileId = ref.watch(activeProfileIdProvider);
     // IL-1 fix: do NOT re-bind the SharedPreferences observer when profileId
-    // transiently reverts to the sentinel 0 after a real (>0) profile id has
-    // already been observed. See _SentinelGuardedPreference for details.
+    // transiently reverts to `null` after a real profile id has already
+    // been observed. See _SentinelGuardedPreference for details.
     if (sentinelBlocksRebind(profileId)) return state;
     final pref = ref.watch(hebrewTermsPreferenceProvider);
-    _bindObserver(ref, pref, profileId, (value) {
+    _bindObserver(ref, pref, profileId ?? _kNoProfileSentinel, (value) {
       if (value != state) state = value;
     });
     return pref.defaultValue;
   }
 
   Future<void> set(bool value) async {
-    final profileId = ref.read(activeProfileIdProvider);
+    final profileId = ref.read(activeProfileIdProvider) ?? _kNoProfileSentinel;
     final pref = ref.read(hebrewTermsPreferenceProvider);
     final previous = state;
     state = value;
@@ -193,7 +195,7 @@ class UseHebrewTerms extends _$UseHebrewTerms
     // persisted, with zero explanation to the user.
     await guardedPersist(
       event: 'use_hebrew_terms_persist_failed',
-      write: () => _writeAndPushSnapshot(ref, pref, profileId, value),
+      write: () => _writeAndPersist(pref, profileId, value),
       onFailure: () => state = previous,
     );
   }
@@ -207,17 +209,17 @@ class UseHebrewDate extends _$UseHebrewDate
   bool build() {
     final profileId = ref.watch(activeProfileIdProvider);
     // IL-1 fix: see _SentinelGuardedPreference — do NOT re-bind when
-    // profileId transiently reverts to the sentinel 0.
+    // profileId transiently reverts to `null`.
     if (sentinelBlocksRebind(profileId)) return state;
     final pref = ref.watch(hebrewDatePreferenceProvider);
-    _bindObserver(ref, pref, profileId, (value) {
+    _bindObserver(ref, pref, profileId ?? _kNoProfileSentinel, (value) {
       if (value != state) state = value;
     });
     return pref.defaultValue;
   }
 
   Future<void> set(bool value) async {
-    final profileId = ref.read(activeProfileIdProvider);
+    final profileId = ref.read(activeProfileIdProvider) ?? _kNoProfileSentinel;
     final pref = ref.read(hebrewDatePreferenceProvider);
     final previous = state;
     state = value;
@@ -226,7 +228,7 @@ class UseHebrewDate extends _$UseHebrewDate
     // state silently diverged from the persisted value.
     await guardedPersist(
       event: 'use_hebrew_date_persist_failed',
-      write: () => _writeAndPushSnapshot(ref, pref, profileId, value),
+      write: () => _writeAndPersist(pref, profileId, value),
       onFailure: () => state = previous,
     );
   }
@@ -240,10 +242,10 @@ class ShowNikudPref extends _$ShowNikudPref
   bool build() {
     final profileId = ref.watch(activeProfileIdProvider);
     // IL-1 fix: see _SentinelGuardedPreference — do NOT re-bind when
-    // profileId transiently reverts to the sentinel 0.
+    // profileId transiently reverts to `null`.
     if (sentinelBlocksRebind(profileId)) return state;
     final pref = ref.watch(nikudPreferenceProvider);
-    _bindObserver(ref, pref, profileId, (value) {
+    _bindObserver(ref, pref, profileId ?? _kNoProfileSentinel, (value) {
       if (value != state) state = value;
     });
     return pref.defaultValue;
@@ -253,14 +255,14 @@ class ShowNikudPref extends _$ShowNikudPref
 
   Future<void> set(bool value) async {
     if (value == state) return;
-    final profileId = ref.read(activeProfileIdProvider);
+    final profileId = ref.read(activeProfileIdProvider) ?? _kNoProfileSentinel;
     final pref = ref.read(nikudPreferenceProvider);
     final previous = state;
     state = value;
     // AUD-core-preferences-04 (EH-2): see UseHebrewTerms.set.
     await guardedPersist(
       event: 'show_nikud_persist_failed',
-      write: () => _writeAndPushSnapshot(ref, pref, profileId, value),
+      write: () => _writeAndPersist(pref, profileId, value),
       onFailure: () => state = previous,
     );
   }
@@ -317,17 +319,17 @@ class CurrentTransliterationVariant extends _$CurrentTransliterationVariant
   TransliterationVariant build() {
     final profileId = ref.watch(activeProfileIdProvider);
     // IL-1 fix: see _SentinelGuardedPreference — do NOT re-bind when
-    // profileId transiently reverts to the sentinel 0.
+    // profileId transiently reverts to `null`.
     if (sentinelBlocksRebind(profileId)) return state;
     final pref = ref.watch(transliterationVariantPreferenceProvider);
-    _bindObserver(ref, pref, profileId, (value) {
+    _bindObserver(ref, pref, profileId ?? _kNoProfileSentinel, (value) {
       if (value != state) state = value;
     });
     return pref.defaultValue;
   }
 
   Future<void> set(TransliterationVariant variant) async {
-    final profileId = ref.read(activeProfileIdProvider);
+    final profileId = ref.read(activeProfileIdProvider) ?? _kNoProfileSentinel;
     final pref = ref.read(transliterationVariantPreferenceProvider);
     final previous = state;
     state = variant;
@@ -349,24 +351,24 @@ class CurrentFontSize extends _$CurrentFontSize
   FontSize build() {
     final profileId = ref.watch(activeProfileIdProvider);
     // IL-1 fix: see _SentinelGuardedPreference — do NOT re-bind when
-    // profileId transiently reverts to the sentinel 0.
+    // profileId transiently reverts to `null`.
     if (sentinelBlocksRebind(profileId)) return state;
     final pref = ref.watch(textDisplayPreferenceProvider);
-    _bindObserver(ref, pref, profileId, (value) {
+    _bindObserver(ref, pref, profileId ?? _kNoProfileSentinel, (value) {
       if (value != state) state = value;
     });
     return pref.defaultValue;
   }
 
   Future<void> set(FontSize size) async {
-    final profileId = ref.read(activeProfileIdProvider);
+    final profileId = ref.read(activeProfileIdProvider) ?? _kNoProfileSentinel;
     final pref = ref.read(textDisplayPreferenceProvider);
     final previous = state;
     state = size;
     // AUD-core-preferences-04 (EH-2): see UseHebrewTerms.set.
     await guardedPersist(
       event: 'current_font_size_persist_failed',
-      write: () => _writeAndPushSnapshot(ref, pref, profileId, size),
+      write: () => _writeAndPersist(pref, profileId, size),
       onFailure: () => state = previous,
     );
   }
@@ -386,10 +388,10 @@ class SiyumGranularity extends _$SiyumGranularity
   MilestoneLevel build(CurriculumId curriculum) {
     final profileId = ref.watch(activeProfileIdProvider);
     // IL-1 fix: see _SentinelGuardedPreference — do NOT re-bind when
-    // profileId transiently reverts to the sentinel 0.
+    // profileId transiently reverts to `null`.
     if (sentinelBlocksRebind(profileId)) return state;
     final pref = ref.watch(siyumGranularityPreferenceProvider(curriculum));
-    _bindObserver(ref, pref, profileId, (value) {
+    _bindObserver(ref, pref, profileId ?? _kNoProfileSentinel, (value) {
       if (value != state) state = value;
     });
     return pref.defaultValue;
@@ -397,7 +399,7 @@ class SiyumGranularity extends _$SiyumGranularity
 
   Future<void> set(MilestoneLevel level) async {
     if (level == state) return;
-    final profileId = ref.read(activeProfileIdProvider);
+    final profileId = ref.read(activeProfileIdProvider) ?? _kNoProfileSentinel;
     final pref = ref.read(siyumGranularityPreferenceProvider(curriculum));
     final previous = state;
     state = level;

@@ -14,7 +14,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$PinScope {
 
- int get profileId;
+ String get profileId;
 /// Create a copy of PinScope
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -45,7 +45,7 @@ abstract mixin class $PinScopeCopyWith<$Res>  {
   factory $PinScopeCopyWith(PinScope value, $Res Function(PinScope) _then) = _$PinScopeCopyWithImpl;
 @useResult
 $Res call({
- int profileId
+ String profileId
 });
 
 
@@ -65,7 +65,7 @@ class _$PinScopeCopyWithImpl<$Res>
 @pragma('vm:prefer-inline') @override $Res call({Object? profileId = null,}) {
   return _then(_self.copyWith(
 profileId: null == profileId ? _self.profileId : profileId // ignore: cast_nullable_to_non_nullable
-as int,
+as String,
   ));
 }
 
@@ -150,7 +150,7 @@ return tutor(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( int profileId)?  parent,TResult Function( int profileId)?  tutor,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( String profileId)?  parent,TResult Function( String profileId)?  tutor,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case PinScopeParent() when parent != null:
 return parent(_that.profileId);case PinScopeTutor() when tutor != null:
@@ -172,7 +172,7 @@ return tutor(_that.profileId);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( int profileId)  parent,required TResult Function( int profileId)  tutor,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( String profileId)  parent,required TResult Function( String profileId)  tutor,}) {final _that = this;
 switch (_that) {
 case PinScopeParent():
 return parent(_that.profileId);case PinScopeTutor():
@@ -190,7 +190,7 @@ return tutor(_that.profileId);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( int profileId)?  parent,TResult? Function( int profileId)?  tutor,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( String profileId)?  parent,TResult? Function( String profileId)?  tutor,}) {final _that = this;
 switch (_that) {
 case PinScopeParent() when parent != null:
 return parent(_that.profileId);case PinScopeTutor() when tutor != null:
@@ -209,7 +209,7 @@ class PinScopeParent implements PinScope {
   const PinScopeParent(this.profileId);
   
 
-@override final  int profileId;
+@override final  String profileId;
 
 /// Create a copy of PinScope
 /// with the given fields replaced by the non-null parameter values.
@@ -241,7 +241,7 @@ abstract mixin class $PinScopeParentCopyWith<$Res> implements $PinScopeCopyWith<
   factory $PinScopeParentCopyWith(PinScopeParent value, $Res Function(PinScopeParent) _then) = _$PinScopeParentCopyWithImpl;
 @override @useResult
 $Res call({
- int profileId
+ String profileId
 });
 
 
@@ -261,7 +261,7 @@ class _$PinScopeParentCopyWithImpl<$Res>
 @override @pragma('vm:prefer-inline') $Res call({Object? profileId = null,}) {
   return _then(PinScopeParent(
 null == profileId ? _self.profileId : profileId // ignore: cast_nullable_to_non_nullable
-as int,
+as String,
   ));
 }
 
@@ -275,7 +275,7 @@ class PinScopeTutor implements PinScope {
   const PinScopeTutor(this.profileId);
   
 
-@override final  int profileId;
+@override final  String profileId;
 
 /// Create a copy of PinScope
 /// with the given fields replaced by the non-null parameter values.
@@ -307,7 +307,7 @@ abstract mixin class $PinScopeTutorCopyWith<$Res> implements $PinScopeCopyWith<$
   factory $PinScopeTutorCopyWith(PinScopeTutor value, $Res Function(PinScopeTutor) _then) = _$PinScopeTutorCopyWithImpl;
 @override @useResult
 $Res call({
- int profileId
+ String profileId
 });
 
 
@@ -327,7 +327,7 @@ class _$PinScopeTutorCopyWithImpl<$Res>
 @override @pragma('vm:prefer-inline') $Res call({Object? profileId = null,}) {
   return _then(PinScopeTutor(
 null == profileId ? _self.profileId : profileId // ignore: cast_nullable_to_non_nullable
-as int,
+as String,
   ));
 }
 

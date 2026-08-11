@@ -31,7 +31,7 @@ class SiyumGranularityPreference
   MilestoneLevel get defaultValue => MilestoneLevel.unit;
 
   @override
-  MilestoneLevel readFromPrefs(SharedPreferences prefs, int profileId) {
+  MilestoneLevel readFromPrefs(SharedPreferences prefs, String profileId) {
     final raw = prefs.getString(
       ProfileScopedPreferenceKeys.siyumGranularity(
         profileId,
@@ -44,7 +44,7 @@ class SiyumGranularityPreference
   @override
   Future<void> writeToPrefs(
     SharedPreferences prefs,
-    int profileId,
+    String profileId,
     MilestoneLevel value,
   ) async {
     await prefs.setString(

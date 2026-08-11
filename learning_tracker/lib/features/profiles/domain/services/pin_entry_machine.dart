@@ -176,7 +176,7 @@ bool _alwaysActive() => true;
 class PinEntryMachine {
   PinEntryMachine({
     required PinService Function() pinService,
-    required int? Function() profileId,
+    required String? Function() profileId,
     required void Function(PinFlowState state) onStateChanged,
     bool Function() isActive = _alwaysActive,
     PinFlowMode initialMode = PinFlowMode.verify,
@@ -194,7 +194,7 @@ class PinEntryMachine {
   /// long-lived (keepAlive) machine always uses the current provider value;
   /// a dialog closure simply returns its fixed `widget.pinService`.
   final PinService Function() _pinService;
-  final int? Function() _profileId;
+  final String? Function() _profileId;
   final void Function(PinFlowState state) _onStateChanged;
   final bool Function() _isActive;
 
@@ -288,7 +288,7 @@ class PinEntryMachine {
 
   // --- Setup (enter -> confirm -> save) ---
 
-  Future<void> _handleSetup(String pin, int? profileId) async {
+  Future<void> _handleSetup(String pin, String? profileId) async {
     if (_state.step == PinFlowStep.enterNew) {
       await _advanceToConfirm(pin);
       return;
@@ -298,7 +298,7 @@ class PinEntryMachine {
 
   // --- Change (verifyCurrent -> enterNew -> confirm -> save) ---
 
-  Future<void> _handleChange(String pin, int? profileId) async {
+  Future<void> _handleChange(String pin, String? profileId) async {
     if (profileId == null) {
       _emit(_state.copyWith(error: PinFlowError.noActiveProfile, digits: ''));
       return;
@@ -316,7 +316,7 @@ class PinEntryMachine {
     }
   }
 
-  Future<void> _handleVerifyCurrentForChange(String pin, int profileId) async {
+  Future<void> _handleVerifyCurrentForChange(String pin, String profileId) async {
     _emit(_state.copyWith(busy: true, error: null));
     try {
       final ok = await _pinService().verifyProfilePin(profileId, pin);
@@ -381,7 +381,7 @@ class PinEntryMachine {
   /// Shared confirm-step validate+save for setup and change: a mismatched
   /// confirm resets to enterNew with an error; a match persists via
   /// [PinService.setProfilePin] and completes the flow.
-  Future<void> _handleConfirmAndSave(String pin, int? profileId) async {
+  Future<void> _handleConfirmAndSave(String pin, String? profileId) async {
     if (pin != _state.firstPin) {
       _emit(
         _state.copyWith(
@@ -495,7 +495,7 @@ class PinEntryMachine {
 
   // --- Verify (single verify -> done) ---
 
-  Future<void> _handleVerify(String pin, int? profileId) async {
+  Future<void> _handleVerify(String pin, String? profileId) async {
     if (profileId == null) {
       _emit(_state.copyWith(error: PinFlowError.noActiveProfile, digits: ''));
       return;

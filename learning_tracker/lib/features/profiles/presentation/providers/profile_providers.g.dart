@@ -8,108 +8,14 @@ part of 'profile_providers.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
-/// The active account's local `accounts.id` within the currently-mounted
-/// per-account user DB (FR22, Story 25.21).
-///
-/// Resolves from [authStateProvider] — when a user is signed-in, the
-/// `currentUser.profileId` is the int FK that `learner_profiles.accountId`
-/// and the snapshot collections key off. Falls back to `1` during the
-/// brief signed-out window (e.g. between sign-up and the
-/// `setLocalBornSession` call that lands onboarding) so DAO calls that
-/// happen before auth-state settles keep their previous behavior.
-// keepAlive: read from DAO call sites throughout the account's session, must survive unrelated rebuilds.
-
-@ProviderFor(currentAccountId)
-final currentAccountIdProvider = CurrentAccountIdProvider._();
-
-/// The active account's local `accounts.id` within the currently-mounted
-/// per-account user DB (FR22, Story 25.21).
-///
-/// Resolves from [authStateProvider] — when a user is signed-in, the
-/// `currentUser.profileId` is the int FK that `learner_profiles.accountId`
-/// and the snapshot collections key off. Falls back to `1` during the
-/// brief signed-out window (e.g. between sign-up and the
-/// `setLocalBornSession` call that lands onboarding) so DAO calls that
-/// happen before auth-state settles keep their previous behavior.
-// keepAlive: read from DAO call sites throughout the account's session, must survive unrelated rebuilds.
-
-final class CurrentAccountIdProvider extends $FunctionalProvider<int, int, int>
-    with $Provider<int> {
-  /// The active account's local `accounts.id` within the currently-mounted
-  /// per-account user DB (FR22, Story 25.21).
-  ///
-  /// Resolves from [authStateProvider] — when a user is signed-in, the
-  /// `currentUser.profileId` is the int FK that `learner_profiles.accountId`
-  /// and the snapshot collections key off. Falls back to `1` during the
-  /// brief signed-out window (e.g. between sign-up and the
-  /// `setLocalBornSession` call that lands onboarding) so DAO calls that
-  /// happen before auth-state settles keep their previous behavior.
-  // keepAlive: read from DAO call sites throughout the account's session, must survive unrelated rebuilds.
-  CurrentAccountIdProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'currentAccountIdProvider',
-        isAutoDispose: false,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
-
-  @override
-  String debugGetCreateSourceHash() => _$currentAccountIdHash();
-
-  @$internal
-  @override
-  $ProviderElement<int> $createElement($ProviderPointer pointer) =>
-      $ProviderElement(pointer);
-
-  @override
-  int create(Ref ref) {
-    return currentAccountId(ref);
-  }
-
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(int value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<int>(value),
-    );
-  }
-}
-
-String _$currentAccountIdHash() => r'49a36871feb359d35d08592973d7e6ceb9282cec';
-
 /// Provider for the ProfileRepository implementation.
-///
-/// Resolves to [FirestoreProfileRepositoryAdapter], not a bare
-/// [ProfileRepositoryImpl] — see that adapter's class doc comment
-/// (`profile_repository_impl.dart`) for why every caller of this provider
-/// (add/edit-profile screens, onboarding, the self-heal path below) now
-/// also mints a Firestore identity for a genuinely new profile and writes
-/// its remote document, with zero changes needed at any of those call
-/// sites. **The adapter does NOT activate that identity (T-49, P2-30)** —
-/// activation is [SelectedProfileId.select]'s own job, below, which is why
-/// every one of those same call sites also calls `select()` right after
-/// creation returns.
-// keepAlive: stateless repository facade over the DB, cheap to keep for the app's lifetime.
+// keepAlive: stateless repository facade, cheap to keep for the app's lifetime.
 
 @ProviderFor(profileRepository)
 final profileRepositoryProvider = ProfileRepositoryProvider._();
 
 /// Provider for the ProfileRepository implementation.
-///
-/// Resolves to [FirestoreProfileRepositoryAdapter], not a bare
-/// [ProfileRepositoryImpl] — see that adapter's class doc comment
-/// (`profile_repository_impl.dart`) for why every caller of this provider
-/// (add/edit-profile screens, onboarding, the self-heal path below) now
-/// also mints a Firestore identity for a genuinely new profile and writes
-/// its remote document, with zero changes needed at any of those call
-/// sites. **The adapter does NOT activate that identity (T-49, P2-30)** —
-/// activation is [SelectedProfileId.select]'s own job, below, which is why
-/// every one of those same call sites also calls `select()` right after
-/// creation returns.
-// keepAlive: stateless repository facade over the DB, cheap to keep for the app's lifetime.
+// keepAlive: stateless repository facade, cheap to keep for the app's lifetime.
 
 final class ProfileRepositoryProvider
     extends
@@ -120,18 +26,7 @@ final class ProfileRepositoryProvider
         >
     with $Provider<ProfileRepository> {
   /// Provider for the ProfileRepository implementation.
-  ///
-  /// Resolves to [FirestoreProfileRepositoryAdapter], not a bare
-  /// [ProfileRepositoryImpl] — see that adapter's class doc comment
-  /// (`profile_repository_impl.dart`) for why every caller of this provider
-  /// (add/edit-profile screens, onboarding, the self-heal path below) now
-  /// also mints a Firestore identity for a genuinely new profile and writes
-  /// its remote document, with zero changes needed at any of those call
-  /// sites. **The adapter does NOT activate that identity (T-49, P2-30)** —
-  /// activation is [SelectedProfileId.select]'s own job, below, which is why
-  /// every one of those same call sites also calls `select()` right after
-  /// creation returns.
-  // keepAlive: stateless repository facade over the DB, cheap to keep for the app's lifetime.
+  // keepAlive: stateless repository facade, cheap to keep for the app's lifetime.
   ProfileRepositoryProvider._()
     : super(
         from: null,
@@ -166,19 +61,22 @@ final class ProfileRepositoryProvider
   }
 }
 
-String _$profileRepositoryHash() => r'e76df7a62e67c25846ca631cc7bb69cf6dabfe45';
+String _$profileRepositoryHash() => r'303da1dcedb7739328ecf4ae8aec4589f4c6c305';
 
-/// The currently selected profile ID. Null means no profile selected yet.
+/// The currently selected profile's ULID (AD-24). Null means no profile
+/// selected yet.
 // keepAlive: the session's profile selection must survive route changes and unrelated rebuilds.
 
 @ProviderFor(SelectedProfileId)
 final selectedProfileIdProvider = SelectedProfileIdProvider._();
 
-/// The currently selected profile ID. Null means no profile selected yet.
+/// The currently selected profile's ULID (AD-24). Null means no profile
+/// selected yet.
 // keepAlive: the session's profile selection must survive route changes and unrelated rebuilds.
 final class SelectedProfileIdProvider
-    extends $NotifierProvider<SelectedProfileId, int?> {
-  /// The currently selected profile ID. Null means no profile selected yet.
+    extends $NotifierProvider<SelectedProfileId, String?> {
+  /// The currently selected profile's ULID (AD-24). Null means no profile
+  /// selected yet.
   // keepAlive: the session's profile selection must survive route changes and unrelated rebuilds.
   SelectedProfileIdProvider._()
     : super(
@@ -199,30 +97,31 @@ final class SelectedProfileIdProvider
   SelectedProfileId create() => SelectedProfileId();
 
   /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(int? value) {
+  Override overrideWithValue(String? value) {
     return $ProviderOverride(
       origin: this,
-      providerOverride: $SyncValueProvider<int?>(value),
+      providerOverride: $SyncValueProvider<String?>(value),
     );
   }
 }
 
-String _$selectedProfileIdHash() => r'54186feec36482a0b3d257e438325f40dc33b6e4';
+String _$selectedProfileIdHash() => r'152b27f7bee397fa8d5db0b9871ad73031aecff5';
 
-/// The currently selected profile ID. Null means no profile selected yet.
+/// The currently selected profile's ULID (AD-24). Null means no profile
+/// selected yet.
 // keepAlive: the session's profile selection must survive route changes and unrelated rebuilds.
 
-abstract class _$SelectedProfileId extends $Notifier<int?> {
-  int? build();
+abstract class _$SelectedProfileId extends $Notifier<String?> {
+  String? build();
   @$mustCallSuper
   @override
   void runBuild() {
-    final ref = this.ref as $Ref<int?, int?>;
+    final ref = this.ref as $Ref<String?, String?>;
     final element =
         ref.element
             as $ClassProviderElement<
-              AnyNotifier<int?, int?>,
-              int?,
+              AnyNotifier<String?, String?>,
+              String?,
               Object?,
               Object?
             >;
@@ -233,36 +132,14 @@ abstract class _$SelectedProfileId extends $Notifier<int?> {
 /// Auto-selects (or self-heals) the account's profile on an auth-valid startup.
 ///
 /// BUG D1: on a force-stop + cold start with a still-valid Firebase/local
-/// session, the app skips the interactive sign-in flow (which is the only
-/// place that calls `selectedProfileIdProvider.notifier.select(...)`, see
+/// session, the app skips the interactive sign-in flow (the only place that
+/// otherwise calls `selectedProfileIdProvider.notifier.select(...)`, see
 /// `sign_in_controller.dart`). Without this effect the in-memory
-/// `selectedProfileIdProvider` stays `null`, so `activeProfileIdProvider`
-/// returns `0` and any write into a `profile_id`-FK'd table (e.g.
-/// `stage_definitions` during track creation) fails with
-/// `SqliteException(787): FOREIGN KEY constraint failed`.
+/// `selectedProfileIdProvider` stays `null`.
 ///
-/// Mirrors the single-profile branch of `_navigateAfterSignIn` (line ~536 of
-/// sign_in_controller): whenever auth transitions to signed-in AND no profile
-/// is selected yet, select the account's first profile.
-///
-/// BUG D1 (round 2 — the real crux): the previous fix only handled the case
-/// where ≥1 profile already existed. This account (a cloud account whose
-/// profiles never materialised locally — restored / skipped-onboarding) has
-/// ZERO rows in `learner_profiles`, so `profiles.first` had nothing to select
-/// and `profileId` stayed `0`. An authenticated account must NEVER operate at
-/// `profile_id = 0`. So when the account has no profile we self-heal by
-/// creating a default adult profile (and adopting any orphaned `profile_id = 0`
-/// rows, e.g. a pre-existing track) and select it. After this an authenticated
-/// account always has ≥1 profile selected.
-///
-/// AUD-profiles-21 (SM-2 — provider `build` must be pure): all of the above
-/// self-heal logic used to run directly inside `build()`, so merely
-/// watching/reading this provider silently wrote to
-/// `selectedProfileIdProvider` (a sibling provider) and to the database
-/// (`ensureDefaultProfile`). `build()` now only mirrors the current
-/// selection; the effect lives in [ensureSelected], an explicit method
-/// invoked by the app shell's post-frame auth-valid effect (see
-/// `app_shell.dart`) — never from `build()`.
+/// AUD-profiles-21 (SM-2 — provider `build` must be pure): the self-heal
+/// logic lives in [ensureSelected], not `build()` — see `app_shell.dart`'s
+/// post-frame auth-valid effect for the caller.
 // keepAlive: the app shell triggers ensureSelected() once per auth transition, must survive unrelated rebuilds.
 
 @ProviderFor(AutoSelectedProfileId)
@@ -271,72 +148,28 @@ final autoSelectedProfileIdProvider = AutoSelectedProfileIdProvider._();
 /// Auto-selects (or self-heals) the account's profile on an auth-valid startup.
 ///
 /// BUG D1: on a force-stop + cold start with a still-valid Firebase/local
-/// session, the app skips the interactive sign-in flow (which is the only
-/// place that calls `selectedProfileIdProvider.notifier.select(...)`, see
+/// session, the app skips the interactive sign-in flow (the only place that
+/// otherwise calls `selectedProfileIdProvider.notifier.select(...)`, see
 /// `sign_in_controller.dart`). Without this effect the in-memory
-/// `selectedProfileIdProvider` stays `null`, so `activeProfileIdProvider`
-/// returns `0` and any write into a `profile_id`-FK'd table (e.g.
-/// `stage_definitions` during track creation) fails with
-/// `SqliteException(787): FOREIGN KEY constraint failed`.
+/// `selectedProfileIdProvider` stays `null`.
 ///
-/// Mirrors the single-profile branch of `_navigateAfterSignIn` (line ~536 of
-/// sign_in_controller): whenever auth transitions to signed-in AND no profile
-/// is selected yet, select the account's first profile.
-///
-/// BUG D1 (round 2 — the real crux): the previous fix only handled the case
-/// where ≥1 profile already existed. This account (a cloud account whose
-/// profiles never materialised locally — restored / skipped-onboarding) has
-/// ZERO rows in `learner_profiles`, so `profiles.first` had nothing to select
-/// and `profileId` stayed `0`. An authenticated account must NEVER operate at
-/// `profile_id = 0`. So when the account has no profile we self-heal by
-/// creating a default adult profile (and adopting any orphaned `profile_id = 0`
-/// rows, e.g. a pre-existing track) and select it. After this an authenticated
-/// account always has ≥1 profile selected.
-///
-/// AUD-profiles-21 (SM-2 — provider `build` must be pure): all of the above
-/// self-heal logic used to run directly inside `build()`, so merely
-/// watching/reading this provider silently wrote to
-/// `selectedProfileIdProvider` (a sibling provider) and to the database
-/// (`ensureDefaultProfile`). `build()` now only mirrors the current
-/// selection; the effect lives in [ensureSelected], an explicit method
-/// invoked by the app shell's post-frame auth-valid effect (see
-/// `app_shell.dart`) — never from `build()`.
+/// AUD-profiles-21 (SM-2 — provider `build` must be pure): the self-heal
+/// logic lives in [ensureSelected], not `build()` — see `app_shell.dart`'s
+/// post-frame auth-valid effect for the caller.
 // keepAlive: the app shell triggers ensureSelected() once per auth transition, must survive unrelated rebuilds.
 final class AutoSelectedProfileIdProvider
-    extends $AsyncNotifierProvider<AutoSelectedProfileId, int?> {
+    extends $AsyncNotifierProvider<AutoSelectedProfileId, String?> {
   /// Auto-selects (or self-heals) the account's profile on an auth-valid startup.
   ///
   /// BUG D1: on a force-stop + cold start with a still-valid Firebase/local
-  /// session, the app skips the interactive sign-in flow (which is the only
-  /// place that calls `selectedProfileIdProvider.notifier.select(...)`, see
+  /// session, the app skips the interactive sign-in flow (the only place that
+  /// otherwise calls `selectedProfileIdProvider.notifier.select(...)`, see
   /// `sign_in_controller.dart`). Without this effect the in-memory
-  /// `selectedProfileIdProvider` stays `null`, so `activeProfileIdProvider`
-  /// returns `0` and any write into a `profile_id`-FK'd table (e.g.
-  /// `stage_definitions` during track creation) fails with
-  /// `SqliteException(787): FOREIGN KEY constraint failed`.
+  /// `selectedProfileIdProvider` stays `null`.
   ///
-  /// Mirrors the single-profile branch of `_navigateAfterSignIn` (line ~536 of
-  /// sign_in_controller): whenever auth transitions to signed-in AND no profile
-  /// is selected yet, select the account's first profile.
-  ///
-  /// BUG D1 (round 2 — the real crux): the previous fix only handled the case
-  /// where ≥1 profile already existed. This account (a cloud account whose
-  /// profiles never materialised locally — restored / skipped-onboarding) has
-  /// ZERO rows in `learner_profiles`, so `profiles.first` had nothing to select
-  /// and `profileId` stayed `0`. An authenticated account must NEVER operate at
-  /// `profile_id = 0`. So when the account has no profile we self-heal by
-  /// creating a default adult profile (and adopting any orphaned `profile_id = 0`
-  /// rows, e.g. a pre-existing track) and select it. After this an authenticated
-  /// account always has ≥1 profile selected.
-  ///
-  /// AUD-profiles-21 (SM-2 — provider `build` must be pure): all of the above
-  /// self-heal logic used to run directly inside `build()`, so merely
-  /// watching/reading this provider silently wrote to
-  /// `selectedProfileIdProvider` (a sibling provider) and to the database
-  /// (`ensureDefaultProfile`). `build()` now only mirrors the current
-  /// selection; the effect lives in [ensureSelected], an explicit method
-  /// invoked by the app shell's post-frame auth-valid effect (see
-  /// `app_shell.dart`) — never from `build()`.
+  /// AUD-profiles-21 (SM-2 — provider `build` must be pure): the self-heal
+  /// logic lives in [ensureSelected], not `build()` — see `app_shell.dart`'s
+  /// post-frame auth-valid effect for the caller.
   // keepAlive: the app shell triggers ensureSelected() once per auth transition, must survive unrelated rebuilds.
   AutoSelectedProfileIdProvider._()
     : super(
@@ -358,54 +191,32 @@ final class AutoSelectedProfileIdProvider
 }
 
 String _$autoSelectedProfileIdHash() =>
-    r'91945fc50cb497d4a8ec3bad675c1a799c882687';
+    r'64fd1d4886985c484f49a8d1d1518b0f62d0b1b3';
 
 /// Auto-selects (or self-heals) the account's profile on an auth-valid startup.
 ///
 /// BUG D1: on a force-stop + cold start with a still-valid Firebase/local
-/// session, the app skips the interactive sign-in flow (which is the only
-/// place that calls `selectedProfileIdProvider.notifier.select(...)`, see
+/// session, the app skips the interactive sign-in flow (the only place that
+/// otherwise calls `selectedProfileIdProvider.notifier.select(...)`, see
 /// `sign_in_controller.dart`). Without this effect the in-memory
-/// `selectedProfileIdProvider` stays `null`, so `activeProfileIdProvider`
-/// returns `0` and any write into a `profile_id`-FK'd table (e.g.
-/// `stage_definitions` during track creation) fails with
-/// `SqliteException(787): FOREIGN KEY constraint failed`.
+/// `selectedProfileIdProvider` stays `null`.
 ///
-/// Mirrors the single-profile branch of `_navigateAfterSignIn` (line ~536 of
-/// sign_in_controller): whenever auth transitions to signed-in AND no profile
-/// is selected yet, select the account's first profile.
-///
-/// BUG D1 (round 2 — the real crux): the previous fix only handled the case
-/// where ≥1 profile already existed. This account (a cloud account whose
-/// profiles never materialised locally — restored / skipped-onboarding) has
-/// ZERO rows in `learner_profiles`, so `profiles.first` had nothing to select
-/// and `profileId` stayed `0`. An authenticated account must NEVER operate at
-/// `profile_id = 0`. So when the account has no profile we self-heal by
-/// creating a default adult profile (and adopting any orphaned `profile_id = 0`
-/// rows, e.g. a pre-existing track) and select it. After this an authenticated
-/// account always has ≥1 profile selected.
-///
-/// AUD-profiles-21 (SM-2 — provider `build` must be pure): all of the above
-/// self-heal logic used to run directly inside `build()`, so merely
-/// watching/reading this provider silently wrote to
-/// `selectedProfileIdProvider` (a sibling provider) and to the database
-/// (`ensureDefaultProfile`). `build()` now only mirrors the current
-/// selection; the effect lives in [ensureSelected], an explicit method
-/// invoked by the app shell's post-frame auth-valid effect (see
-/// `app_shell.dart`) — never from `build()`.
+/// AUD-profiles-21 (SM-2 — provider `build` must be pure): the self-heal
+/// logic lives in [ensureSelected], not `build()` — see `app_shell.dart`'s
+/// post-frame auth-valid effect for the caller.
 // keepAlive: the app shell triggers ensureSelected() once per auth transition, must survive unrelated rebuilds.
 
-abstract class _$AutoSelectedProfileId extends $AsyncNotifier<int?> {
-  FutureOr<int?> build();
+abstract class _$AutoSelectedProfileId extends $AsyncNotifier<String?> {
+  FutureOr<String?> build();
   @$mustCallSuper
   @override
   void runBuild() {
-    final ref = this.ref as $Ref<AsyncValue<int?>, int?>;
+    final ref = this.ref as $Ref<AsyncValue<String?>, String?>;
     final element =
         ref.element
             as $ClassProviderElement<
-              AnyNotifier<AsyncValue<int?>, int?>,
-              AsyncValue<int?>,
+              AnyNotifier<AsyncValue<String?>, String?>,
+              AsyncValue<String?>,
               Object?,
               Object?
             >;
@@ -413,24 +224,24 @@ abstract class _$AutoSelectedProfileId extends $AsyncNotifier<int?> {
   }
 }
 
-/// Profiles for the current account.
+/// Profiles for the active account.
 
 @ProviderFor(profileList)
 final profileListProvider = ProfileListProvider._();
 
-/// Profiles for the current account.
+/// Profiles for the active account.
 
 final class ProfileListProvider
     extends
         $FunctionalProvider<
-          AsyncValue<List<ProfileModel>>,
-          List<ProfileModel>,
-          FutureOr<List<ProfileModel>>
+          AsyncValue<List<LearnerProfileEntity>>,
+          List<LearnerProfileEntity>,
+          FutureOr<List<LearnerProfileEntity>>
         >
     with
-        $FutureModifier<List<ProfileModel>>,
-        $FutureProvider<List<ProfileModel>> {
-  /// Profiles for the current account.
+        $FutureModifier<List<LearnerProfileEntity>>,
+        $FutureProvider<List<LearnerProfileEntity>> {
+  /// Profiles for the active account.
   ProfileListProvider._()
     : super(
         from: null,
@@ -447,36 +258,36 @@ final class ProfileListProvider
 
   @$internal
   @override
-  $FutureProviderElement<List<ProfileModel>> $createElement(
+  $FutureProviderElement<List<LearnerProfileEntity>> $createElement(
     $ProviderPointer pointer,
   ) => $FutureProviderElement(pointer);
 
   @override
-  FutureOr<List<ProfileModel>> create(Ref ref) {
+  FutureOr<List<LearnerProfileEntity>> create(Ref ref) {
     return profileList(ref);
   }
 }
 
-String _$profileListHash() => r'4fa991a4edbce8afb13b4f3100fbce120d6b59a8';
+String _$profileListHash() => r'2b464a9964d99a4b8a2793bd5be0cefa2fec5de0';
 
-/// Stream of profiles for the current account, for reactive UI.
+/// Stream of profiles for the active account, for reactive UI.
 
 @ProviderFor(profileListStream)
 final profileListStreamProvider = ProfileListStreamProvider._();
 
-/// Stream of profiles for the current account, for reactive UI.
+/// Stream of profiles for the active account, for reactive UI.
 
 final class ProfileListStreamProvider
     extends
         $FunctionalProvider<
-          AsyncValue<List<ProfileModel>>,
-          List<ProfileModel>,
-          Stream<List<ProfileModel>>
+          AsyncValue<List<LearnerProfileEntity>>,
+          List<LearnerProfileEntity>,
+          Stream<List<LearnerProfileEntity>>
         >
     with
-        $FutureModifier<List<ProfileModel>>,
-        $StreamProvider<List<ProfileModel>> {
-  /// Stream of profiles for the current account, for reactive UI.
+        $FutureModifier<List<LearnerProfileEntity>>,
+        $StreamProvider<List<LearnerProfileEntity>> {
+  /// Stream of profiles for the active account, for reactive UI.
   ProfileListStreamProvider._()
     : super(
         from: null,
@@ -493,34 +304,36 @@ final class ProfileListStreamProvider
 
   @$internal
   @override
-  $StreamProviderElement<List<ProfileModel>> $createElement(
+  $StreamProviderElement<List<LearnerProfileEntity>> $createElement(
     $ProviderPointer pointer,
   ) => $StreamProviderElement(pointer);
 
   @override
-  Stream<List<ProfileModel>> create(Ref ref) {
+  Stream<List<LearnerProfileEntity>> create(Ref ref) {
     return profileListStream(ref);
   }
 }
 
-String _$profileListStreamHash() => r'62745f3bc8d57d10a2c1a4627f104b0a60b9f404';
+String _$profileListStreamHash() => r'aee5b5766ce3a8c977e97ab641ba6e8c39184e00';
 
-/// The currently selected profile model.
+/// The currently selected profile.
 
 @ProviderFor(selectedProfile)
 final selectedProfileProvider = SelectedProfileProvider._();
 
-/// The currently selected profile model.
+/// The currently selected profile.
 
 final class SelectedProfileProvider
     extends
         $FunctionalProvider<
-          AsyncValue<ProfileModel?>,
-          ProfileModel?,
-          FutureOr<ProfileModel?>
+          AsyncValue<LearnerProfileEntity?>,
+          LearnerProfileEntity?,
+          FutureOr<LearnerProfileEntity?>
         >
-    with $FutureModifier<ProfileModel?>, $FutureProvider<ProfileModel?> {
-  /// The currently selected profile model.
+    with
+        $FutureModifier<LearnerProfileEntity?>,
+        $FutureProvider<LearnerProfileEntity?> {
+  /// The currently selected profile.
   SelectedProfileProvider._()
     : super(
         from: null,
@@ -537,23 +350,23 @@ final class SelectedProfileProvider
 
   @$internal
   @override
-  $FutureProviderElement<ProfileModel?> $createElement(
+  $FutureProviderElement<LearnerProfileEntity?> $createElement(
     $ProviderPointer pointer,
   ) => $FutureProviderElement(pointer);
 
   @override
-  FutureOr<ProfileModel?> create(Ref ref) {
+  FutureOr<LearnerProfileEntity?> create(Ref ref) {
     return selectedProfile(ref);
   }
 }
 
-String _$selectedProfileHash() => r'b66d723d4e6e5829b73400bb6febf572535e6e4f';
+String _$selectedProfileHash() => r'faf12901a6c123d1c1183bf8e62b902aa50caf85';
 
 /// The active profile session as a typed domain aggregate.
 ///
-/// Wraps [selectedProfileIdProvider] into a [ProfileSession] so callers
-/// talk about "a session" rather than a nullable integer. This is the
-/// canonical read path for profile-selection state; write path stays on
+/// Wraps [selectedProfileIdProvider] into a [ProfileSession] so callers talk
+/// about "a session" rather than a nullable String. This is the canonical
+/// read path for profile-selection state; write path stays on
 /// `selectedProfileIdProvider.notifier` (select / clear).
 // keepAlive: wraps selectedProfileIdProvider, which is itself keepAlive — must not defeat that.
 
@@ -562,9 +375,9 @@ final profileSessionProvider = ProfileSessionProvider._();
 
 /// The active profile session as a typed domain aggregate.
 ///
-/// Wraps [selectedProfileIdProvider] into a [ProfileSession] so callers
-/// talk about "a session" rather than a nullable integer. This is the
-/// canonical read path for profile-selection state; write path stays on
+/// Wraps [selectedProfileIdProvider] into a [ProfileSession] so callers talk
+/// about "a session" rather than a nullable String. This is the canonical
+/// read path for profile-selection state; write path stays on
 /// `selectedProfileIdProvider.notifier` (select / clear).
 // keepAlive: wraps selectedProfileIdProvider, which is itself keepAlive — must not defeat that.
 
@@ -573,9 +386,9 @@ final class ProfileSessionProvider
     with $Provider<ProfileSession> {
   /// The active profile session as a typed domain aggregate.
   ///
-  /// Wraps [selectedProfileIdProvider] into a [ProfileSession] so callers
-  /// talk about "a session" rather than a nullable integer. This is the
-  /// canonical read path for profile-selection state; write path stays on
+  /// Wraps [selectedProfileIdProvider] into a [ProfileSession] so callers talk
+  /// about "a session" rather than a nullable String. This is the canonical
+  /// read path for profile-selection state; write path stays on
   /// `selectedProfileIdProvider.notifier` (select / clear).
   // keepAlive: wraps selectedProfileIdProvider, which is itself keepAlive — must not defeat that.
   ProfileSessionProvider._()

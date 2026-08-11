@@ -556,9 +556,11 @@ String _$isSacredTimeActiveHash() =>
 /// [TimezoneLifecycleObserver] calls [SacredWindowRepository.invalidate]
 /// on resume (DNI-367).
 ///
-/// The [SacredWindowDao] is injected so computed windows are persisted to
-/// the user DB, enabling background notification fire-time checks on
-/// cold-start without the Flutter engine (DNI-367 AC 26.24 requirement 4).
+/// No DB tier: the Drift-era `SacredWindowDao` persistence is deleted (proven
+/// dead — nothing in Dart read the windows back, and no native SQLite reader
+/// exists), and `docs/firestore-rewrite-map.md` keeps the derived zmanim cache
+/// device-local ("Stays local, never leaves the device") — it is not a
+/// Firestore migration target, so the repository is constructed bare.
 
 @ProviderFor(sacredWindowRepository)
 final sacredWindowRepositoryProvider = SacredWindowRepositoryProvider._();
@@ -569,9 +571,11 @@ final sacredWindowRepositoryProvider = SacredWindowRepositoryProvider._();
 /// [TimezoneLifecycleObserver] calls [SacredWindowRepository.invalidate]
 /// on resume (DNI-367).
 ///
-/// The [SacredWindowDao] is injected so computed windows are persisted to
-/// the user DB, enabling background notification fire-time checks on
-/// cold-start without the Flutter engine (DNI-367 AC 26.24 requirement 4).
+/// No DB tier: the Drift-era `SacredWindowDao` persistence is deleted (proven
+/// dead — nothing in Dart read the windows back, and no native SQLite reader
+/// exists), and `docs/firestore-rewrite-map.md` keeps the derived zmanim cache
+/// device-local ("Stays local, never leaves the device") — it is not a
+/// Firestore migration target, so the repository is constructed bare.
 
 final class SacredWindowRepositoryProvider
     extends
@@ -587,9 +591,11 @@ final class SacredWindowRepositoryProvider
   /// [TimezoneLifecycleObserver] calls [SacredWindowRepository.invalidate]
   /// on resume (DNI-367).
   ///
-  /// The [SacredWindowDao] is injected so computed windows are persisted to
-  /// the user DB, enabling background notification fire-time checks on
-  /// cold-start without the Flutter engine (DNI-367 AC 26.24 requirement 4).
+  /// No DB tier: the Drift-era `SacredWindowDao` persistence is deleted (proven
+  /// dead — nothing in Dart read the windows back, and no native SQLite reader
+  /// exists), and `docs/firestore-rewrite-map.md` keeps the derived zmanim cache
+  /// device-local ("Stays local, never leaves the device") — it is not a
+  /// Firestore migration target, so the repository is constructed bare.
   SacredWindowRepositoryProvider._()
     : super(
         from: null,
@@ -625,7 +631,7 @@ final class SacredWindowRepositoryProvider
 }
 
 String _$sacredWindowRepositoryHash() =>
-    r'13530eafd0fbfd2938f84a78941349af7d86d81f';
+    r'352f72aa0a86150457c461db1bea1a2ad7b69a86';
 
 /// Provides the [NotificationScheduler] instance.
 
@@ -863,7 +869,7 @@ final class StreakAlertServiceProvider
 }
 
 String _$streakAlertServiceHash() =>
-    r'ab2f3dc7c951f97b7eeee2c8bad4c1bcc91b5042';
+    r'537382123b12e710821b43ffac983c9027338f47';
 
 /// Provides the [StreakAlertService] instance for [profileId].
 ///

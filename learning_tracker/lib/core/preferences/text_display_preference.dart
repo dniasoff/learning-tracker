@@ -12,7 +12,7 @@ class TextDisplayPreference extends ProfileScopedPreference<FontSize> {
   FontSize get defaultValue => FontSize.medium;
 
   @override
-  FontSize readFromPrefs(SharedPreferences prefs, int profileId) {
+  FontSize readFromPrefs(SharedPreferences prefs, String profileId) {
     final idx = ProfileScopedPreferenceKeys.readFontSizeIndex(prefs, profileId);
     if (idx >= 0 && idx < FontSize.values.length) {
       return FontSize.values[idx];
@@ -23,7 +23,7 @@ class TextDisplayPreference extends ProfileScopedPreference<FontSize> {
   @override
   Future<void> writeToPrefs(
     SharedPreferences prefs,
-    int profileId,
+    String profileId,
     FontSize value,
   ) async {
     await prefs.setInt(

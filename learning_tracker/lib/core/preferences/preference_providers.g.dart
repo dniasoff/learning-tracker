@@ -415,7 +415,7 @@ final class UseHebrewTermsProvider
   }
 }
 
-String _$useHebrewTermsHash() => r'610da147b2765c18b0076a8bda948ea81f49609c';
+String _$useHebrewTermsHash() => r'6cd167e5cc162e8d2c58b508496444557f92293c';
 
 /// Whether to render Jewish learning terms in Hebrew script for the active
 /// profile. This is the **only** `core/` entry point for the toggle —
@@ -472,7 +472,7 @@ final class UseHebrewDateProvider
   }
 }
 
-String _$useHebrewDateHash() => r'fe75bc26ace42d9b911709b1345f0387b06871c0';
+String _$useHebrewDateHash() => r'1f8a7c882453d63497cf96bf9c0fb1598d75f8d0';
 
 abstract class _$UseHebrewDate extends $Notifier<bool> {
   bool build();
@@ -524,7 +524,7 @@ final class ShowNikudPrefProvider
   }
 }
 
-String _$showNikudPrefHash() => r'eb9e053fa3a9aaa79b261325cc829f69dd698cf2';
+String _$showNikudPrefHash() => r'a97446949041cd2c7257d37149dc1d7a86eea6c3';
 
 abstract class _$ShowNikudPref extends $Notifier<bool> {
   bool build();
@@ -717,7 +717,7 @@ final class CurrentTransliterationVariantProvider
 }
 
 String _$currentTransliterationVariantHash() =>
-    r'3832e1b2f28d4895649b24a616a29476d8055dee';
+    r'f2d1a6413329960a7759eccbb8f846a17217969a';
 
 abstract class _$CurrentTransliterationVariant
     extends $Notifier<TransliterationVariant> {
@@ -771,7 +771,7 @@ final class CurrentFontSizeProvider
   }
 }
 
-String _$currentFontSizeHash() => r'df2d40b56f5e0cd7d6be8da8964fc5b17b0ae7dc';
+String _$currentFontSizeHash() => r'f29e2536bfdeb48c312589c3b6500ade06a78242';
 
 abstract class _$CurrentFontSize extends $Notifier<FontSize> {
   FontSize build();
@@ -862,7 +862,7 @@ final class SiyumGranularityProvider
   }
 }
 
-String _$siyumGranularityHash() => r'382567ff6f9a87e53d37254c371db5cd284e34e8';
+String _$siyumGranularityHash() => r'5e67880aa7a09e0bf1c3087e5500b895bb41c0a1';
 
 /// The finest [MilestoneLevel] the active profile wants celebrated for
 /// [curriculum] (a Riverpod family keyed by curriculum). Defaults to

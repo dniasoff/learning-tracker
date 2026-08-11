@@ -20,7 +20,7 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 /// something other than accessing parent settings.
 Future<bool> showParentPinVerificationDialog(
   BuildContext context, {
-  required int profileId,
+  required String profileId,
   required PinService pinService,
   AnalyticsService? analytics,
   String? subtitle,
@@ -48,7 +48,7 @@ Future<bool> showParentPinVerificationDialog(
 /// Multi-step change PIN flow in the same modal style as verification.
 Future<bool> showParentPinChangeDialog(
   BuildContext context, {
-  required int profileId,
+  required String profileId,
   required PinService pinService,
 }) async {
   final result = await showDialog<bool>(
@@ -77,7 +77,7 @@ class _ParentPinVerificationDialog extends StatefulWidget {
     this.subtitle,
   });
 
-  final int profileId;
+  final String profileId;
   final PinService pinService;
 
   /// Overrides the default subtitle copy. When null, falls back to
@@ -141,7 +141,7 @@ class _ParentPinChangeDialog extends StatefulWidget {
     required this.pinService,
   });
 
-  final int profileId;
+  final String profileId;
   final PinService pinService;
 
   @override

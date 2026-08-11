@@ -12,7 +12,7 @@ class HebrewDatePreference extends ProfileScopedPreference<bool> {
   bool get defaultValue => true;
 
   @override
-  bool readFromPrefs(SharedPreferences prefs, int profileId) {
+  bool readFromPrefs(SharedPreferences prefs, String profileId) {
     // Delegates to the single source of truth for the scoped/legacy-key
     // read+default logic (matches TextDisplayPreference's pattern) so this
     // default can never drift from ProfileScopedPreferenceKeys' own default
@@ -23,7 +23,7 @@ class HebrewDatePreference extends ProfileScopedPreference<bool> {
   @override
   Future<void> writeToPrefs(
     SharedPreferences prefs,
-    int profileId,
+    String profileId,
     bool value,
   ) async {
     await prefs.setBool(

@@ -1,909 +1,140 @@
-import 'package:drift/drift.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
-import 'package:learning_tracker/core/logging/logger.dart';
-import 'package:learning_tracker/core/sync/codec/learner_profile_codec.dart';
-import 'package:learning_tracker/core/sync/sync_write_facade.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
-// P2-2: this file lives under `data/repositories/` — the directory
-// `check_dependency_direction.dart` (audit check 102) exempts from the
-// "no lib/features/** → lib/data/** import" rule — so it is the one place
-// allowed to import DocIds at all. P2-10: within this file, only
-// `_resolveProfileUlid` (below) ever calls `DocIds.mintProfileUlid()` — see
-// that function's own doc comment. See `ProfileRepository.createProfile`'s
-// doc comment for why every OTHER caller (screens, `profile_providers.dart`)
-// never mints one itself.
 import 'package:learning_tracker/data/firestore/doc_ids.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
-// T-49 (P2-23, P2-30): `_resolveFirestoreProfileRepo`'s return type names
-// this class directly — `repository_providers.dart` above only exposes it
-// indirectly (as a FutureProvider's value type), which is not enough for a
-// type annotation. Same exemption as the DocIds import above.
 import 'package:learning_tracker/data/repositories/firestore_learner_profile_repository.dart';
-import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
+import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
-// AUD-profiles-02: TutorWriteException must propagate out of pushLearnerProfile
-// (see below) instead of being swallowed by the offline-first catch-all — only
-// the barrel import is permitted across the feature boundary (Rule 2).
-import 'package:learning_tracker/features/tutoring/tutoring.dart';
 
-final _log = AppLogger.instance;
-
-/// Resolves [ulid] to a value guaranteed non-null. **This is the ONE call
-/// site in the codebase that ever calls [DocIds.mintProfileUlid] — every
-/// place that used to call the minter directly (`ProfileRepositoryImpl`'s
-/// `createProfile`/`ensureDefaultProfile`, `FirestoreProfileRepositoryAdapter`'s
-/// same two methods) now routes through this function instead.** A prior
-/// version of this file made that claim about "exactly one site mints" while
-/// four separate lines each called `DocIds.mintProfileUlid()` directly —
-/// true only in the sense that production traffic always resolves through
-/// the adapter first (see [FirestoreProfileRepositoryAdapter.createProfile]),
-/// never a literal fact about the source text a reader could grep for. This
-/// function makes the grep and the claim agree: `grep -rn
-/// 'DocIds.mintProfileUlid()' lib/` now returns exactly one line, here.
+/// Firestore-backed [ProfileRepository] — the sole implementation now that
+/// the Drift user database is deleted. Resolves
+/// `firestoreLearnerProfileRepositoryProvider` for whatever account is
+/// active, following the same `SomeAdapter({required Ref ref})` shape as
+/// every other Firestore adapter in this codebase (AD-23/AD-28: this file
+/// lives under `data/repositories/`, the one place `lib/features/**` may
+/// import `DocIds`/`repository_providers.dart`).
 ///
-/// [ProfileRepositoryImpl] still cannot make its own [ulid] parameter
-/// `required` — it deliberately keeps implementing the full
-/// [ProfileRepository] interface (not just the adapter-wrapped path) so a
-/// caller can use it standalone as a local-only repository, no Firestore
-/// adapter involved (`profile_edit_delete_actions_test.dart`'s
-/// AUD-profiles-02 test does exactly this, overriding
-/// `profileRepositoryProvider` with a bare `ProfileRepositoryImpl` to prove
-/// `TutorWriteException` propagation without any Firestore machinery in the
-/// way) — and [ProfileRepository.createProfile]/`.ensureDefaultProfile`
-/// declare [ulid] optional for every OTHER caller (screens can never supply
-/// one; check 102 forbids them importing [DocIds]). Dart's override rules
-/// forbid narrowing an inherited optional named parameter to required
-/// (verified directly: `dart analyze` on a minimal repro reports
-/// `invalid_override`), so as long as [ProfileRepositoryImpl] implements
-/// [ProfileRepository], its `ulid` parameter must stay `String?` too. This
-/// function is the compile-time-cheapest way to guarantee only one place
-/// ever manufactures a fresh value regardless.
-String _resolveProfileUlid(String? ulid) => ulid ?? DocIds.mintProfileUlid();
+/// **No local eager-mint-plus-dual-write scaffolding.** The dual-write
+/// adapter this replaces minted a ULID before an accompanying Drift insert
+/// so both sides agreed on an id, then separately healed a missing remote
+/// document on every activation (T-40) because the two writes could fail
+/// independently. With only one backing store left, [createProfile] mints
+/// and writes in the same call and there is nothing left to heal —
+/// Firestore's own offline queue (local persistence is enabled,
+/// `account_firebase.dart`) already retries a queued write once
+/// connectivity returns.
+class FirestoreProfileRepositoryAdapter implements ProfileRepository {
+  FirestoreProfileRepositoryAdapter({required Ref ref}) : _ref = ref;
 
-/// Implementation of [ProfileRepository] using Drift database.
-///
-/// When a [SyncWriteFacade] is provided (cloud-born accounts), create / update /
-/// delete operations are mirrored to Firestore so learner profiles survive
-/// re-install and sync across devices. Local-born accounts pass null and
-/// the repo stays local-only.
-class ProfileRepositoryImpl implements ProfileRepository {
-  final UserDatabase _db;
-  final SyncWriteFacade? _syncEngine;
+  final Ref _ref;
 
-  ProfileRepositoryImpl(this._db, {SyncWriteFacade? syncEngine})
-    : _syncEngine = syncEngine;
+  static const maxProfilesPerAccount = 10;
 
-  static const int maxProfilesPerAccount = 10;
-  static const _codec = LearnerProfileCodec();
-
-  Map<String, dynamic> _toFirestorePayload(ProfileModel profile) =>
-      _codec.encode(
-        LearnerProfileRow(
-          profileId: profile.id,
-          accountId: profile.accountId,
-          displayName: profile.displayName,
-          mode: profile.mode,
-          avatarIndex: profile.avatarIndex,
-          createdAt: profile.createdAt,
-          updatedAt: profile.updatedAt,
-        ),
-      );
-
-  @override
-  Future<List<ProfileModel>> getProfilesByAccount(int accountId) async {
-    final rows = await _db.profileDao.getProfilesByAccount(accountId);
-    return rows.map(ProfileModel.fromDriftRow).toList();
-  }
-
-  @override
-  Future<ProfileModel?> getProfileById(int id) async {
-    final row = await _db.profileDao.getProfileById(id);
-    return row != null ? ProfileModel.fromDriftRow(row) : null;
-  }
-
-  /// Same lookup as [getProfileById], but returns `null` instead of
-  /// throwing when the row exists with a legacy `ulid IS NULL` (pre-P2-2) —
-  /// [ProfileModel.fromDriftRow]'s [StateError] is the right signal for a
-  /// genuine read (see its own doc comment: wipe and reseed), but the wrong
-  /// one for "is there a ulid to heal onto" (T-40). Used only by
-  /// [FirestoreProfileRepositoryAdapter]'s post-creation/activation heal
-  /// decisions, which must degrade to "nothing to heal" rather than crash
-  /// on a legacy row.
-  Future<ProfileModel?> tryGetProfileById(int id) async {
-    final row = await _db.profileDao.getProfileById(id);
-    if (row == null || row.ulid == null) return null;
-    return ProfileModel.fromDriftRow(row);
-  }
-
-  @override
-  Future<ProfileModel> createProfile({
-    required int accountId,
-    required String displayName,
-    required String mode,
-    int avatarIndex = 0,
-    String? ulid,
-  }) async {
-    final trimmedName = displayName.trim();
-
-    final count = await _db.profileDao.countProfilesForAccount(accountId);
-    if (count >= maxProfilesPerAccount) {
-      throw MaxProfilesExceededException(accountId);
-    }
-
-    // Case-insensitive duplicate name check
-    final nameExists = await _db.profileDao.profileExistsByName(
-      accountId,
-      trimmedName,
+  Future<FirestoreLearnerProfileRepository> _resolve() async {
+    final repo = await _ref.read(
+      firestoreLearnerProfileRepositoryProvider.future,
     );
-    if (nameExists) {
+    if (repo == null) {
+      throw const ProfileRepositoryNotReadyException();
+    }
+    return repo;
+  }
+
+  @override
+  Future<List<LearnerProfileEntity>> getProfiles() async =>
+      (await _resolve()).getProfiles();
+
+  @override
+  Stream<List<LearnerProfileEntity>> watchProfiles() async* {
+    yield* (await _resolve()).watchProfiles();
+  }
+
+  @override
+  Future<LearnerProfileEntity?> getProfileById(String profileId) async =>
+      (await _resolve()).getProfile(profileId);
+
+  @override
+  Future<int> countProfiles() async => (await getProfiles()).length;
+
+  @override
+  Future<LearnerProfileEntity> createProfile({
+    required String displayName,
+    required ProfileMode mode,
+    String avatar = '',
+  }) async {
+    final repo = await _resolve();
+    final trimmedName = displayName.trim();
+    final existing = await repo.getProfiles();
+    if (existing.length >= maxProfilesPerAccount) {
+      throw const MaxProfilesExceededException();
+    }
+    if (existing.any(
+      (p) => p.displayName.toLowerCase() == trimmedName.toLowerCase(),
+    )) {
       throw DuplicateProfileNameException(trimmedName);
     }
-
-    _log.info(event: 'profile_repo_create_start', fields: {'mode': mode});
-    final now = DateTimeFactory.nowUtc();
-    // P2-2: eager, unconditional mint — every profile gets a Firestore
-    // identity at creation, atomically with the Drift insert below, never
-    // left null for a later edit to lazily backfill. [ulid] is normally
-    // already minted by the caller (`FirestoreProfileRepositoryAdapter`);
-    // [_resolveProfileUlid]'s own fallback only fires for a caller that
-    // bypasses the adapter (e.g. a test constructing this class directly).
-    final resolvedUlid = _resolveProfileUlid(ulid);
-    final id = await _db.profileDao.insertProfile(
-      LearnerProfilesCompanion.insert(
-        accountId: accountId,
-        displayName: trimmedName,
-        mode: mode,
-        avatarIndex: Value(avatarIndex),
-        createdAt: now,
-        updatedAt: now,
-        ulid: Value(resolvedUlid),
-      ),
-    );
-
-    final model = ProfileModel(
-      id: id,
-      accountId: accountId,
+    return repo.ensureProfile(
+      profileId: DocIds.mintProfileUlid(),
       displayName: trimmedName,
       mode: mode,
-      avatarIndex: avatarIndex,
-      createdAt: now,
-      updatedAt: now,
-      ulid: resolvedUlid,
+      createdAt: DateTimeFactory.nowUtc(),
+      avatar: avatar,
     );
-
-    _log.info(
-      event: 'profile_repo_create_done',
-      fields: {'profileId': model.id},
-    );
-    // Profile creation must succeed offline-first even if cloud push fails —
-    // but only when the failure is actually retryable. AUD-profiles-02: when
-    // a tutor session is active, `_syncEngine` is a `TutoredWriteRouter`
-    // (sync_providers.dart) that turns this into a one-shot, non-retryable
-    // Cloud Function RPC; swallowing that failure the same way as a durable
-    // outbox push silently strands the caller with no error. Let
-    // `TutorWriteException` propagate; keep swallowing genuine
-    // offline-first push failures on the durable (outbox) path.
-    try {
-      await _syncEngine?.pushLearnerProfile(_toFirestorePayload(model));
-    } on TutorWriteException {
-      rethrow;
-    } catch (e, st) {
-      // Non-fatal: cloud push failure is non-fatal; local write already
-      // succeeded (offline-first). AUD-profiles-16 (EH-3): still log it —
-      // silently discarding it left no telemetry trail to diagnose a real
-      // failure pattern (e.g. outbox writes silently failing on a subset of
-      // devices).
-      _log.warning(
-        event: 'profile_repo_create_cloud_push_failed',
-        fields: {'profileId': model.id},
-        exception: e,
-        stackTrace: st,
-      );
-    }
-    return model;
   }
 
   @override
-  Future<ProfileModel> updateProfile({
-    required int id,
+  Future<LearnerProfileEntity> updateProfile({
+    required String profileId,
     String? displayName,
-    String? mode,
-    int? avatarIndex,
+    ProfileMode? mode,
+    String? avatar,
   }) async {
-    final existing = await _db.profileDao.getProfileById(id);
-    if (existing == null) {
-      throw StateError('Profile $id not found');
+    final repo = await _resolve();
+    final current = await repo.getProfile(profileId);
+    if (current == null) {
+      throw StateError('Profile $profileId not found');
     }
-
-    // Case-insensitive duplicate name check (excluding self)
     if (displayName != null) {
       final trimmedName = displayName.trim();
-      final nameExists = await _db.profileDao.profileExistsByName(
-        existing.accountId,
-        trimmedName,
-        excludeId: id,
-      );
-      if (nameExists) {
+      final existing = await repo.getProfiles();
+      if (existing.any(
+        (p) =>
+            p.profileId != profileId &&
+            p.displayName.toLowerCase() == trimmedName.toLowerCase(),
+      )) {
         throw DuplicateProfileNameException(trimmedName);
       }
     }
-
-    final trimmedDisplayName = displayName?.trim();
-    final now = DateTimeFactory.nowUtc();
-    await (_db.update(
-      _db.learnerProfiles,
-    )..where((t) => t.id.equals(id))).write(
-      LearnerProfilesCompanion(
-        displayName: trimmedDisplayName != null
-            ? Value(trimmedDisplayName)
-            : const Value.absent(),
-        mode: mode != null ? Value(mode) : const Value.absent(),
-        avatarIndex: avatarIndex != null
-            ? Value(avatarIndex)
-            : const Value.absent(),
-        updatedAt: Value(now),
-      ),
+    return repo.updateProfile(
+      profile: current,
+      displayName: displayName?.trim(),
+      mode: mode,
+      avatar: avatar,
     );
-
-    final updated = await _db.profileDao.getProfileById(id);
-    final model = ProfileModel.fromDriftRow(updated!);
-    // AUD-profiles-02: see the createProfile push above — a tutor-routed
-    // push failure (`TutorWriteException`) must reach the caller (editProfileFlow
-    // catches it and shows a snackbar) instead of being swallowed here as if
-    // the durable offline-first outbox had queued a retry.
-    try {
-      await _syncEngine?.pushLearnerProfile(_toFirestorePayload(model));
-    } on TutorWriteException {
-      rethrow;
-    } catch (e, st) {
-      // Non-fatal: cloud push failure is non-fatal; local write already
-      // succeeded (offline-first). AUD-profiles-16 (EH-3): still log it —
-      // silently discarding it left no telemetry trail to diagnose a real
-      // failure pattern (e.g. outbox writes silently failing on a subset of
-      // devices).
-      _log.warning(
-        event: 'profile_repo_update_cloud_push_failed',
-        fields: {'profileId': model.id},
-        exception: e,
-        stackTrace: st,
-      );
-    }
-    return model;
   }
 
   @override
-  Future<void> deleteProfile(int id, {bool allowLast = false}) async {
-    _log.info(
-      event: 'profile_repo_delete_start',
-      fields: {'profileId': id, 'allowLast': allowLast},
-    );
-    // Read the profile first to capture its ULID before the transaction deletes the row.
-    final existing = await _db.profileDao.getProfileById(id);
-    final profileUlid = existing?.ulid;
-    // Guard: by default we refuse to leave the account with zero profiles —
-    // the picker would have nothing to show. Callers can opt in via
-    // `allowLast: true` after a strong confirmation; the empty-state UI in
-    // ProfilePicker will route the user to add a fresh profile.
+  Future<void> deleteProfile(
+    String profileId, {
+    bool allowLast = false,
+  }) async {
     if (!allowLast) {
-      if (existing != null) {
-        final count = await countProfilesForAccount(existing.accountId);
-        if (count <= 1) {
-          throw const LastProfileException();
-        }
+      final count = await countProfiles();
+      if (count <= 1) {
+        throw const LastProfileException();
       }
     }
-
-    await _db.transaction(() async {
-      // Cascade delete all associated data.
-      // W3.20: `completions` and `streaks` tables dropped — their data is now
-      // in `completion_events` and `streak_events` which cascade-delete via FK.
-      await (_db.delete(
-        _db.bookmarks,
-      )..where((t) => t.profileId.equals(id))).go();
-      await (_db.delete(_db.goals)..where((t) => t.profileId.equals(id))).go();
-      await (_db.delete(
-        _db.stageDefinitions,
-      )..where((t) => t.profileId.equals(id))).go();
-      await (_db.delete(
-        _db.learningOrder,
-      )..where((t) => t.profileId.equals(id))).go();
-      await (_db.delete(
-        _db.pointConfigs,
-      )..where((t) => t.profileId.equals(id))).go();
-      // curriculum_scopes and study_day_configs hold a non-nullable (RESTRICT)
-      // FK to curriculum_tracks, so they MUST be cleared BEFORE the tracks
-      // themselves. Deleting curriculum_tracks first fails with
-      // SqliteException(787) FOREIGN KEY constraint, which rolls back the whole
-      // transaction — the profile is never deleted and the user just sees the
-      // confirm dialog dismiss with nothing happening.
-      await (_db.delete(
-        _db.curriculumScopes,
-      )..where((t) => t.profileId.equals(id))).go();
-      await (_db.delete(
-        _db.studyDayConfigs,
-      )..where((t) => t.profileId.equals(id))).go();
-      await (_db.delete(
-        _db.curriculumTracks,
-      )..where((t) => t.profileId.equals(id))).go();
-      // learning_ledger.trackId is ON DELETE SET NULL, so its order relative to
-      // curriculum_tracks does not matter.
-      await (_db.delete(
-        _db.learningLedger,
-      )..where((t) => t.profileId.equals(id))).go();
-      await (_db.delete(
-        _db.profilePrograms,
-      )..where((t) => t.profileId.equals(id))).go();
-      // Canonical event logs + pending-command queue + derived plans.
-      // completion_events / streak_events also cascade off the
-      // learner_profiles delete, but clear them explicitly so the wipe does
-      // not depend on FK-cascade ordering. `outbox` has no FK — without this
-      // its pending pushes for the deleted profile would survive.
-      await (_db.delete(
-        _db.completionEvents,
-      )..where((t) => t.profileId.equals(id))).go();
-      await (_db.delete(
-        _db.streakEvents,
-      )..where((t) => t.profileId.equals(id))).go();
-      await (_db.delete(
-        _db.dailyPlans,
-      )..where((t) => t.profileId.equals(id))).go();
-      await (_db.delete(_db.outbox)..where((t) => t.profileId.equals(id))).go();
-      // Finally delete the profile itself
-      await _db.profileDao.deleteProfile(id);
+    // firestore.rules denies client-side delete on learner_profiles;
+    // deleteLearnerProfile (functions/src/deletes.ts) performs a
+    // server-side recursiveDelete across every subcollection. Talmid
+    // profile deletion is not a tutor right, so this is never tutor-routed.
+    final callable = FirebaseFunctions.instance.httpsCallable(
+      'deleteLearnerProfile',
+    );
+    await callable.call<Map<String, dynamic>>(<String, dynamic>{
+      'profileId': profileId,
     });
-    _log.info(
-      event: 'profile_repo_delete_db_complete',
-      fields: {'profileId': id},
-    );
-
-    if (profileUlid != null) {
-      await _syncEngine?.deleteLearnerProfile(profileUlid);
-    } else {
-      _log.error(
-        event: 'profile_repo_delete_missing_ulid',
-        fields: {
-          'profileId': id,
-          'reason': 'ULID was null, cloud delete skipped',
-        },
-      );
-    }
-    _log.info(
-      event: 'profile_repo_delete_sync_notified',
-      fields: {'profileId': id},
-    );
-  }
-
-  @override
-  Future<int> countProfilesForAccount(int accountId) =>
-      _db.profileDao.countProfilesForAccount(accountId);
-
-  @override
-  Future<int> ensureDefaultProfile({
-    required int accountId,
-    required String defaultDisplayName,
-    String? ulid,
-  }) async {
-    // Fast path: account already owns a profile — nothing to heal.
-    final existing = await _db.profileDao.getProfilesByAccount(accountId);
-    if (existing.isNotEmpty) return existing.first.id;
-
-    _log.warning(
-      event: 'profile_self_heal_start',
-      fields: {'accountId': accountId},
-    );
-
-    final now = DateTimeFactory.nowUtc();
-    final trimmedName = defaultDisplayName.trim();
-    final displayName = trimmedName.isEmpty ? 'Me' : trimmedName;
-    // P2-2: eager, unconditional mint — see the matching comment in
-    // [createProfile]. Only reached on the self-heal path (the fast-path
-    // return above never gets here), so nothing is wasted minting on a
-    // no-op call.
-    final resolvedUlid = _resolveProfileUlid(ulid);
-
-    // Single transaction: create the profile, then re-parent any orphaned
-    // `profile_id = 0` rows that were written before a profile existed (e.g. a
-    // track created on a profile-less account). These tables have no FK on
-    // `learner_profiles`, so `profile_id = 0` rows are physically present and
-    // must be adopted by the new profile rather than left stranded. The
-    // FK-enforced tables (stage_definitions, goals, completion_events, …) can
-    // never hold a `profile_id = 0` row, so they need no re-parenting.
-    final newProfileId = await _db.transaction<int>(() async {
-      final id = await _db.profileDao.insertProfile(
-        LearnerProfilesCompanion.insert(
-          accountId: accountId,
-          displayName: displayName,
-          mode: ProfileMode.adult.storageKey,
-          createdAt: now,
-          updatedAt: now,
-          ulid: Value(resolvedUlid),
-        ),
-      );
-
-      await (_db.update(_db.curriculumTracks)
-            ..where((t) => t.profileId.equals(0)))
-          .write(CurriculumTracksCompanion(profileId: Value(id)));
-      await (_db.update(_db.pointConfigs)..where((t) => t.profileId.equals(0)))
-          .write(PointConfigsCompanion(profileId: Value(id)));
-      await (_db.update(_db.studyDayConfigs)
-            ..where((t) => t.profileId.equals(0)))
-          .write(StudyDayConfigsCompanion(profileId: Value(id)));
-      await (_db.update(_db.profilePrograms)
-            ..where((t) => t.profileId.equals(0)))
-          .write(ProfileProgramsCompanion(profileId: Value(id)));
-      await (_db.update(_db.dailyPlans)..where((t) => t.profileId.equals(0)))
-          .write(DailyPlansCompanion(profileId: Value(id)));
-
-      return id;
-    });
-
-    _log.info(
-      event: 'profile_self_heal_done',
-      fields: {'accountId': accountId, 'profileId': newProfileId},
-    );
-
-    // Mirror to the cloud so the healed profile survives re-install / sync.
-    // Offline-first: a push failure is non-fatal — the local write stands.
-    // AUD-profiles-02: still let a TutorWriteException propagate (see
-    // createProfile above) rather than swallow it as a durable-outbox retry.
-    try {
-      await _syncEngine?.pushLearnerProfile(
-        _toFirestorePayload(
-          ProfileModel(
-            id: newProfileId,
-            accountId: accountId,
-            displayName: displayName,
-            mode: ProfileMode.adult.storageKey,
-            avatarIndex: 0,
-            createdAt: now,
-            updatedAt: now,
-            ulid: resolvedUlid,
-          ),
-        ),
-      );
-    } on TutorWriteException {
-      rethrow;
-    } catch (e, st) {
-      // Non-fatal: cloud push failure is non-fatal; local write already
-      // succeeded. AUD-profiles-16 (EH-3): still log it — silently
-      // discarding it left no telemetry trail to diagnose a real failure
-      // pattern (e.g. outbox writes silently failing on a subset of
-      // devices).
-      _log.warning(
-        event: 'profile_self_heal_cloud_push_failed',
-        fields: {'accountId': accountId, 'profileId': newProfileId},
-        exception: e,
-        stackTrace: st,
-      );
-    }
-
-    return newProfileId;
-  }
-
-  /// No-op: this Drift-only implementation has no Firestore mirror to heal
-  /// — see the class doc comment ("Local-born accounts pass null and the
-  /// repo stays local-only"). [FirestoreProfileRepositoryAdapter] overrides
-  /// this with the real T-40 activation heal.
-  @override
-  Future<void> ensureRemoteProfile(int id) async {}
-}
-
-/// Firestore-backed [ProfileRepository] adapter — wraps a
-/// [ProfileRepositoryImpl] instance rather than replacing it (dual-write,
-/// TEMPORARY — see the class doc comment for what removes it), following
-/// the reference pattern `FirestoreBookmarkRepositoryAdapter`
-/// (`lib/features/learning/data/repositories/bookmark_repository_impl.dart`)
-/// establishes. Read that class's doc comment first; this one only calls
-/// out what is DIFFERENT for profiles.
-///
-/// ## Dual-write, not cutover — and why
-///
-/// Every OTHER Firestore adapter in this codebase (bookmarks, etc.) fully
-/// replaces its Drift-era sibling: the interface is entity-shaped, so
-/// swapping the backing store is invisible to callers. Profiles cannot do
-/// that yet — [ProfileRepository]'s whole interface is `int`-keyed
-/// (`ProfileModel.id`), and that int is threaded through a great many
-/// profile-scoped screens/providers/queries this task is not asked to
-/// convert. So this adapter does NOT swap Drift for Firestore; it does
-/// both: this class mints the profile's Firestore identity EAGERLY (P2-2
-/// — before [_drift]'s insert, not after it) and threads it through, so
-/// the write to [_drift] (unchanged behavior otherwise — the local row,
-/// and its existing legacy `_syncEngine` push, are exactly as before)
-/// lands WITH its `ulid` already set, then this class ensures the matching
-/// Firestore `learner_profiles` document exists. This is explicitly
-/// temporary: it goes away the moment [ProfileRepository] (and every
-/// caller keyed off `ProfileModel.id`) is converted to the ULID identity
-/// end-to-end — at that point [_drift] and the Drift-only creation path it
-/// wraps are deleted outright, not merged into this class.
-///
-/// ## Pairing the two identities: the `ulid` column, not a session cache
-///
-/// A profile needs BOTH identities live at once so [activeProfileDocIdProvider]
-/// can carry the ULID while every existing Drift-keyed screen/provider/
-/// query keeps working unchanged during the transition. That pairing is
-/// stored durably on the Drift row itself — `learner_profiles.ulid`
-/// (schema v38, `ProfileModel.ulid`, `learner_profiles.dart`'s `ulid`
-/// column doc comment) — not in an in-memory cache, so it survives a
-/// restart and is visible to any caller that already reads a
-/// [ProfileModel] (e.g. [SelectedProfileId.select] in
-/// `profile_providers.dart`, which reads `ulid` back to set
-/// [activeProfileDocIdProvider] on every profile switch, not just a
-/// same-session one). A prior version of this adapter used a session-only
-/// `Map<int, String>` cache instead; that was rejected (see git history) —
-/// it made every pre-existing/older-session profile permanently
-/// unresolvable, which is not a bridge the next stage (rewiring every
-/// remaining feature) can stand on.
-///
-/// ## Identity policy (P2-2): eager and unconditional — never lazy
-///
-/// Every profile is minted a Firestore identity BEFORE its Drift row is
-/// ever inserted — [createProfile] and the self-heal branch of
-/// [ensureDefaultProfile] mint via `_resolveProfileUlid` (this file's
-/// top-level function, the one place `DocIds.mintProfileUlid()` is ever
-/// called) first, then pass the same value into [_drift]'s insert, so the
-/// row and its `ulid`
-/// come into existence atomically. There is no longer a lazy, on-edit
-/// backfill path: [updateProfile] does not mint. A profile created before
-/// this policy shipped (schema v38, pre-P2-2) can still have `ulid IS
-/// NULL` — greenfield: that is not healed by this adapter; the remedy is
-/// wiping and reseeding the device, not a migration this class performs.
-///
-/// **`ulid == null` on a row created under this policy should never
-/// happen** — every method below still returns/operates on [ProfileModel]s
-/// exactly as [_drift] does, and a `null` `ulid` now means either a
-/// pre-P2-2 legacy row or (transiently) that a caller bypassed the eager
-/// mint contract; callers must never treat it as the profile being invalid
-/// or absent.
-///
-/// ## No activation of any kind — this class never writes
-/// [activeProfileDocIdProvider], on any path (T-49, P2-30)
-///
-/// P2-18/P2-23/P2-28 each hoisted this adapter's OWN activation write
-/// progressively earlier — above the Firestore write (P2-18/P2-23), then
-/// above the account-resolution await too (P2-28) — and each time a
-/// caller-side await the write's own method could not see (the Drift
-/// insert/transaction, the durable-outbox enqueue, or in a tutored session
-/// a real Cloud Function RPC — see [_ensureFirestoreProfile]'s doc comment
-/// for the full enumeration) still sat between "decide to activate" and
-/// "activate," so a newer selection could still be clobbered by a
-/// late-settling write. Reproduced by execution each time a hoist claimed
-/// closure: see `docs/planning/firestore-cutover-log.md`'s `T-49` entries
-/// for the full history, most recently the round that found this exact
-/// class's P2-28 hoist still reachable through the caller's own
-/// `await _drift.createProfile(...)` / `await _drift.ensureDefaultProfile(...)`.
-///
-/// **P2-30 removes the write instead of relocating it a fourth time.**
-/// [createProfile] and [ensureDefaultProfile] now call
-/// [_ensureFirestoreProfile] directly — the SAME write-only path
-/// [ensureRemoteProfile] already used since P2-18 — and this class touches
-/// [activeProfileDocIdProvider] nowhere at all, on any of its three public
-/// methods. What was previously described as [ensureRemoteProfile]'s own
-/// exception ("this ONE caller never activates") is now simply true of the
-/// whole class; it stops being an exception and becomes the rule.
-///
-/// The only writers of [activeProfileDocIdProvider] anywhere in `lib/` are
-/// in `profile_providers.dart`: `SelectedProfileId.select()`/`.clear()`,
-/// and `AutoSelectedProfileId`'s own guarded re-affirm branch. Every
-/// production caller of [createProfile]/[ensureDefaultProfile] already
-/// calls `select()` right after creation returns —
-/// `onboarding_profile_creation_step.dart`, `add_profile_dialog.dart`, and
-/// `AutoSelectedProfileId._resolveSelection` itself — so this adapter's own
-/// activation was always redundant on the happy path. The three cases
-/// where a caller deliberately does NOT select the profile it just
-/// created — the widget was unmounted before [createProfile] returned; a
-/// newer selection already won a race inside `AutoSelectedProfileId` — are
-/// exactly the cases where activating here would have been WRONG: an
-/// abandoned or superseded creation stranding [activeProfileDocIdProvider]
-/// on a profile nothing else agrees with. Removing the write closes all of
-/// those cases identically, because there is no longer a write to race.
-///
-/// **Scope, stated so it cannot be read as broader than it is (the same
-/// unqualified-claim failure this file's own history warns about):** this
-/// section is about `activeProfileDocIdProvider` alone. It says nothing
-/// about `selectedProfileIdProvider` — that provider's own write path
-/// (`profile_providers.dart`'s `select()`) is unaffected by this change,
-/// and callers that reach `select()` after their own unguarded await are a
-/// separate, narrower defect class, not covered here (see
-/// `docs/planning/firestore-cutover-log.md`'s `T-49` entry for the current
-/// round, "the honest residual").
-///
-/// ## A profile created while offline still gets its remote document (T-40)
-///
-/// The Firestore write inside [_ensureFirestoreProfile] runs from all
-/// three public methods — [ensureRemoteProfile], [createProfile], and
-/// [ensureDefaultProfile]'s self-heal branch each call it directly, once
-/// each, at the instant a cloud outage would have caused the original
-/// failure, with no retry of its own. The actual heal is
-/// [ensureRemoteProfile]: fired from `SelectedProfileId.select`
-/// (`profile_providers.dart`), the ONE seam every profile-activation path
-/// in the app funnels through — the cold-start route guard (`ProfileGuard`
-/// → `router_provider.dart`'s `setSelectedProfileId`), the ≥2-profile
-/// picker (`profile_picker_screen.dart`), the zero-profile self-heal
-/// (`AutoSelectedProfileId._resolveSelection`), the switcher sheet, sign-in
-/// reconciliation, onboarding, device restore, and a notification tap all
-/// call `select()`, never `activeProfileDocIdProvider.notifier.set(...)`
-/// directly (verified: `grep -rn
-/// 'selectedProfileIdProvider.notifier).select(' lib/` returns every one of
-/// them and nothing else). This replaces a design that shipped at P2-8
-/// (`8dea756b`) hooking `ref.listen(selectedProfileIdProvider, …)` inside
-/// `AppShellScreen.build` instead — dead on every cold-start path, because
-/// the router's `ProfileGuard` resolves selection (calling `select()`)
-/// BEFORE the shell widget — and its listener — can ever build; see
-/// `docs/planning/firestore-cutover-log.md`'s `T-40` entries (P2-13/P2-14)
-/// for the full post-mortem. It re-reads the Drift row (cheap, local,
-/// always available) and re-runs the SAME idempotent merge write
-/// ([FirestoreLearnerProfileRepository.ensureProfile], never
-/// `created_at`-clobbering — see that method's own doc comment) every time
-/// the profile activates, so a document that was still missing after
-/// creation gets created the very next time its profile is selected with
-/// the network back — including the next app launch.
-class FirestoreProfileRepositoryAdapter implements ProfileRepository {
-  FirestoreProfileRepositoryAdapter({
-    required Ref ref,
-    required ProfileRepositoryImpl driftRepository,
-  }) : _ref = ref,
-       _drift = driftRepository;
-
-  final Ref _ref;
-  final ProfileRepositoryImpl _drift;
-
-  @override
-  Future<List<ProfileModel>> getProfilesByAccount(int accountId) =>
-      _drift.getProfilesByAccount(accountId);
-
-  @override
-  Future<ProfileModel?> getProfileById(int id) => _drift.getProfileById(id);
-
-  @override
-  Future<int> countProfilesForAccount(int accountId) =>
-      _drift.countProfilesForAccount(accountId);
-
-  // P2-10: was a verbose async pass-through whose only content was a
-  // comment explaining what it no longer does (no lazy ulid backfill on
-  // edit — see the class doc comment's "Identity policy" and "A profile
-  // created while offline still gets its remote document" sections, which
-  // already cover this ground). Collapsed to match the plain forwarding
-  // style [getProfilesByAccount]/[getProfileById]/[countProfilesForAccount]/
-  // [deleteProfile] already use above — [_drift] does the only real work.
-  @override
-  Future<ProfileModel> updateProfile({
-    required int id,
-    String? displayName,
-    String? mode,
-    int? avatarIndex,
-  }) => _drift.updateProfile(
-    id: id,
-    displayName: displayName,
-    mode: mode,
-    avatarIndex: avatarIndex,
-  );
-
-  @override
-  Future<void> deleteProfile(int id, {bool allowLast = false}) =>
-      _drift.deleteProfile(id, allowLast: allowLast);
-  // firestore.rules denies client-side delete on learner_profiles (see
-  // FirestoreLearnerProfileRepository's class doc comment, "No delete
-  // method") — nothing here deletes the Firestore document; the Drift row
-  // (and its `ulid` column) is simply gone once this returns, same as
-  // before this adapter existed.
-
-  @override
-  Future<ProfileModel> createProfile({
-    required int accountId,
-    required String displayName,
-    required String mode,
-    int avatarIndex = 0,
-    String? ulid,
-  }) async {
-    // P2-2: mint BEFORE the Drift insert — this is the only PRODUCTION
-    // caller of `_resolveProfileUlid` that ever actually needs its fallback
-    // to fire (see that function's own doc comment for why it, not this
-    // call site, is the literal one place `DocIds.mintProfileUlid()`
-    // appears in `lib/`) — and thread the same value through to [_drift],
-    // so the local row and the eventual Firestore document always agree on
-    // the id. A caller-supplied [ulid] (tests only, in production this is
-    // always omitted here) is honored rather than re-minted, so two
-    // independent identities are never produced for the same creation.
-    final resolvedUlid = _resolveProfileUlid(ulid);
-    final model = await _drift.createProfile(
-      accountId: accountId,
-      displayName: displayName,
-      mode: mode,
-      avatarIndex: avatarIndex,
-      ulid: resolvedUlid,
-    );
-    // T-49 (P2-30): the write-only path — never activation. This method
-    // never touches [activeProfileDocIdProvider]; the caller owns
-    // activation via `SelectedProfileId.select()` — see the class doc
-    // comment's "No activation of any kind" section for why an
-    // adapter-side activation here was always the wrong owner.
-    await _ensureFirestoreProfile(model);
-    return model;
-  }
-
-  @override
-  Future<int> ensureDefaultProfile({
-    required int accountId,
-    required String defaultDisplayName,
-    String? ulid,
-  }) async {
-    // T-40: ONE decision, made from the row [_drift] actually returns — not
-    // a separate pre-read of `getProfilesByAccount` that could disagree
-    // with [_drift]'s own re-read a moment later. That double-decision
-    // (fixed here) could strand a profile permanently: if the two reads
-    // disagreed, [_drift] could mint and insert a new row while this
-    // adapter — deciding from its OWN stale read — believed no creation
-    // happened and skipped the heal entirely. Minting eagerly and
-    // unconditionally costs nothing to waste (`_resolveProfileUlid`'s
-    // fallback is a pure local generator, no I/O — see [createProfile]'s
-    // comment); the
-    // fast (no-op) path inside [_drift.ensureDefaultProfile] simply ignores
-    // it. [_drift.tryGetProfileById] never throws for a legacy pre-P2-2
-    // `ulid IS NULL` row — see its own doc comment — so the fast path
-    // landing on such a row (never backfilled here, "Identity policy")
-    // safely skips the heal instead of crashing.
-    final resolvedUlid = _resolveProfileUlid(ulid);
-    final id = await _drift.ensureDefaultProfile(
-      accountId: accountId,
-      defaultDisplayName: defaultDisplayName,
-      ulid: resolvedUlid,
-    );
-    final model = await _drift.tryGetProfileById(id);
-    // T-49 (P2-30): same reasoning as createProfile above — write only,
-    // never activation.
-    if (model != null) {
-      await _ensureFirestoreProfile(model);
-    }
-    return id;
-  }
-
-  /// Resolves the [FirestoreLearnerProfileRepository] for whatever cloud
-  /// account is active right now, or `null` when there is none — the ONE
-  /// place [_ensureFirestoreProfile] resolves it, so a genuine
-  /// account-resolution failure (e.g. [AccountNotAuthenticatedException],
-  /// which `firestoreLearnerProfileRepositoryProvider` propagates as an
-  /// `AsyncError` rather than swallowing into `null` — see
-  /// `repository_providers.dart`'s library doc comment) is caught and
-  /// logged exactly once, here, rather than once per caller. Non-fatal for
-  /// the same reason every write in this class is non-fatal: profiles are
-  /// offline-first by explicit contract (`tutor_invites.ts:59-60`), so
-  /// neither a remote outage nor a resolution failure may ever propagate
-  /// out of [createProfile]/[ensureDefaultProfile]/[ensureRemoteProfile].
-  Future<FirestoreLearnerProfileRepository?> _resolveFirestoreProfileRepo(
-    ProfileModel model,
-  ) async {
-    try {
-      return await _ref.read(firestoreLearnerProfileRepositoryProvider.future);
-    } catch (e, st) {
-      _log.warning(
-        event: 'profile_repo_firestore_ensure_failed',
-        fields: {'profileId': model.id},
-        exception: e,
-        stackTrace: st,
-      );
-      return null;
-    }
-  }
-
-  /// Idempotent create-if-missing write for [model]'s Firestore
-  /// `learner_profiles/{ulid}` document — the write alone, NEVER
-  /// [activeProfileDocIdProvider] (T-49, P2-18/P2-30: this method has been
-  /// write-only since P2-18 for [ensureRemoteProfile]; P2-30 makes it the
-  /// SOLE Firestore-write path for [createProfile] and
-  /// [ensureDefaultProfile] too, deleting the separate
-  /// `_activateThenEnsureFirestoreProfile` P2-23/P2-28 added and then
-  /// removed — see the class doc comment's "No activation of any kind"
-  /// section for why).
-  ///
-  /// Called from all THREE public methods, each exactly once per call:
-  /// [ensureRemoteProfile] directly; [createProfile] and
-  /// [ensureDefaultProfile]'s self-heal branch directly too, right after
-  /// their own `await`s on [_drift] (a Drift insert/transaction, then —
-  /// when a [SyncWriteFacade] is wired — a durable-outbox enqueue, or in a
-  /// tutored session a real Cloud Function RPC via
-  /// `TutoredWriteRouter.pushLearnerProfile`) have already settled. Those
-  /// caller-side awaits are exactly what made every prior hoist
-  /// (P2-18/P2-23/P2-28) of an activation write still racy: each hoist
-  /// only ever reasoned about the awaits inside ITS OWN method body, never
-  /// about what already ran in the caller before this method was ever
-  /// entered. This method makes no activation claim at all, so it has
-  /// nothing to be racy about.
-  ///
-  /// Always goes through [FirestoreLearnerProfileRepository.ensureProfile]
-  /// (never the deleted `createProfile`), passing [model.createdAt] — the
-  /// Drift row's own immutable local creation timestamp — as that method's
-  /// `createdAt`. P2-15: that method no longer reads Firestore to decide
-  /// whether `created_at` is safe to (re-)send; it always sends
-  /// [model.createdAt], which can never be wrong regardless of activation
-  /// count, because it is never re-derived from a Firestore read (which
-  /// could be a stale offline cache — see that method's own doc comment
-  /// for the mechanism this replaced). This method NEVER mints;
-  /// [model.ulid] is always already set (eager mint, see
-  /// [createProfile]/[ensureDefaultProfile] above).
-  ///
-  /// Non-fatal on a Firestore failure — see [_resolveFirestoreProfileRepo]'s
-  /// doc comment for why account resolution is non-fatal too.
-  Future<void> _ensureFirestoreProfile(ProfileModel model) async {
-    final firestoreRepo = await _resolveFirestoreProfileRepo(model);
-    if (firestoreRepo == null) return; // no active cloud account yet
-    try {
-      await firestoreRepo.ensureProfile(
-        profileId: model.ulid,
-        displayName: model.displayName,
-        mode: model.profileMode,
-        avatar: model.avatarIndex.toString(),
-        createdAt: model.createdAt,
-      );
-    } catch (e, st) {
-      _log.warning(
-        event: 'profile_repo_firestore_ensure_failed',
-        fields: {'profileId': model.id},
-        exception: e,
-        stackTrace: st,
-      );
-    }
-  }
-
-  /// Activation-time heal (T-40): the replacement for the lazy backfill
-  /// P2-2 deleted. [_ensureFirestoreProfile] alone (called from all three
-  /// public methods, this one included) fires exactly once per call, at
-  /// the instant a network outage would have caused the original failure —
-  /// with no retry, a profile created offline got a local ULID and
-  /// permanently no remote document. This method is the real retry: called
-  /// every time [id]'s profile is ACTIVATED, from `SelectedProfileId.select`
-  /// (`profile_providers.dart`) — the one seam every activation path in the
-  /// app funnels through, see the class doc comment's "A profile created
-  /// while offline still gets its remote document" section for the full
-  /// list of call sites — not only at creation, so the SAME idempotent
-  /// merge write runs again on every cold start and every manual profile
-  /// switch until it succeeds. No-op (never throws) when [id] has no
-  /// matching row or no `ulid` yet to heal onto — see
-  /// [ProfileRepositoryImpl.tryGetProfileById].
-  ///
-  /// **Does NOT activate [activeProfileDocIdProvider] — true of every
-  /// method on this class (T-49, P2-18/P2-30).** The ONE caller of this
-  /// specific method is `SelectedProfileId.select` (`profile_providers.dart`),
-  /// via `unawaited(...)` — a fire-and-forget dispatch. `select()` already
-  /// sets [activeProfileDocIdProvider] synchronously, before dispatching
-  /// this heal, so by the time this method's `await` on a real Firestore
-  /// write finally resolves, a DIFFERENT profile may already be the one
-  /// selected (switch profiles while this one's heal is still in flight,
-  /// e.g. offline). Writing [activeProfileDocIdProvider] again here on
-  /// completion — the pre-P2-18 behaviour — could then re-point it at THIS
-  /// (now stale) profile after a later `select()` had already correctly
-  /// moved it elsewhere: the racing writes have no ordering guarantee
-  /// against wall-clock selection order, only against each write's own
-  /// network latency. `activeProfileDocIdProvider` is what
-  /// `repository_providers.dart`'s `_watchActiveAccountAndProfile` keys ALL
-  /// profile-scoped Firestore providers on, including the two live
-  /// features (bookmarks, learning_order) — so the corrected behaviour is
-  /// not cosmetic: this path calls [_ensureFirestoreProfile] directly — the
-  /// write alone, with no way to also activate, because this whole class
-  /// never activates (see the class doc comment, "No activation of any
-  /// kind") — which is the only value of it that cannot race, per the
-  /// project's greenfield doctrine ("a write this path never performs
-  /// cannot race"). See `docs/planning/firestore-cutover-log.md`'s `T-49`
-  /// entry for the full failure history this replaces.
-  @override
-  Future<void> ensureRemoteProfile(int id) async {
-    try {
-      final model = await _drift.tryGetProfileById(id);
-      if (model == null) return;
-      await _ensureFirestoreProfile(model);
-    } catch (e, st) {
-      // Defensive: _ensureFirestoreProfile already swallows the Firestore
-      // write's own failures (see its doc comment); this catches anything
-      // else (e.g. a Drift read racing a close) so a fire-and-forget caller
-      // (`app_shell.dart` calls this via `unawaited(...)`) can never surface
-      // an unhandled Future error.
-      _log.warning(
-        event: 'profile_repo_ensure_remote_profile_failed',
-        fields: {'profileId': id},
-        exception: e,
-        stackTrace: st,
-      );
-    }
   }
 }

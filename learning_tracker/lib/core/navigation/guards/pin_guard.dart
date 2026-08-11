@@ -72,7 +72,7 @@ class PinGuard extends AutoRouteGuard {
   /// Marks the parent-mode PIN as authenticated for [profileId] in the
   /// current session. Convenience wrapper for flows that verify the parent
   /// PIN outside the guard (e.g. PIN entry route).
-  void markAuthenticated(int profileId) {
+  void markAuthenticated(String profileId) {
     _authenticatedScope = PinScope.parent(profileId);
     onSessionAuthenticated?.call(_authenticatedScope!);
   }

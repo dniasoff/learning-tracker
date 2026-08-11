@@ -13,7 +13,7 @@ class TransliterationVariantPreference
   TransliterationVariant get defaultValue => TransliterationVariant.ashkenazi;
 
   @override
-  TransliterationVariant readFromPrefs(SharedPreferences prefs, int profileId) {
+  TransliterationVariant readFromPrefs(SharedPreferences prefs, String profileId) {
     final raw = ProfileScopedPreferenceKeys.readTransliterationVariant(
       prefs,
       profileId,
@@ -26,7 +26,7 @@ class TransliterationVariantPreference
   @override
   Future<void> writeToPrefs(
     SharedPreferences prefs,
-    int profileId,
+    String profileId,
     TransliterationVariant value,
   ) async {
     await prefs.setString(

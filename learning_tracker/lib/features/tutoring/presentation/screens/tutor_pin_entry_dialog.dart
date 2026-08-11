@@ -18,7 +18,7 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 /// Returns `false` on cancel.
 Future<bool> showTutorPinVerificationDialog(
   BuildContext context, {
-  required int tutorOwnProfileId,
+  required String tutorOwnProfileId,
   required TutorPinService tutorPinService,
 }) async {
   final result = await showDialog<bool>(
@@ -39,7 +39,7 @@ class _TutorPinVerificationDialog extends StatefulWidget {
     required this.tutorPinService,
   });
 
-  final int tutorOwnProfileId;
+  final String tutorOwnProfileId;
   final TutorPinService tutorPinService;
 
   @override

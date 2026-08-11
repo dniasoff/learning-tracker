@@ -26,7 +26,7 @@ TutorPinService tutorPinService(Ref ref) {
 /// Used by [TutorPinEntryGate] (W6.5) to decide whether to show the PIN
 /// entry widget or to route directly to the PIN setup screen (W6.4).
 @riverpod
-Future<bool> tutorPinIsSet(Ref ref, int profileId) async {
+Future<bool> tutorPinIsSet(Ref ref, String profileId) async {
   final service = ref.watch(tutorPinServiceProvider);
   return service.hasTutorPin(profileId);
 }

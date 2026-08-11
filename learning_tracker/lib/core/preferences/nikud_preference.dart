@@ -12,7 +12,7 @@ class NikudPreference extends ProfileScopedPreference<bool> {
   bool get defaultValue => true;
 
   @override
-  bool readFromPrefs(SharedPreferences prefs, int profileId) {
+  bool readFromPrefs(SharedPreferences prefs, String profileId) {
     final scoped = prefs.getBool(
       ProfileScopedPreferenceKeys.textShowNikud(profileId),
     );
@@ -27,7 +27,7 @@ class NikudPreference extends ProfileScopedPreference<bool> {
   @override
   Future<void> writeToPrefs(
     SharedPreferences prefs,
-    int profileId,
+    String profileId,
     bool value,
   ) async {
     await prefs.setBool(

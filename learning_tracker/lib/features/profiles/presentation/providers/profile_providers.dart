@@ -1,173 +1,36 @@
-import 'dart:async';
-
-import 'package:learning_tracker/core/logging/logger.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/providers/active_account_id_provider.dart';
 import 'package:learning_tracker/core/providers/active_profile_doc_id_provider.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/profiles/data/repositories/profile_repository_impl.dart';
-import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
+import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_session.dart';
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
-import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'profile_providers.g.dart';
 
-final _log = AppLogger.instance;
-
-/// The active account's local `accounts.id` within the currently-mounted
-/// per-account user DB (FR22, Story 25.21).
-///
-/// Resolves from [authStateProvider] — when a user is signed-in, the
-/// `currentUser.profileId` is the int FK that `learner_profiles.accountId`
-/// and the snapshot collections key off. Falls back to `1` during the
-/// brief signed-out window (e.g. between sign-up and the
-/// `setLocalBornSession` call that lands onboarding) so DAO calls that
-/// happen before auth-state settles keep their previous behavior.
-// keepAlive: read from DAO call sites throughout the account's session, must survive unrelated rebuilds.
-@Riverpod(keepAlive: true)
-int currentAccountId(Ref ref) {
-  final authState = ref.watch(authStateProvider);
-  return authState.currentUser?.profileId ?? 1;
-}
-
 /// Provider for the ProfileRepository implementation.
-///
-/// Resolves to [FirestoreProfileRepositoryAdapter], not a bare
-/// [ProfileRepositoryImpl] — see that adapter's class doc comment
-/// (`profile_repository_impl.dart`) for why every caller of this provider
-/// (add/edit-profile screens, onboarding, the self-heal path below) now
-/// also mints a Firestore identity for a genuinely new profile and writes
-/// its remote document, with zero changes needed at any of those call
-/// sites. **The adapter does NOT activate that identity (T-49, P2-30)** —
-/// activation is [SelectedProfileId.select]'s own job, below, which is why
-/// every one of those same call sites also calls `select()` right after
-/// creation returns.
-// keepAlive: stateless repository facade over the DB, cheap to keep for the app's lifetime.
+// keepAlive: stateless repository facade, cheap to keep for the app's lifetime.
 @Riverpod(keepAlive: true)
-ProfileRepository profileRepository(Ref ref) {
-  final db = ref.watch(userDatabaseProvider);
-  final syncFacade = ref.watch(syncWriteFacadeProvider);
-  final drift = ProfileRepositoryImpl(db, syncEngine: syncFacade);
-  return FirestoreProfileRepositoryAdapter(ref: ref, driftRepository: drift);
-}
+ProfileRepository profileRepository(Ref ref) =>
+    FirestoreProfileRepositoryAdapter(ref: ref);
 
-/// The currently selected profile ID. Null means no profile selected yet.
+/// The currently selected profile's ULID (AD-24). Null means no profile
+/// selected yet.
 // keepAlive: the session's profile selection must survive route changes and unrelated rebuilds.
 @Riverpod(keepAlive: true)
 class SelectedProfileId extends _$SelectedProfileId {
   @override
-  int? build() => null;
+  String? build() => null;
 
-  /// Selects profile [id] and, purely synchronously, activates its Firestore
-  /// identity via [activeProfileDocIdProvider] — set to [ulid] verbatim, no
-  /// I/O, no async work.
-  ///
-  /// **Why a caller-supplied [ulid], not an internal DB read:** an early
-  /// version of this method read `learner_profiles.ulid` back itself via
-  /// `ref.read(profileRepositoryProvider).getProfileById(id)`. That is
-  /// genuinely async, and `select` is called from synchronous tap/callback
-  /// contexts across the app (`profile_switcher_sheet.dart`,
-  /// `router_provider.dart`'s `ProfileGuard`, a notification-tap handler in
-  /// `notifications_bootstrap.dart`, ...) that do not, and should not have
-  /// to, await or pump a `void` state setter. In a widget test that taps and
-  /// asserts without a follow-up `pumpAndSettle`, that left-over async work
-  /// surfaced as "A Timer is still pending even after the widget tree was
-  /// disposed." — a real regression, not a test-only artifact: the same
-  /// dangling work would run in production too, just silently.
-  ///
-  /// Every caller that already holds the [ProfileModel] it is switching to
-  /// (profile creation, the switcher, sign-in, the self-heal path below)
-  /// passes `ulid: model.ulid` — no new read, it was already in hand. P2-2:
-  /// the two remaining call sites that once passed a bare `int`
-  /// (`router_provider.dart`'s `ProfileGuard`, the notification-tap handler
-  /// in `notifications_bootstrap.dart`) now resolve the profile first and
-  /// pass `ulid:` too — every production call site passes it. P2-3: [ulid]
-  /// is now `required` — the compiler, not just convention, makes a third
-  /// bare call site impossible to write.
-  ///
-  /// **T-49/P2-30: this is now also the activation seam for CREATION, not
-  /// only for switching.** `FirestoreProfileRepositoryAdapter` (three
-  /// hoists across P2-23/P2-28) never closed the race between its own
-  /// activation write and a caller-side await it could not see; P2-30
-  /// deleted that write outright rather than relocating it a fourth time.
-  /// The three creation call sites — `onboarding_profile_creation_step.dart`,
-  /// `add_profile_dialog.dart`, and [AutoSelectedProfileId]'s own self-heal
-  /// branch below — already call this method right after creation returns,
-  /// so nothing new is wired; this method's own synchronous, no-await
-  /// write is simply the ONLY place a newly-created profile's identity now
-  /// activates. When one of those three call sites deliberately declines to
-  /// call this (the widget was unmounted before creation returned; a newer
-  /// selection already won) — nothing activates for that profile, by
-  /// design: an abandoned or superseded creation should not strand
-  /// [activeProfileDocIdProvider] on a profile nothing else agrees with.
-  /// **This method is not the sole writer of [activeProfileDocIdProvider]**
-  /// — [clear] below and [AutoSelectedProfileId]'s own guarded re-affirm
-  /// branch also write it; this is the activation seam for the
-  /// switch/create case, not the only code that ever touches the provider.
-  void select(int id, {required String ulid}) {
-    state = id;
-    ref.read(activeProfileDocIdProvider.notifier).set(ulid);
-
-    // T-40: heal a profile's missing remote Firestore document at every
-    // ACTIVATION, not only at creation — see
-    // `FirestoreProfileRepositoryAdapter`'s class doc comment ("A profile
-    // created while offline still gets its remote document") for the full
-    // design. `select()` is deliberately the trigger, not a `ref.listen`
-    // mounted somewhere downstream: it is the ONE seam every activation
-    // path in the app already funnels through (this doc comment's own
-    // list, above, of every production caller — the route guard, the
-    // picker, the switcher, sign-in, onboarding, restore, a notification
-    // tap, and this class's own self-heal branch below) — so wiring the
-    // heal here covers all of them at once, including the cold-start,
-    // single-profile case, with no separate hook needed per path. A prior
-    // attempt (P2-8) instead hooked `ref.listen(selectedProfileIdProvider,
-    // …)` inside `AppShellScreen.build` — dead on every cold-start path,
-    // because `ProfileGuard` (a route guard on `AppShellRoute` itself)
-    // resolves selection by calling `select()` — right here — BEFORE the
-    // shell widget, and its listener, can ever build. See
-    // `docs/planning/firestore-cutover-log.md`'s `T-40` entries (P2-13/
-    // P2-14) for the full post-mortem.
-    //
-    // Gated on `activeAccountIdProvider` being set — the SAME precondition
-    // `activeAccountFirebaseProvider` itself already enforces (returns
-    // `null` immediately when it's unset), checked here first because it
-    // is cheap (an in-memory `Notifier<String?>`, no I/O), whereas
-    // `profileRepositoryProvider` is NOT: its build unconditionally
-    // `ref.watch`es `userDatabaseProvider`, which opens a REAL on-disk
-    // Drift database the first time anything reads it. Before this gate,
-    // `select()` did so unconditionally on every call — including from
-    // widget tests that override only `selectedProfileIdProvider` itself
-    // (bypassing the real DB/account stack entirely, as most narrow
-    // widget tests do) — and broke one outright: a real, on-disk-DB-backed
-    // query left "A Timer is still pending even after the widget tree was
-    // disposed" (measured: `profile_switcher_sheet_test.dart`'s "tapping a
-    // non-active profile switches the active profile" test, previously
-    // green). `activeAccountIdProvider` is documented as "wired into
-    // production" (`active_account_providers.dart`'s own doc comment) —
-    // bootstrap and every sign-in/sign-up/account-switch flow sets it
-    // before any profile selection can happen — so this gate changes
-    // nothing for a real cold start, only for a container/test that never
-    // established that seam at all.
-    if (ref.read(activeAccountIdProvider) == null) return;
-    // Fire-and-forget (`ensureRemoteProfile` never throws — see its own
-    // doc comment) so `select()` stays synchronous, per this method's own
-    // doc comment above. The outer try/catch is a SEPARATE guard:
-    // `ensureRemoteProfile`'s no-throw contract only covers the returned
-    // Future, not `profileRepositoryProvider` itself failing to resolve
-    // synchronously (e.g. an unconfigured dependency in a test container)
-    // — that must not crash a caller of `select()`.
-    try {
-      unawaited(ref.read(profileRepositoryProvider).ensureRemoteProfile(id));
-    } catch (e, st) {
-      _log.warning(
-        event: 'selected_profile_id_ensure_remote_profile_dispatch_failed',
-        fields: {'profileId': id},
-        exception: e,
-        stackTrace: st,
-      );
-    }
+  /// Selects [profileId] and, purely synchronously, activates its Firestore
+  /// identity via [activeProfileDocIdProvider] — no I/O, no async work. See
+  /// that provider's doc comment: every profile-scoped Firestore adapter in
+  /// the app keys off it.
+  void select(String profileId) {
+    state = profileId;
+    ref.read(activeProfileDocIdProvider.notifier).set(profileId);
   }
 
   void clear() {
@@ -179,48 +42,23 @@ class SelectedProfileId extends _$SelectedProfileId {
 /// Auto-selects (or self-heals) the account's profile on an auth-valid startup.
 ///
 /// BUG D1: on a force-stop + cold start with a still-valid Firebase/local
-/// session, the app skips the interactive sign-in flow (which is the only
-/// place that calls `selectedProfileIdProvider.notifier.select(...)`, see
+/// session, the app skips the interactive sign-in flow (the only place that
+/// otherwise calls `selectedProfileIdProvider.notifier.select(...)`, see
 /// `sign_in_controller.dart`). Without this effect the in-memory
-/// `selectedProfileIdProvider` stays `null`, so `activeProfileIdProvider`
-/// returns `0` and any write into a `profile_id`-FK'd table (e.g.
-/// `stage_definitions` during track creation) fails with
-/// `SqliteException(787): FOREIGN KEY constraint failed`.
+/// `selectedProfileIdProvider` stays `null`.
 ///
-/// Mirrors the single-profile branch of `_navigateAfterSignIn` (line ~536 of
-/// sign_in_controller): whenever auth transitions to signed-in AND no profile
-/// is selected yet, select the account's first profile.
-///
-/// BUG D1 (round 2 — the real crux): the previous fix only handled the case
-/// where ≥1 profile already existed. This account (a cloud account whose
-/// profiles never materialised locally — restored / skipped-onboarding) has
-/// ZERO rows in `learner_profiles`, so `profiles.first` had nothing to select
-/// and `profileId` stayed `0`. An authenticated account must NEVER operate at
-/// `profile_id = 0`. So when the account has no profile we self-heal by
-/// creating a default adult profile (and adopting any orphaned `profile_id = 0`
-/// rows, e.g. a pre-existing track) and select it. After this an authenticated
-/// account always has ≥1 profile selected.
-///
-/// AUD-profiles-21 (SM-2 — provider `build` must be pure): all of the above
-/// self-heal logic used to run directly inside `build()`, so merely
-/// watching/reading this provider silently wrote to
-/// `selectedProfileIdProvider` (a sibling provider) and to the database
-/// (`ensureDefaultProfile`). `build()` now only mirrors the current
-/// selection; the effect lives in [ensureSelected], an explicit method
-/// invoked by the app shell's post-frame auth-valid effect (see
-/// `app_shell.dart`) — never from `build()`.
+/// AUD-profiles-21 (SM-2 — provider `build` must be pure): the self-heal
+/// logic lives in [ensureSelected], not `build()` — see `app_shell.dart`'s
+/// post-frame auth-valid effect for the caller.
 // keepAlive: the app shell triggers ensureSelected() once per auth transition, must survive unrelated rebuilds.
 @Riverpod(keepAlive: true)
 class AutoSelectedProfileId extends _$AutoSelectedProfileId {
   @override
-  Future<int?> build() async => ref.watch(selectedProfileIdProvider);
+  Future<String?> build() async => ref.watch(selectedProfileIdProvider);
 
   /// Runs the BUG D1 self-heal / auto-select effect and returns the id that
   /// ends up selected (existing, healed, or null when signed-out).
-  ///
-  /// MUST be invoked explicitly by a caller reacting to an auth transition
-  /// (see `app_shell.dart`) — never from [build] (AUD-profiles-21 / SM-2).
-  Future<int?> ensureSelected() async {
+  Future<String?> ensureSelected() async {
     state = const AsyncLoading();
     final guarded = await AsyncValue.guard(_resolveSelection);
     // SM-4: this notifier is keepAlive so disposal mid-await is not expected
@@ -230,110 +68,81 @@ class AutoSelectedProfileId extends _$AutoSelectedProfileId {
     return guarded.value;
   }
 
-  Future<int?> _resolveSelection() async {
+  Future<String?> _resolveSelection() async {
     final authState = ref.read(authStateProvider);
     if (!authState.isSignedIn) return null;
+    // Cheap in-memory gate so a test container that overrides only
+    // `selectedProfileIdProvider` (bypassing the real account stack, as most
+    // narrow widget tests do) never attempts a live repository resolve.
+    if (ref.read(activeAccountIdProvider) == null) return null;
 
     final repo = ref.read(profileRepositoryProvider);
-    final accountId = ref.read(currentAccountIdProvider);
 
-    // FK-CONSTRAINT-ONBOARDING-01: if a profileId is already selected (e.g.
-    // by the sign-in flow or the picker), verify it still exists in the
-    // CURRENT account's DB before early-returning. On an account switch the
-    // stale id from the previous account can survive in memory even after
-    // clear() is called (race or missed call path). Returning a stale id that
-    // has no row in this account's learner_profiles table causes
-    // SqliteException(787): FOREIGN KEY constraint failed on any
-    // profile_id-scoped INSERT (e.g. track creation → stage_definitions).
+    // FK-CONSTRAINT-ONBOARDING-01 lineage: if a profileId is already
+    // selected (e.g. by the sign-in flow or the picker), verify it still
+    // exists under the CURRENT account before early-returning — a stale id
+    // from a previous account can survive in memory across a switch.
     final current = ref.read(selectedProfileIdProvider);
     if (current != null) {
       final existingProfile = await repo.getProfileById(current);
       if (existingProfile != null) {
         // Re-check after the await: the picker / sign-in flow may have
         // selected a DIFFERENT profile while we were fetching this one.
-        // Don't clobber an explicit choice — mirrors the guard 43 lines
-        // below in this same method (P2-24; the sibling defect the review
-        // that found T-49 also found here).
         final stillCurrent = ref.read(selectedProfileIdProvider);
         if (stillCurrent == current) {
-          // Already selected, still valid — just (re-)activate its
-          // Firestore identity from the model we already fetched to
-          // confirm it exists.
           ref
               .read(activeProfileDocIdProvider.notifier)
-              .set(existingProfile.ulid);
+              .set(existingProfile.profileId);
         }
         return stillCurrent;
       }
       // Stale id — clear it and fall through to the auto-select/self-heal path.
       ref.read(selectedProfileIdProvider.notifier).clear();
     }
-    final profiles = await repo.getProfilesByAccount(accountId);
 
-    final int id;
-    final String ulid;
+    final profiles = await repo.getProfiles();
+    final String id;
     if (profiles.isNotEmpty) {
-      id = profiles.first.id;
-      ulid = profiles.first.ulid;
+      id = profiles.first.profileId;
     } else {
-      // Self-heal: an authenticated account with no local profile. Create a
-      // default adult profile (named from the account) and adopt any orphaned
-      // profile_id=0 rows so existing tracks survive.
+      // Self-heal: an authenticated account with no profile yet. Create a
+      // default adult profile named from the account.
       final fallbackName = authState.currentUser?.displayName.trim() ?? '';
-      id = await repo.ensureDefaultProfile(
-        accountId: accountId,
-        defaultDisplayName: fallbackName.isNotEmpty ? fallbackName : 'Me',
+      final created = await repo.createProfile(
+        displayName: fallbackName.isNotEmpty ? fallbackName : 'Me',
+        mode: ProfileMode.adult,
       );
-      // The freshly created profile changed the account's profile set; refresh
-      // any list/stream consumers so the new profile is visible immediately.
       ref.invalidate(profileListProvider);
-      final created = await repo.getProfileById(id);
-      if (created == null) {
-        // Genuine invariant violation, not a legacy-data case: the create
-        // above just committed and returned this exact id. A null read-back
-        // means something is actually broken (e.g. a transaction that
-        // didn't commit) — surface it loudly rather than silently picking a
-        // fallback identity.
-        throw StateError(
-          'AutoSelectedProfileId._resolveSelection: ensureDefaultProfile '
-          'returned id $id but getProfileById($id) found nothing right '
-          'after creating it.',
-        );
-      }
-      ulid = created.ulid;
+      id = created.profileId;
     }
 
     // Re-check after the await: the picker / sign-in flow may have selected
     // a profile while we were fetching. Don't clobber an explicit choice.
     if (ref.read(selectedProfileIdProvider) == null) {
-      ref.read(selectedProfileIdProvider.notifier).select(id, ulid: ulid);
+      ref.read(selectedProfileIdProvider.notifier).select(id);
       return id;
     }
     return ref.read(selectedProfileIdProvider);
   }
 }
 
-/// Profiles for the current account.
+/// Profiles for the active account.
 @riverpod
-Future<List<ProfileModel>> profileList(Ref ref) async {
+Future<List<LearnerProfileEntity>> profileList(Ref ref) async {
   final repo = ref.watch(profileRepositoryProvider);
-  final accountId = ref.watch(currentAccountIdProvider);
-  return repo.getProfilesByAccount(accountId);
+  return repo.getProfiles();
 }
 
-/// Stream of profiles for the current account, for reactive UI.
+/// Stream of profiles for the active account, for reactive UI.
 @riverpod
-Stream<List<ProfileModel>> profileListStream(Ref ref) {
-  final db = ref.watch(userDatabaseProvider);
-  final accountId = ref.watch(currentAccountIdProvider);
-  return db.profileDao
-      .watchProfilesByAccount(accountId)
-      .map((rows) => rows.map(ProfileModel.fromDriftRow).toList());
+Stream<List<LearnerProfileEntity>> profileListStream(Ref ref) {
+  final repo = ref.watch(profileRepositoryProvider);
+  return repo.watchProfiles();
 }
 
-/// The currently selected profile model.
+/// The currently selected profile.
 @riverpod
-Future<ProfileModel?> selectedProfile(Ref ref) async {
+Future<LearnerProfileEntity?> selectedProfile(Ref ref) async {
   final id = ref.watch(selectedProfileIdProvider);
   if (id == null) return null;
   final repo = ref.watch(profileRepositoryProvider);
@@ -342,9 +151,9 @@ Future<ProfileModel?> selectedProfile(Ref ref) async {
 
 /// The active profile session as a typed domain aggregate.
 ///
-/// Wraps [selectedProfileIdProvider] into a [ProfileSession] so callers
-/// talk about "a session" rather than a nullable integer. This is the
-/// canonical read path for profile-selection state; write path stays on
+/// Wraps [selectedProfileIdProvider] into a [ProfileSession] so callers talk
+/// about "a session" rather than a nullable String. This is the canonical
+/// read path for profile-selection state; write path stays on
 /// `selectedProfileIdProvider.notifier` (select / clear).
 // keepAlive: wraps selectedProfileIdProvider, which is itself keepAlive — must not defeat that.
 @Riverpod(keepAlive: true)

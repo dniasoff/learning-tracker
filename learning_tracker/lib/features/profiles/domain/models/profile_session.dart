@@ -17,7 +17,7 @@ abstract class ProfileSession with _$ProfileSession {
   // classes (matches ProfileModel's pattern in the same directory).
   const ProfileSession._();
 
-  const factory ProfileSession({required int? profileId}) = _ProfileSession;
+  const factory ProfileSession({required String? profileId}) = _ProfileSession;
 
   /// Constructs an empty session (no profile selected).
   factory ProfileSession.none() => const ProfileSession(profileId: null);

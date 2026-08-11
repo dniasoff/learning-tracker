@@ -12,8 +12,8 @@ part 'pin_scope.freezed.dart';
 @freezed
 sealed class PinScope with _$PinScope {
   /// Parent-mode PIN scoped to a single child [profileId].
-  const factory PinScope.parent(int profileId) = PinScopeParent;
+  const factory PinScope.parent(String profileId) = PinScopeParent;
 
   /// Tutor-mode PIN scoped to a single child [profileId].
-  const factory PinScope.tutor(int profileId) = PinScopeTutor;
+  const factory PinScope.tutor(String profileId) = PinScopeTutor;
 }

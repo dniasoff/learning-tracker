@@ -11,9 +11,9 @@ part 'parent_pin_session_provider.g.dart';
 class ParentPinAuthenticatedProfileId
     extends _$ParentPinAuthenticatedProfileId {
   @override
-  int? build() => null;
+  String? build() => null;
 
-  void setAuthenticated(int profileId) => state = profileId;
+  void setAuthenticated(String profileId) => state = profileId;
 
   void clear() => state = null;
 }

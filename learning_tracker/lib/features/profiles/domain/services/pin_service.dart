@@ -44,21 +44,21 @@ class PinService {
 
   // Per-profile parent PIN key builders. Each child profile can have its own
   // 4-digit parent PIN — the hash is keyed by profile id in secure storage.
-  static String _profilePinKey(int profileId) =>
+  static String _profilePinKey(String profileId) =>
       'profile_${profileId}_parent_pin_hash';
-  static String _profileLockoutKey(int profileId) =>
+  static String _profileLockoutKey(String profileId) =>
       'profile_${profileId}_parent_lockout_count';
-  static String _profileLockoutTimestampKey(int profileId) =>
+  static String _profileLockoutTimestampKey(String profileId) =>
       'profile_${profileId}_parent_lockout_timestamp';
 
   // Per-profile tutor PIN key builders. Independent namespace from parent —
   // authenticating the parent scope must NOT grant tutor access (and vice
   // versa).
-  static String _tutorPinKey(int profileId) =>
+  static String _tutorPinKey(String profileId) =>
       'profile_${profileId}_tutor_pin_hash';
-  static String _tutorLockoutKey(int profileId) =>
+  static String _tutorLockoutKey(String profileId) =>
       'profile_${profileId}_tutor_lockout_count';
-  static String _tutorLockoutTimestampKey(int profileId) =>
+  static String _tutorLockoutTimestampKey(String profileId) =>
       'profile_${profileId}_tutor_lockout_timestamp';
 
   /// Sets the parent PIN by hashing it with bcrypt and storing securely.
@@ -135,7 +135,7 @@ class PinService {
   /// Hashed with bcrypt and written to secure storage keyed by profile id —
   /// each child profile can have its own PIN. Resets any existing lockout
   /// state for the profile. Plaintext is never persisted.
-  Future<void> setProfilePin(int profileId, String pin) async {
+  Future<void> setProfilePin(String profileId, String pin) async {
     if (Pin.tryParse(pin) == null) {
       throw const InvalidPinFormatException();
     }
@@ -150,7 +150,7 @@ class PinService {
   /// Increments the per-profile failed-attempt counter and triggers lockout
   /// after [maxFailedAttempts]. Throws [PinLockoutException] if already
   /// locked out.
-  Future<bool> verifyProfilePin(int profileId, String pin) async {
+  Future<bool> verifyProfilePin(String profileId, String pin) async {
     final timestampKey = _profileLockoutTimestampKey(profileId);
     if (await _isLockedOut(timestampKey)) {
       final remaining = await _getRemainingLockoutMinutes(timestampKey);
@@ -176,20 +176,20 @@ class PinService {
   }
 
   /// Returns true if a parent PIN has been set for [profileId].
-  Future<bool> hasProfilePin(int profileId) async {
+  Future<bool> hasProfilePin(String profileId) async {
     final hash = await _secureStorage.read(key: _profilePinKey(profileId));
     return hash != null;
   }
 
   /// Removes the parent PIN and lockout state for [profileId].
-  Future<void> clearProfilePin(int profileId) async {
+  Future<void> clearProfilePin(String profileId) async {
     await _secureStorage.delete(key: _profilePinKey(profileId));
     await _secureStorage.delete(key: _profileLockoutKey(profileId));
     await _secureStorage.delete(key: _profileLockoutTimestampKey(profileId));
   }
 
   /// Remaining lockout in minutes for [profileId]. Returns 0 if not locked.
-  Future<int> getProfileLockoutRemainingMinutes(int profileId) async {
+  Future<int> getProfileLockoutRemainingMinutes(String profileId) async {
     final key = _profileLockoutTimestampKey(profileId);
     if (!await _isLockedOut(key)) return 0;
     return _getRemainingLockoutMinutes(key);
@@ -199,7 +199,7 @@ class PinService {
   ///
   /// Stored under an independent namespace from the parent PIN so granting
   /// parent access does not grant tutor access (and vice versa).
-  Future<void> setTutorPin(int profileId, String pin) async {
+  Future<void> setTutorPin(String profileId, String pin) async {
     if (Pin.tryParse(pin) == null) {
       throw const InvalidPinFormatException();
     }
@@ -210,7 +210,7 @@ class PinService {
   }
 
   /// Verifies [pin] against the tutor PIN hash stored for [profileId].
-  Future<bool> verifyTutorPin(int profileId, String pin) async {
+  Future<bool> verifyTutorPin(String profileId, String pin) async {
     final timestampKey = _tutorLockoutTimestampKey(profileId);
     if (await _isLockedOut(timestampKey)) {
       final remaining = await _getRemainingLockoutMinutes(timestampKey);
@@ -231,13 +231,13 @@ class PinService {
   }
 
   /// Returns true if a tutor PIN has been set for [profileId].
-  Future<bool> hasTutorPin(int profileId) async {
+  Future<bool> hasTutorPin(String profileId) async {
     final hash = await _secureStorage.read(key: _tutorPinKey(profileId));
     return hash != null;
   }
 
   /// Removes the tutor PIN and lockout state for [profileId].
-  Future<void> clearTutorPin(int profileId) async {
+  Future<void> clearTutorPin(String profileId) async {
     await _secureStorage.delete(key: _tutorPinKey(profileId));
     await _secureStorage.delete(key: _tutorLockoutKey(profileId));
     await _secureStorage.delete(key: _tutorLockoutTimestampKey(profileId));
@@ -245,7 +245,7 @@ class PinService {
 
   /// Remaining tutor-PIN lockout in minutes for [profileId]. Returns 0 if not
   /// locked.
-  Future<int> getTutorLockoutRemainingMinutes(int profileId) async {
+  Future<int> getTutorLockoutRemainingMinutes(String profileId) async {
     final key = _tutorLockoutTimestampKey(profileId);
     if (!await _isLockedOut(key)) return 0;
     return _getRemainingLockoutMinutes(key);

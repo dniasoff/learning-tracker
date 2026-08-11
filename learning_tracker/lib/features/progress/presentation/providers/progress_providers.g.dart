@@ -9,11 +9,19 @@ part of 'progress_providers.dart';
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
 /// Provider for the progress repository instance.
+///
+/// **Firestore-backed** via [FirestoreProgressRepositoryAdapter] (wired
+/// Phase 3, T-20). The Drift-backed [ProgressRepositoryImpl] is
+/// deprecated and will be removed in Phase 4.
 
 @ProviderFor(progressRepository)
 final progressRepositoryProvider = ProgressRepositoryProvider._();
 
 /// Provider for the progress repository instance.
+///
+/// **Firestore-backed** via [FirestoreProgressRepositoryAdapter] (wired
+/// Phase 3, T-20). The Drift-backed [ProgressRepositoryImpl] is
+/// deprecated and will be removed in Phase 4.
 
 final class ProgressRepositoryProvider
     extends
@@ -24,6 +32,10 @@ final class ProgressRepositoryProvider
         >
     with $Provider<ProgressRepository> {
   /// Provider for the progress repository instance.
+  ///
+  /// **Firestore-backed** via [FirestoreProgressRepositoryAdapter] (wired
+  /// Phase 3, T-20). The Drift-backed [ProgressRepositoryImpl] is
+  /// deprecated and will be removed in Phase 4.
   ProgressRepositoryProvider._()
     : super(
         from: null,
@@ -59,7 +71,7 @@ final class ProgressRepositoryProvider
 }
 
 String _$progressRepositoryHash() =>
-    r'94d461758ffc9ecb6e10559f92a5f5ab8a3a8435';
+    r'055688a02ec1e97d52503b1efb00f5fd993e5fe2';
 
 /// Provider for completion counts by curriculum, scoped to the active profile.
 ///

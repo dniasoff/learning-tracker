@@ -39,7 +39,7 @@ final class TutoredProfileSelection extends ProfileSelection {
     required this.ownerUid,
     required this.grantId,
     required this.permissions,
-    this.tutorOwnProfileId = 0,
+    this.tutorOwnProfileId = '',
   });
 
   /// UID of the profile owner (parent).
@@ -56,8 +56,8 @@ final class TutoredProfileSelection extends ProfileSelection {
   /// tutor_pin_hash`). The Tutor PIN is per-tutor (one PIN across all
   /// talmidim), so the PIN scope keys on this id, NOT on [profileId] (the
   /// talmid's id). The entry gate and the route guard MUST agree on this
-  /// single namespace. Falls back to `0` for a profile-less tutor.
-  final int tutorOwnProfileId;
+  /// single namespace. Falls back to `''` for a profile-less tutor.
+  final String tutorOwnProfileId;
 }
 
 // ── SessionRole ─────────────────────────────────────────────────────────────

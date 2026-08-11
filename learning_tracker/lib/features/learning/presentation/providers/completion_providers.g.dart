@@ -85,12 +85,12 @@ final class CompletionRepositoryProvider
 String _$completionRepositoryHash() =>
     r'50a66b9ac044d5347a9d015c7b7c346fff3a641b';
 
-/// Drift-backed [CompletionPointsPort] — see that class's doc comment.
+/// Firestore-backed [CompletionPointsPort] — see that class's doc comment.
 
 @ProviderFor(completionPointsPort)
 final completionPointsPortProvider = CompletionPointsPortProvider._();
 
-/// Drift-backed [CompletionPointsPort] — see that class's doc comment.
+/// Firestore-backed [CompletionPointsPort] — see that class's doc comment.
 
 final class CompletionPointsPortProvider
     extends
@@ -100,7 +100,7 @@ final class CompletionPointsPortProvider
           CompletionPointsPort
         >
     with $Provider<CompletionPointsPort> {
-  /// Drift-backed [CompletionPointsPort] — see that class's doc comment.
+  /// Firestore-backed [CompletionPointsPort] — see that class's doc comment.
   CompletionPointsPortProvider._()
     : super(
         from: null,
@@ -136,14 +136,20 @@ final class CompletionPointsPortProvider
 }
 
 String _$completionPointsPortHash() =>
-    r'a77ee0c191ed7f411f13c51bea1a885bb21dfb0a';
+    r'5ccae26b938ad8047ef7713bde888bb21c9e3930';
 
-/// Drift-backed [CompletionStreakPort] — see that class's doc comment.
+/// Firestore-backed [CompletionStreakPort] — see that class's doc comment.
+///
+/// The recorder resolves its own repository from `ref`, so this presentation
+/// provider never names a data-access-ring type (AD-23/AD-28).
 
 @ProviderFor(completionStreakPort)
 final completionStreakPortProvider = CompletionStreakPortProvider._();
 
-/// Drift-backed [CompletionStreakPort] — see that class's doc comment.
+/// Firestore-backed [CompletionStreakPort] — see that class's doc comment.
+///
+/// The recorder resolves its own repository from `ref`, so this presentation
+/// provider never names a data-access-ring type (AD-23/AD-28).
 
 final class CompletionStreakPortProvider
     extends
@@ -153,7 +159,10 @@ final class CompletionStreakPortProvider
           CompletionStreakPort
         >
     with $Provider<CompletionStreakPort> {
-  /// Drift-backed [CompletionStreakPort] — see that class's doc comment.
+  /// Firestore-backed [CompletionStreakPort] — see that class's doc comment.
+  ///
+  /// The recorder resolves its own repository from `ref`, so this presentation
+  /// provider never names a data-access-ring type (AD-23/AD-28).
   CompletionStreakPortProvider._()
     : super(
         from: null,
@@ -189,7 +198,7 @@ final class CompletionStreakPortProvider
 }
 
 String _$completionStreakPortHash() =>
-    r'3c14264d9a4da00152a0320b698eb49bfcd2871a';
+    r'12e5cdb6ffc62d66c38c1e50146daeeb46be6ad3';
 
 /// Provides the [CompletionOrchestrator] — the single place the five
 /// completion side effects live (`docs/firestore-rewrite-map.md`, owner

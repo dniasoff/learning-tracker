@@ -14,7 +14,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$ProfileSession {
 
- int? get profileId;
+ String? get profileId;
 /// Create a copy of ProfileSession
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -45,7 +45,7 @@ abstract mixin class $ProfileSessionCopyWith<$Res>  {
   factory $ProfileSessionCopyWith(ProfileSession value, $Res Function(ProfileSession) _then) = _$ProfileSessionCopyWithImpl;
 @useResult
 $Res call({
- int? profileId
+ String? profileId
 });
 
 
@@ -65,7 +65,7 @@ class _$ProfileSessionCopyWithImpl<$Res>
 @pragma('vm:prefer-inline') @override $Res call({Object? profileId = freezed,}) {
   return _then(_self.copyWith(
 profileId: freezed == profileId ? _self.profileId : profileId // ignore: cast_nullable_to_non_nullable
-as int?,
+as String?,
   ));
 }
 
@@ -150,7 +150,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int? profileId)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String? profileId)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _ProfileSession() when $default != null:
 return $default(_that.profileId);case _:
@@ -171,7 +171,7 @@ return $default(_that.profileId);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int? profileId)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String? profileId)  $default,) {final _that = this;
 switch (_that) {
 case _ProfileSession():
 return $default(_that.profileId);case _:
@@ -191,7 +191,7 @@ return $default(_that.profileId);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int? profileId)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String? profileId)?  $default,) {final _that = this;
 switch (_that) {
 case _ProfileSession() when $default != null:
 return $default(_that.profileId);case _:
@@ -209,7 +209,7 @@ class _ProfileSession extends ProfileSession {
   const _ProfileSession({required this.profileId}): super._();
   
 
-@override final  int? profileId;
+@override final  String? profileId;
 
 /// Create a copy of ProfileSession
 /// with the given fields replaced by the non-null parameter values.
@@ -241,7 +241,7 @@ abstract mixin class _$ProfileSessionCopyWith<$Res> implements $ProfileSessionCo
   factory _$ProfileSessionCopyWith(_ProfileSession value, $Res Function(_ProfileSession) _then) = __$ProfileSessionCopyWithImpl;
 @override @useResult
 $Res call({
- int? profileId
+ String? profileId
 });
 
 
@@ -261,7 +261,7 @@ class __$ProfileSessionCopyWithImpl<$Res>
 @override @pragma('vm:prefer-inline') $Res call({Object? profileId = freezed,}) {
   return _then(_ProfileSession(
 profileId: freezed == profileId ? _self.profileId : profileId // ignore: cast_nullable_to_non_nullable
-as int?,
+as String?,
   ));
 }
 

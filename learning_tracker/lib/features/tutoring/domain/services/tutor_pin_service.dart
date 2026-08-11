@@ -95,7 +95,7 @@ class TutorPinService {
 
   /// Set the tutor PIN for [profileId].
   Future<TutorPinResult> setTutorPin({
-    required int profileId,
+    required String profileId,
     required String rawPin,
   }) async {
     final pin = TutorPin.tryCreate(rawPin);
@@ -114,7 +114,7 @@ class TutorPinService {
 
   /// Verify the tutor PIN for [profileId].
   Future<TutorPinResult> verifyTutorPin({
-    required int profileId,
+    required String profileId,
     required String rawPin,
   }) async {
     final pin = TutorPin.tryCreate(rawPin);
@@ -132,13 +132,13 @@ class TutorPinService {
   }
 
   /// Returns true if a tutor PIN is set for [profileId].
-  Future<bool> hasTutorPin(int profileId) => _pinService.hasTutorPin(profileId);
+  Future<bool> hasTutorPin(String profileId) => _pinService.hasTutorPin(profileId);
 
   /// Remove the tutor PIN and lockout state for [profileId].
-  Future<void> clearTutorPin(int profileId) =>
+  Future<void> clearTutorPin(String profileId) =>
       _pinService.clearTutorPin(profileId);
 
   /// Remaining lockout in minutes (0 if not locked).
-  Future<int> lockoutRemainingMinutes(int profileId) =>
+  Future<int> lockoutRemainingMinutes(String profileId) =>
       _pinService.getTutorLockoutRemainingMinutes(profileId);
 }

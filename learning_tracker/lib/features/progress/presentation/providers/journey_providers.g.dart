@@ -69,11 +69,21 @@ abstract class _$JourneySortModeNotifier
 }
 
 /// Computes the full JourneyViewModel for a given profile.
+///
+/// [profileId] stays in the signature — every call site already passes it and
+/// it remains the family cache key — but it is now a GUARD rather than a
+/// selector: the ledger is profile-scoped by its Firestore collection path, so
+/// the argument can only be checked, never used to choose whose ledger to read.
 
 @ProviderFor(journeyViewModel)
 final journeyViewModelProvider = JourneyViewModelFamily._();
 
 /// Computes the full JourneyViewModel for a given profile.
+///
+/// [profileId] stays in the signature — every call site already passes it and
+/// it remains the family cache key — but it is now a GUARD rather than a
+/// selector: the ledger is profile-scoped by its Firestore collection path, so
+/// the argument can only be checked, never used to choose whose ledger to read.
 
 final class JourneyViewModelProvider
     extends
@@ -84,6 +94,11 @@ final class JourneyViewModelProvider
         >
     with $FutureModifier<JourneyViewModel>, $FutureProvider<JourneyViewModel> {
   /// Computes the full JourneyViewModel for a given profile.
+  ///
+  /// [profileId] stays in the signature — every call site already passes it and
+  /// it remains the family cache key — but it is now a GUARD rather than a
+  /// selector: the ledger is profile-scoped by its Firestore collection path, so
+  /// the argument can only be checked, never used to choose whose ledger to read.
   JourneyViewModelProvider._({
     required JourneyViewModelFamily super.from,
     required int super.argument,
@@ -128,9 +143,14 @@ final class JourneyViewModelProvider
   }
 }
 
-String _$journeyViewModelHash() => r'9eaa660b66a70cf78c2e1c8f102a3bdb92a5dcdc';
+String _$journeyViewModelHash() => r'aa6b55e64f7bd979eab4715f04d978c4619e33fb';
 
 /// Computes the full JourneyViewModel for a given profile.
+///
+/// [profileId] stays in the signature — every call site already passes it and
+/// it remains the family cache key — but it is now a GUARD rather than a
+/// selector: the ledger is profile-scoped by its Firestore collection path, so
+/// the argument can only be checked, never used to choose whose ledger to read.
 
 final class JourneyViewModelFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<JourneyViewModel>, int> {
@@ -144,6 +164,11 @@ final class JourneyViewModelFamily extends $Family
       );
 
   /// Computes the full JourneyViewModel for a given profile.
+  ///
+  /// [profileId] stays in the signature — every call site already passes it and
+  /// it remains the family cache key — but it is now a GUARD rather than a
+  /// selector: the ledger is profile-scoped by its Firestore collection path, so
+  /// the argument can only be checked, never used to choose whose ledger to read.
 
   JourneyViewModelProvider call(int profileId) =>
       JourneyViewModelProvider._(argument: profileId, from: this);
