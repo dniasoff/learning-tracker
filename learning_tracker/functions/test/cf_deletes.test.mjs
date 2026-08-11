@@ -39,9 +39,22 @@ describe('deleteLearnerProfile', () => {
     );
   });
 
-  test('profileId is a string → invalid-argument', async () => {
+  // AD-24: a learner profile is addressed by a ULID STRING doc-id, so a
+  // non-empty string is the VALID shape. This test previously asserted the
+  // opposite — that `profileId: '5'` must be rejected — which contradicted
+  // deletes.ts's own already-migrated `typeof profileId !== "string"` guard.
+  // It was stale, and it was the only assertion still pinning the pre-ULID
+  // contract in this suite.
+  test('profileId is a number → invalid-argument', async () => {
     await expectHttpsError(
-      call(fns.deleteLearnerProfile, { profileId: '5' }, parentAuth),
+      call(fns.deleteLearnerProfile, { profileId: 5 }, parentAuth),
+      'invalid-argument',
+    );
+  });
+
+  test('profileId is an empty string → invalid-argument', async () => {
+    await expectHttpsError(
+      call(fns.deleteLearnerProfile, { profileId: '' }, parentAuth),
       'invalid-argument',
     );
   });

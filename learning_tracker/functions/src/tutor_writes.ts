@@ -132,7 +132,7 @@ interface GrantVerification {
  * @param callerUid   Firebase Auth uid of the caller (the tutor).
  * @param grantId     The tutor_grants/{grantId} document ID.
  * @param ownerUid    Expected parent/owner uid (sanity check).
- * @param profileId   Expected child profile ID (integer).
+ * @param profileId   Expected child profile ULID (AD-24 string doc-id).
  * @param permKey     The permissions map key to check (e.g. 'can_edit_goals').
  *                    Pass null to skip the permission check (for always-allowed ops).
  */
@@ -140,7 +140,7 @@ async function verifyTutorGrant(
   callerUid: string,
   grantId: string,
   ownerUid: string,
-  profileId: number,
+  profileId: string,
   permKey: string | null,
 ): Promise<GrantVerification> {
   const grantRef = db.collection("tutor_grants").doc(grantId);
@@ -257,7 +257,7 @@ async function writeAuditLog(
 //   {
 //     grantId: string,
 //     ownerUid: string,
-//     profileId: number,
+//     profileId: string,   // ULID
 //     completionId: string,   // the doc-id to delete
 //   }
 //
@@ -273,8 +273,8 @@ export const tutorResetCompletion = onCall(CALL_OPTS, async (request) => {
     throw new HttpsError("invalid-argument", "grantId must be a non-empty string");
   if (typeof ownerUid !== "string" || !ownerUid)
     throw new HttpsError("invalid-argument", "ownerUid must be a non-empty string");
-  if (typeof profileId !== "number" || !Number.isInteger(profileId) || profileId <= 0)
-    throw new HttpsError("invalid-argument", "profileId must be a positive integer");
+  if (typeof profileId !== "string" || !profileId)
+    throw new HttpsError("invalid-argument", "profileId must be a non-empty string (ULID)");
   if (typeof completionId !== "string" || !completionId)
     throw new HttpsError("invalid-argument", "completionId must be a non-empty string");
 
@@ -314,7 +314,7 @@ export const tutorResetCompletion = onCall(CALL_OPTS, async (request) => {
 //   {
 //     grantId: string,
 //     ownerUid: string,
-//     profileId: number,
+//     profileId: string,   // ULID
 //     goalId: string,           // doc-id (matches goals/{goalId})
 //     goalData: object,         // merged into the goal document
 //   }
@@ -331,8 +331,8 @@ export const tutorUpsertGoal = onCall(CALL_OPTS, async (request) => {
     throw new HttpsError("invalid-argument", "grantId must be a non-empty string");
   if (typeof ownerUid !== "string" || !ownerUid)
     throw new HttpsError("invalid-argument", "ownerUid must be a non-empty string");
-  if (typeof profileId !== "number" || !Number.isInteger(profileId) || profileId <= 0)
-    throw new HttpsError("invalid-argument", "profileId must be a positive integer");
+  if (typeof profileId !== "string" || !profileId)
+    throw new HttpsError("invalid-argument", "profileId must be a non-empty string (ULID)");
   if (typeof goalId !== "string" || !goalId)
     throw new HttpsError("invalid-argument", "goalId must be a non-empty string");
   if (!goalData || typeof goalData !== "object" || Array.isArray(goalData))
@@ -387,8 +387,8 @@ export const tutorDeleteGoal = onCall(CALL_OPTS, async (request) => {
     throw new HttpsError("invalid-argument", "grantId must be a non-empty string");
   if (typeof ownerUid !== "string" || !ownerUid)
     throw new HttpsError("invalid-argument", "ownerUid must be a non-empty string");
-  if (typeof profileId !== "number" || !Number.isInteger(profileId) || profileId <= 0)
-    throw new HttpsError("invalid-argument", "profileId must be a positive integer");
+  if (typeof profileId !== "string" || !profileId)
+    throw new HttpsError("invalid-argument", "profileId must be a non-empty string (ULID)");
   if (typeof goalId !== "string" || !goalId)
     throw new HttpsError("invalid-argument", "goalId must be a non-empty string");
 
@@ -440,8 +440,8 @@ export const tutorUpsertTrack = onCall(CALL_OPTS, async (request) => {
     throw new HttpsError("invalid-argument", "grantId must be a non-empty string");
   if (typeof ownerUid !== "string" || !ownerUid)
     throw new HttpsError("invalid-argument", "ownerUid must be a non-empty string");
-  if (typeof profileId !== "number" || !Number.isInteger(profileId) || profileId <= 0)
-    throw new HttpsError("invalid-argument", "profileId must be a positive integer");
+  if (typeof profileId !== "string" || !profileId)
+    throw new HttpsError("invalid-argument", "profileId must be a non-empty string (ULID)");
   if (typeof trackId !== "string" || !trackId)
     throw new HttpsError("invalid-argument", "trackId must be a non-empty string");
   if (!trackData || typeof trackData !== "object" || Array.isArray(trackData))
@@ -494,8 +494,8 @@ export const tutorDeleteTrack = onCall(CALL_OPTS, async (request) => {
     throw new HttpsError("invalid-argument", "grantId must be a non-empty string");
   if (typeof ownerUid !== "string" || !ownerUid)
     throw new HttpsError("invalid-argument", "ownerUid must be a non-empty string");
-  if (typeof profileId !== "number" || !Number.isInteger(profileId) || profileId <= 0)
-    throw new HttpsError("invalid-argument", "profileId must be a positive integer");
+  if (typeof profileId !== "string" || !profileId)
+    throw new HttpsError("invalid-argument", "profileId must be a non-empty string (ULID)");
   if (typeof trackId !== "string" || !trackId)
     throw new HttpsError("invalid-argument", "trackId must be a non-empty string");
 
@@ -547,8 +547,8 @@ export const tutorUpsertStageDefinition = onCall(CALL_OPTS, async (request) => {
     throw new HttpsError("invalid-argument", "grantId must be a non-empty string");
   if (typeof ownerUid !== "string" || !ownerUid)
     throw new HttpsError("invalid-argument", "ownerUid must be a non-empty string");
-  if (typeof profileId !== "number" || !Number.isInteger(profileId) || profileId <= 0)
-    throw new HttpsError("invalid-argument", "profileId must be a positive integer");
+  if (typeof profileId !== "string" || !profileId)
+    throw new HttpsError("invalid-argument", "profileId must be a non-empty string (ULID)");
   if (typeof stageId !== "string" || !stageId)
     throw new HttpsError("invalid-argument", "stageId must be a non-empty string");
   if (!stageData || typeof stageData !== "object" || Array.isArray(stageData))
@@ -606,8 +606,8 @@ export const tutorUpsertStudyDayConfig = onCall(CALL_OPTS, async (request) => {
     throw new HttpsError("invalid-argument", "grantId must be a non-empty string");
   if (typeof ownerUid !== "string" || !ownerUid)
     throw new HttpsError("invalid-argument", "ownerUid must be a non-empty string");
-  if (typeof profileId !== "number" || !Number.isInteger(profileId) || profileId <= 0)
-    throw new HttpsError("invalid-argument", "profileId must be a positive integer");
+  if (typeof profileId !== "string" || !profileId)
+    throw new HttpsError("invalid-argument", "profileId must be a non-empty string (ULID)");
   if (typeof configId !== "string" || !configId)
     throw new HttpsError("invalid-argument", "configId must be a non-empty string");
   if (!configData || typeof configData !== "object" || Array.isArray(configData))
@@ -660,8 +660,8 @@ export const tutorDeleteStudyDayConfig = onCall(CALL_OPTS, async (request) => {
     throw new HttpsError("invalid-argument", "grantId must be a non-empty string");
   if (typeof ownerUid !== "string" || !ownerUid)
     throw new HttpsError("invalid-argument", "ownerUid must be a non-empty string");
-  if (typeof profileId !== "number" || !Number.isInteger(profileId) || profileId <= 0)
-    throw new HttpsError("invalid-argument", "profileId must be a positive integer");
+  if (typeof profileId !== "string" || !profileId)
+    throw new HttpsError("invalid-argument", "profileId must be a non-empty string (ULID)");
   if (typeof configId !== "string" || !configId)
     throw new HttpsError("invalid-argument", "configId must be a non-empty string");
 
@@ -723,8 +723,8 @@ export const tutorUpdateGamificationSettings = onCall(CALL_OPTS, async (request)
     throw new HttpsError("invalid-argument", "grantId must be a non-empty string");
   if (typeof ownerUid !== "string" || !ownerUid)
     throw new HttpsError("invalid-argument", "ownerUid must be a non-empty string");
-  if (typeof profileId !== "number" || !Number.isInteger(profileId) || profileId <= 0)
-    throw new HttpsError("invalid-argument", "profileId must be a positive integer");
+  if (typeof profileId !== "string" || !profileId)
+    throw new HttpsError("invalid-argument", "profileId must be a non-empty string (ULID)");
   if (typeof permKey !== "string" || !GAMIFICATION_PERM_KEYS.has(permKey))
     throw new HttpsError(
       "invalid-argument",
@@ -789,8 +789,8 @@ export const tutorUpsertBookmark = onCall(CALL_OPTS, async (request) => {
     throw new HttpsError("invalid-argument", "grantId must be a non-empty string");
   if (typeof ownerUid !== "string" || !ownerUid)
     throw new HttpsError("invalid-argument", "ownerUid must be a non-empty string");
-  if (typeof profileId !== "number" || !Number.isInteger(profileId) || profileId <= 0)
-    throw new HttpsError("invalid-argument", "profileId must be a positive integer");
+  if (typeof profileId !== "string" || !profileId)
+    throw new HttpsError("invalid-argument", "profileId must be a non-empty string (ULID)");
   if (typeof bookmarkId !== "string" || !bookmarkId)
     throw new HttpsError("invalid-argument", "bookmarkId must be a non-empty string");
   if (!bookmarkData || typeof bookmarkData !== "object" || Array.isArray(bookmarkData))
@@ -849,8 +849,8 @@ export const tutorSetProfileProgram = onCall(CALL_OPTS, async (request) => {
     throw new HttpsError("invalid-argument", "grantId must be a non-empty string");
   if (typeof ownerUid !== "string" || !ownerUid)
     throw new HttpsError("invalid-argument", "ownerUid must be a non-empty string");
-  if (typeof profileId !== "number" || !Number.isInteger(profileId) || profileId <= 0)
-    throw new HttpsError("invalid-argument", "profileId must be a positive integer");
+  if (typeof profileId !== "string" || !profileId)
+    throw new HttpsError("invalid-argument", "profileId must be a non-empty string (ULID)");
   if (typeof programId !== "string" || !programId)
     throw new HttpsError("invalid-argument", "programId must be a non-empty string");
   if (!programData || typeof programData !== "object" || Array.isArray(programData))
@@ -909,8 +909,8 @@ export const tutorUpsertCurriculumScope = onCall(CALL_OPTS, async (request) => {
     throw new HttpsError("invalid-argument", "grantId must be a non-empty string");
   if (typeof ownerUid !== "string" || !ownerUid)
     throw new HttpsError("invalid-argument", "ownerUid must be a non-empty string");
-  if (typeof profileId !== "number" || !Number.isInteger(profileId) || profileId <= 0)
-    throw new HttpsError("invalid-argument", "profileId must be a positive integer");
+  if (typeof profileId !== "string" || !profileId)
+    throw new HttpsError("invalid-argument", "profileId must be a non-empty string (ULID)");
   if (typeof scopeId !== "string" || !scopeId)
     throw new HttpsError("invalid-argument", "scopeId must be a non-empty string");
   if (!scopeData || typeof scopeData !== "object" || Array.isArray(scopeData))
@@ -976,8 +976,8 @@ export const tutorEditProfile = onCall(CALL_OPTS, async (request) => {
     throw new HttpsError("invalid-argument", "grantId must be a non-empty string");
   if (typeof ownerUid !== "string" || !ownerUid)
     throw new HttpsError("invalid-argument", "ownerUid must be a non-empty string");
-  if (typeof profileId !== "number" || !Number.isInteger(profileId) || profileId <= 0)
-    throw new HttpsError("invalid-argument", "profileId must be a positive integer");
+  if (typeof profileId !== "string" || !profileId)
+    throw new HttpsError("invalid-argument", "profileId must be a non-empty string (ULID)");
 
   // At least one editable field must be provided.
   if (displayName === undefined && avatar === undefined && mode === undefined) {

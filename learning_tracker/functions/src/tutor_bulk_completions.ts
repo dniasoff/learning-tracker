@@ -28,7 +28,7 @@ import { db, CALL_OPTS } from "./shared";
 //   {
 //     grantId: string,                  // the active tutor grant doc ID
 //     ownerUid: string,                 // parent/owner uid (sanity check)
-//     profileId: number,                // learner profile ID (integer)
+//     profileId: string,                // learner profile ULID (AD-24)
 //     completions: Array<{              // 1-500 completion payloads
 //       completionId: string,           // ULID — must be globally unique
 //       curriculumId: string,
@@ -71,8 +71,8 @@ export const tutorBulkPriorCompletions = onCall(CALL_OPTS, async (request) => {
   if (typeof ownerUid !== "string" || !ownerUid) {
     throw new HttpsError("invalid-argument", "ownerUid must be a non-empty string");
   }
-  if (typeof profileId !== "number" || !Number.isInteger(profileId) || profileId <= 0) {
-    throw new HttpsError("invalid-argument", "profileId must be a positive integer");
+  if (typeof profileId !== "string" || !profileId) {
+    throw new HttpsError("invalid-argument", "profileId must be a non-empty string (ULID)");
   }
   if (!Array.isArray(completions) || completions.length === 0) {
     throw new HttpsError("invalid-argument", "completions must be a non-empty array");

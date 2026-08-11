@@ -28,7 +28,16 @@ export const db = admin.firestore();
 export const TUTOR = 'tutor-uid';
 export const PARENT = 'parent-uid';
 export const STRANGER = 'stranger-uid';
-export const PROFILE = 5;
+// AD-24: learner profiles are addressed by a ULID string doc-id, never a Drift
+// row integer. This fixture was `5` — a NUMBER — which is exactly why the CF
+// suite could not see that 14 tutor Cloud Functions still demanded
+// `typeof profileId === "number"` while every Dart caller sent a ULID. A
+// number here made the tests agree with the bug instead of with production.
+//
+// Keep this a STRING. `String(PROFILE)` and `${PROFILE}` call sites are
+// unaffected; `child_profile_id: PROFILE` now stores the same shape production
+// writes rather than a coincidentally-stringified integer.
+export const PROFILE = "01J8XKQ2M3N4P5R6S7T8V9W0XY";
 export const GRANT = 'grant-1';
 
 export const tutorAuth = { uid: TUTOR, token: {} };

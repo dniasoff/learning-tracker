@@ -2445,6 +2445,92 @@ not re-learn the hard way:**
 
 ---
 
+### 2026-08-11 — P3-17: finishes the int→ULID re-key at the TypeScript boundary — 14 Cloud Functions would have rejected every tutor write at runtime
+
+`npm run build` (tsc) EXIT 0. **`make test-functions`: 338 tests, 338 pass, 0 fail, EXIT 0**
+against the real Firestore emulator. `flutter test test/data/repositories/`: 285 pass.
+
+#### 1. The defect
+
+`functions/src/tutor_writes.ts` guarded `profileId` at 13 sites with
+`typeof profileId !== "number" || !Number.isInteger(profileId) || profileId <= 0`,
+and `tutor_bulk_completions.ts:74` was the 14th. Every Dart caller sends a ULID
+string — `tutored_write_router.dart:52` states it outright: *"ULID profileIds are
+NOT parsed as integers."* `verifyTutorGrant` also declared `profileId: number`
+(`:143`).
+
+**Every tutor write — reset completion, upsert/delete goal, track, stage
+definition, study day, bookmark, profile program, curriculum scope, edit profile
+— would have returned `invalid-argument` at runtime.**
+
+`deletes.ts` had ALREADY been migrated to `typeof profileId !== "string"`
+(`:135`, `:214`, `:406`). The repo held both conventions, split by file. This is
+the same defect as `e2ab5aeb`, left half-finished.
+
+#### 2. Why nothing caught it
+
+- **`dart analyze` cannot see it** — the Dart side is internally consistent; the
+  disagreement lives across the language boundary.
+- **The CF tests were pinned to agree with the bug.** `_cf_helpers.mjs:31` set
+  `export const PROFILE = 5` — a NUMBER. Every positive test therefore sent the
+  shape the bug expected and passed.
+
+This is the *third* instance this session of a guard that agrees with the defect
+it is supposed to catch. The pattern is worth naming: **a fixture that encodes
+the wrong contract converts a test suite from a detector into a ratchet holding
+the bug in place.**
+
+#### 3. What changed
+
+| File | Change |
+|---|---|
+| `tutor_writes.ts` | 13 guards → `typeof profileId !== "string" \|\| !profileId`; `verifyTutorGrant(profileId: string)`; 3 doc comments |
+| `tutor_bulk_completions.ts` | 1 guard + 1 doc comment |
+| `test/_cf_helpers.mjs` | `PROFILE = 5` → `"01J8XKQ2M3N4P5R6S7T8V9W0XY"` |
+| `test/cf_deletes.test.mjs` | stale assertion inverted (see §4) |
+
+Verified safe before editing: **no arithmetic or numeric coercion is performed
+on `profileId` anywhere** in `functions/src` — the only numeric uses were the
+guards themselves. `String(profileId)` sites (`:170`, `:191`) work unchanged.
+
+#### 4. Changing the fixture proved the tests WERE load-bearing
+
+Flipping `PROFILE` to a ULID first, before touching the assertions, produced
+exactly one failure out of 337 — and its name is the whole story:
+
+```
+✖ profileId is a string → invalid-argument
+```
+
+`cf_deletes.test.mjs:42` asserted that `profileId: '5'` must be REJECTED —
+contradicting `deletes.ts`'s own already-migrated string guard. It was stale
+before this round touched anything, and it was the last assertion pinning the
+pre-ULID contract. Inverted into two tests that assert the real contract: a
+NUMBER is rejected, and an EMPTY STRING is rejected.
+
+The other 336 passing with a string fixture is the actual proof: every positive
+tutor-write path now works end to end against the emulator, where before this
+change all of them would have failed.
+
+#### 5. Orchestrator error, caught by the guard
+
+The first attempt ABORTED with zero changes: the anchor `  profileId: number,`
+matched **3** times, not 1 — it also matched *inside* the doc-comment lines
+`//     profileId: number,`, whose comment indent ends in two spaces. Adding a
+leading newline disambiguated it. Third time this session a count assertion has
+converted an orchestrator miscount into a clean no-op instead of a silent
+partial edit.
+
+#### 6. Not done here
+
+The register also found: `hasCompletionsForStage` should use
+`.where('purged_at', isNull: true).limit(1)` rather than paging (~1h, 640 reads →
+1); siyum detection is silently dead on the Firestore path because
+`_dispatchSiyumDetection` swallows the adapter's delegated-profile exception;
+`tool/emit_fixture_payloads.dart` cannot run (it imports deleted sync codecs), so
+`write_payloads.json` describes the DELETED engine's shapes; and
+`check_rule_coverage.mjs:108`'s regex only matches single-line conditions, so it
+is blind to every multi-line `hasOnly()` whitelist.
 ### 2026-08-11 — P3-16: D-E resolved as a RULE, not a file — achievement reads throw, configuration reads may return empty (9 sites, 4 files)
 
 `dart analyze --fatal-infos` EXIT 0 on all four touched files.
