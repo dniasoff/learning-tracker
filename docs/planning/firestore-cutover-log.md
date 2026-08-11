@@ -2445,6 +2445,81 @@ not re-learn the hard way:**
 
 ---
 
+### 2026-08-11 — P3-22: finishes the streak vertical — 4 construction sites rewired, the D17 midnight rollover RESTORED, and a Drift read that would have been silently lost
+
+`dart analyze --fatal-infos` EXIT 0 on all five touched files.
+`check_dependency_direction` EXIT 0. lib errors **~520 → 511**.
+
+#### 1. The regression the migration honestly declared, now closed
+
+The streak migration listed among its behaviour changes: *"rolloverTicks dropped
+from watch (D17 midnight recompute not supported by watchStreak)"*. It was right,
+and it matters more than it sounds.
+
+A streak is computed relative to TODAY, but
+`FirestoreStreakStateRepository.watchStreak` re-emits only when the EVENT stream
+emits. With no tick, a child whose streak is 5 at 23:59 and who does not study
+still sees **5** after local midnight — until some unrelated event happens to
+fire the stream. The headline number then disagrees with the calendar dots, which
+is precisely the disagreement D17 existed to prevent.
+
+`watch` now merges a periodic tick (15 min, matching the original
+`_defaultRolloverTicks`) and recomputes on it. The interval need not be precise;
+it only bounds how long a stale day can sit on screen. Errors are forwarded to
+the stream rather than swallowed, so a not-ready backend still cannot render as
+a streak of zero (D-E).
+
+#### 2. A Drift read that nearly vanished
+
+`StreakAlertService` looked like a pure rename — swap `UserDatabase db` for
+`Ref`. It was not: `_db` ALSO backed `_hasCompletionsToday` via
+`completionDao.hasCompletionsInDateRangeByProfile` at `:115`. Dropping the field
+on the strength of "it only builds the streak service" would have deleted the
+"did you study today?" check that the entire streak-alert feature is built on.
+
+**Caught by grepping `_db` before removing it, not by the analyzer** — the
+analyzer would have flagged the symbol, but only after the behaviour had already
+been designed away.
+
+The Firestore equivalent exists (`FirestoreCompletionRepository
+.hasCompletionsInDateRange`, `:819`) but lives in the data-access ring, which
+AD-23/AD-28 forbid a `domain/` file from importing, and the domain
+`CompletionRepository` interface has no date-range read. Rather than widen that
+interface from here, the probe is INJECTED as a callback — the same shape the
+class already uses for `clock`/`streakClock`. The composition root supplies the
+Firestore-backed one; tests supply a fake with no database at all.
+
+#### 3. Rewired
+
+`gamification_service_providers.dart` (both providers), `streak_alert_service.dart`,
+`streak_milestone_analytics_observer.dart` — all off `userDatabaseProvider`.
+`StreakRestorer` now has **zero references in lib/** (the Firestore log is
+authoritative, so there is nothing to back-fill); it is left in place for a
+deliberate archiving pass rather than deleted mid-stream.
+
+#### 4. Orchestrator errors this round — three, all caught pre-commit
+
+- **A guard matched a DOC COMMENT.** `if 'rolloverTicks' in s: ABORT` fired
+  because the words appear in a comment DOCUMENTING the removal — the code was
+  genuinely gone. Same substring-over-match trap as the `profileId: number`
+  anchor earlier. **A guard that cannot distinguish code from prose is not a
+  guard.**
+- **Assumed `ref` was in scope** at both remaining construction sites. True in
+  the observer (inside a `StreamProvider`), FALSE in `StreakAlertService`, whose
+  constructor took no `Ref` at all. Checked before running; would otherwise have
+  emitted code referencing an undeclared identifier.
+- **Left an orphaned doc-comment fragment** above `streakCalendar` when replacing
+  the `readEvents` stub — prose still describing raw-event access that no longer
+  exists. Removed. This is the false-doc-claim class this project already tracks
+  under `T-68`.
+
+#### 5. Now exposed downstream, not regressions
+
+`points_service`'s new required parameters (`eligibility`, `balanceReader`,
+`pointConfig`) surface errors in `points_providers.dart`,
+`achievements_overview_provider.dart` and `reward_milestone_service.dart`. That
+is the migration front widening as intended — each is a caller that must now be
+wired to the new seams.
 ### 2026-08-11 — P3-21: parallel OpenCode migration fleet — 3 files migrated, 1 correctly BLOCKED on a product gap, and a third "report died, work survived"
 
 `dart analyze --fatal-infos` EXIT 0 on every file accepted below.

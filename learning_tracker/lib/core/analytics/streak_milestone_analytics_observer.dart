@@ -45,13 +45,12 @@ import 'package:learning_tracker/features/profiles/presentation/providers/active
 /// downgraded to a warning log line (EH-4, AUD-core-analytics-04).
 final streakMilestoneAnalyticsObserverProvider =
     StreamProvider.autoDispose<void>((ref) async* {
-      final db = ref.watch(userDatabaseProvider);
       final profileId = ref.watch(activeProfileIdProvider);
       final analytics = ref.watch(analyticsServiceProvider);
       final logger = AppLogger.instance;
 
       final stateProvider = StreakStateService(
-        db: db,
+        ref: ref,
         clock: ref.watch(localDayClockProvider),
       );
 

@@ -1,11 +1,12 @@
 import 'dart:async';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_state_service.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_gateway.dart';
+
 
 /// Service for managing streak protection alert notifications.
 ///
@@ -15,24 +16,38 @@ import 'package:learning_tracker/features/notifications/domain/services/notifica
 /// W3.20: `streaks` table dropped; streak state derived from
 /// [StreakStateService] (streak_events → StreakReducer).
 class StreakAlertService {
+  /// [ref] replaces the former `UserDatabase db`: [StreakStateService]
+  /// resolves its Firestore repository through Riverpod now. `db` was used here
+  /// ONLY to build that service — verified before the change.
   StreakAlertService({
-    required UserDatabase db,
+    required Ref ref,
     required NotificationGateway notificationService,
     required int profileId,
     DateTime Function()? clock,
     AnalyticsService? analytics,
     LocalDayClock? streakClock,
-  }) : _db = db,
+    required Future<bool> Function(DateTime start, DateTime end)
+    hasCompletionsInRange,
+  }) : _hasCompletionsInRange = hasCompletionsInRange,
        _notificationService = notificationService,
        _profileId = profileId,
        _clock = clock ?? DateTimeFactory.nowUtc,
        _analytics = analytics ?? const NullAnalyticsService(),
        _streakProvider = StreakStateService(
-         db: db,
+         ref: ref,
          clock: streakClock ?? const SystemLocalDayClock(),
        );
 
-  final UserDatabase _db;
+  /// Answers "did this profile complete anything in `[start, end]`?".
+  ///
+  /// Injected rather than resolved here: the Firestore equivalent
+  /// (`FirestoreCompletionRepository.hasCompletionsInDateRange`) lives in the
+  /// data-access ring, which AD-23/AD-28 forbid a `domain/` file from
+  /// importing, and the domain `CompletionRepository` interface exposes no
+  /// date-range read. A callback keeps the dependency at the composition root
+  /// and lets tests supply one with no database at all.
+  final Future<bool> Function(DateTime start, DateTime end)
+  _hasCompletionsInRange;
   final NotificationGateway _notificationService;
   final int _profileId;
   final DateTime Function() _clock;
@@ -110,11 +125,7 @@ class StreakAlertService {
     final startOfDay = LocalDayUtils.startOfLocalDay(now);
     final endOfDay = LocalDayUtils.endOfLocalDay(now);
 
-    return await _db.completionDao.hasCompletionsInDateRangeByProfile(
-      startOfDay,
-      endOfDay,
-      _profileId,
-    );
+    return _hasCompletionsInRange(startOfDay, endOfDay);
   }
 
   static String buildBody(int currentStreak) {

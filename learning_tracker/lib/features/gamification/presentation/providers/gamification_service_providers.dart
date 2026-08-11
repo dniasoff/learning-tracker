@@ -35,16 +35,16 @@ final rewardMilestoneServiceProvider = Provider<RewardMilestoneService>((ref) {
 /// `.watch` both take `profileId` per call — so a single instance (bound to
 /// the active database + the real system clock) is shared by every reader.
 final streakStateProvider = Provider<StreakStateService>((ref) {
-  final database = ref.watch(userDatabaseProvider);
-  return StreakStateService(db: database, clock: const SystemLocalDayClock());
+  // Takes `ref`, not a database handle: StreakStateService resolves its
+  // Firestore repository through Riverpod now.
+  return StreakStateService(ref: ref, clock: const SystemLocalDayClock());
 });
 
 /// Provider for [StreakService], scoped to the active profile.
 final streakServiceProvider = Provider<StreakService>((ref) {
-  final database = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
   return StreakService(
-    database,
+    ref,
     profileId: profileId,
     streakStateProvider: ref.watch(streakStateProvider),
   );
