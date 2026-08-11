@@ -1,24 +1,26 @@
-// Unit tests for ProfileGuard — three routing branches (S6).
+// Unit tests for ProfileGuard — all routing branches (S6).
 //
-// Branch 1: tutored session active → resolver.next() (short-circuit, skip all
-//           profile checks regardless of own-profile count).
+// Branch 1: tutored session active → resolver.next() (short-circuit, skip
+//           all own-profile checks regardless of own-profile count).
 // Branch 2: count==0 own profiles, no tutored session → resolver.next()
 //           (allow into AppShell). The shell detects the empty-profile state
-//           and jumps to the Settings tab, where a tutor-only adult sees their
-//           grants (TALMID PROFILES) and a first-run user can add a profile.
-//           We never replace() to the picker or call next(false) here.
-// Branch 3: count≥1 own profiles, one profile → auto-select + resolver.next().
+//           and jumps to the Settings tab, where a tutor-only adult sees
+//           their grants (TALMID PROFILES) and a first-run user can add a
+//           profile. We never replace() to the picker or call next(false)
+//           here.
+// Branch 3: a selected id that no longer exists in the account's profile
+//           list is re-resolved rather than trusted blindly.
+// Branch 4: count==1 own profile → auto-select + resolver.next().
+// Branch 5: count>=2 own profiles, none selected → redirect to picker.
+// Branch 6: a valid already-selected profile short-circuits.
 library;
 
 import 'package:auto_route/auto_route.dart';
-import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/navigation/guards/profile_guard.dart';
-import 'package:learning_tracker/core/utils/date_utils.dart';
+import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:mocktail/mocktail.dart';
-
-import '../../helpers/test_database.dart';
 
 class MockNavigationResolver extends Mock implements NavigationResolver {}
 
@@ -28,28 +30,19 @@ class MockStackRouter extends Mock implements StackRouter {}
 // verify() matcher captures them without a registerFallbackValue error.
 class _FakePageRouteInfo extends Fake implements PageRouteInfo {}
 
-// P2-10: carries a `ulid` (matching the real eager-mint policy every own
-// profile has in production, P2-2) — ProfileGuard's single-profile
-// auto-select branch now resolves-or-throws on a row's `ulid` before
-// calling `setSelectedProfileId`, so an omitted `ulid` here would make
-// Branch 3's test below throw instead of auto-selecting.
-Future<int> _insertOwnProfile(UserDatabase db, {required int accountId}) {
-  return db
-      .into(db.learnerProfiles)
-      .insert(
-        LearnerProfilesCompanion.insert(
-          accountId: accountId,
-          displayName: 'Own Learner',
-          mode: 'adult',
-          createdAt: DateTimeFactory.nowUtc(),
-          updatedAt: DateTimeFactory.nowUtc(),
-          ulid: Value('ulid-own-learner-$accountId'),
-        ),
-      );
+final _epoch = DateTime.utc(2026, 1, 1);
+
+LearnerProfileEntity _ownProfile(String profileId) {
+  return LearnerProfileEntity(
+    profileId: profileId,
+    displayName: 'Own Learner',
+    mode: ProfileMode.adult,
+    createdAt: _epoch,
+    updatedAt: _epoch,
+  );
 }
 
 void main() {
-  late UserDatabase db;
   late MockNavigationResolver resolver;
   late MockStackRouter router;
 
@@ -57,32 +50,29 @@ void main() {
     registerFallbackValue(_FakePageRouteInfo());
   });
 
-  setUp(() async {
-    db = createTestDatabase();
+  setUp(() {
     resolver = MockNavigationResolver();
     router = MockStackRouter();
+    when(() => resolver.isResolved).thenReturn(false);
     when(() => router.replace(any())).thenAnswer((_) async => null);
   });
 
-  tearDown(() async {
-    await db.close();
-  });
-
-  // ── Branch 1: tutored session active ────────────────────────────────────────
+  // ── Branch 1: tutored session active ──────────────────────────────────────
 
   group('tutored session active', () {
-    ProfileGuard makeGuard({required int? selectedId}) => ProfileGuard(
+    ProfileGuard makeGuard({
+      required String? selectedId,
+      List<LearnerProfileEntity> profiles = const [],
+    }) => ProfileGuard(
       profilePickerRoute: () => _FakePageRouteInfo(),
-      getDatabase: () => db,
+      getProfiles: () async => profiles,
       getSelectedProfileId: () => selectedId,
-      setSelectedProfileId: (_, {String? ulid}) {},
-      getAccountId: () => 1,
+      setSelectedProfileId: (_) {},
       isTutoredSession: () => true,
     );
 
     test('allows through when account has zero own profiles', () async {
       // Profile-less tutor: no own profiles, tutored session active.
-      await seedAccount(db);
       final guard = makeGuard(selectedId: null);
 
       await guard.onNavigation(resolver, router);
@@ -94,9 +84,8 @@ void main() {
     });
 
     test('allows through when account has own profiles', () async {
-      final accountId = await seedAccount(db);
-      final profileId = await _insertOwnProfile(db, accountId: accountId);
-      final guard = makeGuard(selectedId: profileId);
+      final profile = _ownProfile('profile-1');
+      final guard = makeGuard(selectedId: profile.profileId, profiles: [profile]);
 
       await guard.onNavigation(resolver, router);
 
@@ -111,20 +100,18 @@ void main() {
   group('zero own profiles, not tutored', () {
     ProfileGuard makeGuard() => ProfileGuard(
       profilePickerRoute: () => _FakePageRouteInfo(),
-      getDatabase: () => db,
+      getProfiles: () async => const [],
       getSelectedProfileId: () => null,
-      setSelectedProfileId: (_, {String? ulid}) {},
-      getAccountId: () => 1,
+      setSelectedProfileId: (_) {},
       isTutoredSession: () => false,
     );
 
     test(
       'allows into AppShell (shell jumps to Settings) — not the picker',
       () async {
-        // Genuine new user: no profiles, no tutored session. ProfileGuard now
-        // lets them into AppShell; the shell jumps to the Settings tab so they
-        // can manage their account / add a profile. No picker redirect.
-        await seedAccount(db);
+        // Genuine new user: no profiles, no tutored session. ProfileGuard
+        // lets them into AppShell; the shell jumps to the Settings tab so
+        // they can manage their account / add a profile. No picker redirect.
         final guard = makeGuard();
 
         await guard.onNavigation(resolver, router);
@@ -138,9 +125,8 @@ void main() {
     test('allows into AppShell — same path for profile-less tutor', () async {
       // Pure tutor: 0 own profiles, tutored session NOT yet active (before
       // they select a talmid). They land in AppShell → Settings, where the
-      // TALMID PROFILES section lets them accept/enter without first creating
-      // a learner profile.
-      await seedAccount(db);
+      // TALMID PROFILES section lets them accept/enter without first
+      // creating a learner profile.
       final guard = makeGuard();
 
       await guard.onNavigation(resolver, router);
@@ -151,85 +137,30 @@ void main() {
     });
   });
 
-  // ── Branch 3: count≥1 own profiles ──────────────────────────────────────────
+  // ── Branch 3: stale selected id, re-resolves ─────────────────────────────
 
-  group('one own profile, not tutored', () {
-    test('auto-selects single profile and calls resolver.next()', () async {
-      final accountId = await seedAccount(db);
-      final profileId = await _insertOwnProfile(db, accountId: accountId);
-
-      final selectedIds = <int>[];
-      final selectedUlids = <String>[];
-      final guard = ProfileGuard(
-        profilePickerRoute: () => _FakePageRouteInfo(),
-        getDatabase: () => db,
-        getSelectedProfileId: () => null,
-        setSelectedProfileId: (id, {required String ulid}) {
-          selectedIds.add(id);
-          selectedUlids.add(ulid);
-        },
-        getAccountId: () => accountId,
-        isTutoredSession: () => false,
-      );
-
-      await guard.onNavigation(resolver, router);
-
-      expect(selectedIds, [profileId]);
-      // P2-10: proves the resolved, non-null ulid actually reaches the
-      // callback — not just that SOME call happened.
-      expect(selectedUlids, ['ulid-own-learner-$accountId']);
-      verify(() => resolver.next()).called(1);
-      verifyNever(() => resolver.next(false));
-      verifyNever(() => router.replace(any()));
-    });
-
-    // P2-10: closes the type-level seam a mid-phase review found — the raw
-    // Drift row's `ulid` column stays nullable (a legacy pre-P2-2 row), and
-    // ProfileGuard's `setSelectedProfileId` field is now `{required String
-    // ulid}`, so ProfileGuard itself must resolve-or-throw before ever
-    // calling it. Proves the throw is caught by onNavigation's own fail-open
-    // wrapper (same "not a security gate" contract every other unexpected
-    // throw in this guard already gets), NOT propagated to the caller, and
-    // that `setSelectedProfileId` is never called with a fabricated value.
+  group('selected id no longer exists in the profile list', () {
     test(
-      'a legacy null-ulid single profile fails OPEN (resolver.next(), no '
-      'setSelectedProfileId call) instead of crashing or fabricating a ulid',
+      'falls through to re-resolution instead of trusting the stale id',
       () async {
-        // The catch/fail-open path this test exercises reads
-        // `resolver.isResolved` — every other test here that exercises that
-        // same path (see the "unexpected throw" group below) stubs it too.
-        when(() => resolver.isResolved).thenReturn(false);
-
-        final accountId = await seedAccount(db);
-        // Deliberately omits `ulid:` — LearnerProfilesCompanion.insert's
-        // `ulid` column stays nullable (pre-P2-2 legacy shape), unlike
-        // `_insertOwnProfile` above.
-        await db
-            .into(db.learnerProfiles)
-            .insert(
-              LearnerProfilesCompanion.insert(
-                accountId: accountId,
-                displayName: 'Legacy Learner',
-                mode: 'adult',
-                createdAt: DateTimeFactory.nowUtc(),
-                updatedAt: DateTimeFactory.nowUtc(),
-              ),
-            );
-
-        var setSelectedProfileIdCalled = false;
+        // The stale id belonged to a profile that no longer exists (e.g. an
+        // account switch left selectedProfileIdProvider — keepAlive —
+        // pointing at the previous account's profile). With exactly one
+        // real profile left, the guard should fall through to the
+        // auto-select branch rather than short-circuiting on the stale id.
+        final profile = _ownProfile('current-profile');
+        final selectedIds = <String>[];
         final guard = ProfileGuard(
           profilePickerRoute: () => _FakePageRouteInfo(),
-          getDatabase: () => db,
-          getSelectedProfileId: () => null,
-          setSelectedProfileId: (_, {required String ulid}) =>
-              setSelectedProfileIdCalled = true,
-          getAccountId: () => accountId,
+          getProfiles: () async => [profile],
+          getSelectedProfileId: () => 'stale-profile-id',
+          setSelectedProfileId: selectedIds.add,
           isTutoredSession: () => false,
         );
 
         await guard.onNavigation(resolver, router);
 
-        expect(setSelectedProfileIdCalled, isFalse);
+        expect(selectedIds, [profile.profileId]);
         verify(() => resolver.next()).called(1);
         verifyNever(() => resolver.next(false));
         verifyNever(() => router.replace(any()));
@@ -237,7 +168,30 @@ void main() {
     );
   });
 
-  // ── 2+ profiles, none selected → redirect to picker ───────────────────────
+  // ── Branch 4: count>=1 own profiles, exactly one ─────────────────────────
+
+  group('one own profile, not tutored', () {
+    test('auto-selects single profile and calls resolver.next()', () async {
+      final profile = _ownProfile('profile-1');
+      final selectedIds = <String>[];
+      final guard = ProfileGuard(
+        profilePickerRoute: () => _FakePageRouteInfo(),
+        getProfiles: () async => [profile],
+        getSelectedProfileId: () => null,
+        setSelectedProfileId: selectedIds.add,
+        isTutoredSession: () => false,
+      );
+
+      await guard.onNavigation(resolver, router);
+
+      expect(selectedIds, [profile.profileId]);
+      verify(() => resolver.next()).called(1);
+      verifyNever(() => resolver.next(false));
+      verifyNever(() => router.replace(any()));
+    });
+  });
+
+  // ── Branch 5: 2+ profiles, none selected → redirect to picker ─────────────
 
   group('2+ own profiles, none selected', () {
     test('AUD-core-navigation-01: replaces with exactly the route returned by '
@@ -248,17 +202,15 @@ void main() {
       // app-layer route class directly). Prove the redirect route is now
       // fully caller-controlled by injecting a distinctive marker route
       // that the guard could not possibly have constructed on its own.
-      final accountId = await seedAccount(db);
-      await _insertOwnProfile(db, accountId: accountId);
-      await _insertOwnProfile(db, accountId: accountId);
-
       final guard = ProfileGuard(
         profilePickerRoute: () =>
             const PageRouteInfo('AUD_CORE_NAV_01_MARKER_ROUTE'),
-        getDatabase: () => db,
+        getProfiles: () async => [
+          _ownProfile('profile-1'),
+          _ownProfile('profile-2'),
+        ],
         getSelectedProfileId: () => null,
-        setSelectedProfileId: (_, {String? ulid}) {},
-        getAccountId: () => accountId,
+        setSelectedProfileId: (_) {},
         isTutoredSession: () => false,
       );
 
@@ -280,19 +232,16 @@ void main() {
     });
   });
 
-  // ── Branch 4: already-selected valid profile ─────────────────────────────────
+  // ── Branch 6: already-selected valid profile ─────────────────────────────
 
   group('valid profile already selected', () {
     test('short-circuits and calls resolver.next()', () async {
-      final accountId = await seedAccount(db);
-      final profileId = await _insertOwnProfile(db, accountId: accountId);
-
+      final profile = _ownProfile('profile-1');
       final guard = ProfileGuard(
         profilePickerRoute: () => _FakePageRouteInfo(),
-        getDatabase: () => db,
-        getSelectedProfileId: () => profileId,
-        setSelectedProfileId: (_, {String? ulid}) {},
-        getAccountId: () => accountId,
+        getProfiles: () async => [profile],
+        getSelectedProfileId: () => profile.profileId,
+        setSelectedProfileId: (_) {},
         isTutoredSession: () => false,
       );
 
@@ -306,21 +255,21 @@ void main() {
 
   // ── Fail-safe: unexpected throw → fail OPEN (not a gate), no hang ──────────
   //
-  // getProfilesByAccount can throw — a corrupt/locked DB, a disposed provider
-  // lambda. ProfileGuard is not a security gate (the shell handles the empty-
-  // profile state by jumping to Settings), so the guard wraps onNavigation in
-  // a try/catch that fails OPEN (next()) rather than leaving navigation hung.
+  // getProfiles can throw — a Firestore read failure, a disposed provider
+  // lambda. ProfileGuard is not a security gate (the shell handles the
+  // empty-profile state by jumping to Settings), so the guard wraps
+  // onNavigation in a try/catch that fails OPEN (next()) rather than leaving
+  // navigation hung.
   group('unexpected throw (fail-open, no dead-end)', () {
     test(
-      'throwing database lambda → resolver.next(), allows to shell',
+      'throwing getProfiles lambda → resolver.next(), allows to shell',
       () async {
-        when(() => resolver.isResolved).thenReturn(false);
         final guard = ProfileGuard(
           profilePickerRoute: () => _FakePageRouteInfo(),
-          getDatabase: () => throw StateError('provider disposed mid-flight'),
+          getProfiles: () async =>
+              throw StateError('provider disposed mid-flight'),
           getSelectedProfileId: () => null,
-          setSelectedProfileId: (_, {String? ulid}) {},
-          getAccountId: () => 1,
+          setSelectedProfileId: (_) {},
           isTutoredSession: () => false,
         );
 
