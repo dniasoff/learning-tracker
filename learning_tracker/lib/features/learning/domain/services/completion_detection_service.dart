@@ -334,6 +334,32 @@ class CompletionDetectionService {
       trackType: trackType,
       isManual: false,
       source: source,
+      // Deterministic id => a replayed siyum overwrites itself instead of
+      // appending a duplicate. A unit is completed once per curriculum per
+      // scope, so this triple IS the identity. Without it, every retry (two
+      // devices, an offline replay, a re-entered screen) wrote a SECOND ledger
+      // row — and the ledger is append-only with `allow delete: if false`, so
+      // a duplicate could never be cleaned up.
+      ulid: _siyumDocId(
+        curriculumId: curriculum,
+        entryScope: entryScope,
+        unitIdentifier: unitIdentifier,
+      ),
     );
   }
+
+  /// Stable document id for a unit siyum.
+  ///
+  /// A siyum is identified by WHICH unit was completed, in which scope, in
+  /// which curriculum — never by when. Including a timestamp would make every
+  /// replay a new document, which is precisely the defect this exists to close.
+  static String _siyumDocId({
+    required CurriculumId curriculumId,
+    required String entryScope,
+    required String unitIdentifier,
+  }) {
+    final safeUnit = unitIdentifier.replaceAll(RegExp('[^A-Za-z0-9_-]'), '_');
+    return 'siyum_${curriculumId.storageKey}_${entryScope}_$safeUnit';
+  }
+
 }

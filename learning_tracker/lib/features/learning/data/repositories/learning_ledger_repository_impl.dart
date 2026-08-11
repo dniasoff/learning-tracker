@@ -129,6 +129,7 @@ class FirestoreLearningLedgerRepositoryAdapter
     String? markedBy,
     required bool isManual,
     CompletionSource source = CompletionSource.live,
+    String? ulid,
   }) async {
     // The caller may omit `markedBy` (domain services cannot legally reach the
     // active-profile ULID — see the interface's doc comment). This class can,
@@ -150,6 +151,7 @@ class FirestoreLearningLedgerRepositoryAdapter
       markedBy: marker,
       isManual: isManual,
       source: source,
+      ulid: ulid,
     );
   }
 

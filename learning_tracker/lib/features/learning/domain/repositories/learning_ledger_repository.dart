@@ -53,6 +53,17 @@ abstract class LearningLedgerRepository {
     String? markedBy,
     required bool isManual,
     CompletionSource source = CompletionSource.live,
+
+    /// Optional DETERMINISTIC document id, making this write idempotent.
+    ///
+    /// When supplied, a replay of the same logical siyum lands on the SAME
+    /// document instead of appending a duplicate. `firestore.rules` accepts
+    /// that: an identical replay affects no keys, which is the SR-1 case the
+    /// rules permit.
+    ///
+    /// When omitted the implementation mints a random id, so an entry that has
+    /// no natural key (a genuinely new manual mark) still appends.
+    String? ulid,
   });
 
   /// Batch-insert manual ledger rows (e.g. the lifetime marking UI).

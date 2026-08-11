@@ -2445,6 +2445,66 @@ not re-learn the hard way:**
 
 ---
 
+### 2026-08-11 — P3-23: siyum ledger writes become idempotent — a duplicate-siyum bug that exists TODAY, not only offline
+
+`dart analyze --fatal-infos` EXIT 0 on all three touched files.
+`flutter test test/data/repositories/`: 306 pass. Offline gap step 3, partial.
+
+#### 1. The defect
+
+`FirestoreLearningLedgerRepository.recordCompletion` does
+`final id = ulid ?? newUlid()` (`:377`). Neither the adapter nor
+`CompletionDetectionService` passed a `ulid`, so the RANDOM branch always won.
+
+**Every replay of a siyum wrote a SECOND ledger entry.** Not merely an offline
+concern: two devices, a retried write, or a re-entered screen each append their
+own row, so a child can be shown the same siyum twice. The ledger is append-only
+with `allow delete: if false`, so a duplicate can never be cleaned up afterwards.
+
+#### 2. The fix
+
+The document id is now derived from the siyum's natural key —
+`(curriculumId, entryScope, unitIdentifier)`. A unit is completed once per
+curriculum per scope, so that triple IS the identity. A replay lands on the same
+document, and `firestore.rules` accepts it: an identical replay affects no keys
+(`diff().affectedKeys()` is empty), which is exactly the SR-1 case the rules were
+written to permit.
+
+`ulid` is OPTIONAL on the interface — an entry with no natural key (a genuinely
+new manual mark) still appends with a random id.
+
+**Deliberately not time-based.** Including a timestamp would defeat the purpose,
+which is the mistake the streak recorder already makes — see §4.
+
+#### 3. Offline step 3 — what is actually blocked, measured
+
+The goal was to remove the accepted `isNew` double-credit by making all four
+post-write side effects replay-safe. Measured state:
+
+| side effect | doc id | replay-safe? |
+|---|---|---|
+| bookmark advance | set to a value | YES — naturally idempotent |
+| points ledger | caller-supplied `ulid` | POSSIBLE — repo doc says the ulid is "always supplied non-null by every call site" |
+| streak event | caller-supplied `ulid` | POSSIBLE in principle; its ONLY caller passes `newUlid(at)` — RANDOM |
+| siyum ledger | `ulid ?? newUlid()` | **NO — fixed here** |
+
+Points and streak are NOT fixed here, deliberately:
+`completion_streak_recorder.dart` is still Drift + outbox
+(`drift.InsertMode.insertOrIgnore`, `_outboxFacade.enqueueStreakPayload`) — it has
+not been migrated at all. Making its ULID deterministic now would be work on code
+scheduled for replacement. **Do it as part of migrating that file.**
+
+#### 4. ⚠️ A pre-existing false claim, NOT introduced by this migration
+
+`completion_streak_recorder.dart:59-61` states:
+
+> *"ULID encodes the event timestamp so duplicate enqueues across two devices on
+> the same logical day collapse to one Firestore doc."*
+
+`newUlid(at)` is random beyond its timestamp prefix, so two calls at the same
+instant produce DIFFERENT ids and never collapsed. The comment describes a
+property the code does not have. `T-68` class — recorded, to be closed when that
+file is migrated.
 ### 2026-08-11 — P3-22: finishes the streak vertical — 4 construction sites rewired, the D17 midnight rollover RESTORED, and a Drift read that would have been silently lost
 
 `dart analyze --fatal-infos` EXIT 0 on all five touched files.
