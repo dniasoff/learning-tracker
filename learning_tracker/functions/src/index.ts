@@ -22,6 +22,8 @@ export {
 
 export { purgeExpiredAuditLogs } from "./audit_log_purge";
 
+export { billingKillSwitch } from "./billing_kill_switch";
+
 export { tutorBulkPriorCompletions } from "./tutor_bulk_completions";
 
 export {

@@ -2445,6 +2445,43 @@ not re-learn the hard way:**
 
 ---
 
+### 2026-08-11 — P3-34: commit the billing kill-switch (deployed earlier, untracked until now)
+
+The kill-switch was written and **deployed** under the owner's explicit
+instruction ("Pub/Sub-triggered function that disables billing on the project —
+do this"), but its source sat untracked in the working tree for the rest of the
+session. **Deployed code that is not in git is a real gap**, not a formality:
+the only copy of a function that can take the whole project offline was a file
+nobody else could see, review, or restore.
+
+#### What it does, and why it is deliberately brutal
+
+A GCP budget only ALERTS; it cannot stop spend. This function is the actual cap.
+At **100% of budget only** — not the 50% or 90% alert thresholds — it unlinks the
+billing account from the project, which halts all billable services.
+
+Firing it **takes the app down**: Cloud Functions stop, Firestore becomes
+inaccessible, and it stays down until a human re-links billing in the console.
+That is the intended trade for a hobby-budget project, and it is recorded in the
+file's own header so nobody later "improves" it into something that merely warns
+— warning is precisely what the budget already does and what makes the budget
+insufficient.
+
+#### The failure mode worth knowing
+
+The runtime service account must hold **Billing Account Administrator** on the
+billing account. Without that grant the function logs an error and the cap
+**silently does nothing** — the exact silent-failure shape this phase keeps
+catching, except here the consequence is an unbounded invoice rather than a wrong
+number. The header says to re-verify the grant after any service-account change.
+
+Out-of-band wiring, recorded here because it does not live in this repo:
+budget "learning-tracker hobby cap", £5/month, scoped to this project, thresholds
+50/90/100%, publishing to
+`projects/torah-study-tracker/topics/billing-kill-switch`.
+
+No new npm dependency: Node 22 has global `fetch`, and the access token comes
+from the metadata server.
 ### 2026-08-11 — P3-33: stage definitions become an adapter, unblocking the file that was waiting on them
 
 `dart analyze --fatal-infos` EXIT 0. `check_dependency_direction` EXIT 0.

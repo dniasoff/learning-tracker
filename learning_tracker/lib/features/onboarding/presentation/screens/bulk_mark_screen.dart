@@ -17,7 +17,6 @@ import 'package:learning_tracker/features/learning/presentation/providers/comple
 import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/bulk_prior_completion_service.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
@@ -307,7 +306,6 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
 
   Future<void> _expungeRefs(List<String> refs) async {
     final service = ref.read(bulkPriorCompletionServiceProvider);
-    final profileId = ref.read(activeProfileIdProvider);
 
     // AUD-onboarding-07: await every expunge write (each ref individually —
     // service API is per-ref) BEFORE signalling the dependent providers
