@@ -426,6 +426,44 @@ reference them), plus `_computeTrackDualProgressMetric` and
 `// ignore: unused_element`). Only `trackDualProgressMetricsProvider` has
 consumers — twelve of them.
 
+### 6.2d ⚠️ OWNER DECISION: PointConfigScreen is live but its values are ignored
+
+`point_configs` was a **Drift-only** table, retired with the user DB. There is no
+Firestore equivalent and none is planned in the rewrite map.
+
+`FirestoreCompletionPointsAwarder` handles this honestly — it applies the
+hardcoded ladder (`Learn=10, Chazara1=5, Chazara2=3, else 1`) that the Drift
+original already fell back to whenever no config row existed, and its class doc
+records that **per-curriculum point overrides no longer apply**.
+
+**But `PointConfigScreen` is still live and reachable**, routed from Parent
+Settings at `parent_settings_screen.dart:211`.
+
+It currently has 9 analyzer errors, so it does not compile — which is the only
+thing presently hiding the problem. **The moment someone mechanically clears
+those 9 errors, a parent can open Parent Settings → Point Configuration, change
+the points per stage, watch the UI accept it, and have it silently do nothing.**
+
+Note the shape of that: the defect ARRIVES as a result of fixing the errors. It
+is the phase's recurring silent-value failure at FEATURE scale, and it is the
+clearest evidence that **driving the error count to zero is not the same as the
+app working.**
+
+Three options, all owner calls — do NOT pick one during migration:
+
+1. **Restore the feature** — add a Firestore `point_configs` collection, its
+   `firestore.rules` block, and a repository; re-point the awarder at it. Largest,
+   and the only one that keeps the feature.
+2. **Remove the screen** — points become fixed by the ladder. Smallest, and
+   honest, but deletes a shipped capability.
+3. **Keep the screen, mark it clearly non-functional** — worst of the three; a
+   control that visibly does nothing is barely better than one that silently does
+   nothing.
+
+⚠️ Whichever is chosen, do NOT let the screen be "migrated" into compiling
+without resolving this. A compiling screen that ignores its own input is strictly
+worse than one that does not build, because the broken build is at least visible.
+
 ### 6.3 Offline step 2 — process-kill survival UNVERIFIED
 
 Needs `flutter run` + `am force-stop` + `am start` (the test harness uninstalls
