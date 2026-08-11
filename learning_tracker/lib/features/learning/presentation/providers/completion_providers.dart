@@ -2,10 +2,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/analytics/analytics_provider.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
-import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
-import 'package:learning_tracker/features/learning/data/completion_points_awarder.dart';
-import 'package:learning_tracker/features/learning/data/repositories/completion_streak_recorder.dart';
+import 'package:learning_tracker/features/learning/data/repositories/completion_points_awarder.dart';
 import 'package:learning_tracker/features/learning/data/repositories/completion_repository_impl.dart';
+import 'package:learning_tracker/features/learning/data/repositories/completion_streak_recorder.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
 import 'package:learning_tracker/features/learning/domain/services/completion_detection_service.dart';
 import 'package:learning_tracker/features/learning/domain/services/completion_orchestrator.dart';
@@ -72,17 +71,10 @@ CompletionRepository completionRepository(Ref ref) {
   return FirestoreCompletionRepositoryAdapter(ref: ref);
 }
 
-/// Drift-backed [CompletionPointsPort] — see that class's doc comment.
+/// Firestore-backed [CompletionPointsPort] — see that class's doc comment.
 @riverpod
 CompletionPointsPort completionPointsPort(Ref ref) {
-  final database = ref.watch(userDatabaseProvider);
-  final syncFacade = ref.watch(syncWriteFacadeProvider);
-  return DriftCompletionPointsAwarder(
-    database: database,
-    rewardMilestoneServiceFactory: (profileId) =>
-        RewardMilestoneService(database, profileId: profileId),
-    syncEngine: syncFacade,
-  );
+  return FirestoreCompletionPointsAwarder(ref: ref);
 }
 
 /// Firestore-backed [CompletionStreakPort] — see that class's doc comment.

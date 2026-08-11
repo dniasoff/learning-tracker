@@ -2445,6 +2445,79 @@ not re-learn the hard way:**
 
 ---
 
+### 2026-08-11 — P3-40: points awarder migrated (and two of its zeros reclassified as throws); sacred-window DB tier deleted after proving nobody read it
+
+`dart analyze --fatal-infos` EXIT 0 on all three files.
+`check_dependency_direction` EXIT 0. lib errors **376 → 360**.
+
+#### 1. The points awarder drew the right line — and needed one correction
+
+`CompletionPointsAwarder` moved to `features/learning/data/repositories/` (the
+AD-23/AD-28 exempt segment, the same relocation used for the streak recorder in
+P3-27) and now takes `Ref`.
+
+The worker got the important part right unprompted: **`creditCompletion` THROWS**
+rather than silently dropping an award that is owed, and its comment names the
+defect class — "the streak tee receiving null and doing nothing at all". It also
+kept the three-tier policy intact and stamps `source: CompletionSource.live` on
+the ledger row so the tier is durable rather than inferred.
+
+But `calculatePoints` returned `0` for **two different kinds of case**, and they
+are not the same kind:
+
+- **Legitimate zeros, correctly kept:** profile is not a child; the curriculum
+  key resolves to no `CurriculumId`; the profile has no goal (`hasGoal == false`).
+  Each is a real answer to "what does this completion earn".
+- **Not-ready states, reclassified to THROW:** `learnerProfileRepository == null
+  || profileUlid == null`, and `goalRepository == null`.
+
+The second group is **contradictory, not legitimate**. This code runs only while
+a completion is being recorded, and the completion write is itself profile-scoped
+by its Firestore collection path — so an active profile provably exists by the
+time control reaches here. A null repository is an inconsistency, i.e. a bug.
+
+Returning `0` for it is precisely the failure this phase keeps finding: a value
+that is *valid* standing in for one that is *correct*. The worker had added a
+warning log, which does not close it — a warning lands in noise, and nothing
+downstream can distinguish "earned nothing" from "we could not tell". Throwing is
+safe here because `CompletionOrchestrator._safeStep` wraps the call, so the
+already-durable completion write is not rolled back; only the missed credit
+surfaces.
+
+**Generalisable:** "is `0` legitimate here?" is not a property of the METHOD, it
+is a property of the BRANCH. The same function can owe a truthful zero on one
+path and a loud failure on another, and reviewing at method granularity misses
+it.
+
+#### 2. Sacred windows: a persistence tier deleted only after proving it was dead
+
+The migrating worker dropped the repository's DB tier, arguing zmanim are derived
+device-local data that `docs/firestore-rewrite-map.md` explicitly keeps local
+("Stays local, never leaves the device") — so it is not a Firestore target and
+should not be re-homed.
+
+That reasoning is right, but the deleted doc comment claimed the tier existed so
+**"background notification-fire-time checks can read them on cold-start without
+the Flutter engine (AC 26.24 requirement 4)"** — a capability that, if real,
+in-memory caching cannot replace, because an in-memory cache dies with the
+process. So the claim was checked rather than taken at face value:
+
+- No Dart code reads the persisted windows back — `SacredWindowDao`'s only
+  consumer was `notification_providers.dart:480`, which *injected* it. The tier
+  was **write-only**.
+- `grep` across `android/` and `ios/` finds **no reference to sacred windows at
+  all**, and **no native SQLite access anywhere** in `android/app/src`.
+
+So the "read it natively on cold start" capability was **never implemented**. The
+tier was written by nobody's reader. Deleting it loses nothing real — and the doc
+comment asserting the capability is another instance of the pattern this phase
+keeps hitting: **documentation describing an intended design that the code never
+grew into.**
+
+This is the third time a claim in a comment has had to be checked against the
+code rather than trusted (after the streak recorder's ULID idempotence and
+`conflict.dart`'s "every reconciliation path"). Treat a comment asserting a
+capability as a claim to verify.
 ### 2026-08-11 — P3-38: the cold-cache gate gets tests (owner ask #3) — and was only testable because the correct design was chosen
 
 **`flutter test test/data/repositories/` — 309/309 pass** (was 306; +3 new).
