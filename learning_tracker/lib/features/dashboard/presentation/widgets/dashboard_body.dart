@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import 'package:learning_tracker/app/router/app_router.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
@@ -31,11 +30,12 @@ import 'package:learning_tracker/features/progress/presentation/providers/lifeti
 // layering rule.
 import 'package:learning_tracker/features/progress/progress.dart';
 import 'package:learning_tracker/features/scheduler/scheduler.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 class DashboardBody extends ConsumerWidget {
-  final List<CurriculumTrack> activeTracks;
+  final List<CurriculumTrackEntity> activeTracks;
   final ProfileMode userMode;
   final int currentStreak;
   final String? profileName;
@@ -156,7 +156,7 @@ class DashboardBody extends ConsumerWidget {
 
     if (activeTracks.isEmpty) {
       final isChildMode =
-          ref.watch(selectedProfileProvider).asData?.value?.profileMode ==
+          ref.watch(selectedProfileProvider).asData?.value?.mode ==
           ProfileMode.child;
       // T3.gating: suppress the "Add track" CTA in a tutored session.
       final isTutoredSession =

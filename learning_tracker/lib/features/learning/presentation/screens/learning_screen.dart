@@ -51,7 +51,7 @@ class LearningScreen extends ConsumerWidget {
         : rawDailyTasksAsync;
     final streakAsync = ref.watch(dashboardStreakProvider);
     final isChildMode =
-        ref.watch(selectedProfileProvider).asData?.value?.profileMode ==
+        ref.watch(selectedProfileProvider).asData?.value?.mode ==
         ProfileMode.child;
     final activeTutoredSelection = ref.watch(
       activeTutoredProfileSelectionProvider,

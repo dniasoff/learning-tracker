@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/sync/providers/sync_status_providers.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
@@ -11,7 +10,6 @@ import 'package:learning_tracker/features/dashboard/presentation/widgets/dashboa
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 import 'package:learning_tracker/features/scheduler/scheduler.dart';
-import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
 import 'package:learning_tracker/features/tracks/tracks.dart';
 
 @RoutePage()
@@ -57,28 +55,6 @@ class DashboardScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final activeTracksAsync = ref.watch(dashboardActiveTracksStreamProvider);
-
-    // Auto-refresh on launch-pull completion. The launch sync pull
-    // (SyncOrchestrator.pullOnLaunch) merges fresh cloud data into the local
-    // Drift DB and THEN emits SyncStatus.synced — but it does not invalidate
-    // the dashboard's one-shot FutureProviders, so on cold/warm open they have
-    // already resolved against the pre-pull (stale/empty) Drift state. Without
-    // this listener the user has to pull-to-refresh to see points / streak /
-    // today's tasks / projection.
-    //
-    // We invalidate the same provider set as the manual pull, but ONLY on the
-    // transition INTO a `synced` status (previous != synced). That keeps it to
-    // one refresh per completed pull — it does not fire on every rebuild, and a
-    // `synced → synced` re-emit (impossible in practice, but defensive) is
-    // ignored — so there is no refresh loop.
-    ref.listen<SyncStatus>(syncStatusProvider, (previous, next) {
-      if (next is SyncStatusSynced && previous is! SyncStatusSynced) {
-        final tracks =
-            ref.read(dashboardActiveTracksStreamProvider).asData?.value ??
-            const <CurriculumTrackEntity>[];
-        invalidateDashboardData(ref, tracks);
-      }
-    });
 
     final userModeAsync = ref.watch(dashboardUserModeProvider);
     final streakAsync = ref.watch(dashboardStreakProvider);

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/active_track_card.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/arrow_button.dart';
 import 'package:learning_tracker/features/scheduler/scheduler.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 class ActiveTracksCarouselSection extends StatefulWidget {
@@ -18,7 +18,7 @@ class ActiveTracksCarouselSection extends StatefulWidget {
 
   final String title;
   final String subtitle;
-  final List<CurriculumTrack> activeTracks;
+  final List<CurriculumTrackEntity> activeTracks;
   final List<DailyTask> allTasks;
   final TextStyle titleStyle;
 
