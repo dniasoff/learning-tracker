@@ -1,12 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_entity.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart'
+    show goalRepositoryProvider;
 import 'package:learning_tracker/features/progress/data/repositories/firestore_progress_repository_adapter.dart';
 import 'package:learning_tracker/features/progress/domain/models/curriculum_progress_data.dart';
 import 'package:learning_tracker/features/progress/domain/repositories/progress_repository.dart';
@@ -14,6 +15,8 @@ import 'package:learning_tracker/features/progress/domain/services/curriculum_pr
 import 'package:learning_tracker/features/progress/domain/services/pace_calculator.dart';
 import 'package:learning_tracker/features/scheduler/scheduler.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
+import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart'
+    show curriculumTrackRepositoryAdapterProvider;
 import 'package:learning_tracker/features/tracks/stages/presentation/providers/stage_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -45,9 +48,7 @@ ProgressRepository progressRepository(Ref ref) {
 /// curriculum, so this is a single-entry map — not a user-facing concept.
 @riverpod
 Future<Map<String, int>> trackBreakdown(Ref ref, String curriculumId) async {
-  final db = ref.watch(userDatabaseProvider);
-  final profileId = ref.watch(activeProfileIdProvider);
-  return db.completionDao.getTrackBreakdownByProfile(curriculumId, profileId);
+  return ref.watch(progressRepositoryProvider).getTrackBreakdown(curriculumId);
 }
 
 /// Provider for aggregate completion count by curriculum, scoped to the active profile.
@@ -55,9 +56,7 @@ Future<Map<String, int>> trackBreakdown(Ref ref, String curriculumId) async {
 /// Returns the total completion count across all tracks for the given curriculum.
 @riverpod
 Future<int> aggregateCount(Ref ref, String curriculumId) async {
-  final db = ref.watch(userDatabaseProvider);
-  final profileId = ref.watch(activeProfileIdProvider);
-  return db.completionDao.getAggregateCountByProfile(curriculumId, profileId);
+  return ref.watch(progressRepositoryProvider).getAggregateCount(curriculumId);
 }
 
 /// Live progress snapshot derived directly from completion rows.
@@ -67,14 +66,19 @@ Future<int> aggregateCount(Ref ref, String curriculumId) async {
 @riverpod
 Future<ProgressOverviewStats> progressOverviewStats(Ref ref) async {
   ref.watch<int>(completionCommittedProvider);
-  final db = ref.watch(userDatabaseProvider);
-  final profileId = ref.watch(activeProfileIdProvider);
-  // SQL-filtered: excludes bulk-mark sentinel (trackId = 0) at the DB layer.
-  final trackCompletions = await db.completionDao
-      .getTrackOnlyCompletionsByProfile(profileId);
+  final allCompletions = await ref
+      .watch(progressRepositoryProvider)
+      .getAllCompletions();
+  // live-only: the modern equivalent of the old "excludes bulk-mark sentinel
+  // (trackId = 0)" filter -- AD-25 retired trackId, and
+  // CompletionSource.live/bulkInTrack is what that filter actually
+  // distinguished.
+  final trackCompletions = allCompletions
+      .where((c) => c.source == CompletionSource.live)
+      .toList();
   final uniqueItems = <String>{};
   for (final c in trackCompletions) {
-    uniqueItems.add('${c.curriculumId}:${c.sefariaRef}');
+    uniqueItems.add('${c.curriculumId.storageKey}:${c.sefariaRef}');
   }
   return ProgressOverviewStats(
     totalCompletions: trackCompletions.length,
@@ -118,7 +122,6 @@ Future<CurriculumProgressData> curriculumProgress(
   // CP-02: recompute whenever a completion is committed so the Breakdown by
   // Level cards update live without the user having to pull-to-refresh.
   ref.watch<int>(completionCommittedProvider);
-  final db = ref.watch(userDatabaseProvider);
 
   // Resolve CurriculumId enum for content repository
   final curriculumEnum = CurriculumId.values.firstWhere(
@@ -132,9 +135,9 @@ Future<CurriculumProgressData> curriculumProgress(
   final hierarchyConfig = await ref.watch(
     curriculumHierarchyConfigProvider(curriculumEnum).future,
   );
-  final profileId = ref.watch(activeProfileIdProvider);
-  final completions = await db.completionDao
-      .getCompletionsByCurriculumAndProfile(curriculumId, profileId);
+  final completions = await ref
+      .watch(progressRepositoryProvider)
+      .getCompletionsByCurriculum(curriculumId);
   final stageRepository = ref.watch(
     stageDefinitionRepositoryProvider(curriculumEnum),
   );
@@ -166,9 +169,7 @@ Future<ProgressPaceCalculator?> curriculumPaceStatus(
   String curriculumId,
 ) async {
   ref.watch<int>(completionCommittedProvider);
-  final db = ref.watch(userDatabaseProvider);
   final now = ref.watch(clockProvider);
-  final profileId = ref.watch(activeProfileIdProvider);
 
   // Resolve CurriculumId enum for content.
   final curriculumEnum = CurriculumId.values
@@ -177,18 +178,19 @@ Future<ProgressPaceCalculator?> curriculumPaceStatus(
   if (curriculumEnum == null) return null;
 
   // Get goals for this curriculum.
-  final goals = await db.goalDao.getGoalsByCurriculumAndProfile(
-    curriculumId,
-    profileId,
-  );
+  final goals = await ref.watch(goalRepositoryProvider).getGoals(curriculumEnum);
   if (goals.isEmpty) return null;
 
   // Pick the most recently created goal — defends against stale rows.
   final goal = goals.reduce((a, b) => a.createdAt.isAfter(b.createdAt) ? a : b);
   if (goal.targetDate == null) return null;
 
-  // Fetch the track to get activatedAt (= trackStartDate).
-  final track = await db.trackDao.getTrackById(goal.trackId);
+  // Fetch the track to get activatedAt (= trackStartDate). AD-25: a track IS
+  // its curriculum, so this is the same curriculumEnum already resolved above
+  // — no more Drift trackDao.getTrackById(goal.trackId) bridge needed.
+  final track = await ref
+      .watch(curriculumTrackRepositoryAdapterProvider)
+      .getTrack(curriculumEnum);
   if (track == null) return null;
 
   // trackStartDate = local-day midnight of the track's activatedAt.
@@ -202,8 +204,9 @@ Future<ProgressPaceCalculator?> curriculumPaceStatus(
   // Rule-7 (no track types): all tracks are implicitly personal now, so the
   // `trackType == personal` filter was a no-op that could wrongly drop rows.
   // Use every completion for the pace calculation.
-  final allCompletions = await db.completionDao
-      .getCompletionsByCurriculumAndProfile(curriculumId, profileId);
+  final allCompletions = await ref
+      .watch(progressRepositoryProvider)
+      .getCompletionsByCurriculum(curriculumId);
 
   // Split completions into bulk baseline (before trackStartDate) and live
   // (on or after trackStartDate). Bulk entries have sentinel date 2000-01-01

@@ -1,13 +1,9 @@
-import 'package:learning_tracker/core/database/daos/completion_dao.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_tier_filter.dart';
 import 'package:learning_tracker/features/progress/domain/models/chart_data.dart';
+import 'package:learning_tracker/features/progress/domain/services/chart_data_service.dart'
+    show ChartDataRepository;
 import 'package:learning_tracker/features/tracks/stages/domain/repositories/stage_definition_repository.dart';
-import 'package:learning_tracker/features/tracks/stages/presentation/providers/stage_providers.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
-
-part 'track_progress_service.g.dart';
 
 /// Single source of truth for all track and curriculum progress aggregation.
 ///
@@ -29,14 +25,27 @@ part 'track_progress_service.g.dart';
 /// | [liveOnly]        | live only                  | streak, points, charts        |
 /// | [trackAchievement]| live + bulkInTrack         | Manage Tracks, siyumim        |
 /// | [lifetime]        | live + bulkInTrack + etc.  | lifetime views                |
+///
+/// ## Firestore read seam
+///
+/// Takes [ChartDataRepository] rather than resolving Firestore itself —
+/// AD-23/AD-28 forbid `lib/features/**/domain/**` from importing the data
+/// ring at all. Reuses the SAME interface [ChartDataService] already reads
+/// through (`chart_data_service.dart`) rather than declaring a second,
+/// near-identical one: its `getCompletionsByTier` already carries exactly
+/// the D-E contract this service needs (achievement-shaped — throws when
+/// the backend is not ready, so a not-ready read can never masquerade as
+/// "zero progress"). See `features/tracks/presentation/providers/
+/// track_progress_providers.dart` for where the concrete
+/// `FirestoreChartDataRepositoryAdapter` is constructed.
 class TrackProgressService {
   const TrackProgressService({
-    required CompletionDao dao,
+    required ChartDataRepository repository,
     required StageDefinitionRepository stageRepo,
-  }) : _dao = dao,
+  }) : _repository = repository,
        _stageRepo = stageRepo;
 
-  final CompletionDao _dao;
+  final ChartDataRepository _repository;
   final StageDefinitionRepository _stageRepo;
 
   // ── Completion-percent ────────────────────────────────────────────────────
@@ -47,14 +56,12 @@ class TrackProgressService {
   /// - [requireAllStages] `true` (default) — "fully done" means every required
   ///   stage has a completion. Set to `false` for a distinct-refs-only count
   ///   (any completion at any stage counts the item).
-  /// - [since] — optional lower bound on `eventTimestamp`; pass
+  /// - [since] — optional lower bound on `completedAt`; pass
   ///   `track.activatedAt` for a cycle-aware calculation.
   /// - [totalItems] — denominator. Pass the scoped leaf-item count for the
-  ///   track's curriculum; if omitted or 0 the method returns 0.0.
+  ///   curriculum; if omitted or 0 the method returns 0.0.
   Future<double> completionPercent({
-    required int trackId,
     required CurriculumId curriculumId,
-    required int profileId,
     required CompletionTierFilter tier,
     required int totalItems,
     bool requireAllStages = true,
@@ -65,10 +72,9 @@ class TrackProgressService {
     final stages = await _stageRepo.getStagesForCurriculum(curriculumId);
     if (stages.isEmpty) return 0.0;
 
-    final completions = await _dao.getCompletionsByTier(
-      profileId: profileId,
+    final completions = await _repository.getCompletionsByTier(
       tier: tier,
-      trackId: trackId,
+      curriculumId: curriculumId,
       since: since,
     );
 
@@ -102,14 +108,12 @@ class TrackProgressService {
   /// Returns one [DailyCompletionData] per calendar day in the range,
   /// even if the count is zero.
   Future<List<DailyCompletionData>> dailyCounts({
-    required int profileId,
     required CompletionTierFilter tier,
     required DateTime startDate,
     required DateTime endDate,
     CurriculumId? curriculumId,
   }) async {
-    final completions = await _dao.getCompletionsByTier(
-      profileId: profileId,
+    final completions = await _repository.getCompletionsByTier(
       tier: tier,
       curriculumId: curriculumId,
     );
@@ -142,14 +146,12 @@ class TrackProgressService {
   /// range are NOT included in the baseline — the chart plots live activity
   /// only in the chosen window).
   Future<List<CumulativeDataPoint>> cumulativeProgress({
-    required int profileId,
     required CompletionTierFilter tier,
     required DateTime startDate,
     required DateTime endDate,
     CurriculumId? curriculumId,
   }) async {
-    final completions = await _dao.getCompletionsByTier(
-      profileId: profileId,
+    final completions = await _repository.getCompletionsByTier(
       tier: tier,
       curriculumId: curriculumId,
     );
@@ -187,17 +189,4 @@ class CumulativeDataPoint {
 
   final DateTime date;
   final int total;
-}
-
-// ── Riverpod provider ─────────────────────────────────────────────────────
-
-/// Singleton [TrackProgressService] provider.
-///
-/// Depends on [userDatabaseProvider] for the [CompletionDao] and on
-/// [globalStageRepositoryProvider] for the [StageDefinitionRepository].
-@riverpod
-TrackProgressService trackProgressService(Ref ref) {
-  final db = ref.watch(userDatabaseProvider);
-  final stageRepo = ref.watch(globalStageRepositoryProvider);
-  return TrackProgressService(dao: db.completionDao, stageRepo: stageRepo);
 }
