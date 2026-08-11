@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/features/dashboard/presentation/providers/calendar_position_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/progress_providers.dart';
 import 'package:learning_tracker/features/scheduler/scheduler.dart';
@@ -70,10 +71,7 @@ Future<void> onTrackChanged(WidgetRef ref, int profileId) async {
   final activeCurricula = await ref.read(dashboardActiveCurriculaProvider.future);
   for (final c in activeCurricula) {
     ref.invalidate(dashboardTrackCompletionPercentageProvider(c));
-    // TODO(task-19): programCalendarPositionProvider(t.id) used to also be
-    // invalidated per track here — calendar_position_providers.dart is
-    // itself still Drift-dependent (confirmed via dart analyze:
-    // "Undefined name 'userDatabaseProvider'"), blocked on task #19.
+    ref.invalidate(programCalendarPositionProvider(c));
   }
 }
 

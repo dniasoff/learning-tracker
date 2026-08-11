@@ -12,6 +12,9 @@ part of 'calendar_position_providers.dart';
 ///
 /// Uses the enrolled program + selected starting anchor (today or offset) to
 /// compute expected progress and compare against completed learn items.
+///
+/// AD-25: [curriculumId] IS the track — there is no separate per-device
+/// track id to resolve any more.
 
 @ProviderFor(programCalendarPosition)
 final programCalendarPositionProvider = ProgramCalendarPositionFamily._();
@@ -20,6 +23,9 @@ final programCalendarPositionProvider = ProgramCalendarPositionFamily._();
 ///
 /// Uses the enrolled program + selected starting anchor (today or offset) to
 /// compute expected progress and compare against completed learn items.
+///
+/// AD-25: [curriculumId] IS the track — there is no separate per-device
+/// track id to resolve any more.
 
 final class ProgramCalendarPositionProvider
     extends
@@ -33,9 +39,12 @@ final class ProgramCalendarPositionProvider
   ///
   /// Uses the enrolled program + selected starting anchor (today or offset) to
   /// compute expected progress and compare against completed learn items.
+  ///
+  /// AD-25: [curriculumId] IS the track — there is no separate per-device
+  /// track id to resolve any more.
   ProgramCalendarPositionProvider._({
     required ProgramCalendarPositionFamily super.from,
-    required int super.argument,
+    required CurriculumId super.argument,
   }) : super(
          retry: null,
          name: r'programCalendarPositionProvider',
@@ -62,7 +71,7 @@ final class ProgramCalendarPositionProvider
 
   @override
   FutureOr<CalendarPosition> create(Ref ref) {
-    final argument = this.argument as int;
+    final argument = this.argument as CurriculumId;
     return programCalendarPosition(ref, argument);
   }
 
@@ -79,15 +88,18 @@ final class ProgramCalendarPositionProvider
 }
 
 String _$programCalendarPositionHash() =>
-    r'59ba75653994eb25a14777c7549b088f18e16a5d';
+    r'b2692f86990b62a39396596fd06f3a0a074674f9';
 
 /// Provides calendar-relative position for a program track.
 ///
 /// Uses the enrolled program + selected starting anchor (today or offset) to
 /// compute expected progress and compare against completed learn items.
+///
+/// AD-25: [curriculumId] IS the track — there is no separate per-device
+/// track id to resolve any more.
 
 final class ProgramCalendarPositionFamily extends $Family
-    with $FunctionalFamilyOverride<FutureOr<CalendarPosition>, int> {
+    with $FunctionalFamilyOverride<FutureOr<CalendarPosition>, CurriculumId> {
   ProgramCalendarPositionFamily._()
     : super(
         retry: null,
@@ -101,9 +113,12 @@ final class ProgramCalendarPositionFamily extends $Family
   ///
   /// Uses the enrolled program + selected starting anchor (today or offset) to
   /// compute expected progress and compare against completed learn items.
+  ///
+  /// AD-25: [curriculumId] IS the track — there is no separate per-device
+  /// track id to resolve any more.
 
-  ProgramCalendarPositionProvider call(int trackId) =>
-      ProgramCalendarPositionProvider._(argument: trackId, from: this);
+  ProgramCalendarPositionProvider call(CurriculumId curriculumId) =>
+      ProgramCalendarPositionProvider._(argument: curriculumId, from: this);
 
   @override
   String toString() => r'programCalendarPositionProvider';

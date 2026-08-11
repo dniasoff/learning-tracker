@@ -86,7 +86,14 @@ class LifetimeKnowledgeProfileNotActiveException implements Exception {
   });
 
   final int requestedProfileId;
-  final int activeProfileId;
+
+  /// String, not int: AD-24 re-keyed profile identity onto a ULID string
+  /// (`activeProfileIdProvider`). This whole file's providers still key
+  /// their family arg on the Drift-era `int profileId` (tracked separately
+  /// — see the TODO on `_assertActiveProfile` below); this field's type
+  /// only needs to match what `activeProfileIdProvider` actually produces
+  /// so the comparison in `_assertActiveProfile` compiles.
+  final String? activeProfileId;
 
   @override
   String toString() =>
@@ -102,6 +109,24 @@ class LifetimeKnowledgeProfileNotActiveException implements Exception {
 /// Copied from `items_learned_providers.dart`'s `_assertActiveProfile` to
 /// keep the active-profile guard pattern consistent across the Lifetime
 /// Knowledge feature surface.
+///
+/// TODO(lifetime-knowledge-int-profile-id): every provider in this file
+/// still keys its family arg on the Drift-era `int profileId`, but the real
+/// active profile identity has been a ULID `String` since AD-24
+/// (`activeProfileIdProvider`) — `requestedProfileId != activeProfileId`
+/// below therefore compares an `int` to a `String?` and is ALWAYS true, so
+/// this guard now throws on every call, unconditionally. That makes every
+/// provider here (including the ones with real Firestore-backed bodies —
+/// most of this file was already migrated by an earlier wave) fail at
+/// runtime even though the file analyzes clean. The correct fix is to drop
+/// the `int profileId` family key from every provider in this file
+/// entirely (matching the "resolve the active profile implicitly via Ref"
+/// pattern every other Firestore-backed provider in this codebase already
+/// uses) rather than threading a String profileId through instead — but
+/// that also means updating every external caller of these ~9 providers,
+/// which is a wave of its own, not a one-line fix. Left throwing (D-E: a
+/// throw is safe, a silently-wrong comparison would not be) rather than
+/// papered over with a cast.
 void _assertActiveProfile(Ref ref, int requestedProfileId) {
   final activeProfileId = ref.watch(activeProfileIdProvider);
   if (requestedProfileId != activeProfileId) {
