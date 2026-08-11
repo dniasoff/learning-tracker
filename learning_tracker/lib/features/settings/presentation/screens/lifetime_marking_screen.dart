@@ -33,9 +33,7 @@ class LifetimeMarkingScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
-    final summariesAsync = ref.watch(
-      lifetimeSummariesProvider(ref.watch(activeProfileIdProvider)),
-    );
+    final summariesAsync = ref.watch(lifetimeSummariesProvider);
 
     return Scaffold(
       backgroundColor: context.colors.brandCreamCard,
@@ -636,26 +634,23 @@ class _LifetimeCurriculumMarkingScreenState
   }
 
   void _invalidateComputedViews() {
-    final profileId = ref.read(activeProfileIdProvider);
-    ref.invalidate(lifetimeSummariesProvider(profileId));
+    ref.invalidate(lifetimeSummariesProvider);
     // ignore: deprecated_member_use
-    ref.invalidate(globalLifetimeCurriculaProvider(profileId));
-    ref.invalidate(
-      lifetimeDataProvider((profileId: profileId, curriculumId: _curriculum)),
-    );
-    ref.invalidate(trackDualProgressMetricsProvider(profileId));
+    ref.invalidate(globalLifetimeCurriculaProvider);
+    ref.invalidate(lifetimeDataProvider(_curriculum));
+    ref.invalidate(trackDualProgressMetricsProvider);
     ref.invalidate(progressOverviewStatsProvider);
-    ref.invalidate(journeyViewModelProvider(profileId));
+    ref.invalidate(journeyViewModelProvider);
     ref.invalidate(dashboardCompletionPercentageProvider(_curriculum));
     ref.invalidate(dashboardLastCompletionProvider(_curriculum));
-    ref.invalidate(lifetimeTotalsAcrossAllCurriculaProvider(profileId));
+    ref.invalidate(lifetimeTotalsAcrossAllCurriculaProvider);
     ref.invalidate(curriculumLedgerProvider(widget.curriculumId));
     // The Lifetime KNOWLEDGE screen's TREE watches these two view providers
     // (all-sources / track-only). Without invalidating them, the headline count
     // refreshed after a save but the tree below stayed stale until the
     // source-filter segmented control forced a rebuild.
-    ref.invalidate(lifetimeViewSummariesProvider(profileId));
-    ref.invalidate(itemsLearnedSummariesProvider(profileId));
+    ref.invalidate(lifetimeViewSummariesProvider);
+    ref.invalidate(itemsLearnedSummariesProvider);
   }
 
   @override

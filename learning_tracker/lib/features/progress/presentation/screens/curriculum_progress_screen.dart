@@ -10,7 +10,6 @@ import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/core/widgets/error_display.dart';
 import 'package:learning_tracker/core/widgets/loading_indicator.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/progress_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/hierarchy_progress_card.dart';
@@ -35,18 +34,12 @@ class CurriculumProgressScreen extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final progressAsync = ref.watch(curriculumProgressProvider(curriculumId));
     final paceAsync = ref.watch(curriculumPaceStatusProvider(curriculumId));
-    final profileId = ref.watch(activeProfileIdProvider);
     // Lifetime % for this curriculum — used by the new dual-stats row in
     // OverallStatsCard. Null while loading / when the curriculum has no
     // content asset so the row falls back to an em-dash on that side.
     final lifetimeAsync = curriculum == null
         ? const AsyncValue<CurriculumLifetimeSummary?>.data(null)
-        : ref.watch(
-            lifetimeDataProvider((
-              profileId: profileId,
-              curriculumId: curriculum,
-            )),
-          );
+        : ref.watch(lifetimeDataProvider(curriculum));
     // Data-consistency fix (run-9 audit): this screen used to compute its own
     // "Track progress" fraction as `completedAllStages / totalItems` — an
     // all-time, multi-stage-gate metric — while the Progress hub's per-track
@@ -60,9 +53,7 @@ class CurriculumProgressScreen extends ConsumerWidget {
     // all-time completedAllStages figure is not discarded — it remains
     // correctly labeled "Completed all stages" in the stat rows below. Source
     // the SAME provider/metric here so the two surfaces agree byte-for-byte.
-    final dualMetricsAsync = ref.watch(
-      trackDualProgressMetricsProvider(profileId),
-    );
+    final dualMetricsAsync = ref.watch(trackDualProgressMetricsProvider);
     final dualMetric = curriculum == null
         ? null
         : dualMetricsAsync.asData?.value

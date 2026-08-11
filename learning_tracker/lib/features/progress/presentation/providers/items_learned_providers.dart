@@ -208,134 +208,123 @@ Future<CurriculumCompletionSummary?> computeLifetimeViewSummary({
 // Riverpod providers — thin wrappers around the service functions above.
 // ---------------------------------------------------------------------------
 
-/// Thrown when [itemsLearnedDataProvider] / [lifetimeViewDataProvider] is
-/// asked for a profile that is not the ACTIVE one.
+/// Thrown when [itemsLearnedDataProvider] / [lifetimeViewDataProvider] runs
+/// with no active profile.
 ///
 /// The Firestore completions/ledger collections live under
 /// `learner_profiles/{profileId}/...` and every read provider here resolves
 /// for the ACTIVE profile only — there is no way to read another profile's
 /// data from this file. Owner ruling D-E: fail LOUDLY rather than quietly
-/// serve the active profile's counts under someone else's name. Mirrors
-/// `JourneyProfileNotActiveException` (journey_providers.dart), which
-/// reached the identical conclusion for the journey screen.
-class ItemsLearnedProfileNotActiveException implements Exception {
-  const ItemsLearnedProfileNotActiveException({
-    required this.requestedProfileId,
-    required this.activeProfileId,
-  });
-
-  final int requestedProfileId;
-  final int activeProfileId;
+/// serve stale/empty data.
+///
+/// AD-24 correction: these providers used to be keyed by an `int profileId`
+/// argument, checked against the (String ULID) active profile — comparing
+/// an `int` to a `String?` is never equal, so that guard threw
+/// unconditionally, on every call, regardless of whether a profile was
+/// actually active (confirmed: this file did not even compile — the
+/// exception class below assigned that same `String?` to an `int` field).
+/// There was never a legitimate "read someone else's profile" case to guard
+/// against in the Firestore model — every provider these functions read
+/// from is already scoped to the active profile by its collection path —
+/// so the argument added a broken check, not a real capability. Removed;
+/// these now only guard "no active profile at all".
+class ItemsLearnedNoActiveProfileException implements Exception {
+  const ItemsLearnedNoActiveProfileException();
 
   @override
   String toString() =>
-      'ItemsLearnedProfileNotActiveException: an Items Learned / Lifetime '
-      'View provider was asked for profile $requestedProfileId but the active '
-      'profile is $activeProfileId — the Firestore completions/ledger are '
-      'scoped to the active profile and cannot be read for another one.';
+      'ItemsLearnedNoActiveProfileException: an Items Learned / Lifetime '
+      'View provider was read with no active profile — the Firestore '
+      'completions/ledger are scoped to the active profile and there is '
+      'nothing to read without one.';
 }
 
-/// Guards a provider keyed by [requestedProfileId] against serving data for a
-/// profile that is not the active one (D-E). Watches
+/// Guards a provider against running with no active profile (D-E). Watches
 /// [activeProfileIdProvider] synchronously so the dependency is registered
-/// before any await.
-void _assertActiveProfile(Ref ref, int requestedProfileId) {
-  final activeProfileId = ref.watch(activeProfileIdProvider);
-  if (requestedProfileId != activeProfileId) {
-    throw ItemsLearnedProfileNotActiveException(
-      requestedProfileId: requestedProfileId,
-      activeProfileId: activeProfileId,
-    );
+/// (and this provider rebuilds on profile switch) before any await.
+void _assertActiveProfile(Ref ref) {
+  if (ref.watch(activeProfileIdProvider) == null) {
+    throw const ItemsLearnedNoActiveProfileException();
   }
 }
 
 /// Per-curriculum summary for track-achievement completions only
-/// (live + bulkInTrack; excludes lifetimeOnly and ledger-based lifetime marks).
-///
-/// Keyed by `({int profileId, CurriculumId curriculumId})` — [profileId]
-/// stays the family cache key (call sites already pass it) but is now a
-/// GUARD: the completions read is profile-scoped by the Firestore collection
-/// path, so only the ACTIVE profile can be served.
+/// (live + bulkInTrack; excludes lifetimeOnly and ledger-based lifetime marks)
+/// for the ACTIVE profile.
 final itemsLearnedDataProvider = FutureProvider.autoDispose
-    .family<
-      CurriculumCompletionSummary?,
-      ({int profileId, CurriculumId curriculumId})
-    >((ref, args) async {
+    .family<CurriculumCompletionSummary?, CurriculumId>((
+      ref,
+      curriculumId,
+    ) async {
       // ILP-01: recompute whenever a completion is committed so the Items
       // Learned and Lifetime View screens stay live without pull-to-refresh.
       ref.watch<int>(completionCommittedProvider);
-      _assertActiveProfile(ref, args.profileId);
+      _assertActiveProfile(ref);
       // Capture every provider dependency synchronously, before any await —
       // this autoDispose family is rebuilt on commit and a ref.read/ref.watch
       // after an async gap throws "Cannot use Ref after dispose".
       final completionRepository = ref.watch(completionRepositoryProvider);
       final repo = ref.watch(contentRepositoryProvider);
       final trackCompletions = await completionRepository
-          .getCompletionsByCurriculum(args.curriculumId.storageKey);
+          .getCompletionsByCurriculum(curriculumId.storageKey);
       return computeItemsLearnedSummary(
         trackCompletions: trackCompletions,
         repo: repo,
-        curriculum: args.curriculumId,
+        curriculum: curriculumId,
       );
     });
 
-/// Aggregated track-only summaries across all curricula for [profileId].
-final itemsLearnedSummariesProvider = FutureProvider.autoDispose
-    .family<List<CurriculumCompletionSummary>, int>((ref, profileId) async {
+/// Aggregated track-only summaries across all curricula for the ACTIVE
+/// profile.
+final itemsLearnedSummariesProvider =
+    FutureProvider.autoDispose<List<CurriculumCompletionSummary>>((ref) async {
       final results = await Future.wait(
         CurriculumId.values.map(
-          (curriculum) => ref.watch(
-            itemsLearnedDataProvider((
-              profileId: profileId,
-              curriculumId: curriculum,
-            )).future,
-          ),
+          (curriculum) =>
+              ref.watch(itemsLearnedDataProvider(curriculum).future),
         ),
       );
       return results.whereType<CurriculumCompletionSummary>().toList();
     });
 
 /// Per-curriculum summary for ALL completions — track completions plus
-/// ledger-based lifetime marks.
+/// ledger-based lifetime marks — for the ACTIVE profile.
 ///
 /// Delegates to [computeLifetimeViewSummary].
-/// Keyed by `({int profileId, CurriculumId curriculumId})`.
 final lifetimeViewDataProvider = FutureProvider.autoDispose
-    .family<
-      CurriculumCompletionSummary?,
-      ({int profileId, CurriculumId curriculumId})
-    >((ref, args) async {
+    .family<CurriculumCompletionSummary?, CurriculumId>((
+      ref,
+      curriculumId,
+    ) async {
       // ILP-01: recompute whenever a completion is committed so the Lifetime
       // View screen stays live without pull-to-refresh.
       ref.watch<int>(completionCommittedProvider);
-      _assertActiveProfile(ref, args.profileId);
+      _assertActiveProfile(ref);
       final completionRepository = ref.watch(completionRepositoryProvider);
       final repo = ref.watch(contentRepositoryProvider);
       final ledgerFuture = ref.watch(
-        curriculumLedgerProvider(args.curriculumId.storageKey).future,
+        curriculumLedgerProvider(curriculumId.storageKey).future,
       );
-      final completions = await completionRepository
-          .getCompletionsByCurriculum(args.curriculumId.storageKey);
+      final completions = await completionRepository.getCompletionsByCurriculum(
+        curriculumId.storageKey,
+      );
       final ledger = await ledgerFuture;
       return computeLifetimeViewSummary(
         completions: completions,
         ledger: ledger,
         repo: repo,
-        curriculum: args.curriculumId,
+        curriculum: curriculumId,
       );
     });
 
-/// Aggregated lifetime summaries across all curricula for [profileId].
-final lifetimeViewSummariesProvider = FutureProvider.autoDispose
-    .family<List<CurriculumCompletionSummary>, int>((ref, profileId) async {
+/// Aggregated lifetime summaries across all curricula for the ACTIVE
+/// profile.
+final lifetimeViewSummariesProvider =
+    FutureProvider.autoDispose<List<CurriculumCompletionSummary>>((ref) async {
       final results = await Future.wait(
         CurriculumId.values.map(
-          (curriculum) => ref.watch(
-            lifetimeViewDataProvider((
-              profileId: profileId,
-              curriculumId: curriculum,
-            )).future,
-          ),
+          (curriculum) =>
+              ref.watch(lifetimeViewDataProvider(curriculum).future),
         ),
       );
       return results.whereType<CurriculumCompletionSummary>().toList();

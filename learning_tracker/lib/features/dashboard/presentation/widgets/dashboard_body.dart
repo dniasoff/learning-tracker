@@ -23,7 +23,6 @@ import 'package:learning_tracker/features/dashboard/presentation/widgets/main_fo
 import 'package:learning_tracker/features/dashboard/presentation/widgets/skipped_onboarding_cta_banner.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/streak_recovery_banner.dart';
 import 'package:learning_tracker/features/gamification/presentation/widgets/gamification_route_push_guard.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 // Cross-feature import via the progress barrel (Rule 2 / DNI-386). The
@@ -105,7 +104,6 @@ class DashboardBody extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
-    final profileId = ref.watch(activeProfileIdProvider);
     final dailyTasksAsync = ref.watch(allDailyTasksProvider);
     // Use .select() so this widget only rebuilds when the integer value
     // changes — not on every completion-triggered AsyncValue re-emission
@@ -114,7 +112,7 @@ class DashboardBody extends ConsumerWidget {
       dashboardGlobalPointsProvider.select((v) => v.asData?.value ?? 0),
     );
     final lifetimeTotalsAsync = ref.watch(
-      lifetimeTotalsAcrossAllCurriculaProvider(profileId),
+      lifetimeTotalsAcrossAllCurriculaProvider,
     );
     final terms = domainTermLabels(ref);
     final reviewSectionLabel = terms.reviewSection;

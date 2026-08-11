@@ -103,49 +103,43 @@ final profileByIdProvider = FutureProvider.autoDispose
       return repo.getProfileById(profileId);
     });
 
-/// Thrown when [journeyViewModel] is asked for a profile that is not the
-/// ACTIVE one.
+/// Thrown when [journeyViewModel] runs with no active profile.
 ///
 /// The Firestore learning ledger lives at
 /// `learner_profiles/{profileId}/learning_ledger`, and `learningLedgerProvider`
 /// is built for the ACTIVE profile only — there is no way to read another
 /// profile's ledger from here. Owner ruling D-E: fail LOUDLY rather than
-/// quietly serve the active profile's siyumim under someone else's name.
-/// `SiyumimMilestonesScreen` renders the OTHER profile's `displayName` in its
-/// AppBar when deep-linked with `?profileId=`, so a silent substitution would
-/// be invisible mis-attribution, not a visibly empty screen.
-class JourneyProfileNotActiveException implements Exception {
-  const JourneyProfileNotActiveException({
-    required this.requestedProfileId,
-    required this.activeProfileId,
-  });
-
-  final int requestedProfileId;
-  final int activeProfileId;
+/// quietly serve stale/empty data.
+///
+/// AD-24 correction: [journeyViewModel] used to take an `int profileId`
+/// argument and throw when it didn't match the (String ULID) active profile
+/// — comparing an `int` to a `String?` is never equal, so that guard threw
+/// unconditionally, on every call, regardless of whether a profile was
+/// actually active (confirmed: the file analyzed clean while 100%
+/// runtime-broken). There was never a legitimate "read someone else's
+/// profile" case to guard against in the Firestore model — every provider
+/// this function reads from is already scoped to the active profile by its
+/// collection path — so the argument added a broken check, not a real
+/// capability. Removed; this now only guards "no active profile at all".
+class JourneyNoActiveProfileException implements Exception {
+  const JourneyNoActiveProfileException();
 
   @override
   String toString() =>
-      'JourneyProfileNotActiveException: journeyViewModel was asked for '
-      'profile $requestedProfileId but the active profile is $activeProfileId '
-      '— the Firestore learning ledger is scoped to the active profile and '
-      'cannot be read for another one.';
+      'JourneyNoActiveProfileException: journeyViewModel was read with no '
+      'active profile — the Firestore learning ledger is scoped to the '
+      'active profile and there is nothing to read without one.';
 }
 
-/// Computes the full JourneyViewModel for a given profile.
-///
-/// [profileId] stays in the signature — every call site already passes it and
-/// it remains the family cache key — but it is now a GUARD rather than a
-/// selector: the ledger is profile-scoped by its Firestore collection path, so
-/// the argument can only be checked, never used to choose whose ledger to read.
+/// Computes the full JourneyViewModel for the active profile.
 @riverpod
-Future<JourneyViewModel> journeyViewModel(Ref ref, int profileId) async {
+Future<JourneyViewModel> journeyViewModel(Ref ref) async {
   ref.watch<int>(completionCommittedProvider);
-  final activeProfileId = ref.watch(activeProfileIdProvider);
-  if (profileId != activeProfileId) {
-    throw JourneyProfileNotActiveException(
-      requestedProfileId: profileId,
-      activeProfileId: activeProfileId,
-    );
+  // Watched (not read) so this provider rebuilds on profile switch instead
+  // of silently continuing to serve the previous profile's cached data
+  // under the new profile's name.
+  if (ref.watch(activeProfileIdProvider) == null) {
+    throw const JourneyNoActiveProfileException();
   }
   // `learningLedgerProvider` (learning_ledger_providers.dart) is the existing
   // Firestore replacement for the local Drift provider this file used to

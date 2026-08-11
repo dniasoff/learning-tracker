@@ -10,7 +10,6 @@ import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
 import 'package:learning_tracker/core/widgets/empty_state.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
-import 'package:learning_tracker/features/profiles/profiles.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/journey_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/progress_lens_refresh_tick_provider.dart';
@@ -50,7 +49,6 @@ class ProgressScreen extends ConsumerWidget {
     final activeCurriculaAsync = ref.watch(
       dashboardActiveCurriculaStreamProvider,
     );
-    final profileId = ref.watch(activeProfileIdProvider);
     final userMode =
         ref.watch(dashboardUserModeProvider).asData?.value ?? ProfileMode.adult;
 
@@ -92,11 +90,9 @@ class ProgressScreen extends ConsumerWidget {
                   ref.invalidate(dashboardActiveCurriculaStreamProvider);
                   ref.invalidate(dashboardStreakProvider);
                   ref.invalidate(dashboardGlobalPointsProvider);
-                  ref.invalidate(journeyViewModelProvider(profileId));
-                  ref.invalidate(
-                    lifetimeTotalsAcrossAllCurriculaProvider(profileId),
-                  );
-                  ref.invalidate(trackDualProgressMetricsProvider(profileId));
+                  ref.invalidate(journeyViewModelProvider);
+                  ref.invalidate(lifetimeTotalsAcrossAllCurriculaProvider);
+                  ref.invalidate(trackDualProgressMetricsProvider);
                 },
                 child: ListView(
                   physics: const AlwaysScrollableScrollPhysics(),
@@ -116,7 +112,7 @@ class ProgressScreen extends ConsumerWidget {
                     const SizedBox(height: 10),
                     const _LifetimeKnowledgeLensTile(),
                     const SizedBox(height: 22),
-                    _PerTrackSection(profileId: profileId),
+                    const _PerTrackSection(),
                   ],
                 ),
               );
@@ -275,14 +271,12 @@ class _LifetimeKnowledgeLensTile extends ConsumerWidget {
 /// Reads [trackDualProgressMetricsProvider] (already used by Dashboard) so
 /// the two screens share the same numbers and a single cached future.
 class _PerTrackSection extends ConsumerWidget {
-  const _PerTrackSection({required this.profileId});
-
-  final int profileId;
+  const _PerTrackSection();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
-    final metricsAsync = ref.watch(trackDualProgressMetricsProvider(profileId));
+    final metricsAsync = ref.watch(trackDualProgressMetricsProvider);
     final theme = Theme.of(context);
 
     return metricsAsync.when(

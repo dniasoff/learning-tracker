@@ -68,22 +68,12 @@ abstract class _$JourneySortModeNotifier
   }
 }
 
-/// Computes the full JourneyViewModel for a given profile.
-///
-/// [profileId] stays in the signature — every call site already passes it and
-/// it remains the family cache key — but it is now a GUARD rather than a
-/// selector: the ledger is profile-scoped by its Firestore collection path, so
-/// the argument can only be checked, never used to choose whose ledger to read.
+/// Computes the full JourneyViewModel for the active profile.
 
 @ProviderFor(journeyViewModel)
-final journeyViewModelProvider = JourneyViewModelFamily._();
+final journeyViewModelProvider = JourneyViewModelProvider._();
 
-/// Computes the full JourneyViewModel for a given profile.
-///
-/// [profileId] stays in the signature — every call site already passes it and
-/// it remains the family cache key — but it is now a GUARD rather than a
-/// selector: the ledger is profile-scoped by its Firestore collection path, so
-/// the argument can only be checked, never used to choose whose ledger to read.
+/// Computes the full JourneyViewModel for the active profile.
 
 final class JourneyViewModelProvider
     extends
@@ -93,32 +83,20 @@ final class JourneyViewModelProvider
           FutureOr<JourneyViewModel>
         >
     with $FutureModifier<JourneyViewModel>, $FutureProvider<JourneyViewModel> {
-  /// Computes the full JourneyViewModel for a given profile.
-  ///
-  /// [profileId] stays in the signature — every call site already passes it and
-  /// it remains the family cache key — but it is now a GUARD rather than a
-  /// selector: the ledger is profile-scoped by its Firestore collection path, so
-  /// the argument can only be checked, never used to choose whose ledger to read.
-  JourneyViewModelProvider._({
-    required JourneyViewModelFamily super.from,
-    required int super.argument,
-  }) : super(
-         retry: null,
-         name: r'journeyViewModelProvider',
-         isAutoDispose: true,
-         dependencies: null,
-         $allTransitiveDependencies: null,
-       );
+  /// Computes the full JourneyViewModel for the active profile.
+  JourneyViewModelProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'journeyViewModelProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
 
   @override
   String debugGetCreateSourceHash() => _$journeyViewModelHash();
-
-  @override
-  String toString() {
-    return r'journeyViewModelProvider'
-        ''
-        '($argument)';
-  }
 
   @$internal
   @override
@@ -128,54 +106,11 @@ final class JourneyViewModelProvider
 
   @override
   FutureOr<JourneyViewModel> create(Ref ref) {
-    final argument = this.argument as int;
-    return journeyViewModel(ref, argument);
-  }
-
-  @override
-  bool operator ==(Object other) {
-    return other is JourneyViewModelProvider && other.argument == argument;
-  }
-
-  @override
-  int get hashCode {
-    return argument.hashCode;
+    return journeyViewModel(ref);
   }
 }
 
-String _$journeyViewModelHash() => r'aa6b55e64f7bd979eab4715f04d978c4619e33fb';
-
-/// Computes the full JourneyViewModel for a given profile.
-///
-/// [profileId] stays in the signature — every call site already passes it and
-/// it remains the family cache key — but it is now a GUARD rather than a
-/// selector: the ledger is profile-scoped by its Firestore collection path, so
-/// the argument can only be checked, never used to choose whose ledger to read.
-
-final class JourneyViewModelFamily extends $Family
-    with $FunctionalFamilyOverride<FutureOr<JourneyViewModel>, int> {
-  JourneyViewModelFamily._()
-    : super(
-        retry: null,
-        name: r'journeyViewModelProvider',
-        dependencies: null,
-        $allTransitiveDependencies: null,
-        isAutoDispose: true,
-      );
-
-  /// Computes the full JourneyViewModel for a given profile.
-  ///
-  /// [profileId] stays in the signature — every call site already passes it and
-  /// it remains the family cache key — but it is now a GUARD rather than a
-  /// selector: the ledger is profile-scoped by its Firestore collection path, so
-  /// the argument can only be checked, never used to choose whose ledger to read.
-
-  JourneyViewModelProvider call(int profileId) =>
-      JourneyViewModelProvider._(argument: profileId, from: this);
-
-  @override
-  String toString() => r'journeyViewModelProvider';
-}
+String _$journeyViewModelHash() => r'87171953c934d5c70feb958ad6875d8e8da9a458';
 
 /// The siyum tiers offered for [curriculum] in Settings, finest → coarsest.
 ///

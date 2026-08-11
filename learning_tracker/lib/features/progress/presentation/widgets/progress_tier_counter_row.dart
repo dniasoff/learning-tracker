@@ -4,7 +4,6 @@ import 'package:intl/intl.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/journey_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -43,11 +42,10 @@ class ProgressTierCounterRow extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final terms = domainTermLabels(ref);
-    final profileId = ref.watch(activeProfileIdProvider);
     final streakAsync = ref.watch(dashboardStreakProvider);
-    final journeyAsync = ref.watch(journeyViewModelProvider(profileId));
+    final journeyAsync = ref.watch(journeyViewModelProvider);
     final lifetimeTotalsAsync = ref.watch(
-      lifetimeTotalsAcrossAllCurriculaProvider(profileId),
+      lifetimeTotalsAcrossAllCurriculaProvider,
     );
     final pointsAsync = ref.watch(dashboardGlobalPointsProvider);
 

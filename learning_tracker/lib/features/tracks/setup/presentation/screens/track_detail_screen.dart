@@ -99,9 +99,7 @@ final _trackGoalProvider = FutureProvider.autoDispose
       // Most recently created — defends against a stale row from an
       // earlier track setup outliving a re-add (same reasoning
       // dashboard_providers.dart's dashboardPaceStatus already uses).
-      return goals.reduce(
-        (a, b) => a.createdAt.isAfter(b.createdAt) ? a : b,
-      );
+      return goals.reduce((a, b) => a.createdAt.isAfter(b.createdAt) ? a : b);
     });
 
 /// Computes a [ProgressPaceCalculator] for the given [CurriculumTrackEntity].
@@ -214,10 +212,8 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     // so the Track Detail header matches the same numbers shown on the
     // Dashboard active-track card and the Progress hub per-track rows.
     // trackDualProgressMetricsProvider is a deliberate throw-stub (task
-    // #5/#19); the placeholder 0 below is never read by it (it always
-    // throws before touching the argument) and CurriculumTrackEntity has
-    // no .profileId to pass instead.
-    final dualMetricsAsync = ref.watch(trackDualProgressMetricsProvider(0));
+    // #5/#19) scoped to the active profile — no argument to pass.
+    final dualMetricsAsync = ref.watch(trackDualProgressMetricsProvider);
     final dualMetricMatches = dualMetricsAsync.asData?.value
         .where((m) => m.curriculumId == curriculum)
         .toList();
@@ -234,7 +230,10 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
         : formatFractionAsPercent(lifetimePct);
 
     final hasProgramEnrollment =
-        ref.watch(dashboardHasProgramEnrollmentProvider(curriculum)).asData?.value ??
+        ref
+            .watch(dashboardHasProgramEnrollmentProvider(curriculum))
+            .asData
+            ?.value ??
         false;
 
     final curriculumBarColor = context.colors.curriculumFor(curriculum);
@@ -725,7 +724,10 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
                   final canEditGoals =
                       tutorPerms == null || tutorPerms.canEditGoals;
                   final hasGoal =
-                      ref.watch(_trackGoalProvider(track.curriculumId)).asData?.value !=
+                      ref
+                          .watch(_trackGoalProvider(track.curriculumId))
+                          .asData
+                          ?.value !=
                       null;
                   return ListTile(
                     key: const ValueKey('trackDetail.goalTile'),
@@ -912,10 +914,8 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     if (!mounted) return;
     await navigator.push<BulkMarkResult>(
       MaterialPageRoute(
-        builder: (_) => BulkMarkScreen(
-          curriculumId: curriculum,
-          scopeConstraints: null,
-        ),
+        builder: (_) =>
+            BulkMarkScreen(curriculumId: curriculum, scopeConstraints: null),
       ),
     );
   }

@@ -70,70 +70,46 @@ class PriorImportsForCurriculum {
   final Set<String> lifetimeRefs;
 }
 
-/// Thrown when a provider keyed by [requestedProfileId] is asked for a profile
-/// that is not the ACTIVE one.
+/// Thrown when a provider in this file runs with no active profile.
 ///
 /// The Firestore completions/ledger collections live under
 /// `learner_profiles/{profileId}/...`, scoped to the active profile by their
 /// collection path. There is no way to read another profile's data from these
-/// providers. Owner ruling D-E: fail LOUDLY rather than quietly serve the
-/// active profile's data under someone else's name. Mirrors
-/// `ItemsLearnedProfileNotActiveException` in `items_learned_providers.dart`.
-class LifetimeKnowledgeProfileNotActiveException implements Exception {
-  const LifetimeKnowledgeProfileNotActiveException({
-    required this.requestedProfileId,
-    required this.activeProfileId,
-  });
-
-  final int requestedProfileId;
-
-  /// String, not int: AD-24 re-keyed profile identity onto a ULID string
-  /// (`activeProfileIdProvider`). This whole file's providers still key
-  /// their family arg on the Drift-era `int profileId` (tracked separately
-  /// — see the TODO on `_assertActiveProfile` below); this field's type
-  /// only needs to match what `activeProfileIdProvider` actually produces
-  /// so the comparison in `_assertActiveProfile` compiles.
-  final String? activeProfileId;
+/// providers. Owner ruling D-E: fail LOUDLY rather than quietly serve
+/// stale/empty data. Mirrors `ItemsLearnedNoActiveProfileException` in
+/// `items_learned_providers.dart`.
+///
+/// AD-24 correction (fixed alongside `items_learned_providers.dart`'s
+/// identical issue): every provider in this file used to be keyed by an
+/// `int profileId` family argument, checked against the (String ULID)
+/// active profile — comparing an `int` to a `String?` is never equal, so
+/// the old guard threw unconditionally, on every call, regardless of
+/// whether a profile was actually active. That made every provider here
+/// (including the ones with real Firestore-backed bodies — most of this
+/// file was already migrated by an earlier wave) fail at runtime even
+/// though the file analyzed clean. There was never a legitimate "read
+/// someone else's profile" case to guard against in the Firestore model —
+/// every provider these functions read from is already scoped to the
+/// active profile by its collection path — so the argument added a broken
+/// check, not a real capability. Removed from every provider's signature;
+/// this now only guards "no active profile at all".
+class LifetimeKnowledgeNoActiveProfileException implements Exception {
+  const LifetimeKnowledgeNoActiveProfileException();
 
   @override
   String toString() =>
-      'LifetimeKnowledgeProfileNotActiveException: a Lifetime Knowledge provider '
-      'was asked for profile $requestedProfileId but the active profile is '
-      '$activeProfileId — the Firestore completions/ledger are scoped to the '
-      'active profile and cannot be read for another one.';
+      'LifetimeKnowledgeNoActiveProfileException: a Lifetime Knowledge '
+      'provider was read with no active profile — the Firestore '
+      'completions/ledger are scoped to the active profile and there is '
+      'nothing to read without one.';
 }
 
-/// Guards a provider keyed by [requestedProfileId] against serving data for a
-/// profile that is not the active one (D-E).
-///
-/// Copied from `items_learned_providers.dart`'s `_assertActiveProfile` to
-/// keep the active-profile guard pattern consistent across the Lifetime
-/// Knowledge feature surface.
-///
-/// TODO(lifetime-knowledge-int-profile-id): every provider in this file
-/// still keys its family arg on the Drift-era `int profileId`, but the real
-/// active profile identity has been a ULID `String` since AD-24
-/// (`activeProfileIdProvider`) — `requestedProfileId != activeProfileId`
-/// below therefore compares an `int` to a `String?` and is ALWAYS true, so
-/// this guard now throws on every call, unconditionally. That makes every
-/// provider here (including the ones with real Firestore-backed bodies —
-/// most of this file was already migrated by an earlier wave) fail at
-/// runtime even though the file analyzes clean. The correct fix is to drop
-/// the `int profileId` family key from every provider in this file
-/// entirely (matching the "resolve the active profile implicitly via Ref"
-/// pattern every other Firestore-backed provider in this codebase already
-/// uses) rather than threading a String profileId through instead — but
-/// that also means updating every external caller of these ~9 providers,
-/// which is a wave of its own, not a one-line fix. Left throwing (D-E: a
-/// throw is safe, a silently-wrong comparison would not be) rather than
-/// papered over with a cast.
-void _assertActiveProfile(Ref ref, int requestedProfileId) {
-  final activeProfileId = ref.watch(activeProfileIdProvider);
-  if (requestedProfileId != activeProfileId) {
-    throw LifetimeKnowledgeProfileNotActiveException(
-      requestedProfileId: requestedProfileId,
-      activeProfileId: activeProfileId,
-    );
+/// Guards a provider against running with no active profile (D-E). Watches
+/// [activeProfileIdProvider] synchronously so the dependency is registered
+/// (and this provider rebuilds on profile switch) before any await.
+void _assertActiveProfile(Ref ref) {
+  if (ref.watch(activeProfileIdProvider) == null) {
+    throw const LifetimeKnowledgeNoActiveProfileException();
   }
 }
 
@@ -152,71 +128,71 @@ void _assertActiveProfile(Ref ref, int requestedProfileId) {
 /// learning-ledger entries whose `source == CompletionSource.lifetimeOnly`
 /// that expand to leaf-level sefariaRefs via
 /// [LifetimeTreeBuilder.computeLearnedLeafRefs].
-final priorImportsByProfileProvider = FutureProvider.autoDispose
-    .family<Map<String, PriorImportsForCurriculum>, int>(
-      name: 'priorImportsByProfileProvider',
-      (ref, profileId) async {
-        ref.watch(progressLensRefreshTickProvider);
-        ref.watch<int>(completionCommittedProvider);
-        _assertActiveProfile(ref, profileId);
+final priorImportsByProfileProvider =
+    FutureProvider.autoDispose<Map<String, PriorImportsForCurriculum>>((
+      ref,
+    ) async {
+      ref.watch(progressLensRefreshTickProvider);
+      ref.watch<int>(completionCommittedProvider);
+      _assertActiveProfile(ref);
 
-        final repository = ref.watch(completionRepositoryProvider);
-        final ledgerEntries = await ref.watch(learningLedgerProvider.future);
+      final repository = ref.watch(completionRepositoryProvider);
+      final ledgerEntries = await ref.watch(learningLedgerProvider.future);
 
-        // Collect ALL completions for the profile by iterating curricula.
-        final allCompletions = <CompletionEntity>[];
-        for (final curriculum in CurriculumId.values) {
-          allCompletions.addAll(
-            await repository.getCompletionsByCurriculum(curriculum.storageKey),
-          );
+      // Collect ALL completions for the profile by iterating curricula.
+      final allCompletions = <CompletionEntity>[];
+      for (final curriculum in CurriculumId.values) {
+        allCompletions.addAll(
+          await repository.getCompletionsByCurriculum(curriculum.storageKey),
+        );
+      }
+
+      // Partition by (curriculumId, source) in memory.
+      final bulk = <String, Set<String>>{};
+      final lifetime = <String, Set<String>>{};
+      for (final c in allCompletions) {
+        switch (c.source) {
+          case CompletionSource.bulkInTrack:
+            (bulk[c.curriculumId.storageKey] ??= <String>{}).add(c.sefariaRef);
+          case CompletionSource.live:
+            // live marks are not prior-import rows.
+            break;
+          case CompletionSource.lifetimeOnly:
+            // Should never appear in the completions collection, but if it
+            // does, treat it as a lifetime import.
+            (lifetime[c.curriculumId.storageKey] ??= <String>{}).add(
+              c.sefariaRef,
+            );
         }
+      }
 
-        // Partition by (curriculumId, source) in memory.
-        final bulk = <String, Set<String>>{};
-        final lifetime = <String, Set<String>>{};
-        for (final c in allCompletions) {
-          switch (c.source) {
-            case CompletionSource.bulkInTrack:
-              (bulk[c.curriculumId.storageKey] ??= <String>{}).add(c.sefariaRef);
-            case CompletionSource.live:
-              // live marks are not prior-import rows.
-              break;
-            case CompletionSource.lifetimeOnly:
-              // Should never appear in the completions collection, but if it
-              // does, treat it as a lifetime import.
-              (lifetime[c.curriculumId.storageKey] ??= <String>{})
-                  .add(c.sefariaRef);
-          }
+      // Lifetime-only marks live in the learning ledger, not the completions
+      // collection. Ledger entries carry unitIdentifier + entryScope, not
+      // sefariaRef, so they cannot be directly classified into a sefariaRef
+      // set without leaf-expansion per curriculum. The provenance computation
+      // in lifetimeDataProvider handles these via
+      // LifetimeTreeBuilder.computeLearnedLeafRefs + ledgerLearnedRefs instead.
+      // Here we record the curriculum keys that HAVE lifetime-only ledger
+      // entries so callers know the set is non-empty.
+      for (final e in ledgerEntries) {
+        if (e.source == CompletionSource.lifetimeOnly) {
+          // Ledger entries don't carry sefariaRef; their unitIdentifier is
+          // scope-bearing (not a bare sefariaRef). We don't add to lifetimeRefs
+          // here — lifetimeDataProvider computes ledgerLearnedRefs via
+          // computeLearnedLeafRefs which does the leaf expansion.
         }
+      }
 
-        // Lifetime-only marks live in the learning ledger, not the completions
-        // collection. Ledger entries carry unitIdentifier + entryScope, not
-        // sefariaRef, so they cannot be directly classified into a sefariaRef
-        // set without leaf-expansion per curriculum. The provenance computation
-        // in lifetimeDataProvider handles these via
-        // LifetimeTreeBuilder.computeLearnedLeafRefs + ledgerLearnedRefs instead.
-        // Here we record the curriculum keys that HAVE lifetime-only ledger
-        // entries so callers know the set is non-empty.
-        for (final e in ledgerEntries) {
-          if (e.source == CompletionSource.lifetimeOnly) {
-            // Ledger entries don't carry sefariaRef; their unitIdentifier is
-            // scope-bearing (not a bare sefariaRef). We don't add to lifetimeRefs
-            // here — lifetimeDataProvider computes ledgerLearnedRefs via
-            // computeLearnedLeafRefs which does the leaf expansion.
-          }
-        }
-
-        final out = <String, PriorImportsForCurriculum>{};
-        final cKeys = {...bulk.keys, ...lifetime.keys};
-        for (final c in cKeys) {
-          out[c] = PriorImportsForCurriculum(
-            bulkRefs: bulk[c] ?? const <String>{},
-            lifetimeRefs: lifetime[c] ?? const <String>{},
-          );
-        }
-        return out;
-      },
-    );
+      final out = <String, PriorImportsForCurriculum>{};
+      final cKeys = {...bulk.keys, ...lifetime.keys};
+      for (final c in cKeys) {
+        out[c] = PriorImportsForCurriculum(
+          bulkRefs: bulk[c] ?? const <String>{},
+          lifetimeRefs: lifetime[c] ?? const <String>{},
+        );
+      }
+      return out;
+    });
 
 /// Profile-wide completions load for the Lifetime Knowledge feature.
 ///
@@ -227,31 +203,30 @@ final priorImportsByProfileProvider = FutureProvider.autoDispose
 ///
 /// Empty entries (a curriculum with no completions) are omitted from the map so
 /// callers can use `map[cur]` directly and fall back to empty lists.
-final completionsByProfileForLifetimeProvider = FutureProvider.autoDispose
-    .family<Map<String, List<CompletionEntity>>, int>(
-      name: 'completionsByProfileForLifetimeProvider',
-      (ref, profileId) async {
-        ref.watch(progressLensRefreshTickProvider);
-        // D9: also recompute on every completion commit so the dashboard
-        // lifetime card (which reads lifetimeTotalsAcrossAllCurricula → this
-        // chain) stays live.
-        ref.watch<int>(completionCommittedProvider);
-        _assertActiveProfile(ref, profileId);
+final completionsByProfileForLifetimeProvider =
+    FutureProvider.autoDispose<Map<String, List<CompletionEntity>>>((
+      ref,
+    ) async {
+      ref.watch(progressLensRefreshTickProvider);
+      // D9: also recompute on every completion commit so the dashboard
+      // lifetime card (which reads lifetimeTotalsAcrossAllCurricula → this
+      // chain) stays live.
+      ref.watch<int>(completionCommittedProvider);
+      _assertActiveProfile(ref);
 
-        final repository = ref.watch(completionRepositoryProvider);
-        final all = <CompletionEntity>[];
-        for (final curriculum in CurriculumId.values) {
-          all.addAll(
-            await repository.getCompletionsByCurriculum(curriculum.storageKey),
-          );
-        }
-        final out = <String, List<CompletionEntity>>{};
-        for (final c in all) {
-          (out[c.curriculumId.storageKey] ??= <CompletionEntity>[]).add(c);
-        }
-        return out;
-      },
-    );
+      final repository = ref.watch(completionRepositoryProvider);
+      final all = <CompletionEntity>[];
+      for (final curriculum in CurriculumId.values) {
+        all.addAll(
+          await repository.getCompletionsByCurriculum(curriculum.storageKey),
+        );
+      }
+      final out = <String, List<CompletionEntity>>{};
+      for (final c in all) {
+        (out[c.curriculumId.storageKey] ??= <CompletionEntity>[]).add(c);
+      }
+      return out;
+    });
 
 /// Per-curriculum lazy lifetime data provider.
 ///
@@ -259,21 +234,16 @@ final completionsByProfileForLifetimeProvider = FutureProvider.autoDispose
 /// when the curriculum's content asset is missing or empty so callers can skip
 /// it without error.
 ///
-/// Keyed by `({int profileId, CurriculumId curriculumId})` so each curriculum
-/// is fetched independently and cached/disposed independently.
+/// Keyed by [CurriculumId] (the ACTIVE profile) so each curriculum is
+/// fetched independently and cached/disposed independently.
 final lifetimeDataProvider = FutureProvider.autoDispose
-    .family<
-       CurriculumLifetimeSummary?,
-       ({int profileId, CurriculumId curriculumId})
-     >((ref, args) async {
+    .family<CurriculumLifetimeSummary?, CurriculumId>((ref, curriculum) async {
       ref.watch(progressLensRefreshTickProvider);
       // D9: recompute on every completion commit (see priorImportsByProfile).
       ref.watch<int>(completionCommittedProvider);
-      _assertActiveProfile(ref, args.profileId);
+      _assertActiveProfile(ref);
 
       final repo = ref.watch(contentRepositoryProvider);
-      final curriculum = args.curriculumId;
-      final profileId = args.profileId;
 
       final leaves = await _safeLoadLeaves(repo, curriculum);
       if (leaves == null) return null;
@@ -282,7 +252,7 @@ final lifetimeDataProvider = FutureProvider.autoDispose
       // F13: one profile-wide completions read, partitioned in memory by
       // curriculumId via completionsByProfileForLifetimeProvider.
       final completionsByCurriculum = await ref.watch(
-        completionsByProfileForLifetimeProvider(profileId).future,
+        completionsByProfileForLifetimeProvider.future,
       );
       final completions =
           completionsByCurriculum[curriculum.storageKey] ??
@@ -300,9 +270,7 @@ final lifetimeDataProvider = FutureProvider.autoDispose
       // subset-ledger union below (by canonical sefariaRef).
       final ledger = _dropSyntheticContainerMarks(
         curriculum.storageKey,
-        await ref.watch(
-          curriculumLedgerProvider(curriculum.storageKey).future,
-        ),
+        await ref.watch(curriculumLedgerProvider(curriculum.storageKey).future),
       );
 
       // I-4: Union in completions from subset curricula so that, e.g., a ref
@@ -344,9 +312,7 @@ final lifetimeDataProvider = FutureProvider.autoDispose
           if (subsetLeaves == null || subsetLeaves.isEmpty) continue;
           final subsetLedger = _dropSyntheticContainerMarks(
             subset.storageKey,
-            await ref.watch(
-              curriculumLedgerProvider(subset.storageKey).future,
-            ),
+            await ref.watch(curriculumLedgerProvider(subset.storageKey).future),
           );
           if (subsetLedger.isEmpty) continue;
           final subsetCompleted =
@@ -380,8 +346,9 @@ final lifetimeDataProvider = FutureProvider.autoDispose
       // (learned refs NOT present in completions).
       final bulkRefs = completionsToBulkRefs(completions);
       final eventRefs = allEventRefs.toSet();
-      final ledgerLearnedRefs =
-          learnedRefs.difference(eventRefs.union(bulkRefs));
+      final ledgerLearnedRefs = learnedRefs.difference(
+        eventRefs.union(bulkRefs),
+      );
       final leafProvenance = LifetimeTreeBuilder.computeLeafProvenance(
         completionEventRefs: allEventRefs,
         bulkImportedRefs: bulkRefs,
@@ -415,16 +382,11 @@ Set<String> completionsToBulkRefs(List<CompletionEntity> completions) {
 /// Reads from [lifetimeDataProvider] per curriculum lazily — each curriculum
 /// is fetched and cached independently, so a single-curriculum tap only loads
 /// that curriculum's data.
-final lifetimeSummariesProvider = FutureProvider.autoDispose
-    .family<List<CurriculumLifetimeSummary>, int>((ref, profileId) async {
+final lifetimeSummariesProvider =
+    FutureProvider.autoDispose<List<CurriculumLifetimeSummary>>((ref) async {
       final results = await Future.wait(
         CurriculumId.values.map(
-          (curriculum) => ref.watch(
-            lifetimeDataProvider((
-              profileId: profileId,
-              curriculumId: curriculum,
-            )).future,
-          ),
+          (curriculum) => ref.watch(lifetimeDataProvider(curriculum).future),
         ),
       );
       return results.whereType<CurriculumLifetimeSummary>().toList();
@@ -454,22 +416,19 @@ final globalLifetimeCurriculaProvider = lifetimeSummariesProvider;
 /// This provider retains its original signature so existing call sites compile;
 /// it throws [UnsupportedError] at runtime rather than returning a fabricated
 /// `Map` that would be indistinguishable from a real "no completions" result.
-final trackCompletionsByProfileProvider = FutureProvider.autoDispose
-    .family<Map<int, List<CompletionEntity>>, int>(
-      name: 'trackCompletionsByProfileProvider',
-      (ref, profileId) async {
-        ref.watch(progressLensRefreshTickProvider);
-        ref.watch<int>(completionCommittedProvider);
-        _assertActiveProfile(ref, profileId);
-        throw UnsupportedError(
-          'trackCompletionsByProfileProvider is BLOCKED: CompletionEntity has '
-          'no trackId (AD-25 retired per-device track ids). Track/points '
-          'eligibility is curriculum-keyed now. Use '
-          'completionsByProfileForLifetimeProvider (partitioned by '
-          'curriculumId.storageKey) instead.',
-        );
-      },
-    );
+final trackCompletionsByProfileProvider =
+    FutureProvider.autoDispose<Map<int, List<CompletionEntity>>>((ref) async {
+      ref.watch(progressLensRefreshTickProvider);
+      ref.watch<int>(completionCommittedProvider);
+      _assertActiveProfile(ref);
+      throw UnsupportedError(
+        'trackCompletionsByProfileProvider is BLOCKED: CompletionEntity has '
+        'no trackId (AD-25 retired per-device track ids). Track/points '
+        'eligibility is curriculum-keyed now. Use '
+        'completionsByProfileForLifetimeProvider (partitioned by '
+        'curriculumId.storageKey) instead.',
+      );
+    });
 
 /// Profile-wide learning-ledger load for [trackDualProgressMetricsProvider],
 /// partitioned by trackId.
@@ -481,22 +440,21 @@ final trackCompletionsByProfileProvider = FutureProvider.autoDispose
 /// Track eligibility is CURRICULUM-keyed now. The replacement partition lives
 /// in [ledgerEntriesByCurriculumForProfileProvider] (keyed by
 /// `curriculumId.storageKey`).
-final trackLedgerEntriesByProfileProvider = FutureProvider.autoDispose
-    .family<Map<int, List<LearningLedgerEntry>>, int>(
-      name: 'trackLedgerEntriesByProfileProvider',
-      (ref, profileId) async {
-        ref.watch(progressLensRefreshTickProvider);
-        ref.watch<int>(completionCommittedProvider);
-        _assertActiveProfile(ref, profileId);
-        throw UnsupportedError(
-          'trackLedgerEntriesByProfileProvider is BLOCKED: LearningLedgerEntry '
-          'has no trackId (AD-25 retired per-device track ids from every '
-          'synced payload). Track/points eligibility is curriculum-keyed now. '
-          'Use ledgerEntriesByCurriculumForProfileProvider (partitioned by '
-          'curriculumId.storageKey) instead.',
-        );
-      },
-    );
+final trackLedgerEntriesByProfileProvider =
+    FutureProvider.autoDispose<Map<int, List<LearningLedgerEntry>>>((
+      ref,
+    ) async {
+      ref.watch(progressLensRefreshTickProvider);
+      ref.watch<int>(completionCommittedProvider);
+      _assertActiveProfile(ref);
+      throw UnsupportedError(
+        'trackLedgerEntriesByProfileProvider is BLOCKED: LearningLedgerEntry '
+        'has no trackId (AD-25 retired per-device track ids from every '
+        'synced payload). Track/points eligibility is curriculum-keyed now. '
+        'Use ledgerEntriesByCurriculumForProfileProvider (partitioned by '
+        'curriculumId.storageKey) instead.',
+      );
+    });
 
 /// Profile-wide learning-ledger load for [trackDualProgressMetricsProvider]'s
 /// `lifetimePercentage`, partitioned by curriculumId (not trackId).
@@ -504,21 +462,20 @@ final trackLedgerEntriesByProfileProvider = FutureProvider.autoDispose
 /// Replaces the deleted `db.learningLedgerDao.getEntriesGroupedByCurriculum()`
 /// call with a single [learningLedgerProvider] read + in-memory partition
 /// by `curriculumId.storageKey`.
-final ledgerEntriesByCurriculumForProfileProvider = FutureProvider.autoDispose
-    .family<Map<String, List<LearningLedgerEntry>>, int>(
-      name: 'ledgerEntriesByCurriculumForProfileProvider',
-      (ref, profileId) async {
-        ref.watch(progressLensRefreshTickProvider);
-        ref.watch<int>(completionCommittedProvider);
-        _assertActiveProfile(ref, profileId);
-        final all = await ref.watch(learningLedgerProvider.future);
-        final out = <String, List<LearningLedgerEntry>>{};
-        for (final e in all) {
-          (out[e.curriculumId.storageKey] ??= <LearningLedgerEntry>[]).add(e);
-        }
-        return out;
-      },
-    );
+final ledgerEntriesByCurriculumForProfileProvider =
+    FutureProvider.autoDispose<Map<String, List<LearningLedgerEntry>>>((
+      ref,
+    ) async {
+      ref.watch(progressLensRefreshTickProvider);
+      ref.watch<int>(completionCommittedProvider);
+      _assertActiveProfile(ref);
+      final all = await ref.watch(learningLedgerProvider.future);
+      final out = <String, List<LearningLedgerEntry>>{};
+      for (final e in all) {
+        (out[e.curriculumId.storageKey] ??= <LearningLedgerEntry>[]).add(e);
+      }
+      return out;
+    });
 
 /// Profile-wide program-enrollment load for [trackDualProgressMetricsProvider],
 /// partitioned by curriculumType.
@@ -531,22 +488,19 @@ final ledgerEntriesByCurriculumForProfileProvider = FutureProvider.autoDispose
 /// This provider retains its signature so existing call sites compile; it
 /// throws [UnsupportedError] at runtime rather than returning a fabricated
 /// empty map.
-final profileProgramsByProfileProvider = FutureProvider.autoDispose
-    .family<Map<String, Object>, int>(
-      name: 'profileProgramsByProfileProvider',
-      (ref, profileId) async {
-        ref.watch(progressLensRefreshTickProvider);
-        ref.watch<int>(completionCommittedProvider);
-        _assertActiveProfile(ref, profileId);
-        throw UnsupportedError(
-          'profileProgramsByProfileProvider is BLOCKED: ProfileProgram was the '
-          'Drift-era generated data class (deleted). The Firestore replacement '
-          'ProfileProgramEntity has no presentation-legal provider wired yet. '
-          'Migration path: provide a profile-program repository provider in '
-          'features/tracks and rewire this provider to use it.',
-        );
-      },
-    );
+final profileProgramsByProfileProvider =
+    FutureProvider.autoDispose<Map<String, Object>>((ref) async {
+      ref.watch(progressLensRefreshTickProvider);
+      ref.watch<int>(completionCommittedProvider);
+      _assertActiveProfile(ref);
+      throw UnsupportedError(
+        'profileProgramsByProfileProvider is BLOCKED: ProfileProgram was the '
+        'Drift-era generated data class (deleted). The Firestore replacement '
+        'ProfileProgramEntity has no presentation-legal provider wired yet. '
+        'Migration path: provide a profile-program repository provider in '
+        'features/tracks and rewire this provider to use it.',
+      );
+    });
 
 /// Per-track dual-progress metrics for the active-track dashboard card.
 ///
@@ -559,11 +513,11 @@ final profileProgramsByProfileProvider = FutureProvider.autoDispose
 ///
 /// Track/points eligibility is CURRICULUM-keyed now. The lifetime portion of
 /// this provider's computation is covered by [lifetimeTotalsAcrossAllCurriculaProvider].
-final trackDualProgressMetricsProvider = FutureProvider.autoDispose
-    .family<List<TrackDualProgressMetric>, int>((ref, profileId) async {
+final trackDualProgressMetricsProvider =
+    FutureProvider.autoDispose<List<TrackDualProgressMetric>>((ref) async {
       ref.watch(progressLensRefreshTickProvider);
       ref.watch<int>(completionCommittedProvider);
-      _assertActiveProfile(ref, profileId);
+      _assertActiveProfile(ref);
       throw UnsupportedError(
         'trackDualProgressMetricsProvider is BLOCKED: it requires '
         'CompletionEntity.trackId (absent — AD-25 retired per-device track '
@@ -587,11 +541,12 @@ final trackDualProgressMetricsProvider = FutureProvider.autoDispose
 Future<TrackDualProgressMetric?> _computeTrackDualProgressMetric({
   required Ref ref,
   required ContentRepository repo,
-  required int profileId,
   required CurriculumId curriculum,
   required Object track,
-  required Future<Map<String, List<CompletionEntity>>> completionsByCurriculumFuture,
-  required Future<Map<String, List<LearningLedgerEntry>>> ledgerEntriesByCurriculumFuture,
+  required Future<Map<String, List<CompletionEntity>>>
+  completionsByCurriculumFuture,
+  required Future<Map<String, List<LearningLedgerEntry>>>
+  ledgerEntriesByCurriculumFuture,
   required Future<Map<String, Object>> programsByCurriculumFuture,
 }) async {
   throw UnsupportedError(
@@ -606,11 +561,11 @@ Future<TrackDualProgressMetric?> _computeTrackDualProgressMetric({
 
 // R8 Part B — memory-bounded header/denominator rewiring.
 // (See original doc comment — unchanged.)
-final lifetimeTotalsAcrossAllCurriculaProvider = FutureProvider.autoDispose
-    .family<LifetimeTotals, int>((ref, profileId) async {
+final lifetimeTotalsAcrossAllCurriculaProvider =
+    FutureProvider.autoDispose<LifetimeTotals>((ref) async {
       ref.watch(progressLensRefreshTickProvider);
       ref.watch<int>(completionCommittedProvider);
-      _assertActiveProfile(ref, profileId);
+      _assertActiveProfile(ref);
 
       final repo = ref.watch(contentRepositoryProvider);
 
@@ -618,9 +573,9 @@ final lifetimeTotalsAcrossAllCurriculaProvider = FutureProvider.autoDispose
       // ledger entries (grouped by curriculumId) instead of one query per
       // curriculum.
       final completionsByCurriculum = await ref.watch(
-        completionsByProfileForLifetimeProvider(profileId).future,
+        completionsByProfileForLifetimeProvider.future,
       );
-      final ledgerByCurriculum = await _ledgerByCurriculum(ref, profileId);
+      final ledgerByCurriculum = await _ledgerByCurriculum(ref);
 
       const builder = LifetimeTreeBuilder();
       final allDistinct = <String>{};
@@ -666,7 +621,6 @@ final lifetimeTotalsAcrossAllCurriculaProvider = FutureProvider.autoDispose
 /// deleted `LearningLedgerDao.getEntriesGroupedByCurriculum()`.
 Future<Map<String, List<LearningLedgerEntry>>> _ledgerByCurriculum(
   Ref ref,
-  int profileId,
 ) async {
   final all = await ref.watch(learningLedgerProvider.future);
   final out = <String, List<LearningLedgerEntry>>{};
@@ -704,11 +658,11 @@ class LifetimeHeaderCounters {
 /// Reuses [lifetimeTotalsAcrossAllCurriculaProvider] for the items count
 /// (deduplicated across overlapping curricula) and reads completion events
 /// directly to sum chazaros across all curricula in one pass.
-final lifetimeHeaderCountersProvider = FutureProvider.autoDispose
-    .family<LifetimeHeaderCounters, int>((ref, profileId) async {
+final lifetimeHeaderCountersProvider =
+    FutureProvider.autoDispose<LifetimeHeaderCounters>((ref) async {
       // Items learned — reuse the union logic.
       final totals = await ref.watch(
-        lifetimeTotalsAcrossAllCurriculaProvider(profileId).future,
+        lifetimeTotalsAcrossAllCurriculaProvider.future,
       );
 
       // Total chazaros — only REVIEW completion events (stageId > 1).
@@ -718,7 +672,7 @@ final lifetimeHeaderCountersProvider = FutureProvider.autoDispose
       // to their learn count — contradicting the per-leaf "Live · 0 chazaros"
       // display. Filtering to stageId > 1 gives the true review count.
       final completionsByCurriculum = await ref.watch(
-        completionsByProfileForLifetimeProvider(profileId).future,
+        completionsByProfileForLifetimeProvider.future,
       );
       final allCompletions = completionsByCurriculum.values.expand((v) => v);
 
@@ -740,11 +694,11 @@ final lifetimeHeaderCountersProvider = FutureProvider.autoDispose
 /// `itemsLearned` is the cardinality of distinct sefariaRefs in the filtered
 /// set (the SAME data surface the body's `itemsLearnedSummariesProvider`
 /// uses); `totalChazaros` counts every event row in the filtered set.
-final trackOnlyHeaderCountersProvider = FutureProvider.autoDispose
-    .family<LifetimeHeaderCounters, int>((ref, profileId) async {
+final trackOnlyHeaderCountersProvider =
+    FutureProvider.autoDispose<LifetimeHeaderCounters>((ref) async {
       ref.watch(progressLensRefreshTickProvider);
       ref.watch<int>(completionCommittedProvider);
-      _assertActiveProfile(ref, profileId);
+      _assertActiveProfile(ref);
       // Track-achievement = live + bulkInTrack; lifetimeOnly is excluded at
       // the Firestore read layer. In the Firestore model the `completions`
       // collection can only ever hold `live`/`bulkInTrack` documents (a
@@ -753,7 +707,7 @@ final trackOnlyHeaderCountersProvider = FutureProvider.autoDispose
       // eligible. We still assert `c.source.creditsAchievement` for semantic
       // clarity and future-proofing.
       final completionsByCurriculum = await ref.watch(
-        completionsByProfileForLifetimeProvider(profileId).future,
+        completionsByProfileForLifetimeProvider.future,
       );
       final trackCompletions = completionsByCurriculum.values
           .expand((v) => v)

@@ -12,7 +12,6 @@ import 'package:learning_tracker/features/dashboard/presentation/providers/dashb
 import 'package:learning_tracker/features/dashboard/presentation/widgets/active_track_focus_pill.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/dashboard_helpers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/track_stat_grid.dart';
-import 'package:learning_tracker/features/profiles/profiles.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 import 'package:learning_tracker/features/scheduler/scheduler.dart';
 import 'package:learning_tracker/features/tracks/tracks.dart';
@@ -48,10 +47,7 @@ class ActiveTrackCard extends ConsumerWidget {
     final hasProgramEnrollmentAsync = ref.watch(
       dashboardHasProgramEnrollmentProvider(curriculum),
     );
-    final profileId = ref.watch(activeProfileIdProvider);
-    final dualMetricsAsync = ref.watch(
-      trackDualProgressMetricsProvider(profileId),
-    );
+    final dualMetricsAsync = ref.watch(trackDualProgressMetricsProvider);
     final dualMetricMatches = dualMetricsAsync.asData?.value
         .where((m) => m.curriculumId == curriculum)
         .toList();

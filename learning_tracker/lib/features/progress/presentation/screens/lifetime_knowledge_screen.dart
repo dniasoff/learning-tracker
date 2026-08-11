@@ -51,7 +51,6 @@ class _LifetimeKnowledgeScreenState
 
   @override
   Widget build(BuildContext context) {
-    final profileId = ref.watch(activeProfileIdProvider);
     final l10n = AppLocalizations.of(context)!;
     final baseTheme = Theme.of(context);
     final textTheme = GoogleFonts.plusJakartaSansTextTheme(baseTheme.textTheme);
@@ -75,16 +74,16 @@ class _LifetimeKnowledgeScreenState
         ProfileMode.child;
 
     final summariesAsync = _filter == _LifetimeSourceFilter.allSources
-        ? ref.watch(lifetimeViewSummariesProvider(profileId))
-        : ref.watch(itemsLearnedSummariesProvider(profileId));
+        ? ref.watch(lifetimeViewSummariesProvider)
+        : ref.watch(itemsLearnedSummariesProvider);
 
     // F3: header counters must follow the source toggle. The "All sources"
     // branch reads the lifetime-tier union; the "Track only" branch reads
     // the same trackAchievement-filtered surface the body uses, so the
     // numbers on top match the per-curriculum tree below.
     final headerAsync = _filter == _LifetimeSourceFilter.allSources
-        ? ref.watch(lifetimeHeaderCountersProvider(profileId))
-        : ref.watch(trackOnlyHeaderCountersProvider(profileId));
+        ? ref.watch(lifetimeHeaderCountersProvider)
+        : ref.watch(trackOnlyHeaderCountersProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -111,9 +110,9 @@ class _LifetimeKnowledgeScreenState
                 headerAsync: headerAsync,
                 onRetry: () {
                   if (_filter == _LifetimeSourceFilter.allSources) {
-                    ref.invalidate(lifetimeHeaderCountersProvider(profileId));
+                    ref.invalidate(lifetimeHeaderCountersProvider);
                   } else {
-                    ref.invalidate(trackOnlyHeaderCountersProvider(profileId));
+                    ref.invalidate(trackOnlyHeaderCountersProvider);
                   }
                 },
               ),
@@ -157,13 +156,9 @@ class _LifetimeKnowledgeScreenState
                     message: l10n.lifetimeKnowledgeLoadError,
                     onRetry: () {
                       if (_filter == _LifetimeSourceFilter.allSources) {
-                        ref.invalidate(
-                          lifetimeViewSummariesProvider(profileId),
-                        );
+                        ref.invalidate(lifetimeViewSummariesProvider);
                       } else {
-                        ref.invalidate(
-                          itemsLearnedSummariesProvider(profileId),
-                        );
+                        ref.invalidate(itemsLearnedSummariesProvider);
                       }
                     },
                   ),

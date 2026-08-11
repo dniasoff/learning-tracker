@@ -42,10 +42,14 @@ class SiyumimMilestonesScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final activeProfileId = ref.watch(activeProfileIdProvider);
-    final effectiveProfileId = profileId ?? activeProfileId;
-    final journeyAsync = ref.watch(
-      journeyViewModelProvider(effectiveProfileId),
-    );
+    // journeyViewModelProvider only ever reads the ACTIVE profile's ledger
+    // (the Firestore collections it reads are scoped to the active profile's
+    // path — there is no per-profile read to select a different one), so
+    // there is no "effective" profile to compute here any more; the
+    // `?profileId=` deep-link's "view another profile's journey" intent
+    // (below, `isViewingOther`/`profileByIdProvider`) has no backing data
+    // path in the Firestore model and is separately pre-existing broken.
+    final journeyAsync = ref.watch(journeyViewModelProvider);
     final sortMode = ref.watch(journeySortModeProvider);
 
     // Get profile name for AppBar when viewing another profile
@@ -66,8 +70,7 @@ class SiyumimMilestonesScreen extends ConsumerWidget {
           loading: () => const LoadingIndicator(),
           error: (error, _) => ErrorDisplay(
             message: l10n.failedToLoadJourney,
-            onRetry: () =>
-                ref.invalidate(journeyViewModelProvider(effectiveProfileId)),
+            onRetry: () => ref.invalidate(journeyViewModelProvider),
           ),
           data: (viewModel) {
             if (_isEmpty(viewModel)) {
@@ -76,7 +79,7 @@ class SiyumimMilestonesScreen extends ConsumerWidget {
 
             return RefreshIndicator(
               onRefresh: () async {
-                ref.invalidate(journeyViewModelProvider(effectiveProfileId));
+                ref.invalidate(journeyViewModelProvider);
               },
               child: Column(
                 children: [

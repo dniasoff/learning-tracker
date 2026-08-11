@@ -31,25 +31,24 @@ class DashboardScreen extends ConsumerWidget {
     WidgetRef ref,
     List<CurriculumTrackEntity> activeTracks,
   ) {
-    final profileId = ref.read(activeProfileIdProvider);
     ref.invalidate(dashboardActiveTracksStreamProvider);
     ref.invalidate(dashboardUserModeProvider);
     ref.invalidate(dashboardStreakProvider);
     ref.invalidate(dashboardGlobalPointsProvider);
     ref.invalidate(dashboardChildNextRewardProvider);
     ref.invalidate(allDailyTasksProvider);
-    ref.invalidate(lifetimeTotalsAcrossAllCurriculaProvider(profileId));
-    ref.invalidate(lifetimeSummariesProvider(profileId));
+    ref.invalidate(lifetimeTotalsAcrossAllCurriculaProvider);
+    ref.invalidate(lifetimeSummariesProvider);
     // ignore: deprecated_member_use
-    ref.invalidate(globalLifetimeCurriculaProvider(profileId));
+    ref.invalidate(globalLifetimeCurriculaProvider);
     for (final c in CurriculumId.all) {
-      ref.invalidate(
-        lifetimeDataProvider((profileId: profileId, curriculumId: c)),
-      );
+      ref.invalidate(lifetimeDataProvider(c));
     }
-    ref.invalidate(trackDualProgressMetricsProvider(profileId));
+    ref.invalidate(trackDualProgressMetricsProvider);
     for (final t in activeTracks) {
-      ref.invalidate(dashboardTrackCompletionPercentageProvider(t.curriculumId));
+      ref.invalidate(
+        dashboardTrackCompletionPercentageProvider(t.curriculumId),
+      );
       ref.invalidate(dashboardLastCompletionProvider(t.curriculumId));
       ref.invalidate(dashboardPaceStatusProvider(t.curriculumId));
     }
