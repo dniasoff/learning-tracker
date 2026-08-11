@@ -1,19 +1,23 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
-import 'package:learning_tracker/features/profiles/profiles.dart';
+import 'package:learning_tracker/features/settings/data/repositories/firestore_curriculum_scope_settings_adapter.dart';
+
+/// Adapter provider — see [FirestoreCurriculumScopeSettingsAdapter]'s class
+/// doc comment for why this feature owns its own adapter over the shared
+/// Firestore repository rather than importing tracks/setup's write adapter
+/// (AD-23/AD-28 forbids the cross-feature deep import).
+final curriculumScopeSettingsAdapterProvider =
+    Provider<FirestoreCurriculumScopeSettingsAdapter>(
+      (ref) => FirestoreCurriculumScopeSettingsAdapter(ref: ref),
+    );
 
 /// Get a scope summary string for display (e.g., "Seder Zeraim, Seder Moed" or "All").
 final curriculumScopeSummaryProvider =
     FutureProvider.family<String, CurriculumId>((ref, curriculumId) async {
-      final db = ref.watch(userDatabaseProvider);
-      final profileId = ref.watch(activeProfileIdProvider);
-      final values = await db.curriculumScopeDao.getScopeValues(
-        profileId,
-        curriculumId,
-      );
+      final adapter = ref.watch(curriculumScopeSettingsAdapterProvider);
+      final values = await adapter.getScopeValues(curriculumId);
       if (values.isEmpty) return 'All';
       return values.join(', ');
     });
@@ -25,14 +29,10 @@ final scopedCurriculumContentProvider =
       ref,
       curriculumId,
     ) async {
-      final db = ref.watch(userDatabaseProvider);
-      final profileId = ref.watch(activeProfileIdProvider);
+      final adapter = ref.watch(curriculumScopeSettingsAdapterProvider);
       final repository = ref.watch(contentRepositoryProvider);
 
-      final scopes = await db.curriculumScopeDao.getScopes(
-        profileId,
-        curriculumId,
-      );
+      final scopes = await adapter.getScopes(curriculumId);
       if (scopes.isEmpty) {
         return repository.getContentForCurriculum(curriculumId);
       }

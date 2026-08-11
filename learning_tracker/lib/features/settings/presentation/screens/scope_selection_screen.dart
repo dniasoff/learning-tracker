@@ -7,11 +7,9 @@ import 'package:learning_tracker/core/labels/curriculum_label_renderer.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
@@ -63,12 +61,8 @@ class _ScopeSelectionScreenState extends ConsumerState<ScopeSelectionScreen> {
   }
 
   Future<void> _loadExistingScopes() async {
-    final db = ref.read(userDatabaseProvider);
-    final profileId = ref.read(activeProfileIdProvider);
-    final scopes = await db.curriculumScopeDao.getScopes(
-      profileId,
-      widget.curriculumId,
-    );
+    final adapter = ref.read(curriculumScopeSettingsAdapterProvider);
+    final scopes = await adapter.getScopes(widget.curriculumId);
     if (scopes.isEmpty) {
       setState(() => _selectAll = true);
     } else {
@@ -501,28 +495,15 @@ class _ScopeSelectionScreenState extends ConsumerState<ScopeSelectionScreen> {
   bool get _canSave => _selectAll || _selectedValues.isNotEmpty;
 
   Future<void> _save() async {
-    final db = ref.read(userDatabaseProvider);
-    final profileId = ref.read(activeProfileIdProvider);
-
-    // Look up trackId for this curriculum.
-    // AUD-settings-06: reuse TrackDao's (profileId, curriculumId) -> track
-    // lookup instead of re-implementing it inline (see the DAO method's doc
-    // comment for the tutored-mirror id-resolution rule this centralizes).
-    final track = await db.trackDao.getTrackByProfileAndCurriculum(
-      profileId,
-      widget.curriculumId.storageKey,
-    );
-    final trackId = track?.id ?? 0;
+    final adapter = ref.read(curriculumScopeSettingsAdapterProvider);
 
     if (_selectAll) {
-      await db.curriculumScopeDao.clearScopes(profileId, widget.curriculumId);
+      await adapter.clearScopes(widget.curriculumId);
     } else if (_selectedLevel != null && _selectedValues.isNotEmpty) {
-      await db.curriculumScopeDao.setScopes(
-        profileId,
-        widget.curriculumId,
-        trackId,
-        _selectedLevel!,
-        _selectedValues.toList(),
+      await adapter.setScopes(
+        curriculumId: widget.curriculumId,
+        scopeLevel: _selectedLevel!,
+        scopeValues: _selectedValues.toList(),
       );
     }
 
