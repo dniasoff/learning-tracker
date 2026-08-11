@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
+import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/add_profile_card.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/profile_card.dart';
 
@@ -21,10 +21,10 @@ class ProfileGrid extends ConsumerWidget {
     required this.onAddProfile,
   });
 
-  final List<ProfileModel> profiles;
+  final List<LearnerProfileEntity> profiles;
   final bool isSelectingProfile;
-  final void Function(int profileId) onProfileTap;
-  final void Function(ProfileModel profile, int profileCount)
+  final void Function(String profileId) onProfileTap;
+  final void Function(LearnerProfileEntity profile, int profileCount)
   onProfileLongPress;
   final void Function(int profileCount) onAddProfile;
 
@@ -57,7 +57,7 @@ class ProfileGrid extends ConsumerWidget {
           profile: profile,
           onTap: isSelectingProfile
               ? () {}
-              : () => unawaited(Future(() => onProfileTap(profile.id))),
+              : () => unawaited(Future(() => onProfileTap(profile.profileId))),
           onLongPress: () => onProfileLongPress(profile, profiles.length),
         );
       },

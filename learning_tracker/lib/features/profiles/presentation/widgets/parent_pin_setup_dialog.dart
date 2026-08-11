@@ -14,7 +14,7 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 Future<bool> showParentPinSetupDialog(
   BuildContext context,
   WidgetRef ref, {
-  required int profileId,
+  required String profileId,
   String? profileName,
 }) async {
   final result = await showDialog<bool>(
@@ -35,7 +35,7 @@ Future<bool> showParentPinSetupDialog(
 class _ParentPinSetupDialog extends ConsumerStatefulWidget {
   const _ParentPinSetupDialog({required this.profileId, this.profileName});
 
-  final int profileId;
+  final String profileId;
   final String? profileName;
 
   @override

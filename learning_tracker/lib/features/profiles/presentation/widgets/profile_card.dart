@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
-import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
+import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// A tappable card representing a single owned learner profile in the picker.
@@ -12,7 +12,7 @@ class ProfileCard extends StatelessWidget {
     this.onLongPress,
   });
 
-  final ProfileModel profile;
+  final LearnerProfileEntity profile;
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
 
@@ -20,7 +20,7 @@ class ProfileCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
-    final isChild = profile.profileMode.isChild;
+    final isChild = profile.mode.isChild;
     final modeColor = context.colors.brandBlue;
     // AUD-profiles dark-mode sweep: `brandBlue` LIGHTENS in dark (an
     // ink/contrast-role token, not a "stays deep" fill), so a hardcoded

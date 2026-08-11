@@ -3,13 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/utils/text_input_formatters.dart';
-import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
+import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/profile_avatar.dart';
-import 'package:learning_tracker/features/tutoring/tutoring.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Canonical edit-profile flow.
@@ -20,15 +19,20 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 Future<void> editProfileFlow(
   BuildContext context,
   WidgetRef ref,
-  ProfileModel profile,
+  LearnerProfileEntity profile,
 ) async {
   final result = await showDialog<({String name, String mode, int avatar})>(
     context: context,
     builder: (ctx) => ProfileEditFormDialog(
       title: AppLocalizations.of(ctx)!.profilesEditLearner,
       initialName: profile.displayName,
-      initialMode: profile.mode,
-      initialAvatar: profile.avatarIndex,
+      initialMode: profile.mode.storageKey,
+      // LearnerProfileEntity.avatar is a free-form String (no Firestore
+      // index concept); this dialog's picker is still index-based, so the
+      // stored value is parsed back to an index here and re-stringified on
+      // save below. Falls back to 0 (first avatar) for an unset/unparseable
+      // value — never throws on a genuinely-empty '' default.
+      initialAvatar: int.tryParse(profile.avatar) ?? 0,
     ),
   );
   if (result == null) return;
@@ -39,20 +43,11 @@ Future<void> editProfileFlow(
     // actually persisted. Previously mode was silently dropped, meaning a
     // parent could believe they changed a profile's mode when nothing changed.
     await repo.updateProfile(
-      id: profile.id,
+      profileId: profile.profileId,
       displayName: result.name,
-      mode: result.mode,
-      avatarIndex: result.avatar,
+      mode: ProfileMode.fromStorageKey(result.mode),
+      avatar: result.avatar.toString(),
     );
-  } on TutorWriteException catch (e) {
-    if (context.mounted && e.code == 'permission-denied') {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context)!.tutorPermissionDenied),
-        ),
-      );
-    }
-    return;
   } on DuplicateProfileNameException {
     // AUD-profiles-02: mirrors profile_picker_screen.dart's _showRenameDialog
     // — a same-account name collision on the Edit dialog must surface
@@ -70,11 +65,11 @@ Future<void> editProfileFlow(
   // per-profile PINs from secure storage. If left behind, the PIN guard would
   // still prompt for a PIN on what is now an adult profile, and the tutor PIN
   // would remain reachable via an orphaned key.
-  if (profile.profileMode == ProfileMode.child &&
+  if (profile.mode == ProfileMode.child &&
       ProfileMode.fromStorageKey(result.mode) == ProfileMode.adult) {
     final pins = ref.read(pinServiceProvider);
-    await pins.clearProfilePin(profile.id);
-    await pins.clearTutorPin(profile.id);
+    await pins.clearProfilePin(profile.profileId);
+    await pins.clearTutorPin(profile.profileId);
   }
 
   ref.invalidate(profileListProvider);
@@ -83,16 +78,14 @@ Future<void> editProfileFlow(
 }
 
 /// Canonical delete-profile flow (with last-profile guard).
-/// Works offline: the repository deletes locally first and enqueues the cloud
-/// delete to the outbox. Shared between Manage Learners and the switcher sheet.
+/// Shared between Manage Learners and the switcher sheet.
 Future<void> deleteProfileFlow(
   BuildContext context,
   WidgetRef ref,
-  ProfileModel profile,
+  LearnerProfileEntity profile,
 ) async {
   final repo = ref.read(profileRepositoryProvider);
-  final accountId = ref.read(currentAccountIdProvider);
-  final remaining = await repo.countProfilesForAccount(accountId);
+  final remaining = await repo.countProfiles();
   final isLast = remaining <= 1;
   if (!context.mounted) return;
 
@@ -128,25 +121,27 @@ Future<void> deleteProfileFlow(
 
   if (confirmed != true) return;
 
-  // Offline-first: the repository always deletes locally via Drift first,
-  // then enqueues the cloud delete to the outbox (OutboxSyncWriteFacade
-  // .deleteLearnerProfile). No connectivity check is needed here.
+  // deleteLearnerProfile (functions/src/deletes.ts) performs a server-side
+  // recursive delete — firestore.rules denies a client-side delete on
+  // learner_profiles outright. Firestore's own offline queue (local
+  // persistence is enabled, account_firebase.dart) retries the call once
+  // connectivity returns; no separate outbox is involved any more.
   final selectedId = ref.read(selectedProfileIdProvider);
-  await repo.deleteProfile(profile.id, allowLast: isLast);
+  await repo.deleteProfile(profile.profileId, allowLast: isLast);
 
-  if (selectedId == profile.id) {
+  if (selectedId == profile.profileId) {
     // Bug B: deleting the ACTIVE profile previously cleared the selection to
     // null. The dashboard greeting and top-bar then resolved through
     // activeProfile (id == 0 → null) and fell back to the generic "Learner"
     // label until a tile was re-tapped. Instead, auto-switch to a remaining
     // profile so the greeting/role re-derive to the now-active profile's name
     // reactively. clear() only when nothing remains (last-profile delete).
-    final remainingProfiles = await repo.getProfilesByAccount(accountId);
-    final next = remainingProfiles.where((p) => p.id != profile.id).firstOrNull;
+    final remainingProfiles = await repo.getProfiles();
+    final next = remainingProfiles
+        .where((p) => p.profileId != profile.profileId)
+        .firstOrNull;
     if (next != null) {
-      ref
-          .read(selectedProfileIdProvider.notifier)
-          .select(next.id, ulid: next.ulid);
+      ref.read(selectedProfileIdProvider.notifier).select(next.profileId);
     } else {
       ref.read(selectedProfileIdProvider.notifier).clear();
     }

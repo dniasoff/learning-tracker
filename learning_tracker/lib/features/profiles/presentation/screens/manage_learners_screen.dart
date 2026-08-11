@@ -5,7 +5,7 @@ import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
-import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
+import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/add_profile_dialog.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/profile_edit_delete_actions.dart';
@@ -71,7 +71,7 @@ class ManageLearnersScreen extends ConsumerWidget {
 }
 
 class _ProfileListTile extends ConsumerWidget {
-  final ProfileModel profile;
+  final LearnerProfileEntity profile;
 
   const _ProfileListTile({required this.profile});
 
@@ -82,7 +82,7 @@ class _ProfileListTile extends ConsumerWidget {
         leading: _ProfileInitialsAvatar(displayName: profile.displayName),
         title: Text(profile.displayName),
         subtitle: Text(
-          profile.profileMode == ProfileMode.child
+          profile.mode == ProfileMode.child
               ? AppLocalizations.of(context)!.profileTypeChild
               : AppLocalizations.of(context)!.profileTypeAdult,
         ),

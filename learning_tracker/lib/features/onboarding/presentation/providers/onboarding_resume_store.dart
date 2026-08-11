@@ -40,7 +40,7 @@ class OnboardingSnapshot {
   });
 
   final String? phase;
-  final int? profileId;
+  final String? profileId;
   final String? profileName;
   final String? profileMode;
   final bool useHebrewCalendar;
@@ -67,7 +67,7 @@ class OnboardingResumeStore {
 
     return OnboardingSnapshot(
       phase: savedPhase,
-      profileId: prefs.getInt(_kOnboardingProfileId),
+      profileId: prefs.getString(_kOnboardingProfileId),
       profileName: prefs.getString(_kOnboardingProfileName),
       profileMode: prefs.getString(_kOnboardingProfileMode),
       useHebrewCalendar: prefs.getBool(_kOnboardingHebrewCalendar) ?? true,
@@ -82,7 +82,7 @@ class OnboardingResumeStore {
   /// Persist the current onboarding state so it can be resumed on restart.
   Future<void> save({
     required String phase,
-    int? profileId,
+    String? profileId,
     String? profileName,
     required String profileMode,
     required bool useHebrewCalendar,
@@ -93,7 +93,7 @@ class OnboardingResumeStore {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_kOnboardingPhase, phase);
     if (profileId != null) {
-      await prefs.setInt(_kOnboardingProfileId, profileId);
+      await prefs.setString(_kOnboardingProfileId, profileId);
     }
     if (profileName != null) {
       await prefs.setString(_kOnboardingProfileName, profileName);

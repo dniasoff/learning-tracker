@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/utils/text_input_formatters.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/text_display_providers.dart';
-import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
+import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -13,7 +14,7 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 /// Callback type for when profile creation is complete.
 typedef ProfileCreatedCallback =
     void Function({
-      required ProfileModel profile,
+      required LearnerProfileEntity profile,
       required bool isChildMode,
       required bool useHebrewCalendar,
       required bool useHebrewTerms,
@@ -77,9 +78,7 @@ class _OnboardingProfileCreationStepState
       if (_nameError != null) setState(() => _nameError = null);
       return;
     }
-    final profiles = await ref
-        .read(profileRepositoryProvider)
-        .getProfilesByAccount(ref.read(currentAccountIdProvider));
+    final profiles = await ref.read(profileRepositoryProvider).getProfiles();
     final isDuplicate = profiles.any(
       (p) => p.displayName.trim().toLowerCase() == name.toLowerCase(),
     );
@@ -106,14 +105,11 @@ class _OnboardingProfileCreationStepState
         .set(_transliterationVariant);
 
     final repo = ref.read(profileRepositoryProvider);
-    final accountId = ref.read(currentAccountIdProvider);
-    final ProfileModel profile;
+    final LearnerProfileEntity profile;
     try {
       profile = await repo.createProfile(
-        accountId: accountId,
         displayName: name,
-        mode: _profileMode,
-        avatarIndex: 0,
+        mode: ProfileMode.fromStorageKey(_profileMode),
       );
     } on DuplicateProfileNameException {
       if (mounted) {
@@ -135,9 +131,7 @@ class _OnboardingProfileCreationStepState
     // that await throws once this State is disposed — bail out first.
     if (!mounted) return;
 
-    ref
-        .read(selectedProfileIdProvider.notifier)
-        .select(profile.id, ulid: profile.ulid);
+    ref.read(selectedProfileIdProvider.notifier).select(profile.profileId);
 
     if (mounted) setState(() => _isCreatingProfile = false);
 

@@ -27,7 +27,7 @@ class OnboardingParentPinStep extends ConsumerStatefulWidget {
     required this.onComplete,
   });
 
-  final int profileId;
+  final String profileId;
   final String childName;
   final VoidCallback onComplete;
 

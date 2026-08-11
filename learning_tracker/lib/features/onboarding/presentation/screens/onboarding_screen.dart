@@ -14,7 +14,7 @@ import 'package:learning_tracker/features/onboarding/presentation/steps/onboardi
 import 'package:learning_tracker/features/onboarding/presentation/steps/onboarding_handoff_step.dart';
 import 'package:learning_tracker/features/onboarding/presentation/steps/onboarding_parent_pin_step.dart';
 import 'package:learning_tracker/features/onboarding/presentation/steps/onboarding_profile_creation_step.dart';
-import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
+import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/screens/add_track_flow_screen.dart';
@@ -73,7 +73,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   var _phase = _ScreenPhase.profileCreation;
 
   // Profile identity (set after profile creation step completes)
-  int? _createdProfileId;
+  String? _createdProfileId;
   String? _profileName;
   bool _isChildMode = false;
 
@@ -159,14 +159,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   // ── Phase Transitions ──────────────────────────────────────────────────────
 
   void _onProfileCreated({
-    required ProfileModel profile,
+    required LearnerProfileEntity profile,
     required bool isChildMode,
     required bool useHebrewCalendar,
     required bool useHebrewTerms,
     required bool showNikud,
     required TransliterationVariant transliterationVariant,
   }) {
-    _createdProfileId = profile.id;
+    _createdProfileId = profile.profileId;
     // Firestore-rewrite (docs/firestore-rewrite-map.md): every profile-scoped
     // repository now reads the ACTIVE profile
     // (`selectedProfileIdProvider`/`activeProfileIdProvider`), not an id
@@ -176,11 +176,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     // stayed on whatever was selected before onboarding started — so bulk-mark
     // and track-creation writes landed on the WRONG profile for a multi-child
     // add-another-learner flow. Selecting here mirrors every other place a
-    // freshly created/fetched [ProfileModel] is adopted (`profile_providers.dart`'s
-    // `AutoSelectedProfileId._resolveSelection`, the profile switcher).
-    ref
-        .read(selectedProfileIdProvider.notifier)
-        .select(profile.id, ulid: profile.ulid);
+    // freshly created/fetched [LearnerProfileEntity] is adopted
+    // (`profile_providers.dart`'s `AutoSelectedProfileId._resolveSelection`,
+    // the profile switcher).
+    ref.read(selectedProfileIdProvider.notifier).select(profile.profileId);
     _profileName = profile.displayName;
     _isChildMode = isChildMode;
     _useHebrewCalendar = useHebrewCalendar;
@@ -259,9 +258,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     await _store.markComplete();
     if (!mounted) return;
     final repo = ref.read(profileRepositoryProvider);
-    final profiles = await repo.getProfilesByAccount(
-      ref.read(currentAccountIdProvider),
-    );
+    final profiles = await repo.getProfiles();
     if (!mounted) return;
     if (profiles.length >= 2) {
       // Multiple profiles on this account: let the user pick which learner to
@@ -278,12 +275,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       // "Start Learning". Mirrors the account-picker / sign-in landing paths,
       // which all assert the active profile before replaceAll([AppShellRoute]).
       final landingProfile =
-          profiles.where((p) => p.id == _createdProfileId).firstOrNull ??
+          profiles
+              .where((p) => p.profileId == _createdProfileId)
+              .firstOrNull ??
           profiles.firstOrNull;
       if (landingProfile != null) {
         ref
             .read(selectedProfileIdProvider.notifier)
-            .select(landingProfile.id, ulid: landingProfile.ulid);
+            .select(landingProfile.profileId);
       }
       unawaited(context.router.replaceAll([const AppShellRoute()]));
     }
@@ -310,9 +309,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     // _navigateToDashboard does — routing to EmptyLoginRoute would dead-end
     // the user with no bottom nav and no way back (confirmed P1 regression).
     final repo = ref.read(profileRepositoryProvider);
-    final profiles = await repo.getProfilesByAccount(
-      ref.read(currentAccountIdProvider),
-    );
+    final profiles = await repo.getProfiles();
     if (!mounted) return;
 
     if (profiles.isEmpty) {
@@ -323,12 +320,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       unawaited(context.router.replaceAll([const ProfilePickerRoute()]));
     } else {
       final landingProfile =
-          profiles.where((p) => p.id == _createdProfileId).firstOrNull ??
+          profiles
+              .where((p) => p.profileId == _createdProfileId)
+              .firstOrNull ??
           profiles.firstOrNull;
       if (landingProfile != null) {
         ref
             .read(selectedProfileIdProvider.notifier)
-            .select(landingProfile.id, ulid: landingProfile.ulid);
+            .select(landingProfile.profileId);
       }
       unawaited(context.router.replaceAll([const AppShellRoute()]));
     }
@@ -416,7 +415,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 ),
               ),
               _ScreenPhase.parentPinSetup => OnboardingParentPinStep(
-                profileId: _createdProfileId ?? 0,
+                profileId: _createdProfileId ?? '',
                 childName: _profileName ?? '',
                 onComplete: _onPinSetupComplete,
               ),

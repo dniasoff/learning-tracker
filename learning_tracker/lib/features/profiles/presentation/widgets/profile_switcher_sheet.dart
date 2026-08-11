@@ -8,7 +8,7 @@ import 'package:learning_tracker/app/router/router_provider.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
-import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
+import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
@@ -52,7 +52,7 @@ class ProfileSwitcherSheet extends ConsumerWidget {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
     final profilesAsync = ref.watch(profileListStreamProvider);
-    final profiles = profilesAsync.asData?.value ?? <ProfileModel>[];
+    final profiles = profilesAsync.asData?.value ?? <LearnerProfileEntity>[];
     final activeProfileId = ref.watch(activeProfileIdProvider);
     final accountEmail = ref.watch(authStateProvider).currentUser?.email;
     // AN-2: read whether the active profile is a child with a PIN set.
@@ -175,7 +175,7 @@ class ProfileSwitcherSheet extends ConsumerWidget {
                 for (final profile in profiles)
                   _SwitcherProfileTile(
                     profile: profile,
-                    isActive: profile.id == activeProfileId,
+                    isActive: profile.profileId == activeProfileId,
                     // AN-2: switching to an adult profile from a child context
                     // is an escalating action — require Parent PIN.
                     onTap: () => _guardEscalating(
@@ -184,12 +184,8 @@ class ProfileSwitcherSheet extends ConsumerWidget {
                       pinGuardRequired: pinGuardRequired,
                       activeProfileId: activeProfileId,
                       subtitle: l10n.pinDialogSubtitleSwitchProfile,
-                      action: () => _switchProfile(
-                        context,
-                        ref,
-                        profile.id,
-                        ulid: profile.ulid,
-                      ),
+                      action: () =>
+                          _switchProfile(context, ref, profile.profileId),
                     ),
                     onEdit: () => _guardEscalating(
                       context,
@@ -316,12 +312,7 @@ class ProfileSwitcherSheet extends ConsumerWidget {
   /// drops straight into that child's LEARNING view — parent mode is a
   /// separate PIN-gated elevation, so we clear any existing elevation here to
   /// guarantee the freshly-selected profile starts unelevated (no banner).
-  void _switchProfile(
-    BuildContext context,
-    WidgetRef ref,
-    int profileId, {
-    required String ulid,
-  }) {
+  void _switchProfile(BuildContext context, WidgetRef ref, String profileId) {
     Navigator.of(context).pop();
     // R4-H1: exit any active tutored session before replacing the route.
     // No UID change occurs on profile switch, so AppShell's auth-uid listener
@@ -346,7 +337,7 @@ class ProfileSwitcherSheet extends ConsumerWidget {
     // callback (router_provider.dart), the reactive flag — so it strictly
     // supersedes the old clear() rather than duplicating it.
     ref.read(routerProvider).pinGuard.lock();
-    ref.read(selectedProfileIdProvider.notifier).select(profileId, ulid: ulid);
+    ref.read(selectedProfileIdProvider.notifier).select(profileId);
     unawaited(context.router.replaceAll([const AppShellRoute()]));
   }
 
@@ -362,7 +353,7 @@ class ProfileSwitcherSheet extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref, {
     required bool pinGuardRequired,
-    required int activeProfileId,
+    required String? activeProfileId,
     required String subtitle,
     required VoidCallback action,
   }) {
@@ -370,6 +361,9 @@ class ProfileSwitcherSheet extends ConsumerWidget {
       action();
       return;
     }
+    // Fail closed: a PIN-gated action with no resolvable active profile has
+    // nothing to verify against — never fall through to the unguarded path.
+    if (activeProfileId == null) return;
     // Show Parent PIN verification; only proceed on success.
     unawaited(
       showParentPinVerificationDialog(
@@ -393,7 +387,7 @@ class _SwitcherProfileTile extends StatelessWidget {
     required this.onDelete,
   });
 
-  final ProfileModel profile;
+  final LearnerProfileEntity profile;
   final bool isActive;
   final VoidCallback onTap;
   final VoidCallback onEdit;
@@ -405,7 +399,7 @@ class _SwitcherProfileTile extends StatelessWidget {
     final initial = profile.displayName.isNotEmpty
         ? profile.displayName[0].toUpperCase()
         : '?';
-    final typeLabel = profile.profileMode == ProfileMode.child
+    final typeLabel = profile.mode == ProfileMode.child
         ? l10n.profileTypeChild
         : l10n.profileTypeAdult;
     return Material(

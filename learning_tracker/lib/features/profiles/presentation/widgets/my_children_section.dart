@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
-import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
+import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/profile_grid.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
@@ -33,14 +33,14 @@ class OwnProfilesSection extends StatelessWidget {
   });
 
   /// All owned profiles (adults + children).
-  final List<ProfileModel> profiles;
+  final List<LearnerProfileEntity> profiles;
 
   /// Whether to render the "YOUR PROFILES" section header.
   final bool showHeader;
 
   final bool isSelectingProfile;
-  final void Function(int profileId) onProfileTap;
-  final void Function(ProfileModel profile, int profileCount)
+  final void Function(String profileId) onProfileTap;
+  final void Function(LearnerProfileEntity profile, int profileCount)
   onProfileLongPress;
   final void Function(int profileCount) onAddProfile;
 

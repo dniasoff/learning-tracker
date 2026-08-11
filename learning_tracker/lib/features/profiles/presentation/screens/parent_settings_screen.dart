@@ -6,10 +6,13 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:learning_tracker/app/router/app_router.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
+import 'package:learning_tracker/features/gamification/data/repositories/firestore_points_balance_reader_adapter.dart';
+import 'package:learning_tracker/features/gamification/data/repositories/firestore_points_ledger_write_adapter.dart';
+import 'package:learning_tracker/features/gamification/data/repositories/reward_redemption_repository_impl.dart';
+import 'package:learning_tracker/features/gamification/presentation/providers/points_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/utils/account_actions.dart';
@@ -18,29 +21,42 @@ import 'package:learning_tracker/features/settings/presentation/widgets/user_pro
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
+final _rewardRedemptionRepositoryProvider =
+    Provider<FirestoreRewardRedemptionRepositoryAdapter>(
+      (ref) => FirestoreRewardRedemptionRepositoryAdapter(ref: ref),
+    );
+
 /// Reactive count of pending reward-redemption requests for the active profile.
 ///
-/// Backed by [PointsBalanceDao.watchPendingRedemptions] so the "Pending Prizes"
-/// row subtitle updates live as requests arrive or are fulfilled/declined —
-/// rather than reflecting only the count at screen-build time (#33).
+/// Backed by [FirestoreRewardRedemptionRepositoryAdapter.watchPendingRedemptions]
+/// so the "Pending Prizes" row subtitle updates live as requests arrive or are
+/// fulfilled/declined — rather than reflecting only the count at screen-build
+/// time (#33). Same underlying stream `parent_pending_redemptions_screen.dart`'s
+/// `pendingRedemptionsProvider` uses.
 final pendingRedemptionsCountProvider = StreamProvider.autoDispose<int>((ref) {
-  final db = ref.watch(userDatabaseProvider);
-  final profileId = ref.watch(activeProfileIdProvider);
-  return db.pointsBalanceDao
-      .watchPendingRedemptions(profileId)
-      .map((list) => list.length);
+  final repo = ref.watch(_rewardRedemptionRepositoryProvider);
+  return repo.watchPendingRedemptions().map((list) => list.length);
 });
 
-/// Reactive debitable points balance for the active (child / talmid) profile.
+final _pointsLedgerWriteAdapterProvider =
+    Provider<FirestorePointsLedgerWriteAdapter>(
+      (ref) => FirestorePointsLedgerWriteAdapter(ref: ref),
+    );
+
+/// Debitable points balance for the active (child / talmid) profile.
 ///
-/// Backed by [PointsBalanceDao.watchBalance] so the Adjust Points dialog shows
-/// the live current balance and reflects any adjustment immediately.
-final activeProfilePointsBalanceProvider = StreamProvider.autoDispose<int>((
+/// **Not a live stream** — `points_ledger` has no Firestore watch
+/// equivalent (SR-4 caps queries at 500, see [globalPointsProvider]'s doc
+/// comment for the full reasoning). Re-reads on
+/// [pendingRedemptionsCountProvider]'s changes (a redemption fulfil/decline
+/// moves the balance) and is explicitly `ref.invalidate`d after a parent
+/// points adjustment below.
+final activeProfilePointsBalanceProvider = FutureProvider.autoDispose<int>((
   ref,
 ) {
-  final db = ref.watch(userDatabaseProvider);
-  final profileId = ref.watch(activeProfileIdProvider);
-  return db.pointsBalanceDao.watchBalance(profileId);
+  ref.watch(pendingRedemptionsCountProvider);
+  final reader = FirestorePointsBalanceReaderAdapter(ref: ref);
+  return reader.getBalance();
 });
 
 /// Configuration hub shown to a parent when their child profile is active.
@@ -71,7 +87,7 @@ class ParentSettingsScreen extends ConsumerWidget {
     final activeProfileId = ref.watch(activeProfileIdProvider);
     final profilesAsync = ref.watch(profileListStreamProvider);
     final activeProfile = profilesAsync.asData?.value
-        .where((p) => p.id == activeProfileId)
+        .where((p) => p.profileId == activeProfileId)
         .firstOrNull;
     final showDeleteAccountTile = user != null;
 
@@ -496,14 +512,15 @@ Future<void> _showAdjustPointsDialog(
   final amount = int.tryParse(amountController.text.trim()) ?? 0;
   if (amount <= 0) return;
 
-  final db = ref.read(userDatabaseProvider);
-  final profileId = ref.read(activeProfileIdProvider);
+  final writer = ref.read(_pointsLedgerWriteAdapterProvider);
   final delta = addMode ? amount : -amount;
   final note = noteController.text.trim().isEmpty
       ? null
       : noteController.text.trim();
 
-  await db.pointsBalanceDao.parentAdjust(profileId, delta, note: note);
+  await writer.appendParentAdjustment(delta: delta, note: note);
+  ref.invalidate(activeProfilePointsBalanceProvider);
+  ref.invalidate(globalPointsProvider);
 
   amountController.dispose();
   noteController.dispose();

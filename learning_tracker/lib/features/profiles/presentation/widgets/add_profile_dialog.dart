@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/utils/text_input_formatters.dart';
-import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
+import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/add_profile_mode_pick_card.dart';
@@ -15,12 +15,11 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 /// Shows the "Add Profile" dialog and handles the full creation flow including
 /// optional Parent PIN prompt for child profiles.
 ///
-/// Returns the created [ProfileModel], or null if the user cancelled.
-Future<ProfileModel?> showAddProfileDialog(
+/// Returns the created [LearnerProfileEntity], or null if the user cancelled.
+Future<LearnerProfileEntity?> showAddProfileDialog(
   BuildContext context,
   WidgetRef ref,
 ) async {
-  final profileDao = ref.read(userDatabaseProvider).profileDao;
   final repo = ref.read(profileRepositoryProvider);
 
   final ctrl = TextEditingController();
@@ -43,9 +42,13 @@ Future<ProfileModel?> showAddProfileDialog(
             return;
           }
           try {
-            final exists = await profileDao.profileExistsByName(
-              ref.read(currentAccountIdProvider),
-              n,
+            // Best-effort, client-side check against the already-resolved
+            // profile list (AUD-profiles-16 below) — the authoritative check
+            // is repo.createProfile's own DuplicateProfileNameException,
+            // caught below.
+            final profiles = await ref.read(profileListProvider.future);
+            final exists = profiles.any(
+              (p) => p.displayName.toLowerCase() == n.toLowerCase(),
             );
             set(() => err = exists ? l10n.profileNameAlreadyExists : null);
           } catch (e, st) {
@@ -256,9 +259,8 @@ Future<ProfileModel?> showAddProfileDialog(
 
   try {
     final created = await repo.createProfile(
-      accountId: ref.read(currentAccountIdProvider),
       displayName: result.n,
-      mode: result.m,
+      mode: ProfileMode.fromStorageKey(result.m),
     );
     if (context.mounted) ref.invalidate(profileListProvider);
     // P2-24: select() runs for EVERY newly-created profile, not just child
@@ -279,11 +281,9 @@ Future<ProfileModel?> showAddProfileDialog(
     // self-heal branch), which already select() the profile they just
     // created regardless of mode.
     if (context.mounted) {
-      ref
-          .read(selectedProfileIdProvider.notifier)
-          .select(created.id, ulid: created.ulid);
+      ref.read(selectedProfileIdProvider.notifier).select(created.profileId);
     }
-    if (created.profileMode.isChild && context.mounted) {
+    if (created.mode.isChild && context.mounted) {
       // PP-13: update the active-profile context to the newly-created child
       // profile so the app-shell header shows the new profile's identity during
       // the forced PIN setup — not the previously-active profile's stale chrome.
@@ -293,7 +293,7 @@ Future<ProfileModel?> showAddProfileDialog(
       await showParentPinSetupDialog(
         context,
         ref,
-        profileId: created.id,
+        profileId: created.profileId,
         profileName: created.displayName,
       );
     }

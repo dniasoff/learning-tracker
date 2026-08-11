@@ -7,7 +7,7 @@ import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
-import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
+import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/add_profile_dialog.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/my_children_section.dart';
@@ -74,7 +74,7 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
     );
   }
 
-  Widget _buildBody(BuildContext context, List<ProfileModel> profiles) {
+  Widget _buildBody(BuildContext context, List<LearnerProfileEntity> profiles) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
 
@@ -181,31 +181,12 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
 
   // ── Select Profile ─────────────────────────────────────────────────────────
 
-  Future<void> _selectProfile(int profileId) async {
+  Future<void> _selectProfile(String profileId) async {
     if (_isSelectingProfile) return;
     _isSelectingProfile = true;
 
     try {
-      // Synchronous — profileListProvider is already resolved (it rendered
-      // the tile that was just tapped), so this is a lookup on data already
-      // in memory, not a new read. See SelectedProfileId.select's doc
-      // comment for why this must stay synchronous rather than awaiting a
-      // fresh repository call.
-      final ulid = ref
-          .read(profileListProvider)
-          .value
-          ?.where((ProfileModel p) => p.id == profileId)
-          .firstOrNull
-          ?.ulid;
-      if (ulid == null) {
-        // Stale render — the tapped profile is no longer in the resolved
-        // list (e.g. deleted from another surface between render and tap).
-        // No-op rather than switch into an id we can no longer resolve.
-        return;
-      }
-      ref
-          .read(selectedProfileIdProvider.notifier)
-          .select(profileId, ulid: ulid);
+      ref.read(selectedProfileIdProvider.notifier).select(profileId);
 
       if (!mounted) return;
       await context.router.replaceAll([const AppShellRoute()]);
@@ -228,7 +209,10 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
 
   // ── Manage (Long-press) ───────────────────────────────────────────────────
 
-  Future<void> _showManageSheet(ProfileModel profile, int profileCount) async {
+  Future<void> _showManageSheet(
+    LearnerProfileEntity profile,
+    int profileCount,
+  ) async {
     final action = await showModalBottomSheet<String>(
       context: context,
       builder: (ctx) {
