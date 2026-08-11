@@ -381,6 +381,51 @@ Decompose it — the 7-file cluster defeated three different models as one unit:
     step 2  profile_repository_impl.dart
     step 3  the four consumers, in small batches
 
+### 6.2c ⚠️ RECOVER the original algorithm from git — do NOT reconstruct it
+
+The implementation of `trackDualProgressMetricsProvider` and
+`_computeTrackDualProgressMetric` was **deleted** in P3-37, leaving only throws
+and their doc comments. Working from §6.2 alone, an agent would rebuild the
+percentage maths from that prose — **fabricating an achievement computation from
+a description of one.** Same failure class as a silent zero, but larger, and no
+gate catches it.
+
+**The real implementation is in git.** The commit immediately before P3-37 still
+has it:
+
+    git show 94d9013d~1:learning_tracker/lib/features/progress/presentation/providers/lifetime_knowledge_providers.dart
+
+`currentCyclePercentage` is computed around line 695 there; the surrounding
+doc comments at ~382/~439/~454 explain the `trackAchievement` tier gating and
+what `currentCyclePercentage` vs `lifetimePercentage` each answer. Also worth
+reading for intent, since each fixed a real defect:
+
+    7c490bad  lifetimePercentage excludes lifetime-only imports (run-10/5562)
+    5db8634c  R8 Part B — memory-bounded lifetime-totals denominator
+    bf692d71  deleted track shown under Progress-tab ACTIVE TRACKS
+
+**Method:** recover that function verbatim, then re-point ONLY its data sources —
+`db.trackDao.getActiveTracksForProfile` → `adapter.getAllTracks()`,
+`db.profileProgramDao` → `adapter.getProgramsByCurriculum()`,
+`curriculumScopeDao` → `adapter.getScopes(curriculumId)`, and the by-trackId maps
+→ by-`curriculumId.storageKey` per AD-25. Change nothing else. Every arithmetic
+line should survive the port unmodified.
+
+**Why it keeps failing:** four models have now failed this as an open-ended
+migration (three on `kilo`, one on `deepseek` — all reason-to-budget or empty
+response). It is not subtle, it is LONG. Recovering and re-pointing is
+mechanical; reconstructing is not. Do it as a script authored from the recovered
+source, then have a worker execute the script by path (§1.2b).
+
+Five of the six throws in that file are in **zero-consumer or private unused**
+code and can be deleted outright with no runtime impact:
+`trackCompletionsByProfileProvider`, `trackLedgerEntriesByProfileProvider`,
+`profileProgramsByProfileProvider` (each 0 lib consumers, though 2 test files
+reference them), plus `_computeTrackDualProgressMetric` and
+`_safeLoadLeavesForTrack` (both private, both already carrying
+`// ignore: unused_element`). Only `trackDualProgressMetricsProvider` has
+consumers — twelve of them.
+
 ### 6.3 Offline step 2 — process-kill survival UNVERIFIED
 
 Needs `flutter run` + `am force-stop` + `am start` (the test harness uninstalls
