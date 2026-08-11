@@ -2445,6 +2445,71 @@ not re-learn the hard way:**
 
 ---
 
+### 2026-08-11 — P3-31: the bulk-prior expunge path, and the two purge seams it proved were missing
+
+`dart analyze --fatal-infos` EXIT 0 on all five committed files.
+`check_dependency_direction` EXIT 0. lib errors **475 → 455**.
+
+#### 1. ✅ A worker refused correctly, and its refusal was the deliverable
+
+`BulkPriorCompletionService` was migrated by a worker whose MCP report was lost
+to the 30-minute idle timeout. Because no report existed, the whole diff was read
+manually before accepting it — and it was good work.
+
+The old `expungePriorCompletions` identified bulk-prior rows via a
+`prior_completion_imports` side table plus a sentinel `eventTimestamp` of
+`DateTime.utc(2000, 1, 1)`. That table is deleted. The worker found the correct
+Firestore replacement — provenance lives on the document's own `source` field, so
+a bulk import is `source == bulkInTrack`, and one upgraded to real learning by
+`CompletionOrchestrator` becomes `live` and is correctly INVISIBLE to expunge.
+Same semantics, no second table.
+
+Then, rather than fabricate the write, it **threw `UnsupportedError` carrying a
+precise migration path**: which two methods to add, to which interfaces, in which
+files, delegating to which existing concrete methods. That error message was
+directly executable as the next task, and is what P3-31 implements.
+
+This is the no-fabrication rule paying off in the strongest possible way: the
+worker could have silently returned, leaving bulk-marked completions AND their
+siyum both alive — a permanent `completions`/`learning_ledger` disagreement that
+no gate could catch.
+
+#### 2. The seams
+
+Both concrete methods already existed —
+`FirestoreCompletionRepository.purgeCompletion` (`:572`) and
+`FirestoreLearningLedgerRepository.purgeEntry` (`:500`). Only the domain
+interfaces were missing, so `purgeCompletion` and `purgeEntry` were added to
+`CompletionRepository` / `LearningLedgerRepository` and their adapters, which
+delegate without swallowing. `purgeEntry`'s documented D-E behaviour — absent
+target throws `StateError`, never a silent no-op — is preserved through the
+adapter rather than being caught there.
+
+#### 3. ⚠️ HELD BACK deliberately: the siyum retraction itself
+
+`expungePriorCompletions` still throws. The seams are open but NOT yet used,
+because the remaining question is a design decision, not a mechanical fix:
+
+- `purgeEntry`'s own doc says the siyum "must be retracted with" the purged
+  completions or "the two collections disagree permanently".
+- **But a ledger entry is per UNIT (`unitIdentifier`), while expunge is per
+  `sefariaRef`.** So it is NOT a 1:1 retraction. Un-ticking one ref should
+  retract the unit's siyum only if that unit is no longer fully covered.
+- The ledger also has a SECOND retraction mechanism — append-only
+  `unmark_<scope>` rows that `lifetime_tree_builder` subtracts. Which of the two
+  applies here is a real question.
+
+A worker told to "retract the entry it earned" would invent that rule and it
+would look plausible. Held for an explicit decision instead. The loud throw stays
+until then — the un-tick path fails visibly rather than corrupting two
+collections quietly.
+
+#### 4. Not done: `onboarding_providers.dart`
+
+Its 5 remaining errors are blocked on `StageDefinitionRepositoryImpl`, which is
+itself unmigrated (11 errors) — the provider constructs it from `db.stageDao` /
+`db.completionDao`. A genuine dependency, though the worker should have reported
+it as BLOCKED rather than leaving it silent. Sequenced behind that file.
 ### 2026-08-11 — P3-30: "fail loudly" in a widget means VISIBLY, not fatally — the backup card refuses to lie without crashing
 
 `dart analyze --fatal-infos` EXIT 0. `flutter gen-l10n` regenerated both locales.

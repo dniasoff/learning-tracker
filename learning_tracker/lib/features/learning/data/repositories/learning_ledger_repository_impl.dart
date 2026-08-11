@@ -198,4 +198,13 @@ class FirestoreLearningLedgerRepositoryAdapter
     final repo = await _resolve();
     return repo.getCompletionStats(curriculumId);
   }
+
+  @override
+  Future<void> purgeEntry({
+    required String ulid,
+    required DateTime purgedAt,
+  }) async {
+    final repo = await _resolve();
+    await repo.purgeEntry(ulid: ulid, purgedAt: purgedAt);
+  }
 }

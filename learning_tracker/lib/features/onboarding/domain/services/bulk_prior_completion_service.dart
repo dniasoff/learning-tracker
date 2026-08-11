@@ -1,20 +1,14 @@
 import 'dart:async';
-import 'dart:convert';
 
-import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/core/content/hierarchy_selection.dart';
-import 'package:learning_tracker/core/database/daos/outbox_dao.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/learning/completion_constants.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
-import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
-import 'package:learning_tracker/core/sync/sync_write_facade.dart';
-import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/bookmark_repository.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
 import 'package:learning_tracker/features/learning/domain/services/completion_orchestrator.dart';
@@ -70,24 +64,23 @@ class BulkPriorCompletionResult {
 /// with the caller-supplied [stageIds] before writing completions. This
 /// guarantees that prior-marked items show 100% completion, not 0%.
 ///
-/// ### B8 — Expunge API
-/// [expungePriorCompletions] tombstones (sets `purgedAt`) the
-/// completion_events rows that were created by a prior-marking run. Prior
-/// rows are identified by their sentinel `eventTimestamp` of
-/// `DateTime.utc(2000, 1, 1)`. Agent F (UI layer) calls this method when the
-/// user un-selects a previously bulk-marked item.
+  /// ### B8 — Expunge API
+  /// [expungePriorCompletions] tombstones (sets `purgedAt`) the completion
+  /// documents that were created by a prior-marking run for an item. Under
+  /// the Firestore schema, provenance lives on the document's `source` field:
+  /// a bulk-imported row has `source == bulkInTrack` (its `completedAt` is the
+  /// `DateTime.utc(2000, 1, 1)` sentinel written by [execute]); once
+  /// [CompletionOrchestrator] upgrades it to real learning its `source`
+  /// becomes `live` and it is INVISIBLE to expunge. That reproduces the old
+  /// `prior_completion_imports`-table semantics with no second table (that
+  /// table is deleted). Agent F (UI layer) calls this method when the user
+  /// un-selects a previously bulk-marked item.
 class BulkPriorCompletionService {
   final ContentRepository _contentRepository;
   final CompletionRepository _completionRepository;
   final BookmarkRepository _bookmarkRepository;
-  final UserDatabase _database;
   final AnalyticsService _analytics;
   final StageDefinitionRepository? _stageRepository;
-
-  /// Optional outbox DAO for enqueuing tombstone propagation after
-  /// [expungePriorCompletions]. When `null`, tombstones are written locally
-  /// but NOT propagated to Firestore (a warning is logged).
-  final OutboxDao? _outboxDao;
 
   /// Post completion-orchestrator lift (`docs/firestore-rewrite-map.md`,
   /// owner decision 1). When set, [execute] routes its bulk-mark write
@@ -111,33 +104,30 @@ class BulkPriorCompletionService {
   List<ContentItem>? _cachedAllItems;
   CurriculumId? _cachedCurriculumId;
 
+  /// `database` (Drift `UserDatabase`), `syncEngine` (`SyncWriteFacade`) and
+  /// `outboxDao` (Drift `OutboxDao`) are NOT parameters here: all three come
+  /// from the deleted Drift user DB and the `core/sync` engine, and the
+  /// Firestore repositories this service reaches through are profile-scoped by
+  /// their collection path and write directly to `cloud_firestore` (which owns
+  /// its own offline queueing), so neither a local DB nor an outbox DAO is
+  /// part of the `expungePriorCompletions` path any more.
+  ///
+  /// ⚠️ This is a constructor-signature change vs. the Drift-era wiring: the
+  /// `database`, `syncEngine` and `outboxDao` arguments are dropped. The
+  /// production provider (`onboarding_providers.dart`) and the bulk-prior test
+  /// doubles must drop them too.
   BulkPriorCompletionService({
     required ContentRepository contentRepository,
     required CompletionRepository completionRepository,
     required BookmarkRepository bookmarkRepository,
-    required UserDatabase database,
-    // Retained for call-site/API compatibility but intentionally unused:
-    // AUD-onboarding-08 removed the last consumer (an ad-hoc
-    // `BookmarkRepositoryImpl(syncEngine: _syncEngine, ...)` construction in
-    // execute()'s former profileId branch — see owner decision 2,
-    // `docs/firestore-rewrite-map.md`, for why that branch, and the
-    // delegated-profile bookmark-repository seam it relied on, are gone
-    // entirely now).
-    // Dropping this parameter too would require updating ~40 existing call
-    // sites for zero behavioural change; kept as a no-op instead.
-    // ignore: avoid_unused_constructor_parameters
-    SyncWriteFacade? syncEngine,
     AnalyticsService? analytics,
     StageDefinitionRepository? stageRepository,
-    OutboxDao? outboxDao,
     CompletionOrchestrator? orchestrator,
   }) : _contentRepository = contentRepository,
        _completionRepository = completionRepository,
        _bookmarkRepository = bookmarkRepository,
-       _database = database,
        _analytics = analytics ?? const NullAnalyticsService(),
        _stageRepository = stageRepository,
-       _outboxDao = outboxDao,
        _orchestrator = orchestrator;
 
   /// Resolve hierarchy selections into leaf-level sefariaRefs.
@@ -339,133 +329,119 @@ class BulkPriorCompletionService {
     );
   }
 
-  /// B8 — Tombstone completion_events created by prior-marking for an item.
+  /// B8 — Tombstone prior-mark completions for an item.
   ///
-  /// Sets `purgedAt` to the current UTC timestamp on every row in
-  /// `completion_events` that matches:
-  ///   - `profileId` == [profileId] (or the session default when null)
-  ///   - `sefariaRef` == [sefariaRef]
-  ///   - `trackType` == personal (prior-marks are always on the personal track)
-  ///   - `eventTimestamp` == `DateTime.utc(2000, 1, 1)` — the bulk-prior
-  ///     sentinel date, distinguishing these rows from live-learning records.
+  /// Identifies the completion documents that a prior-marking run created for
+  /// [sefariaRef] and tombstones them (stamps `purged_at`).
   ///
-  /// C3 invariant: rows are **never deleted** — this is a tombstone write only.
-  /// The `completions_view` (backed by `completion_events WHERE purgedAt IS
-  /// NULL`) will stop returning the row immediately after this call.
+  /// Under the Firestore schema, provenance lives on the document's `source`
+  /// field (`docs/firestore-rewrite-map.md`, "RESOLVED: prior-import tier
+  /// tracking"): a bulk-imported completion has `source == bulkInTrack`; once
+  /// [CompletionOrchestrator] upgrades it to real learning its `source`
+  /// becomes `live` and it is INVISIBLE here. That reproduces the deleted
+  /// `prior_completion_imports`-table semantics with no second table.
   ///
-  /// **Tombstone propagation (Finding 2).** After writing the local tombstone,
-  /// each affected row is enqueued into the outbox so the tombstone reaches
-  /// Firestore. The gateway writes `purged_at` onto the document; other devices
-  /// see it on pull and tombstone their local rows. Requires [_outboxDao] to be
-  /// set; when absent, a warning is logged and propagation is skipped.
+  /// A prior-marked completion is matched exactly on ALL of:
+  ///   - `source == bulkInTrack`
+  ///   - `trackType == 'personal'` (prior-marks are always on the personal track)
+  ///   - `purgedAt == null` (an already-tombstoned row is left alone)
+  ///   - `curriculumId == [curriculumId]`
   ///
-  /// Agent F (UI layer) calls this when the user un-selects a previously
-  /// bulk-marked item so the item reverts to "not started" status.
+  /// C3 invariant: erasure is a TOMBSTONE, never a delete —
+  /// `FirestoreCompletionRepository.purgeCompletion` stamps `purged_at`, and
+  /// `firestore.rules` sets `allow delete: if false`. Owner rulings D-L / D-M.
   ///
-  /// AUD-onboarding-06 (DB-2): steps 2–4 (the tombstone UPDATE, the
-  /// import-record delete, and the outbox-propagation inserts) run inside a
-  /// single [UserDatabase.transaction] call. Pre-fix these were three
-  /// independently-awaited statements; a crash after the tombstone UPDATE
-  /// but before the outbox inserts landed would tombstone the local device
-  /// while the delete/propagation never reached Firestore or other devices —
-  /// this device shows the item unmarked while every synced device still
-  /// shows it complete. Step 1 (the read that decides whether there is
-  /// anything to expunge) stays outside the transaction — it is read-only
-  /// and its result is only used to decide whether to open one.
+  /// **Tombstone propagation.** Under Drift this step enqueued each tombstone
+  /// into a local outbox (`OutboxDao`) so the purge reached Firestore on the
+  /// next sync. That outbox is deleted (`core/sync/` gone): the Firestore
+  /// repositories write through `cloud_firestore` directly and rely on its own
+  /// offline queueing, so no outbox DAO is part of this call path any more.
+  ///
+  /// **D-M — siyum retraction.** Because [execute] marks prior items with
+  /// `creditsAchievement: true`, each one earned a siyum in `learning_ledger`.
+  /// Un-ticking must retract that ledger entry alongside the completion, or the
+  /// two collections disagree permanently. That path goes through
+  /// `FirestoreLearningLedgerRepository.purgeEntry({ulid, purgedAt})`.
+  ///
+  /// `profileId` is intentionally gone: the Firestore repositories are profile-
+  /// scoped by their collection path (`.../learner_profiles/{profileId}/...`),
+  /// so the profile is path-scoped, not a parameter (owner decision 2,
+  /// `docs/firestore-rewrite-map.md`). The only caller that used to thread a
+  /// cross-profile id switched the session's active profile before this runs.
+  ///
+  /// Agent F (UI layer, `bulk_mark_screen.dart`) calls this when the user
+  /// un-selects a previously bulk-marked item so the item reverts to "not
+  /// started" status.
   Future<void> expungePriorCompletions({
-    required int profileId,
     required String sefariaRef,
     required CurriculumId curriculumId,
   }) async {
-    final purgedAt = DateTimeFactory.nowUtc();
-    const trackType = 'personal';
-    final curriculumKey = curriculumId.storageKey;
+    // ── 1. Identify the bulkInTrack completions to tombstone ─────────────────
+    // D-L: reads are profile-scoped to the active profile via
+    // `getCompletionsForContentItem` (no `profileId` parameter needed),
+    // replacing the Drift path-segment lookup. A row upgraded to `live` by
+    // [CompletionOrchestrator] (the B8 upgrade) carries `source == live` and is
+    // therefore excluded here and left untouched — provenance is on the
+    // document, not a separate import table.
+    final candidates =
+        await _completionRepository.getCompletionsForContentItem(sefariaRef);
+    final toExpunge = candidates
+        .where((c) =>
+            c.curriculumId == curriculumId &&
+            c.trackType == 'personal' &&
+            c.source == CompletionSource.bulkInTrack &&
+            c.purgedAt == null)
+        .toList();
 
-    // ── 1. Identify the stage IDs that have prior-import records ─────────────
-    // B8 fix: only tombstone completion_events rows that still have a matching
-    // row in prior_completion_imports. Rows promoted to real-learning by
-    // CompletionWriter (B8 upgrade) will have had their import record deleted,
-    // so they will be invisible here and left untouched.
-    final importRows =
-        await (_database.select(_database.priorCompletionImports)..where(
-              (t) =>
-                  t.profileId.equals(profileId) &
-                  t.sefariaRef.equals(sefariaRef) &
-                  t.curriculumId.equals(curriculumKey) &
-                  t.trackType.equals(trackType),
-            ))
-            .get();
+    if (toExpunge.isEmpty) {
+      // Nothing to expunge. An empty result is a valid, loud answer (D-E): it
+      // means no `bulkInTrack` rows exist for this item — it is NOT a silent
+      // "0".
+      return;
+    }
 
-    if (importRows.isEmpty) return; // Nothing to expunge.
-
-    final stageIds = importRows.map((r) => r.stageId).toList();
-
-    await _database.transaction(() async {
-      // ── 2. Tombstone the completion_events rows for the identified stages ──
-      await (_database.update(_database.completionEvents)..where(
-            (t) =>
-                t.profileId.equals(profileId) &
-                t.sefariaRef.equals(sefariaRef) &
-                t.curriculumId.equals(curriculumKey) &
-                t.trackType.equals(trackType) &
-                t.stageId.isIn(stageIds),
-          ))
-          .write(CompletionEventsCompanion(purgedAt: Value(purgedAt)));
-
-      // ── 3. Delete the import records ────────────────────────────────────────
-      await _database.priorCompletionImportDao.deleteImportsForItem(
-        profileId: profileId,
-        sefariaRef: sefariaRef,
-        curriculumId: curriculumKey,
-        trackType: trackType,
-      );
-
-      // ── 4. Propagate tombstones to Firestore via outbox ─────────────────────
-      if (_outboxDao == null) {
-        // No outbox DAO injected — tombstone is local-only. Acceptable in
-        // tests.
-        return;
-      }
-
-      // Query the rows just tombstoned (within this same transaction) to
-      // build per-row outbox entries.
-      final tombstonedRows =
-          await (_database.select(_database.completionEvents)..where(
-                (t) =>
-                    t.profileId.equals(profileId) &
-                    t.sefariaRef.equals(sefariaRef) &
-                    t.curriculumId.equals(curriculumKey) &
-                    t.trackType.equals(trackType) &
-                    t.stageId.isIn(stageIds) &
-                    t.purgedAt.isNotNull(),
-              ))
-              .get();
-
-      for (final row in tombstonedRows) {
-        final entityKey =
-            '${row.profileId}:${row.sefariaRef}:${row.stageId}:${row.trackType}:${row.curriculumId}';
-        final payload = jsonEncode({
-          'profile_id': row.profileId,
-          'curriculum_id': row.curriculumId,
-          'sefaria_ref': row.sefariaRef,
-          'stage_id': row.stageId,
-          'track_type': row.trackType,
-          'track_id': row.trackId,
-          'completed_at': row.eventTimestamp.toUtc().toIso8601String(),
-          'points': row.points,
-          'purged_at': purgedAt.toUtc().toIso8601String(),
-        });
-        await _outboxDao.insertOutboxRow(
-          OutboxCompanion.insert(
-            profileId: profileId,
-            entityKind: OutboxEntityKind.completion,
-            entityKey: entityKey,
-            payload: payload,
-            createdAt: purgedAt,
-          ),
-        );
-      }
-    });
+    // ── 2. Tombstone + retract the siyum each earned (D-L / D-M) ───────────
+    // D-E: a path that cannot do its job must fail LOUDLY, never silently no-op.
+    //
+    // Purging the completion documents (stamping `purged_at` via
+    // `FirestoreCompletionRepository.purgeCompletion`) and retracting each siyum
+    // (via
+    // `FirestoreLearningLedgerRepository.purgeEntry({ulid, purgedAt})`)
+    // requires seams the domain's repository interfaces do NOT yet expose — and
+    // reaching the Firestore concrete classes directly from this domain service
+    // is forbidden by AD-23/AD-28 (domain may not depend on the data-access
+    // ring) and infeasible (`FirestoreCompletionRepository` /
+    // `FirestoreLearningLedgerRepository` are not Riverpod providers and need
+    // `FirebaseFirestore`/`uid`/`profileId`, which Rule 3 confines to
+    // `core/sync` + `core/auth`).
+    //
+    // A silent return here (the Drift-era "if no outbox, log + skip") would
+    // leave the bulk-marked completions AND their siyum both alive — a silent
+    // `completions` / `learning_ledger` disagreement no gate can catch. Throwing
+    // keeps it visible.
+    throw UnsupportedError(
+      'BulkPriorCompletionService.expungePriorCompletions: located '
+      '${toExpunge.length} bulkInTrack completion(s) for '
+      '(curriculum=${curriculumId.storageKey}, sefariaRef=$sefariaRef) that '
+      'require tombstoning (D-L: purgeCompletion) and siyum retraction '
+      '(D-M: purgeEntry), but the domain repository interfaces do not yet '
+      'expose either seam. Migration path: (1) add '
+      'Future<void> purgeCompletion({required CurriculumId curriculumId, '
+      'required String sefariaRef, required int stageId, required DateTime '
+      'purgedAt}) to CompletionRepository '
+      '(lib/features/learning/domain/repositories/completion_repository.dart), '
+      'implemented in FirestoreCompletionRepositoryAdapter '
+      '(lib/features/learning/data/repositories/completion_repository_impl.dart) '
+      'by delegating to FirestoreCompletionRepository.purgeCompletion '
+      '(lib/data/repositories/firestore_completion_repository.dart); (2) add '
+      'Future<void> purgeEntry({required String ulid, required DateTime '
+      'purgedAt}) to LearningLedgerRepository '
+      '(lib/features/learning/domain/repositories/learning_ledger_repository.dart), '
+      'implemented in its adapter, and inject a LearningLedgerRepository into '
+      'this service so each purged completion can retract the ledger entry it '
+      'earned. Until those exist, expunge must fail loud rather than leave '
+      'bulk-marked completions and their siyum both alive.',
+    );
   }
 
   /// Find the first uncompleted leaf item in learning order.

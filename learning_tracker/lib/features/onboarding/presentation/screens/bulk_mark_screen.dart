@@ -320,7 +320,6 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
       refs.map((ref_) async {
         try {
           await service.expungePriorCompletions(
-            profileId: profileId,
             sefariaRef: ref_,
             curriculumId: widget.curriculumId,
           );

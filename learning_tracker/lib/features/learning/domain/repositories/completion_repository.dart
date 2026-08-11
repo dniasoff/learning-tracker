@@ -1,3 +1,4 @@
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/exceptions/app_exception.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_entity.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
@@ -71,6 +72,18 @@ abstract class CompletionRepository {
     required String sefariaRef,
     required int stageId,
     required String trackType,
+  });
+
+  /// Tombstone a bulk-prior completion document (B8 / D-L).
+  ///
+  /// Delegates to `FirestoreCompletionRepository.purgeCompletion`: stamps
+  /// `purged_at` on the document keyed by (curriculumId, sefariaRef, stageId).
+  /// `firestore.rules` denies `delete`, so erasure is always a tombstone.
+  Future<void> purgeCompletion({
+    required CurriculumId curriculumId,
+    required String sefariaRef,
+    required int stageId,
+    required DateTime purgedAt,
   });
 }
 

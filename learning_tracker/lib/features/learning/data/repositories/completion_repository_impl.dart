@@ -458,4 +458,20 @@ class FirestoreCompletionRepositoryAdapter implements CompletionRepository {
       (e) => e.trackType == trackType && e.stageId == stageId,
     );
   }
+
+  @override
+  Future<void> purgeCompletion({
+    required CurriculumId curriculumId,
+    required String sefariaRef,
+    required int stageId,
+    required DateTime purgedAt,
+  }) async {
+    final repo = await _resolve();
+    await repo.purgeCompletion(
+      curriculumId: curriculumId,
+      sefariaRef: sefariaRef,
+      stageId: stageId,
+      purgedAt: purgedAt,
+    );
+  }
 }

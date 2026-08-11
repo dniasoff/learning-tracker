@@ -95,6 +95,17 @@ abstract class LearningLedgerRepository {
   ///
   /// Returns a map with keys: 'total', 'manual', 'auto'.
   Future<Map<String, int>> getCompletionStats(CurriculumId curriculumId);
+
+  /// Tombstone a learning-ledger entry (D-M / siyum retraction).
+  ///
+  /// Delegates to `FirestoreLearningLedgerRepository.purgeEntry`, stamping
+  /// `purged_at` on the entry keyed by [ulid]. Throws [StateError] when the
+  /// entry is absent — a retraction that cannot find its target fails loudly,
+  /// never a silent no-op (owner ruling D-E).
+  Future<void> purgeEntry({
+    required String ulid,
+    required DateTime purgedAt,
+  });
 }
 
 /// Thrown when a child profile attempts to self-mark a manual completion.
