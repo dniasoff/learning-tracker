@@ -61,9 +61,9 @@ class _AccountActionsSheet extends ConsumerWidget {
     final activeProfileId = ref.watch(activeProfileIdProvider);
     final profilesAsync = ref.watch(profileListStreamProvider);
     final activeProfile = profilesAsync.asData?.value
-        .where((p) => p.id == activeProfileId)
+        .where((p) => p.profileId == activeProfileId)
         .firstOrNull;
-    final isChildProfile = activeProfile?.profileMode == ProfileMode.child;
+    final isChildProfile = activeProfile?.mode == ProfileMode.child;
 
     final parentAuthedProfileId = ref.watch(
       parentPinAuthenticatedProfileIdProvider,

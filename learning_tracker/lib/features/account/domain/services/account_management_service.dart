@@ -1,6 +1,5 @@
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/onboarding_screen.dart'
@@ -12,14 +11,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 class AccountManagementService {
   AccountManagementService({
     required AuthRepository authRepository,
-    required UserDatabase database,
     FlutterSecureStorage? secureStorage,
   }) : _authRepository = authRepository,
-       _database = database,
        _secureStorage = secureStorage ?? const FlutterSecureStorage();
 
   final AuthRepository _authRepository;
-  final UserDatabase _database;
 
   /// Device-scoped secure storage — holds parent/profile/tutor PIN hashes and
   /// lockout state. These are NOT in SharedPreferences and survive a
@@ -80,8 +76,7 @@ class AccountManagementService {
   /// to be called first. Cascade:
   /// 1. Delete Firestore user document and subcollections
   /// 2. Delete Firebase Auth account
-  /// 3. Clear local database (FR103)
-  /// 4. Clear SharedPreferences
+  /// 3. Clear SharedPreferences + secure storage
   ///
   /// Throws [StateError] if there is no signed-in user or if the signed-in
   /// user's UID does not match [uid], preventing accidental cross-account
@@ -99,18 +94,13 @@ class AccountManagementService {
       );
     }
 
-    // 1. Clear local database FIRST — stops SyncEngine from re-pushing local
-    //    data back to Firestore after we delete it in step 2.
-    await _clearLocalDatabase();
-
-    // 2. Delete Firestore data — local DB is now empty so SyncEngine cannot
-    //    race-write the profiles back between this call and step 3.
+    // 1. Delete Firestore data.
     await _deleteFirestoreUserData(uid);
 
-    // 3. Delete Firebase Auth account.
+    // 2. Delete Firebase Auth account.
     //
     //    This can throw (e.g. `requires-recent-login`, transient network) AFTER
-    //    the cloud/local DB wipe. The deletion overlay treats the account as
+    //    the Firestore wipe. The deletion overlay treats the account as
     //    gone regardless and routes the user back to sign-in/sign-up, so if we
     //    let the throw skip the local-state teardown below, the stale
     //    onboarding-complete flag and tutor PIN survive into the next sign-up
@@ -119,7 +109,7 @@ class AccountManagementService {
     try {
       await _authRepository.deleteAccount();
     } finally {
-      // 4. Wipe ALL device-local per-account state. Pre-launch: aggressive
+      // 3. Wipe ALL device-local per-account state. Pre-launch: aggressive
       //    clearing is safe — nothing here should survive a delete.
       await clearLocalDeviceState();
     }
@@ -209,26 +199,6 @@ class AccountManagementService {
         exception: e,
         stackTrace: stackTrace,
       );
-    }
-  }
-
-  /// Clears all data from the local database.
-  ///
-  /// Wipes EVERY table. Foreign-key enforcement is disabled for the duration
-  /// so delete order is irrelevant and this cannot silently rot when a new
-  /// table is added — a prior hand-maintained list had missed the `outbox`
-  /// table (and `daily_plans`), leaving stale pending pushes alive after an
-  /// account deletion.
-  Future<void> _clearLocalDatabase() async {
-    await _database.customStatement('PRAGMA foreign_keys = OFF');
-    try {
-      await _database.transaction(() async {
-        for (final table in _database.allTables) {
-          await _database.delete(table).go();
-        }
-      });
-    } finally {
-      await _database.customStatement('PRAGMA foreign_keys = ON');
     }
   }
 }

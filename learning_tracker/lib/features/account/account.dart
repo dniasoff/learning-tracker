@@ -16,7 +16,6 @@ export 'domain/services/session_persistence_service.dart';
 // Onboarding screens
 export 'onboarding/presentation/screens/onboarding_intent_screen.dart';
 export 'onboarding/presentation/screens/signup_screen.dart';
-export 'presentation/providers/account_management_providers.dart';
 // Presentation providers
 // AUD-account-19: auth_providers.dart's raw Firebase-stream provider was
 // renamed to firebaseAuthStateProvider so it no longer collides with
