@@ -76,12 +76,6 @@ SiyumGranularityPreference siyumGranularityPreference(
   return pref;
 }
 
-/// Fixed storage bucket used for every profile-scoped preference before any
-/// real profile has ever been selected (AD-24 replacement for the old `0`
-/// int sentinel — [ProfileScopedPreference]'s key space is non-nullable, so
-/// "no profile yet" still needs SOME concrete bucket to read/write).
-const _kNoProfileSentinel = '_no_profile_';
-
 void _bindObserver<T>(
   Ref ref,
   ProfileScopedPreference<T> pref,
@@ -110,7 +104,7 @@ void _bindObserver<T>(
 /// profile is being re-resolved (e.g. during an account switch), before
 /// settling back to the real profile id moments later. Without this guard,
 /// `build()` re-fires with a null id, `_bindObserver` reads no stored pref
-/// for [_kNoProfileSentinel], falls back to `pref.defaultValue`, and
+/// for [kNoProfilePreferenceSentinel], falls back to `pref.defaultValue`, and
 /// overwrites the user's explicit choice — visibly flipping the setting and
 /// silently misfiling any toggle tapped inside that window under the
 /// sentinel bucket.
@@ -124,7 +118,7 @@ void _bindObserver<T>(
 ///   final profileId = ref.watch(activeProfileIdProvider);
 ///   if (sentinelBlocksRebind(profileId)) return state;
 ///   final pref = ref.watch(hebrewDatePreferenceProvider);
-///   _bindObserver(ref, pref, profileId ?? _kNoProfileSentinel, (value) {
+///   _bindObserver(ref, pref, profileId ?? kNoProfilePreferenceSentinel, (value) {
 ///     if (value != state) state = value;
 ///   });
 ///   return pref.defaultValue;
@@ -178,14 +172,17 @@ class UseHebrewTerms extends _$UseHebrewTerms
     // been observed. See _SentinelGuardedPreference for details.
     if (sentinelBlocksRebind(profileId)) return state;
     final pref = ref.watch(hebrewTermsPreferenceProvider);
-    _bindObserver(ref, pref, profileId ?? _kNoProfileSentinel, (value) {
+    _bindObserver(ref, pref, profileId ?? kNoProfilePreferenceSentinel, (
+      value,
+    ) {
       if (value != state) state = value;
     });
     return pref.defaultValue;
   }
 
   Future<void> set(bool value) async {
-    final profileId = ref.read(activeProfileIdProvider) ?? _kNoProfileSentinel;
+    final profileId =
+        ref.read(activeProfileIdProvider) ?? kNoProfilePreferenceSentinel;
     final pref = ref.read(hebrewTermsPreferenceProvider);
     final previous = state;
     state = value;
@@ -212,14 +209,17 @@ class UseHebrewDate extends _$UseHebrewDate
     // profileId transiently reverts to `null`.
     if (sentinelBlocksRebind(profileId)) return state;
     final pref = ref.watch(hebrewDatePreferenceProvider);
-    _bindObserver(ref, pref, profileId ?? _kNoProfileSentinel, (value) {
+    _bindObserver(ref, pref, profileId ?? kNoProfilePreferenceSentinel, (
+      value,
+    ) {
       if (value != state) state = value;
     });
     return pref.defaultValue;
   }
 
   Future<void> set(bool value) async {
-    final profileId = ref.read(activeProfileIdProvider) ?? _kNoProfileSentinel;
+    final profileId =
+        ref.read(activeProfileIdProvider) ?? kNoProfilePreferenceSentinel;
     final pref = ref.read(hebrewDatePreferenceProvider);
     final previous = state;
     state = value;
@@ -245,7 +245,9 @@ class ShowNikudPref extends _$ShowNikudPref
     // profileId transiently reverts to `null`.
     if (sentinelBlocksRebind(profileId)) return state;
     final pref = ref.watch(nikudPreferenceProvider);
-    _bindObserver(ref, pref, profileId ?? _kNoProfileSentinel, (value) {
+    _bindObserver(ref, pref, profileId ?? kNoProfilePreferenceSentinel, (
+      value,
+    ) {
       if (value != state) state = value;
     });
     return pref.defaultValue;
@@ -255,7 +257,8 @@ class ShowNikudPref extends _$ShowNikudPref
 
   Future<void> set(bool value) async {
     if (value == state) return;
-    final profileId = ref.read(activeProfileIdProvider) ?? _kNoProfileSentinel;
+    final profileId =
+        ref.read(activeProfileIdProvider) ?? kNoProfilePreferenceSentinel;
     final pref = ref.read(nikudPreferenceProvider);
     final previous = state;
     state = value;
@@ -322,14 +325,17 @@ class CurrentTransliterationVariant extends _$CurrentTransliterationVariant
     // profileId transiently reverts to `null`.
     if (sentinelBlocksRebind(profileId)) return state;
     final pref = ref.watch(transliterationVariantPreferenceProvider);
-    _bindObserver(ref, pref, profileId ?? _kNoProfileSentinel, (value) {
+    _bindObserver(ref, pref, profileId ?? kNoProfilePreferenceSentinel, (
+      value,
+    ) {
       if (value != state) state = value;
     });
     return pref.defaultValue;
   }
 
   Future<void> set(TransliterationVariant variant) async {
-    final profileId = ref.read(activeProfileIdProvider) ?? _kNoProfileSentinel;
+    final profileId =
+        ref.read(activeProfileIdProvider) ?? kNoProfilePreferenceSentinel;
     final pref = ref.read(transliterationVariantPreferenceProvider);
     final previous = state;
     state = variant;
@@ -354,14 +360,17 @@ class CurrentFontSize extends _$CurrentFontSize
     // profileId transiently reverts to `null`.
     if (sentinelBlocksRebind(profileId)) return state;
     final pref = ref.watch(textDisplayPreferenceProvider);
-    _bindObserver(ref, pref, profileId ?? _kNoProfileSentinel, (value) {
+    _bindObserver(ref, pref, profileId ?? kNoProfilePreferenceSentinel, (
+      value,
+    ) {
       if (value != state) state = value;
     });
     return pref.defaultValue;
   }
 
   Future<void> set(FontSize size) async {
-    final profileId = ref.read(activeProfileIdProvider) ?? _kNoProfileSentinel;
+    final profileId =
+        ref.read(activeProfileIdProvider) ?? kNoProfilePreferenceSentinel;
     final pref = ref.read(textDisplayPreferenceProvider);
     final previous = state;
     state = size;
@@ -391,7 +400,9 @@ class SiyumGranularity extends _$SiyumGranularity
     // profileId transiently reverts to `null`.
     if (sentinelBlocksRebind(profileId)) return state;
     final pref = ref.watch(siyumGranularityPreferenceProvider(curriculum));
-    _bindObserver(ref, pref, profileId ?? _kNoProfileSentinel, (value) {
+    _bindObserver(ref, pref, profileId ?? kNoProfilePreferenceSentinel, (
+      value,
+    ) {
       if (value != state) state = value;
     });
     return pref.defaultValue;
@@ -399,7 +410,8 @@ class SiyumGranularity extends _$SiyumGranularity
 
   Future<void> set(MilestoneLevel level) async {
     if (level == state) return;
-    final profileId = ref.read(activeProfileIdProvider) ?? _kNoProfileSentinel;
+    final profileId =
+        ref.read(activeProfileIdProvider) ?? kNoProfilePreferenceSentinel;
     final pref = ref.read(siyumGranularityPreferenceProvider(curriculum));
     final previous = state;
     state = level;

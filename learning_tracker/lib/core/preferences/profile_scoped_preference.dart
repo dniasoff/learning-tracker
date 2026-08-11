@@ -2,6 +2,15 @@ import 'dart:async';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
+/// Fixed storage bucket used for every profile-scoped preference before any
+/// real profile has ever been selected (AD-24 replacement for the old `0`
+/// int sentinel — [ProfileScopedPreference]'s key space is non-nullable, so
+/// "no profile yet" still needs SOME concrete bucket to read/write). Shared
+/// between `preference_providers.dart` (which substitutes this in whenever
+/// `activeProfileIdProvider` is null) and `ProfileScopedPreferenceKeys`
+/// (whose legacy-key fallback branches key off it).
+const kNoProfilePreferenceSentinel = '_no_profile_';
+
 /// Base contract for a per-profile user preference stored in
 /// [SharedPreferences] under a `key_p<profileId>` namespace.
 ///
