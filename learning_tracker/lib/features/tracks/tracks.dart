@@ -8,7 +8,9 @@ library;
 // ── domain services ───────────────────────────────────────────────────────────
 export 'domain/services/curriculum_activation_service.dart';
 // ── track setup / track creation ────────────────────────────────────────────
+export 'setup/data/repositories/curriculum_track_repository_impl.dart';
 export 'setup/domain/entities/add_track_result.dart';
+export 'setup/domain/entities/curriculum_track.dart';
 export 'setup/domain/services/track_creation_service.dart';
 export 'setup/domain/services/track_edit_service.dart';
 export 'setup/presentation/providers/add_track_providers.dart';

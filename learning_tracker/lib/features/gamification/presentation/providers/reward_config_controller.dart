@@ -83,13 +83,7 @@ class RewardConfigController extends _$RewardConfigController {
   /// one debitable balance. The per-track vs Total split is gone, so the form
   /// is always global and no track list is loaded.
   Future<void> bootstrap() async {
-    state = state.copyWith(
-      tracks: const [],
-      selectedTrackId: null,
-      isGlobalReward: true,
-      loading: false,
-      error: null,
-    );
+    state = state.copyWith(loading: false, error: null);
   }
 
   // ── Field mutations ────────────────────────────────────────────────────────
@@ -97,17 +91,6 @@ class RewardConfigController extends _$RewardConfigController {
   void setName(String value) => state = state.copyWith(name: value);
   void setPointsText(String value) => state = state.copyWith(pointsText: value);
   void setIconIndex(int index) => state = state.copyWith(iconIndex: index);
-
-  void setGlobalReward(bool global) {
-    if (state.tracks.isEmpty) {
-      state = state.copyWith(isGlobalReward: true);
-      return;
-    }
-    state = state.copyWith(isGlobalReward: global);
-  }
-
-  void setSelectedTrack(int trackId) =>
-      state = state.copyWith(selectedTrackId: trackId);
 
   // ── Form lifecycle ─────────────────────────────────────────────────────────
 
@@ -117,18 +100,12 @@ class RewardConfigController extends _$RewardConfigController {
       iconIndex: 0,
       name: '',
       pointsText: '',
-      isGlobalReward: state.tracks.isEmpty,
     );
   }
 
   void applyMilestoneToForm(RewardMilestone m) {
-    final isGlobal =
-        state.tracks.isEmpty ||
-        m.trackId == RewardMilestone.kGlobalTrackSentinel;
     state = state.copyWith(
       editingMilestoneId: m.id,
-      isGlobalReward: isGlobal,
-      selectedTrackId: isGlobal ? state.selectedTrackId : m.trackId,
       iconIndex: RewardMilestoneIcons.clampIndex(m.iconIndex),
       name: m.title,
       pointsText: '${m.thresholdPoints}',
@@ -137,14 +114,11 @@ class RewardConfigController extends _$RewardConfigController {
 
   // ── Persistence ────────────────────────────────────────────────────────────
 
-  /// Returns all milestones for the currently selected ladder (global or
-  /// per-track).
+  /// Returns every configured reward milestone (DEC-32/GA-3: there is only
+  /// ever one, global, ladder now).
   Future<List<RewardMilestone>> milestonesForCurrentLadder() async {
     final svc = ref.read(rewardMilestoneServiceProvider);
-    if (state.usesGlobalLadder) return svc.getGlobalMilestones();
-    final tid = state.selectedTrackId;
-    if (tid == null) return const [];
-    return svc.getMilestonesForTrack(tid);
+    return svc.getMilestones();
   }
 
   Future<void> _persistAndSync() async {
@@ -189,9 +163,6 @@ class RewardConfigController extends _$RewardConfigController {
     // result for a same-cost add.
 
     final svc = ref.read(rewardMilestoneServiceProvider);
-    final trackId = state.usesGlobalLadder
-        ? RewardMilestone.kGlobalTrackSentinel
-        : state.selectedTrackId!;
 
     // SM-5 (AUD-gamification-10): the DB/network calls below can throw
     // (a corrupted SharedPreferences write, a failed sync push) -- previously
@@ -205,9 +176,7 @@ class RewardConfigController extends _$RewardConfigController {
       // Guard against duplicate names within the same reward ladder
       // (Fix #21). When editing, allow the existing reward to keep its own
       // name.
-      final currentMilestones = state.usesGlobalLadder
-          ? await svc.getGlobalMilestones()
-          : await svc.getMilestonesForTrack(trackId);
+      final currentMilestones = await svc.getMilestones();
       final isDuplicateName = currentMilestones.any(
         (m) =>
             m.title.trim().toLowerCase() == title.toLowerCase() &&
@@ -216,7 +185,6 @@ class RewardConfigController extends _$RewardConfigController {
       if (isDuplicateName) return const RewardSaveDuplicateName();
 
       await svc.upsertMilestone(
-        trackId: trackId,
         title: title,
         thresholdPoints: pointsParsed,
         milestoneId: state.editingMilestoneId,
@@ -264,7 +232,6 @@ class RewardConfigController extends _$RewardConfigController {
     state = state.copyWith(loading: true, error: null);
     final guarded = await AsyncValue.guard<void>(() async {
       await svc.upsertMilestone(
-        trackId: m.trackId,
         title: m.title,
         thresholdPoints: m.thresholdPoints,
         milestoneId: m.id,

@@ -1,23 +1,32 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/database/daos/completion_dao.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/logging/logger.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
+import 'package:learning_tracker/features/dashboard/data/repositories/firestore_profile_program_reader_adapter.dart';
+import 'package:learning_tracker/features/dashboard/data/repositories/firestore_study_day_reader_adapter.dart';
 import 'package:learning_tracker/features/dashboard/domain/services/next_reward_selector.dart';
-import 'package:learning_tracker/features/dashboard/domain/services/track_completion_service.dart';
 import 'package:learning_tracker/features/dashboard/domain/use_cases/compute_pace_status_use_case.dart';
 import 'package:learning_tracker/features/gamification/gamification.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_tier_filter.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/scheduler/scheduler.dart';
+// Cross-feature deep import (Rule 2, DNI-386) — warn-only per
+// learning_tracker/CLAUDE.md ("pending legacy cleanup"), and progress.dart's
+// own barrel doc comment restricts its exports to types already demonstrably
+// consumed elsewhere. FirestoreChartDataRepositoryAdapter/ChartDataRepository
+// have exactly one other cross-feature consumer today
+// (features/tracks/presentation/providers/track_progress_providers.dart),
+// which reaches them the same deep way.
+import 'package:learning_tracker/features/progress/data/repositories/firestore_chart_data_repository_adapter.dart';
+import 'package:learning_tracker/features/progress/domain/services/chart_data_service.dart'
+    show ChartDataRepository;
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:learning_tracker/features/tracks/presentation/providers/track_progress_providers.dart';
 import 'package:learning_tracker/features/tracks/stages/presentation/providers/stage_providers.dart';
+import 'package:learning_tracker/features/tracks/tracks.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'dashboard_providers.g.dart';
@@ -47,11 +56,11 @@ CrossCurriculumAggregator crossCurriculumAggregator(Ref ref) {
   return CrossCurriculumAggregator();
 }
 
-/// Provider for the active profile's mode, resolved from the [LearnerProfiles]
-/// table.
+/// Provider for the active profile's mode, resolved from the profile
+/// repository.
 ///
-/// Defaults to [ProfileMode.adult] if no profile row is found. This is what
-/// gates child-only gamification UI (points, streaks, celebrations).
+/// Defaults to [ProfileMode.adult] if no profile is active or found. This is
+/// what gates child-only gamification UI (points, streaks, celebrations).
 ///
 /// WS9.enum: unified — formerly returned [UserMode]; now returns [ProfileMode]
 /// directly. [UserMode] enum has been deleted.
@@ -68,26 +77,21 @@ Future<ProfileMode> dashboardUserMode(Ref ref) async {
   // Management access (parent portal, adjust points) is gated independently by
   // route/PIN guards, so showing the child's gamification UI here does NOT
   // grant or revoke any management capability.
-  final db = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
-  final profile = await db.profileDao.getProfileById(profileId);
+  if (profileId == null) return ProfileMode.adult;
+  final repository = ref.watch(profileRepositoryProvider);
+  final profile = await repository.getProfileById(profileId);
   if (profile == null) return ProfileMode.adult;
-  return ProfileMode.fromStorageKey(profile.mode);
+  return profile.mode;
 }
 
 /// Provider for list of active curricula IDs, scoped to active profile.
 @riverpod
 Future<List<CurriculumId>> dashboardActiveCurricula(Ref ref) async {
-  final db = ref.watch(userDatabaseProvider);
-  final profileId = ref.watch(activeProfileIdProvider);
-  final storageKeys = await db.activeCurriculumDao.getActiveCurriculaByProfile(
-    profileId,
-  );
+  final repo = FirestoreCurriculumTrackRepositoryAdapter(ref: ref);
+  final storageKeys = await repo.getActiveCurriculumIds();
   return storageKeys
-      .map<CurriculumId?>((key) {
-        final matches = CurriculumId.values.where((c) => c.storageKey == key);
-        return matches.isNotEmpty ? matches.first : null;
-      })
+      .map(CurriculumId.fromStorageKey)
       .whereType<CurriculumId>()
       .toList();
 }
@@ -95,19 +99,13 @@ Future<List<CurriculumId>> dashboardActiveCurricula(Ref ref) async {
 /// Stream provider for watching active curricula changes, scoped to active profile.
 @riverpod
 Stream<List<CurriculumId>> dashboardActiveCurriculaStream(Ref ref) {
-  final db = ref.watch(userDatabaseProvider);
-  final profileId = ref.watch(activeProfileIdProvider);
-  return db.activeCurriculumDao.watchActiveCurriculaByProfile(profileId).map((
-    storageKeys,
-  ) {
-    return storageKeys
-        .map<CurriculumId?>((key) {
-          final matches = CurriculumId.values.where((c) => c.storageKey == key);
-          return matches.isNotEmpty ? matches.first : null;
-        })
+  final repo = FirestoreCurriculumTrackRepositoryAdapter(ref: ref);
+  return repo.watchActiveCurriculumIds().map(
+    (storageKeys) => storageKeys
+        .map(CurriculumId.fromStorageKey)
         .whereType<CurriculumId>()
-        .toList();
-  });
+        .toList(),
+  );
 }
 
 /// Track completion percentage for the Manage Tracks card.
@@ -121,6 +119,9 @@ Stream<List<CurriculumId>> dashboardActiveCurriculaStream(Ref ref) {
 ///
 /// Delegates computation to [TrackProgressService] (Layer 3 unification).
 ///
+/// AD-25: one track per curriculum — [curriculumId] IS the track identity,
+/// there is no separate Drift track row to resolve it from any more.
+///
 /// **Why this differs from [trackDualProgressMetricsProvider].currentCyclePercentage:**
 /// This answers "how complete is this track overall?" (all-time, multi-stage gate).
 /// The cycle metric answers "how many items has the user touched since the last
@@ -128,36 +129,22 @@ Stream<List<CurriculumId>> dashboardActiveCurriculaStream(Ref ref) {
 ///
 /// See also: [trackDualProgressMetricsProvider] (lifetime_knowledge_providers.dart).
 @riverpod
-Future<double> dashboardTrackCompletionPercentage(Ref ref, int trackId) async {
+Future<double> dashboardTrackCompletionPercentage(
+  Ref ref,
+  CurriculumId curriculumId,
+) async {
   ref.watch<int>(completionCommittedProvider);
-  final db = ref.watch(userDatabaseProvider);
-  final profileId = ref.watch(activeProfileIdProvider);
   final service = ref.watch(trackProgressServiceProvider);
-  final track = await db.trackDao.getTrackById(trackId);
+  final totalItems = await ref.watch(
+    scopedItemCountProvider(curriculumId).future,
+  );
   // Guard: this autoDispose provider may have been disposed during the async
   // gap above (e.g. the user swiped the active-tracks carousel past this
   // card, or left the dashboard mid-load) — see dashboardChildNextReward's
   // identical guard (SM-4, AUD-dashboard-06).
   if (!ref.mounted) return 0.0;
-  if (track == null) return 0.0;
-  final curriculum = CurriculumId.values
-      .where((c) => c.storageKey == track.curriculumId)
-      .firstOrNull;
-  if (curriculum == null) {
-    AppLogger.instance.warning(
-      event:
-          'dashboardTrackCompletionPercentage: unknown curriculumId '
-          '"${track.curriculumId}" for track $trackId — skipping',
-    );
-    return 0.0;
-  }
-  final totalItems = await ref.watch(
-    scopedItemCountProvider(curriculum).future,
-  );
   return service.completionPercent(
-    trackId: trackId,
-    curriculumId: curriculum,
-    profileId: profileId,
+    curriculumId: curriculumId,
     tier: CompletionTierFilter.trackAchievement,
     totalItems: totalItems,
   );
@@ -165,65 +152,28 @@ Future<double> dashboardTrackCompletionPercentage(Ref ref, int trackId) async {
 
 /// Per-curriculum item-based completion percentage, scoped to active profile.
 ///
-/// An item (sefariaRef) is "done" when every required stage for its track has
-/// a completion record.  Required stages = the non-superseded stages defined
-/// for that track.  An item that is fully done in any of its tracks counts
-/// once toward the numerator.
-///
-/// Formula: `(distinct sefariaRefs fully done in any track) / totalLeafItems`.
-///
-/// Delegates computation to [TrackCompletionService].
+/// AD-25: one track per curriculum, so this is now identical to
+/// [dashboardTrackCompletionPercentage] — both delegate to the same
+/// [TrackProgressService] (Layer 3 unification). Kept as a separate provider
+/// because callers ask two conceptually different questions today even
+/// though the answer is computed the same way.
 @riverpod
 Future<double> dashboardCompletionPercentage(
   Ref ref,
   CurriculumId curriculum,
 ) async {
   ref.watch<int>(completionCommittedProvider);
-  final db = ref.watch(userDatabaseProvider);
-  final profileId = ref.watch(activeProfileIdProvider);
-  final stageRepository = ref.watch(globalStageRepositoryProvider);
-
-  final completions = await db.completionDao
-      .getCompletionsByCurriculumAndProfile(curriculum.storageKey, profileId);
+  final service = ref.watch(trackProgressServiceProvider);
+  final totalItems = await ref.watch(
+    scopedItemCountProvider(curriculum).future,
+  );
   // Guard: this autoDispose provider may have been disposed during the async
   // gap above (e.g. the user navigated away from the dashboard mid-load) —
   // see dashboardChildNextReward's identical guard (SM-4, AUD-dashboard-06).
   if (!ref.mounted) return 0.0;
-
-  final totalItems = await ref.watch(
-    scopedItemCountProvider(curriculum).future,
-  );
-  if (totalItems == 0) return 0.0;
-  if (completions.isEmpty) return 0.0;
-
-  // Group completions by trackId.
-  final completionsByTrack = <int, List<Completion>>{};
-  for (final c in completions) {
-    completionsByTrack.putIfAbsent(c.trackId, () => []).add(c);
-  }
-
-  // Fetch required stages for each track encountered.
-  final byTrack = <int, TrackEntry>{};
-  for (final trackId in completionsByTrack.keys) {
-    if (trackId == 0) continue; // bulk-mark sentinel — skip
-    final stages = await stageRepository.getStagesForCurriculum(curriculum);
-    if (stages.isEmpty) {
-      AppLogger.instance.warning(
-        event:
-            'dashboardCompletionPercentage: no stages for curriculum '
-            '${curriculum.storageKey}, skipping — track may be misconfigured',
-      );
-      continue;
-    }
-    byTrack[trackId] = TrackEntry(
-      stages: stages,
-      completions: completionsByTrack[trackId]!,
-    );
-  }
-
-  const service = TrackCompletionService();
-  return service.computeCurriculumPercentage(
-    byTrack: byTrack,
+  return service.completionPercent(
+    curriculumId: curriculum,
+    tier: CompletionTierFilter.trackAchievement,
     totalItems: totalItems,
   );
 }
@@ -235,12 +185,12 @@ Future<DateTime?> dashboardLastCompletion(
   CurriculumId curriculum,
 ) async {
   ref.watch<int>(completionCommittedProvider);
-  final db = ref.watch(userDatabaseProvider);
-  final profileId = ref.watch(activeProfileIdProvider);
-  final completions = await db.completionDao
-      .getCompletionsByCurriculumAndProfile(curriculum.storageKey, profileId);
+  final repository = FirestoreChartDataRepositoryAdapter(ref: ref);
+  final completions = await repository.getCompletionsByTier(
+    tier: CompletionTierFilter.trackAchievement,
+    curriculumId: curriculum,
+  );
   if (completions.isEmpty) return null;
-  // Completions are returned in insertion order; find the latest
   var latest = completions.first.completedAt;
   for (final c in completions) {
     if (c.completedAt.isAfter(latest)) latest = c.completedAt;
@@ -250,57 +200,54 @@ Future<DateTime?> dashboardLastCompletion(
 
 /// Streak data provider, scoped to the active profile.
 ///
-/// Reads streak state through `core/streak/StreakStateService` — the
-/// only read path post-DNI-337. The provider replays the append-only
-/// `streak_events` log through `StreakReducer` (UTC day boundaries),
-/// restoring from `completions` on a new-device empty-log first launch.
-///
-/// Performance note: `completionCommittedProvider` is intentionally NOT
-/// watched here. [CompletionRepositoryImpl._createCompletion] writes a
-/// `streak_events` row on each completion, which Drift surfaces via the
-/// reactive `watch()` query below — no manual trigger needed.
-/// Watching `completionCommittedProvider` would tear down and rebuild the
-/// entire stream subscription on every completion, causing unnecessary
-/// work on every task mark.
+/// Reads streak state through [StreakStateService] — the only read path.
+/// [StreakStateService] delegates to [FirestoreStreakStateRepository], which
+/// derives state from the synced Firestore event log directly (D-E: throws
+/// when the backend isn't ready rather than returning a fabricated zero
+/// streak).
 @riverpod
 Stream<({int currentStreak, int maxStreak})> dashboardStreak(Ref ref) async* {
-  final profileId = ref.watch(activeProfileIdProvider);
   final stateProvider = ref.watch(streakStateProvider);
-  yield* stateProvider
-      .watch(profileId: profileId)
-      .map(
-        (state) =>
-            (currentStreak: state.currentStreak, maxStreak: state.maxStreak),
-      );
+  yield* stateProvider.watch().map(
+    (state) =>
+        (currentStreak: state.currentStreak, maxStreak: state.maxStreak),
+  );
 }
 
 /// Stored debitable points balance, scoped to active child profile (WS7.balance).
 ///
-/// Reads from [PointsBalanceDao] — the spend-economy source of truth (DEC-32).
-/// Returns 0 for adult profiles (Rule 3: adults have no points).
+/// Reads from [FirestorePointsBalanceReaderAdapter] — the spend-economy
+/// source of truth (DEC-32). Returns 0 for adult profiles (Rule 3: adults
+/// have no points).
+///
+/// **Not a live stream, unlike the Drift-era `watchBalance`.** No Firestore
+/// equivalent exists or can cheaply exist: `firestore.rules` caps every
+/// `points_ledger` list/query at `request.query.limit <= 500` (SR-4), so an
+/// unbounded `.snapshots()` listener over the whole ledger is rejected by
+/// the security rules outright — there is no single-listener way to watch
+/// an arbitrarily-long append-only ledger's derived sum live. This re-reads
+/// the balance whenever [completionCommittedProvider] fires (the dominant
+/// mutation path today) or an explicit `ref.invalidate` fires (see
+/// `dashboard_screen.dart`, `progress_screen.dart`,
+/// `after_track_change_invalidation.dart`). A redemption debit/refund or a
+/// parent points adjustment that doesn't itself invalidate this provider
+/// will leave the counter stale until one of those does — a real,
+/// disclosed regression from the Drift-era live stream, tracked rather than
+/// silently accepted (see the phase's task list — the redemption write
+/// path this would need to hook into does not exist in production code
+/// yet either).
 @riverpod
-Stream<int> dashboardGlobalPoints(Ref ref) async* {
-  // Establish sync dependencies before the async gap (Riverpod: no ref.watch
-  // after await).
-  final db = ref.watch(userDatabaseProvider);
-  final profileId = ref.watch(activeProfileIdProvider);
+Future<int> dashboardGlobalPoints(Ref ref) async {
+  ref.watch<int>(completionCommittedProvider);
   // Await the resolved mode via `.future` (does NOT rebuild on loading→data,
-  // unlike watching the AsyncValue — avoids a premature stream that gets
+  // unlike watching the AsyncValue — avoids a premature read that gets
   // disposed mid-load).
   final userMode = await ref.watch(dashboardUserModeProvider.future);
   if (userMode != ProfileMode.child) {
-    yield 0; // adults have no points (product rule)
-    return;
+    return 0; // adults have no points (product rule)
   }
-  // Reactive stream (watchBalance), NOT a one-shot getBalance future: the
-  // dashboard star counter must reflect EVERY balance mutation — completion
-  // credits, redemption debits, and parent decline-refunds — without waiting
-  // for a pull-to-refresh. Previously a Future<int> that only re-ran on
-  // completionCommittedProvider / pull-to-refresh, so a redemption debit (or
-  // refund) left the counter STALE while the dashboard stayed mounted under
-  // the pushed redemption route (D2, on-device F8). watchBalance emits the
-  // current balance on subscribe and on every PointsBalance row change.
-  yield* db.pointsBalanceDao.watchBalance(profileId);
+  final reader = FirestorePointsBalanceReaderAdapter(ref: ref);
+  return reader.getBalance();
 }
 
 /// Write-path effect: strips legacy stock-template milestones for the current
@@ -329,6 +276,12 @@ Future<void> stripStockMilestonesEffect(Ref ref) async {
 /// Next reward milestone for the child dashboard (closest threshold not yet met).
 ///
 /// Delegates selection to [NextRewardSelector].
+///
+/// DEC-32/GA-3: per-track rewards were removed from the spend economy —
+/// every reward is now a single global priced spend-item, so [trackEntries]
+/// is always empty. [NextRewardSelector.select] already handles that
+/// gracefully (falls straight through to the global ladder); see its own
+/// doc comment.
 @riverpod
 Future<DashboardChildNextReward?> dashboardChildNextReward(Ref ref) async {
   ref.watch<int>(completionCommittedProvider);
@@ -344,34 +297,14 @@ Future<DashboardChildNextReward?> dashboardChildNextReward(Ref ref) async {
   // (e.g. user navigated away), the subsequent ref.watch calls would throw.
   if (!ref.mounted) return null;
 
-  final db = ref.watch(userDatabaseProvider);
-  final profileId = ref.watch(activeProfileIdProvider);
   final milestoneService = ref.watch(rewardMilestoneServiceProvider);
 
-  final tracks = await db.trackDao.getActiveTracksForProfile(profileId);
-
-  // Build track entries for the selector.
-  final trackEntries = <TrackMilestoneEntry>[];
-  for (final track in tracks) {
-    final points = await milestoneService.getTrackPointsTotalForRewards(
-      track.id,
-    );
-    final milestones = await milestoneService.getMilestonesForTrack(track.id);
-    trackEntries.add(
-      TrackMilestoneEntry(
-        trackId: track.id,
-        points: points,
-        milestones: milestones,
-      ),
-    );
-  }
-
   final globalPoints = await milestoneService.getGlobalPointsForRewards();
-  final globalMilestones = await milestoneService.getGlobalMilestones();
+  final globalMilestones = await milestoneService.getMilestones();
 
   const selector = NextRewardSelector();
   final result = selector.select(
-    trackEntries: trackEntries,
+    trackEntries: const [],
     globalPoints: globalPoints,
     globalMilestones: globalMilestones,
   );
@@ -410,26 +343,23 @@ Future<PaceStatus?> dashboardPaceStatus(
   CurriculumId curriculum,
 ) async {
   ref.watch<int>(completionCommittedProvider);
-  final db = ref.watch(userDatabaseProvider);
-  final profileId = ref.watch(activeProfileIdProvider);
   final now = ref.watch(clockProvider);
 
-  final goals = await db.goalDao.getGoalsByCurriculumAndProfile(
-    curriculum.storageKey,
-    profileId,
-  );
+  final goalRepo = FirestoreGoalRepositoryAdapter(ref: ref);
+  final goals = await goalRepo.getGoals(curriculum);
   if (goals.isEmpty) return null;
 
   // Pick the most recently created goal — defends against a stale row from
   // an earlier track setup outliving a re-add (the projection must reflect
-  // the goal the user just set, not whichever row the DB returns first).
+  // the goal the user just set, not whichever row the repository returns
+  // first).
   final goal = goals.reduce((a, b) => a.createdAt.isAfter(b.createdAt) ? a : b);
 
-  // Rule-7 (no track types): all tracks are implicitly personal now, so the
-  // `trackType == personal` filter was a no-op that could wrongly drop rows.
-  // Use every completion for the daily counts.
-  final allCompletions = await db.completionDao
-      .getCompletionsByCurriculumAndProfile(curriculum.storageKey, profileId);
+  final chartData = FirestoreChartDataRepositoryAdapter(ref: ref);
+  final allCompletions = await chartData.getCompletionsByTier(
+    tier: CompletionTierFilter.trackAchievement,
+    curriculumId: curriculum,
+  );
 
   final dailyCounts = ComputePaceStatusUseCase.buildDailyCounts(
     allCompletions.map((c) => c.completedAt),
@@ -445,38 +375,26 @@ Future<PaceStatus?> dashboardPaceStatus(
     scopedItemCountProvider(curriculum).future,
   );
 
-  // Reconstruct PaceTarget from the raw Drift Goal row.
-  final PaceTarget? paceTarget;
-  if (goal.goalType == 'deadline' && goal.targetDate != null) {
-    paceTarget = DeadlineTarget(goal.targetDate!.toUtc());
-  } else if (goal.goalType == 'pace' &&
-      goal.paceValue != null &&
-      goal.pacePeriod != null) {
-    paceTarget = PacePeriodTarget(
-      rate: goal.paceValue!,
-      period: goal.pacePeriod!,
-    );
-  } else {
-    paceTarget = null;
-  }
+  // GoalEntity.paceTarget already reconstructs DeadlineTarget/PacePeriodTarget
+  // from the raw goal fields — no need to hand-roll that here.
+  final paceTarget = goal.paceTarget;
 
   // Resolve study-day counts for deadline goals (pace always derived from
   // scope + study-day density — see ComputePaceStatusUseCase).
   int? studyDaysInWindow;
   int? studyDaysPerWeek;
   if (paceTarget is DeadlineTarget) {
+    final studyDayReader = FirestoreStudyDayReaderAdapter(ref: ref);
     final start = LocalDayUtils.extractLocalDate(now);
     final end = LocalDayUtils.extractLocalDate(paceTarget.dueDate.toLocal());
     studyDaysInWindow = end.isBefore(start)
         ? 0
-        : await db.studyDayConfigDao.countStudyDaysInInclusiveDateRangeForTrack(
-            trackId: goal.trackId,
+        : await studyDayReader.countStudyDaysInInclusiveDateRange(
+            curriculumId: curriculum,
             startInclusive: start,
             endInclusive: end,
           );
-    studyDaysPerWeek = await db.studyDayConfigDao.getStudyDaysPerWeekForTrack(
-      trackId: goal.trackId,
-    );
+    studyDaysPerWeek = await studyDayReader.studyDaysPerWeek(curriculum);
   }
 
   const useCase = ComputePaceStatusUseCase();
@@ -496,22 +414,15 @@ Future<PaceStatus?> dashboardPaceStatus(
 /// Whether the active profile has a programmed enrollment for a curriculum.
 final dashboardHasProgramEnrollmentProvider = FutureProvider.autoDispose
     .family<bool, CurriculumId>((ref, curriculum) async {
-      final db = ref.watch(userDatabaseProvider);
-      final profileId = ref.watch(activeProfileIdProvider);
-      final enrollment = await db.profileProgramDao
-          .getProgramForProfileAndCurriculum(profileId, curriculum.storageKey);
-      return enrollment != null;
+      final reader = FirestoreProfileProgramReaderAdapter(ref: ref);
+      return reader.hasProgram(curriculum);
     });
 
 /// Active (non-archived) profile tracks for the dashboard carousel.
-///
-/// Implemented as a hand-written [StreamProvider] because
-/// [CurriculumTrack] (Drift) is not supported as an `@riverpod` return type.
 final dashboardActiveTracksStreamProvider =
-    StreamProvider.autoDispose<List<CurriculumTrack>>((ref) {
-      final db = ref.watch(userDatabaseProvider);
-      final profileId = ref.watch(activeProfileIdProvider);
-      return db.trackDao.watchActiveTracksForProfile(profileId);
+    StreamProvider.autoDispose<List<CurriculumTrackEntity>>((ref) {
+      final repo = FirestoreCurriculumTrackRepositoryAdapter(ref: ref);
+      return repo.watchActiveTracks();
     });
 
 /// Whether a specific track has chazara stages (stage count > 1).
@@ -519,14 +430,15 @@ final dashboardActiveTracksStreamProvider =
 /// A track with a single stage (learn-only / [SingleStageConfiguration])
 /// returns false; any track with 2+ stages (wizard or schedule-spec chazara)
 /// returns true.  Used to gate chazara UI per Rule 8.
-final trackHasChazaraProvider = FutureProvider.autoDispose.family<bool, int>((
-  ref,
-  trackId,
-) async {
-  final db = ref.watch(userDatabaseProvider);
-  final count = await db.stageDao.countStagesForTrack(trackId);
-  return count > 1;
-});
+///
+/// AD-25: keyed on [CurriculumId], not an `int` track id — a curriculum
+/// track has no separate id any more.
+final trackHasChazaraProvider = FutureProvider.autoDispose
+    .family<bool, CurriculumId>((ref, curriculumId) async {
+      final stageRepo = ref.watch(globalStageRepositoryProvider);
+      final stages = await stageRepo.getStagesForCurriculum(curriculumId);
+      return stages.length > 1;
+    });
 
 /// Whether ANY active track for the current profile has chazara enabled.
 ///
@@ -535,12 +447,14 @@ final trackHasChazaraProvider = FutureProvider.autoDispose.family<bool, int>((
 final anyActiveTrackHasChazaraProvider = FutureProvider.autoDispose<bool>((
   ref,
 ) async {
-  final db = ref.watch(userDatabaseProvider);
-  final profileId = ref.watch(activeProfileIdProvider);
-  final tracks = await db.trackDao.getActiveTracksForProfile(profileId);
-  for (final track in tracks) {
-    final count = await db.stageDao.countStagesForTrack(track.id);
-    if (count > 1) return true;
+  final trackRepo = FirestoreCurriculumTrackRepositoryAdapter(ref: ref);
+  final storageKeys = await trackRepo.getActiveCurriculumIds();
+  final stageRepo = ref.watch(globalStageRepositoryProvider);
+  for (final key in storageKeys) {
+    final curriculumId = CurriculumId.fromStorageKey(key);
+    if (curriculumId == null) continue;
+    final stages = await stageRepo.getStagesForCurriculum(curriculumId);
+    if (stages.length > 1) return true;
   }
   return false;
 });

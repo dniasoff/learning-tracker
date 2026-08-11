@@ -65,7 +65,7 @@ class StreakAlertService {
     String? title,
     String Function(int currentStreak)? localizedBody,
   }) async {
-    final streakState = await _streakProvider.read(profileId: _profileId);
+    final streakState = await _streakProvider.read();
 
     if (streakState.currentStreak == 0) {
       await cancelAlert();

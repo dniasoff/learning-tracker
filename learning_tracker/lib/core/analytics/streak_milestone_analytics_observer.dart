@@ -57,7 +57,7 @@ final streakMilestoneAnalyticsObserverProvider =
       final firedMilestones = <int>{};
 
       try {
-        await for (final state in stateProvider.watch(profileId: profileId)) {
+        await for (final state in stateProvider.watch()) {
           try {
             final current = state.currentStreak;
             for (final milestone in kStreakMilestones) {

@@ -1,5 +1,4 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 
 part 'reward_form.freezed.dart';
 
@@ -26,10 +25,7 @@ abstract class RewardForm with _$RewardForm {
     @Default('') String name,
     @Default('') String pointsText,
     @Default(0) int iconIndex,
-    @Default(false) bool isGlobalReward,
-    int? selectedTrackId,
     String? editingMilestoneId,
-    @Default(<CurriculumTrackEntity>[]) List<CurriculumTrackEntity> tracks,
     @Default(false) bool loading,
     String? error,
   }) = _RewardForm;
@@ -39,9 +35,6 @@ abstract class RewardForm with _$RewardForm {
 
   /// Maximum allowed point cost for a reward (GA-2).
   static const int kMaxPointsCost = 99999;
-
-  /// `true` when the selected reward ladder is the global (total-points) one.
-  bool get usesGlobalLadder => tracks.isEmpty || isGlobalReward;
 
   int get previewPoints => int.tryParse(pointsText.trim()) ?? 0;
 

@@ -52,8 +52,7 @@ class StreakStateService {
   /// [StreakStateRepositoryNotReadyException] when no account/profile is
   /// active (D-E: a streak of zero would be indistinguishable from a real
   /// empty read).
-  Future<StreakState> read({required int profileId}) =>
-      _firestoreRepo.getStreak();
+  Future<StreakState> read() => _firestoreRepo.getStreak();
 
   /// Reactive read — re-emits whenever the streak event log changes.
   ///
@@ -71,12 +70,7 @@ class StreakStateService {
   /// The interval need not be precise; it only bounds how long a stale day can
   /// remain on screen. 15 minutes matches the original `_defaultRolloverTicks`.
   ///
-  /// [profileId] is ignored — the repository is profile-scoped by its
-  /// collection path. It is retained so existing call sites keep compiling.
-  Stream<StreakState> watch({
-    required int profileId,
-    Stream<void>? rolloverTicks,
-  }) {
+  Stream<StreakState> watch({Stream<void>? rolloverTicks}) {
     final ticks =
         rolloverTicks ?? Stream<void>.periodic(const Duration(minutes: 15));
     final controller = StreamController<StreakState>();

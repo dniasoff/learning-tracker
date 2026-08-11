@@ -3,6 +3,7 @@ import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
 import 'package:learning_tracker/features/gamification/domain/services/streak_service.dart';
+import 'package:learning_tracker/features/gamification/data/repositories/firestore_points_balance_reader_adapter.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_state_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 
@@ -24,9 +25,11 @@ import 'package:learning_tracker/features/profiles/presentation/providers/active
 
 /// Provider for [RewardMilestoneService], scoped to the active profile.
 final rewardMilestoneServiceProvider = Provider<RewardMilestoneService>((ref) {
-  final database = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
-  return RewardMilestoneService(database, profileId: profileId);
+  return RewardMilestoneService(
+    balanceReader: FirestorePointsBalanceReaderAdapter(ref: ref),
+    profileId: profileId ?? '',
+  );
 });
 
 /// Provider for [StreakStateService].

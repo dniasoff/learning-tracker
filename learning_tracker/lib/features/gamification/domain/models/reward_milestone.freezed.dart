@@ -14,7 +14,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$RewardMilestone {
 
- String get id; int get profileId; int get trackId; String get title;/// Cost in points for the child to redeem this reward (WS7.reward-price).
+ String get id; String get profileId; String get title;/// Cost in points for the child to redeem this reward (WS7.reward-price).
 ///
 /// Stored under the `threshold_points` JSON key for backward
 /// compatibility with existing cloud payloads. In the spend-economy
@@ -33,16 +33,16 @@ $RewardMilestoneCopyWith<RewardMilestone> get copyWith => _$RewardMilestoneCopyW
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is RewardMilestone&&(identical(other.id, id) || other.id == id)&&(identical(other.profileId, profileId) || other.profileId == profileId)&&(identical(other.trackId, trackId) || other.trackId == trackId)&&(identical(other.title, title) || other.title == title)&&(identical(other.thresholdPoints, thresholdPoints) || other.thresholdPoints == thresholdPoints)&&(identical(other.isEnabled, isEnabled) || other.isEnabled == isEnabled)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt)&&(identical(other.iconIndex, iconIndex) || other.iconIndex == iconIndex));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is RewardMilestone&&(identical(other.id, id) || other.id == id)&&(identical(other.profileId, profileId) || other.profileId == profileId)&&(identical(other.title, title) || other.title == title)&&(identical(other.thresholdPoints, thresholdPoints) || other.thresholdPoints == thresholdPoints)&&(identical(other.isEnabled, isEnabled) || other.isEnabled == isEnabled)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt)&&(identical(other.iconIndex, iconIndex) || other.iconIndex == iconIndex));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,id,profileId,trackId,title,thresholdPoints,isEnabled,createdAt,updatedAt,iconIndex);
+int get hashCode => Object.hash(runtimeType,id,profileId,title,thresholdPoints,isEnabled,createdAt,updatedAt,iconIndex);
 
 @override
 String toString() {
-  return 'RewardMilestone(id: $id, profileId: $profileId, trackId: $trackId, title: $title, thresholdPoints: $thresholdPoints, isEnabled: $isEnabled, createdAt: $createdAt, updatedAt: $updatedAt, iconIndex: $iconIndex)';
+  return 'RewardMilestone(id: $id, profileId: $profileId, title: $title, thresholdPoints: $thresholdPoints, isEnabled: $isEnabled, createdAt: $createdAt, updatedAt: $updatedAt, iconIndex: $iconIndex)';
 }
 
 
@@ -53,7 +53,7 @@ abstract mixin class $RewardMilestoneCopyWith<$Res>  {
   factory $RewardMilestoneCopyWith(RewardMilestone value, $Res Function(RewardMilestone) _then) = _$RewardMilestoneCopyWithImpl;
 @useResult
 $Res call({
- String id, int profileId, int trackId, String title, int thresholdPoints, bool isEnabled, DateTime createdAt, DateTime updatedAt, int iconIndex
+ String id, String profileId, String title, int thresholdPoints, bool isEnabled, DateTime createdAt, DateTime updatedAt, int iconIndex
 });
 
 
@@ -70,12 +70,11 @@ class _$RewardMilestoneCopyWithImpl<$Res>
 
 /// Create a copy of RewardMilestone
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? profileId = null,Object? trackId = null,Object? title = null,Object? thresholdPoints = null,Object? isEnabled = null,Object? createdAt = null,Object? updatedAt = null,Object? iconIndex = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? profileId = null,Object? title = null,Object? thresholdPoints = null,Object? isEnabled = null,Object? createdAt = null,Object? updatedAt = null,Object? iconIndex = null,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,profileId: null == profileId ? _self.profileId : profileId // ignore: cast_nullable_to_non_nullable
-as int,trackId: null == trackId ? _self.trackId : trackId // ignore: cast_nullable_to_non_nullable
-as int,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
+as String,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
 as String,thresholdPoints: null == thresholdPoints ? _self.thresholdPoints : thresholdPoints // ignore: cast_nullable_to_non_nullable
 as int,isEnabled: null == isEnabled ? _self.isEnabled : isEnabled // ignore: cast_nullable_to_non_nullable
 as bool,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
@@ -166,10 +165,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  int profileId,  int trackId,  String title,  int thresholdPoints,  bool isEnabled,  DateTime createdAt,  DateTime updatedAt,  int iconIndex)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String profileId,  String title,  int thresholdPoints,  bool isEnabled,  DateTime createdAt,  DateTime updatedAt,  int iconIndex)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _RewardMilestone() when $default != null:
-return $default(_that.id,_that.profileId,_that.trackId,_that.title,_that.thresholdPoints,_that.isEnabled,_that.createdAt,_that.updatedAt,_that.iconIndex);case _:
+return $default(_that.id,_that.profileId,_that.title,_that.thresholdPoints,_that.isEnabled,_that.createdAt,_that.updatedAt,_that.iconIndex);case _:
   return orElse();
 
 }
@@ -187,10 +186,10 @@ return $default(_that.id,_that.profileId,_that.trackId,_that.title,_that.thresho
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  int profileId,  int trackId,  String title,  int thresholdPoints,  bool isEnabled,  DateTime createdAt,  DateTime updatedAt,  int iconIndex)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String profileId,  String title,  int thresholdPoints,  bool isEnabled,  DateTime createdAt,  DateTime updatedAt,  int iconIndex)  $default,) {final _that = this;
 switch (_that) {
 case _RewardMilestone():
-return $default(_that.id,_that.profileId,_that.trackId,_that.title,_that.thresholdPoints,_that.isEnabled,_that.createdAt,_that.updatedAt,_that.iconIndex);case _:
+return $default(_that.id,_that.profileId,_that.title,_that.thresholdPoints,_that.isEnabled,_that.createdAt,_that.updatedAt,_that.iconIndex);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -207,10 +206,10 @@ return $default(_that.id,_that.profileId,_that.trackId,_that.title,_that.thresho
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  int profileId,  int trackId,  String title,  int thresholdPoints,  bool isEnabled,  DateTime createdAt,  DateTime updatedAt,  int iconIndex)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String profileId,  String title,  int thresholdPoints,  bool isEnabled,  DateTime createdAt,  DateTime updatedAt,  int iconIndex)?  $default,) {final _that = this;
 switch (_that) {
 case _RewardMilestone() when $default != null:
-return $default(_that.id,_that.profileId,_that.trackId,_that.title,_that.thresholdPoints,_that.isEnabled,_that.createdAt,_that.updatedAt,_that.iconIndex);case _:
+return $default(_that.id,_that.profileId,_that.title,_that.thresholdPoints,_that.isEnabled,_that.createdAt,_that.updatedAt,_that.iconIndex);case _:
   return null;
 
 }
@@ -222,12 +221,11 @@ return $default(_that.id,_that.profileId,_that.trackId,_that.title,_that.thresho
 
 
 class _RewardMilestone extends RewardMilestone {
-  const _RewardMilestone({required this.id, required this.profileId, required this.trackId, required this.title, required this.thresholdPoints, required this.isEnabled, required this.createdAt, required this.updatedAt, this.iconIndex = 0}): super._();
+  const _RewardMilestone({required this.id, required this.profileId, required this.title, required this.thresholdPoints, required this.isEnabled, required this.createdAt, required this.updatedAt, this.iconIndex = 0}): super._();
   
 
 @override final  String id;
-@override final  int profileId;
-@override final  int trackId;
+@override final  String profileId;
 @override final  String title;
 /// Cost in points for the child to redeem this reward (WS7.reward-price).
 ///
@@ -253,16 +251,16 @@ _$RewardMilestoneCopyWith<_RewardMilestone> get copyWith => __$RewardMilestoneCo
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _RewardMilestone&&(identical(other.id, id) || other.id == id)&&(identical(other.profileId, profileId) || other.profileId == profileId)&&(identical(other.trackId, trackId) || other.trackId == trackId)&&(identical(other.title, title) || other.title == title)&&(identical(other.thresholdPoints, thresholdPoints) || other.thresholdPoints == thresholdPoints)&&(identical(other.isEnabled, isEnabled) || other.isEnabled == isEnabled)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt)&&(identical(other.iconIndex, iconIndex) || other.iconIndex == iconIndex));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _RewardMilestone&&(identical(other.id, id) || other.id == id)&&(identical(other.profileId, profileId) || other.profileId == profileId)&&(identical(other.title, title) || other.title == title)&&(identical(other.thresholdPoints, thresholdPoints) || other.thresholdPoints == thresholdPoints)&&(identical(other.isEnabled, isEnabled) || other.isEnabled == isEnabled)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt)&&(identical(other.iconIndex, iconIndex) || other.iconIndex == iconIndex));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,id,profileId,trackId,title,thresholdPoints,isEnabled,createdAt,updatedAt,iconIndex);
+int get hashCode => Object.hash(runtimeType,id,profileId,title,thresholdPoints,isEnabled,createdAt,updatedAt,iconIndex);
 
 @override
 String toString() {
-  return 'RewardMilestone(id: $id, profileId: $profileId, trackId: $trackId, title: $title, thresholdPoints: $thresholdPoints, isEnabled: $isEnabled, createdAt: $createdAt, updatedAt: $updatedAt, iconIndex: $iconIndex)';
+  return 'RewardMilestone(id: $id, profileId: $profileId, title: $title, thresholdPoints: $thresholdPoints, isEnabled: $isEnabled, createdAt: $createdAt, updatedAt: $updatedAt, iconIndex: $iconIndex)';
 }
 
 
@@ -273,7 +271,7 @@ abstract mixin class _$RewardMilestoneCopyWith<$Res> implements $RewardMilestone
   factory _$RewardMilestoneCopyWith(_RewardMilestone value, $Res Function(_RewardMilestone) _then) = __$RewardMilestoneCopyWithImpl;
 @override @useResult
 $Res call({
- String id, int profileId, int trackId, String title, int thresholdPoints, bool isEnabled, DateTime createdAt, DateTime updatedAt, int iconIndex
+ String id, String profileId, String title, int thresholdPoints, bool isEnabled, DateTime createdAt, DateTime updatedAt, int iconIndex
 });
 
 
@@ -290,12 +288,11 @@ class __$RewardMilestoneCopyWithImpl<$Res>
 
 /// Create a copy of RewardMilestone
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? profileId = null,Object? trackId = null,Object? title = null,Object? thresholdPoints = null,Object? isEnabled = null,Object? createdAt = null,Object? updatedAt = null,Object? iconIndex = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? profileId = null,Object? title = null,Object? thresholdPoints = null,Object? isEnabled = null,Object? createdAt = null,Object? updatedAt = null,Object? iconIndex = null,}) {
   return _then(_RewardMilestone(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,profileId: null == profileId ? _self.profileId : profileId // ignore: cast_nullable_to_non_nullable
-as int,trackId: null == trackId ? _self.trackId : trackId // ignore: cast_nullable_to_non_nullable
-as int,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
+as String,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
 as String,thresholdPoints: null == thresholdPoints ? _self.thresholdPoints : thresholdPoints // ignore: cast_nullable_to_non_nullable
 as int,isEnabled: null == isEnabled ? _self.isEnabled : isEnabled // ignore: cast_nullable_to_non_nullable
 as bool,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
@@ -311,7 +308,7 @@ as int,
 /// @nodoc
 mixin _$RewardUnlockRecord {
 
- String get milestoneId; int get profileId; int get trackId; String get title; int get thresholdPoints; int get pointsAtUnlock; DateTime get unlockedAt;
+ String get milestoneId; String get profileId; String get title; int get thresholdPoints; int get pointsAtUnlock; DateTime get unlockedAt;
 /// Create a copy of RewardUnlockRecord
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -322,16 +319,16 @@ $RewardUnlockRecordCopyWith<RewardUnlockRecord> get copyWith => _$RewardUnlockRe
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is RewardUnlockRecord&&(identical(other.milestoneId, milestoneId) || other.milestoneId == milestoneId)&&(identical(other.profileId, profileId) || other.profileId == profileId)&&(identical(other.trackId, trackId) || other.trackId == trackId)&&(identical(other.title, title) || other.title == title)&&(identical(other.thresholdPoints, thresholdPoints) || other.thresholdPoints == thresholdPoints)&&(identical(other.pointsAtUnlock, pointsAtUnlock) || other.pointsAtUnlock == pointsAtUnlock)&&(identical(other.unlockedAt, unlockedAt) || other.unlockedAt == unlockedAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is RewardUnlockRecord&&(identical(other.milestoneId, milestoneId) || other.milestoneId == milestoneId)&&(identical(other.profileId, profileId) || other.profileId == profileId)&&(identical(other.title, title) || other.title == title)&&(identical(other.thresholdPoints, thresholdPoints) || other.thresholdPoints == thresholdPoints)&&(identical(other.pointsAtUnlock, pointsAtUnlock) || other.pointsAtUnlock == pointsAtUnlock)&&(identical(other.unlockedAt, unlockedAt) || other.unlockedAt == unlockedAt));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,milestoneId,profileId,trackId,title,thresholdPoints,pointsAtUnlock,unlockedAt);
+int get hashCode => Object.hash(runtimeType,milestoneId,profileId,title,thresholdPoints,pointsAtUnlock,unlockedAt);
 
 @override
 String toString() {
-  return 'RewardUnlockRecord(milestoneId: $milestoneId, profileId: $profileId, trackId: $trackId, title: $title, thresholdPoints: $thresholdPoints, pointsAtUnlock: $pointsAtUnlock, unlockedAt: $unlockedAt)';
+  return 'RewardUnlockRecord(milestoneId: $milestoneId, profileId: $profileId, title: $title, thresholdPoints: $thresholdPoints, pointsAtUnlock: $pointsAtUnlock, unlockedAt: $unlockedAt)';
 }
 
 
@@ -342,7 +339,7 @@ abstract mixin class $RewardUnlockRecordCopyWith<$Res>  {
   factory $RewardUnlockRecordCopyWith(RewardUnlockRecord value, $Res Function(RewardUnlockRecord) _then) = _$RewardUnlockRecordCopyWithImpl;
 @useResult
 $Res call({
- String milestoneId, int profileId, int trackId, String title, int thresholdPoints, int pointsAtUnlock, DateTime unlockedAt
+ String milestoneId, String profileId, String title, int thresholdPoints, int pointsAtUnlock, DateTime unlockedAt
 });
 
 
@@ -359,12 +356,11 @@ class _$RewardUnlockRecordCopyWithImpl<$Res>
 
 /// Create a copy of RewardUnlockRecord
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? milestoneId = null,Object? profileId = null,Object? trackId = null,Object? title = null,Object? thresholdPoints = null,Object? pointsAtUnlock = null,Object? unlockedAt = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? milestoneId = null,Object? profileId = null,Object? title = null,Object? thresholdPoints = null,Object? pointsAtUnlock = null,Object? unlockedAt = null,}) {
   return _then(_self.copyWith(
 milestoneId: null == milestoneId ? _self.milestoneId : milestoneId // ignore: cast_nullable_to_non_nullable
 as String,profileId: null == profileId ? _self.profileId : profileId // ignore: cast_nullable_to_non_nullable
-as int,trackId: null == trackId ? _self.trackId : trackId // ignore: cast_nullable_to_non_nullable
-as int,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
+as String,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
 as String,thresholdPoints: null == thresholdPoints ? _self.thresholdPoints : thresholdPoints // ignore: cast_nullable_to_non_nullable
 as int,pointsAtUnlock: null == pointsAtUnlock ? _self.pointsAtUnlock : pointsAtUnlock // ignore: cast_nullable_to_non_nullable
 as int,unlockedAt: null == unlockedAt ? _self.unlockedAt : unlockedAt // ignore: cast_nullable_to_non_nullable
@@ -453,10 +449,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String milestoneId,  int profileId,  int trackId,  String title,  int thresholdPoints,  int pointsAtUnlock,  DateTime unlockedAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String milestoneId,  String profileId,  String title,  int thresholdPoints,  int pointsAtUnlock,  DateTime unlockedAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _RewardUnlockRecord() when $default != null:
-return $default(_that.milestoneId,_that.profileId,_that.trackId,_that.title,_that.thresholdPoints,_that.pointsAtUnlock,_that.unlockedAt);case _:
+return $default(_that.milestoneId,_that.profileId,_that.title,_that.thresholdPoints,_that.pointsAtUnlock,_that.unlockedAt);case _:
   return orElse();
 
 }
@@ -474,10 +470,10 @@ return $default(_that.milestoneId,_that.profileId,_that.trackId,_that.title,_tha
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String milestoneId,  int profileId,  int trackId,  String title,  int thresholdPoints,  int pointsAtUnlock,  DateTime unlockedAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String milestoneId,  String profileId,  String title,  int thresholdPoints,  int pointsAtUnlock,  DateTime unlockedAt)  $default,) {final _that = this;
 switch (_that) {
 case _RewardUnlockRecord():
-return $default(_that.milestoneId,_that.profileId,_that.trackId,_that.title,_that.thresholdPoints,_that.pointsAtUnlock,_that.unlockedAt);case _:
+return $default(_that.milestoneId,_that.profileId,_that.title,_that.thresholdPoints,_that.pointsAtUnlock,_that.unlockedAt);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -494,10 +490,10 @@ return $default(_that.milestoneId,_that.profileId,_that.trackId,_that.title,_tha
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String milestoneId,  int profileId,  int trackId,  String title,  int thresholdPoints,  int pointsAtUnlock,  DateTime unlockedAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String milestoneId,  String profileId,  String title,  int thresholdPoints,  int pointsAtUnlock,  DateTime unlockedAt)?  $default,) {final _that = this;
 switch (_that) {
 case _RewardUnlockRecord() when $default != null:
-return $default(_that.milestoneId,_that.profileId,_that.trackId,_that.title,_that.thresholdPoints,_that.pointsAtUnlock,_that.unlockedAt);case _:
+return $default(_that.milestoneId,_that.profileId,_that.title,_that.thresholdPoints,_that.pointsAtUnlock,_that.unlockedAt);case _:
   return null;
 
 }
@@ -509,12 +505,11 @@ return $default(_that.milestoneId,_that.profileId,_that.trackId,_that.title,_tha
 
 
 class _RewardUnlockRecord extends RewardUnlockRecord {
-  const _RewardUnlockRecord({required this.milestoneId, required this.profileId, required this.trackId, required this.title, required this.thresholdPoints, required this.pointsAtUnlock, required this.unlockedAt}): super._();
+  const _RewardUnlockRecord({required this.milestoneId, required this.profileId, required this.title, required this.thresholdPoints, required this.pointsAtUnlock, required this.unlockedAt}): super._();
   
 
 @override final  String milestoneId;
-@override final  int profileId;
-@override final  int trackId;
+@override final  String profileId;
 @override final  String title;
 @override final  int thresholdPoints;
 @override final  int pointsAtUnlock;
@@ -530,16 +525,16 @@ _$RewardUnlockRecordCopyWith<_RewardUnlockRecord> get copyWith => __$RewardUnloc
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _RewardUnlockRecord&&(identical(other.milestoneId, milestoneId) || other.milestoneId == milestoneId)&&(identical(other.profileId, profileId) || other.profileId == profileId)&&(identical(other.trackId, trackId) || other.trackId == trackId)&&(identical(other.title, title) || other.title == title)&&(identical(other.thresholdPoints, thresholdPoints) || other.thresholdPoints == thresholdPoints)&&(identical(other.pointsAtUnlock, pointsAtUnlock) || other.pointsAtUnlock == pointsAtUnlock)&&(identical(other.unlockedAt, unlockedAt) || other.unlockedAt == unlockedAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _RewardUnlockRecord&&(identical(other.milestoneId, milestoneId) || other.milestoneId == milestoneId)&&(identical(other.profileId, profileId) || other.profileId == profileId)&&(identical(other.title, title) || other.title == title)&&(identical(other.thresholdPoints, thresholdPoints) || other.thresholdPoints == thresholdPoints)&&(identical(other.pointsAtUnlock, pointsAtUnlock) || other.pointsAtUnlock == pointsAtUnlock)&&(identical(other.unlockedAt, unlockedAt) || other.unlockedAt == unlockedAt));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,milestoneId,profileId,trackId,title,thresholdPoints,pointsAtUnlock,unlockedAt);
+int get hashCode => Object.hash(runtimeType,milestoneId,profileId,title,thresholdPoints,pointsAtUnlock,unlockedAt);
 
 @override
 String toString() {
-  return 'RewardUnlockRecord(milestoneId: $milestoneId, profileId: $profileId, trackId: $trackId, title: $title, thresholdPoints: $thresholdPoints, pointsAtUnlock: $pointsAtUnlock, unlockedAt: $unlockedAt)';
+  return 'RewardUnlockRecord(milestoneId: $milestoneId, profileId: $profileId, title: $title, thresholdPoints: $thresholdPoints, pointsAtUnlock: $pointsAtUnlock, unlockedAt: $unlockedAt)';
 }
 
 
@@ -550,7 +545,7 @@ abstract mixin class _$RewardUnlockRecordCopyWith<$Res> implements $RewardUnlock
   factory _$RewardUnlockRecordCopyWith(_RewardUnlockRecord value, $Res Function(_RewardUnlockRecord) _then) = __$RewardUnlockRecordCopyWithImpl;
 @override @useResult
 $Res call({
- String milestoneId, int profileId, int trackId, String title, int thresholdPoints, int pointsAtUnlock, DateTime unlockedAt
+ String milestoneId, String profileId, String title, int thresholdPoints, int pointsAtUnlock, DateTime unlockedAt
 });
 
 
@@ -567,12 +562,11 @@ class __$RewardUnlockRecordCopyWithImpl<$Res>
 
 /// Create a copy of RewardUnlockRecord
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? milestoneId = null,Object? profileId = null,Object? trackId = null,Object? title = null,Object? thresholdPoints = null,Object? pointsAtUnlock = null,Object? unlockedAt = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? milestoneId = null,Object? profileId = null,Object? title = null,Object? thresholdPoints = null,Object? pointsAtUnlock = null,Object? unlockedAt = null,}) {
   return _then(_RewardUnlockRecord(
 milestoneId: null == milestoneId ? _self.milestoneId : milestoneId // ignore: cast_nullable_to_non_nullable
 as String,profileId: null == profileId ? _self.profileId : profileId // ignore: cast_nullable_to_non_nullable
-as int,trackId: null == trackId ? _self.trackId : trackId // ignore: cast_nullable_to_non_nullable
-as int,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
+as String,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
 as String,thresholdPoints: null == thresholdPoints ? _self.thresholdPoints : thresholdPoints // ignore: cast_nullable_to_non_nullable
 as int,pointsAtUnlock: null == pointsAtUnlock ? _self.pointsAtUnlock : pointsAtUnlock // ignore: cast_nullable_to_non_nullable
 as int,unlockedAt: null == unlockedAt ? _self.unlockedAt : unlockedAt // ignore: cast_nullable_to_non_nullable

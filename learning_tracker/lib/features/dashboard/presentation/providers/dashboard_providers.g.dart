@@ -61,11 +61,11 @@ final class CrossCurriculumAggregatorProvider
 String _$crossCurriculumAggregatorHash() =>
     r'1819b08e0b5c27a2886dc5d9196d1db55ba9384f';
 
-/// Provider for the active profile's mode, resolved from the [LearnerProfiles]
-/// table.
+/// Provider for the active profile's mode, resolved from the profile
+/// repository.
 ///
-/// Defaults to [ProfileMode.adult] if no profile row is found. This is what
-/// gates child-only gamification UI (points, streaks, celebrations).
+/// Defaults to [ProfileMode.adult] if no profile is active or found. This is
+/// what gates child-only gamification UI (points, streaks, celebrations).
 ///
 /// WS9.enum: unified — formerly returned [UserMode]; now returns [ProfileMode]
 /// directly. [UserMode] enum has been deleted.
@@ -73,11 +73,11 @@ String _$crossCurriculumAggregatorHash() =>
 @ProviderFor(dashboardUserMode)
 final dashboardUserModeProvider = DashboardUserModeProvider._();
 
-/// Provider for the active profile's mode, resolved from the [LearnerProfiles]
-/// table.
+/// Provider for the active profile's mode, resolved from the profile
+/// repository.
 ///
-/// Defaults to [ProfileMode.adult] if no profile row is found. This is what
-/// gates child-only gamification UI (points, streaks, celebrations).
+/// Defaults to [ProfileMode.adult] if no profile is active or found. This is
+/// what gates child-only gamification UI (points, streaks, celebrations).
 ///
 /// WS9.enum: unified — formerly returned [UserMode]; now returns [ProfileMode]
 /// directly. [UserMode] enum has been deleted.
@@ -90,11 +90,11 @@ final class DashboardUserModeProvider
           FutureOr<ProfileMode>
         >
     with $FutureModifier<ProfileMode>, $FutureProvider<ProfileMode> {
-  /// Provider for the active profile's mode, resolved from the [LearnerProfiles]
-  /// table.
+  /// Provider for the active profile's mode, resolved from the profile
+  /// repository.
   ///
-  /// Defaults to [ProfileMode.adult] if no profile row is found. This is what
-  /// gates child-only gamification UI (points, streaks, celebrations).
+  /// Defaults to [ProfileMode.adult] if no profile is active or found. This is
+  /// what gates child-only gamification UI (points, streaks, celebrations).
   ///
   /// WS9.enum: unified — formerly returned [UserMode]; now returns [ProfileMode]
   /// directly. [UserMode] enum has been deleted.
@@ -124,7 +124,7 @@ final class DashboardUserModeProvider
   }
 }
 
-String _$dashboardUserModeHash() => r'1c87fec8197ef6b77fafc77b457a3012f71aa361';
+String _$dashboardUserModeHash() => r'eae792786d70934fa955edf11e92b3d7bb918819';
 
 /// Provider for list of active curricula IDs, scoped to active profile.
 
@@ -171,7 +171,7 @@ final class DashboardActiveCurriculaProvider
 }
 
 String _$dashboardActiveCurriculaHash() =>
-    r'bcbc18bb9a788007e9d8e0f89b9cd92f02707587';
+    r'f4b4821afef9d0aaa61ff607e12a586391fb8bd0';
 
 /// Stream provider for watching active curricula changes, scoped to active profile.
 
@@ -219,7 +219,7 @@ final class DashboardActiveCurriculaStreamProvider
 }
 
 String _$dashboardActiveCurriculaStreamHash() =>
-    r'9689fa138119b78a0b3bf8ad2013549a05ca3d37';
+    r'9380412258f124a96956febb02184384cd103822';
 
 /// Track completion percentage for the Manage Tracks card.
 ///
@@ -231,6 +231,9 @@ String _$dashboardActiveCurriculaStreamHash() =>
 /// completion record.  Formula: `(done items) / totalItems`.
 ///
 /// Delegates computation to [TrackProgressService] (Layer 3 unification).
+///
+/// AD-25: one track per curriculum — [curriculumId] IS the track identity,
+/// there is no separate Drift track row to resolve it from any more.
 ///
 /// **Why this differs from [trackDualProgressMetricsProvider].currentCyclePercentage:**
 /// This answers "how complete is this track overall?" (all-time, multi-stage gate).
@@ -254,6 +257,9 @@ final dashboardTrackCompletionPercentageProvider =
 ///
 /// Delegates computation to [TrackProgressService] (Layer 3 unification).
 ///
+/// AD-25: one track per curriculum — [curriculumId] IS the track identity,
+/// there is no separate Drift track row to resolve it from any more.
+///
 /// **Why this differs from [trackDualProgressMetricsProvider].currentCyclePercentage:**
 /// This answers "how complete is this track overall?" (all-time, multi-stage gate).
 /// The cycle metric answers "how many items has the user touched since the last
@@ -275,6 +281,9 @@ final class DashboardTrackCompletionPercentageProvider
   ///
   /// Delegates computation to [TrackProgressService] (Layer 3 unification).
   ///
+  /// AD-25: one track per curriculum — [curriculumId] IS the track identity,
+  /// there is no separate Drift track row to resolve it from any more.
+  ///
   /// **Why this differs from [trackDualProgressMetricsProvider].currentCyclePercentage:**
   /// This answers "how complete is this track overall?" (all-time, multi-stage gate).
   /// The cycle metric answers "how many items has the user touched since the last
@@ -283,7 +292,7 @@ final class DashboardTrackCompletionPercentageProvider
   /// See also: [trackDualProgressMetricsProvider] (lifetime_knowledge_providers.dart).
   DashboardTrackCompletionPercentageProvider._({
     required DashboardTrackCompletionPercentageFamily super.from,
-    required int super.argument,
+    required CurriculumId super.argument,
   }) : super(
          retry: null,
          name: r'dashboardTrackCompletionPercentageProvider',
@@ -310,7 +319,7 @@ final class DashboardTrackCompletionPercentageProvider
 
   @override
   FutureOr<double> create(Ref ref) {
-    final argument = this.argument as int;
+    final argument = this.argument as CurriculumId;
     return dashboardTrackCompletionPercentage(ref, argument);
   }
 
@@ -327,7 +336,7 @@ final class DashboardTrackCompletionPercentageProvider
 }
 
 String _$dashboardTrackCompletionPercentageHash() =>
-    r'73661bfa24a76c144641292f9bc2116eb57aa697';
+    r'baeea6bceb9d42f5a6b95a6f24a1009b942e8d1f';
 
 /// Track completion percentage for the Manage Tracks card.
 ///
@@ -340,6 +349,9 @@ String _$dashboardTrackCompletionPercentageHash() =>
 ///
 /// Delegates computation to [TrackProgressService] (Layer 3 unification).
 ///
+/// AD-25: one track per curriculum — [curriculumId] IS the track identity,
+/// there is no separate Drift track row to resolve it from any more.
+///
 /// **Why this differs from [trackDualProgressMetricsProvider].currentCyclePercentage:**
 /// This answers "how complete is this track overall?" (all-time, multi-stage gate).
 /// The cycle metric answers "how many items has the user touched since the last
@@ -348,7 +360,7 @@ String _$dashboardTrackCompletionPercentageHash() =>
 /// See also: [trackDualProgressMetricsProvider] (lifetime_knowledge_providers.dart).
 
 final class DashboardTrackCompletionPercentageFamily extends $Family
-    with $FunctionalFamilyOverride<FutureOr<double>, int> {
+    with $FunctionalFamilyOverride<FutureOr<double>, CurriculumId> {
   DashboardTrackCompletionPercentageFamily._()
     : super(
         retry: null,
@@ -369,6 +381,9 @@ final class DashboardTrackCompletionPercentageFamily extends $Family
   ///
   /// Delegates computation to [TrackProgressService] (Layer 3 unification).
   ///
+  /// AD-25: one track per curriculum — [curriculumId] IS the track identity,
+  /// there is no separate Drift track row to resolve it from any more.
+  ///
   /// **Why this differs from [trackDualProgressMetricsProvider].currentCyclePercentage:**
   /// This answers "how complete is this track overall?" (all-time, multi-stage gate).
   /// The cycle metric answers "how many items has the user touched since the last
@@ -376,9 +391,9 @@ final class DashboardTrackCompletionPercentageFamily extends $Family
   ///
   /// See also: [trackDualProgressMetricsProvider] (lifetime_knowledge_providers.dart).
 
-  DashboardTrackCompletionPercentageProvider call(int trackId) =>
+  DashboardTrackCompletionPercentageProvider call(CurriculumId curriculumId) =>
       DashboardTrackCompletionPercentageProvider._(
-        argument: trackId,
+        argument: curriculumId,
         from: this,
       );
 
@@ -388,14 +403,11 @@ final class DashboardTrackCompletionPercentageFamily extends $Family
 
 /// Per-curriculum item-based completion percentage, scoped to active profile.
 ///
-/// An item (sefariaRef) is "done" when every required stage for its track has
-/// a completion record.  Required stages = the non-superseded stages defined
-/// for that track.  An item that is fully done in any of its tracks counts
-/// once toward the numerator.
-///
-/// Formula: `(distinct sefariaRefs fully done in any track) / totalLeafItems`.
-///
-/// Delegates computation to [TrackCompletionService].
+/// AD-25: one track per curriculum, so this is now identical to
+/// [dashboardTrackCompletionPercentage] — both delegate to the same
+/// [TrackProgressService] (Layer 3 unification). Kept as a separate provider
+/// because callers ask two conceptually different questions today even
+/// though the answer is computed the same way.
 
 @ProviderFor(dashboardCompletionPercentage)
 final dashboardCompletionPercentageProvider =
@@ -403,28 +415,22 @@ final dashboardCompletionPercentageProvider =
 
 /// Per-curriculum item-based completion percentage, scoped to active profile.
 ///
-/// An item (sefariaRef) is "done" when every required stage for its track has
-/// a completion record.  Required stages = the non-superseded stages defined
-/// for that track.  An item that is fully done in any of its tracks counts
-/// once toward the numerator.
-///
-/// Formula: `(distinct sefariaRefs fully done in any track) / totalLeafItems`.
-///
-/// Delegates computation to [TrackCompletionService].
+/// AD-25: one track per curriculum, so this is now identical to
+/// [dashboardTrackCompletionPercentage] — both delegate to the same
+/// [TrackProgressService] (Layer 3 unification). Kept as a separate provider
+/// because callers ask two conceptually different questions today even
+/// though the answer is computed the same way.
 
 final class DashboardCompletionPercentageProvider
     extends $FunctionalProvider<AsyncValue<double>, double, FutureOr<double>>
     with $FutureModifier<double>, $FutureProvider<double> {
   /// Per-curriculum item-based completion percentage, scoped to active profile.
   ///
-  /// An item (sefariaRef) is "done" when every required stage for its track has
-  /// a completion record.  Required stages = the non-superseded stages defined
-  /// for that track.  An item that is fully done in any of its tracks counts
-  /// once toward the numerator.
-  ///
-  /// Formula: `(distinct sefariaRefs fully done in any track) / totalLeafItems`.
-  ///
-  /// Delegates computation to [TrackCompletionService].
+  /// AD-25: one track per curriculum, so this is now identical to
+  /// [dashboardTrackCompletionPercentage] — both delegate to the same
+  /// [TrackProgressService] (Layer 3 unification). Kept as a separate provider
+  /// because callers ask two conceptually different questions today even
+  /// though the answer is computed the same way.
   DashboardCompletionPercentageProvider._({
     required DashboardCompletionPercentageFamily super.from,
     required CurriculumId super.argument,
@@ -470,18 +476,15 @@ final class DashboardCompletionPercentageProvider
 }
 
 String _$dashboardCompletionPercentageHash() =>
-    r'715eb7e600bb6c6207eca39e32349cec16717556';
+    r'ed52dd0b9e341cc4ddd6cf534c39f896a328db91';
 
 /// Per-curriculum item-based completion percentage, scoped to active profile.
 ///
-/// An item (sefariaRef) is "done" when every required stage for its track has
-/// a completion record.  Required stages = the non-superseded stages defined
-/// for that track.  An item that is fully done in any of its tracks counts
-/// once toward the numerator.
-///
-/// Formula: `(distinct sefariaRefs fully done in any track) / totalLeafItems`.
-///
-/// Delegates computation to [TrackCompletionService].
+/// AD-25: one track per curriculum, so this is now identical to
+/// [dashboardTrackCompletionPercentage] — both delegate to the same
+/// [TrackProgressService] (Layer 3 unification). Kept as a separate provider
+/// because callers ask two conceptually different questions today even
+/// though the answer is computed the same way.
 
 final class DashboardCompletionPercentageFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<double>, CurriculumId> {
@@ -496,14 +499,11 @@ final class DashboardCompletionPercentageFamily extends $Family
 
   /// Per-curriculum item-based completion percentage, scoped to active profile.
   ///
-  /// An item (sefariaRef) is "done" when every required stage for its track has
-  /// a completion record.  Required stages = the non-superseded stages defined
-  /// for that track.  An item that is fully done in any of its tracks counts
-  /// once toward the numerator.
-  ///
-  /// Formula: `(distinct sefariaRefs fully done in any track) / totalLeafItems`.
-  ///
-  /// Delegates computation to [TrackCompletionService].
+  /// AD-25: one track per curriculum, so this is now identical to
+  /// [dashboardTrackCompletionPercentage] — both delegate to the same
+  /// [TrackProgressService] (Layer 3 unification). Kept as a separate provider
+  /// because callers ask two conceptually different questions today even
+  /// though the answer is computed the same way.
 
   DashboardCompletionPercentageProvider call(CurriculumId curriculum) =>
       DashboardCompletionPercentageProvider._(argument: curriculum, from: this);
@@ -573,7 +573,7 @@ final class DashboardLastCompletionProvider
 }
 
 String _$dashboardLastCompletionHash() =>
-    r'd82f958f1ed1485d553b61f7aa929c5832255004';
+    r'8deb9f84078c084a3ac1623da8628715c1b825cc';
 
 /// Per-curriculum last completion timestamp, scoped to active profile.
 
@@ -599,36 +599,22 @@ final class DashboardLastCompletionFamily extends $Family
 
 /// Streak data provider, scoped to the active profile.
 ///
-/// Reads streak state through `core/streak/StreakStateService` — the
-/// only read path post-DNI-337. The provider replays the append-only
-/// `streak_events` log through `StreakReducer` (UTC day boundaries),
-/// restoring from `completions` on a new-device empty-log first launch.
-///
-/// Performance note: `completionCommittedProvider` is intentionally NOT
-/// watched here. [CompletionRepositoryImpl._createCompletion] writes a
-/// `streak_events` row on each completion, which Drift surfaces via the
-/// reactive `watch()` query below — no manual trigger needed.
-/// Watching `completionCommittedProvider` would tear down and rebuild the
-/// entire stream subscription on every completion, causing unnecessary
-/// work on every task mark.
+/// Reads streak state through [StreakStateService] — the only read path.
+/// [StreakStateService] delegates to [FirestoreStreakStateRepository], which
+/// derives state from the synced Firestore event log directly (D-E: throws
+/// when the backend isn't ready rather than returning a fabricated zero
+/// streak).
 
 @ProviderFor(dashboardStreak)
 final dashboardStreakProvider = DashboardStreakProvider._();
 
 /// Streak data provider, scoped to the active profile.
 ///
-/// Reads streak state through `core/streak/StreakStateService` — the
-/// only read path post-DNI-337. The provider replays the append-only
-/// `streak_events` log through `StreakReducer` (UTC day boundaries),
-/// restoring from `completions` on a new-device empty-log first launch.
-///
-/// Performance note: `completionCommittedProvider` is intentionally NOT
-/// watched here. [CompletionRepositoryImpl._createCompletion] writes a
-/// `streak_events` row on each completion, which Drift surfaces via the
-/// reactive `watch()` query below — no manual trigger needed.
-/// Watching `completionCommittedProvider` would tear down and rebuild the
-/// entire stream subscription on every completion, causing unnecessary
-/// work on every task mark.
+/// Reads streak state through [StreakStateService] — the only read path.
+/// [StreakStateService] delegates to [FirestoreStreakStateRepository], which
+/// derives state from the synced Firestore event log directly (D-E: throws
+/// when the backend isn't ready rather than returning a fabricated zero
+/// streak).
 
 final class DashboardStreakProvider
     extends
@@ -642,18 +628,11 @@ final class DashboardStreakProvider
         $StreamProvider<({int currentStreak, int maxStreak})> {
   /// Streak data provider, scoped to the active profile.
   ///
-  /// Reads streak state through `core/streak/StreakStateService` — the
-  /// only read path post-DNI-337. The provider replays the append-only
-  /// `streak_events` log through `StreakReducer` (UTC day boundaries),
-  /// restoring from `completions` on a new-device empty-log first launch.
-  ///
-  /// Performance note: `completionCommittedProvider` is intentionally NOT
-  /// watched here. [CompletionRepositoryImpl._createCompletion] writes a
-  /// `streak_events` row on each completion, which Drift surfaces via the
-  /// reactive `watch()` query below — no manual trigger needed.
-  /// Watching `completionCommittedProvider` would tear down and rebuild the
-  /// entire stream subscription on every completion, causing unnecessary
-  /// work on every task mark.
+  /// Reads streak state through [StreakStateService] — the only read path.
+  /// [StreakStateService] delegates to [FirestoreStreakStateRepository], which
+  /// derives state from the synced Firestore event log directly (D-E: throws
+  /// when the backend isn't ready rather than returning a fabricated zero
+  /// streak).
   DashboardStreakProvider._()
     : super(
         from: null,
@@ -680,28 +659,82 @@ final class DashboardStreakProvider
   }
 }
 
-String _$dashboardStreakHash() => r'8faf5eea08664cfed0ebf1d82240a823ba40671e';
+String _$dashboardStreakHash() => r'7dc0538d473290b65a2a7f9f8ed9373e53c3ad16';
 
 /// Stored debitable points balance, scoped to active child profile (WS7.balance).
 ///
-/// Reads from [PointsBalanceDao] — the spend-economy source of truth (DEC-32).
-/// Returns 0 for adult profiles (Rule 3: adults have no points).
+/// Reads from [FirestorePointsBalanceReaderAdapter] — the spend-economy
+/// source of truth (DEC-32). Returns 0 for adult profiles (Rule 3: adults
+/// have no points).
+///
+/// **Not a live stream, unlike the Drift-era `watchBalance`.** No Firestore
+/// equivalent exists or can cheaply exist: `firestore.rules` caps every
+/// `points_ledger` list/query at `request.query.limit <= 500` (SR-4), so an
+/// unbounded `.snapshots()` listener over the whole ledger is rejected by
+/// the security rules outright — there is no single-listener way to watch
+/// an arbitrarily-long append-only ledger's derived sum live. This re-reads
+/// the balance whenever [completionCommittedProvider] fires (the dominant
+/// mutation path today) or an explicit `ref.invalidate` fires (see
+/// `dashboard_screen.dart`, `progress_screen.dart`,
+/// `after_track_change_invalidation.dart`). A redemption debit/refund or a
+/// parent points adjustment that doesn't itself invalidate this provider
+/// will leave the counter stale until one of those does — a real,
+/// disclosed regression from the Drift-era live stream, tracked rather than
+/// silently accepted (see the phase's task list — the redemption write
+/// path this would need to hook into does not exist in production code
+/// yet either).
 
 @ProviderFor(dashboardGlobalPoints)
 final dashboardGlobalPointsProvider = DashboardGlobalPointsProvider._();
 
 /// Stored debitable points balance, scoped to active child profile (WS7.balance).
 ///
-/// Reads from [PointsBalanceDao] — the spend-economy source of truth (DEC-32).
-/// Returns 0 for adult profiles (Rule 3: adults have no points).
+/// Reads from [FirestorePointsBalanceReaderAdapter] — the spend-economy
+/// source of truth (DEC-32). Returns 0 for adult profiles (Rule 3: adults
+/// have no points).
+///
+/// **Not a live stream, unlike the Drift-era `watchBalance`.** No Firestore
+/// equivalent exists or can cheaply exist: `firestore.rules` caps every
+/// `points_ledger` list/query at `request.query.limit <= 500` (SR-4), so an
+/// unbounded `.snapshots()` listener over the whole ledger is rejected by
+/// the security rules outright — there is no single-listener way to watch
+/// an arbitrarily-long append-only ledger's derived sum live. This re-reads
+/// the balance whenever [completionCommittedProvider] fires (the dominant
+/// mutation path today) or an explicit `ref.invalidate` fires (see
+/// `dashboard_screen.dart`, `progress_screen.dart`,
+/// `after_track_change_invalidation.dart`). A redemption debit/refund or a
+/// parent points adjustment that doesn't itself invalidate this provider
+/// will leave the counter stale until one of those does — a real,
+/// disclosed regression from the Drift-era live stream, tracked rather than
+/// silently accepted (see the phase's task list — the redemption write
+/// path this would need to hook into does not exist in production code
+/// yet either).
 
 final class DashboardGlobalPointsProvider
-    extends $FunctionalProvider<AsyncValue<int>, int, Stream<int>>
-    with $FutureModifier<int>, $StreamProvider<int> {
+    extends $FunctionalProvider<AsyncValue<int>, int, FutureOr<int>>
+    with $FutureModifier<int>, $FutureProvider<int> {
   /// Stored debitable points balance, scoped to active child profile (WS7.balance).
   ///
-  /// Reads from [PointsBalanceDao] — the spend-economy source of truth (DEC-32).
-  /// Returns 0 for adult profiles (Rule 3: adults have no points).
+  /// Reads from [FirestorePointsBalanceReaderAdapter] — the spend-economy
+  /// source of truth (DEC-32). Returns 0 for adult profiles (Rule 3: adults
+  /// have no points).
+  ///
+  /// **Not a live stream, unlike the Drift-era `watchBalance`.** No Firestore
+  /// equivalent exists or can cheaply exist: `firestore.rules` caps every
+  /// `points_ledger` list/query at `request.query.limit <= 500` (SR-4), so an
+  /// unbounded `.snapshots()` listener over the whole ledger is rejected by
+  /// the security rules outright — there is no single-listener way to watch
+  /// an arbitrarily-long append-only ledger's derived sum live. This re-reads
+  /// the balance whenever [completionCommittedProvider] fires (the dominant
+  /// mutation path today) or an explicit `ref.invalidate` fires (see
+  /// `dashboard_screen.dart`, `progress_screen.dart`,
+  /// `after_track_change_invalidation.dart`). A redemption debit/refund or a
+  /// parent points adjustment that doesn't itself invalidate this provider
+  /// will leave the counter stale until one of those does — a real,
+  /// disclosed regression from the Drift-era live stream, tracked rather than
+  /// silently accepted (see the phase's task list — the redemption write
+  /// path this would need to hook into does not exist in production code
+  /// yet either).
   DashboardGlobalPointsProvider._()
     : super(
         from: null,
@@ -718,17 +751,17 @@ final class DashboardGlobalPointsProvider
 
   @$internal
   @override
-  $StreamProviderElement<int> $createElement($ProviderPointer pointer) =>
-      $StreamProviderElement(pointer);
+  $FutureProviderElement<int> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
 
   @override
-  Stream<int> create(Ref ref) {
+  FutureOr<int> create(Ref ref) {
     return dashboardGlobalPoints(ref);
   }
 }
 
 String _$dashboardGlobalPointsHash() =>
-    r'4cce4745284a3ce7c875b0a82537e205973ccfde';
+    r'5cbf4b311b616ffa2c79341e561c43794824d032';
 
 /// Write-path effect: strips legacy stock-template milestones for the current
 /// profile and pushes updated gamification settings to Firestore if any rows
@@ -797,6 +830,12 @@ String _$stripStockMilestonesEffectHash() =>
 /// Next reward milestone for the child dashboard (closest threshold not yet met).
 ///
 /// Delegates selection to [NextRewardSelector].
+///
+/// DEC-32/GA-3: per-track rewards were removed from the spend economy —
+/// every reward is now a single global priced spend-item, so [trackEntries]
+/// is always empty. [NextRewardSelector.select] already handles that
+/// gracefully (falls straight through to the global ladder); see its own
+/// doc comment.
 
 @ProviderFor(dashboardChildNextReward)
 final dashboardChildNextRewardProvider = DashboardChildNextRewardProvider._();
@@ -804,6 +843,12 @@ final dashboardChildNextRewardProvider = DashboardChildNextRewardProvider._();
 /// Next reward milestone for the child dashboard (closest threshold not yet met).
 ///
 /// Delegates selection to [NextRewardSelector].
+///
+/// DEC-32/GA-3: per-track rewards were removed from the spend economy —
+/// every reward is now a single global priced spend-item, so [trackEntries]
+/// is always empty. [NextRewardSelector.select] already handles that
+/// gracefully (falls straight through to the global ladder); see its own
+/// doc comment.
 
 final class DashboardChildNextRewardProvider
     extends
@@ -818,6 +863,12 @@ final class DashboardChildNextRewardProvider
   /// Next reward milestone for the child dashboard (closest threshold not yet met).
   ///
   /// Delegates selection to [NextRewardSelector].
+  ///
+  /// DEC-32/GA-3: per-track rewards were removed from the spend economy —
+  /// every reward is now a single global priced spend-item, so [trackEntries]
+  /// is always empty. [NextRewardSelector.select] already handles that
+  /// gracefully (falls straight through to the global ladder); see its own
+  /// doc comment.
   DashboardChildNextRewardProvider._()
     : super(
         from: null,
@@ -845,7 +896,7 @@ final class DashboardChildNextRewardProvider
 }
 
 String _$dashboardChildNextRewardHash() =>
-    r'50eb514c67e9dd61655959e2a7706035a16f3af4';
+    r'2b612129ee1b8c91b711cedc4ab8d22f78df647d';
 
 /// Streak recovery info — whether the streak was just saved by grace period.
 
@@ -970,7 +1021,7 @@ final class DashboardPaceStatusProvider
 }
 
 String _$dashboardPaceStatusHash() =>
-    r'464595b1fa0eb28ffb458e873a318be50e0ff737';
+    r'1df8e67680f96b5c8a350ac6dc64bce05ca58bb7';
 
 /// Per-curriculum pace status for the dashboard.
 ///

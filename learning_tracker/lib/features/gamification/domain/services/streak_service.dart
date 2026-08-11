@@ -39,7 +39,7 @@ class StreakService {
   /// The grace-period feature is not implemented post-W3.20; this always
   /// returns `wasRecovered: false`.
   Future<StreakRecoveryInfo> getRecoveryInfo() async {
-    final state = await _provider.read(profileId: _profileId);
+    final state = await _provider.read();
     return StreakRecoveryInfo(
       wasRecovered: false,
       currentStreak: state.currentStreak,
@@ -47,10 +47,10 @@ class StreakService {
   }
 
   /// Returns the current [StreakState] for this profile.
-  Future<StreakState> getStreak() => _provider.read(profileId: _profileId);
+  Future<StreakState> getStreak() => _provider.read();
 
   /// Reactive read — re-emits whenever streak_events changes.
-  Stream<StreakState> watchStreak() => _provider.watch(profileId: _profileId);
+  Stream<StreakState> watchStreak() => _provider.watch();
 
   /// Get a map of dates with learning activity within a date range,
   /// scoped to this profile.

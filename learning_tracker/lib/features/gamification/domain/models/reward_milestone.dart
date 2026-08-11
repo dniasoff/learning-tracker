@@ -5,17 +5,18 @@ part 'reward_milestone.freezed.dart';
 
 @freezed
 abstract class RewardMilestone with _$RewardMilestone {
-  /// Stored as [trackId] for milestones that use [PointsService.getGlobalTotal].
-  ///
-  /// Real curriculum tracks use positive DB ids (auto-increment from 1).
+  /// Sentinel `trackId` [NextRewardSelector] stamps onto a global-ladder
+  /// result. A bare constant, not a field on this class any more — DEC-32/
+  /// GA-3 removed per-track rewards from the spend economy, so every
+  /// [RewardMilestone] instance is already global; nothing left to
+  /// distinguish with a per-instance field.
   static const int kGlobalTrackSentinel = 0;
 
   const RewardMilestone._();
 
   const factory RewardMilestone({
     required String id,
-    required int profileId,
-    required int trackId,
+    required String profileId,
     required String title,
 
     /// Cost in points for the child to redeem this reward (WS7.reward-price).
@@ -41,7 +42,6 @@ abstract class RewardMilestone with _$RewardMilestone {
     return {
       'id': id,
       'profile_id': profileId,
-      'track_id': trackId,
       'title': title,
       'threshold_points': thresholdPoints,
       'is_enabled': isEnabled,
@@ -54,8 +54,7 @@ abstract class RewardMilestone with _$RewardMilestone {
   static RewardMilestone fromJson(Map<String, dynamic> json) {
     return RewardMilestone(
       id: (json['id'] ?? '').toString(),
-      profileId: _asInt(json['profile_id']) ?? 0,
-      trackId: _asInt(json['track_id']) ?? 0,
+      profileId: (json['profile_id'] ?? '').toString(),
       title: (json['title'] ?? '').toString(),
       thresholdPoints: _asInt(json['threshold_points']) ?? 0,
       isEnabled: json['is_enabled'] as bool? ?? true,
@@ -82,8 +81,7 @@ abstract class RewardUnlockRecord with _$RewardUnlockRecord {
 
   const factory RewardUnlockRecord({
     required String milestoneId,
-    required int profileId,
-    required int trackId,
+    required String profileId,
     required String title,
     required int thresholdPoints,
     required int pointsAtUnlock,
@@ -94,7 +92,6 @@ abstract class RewardUnlockRecord with _$RewardUnlockRecord {
     return {
       'milestone_id': milestoneId,
       'profile_id': profileId,
-      'track_id': trackId,
       'title': title,
       'threshold_points': thresholdPoints,
       'points_at_unlock': pointsAtUnlock,
@@ -105,8 +102,7 @@ abstract class RewardUnlockRecord with _$RewardUnlockRecord {
   static RewardUnlockRecord fromJson(Map<String, dynamic> json) {
     return RewardUnlockRecord(
       milestoneId: (json['milestone_id'] ?? '').toString(),
-      profileId: RewardMilestone._asInt(json['profile_id']) ?? 0,
-      trackId: RewardMilestone._asInt(json['track_id']) ?? 0,
+      profileId: (json['profile_id'] ?? '').toString(),
       title: (json['title'] ?? '').toString(),
       thresholdPoints: RewardMilestone._asInt(json['threshold_points']) ?? 0,
       pointsAtUnlock: RewardMilestone._asInt(json['points_at_unlock']) ?? 0,

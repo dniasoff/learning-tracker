@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:math';
 
-import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
@@ -10,18 +9,21 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 /// Local reward milestone configuration + unlock tracking.
 ///
-/// Stored in SharedPreferences (profile-scoped), while points totals are
-/// derived from completions via [PointsService] for offline-first consistency.
+/// Stored in SharedPreferences (profile-scoped), while the points balance is
+/// read from [PointsBalanceReader] (the spend-economy source of truth,
+/// DEC-32).
+///
+/// DEC-32/GA-3: per-track rewards were removed from the spend economy —
+/// every milestone applies to the single global debitable balance now. This
+/// service no longer takes a track/curriculum key anywhere; see
+/// `reward_config_controller.dart`'s own doc comment for the product
+/// history ("tracks is hardcoded to const [] ... every reward is now a
+/// single global priced spend-item").
 class RewardMilestoneService {
-  RewardMilestoneService({
-    required this.eligibility,
-    required this.balanceReader,
-    required this.profileId,
-  });
+  RewardMilestoneService({required this.balanceReader, required this.profileId});
 
-  final CurriculumRewardEligibility eligibility;
   final PointsBalanceReader balanceReader;
-  final int profileId;
+  final String profileId;
 
   static const _configKeyPrefix = 'reward_milestones_config_v1_';
   static const _unlockKeyPrefix = 'reward_milestones_unlocks_v1_';
@@ -31,18 +33,11 @@ class RewardMilestoneService {
   String get _unlockKey => '$_unlockKeyPrefix$profileId';
   String get _updatedAtMsKey => '$_updatedAtMsKeyPrefix$profileId';
 
-  Future<List<RewardMilestone>> getMilestonesForTrack(int trackId) async {
-    final all = await getAllMilestones();
-    final trackMilestones = all.where((m) => m.trackId == trackId).toList();
-    trackMilestones.sort(
-      (a, b) => a.thresholdPoints.compareTo(b.thresholdPoints),
-    );
-    return trackMilestones;
-  }
-
-  /// Milestones tied to [RewardMilestone.kGlobalTrackSentinel] (total points).
-  Future<List<RewardMilestone>> getGlobalMilestones() async {
-    return getMilestonesForTrack(RewardMilestone.kGlobalTrackSentinel);
+  /// All configured reward milestones, sorted by threshold ascending.
+  Future<List<RewardMilestone>> getMilestones() async {
+    final all = List<RewardMilestone>.from(await getAllMilestones());
+    all.sort((a, b) => a.thresholdPoints.compareTo(b.thresholdPoints));
+    return all;
   }
 
   /// Current debitable balance for reward display (WS7.balance).
@@ -50,25 +45,6 @@ class RewardMilestoneService {
   /// Reads from [PointsBalanceReader] — the spend-economy source of truth (DEC-32).
   Future<int> getGlobalPointsForRewards() async {
     return balanceReader.getBalance();
-  }
-
-  /// Lifetime completion-derived points total across all reward-eligible curricula.
-  ///
-  /// R-GA2: global milestone unlock classification must use lifetime-earned, not
-  /// the debitable balance. Using the debitable balance causes a milestone that
-  /// was earned (threshold crossed) to flip back to LOCKED after a redemption
-  /// debit reduces the balance below the threshold — i.e. spending points
-  /// re-locks an achievement the child already unlocked.
-  ///
-  /// This method is no longer directly computable here since completions are
-  /// curriculum-keyed, not track-keyed. The equivalent logic lives in
-  /// [PointsService.getDerivedTotal] which accepts a completions list.
-  @Deprecated('Use PointsService.getDerivedTotal with completions from the repository')
-  Future<int> getGlobalLifetimeEarnedForRewards() async {
-    // This method cannot be implemented without access to completions data.
-    // The logic has moved to PointsService which accepts completions as input.
-    // Callers should use PointsService.getDerivedTotal(completions) instead.
-    return 0;
   }
 
   Future<List<RewardMilestone>> getAllMilestones() async {
@@ -134,17 +110,12 @@ class RewardMilestoneService {
   }
 
   Future<void> upsertMilestone({
-    required int trackId,
     required String title,
     required int thresholdPoints,
     String? milestoneId,
     bool isEnabled = true,
     int iconIndex = 0,
   }) async {
-    assert(
-      trackId >= 0,
-      'Use RewardMilestone.kGlobalTrackSentinel for total-points rewards.',
-    );
     final now = DateTimeFactory.nowUtc();
     final all = List<RewardMilestone>.from(await getAllMilestones());
 
@@ -167,7 +138,6 @@ class RewardMilestoneService {
         RewardMilestone(
           id: milestoneId ?? _newMilestoneId(),
           profileId: profileId,
-          trackId: trackId,
           title: title.trim(),
           thresholdPoints: thresholdPoints,
           isEnabled: isEnabled,
@@ -197,15 +167,13 @@ class RewardMilestoneService {
       }
     }
 
-    final byTrack = <int, List<RewardMilestone>>{};
-    for (final m in all) {
-      byTrack.putIfAbsent(m.trackId, () => []).add(m);
-    }
-    for (final list in byTrack.values) {
-      if (list.length != 3) continue;
-      final th = list.map((e) => e.thresholdPoints).toList()..sort();
+    // Legacy 3-tier ladder detection: DEC-32/GA-3 removed per-track grouping,
+    // so this now checks the single (global) list as a whole rather than
+    // grouping by track first.
+    if (all.length == 3) {
+      final th = all.map((e) => e.thresholdPoints).toList()..sort();
       if (th[0] == 50 && th[1] == 150 && th[2] == 300) {
-        for (final m in list) {
+        for (final m in all) {
           removeIds.add(m.id);
         }
       }
@@ -255,86 +223,6 @@ class RewardMilestoneService {
     (title: 'Elite Star', thresholdPoints: 25000),
     (title: 'Legend Star', thresholdPoints: 50000),
   ];
-
-  /// No-op: template ladders are not seeded; parents configure rewards explicitly.
-  Future<void> ensureDefaultsForTrack(int trackId) async {
-    if (trackId == RewardMilestone.kGlobalTrackSentinel) return;
-  }
-
-  /// True when this curriculum is a **programmed** (yeshiva cycle) or **self-paced**
-  /// (has a learning goal) curriculum. Momentum-only "browse" curricula — and lifetime
-  /// learning (ledger only, no completions) — do not count toward reward points.
-  ///
-  /// Replaces the old trackId-keyed [trackCountsTowardRewardPoints] (AD-25).
-  /// Eligibility is now CURRICULUM-keyed via the injected [CurriculumRewardEligibility].
-  Future<bool> curriculumCountsTowardRewardPoints(CurriculumId curriculumId) async {
-    return eligibility.isEligible(curriculumId);
-  }
-
-  /// @deprecated Use [curriculumCountsTowardRewardPoints] instead.
-  /// Kept for backward compatibility with callers that still have a trackId.
-  /// Resolves the track's curriculumId and delegates to the curriculum-based check.
-  @Deprecated('Use curriculumCountsTowardRewardPoints with CurriculumId')
-  Future<bool> trackCountsTowardRewardPoints(int trackId) async {
-    // THROWS rather than returning false.
-    //
-    // Returning `false` here would silently mark every track ineligible for
-    // reward points — indistinguishable from a legitimate "not eligible", so no
-    // gate, log or test could ever see it. A migration that is not finished
-    // must fail loudly at the point of use, not answer plausibly.
-    throw UnsupportedError(
-      'trackCountsTowardRewardPoints is not available on the Firestore path: '
-      'trackId cannot be resolved to a curriculum without the deleted trackDao. '
-      'Call curriculumCountsTowardRewardPoints(CurriculumId) instead.',
-    );
-  }
-
-  /// @deprecated Track-based points queries are no longer supported (AD-25).
-  /// Points are now curriculum-keyed. Use [PointsService.getCurriculumTotal] instead.
-  @Deprecated('Use PointsService.getCurriculumTotal with CurriculumId')
-  Future<int> getTrackPointsTotal(int trackId) async {
-    // THROWS rather than returning 0.
-    //
-    // `getTrackPointsTotalForRewards` delegates here and HAS a live caller
-    // (achievements_overview_provider.dart:122), so returning 0 would render a
-    // child's achievements as zero points, silently, forever. Points are
-    // achievement data — owner ruling D-E: fail loudly.
-    throw UnsupportedError(
-      'getTrackPointsTotal is not available on the Firestore path: points are '
-      'curriculum-keyed now (AD-25). Call PointsService.getCurriculumTotal '
-      'with a CurriculumId instead.',
-    );
-  }
-
-  /// @deprecated Track-based points queries are no longer supported (AD-25).
-  /// Points are now curriculum-keyed. Use [PointsService.getCurriculumTotal] instead.
-  @Deprecated('Use PointsService.getCurriculumTotal with CurriculumId')
-  Future<int> getTrackPointsTotalForRewards(int trackId) async {
-    // Cannot determine curriculum from trackId without trackDao.
-    // This method is kept only to avoid breaking callers; it returns 0.
-    return 0;
-  }
-
-  /// DEC-32: the auto-unlock achievement ladder was REPLACED by the spend
-  /// economy. Rewards are now purely priced spend-items (redeem for
-  /// [RewardMilestone.pointsCost]); there is no cumulative-threshold auto-unlock
-  /// crossing the debitable balance. This method is retained as a no-op so the
-  /// (now removed) live-wiring contract is preserved for any straggler caller;
-  /// it never writes an unlock record.
-  ///
-  /// R4o-C1: previously this read the DEBITABLE balance and auto-unlocked
-  /// milestones whose [RewardMilestone.thresholdPoints] (simultaneously the
-  /// redeem price) was crossed — incoherent once the balance dropped on spend.
-  /// Retained as a no-op (returns no unlock records) so the spend economy is
-  /// the single source of reward semantics.
-  Future<List<RewardUnlockRecord>> evaluateUnlocksForTrack(int trackId) async {
-    return const [];
-  }
-
-  /// DEC-32 no-op — see [evaluateUnlocksForTrack].
-  Future<List<RewardUnlockRecord>> evaluateUnlocksForGlobal() async {
-    return const [];
-  }
 
   Future<Map<String, dynamic>> exportCloudPayload() async {
     final milestones = await getAllMilestones();
