@@ -1739,6 +1739,12 @@ abstract class AppLocalizations {
   /// **'Couldn\'t save your marks. Please try again.'**
   String get lifetimeMarkSaveError;
 
+  /// Shown instead of the marking tree when the ledger read fails (D-E: never render an empty/unmarked tree on a failed read, or the user may re-mark and double-count already-learned units).
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load your existing marks. Please try again.'**
+  String get lifetimeMarkLoadError;
+
   /// No description provided for @dashboardStats.
   ///
   /// In en, this message translates to:

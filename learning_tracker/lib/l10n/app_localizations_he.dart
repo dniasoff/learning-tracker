@@ -956,6 +956,9 @@ class AppLocalizationsHe extends AppLocalizations {
   String get lifetimeMarkSaveError => 'שמירת הסימונים נכשלה. נסו שוב.';
 
   @override
+  String get lifetimeMarkLoadError => 'טעינת הסימונים הקיימים נכשלה. נסו שוב.';
+
+  @override
   String get dashboardStats => 'סטטיסטיקה';
 
   @override

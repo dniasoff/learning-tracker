@@ -960,6 +960,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Couldn\'t save your marks. Please try again.';
 
   @override
+  String get lifetimeMarkLoadError =>
+      'Couldn\'t load your existing marks. Please try again.';
+
+  @override
   String get dashboardStats => 'STATS';
 
   @override

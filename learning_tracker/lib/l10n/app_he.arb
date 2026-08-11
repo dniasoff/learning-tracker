@@ -543,6 +543,10 @@
   "@lifetimeMarkSaveError": {
     "description": "Friendly fallback shown instead of a raw exception when saving lifetime marks fails (EH-5/ST-4)."
   },
+  "lifetimeMarkLoadError": "טעינת הסימונים הקיימים נכשלה. נסו שוב.",
+  "@lifetimeMarkLoadError": {
+    "description": "Shown instead of the marking tree when the ledger read fails (D-E: never render an empty/unmarked tree on a failed read, or the user may re-mark and double-count already-learned units)."
+  },
   "dashboardStats": "סטטיסטיקה",
   "learningLifetimeAllCurricula": "לימוד לכל החיים (כל התוכניות)",
   "dashboardAllCaughtUpTitle": "הכל מעודכן! עבודה מצוינת!",

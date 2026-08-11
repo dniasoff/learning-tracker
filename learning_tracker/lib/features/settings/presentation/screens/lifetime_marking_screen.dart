@@ -2,7 +2,6 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/content/content_grouping.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
@@ -10,11 +9,13 @@ import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
+import 'package:learning_tracker/core/widgets/error_display.dart';
 import 'package:learning_tracker/features/content_browsing/domain/strategies/composite_curriculum_strategy.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/hierarchy_selection_panel.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
-import 'package:learning_tracker/features/learning/domain/repositories/learning_ledger_repository.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
+import 'package:learning_tracker/features/learning/domain/entities/learning_ledger_entry.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_ledger_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/progress/domain/services/lifetime_tree_builder.dart';
@@ -446,7 +447,7 @@ class _LifetimeCurriculumMarkingScreenState
     String value,
     int currentLevel,
     List<String> currentPath,
-    List<LearningLedgerData> ledger,
+    List<LearningLedgerEntry> ledger,
   ) {
     if (allLeaves.isEmpty) return false;
     // Full ancestor path of this row (level1-first), including the row itself.
@@ -465,22 +466,19 @@ class _LifetimeCurriculumMarkingScreenState
     // the current session selections (modelled as ledger rows so the same
     // qualified-id matching logic applies).
     final sessionEntries = _selections.map((s) {
-      return LearningLedgerData(
-        id: 0,
-        profileId: 0,
+      return LearningLedgerEntry(
         ulid: '',
-        curriculumId: _curriculum.storageKey,
+        curriculumId: _curriculum,
         entryScope: 'level${s.level}',
         unitIdentifier: s.value,
         unitDisplayNameHe: '',
         unitDisplayNameEn: '',
         trackType: 'personal',
-        trackId: null,
         completedAt: DateTime.utc(2000),
         completionNumber: 1,
-        markedBy: 0,
+        markedBy: '',
         isManual: true,
-        createdAt: DateTime.utc(2000),
+        source: CompletionSource.lifetimeOnly,
       );
     }).toList();
 
@@ -547,7 +545,7 @@ class _LifetimeCurriculumMarkingScreenState
   }
 
   bool _ledgerHasUnit(
-    List<LearningLedgerData> ledger,
+    List<LearningLedgerEntry> ledger,
     int level,
     String value,
     List<String> currentPath,
@@ -567,9 +565,15 @@ class _LifetimeCurriculumMarkingScreenState
     setState(() => _saving = true);
     try {
       final repo = ref.read(learningLedgerRepositoryProvider);
+      // D-E: this is ACHIEVEMENT-shaped data (real lifetime-learning marks) —
+      // a missing active profile must fail loudly rather than silently
+      // stamping a placeholder marker onto the ledger.
       final profileId = ref.read(activeProfileIdProvider);
+      if (profileId == null) {
+        throw const LifetimeMarkingNoActiveProfileException();
+      }
       final unique = <String>{};
-      final batchItems = <LedgerManualBatchItem>[];
+      final batchItems = <LedgerEntryDraft>[];
       for (final selection in selections) {
         final key = '${selection.level}:${selection.value}';
         if (!unique.add(key)) continue;
@@ -587,14 +591,13 @@ class _LifetimeCurriculumMarkingScreenState
           continue;
         }
         batchItems.add(
-          LedgerManualBatchItem(
-            curriculumId: _curriculum.storageKey,
+          LedgerEntryDraft(
+            curriculumId: _curriculum,
             entryScope: 'level${selection.level}',
             unitIdentifier: selection.value,
             unitDisplayNameHe: selection.value,
             unitDisplayNameEn: selection.value,
             trackType: 'personal',
-            trackId: null,
             markedBy: profileId,
             isManual: true,
           ),
@@ -659,12 +662,37 @@ class _LifetimeCurriculumMarkingScreenState
     final ledgerAsync = ref.watch(
       curriculumLedgerProvider(widget.curriculumId),
     );
+    // D-E: the ledger is achievement-shaped (the user's real completion
+    // history) — curriculumLedgerProvider throws rather than fabricating an
+    // empty list when the backend isn't ready. Falling back to `?? []` here
+    // would render every already-marked unit as unmarked, letting the user
+    // re-mark it and double-count a completion. Bail to an error view before
+    // touching the ledger at all.
+    if (ledgerAsync.hasError) {
+      return Scaffold(
+        backgroundColor: context.colors.brandCreamCard,
+        appBar: AppBar(
+          backgroundColor: context.colors.brandCreamCard,
+          foregroundColor: context.colors.brandInk,
+          surfaceTintColor: Colors.transparent,
+          elevation: 0,
+          title: AppBarTitle(
+            text: curriculumLabelText(ref, curriculum: _curriculum),
+          ),
+        ),
+        body: ErrorDisplay(
+          message: l10n.lifetimeMarkLoadError,
+          onRetry: () =>
+              ref.invalidate(curriculumLedgerProvider(widget.curriculumId)),
+        ),
+      );
+    }
     // Drop any stray SYNTHETIC-container level1 rows (e.g. a composite's
     // Tanach→'Torah') so a parent never reads as fully-checked off a blanket
     // container mark — the row's true state must come from its real descendant
     // marks (rendered as indeterminate via [_isPartial]). Mirrors the read-time
     // guard in lifetime_knowledge_providers; independent of the v32 migration.
-    final ledger = (ledgerAsync.asData?.value ?? const <LearningLedgerData>[])
+    final ledger = (ledgerAsync.asData?.value ?? const <LearningLedgerEntry>[])
         .where((e) {
           final scope = e.entryScope.startsWith('unmark_')
               ? e.entryScope.substring('unmark_'.length)
@@ -1052,4 +1080,23 @@ class _LifetimeCurriculumMarkingScreenState
       ),
     );
   }
+}
+
+/// Thrown by [_LifetimeCurriculumMarkingScreenState._markSelections] when the
+/// save is attempted with no active profile.
+///
+/// D-E: a lifetime mark is ACHIEVEMENT-shaped (a real learning-progress
+/// record) — `markedBy` (AD-24: a learner-profile ULID) has no honest
+/// placeholder value, so a missing active profile must fail loudly rather
+/// than stamping the batch with an empty/fake marker. Mirrors
+/// `ItemsLearnedNoActiveProfileException` (`items_learned_providers.dart`)
+/// and its siblings across this migration.
+class LifetimeMarkingNoActiveProfileException implements Exception {
+  const LifetimeMarkingNoActiveProfileException();
+
+  @override
+  String toString() =>
+      'LifetimeMarkingNoActiveProfileException: lifetime marks were saved '
+      'with no active profile — the learning ledger is scoped to the active '
+      'profile and there is no ULID to stamp `markedBy` with.';
 }
