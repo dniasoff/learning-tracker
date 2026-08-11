@@ -2445,6 +2445,104 @@ not re-learn the hard way:**
 
 ---
 
+### 2026-08-11 — P3-19: offline completion writes MEASURED on a real device — the previous "fix" fixed nothing; the real blockers were the read-before-write and the bare await
+
+`dart analyze --fatal-infos` EXIT 0 on the touched file.
+`flutter test test/data/repositories/`: **306 pass, 0 fail.**
+On-device probe: **Q3 (old shape) FAILS offline, Q4 (fixed shape) SUCCEEDS and lands.**
+
+#### 1. Two confident claims, both false, both caught by measurement
+
+`recordCompletionIfAbsent` was changed twice today on reasoning alone:
+
+1. **"The transaction breaks offline; removing it fixes it."** Half right.
+   Transactions genuinely do fail offline — but removing it changed the
+   exception, not the outcome.
+2. **"`get()` is served from the local cache offline, so a never-fetched
+   document reads as absent."** **FALSE.** It throws. That claim was written
+   into the code as a do-not-revert comment, where it would have outlived this
+   conversation and misled the next reader.
+
+A reviewer disputed claim 2. Rather than argue it, it was settled empirically.
+
+#### 2. The probe
+
+A STANDALONE Flutter package (`cloud_firestore ^6.8.0`, the app's own major),
+run on a real Android device (`emulator-5554`, API 34, on the `lt` box) against
+the Firestore emulator. Standalone deliberately: the main app has ~549 lib
+errors and cannot build, but this question needs the REAL plugin on a REAL
+device — `fake_cloud_firestore` has no network and no offline concept, so any
+offline assertion against it passes unconditionally.
+
+```
+PROBE_Q1_UNCACHED_GET_OFFLINE :: THREW FirebaseException code=unavailable
+PROBE_Q2_SET_OFFLINE         :: AWAIT DID NOT RETURN (TimeoutException after 5s)
+PROBE_Q2_AFTER_RECONNECT     :: exists=true  data={at: Timestamp(...), v: 1}
+PROBE_Q3_COMPLETION_PATH_OFFLINE :: FULL PATH FAILED offline:
+        [cloud_firestore/unavailable] Failed to get document because the client is offline.
+PROBE_Q4_FIXED_PATH_OFFLINE      :: FIXED PATH SUCCEEDED offline
+PROBE_Q4_LANDED_AFTER_RECONNECT  :: exists=true  data={marked: true}
+```
+
+**Three facts now established rather than inferred:**
+
+| | |
+|---|---|
+| `get()` on an UNCACHED doc offline | **THROWS `unavailable`** — does NOT return not-exists |
+| `set()` offline | **queues and LANDS** — confirmed present on the server after reconnect |
+| `await set()` offline | **NEVER RETURNS** — the Android plugin awaits a Task that resolves only on SERVER ack |
+
+#### 3. The actual fix
+
+- **Tolerate `unavailable` on the existence probe.** Offline we cannot know
+  whether the document exists, so treat it as absent and write anyway: the
+  doc-id is a deterministic natural key, so the write is idempotent, and
+  `firestore.rules` accepts an identical replay (`affectedKeys()` is empty).
+- **Never bare-await the write.** Bounded at 3s with `onTimeout`, and a timeout
+  is treated as queued-and-will-sync — because Q2 proves the data lands. A real
+  failure (permission denied) still surfaces promptly while online, because it
+  returns from the server rather than timing out.
+
+**Stated rather than hidden:** offline, `isNew` may report `true` for a
+completion that already existed, double-crediting points/streak/siyum/bookmark
+once. That is the accepted trade — a child on a bus must be able to record
+learning, and a rare over-credit is a far smaller harm than a silently discarded
+completion.
+
+#### 4. The probe is now a repo artifact
+
+Preserved at `learning_tracker/integration_test/firestore_offline_probe_test.dart`.
+It is the ONLY test in this repo that can express this class of defect, and it
+requires a device:
+
+```
+ssh lt; export PATH=$HOME/flutter/bin:$HOME/Android/Sdk/platform-tools:$PATH
+~/Android/Sdk/emulator/emulator -avd lt_api34_pixel7 -no-window -no-audio &
+firebase emulators:exec --only firestore --project demo-offline-probe \
+  "flutter test integration_test/firestore_offline_probe_test.dart -d emulator-5554"
+```
+
+Note it cannot run until the app compiles, because `integration_test` needs the
+package to build — that is why it was proven in a standalone package first.
+
+#### 5. ⚠️ SYSTEMIC — 31 more bare-awaited writes
+
+Q2 is not specific to completions. Any `await ref.set(...)` / `await
+batch.commit()` on a UI path hangs indefinitely offline while the data sits
+safely queued. The offline lens counted **31** such call sites in
+`lib/data/repositories/`, including `recordCompletionsBatch`'s
+`await batch.commit()` reached from onboarding bulk-mark. Presents to a user as
+"the app freezes on the tube" and is near-undiagnosable from a bug report. NOT
+fixed here — recorded as the next offline work item.
+
+#### 6. Machine note corrected
+
+`phase3-handoff-2.md:115` claimed "this is the `lt` box". It is not — the
+development host is **`dn-office`** (verified by `hostname`). `lt` is a SECOND
+box reachable via `ssh lt`, and it is where the six AVDs (API 28-36) live;
+`dn-office` has `adb` but no AVDs. Flutter on `lt` is at `~/flutter/bin` and is
+NOT on the non-interactive SSH PATH. Corrected in place — a wrong machine
+identity sends the next agent hunting for state on the wrong host.
 ### 2026-08-11 — P3-18: siyum detection was SILENTLY DEAD on the Firestore path — revived; bookmark codec inlined, taking the repository heartbeat to 306/306 green
 
 `dart analyze --fatal-infos` EXIT 0 on all four touched files; lib errors 552 → 549.

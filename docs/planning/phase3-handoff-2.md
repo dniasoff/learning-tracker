@@ -112,10 +112,20 @@ Environment: HEAD `5677d6fb`, `origin/dev...dev` = `0 7` (seven unpushed local
 commits — expected), **one** stash on base `1a7223b`, tree dirty = 3 (all
 untracked `.g.dart` files inside the archive; harmless).
 
-**Machine note:** this is the `lt` box, NOT the machine Phase 2 ran on. The older
-handoff's requirement of "exactly 2 stashes with bases `d74e3829`/`8855b9b1`" is
-**unsatisfiable here by construction** — stashes are local-only and never travel
-through `origin`. Do not treat that as a red flag.
+**Machine note (CORRECTED 2026-08-11):** this is **`dn-office`**, not the `lt`
+box — an earlier revision of this note asserted the opposite and was wrong.
+Verified by `hostname`. `lt` is a SECOND dev box reachable over SSH (`ssh lt`),
+and it is where the Android AVDs live: six of them, API 28-36, under
+`~/.android/avd/`, with the emulator binary at `~/Android/Sdk/emulator/`.
+`dn-office` has `adb` but NO AVDs, so any on-device work runs on `lt`.
+Flutter on `lt` is at `~/flutter/bin` and is NOT on the non-interactive SSH
+PATH — export it explicitly.
+
+The note's original CONCLUSION still stands and is unaffected by the correction:
+the older handoff's requirement of "exactly 2 stashes with bases
+`d74e3829`/`8855b9b1`" is **unsatisfiable on any machine but the original**,
+because stashes are local-only and never travel through `origin`. Do not treat
+that as a red flag.
 
 ---
 

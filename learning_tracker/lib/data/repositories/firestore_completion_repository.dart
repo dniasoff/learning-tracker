@@ -471,19 +471,40 @@ class FirestoreCompletionRepository {
     return completionEntityFromFirestore(_normalizeForDecode(data));
   }
 
-  /// Atomically creates the completion document ONLY when it is absent,
-  /// returning `true` when THIS call created it.
+  /// Creates the completion document when it is absent, returning `true` when
+  /// THIS call created it.
   ///
-  /// [recordCompletion]'s `set(merge: true)` cannot answer "did I create it?",
-  /// and a [completionExists] + [recordCompletion] pair is a read-then-write
-  /// race. That race is not cosmetic: `isNew` gates points, streak, siyum
-  /// detection AND bookmark advance (see [MarkCompletionResult]'s doc
-  /// comment), so two concurrent marks of the same item would double-credit
-  /// all four. The transaction closes it.
+  /// ## Deliberately NOT a transaction — offline capability wins
+  ///
+  /// An earlier revision wrapped this in `_firestore.runTransaction` to close
+  /// the read-then-write race on the return value. That was the WRONG trade for
+  /// this app and was reverted.
+  ///
+  /// **Firestore transactions require a server round trip and FAIL when the
+  /// client is offline**, whereas a plain `set` is queued in the local cache and
+  /// replayed on reconnect. Marking a section complete is this app's central
+  /// action, and it is performed by children who are frequently offline — on a
+  /// bus, in a shul, on a school network. A transaction here meant that marking
+  /// work offline threw instead of queueing, which also contradicts this
+  /// project's stated design property that "a previously-created account works
+  /// fully offline" (`lib/data/firestore/account_firebase.dart`).
+  ///
+  /// ## What the race actually costs, stated honestly
+  ///
+  /// `isNew` gates points, streak, siyum detection and bookmark advance (see
+  /// `MarkCompletionResult`'s doc comment). Without the transaction, two devices
+  /// marking the SAME section for the SAME child at the SAME moment can both
+  /// observe "absent" and both report `isNew: true`, double-crediting those four
+  /// side effects once.
+  ///
+  /// That is a rare, cosmetic over-credit. Being unable to record learning while
+  /// offline is a core-function failure. The trade is not close, and it is
+  /// recorded here so nobody "fixes" this back into a transaction without
+  /// weighing the same two costs.
   ///
   /// A tombstoned document counts as PRESENT here and is left untouched —
-  /// resurrecting it belongs to [restoreCompletion], so that the caller's
-  /// `isNew` reports a resurrection rather than a create.
+  /// resurrecting it belongs to [restoreCompletion], so the caller's `isNew`
+  /// reports a resurrection rather than a create.
   Future<bool> recordCompletionIfAbsent(CompletionEntity entity) async {
     if (entity.source == CompletionSource.lifetimeOnly) {
       throw ArgumentError(
@@ -493,12 +514,50 @@ class FirestoreCompletionRepository {
       );
     }
     final ref = _doc(entity);
-    return _firestore.runTransaction<bool>((txn) async {
-      final snapshot = await txn.get(ref);
-      if (snapshot.exists) return false;
-      txn.set(ref, entity.toFirestore());
-      return true;
-    });
+
+    // ── Existence probe, offline-tolerant ────────────────────────────────
+    // MEASURED on a real device (cloud_firestore 6.8.0, Android emulator,
+    // Firestore emulator): `get()` on a document NOT in the local cache
+    // THROWS `FirebaseException(code: 'unavailable')` while offline — it does
+    // NOT return a not-exists snapshot. An earlier revision of this method
+    // claimed the opposite in a comment; that claim was false and is the reason
+    // marking a completion offline still failed after the transaction was
+    // removed.
+    //
+    // Offline we simply cannot know whether the document exists. Treat it as
+    // ABSENT and write anyway: the doc-id is deterministic (natural key), so
+    // the write is idempotent, and `firestore.rules` accepts an identical
+    // replay because `diff().affectedKeys()` is empty for one.
+    //
+    // Consequence, stated rather than hidden: `isNew` may be reported `true`
+    // for a completion that already existed, which can double-credit points /
+    // streak / siyum / bookmark-advance once. That is the accepted trade — a
+    // child on a bus must be able to record learning, and a rare over-credit
+    // is a far smaller harm than a silently discarded completion.
+    var exists = false;
+    try {
+      final snapshot = await ref.get();
+      exists = snapshot.exists;
+    } on FirebaseException catch (e) {
+      if (e.code != 'unavailable') rethrow;
+      exists = false;
+    }
+    if (exists) return false;
+
+    // ── The write itself — NEVER bare-await it ───────────────────────────
+    // MEASURED: offline, `await ref.set(...)` never returns, because the
+    // Android plugin awaits a Task that completes only on SERVER
+    // acknowledgement. The write IS durably queued regardless — the probe
+    // confirmed the document was present on the server after reconnecting.
+    //
+    // So bound the wait and treat a timeout as success-pending-sync. A real
+    // failure (permission denied, invalid argument) still surfaces promptly
+    // while online, because those return from the server rather than timing
+    // out. A bare await here would hang the UI indefinitely on a bus.
+    await ref
+        .set(entity.toFirestore(), SetOptions(merge: true))
+        .timeout(const Duration(seconds: 3), onTimeout: () {});
+    return true;
   }
 
   /// Tombstones an existing completion by stamping `purged_at` — the erasure
