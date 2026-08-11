@@ -5,7 +5,6 @@ import 'package:learning_tracker/features/gamification/presentation/providers/ac
 import 'package:learning_tracker/features/gamification/presentation/providers/gamification_service_providers.dart';
 import 'package:learning_tracker/features/gamification/presentation/screens/child_redemption_screen.dart';
 import 'package:learning_tracker/features/gamification/presentation/widgets/reward_form.dart';
-import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:learning_tracker/features/tutoring/tutoring.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -122,11 +121,14 @@ class RewardConfigController extends _$RewardConfigController {
   }
 
   Future<void> _persistAndSync() async {
-    await ref.read(syncWriteFacadeProvider)?.pushGamificationSettingsSnapshot();
-    // SM-4 (AUD-gamification-01): the screen/notifier can be torn down
-    // while the sync push above is in flight (e.g. a fast back-gesture).
-    // Touching `ref` after disposal throws, so bail out before the
-    // invalidate calls rather than let that throw propagate.
+    // TODO(gamification-settings-sync): the cloud-settings push that used to
+    // run here was deleted along with the archived SyncWriteFacade (lib/core/
+    // database + lib/features/sync were removed wholesale, task tracker
+    // #22) — a saved/toggled/deleted reward is local-only (SharedPreferences)
+    // until a real, non-outbox replacement is built. SM-4 (AUD-gamification-01):
+    // the screen/notifier can still be torn down between the write above (in
+    // the caller) and the invalidate calls below (e.g. a fast back-gesture) —
+    // touching `ref` after disposal throws, so this guard stays.
     if (!ref.mounted) return;
     ref.invalidate(achievementsOverviewProvider);
     ref.invalidate(dashboardChildNextRewardProvider);

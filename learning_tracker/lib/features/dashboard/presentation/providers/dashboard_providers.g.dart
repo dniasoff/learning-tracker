@@ -825,7 +825,7 @@ final class StripStockMilestonesEffectProvider
 }
 
 String _$stripStockMilestonesEffectHash() =>
-    r'e0b343687c26cff6837a2360c4fd17297661333e';
+    r'c3ba54a77521dc1cc0ebe52aebec4c76eac983d3';
 
 /// Next reward milestone for the child dashboard (closest threshold not yet met).
 ///

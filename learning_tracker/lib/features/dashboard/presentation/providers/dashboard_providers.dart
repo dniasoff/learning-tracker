@@ -20,10 +20,7 @@ import 'package:learning_tracker/features/scheduler/scheduler.dart';
 // (features/tracks/presentation/providers/track_progress_providers.dart),
 // which reaches them the same deep way.
 import 'package:learning_tracker/features/progress/data/repositories/firestore_chart_data_repository_adapter.dart';
-import 'package:learning_tracker/features/progress/domain/services/chart_data_service.dart'
-    show ChartDataRepository;
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
-import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:learning_tracker/features/tracks/presentation/providers/track_progress_providers.dart';
 import 'package:learning_tracker/features/tracks/stages/presentation/providers/stage_providers.dart';
 import 'package:learning_tracker/features/tracks/tracks.dart';
@@ -263,14 +260,19 @@ Future<int> dashboardGlobalPoints(Ref ref) async {
 Future<void> stripStockMilestonesEffect(Ref ref) async {
   final milestoneService = ref.watch(rewardMilestoneServiceProvider);
 
-  final stripped = await milestoneService.stripStockTemplateMilestones();
+  await milestoneService.stripStockTemplateMilestones();
   // Guard: this autoDispose provider may have been disposed during the async
   // gap above (e.g. the user navigated away before the strip completed) —
   // see dashboardChildNextReward's identical guard (SM-4, AUD-dashboard-06).
   if (!ref.mounted) return;
-  if (stripped) {
-    await ref.read(syncWriteFacadeProvider)?.pushGamificationSettingsSnapshot();
-  }
+  // TODO(gamification-settings-sync): the strip above is a local
+  // (SharedPreferences) write only — it used to also push a cloud snapshot
+  // via the now-archived SyncWriteFacade (lib/core/database + lib/features/
+  // sync were deliberately deleted wholesale, commit 04897ebc; see
+  // docs/planning task tracker #22). RewardMilestoneService has no
+  // Firestore mirror yet, so a stripped stock milestone stays local-only
+  // until a real (non-outbox) settings-sync replacement is built — a real,
+  // disclosed gap, not silently dropped.
 }
 
 /// Next reward milestone for the child dashboard (closest threshold not yet met).
