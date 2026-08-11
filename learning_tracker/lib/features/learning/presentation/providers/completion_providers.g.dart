@@ -433,7 +433,7 @@ final class CompletionCountProvider
   }
 }
 
-String _$completionCountHash() => r'6945dfea9b86842bd2801dd6e83c986f265960af';
+String _$completionCountHash() => r'2fed986edd27df92631c47e2c071949e59e457cf';
 
 /// Provides the number of completions for a specific content item,
 /// scoped to the active profile.
@@ -469,13 +469,11 @@ final class CompletionCountFamily extends $Family
 }
 
 /// Batch review counts for all items in a curriculum (AC-3, AC-7).
-/// Single GROUP BY query — avoids N+1 per-item watches.
 
 @ProviderFor(reviewCountsForCurriculum)
 final reviewCountsForCurriculumProvider = ReviewCountsForCurriculumFamily._();
 
 /// Batch review counts for all items in a curriculum (AC-3, AC-7).
-/// Single GROUP BY query — avoids N+1 per-item watches.
 
 final class ReviewCountsForCurriculumProvider
     extends
@@ -486,7 +484,6 @@ final class ReviewCountsForCurriculumProvider
         >
     with $FutureModifier<Map<String, int>>, $FutureProvider<Map<String, int>> {
   /// Batch review counts for all items in a curriculum (AC-3, AC-7).
-  /// Single GROUP BY query — avoids N+1 per-item watches.
   ReviewCountsForCurriculumProvider._({
     required ReviewCountsForCurriculumFamily super.from,
     required String super.argument,
@@ -533,10 +530,9 @@ final class ReviewCountsForCurriculumProvider
 }
 
 String _$reviewCountsForCurriculumHash() =>
-    r'71312744f39f7921dd5153a9aeaf589f21bf523d';
+    r'efc2d8599ea58559682239919131b9d4247a63cb';
 
 /// Batch review counts for all items in a curriculum (AC-3, AC-7).
-/// Single GROUP BY query — avoids N+1 per-item watches.
 
 final class ReviewCountsForCurriculumFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<Map<String, int>>, String> {
@@ -550,7 +546,6 @@ final class ReviewCountsForCurriculumFamily extends $Family
       );
 
   /// Batch review counts for all items in a curriculum (AC-3, AC-7).
-  /// Single GROUP BY query — avoids N+1 per-item watches.
 
   ReviewCountsForCurriculumProvider call(String curriculumId) =>
       ReviewCountsForCurriculumProvider._(argument: curriculumId, from: this);
@@ -621,7 +616,7 @@ final class ItemStageBreakdownProvider
 }
 
 String _$itemStageBreakdownHash() =>
-    r'a6483b57733865d4ce8e43541014efbff3058043';
+    r'ff0d5cd62793d0c2be2a74efbf3e8190b8aebc7a';
 
 /// Per-stage breakdown for a single item (AC-1, AC-5).
 

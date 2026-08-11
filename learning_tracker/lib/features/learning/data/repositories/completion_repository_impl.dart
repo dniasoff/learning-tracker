@@ -474,4 +474,26 @@ class FirestoreCompletionRepositoryAdapter implements CompletionRepository {
       purgedAt: purgedAt,
     );
   }
+
+  @override
+  Future<Map<String, int>> getReviewCountsForCurriculum(
+    CurriculumId curriculumId,
+  ) async {
+    // D-E: same achievement-data reasoning as getCompletionsForContentItem
+    // above.
+    final repo = await _resolve();
+    return repo.getReviewCountsByItem(curriculumId);
+  }
+
+  @override
+  Future<Map<int, int>> getStageBreakdownForItem({
+    required CurriculumId curriculumId,
+    required String sefariaRef,
+  }) async {
+    final repo = await _resolve();
+    return repo.getStageBreakdownByItem(
+      curriculumId: curriculumId,
+      sefariaRef: sefariaRef,
+    );
+  }
 }

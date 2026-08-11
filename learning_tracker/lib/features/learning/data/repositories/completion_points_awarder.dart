@@ -84,7 +84,7 @@ class FirestoreCompletionPointsAwarder implements CompletionPointsPort {
   Future<int> calculatePoints({
     required String curriculumId,
     required int stageOrder,
-    required int profileId,
+    required String? profileId,
   }) async {
     // Engagement tier gate (B1): only `live` completions earn points. The
     // orchestrator only calls this method when `awardGamificationPoints` is
@@ -165,7 +165,7 @@ class FirestoreCompletionPointsAwarder implements CompletionPointsPort {
 
   @override
   Future<void> creditCompletion({
-    required int profileId,
+    required String? profileId,
     required int points,
     required String note,
   }) async {

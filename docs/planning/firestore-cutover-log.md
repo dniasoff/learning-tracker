@@ -2445,6 +2445,35 @@ not re-learn the hard way:**
 
 ---
 
+### 2026-08-11 — Phase 3 Wave 0: tutored_write_router.dart deleted — tutor writes have NO client path (T-37, accepted regression)
+
+`TutoredWriteRouter implements SyncWriteFacade` — the whole Drift-outbox
+`SyncWriteFacade` interface it decorated is deleted, and no Firestore-native
+replacement exists for "route a tutor's write into the permission-checked
+`TutorWriteService` Cloud Functions instead of the local outbox" seam. Per
+`docs/planning/phase3-wave-plan.md`'s risk register (Wave 0 entry), deleted
+outright rather than patched: there is nothing left to route TO (the outbox
+is gone) and inventing a replacement was explicitly out of scope for this
+pass.
+
+**Accepted regression, not a mechanical no-op:** a tutor who previously could
+edit goals/tracks/stage-definitions/study-days/profile-programs/gamification-
+settings/profile-fields/reset-a-completion for a talmid now has no client-side
+path to do any of that — `pushGoal`, `deleteGoal`, `pushCurriculumTrack`,
+`pushStageDefinitions`, `pushStudyDayConfig`, `pushProfileProgram`,
+`pushGamificationSettingsSnapshot`, `pushLearnerProfile`, `deleteCompletion`
+were all previously CF-routed here. The server-side `TutorWriteService` CFs
+themselves are untouched and still deployed; only the CLIENT call path is
+gone. `edit_track_screen.dart` (Wave A6, already broken for unrelated Drift
+reasons) still references this class and will need it removed when that
+screen gets its own pass — not a new break introduced by this deletion.
+
+**Restoring tutor write access needs a real design pass**, not a quick patch:
+what does "route through TutorWriteService CFs" look like now that presentation
+code writes directly through `Ref`-based Firestore adapters rather than a
+single facade every write flows through? Tracked as the T-37 owner-uid handle
+seam; escalate before attempting.
+
 ### 2026-08-11 — P3-41: the cold-cache gate propagates itself to the notification path — where a fabricated `false` is worse than on any screen
 
 `dart analyze --fatal-infos` EXIT 0 on all four files.

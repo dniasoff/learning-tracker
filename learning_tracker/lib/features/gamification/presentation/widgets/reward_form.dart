@@ -1,5 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 
 part 'reward_form.freezed.dart';
 
@@ -29,7 +29,7 @@ abstract class RewardForm with _$RewardForm {
     @Default(false) bool isGlobalReward,
     int? selectedTrackId,
     String? editingMilestoneId,
-    @Default(<CurriculumTrack>[]) List<CurriculumTrack> tracks,
+    @Default(<CurriculumTrackEntity>[]) List<CurriculumTrackEntity> tracks,
     @Default(false) bool loading,
     String? error,
   }) = _RewardForm;

@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/analytics/analytics_provider.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/learning/data/repositories/completion_points_awarder.dart';
 import 'package:learning_tracker/features/learning/data/repositories/completion_repository_impl.dart';
@@ -15,7 +15,6 @@ import 'package:learning_tracker/features/learning/presentation/providers/comple
 import 'package:learning_tracker/features/learning/presentation/providers/learning_ledger_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/optimistic_completion_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
-import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:learning_tracker/features/tracks/stages/presentation/providers/stage_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -135,6 +134,21 @@ BulkMarkCompletionUseCase bulkMarkCompletionUseCase(Ref ref) {
   return BulkMarkCompletionUseCase(orchestrator);
 }
 
+/// Resolves a persisted curriculum-id storage key, throwing on an
+/// unrecognised value — a bad key here is a caller bug, not a not-ready
+/// backend, so it must never be swallowed into a silent empty result.
+CurriculumId _requireCurriculumId(String storageKey) {
+  final id = CurriculumId.fromStorageKey(storageKey);
+  if (id == null) {
+    throw ArgumentError.value(
+      storageKey,
+      'curriculumId',
+      'Unknown CurriculumId storage key',
+    );
+  }
+  return id;
+}
+
 /// Provides the number of completions for a specific content item,
 /// scoped to the active profile.
 @riverpod
@@ -143,23 +157,23 @@ Future<int> completionCount(
   required String curriculumId,
   required String sefariaRef,
 }) async {
-  final database = ref.watch(userDatabaseProvider);
-  final profileId = ref.watch(activeProfileIdProvider);
-  final completions = await database.completionDao
-      .getCompletionsForContentAndProfile(sefariaRef, profileId);
-  return completions.where((c) => c.curriculumId == curriculumId).length;
+  final repository = ref.watch(completionRepositoryProvider);
+  final completions = await repository.getCompletionsForContentItem(sefariaRef);
+  return completions
+      .where((c) => c.curriculumId.storageKey == curriculumId)
+      .length;
 }
 
 /// Batch review counts for all items in a curriculum (AC-3, AC-7).
-/// Single GROUP BY query — avoids N+1 per-item watches.
 @riverpod
 Future<Map<String, int>> reviewCountsForCurriculum(
   Ref ref,
   String curriculumId,
 ) async {
-  final database = ref.watch(userDatabaseProvider);
-  final profileId = ref.watch(activeProfileIdProvider);
-  return database.completionDao.getReviewCountsByItem(curriculumId, profileId);
+  final repository = ref.watch(completionRepositoryProvider);
+  return repository.getReviewCountsForCurriculum(
+    _requireCurriculumId(curriculumId),
+  );
 }
 
 /// Per-stage breakdown for a single item (AC-1, AC-5).
@@ -168,11 +182,9 @@ Future<Map<int, int>> itemStageBreakdown(
   Ref ref,
   ({String curriculumId, String sefariaRef}) params,
 ) async {
-  final database = ref.watch(userDatabaseProvider);
-  final profileId = ref.watch(activeProfileIdProvider);
-  return database.completionDao.getStageBreakdownByItem(
-    params.curriculumId,
-    params.sefariaRef,
-    profileId,
+  final repository = ref.watch(completionRepositoryProvider);
+  return repository.getStageBreakdownForItem(
+    curriculumId: _requireCurriculumId(params.curriculumId),
+    sefariaRef: params.sefariaRef,
   );
 }

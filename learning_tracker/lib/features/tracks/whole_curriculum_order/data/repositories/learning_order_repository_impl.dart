@@ -1,23 +1,11 @@
-import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
-import 'package:learning_tracker/core/sync/sync_write_facade.dart';
-import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
 import 'package:learning_tracker/data/repositories/firestore_learning_order_repository.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/domain/models/learning_order_item.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/domain/repositories/learning_order_repository.dart'
     show LearningOrderRepository, ParentControlException;
-
-/// AUD-tracks-15 (SM-8): this repository only talks to its own DAO
-/// (`UserDatabase.learningOrderDao` / `.trackDao`). It no longer holds a
-/// `ContentRepository` dependency — the content-fetch orchestration lives in
-/// `learning_order_providers.dart`, which resolves the curriculum's content
-/// list and passes it in as `allItems` on every `getOrder` call. Mirrors the
-/// same fix applied to `TrackLearningOrderRepositoryImpl`.
 
 /// Thrown by [FirestoreLearningOrderRepositoryAdapter]'s write methods
 /// (`saveOrder`, `resetToDefault`) when `firestoreLearningOrderRepositoryProvider`

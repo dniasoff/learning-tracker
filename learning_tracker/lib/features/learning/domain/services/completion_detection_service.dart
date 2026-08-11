@@ -157,8 +157,6 @@ class CompletionDetectionService {
     required String sefariaRef,
     required String trackType,
     int? trackId,
-    required int profileId,
-    required int markedBy,
     CompletionSource source = CompletionSource.live,
     bool includeUnitLevelCheck = true,
     bool includeAggregateLevelCheck = true,
@@ -192,8 +190,6 @@ class CompletionDetectionService {
         level2: item.level2,
         trackType: trackType,
         trackId: trackId,
-        profileId: profileId,
-        markedBy: markedBy,
         source: source,
       );
     }
@@ -213,8 +209,6 @@ class CompletionDetectionService {
         level2: null,
         trackType: trackType,
         trackId: trackId,
-        profileId: profileId,
-        markedBy: markedBy,
         source: source,
       );
     }
@@ -229,8 +223,6 @@ class CompletionDetectionService {
     String? level2,
     required String trackType,
     int? trackId,
-    required int profileId,
-    required int markedBy,
     CompletionSource source = CompletionSource.live,
   }) async {
     // Get all leaf items for this unit

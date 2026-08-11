@@ -67,6 +67,21 @@ abstract class CompletionRepository {
   /// Get all completions for a specific content item by sefariaRef.
   Future<List<CompletionEntity>> getCompletionsForContentItem(String sefariaRef);
 
+  /// Total review count per sefariaRef within [curriculumId] (AC-3, AC-7).
+  /// Achievement data — throws when the backend is not ready rather than
+  /// returning an empty map indistinguishable from "no reviews yet".
+  Future<Map<String, int>> getReviewCountsForCurriculum(
+    CurriculumId curriculumId,
+  );
+
+  /// Per-stage review-count breakdown for [sefariaRef] within [curriculumId]
+  /// (AC-1, AC-5). Same achievement-data throw contract as
+  /// [getReviewCountsForCurriculum].
+  Future<Map<int, int>> getStageBreakdownForItem({
+    required CurriculumId curriculumId,
+    required String sefariaRef,
+  });
+
   /// Check if a specific stage has been completed for a content item by sefariaRef.
   Future<bool> isStageCompleted({
     required String sefariaRef,

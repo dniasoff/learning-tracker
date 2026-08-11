@@ -18,7 +18,6 @@ export 'package:learning_tracker/features/tutoring/domain/models/session_role.da
 export 'package:learning_tracker/features/tutoring/data/services/tutor_write_service.dart';
 
 // ── Data routers (S1 — tutored write routing keystone) ────────────────────
-export 'package:learning_tracker/features/tutoring/data/routers/tutored_write_router.dart';
 
 // ── Domain services (W4.30, W6.25) ────────────────────────────────────────
 // AUD-tutoring-06 removed tutor_audit_log_writer.dart (dead code — never

@@ -1,54 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/database/daos/learning_order_dao.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
 import 'package:learning_tracker/data/repositories/firestore_learning_order_repository.dart';
 import 'package:learning_tracker/features/scheduler/domain/repositories/scheduler_learning_order_repository.dart';
-
-/// Adapts [LearningOrderDao] for scheduler consumption.
-///
-/// Scoped to a single profile so a sibling profile's custom learning order
-/// cannot leak into this profile's daily plan (AUD-core-database-02).
-///
-/// **No longer wired into production** — `schedulerEngineProvider`
-/// (`lib/features/scheduler/presentation/providers/scheduler_providers.dart`)
-/// now constructs [SchedulerFirestoreLearningOrderRepositoryAdapter] below
-/// instead. This class is a stranded reader left behind by the F2 rewire
-/// (`learningOrderRepositoryProvider` → `FirestoreLearningOrderRepositoryAdapter`,
-/// `lib/features/tracks/whole_curriculum_order/data/repositories/
-/// learning_order_repository_impl.dart`): that rewire's `saveOrder` stopped
-/// writing `learning_order_dao` entirely, so a reorder saved after the
-/// cutover would never appear in [getOrder] below — daily-task generation
-/// would silently keep serving whichever order was in Drift before the
-/// cutover, forever. Kept only for its existing unit tests; do not
-/// reintroduce it as the production wiring.
-class SchedulerLearningOrderRepositoryImpl
-    implements SchedulerLearningOrderRepository {
-  SchedulerLearningOrderRepositoryImpl({
-    required LearningOrderDao learningOrderDao,
-    int profileId = 0,
-  }) : _learningOrderDao = learningOrderDao,
-       _profileId = profileId;
-
-  final LearningOrderDao _learningOrderDao;
-  final int _profileId;
-
-  @override
-  Future<List<SchedulerOrderItem>> getOrder(CurriculumId curriculumId) async {
-    final rows = await _learningOrderDao.getLearningOrderByCurriculum(
-      curriculumId.storageKey,
-      profileId: _profileId,
-    );
-    return rows
-        .map(
-          (r) => SchedulerOrderItem(
-            sefariaRef: r.sefariaRef,
-            userSortOrder: r.userSortOrder,
-          ),
-        )
-        .toList();
-  }
-}
 
 /// Firestore-backed [SchedulerLearningOrderRepository] adapter — the
 /// scheduler-side read counterpart to

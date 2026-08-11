@@ -35,7 +35,7 @@ abstract class CompletionPointsPort {
   Future<int> calculatePoints({
     required String curriculumId,
     required int stageOrder,
-    required int profileId,
+    required String? profileId,
   });
 
   /// Credits [points] (always > 0 — callers only invoke this after checking
@@ -44,7 +44,7 @@ abstract class CompletionPointsPort {
   /// string (mirrors `CompletionRepositoryImpl`'s prior
   /// `'$curriculumId:$sefariaRef'` note).
   Future<void> creditCompletion({
-    required int profileId,
+    required String? profileId,
     required int points,
     required String note,
   });
@@ -63,7 +63,7 @@ abstract class CompletionStreakPort {
   /// day) — a duplicate call for the same day is expected (e.g. a second
   /// completion later the same day) and must be a silent no-op, not an
   /// error.
-  Future<void> recordStudyDay({required int profileId, required DateTime at});
+  Future<void> recordStudyDay({required String? profileId, required DateTime at});
 }
 
 /// Owns the five app-rule side effects that fire when a completion is
@@ -177,7 +177,7 @@ class CompletionOrchestrator {
   CompletionOrchestrator({
     required CompletionRepository repository,
     required ContentRepository contentRepository,
-    required int activeProfileId,
+    required String? activeProfileId,
     BookmarkRepository? bookmarkRepository,
     CompletionDetectionService? completionDetectionService,
     CompletionPointsPort? pointsPort,
@@ -192,7 +192,7 @@ class CompletionOrchestrator {
 
   final CompletionRepository _repository;
   final ContentRepository _contentRepository;
-  final int _activeProfileId;
+  final String? _activeProfileId;
   final BookmarkRepository? _bookmarkRepository;
   final CompletionDetectionService? _completionDetectionService;
   final CompletionPointsPort? _pointsPort;
@@ -306,7 +306,7 @@ class CompletionOrchestrator {
   }
 
   Future<void> _creditPointsIfAny({
-    required int profileId,
+    required String? profileId,
     required int points,
   }) async {
     final port = _pointsPort;
@@ -336,7 +336,6 @@ class CompletionOrchestrator {
       trackType: request.trackType,
       stageId: request.stageId,
       sefariaRefs: request.sefariaRefs,
-      profileId: _activeProfileId,
     );
 
     var points = 0;
@@ -381,7 +380,6 @@ class CompletionOrchestrator {
         curriculumId: request.curriculumId,
         sefariaRefs: completions.map((c) => c.sefariaRef).toList(),
         trackType: request.trackType,
-        profileId: _activeProfileId,
         source: source,
       );
     }
@@ -467,12 +465,15 @@ class CompletionOrchestrator {
     required String trackType,
     required int stageId,
     required List<String> sefariaRefs,
-    required int profileId,
   }) async {
     final refSet = sefariaRefs.toSet();
+    // NO profileId: the Firestore repository is profile-scoped by its
+    // collection path (mirrors the identical fix already applied in
+    // CompletionDetectionService._checkUnitCompletion) -- passing one here
+    // throws CompletionRepositoryDelegatedProfileUnsupportedException,
+    // which made every bulk-mark order validation fail before this fix.
     final existing = await _repository.getCompletionsByCurriculum(
       curriculumId,
-      profileId: profileId,
     );
     final byRef = <String, List<CompletionEntity>>{};
     for (final c in existing) {
@@ -505,8 +506,6 @@ class CompletionOrchestrator {
         curriculumId: curriculumId,
         sefariaRef: sefariaRef,
         trackType: trackType,
-        profileId: _activeProfileId,
-        markedBy: _activeProfileId,
         source: source,
       );
     } catch (error, stackTrace) {
@@ -533,7 +532,6 @@ class CompletionOrchestrator {
     required String curriculumId,
     required List<String> sefariaRefs,
     required String trackType,
-    required int profileId,
     required CompletionSource source,
   }) async {
     final svc = _completionDetectionService;
@@ -572,8 +570,6 @@ class CompletionOrchestrator {
           curriculumId: curriculumId,
           sefariaRef: ref,
           trackType: trackType,
-          profileId: profileId,
-          markedBy: profileId,
           source: source,
           includeAggregateLevelCheck: false,
         );
@@ -583,8 +579,6 @@ class CompletionOrchestrator {
           curriculumId: curriculumId,
           sefariaRef: ref,
           trackType: trackType,
-          profileId: profileId,
-          markedBy: profileId,
           source: source,
           includeUnitLevelCheck: false,
         );

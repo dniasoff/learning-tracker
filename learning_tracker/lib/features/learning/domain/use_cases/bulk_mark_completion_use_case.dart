@@ -1,7 +1,7 @@
-import 'package:learning_tracker/core/database/daos/completion_dao.dart';
 import 'package:learning_tracker/core/learning/completion_constants.dart';
 import 'package:learning_tracker/core/logging/log_events.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_entity.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 import 'package:learning_tracker/features/learning/domain/services/completion_orchestrator.dart';
@@ -45,7 +45,7 @@ class BulkMarkCompletionUseCase {
   /// If any operation fails, the entire transaction is rolled back.
   ///
   /// Returns the list of created completions.
-  Future<List<Completion>> call(
+  Future<List<CompletionEntity>> call(
     BulkCompletionRequest request, {
     CompletionSource source = CompletionSource.bulkInTrack,
   }) async {

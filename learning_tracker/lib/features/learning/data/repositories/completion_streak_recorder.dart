@@ -53,7 +53,7 @@ class FirestoreCompletionStreakRecorder implements CompletionStreakPort {
 
   @override
   Future<void> recordStudyDay({
-    required int profileId,
+    required String? profileId,
     required DateTime at,
   }) async {
     try {
