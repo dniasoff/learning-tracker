@@ -1,6 +1,5 @@
 import 'package:learning_tracker/core/codec/firestore_codec.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/sync/codec/bookmark_codec.dart';
 
 /// Domain entity representing a user's current position in a curriculum.
 ///
@@ -32,17 +31,25 @@ class BookmarkEntity {
 
   /// Convert to Firestore document map.
   ///
-  /// Phase B: routes through [BookmarkCodec.encode] so the write shape is
-  /// identical to the merge read-key (`sefaria_ref`) — removes the
-  /// push↔merge key mismatch that caused cross-device bookmark loss.
+  /// Emitted literally. This previously routed through `BookmarkCodec.encode`
+  /// (`core/sync/codec/bookmark_codec.dart`), which was archived with the sync
+  /// engine. The key set and the `updated_at` encoding are reproduced VERBATIM
+  /// from that codec (archived at
+  /// `docs/_archive/drift-user-db/sync/lib-core-sync/codec/bookmark_codec.dart:61-65`)
+  /// rather than re-derived, because the codec's whole purpose was that the
+  /// write shape match the merge read-key `sefaria_ref` — a mismatch there
+  /// previously caused cross-device bookmark loss.
+  ///
+  /// All three keys are inside `firestore.rules`' bookmarks allowlist
+  /// (`profile_id`, `curriculum_id`, `content_item_id`, `sefaria_ref`,
+  /// `stage_id`, `updated_at`, `synced_at`), and `sefaria_ref` is capped at
+  /// 500 chars there — so this write is accepted as-is.
   Map<String, dynamic> toFirestore() {
-    return const BookmarkCodec().encode(
-      BookmarkRow(
-        curriculumId: curriculumId.storageKey,
-        sefariaRef: sefariaRef,
-        updatedAt: updatedAt,
-      ),
-    );
+    return {
+      'curriculum_id': curriculumId.storageKey,
+      'sefaria_ref': sefariaRef,
+      'updated_at': FirestoreCodec.encodeDateTime(updatedAt),
+    };
   }
 
   /// Create from Firestore document.

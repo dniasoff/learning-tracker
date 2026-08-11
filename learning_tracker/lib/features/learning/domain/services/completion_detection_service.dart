@@ -272,8 +272,14 @@ class CompletionDetectionService {
     // call per leaf — for a masechta with 40 mishnayot leaves that was 40
     // round trips per detection call, and a seder-level check across
     // multiple masechtos could trigger hundreds.
+    // NO profileId: the Firestore repository is profile-scoped by its
+    // collection path, and this is only ever called for the ACTIVE profile
+    // (CompletionOrchestrator passes `profileId: _activeProfileId`). Passing a
+    // Drift int here made the adapter throw
+    // CompletionRepositoryDelegatedProfileUnsupportedException — which
+    // _dispatchSiyumDetection then SWALLOWED, silently disabling every siyum.
     final allCompletions = await _completionRepository
-        .getCompletionsByCurriculum(curriculumId, profileId: profileId);
+        .getCompletionsByCurriculum(curriculumId);
     final stagesByRef = <String, Set<int>>{};
     for (final c in allCompletions) {
       if (c.trackType != trackType) continue;
@@ -315,15 +321,17 @@ class CompletionDetectionService {
         ? unitItems.first.displayNameEn
         : displayEn;
 
+    // P3-13 shape: CurriculumId enum (not the storage-key String), no
+    // trackId (the ledger is keyed by UNIT, not by a per-device track row —
+    // AD-25), and markedBy omitted so the adapter stamps the active profile's
+    // ULID (see LearningLedgerRepository.recordCompletion's doc comment).
     await _ledgerRepository.recordCompletion(
-      curriculumId: curriculumId,
+      curriculumId: curriculum,
       entryScope: entryScope,
       unitIdentifier: unitIdentifier,
       unitDisplayNameHe: unitDisplayHe,
       unitDisplayNameEn: unitDisplayEn,
       trackType: trackType,
-      trackId: trackId,
-      markedBy: markedBy,
       isManual: false,
       source: source,
     );

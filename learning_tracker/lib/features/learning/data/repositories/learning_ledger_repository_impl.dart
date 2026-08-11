@@ -126,11 +126,18 @@ class FirestoreLearningLedgerRepositoryAdapter
     required String unitDisplayNameHe,
     required String unitDisplayNameEn,
     required String trackType,
-    required String markedBy,
+    String? markedBy,
     required bool isManual,
     CompletionSource source = CompletionSource.live,
   }) async {
-    _assertManualMarkPermission(markedBy: markedBy, isManual: isManual);
+    // The caller may omit `markedBy` (domain services cannot legally reach the
+    // active-profile ULID — see the interface's doc comment). This class can,
+    // so it fills the gap rather than pushing the data ring up into the domain.
+    final marker = markedBy ?? _activeProfileUlid;
+    if (marker == null) {
+      throw const LearningLedgerRepositoryNotReadyException();
+    }
+    _assertManualMarkPermission(markedBy: marker, isManual: isManual);
     final repo = await _resolve();
     return repo.recordCompletion(
       curriculumId: curriculumId,
@@ -140,7 +147,7 @@ class FirestoreLearningLedgerRepositoryAdapter
       unitDisplayNameEn: unitDisplayNameEn,
       trackType: trackType,
       completedAt: _completedAtFor(source),
-      markedBy: markedBy,
+      markedBy: marker,
       isManual: isManual,
       source: source,
     );

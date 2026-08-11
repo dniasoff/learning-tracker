@@ -2445,6 +2445,80 @@ not re-learn the hard way:**
 
 ---
 
+### 2026-08-11 — P3-18: siyum detection was SILENTLY DEAD on the Firestore path — revived; bookmark codec inlined, taking the repository heartbeat to 306/306 green
+
+`dart analyze --fatal-infos` EXIT 0 on all four touched files; lib errors 552 → 549.
+`check_dependency_direction` EXIT 0.
+**`flutter test test/data/repositories/`: 306 tests, ALL PASS (was 285 + 1 failure).**
+
+#### 1. Siyum detection never fired, and nothing said so
+
+`CompletionDetectionService._checkUnitCompletion` asked the repository for
+completions scoped to a Drift `int` profileId
+(`completion_detection_service.dart:276`). `FirestoreCompletionRepositoryAdapter`
+refuses that outright with
+`CompletionRepositoryDelegatedProfileUnsupportedException`
+(`completion_repository_impl.dart:423-425`).
+
+**The adapter is RIGHT to refuse**, and its reasoning is worth preserving: it
+*"cannot tell whether a given profileId even means the active profile, so
+silently serving the active profile's data regardless — right or wrong — would
+be worse than refusing outright."* That is a correct guard.
+
+`CompletionOrchestrator._dispatchSiyumDetection` then CATCHES the exception and
+only logs `completion_siyum_detection_failed`
+(`completion_orchestrator.dart:512-523`). The catch is defensible in isolation —
+a detection failure should not fail the completion write — but combined with the
+guard it means **every siyum silently never happened.** In a children's Torah
+tracker the siyum IS the reward mechanic.
+
+Fix: drop the argument. The Firestore repository is profile-scoped by its
+collection path, and this path is only ever invoked for the ACTIVE profile
+(the orchestrator passes `profileId: _activeProfileId`), so the scoping the
+parameter asked for is already guaranteed by construction. Verified before
+changing: within `_checkUnitCompletion`, `profileId` was used ONLY for that read.
+
+#### 2. The ledger call had drifted from P3-13
+
+Three analyzer errors, all caused by this session's own P3-13 interface
+migration never reaching this caller: `curriculumId` was still the storage-key
+`String` (now `CurriculumId`), `trackId` no longer exists (AD-25 — the ledger is
+keyed by UNIT, not a per-device track row), and `markedBy` was an `int` where a
+ULID `String` is required.
+
+**`markedBy` could not simply be passed from here.** It needs the active
+profile's ULID, which lives in the data-access ring, and
+`check_dependency_direction` (AD-23/AD-28) forbids domain and presentation code
+from importing that ring — the same wall P3-15 hit.
+
+Resolution: `markedBy` is now OPTIONAL on `LearningLedgerRepository.recordCompletion`,
+and `FirestoreLearningLedgerRepositoryAdapter` stamps the active profile when it
+is omitted. The adapter already holds `_activeProfileUlid` and lives in
+`features/*/data/repositories/`, which the check exempts. The dependency did not
+move — it stayed in the only layer allowed to hold it. Gate re-run: EXIT 0.
+
+#### 3. Bookmark codec inlined — the heartbeat is now green
+
+`BookmarkEntity.toFirestore` routed through the archived
+`core/sync/codec/bookmark_codec.dart`, so `bookmark.dart` did not compile and
+`firestore_bookmark_repository_test.dart` failed to LOAD — the single failure in
+the fastest real signal this repo has.
+
+The replacement map is copied **verbatim** from the archived codec
+(`docs/_archive/drift-user-db/sync/lib-core-sync/codec/bookmark_codec.dart:61-65`),
+not re-derived. That matters: the codec existed precisely so the write shape
+matched the merge read-key `sefaria_ref`, and a mismatch there previously caused
+**cross-device bookmark loss**. All three keys sit inside `firestore.rules`'
+bookmarks allowlist (`:452-456`).
+
+#### 4. Adopt the heartbeat
+
+`flutter test test/data/repositories/` — **306 assertions, ~5 seconds, all
+green** — is now the cheapest real behavioural signal available, and it exercises
+the migrated Firestore core rather than mocks. Together with `make test-rules`
+(116/116) and `make test-functions` (338/338), three commands under two minutes
+cover the data layer, the security boundary and the Cloud Functions. D-G defers
+the FULL suite, not these.
 ### 2026-08-11 — P3-17: finishes the int→ULID re-key at the TypeScript boundary — 14 Cloud Functions would have rejected every tutor write at runtime
 
 `npm run build` (tsc) EXIT 0. **`make test-functions`: 338 tests, 338 pass, 0 fail, EXIT 0**

@@ -40,7 +40,17 @@ abstract class LearningLedgerRepository {
     required String unitDisplayNameHe,
     required String unitDisplayNameEn,
     required String trackType,
-    required String markedBy,
+
+    /// Who marked this entry, as a learner-profile ULID (AD-24).
+    ///
+    /// OPTIONAL: when omitted the implementation stamps the ACTIVE profile.
+    /// This exists because the only callers that do not already hold a ULID are
+    /// domain services, and the active-profile ULID lives in the data-access
+    /// ring, which `check_dependency_direction` (AD-23/AD-28) forbids domain
+    /// and presentation code from importing. Rather than smuggle the ring into
+    /// the domain, the repository implementation — which is allowed to know —
+    /// fills it in.
+    String? markedBy,
     required bool isManual,
     CompletionSource source = CompletionSource.live,
   });
