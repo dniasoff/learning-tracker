@@ -159,8 +159,21 @@ class FirestoreCompletionPointsAwarder implements CompletionPointsPort {
     final hasGoal = (await goalRepository.getGoals(curriculum)).isNotEmpty;
     if (!hasGoal) return 0;
 
-    // --- Point value (no Firestore `point_configs` — see class doc) ---
-    return pointsForStage(stageOrder);
+    // --- Point value: configured override, falling back to the default
+    // ladder (Phase 3 task #4). Configuration-shaped (D-E): a not-ready
+    // point-configs repository or an absent override for this
+    // (curriculum, stage) both fall back to pointsForStage — the SAME
+    // fallback the codebase has always used, so a not-yet-configured or
+    // not-yet-reachable override never blocks or under/over-awards a
+    // completion.
+    final pointConfigRepository = await _ref.read(
+      firestorePointConfigRepositoryProvider.future,
+    );
+    final configured = await pointConfigRepository?.getPointsForStage(
+      curriculumId: curriculum,
+      stageOrder: stageOrder,
+    );
+    return configured ?? pointsForStage(stageOrder);
   }
 
   @override

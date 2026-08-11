@@ -475,6 +475,28 @@ final class DocIds {
     return '${curriculumId}_$stageOrder';
   }
 
+  // ── point_configs ─────────────────────────────────────────────────────
+
+  /// `point_configs/{curriculumId}_{stageOrder}` doc-id formula (Phase 3
+  /// task #4 — per-curriculum point-value overrides).
+  ///
+  /// A brand-new collection, not a legacy-gateway reproduction — mirrors
+  /// [stageDefinitionDocId]'s AD-25-consistent shape directly: the old
+  /// Drift `PointConfig` table's real key was `(profileId, trackId,
+  /// curriculumId, stageOrder)`; AD-25 collapses `(profileId, trackId)` out
+  /// entirely (profile is already the collection-path scope, and
+  /// `trackId == curriculumId`), leaving this identical two-part key.
+  static String pointConfigDocId(Map<String, dynamic> data) {
+    final curriculumId = data['curriculum_id']?.toString() ?? '';
+    final stageOrder = data['stage_order']?.toString() ?? '';
+    if (curriculumId.isEmpty || stageOrder.isEmpty) {
+      throw ArgumentError(
+        'pointConfigDocId requires non-empty curriculum_id and stage_order',
+      );
+    }
+    return '${curriculumId}_$stageOrder';
+  }
+
   // ── stage_definitions (legacy, pre-AD-25 shape) ──────────────────────
 
   /// `stage_definitions/{trackId}_{stageOrder}` doc-id formula — the

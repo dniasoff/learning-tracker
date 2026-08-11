@@ -414,6 +414,23 @@ service cloud.firestore {
           allow delete: if false;
         }
 
+        // point_configs — per-curriculum-per-stage point-value overrides
+        // (Phase 3 task #4). Doc-id: "{curriculumId}_{stageOrder}" — same
+        // two-part key stage_definitions uses (AD-25 collapses the old
+        // Drift (profileId, trackId, curriculumId, stageOrder) key down to
+        // this: profile is already the collection-path scope, and
+        // trackId == curriculumId). Deny delete like every other config
+        // collection in this file — an override is cleared by overwriting
+        // it back to a default value, not by removing the document.
+        match /point_configs/{configId} {
+          allow read: if isOwner(uid) || hasActiveTutorAccess(uid, profileId);
+          allow create, update: if isOwner(uid)
+            && request.resource.data.keys().hasOnly([
+              'curriculum_id', 'stage_order', 'points', 'updated_at', 'synced_at'
+            ]);
+          allow delete: if false;
+        }
+
         match /curriculum_tracks/{trackId} {
           allow read: if isOwner(uid) || hasActiveTutorAccess(uid, profileId);
           allow create, update: if isOwner(uid)

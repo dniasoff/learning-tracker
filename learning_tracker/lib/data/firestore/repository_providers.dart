@@ -92,6 +92,7 @@ import 'package:learning_tracker/data/repositories/firestore_goal_repository.dar
 import 'package:learning_tracker/data/repositories/firestore_learner_profile_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_learning_ledger_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_learning_order_repository.dart';
+import 'package:learning_tracker/data/repositories/firestore_point_config_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_points_ledger_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_profile_program_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_stage_definition_repository.dart';
@@ -371,6 +372,19 @@ final firestoreLearningOrderRepositoryProvider =
       if (resolved == null) return null;
       final (handles, profileId) = resolved;
       return FirestoreLearningOrderRepository(
+        firestore: handles.firestore,
+        uid: handles.uid,
+        profileId: profileId,
+      );
+    });
+
+/// `.../point_configs/{configId}`.
+final firestorePointConfigRepositoryProvider =
+    FutureProvider<FirestorePointConfigRepository?>((ref) async {
+      final resolved = await _watchActiveAccountAndProfile(ref);
+      if (resolved == null) return null;
+      final (handles, profileId) = resolved;
+      return FirestorePointConfigRepository(
         firestore: handles.firestore,
         uid: handles.uid,
         profileId: profileId,
