@@ -35,7 +35,7 @@ class TutorPinEntryGate extends ConsumerStatefulWidget {
     super.key,
   });
 
-  final int profileId;
+  final String profileId;
   final VoidCallback onPinVerified;
   final VoidCallback onCancel;
 

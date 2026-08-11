@@ -47,7 +47,7 @@ class TutorPinSetupScreen extends ConsumerStatefulWidget {
     super.key,
   });
 
-  final int profileId;
+  final String profileId;
   final VoidCallback onPinSet;
   final VoidCallback? onSkip;
 

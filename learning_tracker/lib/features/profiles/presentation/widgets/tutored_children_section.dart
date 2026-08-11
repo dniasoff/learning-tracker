@@ -211,7 +211,18 @@ class _ViewInvitationsRow extends ConsumerWidget {
   /// H3: present the [TutorPinEntryGate] before navigating to the grants
   /// screen so pending-invitation data is never shown without the Tutor PIN.
   void _openInvitations(BuildContext context, WidgetRef ref) {
-    final tutorOwnProfileId = ref.read(selectedProfileIdProvider) ?? 0;
+    final tutorOwnProfileId = ref.read(selectedProfileIdProvider);
+    if (tutorOwnProfileId == null) {
+      // This section only renders for a signed-in tutor viewing their own
+      // profile picker, so a null active profile id here is a not-ready
+      // inconsistency, not a legitimate "profile-less tutor" state — there
+      // is no honest ULID fallback to fabricate (AD-24). Bail rather than
+      // open a PIN gate keyed on a made-up id.
+      AppLogger.instance.warning(
+        event: 'tutored_children_open_invitations_no_active_profile',
+      );
+      return;
+    }
     unawaited(
       Navigator.of(context).push<void>(
         MaterialPageRoute<void>(
@@ -307,7 +318,14 @@ class _ManageGrantsRow extends ConsumerWidget {
   /// Present the [TutorPinEntryGate] before navigating to ManageGrants. Mirrors
   /// [_ViewInvitationsRow._openInvitations].
   void _openManageGrants(BuildContext context, WidgetRef ref) {
-    final tutorOwnProfileId = ref.read(selectedProfileIdProvider) ?? 0;
+    final tutorOwnProfileId = ref.read(selectedProfileIdProvider);
+    if (tutorOwnProfileId == null) {
+      // See _ViewInvitationsRow._openInvitations' identical guard.
+      AppLogger.instance.warning(
+        event: 'tutored_children_open_manage_grants_no_active_profile',
+      );
+      return;
+    }
     unawaited(
       Navigator.of(context).push<void>(
         MaterialPageRoute<void>(
@@ -433,11 +451,17 @@ class _TutoredChildRow extends ConsumerWidget {
   /// pull, install the resolved local profile id, then land in the talmid
   /// dashboard (T2.entry-pull + T2.nav).
   void _enterTalmidView(BuildContext context, WidgetRef ref) {
-    // The tutor's own local profile ID is required to key the PIN hash.
-    // If the tutor has no own profile (profile-less tutor per DEC-6/DEC-21),
-    // fall back to a sentinel profile ID of 0 — TutorPinEntryGate handles
-    // the setup path for an unset PIN.
-    final tutorOwnProfileId = ref.read(selectedProfileIdProvider) ?? 0;
+    // The tutor's own profile ULID is required to key the PIN hash. See
+    // _ViewInvitationsRow._openInvitations' identical guard for why there
+    // is no honest fallback for a null id (AD-24) — bail rather than
+    // fabricate one.
+    final tutorOwnProfileId = ref.read(selectedProfileIdProvider);
+    if (tutorOwnProfileId == null) {
+      AppLogger.instance.warning(
+        event: 'tutored_children_enter_talmid_view_no_active_profile',
+      );
+      return;
+    }
 
     // Build the TutoredProfileSelection from the active grant.
     // C1: carry the tutor's OWN profile id so the route guard resolves

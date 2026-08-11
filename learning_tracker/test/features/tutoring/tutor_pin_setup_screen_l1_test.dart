@@ -37,28 +37,28 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 class _StubTutorPinService implements TutorPinService {
   _StubTutorPinService({required this.setResult});
 
-  final Future<TutorPinResult> Function(int profileId, String rawPin) setResult;
+  final Future<TutorPinResult> Function(String profileId, String rawPin) setResult;
 
   @override
   Future<TutorPinResult> setTutorPin({
-    required int profileId,
+    required String profileId,
     required String rawPin,
   }) => setResult(profileId, rawPin);
 
   @override
   Future<TutorPinResult> verifyTutorPin({
-    required int profileId,
+    required String profileId,
     required String rawPin,
   }) async => const TutorPinSuccess();
 
   @override
-  Future<bool> hasTutorPin(int profileId) async => false;
+  Future<bool> hasTutorPin(String profileId) async => false;
 
   @override
-  Future<void> clearTutorPin(int profileId) async {}
+  Future<void> clearTutorPin(String profileId) async {}
 
   @override
-  Future<int> lockoutRemainingMinutes(int profileId) async => 0;
+  Future<int> lockoutRemainingMinutes(String profileId) async => 0;
 }
 
 // ---------------------------------------------------------------------------
@@ -91,7 +91,7 @@ Widget _buildHarness({
       ],
       supportedLocales: AppLocalizations.supportedLocales,
       home: TutorPinSetupScreen(
-        profileId: 42,
+        profileId: '42',
         onPinSet: onPinSet,
         onSkip: onSkip,
       ),
@@ -454,7 +454,7 @@ void main() {
         addTearDown(tester.view.resetPhysicalSize);
 
         var onPinSetCalled = false;
-        int? serviceProfileId;
+        String? serviceProfileId;
         String? servicePin;
 
         await tester.pumpWidget(
@@ -480,7 +480,7 @@ void main() {
         await tester.pump(const Duration(milliseconds: 100));
         await tester.pump(const Duration(seconds: 1));
 
-        expect(serviceProfileId, 42, reason: 'correct profileId passed');
+        expect(serviceProfileId, '42', reason: 'correct profileId passed');
         expect(servicePin, '5678', reason: 'correct PIN passed');
         expect(onPinSetCalled, isTrue, reason: 'onPinSet called on success');
         await _teardown(tester);

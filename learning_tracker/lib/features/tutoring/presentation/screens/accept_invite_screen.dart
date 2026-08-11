@@ -86,7 +86,7 @@ enum _AcceptStep {
 class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
   _AcceptStep _step = _AcceptStep.loading;
   String? _errorMessage;
-  int? _tutorProfileId;
+  String? _tutorProfileId;
 
   // WS3.3b: real grant loaded from incomingTutorGrantsProvider during init.
   // Null if the grant is not yet in the cached list (e.g. first load).
@@ -121,10 +121,17 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
       return;
     }
 
-    // C4: resolve the tutor's OWN local profile id — the namespace under which
-    // the Tutor PIN is stored/verified (matches C1). Falls back to 0 for a
-    // profile-less tutor; TutorPinSetupScreen handles the unset-PIN path.
-    _tutorProfileId = ref.read(selectedProfileIdProvider) ?? 0;
+    // C4: resolve the tutor's OWN profile id (AD-24 ULID) — the namespace
+    // under which the Tutor PIN is stored/verified (matches C1). No honest
+    // fallback exists for a profile-less tutor (there is no ULID "0"), so
+    // this is treated the same as the malformed-token case above rather
+    // than fabricating one.
+    _tutorProfileId = ref.read(selectedProfileIdProvider);
+    if (_tutorProfileId == null) {
+      if (!mounted) return;
+      setState(() => _step = _AcceptStep.error);
+      return;
+    }
 
     // WS3.3b: Load the real grant from the incoming grants provider.
     // The token IS the grantId — look it up in the already-loaded list.
@@ -178,7 +185,10 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
           // C4: check whether the tutor has provisioned a Tutor PIN yet, keyed
           // on their OWN profile id (resolved in _initialize). If not, route to
           // Tutor PIN setup before completing.
-          final profileId = _tutorProfileId ?? 0;
+          // Guaranteed non-null: _initialize returns early (to
+          // _AcceptStep.error) whenever it resolves null, and this method
+          // only runs once _step has advanced past that point.
+          final profileId = _tutorProfileId!;
           final pinService = ref.read(tutorPinServiceProvider);
           final hasPin = await pinService.hasTutorPin(profileId);
           if (!mounted) return;
@@ -416,7 +426,8 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
 
   Widget _buildPinSetup() {
     return TutorPinSetupScreen(
-      profileId: _tutorProfileId ?? 0,
+      // Guaranteed non-null — see the comment in _acceptInvite.
+      profileId: _tutorProfileId!,
       onPinSet: () => setState(() => _step = _AcceptStep.success),
     );
   }

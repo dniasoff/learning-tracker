@@ -45,7 +45,7 @@ class _MockAuthRepository extends Mock implements AuthRepository {}
 /// The TUTOR's own learner-profile ID (C1: the PIN namespace).
 /// This must be distinct from any talmid profile ID to verify the gate
 /// keys on the right namespace.
-const int _kTutorProfileId = 7;
+const String _kTutorProfileId = '7';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -655,7 +655,7 @@ void main() {
         setViewSize(tester);
         final mockService = _MockTutorPinService();
         var pinVerifiedCalled = false;
-        int? capturedProfileId;
+        String? capturedProfileId;
 
         when(
           () => mockService.verifyTutorPin(
@@ -663,7 +663,7 @@ void main() {
             rawPin: any(named: 'rawPin'),
           ),
         ).thenAnswer((invocation) async {
-          capturedProfileId = invocation.namedArguments[#profileId] as int;
+          capturedProfileId = invocation.namedArguments[#profileId] as String;
           return const TutorPinSuccess();
         });
 
@@ -1079,7 +1079,7 @@ void main() {
       (tester) async {
         setViewSize(tester);
         final mockService = _MockTutorPinService();
-        final capturedProfileIds = <int>[];
+        final capturedProfileIds = <String>[];
 
         when(
           () => mockService.verifyTutorPin(
@@ -1087,7 +1087,7 @@ void main() {
             rawPin: any(named: 'rawPin'),
           ),
         ).thenAnswer((invocation) async {
-          capturedProfileIds.add(invocation.namedArguments[#profileId] as int);
+          capturedProfileIds.add(invocation.namedArguments[#profileId] as String);
           return const TutorPinSuccess();
         });
 
@@ -1402,12 +1402,12 @@ void main() {
 ///   • hasTutorPin reflects whether a PIN was set (drives tutorPinIsSetProvider)
 ///   • verifyTutorPin succeeds only for the exact PIN that was set
 class _StatefulTutorPinStub implements TutorPinService {
-  final Map<int, String> _pins = {};
+  final Map<String, String> _pins = {};
   bool verifiedCalled = false;
 
   @override
   Future<TutorPinResult> setTutorPin({
-    required int profileId,
+    required String profileId,
     required String rawPin,
   }) async {
     _pins[profileId] = rawPin;
@@ -1416,7 +1416,7 @@ class _StatefulTutorPinStub implements TutorPinService {
 
   @override
   Future<TutorPinResult> verifyTutorPin({
-    required int profileId,
+    required String profileId,
     required String rawPin,
   }) async {
     return _pins[profileId] == rawPin
@@ -1425,11 +1425,11 @@ class _StatefulTutorPinStub implements TutorPinService {
   }
 
   @override
-  Future<bool> hasTutorPin(int profileId) async => _pins.containsKey(profileId);
+  Future<bool> hasTutorPin(String profileId) async => _pins.containsKey(profileId);
 
   @override
-  Future<void> clearTutorPin(int profileId) async => _pins.remove(profileId);
+  Future<void> clearTutorPin(String profileId) async => _pins.remove(profileId);
 
   @override
-  Future<int> lockoutRemainingMinutes(int profileId) async => 0;
+  Future<int> lockoutRemainingMinutes(String profileId) async => 0;
 }

@@ -40,7 +40,7 @@ class TutorPinResetScreen extends ConsumerStatefulWidget {
     super.key,
   });
 
-  final int profileId;
+  final String profileId;
   final VoidCallback onResetComplete;
 
   @override

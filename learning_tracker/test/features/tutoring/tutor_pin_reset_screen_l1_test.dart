@@ -38,7 +38,7 @@ class _MockTutorPinService extends Mock implements TutorPinService {}
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-const _kProfileId = 42;
+const _kProfileId = '42';
 const _kEmail = 'tutor@example.com';
 
 AppUser _fakeUser({String? email = _kEmail}) => AppUser(
