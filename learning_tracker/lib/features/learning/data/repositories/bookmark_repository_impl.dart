@@ -1,12 +1,8 @@
 import 'dart:async';
 
-import 'package:drift/drift.dart' as drift;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/content/content_index.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/sync/firestore_gateway.dart';
-import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
 import 'package:learning_tracker/data/repositories/firestore_bookmark_repository.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';

@@ -5,7 +5,6 @@ import 'package:learning_tracker/features/sacred_time/data/services/location_ser
 import 'package:learning_tracker/features/sacred_time/data/services/sacred_time_preferences.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/location_fetch_result.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/sacred_location.dart';
-import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -74,7 +73,6 @@ class SacredLocationNotifier extends _$SacredLocationNotifier {
             // mid-GPS-fetch). Never touch ref on a disposed notifier.
             if (!ref.mounted) return;
             ref.invalidate(inIsraelProvider);
-            await _pushSnapshot();
           },
           onFailure: () {
             // AUD-sacred_time-01 (SM-4): never write state on a disposed
@@ -131,7 +129,6 @@ class SacredLocationNotifier extends _$SacredLocationNotifier {
         // Never touch ref on a disposed notifier.
         if (!ref.mounted) return;
         ref.invalidate(inIsraelProvider);
-        await _pushSnapshot();
       },
       onFailure: () {
         if (ref.mounted) state = previous;
@@ -163,7 +160,6 @@ class SacredLocationNotifier extends _$SacredLocationNotifier {
         // may have been invalidated/disposed (e.g. an account switch).
         // Never touch ref on a disposed notifier.
         if (!ref.mounted) return;
-        await _pushSnapshot();
       },
       onFailure: () {
         if (ref.mounted) state = previous;
@@ -171,10 +167,9 @@ class SacredLocationNotifier extends _$SacredLocationNotifier {
     );
   }
 
-  Future<void> _pushSnapshot() async {
-    if (!ref.mounted) return;
-    await ref.read(syncWriteFacadeProvider)?.pushUiPreferencesSnapshot();
-  }
+  // core/sync is deleted; no Firestore-native replacement exists yet for
+  // this non-achievement push (see preference_providers.dart's identical
+  // reasoning). Sacred-time location stays local-only for now.
 }
 
 /// User-toggleable in-Israel flag. Auto-set by [SacredLocationNotifier.detect]
@@ -221,7 +216,6 @@ class InIsraelNotifier extends _$InIsraelNotifier {
         // may have been invalidated/disposed (e.g. an account switch).
         // Never touch ref on a disposed notifier.
         if (!ref.mounted) return;
-        await ref.read(syncWriteFacadeProvider)?.pushUiPreferencesSnapshot();
       },
       onFailure: () {
         if (ref.mounted) state = previous;
