@@ -70,7 +70,7 @@ class _LifetimeKnowledgeScreenState
     // "Parent Mode" tile via `if (!isChildProfile) return SizedBox.shrink()`)
     // rather than surfacing a guard that silently no-ops.
     final isChildProfile =
-        ref.watch(activeProfileProvider).asData?.value?.profileMode ==
+        ref.watch(activeProfileProvider).asData?.value?.mode ==
         ProfileMode.child;
 
     final summariesAsync = _filter == _LifetimeSourceFilter.allSources

@@ -1,4 +1,3 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
@@ -8,9 +7,7 @@ import 'package:learning_tracker/features/learning/domain/entities/learning_ledg
 import 'package:learning_tracker/features/learning/domain/services/completion_detection_service.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_ledger_providers.dart';
-import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/progress/domain/models/journey_view_model.dart';
 import 'package:learning_tracker/features/progress/domain/siyum_granularity_filter.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
@@ -95,13 +92,6 @@ class JourneySortModeNotifier extends _$JourneySortModeNotifier {
     state = mode;
   }
 }
-
-/// Looks up a profile by ID, used when viewing another user's journey.
-final profileByIdProvider = FutureProvider.autoDispose
-    .family<ProfileModel?, int>((ref, profileId) async {
-      final repo = ref.watch(profileRepositoryProvider);
-      return repo.getProfileById(profileId);
-    });
 
 /// Thrown when [journeyViewModel] runs with no active profile.
 ///

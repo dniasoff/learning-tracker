@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/core/widgets/error_display.dart';
 import 'package:learning_tracker/core/widgets/loading_indicator.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/progress/domain/models/journey_view_model.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/journey_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/siyumim_grouped_view.dart';
@@ -31,39 +30,24 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 /// "via bulk-mark" vs "Live ·{date}".
 @RoutePage()
 class SiyumimMilestonesScreen extends ConsumerWidget {
-  const SiyumimMilestonesScreen({
-    super.key,
-    @QueryParam('profileId') this.profileId,
-  });
-
-  final int? profileId;
+  const SiyumimMilestonesScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
-    final activeProfileId = ref.watch(activeProfileIdProvider);
     // journeyViewModelProvider only ever reads the ACTIVE profile's ledger
     // (the Firestore collections it reads are scoped to the active profile's
-    // path — there is no per-profile read to select a different one), so
-    // there is no "effective" profile to compute here any more; the
-    // `?profileId=` deep-link's "view another profile's journey" intent
-    // (below, `isViewingOther`/`profileByIdProvider`) has no backing data
-    // path in the Firestore model and is separately pre-existing broken.
+    // path — there is no per-profile read to select a different one). A
+    // former `?profileId=` deep-link "view another profile's journey" mode
+    // had no backing data path in the Firestore model (no production
+    // navigation ever passed the param) and was removed rather than ported.
     final journeyAsync = ref.watch(journeyViewModelProvider);
     final sortMode = ref.watch(journeySortModeProvider);
 
-    // Get profile name for AppBar when viewing another profile
-    final isViewingOther = profileId != null && profileId != activeProfileId;
-    final profileAsync = isViewingOther
-        ? ref.watch(profileByIdProvider(profileId!))
-        : null;
-    final profileName = profileAsync?.asData?.value?.displayName;
-    final title = profileName != null
-        ? l10n.journeyTitleNamed(profileName)
-        : l10n.tierLensSiyumimMilestones;
-
     return Scaffold(
-      appBar: AppBar(title: AppBarTitle(text: title)),
+      appBar: AppBar(
+        title: AppBarTitle(text: l10n.tierLensSiyumimMilestones),
+      ),
       body: SafeArea(
         top: false,
         child: journeyAsync.when(

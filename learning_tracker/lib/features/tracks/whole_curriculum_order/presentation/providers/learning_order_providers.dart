@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/preferences/profile_scoped_preference.dart';
 import 'package:learning_tracker/core/preferences/profile_scoped_preference_keys.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/data/repositories/learning_order_repository_impl.dart';
@@ -61,7 +61,8 @@ final learningOrderProvider =
 
 /// Provides whether parent controls ordering (permission setting).
 final parentControlsOrderingProvider = FutureProvider<bool>((ref) async {
-  final profileId = ref.watch(activeProfileIdProvider);
+  final profileId =
+      ref.watch(activeProfileIdProvider) ?? kNoProfilePreferenceSentinel;
   final prefs = await SharedPreferences.getInstance();
   return ProfileScopedPreferenceKeys.readLearningOrderParentControls(
     prefs,
@@ -69,17 +70,14 @@ final parentControlsOrderingProvider = FutureProvider<bool>((ref) async {
   );
 });
 
-/// Provides the active profile's [ProfileMode] from the [LearnerProfiles] table.
+/// Provides the active profile's [ProfileMode].
 ///
 /// WS9.enum: unified — formerly read [UserMode] from the vestigial
-/// [accounts.userMode] column; now reads [ProfileMode] from the canonical
-/// [learner_profiles.mode] column via [activeProfileIdProvider].
+/// [accounts.userMode] column; now reads [ProfileMode] via
+/// [activeProfileProvider]'s [LearnerProfileEntity.mode].
 final userModeProvider = FutureProvider<ProfileMode>((ref) async {
-  final database = ref.watch(userDatabaseProvider);
-  final profileId = ref.watch(activeProfileIdProvider);
-  final profile = await database.profileDao.getProfileById(profileId);
-  if (profile == null) return ProfileMode.adult;
-  return ProfileMode.fromStorageKey(profile.mode);
+  final profile = await ref.watch(activeProfileProvider.future);
+  return profile?.mode ?? ProfileMode.adult;
 });
 
 /// True when ordering is restricted (child mode + parent controls ordering).

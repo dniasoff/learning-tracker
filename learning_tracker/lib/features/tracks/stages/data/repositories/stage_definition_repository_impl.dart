@@ -147,11 +147,7 @@ class FirestoreStageDefinitionRepositoryAdapter
   }
 
   @override
-  Future<void> resetToDefaults(
-    CurriculumId curriculumId, {
-    required int profileId,
-    required int trackId,
-  }) async {
+  Future<void> resetToDefaults(CurriculumId curriculumId) async {
     final repo = await _resolve();
     // NOTE: unlike the Drift doc comment's "Removes all stages and restores
     // the 3 defaults", the resolved Firestore method can only OVERWRITE the

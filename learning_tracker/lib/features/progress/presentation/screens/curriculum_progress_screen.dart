@@ -68,7 +68,10 @@ class CurriculumProgressScreen extends ConsumerWidget {
     // stays a curriculum fact (untouched by the rename).
     final trackCustomName = dualMetric == null
         ? null
-        : ref.watch(trackCustomNameProvider(dualMetric.trackId)).asData?.value;
+        : ref
+              .watch(trackCustomNameProvider(dualMetric.curriculumId))
+              .asData
+              ?.value;
     final titleText = curriculum == null
         ? null
         : resolveTrackTitle(

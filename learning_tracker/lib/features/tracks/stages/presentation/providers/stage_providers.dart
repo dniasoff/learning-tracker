@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/features/profiles/profiles.dart';
 import 'package:learning_tracker/features/tracks/stages/data/repositories/stage_definition_repository_impl.dart';
 import 'package:learning_tracker/features/tracks/stages/domain/models/stage_definition.dart';
 import 'package:learning_tracker/features/tracks/stages/domain/repositories/stage_definition_repository.dart';
@@ -65,13 +64,8 @@ class StageEditorNotifier extends AsyncNotifier<List<StageDefinition>> {
   // kept because it is intentionally out of this finding's scope (its
   // corresponding repository method is not part of the AC1 grep target).
 
-  Future<void> resetToDefaults({required int trackId}) async {
-    final profileId = ref.read(activeProfileIdProvider);
-    await _repository.resetToDefaults(
-      _curriculum,
-      profileId: profileId,
-      trackId: trackId,
-    );
+  Future<void> resetToDefaults() async {
+    await _repository.resetToDefaults(_curriculum);
     ref.invalidate(stageListProvider(_curriculum));
     state = await AsyncValue.guard(
       () => _repository.getStagesForCurriculum(_curriculum),

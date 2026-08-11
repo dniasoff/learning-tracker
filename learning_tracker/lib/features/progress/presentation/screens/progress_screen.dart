@@ -236,7 +236,7 @@ class _SiyumimMilestonesLensTile extends ConsumerWidget {
       iconColor: context.colors.chartAmber,
       title: l10n.tierLensSiyumimMilestones,
       subtitle: l10n.myLearningJourneySubtitle,
-      onTap: () => context.router.push(SiyumimMilestonesRoute()),
+      onTap: () => context.router.push(const SiyumimMilestonesRoute()),
     );
   }
 }
@@ -336,7 +336,7 @@ class _PerTrackRow extends ConsumerWidget {
     // Detail and the Learn track cards already do (see
     // track_management_providers.dart's trackDisplayTitle, commit 00048c68).
     final customName = ref
-        .watch(trackCustomNameProvider(metric.trackId))
+        .watch(trackCustomNameProvider(metric.curriculumId))
         .asData
         ?.value;
     final titleText = resolveTrackTitle(

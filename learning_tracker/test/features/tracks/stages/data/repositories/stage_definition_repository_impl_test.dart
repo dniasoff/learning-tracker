@@ -151,11 +151,7 @@ void main() {
           final adapter = buildAdapter(container);
 
           expect(
-            () => adapter.resetToDefaults(
-              CurriculumId.mishnayos,
-              profileId: 0,
-              trackId: 1,
-            ),
+            () => adapter.resetToDefaults(CurriculumId.mishnayos),
             throwsA(isA<StageDefinitionRepositoryNotReadyException>()),
           );
         },
@@ -251,11 +247,7 @@ void main() {
             trackId: 1,
           );
 
-          await adapter.resetToDefaults(
-            CurriculumId.mishnayos,
-            profileId: 0,
-            trackId: 1,
-          );
+          await adapter.resetToDefaults(CurriculumId.mishnayos);
 
           final stages = await adapter.getStagesForCurriculum(
             CurriculumId.mishnayos,
