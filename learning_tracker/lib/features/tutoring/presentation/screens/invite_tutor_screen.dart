@@ -101,11 +101,11 @@ class _InviteTutorScreenState extends ConsumerState<InviteTutorScreen> {
       final profiles = ref.read(profileListProvider).asData?.value ?? const [];
       final childProfileUlid = widget.childProfileId;
       final childName = profiles
-          .where((p) => p.ulid == childProfileUlid)
+          .where((p) => p.profileId == childProfileUlid)
           .map((p) => p.displayName)
           .firstOrNull;
       final parentName = profiles
-          .where((p) => p.profileMode == ProfileMode.adult)
+          .where((p) => p.mode == ProfileMode.adult)
           .map((p) => p.displayName)
           .firstOrNull;
 
