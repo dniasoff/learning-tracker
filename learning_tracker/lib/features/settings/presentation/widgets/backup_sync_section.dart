@@ -123,7 +123,6 @@ class _BackupSyncSectionState extends ConsumerState<BackupSyncSection> {
     return _buildLocalOnlyCard(
       context,
       theme,
-      isLocalAuth: authState.isLocalBorn,
       heroLayout: parentSettingsHeroLayout,
     );
   }
@@ -171,7 +170,6 @@ class _BackupSyncSectionState extends ConsumerState<BackupSyncSection> {
   Widget _buildLocalOnlyCard(
     BuildContext context,
     ThemeData theme, {
-    required bool isLocalAuth,
     required bool heroLayout,
   }) {
     final bodyTextStyle = theme.textTheme.bodySmall?.copyWith(
@@ -232,32 +230,6 @@ class _BackupSyncSectionState extends ConsumerState<BackupSyncSection> {
                 textAlign: TextAlign.center,
                 style: bodyTextStyle,
               ),
-              if (isLocalAuth) ...[
-                const SizedBox(height: 18),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: context.colors.peachMid,
-                      foregroundColor: context.colors.peachDark,
-                      minimumSize: const Size.fromHeight(48),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(24),
-                      ),
-                      textStyle: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 18,
-                        color: context.colors.peachDark,
-                      ),
-                    ),
-                    onPressed: () =>
-                        context.pushRoute(const UpgradeToCloudRoute()),
-                    child: Text(
-                      AppLocalizations.of(context)!.backupUpgradeToCloud,
-                    ),
-                  ),
-                ),
-              ],
             ],
           ),
         ),
@@ -318,62 +290,6 @@ class _BackupSyncSectionState extends ConsumerState<BackupSyncSection> {
               style: bodyTextStyle,
             ),
             const SizedBox(height: 16),
-            if (isLocalAuth)
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: context.colors.peachMid,
-                    foregroundColor: context.colors.peachDark,
-                    minimumSize: const Size.fromHeight(42),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                    textStyle: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 20,
-                      color: context.colors.peachDark,
-                    ),
-                  ),
-                  onPressed: () =>
-                      context.pushRoute(const UpgradeToCloudRoute()),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        width: 16,
-                        height: 16,
-                        // peachDark/peachMid (not the old fixed
-                        // 0xFF322A23/peachMid pair): the badge circle was a
-                        // fixed dark brown so, once peachMid itself went dark
-                        // in dark mode, the peachMid icon on top of it became
-                        // dark-on-dark. peachDark/peachMid already invert
-                        // together (see the button foreground fix above),
-                        // so swapping the circle to peachDark keeps this
-                        // badge legible in both themes (run-9 audit).
-                        decoration: BoxDecoration(
-                          color: context.colors.peachDark,
-                          shape: BoxShape.circle,
-                        ),
-                        alignment: Alignment.center,
-                        child: Icon(
-                          Icons.arrow_upward_rounded,
-                          color: context.colors.peachMid,
-                          size: 12,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Flexible(
-                        child: Text(
-                          AppLocalizations.of(context)!.upgradeToCloudButton,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
           ],
         ),
       ),

@@ -2,7 +2,6 @@ import 'package:drift/drift.dart' show QueryExecutor;
 import 'package:drift_flutter/drift_flutter.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
-import 'package:learning_tracker/features/account/domain/services/pending_local_signup.dart';
 import 'package:learning_tracker/features/account/domain/services/session_persistence_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -42,10 +41,6 @@ Future<BootstrapAccountResult> bootstrapAccount({
 }) async {
   try {
     final prefs = await SharedPreferences.getInstance();
-    await PendingLocalSignupStore.cleanupStaleOnStartup(
-      prefs: prefs,
-      databasesPath: databasesPath,
-    );
     final registry = DeviceRegistryDatabase(
       registryExecutor ?? driftDatabase(name: 'device_registry'),
     );

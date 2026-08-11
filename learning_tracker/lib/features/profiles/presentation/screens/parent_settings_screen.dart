@@ -73,7 +73,7 @@ class ParentSettingsScreen extends ConsumerWidget {
     final activeProfile = profilesAsync.asData?.value
         .where((p) => p.id == activeProfileId)
         .firstOrNull;
-    final showDeleteAccountTile = user != null || authState.isLocalBorn;
+    final showDeleteAccountTile = user != null;
 
     // WS3.3d: when a tutor has entered a talmid's context, gate edit tiles
     // behind the corresponding TutorPermissions field.
@@ -363,16 +363,12 @@ class ParentSettingsScreen extends ConsumerWidget {
                   iconColor: context.colors.deleteAccountDangerRed,
                   title: l10n.deleteAccountTitle,
                   titleColor: context.colors.deleteAccountDangerRed,
-                  subtitle: authState.isLocalBorn
-                      ? l10n.deleteLocalAccountSubtitle
-                      : l10n.deleteAccountSubtitle,
+                  subtitle: l10n.deleteAccountSubtitle,
                   subtitleColor: context.colors.deleteAccountDangerRed,
                   leadingSquare: true,
                   trailing: const SizedBox.shrink(),
                   onTap: () {
-                    if (authState.isLocalBorn) {
-                      showDeleteLocalAccountFlow(context, ref);
-                    } else if (user != null) {
+                    if (user != null) {
                       showDeleteAccountFlow(context, ref, user);
                     }
                   },

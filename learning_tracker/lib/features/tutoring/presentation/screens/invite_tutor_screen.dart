@@ -81,16 +81,6 @@ class _InviteTutorScreenState extends ConsumerState<InviteTutorScreen> {
     // LOCAL-ONLY precondition: inviting a tutor requires a cloud account.
     // Show a clear, non-retryable message instead of letting the attempt
     // fail with a confusing generic error.
-    final authState = ref.read(authStateProvider);
-    if (authState.isLocalBorn) {
-      setState(
-        () => _accountError = AppLocalizations.of(
-          context,
-        )!.inviteTutorErrorLocalOnly,
-      );
-      return;
-    }
-
     final email = _emailController.text.trim();
     if (!_emailValid) {
       setState(

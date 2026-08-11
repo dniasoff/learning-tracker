@@ -77,7 +77,7 @@ class _AccountActionsSheet extends ConsumerWidget {
     // Delete is for non-child authenticated users (cloud or local-born). A
     // tutor-only adult has no own profile row, so isChildProfile is false here.
     final showDelete =
-        !isChildProfile && (user != null || authState.isLocalBorn);
+        !isChildProfile && user != null;
     final showSignOut = !isChildProfile;
     final showAddAccount = !isChildProfile || inParentMode;
 
@@ -253,18 +253,14 @@ class _AccountActionsSheet extends ConsumerWidget {
                     ),
                   ),
                   subtitle: Text(
-                    authState.isLocalBorn
-                        ? l10n.deleteLocalAccountSubtitle
-                        : l10n.deleteAccountSubtitle,
+                    l10n.deleteAccountSubtitle,
                     style: TextStyle(
                       color: context.colors.brandInkMuted,
                       fontSize: 12,
                     ),
                   ),
                   onTap: () => closeThen(() async {
-                    if (authState.isLocalBorn) {
-                      await showDeleteLocalAccountFlow(pageContext, pageRef);
-                    } else if (user != null) {
+                    if (user != null) {
                       await showDeleteAccountFlow(pageContext, pageRef, user);
                     }
                   }),

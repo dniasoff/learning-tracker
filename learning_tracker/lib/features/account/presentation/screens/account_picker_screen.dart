@@ -32,8 +32,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// Account picker shown after sign-out when other accounts remain
 /// on the device, or when the user wants to switch accounts.
 ///
-/// Displays all device accounts from the registry with tier badges,
-/// session status, and swipe-to-remove/delete actions.
+/// Displays all device accounts from the registry with their session
+/// status and a swipe-to-remove-from-device action.
 @RoutePage()
 class AccountPickerScreen extends ConsumerStatefulWidget {
   const AccountPickerScreen({super.key});
@@ -291,7 +291,6 @@ class _AccountTileState extends ConsumerState<_AccountTile> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
-    final isCloud = account.accountTier.isCloud;
 
     // Cloud session status — watched (not read) so this badge stays live
     // when the Firebase session changes elsewhere while this tile is
@@ -300,8 +299,7 @@ class _AccountTileState extends ConsumerState<_AccountTile> {
     // snapshot here only re-evaluates when something else forces this
     // widget to rebuild, so it can silently go stale.
     final fbUser = ref.watch(firebaseAuthStateProvider).value;
-    final hasValidSession =
-        isCloud && fbUser != null && fbUser.uid == account.firebaseUid;
+    final hasValidSession = fbUser != null && fbUser.uid == account.firebaseUid;
 
     return Dismissible(
       key: ValueKey(account.accountId),
@@ -314,16 +312,14 @@ class _AccountTileState extends ConsumerState<_AccountTile> {
           borderRadius: BorderRadius.circular(22),
         ),
         child: Text(
-          isCloud
-              ? l10n.accountRemoveFromDevice
-              : l10n.accountDeleteAccountAction,
+          l10n.accountRemoveFromDevice,
           style: TextStyle(
             color: context.colors.brandCoralDeep,
             fontWeight: FontWeight.w600,
           ),
         ),
       ),
-      confirmDismiss: (direction) => _confirmDismiss(context, isCloud),
+      confirmDismiss: (direction) => _confirmDismiss(context),
       onDismissed: (_) => _onDismissed(context, ref),
       child: Material(
         color: Colors.transparent,
@@ -345,10 +341,10 @@ class _AccountTileState extends ConsumerState<_AccountTile> {
               children: [
                 CircleAvatar(
                   radius: 22,
-                  backgroundColor: _avatarBg(isCloud, hasValidSession),
+                  backgroundColor: _avatarBg(hasValidSession),
                   child: Icon(
-                    isCloud ? Icons.cloud_rounded : Icons.smartphone_rounded,
-                    color: _avatarFg(isCloud, hasValidSession),
+                    Icons.cloud_rounded,
+                    color: _avatarFg(hasValidSession),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -365,11 +361,7 @@ class _AccountTileState extends ConsumerState<_AccountTile> {
                           color: context.colors.brandInk,
                         ),
                       ),
-                      // Credential-less offline accounts carry a synthetic
-                      // internal email (…@offline.local) that must never be
-                      // shown; suppress the email line for them.
-                      if (account.email.isNotEmpty &&
-                          !account.email.endsWith('@offline.local'))
+                      if (account.email.isNotEmpty)
                         Text(
                           account.email,
                           style: theme.textTheme.bodyMedium?.copyWith(
@@ -383,13 +375,13 @@ class _AccountTileState extends ConsumerState<_AccountTile> {
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: _pillBg(isCloud, hasValidSession),
+                          color: _pillBg(hasValidSession),
                           borderRadius: BorderRadius.circular(999),
                         ),
                         child: Text(
-                          _pillText(l10n, isCloud, hasValidSession),
+                          _pillText(l10n, hasValidSession),
                           style: theme.textTheme.labelSmall?.copyWith(
-                            color: _pillFg(isCloud, hasValidSession),
+                            color: _pillFg(hasValidSession),
                             fontWeight: FontWeight.w800,
                             letterSpacing: 0.5,
                           ),
@@ -400,18 +392,12 @@ class _AccountTileState extends ConsumerState<_AccountTile> {
                 ),
                 const SizedBox(width: 8),
                 Icon(
-                  isCloud
-                      ? (hasValidSession
-                            ? Icons.chevron_right_rounded
-                            : Icons.warning_rounded)
-                      // run7 #12: a local account opens with no credential gate,
-                      // exactly like a valid-session cloud account — so it shows
-                      // the same "tap to enter" chevron. (A lock icon here
-                      // wrongly implied a password was required.)
-                      : Icons.chevron_right_rounded,
-                  color: isCloud && !hasValidSession
-                      ? context.colors.statusError
-                      : context.colors.brandInkMuted,
+                  hasValidSession
+                      ? Icons.chevron_right_rounded
+                      : Icons.warning_rounded,
+                  color: hasValidSession
+                      ? context.colors.brandInkMuted
+                      : context.colors.statusError,
                   size: 22,
                 ),
               ],
@@ -422,14 +408,12 @@ class _AccountTileState extends ConsumerState<_AccountTile> {
     );
   }
 
-  Color _avatarBg(bool isCloud, bool hasValidSession) {
-    if (!isCloud) return const Color(0xFFFEE6C5);
+  Color _avatarBg(bool hasValidSession) {
     if (!hasValidSession) return const Color(0xFFF8DDE2);
     return context.colors.brandBlueSoft;
   }
 
-  Color _avatarFg(bool isCloud, bool hasValidSession) {
-    if (!isCloud) return const Color(0xFF6A4926);
+  Color _avatarFg(bool hasValidSession) {
     // AUD-darkmode: chartRed is a chart-series-on-CARD role that LIGHTENS in
     // dark mode, but _avatarBg's paired pink above is a FIXED literal in
     // both themes -- measured ~2.00:1 in dark (light mode was already only
@@ -439,20 +423,12 @@ class _AccountTileState extends ConsumerState<_AccountTile> {
     return context.colors.brandBlue;
   }
 
-  Color _pillBg(bool isCloud, bool hasValidSession) {
-    // AUD-darkmode: this was a hardcoded Color(0xFFE8EBF0), but its paired
-    // ink (brandInkMuted, in _pillFg below) LIGHTENS in dark mode --
-    // measured ~2.16:1 in dark (light mode was fine at 5.01:1).
-    // gamifPointConfigChipUnselectedBg is an EXISTING themed token whose
-    // light value is byte-identical to the old literal and darkens
-    // correctly in dark mode, restoring ~5.15:1.
-    if (!isCloud) return context.colors.gamifPointConfigChipUnselectedBg;
+  Color _pillBg(bool hasValidSession) {
     if (!hasValidSession) return context.colors.statusErrorSoft;
     return const Color(0xFFE8EEFF);
   }
 
-  Color _pillFg(bool isCloud, bool hasValidSession) {
-    if (!isCloud) return context.colors.brandInkMuted;
+  Color _pillFg(bool hasValidSession) {
     if (!hasValidSession) return context.colors.statusError;
     // AUD-darkmode: brandBlueDeep is an ink-on-CARD role that LIGHTENS in
     // dark mode, but _pillBg's paired blue above is a FIXED literal in both
@@ -462,8 +438,7 @@ class _AccountTileState extends ConsumerState<_AccountTile> {
     return context.colors.chazaraSelectedGradientStart;
   }
 
-  String _pillText(AppLocalizations l10n, bool isCloud, bool hasValidSession) {
-    if (!isCloud) return l10n.badgeLocalAccount;
+  String _pillText(AppLocalizations l10n, bool hasValidSession) {
     if (!hasValidSession) return l10n.badgeSignInAgain;
     return l10n.badgeCloudAccount;
   }
@@ -485,9 +460,7 @@ class _AccountTileState extends ConsumerState<_AccountTile> {
     WidgetRef ref,
     bool hasValidSession,
   ) async {
-    final isCloud = account.accountTier.isCloud;
-
-    if (isCloud && hasValidSession) {
+    if (hasValidSession) {
       // Instant switch — cached Firebase session is valid.
       // Swap the active DB to this account's file BEFORE reading the
       // profile — the cached userDatabaseProvider still points at the
@@ -499,7 +472,7 @@ class _AccountTileState extends ConsumerState<_AccountTile> {
       ref.invalidate(userDatabaseProvider);
 
       await _activateCloudAccountFromLocalData(context, ref);
-    } else if (isCloud && !hasValidSession) {
+    } else {
       // Use the same configured/overridable checker the rest of the app reads
       // (the provider instance), NOT the package's static singleton — the
       // singleton is unconfigured and untestable, and on an offline device it
@@ -525,9 +498,6 @@ class _AccountTileState extends ConsumerState<_AccountTile> {
         if (!context.mounted) return;
         await _activateCloudAccountFromLocalData(context, ref);
       }
-    } else {
-      // Local-born — instant local activation (no modal password dialog).
-      await _activateLocalAccountFromLocalData(context, ref);
     }
   }
 
@@ -663,8 +633,7 @@ class _AccountTileState extends ConsumerState<_AccountTile> {
     if (profile == null) {
       final profiles = await dao.getAllUserProfiles();
       for (final candidate in profiles) {
-        if (candidate.accountTier.isCloud &&
-            candidate.email.toLowerCase() == account.email.toLowerCase()) {
+        if (candidate.email.toLowerCase() == account.email.toLowerCase()) {
           profile = candidate;
           break;
         }
@@ -747,78 +716,15 @@ class _AccountTileState extends ConsumerState<_AccountTile> {
     }
   }
 
-  Future<void> _activateLocalAccountFromLocalData(
-    BuildContext context,
-    WidgetRef ref,
-  ) async {
-    ref
-        .read(accountDbFileNameProvider.notifier)
-        .setFileName(account.dbFileName);
-    ref.read(activeAccountIdProvider.notifier).set(account.accountId);
-    ref.invalidate(userDatabaseProvider);
-
-    final dao = ref.read(userDatabaseProvider).userProfileDao;
-    final profile = await dao.findLocalBornByEmail(account.email);
-    if (profile == null) {
-      // Same silent-fail guard as _activateCloudAccountFromLocalData: if the
-      // local DB row for this local-born account is missing (DB deleted or
-      // corrupted), surface an error rather than silently stranding the user.
-      if (context.mounted) {
-        final l10n = AppLocalizations.of(context)!;
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(SnackBar(content: Text(l10n.authLocalDataMissing)));
-      }
-      return;
-    }
-    if (!context.mounted) return;
-
-    final prefs = await SharedPreferences.getInstance();
-    final session = SessionPersistenceService(
-      prefs: prefs,
-      registry: ref.read(deviceRegistryProvider),
-    );
-    await session.setActiveAccount(account.accountId);
-    await prefs.setBool(kOnboardingComplete, true);
-    // R1o-C2: clear any stale selected profile id from the previous account.
-    ref.read(selectedProfileIdProvider.notifier).clear();
-    // Land on the switched account's OWN profile in NORMAL mode — drop any
-    // talmid selection and lock the parent-PIN gate carried over from the
-    // previous account.
-    ref.read(activeTutoredProfileSelectionProvider.notifier).exit();
-    ref.read(routerProvider).pinGuard.lock();
-    // RESTORE-01: same session-reset as _activateCloudAccountFromLocalData —
-    // ensure the restore guard re-evaluates for the incoming account.
-    ref.read(routerProvider).restoreGuard.resetForNewSession();
-    // DEC-34: do NOT call signOut() — switching accounts must never terminate
-    // other accounts' sessions. The Drift DB swap above isolates the data;
-    // the AuthState update below makes this account the active on-screen context.
-    // Firebase's currentUser may still point at a cloud account from before the
-    // switch; that is intentional — the local-born account does not use Firebase.
-    ref.read(authStateProvider.notifier).setLocalBornSession(profile: profile);
-
-    if (context.mounted) {
-      unawaited(context.router.replaceAll([const AppShellRoute()]));
-    }
-  }
-
-  Future<bool> _confirmDismiss(BuildContext context, bool isCloud) async {
+  Future<bool> _confirmDismiss(BuildContext context) async {
     final confirmed =
         await showDialog<bool>(
           context: context,
           builder: (ctx) {
             final d = AppLocalizations.of(ctx)!;
             return AlertDialog(
-              title: Text(
-                isCloud
-                    ? d.accountRemoveFromDeviceTitle
-                    : d.accountDeleteAccountTitle,
-              ),
-              content: Text(
-                isCloud
-                    ? d.accountRemoveFromDeviceBody
-                    : d.accountDeleteAccountBody,
-              ),
+              title: Text(d.accountRemoveFromDeviceTitle),
+              content: Text(d.accountRemoveFromDeviceBody),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(ctx).pop(false),
@@ -829,9 +735,7 @@ class _AccountTileState extends ConsumerState<_AccountTile> {
                   style: FilledButton.styleFrom(
                     backgroundColor: Theme.of(ctx).colorScheme.error,
                   ),
-                  child: Text(
-                    isCloud ? d.accountRemove : d.accountDeleteForever,
-                  ),
+                  child: Text(d.accountRemove),
                 ),
               ],
             );
@@ -839,7 +743,7 @@ class _AccountTileState extends ConsumerState<_AccountTile> {
         ) ??
         false;
 
-    if (!confirmed || !isCloud) return confirmed;
+    if (!confirmed) return false;
 
     // AUD-account-01: the dialog above just promised "your cloud data is
     // safe" — that promise only holds if nothing is still queued locally.
@@ -900,7 +804,7 @@ class _AccountTileState extends ConsumerState<_AccountTile> {
     // orphaned inode, reads can throw) while authState/selectedProfileId still
     // point at it. Tear the session down FIRST — close the Drift handle, clear
     // auth + selected profile + active-account pointer — then delete, then
-    // route away. Mirrors showDeleteLocalAccountFlow.
+    // route away.
     final isActive = ref.read(accountDbFileNameProvider) == account.dbFileName;
     if (isActive) {
       ref
@@ -918,12 +822,7 @@ class _AccountTileState extends ConsumerState<_AccountTile> {
       ).clearActiveAccount();
     }
 
-    final isCloud = account.accountTier.isCloud;
-    if (isCloud) {
-      await service.removeCloudFromDevice(account.accountId);
-    } else {
-      await service.deleteLocalAccount(account.accountId);
-    }
+    await service.removeCloudFromDevice(account.accountId);
 
     if (!isActive || !context.mounted) return;
     // Active account is gone — route away from the now-orphaned context.

@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/app/router/router_provider.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
-import 'package:learning_tracker/core/navigation/root_scaffold_messenger.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
@@ -58,11 +57,6 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen> {
   // profile-less user.  Reset when profiles become non-empty so that a user
   // who later adds a profile starts back on Dashboard.
   bool _didJumpToSettings = false;
-
-  // Convert-on-reconnect prompt (offline-account back-up nudge): shown at most
-  // once per shell session, when a signed-in local-born account is confirmed
-  // online. Routes into the existing Upgrade-to-Cloud flow.
-  bool _upgradePromptShown = false;
 
   // AUD-profiles-21: guards the BUG D1 auto-select/self-heal effect
   // (`autoSelectedProfileIdProvider.ensureSelected()`) so it fires once per
@@ -142,11 +136,11 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen> {
     // side effect lives in its explicit `ensureSelected()` method, which
     // mutates `selectedProfileIdProvider` — a provider write Riverpod
     // forbids while any widget is mid-build. So, like `_didJumpToSettings`
-    // and `_upgradePromptShown` below, it is scheduled via
-    // `addPostFrameCallback` rather than called synchronously from here or
-    // from `initState` (SM-2 also rules out kicking a provider off from
-    // `initState`). `_autoSelectRan` makes this a once-per-signed-in-session
-    // effect; it resets on sign-out so a later sign-in re-triggers it.
+    // above, it is scheduled via `addPostFrameCallback` rather than called
+    // synchronously from here or from `initState` (SM-2 also rules out
+    // kicking a provider off from `initState`). `_autoSelectRan` makes this
+    // a once-per-signed-in-session effect; it resets on sign-out so a later
+    // sign-in re-triggers it.
     final isSignedIn = ref.watch(authStateProvider.select((s) => s.isSignedIn));
     if (isSignedIn && !_autoSelectRan) {
       _autoSelectRan = true;
@@ -211,51 +205,6 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen> {
       orElse: () => true,
     );
     final offlineBannerVisible = isCloudBorn && !isOnline;
-
-    // Convert-on-reconnect: a signed-in, credential-less local-born account
-    // that is now confirmed online (data-only — not the optimistic default) is
-    // nudged once to back up via Upgrade to Cloud. Shown as a dismissible
-    // MaterialBanner so it doesn't disturb the appBar PreferredSize math.
-    final authState = ref.watch(authStateProvider);
-    final onlineConfirmed = connectivity.maybeWhen(
-      data: (online) => online,
-      orElse: () => false,
-    );
-    if (authState.isSignedIn &&
-        authState.isLocalBorn &&
-        onlineConfirmed &&
-        !_upgradePromptShown) {
-      _upgradePromptShown = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        final l10n = AppLocalizations.of(context)!;
-        // Use the ROOT messenger (keyed on MaterialApp.router): the shell build
-        // context sits above AutoTabsScaffold, so ScaffoldMessenger.of(context)
-        // resolves to an ancestor messenger with no visible host and the banner
-        // silently no-ops.
-        final messenger = rootScaffoldMessengerKey.currentState;
-        if (messenger == null) return;
-        messenger.showMaterialBanner(
-          MaterialBanner(
-            content: Text(l10n.upgradePromptOnlineBody),
-            leading: const Icon(Icons.cloud_upload_outlined),
-            actions: [
-              TextButton(
-                onPressed: messenger.hideCurrentMaterialBanner,
-                child: Text(l10n.upgradePromptDismiss),
-              ),
-              FilledButton(
-                onPressed: () {
-                  messenger.hideCurrentMaterialBanner();
-                  context.router.push(const UpgradeToCloudRoute());
-                },
-                child: Text(l10n.upgradePromptBackup),
-              ),
-            ],
-          ),
-        );
-      });
-    }
 
     return SacredTimeLockOverlay(
       child: AutoTabsScaffold(

@@ -9,15 +9,12 @@ import 'package:google_sign_in/google_sign_in.dart'
 import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
-import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/providers/active_account_id_provider.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/utils/firebase_error_code.dart';
 import 'package:learning_tracker/core/utils/text_input_formatters.dart';
-import 'package:learning_tracker/features/account/domain/services/local_auth_service.dart';
-import 'package:learning_tracker/features/account/domain/services/pending_local_signup.dart';
 import 'package:learning_tracker/features/account/domain/services/session_persistence_service.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
@@ -29,7 +26,6 @@ import 'package:learning_tracker/features/onboarding/onboarding.dart'
     show validateDisplayName, validateEmail, validatePassword;
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
@@ -82,9 +78,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   String? _validateDisplayName(String? value, AppLocalizations l10n) =>
       validators.validateDisplayName(value, l10n);
 
-  /// Cloud sign-up handler — reached only from the ONLINE form (the offline
-  /// branch shows an explicit "Create offline account" button that calls
-  /// [_createOfflineAccount] directly, with no email/password).
+  /// Cloud sign-up handler — every account is cloud-born, so this requires a
+  /// live internet connection.
   Future<void> _signUpWithEmail() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -92,35 +87,18 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     final password = _passwordController.text;
     final displayName = _nameController.text.trim();
 
-    // Epic 21.5: one-shot connectivity check at tap time decides
-    // which backend handles the signup. The stream keeps the UI
-    // honest (banner/warning); the one-shot prevents stale-stream
-    // race conditions at execution time.
+    // Epic 21.5: one-shot connectivity check at tap time. The stream keeps the
+    // UI honest (banner/warning); the one-shot prevents stale-stream race
+    // conditions at execution time.
     final isOnline = await InternetConnectionChecker.instance.hasConnection;
 
     if (!isOnline) {
       // Race: the online form was showing but connectivity dropped between
-      // render and tap. Fall back to a credential-less offline account; the
-      // typed email/password are discarded (an offline account has neither).
-      await _createOfflineAccount();
-    } else {
-      await _signUpCloud(email, password, displayName);
+      // render and tap.
+      if (mounted) _showError(AppLocalizations.of(context)!.authErrNetwork);
+      return;
     }
-  }
-
-  /// Creates a credential-less, device-local account: no email, no password,
-  /// no account display name. An internal synthetic email/password are
-  /// generated purely so the existing local-account plumbing (registry keying,
-  /// argon2 hash column, restore-by-email) keeps working — they are never shown
-  /// to or entered by the user. Onboarding goes straight to profile creation;
-  /// the account is re-entered from the Account Picker, and can be backed up
-  /// later via Upgrade to Cloud.
-  Future<void> _createOfflineAccount() async {
-    final id = const Uuid().v4();
-    final syntheticEmail =
-        'offline_${id.replaceAll('-', '').substring(0, 12)}@offline.local';
-    final syntheticPassword = const Uuid().v4();
-    await _signUpLocal(syntheticEmail, syntheticPassword, '');
+    await _signUpCloud(email, password, displayName);
   }
 
   /// Forces an immediate connectivity re-probe (the stream otherwise self-probes
@@ -147,16 +125,10 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         );
         unawaited(context.router.replace(const SignInRoute()));
       }
-    } on DuplicateEmailException {
-      if (mounted)
-        _showError(AppLocalizations.of(context)!.signUpEmailAlreadyExists);
-    } on InvalidInputException catch (e) {
-      if (mounted) _showError(_mapInvalidInputCode(e.code));
     } catch (e) {
       final code = extractFirebaseCode(e);
       if (code == 'network-request-failed' && mounted) {
-        // Race condition: one-shot said online but Firebase call
-        // failed. Offer graceful fallback to offline account.
+        // Race condition: one-shot said online but the Firebase call failed.
         _showFallbackDialog(email, password, displayName);
         return;
       }
@@ -172,149 +144,15 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     }
   }
 
-  Future<void> _signUpLocal(
-    String email,
-    String password,
-    String displayName,
-  ) async {
-    setState(() => _isLoading = true);
-    final normalized = email.trim().toLowerCase();
-    final accountId = const Uuid().v4();
-    final dbFileName = 'user_acc_$accountId.db';
-    var reservedEmail = false;
-    var switchedDb = false;
-
-    Future<void> recover(String databasesPath) async {
-      final prefs = await SharedPreferences.getInstance();
-      if (reservedEmail) {
-        await PendingLocalSignupStore.releaseEmail(prefs, normalized);
-      }
-      await PendingLocalSignupStore.clearPayload(prefs);
-      if (switchedDb) {
-        PendingLocalSignupStore.deleteOrphanDbFile(databasesPath, dbFileName);
-        ref
-            .read(accountDbFileNameProvider.notifier)
-            .setFileName('learning_tracker');
-        ref.read(activeAccountIdProvider.notifier).set(null);
-        ref.invalidate(userDatabaseProvider);
-      }
-    }
-
-    try {
-      final registry = ref.read(deviceRegistryProvider);
-      if (await registry.findByEmail(normalized) != null) {
-        if (mounted) {
-          _showError(AppLocalizations.of(context)!.signUpDeviceEmailExists);
-        }
-        return;
-      }
-
-      final prefs = await SharedPreferences.getInstance();
-      final reserved = await PendingLocalSignupStore.tryReserveEmail(
-        prefs,
-        normalized,
-      );
-      if (!reserved) {
-        if (mounted) {
-          _showError(AppLocalizations.of(context)!.signUpOfflineInProgress);
-        }
-        return;
-      }
-      reservedEmail = true;
-
-      ref.read(accountDbFileNameProvider.notifier).setFileName(dbFileName);
-      ref.read(activeAccountIdProvider.notifier).set(accountId);
-      ref.invalidate(userDatabaseProvider);
-      switchedDb = true;
-
-      final dao = ref.read(userDatabaseProvider).userProfileDao;
-      final service = LocalAuthService(dao: dao);
-      final profile = await service.signUp(
-        email: email,
-        password: password,
-        displayName: displayName,
-      );
-
-      await PendingLocalSignupStore.writePayload(
-        prefs,
-        PendingLocalRegistration(
-          accountId: accountId,
-          dbFileName: dbFileName,
-          email: normalized,
-          displayName: displayName,
-        ),
-      );
-
-      ref
-          .read(authStateProvider.notifier)
-          .setLocalBornSession(profile: profile);
-
-      // Clear any cached Firebase user so offline local sessions are never
-      // mistaken for cloud sign-in (downstream Firestore awaits would stall).
-      // On emulators / devices without Google Play Services this can throw
-      // PlatformException(clearCredentialStateAsync…).  The local account was
-      // already created successfully, so a signOut failure must NOT roll back
-      // the signup — swallow and log it.
-      try {
-        await ref.read(authRepositoryProvider).signOut();
-      } catch (e) {
-        // Best-effort cleanup — not fatal for the local signup path.
-        AppLogger.instance.warning(
-          event: 'sign_up_local_sign_out_failed',
-          exception: e,
-        );
-      }
-
-      if (!mounted) return;
-      final router = context.router;
-      final docs = await getApplicationDocumentsDirectory();
-      if (!mounted) return;
-      unawaited(
-        router.push(const OnboardingRoute()).then((_) async {
-          if (!mounted) return;
-          await PendingLocalSignupStore.rollbackIfIncomplete(
-            ref: ref,
-            databasesPath: docs.path,
-          );
-        }),
-      );
-    } on DuplicateEmailException {
-      final docs = await getApplicationDocumentsDirectory();
-      await recover(docs.path);
-      if (mounted) {
-        _showError(AppLocalizations.of(context)!.signUpOfflineEmailExists);
-      }
-    } on InvalidInputException catch (e) {
-      final docs = await getApplicationDocumentsDirectory();
-      await recover(docs.path);
-      if (mounted) _showError(_mapInvalidInputCode(e.code));
-    } catch (e) {
-      final docs = await getApplicationDocumentsDirectory();
-      await recover(docs.path);
-      // AUD-account-24: do not interpolate the raw exception into the
-      // user-facing message (untranslated + leaks implementation detail).
-      // Log it for diagnostics and show the existing localized generic
-      // fallback instead — mirrors the cloud-signup path's own fallback for
-      // an unmapped Firebase error code (see _mapAuthError's default arm).
-      AppLogger.instance.warning(event: 'sign_up_local_failed', exception: e);
-      if (mounted) {
-        _showError(AppLocalizations.of(context)!.signUpErrGeneric);
-      }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
   /// Shown when the one-shot said "online" but Firebase threw
-  /// network-request-failed mid-call. Offers to create an offline
-  /// account instead or retry.
+  /// network-request-failed mid-call.
   void _showFallbackDialog(String email, String password, String displayName) {
     final l10n = AppLocalizations.of(context)!;
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(l10n.connectionLostTitle),
-        content: Text(l10n.signUpFallbackBody),
+        content: Text(l10n.appErrorViewNoConnectionBody),
         actions: [
           TextButton(
             onPressed: () {
@@ -322,15 +160,6 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
               _signUpCloud(email, password, displayName);
             },
             child: Text(l10n.tryAgainButton),
-          ),
-          FilledButton(
-            onPressed: () {
-              Navigator.of(ctx).pop();
-              // Offline accounts are credential-less; discard the typed
-              // email/password and create a device-local account.
-              _createOfflineAccount();
-            },
-            child: Text(l10n.createOfflineAccount),
           ),
         ],
       ),
@@ -361,19 +190,6 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           );
         }
         // Sign out the just-signed-in Google user to avoid orphan state
-        await ref.read(authRepositoryProvider).signOut();
-        return;
-      }
-
-      // Epic 21.6: check collision with local-born account
-      final localMatch = await registry.findByEmail(googleUser.email ?? '');
-      if (localMatch != null && localMatch.accountTier.isLocal) {
-        // Google returned an email matching a local-born account on
-        // this device — route to collision/upgrade flow instead of
-        // silently merging.
-        if (mounted) {
-          _showError(AppLocalizations.of(context)!.authOfflineUseUpgrade);
-        }
         await ref.read(authRepositoryProvider).signOut();
         return;
       }
@@ -502,18 +318,6 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     }
   }
 
-  /// Resolves a [LocalAuthService]-thrown [InvalidInputException.code] to a
-  /// localized message (EH-5) — [InvalidInputException.reason] is
-  /// English-only and log-safe, never shown to users directly.
-  String _mapInvalidInputCode(InvalidInputCode code) {
-    final l10n = AppLocalizations.of(context)!;
-    return switch (code) {
-      InvalidInputCode.invalidEmail => l10n.authErrInvalidEmail,
-      InvalidInputCode.passwordTooShort => l10n.signUpErrWeakPassword,
-      InvalidInputCode.displayNameRequired => l10n.signUpErrGeneric,
-    };
-  }
-
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -530,9 +334,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     final connectivity = ref.watch(connectivityStreamProvider);
     // Offline-first: while the first probe is in flight, fall back to the last
     // observed reading (offline until proven online) rather than optimistically
-    // assuming online — otherwise an offline device renders the cloud-blue
-    // "backed up" card, the Google button, the OR divider and the "Sign Up"
-    // label instead of the coral offline warning + offline-acknowledge flow.
+    // assuming online — otherwise an offline device renders a signup form that
+    // cannot possibly succeed instead of the coral no-connection notice.
     final isOnline = connectivity.maybeWhen(
       data: (v) => v,
       orElse: () => lastKnownOnline,
@@ -715,53 +518,12 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                                       ),
                                     ),
                                   ] else ...[
-                                    // Offline: no email/password/name — an
-                                    // explicit, credential-less device-local
-                                    // account. Profiles are named individually
-                                    // on the next screen.
                                     Text(
-                                      l10n.signUpOfflineExplain,
+                                      l10n.appErrorViewNoConnectionBody,
                                       style: theme.textTheme.bodyMedium
                                           ?.copyWith(
                                             color: context.colors.brandInkMuted,
                                           ),
-                                    ),
-                                    const SizedBox(height: 20),
-                                    SizedBox(
-                                      height: 58,
-                                      child: FilledButton(
-                                        onPressed: _isLoading
-                                            ? null
-                                            : _createOfflineAccount,
-                                        style: FilledButton.styleFrom(
-                                          backgroundColor:
-                                              context.colors.brandBlue,
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              30,
-                                            ),
-                                          ),
-                                        ),
-                                        child: _isLoading
-                                            ? SizedBox(
-                                                height: 20,
-                                                width: 20,
-                                                child:
-                                                    CircularProgressIndicator(
-                                                      strokeWidth: 2,
-                                                      color: context
-                                                          .colors
-                                                          .brandCreamCard,
-                                                    ),
-                                              )
-                                            : Text(
-                                                l10n.createOfflineAccount,
-                                                style: const TextStyle(
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.w700,
-                                                ),
-                                              ),
-                                      ),
                                     ),
                                     const SizedBox(height: 8),
                                     Center(
@@ -932,9 +694,6 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       );
     }
 
-    // A single local-account notice. (Previously two near-identical
-    // "no cloud backup / no device sync" cards were stacked here; the
-    // redundant body card was removed — the title card already says it.)
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -954,7 +713,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              l10n.authModeLocalTitle,
+              l10n.appErrorViewNoConnectionTitle,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: context.colors.brandInk,
                 fontWeight: FontWeight.w700,

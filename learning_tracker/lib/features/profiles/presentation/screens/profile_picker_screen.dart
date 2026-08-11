@@ -7,7 +7,6 @@ import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
-import 'package:learning_tracker/features/account/presentation/widgets/no_backup_badge.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/add_profile_dialog.dart';
@@ -97,11 +96,6 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const SizedBox(height: 16),
-            // DNI-342 / UX-DR20: persistent "no backup" badge for local-born
-            // accounts (hidden for cloudBorn / signed-out via the widget's
-            // internal tier gate).
-            const Align(alignment: Alignment.center, child: NoBackupBadge()),
-            const SizedBox(height: 6),
             Text(
               l10n.profilePickerTitle,
               textAlign: TextAlign.center,
@@ -313,7 +307,7 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
     final theme = Theme.of(context);
 
     // No sign-out tile for unauthenticated / anonymous sessions.
-    if (!authState.isCloudBorn && !authState.isLocalBorn) {
+    if (!authState.isCloudBorn) {
       return const SizedBox.shrink();
     }
 

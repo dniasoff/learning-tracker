@@ -1,6 +1,4 @@
-import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
-import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/features/account/data/repositories/account_repository_adapter.dart';
 import 'package:learning_tracker/features/account/domain/models/account_entity.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
@@ -13,9 +11,7 @@ part 'auth_state_provider.g.dart';
 /// Unified auth state notifier (Epic 20 v2 §3).
 ///
 /// Single source of truth for `currentUser + tier + sessionStatus`.
-/// Replaces the sealed `AppAuthState` hierarchy. Cloud-born and
-/// local-born accounts differ only by backend — the UI reads the
-/// same shape from this notifier regardless.
+/// Replaces the sealed `AppAuthState` hierarchy.
 @Riverpod(keepAlive: true)
 class AuthStateNotifier extends _$AuthStateNotifier {
   @override
@@ -32,9 +28,9 @@ class AuthStateNotifier extends _$AuthStateNotifier {
     // (stream settles to null) while we currently believe a cloud-born
     // session is signed in. A non-null emission is intentionally ignored
     // here — every path that authenticates to a NEW identity already
-    // drives this notifier's state directly (setCloudBornSession /
-    // setLocalBornSession), so re-deriving from the stream on every
-    // non-null event would race and duplicate that explicit transition.
+    // drives this notifier's state directly (setCloudBornSession), so
+    // re-deriving from the stream on every non-null event would race and
+    // duplicate that explicit transition.
     ref.listen<AsyncValue<AppUser?>>(firebaseAuthStateProvider, (
       previous,
       next,
@@ -95,7 +91,7 @@ class AuthStateNotifier extends _$AuthStateNotifier {
           // AUD-account-03: reloadCurrentUser() (User.reload()) is a network
           // round-trip that throws (e.g. FirebaseAuthException with code
           // network-request-failed) on an entirely ordinary offline cold
-          // start. Log and fall through to the local-born restore path below
+          // start. Log and fall through to the signed-out fallback below
           // instead of leaving the session unresolved — mirrors the
           // defensive try/catch pattern in sign_in_controller.dart. The
           // adapter's AccountRepositoryNotReadyException (no active device
@@ -106,29 +102,6 @@ class AuthStateNotifier extends _$AuthStateNotifier {
             exception: e,
             stackTrace: st,
           );
-        }
-      }
-
-      // Local-born accounts are credential-less and device-only: no Firebase
-      // session, no Firestore document — their only home is the device
-      // registry. Restore the last-active local-born row if present. Respect
-      // the active pointer (D10): never silently auto-activate an arbitrary
-      // account against a null/dangling pointer.
-      final registry = ref.read(deviceRegistryProvider);
-      final activeAccountId = await registry.getLastActiveAccountId();
-      if (activeAccountId != null) {
-        final account = await registry.findById(activeAccountId);
-        if (account != null && account.accountTier.isLocal) {
-          state = AuthState.signedIn(
-            user: AuthUser(
-              uid: account.firebaseUid ?? account.accountId,
-              email: account.email,
-              displayName: account.displayName,
-              firebaseUid: account.firebaseUid,
-            ),
-            tier: Tier.local,
-          );
-          return;
         }
       }
 
@@ -156,22 +129,7 @@ class AuthStateNotifier extends _$AuthStateNotifier {
     );
   }
 
-  /// Set the current session to signed-in (local-born).
-  /// Invoked from `LocalAuthService.signIn`.
-  void setLocalBornSession({required DeviceAccount account}) {
-    state = AuthState.signedIn(
-      user: AuthUser(
-        uid: account.firebaseUid ?? account.accountId,
-        email: account.email,
-        displayName: account.displayName,
-        firebaseUid: account.firebaseUid,
-      ),
-      tier: Tier.local,
-    );
-  }
-
-  /// Clear the session. Used by sign-out and by the upgrade flow's
-  /// collision rollback path.
+  /// Clear the session. Used by sign-out.
   void signOut() {
     state = const AuthState.signedOut();
   }

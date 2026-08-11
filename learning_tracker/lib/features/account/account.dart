@@ -12,10 +12,7 @@ export 'domain/repositories/auth_repository.dart';
 // Domain services
 export 'domain/services/account_lifecycle_service.dart';
 export 'domain/services/account_management_service.dart';
-export 'domain/services/local_auth_service.dart';
-export 'domain/services/pending_local_signup.dart';
 export 'domain/services/session_persistence_service.dart';
-export 'domain/services/upgrade_to_cloud_service.dart';
 // Onboarding screens
 export 'onboarding/presentation/screens/onboarding_intent_screen.dart';
 export 'onboarding/presentation/screens/signup_screen.dart';
@@ -34,5 +31,4 @@ export 'presentation/screens/account_picker_screen.dart';
 export 'presentation/screens/sign_in_screen.dart';
 // Presentation widgets
 export 'presentation/widgets/email_verification_confirm_panel.dart';
-export 'presentation/widgets/no_backup_badge.dart';
 export 'presentation/widgets/offline_top_banner.dart';

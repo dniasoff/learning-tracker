@@ -18,9 +18,7 @@ import 'package:learning_tracker/core/sync/providers/outbox_providers.dart'
 import 'package:learning_tracker/core/sync/providers/sync_orchestrator_providers.dart';
 import 'package:learning_tracker/core/utils/firebase_error_code.dart';
 import 'package:learning_tracker/features/account/data/services/magic_link_service.dart';
-import 'package:learning_tracker/features/account/domain/services/local_auth_service.dart';
 import 'package:learning_tracker/features/account/domain/services/session_persistence_service.dart';
-import 'package:learning_tracker/features/account/domain/services/upgrade_to_cloud_service.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart';
@@ -150,8 +148,6 @@ class SignInController extends Notifier<SignInState> {
   ///   * [_SignInFailure] already carries a resolved l10n message (a "soft"
   ///     failure the body detected without an exception being thrown by a
   ///     lower layer — e.g. no local data for an offline restore).
-  ///   * [InvalidCredentialsException] maps to the incorrect-password copy
-  ///     (matches the previous `on InvalidCredentialsException` catch).
   ///   * A non-cancel [GoogleSignInException] maps to the generic Google
   ///     failure copy (matches the previous `on GoogleSignInException`
   ///     catch's else-branch) — the cancel/interrupt codes are handled by the
@@ -159,7 +155,6 @@ class SignInController extends Notifier<SignInState> {
   ///   * Everything else falls back to the existing Firebase-code mapping.
   String _resolveFailureMessage(Object error, AppLocalizations l10n) {
     if (error is _SignInFailure) return error.message;
-    if (error is InvalidCredentialsException) return l10n.authIncorrectPassword;
     if (error is GoogleSignInException) return l10n.authGoogleSignInFailed;
     return _mapAuthErrorFromException(error, l10n);
   }
@@ -264,96 +259,6 @@ class SignInController extends Notifier<SignInState> {
   ) => _ensureCloudEmailVerified(email, l10n);
 
   // ── Offline restore ─────────────────────────────────────────────────────────
-
-  /// Exposed for regression tests covering the catch-path logging (F19).
-  /// Production callers use [signInWithEmail], which invokes this helper
-  /// when the email is not registered on this device.
-  @visibleForTesting
-  Future<bool> tryLocalFallbackSignInForTest({
-    required String email,
-    required String password,
-    required StackRouter router,
-    required AppLocalizations l10n,
-  }) => _tryLocalFallbackSignIn(
-    email: email,
-    password: password,
-    router: router,
-    l10n: l10n,
-  );
-
-  Future<bool> _tryLocalFallbackSignIn({
-    required String email,
-    required String password,
-    required StackRouter router,
-    required AppLocalizations l10n,
-  }) async {
-    try {
-      final dao = _ref.read(userDatabaseProvider).userProfileDao;
-      final service = LocalAuthService(dao: dao);
-      final profile = await service.signIn(email: email, password: password);
-      final prefs = await SharedPreferences.getInstance();
-      _ref
-          .read(authStateProvider.notifier)
-          .setLocalBornSession(profile: profile);
-      // SI-LOCAL-01: signOut() can throw PlatformException(clearCredentialStateAsync…)
-      // on emulators/devices without Google Play Services. The local account was
-      // already created successfully — wrap in its own try/catch so a cleanup
-      // failure never rolls the sign-in into an error state.
-      try {
-        await _ref.read(authRepositoryProvider).signOut();
-      } catch (e) {
-        AppLogger.instance.warning(
-          event: 'try_local_fallback_sign_in_sign_out_failed',
-          exception: e,
-        );
-      }
-      final profiles = await _ref
-          .read(userDatabaseProvider)
-          .profileDao
-          .getProfilesByAccount(_ref.read(currentAccountIdProvider));
-      final firstSignInNeedsSetup = profiles.isEmpty;
-      // R1o-H3: a user who previously skipped profile creation must land on the
-      // empty-login surface, not be looped back into the onboarding wizard.
-      final hasSkipped = prefs.getBool(kOnboardingSkipped) ?? false;
-      if (firstSignInNeedsSetup && !hasSkipped) {
-        await prefs.remove(kOnboardingComplete);
-      } else {
-        await prefs.setBool(kOnboardingComplete, true);
-      }
-      _ref.read(selectedProfileIdProvider.notifier).clear();
-      _resetSessionContextForFreshSignIn();
-      if (firstSignInNeedsSetup) {
-        unawaited(
-          router.replaceAll([
-            if (hasSkipped)
-              const EmptyLoginRoute()
-            else
-              const OnboardingRoute(),
-          ]),
-        );
-      } else {
-        unawaited(router.replaceAll([const ProfilePickerRoute()]));
-      }
-      return true;
-    } on InvalidCredentialsException {
-      // Expected outcome — user has no local account or the password didn't
-      // match. Caller (signInWithEmail) falls through to the next strategy
-      // (Firebase). No log: a wrong-password attempt is not a system failure.
-      return false;
-    } catch (e, stackTrace) {
-      // Any other failure (DB read error, prefs corruption, navigation
-      // crash) is a real problem — the previous empty catch silently
-      // swallowed these so a broken local-DB schema would manifest as an
-      // unexplained "wrong password" UX. Replace with a structured warning
-      // so operators inspecting logs can trace the failure.
-      AppLogger.instance.warning(
-        event: 'try_local_fallback_sign_in_failed',
-        exception: e,
-        stackTrace: stackTrace,
-      );
-      return false;
-    }
-  }
 
   /// Exposed for regression tests covering the catch-path logging (F19).
   /// Production callers use [signInWithEmail], which invokes this helper
@@ -733,7 +638,7 @@ class SignInController extends Notifier<SignInState> {
 
   // ── Public actions ──────────────────────────────────────────────────────────
 
-  /// Smart credential routing: device registry → local → Firebase.
+  /// Smart credential routing: device registry → Firebase.
   ///
   /// AUD-account-14: state transitions are driven by a single
   /// [AsyncValue.guard] around [_signInWithEmailBody] rather than ~10 manual
@@ -783,8 +688,8 @@ class SignInController extends Notifier<SignInState> {
     );
     watchdog.cancel();
     // AUD-account-02: any awaited call inside the guarded body (including
-    // deep inside _navigateAfterSignIn / _tryLocalFallbackSignIn /
-    // _tryOfflineCloudRestore) can throw/leave a disposed ref if the notifier
+    // deep inside _navigateAfterSignIn / _tryOfflineCloudRestore) can
+    // throw/leave a disposed ref if the notifier
     // was torn down mid-flight. AsyncValue.guard already caught that safely;
     // bail out here before touching `state` — there is nothing left to show
     // the user, the screen that would have shown it is already gone.
@@ -814,99 +719,7 @@ class SignInController extends Notifier<SignInState> {
     final registry = _ref.read(deviceRegistryProvider);
     final account = await registry.findByEmail(email);
 
-    if (account != null && account.accountTier.isLocal) {
-      _ref
-          .read(accountDbFileNameProvider.notifier)
-          .setFileName(account.dbFileName);
-      _ref.read(activeAccountIdProvider.notifier).set(account.accountId);
-      _ref.invalidate(userDatabaseProvider);
-
-      final dao = _ref.read(userDatabaseProvider).userProfileDao;
-      final service = LocalAuthService(dao: dao);
-      final profile = await service.signIn(email: email, password: password);
-
-      final prefs = await SharedPreferences.getInstance();
-      final session = SessionPersistenceService(
-        prefs: prefs,
-        registry: registry,
-      );
-      await session.setActiveAccount(account.accountId);
-
-      final isOnline = await _ref
-          .read(internetConnectionCheckerProvider)
-          .hasConnection;
-      if (isOnline) {
-        final upgradeSvc = UpgradeToCloudService(
-          dao: dao,
-          authRepository: _ref.read(authRepositoryProvider),
-          registry: registry,
-          accountId: account.accountId,
-        );
-        final finalized = await upgradeSvc.tryFinalizeVerifiedCloudUpgrade(
-          localProfile: profile,
-          password: password,
-        );
-        if (finalized != null) {
-          final orchestrator = _ref.read(syncOrchestratorProvider);
-          if (orchestrator != null) {
-            await orchestrator.pushAllLocalData();
-            await orchestrator.pullOnLaunch();
-          }
-          await _navigateAfterSignIn(router);
-          return;
-        }
-      }
-
-      _ref
-          .read(authStateProvider.notifier)
-          .setLocalBornSession(profile: profile);
-      // SI-LOCAL-01: signOut() can throw PlatformException(clearCredentialStateAsync…)
-      // on emulators/devices without Google Play Services. The local account
-      // authenticated successfully — wrap in its own try/catch so a cleanup
-      // failure never surfaces as "Sign-in failed" to the user.
-      try {
-        await _ref.read(authRepositoryProvider).signOut();
-      } catch (e) {
-        AppLogger.instance.warning(
-          event: 'sign_in_local_sign_out_failed',
-          exception: e,
-        );
-      }
-      // SI-08: clear all per-session router state that must NOT survive a
-      // fresh sign-in. The local-account path previously only cleared
-      // selectedProfileId, leaving the tutored-selection and PIN-gate caches
-      // intact. In a multi-account scenario (cloud session interrupted, user
-      // signs in with a local account) this leaked the previous session's tutor
-      // context and restore-guard state into the new session. Mirrors the
-      // _navigateAfterSignIn and _tryLocalFallbackSignIn paths.
-      _resetSessionContextForFreshSignIn();
-      _ref.read(selectedProfileIdProvider.notifier).clear();
-      final profiles = await _ref
-          .read(userDatabaseProvider)
-          .profileDao
-          .getProfilesByAccount(_ref.read(currentAccountIdProvider));
-      final firstSignInNeedsSetup = profiles.isEmpty;
-      // R1o-H3: respect a prior onboarding-skip so a skipped local user lands
-      // on the empty-login surface instead of being trapped in onboarding.
-      final hasSkipped = prefs.getBool(kOnboardingSkipped) ?? false;
-      if (firstSignInNeedsSetup && !hasSkipped) {
-        await prefs.remove(kOnboardingComplete);
-      } else {
-        await prefs.setBool(kOnboardingComplete, true);
-      }
-      if (firstSignInNeedsSetup) {
-        unawaited(
-          router.replaceAll([
-            if (hasSkipped)
-              const EmptyLoginRoute()
-            else
-              const OnboardingRoute(),
-          ]),
-        );
-      } else {
-        unawaited(router.replaceAll([const ProfilePickerRoute()]));
-      }
-    } else if (account != null && account.accountTier.isCloud) {
+    if (account != null) {
       final isOnline = await _ref
           .read(internetConnectionCheckerProvider)
           .hasConnection;
@@ -929,16 +742,6 @@ class SignInController extends Notifier<SignInState> {
         }
       }
     } else {
-      final signedInLocally = await _tryLocalFallbackSignIn(
-        email: email,
-        password: password,
-        router: router,
-        l10n: l10n,
-      );
-      if (signedInLocally) {
-        return;
-      }
-
       final isOnline = await _ref
           .read(internetConnectionCheckerProvider)
           .hasConnection;
@@ -1054,20 +857,6 @@ class SignInController extends Notifier<SignInState> {
         }
         throw _SignInFailure(l10n.authMaxDeviceAccounts(kMaxDeviceAccounts));
       }
-    }
-
-    final localMatch = await registry.findByEmail(googleUser.email ?? '');
-    if (localMatch != null && localMatch.accountTier.isLocal) {
-      // SI-GOOGLE-01: same defensive wrap as above.
-      try {
-        await _ref.read(authRepositoryProvider).signOut();
-      } catch (e) {
-        AppLogger.instance.warning(
-          event: 'sign_in_google_local_conflict_sign_out_failed',
-          exception: e,
-        );
-      }
-      throw _SignInFailure(l10n.authOfflineUseUpgrade);
     }
 
     await _navigateAfterSignIn(router);

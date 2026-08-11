@@ -22,16 +22,6 @@
 ///             in settings_p0_test.dart — unawaited postFrameCallback chain
 ///             doesn't propagate widget-tree updates in headless).
 ///
-///   E2E-1208  Upgrade to cloud — email collision
-///             UpgradeToCloudScreen renders the form and the "Back up your
-///             account" headline for a local-born user. The full collision
-///             path (EmailCollisionException → _PhaseCollision UI) requires
-///             Firebase + DeviceRegistry native channels: device-only. This
-///             journey is substantively equivalent to E2E-911 (settings_p1
-///             test file) — the assertion here focuses on the auth-area
-///             entry path (navigating directly to /upgrade-to-cloud from
-///             auth context).
-///
 /// ## Headless limitations
 ///
 /// - AccountPickerScreen.getAllAccounts() is a real Drift FutureBuilder against
@@ -44,27 +34,20 @@
 /// - showSignOutConfirmation (after AccountActionsSheet tap) calls
 ///   TutoredMirrorWipeService → authRepo.signOut() → router.replaceAll via
 ///   unawaited postFrameCallback — navigation outcome not detectable headlessly.
-/// - EmailCollisionException only reachable via real Firebase (device-only).
 ///
 /// Catalog: docs/planning/e2e-test-suite-plan.md §2 Area 12 / §7
 @Tags(['e2e', 'journey'])
 library;
 
-import 'dart:async' show unawaited;
-
 import 'package:drift/native.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/app/router/app_router.dart'
-    show UpgradeToCloudRoute;
 import 'package:learning_tracker/app/router/router_provider.dart'
     show routerProvider;
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart'
     show DeviceAccountsCompanion, DeviceRegistryDatabase;
 import 'package:learning_tracker/core/providers/registry_provider.dart'
     show deviceRegistryProvider;
-import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart'
-    show debugSetLastKnownOnline;
 
 import '../harness/e2e_common_overrides.dart';
 import '../harness/e2e_harness.dart';
@@ -454,130 +437,6 @@ void main() {
       skip: true, // device/harness: R-ST6 — sign-out navigation via unawaited
       // postFrameCallback + router.replaceAll not detectable headlessly;
       // confirmed on device.
-      (tester) async {},
-    );
-  });
-
-  // ── E2E-1208 ─────────────────────────────────────────────────────────────────
-
-  group('E2E-1208 — Upgrade to cloud — email collision', () {
-    // UpgradeToCloudScreen renders the "Back up your account" form for a
-    // local-born user.  Triggering an EmailCollisionException requires the real
-    // UpgradeToCloudService which calls Firebase Auth (createUserWithEmailAndPassword
-    // → email-already-in-use → EmailCollisionException) and DeviceRegistry
-    // native I/O — device-only.
-    //
-    // The headless assertions verify:
-    //   (a) UpgradeToCloudScreen form renders for a local-born user
-    //       (prerequisite for the collision path),
-    //   (b) the "Confirm your password" field and "Upgrade to Cloud" button
-    //       are present,
-    //   (c) collision UI (_PhaseCollision) is NOT shown before a submit.
-    //
-    // This is consistent with E2E-911 in settings_p1_test.dart (same screen,
-    // same harness limitation).
-    //
-    // R-ST8: _isCredentialLess is derived from the authState email ending in
-    // '@offline.local'. For a regular local-born account (non-offline.local)
-    // the form shows "Confirm your password", not "Create a password".
-
-    testWidgets(
-      'UpgradeToCloudScreen renders the upgrade form for a local-born account: '
-      '"Back up your account" headline, password field, Upgrade button',
-      (tester) async {
-        debugSetLastKnownOnline(true);
-        addTearDown(() => debugSetLastKnownOnline(false));
-
-        final identity = E2EIdentity.localBorn(
-          email: 'collision1208@test.com',
-          displayName: 'Collision1208',
-          profileMode: 'adult',
-        );
-        final h = E2EHarness(tester, identity: identity);
-        addTearDown(h.dispose);
-
-        await h.pumpApp(
-          path: '/dashboard',
-          // _settingsSilences already includes connectivityOnlineOverride().
-          extraOverrides: _settingsSilences(h),
-        );
-
-        // Navigate directly to UpgradeToCloudScreen via router.
-        unawaited(h.router.push(const UpgradeToCloudRoute()));
-        await h.pump();
-        await h.pump(const Duration(milliseconds: 500));
-        await h.pump();
-
-        // Screen headline (l10n.upgradeToCloudHeadline = "Back up your account").
-        h.expectOnScreen(
-          'Back up your account',
-          routeName: 'UpgradeToCloudScreen',
-        );
-
-        // Password field: regular local-born shows "Confirm your password".
-        h.expectOnScreen('Confirm your password');
-
-        // Submit button.
-        h.expectOnScreen('Upgrade to Cloud');
-
-        // Collision UI must NOT be visible before any submit.
-        h.expectNotOnScreen('A cloud account already exists with this email');
-      },
-    );
-
-    testWidgets(
-      'UpgradeToCloudScreen for credential-less offline account shows '
-      '"Create a password" field (different from regular local-born)',
-      (tester) async {
-        debugSetLastKnownOnline(true);
-        addTearDown(() => debugSetLastKnownOnline(false));
-
-        // R-ST8: credential-less offline accounts have '@offline.local' email.
-        final identity = E2EIdentity.localBorn(
-          email: 'offline_abc@offline.local',
-          displayName: 'OfflineUser',
-          profileMode: 'adult',
-        );
-        final h = E2EHarness(tester, identity: identity);
-        addTearDown(h.dispose);
-
-        await h.pumpApp(
-          path: '/dashboard',
-          // _settingsSilences already includes connectivityOnlineOverride().
-          extraOverrides: _settingsSilences(h),
-        );
-
-        unawaited(h.router.push(const UpgradeToCloudRoute()));
-        await h.pump();
-        await h.pump(const Duration(milliseconds: 500));
-        await h.pump();
-
-        // Credential-less path shows "Create a password" field.
-        h.expectOnScreen(
-          'Back up your account',
-          routeName: 'UpgradeToCloudScreen',
-        );
-        // l10n.upgradeToCloudNewPasswordLabel = "Create a password"
-        h.expectOnScreen('Create a password');
-
-        // Collision UI still not shown before a submit.
-        h.expectNotOnScreen('A cloud account already exists with this email');
-      },
-    );
-
-    // SKIP: device-test required — triggering an EmailCollisionException
-    // requires the real UpgradeToCloudService.upgrade() flow, which calls
-    // Firebase Auth (createUserWithEmailAndPassword → email-already-in-use)
-    // and DeviceRegistryDatabase via getApplicationDocumentsDirectory
-    // (path_provider native).  The resulting _PhaseCollision UI (which shows
-    // "A cloud account already exists with this email", Upload / Keep-Cloud
-    // option tiles, and the cancel button) can only be asserted on device.
-    testWidgets(
-      'SKIP device-test-required: existing email → EmailCollisionException → '
-      '_PhaseCollision UI shows resolution options (Upload local / Keep cloud)',
-      skip: true, // device/harness: EmailCollisionException only reachable via
-      // real Firebase + DeviceRegistry native channels;
-      // see E2E-911 in settings_p1_test.dart.
       (tester) async {},
     );
   });

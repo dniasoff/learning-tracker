@@ -4,7 +4,6 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
-import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/account/presentation/notifiers/sign_in_controller.dart';
@@ -133,13 +132,8 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       final l10n = AppLocalizations.of(context)!;
       setState(() {
         if (account != null) {
-          final tierLabel = account.accountTier.isCloud
-              ? l10n.authTierCloud
-              : l10n.authTierLocal;
-          _registryFoundHint = l10n.authFoundOnDevice(tierLabel);
-          _registryMatchKind = account.accountTier.isLocal
-              ? RegistryMatchKind.localBorn
-              : RegistryMatchKind.cloudBorn;
+          _registryFoundHint = l10n.authFoundOnDevice(l10n.authTierCloud);
+          _registryMatchKind = RegistryMatchKind.cloudBorn;
         } else {
           _registryFoundHint = null;
           _registryMatchKind = RegistryMatchKind.notOnDevice;
@@ -151,19 +145,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   // ── Mode computation ─────────────────────────────────────────────────────────
 
   SignInModeHint _effectiveSignInMode({required bool isOnline}) {
-    if (_emailController.text.trim().isEmpty) {
-      return isOnline ? SignInModeHint.cloud : SignInModeHint.local;
-    }
-    switch (_registryMatchKind) {
-      case RegistryMatchKind.none:
-        return isOnline ? SignInModeHint.cloud : SignInModeHint.local;
-      case RegistryMatchKind.localBorn:
-        return SignInModeHint.local;
-      case RegistryMatchKind.cloudBorn:
-        return isOnline ? SignInModeHint.cloud : SignInModeHint.cloudOffline;
-      case RegistryMatchKind.notOnDevice:
-        return isOnline ? SignInModeHint.cloud : SignInModeHint.local;
-    }
+    return isOnline ? SignInModeHint.cloud : SignInModeHint.cloudOffline;
   }
 
   String? _registrySubtitle({
@@ -173,7 +155,6 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     switch (_registryMatchKind) {
       case RegistryMatchKind.none:
         return null;
-      case RegistryMatchKind.localBorn:
       case RegistryMatchKind.cloudBorn:
         return _registryFoundHint;
       case RegistryMatchKind.notOnDevice:
@@ -343,13 +324,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                                 textAlign: TextAlign.center,
                               ),
                               const SizedBox(height: 16),
-                              // Fix #13: When offline and the account is not a
-                              // confirmed local-born account, show a plain
-                              // "you're offline" hint rather than the misleading
-                              // "local account only" banner (signInOfflineHint).
-                              if (!isOnline &&
-                                  _registryMatchKind !=
-                                      RegistryMatchKind.localBorn)
+                              if (!isOnline)
                                 Container(
                                   padding: const EdgeInsets.all(12),
                                   decoration: BoxDecoration(
@@ -413,15 +388,8 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                                   }
                                   return null;
                                 },
-                                // AN-11: show "Forgot password?" for cloud
-                                // accounts (or unknown — the user may be typing
-                                // a new cloud email). Suppress for confirmed
-                                // local-born accounts (no Firebase reset).
-                                onForgotPassword:
-                                    _registryMatchKind ==
-                                        RegistryMatchKind.localBorn
-                                    ? null
-                                    : () => _handleForgotPassword(l10n),
+                                onForgotPassword: () =>
+                                    _handleForgotPassword(l10n),
                               ),
                               const SizedBox(height: 12),
                               SignInActions(

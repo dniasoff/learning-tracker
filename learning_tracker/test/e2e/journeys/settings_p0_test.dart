@@ -4,8 +4,7 @@
 ///   E2E-901  Adult opens Settings and verifies profile header + account email
 ///   E2E-902  Adult taps header → AccountActionsSheet shows correct items
 ///   E2E-903  Child profile — AccountActionsSheet shows only Switch Account
-///   E2E-907  Local-born adult sees Backup+Sync upgrade card and taps Upgrade
-///   E2E-910  Upgrade-to-Cloud — UpgradeToCloudScreen renders form
+///   E2E-907  Local-born adult sees the LOCAL ONLY Backup+Sync card
 ///   E2E-912  Lifetime Marking — adult: screen renders with curriculum list
 ///   E2E-913  Lifetime Marking — child profile cannot access (tile hidden)
 ///   E2E-914  Parental controls — child enters parent mode via PIN
@@ -52,7 +51,7 @@ import 'package:flutter/material.dart' show FilledButton, ListView, Scrollable;
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/app_router.dart'
-    show ParentSettingsRoute, UpgradeToCloudRoute;
+    show ParentSettingsRoute;
 import 'package:learning_tracker/app/router/router_provider.dart'
     show routerProvider;
 import 'package:learning_tracker/features/profiles/presentation/screens/parent_settings_screen.dart'
@@ -262,12 +261,11 @@ void main() {
 
   // ── E2E-907 ─────────────────────────────────────────────────────────────────
 
-  group('E2E-907 — Local-born adult sees Backup+Sync upgrade card and taps '
-      'Upgrade to Cloud', () {
-    // BackupSyncSection renders a blue "LOCAL ONLY" card with an
-    // "Upgrade to Cloud" button when syncStatus is SyncStatusLocalOnly and
-    // the user is local-born. The harness overrides syncOrchestratorProvider
-    // to null (default), so syncStatusProvider returns SyncStatusLocalOnly.
+  group('E2E-907 — Local-born adult sees the LOCAL ONLY Backup+Sync card', () {
+    // BackupSyncSection renders a blue "LOCAL ONLY" card when syncStatus is
+    // SyncStatusLocalOnly and the user is local-born. The harness overrides
+    // syncOrchestratorProvider to null (default), so syncStatusProvider
+    // returns SyncStatusLocalOnly.
     //
     // Text-matching note: the card body text is the full localisation string
     // "Your learning progress is currently LOCAL ONLY. Upgrade to sync across
@@ -278,7 +276,7 @@ void main() {
     // orchestrator short-circuits that call safely.
     testWidgets(
       'Settings BackupSyncSection shows "Backup & Sync" card title and '
-      '"Upgrade to Cloud" button; tapping navigates to UpgradeToCloudScreen',
+      'LOCAL ONLY body for a local-born adult',
       (tester) async {
         final identity = E2EIdentity.localBorn(
           email: 'backup907@test.com',
@@ -308,84 +306,6 @@ void main() {
           findsWidgets,
           reason: 'Expected LOCAL ONLY in backup sync card body',
         );
-
-        // "Upgrade to Cloud" button (l10n.backupUpgradeToCloud).
-        h.expectOnScreen('Upgrade to Cloud');
-
-        // Tap → UpgradeToCloudScreen.
-        await h.tapText('Upgrade to Cloud');
-        await h.pump(const Duration(milliseconds: 500));
-        await h.pump();
-
-        // UpgradeToCloudScreen title.
-        h.expectOnScreen('Upgrade to Cloud', routeName: 'UpgradeToCloudScreen');
-        // Screen headline.
-        h.expectOnScreen('Back up your account');
-      },
-    );
-  });
-
-  // ── E2E-910 ─────────────────────────────────────────────────────────────────
-
-  group('E2E-910 — Upgrade-to-Cloud — UpgradeToCloudScreen renders correct form '
-      'for a regular local-born account', () {
-    // R-ST8: UpgradeToCloud._isCredentialLess is derived from an email with
-    // the @offline.local suffix. The test identity uses a regular email, so
-    // the regular password-confirmation form appears, not the
-    // "Enter email + new password" form that credential-less accounts see.
-    //
-    // The Firebase upgrade submit flow (UpgradeToCloudService, deviceRegistry,
-    // internetConnectionChecker) is not exercised headlessly because all three
-    // touch network / native storage. This test verifies the screen form
-    // renders correctly; the full upgrade round-trip is a device integration
-    // test.
-    //
-    // Text-matching note: the value-prop text is a composite l10n string that
-    // includes the account email embedded in a longer sentence. Only the
-    // headline, password field label, and button label are asserted exactly.
-    testWidgets(
-      'UpgradeToCloudScreen shows title, "Back up your account" headline, '
-      'and "Confirm your password" field for a regular local-born account',
-      (tester) async {
-        final identity = E2EIdentity.localBorn(
-          email: 'upgrade910@test.com',
-          displayName: 'UpgradeUser',
-          profileMode: 'adult',
-        );
-        final h = E2EHarness(tester, identity: identity);
-        addTearDown(h.dispose);
-
-        await h.pumpApp(
-          path: '/dashboard',
-          extraOverrides: _settingsSilences(h),
-        );
-
-        // Navigate directly to UpgradeToCloudRoute via the router.
-        unawaited(h.router.push(const UpgradeToCloudRoute()));
-        await h.pump();
-        await h.pump(const Duration(milliseconds: 500));
-        await h.pump();
-
-        // AppBar title.
-        h.expectOnScreen('Upgrade to Cloud', routeName: 'UpgradeToCloudScreen');
-
-        // Screen headline.
-        h.expectOnScreen('Back up your account');
-
-        // Value prop contains the account email — check via textContaining.
-        expect(
-          find.textContaining('upgrade910@test.com'),
-          findsWidgets,
-          reason: 'Expected account email in value prop text',
-        );
-
-        // Submit button label.
-        h.expectOnScreen('Upgrade to Cloud');
-
-        // R-ST8: regular local-born account shows "Confirm your password"
-        // (not "Create a password" which is the credential-less label).
-        h.expectOnScreen('Confirm your password');
-        h.expectNotOnScreen('Create a password');
       },
     );
   });

@@ -23,11 +23,10 @@ class UndrainedOutboxException extends ConflictException {
   final int pendingCount;
 }
 
-/// Service handling account removal and deletion for all tiers.
+/// Service handling account removal and deletion.
 ///
-/// Three operations with increasing destructiveness:
+/// Two operations with increasing destructiveness:
 /// - [removeCloudFromDevice]: light — local cleanup only, cloud intact
-/// - [deleteLocalAccount]: heavy — permanent local wipe, no undo
 /// - [deleteCloudAccount]: heaviest — wipe Firestore + Auth + local
 class AccountLifecycleService {
   AccountLifecycleService({
@@ -60,8 +59,7 @@ class AccountLifecycleService {
     if (account == null) return;
     if (!account.accountTier.isCloud) {
       throw StateError(
-        'removeCloudFromDevice requires a cloud-born account. '
-        'Use deleteLocalAccount for local-born.',
+        'removeCloudFromDevice requires a cloud-born account.',
       );
     }
 
@@ -83,24 +81,6 @@ class AccountLifecycleService {
     } catch (_) {
       // Auth not initialized (tests, or Firebase init failed at
       // startup). Nothing to clean up on the auth side.
-    }
-
-    _deleteDbFile(account.dbFileName);
-    await _registry.removeAccount(accountId);
-  }
-
-  // ─── 21.14: Delete local-born account ──────────────────────
-
-  /// Heavy deletion: deletes the local DB file + registry entry.
-  /// Permanent — no cloud copy exists, data is gone forever.
-  Future<void> deleteLocalAccount(String accountId) async {
-    final account = await _registry.findById(accountId);
-    if (account == null) return;
-    if (!account.accountTier.isLocal) {
-      throw StateError(
-        'deleteLocalAccount requires a local-born account. '
-        'Use removeCloudFromDevice or deleteCloudAccount for cloud-born.',
-      );
     }
 
     _deleteDbFile(account.dbFileName);
@@ -173,8 +153,8 @@ class AccountLifecycleService {
   }
 
   // AUD-account-09: the .sqlite-suffix delete-with-fallback logic used to
-  // live here as a private method; it is now shared with
-  // PendingLocalSignupStore via core/database/drift_db_file.dart.
+  // live here as a private method; it now lives in
+  // core/database/drift_db_file.dart.
   void _deleteDbFile(String dbFileName) =>
       deleteDriftDbFile(_dbPath, dbFileName);
 }

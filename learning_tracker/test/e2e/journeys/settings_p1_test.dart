@@ -6,7 +6,6 @@
 ///   E2E-906  Hebrew Terms toggle shows/hides transliteration variant tile
 ///   E2E-908  Cloud user sees "Synced" status in Backup+Sync section
 ///   E2E-909  RETIRED (Story 1.5 / AD-11): error card + tap-to-retry removed
-///   E2E-911  Upgrade-to-Cloud — email collision shows resolution options
 ///   E2E-915  Parental controls — child in parent mode shows PIN management tile
 ///   E2E-917  Delete account — AccountActionsSheet shows Delete Account tile
 ///            (full flow device-only: R-ST7)
@@ -30,7 +29,7 @@ import 'package:flutter/material.dart'
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/app_router.dart'
-    show SettingsRoute, StudyDayConfigRoute, UpgradeToCloudRoute;
+    show SettingsRoute, StudyDayConfigRoute;
 import 'package:learning_tracker/core/enums/curriculum_id.dart'
     show CurriculumId;
 import 'package:learning_tracker/core/preferences/preference_providers.dart'
@@ -448,69 +447,6 @@ void main() {
       'SKIP retired (Story 1.5 / AD-11): the error card and its '
       'tap-to-retry affordance were removed',
       skip: true,
-      (tester) async {},
-    );
-  });
-
-  // ── E2E-911 ─────────────────────────────────────────────────────────────────
-
-  group('E2E-911 — Upgrade-to-Cloud: collision resolution options shown '
-      '(render-only; full merge is device-only)', () {
-    // When the upgrade service throws EmailCollisionException, the screen
-    // transitions to _PhaseCollision which shows:
-    //   - l10n.upgradeToCloudCollisionTitle
-    //   - l10n.upgradeToCloudCollisionUploadTitle
-    //   - l10n.upgradeToCloudCollisionKeepCloudTitle
-    //
-    // Because UpgradeToCloudService touches Firebase + DeviceRegistry
-    // (which require a native platform) we cannot headlessly trigger the
-    // collision flow via a submit press.  Instead we assert the static
-    // form renders correctly first, then skip the post-submit phase.
-    //
-    // R-ST7: _DeletingAccountOverlay uses UncontrolledProviderScope — not
-    // testable headlessly.  The upgrade itself is not fully tested headlessly.
-    testWidgets('UpgradeToCloudScreen form renders "Confirm your password" for '
-        'a regular local-born account (prerequisite for collision path)', (
-      tester,
-    ) async {
-      final identity = E2EIdentity.localBorn(
-        email: 'collision911@test.com',
-        displayName: 'Collision911',
-        profileMode: 'adult',
-      );
-      final h = E2EHarness(tester, identity: identity);
-      addTearDown(h.dispose);
-
-      await h.pumpApp(path: '/dashboard', extraOverrides: _settingsSilences(h));
-
-      unawaited(h.router.push(const UpgradeToCloudRoute()));
-      await h.pump();
-      await h.pump(const Duration(milliseconds: 500));
-      await h.pump();
-
-      // Screen headline.
-      h.expectOnScreen(
-        'Back up your account',
-        routeName: 'UpgradeToCloudScreen',
-      );
-
-      // Password field confirms existing local password.
-      h.expectOnScreen('Confirm your password');
-
-      // Submit button is present.
-      h.expectOnScreen('Upgrade to Cloud');
-
-      // Collision resolution title must NOT be visible before a submit.
-      h.expectNotOnScreen('A cloud account already exists with this email');
-    });
-
-    testWidgets(
-      // device/harness: EmailCollisionException only reachable via real
-      // Firebase + DeviceRegistry (native), not headlessly simulatable
-      // without UncontrolledProviderScope.
-      'skip: device/harness: full email-collision + resolution flow requires '
-      'Firebase + DeviceRegistry (native); asserted via device integration test',
-      skip: true, // device/harness: R-ST7, R-ST8
       (tester) async {},
     );
   });

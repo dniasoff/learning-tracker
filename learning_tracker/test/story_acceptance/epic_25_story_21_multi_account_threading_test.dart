@@ -2,7 +2,7 @@
 ///
 /// Replaces 8+ hardcoded `currentAccountId = 1` sites with a provider
 /// backed by [authStateProvider] and the `DeviceAccounts` table. Also
-/// preserves Epic 19's tier-aware offline UX (banner / no-backup badge).
+/// preserves Epic 19's tier-aware offline UX (offline banner).
 @Tags(['epic_25', 'story_25_21'])
 library;
 
@@ -15,7 +15,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
-import 'package:learning_tracker/features/account/presentation/widgets/no_backup_badge.dart';
 import 'package:learning_tracker/features/account/presentation/widgets/offline_top_banner.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 
@@ -257,39 +256,6 @@ void main() {
       );
       await tester.pump();
       expect(find.byIcon(Icons.cloud_off), findsOneWidget);
-    });
-
-    testWidgets('NoBackupBadge renders for localBorn tier', (tester) async {
-      await tester.pumpWidget(
-        wrap(
-          authState: _signedIn(1, Tier.localBorn),
-          child: const NoBackupBadge(),
-        ),
-      );
-      await tester.pump();
-      expect(find.text('No Backup'), findsOneWidget);
-    });
-
-    testWidgets('NoBackupBadge hidden for cloudBorn tier', (tester) async {
-      await tester.pumpWidget(
-        wrap(
-          authState: _signedIn(1, Tier.cloudBorn),
-          child: const NoBackupBadge(),
-        ),
-      );
-      await tester.pump();
-      expect(find.text('No Backup'), findsNothing);
-    });
-
-    testWidgets('NoBackupBadge hidden when signed out', (tester) async {
-      await tester.pumpWidget(
-        wrap(
-          authState: const AuthState.signedOut(),
-          child: const NoBackupBadge(),
-        ),
-      );
-      await tester.pump();
-      expect(find.text('No Backup'), findsNothing);
     });
   });
 }

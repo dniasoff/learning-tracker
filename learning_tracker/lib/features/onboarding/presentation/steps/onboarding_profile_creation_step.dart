@@ -4,7 +4,6 @@ import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/utils/text_input_formatters.dart';
-import 'package:learning_tracker/features/account/domain/services/pending_local_signup.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/text_display_providers.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
@@ -139,7 +138,6 @@ class _OnboardingProfileCreationStepState
     ref
         .read(selectedProfileIdProvider.notifier)
         .select(profile.id, ulid: profile.ulid);
-    await PendingLocalSignupStore.finalizeAfterFirstProfile(ref);
 
     if (mounted) setState(() => _isCreatingProfile = false);
 

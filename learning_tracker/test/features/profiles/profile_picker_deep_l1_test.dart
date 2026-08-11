@@ -31,7 +31,6 @@
 //
 //  G. ProfilePickerScreen visual structure
 //     G1. Picker title "Who is learning?" and subtitle always shown
-//     G2. NoBackupBadge widget present in widget tree
 //     G3. Single child profile — rendered alone (no adult label confusion)
 //     G4. Single adult profile — rendered alone
 //     G5. Three profiles (2 children + 1 adult) — all names rendered
@@ -70,7 +69,6 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
-import 'package:learning_tracker/features/account/presentation/widgets/no_backup_badge.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/screens/profile_picker_screen.dart';
@@ -860,21 +858,6 @@ void main() {
       expect(find.text('Who is learning?'), findsOneWidget);
       // l10n.profilePickerSubtitle contains 'Choose your profile'
       expect(find.textContaining('Choose'), findsOneWidget);
-
-      await _teardown(tester);
-    });
-
-    // G2 — NoBackupBadge is present in the widget tree
-    testWidgets('G2: NoBackupBadge widget is in the widget tree', (
-      tester,
-    ) async {
-      await tester.pumpWidget(
-        _buildPicker(router: router, profiles: [_adult()]),
-      );
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 1));
-
-      expect(find.byType(NoBackupBadge), findsOneWidget);
 
       await _teardown(tester);
     });

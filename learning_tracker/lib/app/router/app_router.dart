@@ -39,7 +39,6 @@ import 'package:learning_tracker/features/scheduler/scheduler.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/curriculum_settings_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/lifetime_marking_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/settings_screen.dart';
-import 'package:learning_tracker/features/settings/presentation/screens/upgrade_to_cloud_screen.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/screens/track_detail_screen.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/screens/track_management_hub_screen.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/presentation/screens/learning_order_screen.dart';
@@ -84,11 +83,6 @@ class AppRouter extends RootStackRouter {
     RedirectRoute(path: '/__/auth/action', redirectTo: '/sign-in'),
     AutoRoute(path: '/create-account', page: SignupRoute.page),
     AutoRoute(path: '/account-picker', page: AccountPickerRoute.page),
-    AutoRoute(
-      path: '/upgrade-to-cloud',
-      page: UpgradeToCloudRoute.page,
-      guards: [authGuard],
-    ),
     AutoRoute(path: '/onboarding', page: OnboardingRoute.page),
     // WS2.surface: zero-profile landing surface for users who skipped profile
     // creation. Auth-guarded (user must be signed in) but no profile required.

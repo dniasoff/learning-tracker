@@ -16,7 +16,6 @@ import 'package:learning_tracker/core/sync/tutored_mirror_wipe_service.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/services/account_lifecycle_service.dart';
-import 'package:learning_tracker/features/account/domain/services/session_persistence_service.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
     show authRepositoryProvider;
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
@@ -533,99 +532,3 @@ class _DeletingAccountOverlayState
   }
 }
 
-// ---------------------------------------------------------------------------
-/// Permanent deletion for [Tier.localBorn] accounts (device-only data).
-///
-/// Closes the active Drift DB if needed, deletes the account DB file,
-/// removes the registry row, clears session prefs, and routes to the
-/// account picker or sign-in when nothing remains on device.
-Future<void> showDeleteLocalAccountFlow(
-  BuildContext context,
-  WidgetRef ref,
-) async {
-  final authState = ref.read(authStateProvider);
-  if (!authState.isLocalBorn) return;
-
-  final confirmed = await showDeleteAccountDialog(context: context);
-  if (confirmed != true || !context.mounted) return;
-
-  try {
-    final prefs = await SharedPreferences.getInstance();
-    final registry = ref.read(deviceRegistryProvider);
-    final session = SessionPersistenceService(prefs: prefs, registry: registry);
-    final accountId = await session.resolveActiveAccountId();
-    if (accountId == null) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context)!.errorResolveAccount),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-      return;
-    }
-
-    final account = await registry.findById(accountId);
-    if (account == null || !account.accountTier.isLocal) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context)!.errorOnlyOfflineDelete),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-      return;
-    }
-
-    if (ref.read(accountDbFileNameProvider) == account.dbFileName) {
-      ref
-          .read(accountDbFileNameProvider.notifier)
-          .setFileName('learning_tracker');
-      ref.read(activeAccountIdProvider.notifier).set(null);
-      ref.invalidate(userDatabaseProvider);
-    }
-
-    final docsDir = await getApplicationDocumentsDirectory();
-    final lifecycle = AccountLifecycleService(
-      registry: registry,
-      databasesPath: docsDir.path,
-    );
-    await lifecycle.deleteLocalAccount(accountId);
-
-    await session.clearActiveAccount();
-
-    final management = ref.read(accountManagementServiceProvider);
-    await management.signOut();
-
-    ref.read(authStateProvider.notifier).signOut();
-    ref.read(selectedProfileIdProvider.notifier).clear();
-    ref.read(routerProvider).pinGuard.lock();
-
-    final remaining = await registry.getAllAccounts();
-    final router = ref.read(routerProvider);
-    if (remaining.isNotEmpty) {
-      await router.replaceAll([const AccountPickerRoute()]);
-    } else {
-      await router.replaceAll([const SignInRoute()]);
-    }
-  } catch (e, stackTrace) {
-    // EH-5/ST-4: never surface the raw exception's toString() in the UI —
-    // log it for diagnostics and show only the fixed, localized fallback
-    // copy instead.
-    AppLogger.instance.error(
-      event: 'delete_local_account_failed',
-      exception: e,
-      stackTrace: stackTrace,
-    );
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context)!.errorDeleteAccountFailed),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-}

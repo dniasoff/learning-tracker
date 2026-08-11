@@ -73,23 +73,10 @@ class UserProfileHeaderCard extends ConsumerWidget {
           ),
         );
       }
-      // A signed-in cloud-born user with user==null is a transient loading
-      // state (Firebase user not yet resolved). Return an empty widget to
-      // avoid showing a misleading "Not signed in" label.
-      if (!authState.isLocalBorn) {
-        return const SizedBox.shrink();
-      }
-      return _wrapSurface(
-        surface,
-        _LocalBornProfileRow(
-          surface: surface,
-          theme: theme,
-          authUser: authState.currentUser!,
-        ),
-        onTap: surface == UserProfileHeaderSurface.settings
-            ? () => showAccountActionsSheet(context, ref)
-            : null,
-      );
+      // A signed-in user with user==null is a transient loading state
+      // (Firebase user not yet resolved). Return an empty widget to avoid
+      // showing a misleading "Not signed in" label.
+      return const SizedBox.shrink();
     }
 
     final authState = ref.watch(authStateProvider);
@@ -219,10 +206,6 @@ class UserProfileHeaderCard extends ConsumerWidget {
                         fontSize: 16,
                       ),
                     ),
-                  if (authState.isLocalBorn) ...[
-                    const SizedBox(height: 4),
-                    const _NoBackupInlineText(),
-                  ],
                 ],
               ),
             ),
@@ -313,127 +296,6 @@ class _ParentProfileSurface extends StatelessWidget {
                 child: InkWell(onTap: onTap, child: child),
               ),
       ),
-    );
-  }
-}
-
-class _LocalBornProfileRow extends ConsumerWidget {
-  const _LocalBornProfileRow({
-    required this.surface,
-    required this.theme,
-    required this.authUser,
-  });
-
-  final UserProfileHeaderSurface surface;
-  final ThemeData theme;
-  final AuthUser authUser;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final activeProfileId = ref.watch(activeProfileIdProvider);
-    final activeProfile = _watchActiveProfileFromList(ref, activeProfileId);
-
-    final displayName =
-        activeProfile?.displayName ??
-        (authUser.displayName.isNotEmpty
-            ? authUser.displayName
-            : authUser.email.split('@').first);
-    final profileInitial = _profileInitial(displayName);
-
-    final inner = Padding(
-      padding: EdgeInsets.symmetric(
-        horizontal: 14,
-        vertical: surface == UserProfileHeaderSurface.parent ? 14 : 16,
-      ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 28,
-            backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.2),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 6),
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  profileInitial,
-                  maxLines: 1,
-                  style: TextStyle(
-                    color: theme.colorScheme.primary,
-                    fontSize: 27,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  displayName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 25,
-                  ),
-                ),
-                // Credential-less offline accounts carry a synthetic internal
-                // email (…@offline.local) that must never be shown; suppress it
-                // (the _NoBackupInlineText row below already signals offline).
-                if (!authUser.email.endsWith('@offline.local'))
-                  Text(
-                    authUser.email,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                      fontSize: 16,
-                    ),
-                  ),
-                const SizedBox(height: 4),
-                const _NoBackupInlineText(),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-
-    return inner;
-  }
-}
-
-class _NoBackupInlineText extends StatelessWidget {
-  const _NoBackupInlineText();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(
-          Icons.cloud_off,
-          size: 12,
-          color: context.colors.settingsProfileNoBackupAccent,
-        ),
-        const SizedBox(width: 4),
-        Flexible(
-          child: Text(
-            AppLocalizations.of(context)!.noBackup,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: context.colors.settingsProfileNoBackupAccent,
-              fontWeight: FontWeight.w600,
-              fontSize: 14,
-            ),
-          ),
-        ),
-      ],
     );
   }
 }
