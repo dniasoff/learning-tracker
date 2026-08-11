@@ -1,7 +1,6 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/sync/providers/sync_status_providers.dart';
@@ -13,6 +12,7 @@ import 'package:learning_tracker/features/profiles/presentation/providers/active
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 import 'package:learning_tracker/features/scheduler/scheduler.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
+import 'package:learning_tracker/features/tracks/tracks.dart';
 
 @RoutePage()
 class DashboardScreen extends ConsumerWidget {
@@ -29,7 +29,7 @@ class DashboardScreen extends ConsumerWidget {
   /// on screen (track completion %, last completion, pace status per curriculum).
   static void invalidateDashboardData(
     WidgetRef ref,
-    List<CurriculumTrack> activeTracks,
+    List<CurriculumTrackEntity> activeTracks,
   ) {
     final profileId = ref.read(activeProfileIdProvider);
     ref.invalidate(dashboardActiveTracksStreamProvider);
@@ -49,13 +49,9 @@ class DashboardScreen extends ConsumerWidget {
     }
     ref.invalidate(trackDualProgressMetricsProvider(profileId));
     for (final t in activeTracks) {
-      ref.invalidate(dashboardTrackCompletionPercentageProvider(t.id));
-      final c = CurriculumId.values.firstWhere(
-        (cv) => cv.storageKey == t.curriculumId,
-        orElse: () => CurriculumId.mishnayos,
-      );
-      ref.invalidate(dashboardLastCompletionProvider(c));
-      ref.invalidate(dashboardPaceStatusProvider(c));
+      ref.invalidate(dashboardTrackCompletionPercentageProvider(t.curriculumId));
+      ref.invalidate(dashboardLastCompletionProvider(t.curriculumId));
+      ref.invalidate(dashboardPaceStatusProvider(t.curriculumId));
     }
   }
 
@@ -80,7 +76,7 @@ class DashboardScreen extends ConsumerWidget {
       if (next is SyncStatusSynced && previous is! SyncStatusSynced) {
         final tracks =
             ref.read(dashboardActiveTracksStreamProvider).asData?.value ??
-            const <CurriculumTrack>[];
+            const <CurriculumTrackEntity>[];
         invalidateDashboardData(ref, tracks);
       }
     });

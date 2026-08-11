@@ -3,8 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:learning_tracker/app/router/app_router.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/curriculum_label_providers.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
@@ -17,18 +15,12 @@ import 'package:learning_tracker/features/dashboard/presentation/widgets/track_s
 import 'package:learning_tracker/features/profiles/profiles.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 import 'package:learning_tracker/features/scheduler/scheduler.dart';
+import 'package:learning_tracker/features/tracks/tracks.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
-
-CurriculumId _curriculumIdForTrack(CurriculumTrack track) {
-  return CurriculumId.values.firstWhere(
-    (c) => c.storageKey == track.curriculumId,
-    orElse: () => CurriculumId.mishnayos,
-  );
-}
 
 /// Active track card: program (task metrics) vs self-paced (completion) layouts.
 class ActiveTrackCard extends ConsumerWidget {
-  final CurriculumTrack track;
+  final CurriculumTrackEntity track;
   final List<DailyTask> allTasks;
 
   const ActiveTrackCard({
@@ -41,7 +33,7 @@ class ActiveTrackCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
-    final curriculum = _curriculumIdForTrack(track);
+    final curriculum = track.curriculumId;
     final terms = domainTermLabels(ref);
     final displayNamePrimary = curriculumLabelText(ref, curriculum: curriculum);
     final displayNameSecondary = terms.isHebrew
@@ -61,7 +53,7 @@ class ActiveTrackCard extends ConsumerWidget {
       trackDualProgressMetricsProvider(profileId),
     );
     final dualMetricMatches = dualMetricsAsync.asData?.value
-        .where((m) => m.trackId == track.id)
+        .where((m) => m.curriculumId == curriculum)
         .toList();
     final dualMetric = (dualMetricMatches == null || dualMetricMatches.isEmpty)
         ? null
@@ -76,7 +68,7 @@ class ActiveTrackCard extends ConsumerWidget {
         : formatFractionAsPercent(lifetimePct);
 
     final curriculumTasks = allTasks
-        .where((t) => t.trackId == track.id)
+        .where((t) => t.curriculumId == curriculum)
         .toList();
     final hasProgramEnrollment =
         hasProgramEnrollmentAsync.asData?.value ?? false;
@@ -303,7 +295,7 @@ class ActiveTrackCard extends ConsumerWidget {
                         l10n: l10n,
                         chazaraLabel:
                             (ref
-                                    .watch(trackHasChazaraProvider(track.id))
+                                    .watch(trackHasChazaraProvider(curriculum))
                                     .asData
                                     ?.value ??
                                 false)

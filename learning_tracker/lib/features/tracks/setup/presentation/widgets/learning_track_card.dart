@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
@@ -23,19 +23,19 @@ class LearningTrackCard extends ConsumerWidget {
     this.onLongPress,
   });
 
-  final CurriculumTrack track;
+  final CurriculumTrackEntity track;
   final bool showProgress;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final curriculum = CurriculumId.fromStorageKey(track.curriculumId);
+    final curriculum = track.curriculumId;
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
 
     final completionAsync = ref.watch(
-      dashboardTrackCompletionPercentageProvider(track.id),
+      dashboardTrackCompletionPercentageProvider(track.curriculumId),
     );
     final cycleFraction = completionAsync.asData?.value ?? 0.0;
     final cyclePercentDisplay = formatFractionAsPercent(cycleFraction);
@@ -50,23 +50,21 @@ class LearningTrackCard extends ConsumerWidget {
     // track's brief "Track progress" → "Completion (with חזרה)" flicker
     // on first mount.
     final trackHasChazara =
-        ref.watch(trackHasChazaraProvider(track.id)).asData?.value ?? false;
+        ref.watch(trackHasChazaraProvider(track.curriculumId)).asData?.value ??
+        false;
 
     // The "chazara" term renders per the Hebrew-terms preference: transliterated
     // in English, Hebrew script when the toggle is on (or in Hebrew locale).
     final chazaraTerm = domainTermLabels(ref).chazara;
 
-    final hasProgramEnrollment = curriculum != null
-        ? (ref
-                  .watch(dashboardHasProgramEnrollmentProvider(curriculum))
-                  .asData
-                  ?.value ??
-              false)
-        : false;
+    final hasProgramEnrollment =
+        ref
+            .watch(dashboardHasProgramEnrollmentProvider(curriculum))
+            .asData
+            ?.value ??
+        false;
 
-    final curriculumBarColor = context.colors.curriculumForKey(
-      track.curriculumId,
-    );
+    final curriculumBarColor = context.colors.curriculumFor(curriculum);
 
     // W3.22: trackType column dropped — all tracks are now 'personal'.
     final accent = context.colors.blueMedium;
