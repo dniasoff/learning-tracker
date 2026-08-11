@@ -1,23 +1,23 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/features/gamification/data/repositories/firestore_curriculum_reward_eligibility_adapter.dart';
+import 'package:learning_tracker/features/gamification/data/repositories/firestore_points_balance_reader_adapter.dart';
 import 'package:learning_tracker/features/gamification/domain/services/points_service.dart';
-import 'package:learning_tracker/features/gamification/presentation/providers/gamification_service_providers.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_entity.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
-import 'package:learning_tracker/features/profiles/profiles.dart';
 
-/// Provider for the PointsService, scoped to active profile.
+/// Provider for the PointsService.
 ///
-/// AUD-gamification-11 (SM-7): passes [rewardMilestoneServiceProvider]
-/// through explicitly so `PointsService` shares the single
-/// `RewardMilestoneService` instance instead of constructing its own ad hoc.
+/// **Firestore-backed.** [FirestoreCurriculumRewardEligibilityAdapter] and
+/// [FirestorePointsBalanceReaderAdapter] replace the Drift `UserDatabase` +
+/// `profileId` construction this provider used before — both adapters
+/// resolve the active profile internally via `ref`, so this provider no
+/// longer reads `activeProfileIdProvider` itself.
 final pointsServiceProvider = Provider<PointsService>((ref) {
-  final database = ref.watch(userDatabaseProvider);
-  final profileId = ref.watch(activeProfileIdProvider);
   return PointsService(
-    database,
-    profileId: profileId,
-    rewardMilestoneService: ref.watch(rewardMilestoneServiceProvider),
+    eligibility: FirestoreCurriculumRewardEligibilityAdapter(ref: ref),
+    balanceReader: FirestorePointsBalanceReaderAdapter(ref: ref),
   );
 });
 
@@ -31,27 +31,26 @@ final pointsServiceProvider = Provider<PointsService>((ref) {
 final curriculumPointsProvider = FutureProvider.autoDispose
     .family<int, CurriculumId>((ref, curriculum) async {
       final service = ref.watch(pointsServiceProvider);
-      return service.getCurriculumTotal(curriculum.storageKey);
+      final completions = await ref
+          .watch(completionRepositoryProvider)
+          .getCompletionsByCurriculum(curriculum.storageKey);
+      return service.getCurriculumTotal(curriculum, completions);
     });
 
-/// Global debitable points balance — reactive stream backed by watchBalance.
+/// Global debitable points balance.
 ///
-/// DG-DASH-02 / D9: previously a one-shot [FutureProvider] calling
-/// [PointsService.getGlobalTotal] (which reads the balance once). This left
-/// the gamification-screen points counter STALE after any balance mutation
-/// (redemption debit, parent refund, completion credit) until the user
-/// pull-to-refreshed.
-///
-/// Fix: converted to a [StreamProvider] backed by
-/// [PointsBalanceDao.watchBalance] — the same reactive read path used by
-/// [dashboardGlobalPointsProvider]. Any write to the PointsBalance row
-/// (credit, debit, refund) causes the stream to emit the new value
-/// immediately, so the gamification screen's counter stays live without
-/// requiring manual invalidation or a pull-to-refresh.
-final globalPointsProvider = StreamProvider<int>((ref) {
-  final db = ref.watch(userDatabaseProvider);
-  final profileId = ref.watch(activeProfileIdProvider);
-  return db.pointsBalanceDao.watchBalance(profileId);
+/// **Not a live stream, unlike the Drift-era `watchBalance`.** No Firestore
+/// equivalent exists or can cheaply exist — `firestore.rules` caps every
+/// `points_ledger` query at `limit <= 500` (SR-4), so an unbounded
+/// `.snapshots()` listener over the whole ledger is rules-rejected. Re-reads
+/// whenever [completionCommittedProvider] fires, matching
+/// `dashboardGlobalPoints` (`dashboard_providers.dart`) and
+/// `childRedemptionBalance` (`child_redemption_screen.dart`) — see either's
+/// doc comment for the full disclosed-regression rationale.
+final globalPointsProvider = FutureProvider<int>((ref) async {
+  ref.watch<int>(completionCommittedProvider);
+  final service = ref.watch(pointsServiceProvider);
+  return service.getGlobalTotal();
 });
 
 /// Per-curriculum breakdown map.
@@ -67,7 +66,12 @@ final curriculumBreakdownProvider = FutureProvider<Map<CurriculumId, int>>((
   // chip labels live on the gamification screen.
   ref.watch<int>(completionCommittedProvider);
   final service = ref.watch(pointsServiceProvider);
-  return service.getCurriculumBreakdown();
+  final repository = ref.watch(completionRepositoryProvider);
+  final completions = <CompletionEntity>[
+    for (final curriculum in CurriculumId.values)
+      ...await repository.getCompletionsByCurriculum(curriculum.storageKey),
+  ];
+  return service.getCurriculumBreakdown(completions);
 });
 
 /// Points history log, optionally filtered by curriculum.
@@ -77,5 +81,15 @@ final curriculumBreakdownProvider = FutureProvider<Map<CurriculumId, int>>((
 final pointsHistoryProvider = FutureProvider.autoDispose
     .family<List<PointsHistoryEntry>, CurriculumId?>((ref, curriculum) async {
       final service = ref.watch(pointsServiceProvider);
-      return service.getPointsHistory(curriculumId: curriculum?.storageKey);
+      final repository = ref.watch(completionRepositoryProvider);
+      final completions = curriculum != null
+          ? await repository.getCompletionsByCurriculum(curriculum.storageKey)
+          : <CompletionEntity>[
+              for (final c in CurriculumId.values)
+                ...await repository.getCompletionsByCurriculum(c.storageKey),
+            ];
+      return service.getPointsHistory(
+        completions: completions,
+        curriculumId: curriculum,
+      );
     });

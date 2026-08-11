@@ -1,9 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
+import 'package:learning_tracker/features/gamification/data/repositories/firestore_points_balance_reader_adapter.dart';
 import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
 import 'package:learning_tracker/features/gamification/domain/services/streak_service.dart';
-import 'package:learning_tracker/features/gamification/data/repositories/firestore_points_balance_reader_adapter.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_state_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 
@@ -43,12 +42,10 @@ final streakStateProvider = Provider<StreakStateService>((ref) {
   return StreakStateService(ref: ref, clock: const SystemLocalDayClock());
 });
 
-/// Provider for [StreakService], scoped to the active profile.
+/// Provider for [StreakService].
+///
+/// No `profileId` read here: [StreakService] resolves the active profile
+/// internally via `ref` — see its constructor doc comment.
 final streakServiceProvider = Provider<StreakService>((ref) {
-  final profileId = ref.watch(activeProfileIdProvider);
-  return StreakService(
-    ref,
-    profileId: profileId,
-    streakStateProvider: ref.watch(streakStateProvider),
-  );
+  return StreakService(ref, streakStateProvider: ref.watch(streakStateProvider));
 });

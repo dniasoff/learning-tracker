@@ -29,56 +29,31 @@ abstract class CurriculumRewardEligibility {
   Future<bool> isEligible(CurriculumId curriculumId);
 }
 
-/// Interface for fetching point configuration for a curriculum + stage.
-abstract class PointConfigProvider {
-  Future<int?> getPointsForStage({
-    required CurriculumId curriculumId,
-    required int stageOrder,
-  });
-
-  Future<void> ensureDefaultConfigs({
-    required CurriculumId curriculumId,
-  });
-}
-
 /// Interface for reading the global debitable points balance.
 abstract class PointsBalanceReader {
   Future<int> getBalance();
 }
 
-/// Service for querying and managing gamification points.
+/// Service for querying gamification points.
 ///
 /// Points are awarded as a side effect of completion (via CompletionRepository).
-/// This service provides read access to points totals, history, and configuration.
+/// This service provides read access to points totals and history.
+///
+/// **No point-config dependency.** A `PointConfigProvider` port (and this
+/// service's own `getPointsForStage`/`ensureDefaultConfigs` methods) used to
+/// live here, but had zero implementations and zero real callers — the
+/// live point-award path already reads stage point values directly from
+/// `FirestorePointConfigRepository` via `completion_points_awarder.dart`,
+/// never through this service. Removed rather than adapted (Phase 3).
 class PointsService {
   final CurriculumRewardEligibility _eligibility;
-  final PointConfigProvider _pointConfig;
   final PointsBalanceReader _balanceReader;
 
   PointsService({
     required CurriculumRewardEligibility eligibility,
-    required PointConfigProvider pointConfig,
     required PointsBalanceReader balanceReader,
   }) : _eligibility = eligibility,
-       _pointConfig = pointConfig,
        _balanceReader = balanceReader;
-
-  /// Get the configured point value for a curriculum + stage.
-  ///
-  /// Falls back to default values if no config exists.
-  Future<int> getPointsForStage({
-    required CurriculumId curriculumId,
-    required int stageOrder,
-  }) async {
-    final config = await _pointConfig.getPointsForStage(
-      curriculumId: curriculumId,
-      stageOrder: stageOrder,
-    );
-    if (config != null) return config;
-
-    // Defaults: Learn=10, Chazara1=5, Chazara2=3
-    return _defaultPoints(stageOrder);
-  }
 
   /// Total points earned for a specific curriculum, scoped to active profile.
   ///
@@ -185,18 +160,4 @@ class PointsService {
     });
   }
 
-  /// Seed default point configs for a curriculum if none exist.
-  Future<void> ensureDefaultConfigs(CurriculumId curriculumId) async {
-    await _pointConfig.ensureDefaultConfigs(curriculumId: curriculumId);
-  }
-
-  /// Default point values when no config is present.
-  static int _defaultPoints(int stageOrder) {
-    return switch (stageOrder) {
-      1 => 10, // Learn
-      2 => 5, // Chazara 1
-      3 => 3, // Chazara 2
-      _ => 1, // Any additional stages
-    };
-  }
 }

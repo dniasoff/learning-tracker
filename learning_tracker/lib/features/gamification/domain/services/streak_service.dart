@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
-import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/gamification/domain/models/streak_recovery_info.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_reducer.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_state_service.dart';
@@ -21,16 +20,16 @@ class StreakService {
   /// [ref] replaces the former `UserDatabase db` positional argument:
   /// [StreakStateService] now resolves its Firestore repository through Riverpod
   /// rather than holding a Drift handle. `db` had no other use in this class.
-  StreakService(
-    Ref ref, {
-    int profileId = 0,
-    StreakStateService? streakStateProvider,
-  }) : _profileId = profileId,
-       _provider =
-           streakStateProvider ??
-           StreakStateService(ref: ref, clock: const SystemLocalDayClock());
+  ///
+  /// No `profileId` parameter: [StreakStateService.read]/`.watch`/
+  /// `.streakCalendar` all resolve the active profile internally via `ref`
+  /// (Firestore path is already profile-scoped) — a `profileId` field here
+  /// was dead storage, never read by this class's own methods.
+  StreakService(Ref ref, {StreakStateService? streakStateProvider})
+    : _provider =
+          streakStateProvider ??
+          StreakStateService(ref: ref, clock: const SystemLocalDayClock());
 
-  final int _profileId;
   final StreakStateService _provider;
 
   /// Get streak recovery info.
