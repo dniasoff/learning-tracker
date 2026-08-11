@@ -433,4 +433,54 @@ void main() {
       await expectLater(stream, emits('Yossi'));
     });
   });
+  group('hasHydratedCache — the cold-cache discriminator (P3-32)', () {
+    // An empty aggregate read is AMBIGUOUS on its own: a learner with years of
+    // history reading from a never-synced cache looks byte-for-byte identical
+    // to a brand-new profile with nothing recorded. `isFromCache` cannot tell
+    // them apart — both are cache reads returning nothing.
+    //
+    // The profile DOCUMENT is what separates them: it must exist for the
+    // profile to be selectable at all, so its presence proves the cache holds
+    // real server-sourced data.
+    test('false when the profile document does not exist — cache is cold, so '
+        'an empty result proves nothing', () async {
+      final repo = buildRepo();
+
+      expect(await repo.hasHydratedCache('ulid-never-synced'), isFalse);
+    });
+
+    test('true once the profile document exists — an empty aggregate is then a '
+        'TRUE zero and may be reported', () async {
+      final repo = buildRepo();
+
+      final created = await repo.ensureProfile(
+        profileId: 'ulid-shimon',
+        displayName: 'Shimon',
+        mode: ProfileMode.child,
+        createdAt: _createdAt,
+      );
+
+      expect(await repo.hasHydratedCache(created.profileId), isTrue);
+    });
+
+    test('scoped per profile — one hydrated profile does not vouch for '
+        'another', () async {
+      final repo = buildRepo();
+
+      await repo.ensureProfile(
+        profileId: 'ulid-rivka',
+        displayName: 'Rivka',
+        mode: ProfileMode.child,
+        createdAt: _createdAt,
+      );
+
+      // The discriminator must not degrade to "this ACCOUNT has synced". A
+      // second profile added on another device is legitimately unhydrated here,
+      // and reporting its totals as 0 would be the exact defect being guarded
+      // against.
+      expect(await repo.hasHydratedCache('ulid-rivka'), isTrue);
+      expect(await repo.hasHydratedCache('ulid-added-elsewhere'), isFalse);
+    });
+  });
+
 }

@@ -2445,6 +2445,56 @@ not re-learn the hard way:**
 
 ---
 
+### 2026-08-11 — P3-38: the cold-cache gate gets tests (owner ask #3) — and was only testable because the correct design was chosen
+
+**`flutter test test/data/repositories/` — 309/309 pass** (was 306; +3 new).
+`dart analyze --fatal-infos` EXIT 0.
+
+The owner's third ask was "can you test them". P3-32 shipped the cold-cache gate
+with no test; this closes that.
+
+#### ✅ The design choice that made it testable
+
+This suite's own header records a hard limitation: **`fake_cloud_firestore` has
+NO cache or offline semantics** — no `Source.server` vs `Source.serverAndCache`,
+and no `metadata.isFromCache`.
+
+So the OBVIOUS implementation of a cold-cache gate — branch on `isFromCache` —
+would have been **completely unreachable by this suite**. It could only have been
+verified on a device, and would almost certainly have shipped untested.
+
+`hasHydratedCache` keys on the PRESENCE of the profile document instead. That was
+chosen for correctness — `isFromCache` genuinely cannot distinguish a cold cache
+from a brand-new profile, because both produce an empty cached read — and
+testability came with it for free.
+
+Worth recording as a general observation: **the design that was harder to fool
+was also the one that could be checked.** The `isFromCache` version was both less
+correct AND less verifiable; those were not independent properties.
+
+#### The three tests
+
+1. **absent profile document → NOT hydrated.** The cache is cold, so an empty
+   aggregate proves nothing and must not be reported as `0`.
+2. **document present → hydrated.** An empty aggregate is now a TRUE zero and is
+   reported as such — this is the test that stops the fix over-triggering and
+   hiding legitimate zeros from new learners.
+3. **scoped per profile.** One hydrated profile does NOT vouch for another. A
+   second profile added on another device is legitimately unhydrated, and
+   reporting its totals as `0` would be the exact defect being guarded against.
+   This is the one that would catch a future "optimisation" degrading the check
+   to "has this ACCOUNT ever synced".
+
+#### ⚠️ Stated, not implied: what these do NOT cover
+
+The real offline `timeout` / `unavailable` branches of `hasHydratedCache` are NOT
+exercised — `fake_cloud_firestore` cannot produce them. That class of behaviour is
+covered by the on-device probe built earlier in this phase, which is what
+refuted the original "get() falls back to cache" assumption in the first place.
+
+Said explicitly because an unstated gap reads as coverage, and this phase has
+already produced two false claims that survived precisely because nobody wrote
+down what a test did not prove.
 ### 2026-08-11 — P3-37: lifetime_knowledge compiles (48 → 0) — but ⚠️ FOUR PROVIDERS THROW AND MUST NOT SHIP
 
 `dart analyze --fatal-infos` EXIT 0. `check_dependency_direction` EXIT 0.
