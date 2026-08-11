@@ -1,15 +1,9 @@
-import 'dart:async';
-
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
-import 'package:learning_tracker/core/sync/providers/sync_orchestrator_providers.dart';
-import 'package:learning_tracker/core/sync/providers/sync_status_providers.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
-import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
-import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Sync status and optional upgrade-to-cloud CTA (DNI-188).
@@ -22,9 +16,25 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 /// exist in the slim `synced | syncing | offline` union (plus `localOnly`),
 /// so that UI — including the tap-to-retry affordance shipped in v1.0.68 —
 /// is gone. **This is a known, deliberate regression**: a permanently-failed
-/// write now surfaces only as ambient `syncing`, with no differentiated card
+/// write now surfaces only as ambient `synced`, with no differentiated card
 /// and no per-item recovery action. The replacement is AD-30's per-item
 /// "tap to retry" recovery affordance, landing in Phase 3 — not this story.
+///
+/// Post-P3-5: the Drift sync engine (`core/sync/...`,
+/// `features/sync/domain/models/sync_status.dart`) and its orchestrator were
+/// archived (docs/_archive/drift-user-db/). There is no live Firestore-backed
+/// replacement yet for the app-level `SyncStatus` union, `syncStatusProvider`,
+/// or `SyncOrchestrator` this card rendered from — Firestore offline
+/// persistence is transparent and exposes no "last synced" timestamp or
+/// syncing/offline status to this widget, and a presentation/widgets file may
+/// not import the data-access ring (AD-23/AD-28) to read one. Until such a
+/// layer is re-created, the **cloud status card** (synced | syncing | offline,
+/// plus the "connecting" transitional) is unbacked and throws
+/// `UnsupportedError` in [build] — never a fabricated "synced". The
+/// **cold-launch pull** trigger that consumed `syncOrchestratorProvider` is
+/// removed in [initState]. Only the **local-only card + Upgrade to Cloud**
+/// CTA — fully backed by auth state — still renders. See the BLOCKED notes
+/// in [build] / [initState].
 class BackupSyncSection extends ConsumerStatefulWidget {
   const BackupSyncSection({super.key, this.parentSettingsHeroLayout = false});
 
@@ -39,40 +49,20 @@ class _BackupSyncSectionState extends ConsumerState<BackupSyncSection> {
   @override
   void initState() {
     super.initState();
-    // Kick a cold-start pull when the Backup & Sync surface mounts.
+    // Cold-launch pull trigger (BUG-2 fix) REMOVED.
     //
-    // The orchestrator's status stream starts at `localOnly` and only flips to
-    // `synced` after a `pullOnLaunch`. On a cold launch that RESUMES an existing
-    // cloud session (no fresh sign-in / device-restore / account-switch — the
-    // three paths that already call `pullOnLaunch`) nothing triggered the pull,
-    // so opening Parent Settings showed "Connecting…" indefinitely until a
-    // background→foreground cycle fired the resume-pull. Triggering it here
-    // resolves the status without that cycle.
+    // It depended on `syncOrchestratorProvider` / `SyncOrchestrator.pullOnLaunch()`,
+    // which were archived with the Drift sync engine (P3-5;
+    // docs/_archive/drift-user-db/). There is no live Firestore-backed
+    // replacement for an app-level sync orchestrator — Firestore persistence
+    // is transparent and needs no client pull to "catch up". The old
+    // fire-and-forget pull cannot be compiled without a backing engine, and
+    // the no-fabrication rule forbids inventing one.
     //
-    // `pullOnLaunch`'s once-per-launch guard makes this a no-op if a pull
-    // already ran (or is in flight) this session, so the extra call is cheap and
-    // safe. Fire-and-forget with a timeout so a slow/failed pull never blocks
-    // the UI (the orchestrator emits its own syncing/synced/error status).
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      try {
-        final authState = ref.read(authStateProvider);
-        if (!authState.isCloudBorn) return;
-        final orchestrator = ref.read(syncOrchestratorProvider);
-        if (orchestrator == null) return;
-        if (orchestrator.currentStatus is! SyncStatusLocalOnly) return;
-        unawaited(
-          orchestrator.pullOnLaunch().timeout(
-            const Duration(seconds: 8),
-            onTimeout: () {},
-          ),
-        );
-      } catch (_) {
-        // Best-effort kick: a provider build failure (e.g. in widget tests
-        // that don't wire the full sync stack) must never crash the surface.
-        // The orchestrator emits its own status; the UI degrades gracefully.
-      }
-    });
+    // BLOCKED: restoring a cloud refresh-on-launch trigger requires re-creating
+    // `core/sync/...` and a `SyncOrchestrator` — outside this file's edit-only
+    // scope (a presentation/widgets file may not reach the data-access ring,
+    // AD-23/AD-28).
   }
 
   bool get parentSettingsHeroLayout => widget.parentSettingsHeroLayout;
@@ -80,43 +70,102 @@ class _BackupSyncSectionState extends ConsumerState<BackupSyncSection> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final l10n = AppLocalizations.of(context)!;
-    final syncStatus = ref.watch(syncStatusProvider);
     final authState = ref.watch(authStateProvider);
-    // A cloud-born user briefly sees SyncStatusLocalOnly while the orchestrator
-    // initialises before its first pullOnLaunch completes.  Show a neutral
-    // "connecting" state rather than the "LOCAL ONLY — upgrade" prompt, which
-    // is misleading for an account that already has cloud sync.
-    if (syncStatus is SyncStatusLocalOnly && authState.isCloudBorn) {
-      return _buildCloudStatusCard(
-        theme,
-        icon: Icons.sync_rounded,
-        subtitle: l10n.backupConnecting,
-      );
-    }
-    return switch (syncStatus) {
-      SyncStatusLocalOnly() => _buildLocalOnlyCard(
+
+    // The cloud sync-status card relied on the Drift engine's `SyncStatus`
+    // union + `syncStatusProvider` (synced | syncing | offline, plus the
+    // "connecting" transitional for a booting cloud account). That engine was
+    // archived at P3-5 (docs/_archive/drift-user-db/) and no Firestore-backed
+    // replacement exists yet. A backup surface that falsely claims "synced" is
+    // actively dangerous, so this throws rather than fabricating a status;
+    // it also cannot import the data-access ring from presentation
+    // (AD-23/AD-28) to read one.
+    //
+    // BLOCKED: re-create a Firestore-backed sync-status layer
+    // (`syncStatusProvider` / `SyncStatus`, re-pointed at Firestore), or an
+    // owner decision to collapse this card to auth-tier-only, before removing
+    // this throw. The widget used to show, for a cloud-born account:
+    //   - synced      -> "Last synced Xm ago" (from lastSyncedAt)
+    //   - syncing     -> l10n "Syncing…"
+    //   - offline     -> "Offline"
+    //   - localOnly   -> "Connecting…" (transitional, booting cloud account)
+    // The cloud sync-status card relied on the Drift engine's `SyncStatus`
+    // union + `syncStatusProvider` (synced | syncing | offline, plus the
+    // "connecting" transitional). That engine was archived at P3-5 and no
+    // Firestore-backed replacement exists yet.
+    //
+    // D-E: fail LOUDLY, which in a widget means VISIBLY — not fatally. An
+    // earlier revision threw here, which meant every cloud-born account got an
+    // error screen on opening Parent Settings; that is a worse regression than
+    // the fabricated "synced" it was avoiding, and it took the surrounding
+    // settings surface down with it.
+    //
+    // These three statements are all true and none is invented: cloud backup
+    // IS active (a cloud-born account writes to Firestore, which queues
+    // offline and replays on reconnect), the detailed status is unknown, and
+    // NO "last synced" time is claimed because none is available.
+    //
+    // TODO(AD-30): replace with a real Firestore-backed status. The honest
+    // signal exists — `SnapshotMetadata.hasPendingWrites` distinguishes
+    // "unacked local writes" from "acked", and `isFromCache` distinguishes
+    // offline — it just needs a provider in the data ring, which a
+    // presentation/widgets file may not reach directly (AD-23/AD-28).
+    if (authState.isCloudBorn) {
+      return _buildStatusUnavailableCard(
         context,
         theme,
-        isLocalAuth: authState.isLocalBorn,
         heroLayout: parentSettingsHeroLayout,
+      );
+    }
+
+    // Local-born (or signed-out): the local-only card + "Upgrade to Cloud"
+    // CTA is fully backed by auth state alone — no sync engine required.
+    return _buildLocalOnlyCard(
+      context,
+      theme,
+      isLocalAuth: authState.isLocalBorn,
+      heroLayout: parentSettingsHeroLayout,
+    );
+  }
+
+  /// Backup card for a cloud-born account whose sync status cannot be
+  /// determined. Deliberately states only what is known — see [build].
+  Widget _buildStatusUnavailableCard(
+    BuildContext context,
+    ThemeData theme, {
+    required bool heroLayout,
+  }) {
+    final l10n = AppLocalizations.of(context)!;
+    final bodyTextStyle = theme.textTheme.bodySmall?.copyWith(
+      color: Colors.white.withValues(alpha: 0.88),
+      height: 1.35,
+      fontWeight: FontWeight.w600,
+      fontSize: 17,
+    );
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: const Color(0xFF0B3FB4),
+        borderRadius: BorderRadius.circular(heroLayout ? 24 : 16),
       ),
-      SyncStatusSynced(:final lastSyncedAt) => _buildCloudStatusCard(
-        theme,
-        icon: Icons.cloud_done_rounded,
-        subtitle: l10n.backupLastSynced(_formatTimeAgo(l10n, lastSyncedAt)),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              l10n.backupSyncCardTitle,
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(l10n.backupSyncStatusUnavailable, style: bodyTextStyle),
+          ],
+        ),
       ),
-      SyncStatusSyncing() => _buildCloudStatusCard(
-        theme,
-        icon: Icons.sync_rounded,
-        subtitle: l10n.backupSyncing,
-      ),
-      SyncStatusOffline() => _buildCloudStatusCard(
-        theme,
-        icon: Icons.cloud_off_rounded,
-        subtitle: l10n.backupOffline,
-      ),
-    };
+    );
   }
 
   Widget _buildLocalOnlyCard(
@@ -329,81 +378,5 @@ class _BackupSyncSectionState extends ConsumerState<BackupSyncSection> {
         ),
       ),
     );
-  }
-
-  // Story 1.5 / AD-11: this card no longer takes an `onTap`/`actionLabel` —
-  // the tap-to-retry and "Sign in to back up" affordances it used to support
-  // belonged to the now-removed SyncStatusError/SyncStatusDegraded cases (see
-  // this file's class-level doc comment). AD-30's Phase 3 per-item recovery
-  // affordance will need its own, differently-scoped UI when it lands.
-  Widget _buildCloudStatusCard(
-    ThemeData theme, {
-    required IconData icon,
-    required String subtitle,
-  }) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: const Color(0xFF0B3FB4),
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x30053698),
-            blurRadius: 20,
-            offset: Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                CircleAvatar(
-                  radius: 16,
-                  backgroundColor: const Color(0x3A8EA4ED),
-                  child: Icon(icon, size: 17, color: Colors.white),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        AppLocalizations.of(context)!.backupSyncCardTitle,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 25,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        subtitle,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: Colors.white.withValues(alpha: 0.88),
-                          height: 1.3,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 15.5,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  static String _formatTimeAgo(AppLocalizations l10n, DateTime dateTime) {
-    final diff = DateTimeFactory.nowLocal().difference(dateTime);
-    if (diff.inMinutes < 1) return l10n.backupTimeAgoJustNow;
-    if (diff.inMinutes < 60) return l10n.backupTimeAgoMinutes(diff.inMinutes);
-    if (diff.inHours < 24) return l10n.backupTimeAgoHours(diff.inHours);
-    return l10n.backupTimeAgoDays(diff.inDays);
   }
 }

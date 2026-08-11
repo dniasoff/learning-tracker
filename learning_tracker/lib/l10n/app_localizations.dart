@@ -9371,6 +9371,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{days, plural, one{1 day after} other{{days} days after}}'**
   String wizardRoundDelayAfter(int days);
+
+  /// Shown on the Backup & Sync card for a cloud-born account when the detailed sync status cannot be determined. Must never imply that data is or is not synced.
+  ///
+  /// In en, this message translates to:
+  /// **'Cloud backup is active. Detailed sync status is unavailable in this version.'**
+  String get backupSyncStatusUnavailable;
 }
 
 class _AppLocalizationsDelegate

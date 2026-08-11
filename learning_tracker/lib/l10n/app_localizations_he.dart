@@ -5597,4 +5597,8 @@ class AppLocalizationsHe extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get backupSyncStatusUnavailable =>
+      'גיבוי הענן פעיל. מצב הסנכרון המפורט אינו זמין בגרסה זו.';
 }

@@ -15,7 +15,9 @@
   "remaining": "{count} remaining",
   "@remaining": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "allCaughtUp": "All caught up!",
@@ -36,13 +38,17 @@
   "activeTrackPaceAhead": "Ahead {days}d",
   "@activeTrackPaceAhead": {
     "placeholders": {
-      "days": { "type": "int" }
+      "days": {
+        "type": "int"
+      }
     }
   },
   "activeTrackPaceBehind": "Behind {days}d",
   "@activeTrackPaceBehind": {
     "placeholders": {
-      "days": { "type": "int" }
+      "days": {
+        "type": "int"
+      }
     }
   },
   "activeTrackPaceOk": "OK",
@@ -64,13 +70,17 @@
   "moreTasks": "{count} more tasks...",
   "@moreTasks": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "streakRecovery": "You missed 1 day but your {count}-day streak is safe!",
   "@streakRecovery": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "achievements": "Achievements",
@@ -88,26 +98,34 @@
   "dashboardNextRewardWithName": "Next Reward: {name}",
   "@dashboardNextRewardWithName": {
     "placeholders": {
-      "name": {"type": "String"}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "dashboardPtsToGo": "{count} pts to go!",
   "@dashboardPtsToGo": {
     "placeholders": {
-      "count": {"type": "String"}
+      "count": {
+        "type": "String"
+      }
     }
   },
   "dashboardRedeemPrizes": "Redeem Prizes",
   "dashboardTapToUnlockAtPts": "TAP TO UNLOCK AT {points} PTS",
   "@dashboardTapToUnlockAtPts": {
     "placeholders": {
-      "points": {"type": "String"}
+      "points": {
+        "type": "String"
+      }
     }
   },
   "dashboardPointsValue": "{count} Points",
   "@dashboardPointsValue": {
     "placeholders": {
-      "count": {"type": "String"}
+      "count": {
+        "type": "String"
+      }
     }
   },
   "dashboardBubbleDone": "DONE",
@@ -118,8 +136,12 @@
   "achievementsRewardsCount": "{unlocked} / {total} Rewards",
   "@achievementsRewardsCount": {
     "placeholders": {
-      "unlocked": {"type": "int"},
-      "total": {"type": "int"}
+      "unlocked": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
   },
   "achievementsAcrossAllTracks": "Across all your tracks.",
@@ -127,21 +149,29 @@
   "achievementsRewardsFraction": "{unlocked} / {total}",
   "@achievementsRewardsFraction": {
     "placeholders": {
-      "unlocked": {"type": "int"},
-      "total": {"type": "int"}
+      "unlocked": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
   },
   "achievementsRewardsLabelWord": "Rewards",
   "achievementsMilestonePoints": "{points} PTS",
   "@achievementsMilestonePoints": {
     "placeholders": {
-      "points": {"type": "String"}
+      "points": {
+        "type": "String"
+      }
     }
   },
   "achievementsProgressPercent": "{percent}%",
   "@achievementsProgressPercent": {
     "placeholders": {
-      "percent": {"type": "int"}
+      "percent": {
+        "type": "int"
+      }
     }
   },
   "achievementsTrackSection": "TRACK SELECTION",
@@ -153,13 +183,17 @@
   "achievementsLockedBlurHint": "Reach {points} points to unlock",
   "@achievementsLockedBlurHint": {
     "placeholders": {
-      "points": {"type": "String"}
+      "points": {
+        "type": "String"
+      }
     }
   },
   "achievementsUnlockedAtPoints": "Unlocked at {points} points",
   "@achievementsUnlockedAtPoints": {
     "placeholders": {
-      "points": {"type": "String"}
+      "points": {
+        "type": "String"
+      }
     }
   },
   "achievementsUltimateGoal": "The Ultimate Goal.",
@@ -170,9 +204,15 @@
   "achievementsUnlockPartyMessage": "Congratulations, {name}! You unlocked {milestone} on your {track} track — keep going!",
   "@achievementsUnlockPartyMessage": {
     "placeholders": {
-      "name": {"type": "String"},
-      "milestone": {"type": "String"},
-      "track": {"type": "String"}
+      "name": {
+        "type": "String"
+      },
+      "milestone": {
+        "type": "String"
+      },
+      "track": {
+        "type": "String"
+      }
     }
   },
   "achievementsUnlockPartyButton": "Yay! Let's go!",
@@ -185,7 +225,9 @@
   "deleteRewardConfirm": "Are you sure you want to delete \"{title}\"?",
   "@deleteRewardConfirm": {
     "placeholders": {
-      "title": {"type": "String"}
+      "title": {
+        "type": "String"
+      }
     }
   },
   "cancel": "Cancel",
@@ -220,8 +262,12 @@
   "@commonLabelWithValue": {
     "description": "Generic 'label: value' composition used where a localized label is paired with a value (e.g. a points count) instead of concatenating raw strings in code.",
     "placeholders": {
-      "label": {"type": "String"},
-      "value": {"type": "String"}
+      "label": {
+        "type": "String"
+      },
+      "value": {
+        "type": "String"
+      }
     }
   },
   "alreadyHaveAccount": "Already have an account?",
@@ -252,7 +298,9 @@
   "@introDailyPlanSubtitle": {
     "description": "Subtitle on the daily-plan intro page. {highlight} is the bolded phrase introDailyPlanSubtitleHighlight.",
     "placeholders": {
-      "highlight": { "type": "String" }
+      "highlight": {
+        "type": "String"
+      }
     }
   },
   "introDailyPlanSubtitleHighlight": "clear daily tasks",
@@ -267,7 +315,9 @@
   "@introMishnaSubtitle": {
     "description": "Subtitle on the Mishna intro page. {highlight} is the bolded phrase introMishnaSubtitleHighlight.",
     "placeholders": {
-      "highlight": { "type": "String" }
+      "highlight": {
+        "type": "String"
+      }
     }
   },
   "introMishnaSubtitleHighlight": "spaced-repetition engine",
@@ -282,7 +332,9 @@
   "@introRewardsSubtitle": {
     "description": "Subtitle on the rewards intro page. {scholarTier} is the toggle-aware Talmid Chochom domain term.",
     "placeholders": {
-      "scholarTier": { "type": "String" }
+      "scholarTier": {
+        "type": "String"
+      }
     }
   },
   "introMishnaReviewChip": "Review…",
@@ -359,23 +411,35 @@
   "@addTrackChazaraStepTitle": {
     "description": "Title for the optional chazara (review) setup step in the add-track flow. {term} is the localized chazara/review domain term.",
     "placeholders": {
-      "term": { "type": "String" }
+      "term": {
+        "type": "String"
+      }
     }
   },
   "addTrackChazaraStepQuestion": "How do you want to schedule {term}?",
   "@addTrackChazaraStepQuestion": {
     "description": "Question header for the chazara (review) setup step in the add-track flow. {term} is the localized chazara/review domain term.",
     "placeholders": {
-      "term": { "type": "String" }
+      "term": {
+        "type": "String"
+      }
     }
   },
   "addTrackGoalDeadlinePaceLine": "About {items} {unit} per study day, across {studyDays, plural, =1{1 study day} other{{studyDays} study days}} to finish the scope by the deadline (≈{totalItems} items).",
   "@addTrackGoalDeadlinePaceLine": {
     "placeholders": {
-      "items": { "type": "int" },
-      "unit": { "type": "String" },
-      "studyDays": { "type": "int" },
-      "totalItems": { "type": "int" }
+      "items": {
+        "type": "int"
+      },
+      "unit": {
+        "type": "String"
+      },
+      "studyDays": {
+        "type": "int"
+      },
+      "totalItems": {
+        "type": "int"
+      }
     }
   },
   "addTrackGoalDeadlineNoStudyDaysInWindow": "No study day in your week falls in the range to this deadline. Add study days or move the deadline later.",
@@ -384,9 +448,15 @@
   "@addTrackGoalDeadlinePaceLineNoTotal": {
     "description": "Deadline pace line shown before the scope item count resolves to a positive number — omits the '(≈N items)' parenthetical so we never display '≈0 items'.",
     "placeholders": {
-      "items": { "type": "int" },
-      "unit": { "type": "String" },
-      "studyDays": { "type": "int" }
+      "items": {
+        "type": "int"
+      },
+      "unit": {
+        "type": "String"
+      },
+      "studyDays": {
+        "type": "int"
+      }
     }
   },
   "addTrack": "Add Track",
@@ -395,13 +465,17 @@
   "errorLoadingCurricula": "Error loading curricula: {error}",
   "@errorLoadingCurricula": {
     "placeholders": {
-      "error": {"type": "String"}
+      "error": {
+        "type": "String"
+      }
     }
   },
   "trackCreated": "Track \"{label}\" created",
   "@trackCreated": {
     "placeholders": {
-      "label": {"type": "String"}
+      "label": {
+        "type": "String"
+      }
     }
   },
   "learner": "Learner",
@@ -420,7 +494,9 @@
   "percentComplete": "{percent}% complete",
   "@percentComplete": {
     "placeholders": {
-      "percent": {"type": "int"}
+      "percent": {
+        "type": "int"
+      }
     }
   },
   "viewProgress": "View progress",
@@ -429,13 +505,17 @@
   "markCompleteCompletedStage": "Completed ({stageName})",
   "@markCompleteCompletedStage": {
     "placeholders": {
-      "stageName": {"type": "String"}
+      "stageName": {
+        "type": "String"
+      }
     }
   },
   "unableToLoadCompletionContext": "Unable to load completion context: {error}",
   "@unableToLoadCompletionContext": {
     "placeholders": {
-      "error": {"type": "String"}
+      "error": {
+        "type": "String"
+      }
     }
   },
   "accountOfflineSignInToSync": "Working offline for this account. Sign in to resume cloud sync.",
@@ -444,7 +524,9 @@
   "plusNMore": "+{count} more",
   "@plusNMore": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "noTracksYet": "No tracks yet",
@@ -452,13 +534,17 @@
   "paceAhead": "{days}d ahead",
   "@paceAhead": {
     "placeholders": {
-      "days": {"type": "int"}
+      "days": {
+        "type": "int"
+      }
     }
   },
   "paceBehind": "{days}d behind",
   "@paceBehind": {
     "placeholders": {
-      "days": {"type": "int"}
+      "days": {
+        "type": "int"
+      }
     }
   },
   "paceOnPace": "OK",
@@ -479,7 +565,9 @@
   "lifetimeXpTotal": "{points} XP Total",
   "@lifetimeXpTotal": {
     "placeholders": {
-      "points": { "type": "String" }
+      "points": {
+        "type": "String"
+      }
     }
   },
   "lifetimeStartAdding": "Start Adding",
@@ -499,15 +587,21 @@
   "lifetimeMarkAsLearnedLine": "Selected: {count} • level {level}",
   "@lifetimeMarkAsLearnedLine": {
     "placeholders": {
-      "count": { "type": "int" },
-      "level": { "type": "int" }
+      "count": {
+        "type": "int"
+      },
+      "level": {
+        "type": "int"
+      }
     }
   },
   "lifetimeMarkAsLearnedCount": "Selected: {count}",
   "@lifetimeMarkAsLearnedCount": {
     "description": "PP-3 fix: header info line in LifetimeCurriculumMarkingScreen — shows the session-selected count without leaking the internal 'level N' folder size.",
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "selectAllInThisList": "Select all in this list",
@@ -516,7 +610,9 @@
   "contentLoadError": "Unable to load curriculum content: {error}",
   "@contentLoadError": {
     "placeholders": {
-      "error": { "type": "String" }
+      "error": {
+        "type": "String"
+      }
     }
   },
   "contentHierarchyBrowseTitle": "Browse Content",
@@ -559,7 +655,9 @@
   "@curriculumListPercentDone": {
     "description": "AUD-content_browsing-01: completion badge on a curriculum card, e.g. \"42% Done\". {pctDisplay} is a pre-formatted percentage string.",
     "placeholders": {
-      "pctDisplay": { "type": "String" }
+      "pctDisplay": {
+        "type": "String"
+      }
     }
   },
   "curriculumListNewBadge": "New",
@@ -586,7 +684,9 @@
   "@itemReviewBreakdownStageFallback": {
     "description": "AUD-content_browsing-01: fallback label for a stage in the review breakdown when no stage name could be resolved.",
     "placeholders": {
-      "stageId": { "type": "int" }
+      "stageId": {
+        "type": "int"
+      }
     }
   },
   "noItemsAtThisLevel": "No items at this level",
@@ -595,7 +695,9 @@
   "@lifetimeMarkSavedCount": {
     "description": "IL-3 fix: ICU plural to drop the (s) anti-pattern.",
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "lifetimeMarkSaveError": "Couldn't save your marks. Please try again.",
@@ -610,15 +712,23 @@
   "lifetimeSectionsSummary": "{learned} / {total} sections — {n} curricula",
   "@lifetimeSectionsSummary": {
     "placeholders": {
-      "learned": { "type": "String" },
-      "total": { "type": "String" },
-      "n": { "type": "int" }
+      "learned": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      },
+      "n": {
+        "type": "int"
+      }
     }
   },
   "greetingHelloName": "Shalom, {name}!",
   "@greetingHelloName": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "noFocusTag": "NO FOCUS TAG",
@@ -638,7 +748,9 @@
   "carouselCompletion": "Completion (with {chazara})",
   "@carouselCompletion": {
     "placeholders": {
-      "chazara": { "type": "String" }
+      "chazara": {
+        "type": "String"
+      }
     }
   },
   "continueCta": "CONTINUE",
@@ -649,8 +761,12 @@
   "addTrackStepCounter": "STEP {current} OF {total}",
   "@addTrackStepCounter": {
     "placeholders": {
-      "current": { "type": "int" },
-      "total": { "type": "int" }
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
   },
   "curriculumPickerTitle": "Select a Curriculum",
@@ -669,13 +785,17 @@
   "chazaraProgramNoReviewSubtitle": "{program} doesn't include a review schedule. Set one up now or skip.",
   "@chazaraProgramNoReviewSubtitle": {
     "placeholders": {
-      "program": { "type": "String" }
+      "program": {
+        "type": "String"
+      }
     }
   },
   "chazaraSelfPacedSubtitle": "Pick a preset or build your own {chazara} schedule.",
   "@chazaraSelfPacedSubtitle": {
     "placeholders": {
-      "chazara": { "type": "String" }
+      "chazara": {
+        "type": "String"
+      }
     }
   },
   "scopeGlossSeedsAgriculture": "Seeds & Agriculture",
@@ -689,7 +809,9 @@
   "scopeLevelFallbackLabel": "Level {level}",
   "@scopeLevelFallbackLabel": {
     "placeholders": {
-      "level": { "type": "int" }
+      "level": {
+        "type": "int"
+      }
     }
   },
   "startingPositionSectionLabel": "Section",
@@ -698,14 +820,20 @@
   "learnEntireCurriculumSubtitle": "Select the entire {name}",
   "@learnEntireCurriculumSubtitle": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "level1Selection": "{name} → {levelLabel} selection",
   "@level1Selection": {
     "placeholders": {
-      "name": { "type": "String" },
-      "levelLabel": { "type": "String" }
+      "name": {
+        "type": "String"
+      },
+      "levelLabel": {
+        "type": "String"
+      }
     }
   },
   "scopeSelectedBadge": "SELECTED",
@@ -713,7 +841,9 @@
   "continueWithSelectionCount": "Continue with {count} selected",
   "@continueWithSelectionCount": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "sectionLearning": "LEARNING",
@@ -722,7 +852,9 @@
   "pointsAbbrev": "{count} pts",
   "@pointsAbbrev": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "sectionTracks": "TRACKS",
@@ -767,7 +899,9 @@
   "settingsTutoringViewAll": "View all ({count} more)",
   "@settingsTutoringViewAll": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "profilePickerSkipToSettings": "Skip to Settings",
@@ -778,7 +912,9 @@
   "tutoredChildrenPendingInvitations": "{count, plural, =1{{count} pending tutor invitation} other{{count} pending tutor invitations}}",
   "@tutoredChildrenPendingInvitations": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "tutoredChildrenStatusTutoring": "Tutoring",
@@ -787,7 +923,9 @@
   "tutorModeIndicatorNamed": "Tutor mode · {name}",
   "@tutorModeIndicatorNamed": {
     "placeholders": {
-      "name": {"type": "String"}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "tutorModeExit": "Exit",
@@ -797,7 +935,9 @@
   "viewingChildBanner": "Parent mode — viewing {name}",
   "@viewingChildBanner": {
     "placeholders": {
-      "name": {"type": "String"}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "viewingChildBannerExit": "Exit parent mode",
@@ -805,7 +945,9 @@
   "switchIntoChildMessage": "You are about to enter {name}'s full experience. You can exit anytime from the banner at the top.",
   "@switchIntoChildMessage": {
     "placeholders": {
-      "name": {"type": "String"}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "switchIntoChildConfirm": "Switch in",
@@ -827,7 +969,9 @@
   "profileNameTaken": "A profile named \"{name}\" already exists",
   "@profileNameTaken": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "maxProfilesReached": "Maximum 10 profiles reached",
@@ -839,7 +983,9 @@
   "deleteProfileConfirm": "Permanently delete \"{name}\" and ALL associated learning data? This cannot be undone.",
   "@deleteProfileConfirm": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "cannotDeleteOnlyProfile": "Cannot delete your only profile",
@@ -889,7 +1035,9 @@
   "rewardConfigPointsPreview": "{points, plural, =1{{points} Point} other{{points} Points}}",
   "@rewardConfigPointsPreview": {
     "placeholders": {
-      "points": { "type": "int" }
+      "points": {
+        "type": "int"
+      }
     }
   },
   "rewardConfigCancel": "Cancel",
@@ -903,14 +1051,18 @@
   "rewardConfigRewardCreatedBody": "\"{name}\" was added. Your child can now see this reward — locked and blurred until they reach the points goal.",
   "@rewardConfigRewardCreatedBody": {
     "placeholders": {
-      "name": {"type": "String"}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "rewardConfigRewardUpdatedTitle": "Reward updated",
   "rewardConfigRewardUpdatedBody": "Your changes to \"{name}\" were saved. Your child can now see the update.",
   "@rewardConfigRewardUpdatedBody": {
     "placeholders": {
-      "name": {"type": "String"}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "pointConfigPerTaskTitle": "Points per completed task",
@@ -938,7 +1090,9 @@
   "setParentPinDialogSubtitle": "Set a 4-digit PIN to access parent controls for {name}. The PIN is stored only on this device.",
   "@setParentPinDialogSubtitle": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "enterParentPin": "Enter Parent PIN",
@@ -976,8 +1130,12 @@
   "deviceRestoreStep": "Step {completed} of {total}",
   "@deviceRestoreStep": {
     "placeholders": {
-      "completed": { "type": "int" },
-      "total": { "type": "int" }
+      "completed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
   },
   "deviceRestorePhaseRestoring": "Restoring your data...",
@@ -1016,7 +1174,9 @@
   "journeyTitleNamed": "{name}'s Learning Journey",
   "@journeyTitleNamed": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "loadingYourJourney": "Loading your journey...",
@@ -1042,13 +1202,17 @@
   "learnStreakDayStreak": "{count, plural, =1{1 Day Streak} other{{count} Day Streak}}",
   "@learnStreakDayStreak": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "learnStreakPersonalBest": "Personal Best: {count}",
   "@learnStreakPersonalBest": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "learnStreakKeepItUp": "Keep it up!",
@@ -1080,7 +1244,9 @@
   "authSignInFailedError": "Sign-in failed: {error}",
   "@authSignInFailedError": {
     "placeholders": {
-      "error": { "type": "String" }
+      "error": {
+        "type": "String"
+      }
     }
   },
   "authVerifyEmailTitle": "Confirm Your Email",
@@ -1093,7 +1259,9 @@
   "authMaxDeviceAccounts": "Maximum {count} device accounts reached. Remove one to add another.",
   "@authMaxDeviceAccounts": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "authOfflineUseUpgrade": "An offline account with this email exists on this device. Use the Upgrade to Cloud option in Settings instead.",
@@ -1112,7 +1280,9 @@
   "authFoundOnDevice": "Found on this device ({tier})",
   "@authFoundOnDevice": {
     "placeholders": {
-      "tier": { "type": "String" }
+      "tier": {
+        "type": "String"
+      }
     }
   },
   "authNotOnDeviceCheckCloud": "Not on this device — we'll check the cloud",
@@ -1172,7 +1342,9 @@
   "signUpFailed": "Signup failed: {error}",
   "@signUpFailed": {
     "placeholders": {
-      "error": { "type": "String" }
+      "error": {
+        "type": "String"
+      }
     }
   },
   "signUpFallbackBody": "The internet connection dropped during signup. Would you like to create an offline account instead?",
@@ -1184,7 +1356,9 @@
   "accountPickerMaxAccountsShort": "Maximum {count} device accounts reached",
   "@accountPickerMaxAccountsShort": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "accountPickerPrivacyFooter": "Manage your privacy and security in Settings",
@@ -1204,18 +1378,21 @@
   "@accountRemovePendingSyncBody": {
     "description": "AUD-account-01: blocks swipe-to-remove on a cloud account while its outbox still has undrained rows.",
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "accountPickerAddAnother": "Add another account ({remaining} slots remaining)",
   "@accountPickerAddAnother": {
     "placeholders": {
-      "remaining": { "type": "int" }
+      "remaining": {
+        "type": "int"
+      }
     }
   },
   "cannotDeactivateLastCurriculum": "At least one curriculum must remain active",
   "cannotDeactivateLastCurriculumDetail": "You cannot remove your last active curriculum. Add another curriculum before removing this one.",
-
   "actionStart": "Start",
   "actionCancel": "Cancel",
   "actionSave": "Save",
@@ -1238,7 +1415,6 @@
   "actionStartHere": "Start here",
   "actionStartHereLabel": "Start Here",
   "actionClear": "Clear",
-
   "appErrorViewNoConnectionTitle": "No connection",
   "appErrorViewNoConnectionBody": "Check your internet connection and try again.",
   "appErrorViewInvalidDataTitle": "Invalid data",
@@ -1251,29 +1427,36 @@
   "appErrorViewGenericBody": "An unexpected error occurred. Try again or report the issue.",
   "appErrorViewReportButton": "Report this issue",
   "appErrorViewReportedSnackbar": "Thanks — we've logged the issue.",
-
   "errorGeneric": "Error: {error}",
   "@errorGeneric": {
     "placeholders": {
-      "error": { "type": "String" }
+      "error": {
+        "type": "String"
+      }
     }
   },
   "errorLoadingTasks": "Error loading tasks: {error}",
   "@errorLoadingTasks": {
     "placeholders": {
-      "error": { "type": "String" }
+      "error": {
+        "type": "String"
+      }
     }
   },
   "errorLoadingOrder": "Error loading order: {error}",
   "@errorLoadingOrder": {
     "placeholders": {
-      "error": { "type": "String" }
+      "error": {
+        "type": "String"
+      }
     }
   },
   "errorLoadingContent": "Error loading content: {error}",
   "@errorLoadingContent": {
     "placeholders": {
-      "error": { "type": "String" }
+      "error": {
+        "type": "String"
+      }
     }
   },
   "errorLoadingPoints": "Error loading points",
@@ -1289,13 +1472,17 @@
   "errorSearchError": "Search error: {error}",
   "@errorSearchError": {
     "placeholders": {
-      "error": { "type": "String" }
+      "error": {
+        "type": "String"
+      }
     }
   },
   "errorUnknownCurriculum": "Unknown curriculum: \"{curriculumId}\"",
   "@errorUnknownCurriculum": {
     "placeholders": {
-      "curriculumId": { "type": "String" }
+      "curriculumId": {
+        "type": "String"
+      }
     }
   },
   "errorCouldNotSaveRetry": "Couldn't save — tap to retry",
@@ -1319,18 +1506,21 @@
   "sendLogsSuccess": "Logs sent ({count} entries). View in Firebase console → diagnostic_logs.",
   "@sendLogsSuccess": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "errorNoEmailApp": "No email app found. Copy address instead?",
   "errorMarkCompleteFailed": "Failed to mark complete: {error}",
   "@errorMarkCompleteFailed": {
     "placeholders": {
-      "error": { "type": "String" }
+      "error": {
+        "type": "String"
+      }
     }
   },
   "errorVerificationEmailSent": "Verification email sent. Check your inbox.",
-
   "noData": "No data",
   "noTasksForToday": "No tasks for today",
   "noItemsToOrder": "No items to order.",
@@ -1339,24 +1529,29 @@
   "noResultsForQuery": "No results for \"{query}\"",
   "@noResultsForQuery": {
     "placeholders": {
-      "query": { "type": "String" }
+      "query": {
+        "type": "String"
+      }
     }
   },
   "noResultsForQueryHint": "Try searching by the Hebrew name (e.g. ברכות).",
   "@noResultsForQueryHint": {
     "description": "Hint under the no-results message clarifying that content is searched by its Hebrew name."
   },
-
   "viewAllTasks": "View all ({count}) →",
   "@viewAllTasks": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "tasksDueToday": "{count, plural, =1{1 task today} other{{count} tasks today}}",
   "@tasksDueToday": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "tapToStartLearning": "Tap to start learning",
@@ -1364,53 +1559,58 @@
   "remainingCount": "{count} remaining",
   "@remainingCount": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "allDoneForToday": "All done for today!",
   "missedReview": "Missed review ({count})",
   "@missedReview": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "todaysReview": "Today's review ({count})",
   "@todaysReview": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "todaysLearning": "Today's learning ({count})",
   "@todaysLearning": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
-
   "dailyTasksTitle": "Daily Tasks",
   "taskSkippedUntilTomorrow": "Task skipped until tomorrow",
   "tasksNoTasksRemainingTitle": "You have no tasks remaining for today.",
   "tasksNoOverdueTasksSubtitle": "No overdue tasks.",
   "undoLabel": "Undo",
-
   "searchTitle": "Search",
   "searchHintEnterTerm": "Enter a search term above",
-
   "loadingText": "Loading text...",
   "markedComplete": "Marked complete",
   "couldNotSave": "Couldn't save: {error}",
   "@couldNotSave": {
     "placeholders": {
-      "error": { "type": "String" }
+      "error": {
+        "type": "String"
+      }
     }
   },
   "textReaderTooltipPrevious": "Previous",
   "textReaderTooltipNext": "Next",
   "textReaderHebrewTab": "Hebrew Text",
   "textReaderEnglishTab": "English Translation",
-
   "totalPointsLabel": "Total Points",
-
   "resetToDefaultOrder": "Reset to Default Order",
   "resetToDefaultOrderDialogTitle": "Reset to Default Order",
   "resetToDefaultOrderDialogBody": "This will restore the natural Sefaria order for this curriculum. Your custom ordering will be lost.",
@@ -1420,21 +1620,26 @@
   "reorderConfirmBody": "Reordering will clear your {overdueCount} outstanding overdue item(s). Consider completing them first.",
   "@reorderConfirmBody": {
     "placeholders": {
-      "overdueCount": { "type": "int" }
+      "overdueCount": {
+        "type": "int"
+      }
     }
   },
   "controlledByParent": "Controlled by parent",
-
   "sacredTimeLockGoodShabbos": "Good {term}",
   "@sacredTimeLockGoodShabbos": {
     "placeholders": {
-      "term": { "type": "String" }
+      "term": {
+        "type": "String"
+      }
     }
   },
   "sacredTimeLockShabbosSubtitle": "The app is closed for {term}.",
   "@sacredTimeLockShabbosSubtitle": {
     "placeholders": {
-      "term": { "type": "String" }
+      "term": {
+        "type": "String"
+      }
     }
   },
   "sacredTimeLockGoodYomTov": "Good Yom Tov",
@@ -1442,18 +1647,21 @@
   "sacredTimeLockShabbosYomTovGreeting": "Good {term} & Good Yom Tov",
   "@sacredTimeLockShabbosYomTovGreeting": {
     "placeholders": {
-      "term": { "type": "String" }
+      "term": {
+        "type": "String"
+      }
     }
   },
   "sacredTimeLockShabbosYomTovSubtitle": "The app is closed for {term} and Yom Tov.",
   "@sacredTimeLockShabbosYomTovSubtitle": {
     "placeholders": {
-      "term": { "type": "String" }
+      "term": {
+        "type": "String"
+      }
     }
   },
   "sacredTimeLockYomKippurGreeting": "Have an easy and meaningful fast",
   "sacredTimeLockYomKippurSubtitle": "The app is closed for Yom Kippur.",
-
   "sacredTimeDetect": "Detect",
   "sacredTimeChooseCity": "Choose city",
   "textReaderTextUnavailableTitle": "Text not available",
@@ -1462,13 +1670,17 @@
   "sacredTimeCardDescription": "App is silenced and locked during {term} and Yom Tov. Times computed locally from your location with a 15-minute cushion.",
   "@sacredTimeCardDescription": {
     "placeholders": {
-      "term": { "type": "String" }
+      "term": {
+        "type": "String"
+      }
     }
   },
   "sacredTimeShabbosModeLabel": "{term} MODE",
   "@sacredTimeShabbosModeLabel": {
     "placeholders": {
-      "term": { "type": "String" }
+      "term": {
+        "type": "String"
+      }
     }
   },
   "sacredTimeAlwaysOn": "Always on",
@@ -1503,7 +1715,9 @@
   "calendarOffsetDay": "Day {offset}",
   "@calendarOffsetDay": {
     "placeholders": {
-      "offset": { "type": "String" }
+      "offset": {
+        "type": "String"
+      }
     }
   },
   "calendarDirectionForward": "FORWARD",
@@ -1512,26 +1726,34 @@
   "calendarOffsetDaysCount": "{count, plural, =1{1 Day} other{{count} Days}}",
   "@calendarOffsetDaysCount": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "startingPositionSelectInstruction": "Select the {itemLabel} you are currently up to.",
   "@startingPositionSelectInstruction": {
     "placeholders": {
-      "itemLabel": { "type": "String" }
+      "itemLabel": {
+        "type": "String"
+      }
     }
   },
   "startingPositionBackToListTooltip": "Back to {containerLabel} list",
   "@startingPositionBackToListTooltip": {
     "placeholders": {
-      "containerLabel": { "type": "String" }
+      "containerLabel": {
+        "type": "String"
+      }
     }
   },
   "startingPositionItemFallbackLabel": "Item",
   "searchFieldHint": "Search ⁦{label}⁩…",
   "@searchFieldHint": {
     "placeholders": {
-      "label": { "type": "String" }
+      "label": {
+        "type": "String"
+      }
     }
   },
   "cityPickerTitle": "Choose a city",
@@ -1545,7 +1767,6 @@
     }
   },
   "cityPickerIdleHint": "Start typing to search ~33,000 cities.\nType at least 2 letters.",
-
   "schedulerStudyLabel": "Study",
   "schedulerReviewOnlyLabel": "Review only",
   "schedulerPerDay": "Per day",
@@ -1587,7 +1808,6 @@
       }
     }
   },
-
   "profilesEditLabel": "Edit",
   "profilesDeleteLabel": "Delete",
   "profilesChooseAvatar": "Choose Avatar",
@@ -1606,17 +1826,20 @@
   "deleteProfileBody": "Are you sure you want to delete \"{name}\"? All learning data for this profile will be permanently lost.",
   "@deleteProfileBody": {
     "placeholders": {
-      "name": {"type": "String"}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "deleteProfileLastBody": "This is your only profile. Deleting \"{name}\" will erase every track, completion, and lifetime entry on this account. You will need to create a new profile before you can keep learning.",
   "@deleteProfileLastBody": {
     "placeholders": {
-      "name": {"type": "String"}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "deleteProfileLastConfirm": "Delete anyway",
-
   "trackNameThisTrack": "Name This Track",
   "trackNameLabel": "Track Name",
   "trackAddLabel": "ADD TRACK",
@@ -1626,15 +1849,18 @@
   "trackReplaceTitle": "Replace your {label} track?",
   "@trackReplaceTitle": {
     "placeholders": {
-      "label": { "type": "String" }
+      "label": {
+        "type": "String"
+      }
     }
   },
-
   "bulkMarkCompleteTitle": "Bulk Mark Complete",
   "bulkMarkedComplete": "Marked {count} items as complete",
   "@bulkMarkedComplete": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "bulkMarkConfirmBulkTitle": "Confirm Bulk Mark",
@@ -1642,10 +1868,8 @@
   "bulkMarkDone": "Done!",
   "bulkMarkSkip": "Skip",
   "bulkMarkPriorLearning": "Mark Prior Learning",
-
   "completionButtonCompleted": "Completed",
   "completionButtonMarkComplete": "Mark Complete",
-
   "upgradePromptOnlineBody": "You're online — back up your account so you don't lose your learning if this device is lost.",
   "upgradePromptBackup": "Back up",
   "upgradePromptDismiss": "Not now",
@@ -1657,13 +1881,14 @@
   "upgradeToCloudTitle": "Upgrade to Cloud",
   "upgradeToCloudButton": "Upgrade to Cloud",
   "upgradeToCloudCancelKeepOffline": "Cancel — keep offline account",
-
   "upgradeToCloudHeadline": "Back up your account",
   "upgradeToCloudValueProp": "You're signed in as {email}. Upgrading will create a cloud account with the same email so your data syncs across devices. This is one-way — you can't switch back to offline-only after upgrading.",
   "@upgradeToCloudValueProp": {
     "description": "Value-proposition paragraph on the upgrade-to-cloud screen, explaining the one-way upgrade.",
     "placeholders": {
-      "email": { "type": "String" }
+      "email": {
+        "type": "String"
+      }
     }
   },
   "upgradeToCloudPasswordLabel": "Confirm your password",
@@ -1700,7 +1925,6 @@
     "description": "Friendly fallback shown instead of a raw exception when a collision-merge option fails for an unexpected reason."
   },
   "upgradeToCloudCloudNotVerifiedBody": "This cloud account is not verified yet. Check your inbox, then tap \"I've verified — complete upgrade\" below.",
-
   "scopeSelectionSave": "Save",
   "scopeSelectionTrackEntireCurriculum": "Track Entire Curriculum",
   "scopeSelectionChooseHierarchyLevel": "Choose which hierarchy level to filter by",
@@ -1709,7 +1933,9 @@
   "@scopeSelectionTitle": {
     "description": "AppBar title on the scope-selection screen. {curriculum} is the human-readable curriculum name.",
     "placeholders": {
-      "curriculum": { "type": "String" }
+      "curriculum": {
+        "type": "String"
+      }
     }
   },
   "scopeSelectionAllContentIncluded": "All content is included",
@@ -1720,13 +1946,17 @@
   "@scopeSelectionOptionsCount": {
     "description": "Subtitle on a hierarchy-level tile showing how many distinct values exist at that level.",
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "scopeSelectionItemsWillBeTracked": "{count, plural, one{1 item will be tracked} other{{count} items will be tracked}}",
   "@scopeSelectionItemsWillBeTracked": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "scopeSelectionScopeSetEntireCurriculum": "Scope set to entire curriculum",
@@ -1734,10 +1964,11 @@
   "@scopeSelectionScopeUpdated": {
     "description": "Save-confirmation SnackBar shown after saving a subset scope. {values} is the comma-joined list of rendered selected scope values.",
     "placeholders": {
-      "values": { "type": "String" }
+      "values": {
+        "type": "String"
+      }
     }
   },
-
   "curriculumSettingsLoadingProgram": "Loading program...",
   "curriculumSettingsProgramTitle": "Program",
   "curriculumSettingsProgramError": "Couldn't load the program. Please try again.",
@@ -1753,7 +1984,9 @@
   "@curriculumSettingsTitle": {
     "description": "AppBar title on the per-curriculum settings screen. {curriculum} is the human-readable curriculum name.",
     "placeholders": {
-      "curriculum": { "type": "String" }
+      "curriculum": {
+        "type": "String"
+      }
     }
   },
   "curriculumSettingsCopy": "Copy",
@@ -1761,10 +1994,11 @@
   "@curriculumSettingsProgramLabel": {
     "description": "List tile title showing the active learning program name. {name} is the human-readable program label.",
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
-
   "deleteAccountDialogTitle": "Delete Account",
   "deleteAccountTypeConfirm": "Type DELETE to confirm:",
   "deleteAccountHint": "DELETE",
@@ -1773,14 +2007,17 @@
   "deleteAccountReauthProvider": "You will be asked to sign in with {provider} to confirm your identity.",
   "@deleteAccountReauthProvider": {
     "placeholders": {
-      "provider": { "type": "String" }
+      "provider": {
+        "type": "String"
+      }
     }
   },
-
   "backupLastSynced": "Last synced {timeAgo}",
   "@backupLastSynced": {
     "placeholders": {
-      "timeAgo": { "type": "String" }
+      "timeAgo": {
+        "type": "String"
+      }
     }
   },
   "backupSyncing": "Syncing...",
@@ -1794,27 +2031,32 @@
   "@backupTimeAgoMinutes": {
     "description": "Relative time for a last-synced timestamp, in minutes.",
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "backupTimeAgoHours": "{count}h ago",
   "@backupTimeAgoHours": {
     "description": "Relative time for a last-synced timestamp, in hours.",
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "backupTimeAgoDays": "{count}d ago",
   "@backupTimeAgoDays": {
     "description": "Relative time for a last-synced timestamp, in days.",
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "reauthDialogTitle": "Verify Your Identity",
   "reauthDialogBody": "Please enter your current password to continue.",
   "reauthVerify": "Verify",
-
   "linkAccountTitle": "Link Account",
   "linkAccountSubtitle": "Add another sign-in method to your account.",
   "linkAccountGoogleLabel": "Google",
@@ -1823,19 +2065,15 @@
   "linkAccountAllLinked": "All available sign-in methods are already linked.",
   "linkAccountGoogleSuccess": "Google account linked successfully.",
   "linkAccountEmailSuccess": "Email/password account linked successfully.",
-
   "changePasswordDialogTitle": "Change Password",
   "changePasswordButton": "Change Password",
-
   "accountDeletedTitle": "Account deleted",
   "signOutLabel": "Sign Out",
   "signOutConfirmTitle": "Sign Out",
   "signOutConfirmBody": "Are you sure you want to sign out? Your data will be preserved for when you sign back in.",
-
   "connectionLostTitle": "Connection lost",
   "tryAgainButton": "Try Again",
   "createOfflineAccount": "Create Offline Account",
-
   "onboardingConfirm": "Confirm",
   "onboardingStartLearning": "Start Learning",
   "onboardingAddAnotherTrack": "Add Another Track",
@@ -1844,26 +2082,27 @@
   "onboardingMarkCompleted": "Mark Completed",
   "onboardingStartingPosition": "Starting Position",
   "onboardingStudyDays": "Study Days",
-
   "stageNameLimud": "לימוד",
   "stageNameChazaraAleph": "חזרה א׳",
   "stageNameChazaraBet": "חזרה ב׳",
-
   "actionMarkCompleted": "Mark Completed",
   "actionSkipNoReview": "Skip (no review)",
-
   "studyDaysTitle": "Study Days",
   "studyDaysSubtitle": "Which days do you learn?",
   "studyDaysPerWeekLabel": "{count, plural, =1{1 study day per week} other{{count} study days per week}}",
   "@studyDaysPerWeekLabel": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "studyDayConfigTitle": "{curriculumName} Study Days",
   "@studyDayConfigTitle": {
     "placeholders": {
-      "curriculumName": { "type": "String" }
+      "curriculumName": {
+        "type": "String"
+      }
     }
   },
   "studyDayConfigSubtitle": "Choose which days include new learning and which are for review only.",
@@ -1871,28 +2110,27 @@
   "studyDaysSetByProgram": "Study days set by {programName}",
   "@studyDaysSetByProgram": {
     "placeholders": {
-      "programName": { "type": "String" }
+      "programName": {
+        "type": "String"
+      }
     }
   },
-
   "startingPositionTitle": "Starting Position",
   "startingPositionHint": "Can start up to 30 days back from today",
   "startingPositionWhereAreYou": "Where are you in {programName}?",
   "@startingPositionWhereAreYou": {
     "placeholders": {
-      "programName": { "type": "String" }
+      "programName": {
+        "type": "String"
+      }
     }
   },
-
   "priorLearningTitle": "Mark Prior Learning",
   "priorLearningSubtitle": "Do you want to mark parts you already learned as completed?",
-
   "goalPickDeadlineFirst": "Pick a deadline first.",
   "trackSaveError": "Failed to save track. Please try again.",
-
   "pacePerDay": "Per day",
   "pacePerWeek": "Per week",
-
   "goalTypeDeadline": "Deadline",
   "goalTypePace": "Pace",
   "goalTypeNoDeadline": "No deadline",
@@ -1907,21 +2145,31 @@
   "goalDeadlinePaceItems": "~{pace} items per day",
   "@goalDeadlinePaceItems": {
     "placeholders": {
-      "pace": { "type": "int" }
+      "pace": {
+        "type": "int"
+      }
     }
   },
   "goalDeadlineItemsInDays": "{items} items in {days, plural, =1{1 day} other{{days} days}}",
   "@goalDeadlineItemsInDays": {
     "placeholders": {
-      "items": { "type": "int" },
-      "days": { "type": "int" }
+      "items": {
+        "type": "int"
+      },
+      "days": {
+        "type": "int"
+      }
     }
   },
   "goalPaceHowMany": "How many {unit} per {period}?",
   "@goalPaceHowMany": {
     "placeholders": {
-      "unit": { "type": "String" },
-      "period": { "type": "String" }
+      "unit": {
+        "type": "String"
+      },
+      "period": {
+        "type": "String"
+      }
     }
   },
   "goalPacePeriodDay": "day",
@@ -1935,36 +2183,56 @@
   "goalPaceInputLabel": "{unit} {period}",
   "@goalPaceInputLabel": {
     "placeholders": {
-      "unit": { "type": "String" },
-      "period": { "type": "String" }
+      "unit": {
+        "type": "String"
+      },
+      "period": {
+        "type": "String"
+      }
     }
   },
   "goalPaceProjectedCompletion": "Projected completion: {date}",
   "@goalPaceProjectedCompletion": {
     "placeholders": {
-      "date": { "type": "String" }
+      "date": {
+        "type": "String"
+      }
     }
   },
   "goalPaceItemsInDays": "{items} {unit} in ~{days} days",
   "@goalPaceItemsInDays": {
     "placeholders": {
-      "items": { "type": "int" },
-      "unit": { "type": "String" },
-      "days": { "type": "int" }
+      "items": {
+        "type": "int"
+      },
+      "unit": {
+        "type": "String"
+      },
+      "days": {
+        "type": "int"
+      }
     }
   },
   "goalTargetPercentOnly": "Complete {percent}% of the material",
   "@goalTargetPercentOnly": {
     "placeholders": {
-      "percent": { "type": "int" }
+      "percent": {
+        "type": "int"
+      }
     }
   },
   "goalTargetPercentWithCount": "Complete {percent}% of the material ({done} of {total} items)",
   "@goalTargetPercentWithCount": {
     "placeholders": {
-      "percent": { "type": "int" },
-      "done": { "type": "int" },
-      "total": { "type": "int" }
+      "percent": {
+        "type": "int"
+      },
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
   },
   "goalLearningUnitLabel": "Learning unit",
@@ -1974,49 +2242,53 @@
   "goalSavedSnack": "Goal saved",
   "goalRemovedSnack": "Goal removed",
   "goalRemoveButton": "Remove Goal",
-
   "unitPerakim": "Perakim",
   "unitPesukim": "Pesukim",
   "unitAmudim": "Amudim",
   "unitDafim": "Dafim",
-
   "tasksUnableToLoad": "Unable to load tasks",
   "tasksAllCaughtUp": "All caught up",
   "tasksNoTasksRemainingToday": "No tasks remaining for today.",
   "itemsCount": "{count, plural, one{1 Item} other{{count} Items}}",
   "@itemsCount": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
-
   "scopeSelectionCountSelected": "{count, plural, one{1 selected} other{{count} selected}}",
   "@scopeSelectionCountSelected": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "scopeSelectionItemCount": "{count, plural, one{1 item} other{{count} items}}",
   "@scopeSelectionItemCount": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
-
   "reviewStageDayDelay": "{count, plural, one{1 day delay} other{{count} day delay}}",
   "@reviewStageDayDelay": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "applyToAll": "Apply to All",
-
   "trackNameSubtitle": "Give your track a name to identify it.",
-
   "priorLearningChooseSections": "Choose which sections to mark in {curriculumName}.",
   "@priorLearningChooseSections": {
     "placeholders": {
-      "curriculumName": { "type": "String" }
+      "curriculumName": {
+        "type": "String"
+      }
     }
   },
   "priorLearningAlreadyCompleted": "Have you already completed some of these sections?",
@@ -2024,29 +2296,32 @@
   "priorLearningMarkEverythingSubtitle": "Best if you are starting a new review cycle",
   "priorLearningNoFolders": "No specific folders were selected, but you can still mark all as completed.",
   "priorLearningSelectedFolder": "Selected folder",
-
   "scopeSelectionSelectLevel": "Select {levelName}",
   "@scopeSelectionSelectLevel": {
     "placeholders": {
-      "levelName": { "type": "String" }
+      "levelName": {
+        "type": "String"
+      }
     }
   },
-
   "activeTracksLabel": "Active Tracks",
   "activeTracksRunning": "{count} RUNNING",
   "@activeTracksRunning": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
-
   "trackDetailConfigGoal": "Goal",
   "trackDetailConfigItemsRemaining": "Items remaining",
   "trackDetailConfigEstFinish": "Est. finish",
   "trackSince": "Since {date}",
   "@trackSince": {
     "placeholders": {
-      "date": { "type": "String" }
+      "date": {
+        "type": "String"
+      }
     }
   },
   "trackEditLabel": "Edit Track",
@@ -2058,7 +2333,9 @@
   "@trackEditSectionReview": {
     "description": "Section heading for the review configuration block on the track-edit screen. {term} is the domain-specific term for review/chazara, supplied by the caller via domainTermLabels.",
     "placeholders": {
-      "term": { "type": "String" }
+      "term": {
+        "type": "String"
+      }
     }
   },
   "trackEditGoalTypeLocked": "Goal type cannot be changed after setup",
@@ -2075,7 +2352,9 @@
   "trackEditReviewSummaryDays": "After {delays}",
   "@trackEditReviewSummaryDays": {
     "placeholders": {
-      "delays": { "type": "String" }
+      "delays": {
+        "type": "String"
+      }
     }
   },
   "trackEditChangeReview": "Change",
@@ -2091,7 +2370,9 @@
   "trackDeleteContent": "Permanently delete \"{name}\"? All progress and data for this track will be removed. This cannot be undone.",
   "@trackDeleteContent": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "deleteTrackArchiveTitle": "Delete Track",
@@ -2099,34 +2380,39 @@
   "parentDeleteTrackArchiveBody": "What should happen to your child's completion history?",
   "deleteTrackArchive": "Archive (keep history)",
   "deleteTrackWipe": "Delete and wipe history",
-
   "startingPositionTargetDate": "TARGET DATE",
   "calendarNoLocalEntryFound": "No local calendar entry found for this date.",
   "calendarEntryLoadFailed": "Couldn't load this date's entry. Check your connection and try again.",
-
   "goalPaceOrDeadlineTitle": "What's your pace or deadline?",
   "goalPaceOrDeadlineSubtitle": "Set a goal.",
   "goalTargetPace": "Target Pace",
   "goalPaceDescriptionLine": "{unit} {period}",
   "@goalPaceDescriptionLine": {
     "placeholders": {
-      "unit": { "type": "String" },
-      "period": { "type": "String" }
+      "unit": {
+        "type": "String"
+      },
+      "period": {
+        "type": "String"
+      }
     }
   },
   "goalEstimatedFinish": "Estimated finish: {date}",
   "@goalEstimatedFinish": {
     "placeholders": {
-      "date": { "type": "String" }
+      "date": {
+        "type": "String"
+      }
     }
   },
   "goalSetDeadline": "Set Deadline",
-
   "reviewScheduleTitle": "Review Schedule",
   "reviewScheduleSetByProgram": "Review stages set by {programName}",
   "@reviewScheduleSetByProgram": {
     "placeholders": {
-      "programName": { "type": "String" }
+      "programName": {
+        "type": "String"
+      }
     }
   },
   "reviewScheduleFixedHint": "This schedule is fixed by the program and cannot be edited.",
@@ -2135,20 +2421,22 @@
   "reviewScheduleAfterNDays": "After {count} days",
   "@reviewScheduleAfterNDays": {
     "placeholders": {
-      "count": { "type": "String" }
+      "count": {
+        "type": "String"
+      }
     }
   },
   "reviewScheduleScheduledByProgram": "Scheduled by program",
-
   "chazaraCustomCycle": "Custom Cycle",
   "chazaraSessionsCount": "{count} Sessions",
   "@chazaraSessionsCount": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "chazaraAddNew": "ADD NEW",
-
   "chazaraPresetLearnOnlyTitle": "Learn Only",
   "chazaraPresetLearnOnlyDescription": "No scheduled reviews.",
   "chazaraPresetOneDayTitle": "1 day",
@@ -2157,7 +2445,6 @@
   "chazaraPresetWeekDescription": "The recommended starter.",
   "chazaraPresetMonthTitle": "1 + 7 + 30 days",
   "chazaraPresetMonthDescription": "Full mastery cycle.",
-
   "termChazara": "Chazara",
   "termBubbleChazara": "CHAZARA",
   "termReviewSection": "REVIEW SECTION",
@@ -2172,17 +2459,13 @@
   "termTalmidChochomCaps": "TALMID CHOCHOM",
   "termStageLearn": "Learn",
   "termStageChazaraPrefix": "Chazara",
-
   "authSignInTimeout": "Sign-in is taking too long. Check your connection and try again.",
-
   "reauthGoogleTitle": "Confirm with Google to delete your account",
   "reauthGoogleBody": "We need you to sign in with Google one more time to confirm it's really you. After signing in, your account and all data will be permanently deleted.",
   "reauthGoogleContinue": "Continue to Google",
-
   "deletingAccountTitle": "Deleting your account…",
   "deletingAccountBody": "This may take a few seconds. Please don't close the app.",
   "deletingAccountError": "Deletion encountered an issue. You have been signed out.",
-
   "itemsLearnedTitle": "Items Learned",
   "itemsLearnedSubtitle": "Track completions by curriculum",
   "itemsLearnedNoCurricula": "No track completions yet",
@@ -2190,11 +2473,14 @@
   "itemsLearnedOf": "{completed} of {total}",
   "@itemsLearnedOf": {
     "placeholders": {
-      "completed": { "type": "int" },
-      "total": { "type": "int" }
+      "completed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
   },
-
   "overallProgressCardTitle": "Overall Progress",
   "@overallProgressCardTitle": {
     "description": "Title of the OverallStatsCard on the Curriculum Progress screen."
@@ -2223,7 +2509,9 @@
   "@overallProgressSectionWholeLifetime": {
     "description": "Scope header for the second section of OverallStatsCard: whole-curriculum lifetime knowledge (distinct items ever touched / total across the ENTIRE curriculum, not just the active track's scope). {curriculum} is the curriculum display name.",
     "placeholders": {
-      "curriculum": { "type": "String" }
+      "curriculum": {
+        "type": "String"
+      }
     }
   },
   "overallProgressSectionWholeLifetimeGeneric": "Whole curriculum · lifetime",
@@ -2234,7 +2522,6 @@
   "@overallProgressStatLifetimeItemsTouched": {
     "description": "Row label in OverallStatsCard's whole-curriculum lifetime section for the count of distinct items ever touched across the entire curriculum (value shown as '{completed} of {total}' via itemsLearnedOf)."
   },
-
   "curriculumProgressBreakdownByLevel": "Breakdown by Level",
   "@curriculumProgressBreakdownByLevel": {
     "description": "Section heading in CurriculumProgressScreen above the per-level hierarchy cards."
@@ -2251,7 +2538,6 @@
   "@curriculumProgressSettingsTooltip": {
     "description": "Tooltip for the settings gear IconButton in CurriculumProgressScreen's AppBar, which navigates to CurriculumSettingsRoute."
   },
-
   "tierLensRecentActivity": "Recent Activity",
   "@tierLensRecentActivity": {
     "description": "Lens label for the engagement tier (live-only completions) — Recent Activity screen and Progress hub tile."
@@ -2264,21 +2550,32 @@
   "@tierLensLifetimeKnowledge": {
     "description": "Lens label for the lifetime tier (all sources — live + bulkInTrack + lifetimeOnly) — Lifetime Knowledge screen and Progress hub tile."
   },
-
   "streakWidgetDayStreak": "{count, plural, =1{1 day streak!} other{{count} day streak!}}",
   "@streakWidgetDayStreak": {
     "description": "Child-mode StreakWidget headline showing the current streak length. ICU plural so 1 reads '1 day streak!' not '1 days'.",
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "streakWidgetBest": "{count, plural, =1{Best: 1 day} other{Best: {count} days}}",
   "@streakWidgetBest": {
     "description": "Child-mode StreakWidget sub-line showing the longest streak. ICU plural so 1 reads 'Best: 1 day' not 'Best: 1 days'.",
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "streakSubtleBest": "(best: {count})",
   "@streakSubtleBest": {
     "description": "Adult-mode subtle streak display parenthetical showing the all-time best streak count. Intentionally compact (no 'days' noun) to fit a single row alongside the fire icon and current streak number.",
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "schedulerTodaysGoal": "TODAY'S GOAL",
   "@schedulerTodaysGoal": {
@@ -2288,39 +2585,50 @@
   "@schedulerGoalTaskCount": {
     "description": "Headline count on the scheduler goal banner — number of tasks scheduled for today. ICU plural so count==1 reads '1 task today' not '1 tasks today'.",
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "tierCounterStreakDays": "{count, plural, =1{{count}-day streak} other{{count}-day streak}}",
   "@tierCounterStreakDays": {
     "description": "Engagement-tier counter — current consecutive-day streak. Appears in the three-counter header row on Dashboard and Progress hub. ICU plural so count==1 stays grammatical ('1-day streak').",
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "tierCounterSiyumimEarned": "{count, plural, =1{{count} {siyumimTerm} earned} other{{count} {siyumimTerm} earned}}",
   "@tierCounterSiyumimEarned": {
     "description": "Achievement-tier counter — total siyumim earned. {siyumimTerm} is the toggle-aware domain term (Siyumim / סיומים) and is already a plural noun, so the noun word is unchanged across counts; ICU plural is kept for parity with the Hebrew dual.",
     "placeholders": {
-      "count": { "type": "int" },
-      "siyumimTerm": { "type": "String" }
+      "count": {
+        "type": "int"
+      },
+      "siyumimTerm": {
+        "type": "String"
+      }
     }
   },
   "tierCounterLifetimeItems": "{count, plural, =1{1 item in lifetime} other{{count} items in lifetime}}",
   "@tierCounterLifetimeItems": {
     "description": "Lifetime-tier counter — total distinct items the user has ever marked learned (across live + bulkInTrack + lifetimeOnly). ICU plural so count==1 reads '1 item in lifetime'.",
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "tierCounterPoints": "{count, plural, =1{{count} pt} other{{count} pts}}",
   "@tierCounterPoints": {
     "description": "Child-mode points counter — appears as the fourth counter in the header row when child mode is active. ICU plural so count==1 reads '1 pt'.",
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
-
   "tierTileLabelStreak": "Streak",
   "@tierTileLabelStreak": {
     "description": "Tile-row label (short noun) under the big streak count. The big number above already shows the count, so the label is just the noun — kept short so it fits the tile width without truncation."
@@ -2329,7 +2637,9 @@
   "@tierTileLabelSiyumim": {
     "description": "Tile-row label (short noun) under the big siyumim count. Renders the locale-aware siyumim term (Latin or Hebrew script per the Hebrew Terms toggle).",
     "placeholders": {
-      "siyumimTerm": { "type": "String" }
+      "siyumimTerm": {
+        "type": "String"
+      }
     }
   },
   "tierTileLabelLifetime": "Lifetime",
@@ -2340,7 +2650,6 @@
   "@tierTileLabelPoints": {
     "description": "Tile-row label (short noun) under the big points count. Child-mode only."
   },
-
   "limud": "Limud",
   "@limud": {
     "description": "Canonical vocabulary: initial study (stage 1) of one item. Lean-hard transliteration in English-default; Hebrew script when the Hebrew Terms toggle is ON."
@@ -2396,7 +2705,9 @@
   "paceAheadByDays": "Ahead by {count} days",
   "@paceAheadByDays": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "paceOnTrack": "On pace",
@@ -2404,24 +2715,29 @@
   "@paceBehindByDays": {
     "description": "IL-3 fix: ICU plural so 1 reads 'Behind by 1 day' not 'Behind by 1 days'.",
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "itemsLearnedCount": "{count, plural, one{1 item learned} other{{count} items learned}}",
   "@itemsLearnedCount": {
     "description": "IL-3 fix: ICU plural so 1 reads '1 item learned' not '1 items learned'. NEW sense: distinct sefariaRefs ever touched (lifetime tier). Distinct from the legacy `itemsLearnedTitle` screen-title key.",
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "totalChazaros": "{count, plural, one{1 total chazara} other{{count} total Chazaros}}",
   "@totalChazaros": {
     "description": "IL-3 fix: ICU plural so 1 reads '1 total chazara' not '1 total chazaros'. Lifetime-tier total review count.",
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
-
   "siyumHaShas": "Siyum HaShas",
   "@siyumHaShas": {
     "description": "Top-level curriculum-complete celebration — Talmud Bavli."
@@ -2458,7 +2774,6 @@
   "@siyumMussar": {
     "description": "Top-level curriculum-complete celebration — Mussar curriculum."
   },
-
   "siyumSeder": "Siyum Seder",
   "@siyumSeder": {
     "description": "Mid-level aggregate siyum — completion of a whole seder (e.g. seder of mishnah/talmud)."
@@ -2467,36 +2782,42 @@
   "@siyumChelek": {
     "description": "Mid-level aggregate siyum — completion of a chelek (e.g. Shulchan Aruch chelek)."
   },
-
   "siyumMasechta": "Siyum Masechta {name}",
   "@siyumMasechta": {
     "description": "Unit-level siyum — completion of one masechta (tractate). `{name}` is the masechta name (e.g. Berachos).",
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "siyumSefer": "Siyum Sefer {name}",
   "@siyumSefer": {
     "description": "Unit-level siyum — completion of one sefer. `{name}` is the sefer name (e.g. Bereishis).",
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "siyumSiman": "Siyum Siman {name}",
   "@siyumSiman": {
     "description": "Unit-level siyum — completion of one siman (numbered section, e.g. Shulchan Aruch).",
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "siyumHilchos": "Siyum Hilchos {name}",
   "@siyumHilchos": {
     "description": "Unit-level siyum — completion of one section of Hilchos (e.g. Hilchos Shabbos).",
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
-
   "siyumGranularityTitle": "Celebrate a siyum at",
   "@siyumGranularityTitle": {
     "description": "Section title for the per-curriculum siyum-granularity radio selector on the Curriculum Settings screen. Followed by the tier options (e.g. Masechta / Seder / Whole Bavli)."
@@ -2509,29 +2830,36 @@
   "@siyumGranularityWholeCurriculum": {
     "description": "Coarsest siyum-granularity option — celebrate only the whole-curriculum siyum. `{curriculum}` is the localized curriculum name (e.g. Chumash, Talmud Bavli).",
     "placeholders": {
-      "curriculum": { "type": "String" }
+      "curriculum": {
+        "type": "String"
+      }
     }
   },
-
   "siyumimLevelCurriculum": "{count, plural, one{1 curriculum-level siyum} other{{count} curriculum-level siyumim}}",
   "@siyumimLevelCurriculum": {
     "description": "IL-3 fix: ICU plural so 1 reads '1 curriculum-level siyum' not '1 curriculum-level siyumim'. Top-counter row on the Siyumim & Milestones screen.",
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "siyumimLevelAggregate": "{count, plural, one{1 aggregate-level siyum} other{{count} aggregate-level siyumim}}",
   "@siyumimLevelAggregate": {
     "description": "IL-3 fix: ICU plural so 1 reads '1 aggregate-level siyum' not '1 aggregate-level siyumim'. Top-counter row on the Siyumim & Milestones screen.",
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "siyumimLevelUnit": "{count, plural, one{1 unit-level siyum} other{{count} unit-level siyumim}}",
   "@siyumimLevelUnit": {
     "description": "IL-3 fix: ICU plural so 1 reads '1 unit-level siyum' not '1 unit-level siyumim'. Top-counter row on the Siyumim & Milestones screen.",
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "siyumimEmptyState": "No siyumim yet — keep learning!",
@@ -2542,8 +2870,12 @@
   "@siyumimAggregateSubtitle": {
     "description": "Subtitle on an aggregate-level milestone row (Siyum Seder / Siyum Chelek) when every contained unit is complete. `{count}` is the number of contained units; `{date}` is a locale-formatted achievement date — pre-formatted via DateFormat.yMMMd(locale) by the caller.",
     "placeholders": {
-      "count": { "type": "int" },
-      "date": { "type": "String" }
+      "count": {
+        "type": "int"
+      },
+      "date": {
+        "type": "String"
+      }
     }
   },
   "siyumimPreviouslyLearnedDate": "Previously learned",
@@ -2554,32 +2886,32 @@
   "@paceLiveLearningOnlyCaption": {
     "description": "Caption shown under the PaceIndicator on the Curriculum Progress screen — disambiguates pace (engagement-tier track learning) from the lifetime tier so users don't conflate the two."
   },
-
   "bulkMarkWizardSubtitle": "These count toward {siyumimTerm} and lifetime knowledge — but not toward your streak or points.",
   "@bulkMarkWizardSubtitle": {
     "description": "Subtitle/explainer for the Bulk Mark wizard — clarifies tier credit. {siyumimTerm} is the toggle-aware domain term (Siyumim / סיומים) so the copy respects the Hebrew Terms preference.",
     "placeholders": {
-      "siyumimTerm": { "type": "String" }
+      "siyumimTerm": {
+        "type": "String"
+      }
     }
   },
   "bulkMarkConfirmationToast": "{count} items marked as previously learned. They'll appear in Lifetime Knowledge and may unlock siyumim.",
   "@bulkMarkConfirmationToast": {
     "description": "Confirmation toast after the bulk-mark save completes — used by Wave 5 Task #17.",
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
-
   "lifetimeMarkingSubtitle": "Items you've learned in your life, outside the app's tracks. Counted toward Lifetime Knowledge — not toward siyumim, streak, or points.",
   "@lifetimeMarkingSubtitle": {
     "description": "Subtitle for the Lifetime Marking screen (Wave 5 Task #18) — clarifies the lifetimeOnly source so users understand the tier credit."
   },
-
   "recentActivityLiveOnlyDisclaimer": "Counts track learning (live + bulk-mark). Lifetime-only imports appear under Lifetime Knowledge.",
   "@recentActivityLiveOnlyDisclaimer": {
     "description": "Subtitle shown on Recent Activity charts. Track learning = live + bulk-mark in-track (the achievement tier). Lifetime-only imports are the only completions excluded here."
   },
-
   "lifetimeKnowledgeLoading": "Loading lifetime knowledge…",
   "@lifetimeKnowledgeLoading": {
     "description": "Loading indicator message on the Lifetime Knowledge screen body."
@@ -2620,7 +2952,9 @@
   "@provenanceLiveChazaros": {
     "description": "Per-leaf provenance label for a live-completed leaf with its event count. {count} is the chazaros count (limud + chazaros).",
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "provenanceBulkMarked": "Bulk-marked",
@@ -2672,7 +3006,9 @@
   "@trackInfoDaysCount": {
     "description": "Pluralized day count for the TrackInfoCard Elapsed/Remaining rows (avoids '1 days').",
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "allTimeActivityTitle": "All-time activity",
@@ -2687,21 +3023,27 @@
   "@allTimeTermDone": {
     "description": "Stat label in the All Time summary card. {term} is a toggle-aware domain term (e.g. Limud/לימוד or Chazaros/חזרות).",
     "placeholders": {
-      "term": { "type": "String" }
+      "term": {
+        "type": "String"
+      }
     }
   },
   "allTimeTermDoneHebrew": "{term} שנלמד",
   "@allTimeTermDoneHebrew": {
     "description": "Hebrew-script variant of allTimeTermDone, used when Hebrew domain terms are active so the term and its suffix stay script-consistent (avoids 'לימוד done'). {term} is a Hebrew domain term.",
     "placeholders": {
-      "term": { "type": "String" }
+      "term": {
+        "type": "String"
+      }
     }
   },
   "recentActivityActiveDaysCount": "{count, plural, =1{1 Active day} other{{count} Active days}}",
   "@recentActivityActiveDaysCount": {
     "description": "Active-days stat phrase in the All Time summary card (Recent Activity screen). ICU plural so count==1 is singular (\"1 Active day\").",
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "recentActivityEmptyState": "No learning activity in this range yet.",
@@ -2713,26 +3055,41 @@
   "redeemScreenNoRewards": "No prizes configured yet.\nAsk a parent to set some up!",
   "redeemScreenCostLabel": "{points} Points",
   "@redeemScreenCostLabel": {
-    "placeholders": { "points": { "type": "int" } }
+    "placeholders": {
+      "points": {
+        "type": "int"
+      }
+    }
   },
   "redeemScreenAffordableLabel": "Redeem",
   "redeemScreenCannotAfford": "Not enough points",
   "redeemScreenConfirmTitle": "Redeem \"{title}\"?",
   "@redeemScreenConfirmTitle": {
-    "placeholders": { "title": { "type": "String" } }
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
   },
   "redeemScreenConfirmBody": "This will spend {points} points from your balance.",
   "@redeemScreenConfirmBody": {
-    "placeholders": { "points": { "type": "int" } }
+    "placeholders": {
+      "points": {
+        "type": "int"
+      }
+    }
   },
   "redeemScreenConfirmButton": "Spend & Redeem",
   "redeemScreenRequestedSnackbar": "\"{title}\" requested! Ask a parent to approve it.",
   "@redeemScreenRequestedSnackbar": {
-    "placeholders": { "title": { "type": "String" } }
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
   },
   "redeemScreenInsufficientSnackbar": "Not enough points to redeem this prize.",
   "redeemScreenTutorUnavailable": "Not available (tutor mode)",
-
   "pendingRedemptionsTitle": "Pending Prizes",
   "pendingRedemptionsEmptyTitle": "No prize requests yet",
   "@pendingRedemptionsEmptyTitle": {
@@ -2742,17 +3099,24 @@
   "pendingRedemptionsCountSubtitle": "{count, plural, =1{1 prize request waiting} other{{count} prize requests waiting}}",
   "@pendingRedemptionsCountSubtitle": {
     "description": "Subtitle on the Pending Prizes settings row showing how many redemption requests are awaiting the parent. Reactive — updates live as requests arrive/clear. Shows pendingRedemptionsEmpty when count is 0.",
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "pendingRedemptionsCost": "{points} points",
   "@pendingRedemptionsCost": {
-    "placeholders": { "points": { "type": "int" } }
+    "placeholders": {
+      "points": {
+        "type": "int"
+      }
+    }
   },
   "pendingRedemptionsApprove": "Fulfil",
   "pendingRedemptionsDecline": "Decline",
   "pendingRedemptionsFulfilledSnackbar": "Prize marked as fulfilled!",
   "pendingRedemptionsDeclinedSnackbar": "Prize request declined. Points refunded.",
-
   "parentPointsAdjustTitle": "Adjust Points",
   "parentPointsAdjustSubtitle": "Add or deduct points from your child’s balance.",
   "parentPointsAdjustAddLabel": "Add points",
@@ -2763,9 +3127,12 @@
   "parentPointsAdjustAppliedSnackbar": "Balance updated.",
   "parentPointsAdjustCurrentBalance": "Current balance: {count} pts",
   "@parentPointsAdjustCurrentBalance": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
-
   "profileTypeChild": "Child",
   "profileTypeAdult": "Adult",
   "childMode": "Child mode",
@@ -2774,19 +3141,15 @@
   "statusPending": "Pending",
   "actionTryAgain": "Try again",
   "actionGoToDashboard": "Go to dashboard",
-
   "emptyLoginTutorEntry": "I'm a tutor",
   "switchAccount": "Switch account",
   "emptyLoginTutorComingSoon": "Tutor access coming soon. Ask the parent to share an invite link with you.",
-
   "tutorWelcomeBannerTitle": "Welcome, tutor!",
   "tutorWelcomeBannerBody": "Ask the parent to share an invite link with you, then tap below to accept it.",
-
   "switcherSheetProfiles": "Profiles",
   "switcherSheetAccounts": "Accounts",
   "switcherSheetAddAccount": "Add account",
   "addAnotherAccountSubtitle": "Sign in to or create another account on this device",
-
   "acceptInviteAppBarTitle": "Accept Tutor Invite",
   "acceptInviteAccepting": "Accepting invite…",
   "acceptInviteHeading": "Accept tutor invite",
@@ -2794,8 +3157,12 @@
   "acceptInviteBodyFromParentForChild": "{parentLabel} has invited you to tutor {childLabel}. By accepting, you will have access to view and manage their learning profile.",
   "@acceptInviteBodyFromParentForChild": {
     "placeholders": {
-      "parentLabel": {"type": "String"},
-      "childLabel": {"type": "String"}
+      "parentLabel": {
+        "type": "String"
+      },
+      "childLabel": {
+        "type": "String"
+      }
     }
   },
   "acceptInvitePermissionViewData": "View all learning data and progress",
@@ -2810,7 +3177,6 @@
   "acceptInviteGenericError": "Unable to accept invite. Please try again.",
   "acceptInvitePreconditionError": "This invite can no longer be accepted. It may have expired or already been used.",
   "unexpectedError": "An unexpected error occurred.",
-
   "declineInviteAppBarTitle": "Decline Invite",
   "declineInviteConfirmHeading": "Decline tutor invite?",
   "declineInviteConfirmBody": "You are about to decline this tutor invite. The parent will be notified that you declined. You will not have access to this child's learning profile.",
@@ -2821,7 +3187,6 @@
   "declineInviteErrorHeading": "Could not decline invite",
   "declineInviteGenericError": "Unable to decline invite. Please try again.",
   "declineInvitePreconditionError": "This invite can no longer be declined. It may have expired or already been used.",
-
   "inviteTutorAppBarTitle": "Invite a Tutor",
   "inviteTutorHeading": "Invite a Tutor",
   "inviteTutorBody": "Enter the tutor's email address. They will receive an invite link to accept access to this child's learning profile.",
@@ -2833,24 +3198,29 @@
   "inviteTutorSentSnackbar": "Invite sent to {email}!",
   "@inviteTutorSentSnackbar": {
     "placeholders": {
-      "email": { "type": "String" }
+      "email": {
+        "type": "String"
+      }
     }
   },
   "inviteTutorErrorLocalOnly": "Tutoring requires a cloud account — upgrade to invite a tutor.",
   "inviteTutorErrorUnauthenticated": "Couldn't send the invitation. Please sign in and try again.",
   "inviteTutorErrorGeneric": "Couldn't send the invitation. Please try again.",
-
   "manageGrantsAppBarTitle": "My Tutoring Grants",
   "manageGrantsActiveSection": "Active ({count})",
   "@manageGrantsActiveSection": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "manageGrantsPendingSection": "Pending invites ({count})",
   "@manageGrantsPendingSection": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "manageGrantsEmptyHeading": "No tutoring relationships",
@@ -2859,14 +3229,17 @@
   "manageGrantsResignBody": "You will immediately lose access to this child's profile. The parent will be notified.\n\nChild: {child}\nParent: {parent}",
   "@manageGrantsResignBody": {
     "placeholders": {
-      "child": { "type": "String" },
-      "parent": { "type": "String" }
+      "child": {
+        "type": "String"
+      },
+      "parent": {
+        "type": "String"
+      }
     }
   },
   "manageGrantsResign": "Resign",
   "manageGrantsResignErrorGeneric": "Could not resign. Please try again.",
   "tutorFallbackName": "Your tutor",
-
   "manageTutorsEmptyHeading": "No children profiles yet",
   "manageTutorsEmptyBody": "Add a child profile to start inviting tutors.",
   "manageTutorsLoadErrorGeneric": "Could not load tutors. Please try again.",
@@ -2874,13 +3247,17 @@
   "manageTutorsActiveSection": "Active ({count})",
   "@manageTutorsActiveSection": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "manageTutorsPendingSection": "Pending ({count})",
   "@manageTutorsPendingSection": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "manageTutorsInviteButton": "Invite a tutor",
@@ -2888,7 +3265,9 @@
   "manageTutorsRevokeBody": "{email} will immediately lose access to this child's profile.",
   "@manageTutorsRevokeBody": {
     "placeholders": {
-      "email": { "type": "String" }
+      "email": {
+        "type": "String"
+      }
     }
   },
   "manageTutorsRevoke": "Revoke",
@@ -2897,14 +3276,15 @@
   "manageTutorsRescindBody": "The pending invite to {email} will be cancelled.",
   "@manageTutorsRescindBody": {
     "placeholders": {
-      "email": { "type": "String" }
+      "email": {
+        "type": "String"
+      }
     }
   },
   "manageTutorsRescind": "Rescind",
   "manageTutorsRescindErrorGeneric": "Could not rescind. Please try again.",
   "manageTutorsViewAuditLog": "View audit log",
   "tutorFallbackParent": "Parent",
-
   "auditLogTitle": "Audit Log",
   "auditLogClearFilters": "Clear filters",
   "auditLogFilterFromDate": "Filter from date",
@@ -2935,7 +3315,6 @@
   "auditLogActionStudyDay": "Study day",
   "auditLogBefore": "before: ",
   "auditLogAfter": "after: ",
-
   "tutorPinAppBarTitle": "Tutor PIN",
   "tutorPinEntryHeading": "Enter your Tutor PIN",
   "tutorPinEntryBody": "Enter your 4-digit Tutor PIN to access this profile.",
@@ -2945,23 +3324,28 @@
   "tutorPinLockedOut": "Too many attempts. Locked for {minutes} minute(s).",
   "@tutorPinLockedOut": {
     "placeholders": {
-      "minutes": { "type": "int" }
+      "minutes": {
+        "type": "int"
+      }
     }
   },
   "parentPinLockoutTitle": "Too many failed attempts",
   "parentPinLockoutBody": "Try again in {minutes} minute(s)",
   "@parentPinLockoutBody": {
     "placeholders": {
-      "minutes": { "type": "int" }
+      "minutes": {
+        "type": "int"
+      }
     }
   },
   "tutorPinErrorPrefix": "Error: {error}",
   "@tutorPinErrorPrefix": {
     "placeholders": {
-      "error": { "type": "String" }
+      "error": {
+        "type": "String"
+      }
     }
   },
-
   "tutorPinSetupAppBarTitle": "Set Tutor PIN",
   "tutorPinSetupConfirmHeading": "Confirm your Tutor PIN",
   "tutorPinSetupCreateHeading": "Create your Tutor PIN",
@@ -2972,7 +3356,6 @@
   "tutorPinSetupMismatch": "PINs do not match. Please try again.",
   "tutorPinSetupSaveError": "Unable to save PIN. Please try again.",
   "tutorPinSetupLater": "Set up later",
-
   "tutorPinResetAppBarTitle": "Reset Tutor PIN",
   "tutorPinResetHeading": "Reset your Tutor PIN",
   "tutorPinResetSendingTo": "We will send a reset link to:",
@@ -2985,11 +3368,12 @@
   "tutorPinResetCheckEmailBody": "We sent a reset link to {email}. Follow the link, then return here to set a new PIN.",
   "@tutorPinResetCheckEmailBody": {
     "placeholders": {
-      "email": { "type": "String" }
+      "email": {
+        "type": "String"
+      }
     }
   },
   "tutorPinResetSetNew": "Set new PIN",
-
   "settingsAppPermissions": "App Permissions",
   "settingsAppPermissionsSubtitle": "Notifications and location access",
   "settingsSendDiagnosticLogs": "Send Diagnostic Logs",
@@ -3002,20 +3386,22 @@
   "settingsNikudSubtitle": "Show or hide Hebrew vowel marks when learning.",
   "settingsNikudWithout": "Without nikud",
   "settingsNikudWith": "With nikud",
-
   "deviceNotificationsTitle": "Device notifications",
   "deviceNotificationsChecking": "Checking permission…",
   "deviceNotificationsAllowed": "Notifications allowed on this device",
   "deviceNotificationsBlocked": "Notifications blocked — tap to open Settings",
   "deviceNotificationsDisableHint": "To disable notifications, go to Settings > Apps > Learning Tracker.",
   "deviceNotificationsBlockedHint": "Notifications blocked. Enable them in Settings > Apps > Learning Tracker > Notifications.",
-
   "notificationReminderTitle": "Learning Reminder",
   "notificationReminderBody": "You have {taskCount, plural, =1{1 task} other{{taskCount} tasks}} across {curriculumCount, plural, =1{1 curriculum} other{{curriculumCount} curricula}} today",
   "@notificationReminderBody": {
     "placeholders": {
-      "taskCount": { "type": "int" },
-      "curriculumCount": { "type": "int" }
+      "taskCount": {
+        "type": "int"
+      },
+      "curriculumCount": {
+        "type": "int"
+      }
     }
   },
   "notificationReminderGenericBody": "Time to learn! Open the app to see your tasks.",
@@ -3023,22 +3409,21 @@
   "notificationStreakBody": "Your {currentStreak}-day streak is at risk!",
   "@notificationStreakBody": {
     "placeholders": {
-      "currentStreak": { "type": "int" }
+      "currentStreak": {
+        "type": "int"
+      }
     }
   },
-
   "onboardingNamePrompt": "What should we call you?",
   "onboardingLearningExperience": "Learning Experience",
   "onboardingCalendarLabel": "Calendar",
   "onboardingSettingsChangeableLater": "You can change these settings anytime later.",
-
   "onboardingIntentHeading": "What brings you here?",
   "onboardingIntentSubtitle": "Choose how you want to get started.",
   "onboardingIntentTrackTitle": "Track my own learning",
   "onboardingIntentTrackSubtitle": "Set up a curriculum, goals, and daily schedule.",
   "onboardingIntentSkipTitle": "Skip for now",
   "onboardingIntentSkipSubtitle": "Go to the app and decide later. You can set up a track, or accept an invite to tutor a child, any time.",
-
   "permissionPromptTitleOnboarding": "Almost Done!",
   "@permissionPromptTitleOnboarding": {
     "description": "AppBar title for PermissionPromptScreen when launched from the onboarding flow."
@@ -3047,14 +3432,18 @@
   "@permissionPromptBodyOnboarding": {
     "description": "Body text on PermissionPromptScreen in onboarding mode. {shabbos} is the nusach-aware Shabbos/Shabbat/שבת term.",
     "placeholders": {
-      "shabbos": { "type": "String" }
+      "shabbos": {
+        "type": "String"
+      }
     }
   },
   "permissionPromptBodySettings": "Manage optional permissions for reminders and {shabbos}-time calculations.",
   "@permissionPromptBodySettings": {
     "description": "Body text on PermissionPromptScreen when opened from Settings. {shabbos} is the nusach-aware Shabbos/Shabbat/שבת term.",
     "placeholders": {
-      "shabbos": { "type": "String" }
+      "shabbos": {
+        "type": "String"
+      }
     }
   },
   "permissionPromptNotifSubtitle": "Daily learning reminders and streak-protection alerts.",
@@ -3069,8 +3458,12 @@
   "@permissionPromptLocationSubtitle": {
     "description": "Subtitle on the Location permission card. {shabbos} is the nusach-aware Shabbos term; {havdalah} is the nusach-aware Havdalah term.",
     "placeholders": {
-      "shabbos": { "type": "String" },
-      "havdalah": { "type": "String" }
+      "shabbos": {
+        "type": "String"
+      },
+      "havdalah": {
+        "type": "String"
+      }
     }
   },
   "permissionPromptCtaDone": "Done",
@@ -3085,14 +3478,18 @@
   "@selectionCount": {
     "description": "IL-9: localized count label shown below HierarchySelectionPanel when items are selected.",
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "chazaraDayUnitLabel": "{count, plural, =1{Day} other{Days}}",
   "@chazaraDayUnitLabel": {
     "description": "R1-(3): singular/plural unit word ('Day'/'Days') shown under the numeric delay in the custom-cycle review chip. Uppercased at render time. count==1 must be singular ('1 DAY').",
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "chazaraCustomDayDecrease": "Decrease review day count",
@@ -3107,7 +3504,9 @@
   "@scopeChooseLevelPrompt": {
     "description": "R1-(6): top-level scope breadcrumb prompt. Shown after the curriculum chip; must NOT repeat the curriculum name. levelLabel is the localized level word (e.g. Sefer, Seder).",
     "placeholders": {
-      "levelLabel": { "type": "String" }
+      "levelLabel": {
+        "type": "String"
+      }
     }
   },
   "schedulerStudyDaysScreenTitle": "{curriculum} • Study Days",
@@ -3211,12 +3610,9 @@
       }
     }
   },
-
   "goalClearDeadlineTooltip": "Clear deadline date",
-
   "showPassword": "Show password",
   "hidePassword": "Hide password",
-
   "programDescriptionOraysa": "Structured learning with daily study, next-day review, weekly review, and rolling back-20 review cycle.",
   "programDescriptionDirshuKinyanTorah": "Daf Yomi pace with 3 chazarah review cycles and monthly tests.",
   "programDescriptionDirshuAmudHaYomi": "Half-daf daily pace with review cycles and monthly tests.",
@@ -3238,52 +3634,61 @@
   "programDescriptionSeferHaMitzvot": "Daily study of the Rambam's Sefer HaMitzvot.",
   "programDescriptionShemiratHaLashon": "Daily study of the Chofetz Chaim's Shemirat HaLashon (companion to Chofetz Chaim Yomi).",
   "programDescriptionPirkeiAvotSummer": "One perek of Pirkei Avot each Shabbos between Pesach and Rosh Hashana.",
-
   "onboardingSetUpTrackTitle": "Set Up a Track",
   "onboardingTrackReadyTitle": "Track Ready!",
   "onboardingAllSetTitle": "All Set!",
   "onboardingTrackReadyMessage": "Your track \"{trackLabel}\" is ready!",
   "@onboardingTrackReadyMessage": {
     "placeholders": {
-      "trackLabel": { "type": "String" }
+      "trackLabel": {
+        "type": "String"
+      }
     }
   },
   "onboardingTrackCountSetUp": "{count, plural, one{You have 1 track set up.} other{You have {count} tracks set up.}}",
   "@onboardingTrackCountSetUp": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "onboardingHandoffFallbackName": "Your child",
   "onboardingHandoffAllSetUp": "{name}'s learning is all set up",
   "@onboardingHandoffAllSetUp": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "onboardingHandoffDeviceHint": "Hand the device to {name} to start learning",
   "@onboardingHandoffDeviceHint": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "onboardingHandoffRewardsHint": "You can set up rewards later in Parent Mode",
   "onboardingParentPinFallbackChildName": "your child",
   "onboardingPinReenterSubtitle": "Re-enter the PIN to confirm",
-
   "bulkMarkCannotUnmarkAllError": "You must leave at least some content unmarked to continue learning.",
   "bulkMarkSearchHint": "Search content...",
   "bulkMarkCompletionRecordsCount": "{count, plural, one{1 completion record will be created} other{{count} completion records will be created}}",
   "@bulkMarkCompletionRecordsCount": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
-
   "wizardHowDoesChildReview": "How does {childName} review?",
   "@wizardHowDoesChildReview": {
     "placeholders": {
-      "childName": { "type": "String" }
+      "childName": {
+        "type": "String"
+      }
     }
   },
   "wizardHowDoYouReview": "How do you review?",
@@ -3291,7 +3696,9 @@
   "wizardProgramsAvailableCount": "{count, plural, one{1 program available} other{{count} programs available}}",
   "@wizardProgramsAvailableCount": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "wizardCustomScheduleSubtitle": "Build your own review cycle",
@@ -3300,7 +3707,9 @@
   "wizardWhatProgramDoesChildFollow": "What program does {childName} follow?",
   "@wizardWhatProgramDoesChildFollow": {
     "placeholders": {
-      "childName": { "type": "String" }
+      "childName": {
+        "type": "String"
+      }
     }
   },
   "wizardSelectAProgram": "Select a program",
@@ -3309,7 +3718,9 @@
   "wizardChazarahRoundsCount": "{count, plural, one{1 round} other{{count} rounds}}",
   "@wizardChazarahRoundsCount": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "wizardSetDelayForEachRound": "Set delay for each round",
@@ -3319,19 +3730,29 @@
   "wizardEveryDaysLabel": "Every {days}",
   "@wizardEveryDaysLabel": {
     "placeholders": {
-      "days": { "type": "String" }
+      "days": {
+        "type": "String"
+      }
     }
   },
   "wizardRoundDelayAfterLearning": "{days, plural, one{1 day after learning} other{{days} days after learning}}",
   "@wizardRoundDelayAfterLearning": {
     "placeholders": {
-      "days": { "type": "int" }
+      "days": {
+        "type": "int"
+      }
     }
   },
   "wizardRoundDelayAfter": "{days, plural, one{1 day after} other{{days} days after}}",
   "@wizardRoundDelayAfter": {
     "placeholders": {
-      "days": { "type": "int" }
+      "days": {
+        "type": "int"
+      }
     }
+  },
+  "backupSyncStatusUnavailable": "Cloud backup is active. Detailed sync status is unavailable in this version.",
+  "@backupSyncStatusUnavailable": {
+    "description": "Shown on the Backup & Sync card for a cloud-born account when the detailed sync status cannot be determined. Must never imply that data is or is not synced."
   }
 }

@@ -2445,6 +2445,63 @@ not re-learn the hard way:**
 
 ---
 
+### 2026-08-11 — P3-30: "fail loudly" in a widget means VISIBLY, not fatally — the backup card refuses to lie without crashing
+
+`dart analyze --fatal-infos` EXIT 0. `flutter gen-l10n` regenerated both locales.
+
+#### 1. The worker got the hard part right
+
+`BackupSyncSection` rendered from the Drift engine's `SyncStatus` union and
+`syncStatusProvider`, both archived at P3-5. The migrating worker refused to
+substitute a plausible status, and said why: *"a backup surface that falsely
+claims 'synced' is actively dangerous."* That judgement is exactly right and is
+the whole point of the no-fabrication rule — of every silent-zero this phase has
+caught, a false "your data is backed up" would have been the worst.
+
+It also correctly removed the cold-launch `pullOnLaunch` trigger: Firestore
+persistence is transparent and needs no client-side pull to catch up.
+
+#### 2. ⚠️ But it expressed the refusal as `throw UnsupportedError` inside `build()`
+
+Every cloud-born account would have hit a red error screen on opening Parent
+Settings — and taken the surrounding settings surface down with it.
+
+**This sharpens owner ruling D-E.** "Fail loudly, never silently" is right, but
+in a widget *loudly means VISIBLY, not FATALLY*. A crash is not a louder error
+message; it is a worse regression than the bug it avoids. The rule as now
+applied:
+
+> Refusing to fabricate a value and refusing to render are different decisions.
+> A UI that cannot determine a fact should SAY it cannot determine that fact.
+> Throwing from `build()` converts a display gap into an outage.
+
+The card now states three things, each verifiably true and none invented:
+cloud backup **is** active (a cloud-born account writes to Firestore, which
+queues offline and replays on reconnect); the detailed status is unknown; and
+**no "last synced" time is claimed**, because none is known.
+
+#### 3. A localised string, not an English literal
+
+The existing `backupSyncCardBody` could not be reused — it reads "currently
+LOCAL ONLY. Upgrade to sync across all devices", which is actively WRONG for an
+account already on cloud. A new key `backupSyncStatusUnavailable` was added to
+`app_en.arb` **and `app_he.arb`**: this app ships Hebrew, so an English literal
+would be a real defect in the Hebrew UI rather than a cosmetic one.
+
+#### 4. The real fix is available and is now specified
+
+A genuine Firestore-backed status does not need the Drift engine back.
+`SnapshotMetadata.hasPendingWrites` distinguishes unacked local writes from
+acked ones, and `isFromCache` distinguishes offline — that is precisely
+"syncing / synced / offline". It needs a provider in the data ring, which a
+`presentation/widgets/` file may not reach directly (AD-23/AD-28). Recorded as a
+`TODO(AD-30)` at the call site with that mechanism named, so the next agent does
+not have to rediscover it.
+
+#### 5. Failure accounting
+
+`kbxqz22xd` (track_detail_screen) hit the 30-minute idle timeout — the **ninth**
+this phase, still the dominant failure mode. Target unchanged at 25 errors.
 ### 2026-08-11 — P3-29: the progress adapter grows the five seams `lifetime_knowledge_providers` needs — and a worker applied the achievement/configuration rule unprompted
 
 `dart analyze --fatal-infos` EXIT 0. `check_dependency_direction` EXIT 0.

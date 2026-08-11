@@ -5655,4 +5655,8 @@ class AppLocalizationsEn extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get backupSyncStatusUnavailable =>
+      'Cloud backup is active. Detailed sync status is unavailable in this version.';
 }

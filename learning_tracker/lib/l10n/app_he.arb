@@ -15,7 +15,9 @@
   "remaining": "{count} נותרו",
   "@remaining": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "allCaughtUp": "הכל מעודכן!",
@@ -30,13 +32,17 @@
   "activeTrackPaceAhead": "לפני {days} ימים",
   "@activeTrackPaceAhead": {
     "placeholders": {
-      "days": { "type": "int" }
+      "days": {
+        "type": "int"
+      }
     }
   },
   "activeTrackPaceBehind": "אחרי {days} ימים",
   "@activeTrackPaceBehind": {
     "placeholders": {
-      "days": { "type": "int" }
+      "days": {
+        "type": "int"
+      }
     }
   },
   "activeTrackPaceOk": "במסלול",
@@ -58,13 +64,17 @@
   "moreTasks": "עוד {count} משימות...",
   "@moreTasks": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "streakRecovery": "פספסת יום אחד אבל הרצף של {count} ימים שמור!",
   "@streakRecovery": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "achievements": "הישגים",
@@ -82,26 +92,34 @@
   "dashboardNextRewardWithName": "פרס הבא: {name}",
   "@dashboardNextRewardWithName": {
     "placeholders": {
-      "name": {"type": "String"}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "dashboardPtsToGo": "עוד {count} נק׳!",
   "@dashboardPtsToGo": {
     "placeholders": {
-      "count": {"type": "String"}
+      "count": {
+        "type": "String"
+      }
     }
   },
   "dashboardRedeemPrizes": "מימוש פרסים",
   "dashboardTapToUnlockAtPts": "לחיצה לפתיחה ב־{points} נק׳",
   "@dashboardTapToUnlockAtPts": {
     "placeholders": {
-      "points": {"type": "String"}
+      "points": {
+        "type": "String"
+      }
     }
   },
   "dashboardPointsValue": "{count} נקודות",
   "@dashboardPointsValue": {
     "placeholders": {
-      "count": {"type": "String"}
+      "count": {
+        "type": "String"
+      }
     }
   },
   "dashboardBubbleDone": "בוצע",
@@ -112,8 +130,12 @@
   "achievementsRewardsCount": "{unlocked} / {total} פרסים",
   "@achievementsRewardsCount": {
     "placeholders": {
-      "unlocked": {"type": "int"},
-      "total": {"type": "int"}
+      "unlocked": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
   },
   "achievementsAcrossAllTracks": "בכל המסלולים שלך.",
@@ -121,21 +143,29 @@
   "achievementsRewardsFraction": "{unlocked} / {total}",
   "@achievementsRewardsFraction": {
     "placeholders": {
-      "unlocked": {"type": "int"},
-      "total": {"type": "int"}
+      "unlocked": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
   },
   "achievementsRewardsLabelWord": "פרסים",
   "achievementsMilestonePoints": "{points} נק׳",
   "@achievementsMilestonePoints": {
     "placeholders": {
-      "points": {"type": "String"}
+      "points": {
+        "type": "String"
+      }
     }
   },
   "achievementsProgressPercent": "{percent}%",
   "@achievementsProgressPercent": {
     "placeholders": {
-      "percent": {"type": "int"}
+      "percent": {
+        "type": "int"
+      }
     }
   },
   "achievementsTrackSection": "בחירת מסלול",
@@ -147,13 +177,17 @@
   "achievementsLockedBlurHint": "הגיעו ל־{points} נקודות כדי לפתוח",
   "@achievementsLockedBlurHint": {
     "placeholders": {
-      "points": {"type": "String"}
+      "points": {
+        "type": "String"
+      }
     }
   },
   "achievementsUnlockedAtPoints": "נפתח ב־{points} נקודות",
   "@achievementsUnlockedAtPoints": {
     "placeholders": {
-      "points": {"type": "String"}
+      "points": {
+        "type": "String"
+      }
     }
   },
   "achievementsUltimateGoal": "היעד האולטימטיבי.",
@@ -164,9 +198,15 @@
   "achievementsUnlockPartyMessage": "כל הכבוד, {name}! פתחת את {milestone} במסלול {track} — המשך ככה!",
   "@achievementsUnlockPartyMessage": {
     "placeholders": {
-      "name": {"type": "String"},
-      "milestone": {"type": "String"},
-      "track": {"type": "String"}
+      "name": {
+        "type": "String"
+      },
+      "milestone": {
+        "type": "String"
+      },
+      "track": {
+        "type": "String"
+      }
     }
   },
   "achievementsUnlockPartyButton": "יאללה! בואו נמשיך",
@@ -179,7 +219,9 @@
   "deleteRewardConfirm": "בטוח שברצונך למחוק את \"{title}\"?",
   "@deleteRewardConfirm": {
     "placeholders": {
-      "title": {"type": "String"}
+      "title": {
+        "type": "String"
+      }
     }
   },
   "cancel": "ביטול",
@@ -213,8 +255,12 @@
   "commonLabelWithValue": "{label}: {value}",
   "@commonLabelWithValue": {
     "placeholders": {
-      "label": {"type": "String"},
-      "value": {"type": "String"}
+      "label": {
+        "type": "String"
+      },
+      "value": {
+        "type": "String"
+      }
     }
   },
   "alreadyHaveAccount": "כבר יש לך חשבון?",
@@ -280,23 +326,35 @@
   "@addTrackChazaraStepTitle": {
     "description": "Title for the optional chazara (review) setup step in the add-track flow. {term} is the localized chazara/review domain term.",
     "placeholders": {
-      "term": { "type": "String" }
+      "term": {
+        "type": "String"
+      }
     }
   },
   "addTrackChazaraStepQuestion": "איך תרצה לבצע {term}?",
   "@addTrackChazaraStepQuestion": {
     "description": "Question header for the chazara (review) setup step in the add-track flow. {term} is the localized chazara/review domain term.",
     "placeholders": {
-      "term": { "type": "String" }
+      "term": {
+        "type": "String"
+      }
     }
   },
   "addTrackGoalDeadlinePaceLine": "בערך {items} {unit} בכל יום לימוד, על פני {studyDays, plural, one{יום לימוד אחד} two{יומיים של לימוד} other{{studyDays} ימי לימוד}} עד תאריך היעד (בערך {totalItems} יחידות בתחום).",
   "@addTrackGoalDeadlinePaceLine": {
     "placeholders": {
-      "items": { "type": "int" },
-      "unit": { "type": "String" },
-      "studyDays": { "type": "int" },
-      "totalItems": { "type": "int" }
+      "items": {
+        "type": "int"
+      },
+      "unit": {
+        "type": "String"
+      },
+      "studyDays": {
+        "type": "int"
+      },
+      "totalItems": {
+        "type": "int"
+      }
     }
   },
   "addTrackGoalDeadlineNoStudyDaysInWindow": "אין יום לימוד בטווח עד תאריך היעד. הוסיפו ימי לימוד או בחרו תאריך מאוחר יותר.",
@@ -308,13 +366,17 @@
   "errorLoadingCurricula": "שגיאה בטעינת תוכניות הלימוד: {error}",
   "@errorLoadingCurricula": {
     "placeholders": {
-      "error": {"type": "String"}
+      "error": {
+        "type": "String"
+      }
     }
   },
   "trackCreated": "המסלול \"{label}\" נוצר",
   "@trackCreated": {
     "placeholders": {
-      "label": {"type": "String"}
+      "label": {
+        "type": "String"
+      }
     }
   },
   "learner": "לומד",
@@ -333,7 +395,9 @@
   "percentComplete": "{percent}% הושלם",
   "@percentComplete": {
     "placeholders": {
-      "percent": {"type": "int"}
+      "percent": {
+        "type": "int"
+      }
     }
   },
   "viewProgress": "הצג התקדמות",
@@ -342,13 +406,17 @@
   "markCompleteCompletedStage": "הושלם ({stageName})",
   "@markCompleteCompletedStage": {
     "placeholders": {
-      "stageName": {"type": "String"}
+      "stageName": {
+        "type": "String"
+      }
     }
   },
   "unableToLoadCompletionContext": "לא ניתן לטעון את נתוני ההשלמה: {error}",
   "@unableToLoadCompletionContext": {
     "placeholders": {
-      "error": {"type": "String"}
+      "error": {
+        "type": "String"
+      }
     }
   },
   "accountOfflineSignInToSync": "עובד במצב לא מקוון עבור חשבון זה. התחבר כדי לחדש את הסנכרון בענן.",
@@ -357,7 +425,9 @@
   "plusNMore": "+{count} נוספים",
   "@plusNMore": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "noTracksYet": "עדיין אין מסלולים",
@@ -365,13 +435,17 @@
   "paceAhead": "{days} ימים מקדימה",
   "@paceAhead": {
     "placeholders": {
-      "days": {"type": "int"}
+      "days": {
+        "type": "int"
+      }
     }
   },
   "paceBehind": "{days} ימים באיחור",
   "@paceBehind": {
     "placeholders": {
-      "days": {"type": "int"}
+      "days": {
+        "type": "int"
+      }
     }
   },
   "paceOnPace": "בקצב",
@@ -392,7 +466,9 @@
   "lifetimeXpTotal": "{points} נקודות XP בסך הכל",
   "@lifetimeXpTotal": {
     "placeholders": {
-      "points": { "type": "String" }
+      "points": {
+        "type": "String"
+      }
     }
   },
   "lifetimeStartAdding": "התחל להוסיף",
@@ -412,14 +488,20 @@
   "lifetimeMarkAsLearnedLine": "נבחרו: {count} • רמה {level}",
   "@lifetimeMarkAsLearnedLine": {
     "placeholders": {
-      "count": { "type": "int" },
-      "level": { "type": "int" }
+      "count": {
+        "type": "int"
+      },
+      "level": {
+        "type": "int"
+      }
     }
   },
   "lifetimeMarkAsLearnedCount": "נבחרו: {count}",
   "@lifetimeMarkAsLearnedCount": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "selectAllInThisList": "בחר הכל ברשימה",
@@ -428,7 +510,9 @@
   "contentLoadError": "לא ניתן לטעון את תוכן התוכנית: {error}",
   "@contentLoadError": {
     "placeholders": {
-      "error": { "type": "String" }
+      "error": {
+        "type": "String"
+      }
     }
   },
   "contentHierarchyBrowseTitle": "עיון בתוכן",
@@ -453,7 +537,9 @@
   "@lifetimeMarkSavedCount": {
     "description": "IL-3 fix: ICU plural to drop the (ות) anti-pattern.",
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "lifetimeMarkSaveError": "שמירת הסימונים נכשלה. נסו שוב.",
@@ -468,15 +554,23 @@
   "lifetimeSectionsSummary": "{learned} / {total} חלקים — {n} תוכניות",
   "@lifetimeSectionsSummary": {
     "placeholders": {
-      "learned": { "type": "String" },
-      "total": { "type": "String" },
-      "n": { "type": "int" }
+      "learned": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      },
+      "n": {
+        "type": "int"
+      }
     }
   },
   "greetingHelloName": "שלום, {name}!",
   "@greetingHelloName": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "noFocusTag": "ללא תג מיקוד",
@@ -502,8 +596,12 @@
   "addTrackStepCounter": "שלב {current} מתוך {total}",
   "@addTrackStepCounter": {
     "placeholders": {
-      "current": { "type": "int" },
-      "total": { "type": "int" }
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
   },
   "curriculumPickerTitle": "בחירת תכנית לימוד",
@@ -522,13 +620,17 @@
   "chazaraProgramNoReviewSubtitle": "{program} אינה כוללת לוח חזרות. הגדירו עכשיו או דלגו.",
   "@chazaraProgramNoReviewSubtitle": {
     "placeholders": {
-      "program": { "type": "String" }
+      "program": {
+        "type": "String"
+      }
     }
   },
   "chazaraSelfPacedSubtitle": "בחרו תבנית מוכנה או בנו לוח {chazara} משלכם.",
   "@chazaraSelfPacedSubtitle": {
     "placeholders": {
-      "chazara": { "type": "String" }
+      "chazara": {
+        "type": "String"
+      }
     }
   },
   "scopeGlossSeedsAgriculture": "זרעים וחקלאות",
@@ -542,7 +644,9 @@
   "scopeLevelFallbackLabel": "רמה {level}",
   "@scopeLevelFallbackLabel": {
     "placeholders": {
-      "level": { "type": "int" }
+      "level": {
+        "type": "int"
+      }
     }
   },
   "startingPositionSectionLabel": "חלק",
@@ -551,14 +655,20 @@
   "learnEntireCurriculumSubtitle": "בחרו את כל {name}",
   "@learnEntireCurriculumSubtitle": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "level1Selection": "{name} ← {levelLabel} בחירה",
   "@level1Selection": {
     "placeholders": {
-      "name": { "type": "String" },
-      "levelLabel": { "type": "String" }
+      "name": {
+        "type": "String"
+      },
+      "levelLabel": {
+        "type": "String"
+      }
     }
   },
   "scopeSelectedBadge": "נבחר",
@@ -566,7 +676,9 @@
   "continueWithSelectionCount": "המשך עם {count} נבחרים",
   "@continueWithSelectionCount": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "sectionLearning": "למידה",
@@ -575,7 +687,9 @@
   "pointsAbbrev": "{count} נק׳",
   "@pointsAbbrev": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "sectionTracks": "מסלולים",
@@ -620,7 +734,9 @@
   "settingsTutoringViewAll": "הצג הכל (עוד {count})",
   "@settingsTutoringViewAll": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "profilePickerSkipToSettings": "מעבר להגדרות",
@@ -631,7 +747,9 @@
   "tutoredChildrenPendingInvitations": "{count, plural, =1{הזמנת הדרכה אחת ממתינה} other{{count} הזמנות הדרכה ממתינות}}",
   "@tutoredChildrenPendingInvitations": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "tutoredChildrenStatusTutoring": "מדריך",
@@ -640,7 +758,9 @@
   "tutorModeIndicatorNamed": "מצב מדריך · {name}",
   "@tutorModeIndicatorNamed": {
     "placeholders": {
-      "name": {"type": "String"}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "tutorModeExit": "יציאה",
@@ -670,7 +790,9 @@
   "profileNameTaken": "כבר קיים פרופיל בשם \"{name}\"",
   "@profileNameTaken": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "maxProfilesReached": "הגעתם למקסימום — 10 פרופילים",
@@ -682,7 +804,9 @@
   "deleteProfileConfirm": "למחוק לצמיתות את \"{name}\" ואת כל נתוני הלמידה הקשורים? לא ניתן לבטל.",
   "@deleteProfileConfirm": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "cannotDeleteOnlyProfile": "לא ניתן למחוק את הפרופיל היחיד",
@@ -732,7 +856,9 @@
   "rewardConfigPointsPreview": "{points, plural, one{נקודה אחת} two{שתי נקודות} other{{points} נקודות}}",
   "@rewardConfigPointsPreview": {
     "placeholders": {
-      "points": { "type": "int" }
+      "points": {
+        "type": "int"
+      }
     }
   },
   "rewardConfigCancel": "ביטול",
@@ -746,14 +872,18 @@
   "rewardConfigRewardCreatedBody": "\"{name}\" נוסף. הילד יכול לראות את הפרס עכשיו — נעול ומטושטש עד שיגיע ליעד הנקודות.",
   "@rewardConfigRewardCreatedBody": {
     "placeholders": {
-      "name": {"type": "String"}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "rewardConfigRewardUpdatedTitle": "הפרס עודכן",
   "rewardConfigRewardUpdatedBody": "השינויים ב־\"{name}\" נשמרו. הילד יכול לראות את העדכון.",
   "@rewardConfigRewardUpdatedBody": {
     "placeholders": {
-      "name": {"type": "String"}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "pointConfigPerTaskTitle": "נקודות לכל משימה שהושלמה",
@@ -781,7 +911,9 @@
   "setParentPinDialogSubtitle": "הגדירו קוד בן 4 ספרות לשליטה הורית עבור {name}. הקוד נשמר רק במכשיר זה.",
   "@setParentPinDialogSubtitle": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "enterParentPin": "הזינו קוד הורה",
@@ -819,8 +951,12 @@
   "deviceRestoreStep": "שלב {completed} מתוך {total}",
   "@deviceRestoreStep": {
     "placeholders": {
-      "completed": { "type": "int" },
-      "total": { "type": "int" }
+      "completed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
   },
   "deviceRestorePhaseRestoring": "מחזיר את הנתונים שלך...",
@@ -850,7 +986,9 @@
   "journeyTitleNamed": "מסע הלמידה של {name}",
   "@journeyTitleNamed": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "loadingYourJourney": "טוענים את המסע...",
@@ -876,13 +1014,17 @@
   "learnStreakDayStreak": "{count, plural, =1{רצף יום 1} other{רצף {count} ימים}}",
   "@learnStreakDayStreak": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "learnStreakPersonalBest": "שיא אישי: {count}",
   "@learnStreakPersonalBest": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "learnStreakKeepItUp": "כל הכבוד!",
@@ -914,7 +1056,9 @@
   "authSignInFailedError": "הכניסה נכשלה: {error}",
   "@authSignInFailedError": {
     "placeholders": {
-      "error": { "type": "String" }
+      "error": {
+        "type": "String"
+      }
     }
   },
   "authVerifyEmailTitle": "אשרו את האימייל שלכם",
@@ -927,7 +1071,9 @@
   "authMaxDeviceAccounts": "הגעתם למקסימום {count} חשבונות במכשיר. הסירו אחד כדי להוסיף.",
   "@authMaxDeviceAccounts": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "authOfflineUseUpgrade": "במכשיר כבר קיים חשבון אוף־ליין עם אימייל זה. השתמשו ב״שדרג לענן״ בהגדרות.",
@@ -946,7 +1092,9 @@
   "authFoundOnDevice": "נמצא במכשיר הזה ({tier})",
   "@authFoundOnDevice": {
     "placeholders": {
-      "tier": { "type": "String" }
+      "tier": {
+        "type": "String"
+      }
     }
   },
   "authNotOnDeviceCheckCloud": "לא על המכשיר — נבדוק מול הענן",
@@ -1000,7 +1148,9 @@
   "signUpFailed": "ההרשמה נכשלה: {error}",
   "@signUpFailed": {
     "placeholders": {
-      "error": { "type": "String" }
+      "error": {
+        "type": "String"
+      }
     }
   },
   "signUpFallbackBody": "החיבור לאינטרנט נפסק במהלך ההרשמה. האם ברצונך ליצור חשבון לא מקוון במקום זאת?",
@@ -1012,7 +1162,9 @@
   "accountPickerMaxAccountsShort": "הגעתם למקסימום {count} חשבונות",
   "@accountPickerMaxAccountsShort": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "accountPickerPrivacyFooter": "ניהול פרטיות ואבטחה בהגדרות",
@@ -1032,12 +1184,13 @@
   "accountPickerAddAnother": "הוספת חשבון ({remaining} מקומות פנויים)",
   "@accountPickerAddAnother": {
     "placeholders": {
-      "remaining": { "type": "int" }
+      "remaining": {
+        "type": "int"
+      }
     }
   },
   "cannotDeactivateLastCurriculum": "חייב להישאר לפחות קורס לימוד אחד פעיל",
   "cannotDeactivateLastCurriculumDetail": "לא ניתן להסיר את קורס הלימוד האחרון הפעיל. הוסיפו קורס נוסף לפני הסרת זה.",
-
   "actionStart": "התחל",
   "actionCancel": "ביטול",
   "actionSave": "שמור",
@@ -1060,7 +1213,6 @@
   "actionStartHere": "התחל כאן",
   "actionStartHereLabel": "התחל כאן",
   "actionClear": "נקה",
-
   "appErrorViewNoConnectionTitle": "אין חיבור",
   "appErrorViewNoConnectionBody": "בדקו את חיבור האינטרנט ונסו שוב.",
   "appErrorViewInvalidDataTitle": "נתונים לא תקינים",
@@ -1073,29 +1225,36 @@
   "appErrorViewGenericBody": "אירעה שגיאה בלתי צפויה. נסו שוב או דווחו על הבעיה.",
   "appErrorViewReportButton": "דווח על הבעיה",
   "appErrorViewReportedSnackbar": "תודה — תיעדנו את הבעיה.",
-
   "errorGeneric": "שגיאה: {error}",
   "@errorGeneric": {
     "placeholders": {
-      "error": { "type": "String" }
+      "error": {
+        "type": "String"
+      }
     }
   },
   "errorLoadingTasks": "שגיאה בטעינת משימות: {error}",
   "@errorLoadingTasks": {
     "placeholders": {
-      "error": { "type": "String" }
+      "error": {
+        "type": "String"
+      }
     }
   },
   "errorLoadingOrder": "שגיאה בטעינת הסדר: {error}",
   "@errorLoadingOrder": {
     "placeholders": {
-      "error": { "type": "String" }
+      "error": {
+        "type": "String"
+      }
     }
   },
   "errorLoadingContent": "שגיאה בטעינת תוכן: {error}",
   "@errorLoadingContent": {
     "placeholders": {
-      "error": { "type": "String" }
+      "error": {
+        "type": "String"
+      }
     }
   },
   "errorLoadingPoints": "שגיאה בטעינת נקודות",
@@ -1105,13 +1264,17 @@
   "errorSearchError": "שגיאת חיפוש: {error}",
   "@errorSearchError": {
     "placeholders": {
-      "error": { "type": "String" }
+      "error": {
+        "type": "String"
+      }
     }
   },
   "errorUnknownCurriculum": "קורס לימוד לא מוכר: \"{curriculumId}\"",
   "@errorUnknownCurriculum": {
     "placeholders": {
-      "curriculumId": { "type": "String" }
+      "curriculumId": {
+        "type": "String"
+      }
     }
   },
   "errorCouldNotSaveRetry": "לא ניתן לשמור — לחצו לניסיון חוזר",
@@ -1135,18 +1298,21 @@
   "sendLogsSuccess": "היומנים נשלחו ({count} רשומות). צפו במסוף Firebase ← diagnostic_logs.",
   "@sendLogsSuccess": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "errorNoEmailApp": "לא נמצאה אפליקציית דוא\"ל. להעתיק כתובת במקום?",
   "errorMarkCompleteFailed": "סימון כהושלם נכשל: {error}",
   "@errorMarkCompleteFailed": {
     "placeholders": {
-      "error": { "type": "String" }
+      "error": {
+        "type": "String"
+      }
     }
   },
   "errorVerificationEmailSent": "נשלח אימייל אימות. בדקו את תיבת הדואר.",
-
   "noData": "אין נתונים",
   "noTasksForToday": "אין משימות להיום",
   "noItemsToOrder": "אין פריטים לסידור.",
@@ -1155,24 +1321,29 @@
   "noResultsForQuery": "אין תוצאות עבור \"{query}\"",
   "@noResultsForQuery": {
     "placeholders": {
-      "query": { "type": "String" }
+      "query": {
+        "type": "String"
+      }
     }
   },
   "noResultsForQueryHint": "נסו לחפש לפי השם בעברית (למשל ברכות).",
   "@noResultsForQueryHint": {
     "description": "Hint under the no-results message clarifying that content is searched by its Hebrew name."
   },
-
   "viewAllTasks": "הצג הכול ({count}) →",
   "@viewAllTasks": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "tasksDueToday": "{count, plural, =1{משימה אחת היום} other{{count} משימות היום}}",
   "@tasksDueToday": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "tapToStartLearning": "לחצו להתחיל ללמוד",
@@ -1180,53 +1351,58 @@
   "remainingCount": "{count} נותרו",
   "@remainingCount": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "allDoneForToday": "סיימתם להיום!",
   "missedReview": "חזרה שהוחמצה ({count})",
   "@missedReview": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "todaysReview": "חזרה של היום ({count})",
   "@todaysReview": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "todaysLearning": "לימוד היום ({count})",
   "@todaysLearning": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
-
   "dailyTasksTitle": "משימות יומיות",
   "taskSkippedUntilTomorrow": "המשימה נדחתה למחר",
   "tasksNoTasksRemainingTitle": "אין משימות נותרות להיום.",
   "tasksNoOverdueTasksSubtitle": "אין משימות באיחור.",
   "undoLabel": "בטל",
-
   "searchTitle": "חיפוש",
   "searchHintEnterTerm": "הזינו מונח חיפוש למעלה",
-
   "loadingText": "טוען טקסט...",
   "markedComplete": "סומן כהושלם",
   "couldNotSave": "לא ניתן לשמור: {error}",
   "@couldNotSave": {
     "placeholders": {
-      "error": { "type": "String" }
+      "error": {
+        "type": "String"
+      }
     }
   },
   "textReaderTooltipPrevious": "הקודם",
   "textReaderTooltipNext": "הבא",
   "textReaderHebrewTab": "טקסט עברי",
   "textReaderEnglishTab": "תרגום לאנגלית",
-
   "totalPointsLabel": "סה\"כ נקודות",
-
   "resetToDefaultOrder": "איפוס לסדר ברירת מחדל",
   "resetToDefaultOrderDialogTitle": "איפוס לסדר ברירת מחדל",
   "resetToDefaultOrderDialogBody": "פעולה זו תשחזר את הסדר הטבעי של ספריא עבור קורס לימוד זה. הסדר המותאם אישית שלכם יאבד.",
@@ -1236,11 +1412,12 @@
   "reorderConfirmBody": "שינוי הסדר יאפס את {overdueCount} הפריטים הפיגורים שלך. שקול להשלים אותם קודם.",
   "@reorderConfirmBody": {
     "placeholders": {
-      "overdueCount": { "type": "int" }
+      "overdueCount": {
+        "type": "int"
+      }
     }
   },
   "controlledByParent": "בשליטת ההורה",
-
   "sacredTimeLockGoodShabbos": "שבת שלום",
   "sacredTimeLockShabbosSubtitle": "האפליקציה סגורה לכבוד שבת.",
   "sacredTimeLockGoodYomTov": "חג שמח",
@@ -1249,7 +1426,6 @@
   "sacredTimeLockShabbosYomTovSubtitle": "האפליקציה סגורה לכבוד שבת ויום טוב.",
   "sacredTimeLockYomKippurGreeting": "גמר חתימה טובה",
   "sacredTimeLockYomKippurSubtitle": "האפליקציה סגורה לכבוד יום כיפור.",
-
   "sacredTimeDetect": "זיהוי אוטומטי",
   "sacredTimeChooseCity": "בחר עיר",
   "textReaderTextUnavailableTitle": "הטקסט אינו זמין",
@@ -1283,7 +1459,9 @@
   "calendarOffsetDay": "יום {offset}",
   "@calendarOffsetDay": {
     "placeholders": {
-      "offset": { "type": "String" }
+      "offset": {
+        "type": "String"
+      }
     }
   },
   "calendarDirectionForward": "קדימה",
@@ -1292,33 +1470,40 @@
   "calendarOffsetDaysCount": "{count, plural, =1{יום אחד} =2{יומיים} other{{count} ימים}}",
   "@calendarOffsetDaysCount": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "startingPositionSelectInstruction": "בחרו את {itemLabel} שאתם נמצאים בו כעת.",
   "@startingPositionSelectInstruction": {
     "placeholders": {
-      "itemLabel": { "type": "String" }
+      "itemLabel": {
+        "type": "String"
+      }
     }
   },
   "startingPositionBackToListTooltip": "חזרה לרשימת {containerLabel}",
   "@startingPositionBackToListTooltip": {
     "placeholders": {
-      "containerLabel": { "type": "String" }
+      "containerLabel": {
+        "type": "String"
+      }
     }
   },
   "startingPositionItemFallbackLabel": "פריט",
   "searchFieldHint": "חיפוש ⁦{label}⁩…",
   "@searchFieldHint": {
     "placeholders": {
-      "label": { "type": "String" }
+      "label": {
+        "type": "String"
+      }
     }
   },
   "cityPickerTitle": "בחרו עיר",
   "cityPickerHint": "הקלד שם עיר…",
   "cityPickerNoMatches": "אין תוצאות עבור \"{query}\".",
   "cityPickerIdleHint": "התחילו להקליד כדי לחפש כ-33,000 ערים.\nהקלידו לפחות 2 אותיות.",
-
   "schedulerStudyLabel": "לימוד",
   "schedulerReviewOnlyLabel": "חזרה בלבד",
   "schedulerPerDay": "ליום",
@@ -1340,7 +1525,6 @@
   "schedulerHebrewMonthFieldLabel": "חודש",
   "schedulerHebrewDayFieldLabel": "יום",
   "schedulerHebrewDateEnglishPreview": "אנגלי: {date}",
-
   "profilesEditLabel": "ערוך",
   "profilesDeleteLabel": "מחק",
   "profilesChooseAvatar": "בחרו אווטאר",
@@ -1356,7 +1540,6 @@
   "deleteProfileBody": "האם למחוק את \"{name}\"? כל נתוני הלמידה של פרופיל זה יימחקו לצמיתות.",
   "deleteProfileLastBody": "זהו הפרופיל היחיד שלך. מחיקת \"{name}\" תמחק כל מסלול, השלמה ורישום מצטבר בחשבון זה. יהיה עליך ליצור פרופיל חדש כדי להמשיך ללמוד.",
   "deleteProfileLastConfirm": "מחק בכל זאת",
-
   "trackNameThisTrack": "שמרו מסלול זה",
   "trackNameLabel": "שם המסלול",
   "trackAddLabel": "הוסף מסלול",
@@ -1366,15 +1549,18 @@
   "trackReplaceTitle": "להחליף את מסלול {label}?",
   "@trackReplaceTitle": {
     "placeholders": {
-      "label": { "type": "String" }
+      "label": {
+        "type": "String"
+      }
     }
   },
-
   "bulkMarkCompleteTitle": "סימון המוני כהושלם",
   "bulkMarkedComplete": "סומנו {count} פריטים כהושלמו",
   "@bulkMarkedComplete": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "bulkMarkConfirmBulkTitle": "אישור סימון המוני",
@@ -1382,10 +1568,8 @@
   "bulkMarkDone": "סיום!",
   "bulkMarkSkip": "דלג",
   "bulkMarkPriorLearning": "סמן לימוד קודם",
-
   "completionButtonCompleted": "הושלם",
   "completionButtonMarkComplete": "סמן כהושלם",
-
   "upgradePromptOnlineBody": "אתם מחוברים — גבו את החשבון כדי לא לאבד את הלימוד אם המכשיר יאבד.",
   "upgradePromptBackup": "גיבוי",
   "upgradePromptDismiss": "לא עכשיו",
@@ -1397,13 +1581,14 @@
   "upgradeToCloudTitle": "שדרג לענן",
   "upgradeToCloudButton": "שדרג לענן",
   "upgradeToCloudCancelKeepOffline": "ביטול — שמור חשבון לא מקוון",
-
   "upgradeToCloudHeadline": "גבו את החשבון שלכם",
   "upgradeToCloudValueProp": "אתם מחוברים בתור {email}. השדרוג ייצור חשבון ענן עם אותו אימייל כדי שהנתונים שלכם יסונכרנו בין המכשירים. זוהי פעולה חד-כיוונית — לא תוכלו לחזור למצב לא-מקוון בלבד לאחר השדרוג.",
   "@upgradeToCloudValueProp": {
     "description": "Value-proposition paragraph on the upgrade-to-cloud screen, explaining the one-way upgrade.",
     "placeholders": {
-      "email": { "type": "String" }
+      "email": {
+        "type": "String"
+      }
     }
   },
   "upgradeToCloudPasswordLabel": "אשרו את הסיסמה שלכם",
@@ -1440,7 +1625,6 @@
     "description": "Friendly fallback shown instead of a raw exception when a collision-merge option fails for an unexpected reason."
   },
   "upgradeToCloudCloudNotVerifiedBody": "חשבון ענן זה עדיין לא אומת. בדקו את תיבת הדואר שלכם, ואז הקישו על \"אימתתי — השלמת השדרוג\" למטה.",
-
   "scopeSelectionSave": "שמור",
   "scopeSelectionTrackEntireCurriculum": "עקוב אחר כל קורס הלימוד",
   "scopeSelectionChooseHierarchyLevel": "בחרו לפי איזה רמת היררכיה לסנן",
@@ -1449,7 +1633,9 @@
   "@scopeSelectionTitle": {
     "description": "AppBar title on the scope-selection screen. {curriculum} is the human-readable curriculum name.",
     "placeholders": {
-      "curriculum": { "type": "String" }
+      "curriculum": {
+        "type": "String"
+      }
     }
   },
   "scopeSelectionAllContentIncluded": "כל התוכן כלול",
@@ -1460,13 +1646,17 @@
   "@scopeSelectionOptionsCount": {
     "description": "Subtitle on a hierarchy-level tile showing how many distinct values exist at that level.",
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "scopeSelectionItemsWillBeTracked": "{count, plural, one{פריט אחד ייעקב} other{{count} פריטים ייעקבו}}",
   "@scopeSelectionItemsWillBeTracked": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "scopeSelectionScopeSetEntireCurriculum": "ההיקף הוגדר לכל קורס הלימוד",
@@ -1474,10 +1664,11 @@
   "@scopeSelectionScopeUpdated": {
     "description": "Save-confirmation SnackBar shown after saving a subset scope. {values} is the comma-joined list of rendered selected scope values.",
     "placeholders": {
-      "values": { "type": "String" }
+      "values": {
+        "type": "String"
+      }
     }
   },
-
   "curriculumSettingsLoadingProgram": "טוען תוכנית...",
   "curriculumSettingsProgramTitle": "תוכנית",
   "curriculumSettingsProgramError": "טעינת התוכנית נכשלה. נסו שוב.",
@@ -1493,7 +1684,9 @@
   "@curriculumSettingsTitle": {
     "description": "AppBar title on the per-curriculum settings screen. {curriculum} is the human-readable curriculum name.",
     "placeholders": {
-      "curriculum": { "type": "String" }
+      "curriculum": {
+        "type": "String"
+      }
     }
   },
   "curriculumSettingsCopy": "העתק",
@@ -1501,10 +1694,11 @@
   "@curriculumSettingsProgramLabel": {
     "description": "List tile title showing the active learning program name. {name} is the human-readable program label.",
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
-
   "deleteAccountDialogTitle": "מחיקת חשבון",
   "deleteAccountTypeConfirm": "הקלידו DELETE לאישור:",
   "deleteAccountHint": "DELETE",
@@ -1513,14 +1707,17 @@
   "deleteAccountReauthProvider": "תתבקשו להיכנס עם {provider} כדי לאמת את זהותכם.",
   "@deleteAccountReauthProvider": {
     "placeholders": {
-      "provider": { "type": "String" }
+      "provider": {
+        "type": "String"
+      }
     }
   },
-
   "backupLastSynced": "סונכרן לאחרונה {timeAgo}",
   "@backupLastSynced": {
     "placeholders": {
-      "timeAgo": { "type": "String" }
+      "timeAgo": {
+        "type": "String"
+      }
     }
   },
   "backupSyncing": "מסנכרן...",
@@ -1534,27 +1731,32 @@
   "@backupTimeAgoMinutes": {
     "description": "Relative time for a last-synced timestamp, in minutes.",
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "backupTimeAgoHours": "לפני {count} שע'",
   "@backupTimeAgoHours": {
     "description": "Relative time for a last-synced timestamp, in hours.",
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "backupTimeAgoDays": "לפני {count} ימים",
   "@backupTimeAgoDays": {
     "description": "Relative time for a last-synced timestamp, in days.",
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "reauthDialogTitle": "אמתו את זהותכם",
   "reauthDialogBody": "הזינו את הסיסמה הנוכחית כדי להמשיך.",
   "reauthVerify": "אמת",
-
   "linkAccountTitle": "קשר חשבון",
   "linkAccountSubtitle": "הוסיפו שיטת כניסה נוספת לחשבונכם.",
   "linkAccountGoogleLabel": "גוגל",
@@ -1563,19 +1765,15 @@
   "linkAccountAllLinked": "כל שיטות הכניסה כבר מקושרות.",
   "linkAccountGoogleSuccess": "חשבון גוגל קושר בהצלחה.",
   "linkAccountEmailSuccess": "חשבון דוא\"ל וסיסמה קושר בהצלחה.",
-
   "changePasswordDialogTitle": "שנה סיסמה",
   "changePasswordButton": "שנה סיסמה",
-
   "accountDeletedTitle": "החשבון נמחק",
   "signOutLabel": "התנתק",
   "signOutConfirmTitle": "התנתקות",
   "signOutConfirmBody": "האם אתם בטוחים שברצונכם להתנתק? הנתונים שלכם יישמרו לכשתחזרו.",
-
   "connectionLostTitle": "החיבור אבד",
   "tryAgainButton": "נסה שוב",
   "createOfflineAccount": "צור חשבון לא מקוון",
-
   "onboardingConfirm": "אישור",
   "onboardingStartLearning": "התחל ללמוד",
   "onboardingAddAnotherTrack": "הוסף מסלול נוסף",
@@ -1584,26 +1782,27 @@
   "onboardingMarkCompleted": "סמן כהושלם",
   "onboardingStartingPosition": "נקודת התחלה",
   "onboardingStudyDays": "ימי לימוד",
-
   "stageNameLimud": "לימוד",
   "stageNameChazaraAleph": "חזרה א׳",
   "stageNameChazaraBet": "חזרה ב׳",
-
   "actionMarkCompleted": "סמן כהושלם",
   "actionSkipNoReview": "דלג (ללא חזרה)",
-
   "studyDaysTitle": "ימי לימוד",
   "studyDaysSubtitle": "באילו ימים אתה לומד?",
   "studyDaysPerWeekLabel": "{count, plural, =1{יום לימוד אחד בשבוע} two{שני ימי לימוד בשבוע} other{{count} ימי לימוד בשבוע}}",
   "@studyDaysPerWeekLabel": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "studyDayConfigTitle": "ימי לימוד — {curriculumName}",
   "@studyDayConfigTitle": {
     "placeholders": {
-      "curriculumName": { "type": "String" }
+      "curriculumName": {
+        "type": "String"
+      }
     }
   },
   "studyDayConfigSubtitle": "בחר אילו ימים כוללים לימוד חדש ואילו לחזרה בלבד.",
@@ -1611,28 +1810,27 @@
   "studyDaysSetByProgram": "ימי הלימוד נקבעו על ידי {programName}",
   "@studyDaysSetByProgram": {
     "placeholders": {
-      "programName": { "type": "String" }
+      "programName": {
+        "type": "String"
+      }
     }
   },
-
   "startingPositionTitle": "מיקום התחלתי",
   "startingPositionHint": "ניתן להתחיל עד 30 ימים אחורה מהיום",
   "startingPositionWhereAreYou": "איפה אתה ב{programName}?",
   "@startingPositionWhereAreYou": {
     "placeholders": {
-      "programName": { "type": "String" }
+      "programName": {
+        "type": "String"
+      }
     }
   },
-
   "priorLearningTitle": "סימון לימוד קודם",
   "priorLearningSubtitle": "האם ברצונך לסמן חלקים שכבר למדת כהושלמו?",
-
   "goalPickDeadlineFirst": "בחר תאריך יעד תחילה.",
   "trackSaveError": "שגיאה בשמירת המסלול. נסה שוב.",
-
   "pacePerDay": "ליום",
   "pacePerWeek": "לשבוע",
-
   "goalTypeDeadline": "תאריך יעד",
   "goalTypePace": "קצב",
   "goalTypeNoDeadline": "ללא יעד",
@@ -1647,21 +1845,31 @@
   "goalDeadlinePaceItems": "~{pace} פריטים ביום",
   "@goalDeadlinePaceItems": {
     "placeholders": {
-      "pace": { "type": "int" }
+      "pace": {
+        "type": "int"
+      }
     }
   },
   "goalDeadlineItemsInDays": "{items} פריטים ב-{days, plural, =1{יום אחד} =2{יומיים} other{{days} ימים}}",
   "@goalDeadlineItemsInDays": {
     "placeholders": {
-      "items": { "type": "int" },
-      "days": { "type": "int" }
+      "items": {
+        "type": "int"
+      },
+      "days": {
+        "type": "int"
+      }
     }
   },
   "goalPaceHowMany": "כמה {unit} ב{period}?",
   "@goalPaceHowMany": {
     "placeholders": {
-      "unit": { "type": "String" },
-      "period": { "type": "String" }
+      "unit": {
+        "type": "String"
+      },
+      "period": {
+        "type": "String"
+      }
     }
   },
   "goalPacePeriodDay": "יום",
@@ -1669,36 +1877,56 @@
   "goalPaceInputLabel": "{unit} {period}",
   "@goalPaceInputLabel": {
     "placeholders": {
-      "unit": { "type": "String" },
-      "period": { "type": "String" }
+      "unit": {
+        "type": "String"
+      },
+      "period": {
+        "type": "String"
+      }
     }
   },
   "goalPaceProjectedCompletion": "סיום משוער: {date}",
   "@goalPaceProjectedCompletion": {
     "placeholders": {
-      "date": { "type": "String" }
+      "date": {
+        "type": "String"
+      }
     }
   },
   "goalPaceItemsInDays": "{items} {unit} בכ-{days} ימים",
   "@goalPaceItemsInDays": {
     "placeholders": {
-      "items": { "type": "int" },
-      "unit": { "type": "String" },
-      "days": { "type": "int" }
+      "items": {
+        "type": "int"
+      },
+      "unit": {
+        "type": "String"
+      },
+      "days": {
+        "type": "int"
+      }
     }
   },
   "goalTargetPercentOnly": "השלם {percent}% מהחומר",
   "@goalTargetPercentOnly": {
     "placeholders": {
-      "percent": { "type": "int" }
+      "percent": {
+        "type": "int"
+      }
     }
   },
   "goalTargetPercentWithCount": "השלם {percent}% מהחומר ({done} מתוך {total} פריטים)",
   "@goalTargetPercentWithCount": {
     "placeholders": {
-      "percent": { "type": "int" },
-      "done": { "type": "int" },
-      "total": { "type": "int" }
+      "percent": {
+        "type": "int"
+      },
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
   },
   "goalLearningUnitLabel": "יחידת לימוד",
@@ -1708,49 +1936,53 @@
   "goalSavedSnack": "היעד נשמר",
   "goalRemovedSnack": "היעד הוסר",
   "goalRemoveButton": "הסרת יעד",
-
   "unitPerakim": "פרקים",
   "unitPesukim": "פסוקים",
   "unitAmudim": "עמודים",
   "unitDafim": "דפים",
-
   "tasksUnableToLoad": "לא ניתן לטעון משימות",
   "tasksAllCaughtUp": "עדכני לחלוטין",
   "tasksNoTasksRemainingToday": "אין משימות נותרות להיום.",
   "itemsCount": "{count, plural, one{פריט אחד} other{{count} פריטים}}",
   "@itemsCount": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
-
   "scopeSelectionCountSelected": "{count, plural, one{נבחר 1} other{נבחרו {count}}}",
   "@scopeSelectionCountSelected": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "scopeSelectionItemCount": "{count, plural, one{פריט אחד} other{{count} פריטים}}",
   "@scopeSelectionItemCount": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
-
   "reviewStageDayDelay": "{count, plural, one{עיכוב של יום אחד} other{עיכוב של {count} ימים}}",
   "@reviewStageDayDelay": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "applyToAll": "החל על הכל",
-
   "trackNameSubtitle": "תן למסלול שלך שם לזיהוי.",
-
   "priorLearningChooseSections": "בחר אילו סעיפים לסמן ב{curriculumName}.",
   "@priorLearningChooseSections": {
     "placeholders": {
-      "curriculumName": { "type": "String" }
+      "curriculumName": {
+        "type": "String"
+      }
     }
   },
   "priorLearningAlreadyCompleted": "האם כבר השלמת חלק מהסעיפים האלה?",
@@ -1758,29 +1990,32 @@
   "priorLearningMarkEverythingSubtitle": "מומלץ אם אתה מתחיל מחזור חזרה חדש",
   "priorLearningNoFolders": "לא נבחרו תיקיות ספציפיות, אך עדיין ניתן לסמן הכל כהושלם.",
   "priorLearningSelectedFolder": "תיקייה שנבחרה",
-
   "scopeSelectionSelectLevel": "בחר {levelName}",
   "@scopeSelectionSelectLevel": {
     "placeholders": {
-      "levelName": { "type": "String" }
+      "levelName": {
+        "type": "String"
+      }
     }
   },
-
   "activeTracksLabel": "מסלולים פעילים",
   "activeTracksRunning": "{count} פעיל",
   "@activeTracksRunning": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
-
   "trackDetailConfigGoal": "יעד",
   "trackDetailConfigItemsRemaining": "פריטים שנותרו",
   "trackDetailConfigEstFinish": "סיום משוער",
   "trackSince": "מאז {date}",
   "@trackSince": {
     "placeholders": {
-      "date": { "type": "String" }
+      "date": {
+        "type": "String"
+      }
     }
   },
   "trackEditLabel": "ערוך מסלול",
@@ -1792,7 +2027,9 @@
   "@trackEditSectionReview": {
     "description": "Section heading for the review configuration block on the track-edit screen. {term} is the domain-specific term for review/chazara, supplied by the caller via domainTermLabels.",
     "placeholders": {
-      "term": { "type": "String" }
+      "term": {
+        "type": "String"
+      }
     }
   },
   "trackEditGoalTypeLocked": "לא ניתן לשנות את סוג היעד לאחר ההגדרה",
@@ -1803,7 +2040,9 @@
   "trackEditReviewSummaryDays": "אחרי {delays}",
   "@trackEditReviewSummaryDays": {
     "placeholders": {
-      "delays": { "type": "String" }
+      "delays": {
+        "type": "String"
+      }
     }
   },
   "trackEditChangeReview": "שנה",
@@ -1819,7 +2058,9 @@
   "trackDeleteContent": "למחוק לצמיתות את \"{name}\"? כל ההתקדמות והנתונים של מסלול זה יוסרו. לא ניתן לבטל פעולה זו.",
   "@trackDeleteContent": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "deleteTrackArchiveTitle": "מחיקת מסלול",
@@ -1827,34 +2068,39 @@
   "parentDeleteTrackArchiveBody": "מה לעשות עם היסטוריית ההשלמות של ילדך?",
   "deleteTrackArchive": "ארכיון (שמור היסטוריה)",
   "deleteTrackWipe": "מחק ומחה היסטוריה",
-
   "startingPositionTargetDate": "תאריך יעד",
   "calendarNoLocalEntryFound": "לא נמצאה רשומת לוח שנה מקומית לתאריך זה.",
   "calendarEntryLoadFailed": "טעינת הרשומה לתאריך זה נכשלה. בדקו את החיבור ונסו שוב.",
-
   "goalPaceOrDeadlineTitle": "מה הקצב או המועד שלך?",
   "goalPaceOrDeadlineSubtitle": "הגדר יעד.",
   "goalTargetPace": "קצב יעד",
   "goalPaceDescriptionLine": "{unit} {period}",
   "@goalPaceDescriptionLine": {
     "placeholders": {
-      "unit": { "type": "String" },
-      "period": { "type": "String" }
+      "unit": {
+        "type": "String"
+      },
+      "period": {
+        "type": "String"
+      }
     }
   },
   "goalEstimatedFinish": "סיום משוער: {date}",
   "@goalEstimatedFinish": {
     "placeholders": {
-      "date": { "type": "String" }
+      "date": {
+        "type": "String"
+      }
     }
   },
   "goalSetDeadline": "קבע מועד יעד",
-
   "reviewScheduleTitle": "לוח חזרות",
   "reviewScheduleSetByProgram": "שלבי החזרה נקבעו על ידי {programName}",
   "@reviewScheduleSetByProgram": {
     "placeholders": {
-      "programName": { "type": "String" }
+      "programName": {
+        "type": "String"
+      }
     }
   },
   "reviewScheduleFixedHint": "לוח זה קבוע על ידי התוכנית ולא ניתן לעריכה.",
@@ -1863,20 +2109,22 @@
   "reviewScheduleAfterNDays": "אחרי {count} ימים",
   "@reviewScheduleAfterNDays": {
     "placeholders": {
-      "count": { "type": "String" }
+      "count": {
+        "type": "String"
+      }
     }
   },
   "reviewScheduleScheduledByProgram": "מתוזמן על ידי התוכנית",
-
   "chazaraCustomCycle": "מחזור מותאם אישית",
   "chazaraSessionsCount": "{count} סבבים",
   "@chazaraSessionsCount": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "chazaraAddNew": "הוסף",
-
   "chazaraPresetLearnOnlyTitle": "לימוד בלבד",
   "chazaraPresetLearnOnlyDescription": "ללא חזרות מתוזמנות.",
   "chazaraPresetOneDayTitle": "יום אחד",
@@ -1885,7 +2133,6 @@
   "chazaraPresetWeekDescription": "נקודת ההתחלה המומלצת.",
   "chazaraPresetMonthTitle": "1 + 7 + 30 ימים",
   "chazaraPresetMonthDescription": "מחזור שליטה מלא.",
-
   "termChazara": "חזרה",
   "termBubbleChazara": "חזרה",
   "termReviewSection": "חזרה",
@@ -1900,17 +2147,13 @@
   "termTalmidChochomCaps": "תלמיד חכם",
   "termStageLearn": "לימוד",
   "termStageChazaraPrefix": "חזרה",
-
   "authSignInTimeout": "הכניסה לוקחת יותר מדי זמן. בדוק את החיבור ונסה שוב.",
-
   "reauthGoogleTitle": "אמת עם גוגל כדי למחוק את חשבונך",
   "reauthGoogleBody": "אנו צריכים שתיכנס עם גוגל עוד פעם אחת כדי לאמת שזה באמת אתה. לאחר הכניסה, חשבונך וכל הנתונים יימחקו לצמיתות.",
   "reauthGoogleContinue": "המשך לגוגל",
-
   "deletingAccountTitle": "מוחק את חשבונך…",
   "deletingAccountBody": "זה עשוי לקחת מספר שניות. אנא אל תסגור את האפליקציה.",
   "deletingAccountError": "המחיקה נתקלה בבעיה. התנתקת מהחשבון.",
-
   "itemsLearnedTitle": "פריטים שנלמדו",
   "itemsLearnedSubtitle": "השלמות מסלול לפי תוכנית",
   "itemsLearnedNoCurricula": "עדיין אין השלמות מסלול",
@@ -1918,11 +2161,14 @@
   "itemsLearnedOf": "{completed} מתוך {total}",
   "@itemsLearnedOf": {
     "placeholders": {
-      "completed": { "type": "int" },
-      "total": { "type": "int" }
+      "completed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
   },
-
   "overallProgressCardTitle": "התקדמות כוללת",
   "overallProgressStatTotalItems": "סה\"כ פריטים",
   "overallProgressStatCompletedAllStages": "הושלמו כל השלבים",
@@ -1932,7 +2178,6 @@
   "overallProgressSectionWholeLifetime": "כל {curriculum} · ידע כולל",
   "overallProgressSectionWholeLifetimeGeneric": "כל התוכנית · ידע כולל",
   "overallProgressStatLifetimeItemsTouched": "פריטים שנלמדו",
-
   "curriculumProgressBreakdownByLevel": "פירוט לפי רמה",
   "curriculumProgressLoading": "טוענים נתוני התקדמות...",
   "curriculumProgressLoadFailed": "שגיאה בטעינת ההתקדמות. נסה שוב.",
@@ -1940,7 +2185,6 @@
     "description": "AUD-progress-08: generic failure message shown in CurriculumProgressScreen when progress data fails to load — never interpolate the raw exception (EH-5)."
   },
   "curriculumProgressSettingsTooltip": "הגדרות קורס הלימוד",
-
   "tierLensRecentActivity": "פעילות אחרונה",
   "@tierLensRecentActivity": {
     "description": "Lens label for the engagement tier (live-only completions)."
@@ -1953,21 +2197,32 @@
   "@tierLensLifetimeKnowledge": {
     "description": "Lens label for the lifetime tier (all sources)."
   },
-
   "streakWidgetDayStreak": "{count, plural, one{רצף של יום אחד!} other{רצף של {count} ימים!}}",
   "@streakWidgetDayStreak": {
     "description": "Child-mode StreakWidget headline showing the current streak length.",
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "streakWidgetBest": "{count, plural, one{שיא: יום אחד} other{שיא: {count} ימים}}",
   "@streakWidgetBest": {
     "description": "Child-mode StreakWidget sub-line showing the longest streak.",
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "streakSubtleBest": "(שיא: {count})",
   "@streakSubtleBest": {
     "description": "Adult-mode subtle streak display parenthetical showing the all-time best streak count.",
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "schedulerTodaysGoal": "היעד של היום",
   "@schedulerTodaysGoal": {
@@ -1977,39 +2232,50 @@
   "@schedulerGoalTaskCount": {
     "description": "Headline count on the scheduler goal banner — number of tasks scheduled for today. ICU plural with Hebrew dual so count==1 reads 'משימה אחת היום' and count==2 reads 'שתי משימות היום'.",
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "tierCounterStreakDays": "{count, plural, one{רצף של יום אחד} two{רצף של יומיים} other{רצף של {count} ימים}}",
   "@tierCounterStreakDays": {
     "description": "Engagement-tier counter — current consecutive-day streak. ICU plural with Hebrew dual so count==1 reads 'רצף של יום אחד' and count==2 reads 'רצף של יומיים'.",
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "tierCounterSiyumimEarned": "{count, plural, one{{siyumimTerm} אחד} two{שני {siyumimTerm}} other{{count} {siyumimTerm}}}",
   "@tierCounterSiyumimEarned": {
     "description": "Achievement-tier counter — total siyumim earned. {siyumimTerm} is the toggle-aware domain term, kept intact across forms. ICU plural with Hebrew dual so count==1 reads 'סיום אחד'-style and count==2 reads 'שני סיומים'-style.",
     "placeholders": {
-      "count": { "type": "int" },
-      "siyumimTerm": { "type": "String" }
+      "count": {
+        "type": "int"
+      },
+      "siyumimTerm": {
+        "type": "String"
+      }
     }
   },
   "tierCounterLifetimeItems": "{count, plural, one{פריט אחד} two{שני פריטים} other{{count} פריטים}}",
   "@tierCounterLifetimeItems": {
     "description": "Lifetime-tier counter — total distinct items ever learned. Short form to avoid tile truncation. ICU plural with Hebrew dual so count==1 reads 'פריט אחד' and count==2 reads 'שני פריטים'.",
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "tierCounterPoints": "{count, plural, one{נקודה אחת} two{שתי נקודות} other{{count} נקודות}}",
   "@tierCounterPoints": {
     "description": "Child-mode points counter. ICU plural with Hebrew dual so count==1 reads 'נקודה אחת' and count==2 reads 'שתי נקודות'.",
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
-
   "tierTileLabelStreak": "רצף",
   "@tierTileLabelStreak": {
     "description": "Tile-row label (short noun) under the big streak count."
@@ -2018,7 +2284,9 @@
   "@tierTileLabelSiyumim": {
     "description": "Tile-row label (short noun) under the big siyumim count — renders the locale-aware siyumim term.",
     "placeholders": {
-      "siyumimTerm": { "type": "String" }
+      "siyumimTerm": {
+        "type": "String"
+      }
     }
   },
   "tierTileLabelLifetime": "ידע כולל",
@@ -2029,7 +2297,6 @@
   "@tierTileLabelPoints": {
     "description": "Tile-row label (short noun) under the big points count."
   },
-
   "limud": "לימוד",
   "@limud": {
     "description": "Canonical vocabulary: initial study (stage 1)."
@@ -2085,7 +2352,9 @@
   "paceAheadByDays": "לפני ב-{count} ימים",
   "@paceAheadByDays": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "paceOnTrack": "בקצב הנכון",
@@ -2093,24 +2362,29 @@
   "@paceBehindByDays": {
     "description": "IL-3 fix: ICU plural so 1 reads 'ביום אחד' not 'ב-1 ימים'.",
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "itemsLearnedCount": "{count, plural, one{פריט אחד נלמד} other{{count} פריטים נלמדו}}",
   "@itemsLearnedCount": {
     "description": "IL-3 fix: ICU plural. NEW sense: distinct items ever touched (lifetime tier).",
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "totalChazaros": "{count, plural, one{חזרה אחת סה״כ} other{{count} חזרות סה״כ}}",
   "@totalChazaros": {
     "description": "IL-3 fix: ICU plural. Lifetime-tier total review count.",
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
-
   "siyumHaShas": "סיום הש״ס",
   "@siyumHaShas": {
     "description": "Top-level curriculum-complete celebration — Talmud Bavli."
@@ -2147,7 +2421,6 @@
   "@siyumMussar": {
     "description": "Top-level curriculum-complete celebration — Mussar."
   },
-
   "siyumSeder": "סיום סדר",
   "@siyumSeder": {
     "description": "Mid-level aggregate siyum — completion of a whole seder."
@@ -2156,36 +2429,42 @@
   "@siyumChelek": {
     "description": "Mid-level aggregate siyum — completion of a chelek."
   },
-
   "siyumMasechta": "סיום מסכת {name}",
   "@siyumMasechta": {
     "description": "Unit-level siyum — completion of one masechta.",
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "siyumSefer": "סיום ספר {name}",
   "@siyumSefer": {
     "description": "Unit-level siyum — completion of one sefer.",
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "siyumSiman": "סיום סימן {name}",
   "@siyumSiman": {
     "description": "Unit-level siyum — completion of one siman.",
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "siyumHilchos": "סיום הלכות {name}",
   "@siyumHilchos": {
     "description": "Unit-level siyum — completion of one section of Hilchos.",
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
-
   "siyumGranularityTitle": "חגגו סיום ברמת",
   "@siyumGranularityTitle": {
     "description": "Section title for the per-curriculum siyum-granularity radio selector on the Curriculum Settings screen. Followed by the tier options (e.g. Masechta / Seder / Whole Bavli)."
@@ -2198,29 +2477,36 @@
   "@siyumGranularityWholeCurriculum": {
     "description": "Coarsest siyum-granularity option — celebrate only the whole-curriculum siyum. `{curriculum}` is the localized curriculum name (e.g. Chumash, Talmud Bavli).",
     "placeholders": {
-      "curriculum": { "type": "String" }
+      "curriculum": {
+        "type": "String"
+      }
     }
   },
-
   "siyumimLevelCurriculum": "{count, plural, one{סיום אחד ברמת מסלול} other{{count} סיומים ברמת מסלול}}",
   "@siyumimLevelCurriculum": {
     "description": "IL-3 fix: ICU plural. Top-counter row on the Siyumim & Milestones screen for the curriculum-complete tier.",
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "siyumimLevelAggregate": "{count, plural, one{סיום אחד ברמת אגד} other{{count} סיומים ברמת אגד}}",
   "@siyumimLevelAggregate": {
     "description": "IL-3 fix: ICU plural. Top-counter row on the Siyumim & Milestones screen for the aggregate tier.",
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "siyumimLevelUnit": "{count, plural, one{סיום אחד ברמת יחידה} other{{count} סיומים ברמת יחידה}}",
   "@siyumimLevelUnit": {
     "description": "IL-3 fix: ICU plural. Top-counter row on the Siyumim & Milestones screen for the unit tier.",
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "siyumimEmptyState": "אין סיומים עדיין — המשיכו ללמוד!",
@@ -2231,8 +2517,12 @@
   "@siyumimAggregateSubtitle": {
     "description": "Subtitle on an aggregate-level milestone row when every contained unit is complete. `{date}` is a locale-formatted achievement date.",
     "placeholders": {
-      "count": { "type": "int" },
-      "date": { "type": "String" }
+      "count": {
+        "type": "int"
+      },
+      "date": {
+        "type": "String"
+      }
     }
   },
   "siyumimPreviouslyLearnedDate": "נלמד בעבר",
@@ -2243,32 +2533,32 @@
   "@paceLiveLearningOnlyCaption": {
     "description": "Caption shown under the PaceIndicator on the Curriculum Progress screen — disambiguates pace (engagement-tier track learning) from the lifetime tier."
   },
-
   "bulkMarkWizardSubtitle": "פריטים אלו נספרים ל{siyumimTerm} ולידע הכולל — אך לא לרצף או לנקודות שלך.",
   "@bulkMarkWizardSubtitle": {
     "description": "Subtitle/explainer for the Bulk Mark wizard — clarifies tier credit. {siyumimTerm} is the toggle-aware domain term (Siyumim / סיומים) so the copy respects the Hebrew Terms preference.",
     "placeholders": {
-      "siyumimTerm": { "type": "String" }
+      "siyumimTerm": {
+        "type": "String"
+      }
     }
   },
   "bulkMarkConfirmationToast": "{count} פריטים סומנו כנלמדו בעבר. הם יופיעו בידע הכולל ועשויים לפתוח סיומים.",
   "@bulkMarkConfirmationToast": {
     "description": "Confirmation toast after the bulk-mark save completes.",
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
-
   "lifetimeMarkingSubtitle": "פריטים שלמדת בחייך, מחוץ למסלולי האפליקציה. נספרים לידע הכולל — אך לא לסיומים, לרצף, או לנקודות.",
   "@lifetimeMarkingSubtitle": {
     "description": "Subtitle for the Lifetime Marking screen."
   },
-
   "recentActivityLiveOnlyDisclaimer": "כולל לימוד במסלולים (חי + סימון בקבוצה). ייבוא לכל החיים מופיע תחת הידע הכולל.",
   "@recentActivityLiveOnlyDisclaimer": {
     "description": "Subtitle shown on Recent Activity charts. Track learning = live + bulk-mark in-track."
   },
-
   "lifetimeKnowledgeLoading": "טוען ידע כולל…",
   "@lifetimeKnowledgeLoading": {
     "description": "Loading indicator message on the Lifetime Knowledge screen body."
@@ -2309,7 +2599,9 @@
   "@provenanceLiveChazaros": {
     "description": "Per-leaf provenance label for a live-completed leaf with its event count.",
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "provenanceBulkMarked": "מסומן בקבוצה",
@@ -2361,7 +2653,9 @@
   "@trackInfoDaysCount": {
     "description": "Pluralized day count for the TrackInfoCard Elapsed/Remaining rows.",
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "allTimeActivityTitle": "פעילות כל הזמנים",
@@ -2376,21 +2670,27 @@
   "@allTimeTermDone": {
     "description": "Stat label in the All Time summary card. {term} is a toggle-aware domain term.",
     "placeholders": {
-      "term": { "type": "String" }
+      "term": {
+        "type": "String"
+      }
     }
   },
   "allTimeTermDoneHebrew": "{term} שנלמד",
   "@allTimeTermDoneHebrew": {
     "description": "Hebrew-script variant of allTimeTermDone, used when Hebrew domain terms are active so the term and its suffix stay script-consistent. {term} is a Hebrew domain term.",
     "placeholders": {
-      "term": { "type": "String" }
+      "term": {
+        "type": "String"
+      }
     }
   },
   "recentActivityActiveDaysCount": "{count, plural, one{יום פעיל אחד} two{יומיים פעילים} other{{count} ימים פעילים}}",
   "@recentActivityActiveDaysCount": {
     "description": "Active-days stat phrase in the All Time summary card (Recent Activity screen). ICU plural so count==1 is singular (\"יום פעיל אחד\").",
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "recentActivityEmptyState": "אין עדיין פעילות לימוד בטווח הזה.",
@@ -2402,43 +2702,65 @@
   "redeemScreenNoRewards": "עדיין לא הוגדרו פרסים.\nבקש מהורה להגדיר!",
   "redeemScreenCostLabel": "{points} נקודות",
   "@redeemScreenCostLabel": {
-    "placeholders": { "points": { "type": "int" } }
+    "placeholders": {
+      "points": {
+        "type": "int"
+      }
+    }
   },
   "redeemScreenAffordableLabel": "פדה",
   "redeemScreenCannotAfford": "אין מספיק נקודות",
   "redeemScreenConfirmTitle": "לפדות \"{title}\"?",
   "@redeemScreenConfirmTitle": {
-    "placeholders": { "title": { "type": "String" } }
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
   },
   "redeemScreenConfirmBody": "פעולה זו תנצל {points} נקודות מהיתרה שלך.",
   "@redeemScreenConfirmBody": {
-    "placeholders": { "points": { "type": "int" } }
+    "placeholders": {
+      "points": {
+        "type": "int"
+      }
+    }
   },
   "redeemScreenConfirmButton": "בזבז ופדה",
   "redeemScreenRequestedSnackbar": "\"{title}\" הוזמן! בקש מהורה לאשר.",
   "@redeemScreenRequestedSnackbar": {
-    "placeholders": { "title": { "type": "String" } }
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
   },
   "redeemScreenInsufficientSnackbar": "אין מספיק נקודות לפדות פרס זה.",
   "redeemScreenTutorUnavailable": "לא זמין (מצב מדריך)",
-
   "pendingRedemptionsTitle": "פרסים ממתינים",
   "pendingRedemptionsEmptyTitle": "עדיין אין בקשות פרס",
   "pendingRedemptionsEmpty": "אין בקשות פרס ממתינות.",
   "pendingRedemptionsCountSubtitle": "{count, plural, one{בקשת פרס אחת ממתינה} other{{count} בקשות פרס ממתינות}}",
   "@pendingRedemptionsCountSubtitle": {
     "description": "Subtitle on the Pending Prizes settings row showing how many redemption requests are awaiting the parent.",
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "pendingRedemptionsCost": "{points} נקודות",
   "@pendingRedemptionsCost": {
-    "placeholders": { "points": { "type": "int" } }
+    "placeholders": {
+      "points": {
+        "type": "int"
+      }
+    }
   },
   "pendingRedemptionsApprove": "מלא",
   "pendingRedemptionsDecline": "דחה",
   "pendingRedemptionsFulfilledSnackbar": "הפרס סומן כמומש!",
   "pendingRedemptionsDeclinedSnackbar": "בקשת הפרס נדחתה. הנקודות הוחזרו.",
-
   "parentPointsAdjustTitle": "התאם נקודות",
   "parentPointsAdjustSubtitle": "הוסף או הפחת נקודות מיתרת הילד.",
   "parentPointsAdjustAddLabel": "הוסף נקודות",
@@ -2449,9 +2771,12 @@
   "parentPointsAdjustAppliedSnackbar": "היתרה עודכנה.",
   "parentPointsAdjustCurrentBalance": "יתרה נוכחית: {count} נק׳",
   "@parentPointsAdjustCurrentBalance": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
-
   "profileTypeChild": "ילד",
   "profileTypeAdult": "מבוגר",
   "childMode": "מצב ילדים",
@@ -2460,19 +2785,15 @@
   "statusPending": "ממתין",
   "actionTryAgain": "נסו שוב",
   "actionGoToDashboard": "מעבר ללוח",
-
   "emptyLoginTutorEntry": "אני מדריך",
   "switchAccount": "החלפת חשבון",
   "emptyLoginTutorComingSoon": "גישת מדריך תהיה זמינה בקרוב. בקשו מההורה לשתף אתכם בקישור הזמנה.",
-
   "tutorWelcomeBannerTitle": "ברוכים הבאים, מדריך!",
   "tutorWelcomeBannerBody": "בקשו מההורה לשתף אתכם בקישור הזמנה, ואז הקישו למטה כדי לאשר אותה.",
-
   "switcherSheetProfiles": "פרופילים",
   "switcherSheetAccounts": "חשבונות",
   "switcherSheetAddAccount": "הוספת חשבון",
   "addAnotherAccountSubtitle": "התחבר או צור חשבון נוסף במכשיר זה",
-
   "acceptInviteAppBarTitle": "אישור הזמנת מדריך",
   "acceptInviteAccepting": "מאשר הזמנה…",
   "acceptInviteHeading": "אישור הזמנת מדריך",
@@ -2480,8 +2801,12 @@
   "acceptInviteBodyFromParentForChild": "{parentLabel} הזמין/ה אתכם להדריך את {childLabel}. באישור ההזמנה תקבלו גישה לצפייה ולניהול של פרופיל הלמידה שלו.",
   "@acceptInviteBodyFromParentForChild": {
     "placeholders": {
-      "parentLabel": {"type": "String"},
-      "childLabel": {"type": "String"}
+      "parentLabel": {
+        "type": "String"
+      },
+      "childLabel": {
+        "type": "String"
+      }
     }
   },
   "acceptInvitePermissionViewData": "צפייה בכל נתוני הלמידה וההתקדמות",
@@ -2496,7 +2821,6 @@
   "acceptInviteGenericError": "לא ניתן לאשר את ההזמנה. נסו שוב.",
   "acceptInvitePreconditionError": "לא ניתן עוד לאשר הזמנה זו. ייתכן שפג תוקפה או שכבר נעשה בה שימוש.",
   "unexpectedError": "אירעה שגיאה בלתי צפויה.",
-
   "declineInviteAppBarTitle": "דחיית הזמנה",
   "declineInviteConfirmHeading": "לדחות את הזמנת המדריך?",
   "declineInviteConfirmBody": "אתם עומדים לדחות את הזמנת המדריך. ההורה יקבל הודעה שדחיתם. לא תהיה לכם גישה לפרופיל הלמידה של הילד.",
@@ -2507,7 +2831,6 @@
   "declineInviteErrorHeading": "לא ניתן לדחות את ההזמנה",
   "declineInviteGenericError": "לא ניתן לדחות את ההזמנה. נסו שוב.",
   "declineInvitePreconditionError": "לא ניתן עוד לדחות הזמנה זו. ייתכן שפג תוקפה או שכבר נעשה בה שימוש.",
-
   "inviteTutorAppBarTitle": "הזמנת מדריך",
   "inviteTutorHeading": "הזמנת מדריך",
   "inviteTutorBody": "הזינו את כתובת האימייל של המדריך. הוא יקבל קישור הזמנה לאישור גישה לפרופיל הלמידה של הילד.",
@@ -2519,24 +2842,29 @@
   "inviteTutorSentSnackbar": "ההזמנה נשלחה אל {email}!",
   "@inviteTutorSentSnackbar": {
     "placeholders": {
-      "email": { "type": "String" }
+      "email": {
+        "type": "String"
+      }
     }
   },
   "inviteTutorErrorLocalOnly": "הזמנת מדריך מצריכה חשבון ענן — שדרגו את החשבון כדי להזמין מדריך.",
   "inviteTutorErrorUnauthenticated": "לא הצלחנו לשלוח את ההזמנה. היכנסו לחשבון ונסו שוב.",
   "inviteTutorErrorGeneric": "לא הצלחנו לשלוח את ההזמנה. נסו שוב.",
-
   "manageGrantsAppBarTitle": "ההדרכות שלי",
   "manageGrantsActiveSection": "פעילות ({count})",
   "@manageGrantsActiveSection": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "manageGrantsPendingSection": "הזמנות ממתינות ({count})",
   "@manageGrantsPendingSection": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "manageGrantsEmptyHeading": "אין קשרי הדרכה",
@@ -2545,14 +2873,17 @@
   "manageGrantsResignBody": "תאבדו מיד את הגישה לפרופיל של הילד. ההורה יקבל הודעה.\n\nילד: {child}\nהורה: {parent}",
   "@manageGrantsResignBody": {
     "placeholders": {
-      "child": { "type": "String" },
-      "parent": { "type": "String" }
+      "child": {
+        "type": "String"
+      },
+      "parent": {
+        "type": "String"
+      }
     }
   },
   "manageGrantsResign": "התפטרות",
   "manageGrantsResignErrorGeneric": "לא ניתן להתפטר. נסו שוב.",
   "tutorFallbackName": "המדריך שלכם",
-
   "manageTutorsEmptyHeading": "אין עדיין פרופילי ילדים",
   "manageTutorsEmptyBody": "הוסיפו פרופיל ילד כדי להתחיל להזמין מדריכים.",
   "manageTutorsLoadErrorGeneric": "לא ניתן לטעון מדריכים. נסו שוב.",
@@ -2560,13 +2891,17 @@
   "manageTutorsActiveSection": "פעילים ({count})",
   "@manageTutorsActiveSection": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "manageTutorsPendingSection": "ממתינים ({count})",
   "@manageTutorsPendingSection": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "manageTutorsInviteButton": "הזמנת מדריך",
@@ -2574,7 +2909,9 @@
   "manageTutorsRevokeBody": "{email} יאבד מיד את הגישה לפרופיל של הילד.",
   "@manageTutorsRevokeBody": {
     "placeholders": {
-      "email": { "type": "String" }
+      "email": {
+        "type": "String"
+      }
     }
   },
   "manageTutorsRevoke": "ביטול גישה",
@@ -2583,14 +2920,15 @@
   "manageTutorsRescindBody": "ההזמנה הממתינה אל {email} תבוטל.",
   "@manageTutorsRescindBody": {
     "placeholders": {
-      "email": { "type": "String" }
+      "email": {
+        "type": "String"
+      }
     }
   },
   "manageTutorsRescind": "ביטול הזמנה",
   "manageTutorsRescindErrorGeneric": "לא ניתן לבטל את ההזמנה. נסו שוב.",
   "manageTutorsViewAuditLog": "צפייה ביומן הפעולות",
   "tutorFallbackParent": "הורה",
-
   "auditLogTitle": "יומן פעולות",
   "auditLogClearFilters": "ניקוי סינונים",
   "auditLogFilterFromDate": "סינון מתאריך",
@@ -2621,7 +2959,6 @@
   "auditLogActionStudyDay": "יום לימוד",
   "auditLogBefore": "לפני: ",
   "auditLogAfter": "אחרי: ",
-
   "tutorPinAppBarTitle": "קוד מדריך",
   "tutorPinEntryHeading": "הזינו את קוד המדריך",
   "tutorPinEntryBody": "הזינו את קוד המדריך בן 4 הספרות כדי לגשת לפרופיל זה.",
@@ -2631,23 +2968,28 @@
   "tutorPinLockedOut": "יותר מדי ניסיונות. ננעל למשך {minutes} דקות.",
   "@tutorPinLockedOut": {
     "placeholders": {
-      "minutes": { "type": "int" }
+      "minutes": {
+        "type": "int"
+      }
     }
   },
   "parentPinLockoutTitle": "יותר מדי ניסיונות כושלים",
   "parentPinLockoutBody": "נסה שוב בעוד {minutes} דקות",
   "@parentPinLockoutBody": {
     "placeholders": {
-      "minutes": { "type": "int" }
+      "minutes": {
+        "type": "int"
+      }
     }
   },
   "tutorPinErrorPrefix": "שגיאה: {error}",
   "@tutorPinErrorPrefix": {
     "placeholders": {
-      "error": { "type": "String" }
+      "error": {
+        "type": "String"
+      }
     }
   },
-
   "tutorPinSetupAppBarTitle": "הגדרת קוד מדריך",
   "tutorPinSetupConfirmHeading": "אישור קוד המדריך",
   "tutorPinSetupCreateHeading": "יצירת קוד מדריך",
@@ -2658,7 +3000,6 @@
   "tutorPinSetupMismatch": "הקודים אינם תואמים. נסו שוב.",
   "tutorPinSetupSaveError": "לא ניתן לשמור את הקוד. נסו שוב.",
   "tutorPinSetupLater": "הגדרה מאוחר יותר",
-
   "tutorPinResetAppBarTitle": "איפוס קוד מדריך",
   "tutorPinResetHeading": "איפוס קוד המדריך",
   "tutorPinResetSendingTo": "נשלח קישור לאיפוס אל:",
@@ -2671,11 +3012,12 @@
   "tutorPinResetCheckEmailBody": "שלחנו קישור לאיפוס אל {email}. לחצו על הקישור וחזרו לכאן כדי להגדיר קוד חדש.",
   "@tutorPinResetCheckEmailBody": {
     "placeholders": {
-      "email": { "type": "String" }
+      "email": {
+        "type": "String"
+      }
     }
   },
   "tutorPinResetSetNew": "הגדרת קוד חדש",
-
   "settingsAppPermissions": "הרשאות אפליקציה",
   "settingsAppPermissionsSubtitle": "התראות וגישה למיקום",
   "settingsSendDiagnosticLogs": "שליחת יומני אבחון",
@@ -2688,20 +3030,22 @@
   "settingsNikudSubtitle": "הצגה או הסתרה של ניקוד עברי בעת הלימוד.",
   "settingsNikudWithout": "ללא ניקוד",
   "settingsNikudWith": "עם ניקוד",
-
   "deviceNotificationsTitle": "התראות מכשיר",
   "deviceNotificationsChecking": "בודק הרשאה…",
   "deviceNotificationsAllowed": "התראות מאושרות במכשיר זה",
   "deviceNotificationsBlocked": "התראות חסומות — הקישו כדי לפתוח הגדרות",
   "deviceNotificationsDisableHint": "כדי להשבית התראות, עברו להגדרות > אפליקציות > Learning Tracker.",
   "deviceNotificationsBlockedHint": "התראות חסומות. הפעילו אותן בהגדרות > אפליקציות > Learning Tracker > התראות.",
-
   "notificationReminderTitle": "תזכורת לימוד",
   "notificationReminderBody": "יש לכם {taskCount, plural, =1{משימה אחת} other{{taskCount} משימות}} ב{curriculumCount, plural, =1{תוכנית לימוד אחת} other{{curriculumCount} תוכניות לימוד}} היום",
   "@notificationReminderBody": {
     "placeholders": {
-      "taskCount": { "type": "int" },
-      "curriculumCount": { "type": "int" }
+      "taskCount": {
+        "type": "int"
+      },
+      "curriculumCount": {
+        "type": "int"
+      }
     }
   },
   "notificationReminderGenericBody": "הגיע הזמן ללמוד! פתחו את האפליקציה כדי לראות את המשימות שלכם.",
@@ -2709,22 +3053,21 @@
   "notificationStreakBody": "רצף {currentStreak} הימים שלכם בסכנה!",
   "@notificationStreakBody": {
     "placeholders": {
-      "currentStreak": { "type": "int" }
+      "currentStreak": {
+        "type": "int"
+      }
     }
   },
-
   "onboardingNamePrompt": "מה נקרא לך?",
   "onboardingLearningExperience": "חוויית למידה",
   "onboardingCalendarLabel": "לוח שנה",
   "onboardingSettingsChangeableLater": "ניתן לשנות הגדרות אלה בכל עת מאוחר יותר.",
-
   "onboardingIntentHeading": "מה הביא אותך לכאן?",
   "onboardingIntentSubtitle": "בחר איך תרצה להתחיל.",
   "onboardingIntentTrackTitle": "לעקוב אחרי הלמידה שלי",
   "onboardingIntentTrackSubtitle": "הגדר תכנית לימוד, מטרות ולוח זמנים יומי.",
   "onboardingIntentSkipTitle": "דלג בינתיים",
   "onboardingIntentSkipSubtitle": "כנס לאפליקציה והחלט מאוחר יותר. תוכל להגדיר מסלול, או לקבל הזמנה להדריך ילד, בכל עת.",
-
   "permissionPromptTitleOnboarding": "כמעט סיימנו!",
   "permissionPromptBodyOnboarding": "אפשרו הרשאות אלה כדי שהאפליקציה תוכל להזכיר לכם ללמוד ולחשב זמני {shabbos} לפי מיקומכם.",
   "permissionPromptBodySettings": "נהלו הרשאות אופציונליות לתזכורות ולחישובי זמני {shabbos}.",
@@ -2738,7 +3081,9 @@
   "@chazaraDayUnitLabel": {
     "description": "R1-(3): singular/plural unit word ('day'/'days') shown under the numeric delay in the custom-cycle review chip.",
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "chazaraCustomDayDecrease": "הפחת את מספר ימי החזרה",
@@ -2747,7 +3092,9 @@
   "@scopeChooseLevelPrompt": {
     "description": "R1-(6): top-level scope breadcrumb prompt. Shown after the curriculum chip; must NOT repeat the curriculum name.",
     "placeholders": {
-      "levelLabel": { "type": "String" }
+      "levelLabel": {
+        "type": "String"
+      }
     }
   },
   "schedulerStudyDaysScreenTitle": "{curriculum} • ימי לימוד",
@@ -2778,12 +3125,9 @@
       }
     }
   },
-
   "goalClearDeadlineTooltip": "נקה תאריך יעד",
-
   "showPassword": "הצג סיסמה",
   "hidePassword": "הסתר סיסמה",
-
   "programDescriptionOraysa": "לימוד מובנה עם לימוד יומי, חזרה למחרת, חזרה שבועית ומחזור חזרה מתגלגל של 20 אחרון.",
   "programDescriptionDirshuKinyanTorah": "קצב דף יומי עם 3 מחזורי חזרה וחינות חודשיות.",
   "programDescriptionDirshuAmudHaYomi": "קצב חצי דף ביום עם מחזורי חזרה וחינות חודשיות.",
@@ -2805,7 +3149,6 @@
   "programDescriptionSeferHaMitzvot": "לימוד יומי של ספר המצוות של הרמב\"ם.",
   "programDescriptionShemiratHaLashon": "לימוד יומי של שמירת הלשון של חפץ חיים (נלווה לחפץ חיים יומי).",
   "programDescriptionPirkeiAvotSummer": "פרק אחד של פרקי אבות בכל שבת בין פסח לראש השנה.",
-
   "onboardingSetUpTrackTitle": "הגדרת מסלול",
   "onboardingTrackReadyTitle": "!המסלול מוכן",
   "onboardingAllSetTitle": "!הכול מוכן",
@@ -2817,11 +3160,9 @@
   "onboardingHandoffRewardsHint": "אפשר להגדיר פרסים מאוחר יותר במצב הורה",
   "onboardingParentPinFallbackChildName": "הילד/ה שלך",
   "onboardingPinReenterSubtitle": "הזינו שוב את הקוד לאישור",
-
   "bulkMarkCannotUnmarkAllError": "עליכם להשאיר לפחות מעט תוכן לא מסומן כדי להמשיך ללמוד.",
   "bulkMarkSearchHint": "חיפוש תוכן...",
   "bulkMarkCompletionRecordsCount": "{count, plural, one{רשומת השלמה אחת תיווצר} other{{count} רשומות השלמה ייווצרו}}",
-
   "wizardHowDoesChildReview": "איך {childName} חוזר/ת על החומר?",
   "wizardHowDoYouReview": "איך אתם חוזרים על החומר?",
   "wizardFollowProgramTitle": "עקבו אחר תוכנית",
@@ -2840,5 +3181,6 @@
   "wizardDailyNewMaterial": "חומר חדש יומי",
   "wizardEveryDaysLabel": "כל {days}",
   "wizardRoundDelayAfterLearning": "{days, plural, one{יום אחד אחרי הלימוד} other{{days} ימים אחרי הלימוד}}",
-  "wizardRoundDelayAfter": "{days, plural, one{יום אחד אחרי} other{{days} ימים אחרי}}"
+  "wizardRoundDelayAfter": "{days, plural, one{יום אחד אחרי} other{{days} ימים אחרי}}",
+  "backupSyncStatusUnavailable": "גיבוי הענן פעיל. מצב הסנכרון המפורט אינו זמין בגרסה זו."
 }
