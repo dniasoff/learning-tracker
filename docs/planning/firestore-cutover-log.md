@@ -2445,6 +2445,69 @@ not re-learn the hard way:**
 
 ---
 
+### 2026-08-11 — P3-27: the streak tee was a NO-OP, and its idempotence comment described behaviour the code did not have
+
+`dart analyze --fatal-infos` EXIT 0 on both touched files.
+`check_dependency_direction` EXIT 0. lib errors **495 → 483**.
+
+#### 1. The tee had been silently disconnected
+
+`CompletionStreakPort` existed, `CompletionOrchestrator` accepted it — and the
+provider handed it a `DriftCompletionStreakRecorder` built from
+`userDatabaseProvider`, a database that no longer exists. Above any
+Firestore-backed repository the orchestrator simply received `streakPort: null`.
+
+So **every completion recorded since the cutover wrote no streak event.** Nothing
+failed loudly, because a null port is a legal configuration — the same shape as
+the 0%-progress and streak-0 defects: a value that is *valid* standing in for a
+value that is *correct*.
+
+#### 2. ⚠️ A `T-68`-class false claim, in a comment
+
+The old recorder's own comment said the ULID "encodes the event timestamp so
+duplicate enqueues across two devices on the same logical day collapse to one
+Firestore doc". It then called `newUlid(at)` — random beyond its timestamp
+prefix. Two calls produced two documents. Nothing ever collapsed.
+
+This is the fourth instance this phase of *documentation asserting a property the
+code does not implement*, and the pattern is now clear enough to state as a rule:
+**a comment claiming an invariant is a claim to VERIFY, not a fact to trust** —
+it is exactly as likely to be aspirational as accurate, and it is never checked
+by any gate.
+
+The id is now derived from the natural key of a study day — `(eventType, local
+day)` inside a profile-scoped collection:
+
+    completion_20260811
+
+Two marks on the same day, from any device, any retry, or an offline write
+replaying on reconnect, resolve to the SAME document. The claim is now true, and
+it is true *structurally* rather than by assertion. That idempotence is precisely
+what makes the offline replay path safe.
+
+#### 3. AD-23/AD-28: pushed DOWN, not imported UP
+
+The recorder needs `firestoreStreakEventRepositoryProvider`, which lives in the
+data-access ring. `check_dependency_direction` exempts **exactly**
+`/data/repositories/` (`tool/check_dependency_direction.dart:57`) — not all of
+`data/`. The recorder sat in `features/learning/data/`, one level short of the
+exemption.
+
+Rather than weaken the check or thread a ring type through the presentation
+provider, the recorder was `git mv`-ed into
+`features/learning/data/repositories/` — which is where a repository-backed
+writer belongs anyway — and now takes `Ref` and resolves the repository itself.
+The presentation provider is reduced to `FirestoreCompletionStreakRecorder(ref:
+ref)` and names no data-ring type at all. Same resolution as P3-15 and P3-18:
+push the dependency DOWN to the layer permitted to hold it.
+
+#### 4. Two workers returned nothing
+
+`mig-lifetime-knowledge-v2` and `mig-backup-sync-section` both ended `idle` with
+**zero file changes** — the fifth and sixth empty returns this phase. Their
+targets are unchanged (48 and 12 errors) and are re-queued. Cost of a failed free
+worker remains $0.00; the only loss is wall-clock, which is why they run in
+parallel with verified work rather than blocking it.
 ### 2026-08-11 — P3-26: the client↔Cloud-Function contract is now pinned by a test — and a test that HUNG the suite was found, isolated, and left out
 
 `cf_deletes.test.mjs`: **66 tests, 66 pass, 0 fail, EXIT 0** against the real

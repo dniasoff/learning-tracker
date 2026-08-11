@@ -4,7 +4,7 @@ import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
 import 'package:learning_tracker/features/learning/data/completion_points_awarder.dart';
-import 'package:learning_tracker/features/learning/data/completion_streak_recorder.dart';
+import 'package:learning_tracker/features/learning/data/repositories/completion_streak_recorder.dart';
 import 'package:learning_tracker/features/learning/data/repositories/completion_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
 import 'package:learning_tracker/features/learning/domain/services/completion_detection_service.dart';
@@ -85,17 +85,13 @@ CompletionPointsPort completionPointsPort(Ref ref) {
   );
 }
 
-/// Drift-backed [CompletionStreakPort] — see that class's doc comment.
+/// Firestore-backed [CompletionStreakPort] — see that class's doc comment.
+///
+/// The recorder resolves its own repository from `ref`, so this presentation
+/// provider never names a data-access-ring type (AD-23/AD-28).
 @riverpod
 CompletionStreakPort completionStreakPort(Ref ref) {
-  final database = ref.watch(userDatabaseProvider);
-  // Phase 1 — outbox facade for the streak tee. Cloud-born only; null for
-  // local-born accounts (which short-circuit the enqueue path).
-  final outboxFacade = ref.watch(outboxSyncWriteFacadeProvider);
-  return DriftCompletionStreakRecorder(
-    database: database,
-    outboxFacade: outboxFacade,
-  );
+  return FirestoreCompletionStreakRecorder(ref: ref);
 }
 
 /// Provides the [CompletionOrchestrator] — the single place the five
