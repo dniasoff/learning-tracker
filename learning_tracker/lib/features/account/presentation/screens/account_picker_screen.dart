@@ -7,13 +7,13 @@ import 'package:google_sign_in/google_sign_in.dart'
     show GoogleSignInException, GoogleSignInExceptionCode;
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/app/router/router_provider.dart';
-import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
 import 'package:learning_tracker/core/providers/active_account_id_provider.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
-import 'package:learning_tracker/core/sync/providers/sync_orchestrator_providers.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
+import 'package:learning_tracker/features/account/data/repositories/account_repository_adapter.dart';
+import 'package:learning_tracker/features/account/domain/models/account_entity.dart';
+import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/services/account_lifecycle_service.dart';
 import 'package:learning_tracker/features/account/domain/services/session_persistence_service.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart';
@@ -73,7 +73,7 @@ class _AccountPickerScreenState extends ConsumerState<AccountPickerScreen> {
     // stable creation order). lastUsedAt ordering is intentionally NOT used
     // because it changes every time you switch accounts, causing cards to
     // reorder between visits and making tap-target positions unpredictable.
-    final activeDbFileName = ref.watch(accountDbFileNameProvider);
+    final activeAccountId = ref.watch(activeAccountIdProvider);
     final theme = Theme.of(context);
 
     return Scaffold(
@@ -89,9 +89,9 @@ class _AccountPickerScreenState extends ConsumerState<AccountPickerScreen> {
             // remaining accounts in stable dbFileName order.
             final rawAccounts = snapshot.data!;
             final accounts = [
-              ...rawAccounts.where((a) => a.dbFileName == activeDbFileName),
+              ...rawAccounts.where((a) => a.accountId == activeAccountId),
               ...rawAccounts
-                  .where((a) => a.dbFileName != activeDbFileName)
+                  .where((a) => a.accountId != activeAccountId)
                   .toList()
                 ..sort((a, b) => a.dbFileName.compareTo(b.dbFileName)),
             ];
@@ -462,14 +462,7 @@ class _AccountTileState extends ConsumerState<_AccountTile> {
   ) async {
     if (hasValidSession) {
       // Instant switch — cached Firebase session is valid.
-      // Swap the active DB to this account's file BEFORE reading the
-      // profile — the cached userDatabaseProvider still points at the
-      // previous account otherwise (keepAlive).
-      ref
-          .read(accountDbFileNameProvider.notifier)
-          .setFileName(account.dbFileName);
       ref.read(activeAccountIdProvider.notifier).set(account.accountId);
-      ref.invalidate(userDatabaseProvider);
 
       await _activateCloudAccountFromLocalData(context, ref);
     } else {
@@ -544,9 +537,9 @@ class _AccountTileState extends ConsumerState<_AccountTile> {
     // PERMISSION_DENIED flood reported in the bug, and the cause of the
     // parent's "Manage Tutors" sticking on "Pending" (the tutor_grants listen
     // dies on the denial). The listener set is re-opened against the new
-    // identity by the orchestrator's active-profile listener once the switch
-    // completes. Best-effort: never block or throw out of the switch.
-    await ref.read(syncOrchestratorProvider)?.stopListeners();
+    // identity the moment activeAccountIdProvider changes below — Riverpod's
+    // own dependency graph cancels the old subscriptions and opens fresh ones
+    // scoped to the new account id, no manual stop/restart needed (P3-5).
 
     // SILENT-FIRST: attempt a no-UI re-auth to the cached Google session. If it
     // resolves the TARGET account's uid, activate with no picker. A null result
@@ -618,35 +611,37 @@ class _AccountTileState extends ConsumerState<_AccountTile> {
     BuildContext context,
     WidgetRef ref,
   ) async {
-    // Always swap DB first, so profile reads are scoped to this account.
-    ref
-        .read(accountDbFileNameProvider.notifier)
-        .setFileName(account.dbFileName);
     ref.read(activeAccountIdProvider.notifier).set(account.accountId);
-    ref.invalidate(userDatabaseProvider);
 
-    final dao = ref.read(userDatabaseProvider).userProfileDao;
-    var profile = account.firebaseUid == null
-        ? null
-        : await dao.findCloudBornByFirebaseUid(account.firebaseUid!);
-
-    if (profile == null) {
-      final profiles = await dao.getAllUserProfiles();
-      for (final candidate in profiles) {
-        if (candidate.email.toLowerCase() == account.email.toLowerCase()) {
-          profile = candidate;
-          break;
-        }
+    AccountEntity? accountEntity;
+    if (account.firebaseUid != null) {
+      try {
+        // No local Drift cache anymore (P3-5) — Firestore's own offline
+        // persistence (account_firebase.dart) transparently serves the
+        // cached users/{uid} doc when offline, so this reads the same way
+        // whether online or off.
+        final syntheticUser = AppUser(
+          uid: account.firebaseUid!,
+          email: account.email,
+          displayName: account.displayName,
+          emailVerified: true,
+          providers: const <String>[],
+        );
+        accountEntity = await ref
+            .read(firestoreAccountRepositoryAdapterProvider)
+            .ensureAccountForFirebaseUser(syntheticUser);
+      } catch (_) {
+        accountEntity = null;
       }
     }
 
-    if (profile == null) {
-      // ACCTPICK-03 / SI-04: the account is in the registry but its local DB
-      // row is missing (e.g. DB deleted, corrupt, or never populated because
-      // the account was only created in the cloud and never synced to this
-      // device). Silently returning leaves the user stranded on the picker
-      // with no indication of the failure. Surface a clear error so they know
-      // to connect to the internet to restore from the cloud.
+    if (accountEntity == null) {
+      // ACCTPICK-03 / SI-04: the account is in the device registry but its
+      // Firestore record could not be resolved (offline with nothing cached
+      // yet, or the account was only ever registered on this device and
+      // never actually reached the cloud). Silently returning leaves the
+      // user stranded on the picker with no indication of the failure.
+      // Surface a clear error so they know to connect to the internet.
       if (context.mounted) {
         final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context)
@@ -678,38 +673,16 @@ class _AccountTileState extends ConsumerState<_AccountTile> {
     // never leaks into the new one.
     ref.read(activeTutoredProfileSelectionProvider.notifier).exit();
     ref.read(routerProvider).pinGuard.lock();
-    // RESTORE-01: reset the restore guard's new-device cache so the incoming
-    // account gets its own fresh check. After `markRestoreComplete()` sets
-    // `_isNewDevice = false`, switching to a DIFFERENT cloud account whose
-    // local DB is empty would be silently skipped — never redirected to
-    // DeviceRestoreRoute — without this reset.
-    ref.read(routerProvider).restoreGuard.resetForNewSession();
 
-    ref.read(authStateProvider.notifier).setCloudBornSession(profile: profile);
+    ref
+        .read(authStateProvider.notifier)
+        .setCloudBornSession(account: accountEntity);
 
-    // Restart sync for the now-active identity. The authStateProvider rebuild
-    // above already re-resolves syncIdentityStatusProvider (→ matched when the
-    // live Firebase uid equals this account's uid after re-auth) and rebuilds
-    // the Firestore gateway/orchestrator. Kick a best-effort launch pull so the
-    // outbox drains and listeners re-resolve immediately; offline-first means
-    // this must never block or throw out of the switch.
-    final orchestrator = ref.read(syncOrchestratorProvider);
-    if (orchestrator != null) {
-      // Re-open the Firestore real-time listeners against the now-active
-      // identity. The previous account's listeners were torn down before
-      // re-auth (see _reauthAndActivateCloudAccount / _onTap) so the set is
-      // currently stopped; restart deterministically rebinds it to the new
-      // uid + profile — even when the new account's active profile id collides
-      // with the previous one (the orchestrator's profile-change listener
-      // would not fire in that case).
-      orchestrator.restartListeners();
-      unawaited(
-        orchestrator.pullOnLaunch().timeout(
-          const Duration(seconds: 8),
-          onTimeout: () {},
-        ),
-      );
-    }
+    // Riverpod re-resolves every provider scoped off activeAccountIdProvider
+    // (set above) the moment it changes — including the Firestore
+    // repositories' real-time listeners, which get torn down and re-opened
+    // against the new identity automatically. No manual restart/pull step
+    // is needed anymore (P3-5: no sync-orchestrator to kick).
 
     if (context.mounted) {
       unawaited(context.router.replaceAll([const AppShellRoute()]));
@@ -805,13 +778,9 @@ class _AccountTileState extends ConsumerState<_AccountTile> {
     // point at it. Tear the session down FIRST — close the Drift handle, clear
     // auth + selected profile + active-account pointer — then delete, then
     // route away.
-    final isActive = ref.read(accountDbFileNameProvider) == account.dbFileName;
+    final isActive = ref.read(activeAccountIdProvider) == account.accountId;
     if (isActive) {
-      ref
-          .read(accountDbFileNameProvider.notifier)
-          .setFileName('learning_tracker');
       ref.read(activeAccountIdProvider.notifier).set(null);
-      ref.invalidate(userDatabaseProvider);
       ref.read(authStateProvider.notifier).signOut();
       ref.read(selectedProfileIdProvider.notifier).clear();
       ref.read(routerProvider).pinGuard.lock();

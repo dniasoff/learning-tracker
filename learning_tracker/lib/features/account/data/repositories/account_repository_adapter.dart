@@ -60,6 +60,18 @@ class FirestoreAccountRepositoryAdapter {
   }
 }
 
+/// Widget-callable seam for [FirestoreAccountRepositoryAdapter]:
+/// `FirestoreAccountRepositoryAdapter({required Ref ref})` cannot be
+/// constructed directly from a `WidgetRef`-scoped method (screens,
+/// `ConsumerState`) — `WidgetRef` and `Ref` are distinct types. This
+/// provider's own callback always receives a real `Ref` regardless of the
+/// caller, so `ref.read(firestoreAccountRepositoryAdapterProvider)` is the
+/// sanctioned way to reach the adapter from widget code.
+final firestoreAccountRepositoryAdapterProvider =
+    Provider<FirestoreAccountRepositoryAdapter>(
+      (ref) => FirestoreAccountRepositoryAdapter(ref: ref),
+    );
+
 /// Thrown when `firestoreAccountRepositoryProvider` resolves to `null` (no
 /// active device account yet). The caller must not treat the account as
 /// existing or the session as established when it cannot resolve the record.

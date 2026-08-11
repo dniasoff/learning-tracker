@@ -10,7 +10,6 @@ import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
 import 'package:learning_tracker/core/providers/active_account_id_provider.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/utils/firebase_error_code.dart';
@@ -199,10 +198,12 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       // the existing DB file — the registry row already points at it.
       if (existingEntry == null) {
         final accountId = const Uuid().v4();
+        // dbFileName is vestigial post-P3-5 (no per-account Drift DB is ever
+        // opened again) but the registry row still carries it so
+        // AccountLifecycleService can defensively delete a stale on-disk
+        // .sqlite file left over from before the archival.
         final dbFileName = 'user_acc_$accountId.db';
-        ref.read(accountDbFileNameProvider.notifier).setFileName(dbFileName);
         ref.read(activeAccountIdProvider.notifier).set(accountId);
-        ref.invalidate(userDatabaseProvider);
 
         await ref
             .read(authStateProvider.notifier)
@@ -222,13 +223,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           dbFileName: dbFileName,
         );
       } else {
-        // Existing account on this device — swap to its DB and
-        // refresh lastUsedAt so session persistence stays coherent.
-        ref
-            .read(accountDbFileNameProvider.notifier)
-            .setFileName(existingEntry.dbFileName);
+        // Existing account on this device — refresh lastUsedAt so session
+        // persistence stays coherent.
         ref.read(activeAccountIdProvider.notifier).set(existingEntry.accountId);
-        ref.invalidate(userDatabaseProvider);
         await ref
             .read(authStateProvider.notifier)
             .setCloudBornSessionFromFirebaseUser(googleUser);
@@ -251,11 +248,11 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
 
       final user = ref.read(authRepositoryProvider).currentUser;
       if (user != null && mounted) {
-        // Check if this is a returning user (account row already exists).
-        final dao = ref.read(userDatabaseProvider).userProfileDao;
-        final existingAccount = await dao.getUserProfileByFirebaseUid(user.uid);
+        // Returning user: the device-registry row already existed before
+        // this sign-in (computed above as existingEntry) — no separate
+        // local-DB check needed post-P3-5.
         if (mounted) {
-          if (existingAccount != null) {
+          if (existingEntry != null) {
             final activationService = ref.read(
               curriculumActivationServiceProvider,
             );

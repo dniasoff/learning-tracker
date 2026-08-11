@@ -7,17 +7,14 @@ import 'package:google_sign_in/google_sign_in.dart'
     show GoogleSignInException, GoogleSignInExceptionCode;
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/app/router/router_provider.dart';
-import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/providers/active_account_id_provider.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
-import 'package:learning_tracker/core/sync/providers/outbox_providers.dart'
-    show firestoreGatewayProvider;
-import 'package:learning_tracker/core/sync/providers/sync_orchestrator_providers.dart';
 import 'package:learning_tracker/core/utils/firebase_error_code.dart';
+import 'package:learning_tracker/features/account/data/repositories/account_repository_adapter.dart';
 import 'package:learning_tracker/features/account/data/services/magic_link_service.dart';
+import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/services/session_persistence_service.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
@@ -25,7 +22,7 @@ import 'package:learning_tracker/features/account/presentation/providers/connect
 import 'package:learning_tracker/features/account/presentation/widgets/email_verification_dialog.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_resume_store.dart'
     show kOnboardingComplete, kOnboardingSkipped;
-import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
+import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/tutoring/tutoring.dart'
     show
@@ -273,30 +270,24 @@ class SignInController extends Notifier<SignInState> {
     DeviceAccount account,
     StackRouter router,
   ) async {
+    if (account.firebaseUid == null) return false;
     try {
-      _ref
-          .read(accountDbFileNameProvider.notifier)
-          .setFileName(account.dbFileName);
       _ref.read(activeAccountIdProvider.notifier).set(account.accountId);
-      _ref.invalidate(userDatabaseProvider);
 
-      final dao = _ref.read(userDatabaseProvider).userProfileDao;
-      var profile = account.firebaseUid == null
-          ? null
-          : await dao.findCloudBornByFirebaseUid(account.firebaseUid!);
-
-      if (profile == null) {
-        final allProfiles = await dao.getAllUserProfiles();
-        for (final candidate in allProfiles) {
-          if (candidate.accountTier.isCloud &&
-              candidate.email.toLowerCase() == account.email.toLowerCase()) {
-            profile = candidate;
-            break;
-          }
-        }
-      }
-
-      if (profile == null) return false;
+      // No local Drift cache anymore (P3-5) — Firestore's own offline
+      // persistence (account_firebase.dart) transparently serves the
+      // cached users/{uid} doc when offline, so this reads the same way
+      // whether online or off.
+      final syntheticUser = AppUser(
+        uid: account.firebaseUid!,
+        email: account.email,
+        displayName: account.displayName,
+        emailVerified: true,
+        providers: const <String>[],
+      );
+      final accountEntity = await FirestoreAccountRepositoryAdapter(
+        ref: _ref,
+      ).ensureAccountForFirebaseUser(syntheticUser);
 
       final prefs = await SharedPreferences.getInstance();
       final session = SessionPersistenceService(
@@ -307,7 +298,7 @@ class SignInController extends Notifier<SignInState> {
       await prefs.setBool(kOnboardingComplete, true);
       _ref
           .read(authStateProvider.notifier)
-          .setCloudBornSession(profile: profile);
+          .setCloudBornSession(account: accountEntity);
       _ref.read(selectedProfileIdProvider.notifier).clear();
       _resetSessionContextForFreshSignIn();
       unawaited(router.replaceAll([const AppShellRoute()]));
@@ -353,7 +344,6 @@ class SignInController extends Notifier<SignInState> {
   void _resetSessionContextForFreshSignIn() {
     _ref.read(activeTutoredProfileSelectionProvider.notifier).exit();
     _ref.read(routerProvider).pinGuard.lock();
-    _ref.read(routerProvider).restoreGuard.resetForNewSession();
   }
 
   Future<void> _navigateAfterSignIn(StackRouter router) async {
@@ -396,12 +386,6 @@ class SignInController extends Notifier<SignInState> {
     final session = SessionPersistenceService(prefs: prefs, registry: registry);
 
     if (existingEntry != null) {
-      if (_ref.read(accountDbFileNameProvider) != existingEntry.dbFileName) {
-        _ref
-            .read(accountDbFileNameProvider.notifier)
-            .setFileName(existingEntry.dbFileName);
-        _ref.invalidate(userDatabaseProvider);
-      }
       _ref.read(activeAccountIdProvider.notifier).set(existingEntry.accountId);
       await _ref
           .read(authStateProvider.notifier)
@@ -414,10 +398,12 @@ class SignInController extends Notifier<SignInState> {
       // (no chance of accidental duplication even if the registry row is
       // ever lost and recreated).
       final accountId = user.uid;
+      // dbFileName is vestigial post-P3-5 (no per-account Drift DB is ever
+      // opened again) but the registry row still carries it so
+      // AccountLifecycleService can defensively delete a stale on-disk
+      // .sqlite file left over from before the archival.
       final dbFileName = 'user_acc_$accountId.db';
-      _ref.read(accountDbFileNameProvider.notifier).setFileName(dbFileName);
       _ref.read(activeAccountIdProvider.notifier).set(accountId);
-      _ref.invalidate(userDatabaseProvider);
 
       await _ref
           .read(authStateProvider.notifier)
@@ -433,112 +419,32 @@ class SignInController extends Notifier<SignInState> {
       );
     }
 
-    // S7: do NOT invalidate syncEngineProvider here — the orchestrator is a
-    // per-session singleton and registers duplicate lifecycle observers /
-    // Firestore listeners if rebuilt.
-    final orchestrator = _ref.read(syncOrchestratorProvider);
-    if (orchestrator != null) {
-      // Offline-first: the launch pull is best-effort and MUST NOT block
-      // sign-in. A thrown pull error (e.g. a not-yet-deployed Firestore rule
-      // denying a newly added collection) previously propagated out of this
-      // method and surfaced as a SignInError even though Firebase auth had
-      // already succeeded — locking returning users out. Swallow + log; the
-      // local Drift state below drives navigation regardless.
+    // Wrap in try/catch with backoff: an account doc is always ensured to
+    // exist by setCloudBornSessionFromFirebaseUser above, but a *thrown*
+    // fetch (transient permission-denied from an App Check token blip / a
+    // flaky network at sign-in) would otherwise be indistinguishable from
+    // a genuinely profile-less account, and falling straight through would
+    // dump a RETURNING user into first-profile onboarding. Only *errors*
+    // are retried — an empty result is trusted immediately.
+    var profiles = const <LearnerProfileEntity>[];
+    const maxFetchAttempts = 3;
+    for (var attempt = 1; attempt <= maxFetchAttempts; attempt++) {
       try {
-        await orchestrator.pullOnLaunch().timeout(
-          const Duration(seconds: 8),
-          onTimeout: () {},
-        );
+        profiles = await _ref.read(profileRepositoryProvider).getProfiles();
+        break;
       } catch (e, stackTrace) {
         AppLogger.instance.warning(
-          event: 'navigate_after_sign_in_pull_failed',
+          event: 'navigate_after_sign_in_fetch_profiles_failed',
           exception: e,
           stackTrace: stackTrace,
+          fields: {'attempt': attempt, 'maxAttempts': maxFetchAttempts},
         );
+        if (attempt == maxFetchAttempts) rethrow;
+        await Future<void>.delayed(Duration(milliseconds: 1200 * attempt));
       }
     }
 
-    var profileCount = await _ref
-        .read(userDatabaseProvider)
-        .profileDao
-        .countProfilesForAccount(_ref.read(currentAccountIdProvider));
-
-    var cloudAccountHasProfiles = false;
-    if (profileCount == 0) {
-      // Wrap in try/catch: a new uid that has no Firestore user document yet
-      // will get permission-denied from fetchLearnerProfiles (the rules
-      // require the document to exist). Treat any error as "no remote profiles"
-      // so sign-in is never blocked by a Firestore permission error here.
-      //
-      // RETURNING-USER ROBUSTNESS: a *thrown* fetch (transient permission-denied
-      // from an App Check token blip / a flaky network at sign-in) is
-      // indistinguishable from a genuinely-new account here, and falling
-      // straight through would dump a RETURNING user into first-profile
-      // onboarding. So retry the fetch a few times with backoff before
-      // concluding "no remote profiles": a transient failure recovers, while a
-      // genuinely doc-less new account keeps denying on every attempt and still
-      // (correctly) lands on onboarding. Only *errors* are retried — a timeout
-      // resolves to an empty list (no throw) and is not retried.
-      var remoteProfiles = const <Map<String, dynamic>>[];
-      const maxFetchAttempts = 3;
-      for (var attempt = 1; attempt <= maxFetchAttempts; attempt++) {
-        try {
-          remoteProfiles =
-              await _ref
-                  .read(firestoreGatewayProvider)
-                  ?.fetchLearnerProfiles()
-                  .timeout(
-                    const Duration(seconds: 8),
-                    onTimeout: () => const <Map<String, dynamic>>[],
-                  ) ??
-              const <Map<String, dynamic>>[];
-          break;
-        } catch (e, stackTrace) {
-          AppLogger.instance.warning(
-            event: 'navigate_after_sign_in_fetch_profiles_failed',
-            exception: e,
-            stackTrace: stackTrace,
-            fields: {'attempt': attempt, 'maxAttempts': maxFetchAttempts},
-          );
-          if (attempt < maxFetchAttempts) {
-            await Future<void>.delayed(Duration(milliseconds: 1200 * attempt));
-          }
-        }
-      }
-      cloudAccountHasProfiles = remoteProfiles.isNotEmpty;
-
-      if (cloudAccountHasProfiles && orchestrator != null) {
-        try {
-          await orchestrator.pullOnLaunch().timeout(
-            const Duration(seconds: 8),
-            onTimeout: () {},
-          );
-        } catch (e, stackTrace) {
-          AppLogger.instance.warning(
-            event: 'navigate_after_sign_in_pull_failed',
-            exception: e,
-            stackTrace: stackTrace,
-          );
-        }
-        profileCount = await _ref
-            .read(userDatabaseProvider)
-            .profileDao
-            .countProfilesForAccount(_ref.read(currentAccountIdProvider));
-      }
-    }
-
-    // Plan §F Phase 4 deliverable 5 — never push the onboarding wizard when
-    // the account already owns profiles in the cloud (returning user on a
-    // clean install). The check above pulls + recounts; this final
-    // re-query reflects any restore that ran in parallel (e.g. the
-    // restoreGuard kicked off DeviceRestoreService while we were here) so
-    // we don't lose a race against the just-merged Drift state.
-    final finalProfileCount = await _ref
-        .read(userDatabaseProvider)
-        .profileDao
-        .countProfilesForAccount(_ref.read(currentAccountIdProvider));
-
-    if (finalProfileCount == 0 && !cloudAccountHasProfiles) {
+    if (profiles.isEmpty) {
       // S6: a profile-less account with ≥1 active tutor grant is a pure tutor.
       // Route directly to the picker (TALMID PROFILES section visible) so they
       // are never forced through the profile-creation wizard. We fire-and-forget
@@ -575,64 +481,21 @@ class SignInController extends Notifier<SignInState> {
       return;
     }
 
-    final profiles = await _ref
-        .read(userDatabaseProvider)
-        .profileDao
-        .getProfilesByAccount(_ref.read(currentAccountIdProvider));
-
-    // SYNC-RECONCILE: local profiles exist but the cloud account has NONE
-    // (cloudAccountHasProfiles was false from the fetch above). This is the
-    // "never reached the cloud" gap: a profile created while local-born/offline,
-    // or whose push failed under a since-fixed identity mismatch, has no cloud
-    // document — and a plain cloud-born re-sign-in otherwise only PULLS, so the
-    // data would stay stranded locally forever (the "Backup & Sync unavailable"
-    // never clears even after re-login). Run the bulk uploader once to enqueue
-    // every local entity (profiles + their data) into the outbox. Idempotent
-    // (deterministic doc ids + set/merge), best-effort, and MUST NOT block
-    // sign-in navigation, so fire-and-forget with the active profile primed so
-    // LocalDataUploadService resolves a valid profile id.
-    if (profiles.isNotEmpty &&
-        !cloudAccountHasProfiles &&
-        orchestrator != null) {
-      final reconcileProfile = ProfileModel.fromDriftRow(profiles.first);
-      _ref
-          .read(selectedProfileIdProvider.notifier)
-          .select(reconcileProfile.id, ulid: reconcileProfile.ulid);
-      unawaited(
-        orchestrator.pushAllLocalData().catchError((Object e, StackTrace st) {
-          AppLogger.instance.warning(
-            event: 'sign_in_reconcile_push_all_local_failed',
-            exception: e,
-            stackTrace: st,
-          );
-        }),
-      );
-    }
-
     // Multi-profile accounts go to the picker; single-profile accounts go
-    // straight to the app shell. Both paths bypass OnboardingRoute.
+    // straight to the app shell. Both paths bypass OnboardingRoute. Every
+    // other case was already handled above (profiles.isEmpty) or is
+    // structurally unreachable now that `profiles` IS the Firestore-direct
+    // state (P3-7: no separate local-materialization step to lag behind it).
     if (profiles.length == 1) {
-      final soleProfile = ProfileModel.fromDriftRow(profiles.first);
       _ref
           .read(selectedProfileIdProvider.notifier)
-          .select(soleProfile.id, ulid: soleProfile.ulid);
-      final selectedOrchestrator = _ref.read(syncOrchestratorProvider);
-      if (selectedOrchestrator != null) {
-        unawaited(selectedOrchestrator.pullOnLaunch());
-      }
+          .select(profiles.first.profileId);
       await prefs.setBool(kOnboardingComplete, true);
       unawaited(router.replaceAll([const AppShellRoute()]));
-    } else if (profiles.length > 1) {
+    } else {
       _ref.read(selectedProfileIdProvider.notifier).clear();
       await prefs.setBool(kOnboardingComplete, true);
       unawaited(router.replaceAll([const ProfilePickerRoute()]));
-    } else {
-      // Cloud account has remote profiles but local pull didn't materialise
-      // any — fall back to the app shell; the restoreGuard will pick up
-      // the new-device case and route to DeviceRestoreRoute.
-      _ref.read(selectedProfileIdProvider.notifier).clear();
-      await prefs.setBool(kOnboardingComplete, true);
-      unawaited(router.replaceAll([const AppShellRoute()]));
     }
   }
 
