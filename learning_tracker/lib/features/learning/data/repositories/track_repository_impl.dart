@@ -1,63 +1,56 @@
-import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/sync/codec/track_codec.dart';
-import 'package:learning_tracker/core/sync/sync_write_facade.dart';
+import 'package:learning_tracker/data/firestore/repository_providers.dart';
+import 'package:learning_tracker/data/repositories/firestore_curriculum_track_repository.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/track_repository.dart';
 
-/// Implementation of [TrackRepository] using Drift database.
+/// Thrown by [FirestoreTrackRepositoryAdapter]'s write methods when
+/// `firestoreCurriculumTrackRepositoryProvider` resolves to `null` — no active
+/// account, or no active learner profile yet. See
+/// [BookmarkRepositoryNotReadyException] for the read-vs-write split this mirrors:
+/// reads reuse a natural "nothing yet" value, writes have no such value and throw.
+class TrackRepositoryNotReadyException implements Exception {
+  const TrackRepositoryNotReadyException();
+
+  @override
+  String toString() =>
+      'TrackRepositoryNotReadyException: firestoreCurriculumTrackRepositoryProvider '
+      'resolved to null (no active account, or no active learner profile yet) — '
+      'cannot complete a track write until one is active.';
+}
+
+/// Firestore-backed adapter over [FirestoreCurriculumTrackRepository],
+/// implementing the [TrackRepository] interface for the learning feature.
 ///
-/// W3.28/W3.29: `isActive`, `deactivatedAt`, `deletedAt` columns dropped from
-/// `curriculum_tracks`. The UNIQUE key is `{profileId, curriculumId}` — one
-/// track per curriculum per profile.
-class TrackRepositoryImpl implements TrackRepository {
-  TrackRepositoryImpl({
-    required UserDatabase database,
-    SyncWriteFacade? syncEngine,
-    int activeProfileId = 0,
-  }) : _database = database,
-       _syncEngine = syncEngine,
-       _activeProfileId = activeProfileId;
+/// Follows the pattern established by [FirestoreBookmarkRepositoryAdapter]
+/// (`lib/features/learning/data/repositories/bookmark_repository_impl.dart`):
+/// - Takes a [Ref] and re-resolves the provider on every call
+/// - Construction stays synchronous; the provider is an async nullable FutureProvider
+/// - Write methods throw [TrackRepositoryNotReadyException] when not ready
+/// - The legacy `profileId` parameter (Drift int) is ignored — Firestore repos
+///   are profile-scoped by ULID via the provider.
+class FirestoreTrackRepositoryAdapter implements TrackRepository {
+  FirestoreTrackRepositoryAdapter({required Ref ref}) : _ref = ref;
 
-  final UserDatabase _database;
-  final SyncWriteFacade? _syncEngine;
-  final int _activeProfileId;
+  final Ref _ref;
 
-  Future<CurriculumTrack?> _resolveTrackRowForSync(
-    CurriculumId curriculumId, {
-    required int profileId,
-  }) async {
-    final all = await _database.trackDao.getAllTracks(curriculumId);
-    final preferred = all.where((t) => t.profileId == profileId);
-    if (preferred.isNotEmpty) return preferred.first;
-    return all.isEmpty ? null : all.first;
+  /// Re-reads `firestoreCurriculumTrackRepositoryProvider`, resolving to `null`
+  /// exactly when it does (no active account, or no active learner profile).
+  /// Re-reads on every call rather than caching so profile switches mid-session
+  /// are picked up automatically.
+  Future<FirestoreCurriculumTrackRepository?> _resolveOrNull() {
+    return _ref.read(firestoreCurriculumTrackRepositoryProvider.future);
   }
 
-  static const _trackCodec = TrackCodec();
-
-  Future<void> _pushCurriculumTrackIfCloud(
-    CurriculumId curriculumId, {
-    int? profileId,
-  }) async {
-    final engine = _syncEngine;
-    if (engine == null) return;
-
-    final pid = profileId ?? _activeProfileId;
-    final row = await _resolveTrackRowForSync(curriculumId, profileId: pid);
-    if (row == null) return;
-
-    await engine.pushCurriculumTrack(
-      _trackCodec.encode(
-        TrackRow(
-          profileId: row.profileId,
-          trackId: row.id,
-          curriculumId: row.curriculumId,
-          state: row.state,
-          stateChangedAt: row.stateChangedAt,
-          activatedAt: row.activatedAt,
-          paceResetDate: row.paceResetDate,
-        ),
-      ),
-    );
+  /// Like [_resolveOrNull], but throws [TrackRepositoryNotReadyException]
+  /// instead of returning `null` — for write methods with no natural
+  /// "not ready" value to reuse.
+  Future<FirestoreCurriculumTrackRepository> _resolve() async {
+    final repo = await _resolveOrNull();
+    if (repo == null) {
+      throw const TrackRepositoryNotReadyException();
+    }
+    return repo;
   }
 
   @override
@@ -65,10 +58,7 @@ class TrackRepositoryImpl implements TrackRepository {
     CurriculumId curriculumId, {
     int profileId = 0,
   }) async {
-    await _database.trackDao.initializeDefaultTracks(
-      curriculumId,
-      profileId: profileId,
-    );
-    await _pushCurriculumTrackIfCloud(curriculumId, profileId: profileId);
+    final repo = await _resolve();
+    await repo.activateTrack(curriculumId);
   }
 }

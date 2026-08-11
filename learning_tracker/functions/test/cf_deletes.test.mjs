@@ -194,6 +194,36 @@ describe('deleteCurriculumTrack', () => {
     assert.equal(snap.exists, false, 'track doc should be deleted');
   });
 
+  // ── CLIENT CONTRACT ────────────────────────────────────────────────────
+  // Pins the exact argument shape the Dart client sends from
+  // FirestoreCurriculumTrackRepositoryAdapter.deleteTrackPermanently:
+  //     { profileId: <profile ULID string>, curriculumId: <storageKey string> }
+  //
+  // This seam has broken TWICE — e2ab5aeb (CF wanted a ULID, Dart sent an int)
+  // and P3-17 (14 CF guards still demanded a number). Both times each side was
+  // internally consistent, so neither `dart analyze` nor these tests could see
+  // the disagreement: the fixture supplied whatever shape the bug expected.
+  // This fails if the client is ever changed to send an enum or a numeric id.
+  test('CLIENT CONTRACT: the exact shape the Dart adapter sends is accepted', async () => {
+    const trackRef = db
+      .collection('users')
+      .doc(PARENT)
+      .collection('learner_profiles')
+      .doc(String(PROFILE))
+      .collection('curriculum_tracks')
+      .doc('genesis');
+    await trackRef.set({ curriculumId: 'genesis', enabled: true });
+
+    const res = await call(
+      fns.deleteCurriculumTrack,
+      { profileId: String(PROFILE), curriculumId: 'genesis' },
+      parentAuth,
+    );
+
+    assert.equal(res.success, true);
+    assert.equal((await trackRef.get()).exists, false);
+  });
+
   test('deleting non-existent track doc → still returns success (Firestore delete is idempotent)', async () => {
     // Firestore .delete() on a non-existent doc does NOT throw; verify that.
     const res = await call(fns.deleteCurriculumTrack, goodArgs, parentAuth);

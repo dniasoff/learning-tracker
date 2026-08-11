@@ -2445,6 +2445,54 @@ not re-learn the hard way:**
 
 ---
 
+### 2026-08-11 — P3-26: the client↔Cloud-Function contract is now pinned by a test — and a test that HUNG the suite was found, isolated, and left out
+
+`cf_deletes.test.mjs`: **66 tests, 66 pass, 0 fail, EXIT 0** against the real
+emulator. `dart analyze --fatal-infos` EXIT 0 on the migrated file.
+lib errors **505 → 495**.
+
+#### 1. The contract test that matters
+
+`deleteCurriculumTrack`'s Cloud Function was already well covered. The **client
+call** was not — and that is the seam that has broken TWICE:
+
+- `e2ab5aeb` — the CF demanded a ULID string while every Dart layer sent an int
+- `P3-17` — 14 CF guards still demanded `typeof profileId === "number"`
+
+Both times each side was internally consistent, so `dart analyze` saw nothing,
+and the CF tests saw nothing because the fixture supplied whatever shape the bug
+expected. There is now a test asserting the EXACT argument map
+`FirestoreCurriculumTrackRepositoryAdapter.deleteTrackPermanently` builds. It
+fails if anyone changes the client to send an enum or a numeric id.
+
+#### 2. ⚠️ My own test hung the suite — found by isolation, not by guessing
+
+The first attempt added TWO tests. Result: `cf_deletes.test.mjs` hung for **~891
+seconds**, the run timed out (EXIT 124), and a previously-passing test
+(`deleteLearnerProfile` happy path) failed as collateral. The suite had been
+338/338 immediately before.
+
+It was never committed. Reverting proved the cause was mine — that file returned
+to **65/65 EXIT 0** untouched. Re-adding ONLY the first test gave **66/66 EXIT 0**.
+
+**So the hang was the SECOND test**, which passed an object
+(`{storageKey: 'genesis'}`) where the callable expects a string, to prove it is
+rejected rather than silently coerced. `fft.wrap` evidently does not settle on a
+non-primitive in that position — the promise never resolves or rejects, so
+`assert.rejects` waits forever.
+
+That is a finding about the HARNESS, not just about the test:
+**`firebase-functions-test`'s `wrap` can hang rather than reject on a malformed
+argument, so a negative-path test written the obvious way can silently convert a
+suite into a timeout.** Recorded; the object-rejection case is left unwritten
+pending a technique that cannot hang (e.g. racing it against a timeout).
+
+#### 3. Also landed
+
+`track_repository_impl.dart` migrated (11 → 0), audited for the silent-stub
+pattern: **zero fabricated return values, two explicit throws.** The "never
+return a plausible value to clear an error — throw or report BLOCKED" clause
+added to every dispatch after P3-24 is now visibly changing worker output.
 ### 2026-08-11 — P3-25: the track-delete gap is CLOSED — the Cloud Function is wired to the client, with a contract test on the seam that has broken twice
 
 `dart analyze --fatal-infos` EXIT 0 on both touched files.
