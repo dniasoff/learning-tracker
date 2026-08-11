@@ -19,11 +19,9 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 class TrackLearningOrderScreen extends ConsumerStatefulWidget {
   const TrackLearningOrderScreen({
     super.key,
-    required this.trackId,
     required this.curriculumId,
   });
 
-  final int trackId;
   final CurriculumId curriculumId;
 
   @override
@@ -43,9 +41,9 @@ class _TrackLearningOrderScreenState
 
   @override
   Widget build(BuildContext context) {
-    final args = (trackId: widget.trackId, curriculumId: widget.curriculumId);
-    final sedarimAsync = ref.watch(trackSedarimOrderProvider(args));
-    final masechtosAsync = ref.watch(trackMasechtosOrderProvider(args));
+    final curriculumId = widget.curriculumId;
+    final sedarimAsync = ref.watch(trackSedarimOrderProvider(curriculumId));
+    final masechtosAsync = ref.watch(trackMasechtosOrderProvider(curriculumId));
 
     sedarimAsync.whenData((items) {
       if (_localSedarim == null) _localSedarim = List.from(items);
@@ -226,14 +224,14 @@ class _TrackLearningOrderScreenState
     List<LearningOrderItem>? previous,
   ) async {
     final mySeq = ++_sedarimSaveSeq;
-    final args = (trackId: widget.trackId, curriculumId: widget.curriculumId);
+    final curriculumId = widget.curriculumId;
     try {
       await ref
           .read(trackLearningOrderRepositoryProvider)
-          .saveSedarimOrder(widget.trackId, items);
+          .saveSedarimOrder(widget.curriculumId, items);
     } on Exception catch (e, st) {
       AppLogger.instance.error(
-        event: 'track_sedarim_order_save_failed: trackId=${widget.trackId}',
+        event: 'track_sedarim_order_save_failed: curriculumId=${widget.curriculumId}',
         exception: e,
         stackTrace: st,
       );
@@ -243,14 +241,14 @@ class _TrackLearningOrderScreenState
       return;
     }
     if (!mounted || mySeq != _sedarimSaveSeq) return;
-    ref.invalidate(trackSedarimOrderProvider(args));
+    ref.invalidate(trackSedarimOrderProvider(curriculumId));
     // Reordering sedarim shifts the natural grouping of masechtos below.
     // Wait for the fresh masechtos fetch before re-seeding the local
     // cache; the previous setState(null) approach could lock in the
     // stale cached value during the rebuild before the refetch landed.
-    ref.invalidate(trackMasechtosOrderProvider(args));
+    ref.invalidate(trackMasechtosOrderProvider(curriculumId));
     final freshMasechtos = await ref.read(
-      trackMasechtosOrderProvider(args).future,
+      trackMasechtosOrderProvider(curriculumId).future,
     );
     if (!mounted || mySeq != _sedarimSaveSeq) return;
     setState(() => _localMasechtos = List.from(freshMasechtos));
@@ -260,14 +258,14 @@ class _TrackLearningOrderScreenState
     List<LearningOrderItem> items,
     List<LearningOrderItem>? previous,
   ) async {
-    final args = (trackId: widget.trackId, curriculumId: widget.curriculumId);
+    final curriculumId = widget.curriculumId;
     try {
       await ref
           .read(trackLearningOrderRepositoryProvider)
-          .saveMasechtosOrder(widget.trackId, items);
+          .saveMasechtosOrder(widget.curriculumId, items);
     } on Exception catch (e, st) {
       AppLogger.instance.error(
-        event: 'track_masechtos_order_save_failed: trackId=${widget.trackId}',
+        event: 'track_masechtos_order_save_failed: curriculumId=${widget.curriculumId}',
         exception: e,
         stackTrace: st,
       );
@@ -277,7 +275,7 @@ class _TrackLearningOrderScreenState
       return;
     }
     if (!mounted) return;
-    ref.invalidate(trackMasechtosOrderProvider(args));
+    ref.invalidate(trackMasechtosOrderProvider(curriculumId));
   }
 
   void _showOrderSaveError() {
@@ -302,17 +300,17 @@ class _TrackLearningOrderScreenState
     final confirmed = await ResetOrderDialog.show(context);
     if (!confirmed) return;
 
-    final args = (trackId: widget.trackId, curriculumId: widget.curriculumId);
+    final curriculumId = widget.curriculumId;
     // Bump the save sequence so any in-flight sedarim persist can't resolve
     // last and clobber the reset with its stale masechtos snapshot.
     final mySeq = ++_sedarimSaveSeq;
     try {
       await ref
           .read(trackLearningOrderRepositoryProvider)
-          .resetToDefault(widget.trackId);
+          .resetToDefault(widget.curriculumId);
     } on Exception catch (e, st) {
       AppLogger.instance.error(
-        event: 'track_order_reset_failed: trackId=${widget.trackId}',
+        event: 'track_order_reset_failed: curriculumId=${widget.curriculumId}',
         exception: e,
         stackTrace: st,
       );
@@ -329,13 +327,13 @@ class _TrackLearningOrderScreenState
     // refetch is loading, so a rebuild that lands first re-seeds the stale
     // custom order and the later default emission is then ignored — leaving the
     // UI showing the old order until manual re-navigation.
-    ref.invalidate(trackSedarimOrderProvider(args));
-    ref.invalidate(trackMasechtosOrderProvider(args));
+    ref.invalidate(trackSedarimOrderProvider(curriculumId));
+    ref.invalidate(trackMasechtosOrderProvider(curriculumId));
     final defaultSedarim = await ref.read(
-      trackSedarimOrderProvider(args).future,
+      trackSedarimOrderProvider(curriculumId).future,
     );
     final defaultMasechtos = await ref.read(
-      trackMasechtosOrderProvider(args).future,
+      trackMasechtosOrderProvider(curriculumId).future,
     );
     if (!mounted || mySeq != _sedarimSaveSeq) return;
     setState(() {

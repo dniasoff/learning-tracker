@@ -5,43 +5,6 @@ import 'package:learning_tracker/data/repositories/firestore_goal_repository.dar
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/features/scheduler/domain/repositories/goal_repository.dart';
 
-/// Converts a Drift [Goal] row into the storage-agnostic [GoalEntity] that
-/// [GoalRepository]'s interface now speaks in terms of everywhere (owner
-/// decision 4, `docs/firestore-rewrite-map.md`: goals are addressed by
-/// value, not by row number). Exposed at top level — not just as
-/// [GoalRepositoryImpl]'s private mapping helper — so the other two call
-/// sites that already hold a Drift [Goal] row and need to hand a
-/// [GoalEntity] to [GoalRepository.updateGoal]/[GoalRepository.deleteGoal]
-/// (`TrackCreationService._deleteExistingGoals` and
-/// `edit_track_screen.dart`'s save handler) share one mapping instead of
-/// hand-rolling a second/third copy that could silently drift from this one
-/// (`track_detail_screen.dart` already had its own private copy,
-/// `_goalRowToEntity`, before this — the exact duplication this guards
-/// against going forward).
-GoalEntity goalEntityFromRow(Goal goal) {
-  final rawUnit = goal.paceGranularity;
-  final granularity = PaceGranularity.fromStorageKey(rawUnit);
-  return GoalEntity(
-    id: goal.id,
-    curriculumId: CurriculumId.values.firstWhere(
-      (c) => c.storageKey == goal.curriculumId,
-    ),
-    trackId: goal.trackId,
-    targetPercent: goal.targetPercent,
-    targetDate: goal.targetDate?.toUtc(),
-    description: goal.description,
-    dateType: goal.dateType,
-    goalType: goal.goalType,
-    paceValue: goal.paceValue,
-    pacePeriod: goal.pacePeriod,
-    paceGranularity: granularity,
-    rawLearningUnit: granularity == null ? rawUnit : null,
-    createdAt: goal.createdAt.toUtc(),
-    updatedAt: goal.updatedAt.toUtc(),
-  );
-}
-
-/// Implementation of [GoalRepository] using Drift database and sync engine.
 
 /// Thrown by [FirestoreGoalRepositoryAdapter]'s write methods when
 /// `firestoreGoalRepositoryProvider` resolves to `null` — see
