@@ -2,19 +2,18 @@ import 'dart:async' show unawaited;
 import 'dart:math' as math;
 
 import 'package:auto_route/auto_route.dart';
-import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/empty_state.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
-import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
+import 'package:learning_tracker/data/repositories/firestore_point_config_repository.dart'
+    show defaultPointsForStage;
+import 'package:learning_tracker/features/gamification/data/repositories/point_config_repository_impl.dart';
+import 'package:learning_tracker/features/gamification/domain/models/point_config.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart';
 import 'package:learning_tracker/features/tracks/stages/domain/models/stage_definition.dart'
     as domain_stage;
@@ -38,34 +37,29 @@ Color _kHeroBlueTop(BuildContext context) =>
 Color _kHeroBlueBottom(BuildContext context) =>
     context.colors.gamifPointConfigHeroBlueBottom;
 
-/// Matches [PointConfigDao.seedDefaults] descending defaults per stage order.
-int _defaultPointsForStageOrder(int stageOrder) {
-  const defaultPoints = [10, 5, 3, 2, 1];
-  final idx = stageOrder - 1;
-  if (idx >= 0 && idx < defaultPoints.length) return defaultPoints[idx];
-  return 1;
-}
-
 class _StagePointConfig {
   const _StagePointConfig({required this.stage, required this.config});
 
   final domain_stage.StageDefinition stage;
-  final PointConfig config;
+  final PointConfigEntity config;
 }
 
 class _TrackPointData {
-  const _TrackPointData({
-    required this.curriculum,
-    required this.profileId,
-    required this.trackId,
-    required this.stages,
-  });
+  const _TrackPointData({required this.curriculum, required this.stages});
 
   final CurriculumId curriculum;
-  final int profileId;
-  final int trackId;
   final List<_StagePointConfig> stages;
 }
+
+/// Top-level Provider (not an inline construction inside a WidgetRef-scoped
+/// method): the adapter needs a real `Ref`, which only a provider
+/// callback's `Ref` satisfies -- see track_detail_screen.dart's identical
+/// `_curriculumTrackRepositoryProvider` doc comment (same lesson, earlier
+/// this session).
+final _pointConfigRepositoryProvider =
+    Provider<FirestorePointConfigRepositoryAdapter>(
+      (ref) => FirestorePointConfigRepositoryAdapter(ref: ref),
+    );
 
 _StagePointConfig _primaryStageRow(_TrackPointData data) {
   return data.stages.reduce(
@@ -89,25 +83,12 @@ _StagePointConfig _primaryStageRow(_TrackPointData data) {
 /// `.id`, so editing a synthetic default round-trips correctly.
 final pointConfigDataProvider = FutureProvider.autoDispose<List<_TrackPointData>>(
   (ref) async {
-    final db = ref.watch(userDatabaseProvider);
-    final profileId = ref.watch(activeProfileIdProvider);
-
-    // Same query as [activeTracksProvider] / dashboard; watch the stream so we
-    // rebuild when tracks change, but avoid awaiting another provider's .future
-    // (can stall tests). Fall back to a one-shot read while the stream is idle.
-    final tracksAsync = ref.watch(activeTracksProvider);
-    final activeTracks = switch (tracksAsync) {
-      AsyncData(:final value) => value,
-      AsyncLoading() => await db.trackDao.getActiveTracksForProfile(profileId),
-      AsyncError() => await db.trackDao.getActiveTracksForProfile(profileId),
-    };
+    final activeTracks = await ref.watch(activeTracksProvider.future);
+    final pointConfigRepo = ref.watch(_pointConfigRepositoryProvider);
 
     final result = <_TrackPointData>[];
     for (final track in activeTracks) {
-      final curriculum = CurriculumId.values
-          .where((c) => c.storageKey == track.curriculumId)
-          .firstOrNull;
-      if (curriculum == null) continue;
+      final curriculum = track.curriculumId;
 
       final stageRepo = ref.read(stageDefinitionRepositoryProvider(curriculum));
       final stages = await stageRepo.getStagesForCurriculum(curriculum);
@@ -115,15 +96,11 @@ final pointConfigDataProvider = FutureProvider.autoDispose<List<_TrackPointData>
       // stage definitions and will invalidate this provider once it does.
       if (stages.isEmpty) continue;
 
-      final configs = await db.pointConfigDao.getConfigsByCurriculum(
-        curriculum.storageKey,
-        profileId: profileId,
-        trackId: track.id,
-      );
+      final configs = await pointConfigRepo.getConfigsForCurriculum(curriculum);
 
       final stageConfigs = <_StagePointConfig>[];
       for (final stage in stages) {
-        PointConfig? config;
+        PointConfigEntity? config;
         for (final c in configs) {
           if (c.stageOrder == stage.stageOrder) {
             config = c;
@@ -131,25 +108,15 @@ final pointConfigDataProvider = FutureProvider.autoDispose<List<_TrackPointData>
           }
         }
         // Unpersisted view-model default -- see doc comment above.
-        config ??= PointConfig(
-          id: -1,
-          profileId: profileId,
-          curriculumId: curriculum.storageKey,
-          trackId: track.id,
+        config ??= PointConfigEntity(
+          curriculumId: curriculum,
           stageOrder: stage.stageOrder,
-          points: _defaultPointsForStageOrder(stage.stageOrder),
+          points: defaultPointsForStage(stage.stageOrder),
         );
         stageConfigs.add(_StagePointConfig(stage: stage, config: config));
       }
 
-      result.add(
-        _TrackPointData(
-          curriculum: curriculum,
-          profileId: profileId,
-          trackId: track.id,
-          stages: stageConfigs,
-        ),
-      );
+      result.add(_TrackPointData(curriculum: curriculum, stages: stageConfigs));
     }
     return result;
   },
@@ -170,57 +137,41 @@ class PointConfigMaintenanceController extends Notifier<void> {
   void build() {}
 
   Future<void> seedMissingDefaultsIfNeeded() async {
-    final db = ref.read(userDatabaseProvider);
-    final profileId = ref.read(activeProfileIdProvider);
-    final activeTracks = await db.trackDao.getActiveTracksForProfile(profileId);
+    final activeTracks = await ref.read(activeTracksProvider.future);
+    final pointConfigRepo = ref.read(_pointConfigRepositoryProvider);
 
     var wrote = false;
     for (final track in activeTracks) {
-      final curriculum = CurriculumId.values
-          .where((c) => c.storageKey == track.curriculumId)
-          .firstOrNull;
-      if (curriculum == null) continue;
+      final curriculum = track.curriculumId;
 
       final stageRepo = ref.read(stageDefinitionRepositoryProvider(curriculum));
       var stages = await stageRepo.getStagesForCurriculum(curriculum);
       if (stages.isEmpty) {
-        await stageRepo.initializeDefaults(
-          curriculum,
-          profileId: profileId,
-          trackId: track.id,
-        );
+        // profileId/trackId are both vestigial on this call — the
+        // resolved repository is already profile-scoped, and AD-25
+        // makes curriculumId the sole canonical track key (see
+        // FirestoreStageDefinitionRepositoryAdapter.initializeDefaults's
+        // own doc comment).
+        await stageRepo.initializeDefaults(curriculum, profileId: 0, trackId: 0);
         stages = await stageRepo.getStagesForCurriculum(curriculum);
         wrote = true;
       }
       if (stages.isEmpty) continue;
 
-      final configs = await db.pointConfigDao.getConfigsByCurriculum(
-        curriculum.storageKey,
-        profileId: profileId,
-        trackId: track.id,
+      final beforeCount =
+          (await pointConfigRepo.getConfigsForCurriculum(curriculum)).length;
+      await pointConfigRepo.ensureDefaultConfigs(
+        curriculumId: curriculum,
+        stageOrders: [for (final s in stages) s.stageOrder],
       );
-
-      for (final stage in stages) {
-        final hasConfig = configs.any((c) => c.stageOrder == stage.stageOrder);
-        if (hasConfig) continue;
-        await db.pointConfigDao.upsertConfig(
-          PointConfigsCompanion.insert(
-            profileId: profileId,
-            curriculumId: curriculum.storageKey,
-            trackId: track.id,
-            stageOrder: stage.stageOrder,
-            points: _defaultPointsForStageOrder(stage.stageOrder),
-          ),
-        );
-        wrote = true;
-      }
+      final afterCount =
+          (await pointConfigRepo.getConfigsForCurriculum(curriculum)).length;
+      if (afterCount > beforeCount) wrote = true;
     }
 
     if (!wrote) return;
     // SM-4: the screen that triggered this can be disposed while the seeding
     // writes above are in flight.
-    if (!ref.mounted) return;
-    await ref.read(syncWriteFacadeProvider)?.pushGamificationSettingsSnapshot();
     if (!ref.mounted) return;
     ref.invalidate(pointConfigDataProvider);
   }
@@ -240,8 +191,10 @@ class PointConfigScreen extends ConsumerStatefulWidget {
 }
 
 class _PointConfigScreenState extends ConsumerState<PointConfigScreen> {
-  /// Pending edits for the primary (lowest stage order) row per track.
-  final Map<int, int> _pendingPrimaryByTrackId = {};
+  /// Pending edits for the primary (lowest stage order) row per curriculum
+  /// (AD-25: curriculum IS the track, there is no separate track id to key
+  /// this map on any more).
+  final Map<CurriculumId, int> _pendingPrimaryByCurriculum = {};
   bool _saving = false;
 
   @override
@@ -264,41 +217,34 @@ class _PointConfigScreenState extends ConsumerState<PointConfigScreen> {
   }
 
   int _effectivePrimaryPoints(_TrackPointData data) {
-    final pending = _pendingPrimaryByTrackId[data.trackId];
+    final pending = _pendingPrimaryByCurriculum[data.curriculum];
     if (pending != null) return pending;
     return _primaryStageRow(data).config.points;
   }
 
-  bool get _hasPendingEdits => _pendingPrimaryByTrackId.isNotEmpty;
+  bool get _hasPendingEdits => _pendingPrimaryByCurriculum.isNotEmpty;
 
   Future<void> _savePending(List<_TrackPointData> tracks) async {
     if (!_hasPendingEdits || _saving) return;
     final l10n = AppLocalizations.of(context)!;
     setState(() => _saving = true);
     try {
-      final db = ref.read(userDatabaseProvider);
-      final profileId = ref.read(activeProfileIdProvider);
-      final sync = ref.read(syncWriteFacadeProvider);
+      final pointConfigRepo = ref.read(_pointConfigRepositoryProvider);
 
       for (final track in tracks) {
-        final pending = _pendingPrimaryByTrackId[track.trackId];
+        final pending = _pendingPrimaryByCurriculum[track.curriculum];
         if (pending == null) continue;
         final primary = _primaryStageRow(track);
-        await db.pointConfigDao.upsertConfig(
-          PointConfigsCompanion(
-            profileId: Value(profileId),
-            curriculumId: Value(track.curriculum.storageKey),
-            trackId: Value(track.trackId),
-            stageOrder: Value(primary.stage.stageOrder),
-            points: Value(pending),
-          ),
+        await pointConfigRepo.upsertConfig(
+          curriculumId: track.curriculum,
+          stageOrder: primary.stage.stageOrder,
+          points: pending,
         );
       }
 
-      await sync?.pushGamificationSettingsSnapshot();
       if (mounted) {
         setState(() {
-          _pendingPrimaryByTrackId.clear();
+          _pendingPrimaryByCurriculum.clear();
           _saving = false;
         });
         ref.invalidate(pointConfigDataProvider);
@@ -323,7 +269,7 @@ class _PointConfigScreenState extends ConsumerState<PointConfigScreen> {
   void _bumpPrimary(_TrackPointData data, int delta) {
     final current = _effectivePrimaryPoints(data);
     final next = math.max(1, math.min(9999, current + delta));
-    setState(() => _pendingPrimaryByTrackId[data.trackId] = next);
+    setState(() => _pendingPrimaryByCurriculum[data.curriculum] = next);
   }
 
   @override
