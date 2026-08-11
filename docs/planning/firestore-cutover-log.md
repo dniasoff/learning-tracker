@@ -2445,6 +2445,41 @@ not re-learn the hard way:**
 
 ---
 
+### 2026-08-11 — P3-33: stage definitions become an adapter, unblocking the file that was waiting on them
+
+`dart analyze --fatal-infos` EXIT 0. `check_dependency_direction` EXIT 0.
+11 errors → 0.
+
+`StageDefinitionRepositoryImpl` was Drift-shaped: it took `stageDao`,
+`completionDao` and a `pushStageDefinitions` outbox callback, all injected by its
+caller. It is now `FirestoreStageDefinitionRepositoryAdapter({required Ref ref})`
+— the same shape as `FirestoreBookmarkRepositoryAdapter` and
+`FirestoreProgressRepositoryAdapter`: takes `Ref`, resolves
+`firestoreStageDefinitionRepositoryProvider` itself.
+
+The rename is the point, not cosmetic. Three injected dependencies collapse to
+one `ref`, which is what lets the presentation-layer call site shrink from a
+four-argument construction over `db.stageDao` / `db.completionDao` /
+`syncFacade?.pushStageDefinitions` to `FirestoreStageDefinitionRepositoryAdapter(ref: ref)`.
+`onboarding_providers.dart` was blocked on exactly that and is now dispatched.
+
+It also carried over the read/write split rather than inventing one:
+`StageDefinitionRepositoryNotReadyException` on writes (there is no empty value a
+write can legitimately return), while reads reuse the interface's own empty-list
+convention — the same distinction `BookmarkRepositoryNotReadyException` documents.
+
+#### Sequencing note
+
+This is the third time this phase that a file's "blocker" turned out to be a
+constructor shape rather than missing capability. The pattern is worth naming:
+**a Drift-era class that takes its dependencies as constructor arguments blocks
+every caller until it is converted to take `Ref`**, because each caller would
+otherwise have to reach the data ring itself — which AD-23/AD-28 forbids from
+presentation. Converting the callee first unblocks all its callers at once;
+attacking the callers first cannot work.
+
+That is why the queue is now ordered callee-before-caller rather than by error
+count.
 ### 2026-08-11 — P3-32: COLD CACHE (owner ask #2) — an unsynced cache can no longer render as "you have achieved nothing"
 
 `dart analyze --fatal-infos` EXIT 0. `check_dependency_direction` EXIT 0.
