@@ -40,7 +40,7 @@ class UserProfileHeaderCard extends ConsumerWidget {
   });
 
   final AppUser? user;
-  final ProfileModel? activeProfile;
+  final LearnerProfileEntity? activeProfile;
   final UserProfileHeaderSurface surface;
   final UserProfileContextRole contextRole;
 
@@ -300,19 +300,22 @@ class _ParentProfileSurface extends StatelessWidget {
   }
 }
 
-/// Resolves the [ProfileModel] matching [activeProfileId] out of the live
-/// profile-list stream.
+/// Resolves the [LearnerProfileEntity] matching [activeProfileId] out of the
+/// live profile-list stream.
 ///
 /// AUD-settings-10: this lookup used to be copy-pasted between
-/// [UserProfileHeaderCard]'s and [_LocalBornProfileRow]'s `build` methods.
-/// Shared here and read via [ProviderListenable.select] (PF-1) so callers
-/// rebuild only when the *resolved profile* changes, not on every unrelated
-/// mutation to the full profile list.
-ProfileModel? _watchActiveProfileFromList(WidgetRef ref, int activeProfileId) {
+/// [UserProfileHeaderCard]'s and a since-removed local-born profile row's
+/// `build` methods. Shared here and read via [ProviderListenable.select]
+/// (PF-1) so callers rebuild only when the *resolved profile* changes, not
+/// on every unrelated mutation to the full profile list.
+LearnerProfileEntity? _watchActiveProfileFromList(
+  WidgetRef ref,
+  String? activeProfileId,
+) {
   return ref.watch(
     profileListStreamProvider.select(
       (asyncValue) => asyncValue.asData?.value
-          .where((p) => p.id == activeProfileId)
+          .where((p) => p.profileId == activeProfileId)
           .firstOrNull,
     ),
   );

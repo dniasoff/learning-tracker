@@ -88,6 +88,7 @@ import 'package:learning_tracker/data/repositories/firestore_bookmark_repository
 import 'package:learning_tracker/data/repositories/firestore_completion_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_curriculum_scope_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_curriculum_track_repository.dart';
+import 'package:learning_tracker/data/repositories/firestore_diagnostic_log_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_goal_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_learner_profile_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_learning_ledger_repository.dart';
@@ -183,6 +184,19 @@ final firestoreAccountRepositoryProvider =
       final handles = await ref.watch(activeAccountFirebaseProvider.future);
       if (handles == null) return null;
       return FirestoreAccountRepository(
+        firestore: handles.firestore,
+        uid: handles.uid,
+      );
+    });
+
+/// `users/{uid}/diagnostic_logs/{autoId}` — Settings' "Send Diagnostic
+/// Logs" upload. Account-scoped: needs no active learner profile, same
+/// reasoning as [firestoreAccountRepositoryProvider] above.
+final firestoreDiagnosticLogRepositoryProvider =
+    FutureProvider<FirestoreDiagnosticLogRepository?>((ref) async {
+      final handles = await ref.watch(activeAccountFirebaseProvider.future);
+      if (handles == null) return null;
+      return FirestoreDiagnosticLogRepository(
         firestore: handles.firestore,
         uid: handles.uid,
       );

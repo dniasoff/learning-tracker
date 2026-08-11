@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
-import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
+import 'package:learning_tracker/features/settings/data/repositories/firestore_diagnostic_log_repository_impl.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 const _logWindowMinutes = 10;
 
 /// Uploads the last [_logWindowMinutes] minutes of log history to
-/// `users/{uid}/diagnostic_logs/{auto-id}` in Firestore via [FirestoreGateway].
+/// `users/{uid}/diagnostic_logs/{autoId}` in Firestore via
+/// [FirestoreDiagnosticLogRepositoryAdapter]. Replaces
+/// `FirestoreGatewayImpl.pushDiagnosticLog` (archived with the rest of the
+/// Drift sync engine).
 ///
 /// The developer can view and query logs directly in the Firebase console.
 /// Each document expires after 7 days (set `expires_at` as Firestore TTL
@@ -17,7 +20,7 @@ const _logWindowMinutes = 10;
 Future<void> sendLogsToFirebase({
   required BuildContext context,
   required AppLogger logger,
-  required FirestoreGateway? gateway,
+  required FirestoreDiagnosticLogRepositoryAdapter repository,
   required AuthRepository auth,
 }) async {
   final uid = auth.currentUser?.uid;
@@ -28,17 +31,6 @@ Future<void> sendLogsToFirebase({
           content: Text(
             AppLocalizations.of(context)!.errorSendLogsMustBeSignedIn,
           ),
-        ),
-      );
-    }
-    return;
-  }
-
-  if (gateway == null) {
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context)!.errorSendLogsNoGateway),
         ),
       );
     }
@@ -71,20 +63,17 @@ Future<void> sendLogsToFirebase({
       .toList();
 
   try {
-    await gateway.pushDiagnosticLog(
-      uid: uid,
-      data: {
-        'version': pkgInfo != null
-            ? '${pkgInfo.version}+${pkgInfo.buildNumber}'
-            : 'unknown',
-        'window_minutes': _logWindowMinutes,
-        'entry_count': entries.length,
-        'entries': entries,
-        // TTL field — enable automatic deletion in Firebase console:
-        // Firestore → Data → TTL policies → collection: diagnostic_logs, field: expires_at
-        'expires_at': now.add(const Duration(days: 7)).toIso8601String(),
-      },
-    );
+    await repository.pushLog({
+      'version': pkgInfo != null
+          ? '${pkgInfo.version}+${pkgInfo.buildNumber}'
+          : 'unknown',
+      'window_minutes': _logWindowMinutes,
+      'entry_count': entries.length,
+      'entries': entries,
+      // TTL field — enable automatic deletion in Firebase console:
+      // Firestore → Data → TTL policies → collection: diagnostic_logs, field: expires_at
+      'expires_at': now.add(const Duration(days: 7)).toIso8601String(),
+    });
 
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -93,6 +82,19 @@ Future<void> sendLogsToFirebase({
             AppLocalizations.of(context)!.sendLogsSuccess(entries.length),
           ),
           duration: const Duration(seconds: 4),
+        ),
+      );
+    }
+  } on DiagnosticLogRepositoryNotReadyException catch (e, stackTrace) {
+    logger.error(
+      event: 'send_logs_failed_not_ready',
+      exception: e,
+      stackTrace: stackTrace,
+    );
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.errorSendLogsNoGateway),
         ),
       );
     }

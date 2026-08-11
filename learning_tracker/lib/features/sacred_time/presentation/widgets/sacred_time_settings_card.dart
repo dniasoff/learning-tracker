@@ -29,10 +29,12 @@ final sacredTimeLocationPinGuardRequiredProvider = FutureProvider<bool>((
   ref,
 ) async {
   final profiles =
-      ref.watch(profileListStreamProvider).asData?.value ?? <ProfileModel>[];
+      ref.watch(profileListStreamProvider).asData?.value ??
+      <LearnerProfileEntity>[];
   final activeId = ref.watch(activeProfileIdProvider);
-  final active = profiles.where((p) => p.id == activeId).firstOrNull;
-  if (active == null || active.profileMode != ProfileMode.child) return false;
+  final active = profiles.where((p) => p.profileId == activeId).firstOrNull;
+  if (active == null || active.mode != ProfileMode.child) return false;
+  if (activeId == null) return false;
   final pinService = ref.read(pinServiceProvider);
   return pinService.hasProfilePin(activeId);
 });
@@ -44,7 +46,7 @@ class SacredTimeSettingsCard extends ConsumerWidget {
   const SacredTimeSettingsCard({
     super.key,
     this.pinGuardRequired = false,
-    this.activeProfileId = 0,
+    this.activeProfileId,
   });
 
   /// AUD-sacred_time-08: gates the location actions behind a Parent PIN
@@ -59,7 +61,7 @@ class SacredTimeSettingsCard extends ConsumerWidget {
 
   /// Active profile id passed through to the Parent PIN dialog. Ignored
   /// when [pinGuardRequired] is false.
-  final int activeProfileId;
+  final String? activeProfileId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -230,7 +232,7 @@ class _LocationActions extends ConsumerStatefulWidget {
   });
 
   final bool pinGuardRequired;
-  final int activeProfileId;
+  final String? activeProfileId;
 
   @override
   ConsumerState<_LocationActions> createState() => _LocationActionsState();
@@ -296,10 +298,14 @@ class _LocationActionsState extends ConsumerState<_LocationActions> {
   /// returns whether it succeeded. Mirrors ProfileSwitcherSheet's
   /// `_guardEscalating` (AN-2).
   Future<bool> _verifyParentPin() {
+    final activeProfileId = widget.activeProfileId;
+    // Fail closed: nothing to verify against — same posture as
+    // ProfileSwitcherSheet's AN-2 `_guardEscalating`.
+    if (activeProfileId == null) return Future.value(false);
     final l10n = AppLocalizations.of(context)!;
     return showParentPinVerificationDialog(
       context,
-      profileId: widget.activeProfileId,
+      profileId: activeProfileId,
       pinService: ref.read(pinServiceProvider),
       subtitle: l10n.pinDialogSubtitleLocationAccess,
     );

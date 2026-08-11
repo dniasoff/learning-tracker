@@ -20,7 +20,7 @@
 library profiles;
 
 // ── Domain models ──────────────────────────────────────────────────────
-export 'domain/models/profile_model.dart';
+export 'domain/models/learner_profile_entity.dart';
 
 // ── Domain repositories ────────────────────────────────────────────────
 export 'domain/repositories/profile_repository.dart';

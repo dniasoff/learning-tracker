@@ -156,9 +156,9 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen> {
 
     final activeProfileId = ref.watch(activeProfileIdProvider);
     final profilesAsync = ref.watch(profileListStreamProvider);
-    final profiles = profilesAsync.asData?.value ?? <ProfileModel>[];
+    final profiles = profilesAsync.asData?.value ?? <LearnerProfileEntity>[];
     final activeProfile = profiles
-        .where((p) => p.id == activeProfileId)
+        .where((p) => p.profileId == activeProfileId)
         .firstOrNull;
 
     // No own profiles and not in a tutored session → the shell jumps to the
@@ -186,7 +186,7 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen> {
     final parentModeActive =
         parentAuthedProfileId != null &&
         parentAuthedProfileId == activeProfileId &&
-        activeProfile?.profileMode == ProfileMode.child;
+        activeProfile?.mode == ProfileMode.child;
     // Tutor mode has its own indicator bar; only one context banner shows.
     final isViewingChildProfile = !hasActiveTutoredProfiles && parentModeActive;
     final viewingChildName = isViewingChildProfile
@@ -476,9 +476,9 @@ class ProfileSwitcherBar extends ConsumerWidget {
     final activeProfileId = ref.watch(activeProfileIdProvider);
     final profiles =
         ref.watch(profileListStreamProvider).asData?.value ??
-        const <ProfileModel>[];
+        const <LearnerProfileEntity>[];
     final activeProfile = profiles
-        .where((p) => p.id == activeProfileId)
+        .where((p) => p.profileId == activeProfileId)
         .firstOrNull;
     // Same fallback chain as UserProfileHeaderCard: prefer the active profile's
     // name, then the signed-in account's display name / email handle, then a
@@ -533,10 +533,10 @@ class ProfileSwitcherBar extends ConsumerWidget {
     final String roleBadge;
     if (isTutoredContext) {
       roleBadge = l10n.tutorContextBadge;
-    } else if (activeProfile?.profileMode == ProfileMode.child &&
+    } else if (activeProfile?.mode == ProfileMode.child &&
         isParentElevated) {
       roleBadge = l10n.profileBadgeParentMode;
-    } else if (activeProfile?.profileMode == ProfileMode.child) {
+    } else if (activeProfile?.mode == ProfileMode.child) {
       roleBadge = l10n.profileBadgeChildMode;
     } else {
       roleBadge = l10n.profileBadgeAdultMode;
@@ -718,7 +718,7 @@ class ChildViewBanner extends ConsumerWidget {
   });
 
   final String childName;
-  final List<ProfileModel> profiles;
+  final List<LearnerProfileEntity> profiles;
   final VoidCallback onExit;
 
   @override

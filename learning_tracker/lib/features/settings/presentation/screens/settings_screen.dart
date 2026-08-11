@@ -6,7 +6,6 @@ import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/providers/talker_provider.dart';
-import 'package:learning_tracker/core/sync/providers/outbox_providers.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/preference_list_tile.dart';
 import 'package:learning_tracker/core/widgets/preference_segmented_tile.dart';
@@ -19,6 +18,7 @@ import 'package:learning_tracker/features/profiles/presentation/providers/parent
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/parent_pin_keypad_dialog.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/widgets/sacred_time_settings_card.dart';
+import 'package:learning_tracker/features/settings/data/repositories/firestore_diagnostic_log_repository_impl.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/lifetime_marking_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/utils/send_logs_service.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/backup_sync_section.dart';
@@ -31,6 +31,16 @@ import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_
     show pendingTutorInvitesProvider;
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+
+/// [FirestoreDiagnosticLogRepositoryAdapter] needs a real `Ref`, not the
+/// `WidgetRef` this screen's `build` method holds — wrapped in a top-level
+/// provider so `ref.read` below always supplies a real `Ref` regardless of
+/// the caller (see `FirestoreCurriculumRewardEligibilityAdapter`'s wiring
+/// for the same pattern).
+final _diagnosticLogRepositoryProvider =
+    Provider<FirestoreDiagnosticLogRepositoryAdapter>(
+      (ref) => FirestoreDiagnosticLogRepositoryAdapter(ref: ref),
+    );
 
 @RoutePage()
 class SettingsScreen extends ConsumerWidget {
@@ -45,9 +55,9 @@ class SettingsScreen extends ConsumerWidget {
     final activeProfileId = ref.watch(activeProfileIdProvider);
     final profilesAsync = ref.watch(profileListStreamProvider);
     final activeProfile = profilesAsync.asData?.value
-        .where((p) => p.id == activeProfileId)
+        .where((p) => p.profileId == activeProfileId)
         .firstOrNull;
-    final isChildProfile = activeProfile?.profileMode == ProfileMode.child;
+    final isChildProfile = activeProfile?.mode == ProfileMode.child;
     final activeTutoredSelection = ref.watch(
       activeTutoredProfileSelectionProvider,
     );
@@ -288,7 +298,7 @@ class SettingsScreen extends ConsumerWidget {
                   onTap: () => sendLogsToFirebase(
                     context: context,
                     logger: ref.read(appLoggerProvider),
-                    gateway: ref.read(firestoreGatewayProvider),
+                    repository: ref.read(_diagnosticLogRepositoryProvider),
                     auth: ref.read(authRepositoryProvider),
                   ),
                 ),
