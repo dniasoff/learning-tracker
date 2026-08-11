@@ -17,6 +17,7 @@ import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/time/ulid.dart';
 import 'package:learning_tracker/data/firestore/doc_ids.dart';
 import 'package:learning_tracker/data/firestore/resilient_doc_stream.dart';
+import 'package:learning_tracker/data/firestore/write_ack.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 import 'package:learning_tracker/features/learning/domain/entities/learning_ledger_entry.dart';
 
@@ -403,7 +404,7 @@ class FirestoreLearningLedgerRepository {
       isManual: isManual,
       source: source,
     );
-    await ref.set(entry.toFirestore());
+    await ref.set(entry.toFirestore()).orQueuedOffline;
     return entry;
   }
 
@@ -472,7 +473,7 @@ class FirestoreLearningLedgerRepository {
       for (final entry in chunk) {
         batch.set(_doc(entry.ulid), entry.toFirestore());
       }
-      await batch.commit();
+      await batch.commit().orQueuedOffline;
     }
 
     return entries;
@@ -508,7 +509,7 @@ class FirestoreLearningLedgerRepository {
         'cannot find its target must fail loudly, never no-op (D-E).',
       );
     }
-    await ref.update({'purged_at': purgedAt.toUtc()});
+    await ref.update({'purged_at': purgedAt.toUtc()}).orQueuedOffline;
   }
 
   Future<List<LearningLedgerEntry>> getLifetimeLedger() async {

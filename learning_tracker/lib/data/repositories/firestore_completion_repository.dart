@@ -14,6 +14,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/data/firestore/doc_ids.dart';
 import 'package:learning_tracker/data/firestore/resilient_doc_stream.dart';
+import 'package:learning_tracker/data/firestore/write_ack.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_entity.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_tier_filter.dart';
@@ -441,7 +442,7 @@ class FirestoreCompletionRepository {
       for (final entity in chunk) {
         batch.set(_doc(entity), entity.toFirestore(), SetOptions(merge: true));
       }
-      await batch.commit();
+      await batch.commit().orQueuedOffline;
     }
     return entities;
   }
@@ -650,7 +651,7 @@ class FirestoreCompletionRepository {
         'completion that does not exist must fail loudly, never no-op (D-E).',
       );
     }
-    await ref.update(fields);
+    await ref.update(fields).orQueuedOffline;
   }
 
   // ── Reads ─────────────────────────────────────────────────────────────

@@ -2445,6 +2445,76 @@ not re-learn the hard way:**
 
 ---
 
+### 2026-08-11 — P3-20: offline gap step 1 — 19 Firestore writes no longer hang the UI; `batch.commit()` measured, not assumed
+
+`dart analyze --fatal-infos lib/data/` **EXIT 0 — "No issues found!"** (the whole
+data layer). `flutter test test/data/repositories/`: **306 pass, 0 fail.**
+
+#### 1. What was broken
+
+A bare `await` on ANY Firestore write never returns while offline. The Android
+plugin does `Tasks.await(...)` on a Task that completes only on SERVER
+acknowledgement, while the SDK has already durably queued the write locally.
+Data safe; UI stuck forever. To a learner that is "the app freezes on the tube",
+and it is close to undiagnosable from a bug report.
+
+#### 2. Measured, both cases
+
+The earlier risk analysis INFERRED `batch.commit()`'s behaviour from the same
+`Tasks.await` code path. Plausible, but unmeasured — and reasoning about this SDK
+instead of asking the device has already produced two wrong fixes today. So it
+was probed on a real Android device against the Firestore emulator:
+
+```
+PROBE_Q2_SET_OFFLINE   :: AWAIT DID NOT RETURN (TimeoutException after 5s)
+PROBE_Q2_AFTER_RECONNECT :: exists=true
+PROBE_Q5_BATCH_OFFLINE :: AWAIT DID NOT RETURN (TimeoutException)
+PROBE_Q5_BATCH_LANDED  :: a=true b=true
+```
+
+Both hang; both LAND. The sweep is uniform, and the timeout is sound precisely
+because the data arrives — a timeout means "no server ack yet", not "lost".
+
+#### 3. What changed
+
+New `lib/data/firestore/write_ack.dart`:
+
+```dart
+extension FirestoreWriteAck on Future<void> {
+  Future<void> get orQueuedOffline =>
+      timeout(kFirestoreWriteAckTimeout, onTimeout: () {});
+}
+```
+
+Applied to **19 write sites across 10 repositories** — every `set`, `update` and
+`batch.commit` in `lib/data/repositories/`. The count was verified per site with
+an expected-occurrence assertion, so a miscount aborts rather than half-editing.
+
+**The earlier count of "31" was wrong** — measured, it is 19 (20 grep hits, one
+of which is a comment). Another instance of a quoted number that had never been
+re-measured.
+
+#### 4. Deliberately NOT applied to reads
+
+A bounded READ that times out returns nothing, which fabricates an empty
+result — indistinguishable from real emptiness, and exactly the silent-zero
+defect class owner ruling D-E exists to forbid. **Writes queue offline; reads do
+not.** That distinction is written into the helper's doc comment so nobody
+extends it to reads later.
+
+#### 5. Remaining offline gap
+
+Step 1 of 4 complete. Still open, in order:
+  2. Probe whether the write queue survives a PROCESS KILL — "child marks five
+     sections on the bus, then swipes the app away". The SDK is designed to
+     persist it, but that was also true of the `get()` assumption that proved
+     false. This is the most product-relevant unknown left.
+  3. Make points / streak / siyum / bookmark-advance idempotent on the
+     deterministic doc-id, which removes the accepted `isNew` double-credit.
+  4. Wire `conflict.dart:132-134`'s existing `hasPendingWrites`/`isFromCache`
+     helper (ZERO production callers today) so a COLD CACHE renders "not
+     downloaded yet" instead of a fabricated zero. Cold cache is the one offline
+     limit that is structural and cannot be coded away.
 ### 2026-08-11 — P3-19: offline completion writes MEASURED on a real device — the previous "fix" fixed nothing; the real blockers were the read-before-write and the bare await
 
 `dart analyze --fatal-infos` EXIT 0 on the touched file.

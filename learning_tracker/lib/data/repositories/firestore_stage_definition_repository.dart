@@ -14,6 +14,7 @@ import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/data/firestore/doc_ids.dart';
 import 'package:learning_tracker/data/firestore/resilient_doc_stream.dart';
+import 'package:learning_tracker/data/firestore/write_ack.dart';
 import 'package:learning_tracker/features/tracks/stages/domain/models/stage_definition.dart';
 
 /// Default stage definitions (לימוד, חזרה א׳, חזרה ב׳) — same three stages
@@ -259,7 +260,7 @@ class FirestoreStageDefinitionRepository {
         stage.toFirestore(updatedAt: now),
       );
     }
-    await batch.commit();
+    await batch.commit().orQueuedOffline;
   }
 
   /// Returns true if any completions reference [stageId].

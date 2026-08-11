@@ -11,6 +11,7 @@ import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/data/firestore/doc_ids.dart';
 import 'package:learning_tracker/data/firestore/resilient_doc_stream.dart';
+import 'package:learning_tracker/data/firestore/write_ack.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_scope.dart';
 
 /// Firestore-backed curriculum-scopes repository: `users/{uid}/
@@ -254,7 +255,7 @@ class FirestoreCurriculumScopeRepository {
           SetOptions(merge: true),
         );
       }
-      await batch.commit();
+      await batch.commit().orQueuedOffline;
       return;
     }
 
@@ -287,7 +288,7 @@ class FirestoreCurriculumScopeRepository {
       for (final ref in refs.skip(i).take(_maxBatchOps)) {
         batch.delete(ref);
       }
-      await batch.commit();
+      await batch.commit().orQueuedOffline;
     }
   }
 
@@ -308,7 +309,7 @@ class FirestoreCurriculumScopeRepository {
           SetOptions(merge: true),
         );
       }
-      await batch.commit();
+      await batch.commit().orQueuedOffline;
     }
   }
 }

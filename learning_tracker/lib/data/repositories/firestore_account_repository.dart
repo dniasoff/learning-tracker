@@ -10,6 +10,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/data/firestore/resilient_doc_stream.dart';
+import 'package:learning_tracker/data/firestore/write_ack.dart';
 import 'package:learning_tracker/features/account/domain/models/account_entity.dart';
 
 /// The fixed doc-id `FirestoreGatewayImpl.pushAccountProfile` and
@@ -142,7 +143,9 @@ class FirestoreAccountRepository {
       createdAt: now,
       updatedAt: now,
     );
-    await _accountDoc.set(account.toFirestore(), SetOptions(merge: true));
+    await _accountDoc
+        .set(account.toFirestore(), SetOptions(merge: true))
+        .orQueuedOffline;
     return account;
   }
 
@@ -161,7 +164,9 @@ class FirestoreAccountRepository {
       email: email ?? account.email,
       updatedAt: now,
     );
-    await _accountDoc.set(updated.toFirestore(), SetOptions(merge: true));
+    await _accountDoc
+        .set(updated.toFirestore(), SetOptions(merge: true))
+        .orQueuedOffline;
     return updated;
   }
 
@@ -192,6 +197,6 @@ class FirestoreAccountRepository {
   /// shape; this method performs no validation beyond what
   /// `firestore.rules` itself enforces.
   Future<void> updateProfileSnapshot(Map<String, dynamic> data) async {
-    await _profileSnapshotDoc.set(data, SetOptions(merge: true));
+    await _profileSnapshotDoc.set(data, SetOptions(merge: true)).orQueuedOffline;
   }
 }

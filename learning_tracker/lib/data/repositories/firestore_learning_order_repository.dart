@@ -185,6 +185,7 @@ import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/data/firestore/doc_ids.dart';
 import 'package:learning_tracker/data/firestore/resilient_doc_stream.dart';
+import 'package:learning_tracker/data/firestore/write_ack.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/domain/models/learning_order_item.dart';
 
 /// A decoded `learning_order` document, before content-item enrichment.
@@ -426,7 +427,7 @@ class FirestoreLearningOrderRepository {
         'updated_at': FirestoreCodec.encodeDateTime(updatedAt),
       }, SetOptions(merge: true));
     }
-    await batch.commit();
+    await batch.commit().orQueuedOffline;
   }
 
   /// Resets [curriculumId]'s custom order to natural content order by
@@ -446,6 +447,6 @@ class FirestoreLearningOrderRepository {
     for (final doc in snapshot.docs) {
       batch.delete(doc.reference);
     }
-    await batch.commit();
+    await batch.commit().orQueuedOffline;
   }
 }

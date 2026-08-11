@@ -14,6 +14,7 @@ import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/time/ulid.dart';
 import 'package:learning_tracker/data/firestore/doc_ids.dart';
 import 'package:learning_tracker/data/firestore/resilient_doc_stream.dart';
+import 'package:learning_tracker/data/firestore/write_ack.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_event_entry.dart';
 
 /// Firestore-backed streak-event-log repository: `users/{uid}/
@@ -228,7 +229,7 @@ class FirestoreStreakEventRepository {
       eventTimestamp: ts,
       clientDeviceId: clientDeviceId,
     );
-    await ref.set(entry.toFirestore());
+    await ref.set(entry.toFirestore()).orQueuedOffline;
     return entry;
   }
 

@@ -14,6 +14,7 @@ import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/data/firestore/doc_ids.dart';
 import 'package:learning_tracker/data/firestore/resilient_doc_stream.dart';
+import 'package:learning_tracker/data/firestore/write_ack.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/day_type.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/study_day_config.dart';
 
@@ -237,7 +238,7 @@ class FirestoreStudyDayConfigRepository {
         SetOptions(merge: true),
       );
     }
-    await batch.commit();
+    await batch.commit().orQueuedOffline;
   }
 
   /// Seeds all 7 days as [DayType.study] if no config exists yet for
@@ -260,6 +261,6 @@ class FirestoreStudyDayConfigRepository {
         SetOptions(merge: true),
       );
     }
-    await batch.commit();
+    await batch.commit().orQueuedOffline;
   }
 }

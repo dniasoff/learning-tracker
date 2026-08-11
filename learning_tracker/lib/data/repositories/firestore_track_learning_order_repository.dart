@@ -90,6 +90,7 @@ import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/data/firestore/doc_ids.dart';
 import 'package:learning_tracker/data/firestore/resilient_doc_stream.dart';
+import 'package:learning_tracker/data/firestore/write_ack.dart';
 import 'package:learning_tracker/features/tracks/track_order/domain/services/masechta_ordering_policy.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/domain/models/learning_order_item.dart';
 
@@ -398,7 +399,7 @@ class FirestoreTrackLearningOrderRepository {
         'updated_at': FirestoreCodec.encodeDateTime(updatedAt),
       }, SetOptions(merge: true));
     }
-    await batch.commit();
+    await batch.commit().orQueuedOffline;
   }
 
   /// Saves a new custom sedarim order for [curriculumId]. See [_saveOrder].
