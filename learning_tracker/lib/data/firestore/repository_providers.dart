@@ -101,6 +101,7 @@ import 'package:learning_tracker/data/repositories/firestore_stage_definition_re
 import 'package:learning_tracker/data/repositories/firestore_streak_event_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_study_day_config_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_track_learning_order_repository.dart';
+import 'package:learning_tracker/data/repositories/firestore_tutor_audit_log_repository.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 // Direct import, not the tutoring barrel: this file lives outside
 // lib/features/** and lib/domain/**, so it is outside audit check 102's
@@ -200,6 +201,19 @@ final firestoreDiagnosticLogRepositoryProvider =
         firestore: handles.firestore,
         uid: handles.uid,
       );
+    });
+
+/// `tutor_grants/{grantId}/audit_log/{entryId}` — a tutor's own view of the
+/// grant activity log. Account-scoped (resolves against the signed-in
+/// account's own Firestore app instance), same reasoning as
+/// [firestoreAccountRepositoryProvider] above — the grant/entry scoping
+/// itself is expressed by the `grantId` argument at call time, not by this
+/// provider.
+final firestoreTutorAuditLogRepositoryProvider =
+    FutureProvider<FirestoreTutorAuditLogRepository?>((ref) async {
+      final handles = await ref.watch(activeAccountFirebaseProvider.future);
+      if (handles == null) return null;
+      return FirestoreTutorAuditLogRepository(firestore: handles.firestore);
     });
 
 /// `users/{uid}/learner_profiles/{profileId}` — the profile list itself.
