@@ -45,9 +45,8 @@ class AccountManagementService {
   /// which push [AccountPickerRoute] while leaving the live session intact.
   ///
   /// The hard sign-out (clearing the Firebase token) happens when the
-  /// account is removed or deleted — see
-  /// [AccountLifecycleService.removeCloudFromDevice] /
-  /// [AccountLifecycleService.deleteCloudAccount].
+  /// account is removed — see
+  /// [AccountLifecycleService.removeCloudFromDevice].
   Future<void> signOut() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(kOnboardingComplete);

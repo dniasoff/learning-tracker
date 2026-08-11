@@ -1,48 +1,25 @@
-import 'package:drift/native.dart';
 import 'package:learning_tracker/core/database/drift_db_file.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/core/exceptions/app_exception.dart';
-import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
 
-/// Thrown by [AccountLifecycleService.removeCloudFromDevice] when the
-/// account's local DB still has outbox rows that have not reached Firestore.
+/// Service handling account removal from a device.
 ///
-/// The outbox is the only copy of a queued mutation until it is pushed;
-/// deleting the local DB file while [pendingCount] is nonzero would
-/// permanently destroy that data even though the Account Picker's
-/// confirmation dialog promises "your cloud data is safe" unconditionally.
-/// See AUD-account-01.
-class UndrainedOutboxException extends ConflictException {
-  const UndrainedOutboxException(this.pendingCount)
-    : super('$pendingCount change(s) have not been backed up to the cloud yet');
-
-  /// Number of outbox rows across every profile under the account that have
-  /// not yet been pushed to Firestore.
-  final int pendingCount;
-}
-
-/// Service handling account removal and deletion.
-///
-/// Two operations with increasing destructiveness:
-/// - [removeCloudFromDevice]: light — local cleanup only, cloud intact
-/// - [deleteCloudAccount]: heaviest — wipe Firestore + Auth + local
+/// [removeCloudFromDevice] is the sole operation: a light local cleanup
+/// (delete the local DB file + registry entry) that leaves Firestore and
+/// Firebase Auth untouched — the user can sign back in on any device and
+/// recover everything.
 class AccountLifecycleService {
   AccountLifecycleService({
     required DeviceRegistryDatabase registry,
     required String databasesPath,
     AuthRepository? authRepository,
-    FirestoreGateway? gateway,
   }) : _registry = registry,
        _dbPath = databasesPath,
-       _authRepository = authRepository,
-       _gateway = gateway;
+       _authRepository = authRepository;
 
   final DeviceRegistryDatabase _registry;
   final String _dbPath;
   final AuthRepository? _authRepository;
-  final FirestoreGateway? _gateway;
 
   // ─── 21.13: Remove cloud-born account from device ──────────
 
@@ -50,10 +27,13 @@ class AccountLifecycleService {
   /// Firestore data and Firebase Auth are NOT touched — user can
   /// sign back in on any device and recover everything.
   ///
-  /// Throws [UndrainedOutboxException] if any profile under this account
-  /// still has outbox rows that have not reached Firestore — deleting the
-  /// DB file now would destroy that data permanently, contradicting the
-  /// "your cloud data is safe" promise shown at the confirmation prompt.
+  /// Known gap: the Drift-outbox guard that used to block removal while
+  /// writes were undrained has been removed because the Drift outbox no
+  /// longer exists. The closest equivalent risk today is the Firestore
+  /// SDK's own local offline-write queue — a queued write can still be
+  /// stranded if the account is removed from the device before it flushes.
+  /// This is NOT currently checked; `FirebaseFirestore.waitForPendingWrites()`
+  /// is the primitive to use if that guard is rebuilt later.
   Future<void> removeCloudFromDevice(String accountId) async {
     final account = await _registry.findById(accountId);
     if (account == null) return;
@@ -61,11 +41,6 @@ class AccountLifecycleService {
       throw StateError(
         'removeCloudFromDevice requires a cloud-born account.',
       );
-    }
-
-    final pending = await pendingOutboxDepth(accountId);
-    if (pending > 0) {
-      throw UndrainedOutboxException(pending);
     }
 
     // If we're removing the Firebase user whose token is currently
@@ -85,71 +60,6 @@ class AccountLifecycleService {
 
     _deleteDbFile(account.dbFileName);
     await _registry.removeAccount(accountId);
-  }
-
-  // ─── 21.15: Delete cloud-born account (full wipe) ──────────
-
-  /// Full GDPR-style deletion. Execution order is critical:
-  /// 1. Delete Firestore subcollections under /users/{uid}
-  /// 2. Delete Firebase Auth user
-  /// 3. Delete local DB file
-  /// 4. Remove from registry
-  ///
-  /// NEVER deletes local before cloud succeeds — if network
-  /// fails mid-way, local data is preserved and the user can
-  /// retry. The Cloud Function (21.16) is the safety net for
-  /// partial Firestore deletion.
-  ///
-  /// Requires recent authentication — caller must re-auth the
-  /// user before calling this.
-  Future<void> deleteCloudAccount(String accountId) async {
-    final account = await _registry.findById(accountId);
-    if (account == null) return;
-    if (!account.accountTier.isCloud || account.firebaseUid == null) {
-      throw StateError('deleteCloudAccount requires a cloud-born account');
-    }
-
-    final uid = account.firebaseUid!;
-
-    // Step 1: delete Firestore data via gateway (client-side best-effort)
-    if (_gateway != null) {
-      await _gateway.deleteUserData(uid);
-    }
-
-    // Step 2: delete Firebase Auth user — triggers Cloud Function
-    final currentUser = _authRepository?.currentUser;
-    if (currentUser != null && currentUser.uid == uid) {
-      await _authRepository?.deleteCurrentFirebaseUser();
-    }
-
-    // Step 3: local cleanup (only after cloud succeeds)
-    _deleteDbFile(account.dbFileName);
-    await _registry.removeAccount(accountId);
-  }
-
-  // ─── AUD-account-01: pre-delete outbox guard ───────────────────
-
-  /// Total number of undrained outbox rows across every profile under
-  /// [accountId]'s local DB, or 0 if the account or its DB file cannot be
-  /// found (nothing to lose).
-  ///
-  /// The outbox table is per-account (one row per profile column), so a
-  /// single unfiltered count over the account's own DB file already sums
-  /// every profile it holds — there is no need to enumerate profile ids
-  /// first.
-  Future<int> pendingOutboxDepth(String accountId) async {
-    final account = await _registry.findById(accountId);
-    if (account == null) return 0;
-
-    final driftFile = resolveDriftDbFile(_dbPath, account.dbFileName);
-    if (driftFile == null) return 0;
-
-    final db = UserDatabase(NativeDatabase(driftFile));
-    try {
-      return await db.outboxDao.totalDepth();
-    } finally {
-      await db.close();
-    }
   }
 
   // AUD-account-09: the .sqlite-suffix delete-with-fallback logic used to

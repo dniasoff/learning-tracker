@@ -484,40 +484,6 @@ void main() {
       );
     });
 
-    // ─── Story 21.15: Delete Cloud Account (service contract) ───
-    group(
-      'Story 21.15 — Delete Cloud Account (service contract)',
-      tags: ['story_21_15'],
-      () {
-        test('cloud-born without firebaseUid rejects deletion', () async {
-          final registry = DeviceRegistryDatabase(NativeDatabase.memory());
-          addTearDown(registry.close);
-
-          await registry.addAccount(
-            DeviceAccountsCompanion.insert(
-              accountId: 'acc-broken',
-              email: 'broken@test.local',
-              displayName: 'Broken',
-              tier: 'cloudBorn',
-              dbFileName: 'user_acc_broken.db',
-              createdAt: DateTime.utc(2026, 1, 1),
-              lastUsedAt: DateTime.utc(2026, 1, 1),
-            ),
-          );
-
-          final service = AccountLifecycleService(
-            registry: registry,
-            databasesPath: '/tmp',
-          );
-
-          expect(
-            () => service.deleteCloudAccount('acc-broken'),
-            throwsA(isA<StateError>()),
-          );
-        });
-      },
-    );
-
     // ─── Cross-story integration ────────────────────────────────
     group('Cross-story integration', () {
       test(

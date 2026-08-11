@@ -6,29 +6,21 @@ import 'package:google_sign_in/google_sign_in.dart'
     show GoogleSignInException, GoogleSignInExceptionCode;
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/app/router/router_provider.dart';
-import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/providers/active_account_id_provider.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/network_providers.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
-import 'package:learning_tracker/core/sync/tutored_mirror_wipe_service.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/services/account_lifecycle_service.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
     show authRepositoryProvider;
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart'
-    show currentAccountIdProvider, selectedProfileIdProvider;
 import 'package:learning_tracker/features/settings/presentation/providers/account_management_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/delete_account_dialog.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/reauthenticate_dialog.dart';
-import 'package:learning_tracker/features/tutoring/tutoring.dart'
-    show activeTutoredProfileSelectionProvider;
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 /// Shared account actions used by multiple settings surfaces.
 
@@ -188,19 +180,14 @@ Future<void> showSignOutConfirmation(
   final registry = ref.read(deviceRegistryProvider);
 
   try {
-    // T5.lifecycle — wipe tutored mirrors before clearing auth state so we
-    // still have the accountId and the DB handle.
-    final accountId = ref.read(currentAccountIdProvider);
-    final db = ref.read(userDatabaseProvider);
-    // R4-H2: pass onWipe so exit() fires even when AppShell is not mounted.
-    // The keepAlive tutoredListenerSupervisorProvider would otherwise keep
-    // subscriptions alive indefinitely if AppShell is not mounted at sign-out.
-    await TutoredMirrorWipeService(
-      profileDao: db.profileDao,
-      onWipe: (_) =>
-          ref.read(activeTutoredProfileSelectionProvider.notifier).exit(),
-    ).wipeAllMirrors(accountId);
-
+    // T-37: this used to also wipe local tutored-profile mirror data
+    // (TutoredMirrorWipeService.wipeAllMirrors) before signing out. That
+    // service's Drift backing was archived along with the rest of the local
+    // sync engine, so the data-wipe half is currently unimplemented — only
+    // the tutored-selection *exit* still happens, automatically, via
+    // app_shell.dart's listener on the Firebase-uid change this sign-out
+    // triggers. Rebuilding the wipe is in scope for the tutoring cluster's
+    // Firestore rework (see docs/planning/t37-tutored-view-decision-brief.md).
     final service = ref.read(accountManagementServiceProvider);
     await service.signOut();
     // Hard sign-out: clear Firebase session so the user must re-authenticate
@@ -400,21 +387,19 @@ class _DeletingAccountOverlayState
       if (!mounted) return;
 
       // D19: deleteAccount wipes the cloud + local table rows + prefs, but
-      // leaves the DEVICE REGISTRY row and the per-account DB file intact, so
-      // the deleted account reappears in the Account Picker on next launch and
-      // tapping it activates an empty shell. Tear those down too: close the
-      // open Drift handle (reset to the default file) BEFORE deleting the file,
-      // then remove the file + registry row (which also clears
+      // leaves the DEVICE REGISTRY row intact, so the deleted account
+      // reappears in the Account Picker on next launch. Tear that down too:
+      // if this was the active account, clear activeAccountIdProvider FIRST
+      // (lib/data/firestore/active_account_providers.dart — every Firestore
+      // repository is scoped off this id, so clearing it tears down the
+      // now-deleted account's real-time listeners) — then remove the
+      // registry row (removeCloudFromDevice below; also clears
       // lastActiveAccountId — D10).
       final registry = ref.read(deviceRegistryProvider);
       final account = await registry.findByFirebaseUid(widget.accountId);
       if (account != null) {
-        if (ref.read(accountDbFileNameProvider) == account.dbFileName) {
-          ref
-              .read(accountDbFileNameProvider.notifier)
-              .setFileName('learning_tracker');
+        if (ref.read(activeAccountIdProvider) == account.accountId) {
           ref.read(activeAccountIdProvider.notifier).set(null);
-          ref.invalidate(userDatabaseProvider);
         }
         final docsDir = await getApplicationDocumentsDirectory();
         await AccountLifecycleService(
@@ -531,4 +516,3 @@ class _DeletingAccountOverlayState
     );
   }
 }
-
