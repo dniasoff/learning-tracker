@@ -2445,6 +2445,63 @@ not re-learn the hard way:**
 
 ---
 
+### 2026-08-11 — P3-37: lifetime_knowledge compiles (48 → 0) — but ⚠️ FOUR PROVIDERS THROW AND MUST NOT SHIP
+
+`dart analyze --fatal-infos` EXIT 0. `check_dependency_direction` EXIT 0.
+48 errors → 0. **This is an INTERMEDIATE state, committed deliberately and
+recorded as such.**
+
+#### What landed
+
+The 1031-line file — the largest remaining, and one two earlier agents failed on
+— now compiles. The mechanical part is genuinely done and correct: the four dead
+type names mapped to their Firestore entities (`Completion`→`CompletionEntity`,
+`LearningLedgerData`→`LearningLedgerEntry`, `ProfileProgram`→
+`ProfileProgramEntity`, `CurriculumTrack`→`CurriculumTrackEntity`), the dead
+`core/database` imports are gone, and the per-curriculum computation paths were
+re-keyed onto `curriculumId.storageKey`.
+
+#### ⚠️ What did NOT land, stated plainly
+
+FOUR providers were replaced with `throw UnsupportedError` rather than migrated:
+
+    trackCompletionsByProfileProvider        (0 lib consumers)
+    trackLedgerEntriesByProfileProvider      (0 lib consumers)
+    profileProgramsByProfileProvider         (0 lib consumers)
+    trackDualProgressMetricsProvider         (⚠️ TWELVE consumers)
+
+The first three are internal feeds and harmless. **`trackDualProgressMetricsProvider`
+is not** — it powers the dashboard's active-track card, `progress_screen`,
+`curriculum_progress_screen`, `track_detail_screen` and more.
+
+Committing a provider that throws is defensible ONLY because this file had 48
+compile errors immediately before: nothing regressed from a working state, and
+the alternative is holding 48 errors hostage to one provider. **It must not
+survive to the end of the phase.**
+
+#### The real blocker, and why the throw was an honest answer
+
+`TrackDualProgressMetric` declares `final int trackId` — a field the Firestore
+model CANNOT supply, because AD-25 retired per-device track ids and
+`CurriculumTrackEntity` has no `id`. Confined to a single file, the worker could
+not change the model, so its options were to fabricate an int or to throw. It
+threw. Given the choice offered, that was right.
+
+But its stated reason — that active-track and profile-program data "has no
+presentation-legal provider yet" — is **FALSE**. P3-29 added exactly
+`getAllTracks()`, `getProgramsByCurriculum()` and `getScopes()` to
+`FirestoreProgressRepositoryAdapter`, and the dispatch named them. A worker
+reaching for `throw` will sometimes justify it with a reason that is no longer
+true; the justification needs checking as carefully as the code.
+
+#### Fix, already specified
+
+`TrackDualProgressMetric.trackId` is REDUNDANT — the class already carries
+`final CurriculumId curriculumId`, and under AD-25 a track IS its curriculum.
+Remove `trackId`, re-key the consumers (`trackCustomNameProvider` is
+`family<String?, int>` and needs re-keying to `CurriculumId`), and reimplement
+the provider off the adapter. Re-dispatched; the first attempt hit the 30-minute
+idle timeout before writing anything.
 ### 2026-08-11 — P3-36: curriculum activation rewired, and the siyum-retraction question is SETTLED
 
 `dart analyze --fatal-infos` EXIT 0 on both files. `check_dependency_direction`
