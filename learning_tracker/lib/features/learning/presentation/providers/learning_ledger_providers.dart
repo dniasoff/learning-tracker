@@ -28,9 +28,10 @@ final _activeProfileModeProvider = FutureProvider.autoDispose<ProfileMode>((
 ) async {
   final repository = ref.watch(profileRepositoryProvider);
   final profileId = ref.watch(activeProfileIdProvider);
+  if (profileId == null) return ProfileMode.adult;
   final profile = await repository.getProfileById(profileId);
   if (profile == null) return ProfileMode.adult;
-  return profile.profileMode;
+  return profile.mode;
 });
 
 /// Provides the learning ledger repository.
@@ -42,10 +43,9 @@ LearningLedgerRepository learningLedgerRepository(Ref ref) {
   final pinSessionProfileId = ref.watch(
     parentPinAuthenticatedProfileIdProvider,
   );
-  // The PIN match is computed entirely in the Drift id space, and stays there:
-  // it only asks "was the PIN verified for the SAME profile that is active?",
-  // which is a comparison between two ids of the same kind. It deliberately
-  // does not involve the ULID.
+  // The PIN match is computed entirely in profile-ULID space: it only asks
+  // "was the PIN verified for the SAME profile that is active?", a
+  // comparison between two ids of the same kind.
   final parentPinSessionMatches =
       pinSessionProfileId != null && pinSessionProfileId == profileId;
 

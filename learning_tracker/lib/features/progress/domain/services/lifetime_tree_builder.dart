@@ -1,7 +1,7 @@
 import 'package:learning_tracker/core/content/content_grouping.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
+import 'package:learning_tracker/features/learning/domain/entities/learning_ledger_entry.dart';
 import 'package:learning_tracker/features/progress/domain/models/lifetime_knowledge.dart';
 
 /// Pure computation service for building the lifetime knowledge tree.
@@ -34,7 +34,7 @@ class LifetimeTreeBuilder {
     required CurriculumId curriculum,
     required List<ContentItem> leaves,
     required Set<String> completedRefs,
-    required List<LearningLedgerData> ledgerEntries,
+    required List<LearningLedgerEntry> ledgerEntries,
     required Map<String, String> heLabelLookup,
     Map<String, LifetimeLeafProvenance> leafProvenance = const {},
   }) {
@@ -96,7 +96,7 @@ class LifetimeTreeBuilder {
   Set<String> computeLearnedLeafRefs({
     required List<ContentItem> leaves,
     required Set<String> completedRefs,
-    required List<LearningLedgerData> ledgerEntries,
+    required List<LearningLedgerEntry> ledgerEntries,
   }) {
     final learnedRefs = <String>{...completedRefs};
     final refActions = <String, bool>{};

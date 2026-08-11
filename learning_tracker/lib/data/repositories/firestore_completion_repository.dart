@@ -854,6 +854,8 @@ class FirestoreCompletionRepository {
   Future<List<CompletionEntity>> getCompletionsByTier({
     required CompletionTierFilter tier,
     CurriculumId? curriculumId,
+    DateTime? since,
+    DateTime? until,
   }) async {
     Query<Map<String, dynamic>> query = _completions;
     if (curriculumId != null) {
@@ -863,7 +865,23 @@ class FirestoreCompletionRepository {
       query = query.where('source', isEqualTo: CompletionSource.live.name);
     }
     final docs = await _fetchAllPagesByDocId(query);
-    return _decodeAll(docs);
+    var entities = _decodeAll(docs);
+    // Filtered client-side, not via a Firestore range query: this method
+    // already mixes two equality filters (curriculum_id, source) that would
+    // need a composite index to also range-filter completed_at server-side,
+    // and every caller (ChartDataService) already does bucketing/cumulative
+    // math client-side over this same bounded, paginated result set.
+    if (since != null) {
+      entities = entities
+          .where((e) => !e.completedAt.isBefore(since))
+          .toList();
+    }
+    if (until != null) {
+      entities = entities
+          .where((e) => !e.completedAt.isAfter(until))
+          .toList();
+    }
+    return entities;
   }
 
   // ── Client-side aggregates ───────────────────────────────────────────
