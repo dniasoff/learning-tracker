@@ -1,9 +1,8 @@
-import 'package:drift/drift.dart';
-import 'package:learning_tracker/core/constants/app_constants.dart';
-import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
+import 'package:drift/drift.dart' show Value;
+import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
+import 'package:learning_tracker/core/domain/value_objects/account_tier.dart';
 import 'package:learning_tracker/core/exceptions/app_exception.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
-import 'package:learning_tracker/features/account/domain/services/password_hasher.dart';
 
 /// Thrown when a local-born signup is attempted with an email that
 /// already has a local-born row. Distinct from a Firebase-level
@@ -28,8 +27,8 @@ class DuplicateEmailException extends ConflictException {
   }
 }
 
-/// Thrown when sign-in fails because the email is unknown *or* the
-/// password does not match. The single error type is intentional —
+/// Thrown when sign-in fails because the email is unknown *or* does not name
+/// a local-born account. The single error type is intentional —
 /// distinguishing the two would enable user enumeration.
 class InvalidCredentialsException extends PermissionException {
   const InvalidCredentialsException() : super('Invalid email or password');
@@ -41,12 +40,11 @@ class InvalidCredentialsException extends PermissionException {
 /// `AppLocalizations` (EH-5) — [InvalidInputException.reason] is a
 /// log-safe, English-only detail for developers and must never be shown
 /// to users directly.
-enum InvalidInputCode { invalidEmail, passwordTooShort, displayNameRequired }
+enum InvalidInputCode { invalidEmail, displayNameRequired }
 
-/// Thrown when sign-up receives malformed input (invalid email,
-/// password too short, etc). Callers resolve [code] to a localized
-/// message; [reason] is for logs/toString only — never surface it
-/// directly in the UI (EH-5).
+/// Thrown when sign-up receives malformed input (invalid email, etc).
+/// Callers resolve [code] to a localized message; [reason] is for
+/// logs/toString only — never surface it directly in the UI (EH-5).
 class InvalidInputException extends ValidationException {
   const InvalidInputException(this.field, this.code, this.reason)
     : super('$field: $reason');
@@ -55,77 +53,69 @@ class InvalidInputException extends ValidationException {
   final String reason;
 }
 
-/// Domain service for local-born account authentication.
+/// Domain service for local-born account lifecycle.
 ///
-/// Cloud-born accounts go through Firebase Auth instead — see
-/// v2 doc §4.2. This service is only invoked for accounts with
-/// `tier == localBorn`.
+/// Per the 2026-06-14 product decision (`docs/planning/ux-upgrade-flow-spec.md`),
+/// offline / local-born accounts are **credential-less** — there is no local
+/// password to hash or verify. The device registry
+/// ([DeviceRegistryDatabase]) is the on-device account store: a local-born
+/// account is a registry row with `tier == 'localBorn'` and no linked
+/// Firebase credentials. Cloud-born accounts go through Firebase Auth instead
+/// (v2 doc §4.2).
 class LocalAuthService {
-  LocalAuthService({required UserProfileDao dao, PasswordHasher? hasher})
-    : _dao = dao,
-      _hasher = hasher ?? PasswordHasher();
+  LocalAuthService({required DeviceRegistryDatabase registry})
+    : _registry = registry;
 
-  final UserProfileDao _dao;
-  final PasswordHasher _hasher;
+  final DeviceRegistryDatabase _registry;
 
-  /// Create a new local-born account. Throws
-  /// [DuplicateEmailException] if the email already has a local-born
-  /// row, [InvalidInputException] on malformed input.
+  /// Create a new credential-less local-born account in the device registry.
+  /// Throws [DuplicateEmailException] if the email is already registered on
+  /// this device, [InvalidInputException] on malformed input.
   ///
-  /// WS9.flows: [userMode] parameter removed — mode belongs to
-  /// [LearnerProfiles], not to an account.
-  Future<UserProfile> signUp({
+  /// [accountId] and [dbFileName] are supplied by the caller (generated at
+  /// the flow's start, before any I/O — the pre-rewrite flow generated both
+  /// in the screen and passed the per-account DB filename through).
+  Future<DeviceAccount> signUp({
     required String email,
-    required String password,
     required String displayName,
+    required String accountId,
+    required String dbFileName,
   }) async {
     final normalized = _normalizeEmail(email);
     _validateEmail(normalized);
-    _validatePassword(password);
 
-    final existing = await _dao.findLocalBornByEmail(normalized);
+    final existing = await _registry.findByEmail(normalized);
     if (existing != null) {
       throw DuplicateEmailException(normalized);
     }
 
-    final hash = await _hasher.hash(password);
     final now = DateTimeFactory.nowUtc();
-    final id = await _dao.insertUserProfile(
-      UserProfilesCompanion.insert(
+    await _registry.addAccount(
+      DeviceAccountsCompanion.insert(
+        accountId: accountId,
         email: normalized,
-        firebaseUid: const Value(null),
-        tier: UserTier.localBorn.dbValue,
-        passwordHash: Value(hash),
         displayName: displayName,
+        tier: AccountTier.local.storageKey,
+        firebaseUid: const Value(null),
+        dbFileName: dbFileName,
         createdAt: now,
-        updatedAt: now,
+        lastUsedAt: now,
       ),
     );
-    return (await _dao.getUserProfileById(id))!;
+    return (await _registry.findById(accountId))!;
   }
 
-  /// Verify a local-born account's credentials. Returns the profile
-  /// on success; throws [InvalidCredentialsException] on any failure.
-  ///
-  /// The dummy-verify branch keeps timing constant when the email
-  /// does not exist so attackers cannot enumerate accounts.
-  Future<UserProfile> signIn({
-    required String email,
-    required String password,
-  }) async {
+  /// Verify that [email] names a local-born account on this device. Returns
+  /// the registry row on success; throws [InvalidCredentialsException] if the
+  /// email is unknown or the row is not a local-born account.
+  Future<DeviceAccount> signIn({required String email}) async {
     final normalized = _normalizeEmail(email);
 
-    final profile = await _dao.findLocalBornByEmail(normalized);
-    if (profile == null || profile.passwordHash == null) {
-      await _hasher.dummyVerify();
+    final account = await _registry.findByEmail(normalized);
+    if (account == null || !account.accountTier.isLocal) {
       throw const InvalidCredentialsException();
     }
-
-    final ok = await _hasher.verify(password, profile.passwordHash!);
-    if (!ok) {
-      throw const InvalidCredentialsException();
-    }
-    return profile;
+    return account;
   }
 
   String _normalizeEmail(String email) => email.trim().toLowerCase();
@@ -140,16 +130,6 @@ class LocalAuthService {
         'email',
         InvalidInputCode.invalidEmail,
         'invalid format',
-      );
-    }
-  }
-
-  void _validatePassword(String password) {
-    if (password.length < AppConstants.minLocalPasswordLength) {
-      throw const InvalidInputException(
-        'password',
-        InvalidInputCode.passwordTooShort,
-        'must be at least ${AppConstants.minLocalPasswordLength} characters',
       );
     }
   }
