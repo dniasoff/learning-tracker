@@ -1,13 +1,11 @@
-import 'package:learning_tracker/core/database/daos/completion_dao.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_entity.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_tier_filter.dart';
 
 /// Record of a single points award event.
 class PointsHistoryEntry {
   final DateTime timestamp;
-  final String curriculumId;
+  final CurriculumId curriculumId;
   final int stageId;
   final int points;
   final String sefariaRef;
@@ -21,44 +19,62 @@ class PointsHistoryEntry {
   });
 }
 
+/// Interface for checking if a curriculum counts toward reward points.
+///
+/// Eligibility is CURRICULUM-keyed (AD-25): a curriculum is reward-eligible
+/// when a profile_program exists for it OR any goal exists for it.
+/// This replaces the old trackId-keyed eligibility in
+/// [RewardMilestoneService.trackCountsTowardRewardPoints].
+abstract class CurriculumRewardEligibility {
+  Future<bool> isEligible(CurriculumId curriculumId);
+}
+
+/// Interface for fetching point configuration for a curriculum + stage.
+abstract class PointConfigProvider {
+  Future<int?> getPointsForStage({
+    required CurriculumId curriculumId,
+    required int stageOrder,
+  });
+
+  Future<void> ensureDefaultConfigs({
+    required CurriculumId curriculumId,
+  });
+}
+
+/// Interface for reading the global debitable points balance.
+abstract class PointsBalanceReader {
+  Future<int> getBalance();
+}
+
 /// Service for querying and managing gamification points.
 ///
 /// Points are awarded as a side effect of completion (via CompletionRepository).
 /// This service provides read access to points totals, history, and configuration.
 class PointsService {
-  final UserDatabase _database;
-  final int profileId;
-  final RewardMilestoneService _rewardMilestoneService;
+  final CurriculumRewardEligibility _eligibility;
+  final PointConfigProvider _pointConfig;
+  final PointsBalanceReader _balanceReader;
 
-  /// AUD-gamification-11 (SM-7): [rewardMilestoneService] is injectable so
-  /// callers — and their tests — can substitute a fake
-  /// [RewardMilestoneService] without also faking the whole [UserDatabase].
-  /// Defaults to the prior ad-hoc construction (same `database`, same
-  /// `profileId`) so every existing call site
-  /// (`PointsService(db, profileId: ...)`) is unaffected.
-  PointsService(
-    this._database, {
-    this.profileId = 0,
-    RewardMilestoneService? rewardMilestoneService,
-  }) : _rewardMilestoneService =
-           rewardMilestoneService ??
-           RewardMilestoneService(_database, profileId: profileId);
+  PointsService({
+    required CurriculumRewardEligibility eligibility,
+    required PointConfigProvider pointConfig,
+    required PointsBalanceReader balanceReader,
+  }) : _eligibility = eligibility,
+       _pointConfig = pointConfig,
+       _balanceReader = balanceReader;
 
   /// Get the configured point value for a curriculum + stage.
   ///
   /// Falls back to default values if no config exists.
   Future<int> getPointsForStage({
-    required String curriculumId,
+    required CurriculumId curriculumId,
     required int stageOrder,
-    required int trackId,
   }) async {
-    final config = await _database.pointConfigDao.getConfig(
-      curriculumId,
-      stageOrder,
-      profileId: profileId,
-      trackId: trackId,
+    final config = await _pointConfig.getPointsForStage(
+      curriculumId: curriculumId,
+      stageOrder: stageOrder,
     );
-    if (config != null) return config.points;
+    if (config != null) return config;
 
     // Defaults: Learn=10, Chazara1=5, Chazara2=3
     return _defaultPoints(stageOrder);
@@ -66,40 +82,48 @@ class PointsService {
 
   /// Total points earned for a specific curriculum, scoped to active profile.
   ///
-  /// Only includes completions on tracks that count toward gamification
+  /// Only includes completions on curricula that count toward gamification
   /// (programmed enrollment or self-paced with a learning goal) — not
-  /// momentum-only browse tracks.
-  Future<int> getCurriculumTotal(String curriculumId) async {
-    final completions = await _database.completionDao
-        .getCompletionsByCurriculumAndProfile(curriculumId, profileId);
-    return _sumPointsForRewardEligibleTracks(completions);
+  /// momentum-only browse curricula.
+  Future<int> getCurriculumTotal(
+    CurriculumId curriculumId,
+    List<CompletionEntity> completions,
+  ) async {
+    final eligible = await _eligibility.isEligible(curriculumId);
+    if (!eligible) return 0;
+
+    return completions
+        .where((c) => c.curriculumId == curriculumId && c.points > 0)
+        .fold<int>(0, (sum, c) => sum + c.points);
   }
 
   /// Current debitable points balance for this profile (WS7.balance).
   ///
-  /// Returns the stored balance from [PointsBalanceDao] — the spend-economy
+  /// Returns the stored balance from the points ledger — the spend-economy
   /// source of truth (DEC-32). Replaces the old derived-sum read.
   Future<int> getGlobalTotal() async {
-    return _database.pointsBalanceDao.getBalance(profileId);
+    return _balanceReader.getBalance();
   }
 
-  /// Derived sum of completion points for reward-eligible tracks.
+  /// Derived sum of completion points for reward-eligible curricula.
   ///
   /// Kept for backward compatibility with tests and the streak/history
   /// subsystems that still need the raw completion sum. New UI should use
   /// [getGlobalTotal] which reads the stored debitable balance.
-  Future<int> getDerivedTotal() async {
-    final completions = await _database.completionDao.getCompletionsByProfile(
-      profileId,
-    );
-    return _sumPointsForRewardEligibleTracks(completions);
+  Future<int> getDerivedTotal(List<CompletionEntity> completions) async {
+    return _sumPointsForRewardEligibleCurricula(completions);
   }
 
   /// Per-curriculum breakdown of points totals.
-  Future<Map<CurriculumId, int>> getCurriculumBreakdown() async {
+  Future<Map<CurriculumId, int>> getCurriculumBreakdown(
+    List<CompletionEntity> completions,
+  ) async {
     final totals = <CurriculumId, int>{};
     for (final curriculum in CurriculumId.values) {
-      final total = await getCurriculumTotal(curriculum.storageKey);
+      final total = await getCurriculumTotal(
+        curriculum,
+        completions.where((c) => c.curriculumId == curriculum).toList(),
+      );
       if (total > 0) {
         totals[curriculum] = total;
       }
@@ -107,32 +131,25 @@ class PointsService {
     return totals;
   }
 
-  /// Points history log — point awards from reward-eligible tracks only,
+  /// Points history log — point awards from reward-eligible curricula only,
   /// ordered by timestamp, scoped to active profile.
   ///
   /// Uses [CompletionTierFilter.liveOnly] (engagement tier) to exclude
   /// bulk-import and prior completions, per the three-tier credit policy.
   Future<List<PointsHistoryEntry>> getPointsHistory({
-    String? curriculumId,
+    required List<CompletionEntity> completions,
+    CurriculumId? curriculumId,
   }) async {
-    // Resolve the raw storage key to a typed enum value so we can pass it to
-    // the tier-filtered DAO accessor (which requires CurriculumId?).
-    final curriculumEnum = curriculumId == null
-        ? null
-        : CurriculumId.values
-              .where((c) => c.storageKey == curriculumId)
-              .firstOrNull;
+    final filtered = completions.where((c) {
+      if (c.points <= 0) return false;
+      if (curriculumId != null && c.curriculumId != curriculumId) return false;
+      return true;
+    }).toList();
 
-    final completions = await _database.completionDao.getCompletionsByTier(
-      profileId: profileId,
-      tier: CompletionTierFilter.liveOnly,
-      curriculumId: curriculumEnum,
-    );
+    final eligibility = await _rewardEligibilityByCurriculumId(filtered);
 
-    final eligibility = await _rewardEligibilityByTrackId(completions);
-
-    return completions
-        .where((c) => c.points > 0 && (eligibility[c.trackId] ?? false))
+    return filtered
+        .where((c) => eligibility[c.curriculumId] ?? false)
         .map(
           (c) => PointsHistoryEntry(
             timestamp: c.completedAt,
@@ -146,45 +163,31 @@ class PointsService {
       ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
   }
 
-  Future<Map<int, bool>> _rewardEligibilityByTrackId(
-    List<Completion> completions,
+  Future<Map<CurriculumId, bool>> _rewardEligibilityByCurriculumId(
+    List<CompletionEntity> completions,
   ) async {
-    final ids = completions.map((c) => c.trackId).toSet();
-    final map = <int, bool>{};
-    for (final id in ids) {
-      map[id] = await _rewardMilestoneService.trackCountsTowardRewardPoints(id);
+    final curricula = completions.map((c) => c.curriculumId).toSet();
+    final map = <CurriculumId, bool>{};
+    for (final curriculum in curricula) {
+      map[curriculum] = await _eligibility.isEligible(curriculum);
     }
     return map;
   }
 
-  Future<int> _sumPointsForRewardEligibleTracks(
-    List<Completion> completions,
+  Future<int> _sumPointsForRewardEligibleCurricula(
+    List<CompletionEntity> completions,
   ) async {
     if (completions.isEmpty) return 0;
-    final eligibility = await _rewardEligibilityByTrackId(completions);
+    final eligibility = await _rewardEligibilityByCurriculumId(completions);
     return completions.fold<int>(0, (sum, c) {
-      if (!(eligibility[c.trackId] ?? false)) return sum;
+      if (!(eligibility[c.curriculumId] ?? false)) return sum;
       return sum + c.points;
     });
   }
 
   /// Seed default point configs for a curriculum if none exist.
-  Future<void> ensureDefaultConfigs(
-    String curriculumId, {
-    required int trackId,
-  }) async {
-    final existing = await _database.pointConfigDao.getConfigsByCurriculum(
-      curriculumId,
-      profileId: profileId,
-      trackId: trackId,
-    );
-    if (existing.isEmpty) {
-      await _database.pointConfigDao.seedDefaults(
-        curriculumId,
-        trackId,
-        profileId: profileId,
-      );
-    }
+  Future<void> ensureDefaultConfigs(CurriculumId curriculumId) async {
+    await _pointConfig.ensureDefaultConfigs(curriculumId: curriculumId);
   }
 
   /// Default point values when no config is present.

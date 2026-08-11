@@ -2445,6 +2445,83 @@ not re-learn the hard way:**
 
 ---
 
+### 2026-08-11 — P3-21: parallel OpenCode migration fleet — 3 files migrated, 1 correctly BLOCKED on a product gap, and a third "report died, work survived"
+
+`dart analyze --fatal-infos` EXIT 0 on every file accepted below.
+`check_dependency_direction` EXIT 0. lib errors **546 → ~520**.
+`flutter test test/data/repositories/`: 306 pass. Cost: **$0.00** (free models).
+
+#### 1. Fleet results
+
+| File | Result |
+|---|---|
+| `items_learned_providers.dart` | **CLEAN 36 → 0** — Drift reads replaced by `completionRepositoryProvider` + `curriculumLedgerProvider`; helpers RETYPED, not deleted |
+| `streak_state_service.dart` | **CLEAN 44 → 0** — delegates to the already-written `FirestoreStreakStateRepository` |
+| `points_service.dart` | **CLEAN 15 → 0** — `trackId`-keyed eligibility replaced by an injected `CurriculumRewardEligibility` seam keyed on `curriculumId` |
+| `curriculum_activation_service.dart` | **BLOCKED, correctly** — see §3 |
+
+#### 2. Two orchestrator misjudgements, both corrected before acting
+
+- **Called `streak_state_service` "hollowed out" from a 56/146 diff ratio.** Wrong:
+  all three public methods still exist and every caller resolves. The deleted
+  lines were a hand-rolled `StreamController` + rollover tick REPLACED BY
+  DELEGATION to the repository that already does that work. **A deletion ratio is
+  not evidence of behaviour loss** — the same class of error as treating
+  `grep -l` as a dependency count.
+- **Assumed a `firestoreStreakStateRepositoryProvider` existed** when writing the
+  follow-up fix. It does not — the service constructs the repository directly via
+  a `_firestoreRepo` getter. Caught by reading before running.
+
+#### 3. `curriculum_activation_service` — a PRODUCT gap, not a migration gap
+
+The worker refused to edit and explained why, correctly:
+
+`deactivate` **HARD-DELETES** the track config (its own doc: *"use [deactivate]
+only where hard-deleting the config on deactivation is actually intended"*).
+Firestore exposes only `retireTrack` and `archiveTrack` — **both soft, both
+preserve config**. The repository's class doc states deletion *"is not its job"*:
+`curriculum_tracks` is `allow delete: if false`, and client deletion happens
+ONLY via the `deleteCurriculumTrack` Cloud Function, which has **no method on the
+adapter**. `purgeTrackHistory` has the same problem.
+
+**So "remove this track and its data" currently has NO client path in the
+Firestore model.** That needs an owner decision, not a worker's guess. The worker
+explicitly offered the tempting wrong answer — stub the methods to throw
+`UnsupportedError` — and ASKED rather than doing it. Given how many silent
+failures this session produced, a worker that asks before removing behaviour is
+worth more than one that reaches green.
+
+#### 4. The streak vertical needed follow-up the worker had flagged
+
+It declared 6 behaviour changes rather than hiding them. Two mattered and both
+were closed here:
+
+- **`readEvents` was stubbed to throw** and had one live caller
+  (`streak_service.dart:73`). Fixed by delegating `getStreakCalendar` to
+  `FirestoreStreakStateRepository.getStreakCalendar` — verified to be a
+  line-for-line reimplementation of the loop being removed, so a relocation
+  rather than a rewrite. `readEvents` then had no callers and was deleted.
+- **`StreakService` still took the deleted `UserDatabase`.** Now takes `Ref`.
+  Verified `db` had no other use in the class.
+
+⚠️ **STILL OPEN from that migration — the D17 midnight rollover tick was
+DROPPED.** `watchStreak` recomputes only when the EVENT stream emits, so a
+streak can display stale across local midnight; the old `_defaultRolloverTicks()`
+existed precisely to prevent that. Not restored yet. Also still Drift-coupled:
+`streak_restorer.dart` and 4 construction sites
+(`gamification_service_providers.dart:39,46`, `streak_alert_service.dart:30`,
+`streak_milestone_analytics_observer.dart:53`).
+
+#### 5. Process — "the report died, the work survived", third instance
+
+The `points_service` worker was killed by a 30-minute MCP idle timeout having
+produced NO report. The tree showed a complete, correct migration — 15 errors
+down to a single missing-newline info. **Always check the tree before writing off
+a dead worker.** Cost of checking: seconds.
+
+Also observed: a worker reported receiving the **byte-identical task prompt
+twice** (*"The user just re-sent the exact same task prompt"*) and correctly
+declined to redo the work — a live sighting of the prompt re-delivery defect.
 ### 2026-08-11 — P3-20: offline gap step 1 — 19 Firestore writes no longer hang the UI; `batch.commit()` measured, not assumed
 
 `dart analyze --fatal-infos lib/data/` **EXIT 0 — "No issues found!"** (the whole

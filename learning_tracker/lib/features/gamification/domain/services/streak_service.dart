@@ -1,4 +1,4 @@
-import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/gamification/domain/models/streak_recovery_info.dart';
@@ -18,14 +18,17 @@ class StreakService {
   /// ad-hoc construction (same `db`, system clock) so every existing
   /// positional-only call site (`StreakService(db, profileId: ...)`) is
   /// unaffected.
+  /// [ref] replaces the former `UserDatabase db` positional argument:
+  /// [StreakStateService] now resolves its Firestore repository through Riverpod
+  /// rather than holding a Drift handle. `db` had no other use in this class.
   StreakService(
-    UserDatabase db, {
+    Ref ref, {
     int profileId = 0,
     StreakStateService? streakStateProvider,
   }) : _profileId = profileId,
        _provider =
            streakStateProvider ??
-           StreakStateService(db: db, clock: const SystemLocalDayClock());
+           StreakStateService(ref: ref, clock: const SystemLocalDayClock());
 
   final int _profileId;
   final StreakStateService _provider;
@@ -55,29 +58,18 @@ class StreakService {
     required DateTime startUtc,
     required DateTime endUtc,
   }) async {
-    // Read completion dates from completions_view (via completionDao).
-    // StreakService injects UserDatabase so we can read directly.
-    // This path is kept for calendar widgets that show activity dots.
-    final state = await _provider.read(profileId: _profileId);
-    final lastDay = state.lastCompletionDayLocal;
-    if (lastDay == null) return {};
-
-    // Build the set of active UTC days from streak_events.
-    // (completionDao.getCompletionsByProfile would work too, but reading
-    // streak_events avoids a join and the view overhead.)
-    final activeDates = <DateTime>{};
-    final startLocal = LocalDayUtils.extractLocalDate(startUtc);
-    final endLocal = LocalDayUtils.extractLocalDate(endUtc);
-
-    // Re-read events directly to enumerate per-day activity.
-    final events = await _provider.readEvents(profileId: _profileId);
-    for (final event in events) {
-      if (event.eventType != 'completion') continue;
-      final localDate = LocalDayUtils.extractLocalDate(event.eventTimestamp);
-      if (!localDate.isBefore(startLocal) && !localDate.isAfter(endLocal)) {
-        activeDates.add(localDate);
-      }
-    }
-    return activeDates;
+    // Delegates to the repository rather than walking raw events here.
+    //
+    // This used to enumerate `streak_events` itself via
+    // `StreakStateService.readEvents`. That method no longer exists on the
+    // Firestore path: `FirestoreStreakStateRepository` deliberately exposes no
+    // raw-event accessor, and AD-23 forbids a domain service importing the
+    // data-access ring to get one.
+    //
+    // `FirestoreStreakStateRepository.getStreakCalendar` is a line-for-line
+    // reimplementation of the loop that was here — same local-day extraction,
+    // same 'completion' event-type filter, same inclusive range — so this is a
+    // relocation, not a reimplementation.
+    return _provider.streakCalendar(startUtc: startUtc, endUtc: endUtc);
   }
 }

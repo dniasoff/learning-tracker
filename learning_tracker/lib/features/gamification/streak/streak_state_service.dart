@@ -1,175 +1,81 @@
 /// `StreakStateService` — the only read path for streak values.
 ///
-/// Wraps `[Restorer → Reducer]`:
+/// Now a thin adapter over [FirestoreStreakStateRepository] — the Drift-backed
+/// `streak_events` table and `UserDatabase` are deleted. Delegates `read` →
+/// `FirestoreStreakStateRepository.getStreak`, `watch` →
+/// `FirestoreStreakStateRepository.watchStreak`.
 ///
-///   1. Ensure the local log isn't empty (restore from `completions`
-///      on first launch / new device).
-///   2. Replay `streak_events` through [StreakReducer] using the
-///      [LocalDayClock]'s "today" UTC.
+/// ## Behavior changes from the Drift era
 ///
-/// `StreakService.recordCompletion` writes are gone (Story 25.16) —
-/// state is derived, never assigned.
+/// - **restore is gone**: `FirestoreStreakStateRepository` derives state from
+///   the synced Firestore event log directly — there is no "local empty log to
+///   backfill." D-E fires (`StreakStateRepositoryNotReadyException`) when the
+///   backend isn't ready instead.
+/// - **`profileId` is ignored**: the active profile is resolved via the [Ref]
+///   through `firestoreStreakEventRepositoryProvider`; the `int` is the old
+///   Drift primary key with no Firestore equivalent (see
+///   `repository_providers.dart`'s "active-profile bridge" doc).
+/// - **`dayOf` seam dropped**: `FirestoreStreakStateRepository` does not
+///   inject a day-bucketing function. Production behavior is unchanged
+///   (`dayOf` defaulted to `LocalDayUtils.extractLocalDate` in both paths).
+/// - **`rolloverTicks` dropped on `watch`**:
+///   `FirestoreStreakStateRepository.watchStreak` has no periodic recompute.
+/// - **`readEvents` throws**: raw-event access is not exposed by
+///   [FirestoreStreakStateRepository]; calendar consumers should migrate to
+///   [FirestoreStreakStateRepository.getStreakCalendar].
 library;
 
-import 'dart:async';
-
-import 'package:flutter/foundation.dart' show visibleForTesting;
-import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
+import 'package:learning_tracker/features/gamification/data/repositories/firestore_streak_state_repository.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_log_event.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_reducer.dart';
-import 'package:learning_tracker/features/gamification/streak/streak_restorer.dart';
 
 class StreakStateService {
   StreakStateService({
-    required UserDatabase db,
-    required LocalDayClock clock,
-    @visibleForTesting DateTime Function(DateTime)? dayOf,
-  }) : _db = db,
-       _clock = clock,
-       _dayOf = dayOf,
-       _restorer = StreakRestorer(db);
+    required Ref ref,
+    LocalDayClock? clock,
+  })  : _ref = ref,
+        _clock = clock ?? const SystemLocalDayClock();
 
-  final UserDatabase _db;
+  final Ref _ref;
   final LocalDayClock _clock;
 
-  /// AUD-t-cross-79: mirrors [StreakReducer.reduce]'s own injectable
-  /// `dayOf` seam. When null (production default), day-bucketing goes
-  /// through [LocalDayClock.today] exactly as before — zero behavior
-  /// change. Tests can inject a fixed, TZ-independent bucketing function
-  /// here so pass/fail can't depend on the host machine's timezone (both
-  /// `LocalDayClock.today()` and the reducer's default `dayOf` resolve
-  /// through `DateTime.toLocal()`, which reads the executing machine's TZ).
-  final DateTime Function(DateTime)? _dayOf;
-  final StreakRestorer _restorer;
+  FirestoreStreakStateRepository get _firestoreRepo =>
+      FirestoreStreakStateRepository(ref: _ref, clock: _clock);
 
-  /// The "today" bucket used to anchor a reduce: the pinned [_dayOf] seam
-  /// applied to the clock's raw UTC instant when injected, otherwise the
-  /// clock's own (TZ-dependent) `today()` — unchanged production behavior.
-  DateTime _today() {
-    final dayOf = _dayOf;
-    return dayOf == null ? _clock.today() : dayOf(_clock.nowUtc());
-  }
-
-  /// Returns the raw [StreakLogEvent] list for [profileId].
+  /// Returns the current [StreakState].
   ///
-  /// Used by callers that need per-event detail (e.g. calendar heatmaps).
-  Future<Iterable<StreakLogEvent>> readEvents({required int profileId}) async {
-    final rows = await (_db.select(
-      _db.streakEvents,
-    )..where((t) => t.profileId.equals(profileId))).get();
-    return rows.map(
-      (r) => StreakLogEvent(
-        profileId: r.profileId,
-        eventType: r.eventType,
-        eventTimestamp: r.eventTimestamp,
-        clientDeviceId: r.clientDeviceId,
-      ),
-    );
-  }
+  /// Delegates to [FirestoreStreakStateRepository.getStreak], which throws
+  /// [StreakStateRepositoryNotReadyException] when no account/profile is
+  /// active (D-E: a streak of zero would be indistinguishable from a real
+  /// empty read).
+  Future<StreakState> read({required int profileId}) =>
+      _firestoreRepo.getStreak();
 
-  /// Returns the current [StreakState] for [profileId].
-  Future<StreakState> read({required int profileId}) async {
-    await _restorer.restoreIfEmpty(profileId: profileId);
-    final rows = await (_db.select(
-      _db.streakEvents,
-    )..where((t) => t.profileId.equals(profileId))).get();
-    final events = rows.map(
-      (r) => StreakLogEvent(
-        profileId: r.profileId,
-        eventType: r.eventType,
-        eventTimestamp: r.eventTimestamp,
-        clientDeviceId: r.clientDeviceId,
-      ),
-    );
-    // D16: anchor on the LOCAL day (`today()`), not the UTC instant, so the
-    // headline streak agrees with the local-day calendar dots.
-    return const StreakReducer().reduce(events, today: _today(), dayOf: _dayOf);
-  }
-
-  /// Reactive read — re-emits whenever `streak_events` for the profile
-  /// changes (e.g. a sync pull lands a new row) **or** the local day rolls
-  /// over (D17). `today` is recomputed on every emission from [_clock] so a
-  /// dashboard left open across midnight lapses the streak without a relaunch.
+  /// Reactive read — re-emits whenever the streak event log changes.
   ///
-  /// [rolloverTicks] is injectable for tests; in production it defaults to a
-  /// periodic local-midnight check.
-  Stream<StreakState> watch({
-    required int profileId,
-    @visibleForTesting Stream<void>? rolloverTicks,
-  }) {
-    final controller = StreamController<StreakState>();
-    StreamSubscription<List<StreakLogEvent>>? eventsSub;
-    StreamSubscription<void>? tickSub;
-    var latest = const <StreakLogEvent>[];
+  /// Delegates to [FirestoreStreakStateRepository.watchStreak]. [profileId]
+  /// is ignored — see class doc comment.
+  Stream<StreakState> watch({required int profileId}) =>
+      _firestoreRepo.watchStreak();
 
-    // D16/D17: recompute against the CURRENT local day on every signal.
-    StreakState compute() =>
-        const StreakReducer().reduce(latest, today: _today(), dayOf: _dayOf);
-
-    controller.onListen = () async {
-      // D17 fix: an exception thrown inside this async `onListen` body (e.g.
-      // `restoreIfEmpty` hitting a Drift handle that is closing during a
-      // profile/account swap — the D20 teardown window) is an UNHANDLED async
-      // error: it does NOT reach the listener's onError and the stream never
-      // emits or closes (perpetual loading). Forward the failure to the
-      // controller so the consumer can observe it, matching the pre-D17
-      // `async*` behaviour where the throw surfaced as a stream error.
-      try {
-        await _restorer.restoreIfEmpty(profileId: profileId);
-        eventsSub =
-            (_db.select(_db.streakEvents)
-                  ..where((t) => t.profileId.equals(profileId)))
-                .watch()
-                .map(
-                  (rows) => rows
-                      .map(
-                        (r) => StreakLogEvent(
-                          profileId: r.profileId,
-                          eventType: r.eventType,
-                          eventTimestamp: r.eventTimestamp,
-                          clientDeviceId: r.clientDeviceId,
-                        ),
-                      )
-                      .toList(),
-                )
-                .listen((events) {
-                  latest = events;
-                  if (!controller.isClosed) controller.add(compute());
-                });
-        tickSub = (rolloverTicks ?? _defaultRolloverTicks()).listen((_) {
-          if (!controller.isClosed) controller.add(compute());
-        });
-      } catch (e, st) {
-        if (!controller.isClosed) {
-          controller.addError(e, st);
-          // Close without awaiting: a `.first`/`take(1)` consumer cancels its
-          // subscription on the error, which re-enters `onCancel` (which also
-          // closes the controller). Awaiting `close()` here would deadlock
-          // against that cancel. The unawaited close still tears the controller
-          // down for long-lived `.listen` consumers that don't auto-cancel.
-          unawaited(controller.close());
-        }
-      }
-    };
-    controller.onCancel = () async {
-      await eventsSub?.cancel();
-      await tickSub?.cancel();
-      eventsSub = null;
-      tickSub = null;
-      // D17: guard the close — onCancel also fires when a `.first` consumer
-      // cancels after the error path above already closed the controller.
-      // Closing an already-closed controller from within its own cancel
-      // deadlocks the consumer's cancel future, so it stays stuck.
-      if (!controller.isClosed) await controller.close();
-    };
-    return controller.stream;
-  }
-
-  /// Production rollover signal: a low-frequency tick so a long-open dashboard
-  /// recomputes `today` after a local-midnight boundary. The recompute is
-  /// cheap (a reduce over the in-memory event list); the distinct-state UI
-  /// makes a no-change tick a no-op.
-  Stream<void> _defaultRolloverTicks() =>
-      Stream<void>.periodic(const Duration(minutes: 15));
+  /// Returns raw [StreakLogEvent]s for [profileId].
+  ///
+  /// Not supported on the Firestore-backed service.
+  /// [FirestoreStreakStateRepository] does not expose raw events — calendar
+  /// consumers should migrate to
+  /// [FirestoreStreakStateRepository.getStreakCalendar].
+  /// Active local days in `[startUtc, endUtc]`, for the calendar dots.
+  ///
+  /// Replaces the former `readEvents` accessor. That existed only so
+  /// `StreakService` could walk raw events and bucket them by local day —
+  /// work `FirestoreStreakStateRepository.getStreakCalendar` already does
+  /// identically. Exposing raw events again would mean importing the
+  /// data-access ring from here, which AD-23 forbids.
+  Future<Set<DateTime>> streakCalendar({
+    required DateTime startUtc,
+    required DateTime endUtc,
+  }) =>
+      _firestoreRepo.getStreakCalendar(startUtc: startUtc, endUtc: endUtc);
 }
