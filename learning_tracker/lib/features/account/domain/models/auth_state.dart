@@ -1,11 +1,17 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
+import 'package:learning_tracker/core/domain/value_objects/account_tier.dart';
+import 'package:learning_tracker/features/account/domain/models/account_entity.dart';
 
 part 'auth_state.freezed.dart';
 
 /// Hard-tier classification — set at signup, immutable except via the
 /// one-way local → cloud upgrade flow (Epic 20 story 20.9).
-typedef Tier = UserTier;
+///
+/// Re-pointed from the deleted Drift `UserTier` to [AccountTier], the live
+/// tier enum (`core/domain/value_objects/account_tier.dart`): [Tier.cloud]
+/// = created with email/Firebase credentials, [Tier.local] = created
+/// offline, device-only. Storage keys remain `'cloudBorn'`/`'localBorn'`.
+typedef Tier = AccountTier;
 
 /// Session lifecycle state.
 enum SessionStatus {
@@ -33,7 +39,14 @@ enum SessionStatus {
 @freezed
 abstract class AuthUser with _$AuthUser {
   const factory AuthUser({
-    required int profileId,
+    /// The account's uid — the Firestore `users/{uid}` doc-id / Firebase uid
+    /// for cloud-born accounts, the device-registry `accountId` for
+    /// credential-less local-born accounts (which have no Firebase uid).
+    ///
+    /// Replaced the deleted Drift `profileId` int FK: identity is a String
+    /// everywhere in the Firestore world (uid / ULID / doc-id) — see
+    /// [AccountEntity] and [LearnerProfileEntity].
+    required String uid,
     required String email,
     required String displayName,
     String? firebaseUid,
@@ -41,11 +54,17 @@ abstract class AuthUser with _$AuthUser {
 
   const AuthUser._();
 
-  factory AuthUser.fromProfile(UserProfile profile) => AuthUser(
-    profileId: profile.id,
-    email: profile.email,
-    displayName: profile.displayName,
-    firebaseUid: profile.firebaseUid,
+  /// Builds the UI descriptor from the Firestore account record.
+  ///
+  /// For cloud-born accounts the account uid IS the Firebase uid, so
+  /// [firebaseUid] and [uid] coincide. Local-born (credential-less) accounts
+  /// have no Firestore document and are built from the device registry row
+  /// instead (see `auth_state_provider.dart`).
+  factory AuthUser.fromAccount(AccountEntity account) => AuthUser(
+    uid: account.uid,
+    email: account.email ?? '',
+    displayName: account.displayName,
+    firebaseUid: account.uid,
   );
 }
 
@@ -86,7 +105,7 @@ class AuthState {
       tier = null,
       sessionStatus = SessionStatus.signedOut;
 
-  const AuthState.signedIn({required AuthUser user, required Tier this.tier})
+  const AuthState.signedIn({required AuthUser user, required this.tier})
     : currentUser = user,
       sessionStatus = SessionStatus.signedIn;
 
@@ -96,8 +115,8 @@ class AuthState {
 
   bool get isSignedIn => sessionStatus == SessionStatus.signedIn;
   bool get isInitializing => sessionStatus == SessionStatus.initializing;
-  bool get isCloudBorn => tier == Tier.cloudBorn;
-  bool get isLocalBorn => tier == Tier.localBorn;
+  bool get isCloudBorn => tier == Tier.cloud;
+  bool get isLocalBorn => tier == Tier.local;
 
   /// Display identifier for logs / fallback UI. Falls back to email
   /// when there's no display name, and to `'anon'` when signed out.

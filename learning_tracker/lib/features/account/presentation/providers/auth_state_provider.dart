@@ -1,7 +1,8 @@
-import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
+import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
-import 'package:learning_tracker/core/utils/date_utils.dart';
+import 'package:learning_tracker/core/providers/registry_provider.dart';
+import 'package:learning_tracker/features/account/data/repositories/account_repository_adapter.dart';
+import 'package:learning_tracker/features/account/domain/models/account_entity.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart';
@@ -41,7 +42,7 @@ class AuthStateNotifier extends _$AuthStateNotifier {
       if (next is AsyncData<AppUser?> &&
           next.value == null &&
           state.isSignedIn &&
-          state.tier == Tier.cloudBorn) {
+          state.tier == Tier.cloud) {
         state = const AuthState.signedOut();
       }
     });
@@ -57,8 +58,11 @@ class AuthStateNotifier extends _$AuthStateNotifier {
     try {
       // Cloud-born accounts require a valid Firebase session. If Firebase
       // has no current user (reinstall, signed out, etc.), we are signed
-      // out — never resurrect a cloudBorn profile row from SQLite without
-      // Firebase confirming the session.
+      // out — never resurrect a cloudBorn account without Firebase
+      // confirming the session. The Firestore `users/{uid}` account doc is
+      // resolved through [FirestoreAccountRepositoryAdapter] (the
+      // AD-23/AD-28 seam; presentation/domain must not import the data
+      // ring directly).
       final authRepo = ref.read(authRepositoryProvider);
       final firebaseUser = authRepo.currentUser;
       if (firebaseUser != null) {
@@ -68,29 +72,22 @@ class AuthStateNotifier extends _$AuthStateNotifier {
               refreshed?.providers.contains('password') ?? false;
           if (refreshed != null &&
               !(isPasswordAccount && !refreshed.emailVerified)) {
-            final dao = ref.read(userDatabaseProvider).userProfileDao;
-            var profile = await dao.findCloudBornByFirebaseUid(refreshed.uid);
-            if (profile == null) {
-              // Profile tier may be stale (was created locally before cloud
-              // sign-in or the upgrade flow didn't flip the tier). Upgrade it
-              // now so sync activates on this and every subsequent launch.
-              final any = await dao.getUserProfileByFirebaseUid(refreshed.uid);
-              if (any != null) {
-                await dao.upgradeLocalToCloud(
-                  profileId: any.id,
-                  firebaseUid: refreshed.uid,
-                  updatedAt: DateTimeFactory.nowUtc(),
-                );
-                profile = await dao.findCloudBornByFirebaseUid(refreshed.uid);
-              }
-            }
-            if (profile != null) {
-              state = AuthState.signedIn(
-                user: AuthUser.fromProfile(profile),
-                tier: Tier.cloudBorn,
-              );
-              return;
-            }
+            // Ensure the `users/{uid}` doc exists (placeholder created on
+            // first sign-in) and restore the session from the account
+            // record. Tier comes from the LIVE Firebase session, not from
+            // any persisted field: cloud-born = linked credentials present.
+            // An anonymous session (no providers) is the credential-less
+            // local-born case and must never be labelled cloud-born.
+            final adapter = FirestoreAccountRepositoryAdapter(ref: ref);
+            final account = await adapter.ensureAccountForFirebaseUser(
+              refreshed,
+            );
+            final hasLinkedCredentials = refreshed.providers.isNotEmpty;
+            state = AuthState.signedIn(
+              user: AuthUser.fromAccount(account),
+              tier: hasLinkedCredentials ? Tier.cloud : Tier.local,
+            );
+            return;
           } else {
             await authRepo.signOut();
           }
@@ -100,7 +97,10 @@ class AuthStateNotifier extends _$AuthStateNotifier {
           // network-request-failed) on an entirely ordinary offline cold
           // start. Log and fall through to the local-born restore path below
           // instead of leaving the session unresolved — mirrors the
-          // defensive try/catch pattern in sign_in_controller.dart.
+          // defensive try/catch pattern in sign_in_controller.dart. The
+          // adapter's AccountRepositoryNotReadyException (no active device
+          // account) lands here too — the "cannot establish the account
+          // record" case, which must never be reported as success.
           AppLogger.instance.warning(
             event: 'auth_state_init_cloud_reload_failed',
             exception: e,
@@ -109,23 +109,35 @@ class AuthStateNotifier extends _$AuthStateNotifier {
         }
       }
 
-      // Local-born accounts don't need Firebase auth — they store data
-      // locally only. Restore the first local-born row if present.
-      final dao = ref.read(userDatabaseProvider).userProfileDao;
-      final locals = await dao.findByTier(UserTier.localBorn);
-      if (locals.isNotEmpty) {
-        state = AuthState.signedIn(
-          user: AuthUser.fromProfile(locals.first),
-          tier: Tier.localBorn,
-        );
-        return;
+      // Local-born accounts are credential-less and device-only: no Firebase
+      // session, no Firestore document — their only home is the device
+      // registry. Restore the last-active local-born row if present. Respect
+      // the active pointer (D10): never silently auto-activate an arbitrary
+      // account against a null/dangling pointer.
+      final registry = ref.read(deviceRegistryProvider);
+      final activeAccountId = await registry.getLastActiveAccountId();
+      if (activeAccountId != null) {
+        final account = await registry.findById(activeAccountId);
+        if (account != null && account.accountTier.isLocal) {
+          state = AuthState.signedIn(
+            user: AuthUser(
+              uid: account.firebaseUid ?? account.accountId,
+              email: account.email,
+              displayName: account.displayName,
+              firebaseUid: account.firebaseUid,
+            ),
+            tier: Tier.local,
+          );
+          return;
+        }
       }
 
       state = const AuthState.signedOut();
     } on Exception catch (e, st) {
       // AUD-account-11: final safety net — any other exception in this
-      // method (e.g. a DAO/DB read failure) must still resolve `state` to a
-      // terminal status rather than leaving it at `initializing` forever.
+      // method (e.g. a registry/DB read failure) must still resolve `state`
+      // to a terminal status rather than leaving it at `initializing`
+      // forever.
       AppLogger.instance.error(
         event: 'auth_state_init_failed',
         exception: e,
@@ -137,19 +149,24 @@ class AuthStateNotifier extends _$AuthStateNotifier {
 
   /// Promote the current session to signed-in (cloud-born).
   /// Invoked from the cloud-born sign-up/sign-in flows.
-  void setCloudBornSession({required UserProfile profile}) {
+  void setCloudBornSession({required AccountEntity account}) {
     state = AuthState.signedIn(
-      user: AuthUser.fromProfile(profile),
-      tier: Tier.cloudBorn,
+      user: AuthUser.fromAccount(account),
+      tier: Tier.cloud,
     );
   }
 
   /// Set the current session to signed-in (local-born).
   /// Invoked from `LocalAuthService.signIn`.
-  void setLocalBornSession({required UserProfile profile}) {
+  void setLocalBornSession({required DeviceAccount account}) {
     state = AuthState.signedIn(
-      user: AuthUser.fromProfile(profile),
-      tier: Tier.localBorn,
+      user: AuthUser(
+        uid: account.firebaseUid ?? account.accountId,
+        email: account.email,
+        displayName: account.displayName,
+        firebaseUid: account.firebaseUid,
+      ),
+      tier: Tier.local,
     );
   }
 
@@ -159,31 +176,16 @@ class AuthStateNotifier extends _$AuthStateNotifier {
     state = const AuthState.signedOut();
   }
 
-  /// Ensure a cloud-born [Account] row exists for [firebaseUser] and activate
-  /// the session. Called from sign-in, signup, and magic-link flows.
+  /// Ensure a cloud-born [AccountEntity] row exists for [firebaseUser] and
+  /// activate the session. Called from sign-in, signup, and magic-link flows.
   ///
-  /// If no account row exists yet (first sign-in on this device), a placeholder
-  /// row is created so downstream code has something to read. The learner
-  /// profile (child/adult mode) is a separate [LearnerProfiles] row created
-  /// during onboarding — it is NOT set here.
-  ///
-  /// WS9.shims: renamed from [promoteToCloud]; shim label and [demoteToLocal]
-  /// alias removed. The function is a real, permanent part of the sign-in path.
+  /// If no account document exists yet (first sign-in on this device), a
+  /// placeholder `users/{uid}` document is created so downstream code has
+  /// something to read. The learner profile (child/adult mode) is a separate
+  /// [LearnerProfiles] row created during onboarding — it is NOT set here.
   Future<void> setCloudBornSessionFromFirebaseUser(AppUser firebaseUser) async {
-    final dao = ref.read(userDatabaseProvider).userProfileDao;
-    var profile = await dao.getUserProfileByFirebaseUid(firebaseUser.uid);
-    if (profile == null) {
-      // Create a placeholder cloud-born row so downstream code can read it.
-      await dao.upsertProfile(
-        firebaseUid: firebaseUser.uid,
-        email: firebaseUser.email ?? '${firebaseUser.uid}@cloud.placeholder',
-        displayName: firebaseUser.displayName ?? '',
-        updatedAt: DateTimeFactory.nowUtc(),
-      );
-      profile = await dao.getUserProfileByFirebaseUid(firebaseUser.uid);
-    }
-    if (profile != null) {
-      setCloudBornSession(profile: profile);
-    }
+    final adapter = FirestoreAccountRepositoryAdapter(ref: ref);
+    final account = await adapter.ensureAccountForFirebaseUser(firebaseUser);
+    setCloudBornSession(account: account);
   }
 }

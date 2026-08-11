@@ -347,6 +347,28 @@ Measured: `.ulid` has **33** uses vs `profile.id`'s **18** → **keep `ulid`, dr
 `profile_repository.dart` then build_runner; (2) `profile_repository_impl.dart`;
 (3) the four consumers in small batches.
 
+### 6.2b ⚠️ build_runner blocks the AD-24 seam in TWO places, not one
+
+Discovered after §6.2 was written, and it strengthens the case: a worker attempted
+the auth half of the AD-24 cluster and hit the SAME wall from a different
+direction.
+
+`auth_state.dart:53` now fails with `redirect_to_invalid_function_type` — the
+generated `_AuthUser` still expects `int profileId` while `AuthUser` declares
+`String uid`. That is a **stale `.freezed.dart`**, not a source bug: the generated
+file cannot be updated without regenerating, and every dispatch forbids
+build_runner.
+
+So the int→ULID conversion is gated on codegen in **both** `ProfileModel` AND
+`AuthUser`. Neither half of the cluster (~40 errors across profile, auth and
+sign-in) can proceed until build_runner is authorised. **That single authorisation
+is the gate on the largest remaining unit of work.**
+
+Partial work is preserved on `dev` as a labelled WIP commit — see
+`git log --grep="WIP auth half"`. It is analyze-clean apart from that one
+generated-file mismatch, and was audited: no fabricated auth values, no weakened
+checks.
+
 ### 6.3 Siyum retraction — RULING MADE, NOT IMPLEMENTED
 
 `expungePriorCompletions` still throws. Seams (`purgeCompletion`, `purgeEntry`)
