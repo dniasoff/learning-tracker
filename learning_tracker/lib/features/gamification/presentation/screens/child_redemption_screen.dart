@@ -11,19 +11,24 @@ library;
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
+import 'package:learning_tracker/features/gamification/data/repositories/firestore_points_balance_reader_adapter.dart';
+import 'package:learning_tracker/features/gamification/data/repositories/reward_redemption_repository_impl.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
 import 'package:learning_tracker/features/gamification/domain/reward_milestone_icons.dart';
 import 'package:learning_tracker/features/gamification/presentation/providers/achievements_overview_provider.dart';
 import 'package:learning_tracker/features/gamification/presentation/providers/gamification_service_providers.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
-import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
 import 'package:learning_tracker/features/tutoring/tutoring.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'child_redemption_screen.g.dart';
+
+final _redemptionRepositoryProvider =
+    Provider<FirestoreRewardRedemptionRepositoryAdapter>(
+      (ref) => FirestoreRewardRedemptionRepositoryAdapter(ref: ref),
+    );
 
 // ─── Providers ────────────────────────────────────────────────────────────────
 
@@ -38,29 +43,28 @@ part 'child_redemption_screen.g.dart';
 /// [PointsBalanceDao.watchBalance] — the same reactive read path used by
 /// [dashboardGlobalPointsProvider] and [globalPointsProvider]. Any write to
 /// the PointsBalance row causes the stream to emit the new value immediately.
+// Not a live watch: firestore.rules caps every points_ledger query at
+// limit<=500, so there is no single-listener way to watch an
+// arbitrarily-long ledger's derived balance live -- same constraint
+// dashboard_providers.dart's dashboardGlobalPoints already accepted
+// this session. Re-reads on completionCommittedProvider plus explicit
+// invalidation after this screen's own redemption write.
 @riverpod
-Stream<int> childRedemptionBalance(Ref ref) {
-  final db = ref.watch(userDatabaseProvider);
-  final profileId = ref.watch(activeProfileIdProvider);
-  return db.pointsBalanceDao.watchBalance(profileId);
+Future<int> childRedemptionBalance(Ref ref) async {
+  ref.watch<int>(completionCommittedProvider);
+  final reader = FirestorePointsBalanceReaderAdapter(ref: ref);
+  return reader.getBalance();
 }
 
 @riverpod
 Future<List<RewardMilestone>> childRedemptionRewards(Ref ref) async {
-  final db = ref.watch(userDatabaseProvider);
-  final profileId = ref.watch(activeProfileIdProvider);
+  // DEC-32/GA-3: per-track rewards were removed from the spend economy --
+  // every reward is a single global priced spend-item now (same fix
+  // already applied to dashboard_providers.dart/
+  // achievements_overview_provider.dart earlier this session).
   final svc = ref.watch(rewardMilestoneServiceProvider);
-  // Gather all enabled milestones (global + per-track).
-  final global = await svc.getGlobalMilestones();
-  final tracks = await db.trackDao.getActiveTracksForProfile(profileId);
-  final perTrack = <RewardMilestone>[];
-  for (final t in tracks) {
-    perTrack.addAll(await svc.getMilestonesForTrack(t.id));
-  }
-  return [
-    ...global.where((m) => m.isEnabled),
-    ...perTrack.where((m) => m.isEnabled),
-  ];
+  final global = await svc.getMilestones();
+  return global.where((m) => m.isEnabled).toList();
 }
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
@@ -175,15 +179,8 @@ class ChildRedemptionScreen extends ConsumerWidget {
 
     if (confirmed != true || !context.mounted) return;
 
-    final db = ref.read(userDatabaseProvider);
-    final profileId = ref.read(activeProfileIdProvider);
-    // WS9 Wave-B (C#2): touch the outbox facade provider so the points-sync
-    // sink is registered on the DAO before the redemption is written, ensuring
-    // the redemption + debit ledger entry are pushed to Firestore.
-    ref.read(outboxSyncWriteFacadeProvider);
-
-    final redemption = await db.pointsBalanceDao.createRedemption(
-      profileId: profileId,
+    final redemptionRepo = ref.read(_redemptionRepositoryProvider);
+    final redemption = await redemptionRepo.createRedemption(
       rewardTitle: reward.title,
       iconIndex: reward.iconIndex,
       pointsCost: reward.pointsCost,
@@ -200,10 +197,10 @@ class ChildRedemptionScreen extends ConsumerWidget {
           content: Text(l10n.redeemScreenRequestedSnackbar(reward.title)),
         ),
       );
-      // DG-RDMP-01: no need to invalidate childRedemptionBalanceProvider —
-      // it is a StreamProvider backed by watchBalance, which emits the updated
-      // balance reactively after the createRedemption debit.
-      //
+      // childRedemptionBalanceProvider is a one-shot Future now (not a
+      // live watch -- see its own doc comment), so it needs an explicit
+      // invalidate here to reflect the debit immediately.
+      ref.invalidate(childRedemptionBalanceProvider);
       // DG-ACHV-01: invalidate achievementsOverviewProvider so the gamification
       // screen's unlock classification reflects the post-debit balance without
       // requiring a pull-to-refresh. Without this, a milestone that was

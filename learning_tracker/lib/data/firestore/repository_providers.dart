@@ -95,6 +95,7 @@ import 'package:learning_tracker/data/repositories/firestore_learning_order_repo
 import 'package:learning_tracker/data/repositories/firestore_point_config_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_points_ledger_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_profile_program_repository.dart';
+import 'package:learning_tracker/data/repositories/firestore_reward_redemption_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_stage_definition_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_streak_event_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_study_day_config_repository.dart';
@@ -411,6 +412,19 @@ final firestoreProfileProgramRepositoryProvider =
       if (resolved == null) return null;
       final (handles, profileId) = resolved;
       return FirestoreProfileProgramRepository(
+        firestore: handles.firestore,
+        uid: handles.uid,
+        profileId: profileId,
+      );
+    });
+
+/// `.../reward_redemptions/{redemptionId}`.
+final firestoreRewardRedemptionRepositoryProvider =
+    FutureProvider<FirestoreRewardRedemptionRepository?>((ref) async {
+      final resolved = await _watchActiveAccountAndProfile(ref);
+      if (resolved == null) return null;
+      final (handles, profileId) = resolved;
+      return FirestoreRewardRedemptionRepository(
         firestore: handles.firestore,
         uid: handles.uid,
         profileId: profileId,

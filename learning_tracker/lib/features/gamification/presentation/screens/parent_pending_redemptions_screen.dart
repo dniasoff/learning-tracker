@@ -12,12 +12,10 @@ library;
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
+import 'package:learning_tracker/features/gamification/data/repositories/reward_redemption_repository_impl.dart';
+import 'package:learning_tracker/features/gamification/domain/models/reward_redemption.dart';
 import 'package:learning_tracker/features/gamification/domain/reward_milestone_icons.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
-import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
@@ -41,13 +39,15 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 /// are retained for backwards compatibility (they restart the stream
 /// subscription, which is benign for a [StreamProvider]).
 ///
-/// Declared as a manual provider (not @riverpod code-gen) to avoid
-/// riverpod_generator choking on the Drift-generated [RewardRedemption] type.
+final _redemptionRepositoryProvider =
+    Provider<FirestoreRewardRedemptionRepositoryAdapter>(
+      (ref) => FirestoreRewardRedemptionRepositoryAdapter(ref: ref),
+    );
+
 final pendingRedemptionsProvider =
-    StreamProvider.autoDispose<List<RewardRedemption>>((ref) {
-      final db = ref.watch(userDatabaseProvider);
-      final profileId = ref.watch(activeProfileIdProvider);
-      return db.pointsBalanceDao.watchPendingRedemptions(profileId);
+    StreamProvider.autoDispose<List<RewardRedemptionEntity>>((ref) {
+      final repo = ref.watch(_redemptionRepositoryProvider);
+      return repo.watchPendingRedemptions();
     });
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
@@ -134,14 +134,11 @@ class ParentPendingRedemptionsScreen extends ConsumerWidget {
   Future<void> _fulfil(
     BuildContext context,
     WidgetRef ref,
-    RewardRedemption redemption,
+    RewardRedemptionEntity redemption,
     AppLocalizations l10n,
   ) async {
-    final db = ref.read(userDatabaseProvider);
-    // WS9 Wave-B (C#2): ensure the points-sync sink is registered so the
-    // status change is pushed to the child's device.
-    ref.read(outboxSyncWriteFacadeProvider);
-    await db.pointsBalanceDao.fulfilRedemption(redemption.id);
+    final repo = ref.read(_redemptionRepositoryProvider);
+    await repo.fulfilRedemption(redemption.ulid);
     // SM-4 (AUD-gamification-01): the screen can be popped while the DB
     // write above is in flight -- check context.mounted before touching
     // `ref`/`context` again, not after.
@@ -156,14 +153,11 @@ class ParentPendingRedemptionsScreen extends ConsumerWidget {
   Future<void> _decline(
     BuildContext context,
     WidgetRef ref,
-    RewardRedemption redemption,
+    RewardRedemptionEntity redemption,
     AppLocalizations l10n,
   ) async {
-    final db = ref.read(userDatabaseProvider);
-    // WS9 Wave-B (C#2): ensure the points-sync sink is registered so the
-    // decline + refund ledger entry are pushed to the child's device.
-    ref.read(outboxSyncWriteFacadeProvider);
-    await db.pointsBalanceDao.declineRedemption(redemption.id);
+    final repo = ref.read(_redemptionRepositoryProvider);
+    await repo.declineRedemption(redemption.ulid);
     // SM-4 (AUD-gamification-01): the screen can be popped while the DB
     // write above is in flight -- check context.mounted before touching
     // `ref`/`context` again, not after.
@@ -187,7 +181,7 @@ class _RedemptionCard extends StatefulWidget {
     required this.onDecline,
   });
 
-  final RewardRedemption redemption;
+  final RewardRedemptionEntity redemption;
   final AppLocalizations l10n;
   final ThemeData theme;
   final Future<void> Function() onFulfil;
