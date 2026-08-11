@@ -9,7 +9,6 @@ import 'package:learning_tracker/features/onboarding/domain/services/curriculum_
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
 import 'package:learning_tracker/features/scheduler/scheduler.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
-import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:learning_tracker/features/tracks/stages/data/repositories/stage_definition_repository_impl.dart';
 
 /// Provider for CurriculumImportService used during onboarding.
@@ -35,18 +34,10 @@ final bulkPriorCompletionServiceProvider = Provider<BulkPriorCompletionService>(
     final contentRepo = ref.watch(contentRepositoryProvider);
     final completionRepo = ref.watch(completionRepositoryProvider);
     final bookmarkRepo = ref.watch(bookmarkRepositoryProvider);
-    final db = ref.watch(userDatabaseProvider);
-    final syncFacade = ref.watch(syncWriteFacadeProvider);
     final analytics = ref.watch(analyticsServiceProvider);
     // B6: inject StageDefinitionRepository so execute() can enumerate all
     // configured stages and write completion records for learn + every chazara.
-    final stageRepo = StageDefinitionRepositoryImpl(
-      stageDao: db.stageDao,
-      completionDao: db.completionDao,
-      // Plan §F Phase 5 deliverable 6 — dedicated stage_definition outbox
-      // kind replaces the legacy pushSettings piggyback.
-      pushStageDefinitions: syncFacade?.pushStageDefinitions,
-    );
+    final stageRepo = FirestoreStageDefinitionRepositoryAdapter(ref: ref);
     // Post completion-orchestrator lift (`docs/firestore-rewrite-map.md`,
     // owner decision 1): route the bulk-mark write through
     // CompletionOrchestrator so achievement (siyum) detection still fires —
@@ -57,11 +48,8 @@ final bulkPriorCompletionServiceProvider = Provider<BulkPriorCompletionService>(
       contentRepository: contentRepo,
       completionRepository: completionRepo,
       bookmarkRepository: bookmarkRepo,
-      database: db,
-      syncEngine: syncFacade,
       analytics: analytics,
       stageRepository: stageRepo,
-      outboxDao: db.outboxDao,
       orchestrator: orchestrator,
     );
   },

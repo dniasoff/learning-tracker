@@ -2445,6 +2445,50 @@ not re-learn the hard way:**
 
 ---
 
+### 2026-08-11 — P3-35: the callee-before-caller rule pays out — 10 lines of Drift wiring collapse to one `ref`
+
+`dart analyze --fatal-infos` EXIT 0. `check_dependency_direction` EXIT 0.
+5 errors → 0. **`make test-functions` — 339/339 pass.**
+
+`onboarding_providers.dart` had been blocked twice: once on
+`BulkPriorCompletionService`'s constructor (P3-31) and once on
+`StageDefinitionRepositoryImpl`'s (P3-33). With both callees converted, the fix
+was almost nothing:
+
+```
+-    final db = ref.watch(userDatabaseProvider);
+-    final syncFacade = ref.watch(syncWriteFacadeProvider);
+-    final stageRepo = StageDefinitionRepositoryImpl(
+-      stageDao: db.stageDao,
+-      completionDao: db.completionDao,
+-      pushStageDefinitions: syncFacade?.pushStageDefinitions,
+-    );
++    final stageRepo = FirestoreStageDefinitionRepositoryAdapter(ref: ref);
+```
+
+plus dropping `database:`, `syncEngine:` and `outboxDao:` from the service
+construction.
+
+This is the concrete payout of the sequencing rule adopted in P3-33. Every one of
+those deleted lines was a presentation-layer file reaching into Drift internals
+(`db.stageDao`, `db.completionDao`, `db.outboxDao`) — which under Firestore would
+have had to become a data-ring import, and AD-23/AD-28 forbids that from
+presentation. There was no way to fix this file first. Converting the two callees
+to take `Ref` did not merely unblock it; it made the caller *smaller*, because
+the dependency resolution moved to the layer permitted to do it.
+
+Recorded as a rule for the rest of the phase: **when a presentation file's errors
+are all "undefined name" on Drift-era injected dependencies, do not touch that
+file — convert its callee to take `Ref` and the caller collapses on its own.**
+
+#### Gate note
+
+`make test-functions` now reports **339** (was 338): the extra test is the
+client-to-Cloud-Function contract test added in P3-26, which pins the exact
+argument map the Dart adapter sends to `deleteCurriculumTrack`.
+
+Also note `make test-functions` must be run from `learning_tracker/`, not the
+repo root — the root Makefile has no such target.
 ### 2026-08-11 — P3-34: commit the billing kill-switch (deployed earlier, untracked until now)
 
 The kill-switch was written and **deployed** under the owner's explicit
