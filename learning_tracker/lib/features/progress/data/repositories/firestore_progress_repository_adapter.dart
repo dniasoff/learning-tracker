@@ -9,9 +9,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
 import 'package:learning_tracker/data/repositories/firestore_completion_repository.dart';
+import 'package:learning_tracker/data/repositories/firestore_curriculum_scope_repository.dart';
+import 'package:learning_tracker/data/repositories/firestore_curriculum_track_repository.dart';
+import 'package:learning_tracker/data/repositories/firestore_learning_ledger_repository.dart';
+import 'package:learning_tracker/data/repositories/firestore_profile_program_repository.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_entity.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_tier_filter.dart';
+import 'package:learning_tracker/features/learning/domain/entities/learning_ledger_entry.dart';
 import 'package:learning_tracker/features/progress/domain/repositories/progress_repository.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_scope.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/entities/profile_program.dart';
 
 /// Firestore-backed [ProgressRepository] adapter.
 ///
@@ -75,12 +83,16 @@ import 'package:learning_tracker/features/progress/domain/repositories/progress_
 /// CONFIGURATION list is a legitimate state the UI already renders, whereas a
 /// fabricated achievement total is not.
 class ProgressRepositoryNotReadyException implements Exception {
-  const ProgressRepositoryNotReadyException();
+  const ProgressRepositoryNotReadyException([
+    this.providerName = 'firestoreCompletionRepositoryProvider',
+  ]);
+
+  final String providerName;
 
   @override
   String toString() =>
       'ProgressRepositoryNotReadyException: '
-      'firestoreCompletionRepositoryProvider resolved to null (no active '
+      '$providerName resolved to null (no active '
       'account, or no active learner profile, yet) — refusing to report a '
       'progress figure that would be indistinguishable from a real zero.';
 }
@@ -123,6 +135,49 @@ class FirestoreProgressRepositoryAdapter implements ProgressRepository {
     return _ref.read(firestoreCompletionRepositoryProvider.future);
   }
 
+  // ── Tracks / programs / scopes (configuration-shaped — empty is valid) ──
+
+  /// Resolves `firestoreCurriculumTrackRepositoryProvider`, returning `null`
+  /// when no profile is active yet. Configuration-shaped callers fall back to
+  /// an empty list rather than throwing — see the class doc comment's D-E
+  /// distinction.
+  Future<FirestoreCurriculumTrackRepository?> _resolveTracksOrNull() {
+    return _ref.read(firestoreCurriculumTrackRepositoryProvider.future);
+  }
+
+  /// Resolves `firestoreProfileProgramRepositoryProvider`, returning `null`
+  /// when no profile is active yet.
+  Future<FirestoreProfileProgramRepository?> _resolveProgramsOrNull() {
+    return _ref.read(firestoreProfileProgramRepositoryProvider.future);
+  }
+
+  /// Resolves `firestoreCurriculumScopeRepositoryProvider`, returning `null`
+  /// when no profile is active yet.
+  Future<FirestoreCurriculumScopeRepository?> _resolveScopesOrNull() {
+    return _ref.read(firestoreCurriculumScopeRepositoryProvider.future);
+  }
+
+  // ── Learning ledger (achievement-shaped — throws on not-ready) ─────────
+
+  /// Resolves `firestoreLearningLedgerRepositoryProvider`, returning `null`
+  /// when no profile is active yet. Used by [_resolveLedger] below.
+  Future<FirestoreLearningLedgerRepository?> _resolveLedgerOrNull() {
+    return _ref.read(firestoreLearningLedgerRepositoryProvider.future);
+  }
+
+  /// Like [_resolveLedgerOrNull], but throws — see
+  /// [ProgressRepositoryNotReadyException] for why every achievement-shaped
+  /// read here throws.
+  Future<FirestoreLearningLedgerRepository> _resolveLedger() async {
+    final repo = await _resolveLedgerOrNull();
+    if (repo == null) {
+      throw const ProgressRepositoryNotReadyException(
+        'firestoreLearningLedgerRepositoryProvider',
+      );
+    }
+    return repo;
+  }
+
   @override
   Future<Map<String, int>> getTrackBreakdown(String curriculumId) async {
     final repo = await _resolve();
@@ -157,5 +212,67 @@ class FirestoreProgressRepositoryAdapter implements ProgressRepository {
     // the same "no tier filter" scope the Drift-era
     // `CompletionDao.getCompletionsByProfile` this replaces had.
     return repo.getCompletionsByTier(tier: CompletionTierFilter.lifetime);
+  }
+
+  /// The complete lifetime learning record, across every curriculum — the
+  /// "track everything I have learnt over my lifetime" feature itself.
+  /// Delegates to [FirestoreLearningLedgerRepository.getLifetimeLedger].
+  ///
+  /// Achievement-shaped read: throws [ProgressRepositoryNotReadyException]
+  /// when no profile is active yet (D-E) — a fabricated empty list here would
+  /// be indistinguishable from "nothing ever learned".
+  Future<List<LearningLedgerEntry>> getAllLedgerEntries() async {
+    final repo = await _resolveLedger();
+    return repo.getLifetimeLedger();
+  }
+
+  /// Lifetime learning record for one curriculum. Delegates to
+  /// [FirestoreLearningLedgerRepository.getLedgerForCurriculum].
+  ///
+  /// Achievement-shaped read — throws [ProgressRepositoryNotReadyException]
+  /// when no profile is active yet (D-E).
+  Future<List<LearningLedgerEntry>> getLedgerEntriesByCurriculum(
+    String curriculumId,
+  ) async {
+    final repo = await _resolveLedger();
+    final id = _curriculumFor(curriculumId);
+    return repo.getLedgerForCurriculum(id);
+  }
+
+  /// Every curriculum track for the active profile (any state). Delegates to
+  /// [FirestoreCurriculumTrackRepository.getAllTracks].
+  ///
+  /// Configuration-shaped read — returns an empty list when no profile is
+  /// active yet, rather than throwing.
+  Future<List<CurriculumTrackEntity>> getAllTracks() async {
+    final repo = await _resolveTracksOrNull();
+    if (repo == null) return const [];
+    return repo.getAllTracks();
+  }
+
+  /// Every program enrollment across this profile's curricula, keyed by
+  /// `curriculumId.storageKey`. Delegates to
+  /// [FirestoreProfileProgramRepository.getAllPrograms], partitioning the
+  /// list into a map.
+  ///
+  /// Configuration-shaped read — returns an empty map when no profile is
+  /// active yet.
+  Future<Map<String, ProfileProgramEntity>> getProgramsByCurriculum() async {
+    final repo = await _resolveProgramsOrNull();
+    if (repo == null) return const <String, ProfileProgramEntity>{};
+    final programs = await repo.getAllPrograms();
+    return {for (final p in programs) p.curriculumId.storageKey: p};
+  }
+
+  /// Every scope selection for [curriculumId]. Delegates to
+  /// [FirestoreCurriculumScopeRepository.getScopes].
+  ///
+  /// Configuration-shaped read — returns an empty list when no profile is
+  /// active yet (a curriculum with no scope override tracks the whole
+  /// curriculum, a legitimate configuration).
+  Future<List<CurriculumScopeEntity>> getScopes(CurriculumId curriculumId) async {
+    final repo = await _resolveScopesOrNull();
+    if (repo == null) return const [];
+    return repo.getScopes(curriculumId);
   }
 }

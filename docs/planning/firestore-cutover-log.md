@@ -2445,6 +2445,58 @@ not re-learn the hard way:**
 
 ---
 
+### 2026-08-11 — P3-29: the progress adapter grows the five seams `lifetime_knowledge_providers` needs — and a worker applied the achievement/configuration rule unprompted
+
+`dart analyze --fatal-infos` EXIT 0. `check_dependency_direction` EXIT 0.
+
+#### 1. Why an adapter rather than an import
+
+`lifetime_knowledge_providers.dart` (48 errors — the single largest remaining
+file) is `presentation/providers/`, so AD-23/AD-28 forbid it importing the
+data-access ring. The established route is an adapter under
+`features/<feature>/data/repositories/` that takes `Ref` and resolves
+repositories itself.
+
+That route is not a matter of taste — **18 of 18** files currently importing
+`data/firestore/repository_providers.dart` sit under `/data/repositories/`, which
+is the exact segment `check_dependency_direction.dart:57` exempts. So the adapter
+gained five methods: `getAllLedgerEntries`, `getLedgerEntriesByCurriculum`,
+`getAllTracks`, `getProgramsByCurriculum`, `getScopes`.
+
+#### 2. ✅ The achievement/configuration rule applied without being asked
+
+The interesting part is what the worker did with the null-profile case. It split
+the five methods in two and labelled them in the doc comments:
+
+- **Achievement-shaped** (`getAllLedgerEntries`, `getLedgerEntriesByCurriculum`)
+  — resolve through a THROWING helper, raising
+  `ProgressRepositoryNotReadyException`. A lifetime learning record must never
+  silently read as empty; that is the 0%-progress and streak-0 defect class.
+- **Configuration-shaped** (`getAllTracks`, `getProgramsByCurriculum`,
+  `getScopes`) — return an empty collection, because "this profile has no tracks
+  configured yet" is a true and useful answer.
+
+That is exactly the distinction established after the `getTrackPointsTotal → 0`
+rejection, and this time no instruction spelled it out for these five methods.
+The rule has become legible enough from the rulings and the surrounding code that
+a free model reproduced it and justified it in writing.
+
+Worth recording as a process result, not just a code result: the defence against
+silent-zero stubs is now **the documented rule**, not the reviewer catching each
+one. Verification still happens — this file was read method-by-method before
+committing — but it is confirming a decision rather than repairing one.
+
+#### 3. Failure accounting
+
+`kj9k9pe6c` (lifetime-knowledge, first attempt) hit the 30-minute MCP idle
+timeout — the **eighth** this phase, and still the dominant failure mode by a
+wide margin. It produced nothing; its target is unchanged at 48 errors and is
+re-dispatched now that the adapter it needed exists.
+
+Separately, a mid-run `dart analyze` briefly reported **950** lib errors. That was
+an artifact of racing a worker's writes, not a regression — a clean re-run gave
+475. Noted so the number is not mistaken for a real spike later: **do not sample
+the error count while workers are mid-write.**
 ### 2026-08-11 — P3-28: wiring the streak tee armed two latent defects in the same call — both closed before they could fire
 
 `dart analyze --fatal-infos` EXIT 0 on both files. `check_dependency_direction`
