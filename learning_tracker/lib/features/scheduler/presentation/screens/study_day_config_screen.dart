@@ -7,16 +7,13 @@ import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
-import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/day_type.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/study_day_toggle_service.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/study_day_config_providers.dart';
-import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
+import 'package:learning_tracker/features/tracks/stages/presentation/providers/stage_providers.dart';
 import 'package:learning_tracker/features/tutoring/tutoring.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
@@ -257,80 +254,40 @@ class StudyDayConfigScreen extends ConsumerWidget {
     int dayOfWeek,
     DayType newType,
   ) {
-    final db = ref.read(userDatabaseProvider);
-    final profileId = ref.read(activeProfileIdProvider);
-    final syncFacade = ref.read(syncWriteFacadeProvider);
-    // STUDYDAY-COMPANION-10: withResolvedStudyDayTrackId skips the write
-    // (rather than falling back to trackId=0, which violates the FK
-    // constraint on study_day_configs.track_id → curriculum_tracks.id) when
-    // the track does not exist.
-    withResolvedStudyDayTrackId(
-      db,
-      profileId: profileId,
-      curriculumId: curriculumId.storageKey,
-      onFound: (trackId) async {
-        // STUDYDAY-TOGGLE-RACE-14: writeThenInvalidate guarantees the
-        // scheduler invalidation runs strictly AFTER the DB write completes,
-        // so allDailyTasksProvider re-reads the updated study-day config
-        // instead of rebuilding from stale data.
-        //
-        // AUD-scheduler-17 (EH-2/EH-3): writeThenInvalidateGuarded catches a
-        // thrown upsertDayConfig (constraint violation, disk error) instead
-        // of letting it propagate as an unhandled Future error, logs it via
-        // AppLogger, and only invokes ref.invalidate when the widget is
-        // still mounted — matching the context.mounted guard the SnackBar
-        // below already uses.
-        final wrote = await writeThenInvalidateGuarded(
-          write: () => db.studyDayConfigDao.upsertDayConfig(
-            profileId: profileId,
-            curriculumId: curriculumId.storageKey,
-            trackId: trackId,
-            dayOfWeek: dayOfWeek,
-            dayType: newType.storageKey,
-          ),
-          invalidate: () => ref.invalidate(allDailyTasksProvider),
-          isMounted: () => context.mounted,
-          onError: (e, st) {
-            AppLogger.instance.error(
-              event: 'study_day_toggle_write_failed',
-              exception: e,
-              stackTrace: st,
-            );
-            if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    AppLocalizations.of(
-                      context,
-                    )!.schedulerStudyDayToggleSaveError,
-                  ),
-                ),
-              );
-            }
-          },
+    final adapter = ref.read(studyDayConfigRepositoryAdapterProvider);
+    // STUDYDAY-TOGGLE-RACE-14: writeThenInvalidate guarantees the
+    // scheduler invalidation runs strictly AFTER the write completes, so
+    // allDailyTasksProvider re-reads the updated study-day config instead
+    // of rebuilding from stale data.
+    //
+    // AUD-scheduler-17 (EH-2/EH-3): writeThenInvalidateGuarded catches a
+    // thrown setDayConfig (not-ready backend, permission-denied) instead of
+    // letting it propagate as an unhandled Future error, logs it via
+    // AppLogger, and only invokes ref.invalidate when the widget is still
+    // mounted — matching the context.mounted guard the SnackBar below
+    // already uses.
+    writeThenInvalidateGuarded(
+      write: () => adapter.setDayConfig(
+        curriculumId: curriculumId,
+        dayOfWeek: dayOfWeek,
+        dayType: newType,
+      ),
+      invalidate: () => ref.invalidate(allDailyTasksProvider),
+      isMounted: () => context.mounted,
+      onError: (e, st) {
+        AppLogger.instance.error(
+          event: 'study_day_toggle_write_failed',
+          exception: e,
+          stackTrace: st,
         );
-        // The local write failed and was already logged/surfaced above —
-        // don't push sync data for a config that never persisted locally.
-        if (!wrote) return;
-        try {
-          await syncFacade?.pushStudyDayConfig({
-            'profile_id': profileId,
-            'curriculum_id': curriculumId.storageKey,
-            'track_id': trackId,
-            'day_of_week': dayOfWeek,
-            'day_type': newType.storageKey,
-            'updated_at': DateTimeFactory.nowUtc().toIso8601String(),
-          });
-        } on TutorWriteException catch (e) {
-          if (context.mounted && e.code == 'permission-denied') {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  AppLocalizations.of(context)!.tutorPermissionDenied,
-                ),
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                AppLocalizations.of(context)!.schedulerStudyDayToggleSaveError,
               ),
-            );
-          }
+            ),
+          );
         }
       },
     );
@@ -346,16 +303,11 @@ class StudyDayConfigScreen extends ConsumerWidget {
 /// (AUD-t-scheduler-02 / STUDYDAY-CHAZARA-GATE-12).
 final curriculumTrackHasChazaraProvider = FutureProvider.autoDispose
     .family<bool, CurriculumId>((ref, curriculumId) async {
-      final db = ref.watch(userDatabaseProvider);
-      final profileId = ref.watch(activeProfileIdProvider);
-      final trackId = await resolveStudyDayTrackId(
-        db,
-        profileId: profileId,
-        curriculumId: curriculumId.storageKey,
+      final stageRepository = ref.watch(globalStageRepositoryProvider);
+      final stages = await stageRepository.getStagesForCurriculum(
+        curriculumId,
       );
-      if (trackId == null) return false;
-      final count = await db.stageDao.countStagesForTrack(trackId);
-      return count > 1;
+      return stages.length > 1;
     });
 
 class _DayToggleTile extends StatelessWidget {
