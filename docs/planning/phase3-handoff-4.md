@@ -4,9 +4,12 @@
 accurate on the contract; this one updates state and adds hard-won operational
 rules).
 
-**State at handoff:** HEAD `dfcd055e` + the P3-39 commit that follows this doc.
-**40 commits on `dev`, ALL UNPUSHED.** `lib` analyzer errors **376** (720 at
-phase start). Worker cost to date: **$0.00** — every worker on a free tier.
+**State at handoff:** HEAD `e1f30248` (P3-41). **34 commits on `dev`, 43 ahead of
+`origin/dev`, ALL UNPUSHED.** `lib` analyzer errors **351** (720 at phase start).
+Worker cost to date: **$0.00** — every worker on a free tier.
+
+*(Amended after first writing: §1.2b on model selection and §6.2b on the
+build_runner blocker were added once both were discovered.)*
 
 ---
 
@@ -60,6 +63,28 @@ sessions still `busy` long after their task was reported failed.
 its budget and emits nothing. The `profile_repository_impl` refusal and the
 `sacred_window` burnout both showed `idle`; one produced the best analysis of the
 session, the other produced nothing.
+
+### 1.2b Which model to actually use (as at 2026-08-11)
+
+The table above says re-dispatch a reason-to-budget failure on a "different
+model". Concretely, measured this session:
+
+| model | verdict |
+|---|---|
+| `kilo` / `kilo-auto/free` | **DEGRADED — do not use.** Sessions entered `[retry]` (rate-limited) AND reason-to-budget became the norm on substantial tasks (`9600 in, 10000 reasoning, 0 out`). |
+| `opencode` / `nemotron-3-ultra-free` | Returned an EMPTY response with no token counts at all. |
+| `opencode` / `deepseek-v4-flash-free` | **7 for 7** on script-on-disk execution, 40–170 tokens per run. Current default. |
+
+Untried, if both degrade: `north-mini-code-free`, `longcat-2.0-free`,
+`laguna-s-2.1-free`, `ling-3.0-tiny-free`, `mimo-v2.5-free`.
+
+⚠️ Cost is **$0.00 on all of them**, so model choice is purely a QUALITY and
+WALL-CLOCK decision, never a budget one. Never send a hard cluster to a weak
+model to economise — a wrong migration costs far more to find than to prevent.
+
+The most reliable pattern remains: **author the change yourself as a script on
+disk, then have a worker run it by path** with "do NOT open, read, retype or
+reconstruct it". That has never once produced a wrong edit.
 
 ### 1.3 Never sample `dart analyze` while workers are mid-write
 
@@ -325,6 +350,36 @@ class's existing `final CurriculumId curriculumId`. Delete `trackId`, re-key
 `progress_screen.dart:~345` and `curriculum_progress_screen.dart:~80`, and
 reimplement the provider from the adapter's `getAllTracks()` /
 `getProgramsByCurriculum()` / `getScopes()` / ledger reads.
+
+### 6.2b ⚠️ The AD-24 profile cluster is BLOCKED ON `build_runner`
+
+§7 recommends the profile cluster as the biggest coherent unit. It is — but as
+described there it **cannot succeed**, and three separate attempts failed for
+this reason before it was spotted:
+
+`ProfileModel` is a **freezed** class (`part 'profile_model.freezed.dart'`, ~12KB
+generated). Dropping `int id` / `int accountId` requires REGENERATING that file
+— `dart run build_runner build`. Every worker dispatch in this session carried
+"do NOT run build_runner", so the change was structurally impossible as
+dispatched.
+
+**Before retrying:** authorise build_runner for this specific change, and run it
+YOURSELF after the source edit so the regeneration stays controlled.
+
+Already measured, so it need not be re-derived — which identity field survives:
+
+    profile `.ulid` uses : 33
+    `profile.id` uses    : 18
+
+So **KEEP `ulid`, DROP `id` and `accountId`** — lower churn AND the
+Firestore-native name. (`.accountId` shows 52 hits repo-wide, but most are on
+`Account`, not `ProfileModel`; re-measure before acting.)
+
+Decompose it — the 7-file cluster defeated three different models as one unit:
+
+    step 1  profile_model.dart + profile_repository.dart, then build_runner
+    step 2  profile_repository_impl.dart
+    step 3  the four consumers, in small batches
 
 ### 6.3 Offline step 2 — process-kill survival UNVERIFIED
 
