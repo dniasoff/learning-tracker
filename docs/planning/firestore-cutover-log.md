@@ -2445,6 +2445,75 @@ not re-learn the hard way:**
 
 ---
 
+### 2026-08-11 — P3-36: curriculum activation rewired, and the siyum-retraction question is SETTLED
+
+`dart analyze --fatal-infos` EXIT 0 on both files. `check_dependency_direction`
+EXIT 0. 20 errors → 0.
+
+#### 1. Activation: three lifecycle verbs, correctly separated
+
+A worker had previously REFUSED this file, correctly: `deactivate` hard-deleted
+the track config, while Firestore exposed only soft `retireTrack`/`archiveTrack`.
+That refusal was right — quietly turning a hard delete into a soft retire is a
+silent behaviour change.
+
+With `deleteCurriculumTrack` now wired (P3-25), the verbs separate cleanly:
+
+| verb | behaviour | route |
+|---|---|---|
+| `deactivate` | stop showing it, KEEP history | `retireTrack` |
+| `archive`    | same, explicitly archived     | `archiveTrack` |
+| hard delete  | remove track AND its data     | `deleteCurriculumTrack` Cloud Function |
+
+`curriculum_tracks` is `allow delete: if false` by design, so the destructive
+path can only run server-side — which is why it needed the function rather than
+a client write.
+
+The service also dropped three vestigial constructor parameters
+(`legacyTrackRepository`, `profileId`, `trackId`) that had been kept as
+"drop-in compatibility" for a provider the earlier worker was not allowed to
+edit. With both files in scope they simply go, and the provider now constructs
+the service from two adapters and nothing else.
+
+⚠️ Two workers each did half of this and neither could see the other's half: the
+service gained a second dependency AFTER the provider was rewritten, so the
+provider was left constructing it with one argument, and the added import was
+omitted. Both were caught by verification, not by either worker's report. **A
+split contract across two files needs the second file re-verified after the
+first lands** — the reports are individually truthful and jointly wrong.
+
+#### 2. ✅ RULING: siyum retraction on expunge
+
+The question held open since P3-31 — what should `expungePriorCompletions` do
+about the siyum its completions earned — is now decided, on evidence rather than
+plausibility:
+
+**Finding: NOTHING in `lib/` writes an `unmark_` ledger row.** The only
+references are `lifetime_tree_builder` and two providers READING them. So the
+append-only `unmark_<scope>` mechanism has no writer — its writer died with
+Drift. It is reader-side legacy handling, NOT the live retraction path.
+
+That settles the first half: **`purgeEntry` (the `purged_at` tombstone) is the
+mechanism.**
+
+The second half — WHICH entry — is decided by `completionNumber`. Ledger entries
+are per `(curriculumId, unitIdentifier)` and carry an incrementing
+`completionNumber`, so multiple entries per unit are EXPECTED: one per cycle /
+chazara. Therefore:
+
+> **Retract the HIGHEST-`completionNumber` entry for the unit containing the
+> expunged ref, and only when the remaining non-purged completions no longer
+> cover that unit.**
+
+Both clauses matter. Retracting by unit alone would erase earlier legitimate
+cycles — a learner who finished a masechta three times would lose all three for
+un-ticking one ref. Retracting unconditionally would be wrong when the ref is
+still covered by a `live` completion, which is exactly the case `source`
+distinguishes.
+
+This is NOT yet implemented — `expungePriorCompletions` still throws, which fails
+visibly rather than corrupting two collections quietly. Recorded now so the
+ruling is not re-derived, and sequenced after lib errors reach 0.
 ### 2026-08-11 — P3-35: the callee-before-caller rule pays out — 10 lines of Drift wiring collapse to one `ref`
 
 `dart analyze --fatal-infos` EXIT 0. `check_dependency_direction` EXIT 0.
