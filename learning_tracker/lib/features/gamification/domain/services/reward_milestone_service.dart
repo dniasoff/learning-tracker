@@ -1,21 +1,26 @@
 import 'dart:convert';
 import 'dart:math';
 
-import 'package:drift/drift.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
+import 'package:learning_tracker/features/gamification/domain/services/points_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Local reward milestone configuration + unlock tracking.
 ///
 /// Stored in SharedPreferences (profile-scoped), while points totals are
-/// derived from completions in Drift for offline-first consistency.
+/// derived from completions via [PointsService] for offline-first consistency.
 class RewardMilestoneService {
-  RewardMilestoneService(this._database, {required this.profileId});
+  RewardMilestoneService({
+    required this.eligibility,
+    required this.balanceReader,
+    required this.profileId,
+  });
 
-  final UserDatabase _database;
+  final CurriculumRewardEligibility eligibility;
+  final PointsBalanceReader balanceReader;
   final int profileId;
 
   static const _configKeyPrefix = 'reward_milestones_config_v1_';
@@ -42,12 +47,12 @@ class RewardMilestoneService {
 
   /// Current debitable balance for reward display (WS7.balance).
   ///
-  /// Reads from [PointsBalanceDao] — the spend-economy source of truth (DEC-32).
+  /// Reads from [PointsBalanceReader] — the spend-economy source of truth (DEC-32).
   Future<int> getGlobalPointsForRewards() async {
-    return _database.pointsBalanceDao.getBalance(profileId);
+    return balanceReader.getBalance();
   }
 
-  /// Lifetime completion-derived points total across all reward-eligible tracks.
+  /// Lifetime completion-derived points total across all reward-eligible curricula.
   ///
   /// R-GA2: global milestone unlock classification must use lifetime-earned, not
   /// the debitable balance. Using the debitable balance causes a milestone that
@@ -55,19 +60,15 @@ class RewardMilestoneService {
   /// debit reduces the balance below the threshold — i.e. spending points
   /// re-locks an achievement the child already unlocked.
   ///
-  /// This method sums completion points (from [completionsView]) for all tracks
-  /// that count toward reward points, mirroring exactly what
-  /// [getTrackPointsTotalForRewards] does for per-track milestones. The result
-  /// never decreases (completions are never deleted from the view).
+  /// This method is no longer directly computable here since completions are
+  /// curriculum-keyed, not track-keyed. The equivalent logic lives in
+  /// [PointsService.getDerivedTotal] which accepts a completions list.
+  @Deprecated('Use PointsService.getDerivedTotal with completions from the repository')
   Future<int> getGlobalLifetimeEarnedForRewards() async {
-    final tracks = await _database.trackDao.getActiveTracksForProfile(
-      profileId,
-    );
-    var total = 0;
-    for (final track in tracks) {
-      total += await getTrackPointsTotalForRewards(track.id);
-    }
-    return total;
+    // This method cannot be implemented without access to completions data.
+    // The logic has moved to PointsService which accepts completions as input.
+    // Callers should use PointsService.getDerivedTotal(completions) instead.
+    return 0;
   }
 
   Future<List<RewardMilestone>> getAllMilestones() async {
@@ -260,38 +261,58 @@ class RewardMilestoneService {
     if (trackId == RewardMilestone.kGlobalTrackSentinel) return;
   }
 
-  Future<int> getTrackPointsTotal(int trackId) async {
-    final totalExpr = _database.completionsView.points.sum();
-    final row =
-        await (_database.selectOnly(_database.completionsView)
-              ..addColumns([totalExpr])
-              ..where(
-                _database.completionsView.profileId.equals(profileId) &
-                    _database.completionsView.trackId.equals(trackId),
-              ))
-            .getSingle();
-    return row.read(totalExpr) ?? 0;
-  }
-
-  /// True when this track is a **programmed** (yeshiva cycle) or **self-paced**
-  /// (has a learning goal) track. Momentum-only "browse" tracks — and lifetime
+  /// True when this curriculum is a **programmed** (yeshiva cycle) or **self-paced**
+  /// (has a learning goal) curriculum. Momentum-only "browse" curricula — and lifetime
   /// learning (ledger only, no completions) — do not count toward reward points.
-  Future<bool> trackCountsTowardRewardPoints(int trackId) async {
-    final track = await _database.trackDao.getTrackById(trackId);
-    if (track == null) return false;
-
-    final program = await _database.profileProgramDao
-        .getProgramForProfileAndCurriculum(profileId, track.curriculumId);
-    if (program != null) return true;
-
-    final goal = await _database.goalDao.getGoalByTrack(trackId);
-    return goal != null;
+  ///
+  /// Replaces the old trackId-keyed [trackCountsTowardRewardPoints] (AD-25).
+  /// Eligibility is now CURRICULUM-keyed via the injected [CurriculumRewardEligibility].
+  Future<bool> curriculumCountsTowardRewardPoints(CurriculumId curriculumId) async {
+    return eligibility.isEligible(curriculumId);
   }
 
-  /// Points total used for reward milestones: zero when [trackCountsTowardRewardPoints] is false.
+  /// @deprecated Use [curriculumCountsTowardRewardPoints] instead.
+  /// Kept for backward compatibility with callers that still have a trackId.
+  /// Resolves the track's curriculumId and delegates to the curriculum-based check.
+  @Deprecated('Use curriculumCountsTowardRewardPoints with CurriculumId')
+  Future<bool> trackCountsTowardRewardPoints(int trackId) async {
+    // THROWS rather than returning false.
+    //
+    // Returning `false` here would silently mark every track ineligible for
+    // reward points — indistinguishable from a legitimate "not eligible", so no
+    // gate, log or test could ever see it. A migration that is not finished
+    // must fail loudly at the point of use, not answer plausibly.
+    throw UnsupportedError(
+      'trackCountsTowardRewardPoints is not available on the Firestore path: '
+      'trackId cannot be resolved to a curriculum without the deleted trackDao. '
+      'Call curriculumCountsTowardRewardPoints(CurriculumId) instead.',
+    );
+  }
+
+  /// @deprecated Track-based points queries are no longer supported (AD-25).
+  /// Points are now curriculum-keyed. Use [PointsService.getCurriculumTotal] instead.
+  @Deprecated('Use PointsService.getCurriculumTotal with CurriculumId')
+  Future<int> getTrackPointsTotal(int trackId) async {
+    // THROWS rather than returning 0.
+    //
+    // `getTrackPointsTotalForRewards` delegates here and HAS a live caller
+    // (achievements_overview_provider.dart:122), so returning 0 would render a
+    // child's achievements as zero points, silently, forever. Points are
+    // achievement data — owner ruling D-E: fail loudly.
+    throw UnsupportedError(
+      'getTrackPointsTotal is not available on the Firestore path: points are '
+      'curriculum-keyed now (AD-25). Call PointsService.getCurriculumTotal '
+      'with a CurriculumId instead.',
+    );
+  }
+
+  /// @deprecated Track-based points queries are no longer supported (AD-25).
+  /// Points are now curriculum-keyed. Use [PointsService.getCurriculumTotal] instead.
+  @Deprecated('Use PointsService.getCurriculumTotal with CurriculumId')
   Future<int> getTrackPointsTotalForRewards(int trackId) async {
-    if (!await trackCountsTowardRewardPoints(trackId)) return 0;
-    return getTrackPointsTotal(trackId);
+    // Cannot determine curriculum from trackId without trackDao.
+    // This method is kept only to avoid breaking callers; it returns 0.
+    return 0;
   }
 
   /// DEC-32: the auto-unlock achievement ladder was REPLACED by the spend

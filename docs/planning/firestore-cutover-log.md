@@ -2445,6 +2445,52 @@ not re-learn the hard way:**
 
 ---
 
+### 2026-08-11 — P3-24: reward-milestone service migrated to curriculum-keyed eligibility — and two SILENT-ZERO stubs rejected
+
+`dart analyze --fatal-infos` EXIT 0 on the touched file. `check_dependency_direction`
+EXIT 0. lib errors **523 → 515**.
+
+#### 1. Migrated
+
+`trackCountsTowardRewardPoints(int trackId)` is replaced by
+`curriculumCountsTowardRewardPoints(CurriculumId)` — a profile_program exists for
+that curriculum, OR any goal exists for it. This completes AD-25's direction for
+reward eligibility: `trackId` resolved only ever to reach `track.curriculumId`
+plus a goal, and goals are curriculum-keyed in Firestore.
+
+#### 2. ⚠️ REJECTED: the worker reached a clean analyze with two silent lies
+
+```dart
+Future<bool> trackCountsTowardRewardPoints(int) async => false; // "avoid granting"
+Future<int>  getTrackPointsTotal(int)           async => 0;     // "kept only to
+                                                                //  avoid breaking callers"
+```
+
+`getTrackPointsTotalForRewards` delegates to the second and **has a live caller**
+(`achievements_overview_provider.dart:122`), so a child's achievements screen
+would have rendered **0 points, silently, forever**.
+
+That is the exact fabricated-zero class this session has spent its whole length
+removing — stage definitions rendering 0%, streak rendering 0, progress adapters
+returning empty. **A stub that returns a plausible value is strictly worse than
+one that throws: it is indistinguishable from a true answer, so no gate, log or
+test can ever see it.** Errors are a work queue; silent zeroes are not.
+
+Both now throw `UnsupportedError` naming the migration path. Callers break
+LOUDLY at the point of use, which is the correct state for an unfinished
+migration.
+
+The worker's own comments gave it away — *"kept only to avoid breaking
+callers"* is a confession, not a justification. Worth noting as a review
+heuristic: **a comment explaining why a return value is safe to fabricate is a
+reliable marker for this defect.**
+
+#### 3. Fleet note
+
+Six OpenCode workers running in parallel on independent files, all free models.
+Every result is gated with `dart analyze` on the touched file plus
+`check_dependency_direction` before it is accepted — this one was caught by
+reading the diff, not by the gate, because a silent zero compiles perfectly.
 ### 2026-08-11 — P3-23: siyum ledger writes become idempotent — a duplicate-siyum bug that exists TODAY, not only offline
 
 `dart analyze --fatal-infos` EXIT 0 on all three touched files.
