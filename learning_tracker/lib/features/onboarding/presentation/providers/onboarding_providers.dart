@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/analytics/analytics_provider.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/bookmark_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
@@ -9,6 +8,7 @@ import 'package:learning_tracker/features/onboarding/domain/services/curriculum_
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
 import 'package:learning_tracker/features/scheduler/scheduler.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
+import 'package:learning_tracker/features/tracks/setup/data/repositories/profile_program_repository_impl.dart';
 import 'package:learning_tracker/features/tracks/stages/data/repositories/stage_definition_repository_impl.dart';
 
 /// Provider for CurriculumImportService used during onboarding.
@@ -58,10 +58,9 @@ final bulkPriorCompletionServiceProvider = Provider<BulkPriorCompletionService>(
 /// Provider for LearningProcessWizardService used during onboarding.
 final learningProcessWizardServiceProvider =
     Provider<LearningProcessWizardService>((ref) {
-      final db = ref.watch(userDatabaseProvider);
       return LearningProcessWizardService(
-        stageDao: db.stageDao,
+        stageRepository: FirestoreStageDefinitionRepositoryAdapter(ref: ref),
         learningProgramRepo: ref.read(learningProgramRepositoryProvider),
-        profileProgramDao: db.profileProgramDao,
+        profileProgramRepository: FirestoreProfileProgramRepositoryAdapter(ref: ref),
       );
     });

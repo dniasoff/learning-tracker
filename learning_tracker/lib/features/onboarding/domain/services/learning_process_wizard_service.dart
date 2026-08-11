@@ -1,13 +1,12 @@
 import 'dart:convert';
 
-import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/constants/hebrew_terms.dart';
-import 'package:learning_tracker/core/database/daos/profile_program_dao.dart';
-import 'package:learning_tracker/core/database/daos/stage_dao.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart' as db;
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/scheduler/scheduler.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/repositories/profile_program_repository.dart';
 import 'package:learning_tracker/features/tracks/stages/domain/models/schedule_type.dart';
+import 'package:learning_tracker/features/tracks/stages/domain/models/stage_definition.dart';
+import 'package:learning_tracker/features/tracks/stages/domain/repositories/stage_definition_repository.dart';
 
 /// Result of the learning process wizard for a single curriculum.
 class WizardResult {
@@ -53,18 +52,23 @@ class CustomRound {
 /// 1. Preset — look up program stages_config, create stages from it
 /// 2. Custom — create Learn + N custom chazarah rounds
 /// 3. No review — create Learn stage only
+///
+/// AD-25: one track per curriculum, so [WizardResult.curriculumId] alone is
+/// the target — there is no separate per-device track id to key stages on
+/// any more (see [StageDefinitionRepository.replaceStagesForCurriculum]'s
+/// doc comment).
 class LearningProcessWizardService {
   LearningProcessWizardService({
-    required StageDao stageDao,
+    required StageDefinitionRepository stageRepository,
     required LearningProgramRepository learningProgramRepo,
-    required ProfileProgramDao profileProgramDao,
-  }) : _stageDao = stageDao,
+    required ProfileProgramRepository profileProgramRepository,
+  }) : _stageRepository = stageRepository,
        _learningProgramRepo = learningProgramRepo,
-       _profileProgramDao = profileProgramDao;
+       _profileProgramRepository = profileProgramRepository;
 
-  final StageDao _stageDao;
+  final StageDefinitionRepository _stageRepository;
   final LearningProgramRepository _learningProgramRepo;
-  final ProfileProgramDao _profileProgramDao;
+  final ProfileProgramRepository _profileProgramRepository;
 
   /// Get active programs filtered by curriculum type.
   List<LearningProgramData> getPresetsForCurriculum(CurriculumId curriculumId) {
@@ -73,86 +77,43 @@ class LearningProcessWizardService {
     );
   }
 
-  /// Apply the wizard result — creates stages for the curriculum.
+  /// Apply the wizard result — replaces [result.curriculumId]'s stage set.
   ///
-  /// [profileId] identifies the profile to associate with the preset program.
-  /// [trackId] is the FK to curriculum_tracks.id for the target track.
-  ///
-  /// Pass [clearFirst] = false when the caller has already superseded the old
-  /// stage rows (edit-track flow) and must not hard-delete them — those rows
-  /// are retained so completions.stageId FKs stay valid.
-  ///
-  /// AUD-onboarding-06 (DB-2): the delete, the optional preset-association
-  /// write, and every stage insert run inside a single [StageDao.runTransaction]
-  /// call so a crash mid-sequence (process death, backgrounding) rolls back
-  /// to the pre-call state instead of leaving zero or partially-written
-  /// review stages. All the actual Drift writes happen directly in this
-  /// method's own body (not scattered across the `_build*Stages` helpers,
-  /// which are pure) so the atomic unit is easy to audit in one place.
-  Future<void> applyWizardResult(
-    WizardResult result, {
-    required int profileId,
-    required int trackId,
-    bool clearFirst = true,
-  }) async {
-    await _stageDao.runTransaction(() async {
-      if (clearFirst) {
-        // Replace stages for this track only — other active tracks for the
-        // same curriculum keep their own stage rows (Story 20.2
-        // track-scoping).
-        await _stageDao.deleteStagesForTrack(trackId);
-      }
+  /// Not atomic across the preset-program association write and the stage
+  /// replacement (Firestore has no cross-collection transaction available
+  /// here — see the module doc comment); the two run sequentially, program
+  /// association first.
+  Future<void> applyWizardResult(WizardResult result) async {
+    final stages = switch (result.choice) {
+      WizardChoice.preset => await _buildPresetStages(result),
+      WizardChoice.custom => _buildCustomStages(result),
+      WizardChoice.noReview => _buildNoReviewStages(result),
+    };
 
-      final stages = switch (result.choice) {
-        WizardChoice.preset => await _buildPresetStages(
-          result,
-          profileId: profileId,
-          trackId: trackId,
-        ),
-        WizardChoice.custom => _buildCustomStages(
-          result,
-          profileId: profileId,
-          trackId: trackId,
-        ),
-        WizardChoice.noReview => _buildNoReviewStages(
-          result,
-          profileId: profileId,
-          trackId: trackId,
-        ),
-      };
-
-      for (final stage in stages) {
-        await _stageDao.insertStageDefinition(stage);
-      }
-    });
+    await _stageRepository.replaceStagesForCurriculum(
+      result.curriculumId,
+      stages,
+    );
   }
 
   /// Stores the preset-program association (if [result.programId] resolves
-  /// to a real program) and returns the stage rows to insert. The
-  /// association write is performed here — not by the caller — because it
-  /// must land inside the same transaction as the stage inserts.
+  /// to a real program) and returns the stage rows to write.
   ///
   /// Returns an empty list (writing nothing) when [result.programId] does
   /// not resolve to a known program.
-  Future<List<db.StageDefinitionsCompanion>> _buildPresetStages(
-    WizardResult result, {
-    required int profileId,
-    required int trackId,
-  }) async {
+  Future<List<StageDefinition>> _buildPresetStages(WizardResult result) async {
     final program = _learningProgramRepo.getProgramById(result.programId!);
     if (program == null) return const [];
 
-    // Store the preset association.
-    await _profileProgramDao.setProfileProgram(
-      profileId: profileId,
-      curriculumType: result.curriculumId.storageKey,
+    await _profileProgramRepository.setProgram(
+      curriculumId: result.curriculumId,
       programId: program.id,
     );
 
     // Parse stages_config JSON and build stage definitions.
     final stages = (jsonDecode(program.stagesConfig) as List)
         .cast<Map<String, dynamic>>();
-    final companions = <db.StageDefinitionsCompanion>[];
+    final definitions = <StageDefinition>[];
     for (var i = 0; i < stages.length; i++) {
       final stage = stages[i];
       final scheduleType = _parseScheduleType(stage);
@@ -160,52 +121,38 @@ class LearningProcessWizardService {
           ? _parseDaysOfWeek(stage['days'] as List)
           : null;
 
-      final scheduleJson = switch (scheduleType) {
-        ScheduleType.weekly => jsonEncode({
-          'type': 'weekly',
-          'days_of_week': daysOfWeek ?? [],
-        }),
-        ScheduleType.rolling => jsonEncode({
-          'type': 'rolling',
-          'rolling_window_size': (stage['window'] as int?) ?? 7,
-        }),
-        _ => jsonEncode({
-          'type': 'delay',
-          'delay_days': (stage['delay_days'] as int?) ?? 0,
-        }),
-      };
-      companions.add(
-        db.StageDefinitionsCompanion.insert(
-          profileId: profileId,
-          curriculumId: result.curriculumId.storageKey,
-          trackId: trackId,
+      definitions.add(
+        StageDefinition(
+          id: kFirestoreUnmappedStageId,
+          curriculumId: result.curriculumId,
           stageOrder: i + 1,
           stageName: stage['label'] as String,
-          isDefault: const Value(false),
-          schedule: Value(scheduleJson),
+          delayDays: scheduleType == ScheduleType.delay
+              ? ((stage['delay_days'] as int?) ?? 0)
+              : 0,
+          isDefault: false,
+          scheduleType: scheduleType,
+          daysOfWeek: daysOfWeek,
+          rollingWindowSize: scheduleType == ScheduleType.rolling
+              ? ((stage['window'] as int?) ?? 7)
+              : null,
         ),
       );
     }
-    return companions;
+    return definitions;
   }
 
   /// Builds the stage rows for a custom wizard result (לימוד + N custom
-  /// chazarah rounds). Pure — no Drift writes — so the caller can insert the
-  /// result inside its own transaction.
-  List<db.StageDefinitionsCompanion> _buildCustomStages(
-    WizardResult result, {
-    required int profileId,
-    required int trackId,
-  }) {
-    final companions = <db.StageDefinitionsCompanion>[
-      db.StageDefinitionsCompanion.insert(
-        profileId: profileId,
-        curriculumId: result.curriculumId.storageKey,
-        trackId: trackId,
+  /// chazarah rounds).
+  List<StageDefinition> _buildCustomStages(WizardResult result) {
+    final definitions = <StageDefinition>[
+      StageDefinition(
+        id: kFirestoreUnmappedStageId,
+        curriculumId: result.curriculumId,
         stageOrder: 1,
         stageName: kLimudStageName,
-        isDefault: const Value(false),
-        schedule: const Value('{"type":"delay","delay_days":0}'),
+        delayDays: 0,
+        isDefault: false,
       ),
     ];
 
@@ -213,48 +160,37 @@ class LearningProcessWizardService {
     final rounds = result.customRounds ?? [];
     for (var i = 0; i < rounds.length; i++) {
       final round = rounds[i];
-      final roundScheduleJson = switch (round.scheduleType) {
-        ScheduleType.weekly => jsonEncode({
-          'type': 'weekly',
-          'days_of_week': round.daysOfWeek ?? [],
-        }),
-        ScheduleType.rolling => jsonEncode({
-          'type': 'rolling',
-          'rolling_window_size': round.rollingWindowSize ?? 7,
-        }),
-        _ => jsonEncode({'type': 'delay', 'delay_days': round.delayDays ?? 0}),
-      };
-      companions.add(
-        db.StageDefinitionsCompanion.insert(
-          profileId: profileId,
-          curriculumId: result.curriculumId.storageKey,
-          trackId: trackId,
+      definitions.add(
+        StageDefinition(
+          id: kFirestoreUnmappedStageId,
+          curriculumId: result.curriculumId,
           stageOrder: i + 2,
           stageName: round.label,
-          isDefault: const Value(false),
-          schedule: Value(roundScheduleJson),
+          delayDays: round.scheduleType == ScheduleType.delay
+              ? (round.delayDays ?? 0)
+              : 0,
+          isDefault: false,
+          scheduleType: round.scheduleType,
+          daysOfWeek: round.daysOfWeek,
+          rollingWindowSize: round.scheduleType == ScheduleType.rolling
+              ? (round.rollingWindowSize ?? 7)
+              : null,
         ),
       );
     }
-    return companions;
+    return definitions;
   }
 
   /// Builds the single לימוד-only stage row for a no-review wizard result.
-  /// Pure — no Drift writes.
-  List<db.StageDefinitionsCompanion> _buildNoReviewStages(
-    WizardResult result, {
-    required int profileId,
-    required int trackId,
-  }) {
+  List<StageDefinition> _buildNoReviewStages(WizardResult result) {
     return [
-      db.StageDefinitionsCompanion.insert(
-        profileId: profileId,
-        curriculumId: result.curriculumId.storageKey,
-        trackId: trackId,
+      StageDefinition(
+        id: kFirestoreUnmappedStageId,
+        curriculumId: result.curriculumId,
         stageOrder: 1,
         stageName: kLimudStageName,
-        isDefault: const Value(false),
-        schedule: const Value('{"type":"delay","delay_days":0}'),
+        delayDays: 0,
+        isDefault: false,
       ),
     ];
   }
