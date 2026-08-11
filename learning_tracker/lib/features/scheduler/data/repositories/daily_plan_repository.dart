@@ -39,7 +39,7 @@ import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dar
 class DailyPlanRepository {
   DailyPlanRepository();
 
-  final Map<(int, DateTime), List<DailyTask>> _snapshots = {};
+  final Map<(String, DateTime), List<DailyTask>> _snapshots = {};
 
   /// Returns today's plan, running [buildPlan] exactly once per local day
   /// to materialize rows. Subsequent calls on the same local day read the
@@ -50,7 +50,7 @@ class DailyPlanRepository {
   /// Callers can use this flag to skip expensive integrity guards that only
   /// matter immediately after generation.
   Future<({List<DailyTask> tasks, bool isNew})> getOrSnapshotPlan({
-    required int profileId,
+    required String profileId,
     required DateTime now,
     required Future<List<DailyTask>> Function() buildPlan,
   }) async {
@@ -69,7 +69,7 @@ class DailyPlanRepository {
 
   /// Forces regeneration for today's plan by clearing the existing snapshot.
   Future<List<DailyTask>> rebuildPlan({
-    required int profileId,
+    required String profileId,
     required DateTime now,
     required Future<List<DailyTask>> Function() buildPlan,
   }) async {

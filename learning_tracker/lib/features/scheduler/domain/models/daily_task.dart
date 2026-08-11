@@ -49,9 +49,6 @@ abstract class DailyTask with _$DailyTask {
     required String reason,
     required String stageName,
 
-    /// The track that produced this task.
-    required int trackId,
-
     /// Display label for the track (e.g., "Daf Yomi", "Mishnayos - School").
     required String trackLabel,
 

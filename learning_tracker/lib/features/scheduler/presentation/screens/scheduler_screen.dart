@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:learning_tracker/core/content/content_index.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/empty_state.dart';
@@ -24,7 +25,8 @@ class SchedulerScreen extends ConsumerWidget {
     // goal/content data is already available; otherwise show the ungrouped list
     // (never block the daily screen on the grouping lookups).
     final coarsePacedIds =
-        ref.watch(coarsePacedTrackIdsProvider).asData?.value ?? const <int>{};
+        ref.watch(coarsePacedTrackIdsProvider).asData?.value ??
+        const <CurriculumId>{};
     final contentIndex = ref.watch(contentIndexProvider).asData?.value;
     final section = ref.watch(schedulerTaskSectionProvider);
     final isGroupedView = ref.watch(schedulerGroupedViewProvider);

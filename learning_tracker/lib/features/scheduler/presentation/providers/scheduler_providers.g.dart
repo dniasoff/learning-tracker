@@ -121,20 +121,26 @@ final class ClockProvider
 
 String _$clockHash() => r'9468c7ed98173bba0de2531c1898d9587398c3de';
 
-/// Track ids on the active profile whose goal is COARSE-paced (daf/perek/seif).
+/// Curricula on the active profile whose goal is COARSE-paced (daf/perek/seif).
 /// Drives daf-grouping of the daily list and daf labels on task cards.
 
 @ProviderFor(coarsePacedTrackIds)
 final coarsePacedTrackIdsProvider = CoarsePacedTrackIdsProvider._();
 
-/// Track ids on the active profile whose goal is COARSE-paced (daf/perek/seif).
+/// Curricula on the active profile whose goal is COARSE-paced (daf/perek/seif).
 /// Drives daf-grouping of the daily list and daf labels on task cards.
 
 final class CoarsePacedTrackIdsProvider
     extends
-        $FunctionalProvider<AsyncValue<Set<int>>, Set<int>, FutureOr<Set<int>>>
-    with $FutureModifier<Set<int>>, $FutureProvider<Set<int>> {
-  /// Track ids on the active profile whose goal is COARSE-paced (daf/perek/seif).
+        $FunctionalProvider<
+          AsyncValue<Set<CurriculumId>>,
+          Set<CurriculumId>,
+          FutureOr<Set<CurriculumId>>
+        >
+    with
+        $FutureModifier<Set<CurriculumId>>,
+        $FutureProvider<Set<CurriculumId>> {
+  /// Curricula on the active profile whose goal is COARSE-paced (daf/perek/seif).
   /// Drives daf-grouping of the daily list and daf labels on task cards.
   CoarsePacedTrackIdsProvider._()
     : super(
@@ -152,17 +158,18 @@ final class CoarsePacedTrackIdsProvider
 
   @$internal
   @override
-  $FutureProviderElement<Set<int>> $createElement($ProviderPointer pointer) =>
-      $FutureProviderElement(pointer);
+  $FutureProviderElement<Set<CurriculumId>> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
 
   @override
-  FutureOr<Set<int>> create(Ref ref) {
+  FutureOr<Set<CurriculumId>> create(Ref ref) {
     return coarsePacedTrackIds(ref);
   }
 }
 
 String _$coarsePacedTrackIdsHash() =>
-    r'b61b1e4e57e56f0dc10245796c0216860721c58e';
+    r'715791953077265e809f32b7d8128008613816bd';
 
 @ProviderFor(schedulerEngine)
 final schedulerEngineProvider = SchedulerEngineProvider._();
@@ -204,7 +211,7 @@ final class SchedulerEngineProvider
   }
 }
 
-String _$schedulerEngineHash() => r'aec674f549aef2b4e86911de94982bdfa2de5874';
+String _$schedulerEngineHash() => r'a01d11407c6f049b1bd2f9d83c0766efd4099159';
 
 @ProviderFor(dailyTaskGenerator)
 final dailyTaskGeneratorProvider = DailyTaskGeneratorProvider._();
@@ -269,7 +276,6 @@ final class DailyTasksProvider
     required DailyTasksFamily super.from,
     required ({
       CurriculumId curriculumId,
-      int trackId,
       String trackLabel,
       DateTime? goalDeadline,
     })
@@ -304,14 +310,12 @@ final class DailyTasksProvider
         this.argument
             as ({
               CurriculumId curriculumId,
-              int trackId,
               String trackLabel,
               DateTime? goalDeadline,
             });
     return dailyTasks(
       ref,
       curriculumId: argument.curriculumId,
-      trackId: argument.trackId,
       trackLabel: argument.trackLabel,
       goalDeadline: argument.goalDeadline,
     );
@@ -328,7 +332,7 @@ final class DailyTasksProvider
   }
 }
 
-String _$dailyTasksHash() => r'93eb55acff506fb02a96868e8a9d49ed957c0971';
+String _$dailyTasksHash() => r'81462e468cc5c49491febfdc4e658b4547eda94e';
 
 final class DailyTasksFamily extends $Family
     with
@@ -336,7 +340,6 @@ final class DailyTasksFamily extends $Family
           FutureOr<List<DailyTask>>,
           ({
             CurriculumId curriculumId,
-            int trackId,
             String trackLabel,
             DateTime? goalDeadline,
           })
@@ -352,13 +355,11 @@ final class DailyTasksFamily extends $Family
 
   DailyTasksProvider call({
     required CurriculumId curriculumId,
-    required int trackId,
     required String trackLabel,
     DateTime? goalDeadline,
   }) => DailyTasksProvider._(
     argument: (
       curriculumId: curriculumId,
-      trackId: trackId,
       trackLabel: trackLabel,
       goalDeadline: goalDeadline,
     ),
@@ -585,7 +586,7 @@ final class PaceStatusProvider
   }
 }
 
-String _$paceStatusHash() => r'2d93639ad7c6de9c1058f1ccfef75abc3ff45c90';
+String _$paceStatusHash() => r'25617cc4ae399439c5ba947d557b2ca706ed362d';
 
 /// Pace status for a curriculum goal.
 ///
@@ -698,40 +699,10 @@ final class DailyPlanRepositoryProvider
 }
 
 String _$dailyPlanRepositoryHash() =>
-    r'ea6412ceadb21065b6e8a962b1b0ea3276be1bed';
-
-/// All daily tasks across active curricula.
-///
-/// The projection (pure overdue/today computation from synced inputs) is
-/// authoritative.  Every self-paced track is required by the setup UI to
-/// carry an explicit pace; the projection's API enforces it
-/// (`MissingPaceError`).
-///
-/// daily_plans is used as a write-through cache for chazara tasks produced
-/// by the engine (review items that require stage-completion timing data the
-/// pure projection does not compute).  The overdue/today buckets are NEVER
-/// read from daily_plans.isOverdue — they come solely from the projection.
-///
-/// Skipped-task filtering and previously-skipped priority boosting are
-/// applied at read time.
+    r'92ea79f7e36c0ab80617f82c349e9a2c4649246f';
 
 @ProviderFor(allDailyTasks)
 final allDailyTasksProvider = AllDailyTasksProvider._();
-
-/// All daily tasks across active curricula.
-///
-/// The projection (pure overdue/today computation from synced inputs) is
-/// authoritative.  Every self-paced track is required by the setup UI to
-/// carry an explicit pace; the projection's API enforces it
-/// (`MissingPaceError`).
-///
-/// daily_plans is used as a write-through cache for chazara tasks produced
-/// by the engine (review items that require stage-completion timing data the
-/// pure projection does not compute).  The overdue/today buckets are NEVER
-/// read from daily_plans.isOverdue — they come solely from the projection.
-///
-/// Skipped-task filtering and previously-skipped priority boosting are
-/// applied at read time.
 
 final class AllDailyTasksProvider
     extends
@@ -741,20 +712,6 @@ final class AllDailyTasksProvider
           FutureOr<List<DailyTask>>
         >
     with $FutureModifier<List<DailyTask>>, $FutureProvider<List<DailyTask>> {
-  /// All daily tasks across active curricula.
-  ///
-  /// The projection (pure overdue/today computation from synced inputs) is
-  /// authoritative.  Every self-paced track is required by the setup UI to
-  /// carry an explicit pace; the projection's API enforces it
-  /// (`MissingPaceError`).
-  ///
-  /// daily_plans is used as a write-through cache for chazara tasks produced
-  /// by the engine (review items that require stage-completion timing data the
-  /// pure projection does not compute).  The overdue/today buckets are NEVER
-  /// read from daily_plans.isOverdue — they come solely from the projection.
-  ///
-  /// Skipped-task filtering and previously-skipped priority boosting are
-  /// applied at read time.
   AllDailyTasksProvider._()
     : super(
         from: null,
@@ -781,7 +738,7 @@ final class AllDailyTasksProvider
   }
 }
 
-String _$allDailyTasksHash() => r'd7f1047fa6a75af759fa2a8db67e1110180dd21b';
+String _$allDailyTasksHash() => r'1041f4047803d0065aee12a6f1286e59cecc9c72';
 
 /// Overdue task count for a single curriculum.
 ///
@@ -914,7 +871,8 @@ final class FirstTaskInTrackForCategoryProvider
   /// and benefits from the same skip-filtering logic.
   FirstTaskInTrackForCategoryProvider._({
     required FirstTaskInTrackForCategoryFamily super.from,
-    required ({int trackId, TrackTaskCategory category}) super.argument,
+    required ({CurriculumId curriculumId, TrackTaskCategory category})
+    super.argument,
   }) : super(
          retry: null,
          name: r'firstTaskInTrackForCategoryProvider',
@@ -941,10 +899,11 @@ final class FirstTaskInTrackForCategoryProvider
   @override
   FutureOr<DailyTask?> create(Ref ref) {
     final argument =
-        this.argument as ({int trackId, TrackTaskCategory category});
+        this.argument
+            as ({CurriculumId curriculumId, TrackTaskCategory category});
     return firstTaskInTrackForCategory(
       ref,
-      trackId: argument.trackId,
+      curriculumId: argument.curriculumId,
       category: argument.category,
     );
   }
@@ -962,7 +921,7 @@ final class FirstTaskInTrackForCategoryProvider
 }
 
 String _$firstTaskInTrackForCategoryHash() =>
-    r'5856c50987d26eb5b53c4424976c9bb59854db33';
+    r'fc5d4de7faeade7d644caa1439e1a02519a4a261';
 
 /// Returns the first [DailyTask] for [trackId] that falls in [category],
 /// or null when the bucket is empty.
@@ -974,7 +933,7 @@ final class FirstTaskInTrackForCategoryFamily extends $Family
     with
         $FunctionalFamilyOverride<
           FutureOr<DailyTask?>,
-          ({int trackId, TrackTaskCategory category})
+          ({CurriculumId curriculumId, TrackTaskCategory category})
         > {
   FirstTaskInTrackForCategoryFamily._()
     : super(
@@ -992,10 +951,10 @@ final class FirstTaskInTrackForCategoryFamily extends $Family
   /// and benefits from the same skip-filtering logic.
 
   FirstTaskInTrackForCategoryProvider call({
-    required int trackId,
+    required CurriculumId curriculumId,
     required TrackTaskCategory category,
   }) => FirstTaskInTrackForCategoryProvider._(
-    argument: (trackId: trackId, category: category),
+    argument: (curriculumId: curriculumId, category: category),
     from: this,
   );
 

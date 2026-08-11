@@ -38,7 +38,8 @@ class LearningScreen extends ConsumerWidget {
     // the daily list on the grouping lookups).
     final rawDailyTasksAsync = ref.watch(allDailyTasksProvider);
     final coarsePacedIds =
-        ref.watch(coarsePacedTrackIdsProvider).asData?.value ?? const <int>{};
+        ref.watch(coarsePacedTrackIdsProvider).asData?.value ??
+        const <CurriculumId>{};
     final contentIndex = ref.watch(contentIndexProvider).asData?.value;
     final dailyTasksAsync = (coarsePacedIds.isNotEmpty && contentIndex != null)
         ? rawDailyTasksAsync.whenData(
@@ -380,7 +381,7 @@ class _LearnTaskCard extends ConsumerWidget {
     // For a daf-paced (coarse) track this card represents the whole daf, so name
     // the daf — the seeded day label if present, else drop the trailing amud.
     final coarseIds = ref.watch(coarsePacedTrackIdsProvider).asData?.value;
-    if (coarseIds != null && coarseIds.contains(task.trackId)) {
+    if (coarseIds != null && coarseIds.contains(task.curriculumId)) {
       final useHebrew = domainTermLabels(ref).isHebrew;
       final seeded = useHebrew ? task.unitDisplayHe : task.unitDisplayEn;
       taskTitle = (seeded != null && seeded.isNotEmpty)

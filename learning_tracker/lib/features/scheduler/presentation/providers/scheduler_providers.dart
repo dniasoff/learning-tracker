@@ -3,16 +3,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/content/content_grouping.dart';
 import 'package:learning_tracker/core/content/content_index.dart';
 import 'package:learning_tracker/core/content/program_ref_resolver.dart';
-import 'package:learning_tracker/core/database/daos/completion_dao.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/providers/calendar_providers.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/core/utils/guarded_persist.dart';
+import 'package:learning_tracker/features/dashboard/data/repositories/firestore_study_day_reader_adapter.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
+import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/profiles/profiles.dart';
 import 'package:learning_tracker/features/scheduler/data/repositories/daily_plan_repository.dart';
 import 'package:learning_tracker/features/scheduler/data/repositories/scheduler_completion_repository_impl.dart';
@@ -20,16 +20,19 @@ import 'package:learning_tracker/features/scheduler/data/repositories/scheduler_
 import 'package:learning_tracker/features/scheduler/data/repositories/scheduler_learning_order_repository_impl.dart';
 import 'package:learning_tracker/features/scheduler/data/repositories/scheduler_stage_repository_impl.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
-import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/schedule_config.dart';
+import 'package:learning_tracker/features/scheduler/domain/repositories/scheduler_completion_repository.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/daily_task_generator.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/daily_task_projection_service.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/pace_calculator.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/scheduler_engine.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
+import 'package:learning_tracker/features/tracks/setup/data/repositories/profile_program_repository_impl.dart';
 import 'package:learning_tracker/features/tracks/stages/presentation/providers/stage_providers.dart';
+import 'package:learning_tracker/features/tracks/tracks.dart' show activeTracksProvider;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -67,19 +70,21 @@ class SchedulerTaskSectionNotifier extends Notifier<SchedulerTaskSection> {
 @riverpod
 DateTime clock(Ref ref) => DateTimeFactory.nowUtc();
 
-/// Track ids on the active profile whose goal is COARSE-paced (daf/perek/seif).
+/// Curricula on the active profile whose goal is COARSE-paced (daf/perek/seif).
 /// Drives daf-grouping of the daily list and daf labels on task cards.
 @riverpod
-Future<Set<int>> coarsePacedTrackIds(Ref ref) async {
-  final profileId = ref.watch(activeProfileIdProvider);
-  final goals = await ref
-      .watch(userDatabaseProvider)
-      .goalDao
-      .getGoalsByProfile(profileId);
-  return {
-    for (final g in goals)
-      if (PaceGranularity.fromStorageKey(g.paceGranularity) != null) g.trackId,
-  };
+Future<Set<CurriculumId>> coarsePacedTrackIds(Ref ref) async {
+  final activeCurricula = await ref
+      .watch(curriculumActivationServiceProvider)
+      .getActiveCurricula();
+  final goalRepository = ref.watch(goalRepositoryProvider);
+  final result = <CurriculumId>{};
+  for (final curriculum in activeCurricula) {
+    final goals = await goalRepository.getGoals(curriculum);
+    final goal = goals.firstOrNull;
+    if (goal?.paceGranularity != null) result.add(curriculum);
+  }
+  return result;
 }
 
 /// Collapse same-(track, coarse-unit, stage) leaf tasks into ONE representative
@@ -88,13 +93,13 @@ Future<Set<int>> coarsePacedTrackIds(Ref ref) async {
 /// through unchanged. Pure and order-preserving.
 List<DailyTask> collapseDafTasks(
   List<DailyTask> tasks, {
-  required Set<int> coarsePacedTrackIds,
+  required Set<CurriculumId> coarsePacedTrackIds,
   required ContentIndex index,
 }) {
   final seen = <String>{};
   final out = <DailyTask>[];
   for (final t in tasks) {
-    if (!coarsePacedTrackIds.contains(t.trackId)) {
+    if (!coarsePacedTrackIds.contains(t.curriculumId)) {
       out.add(t);
       continue;
     }
@@ -111,16 +116,13 @@ List<DailyTask> collapseDafTasks(
         : coarseUnitKeyForItem(item);
     // Keep stage in the key so a daf's Learn task and its Chazara task stay
     // separate cards (only same-daf same-stage amudim collapse).
-    if (seen.add('${t.trackId}|$dafKey|${t.stageOrder}')) out.add(t);
+    if (seen.add('${t.curriculumId}|$dafKey|${t.stageOrder}')) out.add(t);
   }
   return out;
 }
 
 @riverpod
 SchedulerEngine schedulerEngine(Ref ref) {
-  final db = ref.watch(userDatabaseProvider);
-  final profileId = ref.watch(activeProfileIdProvider);
-
   // Use scope-aware content: returns scoped content if scopes are set,
   // otherwise returns full curriculum content.
   Future<List<ContentItem>> getScopedContent(CurriculumId curriculumId) async {
@@ -131,12 +133,12 @@ SchedulerEngine schedulerEngine(Ref ref) {
     contentRepository: SchedulerContentRepositoryImpl(
       getContent: getScopedContent,
     ),
-    completionRepository: SchedulerCompletionRepositoryImpl(
-      completionDao: db.completionDao,
-      stageDao: db.stageDao,
-      profileId: profileId,
+    completionRepository: SchedulerFirestoreCompletionRepositoryAdapter(
+      ref: ref,
     ),
-    stageRepository: SchedulerStageRepositoryImpl(stageDao: db.stageDao),
+    stageRepository: SchedulerStageRepositoryImpl(
+      stageRepository: ref.watch(globalStageRepositoryProvider),
+    ),
     // F2-parallel fix: the custom-order WRITER moved to Firestore
     // (`learningOrderRepositoryProvider` → `FirestoreLearningOrderRepositoryAdapter`),
     // so the scheduler's reader must resolve the same document tree instead
@@ -159,14 +161,12 @@ DailyTaskGenerator dailyTaskGenerator(Ref ref) {
 Future<List<DailyTask>> dailyTasks(
   Ref ref, {
   required CurriculumId curriculumId,
-  required int trackId,
   required String trackLabel,
   DateTime? goalDeadline,
 }) async {
   final engine = ref.watch(schedulerEngineProvider);
   final config = ScheduleConfig(
     curriculumId: curriculumId,
-    trackId: trackId,
     trackLabel: trackLabel,
     goalDeadline: goalDeadline,
     currentDate: ref.watch(clockProvider),
@@ -297,16 +297,17 @@ Future<PaceStatus?> paceStatus(
   String goalType = 'deadline',
   double? pacePerDay,
 }) async {
-  final db = ref.watch(userDatabaseProvider);
   final now = ref.watch(clockProvider);
-
-  final profileId = ref.watch(activeProfileIdProvider);
 
   // Rule-7 (no track types): all tracks are implicitly personal now, so the
   // `trackType == personal` filter was a no-op that could wrongly drop rows.
   // Use every completion for the rolling-average daily counts.
-  final allCompletions = await db.completionDao
-      .getCompletionsByCurriculumAndProfile(curriculumId.storageKey, profileId);
+  final completionRepository = SchedulerFirestoreCompletionRepositoryAdapter(
+    ref: ref,
+  );
+  final allCompletions = await completionRepository.getCompletions(
+    curriculumId,
+  );
 
   // Build daily completion counts for rolling average
   final dailyCounts = <DateTime, int>{};
@@ -345,8 +346,7 @@ Future<PaceStatus?> paceStatus(
 /// trigger regeneration.
 @riverpod
 DailyPlanRepository dailyPlanRepository(Ref ref) {
-  final db = ref.watch(userDatabaseProvider);
-  return DailyPlanRepository(db);
+  return DailyPlanRepository();
 }
 
 /// All daily tasks across active curricula.
@@ -363,10 +363,26 @@ DailyPlanRepository dailyPlanRepository(Ref ref) {
 ///
 /// Skipped-task filtering and previously-skipped priority boosting are
 /// applied at read time.
+/// Thrown by [allDailyTasksProvider] when there is no active profile.
+///
+/// The daily task list is achievement-shaped (D-E): an empty list would
+/// read as "nothing scheduled today", indistinguishable from a learner
+/// with a genuinely empty plan. There is no legitimate "no active profile"
+/// empty state to fabricate here — every dependency this provider reads is
+/// scoped to the active profile.
+class SchedulerNoActiveProfileException implements Exception {
+  const SchedulerNoActiveProfileException();
+
+  @override
+  String toString() =>
+      'SchedulerNoActiveProfileException: allDailyTasks was read with no '
+      'active profile — the daily task list is scoped to the active '
+      'profile and there is nothing to compute without one.';
+}
+
 @riverpod
 Future<List<DailyTask>> allDailyTasks(Ref ref) async {
   ref.watch<int>(completionCommittedProvider);
-  final db = ref.watch(userDatabaseProvider);
   final generator = ref.watch(dailyTaskGeneratorProvider);
   final planRepo = ref.watch(dailyPlanRepositoryProvider);
   // Capture future synchronously (before first await) to satisfy the
@@ -388,10 +404,25 @@ Future<List<DailyTask>> allDailyTasks(Ref ref) async {
   final calendarService = await calendarServiceFuture;
 
   final profileId = ref.watch(activeProfileIdProvider);
+  if (profileId == null) {
+    throw const SchedulerNoActiveProfileException();
+  }
   final now = ref.watch(clockProvider);
 
   final engine = ref.watch(schedulerEngineProvider);
   final stageRepository = ref.watch(globalStageRepositoryProvider);
+  final activeCurricula = await ref
+      .watch(curriculumActivationServiceProvider)
+      .getActiveCurricula();
+  final activeTracks = await ref.watch(activeTracksProvider.future);
+  final completionRepository = SchedulerFirestoreCompletionRepositoryAdapter(
+    ref: ref,
+  );
+  final profileProgramRepository = FirestoreProfileProgramRepositoryAdapter(
+    ref: ref,
+  );
+  final goalRepository = ref.watch(goalRepositoryProvider);
+  final studyDayReader = FirestoreStudyDayReaderAdapter(ref: ref);
 
   // ── Step 1: derive overdue/today via the pure projection ─────────────────
   //
@@ -406,10 +437,14 @@ Future<List<DailyTask>> allDailyTasks(Ref ref) async {
 
   final projectionTasks = await buildProjectionTasks(
     trackLabelFor: trackLabelFor,
-    db: db,
+    activeCurricula: activeCurricula,
+    activeTracks: activeTracks,
+    completionRepository: completionRepository,
+    profileProgramRepository: profileProgramRepository,
+    goalRepository: goalRepository,
+    studyDayReader: studyDayReader,
     stageRepository: stageRepository,
     engine: engine,
-    profileId: profileId,
     now: now,
     calendarService: calendarService,
     getScopedContent: (curriculumId) =>
@@ -428,11 +463,14 @@ Future<List<DailyTask>> allDailyTasks(Ref ref) async {
     now: now,
     buildPlan: () => buildFreshPlan(
       trackLabelFor: trackLabelFor,
-      db: db,
+      activeCurricula: activeCurricula,
+      activeTracks: activeTracks,
+      goalRepository: goalRepository,
+      profileProgramRepository: profileProgramRepository,
+      studyDayReader: studyDayReader,
       stageRepository: stageRepository,
       generator: generator,
       engine: engine,
-      profileId: profileId,
       now: now,
       calendarService: calendarService,
       getScopedContent: (curriculumId) =>
@@ -456,25 +494,22 @@ Future<List<DailyTask>> allDailyTasks(Ref ref) async {
   final effectiveTasks = [...projectionTasks, ...chazaraTasks];
 
   // ── Step 3: completion filtering ─────────────────────────────────────────
-  final taskRefs = effectiveTasks.map((t) => t.contentItemSefariaRef).toSet();
-  final completions = taskRefs.isEmpty
-      ? const <Completion>[]
-      : await db.completionDao.getCompletionsByProfileForSefariaRefs(
-          profileId,
-          taskRefs,
-        );
+  final taskCurricula = effectiveTasks.map((t) => t.curriculumId).toSet();
+  final completionsByCurriculum = <CurriculumId, List<SchedulerCompletion>>{
+    for (final curriculum in taskCurricula)
+      curriculum: await completionRepository.getCompletions(curriculum),
+  };
   bool isTaskCompleted(DailyTask task) {
+    final completions = completionsByCurriculum[task.curriculumId] ?? const [];
     return completions.any((c) {
       if (c.sefariaRef != task.contentItemSefariaRef) return false;
-      if (task.trackId != 0 && c.trackId != task.trackId) return false;
       // Sentinel completions (bulk-prior mark, completedAt = 2000-01-01) are
       // not genuine study sessions. They must NOT filter today's new-learning
       // tasks — the user still needs to study these items. (F5)
       if (c.completedAt.millisecondsSinceEpoch ==
           SchedulerEngine.kBulkPriorSentinelMs)
         return false;
-      return c.stageId == task.stageDefinitionId ||
-          c.stageId == task.stageOrder;
+      return c.stageOrder == task.stageOrder;
     });
   }
 
@@ -541,11 +576,11 @@ enum TrackTaskCategory { review, dueToday, overdue }
 @riverpod
 Future<DailyTask?> firstTaskInTrackForCategory(
   Ref ref, {
-  required int trackId,
+  required CurriculumId curriculumId,
   required TrackTaskCategory category,
 }) async {
   final all = await ref.watch(allDailyTasksProvider.future);
-  final forTrack = all.where((t) => t.trackId == trackId);
+  final forTrack = all.where((t) => t.curriculumId == curriculumId);
 
   bool isReview(DailyTask t) =>
       t.priority == DailyTaskPriority.overdueChazara ||

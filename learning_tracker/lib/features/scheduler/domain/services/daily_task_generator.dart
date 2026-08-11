@@ -17,7 +17,6 @@ class DailyTaskGenerator {
   Future<List<DailyTask>> generate(
     CurriculumId curriculumId,
     DateTime date, {
-    required int trackId,
     required String trackLabel,
     DateTime? goalDeadline,
     double? pacePerDay,
@@ -31,7 +30,6 @@ class DailyTaskGenerator {
   }) async {
     final config = ScheduleConfig(
       curriculumId: curriculumId,
-      trackId: trackId,
       trackLabel: trackLabel,
       currentDate: date,
       goalDeadline: goalDeadline,
@@ -56,7 +54,7 @@ class DailyTaskGenerator {
   ///
   /// [goalDeadlines] maps curriculum IDs to their earliest goal deadline,
   /// enabling deadline-aware pacing.
-  /// [trackIds] and [trackLabels] map curriculum IDs to their track context.
+  /// [trackLabels] maps curriculum IDs to their track context.
   /// [trackStartedAtMap] enables the snapshot-aware self-paced new-learning
   /// path when combined with [pacePerDayMap]; both must be set for a
   /// curriculum for the new logic to kick in.
@@ -72,7 +70,6 @@ class DailyTaskGenerator {
     Map<CurriculumId, bool> isStudyDayMap = const {},
     Map<CurriculumId, int> studyDaysPerWeekMap = const {},
     Map<CurriculumId, int> studyDaysInDeadlineWindowMap = const {},
-    Map<CurriculumId, int> trackIds = const {},
     Map<CurriculumId, String> trackLabels = const {},
     Map<CurriculumId, DateTime> trackStartedAtMap = const {},
     Map<CurriculumId, Set<String>> priorlyShownRefsMap = const {},
@@ -84,7 +81,6 @@ class DailyTaskGenerator {
       final tasks = await generate(
         curriculum,
         date,
-        trackId: trackIds[curriculum] ?? 0,
         trackLabel: trackLabels[curriculum] ?? '',
         goalDeadline: goalDeadlines[curriculum],
         pacePerDay: pacePerDayMap[curriculum],

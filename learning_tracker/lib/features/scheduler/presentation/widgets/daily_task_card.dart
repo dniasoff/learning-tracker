@@ -112,7 +112,7 @@ class DailyTaskCard extends ConsumerWidget {
                                     .asData
                                     ?.value;
                                 if (coarseIds != null &&
-                                    coarseIds.contains(task.trackId)) {
+                                    coarseIds.contains(task.curriculumId)) {
                                   final useHebrew = domainTermLabels(
                                     ref,
                                   ).isHebrew;

@@ -24,7 +24,7 @@ part 'completion_providers.g.dart';
 /// event log. There is exactly one track per (profile, curriculum), so this is
 /// a fixed constant — it is never surfaced as a user-facing "track type" label.
 final trackStorageKeyForTrackIdProvider = FutureProvider.autoDispose
-    .family<String, int>((ref, trackId) async {
+    .family<String, CurriculumId>((ref, curriculumId) async {
       return 'personal';
     });
 

@@ -13,7 +13,6 @@ import 'package:learning_tracker/core/labels/curriculum_label_providers.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/preferences/text_display_preferences.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/theme/text_styles.dart';
 import 'package:learning_tracker/core/utils/gematriya.dart';
@@ -27,6 +26,7 @@ import 'package:learning_tracker/features/learning/domain/entities/completion_re
 import 'package:learning_tracker/features/learning/domain/entities/mark_completion_result.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
+import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/scheduler/scheduler.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
@@ -670,12 +670,11 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
   /// coarse unit — the daf's amudim (e.g. 2a + 2b) — so one mark completes the
   /// whole daf. On a fine/leaf-paced track it returns just the current ref.
   Future<List<String>> _refsToMark(DailyTask task) async {
-    final goal = await ref
-        .read(userDatabaseProvider)
-        .goalDao
-        .getGoalByTrack(task.trackId);
-    final isCoarse =
-        PaceGranularity.fromStorageKey(goal?.paceGranularity) != null;
+    final goals = await ref
+        .read(goalRepositoryProvider)
+        .getGoals(task.curriculumId);
+    final goal = goals.firstOrNull;
+    final isCoarse = goal?.paceGranularity != null;
     if (!isCoarse) return [widget.sefariaRef];
     final items = await ref.read(
       curriculumContentProvider(task.curriculumId).future,
@@ -924,7 +923,7 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
         final task = matches.first;
         final nextTask = _nextDailyTaskAfter(tasks, widget.sefariaRef);
         final trackTypeAsync = ref.watch(
-          trackStorageKeyForTrackIdProvider(task.trackId),
+          trackStorageKeyForTrackIdProvider(task.curriculumId),
         );
         return trackTypeAsync.when(
           loading: () => const SizedBox(

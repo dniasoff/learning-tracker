@@ -24,14 +24,17 @@
 /// it is not removed.
 library;
 
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/core/utils/pace_derivation.dart';
+import 'package:learning_tracker/features/dashboard/data/repositories/firestore_study_day_reader_adapter.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/day_type.dart';
 import 'package:learning_tracker/features/scheduler/domain/projection/projection.dart';
+import 'package:learning_tracker/features/scheduler/domain/repositories/goal_repository.dart';
+import 'package:learning_tracker/features/scheduler/domain/repositories/scheduler_completion_repository.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/calendar_program_registry.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/calendar_program_service.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/daily_task_generator.dart';
@@ -39,6 +42,8 @@ import 'package:learning_tracker/features/scheduler/domain/services/learning_pro
 import 'package:learning_tracker/features/scheduler/domain/services/pace_calculator.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/scheduler_engine.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/sefaria_ref_matcher.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/repositories/profile_program_repository.dart';
 import 'package:learning_tracker/features/tracks/stages/domain/models/stage_definition.dart'
     as domain_stage;
 import 'package:learning_tracker/features/tracks/stages/domain/repositories/stage_definition_repository.dart';
@@ -55,25 +60,19 @@ import 'package:learning_tracker/features/tracks/stages/domain/repositories/stag
 /// (architecture §10.3).
 Future<List<DailyTask>> buildProjectionTasks({
   required String Function(CurriculumId) trackLabelFor,
-  required UserDatabase db,
+  required List<CurriculumId> activeCurricula,
+  required List<CurriculumTrackEntity> activeTracks,
+  required SchedulerCompletionRepository completionRepository,
+  required ProfileProgramRepository profileProgramRepository,
+  required GoalRepository goalRepository,
+  required FirestoreStudyDayReaderAdapter studyDayReader,
   required StageDefinitionRepository stageRepository,
   required SchedulerEngine engine,
-  required int profileId,
   required DateTime now,
   required CalendarProgramService calendarService,
   required Future<List<ContentItem>> Function(CurriculumId) getScopedContent,
   required LearningProgramRepository programRepository,
 }) async {
-  final activeKeys = await db.activeCurriculumDao.getActiveCurriculaByProfile(
-    profileId,
-  );
-  final activeCurricula = <CurriculumId>[
-    for (final key in activeKeys)
-      ...CurriculumId.values.where((c) => c.storageKey == key).take(1),
-  ];
-
-  final activeTracks = await db.trackDao.getActiveTracksForProfile(profileId);
-  final trackIds = <CurriculumId, int>{};
   final trackLabels = <CurriculumId, String>{};
   final trackStartedAtMap = <CurriculumId, DateTime>{};
   // §10.1 / reorder-amnesty: the projection filters out overdue items whose
@@ -81,14 +80,12 @@ Future<List<DailyTask>> buildProjectionTasks({
   // Null lastReorderAt (rows created before this column was added) is treated
   // as epoch 0 — no historic tasks are amnestied.
   final trackLastReorderAtMap = <CurriculumId, DateTime>{};
+  final tracksByCurriculum = <CurriculumId, CurriculumTrackEntity>{
+    for (final t in activeTracks) t.curriculumId: t,
+  };
   for (final curriculum in activeCurricula) {
-    final tracksForCurriculum = activeTracks
-        .where((t) => t.curriculumId == curriculum.storageKey)
-        .toList();
-    if (tracksForCurriculum.isEmpty) continue;
-    // W3.22: trackType dropped — one track per curriculum per profile.
-    final preferred = tracksForCurriculum.first;
-    trackIds[curriculum] = preferred.id;
+    final preferred = tracksByCurriculum[curriculum];
+    if (preferred == null) continue;
     // Rule-7 (no track types): the track label is the curriculum's localized
     // display name (never an internal track storage key like "personal").
     trackLabels[curriculum] = trackLabelFor(curriculum);
@@ -101,10 +98,9 @@ Future<List<DailyTask>> buildProjectionTasks({
   final result = <DailyTask>[];
 
   for (final curriculum in activeCurricula) {
-    final trackId = trackIds[curriculum];
-    if (trackId == null) continue;
+    if (!tracksByCurriculum.containsKey(curriculum)) continue;
 
-    final stages = await stageRepository.getStagesByTrack(trackId);
+    final stages = await stageRepository.getStagesForCurriculum(curriculum);
     if (stages.isEmpty) continue;
     final firstStage = stages.reduce(
       (domain_stage.StageDefinition a, domain_stage.StageDefinition b) =>
@@ -116,27 +112,20 @@ Future<List<DailyTask>> buildProjectionTasks({
     // completion for ref X must NOT mask an unlearned ref X in the
     // projection's overdue set; only a first-stage (learn) completion counts.
     //
-    // The OR accepts both stage-reference formats live in the codebase: the
-    // legacy completion path writes stage_definitions.id (autoincrement FK)
-    // and the newer path writes stageOrder (1, 2, 3…). Completion rows are
-    // already scoped to this curriculum + profile, so cross-curriculum
-    // contamination is excluded. A narrow edge remains within a curriculum
-    // if stage_definitions.id coincidentally equals another stage's
-    // stageOrder — flagged for a future migration to a single canonical
-    // stage reference.
-    final allCompletions = await db.completionDao
-        .getCompletionsByCurriculumAndProfile(curriculum.storageKey, profileId);
+    // Every Firestore completion's stageId is a stage_order value by
+    // construction (SchedulerFirestoreCompletionRepositoryAdapter's class
+    // doc comment) — no legacy stage_definitions.id format to disambiguate,
+    // unlike the retired Drift dual-format comparison this replaces.
+    final allCompletions = await completionRepository.getCompletions(
+      curriculum,
+    );
     final completionRefs = allCompletions
-        .where(
-          (c) =>
-              c.stageId == firstStage.id || c.stageId == firstStage.stageOrder,
-        )
+        .where((c) => c.stageOrder == firstStage.stageOrder)
         .map((c) => c.sefariaRef)
         .toSet();
 
     // ── Program track path ────────────────────────────────────────────────
-    final enrollment = await db.profileProgramDao
-        .getProgramForProfileAndCurriculum(profileId, curriculum.storageKey);
+    final enrollment = await profileProgramRepository.getProgram(curriculum);
 
     if (enrollment != null) {
       final program = programRepository.getProgramById(enrollment.programId);
@@ -265,7 +254,6 @@ Future<List<DailyTask>> buildProjectionTasks({
                       isOverdue: true,
                       reason: 'Program day pending from previous days',
                       stageName: firstStage.stageName,
-                      trackId: trackId,
                       trackLabel: trackLabels[curriculum] ?? '',
                       estimatedEffortMinutes: 5,
                       unitDisplayHe: dayLabel?.he,
@@ -292,7 +280,6 @@ Future<List<DailyTask>> buildProjectionTasks({
                       isOverdue: false,
                       reason: 'Program assignment for today',
                       stageName: firstStage.stageName,
-                      trackId: trackId,
                       trackLabel: trackLabels[curriculum] ?? '',
                       estimatedEffortMinutes: 5,
                       unitDisplayHe: dayLabel?.he,
@@ -317,7 +304,8 @@ Future<List<DailyTask>> buildProjectionTasks({
     // emits today's tasks instead of being skipped. Older deadline goals
     // (written before F-M2 saved an explicit pace) and anything else where
     // pace fields are null but a target date exists land in the fallback.
-    final goal = await db.goalDao.getGoalByTrack(trackId);
+    final goals = await goalRepository.getGoals(curriculum);
+    final goal = goals.firstOrNull;
     if (goal == null) continue;
 
     // Fetch ordered curriculum refs via the engine (which respects the
@@ -342,14 +330,15 @@ Future<List<DailyTask>> buildProjectionTasks({
         goal.targetDate!.toLocal(),
       );
       if (!endLocal.isBefore(startLocal)) {
-        final studyDaysInWindow = await db.studyDayConfigDao
-            .countStudyDaysInInclusiveDateRangeForTrack(
-              trackId: trackId,
+        final studyDaysInWindow = await studyDayReader
+            .countStudyDaysInInclusiveDateRange(
+              curriculumId: curriculum,
               startInclusive: startLocal,
               endInclusive: endLocal,
             );
-        final studyDaysPerWeek = await db.studyDayConfigDao
-            .getStudyDaysPerWeekForTrack(trackId: trackId);
+        final studyDaysPerWeek = await studyDayReader.studyDaysPerWeek(
+          curriculum,
+        );
         final derived = derivePaceFromDeadline(
           totalScopeItems: orderedItems.length,
           studyDaysInWindow: studyDaysInWindow,
@@ -371,10 +360,12 @@ Future<List<DailyTask>> buildProjectionTasks({
     // review-only — disagreeing with isStudyDayForTrack (which correctly
     // reports those days are NOT study days). When rows exist but none are
     // 'study', skip new-learning scheduling entirely for this track.
-    final studyConfigs = await db.studyDayConfigDao.getConfigsByTrack(trackId);
+    final studyConfigs = await studyDayReader.getConfigsForCurriculum(
+      curriculum,
+    );
     final studyWeekdays = <int>{
       for (final c in studyConfigs)
-        if (c.dayType == 'study') c.dayOfWeek,
+        if (c.dayType == DayType.study) c.dayOfWeek,
     };
     if (studyConfigs.isNotEmpty && studyWeekdays.isEmpty) {
       // Genuine zero-study-day pattern: the user marked every day review-only.
@@ -410,8 +401,7 @@ Future<List<DailyTask>> buildProjectionTasks({
     final priorCompletionRefs = allCompletions
         .where(
           (c) =>
-              (c.stageId == firstStage.id ||
-                  c.stageId == firstStage.stageOrder) &&
+              c.stageOrder == firstStage.stageOrder &&
               LocalDayUtils.extractLocalDate(c.completedAt).isBefore(anchor),
         )
         .map((c) => c.sefariaRef)
@@ -466,7 +456,6 @@ Future<List<DailyTask>> buildProjectionTasks({
           isOverdue: true,
           reason: 'Behind pace',
           stageName: firstStage.stageName,
-          trackId: trackId,
           trackLabel: trackLabels[curriculum] ?? '',
           estimatedEffortMinutes: 5,
         ),
@@ -484,7 +473,6 @@ Future<List<DailyTask>> buildProjectionTasks({
           isOverdue: false,
           reason: 'Due today',
           stageName: firstStage.stageName,
-          trackId: trackId,
           trackLabel: trackLabels[curriculum] ?? '',
           estimatedEffortMinutes: 5,
         ),
@@ -507,38 +495,28 @@ Future<List<DailyTask>> buildProjectionTasks({
 /// exists to fix.
 Future<List<DailyTask>> buildFreshPlan({
   required String Function(CurriculumId) trackLabelFor,
-  required UserDatabase db,
+  required List<CurriculumId> activeCurricula,
+  required List<CurriculumTrackEntity> activeTracks,
+  required GoalRepository goalRepository,
+  required ProfileProgramRepository profileProgramRepository,
+  required FirestoreStudyDayReaderAdapter studyDayReader,
   required StageDefinitionRepository stageRepository,
   required DailyTaskGenerator generator,
   required SchedulerEngine engine,
-  required int profileId,
   required DateTime now,
   required CalendarProgramService calendarService,
   required Future<List<ContentItem>> Function(CurriculumId) getScopedContent,
   required LearningProgramRepository programRepository,
 }) async {
-  final activeKeys = await db.activeCurriculumDao.getActiveCurriculaByProfile(
-    profileId,
-  );
-  final activeCurricula = <CurriculumId>[
-    for (final key in activeKeys)
-      ...CurriculumId.values.where((c) => c.storageKey == key).take(1),
-  ];
-
   // Resolve one active track per curriculum for this profile.
-  // Prefer personal track when present (current v1 default).
-  final activeTracks = await db.trackDao.getActiveTracksForProfile(profileId);
-  final trackIds = <CurriculumId, int>{};
+  final tracksByCurriculum = <CurriculumId, CurriculumTrackEntity>{
+    for (final t in activeTracks) t.curriculumId: t,
+  };
   final trackLabels = <CurriculumId, String>{};
   final trackStartedAtMap = <CurriculumId, DateTime>{};
   for (final curriculum in activeCurricula) {
-    final tracksForCurriculum = activeTracks
-        .where((t) => t.curriculumId == curriculum.storageKey)
-        .toList();
-    if (tracksForCurriculum.isEmpty) continue;
-    // W3.22: trackType dropped — one track per curriculum per profile.
-    final preferred = tracksForCurriculum.first;
-    trackIds[curriculum] = preferred.id;
+    final preferred = tracksByCurriculum[curriculum];
+    if (preferred == null) continue;
     // Rule-7 (no track types): the track label is the curriculum's localized
     // display name (never an internal track storage key like "personal").
     trackLabels[curriculum] = trackLabelFor(curriculum);
@@ -549,41 +527,7 @@ Future<List<DailyTask>> buildFreshPlan({
   final pacePerDayMap = <CurriculumId, double>{};
   final paceGranularityMap = <CurriculumId, String>{};
   for (final curriculum in activeCurricula) {
-    final trackId = trackIds[curriculum];
-    if (trackId != null) {
-      final goal = await db.goalDao.getGoalByTrack(trackId);
-      if (goal != null) {
-        if (goal.goalType == 'pace' &&
-            goal.paceValue != null &&
-            goal.pacePeriod != null) {
-          final dailyRate = PaceCalculator.paceToDaily(
-            goal.paceValue!,
-            goal.pacePeriod!,
-          );
-          final existing = pacePerDayMap[curriculum];
-          if (existing == null || dailyRate > existing) {
-            pacePerDayMap[curriculum] = dailyRate;
-            if (goal.paceGranularity != null) {
-              paceGranularityMap[curriculum] = goal.paceGranularity!;
-            } else {
-              paceGranularityMap.remove(curriculum);
-            }
-          }
-        } else if (goal.targetDate != null) {
-          final existing = goalDeadlines[curriculum];
-          if (existing == null || goal.targetDate!.isBefore(existing)) {
-            goalDeadlines[curriculum] = goal.targetDate!;
-          }
-        }
-        continue;
-      }
-    }
-
-    // Fallback for legacy rows lacking explicit track linkage.
-    final goals = await db.goalDao.getGoalsByCurriculumAndProfile(
-      curriculum.storageKey,
-      profileId,
-    );
+    final goals = await goalRepository.getGoals(curriculum);
     for (final goal in goals) {
       if (goal.goalType == 'pace' &&
           goal.paceValue != null &&
@@ -596,7 +540,7 @@ Future<List<DailyTask>> buildFreshPlan({
         if (existing == null || dailyRate > existing) {
           pacePerDayMap[curriculum] = dailyRate;
           if (goal.paceGranularity != null) {
-            paceGranularityMap[curriculum] = goal.paceGranularity!;
+            paceGranularityMap[curriculum] = goal.paceGranularity!.storageKey;
           } else {
             paceGranularityMap.remove(curriculum);
           }
@@ -614,26 +558,21 @@ Future<List<DailyTask>> buildFreshPlan({
   final studyDaysPerWeekMap = <CurriculumId, int>{};
   final localWeekday = now.toLocal().weekday;
   for (final curriculum in activeCurricula) {
-    final trackId = trackIds[curriculum];
-    if (trackId != null) {
-      isStudyDayMap[curriculum] = await db.studyDayConfigDao.isStudyDayForTrack(
-        trackId: trackId,
-        dayOfWeek: localWeekday,
-      );
-      studyDaysPerWeekMap[curriculum] = await db.studyDayConfigDao
-          .getStudyDaysPerWeekForTrack(trackId: trackId);
-    } else {
-      isStudyDayMap[curriculum] = await db.studyDayConfigDao.isStudyDay(
-        profileId: profileId,
-        curriculumId: curriculum.storageKey,
-        dayOfWeek: localWeekday,
-      );
-      studyDaysPerWeekMap[curriculum] = await db.studyDayConfigDao
-          .getStudyDaysPerWeek(
-            profileId: profileId,
-            curriculumId: curriculum.storageKey,
-          );
-    }
+    // "No config" defaults to "study every day" — same convention
+    // buildProjectionTasks' StudyDayPattern uses (an empty weekday set means
+    // every day is a study day; a non-empty config set with zero 'study'
+    // entries means the user marked every day review-only).
+    final configs = await studyDayReader.getConfigsForCurriculum(curriculum);
+    final studyWeekdays = <int>{
+      for (final c in configs)
+        if (c.dayType == DayType.study) c.dayOfWeek,
+    };
+    isStudyDayMap[curriculum] = configs.isEmpty
+        ? true
+        : studyWeekdays.contains(localWeekday);
+    studyDaysPerWeekMap[curriculum] = studyWeekdays.isEmpty
+        ? 7
+        : studyWeekdays.length;
   }
 
   // Exact study-day count from today through deadline (per track pattern).
@@ -641,16 +580,14 @@ Future<List<DailyTask>> buildFreshPlan({
   for (final curriculum in activeCurricula) {
     if (pacePerDayMap.containsKey(curriculum)) continue;
     final deadline = goalDeadlines[curriculum];
-    final trackId = trackIds[curriculum];
-    if (deadline == null || trackId == null) continue;
+    if (deadline == null) continue;
     final start = LocalDayUtils.extractLocalDate(now);
     final end = LocalDayUtils.extractLocalDate(deadline);
-    final n = await db.studyDayConfigDao
-        .countStudyDaysInInclusiveDateRangeForTrack(
-          trackId: trackId,
-          startInclusive: start,
-          endInclusive: end,
-        );
+    final n = await studyDayReader.countStudyDaysInInclusiveDateRange(
+      curriculumId: curriculum,
+      startInclusive: start,
+      endInclusive: end,
+    );
     if (n > 0) {
       studyDaysInDeadlineWindowMap[curriculum] = n;
     }
@@ -669,7 +606,6 @@ Future<List<DailyTask>> buildFreshPlan({
     isStudyDayMap: isStudyDayMap,
     studyDaysPerWeekMap: studyDaysPerWeekMap,
     studyDaysInDeadlineWindowMap: studyDaysInDeadlineWindowMap,
-    trackIds: trackIds,
     trackLabels: trackLabels,
     trackStartedAtMap: trackStartedAtMap,
     priorlyShownRefsMap: const {},
@@ -677,13 +613,11 @@ Future<List<DailyTask>> buildFreshPlan({
   );
 
   final overridden = await _applyProgramCalendarOverrides(
-    db: db,
     stageRepository: stageRepository,
+    profileProgramRepository: profileProgramRepository,
     generated: generated,
-    profileId: profileId,
     now: now,
     activeCurricula: activeCurricula,
-    trackIds: trackIds,
     trackLabels: trackLabels,
     calendarService: calendarService,
     getScopedContent: getScopedContent,
@@ -745,13 +679,11 @@ Future<List<CalendarProgramEntry>> programCalendarSchedule({
 }
 
 Future<List<DailyTask>> _applyProgramCalendarOverrides({
-  required UserDatabase db,
   required StageDefinitionRepository stageRepository,
+  required ProfileProgramRepository profileProgramRepository,
   required List<DailyTask> generated,
-  required int profileId,
   required DateTime now,
   required List<CurriculumId> activeCurricula,
-  required Map<CurriculumId, int> trackIds,
   required Map<CurriculumId, String> trackLabels,
   required CalendarProgramService calendarService,
   required Future<List<ContentItem>> Function(CurriculumId) getScopedContent,
@@ -760,11 +692,9 @@ Future<List<DailyTask>> _applyProgramCalendarOverrides({
   final result = List<DailyTask>.from(generated);
 
   for (final curriculum in activeCurricula) {
-    final trackId = trackIds[curriculum];
-    if (trackId == null) continue;
+    if (!trackLabels.containsKey(curriculum)) continue;
 
-    final enrollment = await db.profileProgramDao
-        .getProgramForProfileAndCurriculum(profileId, curriculum.storageKey);
+    final enrollment = await profileProgramRepository.getProgram(curriculum);
     if (enrollment == null) continue;
 
     final program = programRepository.getProgramById(enrollment.programId);
@@ -778,7 +708,7 @@ Future<List<DailyTask>> _applyProgramCalendarOverrides({
     if (programKey == null) continue;
 
     final contentItems = await getScopedContent(curriculum);
-    final stages = await stageRepository.getStagesByTrack(trackId);
+    final stages = await stageRepository.getStagesForCurriculum(curriculum);
     if (stages.isEmpty) continue;
     final firstStage =
         (stages.toList()..sort(
@@ -805,7 +735,6 @@ Future<List<DailyTask>> _applyProgramCalendarOverrides({
     result.removeWhere(
       (t) =>
           t.curriculumId == curriculum &&
-          t.trackId == trackId &&
           (t.priority == DailyTaskPriority.newLearning ||
               t.priority == DailyTaskPriority.overdueProgram ||
               t.priority == DailyTaskPriority.todayProgram),
@@ -841,7 +770,6 @@ Future<List<DailyTask>> _applyProgramCalendarOverrides({
       event: 'program_calendar_override',
       fields: {
         'curriculum': curriculum.storageKey,
-        'trackId': trackId,
         'tracking_start_date':
             enrollment.trackingStartDate?.toIso8601String() ?? 'null',
         'tracking_start_ref': enrollment.trackingStartRef ?? 'null',
@@ -880,7 +808,6 @@ Future<List<DailyTask>> _applyProgramCalendarOverrides({
             isOverdue: !isTodayUnit,
             reason: reason,
             stageName: firstStage.stageName,
-            trackId: trackId,
             trackLabel: trackLabels[curriculum] ?? '',
             estimatedEffortMinutes: 5,
             unitDisplayHe: unitDisplayHe,
