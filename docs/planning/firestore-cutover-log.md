@@ -2445,6 +2445,82 @@ not re-learn the hard way:**
 
 ---
 
+### 2026-08-11 — P3-32: COLD CACHE (owner ask #2) — an unsynced cache can no longer render as "you have achieved nothing"
+
+`dart analyze --fatal-infos` EXIT 0. `check_dependency_direction` EXIT 0.
+**`flutter test test/data/repositories/` — 306/306 pass.**
+
+#### 1. The defect
+
+On a cold start with no network, Firestore serves reads from its on-disk
+persistence cache. If that cache has never synced, an aggregate query returns
+EMPTY — and every reporting surface renders **0**. A learner with years of
+history is told they have completed nothing.
+
+Same class as the 0%-progress, streak-0 and `getTrackPointsTotal → 0` defects
+already closed this phase: *a value that is valid standing in for a value that is
+correct*. `ProgressRepositoryNotReadyException` covers "no profile resolved yet";
+it does NOT cover "profile resolved, cache never populated", which is exactly
+cold-start-offline.
+
+#### 2. ⚠️ Why `isFromCache` cannot answer this — and why the obvious wiring was WRONG
+
+The tempting fix is `data/firestore/conflict.dart:131`'s
+`isUnresolvedSnapshotMetadata`, which has **zero production callers** and looks
+like it was written for precisely this. It was not. Reading it: it is the LWW
+**cache-echo guard** for the merge pipeline — "do not treat an un-acked or
+cached snapshot as authoritative for last-write-wins". Different question
+entirely. Force-fitting it here would have been exactly the plausible-but-wrong
+move this phase keeps catching, so it is deliberately NOT used.
+
+(Its zero-caller status is a separate finding: a guard written and unit-tested
+but never wired into the pipeline it was built for. Flagged for the owner.)
+
+More fundamentally, **`isFromCache` alone cannot decide this at all.** An empty
+cached read is *genuinely ambiguous*: a brand-new profile with no completions
+looks byte-for-byte identical to a cold cache. Treating every cached-empty read
+as "unknown" breaks the legitimate new-learner case; treating it as zero is the
+bug. Neither flag distinguishes them.
+
+#### 3. The discriminator: the profile document
+
+The learner profile document must exist for the profile to be selectable at all.
+So finding it — from cache or server — PROVES the cache holds real
+server-sourced data, which makes a subsequent empty completions result a TRUE
+zero. Not finding it means the cache is cold and an empty result means nothing.
+
+`FirestoreLearnerProfileRepository.hasHydratedCache` implements that probe, and
+is offline-safe the same way `recordCompletionIfAbsent` and (P3-28)
+`StreakEventRepository.append` are — timeout plus `unavailable`, both resolving
+to `false`. The degradation direction is deliberate: "not hydrated" shows a
+placeholder, whereas a wrong `true` would let the fabricated zero through, which
+is the entire defect.
+
+#### 4. It costs essentially nothing
+
+The probe runs **only when a read comes back empty** — a non-empty result is
+self-evidently hydrated. The common path adds ZERO Firestore reads; the
+ambiguous path adds one document read normally served from cache. That is a
+deliberate response to the owner's standing constraint of minimal cloud spend for
+a hobby project: a naive implementation would have probed on every read.
+
+Wired into six achievement-shaped reads: `getTrackBreakdown`,
+`getAggregateCount`, `getCompletionsByCurriculum`, `getAllCompletions`,
+`getAllLedgerEntries`, `getLedgerEntriesByCurriculum`. Configuration-shaped reads
+are untouched — an empty track list really is a legitimate answer.
+
+#### 5. Zero UI changes required
+
+`ProgressDataNotHydratedException` is thrown rather than returned as a flag,
+because `progress_tier_counter_row.dart:56-64` ALREADY gates its render on
+`hasValue` — chosen deliberately over `!hasError` so that an errored provider
+keeps its placeholder instead of rendering a misleading 0. The new exception
+therefore lands in a UI path that was already correct, and no widget changed.
+
+The existing gate's comment says it was built so that showing real numbers for
+some counters while others still read "0" could not produce the "1336 vs 0"
+confusion. That is the same instinct as this fix, one layer up — which is why
+they compose without modification.
 ### 2026-08-11 — P3-31: the bulk-prior expunge path, and the two purge seams it proved were missing
 
 `dart analyze --fatal-infos` EXIT 0 on all five committed files.

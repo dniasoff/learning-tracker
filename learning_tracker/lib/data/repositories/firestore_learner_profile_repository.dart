@@ -6,11 +6,14 @@
 /// for `learner_profiles`.
 library;
 
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/data/firestore/resilient_doc_stream.dart';
+import 'package:learning_tracker/data/firestore/write_ack.dart';
 import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 
 /// Firestore-backed learner-profile repository: `users/{uid}/
@@ -123,6 +126,39 @@ class FirestoreLearnerProfileRepository {
 
   DocumentReference<Map<String, dynamic>> _doc(String profileId) =>
       _profiles.doc(profileId);
+
+  /// Whether the local Firestore cache holds real, server-sourced data for
+  /// this account — the discriminator that tells a TRUE zero apart from an
+  /// unsynced cold cache.
+  ///
+  /// Presence of the profile document is the signal: it must exist for the
+  /// profile to be selectable at all, so finding it (from cache or server)
+  /// proves the cache was populated, which makes an empty aggregate result
+  /// truthful. Not finding it means the cache is cold and an empty result
+  /// means nothing.
+  ///
+  /// `isFromCache` alone CANNOT answer this: an empty cached read is exactly
+  /// what a brand-new profile with no completions also looks like.
+  ///
+  /// Offline-safe, for the same reason
+  /// `FirestoreCompletionRepository.recordCompletionIfAbsent` is — the
+  /// on-device probe built in this phase refuted the assumption that `get()`
+  /// falls back to the cache. A timeout or `unavailable` resolves to `false`:
+  /// "not hydrated" makes the UI show a placeholder, whereas a wrong `true`
+  /// would let a fabricated zero through, which is the defect being closed.
+  Future<bool> hasHydratedCache(String profileId) async {
+    try {
+      final snapshot = await _doc(profileId).get().timeout(
+        kFirestoreWriteAckTimeout,
+      );
+      return snapshot.exists;
+    } on TimeoutException {
+      return false;
+    } on FirebaseException catch (e) {
+      if (e.code != 'unavailable') rethrow;
+      return false;
+    }
+  }
 
   /// Returns the profile for [profileId], or `null` if it does not exist.
   Future<LearnerProfileEntity?> getProfile(String profileId) async {

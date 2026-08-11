@@ -97,6 +97,34 @@ class ProgressRepositoryNotReadyException implements Exception {
       'progress figure that would be indistinguishable from a real zero.';
 }
 
+/// Thrown when an ACHIEVEMENT-shaped read returns empty and the local
+/// Firestore cache has never been populated from the server.
+///
+/// The cold-start-offline case that [ProgressRepositoryNotReadyException] does
+/// NOT cover: there, no profile has resolved; here, one has, and the query
+/// legitimately returned nothing — but from a cache that holds nothing to
+/// begin with. Rendering that as `0` tells a learner with years of history
+/// that they have achieved nothing.
+///
+/// An empty cached read is genuinely ambiguous on its own — a brand-new
+/// profile looks identical — so this is raised only when the profile document
+/// is ALSO absent from the cache, which is what proves the cache is cold
+/// rather than the learner new.
+///
+/// Deliberately an exception rather than a nullable/flag return:
+/// `progress_tier_counter_row.dart` already gates on `hasValue`, so an errored
+/// provider keeps its placeholder. Throwing routes this into UI handling that
+/// is already correct.
+class ProgressDataNotHydratedException implements Exception {
+  const ProgressDataNotHydratedException();
+
+  @override
+  String toString() =>
+      'ProgressDataNotHydratedException: the local Firestore cache has not '
+      'been populated for this profile, so an empty result cannot be '
+      'distinguished from a real zero — refusing to report one.';
+}
+
 class FirestoreProgressRepositoryAdapter implements ProgressRepository {
   FirestoreProgressRepositoryAdapter({required Ref ref}) : _ref = ref;
 
@@ -115,6 +143,36 @@ class FirestoreProgressRepositoryAdapter implements ProgressRepository {
       throw const ProgressRepositoryNotReadyException();
     }
     return repo;
+  }
+
+  /// Raises [ProgressDataNotHydratedException] when an empty achievement read
+  /// cannot be trusted, i.e. when the local cache was never populated.
+  ///
+  /// Called ONLY on an empty result: a non-empty one is self-evidently
+  /// hydrated, so the common path adds no Firestore read at all, and the
+  /// ambiguous path adds a single document read normally served from cache.
+  /// Read cost is a live constraint on this project, not an afterthought.
+  Future<void> _assertHydrated() async {
+    // Read synchronously: `activeProfileDocIdProvider` is a
+    // NotifierProvider<ActiveProfileDocId, String?>, NOT a FutureProvider —
+    // it has no `.future`.
+    final profileId = _ref.read(activeProfileDocIdProvider);
+    if (profileId == null) {
+      throw const ProgressRepositoryNotReadyException(
+        'activeProfileDocIdProvider',
+      );
+    }
+    final repo = await _ref.read(
+      firestoreLearnerProfileRepositoryProvider.future,
+    );
+    if (repo == null) {
+      throw const ProgressRepositoryNotReadyException(
+        'firestoreLearnerProfileRepositoryProvider',
+      );
+    }
+    if (!await repo.hasHydratedCache(profileId)) {
+      throw const ProgressDataNotHydratedException();
+    }
   }
 
   /// Resolves a storage key to its [CurriculumId], THROWING on an unknown key.
@@ -182,14 +240,18 @@ class FirestoreProgressRepositoryAdapter implements ProgressRepository {
   Future<Map<String, int>> getTrackBreakdown(String curriculumId) async {
     final repo = await _resolve();
     final id = _curriculumFor(curriculumId);
-    return repo.getTrackTypeBreakdownForCurriculum(id);
+    final result = await repo.getTrackTypeBreakdownForCurriculum(id);
+    if (result.isEmpty) await _assertHydrated();
+    return result;
   }
 
   @override
   Future<int> getAggregateCount(String curriculumId) async {
     final repo = await _resolve();
     final id = _curriculumFor(curriculumId);
-    return repo.getAggregateCountForCurriculum(id);
+    final result = await repo.getAggregateCountForCurriculum(id);
+    if (result == 0) await _assertHydrated();
+    return result;
   }
 
   @override
@@ -198,7 +260,9 @@ class FirestoreProgressRepositoryAdapter implements ProgressRepository {
   ) async {
     final repo = await _resolve();
     final id = _curriculumFor(curriculumId);
-    return repo.getCompletionsForCurriculum(id);
+    final result = await repo.getCompletionsForCurriculum(id);
+    if (result.isEmpty) await _assertHydrated();
+    return result;
   }
 
   @override
@@ -211,7 +275,11 @@ class FirestoreProgressRepositoryAdapter implements ProgressRepository {
     // `completions` can only ever hold `live`/`bulkInTrack` documents) —
     // the same "no tier filter" scope the Drift-era
     // `CompletionDao.getCompletionsByProfile` this replaces had.
-    return repo.getCompletionsByTier(tier: CompletionTierFilter.lifetime);
+    final result = await repo.getCompletionsByTier(
+      tier: CompletionTierFilter.lifetime,
+    );
+    if (result.isEmpty) await _assertHydrated();
+    return result;
   }
 
   /// The complete lifetime learning record, across every curriculum — the
@@ -223,7 +291,9 @@ class FirestoreProgressRepositoryAdapter implements ProgressRepository {
   /// be indistinguishable from "nothing ever learned".
   Future<List<LearningLedgerEntry>> getAllLedgerEntries() async {
     final repo = await _resolveLedger();
-    return repo.getLifetimeLedger();
+    final result = await repo.getLifetimeLedger();
+    if (result.isEmpty) await _assertHydrated();
+    return result;
   }
 
   /// Lifetime learning record for one curriculum. Delegates to
@@ -236,7 +306,9 @@ class FirestoreProgressRepositoryAdapter implements ProgressRepository {
   ) async {
     final repo = await _resolveLedger();
     final id = _curriculumFor(curriculumId);
-    return repo.getLedgerForCurriculum(id);
+    final result = await repo.getLedgerForCurriculum(id);
+    if (result.isEmpty) await _assertHydrated();
+    return result;
   }
 
   /// Every curriculum track for the active profile (any state). Delegates to
