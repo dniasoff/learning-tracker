@@ -1,9 +1,9 @@
-import 'package:learning_tracker/core/database/daos/completion_dao.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_entity.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_tier_filter.dart';
 import 'package:learning_tracker/features/progress/domain/models/chart_data.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 
 /// Threshold (in days) above which chart series are aggregated into weekly
 /// buckets instead of returning one point per day.
@@ -28,15 +28,67 @@ const int kChartDailyMaxDays = 60;
 /// the literal `DateTime(2000, 1, 1)` use at call sites.
 final DateTime kChartAllTimeFloor = DateTime.utc(2000, 1, 1);
 
+/// Domain read seam for [ChartDataService], implemented by an adapter under
+/// `features/progress/data/repositories/`.
+///
+/// The chart service lives in `domain/services/`, and AD-23/AD-28 forbid
+/// `lib/features/**/domain/**` from importing
+/// `package:learning_tracker/data/firestore/...` or
+/// `package:learning_tracker/data/repositories/...` — so the service reads
+/// only through this interface and never resolves a Firestore repository
+/// itself. The concrete adapter is constructed from a `Ref`
+/// (`FirestoreChartDataRepositoryAdapter`), resolves the repositories per
+/// call, and owns the D-E not-ready policy.
+///
+/// ## Achievement / configuration split (D-E)
+///
+/// The two completion reads are ACHIEVEMENT-shaped: an empty list is
+/// indistinguishable from a learner who has completed nothing, so the
+/// adapter THROWS (e.g. [ProgressRepositoryNotReadyException]) when the
+/// backing provider is not ready rather than returning `[]`. [getGoals] is
+/// CONFIGURATION-shaped — an empty list is a legitimate "no goal
+/// configured" state the UI already renders.
+abstract class ChartDataRepository {
+  /// Completions for [curriculumId] (across all curricula when `null`),
+  /// filtered to [tier] and to completions within
+  /// `[since, until]` inclusive when those bounds are supplied.
+  ///
+  /// Achievement-shaped — throws when the backend is not ready (see the
+  /// class doc comment).
+  Future<List<CompletionEntity>> getCompletionsByTier({
+    required CompletionTierFilter tier,
+    CurriculumId? curriculumId,
+    DateTime? since,
+    DateTime? until,
+  });
+
+  /// Goals for [curriculumId], sorted by `targetDate` (null-first,
+  /// ascending).
+  ///
+  /// Configuration-shaped — returns an empty list when none are configured
+  /// or the backend is not ready (see the class doc comment).
+  Future<List<GoalEntity>> getGoals(CurriculumId curriculumId);
+
+  /// Every completion for [curriculumId].
+  ///
+  /// Achievement-shaped — throws when the backend is not ready (see the
+  /// class doc comment).
+  Future<List<CompletionEntity>> getCompletionsByCurriculum(
+    CurriculumId curriculumId,
+  );
+}
+
 /// Service for aggregating completion data into chart-ready structures.
 ///
-/// All reads are scoped to a single profile so charts never mix data
-/// across profiles on the same account.
+/// All reads are scoped to a single profile by the injected
+/// [ChartDataRepository] (Firestore repositories are profile-scoped by their
+/// collection path), so charts never mix data across profiles on the same
+/// account.
 class ChartDataService {
-  final UserDatabase _db;
-  final int _profileId;
+  ChartDataService({required ChartDataRepository repository})
+    : _repository = repository;
 
-  ChartDataService(this._db, {int profileId = 0}) : _profileId = profileId;
+  final ChartDataRepository _repository;
 
   /// Get completion counts within a date range — bucketed daily for short
   /// ranges (≤ [kChartDailyMaxDays]) and weekly otherwise.
@@ -52,6 +104,11 @@ class ChartDataService {
   /// The fl_chart widget can render either daily or weekly series — the
   /// bucket boundary is encoded in [DailyCompletionData.date] (which always
   /// holds the *start* of the bucket).
+  ///
+  /// Achievement-shaped read: an empty series must never be a silent
+  /// "backend not ready" fallback — the repository throws in that case, so
+  /// an empty result here is only ever a truthful "no completions in this
+  /// window".
   Future<List<DailyCompletionData>> getDailyCompletions({
     required DateTime startDate,
     required DateTime endDate,
@@ -64,9 +121,7 @@ class ChartDataService {
       curriculumId: curriculum,
     );
 
-    // SQL pushdown: bound by [effectiveStart, endDate].
-    final completions = await _db.completionDao.getCompletionsByTier(
-      profileId: _profileId,
+    final completions = await _repository.getCompletionsByTier(
       tier: CompletionTierFilter.trackAchievement,
       curriculumId: curriculum,
       since: effectiveStart,
@@ -102,6 +157,8 @@ class ChartDataService {
   /// effective start is bumped to the user's first track-learning completion
   /// so the chart never displays thousands of empty leading buckets — same
   /// cap applied by the other Recent Activity methods.
+  ///
+  /// Achievement-shaped read — see [getDailyCompletions].
   Future<List<DailyLimudChazaraData>> getDailyLimudimAndChazaros({
     required DateTime startDate,
     required DateTime endDate,
@@ -115,8 +172,7 @@ class ChartDataService {
       tier: CompletionTierFilter.trackAchievement,
     );
 
-    final completions = await _db.completionDao.getCompletionsByTier(
-      profileId: _profileId,
+    final completions = await _repository.getCompletionsByTier(
       tier: CompletionTierFilter.trackAchievement,
       curriculumId: curriculum,
       since: effectiveStart,
@@ -151,6 +207,8 @@ class ChartDataService {
   ///
   /// [CumulativeProgressPoint.date] is the start of the bucket; [total] is
   /// the cumulative count at the END of the bucket.
+  ///
+  /// Achievement-shaped read — see [getDailyCompletions].
   Future<List<CumulativeProgressPoint>> getCumulativeProgress({
     required DateTime startDate,
     required DateTime endDate,
@@ -163,13 +221,12 @@ class ChartDataService {
       curriculumId: curriculum,
     );
 
-    // SQL count of completions strictly before [effectiveStart] to seed the
+    // Count of completions strictly before [effectiveStart] to seed the
     // running total. Subtracting 1ms keeps "before" strictly exclusive.
     final beforeStartCutoff = effectiveStart.subtract(
       const Duration(milliseconds: 1),
     );
-    final priorRows = await _db.completionDao.getCompletionsByTier(
-      profileId: _profileId,
+    final priorRows = await _repository.getCompletionsByTier(
       tier: CompletionTierFilter.trackAchievement,
       curriculumId: curriculum,
       until: beforeStartCutoff,
@@ -177,8 +234,7 @@ class ChartDataService {
     final cumulativeBeforeStart = priorRows.length;
 
     // Completions within the window.
-    final completions = await _db.completionDao.getCompletionsByTier(
-      profileId: _profileId,
+    final completions = await _repository.getCompletionsByTier(
       tier: CompletionTierFilter.trackAchievement,
       curriculumId: curriculum,
       since: effectiveStart,
@@ -235,14 +291,17 @@ class ChartDataService {
   /// streak across every active curriculum and is the source for the
   /// Dashboard hero pill too. The screen's chart subtitle clarifies that
   /// scope to the user; see `recent_activity_screen.dart`.
+  ///
+  /// Achievement-shaped read: the returned set answers "on which days did
+  /// this learner learn" — the repository throws when not ready rather than
+  /// reporting an empty (would-be "learned nothing") set.
   Future<Set<DateTime>> getStreakCalendarLive({
     required DateTime startDate,
     required DateTime endDate,
     String? curriculumId,
   }) async {
     final curriculum = _resolveCurriculum(curriculumId);
-    final completions = await _db.completionDao.getCompletionsByTier(
-      profileId: _profileId,
+    final completions = await _repository.getCompletionsByTier(
       tier: CompletionTierFilter.liveOnly,
       curriculumId: curriculum,
       since: startDate,
@@ -256,22 +315,29 @@ class ChartDataService {
   }
 
   /// Get target line points for a curriculum's goal.
+  ///
+  /// Configuration-shaped where the line itself is concerned: `null` is a
+  /// legitimate "no goal / no target date configured" state the UI already
+  /// renders as no overlay — it is not a fabricated progress figure. When a
+  /// goal DOES exist, the completion baseline that seeds the line is an
+  /// achievement read, which the repository throws on if not ready.
   Future<List<TargetLinePoint>?> getTargetLine({
     required String curriculumId,
     required DateTime startDate,
     required DateTime endDate,
   }) async {
-    final goals = await _db.goalDao.getGoalsByCurriculumAndProfile(
-      curriculumId,
-      _profileId,
-    );
+    final curriculum = _resolveCurriculum(curriculumId);
+    if (curriculum == null) return null;
+
+    final goals = await _repository.getGoals(curriculum);
     if (goals.isEmpty) return null;
 
     final goal = goals.first;
     if (goal.targetDate == null) return null;
 
-    final completions = await _db.completionDao
-        .getCompletionsByCurriculumAndProfile(curriculumId, _profileId);
+    final completions = await _repository.getCompletionsByCurriculum(
+      curriculum,
+    );
     final baselineCount = completions
         .where((c) => _extractLocalDate(c.completedAt).isBefore(goal.createdAt))
         .length;
@@ -300,6 +366,11 @@ class ChartDataService {
   ///
   /// Uses [CompletionTierFilter.liveOnly] — points are only earned by live
   /// in-session marks (per the three-tier credit policy: engagement tier).
+  ///
+  /// The adult-mode `null` branch is configuration-shaped (adults do not
+  /// earn points — a truthful "not applicable"); the counting itself is
+  /// achievement-shaped, so the repository throws on a not-ready backend
+  /// rather than reporting a fabricated zero-point series.
   Future<List<DailyPointsData>?> getDailyPoints({
     required DateTime startDate,
     required DateTime endDate,
@@ -318,8 +389,7 @@ class ChartDataService {
       tier: CompletionTierFilter.liveOnly,
     );
 
-    final completions = await _db.completionDao.getCompletionsByTier(
-      profileId: _profileId,
+    final completions = await _repository.getCompletionsByTier(
       tier: CompletionTierFilter.liveOnly,
       curriculumId: curriculum,
       since: effectiveStart,
@@ -341,17 +411,16 @@ class ChartDataService {
 
   /// Get streak calendar data — set of dates with activity for this profile.
   ///
-  /// Pushes the date filter to SQL via [CompletionDao.getCompletionsByTier]
-  /// instead of loading every row for the profile and filtering in Dart.
   /// Uses [CompletionTierFilter.trackAchievement] so the calendar lights up
   /// for both live and bulk-in-track marks (consistent with the other
   /// per-track charts).
+  ///
+  /// Achievement-shaped read — see [getStreakCalendarLive].
   Future<Set<DateTime>> getStreakCalendar({
     required DateTime startDate,
     required DateTime endDate,
   }) async {
-    final completions = await _db.completionDao.getCompletionsByTier(
-      profileId: _profileId,
+    final completions = await _repository.getCompletionsByTier(
       tier: CompletionTierFilter.trackAchievement,
       since: startDate,
       until: _endOfDay(endDate),
@@ -565,7 +634,10 @@ class ChartDataService {
   /// If there are no matching completions in the requested window the
   /// effective start is set to one bucket before [requestedEnd] so the
   /// chart still renders a single empty trailing bucket rather than
-  /// thousands.
+  /// thousands. This is only reached after the repository resolved
+  /// successfully (achievement-shaped reads throw when not ready), so the
+  /// empty window here is a truthful "no completions" — never a fabricated
+  /// zero.
   Future<DateTime> _effectiveStartDate({
     required DateTime requestedStart,
     required DateTime requestedEnd,
@@ -576,8 +648,7 @@ class ChartDataService {
     if (span <= kChartDailyMaxDays) return requestedStart;
 
     // Look up the earliest matching completion within the requested window.
-    final all = await _db.completionDao.getCompletionsByTier(
-      profileId: _profileId,
+    final all = await _repository.getCompletionsByTier(
       tier: tier,
       curriculumId: curriculumId,
       since: requestedStart,
@@ -621,8 +692,8 @@ class ChartDataService {
 
   /// Returns the inclusive end-of-day instant for a date-only local value.
   ///
-  /// Used as the SQL `until` bound so completions logged after midnight on
-  /// the requested end date are still counted.
+  /// Used as the `until` bound so completions logged after midnight on the
+  /// requested end date are still counted.
   static DateTime _endOfDay(DateTime date) {
     return DateTime(date.year, date.month, date.day, 23, 59, 59, 999);
   }

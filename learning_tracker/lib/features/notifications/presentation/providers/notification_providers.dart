@@ -5,8 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/analytics/analytics_provider.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
+import 'package:learning_tracker/features/notifications/data/repositories/firestore_notifications_completion_adapter.dart';
 import 'package:learning_tracker/features/notifications/data/services/sacred_window_repository.dart';
 import 'package:learning_tracker/features/notifications/domain/models/reminder_preferences.dart';
 import 'package:learning_tracker/features/notifications/domain/repositories/notification_preferences_repository.dart'
@@ -19,7 +19,6 @@ import 'package:learning_tracker/features/profiles/presentation/providers/profil
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_location_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart';
 import 'package:learning_tracker/features/scheduler/scheduler.dart';
-import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -334,130 +333,6 @@ String buildNotificationSettingsSignature({
       'w:$rewardEnabled';
 }
 
-/// Persist the current notification preference set to Firestore for
-/// cloud-born accounts. Local-born accounts remain local-only.
-///
-/// Phase 1 — routes through [OutboxSyncWriteFacade.enqueueNotificationSettings]
-/// so a write made offline is retained and pushed by the next drain. Direct
-/// gateway pushes silently lost writes when the device was offline.
-Future<void> _persistNotificationSettingsToCloud(
-  Ref ref, {
-  required SharedPreferences prefs,
-  required int profileId,
-}) async {
-  final outboxFacade = () {
-    try {
-      return ref.read(outboxSyncWriteFacadeProvider);
-    } catch (e, stackTrace) {
-      // AUD-notifications-05 (EH-3): this catches every exception from the
-      // whole outboxSyncWriteFacadeProvider dependency chain, not just the
-      // "test doesn't override this provider" case below — log it so a real
-      // production failure (as opposed to test scaffolding) leaves a
-      // diagnostic trail instead of silently disabling cloud sync of
-      // notification settings for the rest of the session.
-      // Some tests build notification providers without full sync dependencies.
-      AppLogger.instance.warning(
-        event: 'notification_settings_outbox_facade_read_failed',
-        exception: e,
-        stackTrace: stackTrace,
-      );
-      return null;
-    }
-  }();
-  if (outboxFacade == null) return;
-
-  // M2 fix: build a stable signature of the current settings (excluding the
-  // timestamp). Only bump updated_at + enqueue a push when this signature
-  // differs from the last value we pushed. Pushing unconditionally on every
-  // launch/switch advanced updated_at even when nothing changed, letting a
-  // stale local win LWW over a newer remote.
-  final reminderEnabled =
-      prefs.getBool(
-        NotificationPreferencesRepository.reminderEnabledKey(profileId),
-      ) ??
-      true;
-  final reminderHour =
-      prefs.getInt(
-        NotificationPreferencesRepository.reminderHourKey(profileId),
-      ) ??
-      defaultReminderHour;
-  final reminderMinute =
-      prefs.getInt(
-        NotificationPreferencesRepository.reminderMinuteKey(profileId),
-      ) ??
-      defaultReminderMinute;
-  final streakEnabled =
-      prefs.getBool(
-        NotificationPreferencesRepository.streakAlertEnabledKey(profileId),
-      ) ??
-      true;
-  final streakHour =
-      prefs.getInt(
-        NotificationPreferencesRepository.streakAlertHourKey(profileId),
-      ) ??
-      defaultStreakAlertHour;
-  final streakMinute =
-      prefs.getInt(
-        NotificationPreferencesRepository.streakAlertMinuteKey(profileId),
-      ) ??
-      defaultStreakAlertMinute;
-  final rewardEnabled =
-      prefs.getBool(
-        NotificationPreferencesRepository.rewardNotificationEnabledKey(
-          profileId,
-        ),
-      ) ??
-      true;
-
-  final signature = buildNotificationSettingsSignature(
-    reminderEnabled: reminderEnabled,
-    reminderHour: reminderHour,
-    reminderMinute: reminderMinute,
-    streakEnabled: streakEnabled,
-    streakHour: streakHour,
-    streakMinute: streakMinute,
-    rewardEnabled: rewardEnabled,
-  );
-  final lastPushed = prefs.getString(
-    NotificationPreferencesRepository.lastPushedSettingsHashKey(profileId),
-  );
-  if (lastPushed == signature) {
-    // Nothing changed since the last push — do not bump updated_at or enqueue.
-    return;
-  }
-
-  final updatedAtMs = DateTimeFactory.nowUtc().millisecondsSinceEpoch;
-  await prefs.setInt(
-    NotificationPreferencesRepository.notificationSettingsUpdatedAtMsKey(
-      profileId,
-    ),
-    updatedAtMs,
-  );
-  await prefs.setString(
-    NotificationPreferencesRepository.lastPushedSettingsHashKey(profileId),
-    signature,
-  );
-
-  await outboxFacade.enqueueNotificationSettings({
-    'schema_version': 1,
-    'daily_reminder': {
-      'enabled': reminderEnabled,
-      'hour': reminderHour,
-      'minute': reminderMinute,
-    },
-    'streak_alert': {
-      'enabled': streakEnabled,
-      'hour': streakHour,
-      'minute': streakMinute,
-    },
-    'reward_notifications': {'enabled': rewardEnabled},
-    'updated_at': DateTime.fromMillisecondsSinceEpoch(
-      updatedAtMs,
-      isUtc: true,
-    ).toIso8601String(),
-  });
-}
-
 /// Returns true if notifications should currently be suppressed because
 /// Sacred Time is active. Backed by [currentSacredWindowProvider] —
 /// notifications follow the same window the lock screen does.
@@ -472,13 +347,14 @@ bool isSacredTimeActive(Ref ref) {
 /// [TimezoneLifecycleObserver] calls [SacredWindowRepository.invalidate]
 /// on resume (DNI-367).
 ///
-/// The [SacredWindowDao] is injected so computed windows are persisted to
-/// the user DB, enabling background notification fire-time checks on
-/// cold-start without the Flutter engine (DNI-367 AC 26.24 requirement 4).
+/// No DB tier: the Drift-era `SacredWindowDao` persistence is deleted (proven
+/// dead — nothing in Dart read the windows back, and no native SQLite reader
+/// exists), and `docs/firestore-rewrite-map.md` keeps the derived zmanim cache
+/// device-local ("Stays local, never leaves the device") — it is not a
+/// Firestore migration target, so the repository is constructed bare.
 @Riverpod(keepAlive: true)
 SacredWindowRepository sacredWindowRepository(Ref ref) {
-  final dao = ref.watch(userDatabaseProvider).sacredWindowDao;
-  return SacredWindowRepository(dao: dao);
+  return SacredWindowRepository();
 }
 
 /// Provides the [NotificationScheduler] instance.
@@ -494,8 +370,16 @@ NotificationScheduler notificationScheduler(Ref ref) {
   );
 }
 
-/// Watches all notification preference providers and syncs the composite
-/// profile-scoped notification_settings document for cloud-born accounts.
+/// Watches all notification preference providers so the bootstrapper
+/// ([notifications_bootstrap.dart]) settles them once at startup.
+///
+/// The former cloud-sync half of this effect is gone: it enqueued a
+/// profile-scoped `notification_settings` document through
+/// [OutboxSyncWriteFacade], and the Drift outbox engine it depended on is
+/// deleted. Notification settings are SharedPreferences-local per
+/// AD-15/AD-27 — `docs/firestore-rewrite-map.md` has no `notification_settings`
+/// Firestore target — and the SDK's offline write queue owns any future
+/// cloud replication, so there is no push facade to thread here.
 final notificationSettingsCloudSyncEffectProvider = FutureProvider<void>((
   ref,
 ) async {
@@ -515,16 +399,6 @@ final notificationSettingsCloudSyncEffectProvider = FutureProvider<void>((
   await ref.watch(streakAlertTimeProvider.future);
   if (!ref.mounted) return;
   await ref.watch(rewardNotificationEnabledProvider.future);
-  if (!ref.mounted) return;
-
-  final profileId = ref.watch(activeProfileIdProvider);
-  final prefs = await SharedPreferences.getInstance();
-  if (!ref.mounted) return;
-  await _persistNotificationSettingsToCloud(
-    ref,
-    prefs: prefs,
-    profileId: profileId,
-  );
 });
 
 /// Watches reminder settings and daily tasks, then schedules or cancels
@@ -640,11 +514,21 @@ Future<void> reminderSyncEffect(Ref ref) async {
 /// now observably changes bootstrap's behavior for that profile.
 @riverpod
 StreakAlertService streakAlertService(Ref ref, int profileId) {
-  final db = ref.watch(userDatabaseProvider);
   final notifService = ref.watch(notificationServiceProvider);
   final analytics = ref.watch(analyticsServiceProvider);
+  // The date-range read is injected rather than resolved inside the service:
+  // its Firestore implementation lives in the data-access ring, which
+  // AD-23/AD-28 forbid a `domain/` file from importing. This provider is the
+  // composition root, so the dependency belongs here.
+  //
+  // The adapter applies the P3-32 cold-cache gate on a `false` answer, which
+  // matters more here than on a progress screen: "no completions in range" read
+  // from an unsynced cache would fire a SPURIOUS streak-at-risk notification,
+  // telling a learner they have not studied when they have.
+  final completions = FirestoreNotificationsCompletionAdapter(ref: ref);
   return StreakAlertService(
-    db: db,
+    ref: ref,
+    hasCompletionsInRange: completions.hasCompletionsInRange,
     notificationService: notifService,
     profileId: profileId,
     analytics: analytics,

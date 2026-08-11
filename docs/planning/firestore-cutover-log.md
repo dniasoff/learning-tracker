@@ -2445,6 +2445,69 @@ not re-learn the hard way:**
 
 ---
 
+### 2026-08-11 — P3-41: the cold-cache gate propagates itself to the notification path — where a fabricated `false` is worse than on any screen
+
+`dart analyze --fatal-infos` EXIT 0 on all four files.
+`check_dependency_direction` EXIT 0. lib errors **360 → 351**.
+
+#### 1. ✅ The best thing a worker has done this phase
+
+`StreakAlertService` needs to know "did this profile complete anything in
+`[start, end]`?". Its Firestore implementation
+(`FirestoreCompletionRepository.hasCompletionsInDateRange`) is in the
+data-access ring, which AD-23/AD-28 forbid a `domain/` service from importing,
+and the domain `CompletionRepository` interface has no date-range read. So the
+service takes the predicate as an injected callback and the dependency stays at
+the composition root.
+
+A worker built `FirestoreNotificationsCompletionAdapter({required Ref ref})` to
+supply it — and **applied the P3-32 cold-cache gate to it, unprompted**:
+
+```dart
+Future<bool> hasCompletionsInRange(DateTime start, DateTime end) async {
+  final repo = await _resolve();
+  final inRange = await repo.hasCompletionsInDateRange(start: start, end: end);
+  if (!inRange) await _assertHydrated();
+  return inRange;
+}
+```
+
+Note *where* the gate sits: **only on the `false` branch.** A `true` answer is
+self-evidently hydrated and costs no probe — the same "probe only the ambiguous
+result" shape P3-32 used to keep read cost near zero.
+
+And this is the surface where it matters most. Everywhere else a cold cache
+fabricates a wrong NUMBER on a screen. Here it fabricates "you have not studied"
+and **fires a spurious streak-at-risk notification** — the app actively telling a
+learner they broke a streak they did not break. Worse than a wrong number,
+because it is pushed rather than looked at.
+
+That is the fix generalising on its own, into a surface the original dispatch
+never mentioned.
+
+#### 2. The exception needed the parameter its own call sites passed
+
+`NotificationCompletionsNotReadyException` was declared with no constructor
+parameters but raised twice WITH a provider name, so it did not compile. Given
+the shape of `ProgressRepositoryNotReadyException` — an optional provider name
+interpolated into `toString()` — the fix is to match it rather than delete the
+arguments.
+
+Not cosmetic: **three** different providers can resolve to null on this path
+(completion repository, active profile doc id, learner profile repository), for
+different reasons. This exception is thrown on the notification path, so it will
+be read from a log, not a debugger — naming which provider failed is the whole
+difference between diagnosable and not.
+
+#### 3. Also landed
+
+- `chart_data_service.dart` (5 → 0), now behind a `ChartDataRepository`
+  interface so the `domain/` service holds no ring dependency. Its `return null`
+  cases were audited and are all legitimate: `getTargetLine` is nullable and
+  `null` means "there is no target line to draw" (no goal, no target date, adult
+  mode) — configuration-shaped. Its own doc comment records that the completion
+  baseline seeding the line IS an achievement read and throws if not ready.
+- `daily_plan_repository.dart` (5 → 0).
 ### 2026-08-11 — P3-40: points awarder migrated (and two of its zeros reclassified as throws); sacred-window DB tier deleted after proving nobody read it
 
 `dart analyze --fatal-infos` EXIT 0 on all three files.

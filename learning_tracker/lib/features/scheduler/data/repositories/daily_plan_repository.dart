@@ -1,6 +1,3 @@
-import 'package:drift/drift.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 
@@ -12,10 +9,37 @@ import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dar
 /// authoritative overdue/today/review view is derived by the pure
 /// projection module — this repository only caches that result for the
 /// current local day so repeated reads are cheap.
+///
+/// ## Stays local — never leaves the device
+///
+/// `docs/firestore-rewrite-map.md` classifies `DailyPlans` under "Stays
+/// local (never leaves the device)": the plan is recomputed per device from
+/// stages + goals + bookmarks, and Firestore owns no `daily_plans`
+/// collection. With the Drift user DB deleted, the snapshot now lives in an
+/// in-memory session cache keyed by `(profileId, local date)` instead of a
+/// table — the same "build once per local day" contract, scoped to the
+/// current app session (a cold start re-runs [buildPlan] for the day, which
+/// a disposable cache always tolerated). The cache stores the [DailyTask]
+/// values directly, so fields the old table could not round-trip (the
+/// seed-sourced `unitDisplayHe`/`unitDisplayEn` labels) now survive the
+/// snapshot.
+///
+/// There is no backend resolution on any path, so there is no "not ready"
+/// state to throw on: every result is either a cache hit or the caller's
+/// freshly built plan — never a fabricated empty snapshot.
+///
+/// ## Achievement-shaped reads (D-E)
+///
+/// The plan this serves is achievement-shaped: an empty list would read as
+/// "nothing scheduled for today", indistinguishable from a learner who has
+/// no plan. This repository therefore never returns an empty plan of its
+/// own making — it serves only what [buildPlan] actually produced (or what
+/// was already cached), and the caller's own scheduler/achievement adapters
+/// own the not-ready policy.
 class DailyPlanRepository {
-  DailyPlanRepository(this._db);
+  DailyPlanRepository();
 
-  final UserDatabase _db;
+  final Map<(int, DateTime), List<DailyTask>> _snapshots = {};
 
   /// Returns today's plan, running [buildPlan] exactly once per local day
   /// to materialize rows. Subsequent calls on the same local day read the
@@ -31,27 +55,16 @@ class DailyPlanRepository {
     required Future<List<DailyTask>> Function() buildPlan,
   }) async {
     final planDate = LocalDayUtils.extractLocalDate(now);
+    final key = (profileId, planDate);
 
-    final hasPlan = await _db.dailyPlanDao.hasPlanForDay(
-      profileId: profileId,
-      planDate: planDate,
-    );
-
-    if (!hasPlan) {
-      final freshTasks = await buildPlan();
-      await _persistPlan(
-        profileId: profileId,
-        planDate: planDate,
-        tasks: freshTasks,
-        now: now,
-      );
+    final cached = _snapshots[key];
+    if (cached != null) {
+      return (tasks: cached, isNew: false);
     }
 
-    final rows = await _db.dailyPlanDao.getPlanForDay(
-      profileId: profileId,
-      planDate: planDate,
-    );
-    return (tasks: rows.map(_rowToTask).toList(), isNew: !hasPlan);
+    final freshTasks = await buildPlan();
+    _snapshots[key] = List.unmodifiable(freshTasks);
+    return (tasks: freshTasks, isNew: true);
   }
 
   /// Forces regeneration for today's plan by clearing the existing snapshot.
@@ -61,71 +74,10 @@ class DailyPlanRepository {
     required Future<List<DailyTask>> Function() buildPlan,
   }) async {
     final planDate = LocalDayUtils.extractLocalDate(now);
-    await _db.dailyPlanDao.deletePlanForDay(
-      profileId: profileId,
-      planDate: planDate,
-    );
+    _snapshots.remove((profileId, planDate));
 
     final freshTasks = await buildPlan();
-    await _persistPlan(
-      profileId: profileId,
-      planDate: planDate,
-      tasks: freshTasks,
-      now: now,
-    );
+    _snapshots[(profileId, planDate)] = List.unmodifiable(freshTasks);
     return freshTasks;
-  }
-
-  Future<void> _persistPlan({
-    required int profileId,
-    required DateTime planDate,
-    required List<DailyTask> tasks,
-    required DateTime now,
-  }) async {
-    final entries = <DailyPlansCompanion>[];
-    for (var i = 0; i < tasks.length; i++) {
-      final task = tasks[i];
-      entries.add(
-        DailyPlansCompanion.insert(
-          profileId: profileId,
-          curriculumId: task.curriculumId.storageKey,
-          planDate: planDate,
-          sefariaRef: task.contentItemSefariaRef,
-          stageOrder: task.stageOrder,
-          stageDefinitionId: task.stageDefinitionId,
-          trackId: task.trackId,
-          trackLabel: Value(task.trackLabel),
-          priority: task.priority.name,
-          isOverdue: Value(task.isOverdue),
-          reason: Value(task.reason),
-          stageName: Value(task.stageName),
-          estimatedEffortMinutes: Value(task.estimatedEffortMinutes),
-          sortOrder: Value(i),
-          createdAt: now,
-        ),
-      );
-    }
-    await _db.dailyPlanDao.insertEntries(entries);
-  }
-
-  DailyTask _rowToTask(DailyPlan row) {
-    return DailyTask(
-      curriculumId: CurriculumId.values.firstWhere(
-        (c) => c.storageKey == row.curriculumId,
-      ),
-      contentItemSefariaRef: row.sefariaRef,
-      stageOrder: row.stageOrder,
-      stageDefinitionId: row.stageDefinitionId,
-      priority: DailyTaskPriority.values.firstWhere(
-        (p) => p.name == row.priority,
-        orElse: () => DailyTaskPriority.newLearning,
-      ),
-      isOverdue: row.isOverdue,
-      reason: row.reason,
-      stageName: row.stageName,
-      trackId: row.trackId,
-      trackLabel: row.trackLabel,
-      estimatedEffortMinutes: row.estimatedEffortMinutes,
-    );
   }
 }
