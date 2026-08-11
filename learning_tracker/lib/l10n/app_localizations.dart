@@ -605,12 +605,8 @@ abstract class AppLocalizations {
   /// No description provided for @achievementsUnlockPartyMessage.
   ///
   /// In en, this message translates to:
-  /// **'Congratulations, {name}! You unlocked {milestone} on your {track} track — keep going!'**
-  String achievementsUnlockPartyMessage(
-    String name,
-    String milestone,
-    String track,
-  );
+  /// **'Congratulations, {name}! You unlocked {milestone} — keep going!'**
+  String achievementsUnlockPartyMessage(String name, String milestone);
 
   /// No description provided for @achievementsUnlockPartyButton.
   ///

@@ -5,9 +5,7 @@ import 'dart:math';
 import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/labels/curriculum_label.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/core/preferences/profile_scoped_preference.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
 import 'package:learning_tracker/features/gamification/presentation/providers/achievements_overview_provider.dart';
@@ -15,15 +13,6 @@ import 'package:learning_tracker/features/profiles/presentation/providers/active
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
-Future<String> _resolveTrackLabel(WidgetRef ref, int trackId) async {
-  final db = ref.read(userDatabaseProvider);
-  final track = await db.trackDao.getTrackById(trackId);
-  if (track == null) return '';
-  final c = CurriculumId.fromStorageKey(track.curriculumId);
-  if (c != null) return curriculumLabelText(ref, curriculum: c);
-  return track.curriculumId;
-}
 
 // ---------------------------------------------------------------------------
 // Riverpod notifier — replaces the former static _dialogInFlight bool.
@@ -65,7 +54,8 @@ class AchievementUnlockCelebration {
     WidgetRef ref,
     AchievementsOverview overview,
   ) async {
-    final profileId = ref.read(activeProfileIdProvider);
+    final profileId =
+        ref.read(activeProfileIdProvider) ?? kNoProfilePreferenceSentinel;
     final prefs = await SharedPreferences.getInstance();
     final migratedKey = '$_migratedPrefix$profileId';
     final doneKey = '$_donePrefix$profileId';
@@ -80,7 +70,7 @@ class AchievementUnlockCelebration {
   }
 
   static Future<void> _mergeMilestoneIdsIntoDonePrefs(
-    int profileId,
+    String profileId,
     Set<String> addIds,
   ) async {
     if (addIds.isEmpty) return;
@@ -116,13 +106,10 @@ class AchievementUnlockCelebration {
     final inFlight = ref.read(_celebrationInFlightProvider);
     if (inFlight) return;
 
-    final profileId = ref.read(activeProfileIdProvider);
+    final profileId =
+        ref.read(activeProfileIdProvider) ?? kNoProfilePreferenceSentinel;
     final first = newUnlocks.first;
     final milestoneTitle = first.title;
-
-    if (!context.mounted) return;
-    final trackLabel = await _resolveTrackLabel(ref, first.trackId);
-    if (!context.mounted) return;
 
     final l10n = AppLocalizations.of(context)!;
     String displayName;
@@ -148,7 +135,6 @@ class AchievementUnlockCelebration {
           return _UnlockPartyDialog(
             displayName: displayName,
             milestoneTitle: milestoneTitle,
-            trackLabel: trackLabel,
             l10n: l10n,
           );
         },
@@ -179,13 +165,11 @@ class _UnlockPartyDialog extends StatefulWidget {
   const _UnlockPartyDialog({
     required this.displayName,
     required this.milestoneTitle,
-    required this.trackLabel,
     required this.l10n,
   });
 
   final String displayName;
   final String milestoneTitle;
-  final String trackLabel;
   final AppLocalizations l10n;
 
   @override
@@ -276,7 +260,6 @@ class _UnlockPartyDialogState extends State<_UnlockPartyDialog> {
                 child: AchievementUnlockCard(
                   displayName: widget.displayName,
                   milestoneTitle: widget.milestoneTitle,
-                  trackLabel: widget.trackLabel,
                   l10n: widget.l10n,
                   onContinue: () => Navigator.of(context).pop(),
                 ),
@@ -302,14 +285,12 @@ class AchievementUnlockCard extends StatelessWidget {
     super.key,
     required this.displayName,
     required this.milestoneTitle,
-    required this.trackLabel,
     required this.l10n,
     required this.onContinue,
   });
 
   final String displayName;
   final String milestoneTitle;
-  final String trackLabel;
   final AppLocalizations l10n;
   final VoidCallback onContinue;
 
@@ -367,11 +348,7 @@ class AchievementUnlockCard extends StatelessWidget {
               ),
               const SizedBox(height: 14),
               Text(
-                l10n.achievementsUnlockPartyMessage(
-                  displayName,
-                  milestoneTitle,
-                  trackLabel,
-                ),
+                l10n.achievementsUnlockPartyMessage(displayName, milestoneTitle),
                 textAlign: TextAlign.center,
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w600,

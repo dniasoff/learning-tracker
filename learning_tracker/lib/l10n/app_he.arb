@@ -195,16 +195,13 @@
   "achievementsProTipBody": "המשיכו ללמוד במסלולים כדי לטפס בסולם הפרסים.",
   "achievementsActivityAndPoints": "פעילות ונקודות",
   "achievementsUnlockPartyTitle": "וואו! איזה כיף!",
-  "achievementsUnlockPartyMessage": "כל הכבוד, {name}! פתחת את {milestone} במסלול {track} — המשך ככה!",
+  "achievementsUnlockPartyMessage": "כל הכבוד, {name}! פתחת את {milestone} — המשך ככה!",
   "@achievementsUnlockPartyMessage": {
     "placeholders": {
       "name": {
         "type": "String"
       },
       "milestone": {
-        "type": "String"
-      },
-      "track": {
         "type": "String"
       }
     }

@@ -294,12 +294,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get achievementsUnlockPartyTitle => 'Wow! Amazing!';
 
   @override
-  String achievementsUnlockPartyMessage(
-    String name,
-    String milestone,
-    String track,
-  ) {
-    return 'Congratulations, $name! You unlocked $milestone on your $track track — keep going!';
+  String achievementsUnlockPartyMessage(String name, String milestone) {
+    return 'Congratulations, $name! You unlocked $milestone — keep going!';
   }
 
   @override

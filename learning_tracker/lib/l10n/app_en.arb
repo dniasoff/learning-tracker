@@ -201,16 +201,13 @@
   "achievementsProTipBody": "Keep learning on your tracks to climb the reward ladder.",
   "achievementsActivityAndPoints": "Activity & points",
   "achievementsUnlockPartyTitle": "Wow! Amazing!",
-  "achievementsUnlockPartyMessage": "Congratulations, {name}! You unlocked {milestone} on your {track} track — keep going!",
+  "achievementsUnlockPartyMessage": "Congratulations, {name}! You unlocked {milestone} — keep going!",
   "@achievementsUnlockPartyMessage": {
     "placeholders": {
       "name": {
         "type": "String"
       },
       "milestone": {
-        "type": "String"
-      },
-      "track": {
         "type": "String"
       }
     }
