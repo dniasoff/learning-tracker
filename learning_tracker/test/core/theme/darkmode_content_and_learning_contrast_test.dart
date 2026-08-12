@@ -54,7 +54,6 @@ import 'package:learning_tracker/core/labels/curriculum_label_providers.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/preferences/text_display_preferences.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/content_browsing/domain/entities/text_content.dart';
@@ -67,7 +66,7 @@ import 'package:learning_tracker/features/learning/domain/use_cases/mark_complet
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/screens/learning_screen.dart';
-import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
+import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
@@ -76,7 +75,6 @@ import 'package:learning_tracker/features/tutoring/presentation/providers/active
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../helpers/drift_memory.dart';
 import '../../helpers/pump_app.dart';
 
 /// WCAG relative luminance (sRGB), per w3.org/TR/WCAG21/#dfn-relative-luminance.
@@ -118,17 +116,13 @@ class _FakeNoTutorSession extends ActiveTutoredProfileSelection {
   TutoredProfileSelection? build() => null;
 }
 
-final _learningTestUserDb = inMemoryDb();
-
-ProfileModel _adultProfile() {
+LearnerProfileEntity _adultProfile() {
   final now = DateTime.utc(2026, 1, 1);
-  return ProfileModel(
-    id: 2,
-    ulid: 'ulid-2',
-    accountId: 1,
+  return LearnerProfileEntity(
+    profileId: 'darkmode-profile-ulid',
     displayName: 'Dad',
-    mode: 'adult',
-    avatarIndex: 0,
+    mode: ProfileMode.adult,
+    avatar: '',
     createdAt: now,
     updatedAt: now,
   );
@@ -146,7 +140,6 @@ DailyTask _learnTask({
   isOverdue: isOverdue,
   reason: 'test',
   stageName: 'Learn',
-  trackId: 1,
   trackLabel: 'Test Track',
   estimatedEffortMinutes: 5,
 );
@@ -175,12 +168,11 @@ Widget _pumpLearningScreen({required ThemeData theme, required bool overdue}) {
     ),
     activeTutoredProfileSelectionProvider.overrideWith(_FakeNoTutorSession.new),
     coarsePacedTrackIdsProvider.overrideWith(
-      (ref) => Future.value(const <int>{}),
+      (ref) => Future.value(const <CurriculumId>{}),
     ),
     contentIndexProvider.overrideWith(
       (ref) => Future.value(ContentIndex.fromCurricula(const {})),
     ),
-    userDatabaseProvider.overrideWithValue(_learningTestUserDb),
   ];
 
   return pumpApp(
@@ -203,7 +195,6 @@ DailyTask _readerTask() => const DailyTask(
   isOverdue: false,
   reason: 'test',
   stageName: 'Learn',
-  trackId: 1,
   trackLabel: 'Test Track',
   estimatedEffortMinutes: 5,
 );
@@ -266,8 +257,6 @@ ContentIndex _readerContentIndex() {
   });
 }
 
-final _readerTestUserDb = inMemoryDb();
-
 /// Pumps the real [TextDisplayScreen], wired so tapping "Mark complete"
 /// drives the real `_handleComplete` catch branch and shows the real
 /// "could not save" SnackBar.
@@ -309,7 +298,6 @@ Widget _pumpTextDisplayScreen({
     markCompletionUseCaseProvider.overrideWithValue(
       MarkCompletionUseCase(orchestrator),
     ),
-    userDatabaseProvider.overrideWithValue(_readerTestUserDb),
   ];
 
   return pumpApp(
@@ -338,11 +326,6 @@ void main() {
         trackType: 'personal',
       ),
     );
-  });
-
-  tearDownAll(() async {
-    await _learningTestUserDb.close();
-    await _readerTestUserDb.close();
   });
 
   group(

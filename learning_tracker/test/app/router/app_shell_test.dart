@@ -1,9 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:auto_route/auto_route.dart';
-import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -14,15 +12,15 @@ import 'package:learning_tracker/app/router/app_shell.dart'
 import 'package:learning_tracker/app/router/guards/auth_guard.dart';
 import 'package:learning_tracker/app/router/persistent_switcher_scaffold.dart';
 import 'package:learning_tracker/app/router/router_provider.dart' as rp;
-import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/navigation/guards/child_mode_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/pin_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/profile_guard.dart';
 import 'package:learning_tracker/core/navigation/pin_scope.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
+import 'package:learning_tracker/data/repositories/firestore_learner_profile_repository.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
@@ -30,7 +28,7 @@ import 'package:learning_tracker/features/account/presentation/providers/auth_pr
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/gamification/domain/models/streak_recovery_info.dart';
-import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
+import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
@@ -42,19 +40,20 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../helpers/test_database.dart';
+import '../../helpers/firestore_fake.dart';
+import '../../helpers/firestore_fixtures.dart';
 
 class MockAuthRepository extends Mock implements AuthRepository {}
 
 class MockPinService extends Mock implements PinService {}
 
 /// Pins the active profile id deterministically so the switcher bar resolves
-/// the seeded profile (id 1) and shows its real name — instead of the
+/// the seeded profile and shows its real name — instead of the
 /// account/fallback chain (the nav harness never sets the selected-profile
 /// pref, so the real `activeProfileIdProvider` would not resolve to a profile).
 class _FixedActiveProfileId extends ActiveProfileId {
   @override
-  int build() => 1;
+  String? build() => 'ulid-1';
 }
 
 /// TUT-05: pins the active profile id to the talmid's synthetic local MIRROR id
@@ -62,7 +61,7 @@ class _FixedActiveProfileId extends ActiveProfileId {
 /// modelling a live tutor session where the mirror was resolved by the pull.
 class _MirrorActiveProfileId extends ActiveProfileId {
   @override
-  int build() => 99;
+  String? build() => 'ulid-99';
 }
 
 /// TUT-05: a fixed non-null tutored selection so the switcher bar treats the
@@ -82,12 +81,12 @@ Future<AppRouter> _createAuthenticatedRouter({
 }) async {
   final mockPinService = MockPinService();
   when(() => mockPinService.hasParentPin()).thenAnswer((_) async => false);
-
-  final testDb = createTestDatabase();
-  // ProfileGuard now validates that the selected profile id actually exists in
-  // the current DB before short-circuiting (R1o-C2), so the guard DB must hold
-  // a profile whose id matches getSelectedProfileId() → 1.
-  await seedProfileWithIds(testDb, profileId: 1, accountId: 1);
+  final firestore = createFakeFirestore(authenticatedUid: 'uid-1');
+  await seedProfile(firestore, uid: 'uid-1', profileId: 'ulid-1');
+  final profileRepository = FirestoreLearnerProfileRepository(
+    firestore: firestore,
+    uid: 'uid-1',
+  );
 
   return AppRouter(
     // BUG E3 follow-up: the persistent switcher bar (rendered above the
@@ -98,21 +97,20 @@ Future<AppRouter> _createAuthenticatedRouter({
     authGuard: AuthGuard(),
     profileGuard: ProfileGuard(
       profilePickerRoute: () => const ProfilePickerRoute(),
-      getDatabase: () => testDb,
-      getSelectedProfileId: () => 1,
-      setSelectedProfileId: (_, {String? ulid}) {},
-      getAccountId: () => 1,
+      getProfiles: () => profileRepository.watchProfiles().first,
+      getSelectedProfileId: () => 'ulid-1',
+      setSelectedProfileId: (_) {},
       isTutoredSession: () => false,
     ),
     childModeGuard: ChildModeGuard(
-      getDatabase: () => testDb,
-      getSelectedProfileId: () => 1,
+      getProfileById: (profileId) => profileRepository.getProfile(profileId),
+      getSelectedProfileId: () => 'ulid-1',
     ),
     pinGuard: PinGuard(
       pinSetupRoute: () => const PinFlowSetupRoute(),
       pinService: mockPinService,
       promptForPin: () async => false,
-      getScope: () => const PinScope.parent(1),
+      getScope: () => const PinScope.parent('ulid-1'),
     ),
   );
 }
@@ -120,48 +118,48 @@ Future<AppRouter> _createAuthenticatedRouter({
 Future<AppRouter> _createUnauthenticatedRouter() async {
   final mockPinService = MockPinService();
   when(() => mockPinService.hasParentPin()).thenAnswer((_) async => false);
-
-  final testDb = createTestDatabase();
+  final firestore = createFakeFirestore(authenticatedUid: 'uid-1');
+  final profileRepository = FirestoreLearnerProfileRepository(
+    firestore: firestore,
+    uid: 'uid-1',
+  );
 
   return AppRouter(
     authGuard: AuthGuard(),
     profileGuard: ProfileGuard(
       profilePickerRoute: () => const ProfilePickerRoute(),
-      getDatabase: () => testDb,
-      getSelectedProfileId: () => 1,
-      setSelectedProfileId: (_, {String? ulid}) {},
-      getAccountId: () => 1,
+      getProfiles: () => profileRepository.watchProfiles().first,
+      getSelectedProfileId: () => 'ulid-1',
+      setSelectedProfileId: (_) {},
       isTutoredSession: () => false,
     ),
     childModeGuard: ChildModeGuard(
-      getDatabase: () => testDb,
-      getSelectedProfileId: () => 1,
+      getProfileById: (profileId) => profileRepository.getProfile(profileId),
+      getSelectedProfileId: () => 'ulid-1',
     ),
     pinGuard: PinGuard(
       pinSetupRoute: () => const PinFlowSetupRoute(),
       pinService: mockPinService,
       promptForPin: () async => false,
-      getScope: () => const PinScope.parent(1),
+      getScope: () => const PinScope.parent('ulid-1'),
     ),
   );
 }
 
 const _authOverride = AuthState.signedIn(
-  user: AuthUser(profileId: 1, email: 'test@test.com', displayName: 'Test'),
-  tier: Tier.localBorn,
+  user: AuthUser(uid: 'uid-1', email: 'test@test.com', displayName: 'Test'),
+  tier: Tier.local,
 );
 
 /// A single own adult profile so AppShell sees a non-empty profile list and
 /// does NOT trigger the profile-less → Settings-tab jump — it stays on the
 /// Dashboard tab, which is what these shell-navigation tests exercise.
 final _seededProfiles = [
-  ProfileModel(
-    id: 1,
-    ulid: 'ulid-1',
-    accountId: 1,
+  LearnerProfileEntity(
+    profileId: 'ulid-1',
     displayName: 'Test',
-    mode: 'adult',
-    avatarIndex: 0,
+    mode: ProfileMode.adult,
+    avatar: '',
     createdAt: DateTime(2024),
     updatedAt: DateTime(2024),
   ),
@@ -218,16 +216,10 @@ MaterialApp _wrapAppWithPersistentSwitcher(RouterConfig<Object> routerConfig) {
 }
 
 void main() {
-  late UserDatabase db;
-
   setUpAll(() {
     // Prevent google_fonts from making real HTTP requests in tests.
     // Without this, font-loading futures cause 10-minute test timeouts.
     GoogleFonts.config.allowRuntimeFetching = false;
-
-    // Suppress Drift "multiple database" warning in tests where router
-    // helpers and setUp each create their own in-memory database.
-    driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
 
     // Suppress google_fonts "font not found in assets" errors — PlusJakartaSans
     // is not bundled in test assets, but navigation tests don't need real fonts.
@@ -237,29 +229,10 @@ void main() {
       if (msg.contains('GoogleFonts') || msg.contains('google_fonts')) return;
       savedOnError?.call(details);
     };
-
-    // Mock path_provider so driftDatabase can resolve in the auth guard
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(
-          const MethodChannel('plugins.flutter.io/path_provider'),
-          (MethodCall methodCall) async {
-            if (methodCall.method == 'getTemporaryDirectory' ||
-                methodCall.method == 'getApplicationDocumentsDirectory' ||
-                methodCall.method == 'getApplicationSupportDirectory') {
-              return '/tmp/flutter_test';
-            }
-            return null;
-          },
-        );
   });
 
   setUp(() {
     SharedPreferences.setMockInitialValues({'onboarding_complete': true});
-    db = createTestDatabase();
-  });
-
-  tearDown(() async {
-    await db.close();
   });
 
   group('AppShellScreen bottom navigation', () {
@@ -271,8 +244,6 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
-              appDatabaseProvider.overrideWithValue(db),
-              userDatabaseProvider.overrideWithValue(db),
               authStateProvider.overrideWithValue(_authOverride),
               profileListStreamProvider.overrideWith(
                 (ref) => Stream.value(_seededProfiles),
@@ -318,8 +289,6 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            appDatabaseProvider.overrideWithValue(db),
-            userDatabaseProvider.overrideWithValue(db),
             authStateProvider.overrideWithValue(_authOverride),
             profileListStreamProvider.overrideWith(
               (ref) => Stream.value(_seededProfiles),
@@ -364,8 +333,6 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            appDatabaseProvider.overrideWithValue(db),
-            userDatabaseProvider.overrideWithValue(db),
             authStateProvider.overrideWithValue(_authOverride),
             profileListStreamProvider.overrideWith(
               (ref) => Stream.value(_seededProfiles),
@@ -421,8 +388,6 @@ void main() {
         ProviderScope(
           overrides: [
             ...[
-              appDatabaseProvider.overrideWithValue(db),
-              userDatabaseProvider.overrideWithValue(db),
               authStateProvider.overrideWithValue(_authOverride),
               profileListStreamProvider.overrideWith(
                 (ref) => Stream.value(_seededProfiles),
@@ -474,8 +439,6 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            appDatabaseProvider.overrideWithValue(db),
-            userDatabaseProvider.overrideWithValue(db),
             authStateProvider.overrideWithValue(_authOverride),
             profileListStreamProvider.overrideWith(
               (ref) => Stream.value(_seededProfiles),
@@ -517,13 +480,12 @@ void main() {
       SharedPreferences.setMockInitialValues({}); // no onboarding_complete
       final router = await _createUnauthenticatedRouter();
 
-      // Suppress layout-overflow errors and Drift multiple-database warnings.
+      // Suppress layout-overflow errors from the navigation harness.
       final originalOnError = FlutterError.onError;
       FlutterError.onError = (details) {
         final msg = details.exception.toString();
         if (msg.contains('overflowed')) return;
         if (msg.contains('multiple times')) return;
-        if (msg.contains('drift')) return;
         originalOnError?.call(details);
       };
       addTearDown(() => FlutterError.onError = originalOnError);
@@ -552,8 +514,6 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            appDatabaseProvider.overrideWithValue(db),
-            userDatabaseProvider.overrideWithValue(db),
             authStateProvider.overrideWithValue(_authOverride),
             profileListStreamProvider.overrideWith(
               (ref) => Stream.value(_seededProfiles),
@@ -599,8 +559,6 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
-              appDatabaseProvider.overrideWithValue(db),
-              userDatabaseProvider.overrideWithValue(db),
               authStateProvider.overrideWithValue(_authOverride),
               profileListStreamProvider.overrideWith(
                 (ref) => Stream.value(_seededProfiles),
@@ -657,13 +615,11 @@ void main() {
       (tester) async {
         final router = await _createAuthenticatedRouter();
         final childProfiles = [
-          ProfileModel(
-            id: 1,
-            ulid: 'ulid-1',
-            accountId: 1,
+          LearnerProfileEntity(
+            profileId: 'ulid-1',
             displayName: 'Test',
-            mode: 'child',
-            avatarIndex: 0,
+            mode: ProfileMode.child,
+            avatar: '',
             createdAt: DateTime(2024),
             updatedAt: DateTime(2024),
           ),
@@ -672,8 +628,6 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
-              appDatabaseProvider.overrideWithValue(db),
-              userDatabaseProvider.overrideWithValue(db),
               authStateProvider.overrideWithValue(_authOverride),
               profileListStreamProvider.overrideWith(
                 (ref) => Stream.value(childProfiles),
@@ -737,8 +691,6 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            appDatabaseProvider.overrideWithValue(db),
-            userDatabaseProvider.overrideWithValue(db),
             authStateProvider.overrideWithValue(_authOverride),
             profileListStreamProvider.overrideWith(
               (ref) => Stream.value(_seededProfiles),
@@ -793,8 +745,6 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            appDatabaseProvider.overrideWithValue(db),
-            userDatabaseProvider.overrideWithValue(db),
             authStateProvider.overrideWithValue(_authOverride),
             profileListStreamProvider.overrideWith(
               (ref) => Stream.value(_seededProfiles),
@@ -901,8 +851,6 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
-              appDatabaseProvider.overrideWithValue(db),
-              userDatabaseProvider.overrideWithValue(db),
               authStateProvider.overrideWithValue(_authOverride),
               profileListStreamProvider.overrideWith(
                 (ref) => Stream.value(_seededProfiles),
@@ -975,26 +923,22 @@ void main() {
         // show). Note its name differs from both the account "Test" and the
         // talmid "Kid".
         final tutorOwnProfiles = [
-          ProfileModel(
-            id: 1,
-            ulid: 'ulid-1',
-            accountId: 1,
+          LearnerProfileEntity(
+            profileId: 'ulid-1',
             displayName: 'Family Niasoff',
-            mode: 'adult',
-            avatarIndex: 0,
+            mode: ProfileMode.adult,
+            avatar: '',
             createdAt: DateTime(2024),
             updatedAt: DateTime(2024),
           ),
         ];
 
         // The talmid mirror profile (id 99) — what the header SHOULD display.
-        final talmidMirror = ProfileModel(
-          id: 99,
-          ulid: 'ulid-99',
-          accountId: 1,
+        final talmidMirror = LearnerProfileEntity(
+          profileId: 'ulid-99',
           displayName: 'Kid',
-          mode: 'child',
-          avatarIndex: 0,
+          mode: ProfileMode.child,
+          avatar: '',
           createdAt: DateTime(2024),
           updatedAt: DateTime(2024),
         );
@@ -1002,8 +946,6 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
-              appDatabaseProvider.overrideWithValue(db),
-              userDatabaseProvider.overrideWithValue(db),
               authStateProvider.overrideWithValue(_authOverride),
               // Own profiles never contain the talmid mirror.
               profileListStreamProvider.overrideWith(
@@ -1072,24 +1014,20 @@ void main() {
         );
 
         final tutorOwnProfiles = [
-          ProfileModel(
-            id: 1,
-            ulid: 'ulid-1',
-            accountId: 1,
+          LearnerProfileEntity(
+            profileId: 'ulid-1',
             displayName: 'Family Niasoff',
-            mode: 'adult',
-            avatarIndex: 0,
+            mode: ProfileMode.adult,
+            avatar: '',
             createdAt: DateTime(2024),
             updatedAt: DateTime(2024),
           ),
         ];
-        final talmidMirror = ProfileModel(
-          id: 99,
-          ulid: 'ulid-99',
-          accountId: 1,
+        final talmidMirror = LearnerProfileEntity(
+          profileId: 'ulid-99',
           displayName: 'Kid',
-          mode: 'child',
-          avatarIndex: 0,
+          mode: ProfileMode.child,
+          avatar: '',
           createdAt: DateTime(2024),
           updatedAt: DateTime(2024),
         );
@@ -1097,8 +1035,6 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
-              appDatabaseProvider.overrideWithValue(db),
-              userDatabaseProvider.overrideWithValue(db),
               authStateProvider.overrideWithValue(_authOverride),
               profileListStreamProvider.overrideWith(
                 (ref) => Stream.value(tutorOwnProfiles),
@@ -1174,14 +1110,12 @@ void main() {
     Widget barUnderDarkAmbient() => ProviderScope(
       overrides: [
         profileListStreamProvider.overrideWith(
-          (ref) => Stream.value(<ProfileModel>[
-            ProfileModel(
-              id: 1,
-              ulid: 'ulid-1',
-              accountId: 1,
+          (ref) => Stream.value(<LearnerProfileEntity>[
+            LearnerProfileEntity(
+              profileId: 'ulid-1',
               displayName: 'Talmid1',
-              mode: 'adult',
-              avatarIndex: 0,
+              mode: ProfileMode.adult,
+              avatar: '',
               createdAt: DateTime(2024),
               updatedAt: DateTime(2024),
             ),
@@ -1262,14 +1196,12 @@ void main() {
     Widget barInScaffold() => ProviderScope(
       overrides: [
         profileListStreamProvider.overrideWith(
-          (ref) => Stream.value(<ProfileModel>[
-            ProfileModel(
-              id: 1,
-              ulid: 'ulid-1',
-              accountId: 1,
+          (ref) => Stream.value(<LearnerProfileEntity>[
+            LearnerProfileEntity(
+              profileId: 'ulid-1',
               displayName: 'Talmid1',
-              mode: 'adult',
-              avatarIndex: 0,
+              mode: ProfileMode.adult,
+              avatar: '',
               createdAt: DateTime(2024),
               updatedAt: DateTime(2024),
             ),

@@ -6,18 +6,43 @@ library;
 
 import 'dart:async';
 
-import 'package:drift/drift.dart' show Value;
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/analytics/analytics_provider.dart';
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/core/analytics/streak_milestone_analytics_observer.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
+import 'package:learning_tracker/data/firestore/repository_providers.dart';
+import 'package:learning_tracker/data/repositories/firestore_streak_event_repository.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 
-import '../../helpers/drift_memory.dart';
+import '../../helpers/firestore_fake.dart';
+
+const _uid = 'streak-analytics-uid';
+const _profileId = 'streak-analytics-profile-ulid';
+
+FirestoreStreakEventRepository _eventRepository(
+  FakeFirebaseFirestore firestore,
+) => FirestoreStreakEventRepository(
+  firestore: firestore,
+  uid: _uid,
+  profileId: _profileId,
+);
+
+Future<void> _seedSevenDayStreak(
+  FirestoreStreakEventRepository repository, {
+  required DateTime base,
+}) async {
+  for (var i = 0; i < 7; i++) {
+    final day = base.add(Duration(days: i));
+    await repository.append(
+      eventType: 'completion',
+      eventTimestamp: day,
+      ulid: 'streak-analytics-${day.millisecondsSinceEpoch}',
+    );
+  }
+}
 
 void main() {
   group('streakMilestoneAnalyticsObserverProvider — error resilience (R6-3)', () {
@@ -26,16 +51,12 @@ void main() {
     test('when the streak source stream emits an error the provider does NOT '
         'enter an error state', () async {
       final analytics = FakeAnalyticsService();
-      // Close the DB before the observer opens it so restoreIfEmpty throws
-      // and StreakStateService.watch surfaces a stream error.
-      final db = inMemoryDb();
-      await seedProfile(db); // profile id = 1
-      await db.close(); // force an error when the observer tries to watch
-
       final container = ProviderContainer(
         overrides: [
-          userDatabaseProvider.overrideWithValue(db),
-          activeProfileIdProvider.overrideWithValue(1),
+          firestoreStreakEventRepositoryProvider.overrideWith(
+            (ref) async => null,
+          ),
+          activeProfileIdProvider.overrideWithValue(_profileId),
           analyticsServiceProvider.overrideWithValue(analytics),
         ],
       );
@@ -49,7 +70,7 @@ void main() {
       addTearDown(sub.close);
 
       // Give the async* generator time to run the await-for and catch the
-      // error from the closed DB.
+      // unavailable-backend error.
       await Future<void>.delayed(const Duration(milliseconds: 50));
 
       final state = container.read(streakMilestoneAnalyticsObserverProvider);
@@ -71,33 +92,25 @@ void main() {
         'enter an error state and the error is swallowed', () async {
       // A FakeAnalyticsService that throws on logEvent.
       final throwingAnalytics = _ThrowingAnalyticsService();
-      final db = inMemoryDb();
-      await seedProfile(db);
+      final firestore = createFakeFirestore(authenticatedUid: _uid);
+      final repository = _eventRepository(firestore);
+      final clock = FakeLocalDayClock(DateTime.utc(2026, 5, 31, 12));
 
       // Seed 7 events so the milestone fires and the throwing service is called.
       final base = DateTime.utc(2026, 5, 25);
-      for (var i = 0; i < 7; i++) {
-        final day = base.add(Duration(days: i));
-        await db.streakEventDao.appendEvent(
-          StreakEventsCompanion.insert(
-            profileId: 1,
-            eventType: 'completion',
-            dayUtc: day,
-            eventTimestamp: day,
-            clientDeviceId: const Value(null),
-          ),
-        );
-      }
+      await _seedSevenDayStreak(repository, base: base);
 
       final container = ProviderContainer(
         overrides: [
-          userDatabaseProvider.overrideWithValue(db),
-          activeProfileIdProvider.overrideWithValue(1),
+          firestoreStreakEventRepositoryProvider.overrideWith(
+            (ref) async => repository,
+          ),
+          activeProfileIdProvider.overrideWithValue(_profileId),
           analyticsServiceProvider.overrideWithValue(throwingAnalytics),
+          localDayClockProvider.overrideWithValue(clock),
         ],
       );
       addTearDown(container.dispose);
-      addTearDown(db.close);
 
       final sub = container.listen(
         streakMilestoneAnalyticsObserverProvider,
@@ -116,6 +129,13 @@ void main() {
             'a throwing analytics call must not propagate to the '
             'StreamProvider error state',
       );
+      expect(
+        throwingAnalytics.callCount,
+        greaterThanOrEqualTo(1),
+        reason:
+            'the fixed clock must keep the seeded May streak current so the '
+            'analytics failure path is actually exercised',
+      );
     });
 
     // ── 3. happy-path milestones still fire ───────────────────────────────────
@@ -123,8 +143,8 @@ void main() {
     test('happy path: milestone fires when streak reaches threshold '
         '(AUD-core-analytics-02)', () async {
       final analytics = _MilestoneAwaitingAnalyticsService();
-      final db = inMemoryDb();
-      await seedProfile(db);
+      final firestore = createFakeFirestore(authenticatedUid: _uid);
+      final repository = _eventRepository(firestore);
 
       // Fixed clock instead of DateTime.now() — the observer now watches
       // localDayClockProvider (mirrors outbox_providers.dart's
@@ -138,29 +158,19 @@ void main() {
       // Seed 7 consecutive streak events ENDING on the fixed "today" so
       // currentStreak == 7.
       final base = DateTime.utc(2026, 5, 25);
-      for (var i = 0; i < 7; i++) {
-        final day = base.add(Duration(days: i));
-        await db.streakEventDao.appendEvent(
-          StreakEventsCompanion.insert(
-            profileId: 1,
-            eventType: 'completion',
-            dayUtc: day,
-            eventTimestamp: day,
-            clientDeviceId: const Value(null),
-          ),
-        );
-      }
+      await _seedSevenDayStreak(repository, base: base);
 
       final container = ProviderContainer(
         overrides: [
-          userDatabaseProvider.overrideWithValue(db),
-          activeProfileIdProvider.overrideWithValue(1),
+          firestoreStreakEventRepositoryProvider.overrideWith(
+            (ref) async => repository,
+          ),
+          activeProfileIdProvider.overrideWithValue(_profileId),
           analyticsServiceProvider.overrideWithValue(analytics),
           localDayClockProvider.overrideWithValue(clock),
         ],
       );
       addTearDown(container.dispose);
-      addTearDown(db.close);
 
       final sub = container.listen(
         streakMilestoneAnalyticsObserverProvider,
@@ -200,45 +210,32 @@ void main() {
           'anticipated closed-db StateError) propagates to the StreamProvider '
           'error state instead of being swallowed as a warning', () async {
         final buggyAnalytics = _BuggyAnalyticsService();
-        final db = inMemoryDb();
-        await seedProfile(db);
+        final firestore = createFakeFirestore(authenticatedUid: _uid);
+        final repository = _eventRepository(firestore);
+        final clock = FakeLocalDayClock(DateTime.utc(2026, 5, 31, 12));
 
         // Seed 7 consecutive streak events ENDING TODAY so currentStreak
         // == 7 and the milestone loop actually calls the (buggy) analytics
         // service, which throws a bare `Error` subtype synchronously — the
         // exact "real bug, not a recoverable runtime condition" scenario
         // EH-4 says must never be caught by a bare `catch (e, st)`.
-        // Anchored relative to "now" (see the happy-path test above) —
-        // a hardcoded past date stops being a *current* streak once the
-        // calendar advances past it.
-        final todayUtc = DateTime.now().toUtc();
-        final base = DateTime.utc(
-          todayUtc.year,
-          todayUtc.month,
-          todayUtc.day,
-        ).subtract(const Duration(days: 6));
-        for (var i = 0; i < 7; i++) {
-          final day = base.add(Duration(days: i));
-          await db.streakEventDao.appendEvent(
-            StreakEventsCompanion.insert(
-              profileId: 1,
-              eventType: 'completion',
-              dayUtc: day,
-              eventTimestamp: day,
-              clientDeviceId: const Value(null),
-            ),
-          );
-        }
+        // Use the same deterministic clock seam as the happy-path test so
+        // this programming-error path remains current without reading the
+        // host wall clock.
+        final base = DateTime.utc(2026, 5, 25);
+        await _seedSevenDayStreak(repository, base: base);
 
         final container = ProviderContainer(
           overrides: [
-            userDatabaseProvider.overrideWithValue(db),
-            activeProfileIdProvider.overrideWithValue(1),
+            firestoreStreakEventRepositoryProvider.overrideWith(
+              (ref) async => repository,
+            ),
+            activeProfileIdProvider.overrideWithValue(_profileId),
             analyticsServiceProvider.overrideWithValue(buggyAnalytics),
+            localDayClockProvider.overrideWithValue(clock),
           ],
         );
         addTearDown(container.dispose);
-        addTearDown(db.close);
 
         final sub = container.listen(
           streakMilestoneAnalyticsObserverProvider,
@@ -246,14 +243,11 @@ void main() {
         );
         addTearDown(sub.close);
 
-        // Poll until the provider settles into an error state or the
-        // milestone has clearly had a chance to fire and be swallowed.
-        final deadline = DateTime.now().add(const Duration(seconds: 5));
-        var state = container.read(streakMilestoneAnalyticsObserverProvider);
-        while (DateTime.now().isBefore(deadline) && !state.hasError) {
-          await Future<void>.delayed(const Duration(milliseconds: 20));
-          state = container.read(streakMilestoneAnalyticsObserverProvider);
-        }
+        await expectLater(
+          container.read(streakMilestoneAnalyticsObserverProvider.future),
+          throwsA(isA<_SimulatedBugError>()),
+        );
+        final state = container.read(streakMilestoneAnalyticsObserverProvider);
 
         expect(
           state.hasError,
@@ -278,8 +272,11 @@ void main() {
 /// Used to verify that a throwing analytics call is absorbed by the observer
 /// and does NOT propagate to the StreamProvider.
 class _ThrowingAnalyticsService extends AnalyticsService {
+  int callCount = 0;
+
   @override
   Future<void> logEvent(String name, {Map<String, Object?>? parameters}) {
+    callCount++;
     throw Exception('analytics unavailable (test double)');
   }
 }

@@ -158,7 +158,6 @@ class CurriculumLifetimeSummary {
 /// Computed by [TrackDualProgressCalculator].
 class TrackDualProgressMetric {
   const TrackDualProgressMetric({
-    required this.trackId,
     required this.trackLabel,
     required this.curriculumId,
     required this.currentCyclePercentage,
@@ -168,7 +167,7 @@ class TrackDualProgressMetric {
     this.overdueCount,
   });
 
-  final int trackId;
+  /// AD-25: the curriculum is the sole track identity in the Firestore model.
   final String trackLabel;
   final CurriculumId curriculumId;
   final double currentCyclePercentage;

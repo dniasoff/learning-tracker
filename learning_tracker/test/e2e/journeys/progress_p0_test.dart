@@ -662,7 +662,6 @@ void main() {
             trackDualProgressMetricsProvider.overrideWith(
               (ref, pid) => Future.value(<TrackDualProgressMetric>[
                 const TrackDualProgressMetric(
-                  trackId: 1,
                   trackLabel: 'Mishnayos',
                   curriculumId: CurriculumId.mishnayos,
                   currentCyclePercentage: 0.5,

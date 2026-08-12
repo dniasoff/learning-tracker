@@ -3,107 +3,91 @@ library;
 
 import 'dart:async';
 
-import 'package:drift/drift.dart' show Value;
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
+import 'package:learning_tracker/data/firestore/repository_providers.dart';
+import 'package:learning_tracker/data/repositories/firestore_streak_event_repository.dart';
+import 'package:learning_tracker/features/gamification/presentation/providers/gamification_service_providers.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_state_service.dart';
 
-import '../../helpers/drift_memory.dart';
+import '../../helpers/firestore_fake.dart';
 
 void main() {
-  late UserDatabase db;
+  const uid = 'streak-service-uid';
+  late FakeFirebaseFirestore firestore;
+  late FirestoreStreakEventRepository eventRepository;
+  late ProviderContainer container;
   late FakeLocalDayClock clock;
   late StreakStateService provider;
-  const profileId = 1;
+  const profileId = 'streak-profile-ulid';
+  const otherProfileId = 'other-streak-profile-ulid';
 
   // Captured before insertEvent() below so its `profileId` parameter can
   // default to the outer constant without being shadowed by its own name.
   const defaultProfileId = profileId;
 
-  // Helper to insert a streak event. `profileId` defaults to the outer
-  // constant so most call sites don't need to pass it; callers that need a
-  // different profile (e.g. cross-profile isolation tests) can override it.
-  Future<void> insertEvent(
-    UserDatabase db,
-    DateTime timestamp, {
-    int? profileId,
-  }) async {
-    await db.streakEventDao.appendEvent(
-      StreakEventsCompanion.insert(
-        profileId: profileId ?? defaultProfileId,
-        eventType: 'completion',
-        dayUtc: DateTime.utc(timestamp.year, timestamp.month, timestamp.day),
-        eventTimestamp: timestamp,
-        clientDeviceId: const Value(null),
-      ),
+  DateTime utcDay(DateTime instant) =>
+      DateTime.utc(instant.year, instant.month, instant.day);
+
+  Future<void> insertEvent(DateTime timestamp, {String? profileId}) async {
+    final targetProfile = profileId ?? defaultProfileId;
+    final repository = targetProfile == defaultProfileId
+        ? eventRepository
+        : FirestoreStreakEventRepository(
+            firestore: firestore,
+            uid: uid,
+            profileId: targetProfile,
+          );
+    await repository.append(
+      eventType: 'completion',
+      eventTimestamp: timestamp,
+      ulid: 'streak-${timestamp.microsecondsSinceEpoch}',
     );
   }
 
   setUp(() async {
-    db = inMemoryDb();
-    await seedProfile(db); // creates learner_profiles(id=1)
-    // Insert a second profile so streak_events with profileId=2 can satisfy FK.
-    await db
-        .into(db.accounts)
-        .insert(
-          AccountsCompanion.insert(
-            email: 'test2@example.com',
-            tier: 'localBorn',
-            displayName: 'Test User 2',
-            createdAt: DateTime.utc(2026, 1, 1),
-            updatedAt: DateTime.utc(2026, 1, 1),
-          ),
-        );
-    await db
-        .into(db.learnerProfiles)
-        .insert(
-          LearnerProfilesCompanion.insert(
-            accountId: 2,
-            displayName: 'Test User 2',
-            mode: 'adult',
-            createdAt: DateTime.utc(2026, 1, 1),
-            updatedAt: DateTime.utc(2026, 1, 1),
-          ),
-        );
-    clock = FakeLocalDayClock(DateTime.utc(2026, 5, 14, 12));
-    // AUD-t-cross-79: pin day-bucketing to the UTC calendar date instead of
-    // letting it resolve through DateTime.toLocal() (which reads the host
-    // machine's TZ). Every fixture in this file is already expressed in
-    // `DateTime.utc(...)` terms, so this makes the whole suite deterministic
-    // by construction — pass/fail can no longer depend on the timezone the
-    // test runner happens to execute in.
-    provider = StreakStateService(
-      db: db,
-      clock: clock,
-      dayOf: (dt) =>
-          DateTime.utc(dt.toUtc().year, dt.toUtc().month, dt.toUtc().day),
+    firestore = createFakeFirestore(authenticatedUid: uid);
+    eventRepository = FirestoreStreakEventRepository(
+      firestore: firestore,
+      uid: uid,
+      profileId: profileId,
     );
-  });
-
-  tearDown(() async {
-    await db.close();
+    clock = FakeLocalDayClock(DateTime.utc(2026, 5, 14, 12));
+    container = ProviderContainer(
+      overrides: [
+        firestoreStreakEventRepositoryProvider.overrideWith(
+          (ref) async => eventRepository,
+        ),
+        streakStateProvider.overrideWith(
+          (ref) => StreakStateService(ref: ref, clock: clock, dayOf: utcDay),
+        ),
+      ],
+    );
+    provider = container.read(streakStateProvider);
+    addTearDown(container.dispose);
   });
 
   // ── read() ────────────────────────────────────────────────────────────────
 
   group('StreakStateService.read', () {
     test('returns zero streak when no events exist', () async {
-      final state = await provider.read(profileId: profileId);
+      final state = await provider.read();
       expect(state.currentStreak, 0);
     });
 
     test('returns empty state when no events', () async {
-      final state = await provider.read(profileId: profileId);
+      final state = await provider.read();
       expect(state.currentStreak, 0);
       expect(state.maxStreak, 0);
       expect(state.lastCompletionDayLocal, isNull);
     });
 
     test('returns streak of 1 for a single completion today', () async {
-      await insertEvent(db, DateTime.utc(2026, 5, 14));
+      await insertEvent(DateTime.utc(2026, 5, 14));
 
-      final state = await provider.read(profileId: profileId);
+      final state = await provider.read();
       expect(state.currentStreak, 1);
       expect(state.maxStreak, 1);
     });
@@ -111,10 +95,10 @@ void main() {
     test(
       'returns streak of 2 for completions on two consecutive days',
       () async {
-        await insertEvent(db, DateTime.utc(2026, 5, 13));
-        await insertEvent(db, DateTime.utc(2026, 5, 14));
+        await insertEvent(DateTime.utc(2026, 5, 13));
+        await insertEvent(DateTime.utc(2026, 5, 14));
 
-        final state = await provider.read(profileId: profileId);
+        final state = await provider.read();
         expect(state.currentStreak, 2);
         expect(state.maxStreak, 2);
       },
@@ -122,9 +106,9 @@ void main() {
 
     test('streak lapses when last completion was 2+ days ago', () async {
       // Last completion 3 days ago, today is May 14.
-      await insertEvent(db, DateTime.utc(2026, 5, 11));
+      await insertEvent(DateTime.utc(2026, 5, 11));
 
-      final state = await provider.read(profileId: profileId);
+      final state = await provider.read();
       expect(state.currentStreak, 0);
       expect(state.maxStreak, 1);
     });
@@ -136,9 +120,9 @@ void main() {
       // still "alive" per the reducer's <=1-day grace window -- and that
       // answer must not depend on the executing machine's timezone.
       clock.setNow(DateTime.utc(2026, 5, 11, 12));
-      await insertEvent(db, DateTime.utc(2026, 5, 10));
+      await insertEvent(DateTime.utc(2026, 5, 10));
 
-      final state = await provider.read(profileId: profileId);
+      final state = await provider.read();
 
       expect(
         state.currentStreak,
@@ -151,9 +135,9 @@ void main() {
 
     test('does not count events from another profile', () async {
       // Insert event for profile 2.
-      await insertEvent(db, DateTime.utc(2026, 5, 14), profileId: 2);
+      await insertEvent(DateTime.utc(2026, 5, 14), profileId: otherProfileId);
 
-      final state = await provider.read(profileId: profileId);
+      final state = await provider.read();
       expect(state.currentStreak, 0);
     });
   });
@@ -163,42 +147,40 @@ void main() {
   group('StreakStateService.watch', () {
     test('emits streak state as a stream', () async {
       // First emission should be the initial state (no events = 0 streak).
-      final firstState = await provider.watch(profileId: profileId).first;
+      final firstState = await provider.watch().first;
       expect(firstState.currentStreak, 0);
     });
 
     test('emits empty state when no events', () async {
-      final state = await provider.watch(profileId: profileId).first;
+      final state = await provider.watch().first;
       expect(state.currentStreak, 0);
       expect(state.maxStreak, 0);
     });
 
     test('emits zero streak when profile has no events', () async {
-      final states = provider.watch(profileId: 99);
+      final states = provider.watch();
       final first = await states.first;
       expect(first.currentStreak, 0);
     });
 
     test('emits updated state after event is inserted', () async {
-      await insertEvent(db, DateTime.utc(2026, 5, 14));
+      await insertEvent(DateTime.utc(2026, 5, 14));
 
-      final state = await provider.watch(profileId: profileId).first;
+      final state = await provider.watch().first;
       expect(state.currentStreak, 1);
       expect(state.maxStreak, 1);
     });
 
     test('stream emits new value when event is added while watching', () async {
       final states = <int>[];
-      final sub = provider
-          .watch(profileId: profileId)
-          .listen((s) => states.add(s.currentStreak));
+      final sub = provider.watch().listen((s) => states.add(s.currentStreak));
       addTearDown(sub.cancel);
 
       // Give the first emission time to arrive.
       await Future<void>.delayed(Duration.zero);
       expect(states.first, 0); // zero at start
 
-      await insertEvent(db, DateTime.utc(2026, 5, 14));
+      await insertEvent(DateTime.utc(2026, 5, 14));
       await Future<void>.delayed(Duration.zero);
 
       // Should have received at least 2 emissions.
@@ -208,26 +190,34 @@ void main() {
 
     // ── D17 regression: a throw inside onListen must surface as a stream ──
     // error, not silently hang the stream (perpetual loading). Reproduces the
-    // D20 teardown window where restoreIfEmpty hits a closing Drift handle.
+    // D20 teardown window where the backing read handle becomes unavailable.
     test(
       'D17: error from restoreIfEmpty in onListen surfaces as a stream error '
       'instead of hanging forever',
       () async {
-        // Close the underlying DB so restoreIfEmpty (which does a Drift select)
-        // throws when the stream is listened to — exactly the closing-handle
-        // race during a profile/account swap. (tearDown closing again is a
-        // safe no-op.)
-        await db.close();
+        // Resolve the Firestore repository as unavailable, modelling the
+        // profile/account swap window without constructing a Drift database.
+        final unavailableContainer = ProviderContainer(
+          overrides: [
+            firestoreStreakEventRepositoryProvider.overrideWith(
+              (ref) async => null,
+            ),
+            streakStateProvider.overrideWith(
+              (ref) =>
+                  StreakStateService(ref: ref, clock: clock, dayOf: utcDay),
+            ),
+          ],
+        );
+        addTearDown(unavailableContainer.dispose);
+        final unavailableProvider = unavailableContainer.read(
+          streakStateProvider,
+        );
 
         // Before the fix the unhandled async throw inside onListen meant the
-        // stream NEVER emitted or errored, so awaiting .first would hang until
-        // the timeout. The fix forwards the failure to the controller, so
-        // .first completes with the underlying error promptly (NOT a timeout).
+        // The failure must reach the consumer as a stream error promptly (NOT
+        // a timeout).
         await expectLater(
-          provider
-              .watch(profileId: profileId)
-              .first
-              .timeout(const Duration(seconds: 2)),
+          unavailableProvider.watch().first.timeout(const Duration(seconds: 2)),
           throwsA(isNot(isA<TimeoutException>())),
           reason:
               'a restore/DB failure must reach the consumer as a stream error, '
@@ -242,13 +232,13 @@ void main() {
       'streak to 0 on the next rollover tick — without a relaunch',
       () async {
         // Seed a completion "today" (clock is 2026-05-14 in setUp).
-        await insertEvent(db, DateTime.utc(2026, 5, 14, 12));
+        await insertEvent(DateTime.utc(2026, 5, 14, 12));
 
         final ticks = StreamController<void>();
         addTearDown(ticks.close);
         final states = <int>[];
         final sub = provider
-            .watch(profileId: profileId, rolloverTicks: ticks.stream)
+            .watch(rolloverTicks: ticks.stream)
             .listen((s) => states.add(s.currentStreak));
         addTearDown(sub.cancel);
 

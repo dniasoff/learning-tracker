@@ -9,23 +9,25 @@
 @Tags(['dashboard', 'tier_counter'])
 library;
 
-import 'package:drift/drift.dart' show Value;
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
-import 'package:learning_tracker/core/sync/initial_sync_state.dart';
-import 'package:learning_tracker/core/sync/providers/sync_status_providers.dart';
+import 'package:learning_tracker/data/firestore/repository_providers.dart'
+    show firestoreLearningLedgerRepositoryProvider;
+import 'package:learning_tracker/data/repositories/firestore_learning_ledger_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'package:learning_tracker/features/gamification/domain/models/streak_recovery_info.dart';
+import 'package:learning_tracker/features/learning/data/repositories/learning_ledger_repository_impl.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/learning_ledger_providers.dart'
+    show learningLedgerRepositoryProvider;
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/progress/domain/models/journey_view_model.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/journey_providers.dart';
@@ -33,20 +35,22 @@ import 'package:learning_tracker/features/progress/presentation/providers/lifeti
 import 'package:learning_tracker/features/progress/presentation/widgets/progress_tier_counter_row.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
-import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
-import '../../../../helpers/drift_memory.dart';
+import '../../../../helpers/firestore_fake.dart';
+import '../../../../helpers/firestore_fixtures.dart';
 
-const _profileId = 0;
+const _uid = 'dashboard-tier-uid';
+const _profileId = 'dashboard-tier-profile-ulid';
 
 // ── Overrides ──────────────────────────────────────────────────────────────
 
 class _ProfileIdOverride extends ActiveProfileId {
   _ProfileIdOverride(this._id);
-  final int _id;
+  final String _id;
   @override
-  int build() => _id;
+  String? build() => _id;
 }
 
 /// Pin the Hebrew Terms toggle off so assertions can target English copy
@@ -80,25 +84,20 @@ LifetimeTotals _lifetimeTotals({int learned = 0, int total = 0}) =>
       totalCurricula: CurriculumId.values.length,
     );
 
-CurriculumTrack _track({
-  int id = 1,
+CurriculumTrackEntity _track({
   CurriculumId curriculum = CurriculumId.mishnayos,
-}) => CurriculumTrack(
-  id: id,
-  profileId: _profileId,
-  curriculumId: curriculum.storageKey,
+}) => CurriculumTrackEntity(
+  curriculumId: curriculum,
   state: 'active',
   stateChangedAt: DateTime.utc(2026, 1, 1),
   activatedAt: DateTime.utc(2026, 1, 1),
 );
 
 TrackDualProgressMetric _dualMetric({
-  required int trackId,
   required CurriculumId curriculum,
   double currentCycle = 0.0,
   double lifetime = 0.0,
 }) => TrackDualProgressMetric(
-  trackId: trackId,
   trackLabel: curriculum.storageKey,
   curriculumId: curriculum,
   currentCyclePercentage: currentCycle,
@@ -114,16 +113,11 @@ List<Override> _overridesFor({
   required int currentStreak,
   required JourneyViewModel journey,
   required LifetimeTotals lifetime,
-  required List<CurriculumTrack> tracks,
+  required List<CurriculumTrackEntity> tracks,
   required List<TrackDualProgressMetric> dualMetrics,
   int points = 0,
 }) {
   return [
-    // DashboardScreen listens to syncStatusProvider (auto-refresh on launch-pull
-    // completion). Stub it so the test never reaches the real sync/auth/Firebase
-    // provider graph. `localOnly` never transitions to `synced`, so the
-    // auto-refresh listener stays dormant.
-    syncStatusProvider.overrideWith((ref) => const SyncStatus.localOnly()),
     activeProfileIdProvider.overrideWith(() => _ProfileIdOverride(_profileId)),
     useHebrewTermsProvider.overrideWith(
       () => _UseHebrewTermsOverride(useHebrew: false),
@@ -133,7 +127,7 @@ List<Override> _overridesFor({
         tracks
             .map(
               (t) => CurriculumId.values.firstWhere(
-                (c) => c.storageKey == t.curriculumId,
+                (c) => c == t.curriculumId,
                 orElse: () => CurriculumId.mishnayos,
               ),
             )
@@ -145,7 +139,7 @@ List<Override> _overridesFor({
         tracks
             .map(
               (t) => CurriculumId.values.firstWhere(
-                (c) => c.storageKey == t.curriculumId,
+                (c) => c == t.curriculumId,
                 orElse: () => CurriculumId.mishnayos,
               ),
             )
@@ -162,23 +156,20 @@ List<Override> _overridesFor({
         maxStreak: currentStreak,
       )),
     ),
-    dashboardGlobalPointsProvider.overrideWith((ref) => Stream.value(points)),
+    dashboardGlobalPointsProvider.overrideWith((ref) => Future.value(points)),
     dashboardStreakRecoveryProvider.overrideWith(
       (ref) => Future.value(
         StreakRecoveryInfo(wasRecovered: false, currentStreak: currentStreak),
       ),
     ),
     allDailyTasksProvider.overrideWith((ref) => Future.value(const [])),
-    initialSyncCompleteProvider.overrideWith((ref) => Future.value(true)),
-    journeyViewModelProvider(
-      _profileId,
-    ).overrideWith((ref) => Future.value(journey)),
-    lifetimeTotalsAcrossAllCurriculaProvider(
-      _profileId,
-    ).overrideWith((ref) => Future.value(lifetime)),
-    trackDualProgressMetricsProvider(
-      _profileId,
-    ).overrideWith((ref) => Future.value(dualMetrics)),
+    journeyViewModelProvider.overrideWith((ref) => Future.value(journey)),
+    lifetimeTotalsAcrossAllCurriculaProvider.overrideWith(
+      (ref) => Future.value(lifetime),
+    ),
+    trackDualProgressMetricsProvider.overrideWith(
+      (ref) => Future.value(dualMetrics),
+    ),
     // Mark every curriculum as non-program-enrolled so the active-track card
     // takes the self-paced branch (avoids the program-calendar provider tree).
     for (final c in CurriculumId.values)
@@ -219,7 +210,6 @@ void main() {
               tracks: [track],
               dualMetrics: [
                 _dualMetric(
-                  trackId: track.id,
                   curriculum: CurriculumId.mishnayos,
                   currentCycle: 0.5,
                   lifetime: 0.42,
@@ -270,12 +260,7 @@ void main() {
             lifetime: _lifetimeTotals(learned: 15, total: 100),
             points: 1200,
             tracks: [track],
-            dualMetrics: [
-              _dualMetric(
-                trackId: track.id,
-                curriculum: CurriculumId.mishnayos,
-              ),
-            ],
+            dualMetrics: [_dualMetric(curriculum: CurriculumId.mishnayos)],
           ),
         ),
       );
@@ -318,7 +303,6 @@ void main() {
               tracks: [track],
               dualMetrics: [
                 _dualMetric(
-                  trackId: track.id,
                   curriculum: CurriculumId.mishnayos,
                   // 0.35 → 35%, 0.74 → 74% (rounded via formatFractionAsPercent)
                   currentCycle: 0.35,
@@ -371,12 +355,7 @@ void main() {
             journey: _journey(),
             lifetime: _lifetimeTotals(),
             tracks: [track],
-            dualMetrics: [
-              _dualMetric(
-                trackId: track.id,
-                curriculum: CurriculumId.mishnayos,
-              ),
-            ],
+            dualMetrics: [_dualMetric(curriculum: CurriculumId.mishnayos)],
           ),
         ),
       );
@@ -426,24 +405,23 @@ void main() {
     ];
 
     Future<void> seedMasechtaLedger(
-      UserDatabase db, {
+      FakeFirebaseFirestore firestore, {
       required String masechta,
       required DateTime at,
+      required String ulid,
     }) {
-      return db.learningLedgerDao.insertEntry(
-        LearningLedgerCompanion.insert(
-          profileId: _profileId,
-          curriculumId: CurriculumId.mishnayos.storageKey,
-          entryScope: 'masechta',
-          unitIdentifier: masechta,
-          unitDisplayNameHe: masechta,
-          unitDisplayNameEn: masechta,
-          trackType: 'personal',
-          completedAt: at,
-          completionNumber: 1,
-          markedBy: _profileId,
-          isManual: const Value(false),
-        ),
+      return seedLedgerEntry(
+        firestore,
+        uid: _uid,
+        profileId: _profileId,
+        ulid: ulid,
+        curriculumId: CurriculumId.mishnayos,
+        entryScope: 'masechta',
+        unitIdentifier: masechta,
+        unitDisplayNameHe: masechta,
+        unitDisplayNameEn: masechta,
+        trackType: 'personal',
+        completedAt: at,
       );
     }
 
@@ -538,24 +516,33 @@ void main() {
       return items;
     }
 
-    /// Real-DB integration override builder — wires the in-memory DB and
+    /// Real-Firestore integration override builder — wires the fake Firestore and
     /// the curriculum-content provider for Mishnayos, then keeps everything
     /// else from [_overridesFor] EXCEPT the `journeyViewModelProvider`
     /// override (which we deliberately omit so the REAL provider runs).
     List<Override> integrationOverrides({
-      required UserDatabase db,
+      required FakeFirebaseFirestore firestore,
       required int currentStreak,
       required LifetimeTotals lifetime,
-      required List<CurriculumTrack> tracks,
+      required List<CurriculumTrackEntity> tracks,
       required List<TrackDualProgressMetric> dualMetrics,
     }) {
       return [
-        // Stub syncStatusProvider so DashboardScreen's auto-refresh listener
-        // never reaches the real sync/auth/Firebase provider graph.
-        syncStatusProvider.overrideWith((ref) => const SyncStatus.localOnly()),
-        userDatabaseProvider.overrideWith((ref) => db),
         activeProfileIdProvider.overrideWith(
           () => _ProfileIdOverride(_profileId),
+        ),
+        firestoreLearningLedgerRepositoryProvider.overrideWith(
+          (ref) async => FirestoreLearningLedgerRepository(
+            firestore: firestore,
+            uid: _uid,
+            profileId: _profileId,
+          ),
+        ),
+        learningLedgerRepositoryProvider.overrideWith(
+          (ref) => FirestoreLearningLedgerRepositoryAdapter(
+            ref: ref,
+            activeProfileMode: ProfileMode.adult,
+          ),
         ),
         useHebrewTermsProvider.overrideWith(
           () => _UseHebrewTermsOverride(useHebrew: false),
@@ -577,7 +564,7 @@ void main() {
             tracks
                 .map(
                   (t) => CurriculumId.values.firstWhere(
-                    (c) => c.storageKey == t.curriculumId,
+                    (c) => c == t.curriculumId,
                     orElse: () => CurriculumId.mishnayos,
                   ),
                 )
@@ -589,7 +576,7 @@ void main() {
             tracks
                 .map(
                   (t) => CurriculumId.values.firstWhere(
-                    (c) => c.storageKey == t.curriculumId,
+                    (c) => c == t.curriculumId,
                     orElse: () => CurriculumId.mishnayos,
                   ),
                 )
@@ -608,7 +595,7 @@ void main() {
             maxStreak: currentStreak,
           )),
         ),
-        dashboardGlobalPointsProvider.overrideWith((ref) => Stream.value(0)),
+        dashboardGlobalPointsProvider.overrideWith((ref) => Future.value(0)),
         dashboardStreakRecoveryProvider.overrideWith(
           (ref) => Future.value(
             StreakRecoveryInfo(
@@ -618,13 +605,12 @@ void main() {
           ),
         ),
         allDailyTasksProvider.overrideWith((ref) => Future.value(const [])),
-        initialSyncCompleteProvider.overrideWith((ref) => Future.value(true)),
-        lifetimeTotalsAcrossAllCurriculaProvider(
-          _profileId,
-        ).overrideWith((ref) => Future.value(lifetime)),
-        trackDualProgressMetricsProvider(
-          _profileId,
-        ).overrideWith((ref) => Future.value(dualMetrics)),
+        lifetimeTotalsAcrossAllCurriculaProvider.overrideWith(
+          (ref) => Future.value(lifetime),
+        ),
+        trackDualProgressMetricsProvider.overrideWith(
+          (ref) => Future.value(dualMetrics),
+        ),
         for (final c in CurriculumId.values)
           dashboardHasProgramEnrollmentProvider(
             c,
@@ -637,12 +623,7 @@ void main() {
       'ledger has Seder Zeraim fully complete (11 unit + 1 aggregate + 0 '
       'curriculum = 12 total)',
       (tester) async {
-        final db = inMemoryDb();
-        addTearDown(db.close);
-        // `_profileId` is 0 to match the const at the top of the file;
-        // `seedProfileZero` provisions the matching learner_profiles row
-        // so the FK on `learning_ledger.profile_id` resolves.
-        await seedProfileZero(db);
+        final firestore = createFakeFirestore(authenticatedUid: _uid);
 
         // Seed all 11 Zeraim masechtos into the ledger — the real journey
         // provider should compute 11 unit-level siyumim + 1 aggregate-level
@@ -650,9 +631,10 @@ void main() {
         final base = DateTime(2026, 1, 1);
         for (var i = 0; i < zeraimMasechtos.length; i++) {
           await seedMasechtaLedger(
-            db,
+            firestore,
             masechta: zeraimMasechtos[i],
             at: base.add(Duration(days: i)),
+            ulid: 'ledger-$i',
           );
         }
 
@@ -660,16 +642,11 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: integrationOverrides(
-              db: db,
+              firestore: firestore,
               currentStreak: 5,
               lifetime: _lifetimeTotals(learned: 200),
               tracks: [track],
-              dualMetrics: [
-                _dualMetric(
-                  trackId: track.id,
-                  curriculum: CurriculumId.mishnayos,
-                ),
-              ],
+              dualMetrics: [_dualMetric(curriculum: CurriculumId.mishnayos)],
             ),
             child: const MaterialApp(
               localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -720,9 +697,7 @@ void main() {
       'empty ledger → siyumim counter shows 0 even when the dashboard '
       'is otherwise fully populated',
       (tester) async {
-        final db = inMemoryDb();
-        addTearDown(db.close);
-        await seedProfileZero(db);
+        final firestore = createFakeFirestore(authenticatedUid: _uid);
         // Deliberately seed NO ledger entries — the real provider should
         // emit a JourneyViewModel with all three counters at 0.
 
@@ -730,16 +705,11 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: integrationOverrides(
-              db: db,
+              firestore: firestore,
               currentStreak: 0,
               lifetime: _lifetimeTotals(),
               tracks: [track],
-              dualMetrics: [
-                _dualMetric(
-                  trackId: track.id,
-                  curriculum: CurriculumId.mishnayos,
-                ),
-              ],
+              dualMetrics: [_dualMetric(curriculum: CurriculumId.mishnayos)],
             ),
             child: const MaterialApp(
               localizationsDelegates: AppLocalizations.localizationsDelegates,

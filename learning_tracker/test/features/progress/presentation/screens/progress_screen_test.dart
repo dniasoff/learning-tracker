@@ -97,7 +97,6 @@ List<TrackDualProgressMetric> _metrics({
   return [
     for (var i = 0; i < curricula.length; i++)
       TrackDualProgressMetric(
-        trackId: 100 + i,
         trackLabel: curricula[i].storageKey,
         curriculumId: curricula[i],
         currentCyclePercentage: cyclePct,
@@ -537,7 +536,6 @@ void main() {
             db: db,
             metricsOverride: [
               TrackDualProgressMetric(
-                trackId: trackId,
                 trackLabel: CurriculumId.mishnayos.storageKey,
                 curriculumId: CurriculumId.mishnayos,
                 currentCyclePercentage: 0.31,
@@ -576,7 +574,6 @@ void main() {
           db: db,
           metricsOverride: [
             TrackDualProgressMetric(
-              trackId: trackId,
               trackLabel: CurriculumId.mishnayos.storageKey,
               curriculumId: CurriculumId.mishnayos,
               currentCyclePercentage: 0.31,

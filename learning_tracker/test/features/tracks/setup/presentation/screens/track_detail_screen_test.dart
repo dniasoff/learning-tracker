@@ -74,7 +74,6 @@ TrackDualProgressMetric _dualMetric({
   double currentCycle = 0.0,
   double lifetime = 0.0,
 }) => TrackDualProgressMetric(
-  trackId: trackId,
   trackLabel: curriculum.storageKey,
   curriculumId: curriculum,
   currentCyclePercentage: currentCycle,

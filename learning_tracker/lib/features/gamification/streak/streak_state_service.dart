@@ -15,9 +15,9 @@
 ///   through `firestoreStreakEventRepositoryProvider`; the `int` is the old
 ///   Drift primary key with no Firestore equivalent (see
 ///   `repository_providers.dart`'s "active-profile bridge" doc).
-/// - **`dayOf` seam dropped**: `FirestoreStreakStateRepository` does not
-///   inject a day-bucketing function. Production behavior is unchanged
-///   (`dayOf` defaulted to `LocalDayUtils.extractLocalDate` in both paths).
+/// - **day bucketing remains injectable**: production defaults to
+///   `LocalDayUtils.extractLocalDate`, while tests may provide a deterministic
+///   UTC (or other fixed-boundary) mapper without depending on the host TZ.
 /// - **`rolloverTicks` RESTORED on `watch`**:
 ///   `FirestoreStreakStateRepository.watchStreak` has no periodic recompute of
 ///   its own, so `watch` merges a periodic tick and recomputes on it — see
@@ -30,6 +30,7 @@ library;
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/gamification/data/repositories/firestore_streak_state_repository.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_reducer.dart';
 
@@ -37,14 +38,17 @@ class StreakStateService {
   StreakStateService({
     required Ref ref,
     LocalDayClock? clock,
-  })  : _ref = ref,
-        _clock = clock ?? const SystemLocalDayClock();
+    DateTime Function(DateTime)? dayOf,
+  }) : _ref = ref,
+       _clock = clock ?? const SystemLocalDayClock(),
+       _dayOf = dayOf ?? LocalDayUtils.extractLocalDate;
 
   final Ref _ref;
   final LocalDayClock _clock;
+  final DateTime Function(DateTime) _dayOf;
 
   FirestoreStreakStateRepository get _firestoreRepo =>
-      FirestoreStreakStateRepository(ref: _ref, clock: _clock);
+      FirestoreStreakStateRepository(ref: _ref, clock: _clock, dayOf: _dayOf);
 
   /// Returns the current [StreakState].
   ///
@@ -113,6 +117,5 @@ class StreakStateService {
   Future<Set<DateTime>> streakCalendar({
     required DateTime startUtc,
     required DateTime endUtc,
-  }) =>
-      _firestoreRepo.getStreakCalendar(startUtc: startUtc, endUtc: endUtc);
+  }) => _firestoreRepo.getStreakCalendar(startUtc: startUtc, endUtc: endUtc);
 }

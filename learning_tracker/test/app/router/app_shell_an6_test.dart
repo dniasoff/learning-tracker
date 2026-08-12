@@ -59,10 +59,8 @@
 library;
 
 import 'package:auto_route/auto_route.dart';
-import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -70,18 +68,18 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/app/router/app_shell.dart' show AppShellScreen;
 import 'package:learning_tracker/app/router/guards/auth_guard.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/navigation/guards/child_mode_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/pin_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/profile_guard.dart';
 import 'package:learning_tracker/core/navigation/pin_scope.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/data/repositories/firestore_learner_profile_repository.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/gamification/domain/models/streak_recovery_info.dart';
-import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
+import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
@@ -89,66 +87,64 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../helpers/test_database.dart';
+import '../../helpers/firestore_fake.dart';
+import '../../helpers/firestore_fixtures.dart';
 
 class MockPinService extends Mock implements PinService {}
 
 /// Pins the active profile id deterministically so the shell resolves the
-/// seeded profile (id 1) and stays on the Dashboard tab.
+/// seeded profile (ULID `ulid-1`) and stays on the Dashboard tab.
 class _FixedActiveProfileId extends ActiveProfileId {
   @override
-  int build() => 1;
+  String? build() => 'ulid-1';
 }
 
 Future<AppRouter> _createAuthenticatedRouter() async {
   final mockPinService = MockPinService();
   when(() => mockPinService.hasParentPin()).thenAnswer((_) async => false);
-
-  final testDb = createTestDatabase();
-  // ProfileGuard validates the selected profile id exists in the current DB
-  // before short-circuiting, so the guard DB must hold a profile whose id
-  // matches getSelectedProfileId() → 1.
-  await seedProfileWithIds(testDb, profileId: 1, accountId: 1);
+  final firestore = createFakeFirestore(authenticatedUid: 'uid-1');
+  await seedProfile(firestore, uid: 'uid-1', profileId: 'ulid-1');
+  final profileRepository = FirestoreLearnerProfileRepository(
+    firestore: firestore,
+    uid: 'uid-1',
+  );
 
   return AppRouter(
     authGuard: AuthGuard(),
     profileGuard: ProfileGuard(
       profilePickerRoute: () => const ProfilePickerRoute(),
-      getDatabase: () => testDb,
-      getSelectedProfileId: () => 1,
-      setSelectedProfileId: (_, {String? ulid}) {},
-      getAccountId: () => 1,
+      getProfiles: () => profileRepository.watchProfiles().first,
+      getSelectedProfileId: () => 'ulid-1',
+      setSelectedProfileId: (_) {},
       isTutoredSession: () => false,
     ),
     childModeGuard: ChildModeGuard(
-      getDatabase: () => testDb,
-      getSelectedProfileId: () => 1,
+      getProfileById: (profileId) => profileRepository.getProfile(profileId),
+      getSelectedProfileId: () => 'ulid-1',
     ),
     pinGuard: PinGuard(
       pinSetupRoute: () => const PinFlowSetupRoute(),
       pinService: mockPinService,
       promptForPin: () async => false,
-      getScope: () => const PinScope.parent(1),
+      getScope: () => const PinScope.parent('ulid-1'),
     ),
   );
 }
 
 const _authOverride = AuthState.signedIn(
-  user: AuthUser(profileId: 1, email: 'test@test.com', displayName: 'Test'),
-  tier: Tier.localBorn,
+  user: AuthUser(uid: 'uid-1', email: 'test@test.com', displayName: 'Test'),
+  tier: Tier.local,
 );
 
 /// A single own adult profile so AppShell sees a non-empty profile list and
 /// does NOT trigger the profile-less → Settings-tab jump — it stays on the
 /// Dashboard tab, which is what this shell-navigation test exercises.
 final _seededProfiles = [
-  ProfileModel(
-    id: 1,
-    ulid: 'ulid-1',
-    accountId: 1,
+  LearnerProfileEntity(
+    profileId: 'ulid-1',
     displayName: 'Test',
-    mode: 'adult',
-    avatarIndex: 0,
+    mode: ProfileMode.adult,
+    avatar: '',
     createdAt: DateTime(2024),
     updatedAt: DateTime(2024),
   ),
@@ -238,16 +234,10 @@ double _deriveNarrowShellWidth({
 }
 
 void main() {
-  late UserDatabase db;
-
   setUpAll(() {
     // Prevent google_fonts from making real HTTP requests in tests.
     // Without this, font-loading futures cause 10-minute test timeouts.
     GoogleFonts.config.allowRuntimeFetching = false;
-
-    // Suppress Drift "multiple database" warning in tests where router
-    // helpers and setUp each create their own in-memory database.
-    driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
 
     // Suppress google_fonts "font not found in assets" errors — PlusJakartaSans
     // is not bundled in test assets, but navigation tests don't need real fonts.
@@ -257,29 +247,10 @@ void main() {
       if (msg.contains('GoogleFonts') || msg.contains('google_fonts')) return;
       savedOnError?.call(details);
     };
-
-    // Mock path_provider so driftDatabase can resolve in the auth guard
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(
-          const MethodChannel('plugins.flutter.io/path_provider'),
-          (MethodCall methodCall) async {
-            if (methodCall.method == 'getTemporaryDirectory' ||
-                methodCall.method == 'getApplicationDocumentsDirectory' ||
-                methodCall.method == 'getApplicationSupportDirectory') {
-              return '/tmp/flutter_test';
-            }
-            return null;
-          },
-        );
   });
 
   setUp(() {
     SharedPreferences.setMockInitialValues({'onboarding_complete': true});
-    db = createTestDatabase();
-  });
-
-  tearDown(() async {
-    await db.close();
   });
 
   group('AN-6 regression — DASHBOARD label truncation at font_scale 1.3', () {
@@ -302,8 +273,6 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
-              appDatabaseProvider.overrideWithValue(db),
-              userDatabaseProvider.overrideWithValue(db),
               authStateProvider.overrideWithValue(_authOverride),
               profileListStreamProvider.overrideWith(
                 (ref) => Stream.value(_seededProfiles),

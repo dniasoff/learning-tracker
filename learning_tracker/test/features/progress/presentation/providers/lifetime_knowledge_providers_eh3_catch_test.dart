@@ -185,9 +185,9 @@ void main() {
         );
 
         final metric = metrics.firstWhere(
-          (m) => m.trackId == trackId,
+          (m) => m.curriculumId == CurriculumId.mishnayos,
           orElse: () => throw StateError(
-            'expected a metric for trackId $trackId — got: $metrics',
+            'expected a metric for Mishnayos — got: $metrics',
           ),
         );
 
@@ -270,7 +270,7 @@ void main() {
           // hold — this test is about adding the missing breadcrumb, not
           // changing the skip behaviour.
           expect(
-            metrics.any((m) => m.trackId == trackId),
+            metrics.any((m) => m.curriculumId == CurriculumId.mishnayos),
             isFalse,
             reason:
                 'the track must still be skipped on a scoped-content load '

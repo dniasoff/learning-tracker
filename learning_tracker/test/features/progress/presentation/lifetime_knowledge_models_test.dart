@@ -107,14 +107,12 @@ void main() {
   group('TrackDualProgressMetric', () {
     test('constructs with required fields', () {
       const metric = TrackDualProgressMetric(
-        trackId: 42,
         trackLabel: 'Mishnayos (personal)',
         curriculumId: CurriculumId.mishnayos,
         currentCyclePercentage: 0.25,
         lifetimePercentage: 0.60,
         isProgramTrack: true,
       );
-      expect(metric.trackId, 42);
       expect(metric.trackLabel, 'Mishnayos (personal)');
       expect(metric.curriculumId, CurriculumId.mishnayos);
       expect(metric.currentCyclePercentage, 0.25);
@@ -126,7 +124,6 @@ void main() {
 
     test('constructs with optional todayDueCount and overdueCount', () {
       const metric = TrackDualProgressMetric(
-        trackId: 1,
         trackLabel: 'Bavli',
         curriculumId: CurriculumId.bavli,
         currentCyclePercentage: 0.5,

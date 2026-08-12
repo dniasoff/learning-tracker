@@ -107,12 +107,17 @@ class StreakStateRepositoryNotReadyException implements Exception {
 }
 
 class FirestoreStreakStateRepository {
-  FirestoreStreakStateRepository({required Ref ref, LocalDayClock? clock})
-    : _ref = ref,
-      _clock = clock ?? const SystemLocalDayClock();
+  FirestoreStreakStateRepository({
+    required Ref ref,
+    LocalDayClock? clock,
+    DateTime Function(DateTime)? dayOf,
+  }) : _ref = ref,
+       _clock = clock ?? const SystemLocalDayClock(),
+       _dayOf = dayOf ?? LocalDayUtils.extractLocalDate;
 
   final Ref _ref;
   final LocalDayClock _clock;
+  final DateTime Function(DateTime) _dayOf;
 
   /// Re-reads `firestoreStreakEventRepositoryProvider`, resolving to `null`
   /// exactly when it does (no active account, or no active learner
@@ -157,7 +162,8 @@ class FirestoreStreakStateRepository {
     final events = await repo.getAllEvents();
     return const StreakReducer().reduce(
       events.map(_asLogEvent),
-      today: _clock.today(),
+      today: _dayOf(_clock.nowUtc()),
+      dayOf: _dayOf,
     );
   }
 
@@ -186,13 +192,13 @@ class FirestoreStreakStateRepository {
     final repo = await _resolve();
 
     final events = await repo.getAllEvents();
-    final startLocal = LocalDayUtils.extractLocalDate(startUtc);
-    final endLocal = LocalDayUtils.extractLocalDate(endUtc);
+    final startLocal = _dayOf(startUtc);
+    final endLocal = _dayOf(endUtc);
 
     final activeDates = <DateTime>{};
     for (final event in events) {
       if (event.eventType != 'completion') continue;
-      final localDate = LocalDayUtils.extractLocalDate(event.eventTimestamp);
+      final localDate = _dayOf(event.eventTimestamp);
       if (!localDate.isBefore(startLocal) && !localDate.isAfter(endLocal)) {
         activeDates.add(localDate);
       }
@@ -217,7 +223,8 @@ class FirestoreStreakStateRepository {
         .map(
           (events) => const StreakReducer().reduce(
             events.map(_asLogEvent),
-            today: _clock.today(),
+            today: _dayOf(_clock.nowUtc()),
+            dayOf: _dayOf,
           ),
         );
   }

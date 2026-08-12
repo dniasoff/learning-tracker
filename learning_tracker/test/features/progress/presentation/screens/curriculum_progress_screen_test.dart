@@ -359,7 +359,6 @@ void main() {
           router: router,
           dualMetrics: [
             TrackDualProgressMetric(
-              trackId: trackId,
               trackLabel: 'Mishnayos',
               curriculumId: CurriculumId.mishnayos,
               currentCyclePercentage: 0.25,
@@ -465,7 +464,6 @@ void main() {
           router: router,
           dualMetrics: [
             TrackDualProgressMetric(
-              trackId: trackId,
               trackLabel: 'Mishnayos',
               curriculumId: CurriculumId.mishnayos,
               currentCyclePercentage: 0.10,
@@ -853,7 +851,6 @@ void main() {
             router: router,
             dualMetrics: [
               TrackDualProgressMetric(
-                trackId: trackId,
                 trackLabel: 'Mishnayos',
                 curriculumId: CurriculumId.mishnayos,
                 currentCyclePercentage: 0.25,
@@ -899,7 +896,6 @@ void main() {
             router: router,
             dualMetrics: [
               TrackDualProgressMetric(
-                trackId: trackId,
                 trackLabel: 'Mishnayos',
                 curriculumId: CurriculumId.mishnayos,
                 currentCyclePercentage: 0.25,

@@ -140,7 +140,6 @@ Widget _buildDetailApp({
       trackDualProgressMetricsProvider(track.profileId).overrideWith(
         (ref) async => [
           TrackDualProgressMetric(
-            trackId: track.id,
             trackLabel: 'mishnayos',
             curriculumId: curriculum,
             currentCyclePercentage: 0.0,
