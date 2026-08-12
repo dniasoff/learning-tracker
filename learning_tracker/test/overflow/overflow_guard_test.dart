@@ -25,16 +25,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/providers/calendar_providers.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/widgets/app_dialog.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/calendar_program_service.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
-import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/steps/step_starting_position_calendar.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../helpers/drift_memory.dart';
 import '../helpers/overflow_harness.dart';
 
 // ── StartingPositionCalendarMode fixtures ───────────────────────────────────
@@ -249,12 +246,10 @@ void main() {
           onComplete: (_) {},
         ),
         overrides: [
-          userDatabaseProvider.overrideWithValue(inMemoryDb()),
           calendarProgramServiceProvider.overrideWith(
             (ref) => Future.value(calendarSvc),
           ),
           useHebrewTermsProvider.overrideWith(() => _FalseUseHebrewTerms()),
-          syncWriteFacadeProvider.overrideWithValue(null),
         ],
       );
     },

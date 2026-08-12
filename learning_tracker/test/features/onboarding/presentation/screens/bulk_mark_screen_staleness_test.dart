@@ -28,68 +28,58 @@
 ///
 /// This test drives the REAL `BulkMarkScreen` UI (tap the checkbox, tap
 /// Next, tap Confirm — the actual `_executeBulkMark()` code path, backed by
-/// a real in-memory DB and a real `BulkPriorCompletionService`) while an
+/// a fake Firestore and a real `BulkPriorCompletionService`) while an
 /// already-established listener on `lifetimeTotalsAcrossAllCurriculaProvider`
 /// (mirroring a persistently-mounted Dashboard tile) is watching. It never
 /// calls `.increment()` itself — only the production code under test may.
 ///
-/// `bulkPriorCompletionServiceProvider`'s default Riverpod wiring pulls in
-/// `bookmarkRepositoryProvider` -> `FirestoreBookmarkRepositoryAdapter` ->
-/// `firestoreBookmarkRepositoryProvider` -> real Firebase Auth/Firestore
-/// account resolution (still `[core/no-app] No Firebase App '[DEFAULT]'`
-/// in a plain widget test — bookmarks moved onto a different provider
-/// chain than the old `firestoreGatewayProvider` one, but it still needs a
-/// real signed-in Firebase app) — every existing `BulkMarkScreen` test
-/// avoids this the same way (`bulk_mark_screen_test.dart`,
-/// `bulk_mark_screen_expunge_ordering_test.dart`): override
-/// `completionRepositoryProvider`/`bulkPriorCompletionServiceProvider`
-/// directly instead of letting the real provider graph resolve. Those two
-/// sibling tests get away with a canned `_MockBulkPriorCompletionService`
-/// because they never assert on real completion-write side effects; this
-/// test needs the actual completion-write SQL to run — that is what makes
-/// `lifetimeTotalsAcrossAllCurriculaProvider` change — so it constructs a
-/// REAL `CompletionRepositoryImpl` (`syncEngine: null`, the same wiring
-/// `completionRepositoryProvider` gives a local-born/offline account)
-/// backed by the real in-memory DB, rather than a mock.
+/// `bulkPriorCompletionServiceProvider`'s default graph still needs a live
+/// Firebase account. This test therefore overrides the account/profile
+/// seams with a `FakeFirebaseFirestore` handle and constructs the real
+/// Firestore repository adapters inside the provider override.
 ///
 /// `BulkPriorCompletionService.execute()` also calls
-/// `_bookmarkRepository.setBookmark(...)`, so the service still needs some
-/// working `BookmarkRepository`. Bookmarks are Firestore-only now for
-/// every account — local-born or not, `bookmarkRepositoryProvider` no
-/// longer has a Drift branch — so there is no "the app's own wiring"
-/// version of this dependency left to reuse the way there is for
-/// completions. The Drift-backed `BookmarkRepositoryImpl` class is still
-/// real, working code — just unreachable from the bookmark providers, not
-/// deleted — so this test constructs it directly against the same
-/// in-memory `db` as a Firebase-free stand-in: real SQL runs, but this is
-/// no longer the path production traffic takes.
+/// `_bookmarkRepository.setBookmark(...)`, so the test supplies the real
+/// Firestore bookmark adapter against the same fake account.
 @Tags(['onboarding', 'bulk_mark', 'riverpod', 'contract'])
 library;
 
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/data/firestore/account_firebase.dart';
+import 'package:learning_tracker/data/firestore/active_account_providers.dart';
+import 'package:learning_tracker/data/firestore/repository_providers.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/learning/data/repositories/bookmark_repository_impl.dart';
 import 'package:learning_tracker/features/learning/data/repositories/completion_repository_impl.dart';
+import 'package:learning_tracker/features/learning/data/repositories/learning_ledger_repository_impl.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/learning_ledger_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/bulk_prior_completion_service.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/bulk_mark_screen.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
-import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
+import 'package:mocktail/mocktail.dart';
 
-import '../../../../helpers/drift_memory.dart';
+import '../../../../helpers/firestore_fake.dart';
 import '../../../../helpers/pump_app.dart';
 import '../../../../helpers/reactivity_contract.dart';
 
-const _profileId = 1;
+class _MockFirebaseApp extends Mock implements FirebaseApp {}
+
+class _MockFirebaseAuth extends Mock implements FirebaseAuth {}
+
+const _uid = 'bulk-mark-uid';
+const _profileId = '01JQ8M9Y7V3K2N6P4R5T8W0X1Z';
 const _curriculumKey = 'mishnayos';
 const _curriculum = CurriculumId.mishnayos;
 const _sefariaRef = 'Mishnah Berakhot 1:1';
@@ -174,7 +164,12 @@ class _TwoLeafContentRepository implements ContentRepository {
 
 class _ProfileIdOverride extends ActiveProfileId {
   @override
-  int build() => _profileId;
+  String build() => _profileId;
+}
+
+class _ProfileDocIdOverride extends ActiveProfileDocId {
+  @override
+  String build() => _profileId;
 }
 
 void main() {
@@ -182,59 +177,55 @@ void main() {
       'lifetimeTotalsAcrossAllCurriculaProvider listener without the test '
       'ever ticking completionCommittedProvider itself (bulk-mark staleness '
       'regression)', (tester) async {
-    final db = inMemoryDb();
-    addTearDown(db.close);
-    await seedProfile(db);
-    await seedTrack(db, profileId: _profileId, curriculumId: _curriculumKey);
+    final firestore = createFakeFirestore(authenticatedUid: _uid);
+    final handles = AccountFirebaseHandles(
+      app: _MockFirebaseApp(),
+      firestore: firestore,
+      auth: _MockFirebaseAuth(),
+      uid: _uid,
+    );
 
     final contentRepo = _TwoLeafContentRepository();
 
-    // completionRepo mirrors production wiring for a local-born (offline)
-    // account (`syncEngine: null`, same as `completionRepositoryProvider`).
-    // bookmarkRepo has no such production equivalent to mirror anymore —
-    // bookmarks are Firestore-only now — so it's a deliberate Firebase-free
-    // stand-in instead: still real, DB-backed code (not a canned mock),
-    // just not what the app itself calls for bookmarks today.
-    final bookmarkRepo = BookmarkRepositoryImpl(
-      database: db,
-      contentRepository: contentRepo,
-      profileId: _profileId,
-    );
-    final completionRepo = CompletionRepositoryImpl(
-      database: db,
-      activeProfileId: _profileId,
-    );
-    final bulkService = BulkPriorCompletionService(
-      contentRepository: contentRepo,
-      completionRepository: completionRepo,
-      bookmarkRepository: bookmarkRepo,
-      database: db,
-    );
-
     final container = ProviderContainer(
       overrides: [
-        userDatabaseProvider.overrideWith((ref) => db),
+        activeAccountFirebaseProvider.overrideWith((ref) async => handles),
+        activeProfileDocIdProvider.overrideWith(_ProfileDocIdOverride.new),
+        activeProfileIdProvider.overrideWith(_ProfileIdOverride.new),
         contentRepositoryProvider.overrideWithValue(contentRepo),
         curriculumContentProvider.overrideWith(
           (ref, curriculumId) =>
               contentRepo.getContentForCurriculum(curriculumId),
         ),
         contentSearchProvider.overrideWith((ref, args) => Future.value([])),
-        activeProfileIdProvider.overrideWith(_ProfileIdOverride.new),
-        syncWriteFacadeProvider.overrideWithValue(null),
-        bulkPriorCompletionServiceProvider.overrideWithValue(bulkService),
-        // BulkMarkScreen._loadPreExistingCompletions reads
-        // completionRepositoryProvider directly (not only via
-        // bulkPriorCompletionServiceProvider) to pre-tick already-completed
-        // leaves — same Firebase-avoidance reason as above.
-        completionRepositoryProvider.overrideWithValue(completionRepo),
+        completionRepositoryProvider.overrideWith(
+          (ref) => FirestoreCompletionRepositoryAdapter(ref: ref),
+        ),
+        learningLedgerRepositoryProvider.overrideWith(
+          (ref) => FirestoreLearningLedgerRepositoryAdapter(
+            ref: ref,
+            activeProfileMode: ProfileMode.adult,
+          ),
+        ),
+        bulkPriorCompletionServiceProvider.overrideWith(
+          (ref) => BulkPriorCompletionService(
+            contentRepository: contentRepo,
+            completionRepository: FirestoreCompletionRepositoryAdapter(
+              ref: ref,
+            ),
+            bookmarkRepository: FirestoreBookmarkRepositoryAdapter(
+              ref: ref,
+              contentRepository: contentRepo,
+            ),
+          ),
+        ),
       ],
     );
     addTearDown(container.dispose);
 
     await expectRebuildsOn(
       container,
-      lifetimeTotalsAcrossAllCurriculaProvider(_profileId),
+      lifetimeTotalsAcrossAllCurriculaProvider,
       () async {
         await tester.pumpWidget(
           pumpApp(

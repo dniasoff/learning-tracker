@@ -28,7 +28,6 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
@@ -49,7 +48,6 @@ import 'package:learning_tracker/features/tutoring/presentation/screens/decline_
 import 'package:learning_tracker/features/tutoring/presentation/screens/manage_grants_screen.dart';
 import 'package:mocktail/mocktail.dart';
 
-import '../../helpers/drift_memory.dart';
 import '../../helpers/pump_app.dart';
 
 TutorGrant _makeGrant({
@@ -261,9 +259,6 @@ void main() {
       final authRepo = _MockAuthRepository();
       final resignUseCase = _MockResignUseCase();
       final notificationGateway = _MockNotificationGateway();
-      final db = inMemoryDb();
-      addTearDown(db.close);
-
       when(() => authRepo.currentUser).thenReturn(_kFakeTutor);
       when(
         () => resignUseCase.call(grant: any(named: 'grant')),
@@ -290,7 +285,6 @@ void main() {
             tutorNotificationGatewayProvider.overrideWithValue(
               notificationGateway,
             ),
-            userDatabaseProvider.overrideWithValue(db),
           ],
         ),
       );

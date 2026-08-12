@@ -21,23 +21,24 @@
 @Tags(['settings', 'curriculum_settings'])
 library;
 
-import 'package:drift/drift.dart' show Value;
-import 'package:drift/native.dart';
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
-import 'package:learning_tracker/core/utils/date_utils.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/data/firestore/repository_providers.dart';
+import 'package:learning_tracker/data/repositories/firestore_curriculum_track_repository.dart';
+import 'package:learning_tracker/data/repositories/firestore_goal_repository.dart';
+import 'package:learning_tracker/data/repositories/firestore_profile_program_repository.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/curriculum_settings_screen.dart';
-import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
+import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart'
+    show activeTracksProvider;
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
-import '../../../../helpers/drift_memory.dart' show seedProfile, seedTrack;
+import '../../../../helpers/firestore_fake.dart';
+import '../../../../helpers/firestore_fixtures.dart';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -45,12 +46,6 @@ const _curriculum = CurriculumId.mishnayos;
 const _curriculumKey = 'mishnayos';
 
 // ── Provider override stubs ───────────────────────────────────────────────────
-
-/// Pins the active profile id to 1 without touching SharedPreferences.
-class _ProfileId1 extends ActiveProfileId {
-  @override
-  int build() => 1;
-}
 
 /// Pins useHebrewTerms to false.
 class _HebrewTermsOff extends UseHebrewTerms {
@@ -64,6 +59,29 @@ class _HebrewTermsOn extends UseHebrewTerms {
   bool build() => true;
 }
 
+const _activeTrackLoadedKey = ValueKey<String>('active-mishnayos-track-loaded');
+
+/// Makes the active-track fixture load-bearing through the same provider path
+/// the screen uses. The screen's title intentionally falls back to the
+/// curriculum label both when there is no active track and when an active
+/// track has no custom goal name, so the title assertion alone cannot
+/// distinguish those two states.
+class _ActiveTrackProbe extends ConsumerWidget {
+  const _ActiveTrackProbe();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final tracks = ref.watch(activeTracksProvider);
+    final hasActiveMishnayosTrack = tracks.asData?.value.any(
+          (track) => track.curriculumId == _curriculum && track.isActive,
+        ) ??
+        false;
+    return hasActiveMishnayosTrack
+        ? const SizedBox(key: _activeTrackLoadedKey, width: 1, height: 1)
+        : const SizedBox.shrink();
+  }
+}
+
 // ── Widget factory ────────────────────────────────────────────────────────────
 
 /// Builds a [ProviderScope] with the minimum overrides the screen needs.
@@ -71,18 +89,31 @@ class _HebrewTermsOn extends UseHebrewTerms {
 /// The  retry: (_, __) => null  is MANDATORY for Riverpod 3 so that errored
 /// FutureProviders surface their error state rather than staying in AsyncLoading.
 Widget _buildApp({
-  required UserDatabase db,
+  required FirestoreProfileProgramRepository db,
   bool useHebrew = false,
   Locale locale = const Locale('en'),
+  bool assertActiveTrackLoaded = false,
 }) {
+  final home = Stack(
+    fit: StackFit.expand,
+    children: [
+      const CurriculumSettingsScreen(curriculumId: _curriculumKey),
+      if (assertActiveTrackLoaded) const _ActiveTrackProbe(),
+    ],
+  );
   return ProviderScope(
     overrides: [
-      // Provide the in-memory DB so all database reads stay in-memory.
-      userDatabaseProvider.overrideWith((ref) => db),
-      // Fix active profile to 1 (no SharedPreferences needed).
-      activeProfileIdProvider.overrideWith(() => _ProfileId1()),
-      // No sync engine — local-only test.
-      syncWriteFacadeProvider.overrideWithValue(null),
+      // Route the screen's profile-program, track, and goal reads through the
+      // same real Firestore repositories backed by the test fake.
+      firestoreProfileProgramRepositoryProvider.overrideWith(
+        (ref) async => db,
+      ),
+      firestoreCurriculumTrackRepositoryProvider.overrideWith(
+        (ref) async => _trackRepository,
+      ),
+      firestoreGoalRepositoryProvider.overrideWith(
+        (ref) async => _goalRepository,
+      ),
       // Hebrew Terms toggle — controlled per test.
       if (useHebrew)
         useHebrewTermsProvider.overrideWith(() => _HebrewTermsOn())
@@ -98,19 +129,20 @@ Widget _buildApp({
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: AppLocalizations.supportedLocales,
-      home: const CurriculumSettingsScreen(curriculumId: _curriculumKey),
+      home: home,
     ),
   );
 }
 
-/// Seeds a [ProfileProgram] row linking profileId=1 to [programId] for
-/// [_curriculumKey].  When this row is absent the screen shows "Custom schedule".
-Future<void> _seedProfileProgram(UserDatabase db, {required int programId}) =>
-    db.profileProgramDao.setProfileProgram(
-      profileId: 1,
-      curriculumType: _curriculumKey,
-      programId: programId,
-    );
+/// Seeds the Firestore profile-program assignment for [programId] and
+/// [_curriculum]. When this document is absent the screen shows
+/// "Custom schedule".
+Future<void> _seedProfileProgram(
+  FirestoreProfileProgramRepository repository, {
+  required int programId,
+}) => repository
+    .setProgram(curriculumId: _curriculum, programId: programId)
+    .then((_) {});
 
 Future<void> _pump(WidgetTester tester, Widget app) async {
   await tester.pumpWidget(app);
@@ -125,17 +157,33 @@ Future<void> _tearDown(WidgetTester tester) async {
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 
-late UserDatabase _db;
+const _uid = 'curriculum-settings-test-uid';
+const _profileId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+late FakeFirebaseFirestore _firestore;
+late FirestoreProfileProgramRepository _db;
+late FirestoreCurriculumTrackRepository _trackRepository;
+late FirestoreGoalRepository _goalRepository;
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 void main() {
   setUp(() {
-    _db = UserDatabase(NativeDatabase.memory());
-  });
-
-  tearDown(() async {
-    await _db.close();
+    _firestore = createFakeFirestore(authenticatedUid: _uid);
+    _db = FirestoreProfileProgramRepository(
+      firestore: _firestore,
+      uid: _uid,
+      profileId: _profileId,
+    );
+    _trackRepository = FirestoreCurriculumTrackRepository(
+      firestore: _firestore,
+      uid: _uid,
+      profileId: _profileId,
+    );
+    _goalRepository = FirestoreGoalRepository(
+      firestore: _firestore,
+      uid: _uid,
+      profileId: _profileId,
+    );
   });
 
   // ── AppBar title ────────────────────────────────────────────────────────────
@@ -167,8 +215,8 @@ void main() {
       'loading tile has school icon (loading branch renders correctly)',
       (tester) async {
         // The loading branch renders an Icon(Icons.school) ListTile with
-        // "Loading program..." text. Because NativeDatabase.memory() resolves
-        // synchronously in tests, the loading state is ephemeral.  We verify
+        // "Loading program..." text. Because the fake Firestore read resolves
+        // quickly in tests, the loading state is ephemeral.  We verify
         // it by pumping a single frame immediately after pumpWidget and
         // checking either the loading tile OR the resolved tile is present
         // (both are valid depending on micro-task scheduling).
@@ -571,24 +619,19 @@ void main() {
       'a track renamed via Goal.description shows the custom name in the '
       'AppBar title, not the curriculum label',
       (tester) async {
-        await seedProfile(_db);
-        final trackId = await seedTrack(
-          _db,
-          profileId: 1,
-          curriculumId: _curriculumKey,
+        await seedTrack(
+          _firestore,
+          uid: _uid,
+          profileId: _profileId,
+          curriculumId: _curriculum,
         );
-        await _db
-            .into(_db.goals)
-            .insert(
-              GoalsCompanion.insert(
-                profileId: 1,
-                curriculumId: _curriculumKey,
-                trackId: trackId,
-                description: const Value('My Shas Journey'),
-                createdAt: DateTimeFactory.nowUtc(),
-                updatedAt: DateTimeFactory.nowUtc(),
-              ),
-            );
+        await seedGoal(
+          _firestore,
+          uid: _uid,
+          profileId: _profileId,
+          curriculumId: _curriculum,
+          description: 'My Shas Journey',
+        );
 
         await _pump(tester, _buildApp(db: _db));
 
@@ -605,11 +648,25 @@ void main() {
       'no custom name (no goal seeded) → AppBar title falls back to the '
       'curriculum label',
       (tester) async {
-        await seedProfile(_db);
-        await seedTrack(_db, profileId: 1, curriculumId: _curriculumKey);
+        await seedTrack(
+          _firestore,
+          uid: _uid,
+          profileId: _profileId,
+          curriculumId: _curriculum,
+        );
 
-        await _pump(tester, _buildApp(db: _db));
+        await _pump(
+          tester,
+          _buildApp(db: _db, assertActiveTrackLoaded: true),
+        );
 
+        expect(
+          find.byKey(_activeTrackLoadedKey),
+          findsOneWidget,
+          reason:
+              'The fallback must be reached with an active track loaded; '
+              'without seedTrack this would incorrectly cover the no-track path.',
+        );
         expect(find.textContaining('Mishnayos'), findsWidgets);
 
         await _tearDown(tester);

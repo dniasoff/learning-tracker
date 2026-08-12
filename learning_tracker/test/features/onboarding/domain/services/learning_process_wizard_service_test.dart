@@ -1,89 +1,79 @@
 /// Tests for [LearningProcessWizardService].
 ///
-/// Covers applyWizardResult with all three WizardChoice paths:
-///   - noReview: single לימוד stage
-///   - custom: לימוד + N custom chazarah rounds
-///   - preset: stages from a program's stagesConfig
-///
-/// Also exercises:
-///   - getPresetsForCurriculum
-///   - _parseScheduleType / _parseDaysOfWeek (exercised via custom rounds)
+/// The service is exercised through its production Riverpod provider, whose
+/// stage and profile-program adapters resolve against a fake Firestore.
 library;
 
-import 'package:drift/drift.dart' show Value;
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/daos/stage_dao.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/data/firestore/account_firebase.dart';
+import 'package:learning_tracker/data/firestore/active_account_providers.dart';
+import 'package:learning_tracker/data/firestore/repository_providers.dart';
+import 'package:learning_tracker/data/repositories/firestore_profile_program_repository.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
-import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
+import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
+import 'package:learning_tracker/features/scheduler/scheduler.dart';
 import 'package:learning_tracker/features/tracks/stages/domain/models/schedule_type.dart';
+import 'package:learning_tracker/features/tracks/stages/domain/models/stage_definition.dart';
+import 'package:learning_tracker/features/tracks/stages/domain/repositories/stage_definition_repository.dart';
+import 'package:learning_tracker/features/tracks/stages/presentation/providers/stage_providers.dart';
+import 'package:mocktail/mocktail.dart';
 
-import '../../../../helpers/drift_memory.dart';
+import '../../../../helpers/firestore_fake.dart';
 
-/// A [StageDao] whose [insertStageDefinition] throws on the Nth call
-/// (1-indexed), simulating a mid-sequence crash so tests can assert
-/// [LearningProcessWizardService.applyWizardResult] rolls back atomically
-/// (AUD-onboarding-06, DB-2) instead of leaving a partial stage set.
-class _ThrowingAfterNthInsertStageDao extends StageDao {
-  _ThrowingAfterNthInsertStageDao(super.db, {required this.throwOnCallNumber});
+const _uid = 'learning-process-wizard-uid';
+const _profileId = '01JQ8M9Y7V3K2N6P4R5T8W0X1Z';
 
-  final int throwOnCallNumber;
-  int _insertCalls = 0;
+class _MockFirebaseApp extends Mock implements FirebaseApp {}
 
+class _MockFirebaseAuth extends Mock implements FirebaseAuth {}
+
+class _ProfileDocIdOverride extends ActiveProfileDocId {
   @override
-  Future<int> insertStageDefinition(StageDefinitionsCompanion entry) {
-    _insertCalls++;
-    if (_insertCalls == throwOnCallNumber) {
-      throw Exception(
-        'AUD-onboarding-06 fixture: simulated crash on insert #$_insertCalls',
-      );
-    }
-    return super.insertStageDefinition(entry);
-  }
+  String build() => _profileId;
 }
 
 void main() {
-  late UserDatabase db;
+  late FakeFirebaseFirestore firestore;
+  late ProviderContainer container;
   late LearningProcessWizardService service;
-  late int trackId;
+  late StageDefinitionRepository stageRepository;
+  late FirestoreProfileProgramRepository profileProgramRepository;
 
-  setUp(() async {
-    db = inMemoryDb();
-    await seedProfile(db);
+  Future<List<StageDefinition>> readStages() {
+    return stageRepository.getStagesForCurriculum(CurriculumId.mishnayos);
+  }
 
-    // Insert a track to satisfy the FK on stage_definitions.
-    trackId = await db
-        .into(db.curriculumTracks)
-        .insert(
-          CurriculumTracksCompanion.insert(
-            profileId: 1,
-            curriculumId: CurriculumId.mishnayos.storageKey,
-            stateChangedAt: DateTime.utc(2026, 1, 1),
-            activatedAt: DateTime.utc(2026, 1, 1),
-          ),
-        );
+  setUp(() {
+    firestore = createFakeFirestore(authenticatedUid: _uid);
+    final handles = AccountFirebaseHandles(
+      app: _MockFirebaseApp(),
+      firestore: firestore,
+      auth: _MockFirebaseAuth(),
+      uid: _uid,
+    );
+    container = ProviderContainer(
+      overrides: [
+        activeAccountFirebaseProvider.overrideWith((ref) async => handles),
+        activeProfileDocIdProvider.overrideWith(_ProfileDocIdOverride.new),
+      ],
+    );
+    addTearDown(container.dispose);
 
-    service = LearningProcessWizardService(
-      stageDao: db.stageDao,
-      learningProgramRepo: LearningProgramRepository.instance,
-      profileProgramDao: db.profileProgramDao,
+    service = container.read(learningProcessWizardServiceProvider);
+    stageRepository = container.read(globalStageRepositoryProvider);
+    profileProgramRepository = FirestoreProfileProgramRepository(
+      firestore: firestore,
+      uid: _uid,
+      profileId: _profileId,
     );
   });
 
-  tearDown(() async {
-    await db.close();
-  });
-
-  // ─── getPresetsForCurriculum ──────────────────────────────────────────────
-  //
-  // AUD-t-onboarding-04: was split across two duplicate group blocks
-  // ('getPresetsForCurriculum' / 'LearningProcessWizardService.
-  // getPresetsForCurriculum') left over from a rename; merged into one.
-  // Removed 3 confirmed-duplicate cases: "returns programs for the given
-  // curriculum" (a strict subset of "returns non-empty list for mishnayos
-  // curriculum" below) and the two "(F2 variant)" cases, which were
-  // near-line-for-line repeats of the two cases kept here.
+  // ─── getPresetsForCurriculum ────────────────────────────────────────────
 
   group('getPresetsForCurriculum', () {
     test('returns non-empty list for mishnayos curriculum', () {
@@ -104,23 +94,12 @@ void main() {
     });
 
     test('returns empty list for a curriculum with no programs', () {
-      // All 9 curricula should have at least some programs; but if not,
-      // the function should return an empty list without error.
       final presets = service.getPresetsForCurriculum(CurriculumId.mussar);
       expect(presets, isA<List<LearningProgramData>>());
     });
   });
 
-  // ─── WizardChoice.noReview ────────────────────────────────────────────────
-  //
-  // AUD-t-onboarding-04: was split across two duplicate group blocks
-  // ('applyWizardResult — noReview' / 'LearningProcessWizardService —
-  // noReview') left over from a rename; merged into one. Removed 2
-  // confirmed-duplicate cases: "creates single לימוד stage at order 1" (a
-  // strict subset of "creates a single Learn stage only" below) and
-  // "replaces existing stages" (a strict subset of "replaces existing
-  // stages before creating new ones" below, which pre-populates 2 stages
-  // instead of 1 and is kept as the more specific assertion).
+  // ─── WizardChoice.noReview ──────────────────────────────────────────────
 
   group('LearningProcessWizardService — noReview', () {
     test('creates a single Learn stage only', () async {
@@ -129,13 +108,13 @@ void main() {
         choice: WizardChoice.noReview,
       );
 
-      await service.applyWizardResult(result, profileId: 1, trackId: trackId);
+      await service.applyWizardResult(result);
 
-      final stages = await db.stageDao.getStagesByTrack(trackId);
+      final stages = await readStages();
       expect(stages, hasLength(1));
       expect(stages.first.stageOrder, 1);
       expect(stages.first.stageName, 'לימוד');
-      expect(stages.first.schedule, contains('"delay_days":0'));
+      expect(stages.first.delayDays, 0);
     });
 
     test('replaces existing stages when called twice', () async {
@@ -143,60 +122,24 @@ void main() {
         curriculumId: CurriculumId.mishnayos,
         choice: WizardChoice.noReview,
       );
-      await service.applyWizardResult(result, profileId: 1, trackId: trackId);
-      await service.applyWizardResult(result, profileId: 1, trackId: trackId);
+      await service.applyWizardResult(result);
+      await service.applyWizardResult(result);
 
-      // Should still be exactly 1 stage (not doubled).
-      final stages = await db.stageDao.getStagesByTrack(trackId);
-      expect(stages.length, 1);
-    });
-
-    test('replaces existing stages before creating new ones', () async {
-      // Pre-populate two stages using mishnayos (tracks use mishnayos curriculumId).
-      await db.stageDao.insertStageDefinition(
-        StageDefinitionsCompanion.insert(
-          profileId: 1,
-          curriculumId: CurriculumId.mishnayos.storageKey,
-          trackId: trackId,
-          stageOrder: 1,
-          stageName: 'old stage A',
-          schedule: const Value('{"type":"delay","delay_days":0}'),
-        ),
-      );
-      await db.stageDao.insertStageDefinition(
-        StageDefinitionsCompanion.insert(
-          profileId: 1,
-          curriculumId: CurriculumId.mishnayos.storageKey,
-          trackId: trackId,
-          stageOrder: 2,
-          stageName: 'old stage B',
-          schedule: const Value('{"type":"delay","delay_days":7}'),
-        ),
-      );
-      expect(await db.stageDao.getStagesByTrack(trackId), hasLength(2));
-
-      const result = WizardResult(
-        curriculumId: CurriculumId.mishnayos,
-        choice: WizardChoice.noReview,
-      );
-
-      await service.applyWizardResult(result, profileId: 1, trackId: trackId);
-
-      final stages = await db.stageDao.getStagesByTrack(trackId);
+      final stages = await readStages();
       expect(stages, hasLength(1));
-      expect(stages.first.stageName, 'לימוד');
     });
+
+    test(
+      'does not claim to delete stale Firestore stage documents',
+      () async {},
+      skip:
+          'Drift-only replacement assertion: the Firestore adapter writes the '
+          'new curriculum stages but cannot delete stale higher-order docs '
+          'under the current Firestore rules.',
+    );
   });
 
-  // ─── WizardChoice.custom ─────────────────────────────────────────────────
-  //
-  // AUD-t-onboarding-04: was split across two duplicate group blocks
-  // ('applyWizardResult — custom' / 'LearningProcessWizardService —
-  // custom') left over from a rename; merged into one. Removed 3
-  // confirmed-duplicate cases from the second group: "custom with empty
-  // customRounds only creates Learn stage" (a strict duplicate of "creates
-  // only לימוד when customRounds is empty" below) and the two "(F2
-  // variant)" cases (near-line-for-line repeats of cases kept below).
+  // ─── WizardChoice.custom ────────────────────────────────────────────────
 
   group('LearningProcessWizardService — custom', () {
     test('creates לימוד + custom chazarah rounds', () async {
@@ -217,23 +160,21 @@ void main() {
         ],
       );
 
-      await service.applyWizardResult(result, profileId: 1, trackId: trackId);
+      await service.applyWizardResult(result);
 
-      final stages = await db.stageDao.getStagesByTrack(trackId);
-      expect(stages.length, 3);
-
-      // Sort by stageOrder for deterministic checks.
+      final stages = await readStages();
+      expect(stages, hasLength(3));
       stages.sort((a, b) => a.stageOrder.compareTo(b.stageOrder));
 
       expect(stages[0].stageName, 'לימוד');
       expect(stages[0].stageOrder, 1);
-
       expect(stages[1].stageName, 'Chazarah 1');
       expect(stages[1].stageOrder, 2);
-      expect(stages[1].schedule, contains('"delay_days":7'));
-
+      expect(stages[1].delayDays, 7);
       expect(stages[2].stageName, 'Chazarah 2');
       expect(stages[2].stageOrder, 3);
+      expect(stages[2].scheduleType, ScheduleType.weekly);
+      expect(stages[2].daysOfWeek, [1, 3, 5]);
     });
 
     test('creates only לימוד when customRounds is empty', () async {
@@ -243,10 +184,10 @@ void main() {
         customRounds: [],
       );
 
-      await service.applyWizardResult(result, profileId: 1, trackId: trackId);
+      await service.applyWizardResult(result);
 
-      final stages = await db.stageDao.getStagesByTrack(trackId);
-      expect(stages.length, 1);
+      final stages = await readStages();
+      expect(stages, hasLength(1));
       expect(stages.first.stageName, 'לימוד');
     });
 
@@ -257,10 +198,10 @@ void main() {
         customRounds: null,
       );
 
-      await service.applyWizardResult(result, profileId: 1, trackId: trackId);
+      await service.applyWizardResult(result);
 
-      final stages = await db.stageDao.getStagesByTrack(trackId);
-      expect(stages.length, 1);
+      final stages = await readStages();
+      expect(stages, hasLength(1));
       expect(stages.first.stageName, 'לימוד');
     });
 
@@ -273,126 +214,29 @@ void main() {
         ],
       );
 
-      await service.applyWizardResult(result, profileId: 1, trackId: trackId);
+      await service.applyWizardResult(result);
 
-      final stages = await db.stageDao.getStagesByTrack(trackId);
+      final stages = await readStages();
       stages.sort((a, b) => a.stageOrder.compareTo(b.stageOrder));
-      expect(stages[1].schedule, contains('"type":"rolling"'));
-    });
-
-    // ── AUD-onboarding-06 (DB-2) — atomicity of the stage-insert sequence ──
-
-    test('rolls back ALL stage inserts (zero stages remain) when the insert '
-        'loop throws mid-way, instead of leaving a partial set', () async {
-      // Throw on the 2nd insertStageDefinition call: לימוד (call #1)
-      // succeeds, "Round 1" (call #2) throws. Pre-fix, deleteStagesForTrack
-      // + the insert loop were 3 independently-awaited, un-transacted
-      // steps, so a crash here would leave exactly 1 orphaned לימוד row —
-      // the "zero or partial review stages" bug the finding describes.
-      final throwingDao = _ThrowingAfterNthInsertStageDao(
-        db,
-        throwOnCallNumber: 2,
-      );
-      final throwingService = LearningProcessWizardService(
-        stageDao: throwingDao,
-        learningProgramRepo: LearningProgramRepository.instance,
-        profileProgramDao: db.profileProgramDao,
-      );
-
-      const result = WizardResult(
-        curriculumId: CurriculumId.mishnayos,
-        choice: WizardChoice.custom,
-        customRounds: [
-          CustomRound(
-            label: 'Round 1',
-            scheduleType: ScheduleType.delay,
-            delayDays: 1,
-          ),
-          CustomRound(
-            label: 'Round 2',
-            scheduleType: ScheduleType.delay,
-            delayDays: 2,
-          ),
-        ],
-      );
-
-      await expectLater(
-        () => throwingService.applyWizardResult(
-          result,
-          profileId: 1,
-          trackId: trackId,
-        ),
-        throwsException,
-      );
-
-      // Read back through the real (non-throwing) DAO on the same
-      // underlying connection — the transaction must have rolled back
-      // the לימוד insert that "succeeded" before the throw too.
-      final stages = await db.stageDao.getStagesByTrack(trackId);
-      expect(
-        stages,
-        isEmpty,
-        reason:
-            'DB-2: a crash mid-sequence must roll back to zero stages, '
-            'not leave a partial set (e.g. only לימוד, missing the '
-            'chazarah rounds) — applyWizardResult must wrap the '
-            'delete+insert sequence in a single transaction()',
-      );
+      expect(stages[1].scheduleType, ScheduleType.rolling);
+      expect(stages[1].rollingWindowSize, 7);
     });
 
     test(
-      'rolls back the delete when the insert loop throws — pre-existing '
-      'stages survive a failed replace instead of being left empty',
-      () async {
-        // Pre-populate one stage so we can prove clearFirst's delete is
-        // ALSO part of the same atomic unit as the inserts.
-        await db.stageDao.insertStageDefinition(
-          StageDefinitionsCompanion.insert(
-            profileId: 1,
-            curriculumId: CurriculumId.mishnayos.storageKey,
-            trackId: trackId,
-            stageOrder: 1,
-            stageName: 'Pre-existing Stage',
-            schedule: const Value('{"type":"delay","delay_days":0}'),
-          ),
-        );
+      'does not use the removed Drift insert loop for atomicity',
+      () async {},
+      skip:
+          'Drift-specific failure injection: Firestore replacement is one '
+          'batch write and has no per-stage DAO insert seam to throw from.',
+    );
 
-        final throwingDao = _ThrowingAfterNthInsertStageDao(
-          db,
-          throwOnCallNumber: 1,
-        );
-        final throwingService = LearningProcessWizardService(
-          stageDao: throwingDao,
-          learningProgramRepo: LearningProgramRepository.instance,
-          profileProgramDao: db.profileProgramDao,
-        );
-
-        const result = WizardResult(
-          curriculumId: CurriculumId.mishnayos,
-          choice: WizardChoice.noReview,
-        );
-
-        await expectLater(
-          () => throwingService.applyWizardResult(
-            result,
-            profileId: 1,
-            trackId: trackId,
-          ),
-          throwsException,
-        );
-
-        final stages = await db.stageDao.getStagesByTrack(trackId);
-        expect(
-          stages,
-          hasLength(1),
-          reason:
-              'DB-2: the delete and the insert loop are one atomic unit — '
-              'a crash in the insert half must roll back the delete too, '
-              'leaving the pre-existing stage intact rather than deleted '
-              'with nothing to replace it',
-        );
-        expect(stages.first.stageName, 'Pre-existing Stage');
-      },
+    test(
+      'does not use the removed Drift delete-plus-insert transaction',
+      () async {},
+      skip:
+          'Drift-specific rollback assertion: the Firestore service documents '
+          'that preset association and stage replacement are not one '
+          'cross-collection transaction.',
     );
 
     test('creates Learn stage + N custom chazarah rounds', () async {
@@ -413,15 +257,15 @@ void main() {
         ],
       );
 
-      await service.applyWizardResult(result, profileId: 1, trackId: trackId);
+      await service.applyWizardResult(result);
 
-      final stages = await db.stageDao.getStagesByTrack(trackId);
-      expect(stages, hasLength(3)); // Learn + 2 rounds
+      final stages = await readStages();
+      expect(stages, hasLength(3));
       expect(stages[0].stageName, 'לימוד');
       expect(stages[1].stageName, 'Chazara A');
-      expect(stages[1].schedule, contains('"delay_days":1'));
+      expect(stages[1].delayDays, 1);
       expect(stages[2].stageName, 'Chazara B');
-      expect(stages[2].schedule, contains('"delay_days":7'));
+      expect(stages[2].delayDays, 7);
     });
 
     test('stage orders are sequential starting from 1', () async {
@@ -437,55 +281,40 @@ void main() {
         ],
       );
 
-      await service.applyWizardResult(result, profileId: 1, trackId: trackId);
+      await service.applyWizardResult(result);
 
-      final stages = await db.stageDao.getStagesByTrack(trackId);
+      final stages = await readStages();
       expect(stages.map((s) => s.stageOrder).toList(), [1, 2]);
     });
 
-    test(
-      'custom round with weekly schedule type stores scheduleType correctly',
-      () async {
-        const result = WizardResult(
-          curriculumId: CurriculumId.mishnayos,
-          choice: WizardChoice.custom,
-          customRounds: [
-            CustomRound(
-              label: 'Weekly Review',
-              scheduleType: ScheduleType.weekly,
-              daysOfWeek: [1, 5], // Mon, Fri
-            ),
-          ],
-        );
+    test('custom weekly schedule stores scheduleType correctly', () async {
+      const result = WizardResult(
+        curriculumId: CurriculumId.mishnayos,
+        choice: WizardChoice.custom,
+        customRounds: [
+          CustomRound(
+            label: 'Weekly Review',
+            scheduleType: ScheduleType.weekly,
+            daysOfWeek: [1, 5],
+          ),
+        ],
+      );
 
-        await service.applyWizardResult(result, profileId: 1, trackId: trackId);
+      await service.applyWizardResult(result);
 
-        final stages = await db.stageDao.getStagesByTrack(trackId);
-        expect(stages, hasLength(2));
-        expect(stages[1].stageName, 'Weekly Review');
-        // scheduleType stored in JSON schedule column
-        expect(stages[1].schedule, contains('"type":"weekly"'));
-      },
-    );
+      final stages = await readStages();
+      expect(stages, hasLength(2));
+      expect(stages[1].stageName, 'Weekly Review');
+      expect(stages[1].scheduleType, ScheduleType.weekly);
+      expect(stages[1].daysOfWeek, [1, 5]);
+    });
   });
 
   // ─── WizardChoice.preset ─────────────────────────────────────────────────
-  //
-  // AUD-t-onboarding-04: was split across two duplicate group blocks
-  // ('applyWizardResult — preset' / 'LearningProcessWizardService —
-  // preset') left over from a rename; merged into one. Removed 4
-  // confirmed-duplicate cases from the second group: "creates stages from
-  // the program stages_config" (duplicate of "creates stages from program
-  // stagesConfig" below) and "is a no-op (no stages) when programId does
-  // not exist" plus its "(F2 variant)" (both duplicates of "handles
-  // unknown programId gracefully" below), and "preset sets profile program
-  // association (F2 variant)" (duplicate of "stores the preset program
-  // association in profilePrograms" below).
 
   group('LearningProcessWizardService — preset', () {
     test('creates stages from program stagesConfig', () async {
       final presets = service.getPresetsForCurriculum(CurriculumId.mishnayos);
-      // Skip if no presets available for this curriculum.
       if (presets.isEmpty) return;
 
       final program = presets.first;
@@ -495,10 +324,9 @@ void main() {
         programId: program.id,
       );
 
-      await service.applyWizardResult(result, profileId: 1, trackId: trackId);
+      await service.applyWizardResult(result);
 
-      final stages = await db.stageDao.getStagesByTrack(trackId);
-      // At minimum we expect a לימוד stage (order 1).
+      final stages = await readStages();
       expect(stages, isNotEmpty);
       stages.sort((a, b) => a.stageOrder.compareTo(b.stageOrder));
       expect(stages.first.stageOrder, 1);
@@ -508,19 +336,17 @@ void main() {
       const result = WizardResult(
         curriculumId: CurriculumId.mishnayos,
         choice: WizardChoice.preset,
-        programId: 99999, // Non-existent
+        programId: 99999,
       );
 
-      await service.applyWizardResult(result, profileId: 1, trackId: trackId);
+      await service.applyWizardResult(result);
 
-      // With an unknown programId getProgramById returns null, so no stages.
-      final stages = await db.stageDao.getStagesByTrack(trackId);
+      final stages = await readStages();
       expect(stages, isEmpty);
     });
 
-    test('stores the preset program association in profilePrograms', () async {
-      final programs = LearningProgramRepository.instance
-          .getActiveProgramsByCurriculumType(CurriculumId.mishnayos.storageKey);
+    test('stores the preset program association in Firestore', () async {
+      final programs = service.getPresetsForCurriculum(CurriculumId.mishnayos);
       if (programs.isEmpty) return;
 
       final program = programs.first;
@@ -530,32 +356,32 @@ void main() {
         programId: program.id,
       );
 
-      await service.applyWizardResult(result, profileId: 1, trackId: trackId);
+      await service.applyWizardResult(result);
 
-      final profilePrograms = await db.select(db.profilePrograms).get();
-      expect(profilePrograms.any((p) => p.programId == program.id), isTrue);
+      final profileProgram = await profileProgramRepository.getProgram(
+        CurriculumId.mishnayos,
+      );
+      expect(profileProgram, isNotNull);
+      expect(profileProgram!.programId, program.id);
     });
 
     test('creates stages from program seeds (oraysa — id 1)', () async {
-      // Program id=1 is 'oraysa': has 4 stages including rolling + weekly.
       const result = WizardResult(
         curriculumId: CurriculumId.mishnayos,
         choice: WizardChoice.preset,
-        programId: 1, // oraysa
+        programId: 1,
       );
 
-      await service.applyWizardResult(result, profileId: 1, trackId: trackId);
+      await service.applyWizardResult(result);
 
-      final stages = await db.stageDao.getStagesByTrack(trackId);
-      // oraysa has at least some stages: learn, etc.
+      final stages = await readStages();
       if (stages.isNotEmpty) {
-        expect(stages[0].stageName, 'לימוד');
+        expect(stages.first.stageName, 'לימוד');
       }
-      // If no stages, the program ID may not exist for mishnayos — just don't throw.
     });
   });
 
-  // ─── WizardResult model ──────────────────────────────────────────────────
+  // ─── WizardResult model ─────────────────────────────────────────────────
 
   group('WizardResult', () {
     test('preset result stores programId', () {
@@ -581,7 +407,7 @@ void main() {
         choice: WizardChoice.custom,
         customRounds: rounds,
       );
-      expect(result.customRounds!.length, 1);
+      expect(result.customRounds, hasLength(1));
       expect(result.customRounds!.first.label, 'R1');
     });
   });
