@@ -3,183 +3,129 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/scheduler/data/repositories/daily_plan_repository.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 
-import '../../../../helpers/test_database.dart';
-
 void main() {
-  group('DailyPlanRepository', () {
-    late DailyPlanRepository repo;
-    late int buildCount;
+  late DailyPlanRepository repo;
+  var buildCount = 0;
 
-    DailyTask mkTask(String ref, {int stage = 1}) => DailyTask(
-      curriculumId: CurriculumId.mishnayos,
-      contentItemSefariaRef: ref,
-      stageOrder: stage,
-      stageDefinitionId: 100 + stage,
-      priority: DailyTaskPriority.newLearning,
-      isOverdue: false,
-      reason: 'New learning',
-      stageName: 'Learning',
-      trackId: 1,
-      trackLabel: 'Personal',
+  DailyTask task(
+    String ref, {
+    DailyTaskPriority priority = DailyTaskPriority.newLearning,
+    bool isOverdue = false,
+    int stageOrder = 1,
+    String stageName = 'Learning',
+  }) => DailyTask(
+    curriculumId: CurriculumId.mishnayos,
+    contentItemSefariaRef: ref,
+    stageOrder: stageOrder,
+    stageDefinitionId: 100 + stageOrder,
+    priority: priority,
+    isOverdue: isOverdue,
+    reason: stageName,
+    stageName: stageName,
+    trackLabel: 'Mishnayos',
+  );
+
+  setUp(() {
+    repo = DailyPlanRepository();
+    buildCount = 0;
+  });
+
+  test('snapshots once per local day and isolates ULID profiles', () async {
+    final now = DateTime.utc(2026, 4, 19, 10);
+    Future<List<DailyTask>> build() async {
+      buildCount++;
+      return [task('item-$buildCount')];
+    }
+
+    final first = await repo.getOrSnapshotPlan(
+      profileId: '01J00000000000000000000001',
+      now: now,
+      buildPlan: build,
+    );
+    final sameDay = await repo.getOrSnapshotPlan(
+      profileId: '01J00000000000000000000001',
+      now: now.add(const Duration(hours: 5)),
+      buildPlan: build,
+    );
+    final otherProfile = await repo.getOrSnapshotPlan(
+      profileId: '01J00000000000000000000002',
+      now: now,
+      buildPlan: build,
     );
 
-    setUp(() {
-      final db = createTestDatabase();
-      repo = DailyPlanRepository(db);
-      buildCount = 0;
-    });
+    expect(first.isNew, isTrue);
+    expect(sameDay.isNew, isFalse);
+    expect(sameDay.tasks.single.contentItemSefariaRef, 'item-1');
+    expect(otherProfile.tasks.single.contentItemSefariaRef, 'item-2');
+    expect(buildCount, 2);
+  });
 
-    test(
-      'runs buildPlan once per local day — second read serves snapshot',
-      () async {
-        final now = DateTime.utc(2026, 4, 19, 10, 0);
-
-        Future<List<DailyTask>> build() async {
-          buildCount++;
-          return [
-            mkTask('Mishnah Berachot 1:1'),
-            mkTask('Mishnah Berachot 1:2'),
-          ];
-        }
-
-        final first = await repo.getOrSnapshotPlan(
-          profileId: 1,
-          now: now,
-          buildPlan: build,
-        );
-        expect(buildCount, 1);
-        expect(first.isNew, isTrue);
-        expect(first.tasks.map((t) => t.contentItemSefariaRef).toList(), [
-          'Mishnah Berachot 1:1',
-          'Mishnah Berachot 1:2',
-        ]);
-
-        // Second read on the same local day must not call build again.
-        final second = await repo.getOrSnapshotPlan(
-          profileId: 1,
-          now: now.add(const Duration(hours: 5)),
-          buildPlan: build,
-        );
-        expect(buildCount, 1);
-        expect(second.isNew, isFalse);
-        expect(second.tasks.map((t) => t.contentItemSefariaRef).toList(), [
-          'Mishnah Berachot 1:1',
-          'Mishnah Berachot 1:2',
-        ]);
-      },
+  test('next local day gets a fresh snapshot', () async {
+    final today = DateTime.utc(2026, 4, 19, 10);
+    await repo.getOrSnapshotPlan(
+      profileId: '01J00000000000000000000001',
+      now: today,
+      buildPlan: () async => [task('today')],
     );
 
-    test('completions do not change the snapshot', () async {
-      final now = DateTime.utc(2026, 4, 19, 10, 0);
+    final tomorrow = await repo.getOrSnapshotPlan(
+      profileId: '01J00000000000000000000001',
+      now: DateTime.utc(2026, 4, 20, 10),
+      buildPlan: () async => [task('tomorrow')],
+    );
 
-      var plan = [mkTask('Item 1'), mkTask('Item 2'), mkTask('Item 3')];
-      Future<List<DailyTask>> build() async {
-        buildCount++;
-        return plan;
-      }
+    expect(tomorrow.isNew, isTrue);
+    expect(tomorrow.tasks.single.contentItemSefariaRef, 'tomorrow');
+  });
 
-      final first = await repo.getOrSnapshotPlan(
-        profileId: 1,
-        now: now,
-        buildPlan: build,
-      );
-      expect(first.tasks.length, 3);
+  test('rebuildPlan replaces the current-day snapshot', () async {
+    final now = DateTime.utc(2026, 4, 19, 10);
+    await repo.getOrSnapshotPlan(
+      profileId: '01J00000000000000000000001',
+      now: now,
+      buildPlan: () async => [task('old')],
+    );
 
-      // Simulate the scheduler changing its mind (e.g., a completion would
-      // shrink the list). We still expect the snapshot to be served.
-      plan = [mkTask('Item 99')];
+    final rebuilt = await repo.rebuildPlan(
+      profileId: '01J00000000000000000000001',
+      now: now,
+      buildPlan: () async => [task('new')],
+    );
 
-      final second = await repo.getOrSnapshotPlan(
-        profileId: 1,
-        now: now,
-        buildPlan: build,
-      );
-      expect(
-        buildCount,
-        1,
-        reason: 'buildPlan should not have been called again',
-      );
-      expect(second.tasks.map((t) => t.contentItemSefariaRef).toList(), [
-        'Item 1',
-        'Item 2',
-        'Item 3',
-      ]);
-    });
+    expect(rebuilt.single.contentItemSefariaRef, 'new');
+    final cached = await repo.getOrSnapshotPlan(
+      profileId: '01J00000000000000000000001',
+      now: now,
+      buildPlan: () async => [task('unexpected')],
+    );
+    expect(cached.isNew, isFalse);
+    expect(cached.tasks.single.contentItemSefariaRef, 'new');
+  });
 
-    test('next local day gets a fresh snapshot', () async {
-      final today = DateTime.utc(2026, 4, 19, 10, 0);
-      final tomorrow = DateTime.utc(2026, 4, 20, 10, 0);
+  test('preserves priority ordering from the built plan', () async {
+    final now = DateTime.utc(2026, 4, 19, 10);
+    final plan = [
+      task(
+        'overdue-review',
+        priority: DailyTaskPriority.overdueChazara,
+        isOverdue: true,
+        stageOrder: 2,
+        stageName: 'Review',
+      ),
+      task('new-learning'),
+    ];
 
-      var plan = [mkTask('Item A')];
-      Future<List<DailyTask>> build() async {
-        buildCount++;
-        return plan;
-      }
+    final result = await repo.getOrSnapshotPlan(
+      profileId: '01J00000000000000000000001',
+      now: now,
+      buildPlan: () async => plan,
+    );
 
-      await repo.getOrSnapshotPlan(profileId: 1, now: today, buildPlan: build);
-      expect(buildCount, 1);
-
-      plan = [mkTask('Item B')];
-
-      final next = await repo.getOrSnapshotPlan(
-        profileId: 1,
-        now: tomorrow,
-        buildPlan: build,
-      );
-      expect(buildCount, 2, reason: 'new day must trigger a fresh build');
-      expect(next.tasks.single.contentItemSefariaRef, 'Item B');
-    });
-
-    test('different profiles maintain independent snapshots', () async {
-      final now = DateTime.utc(2026, 4, 19, 10, 0);
-
-      Future<List<DailyTask>> buildFor(String ref) async {
-        buildCount++;
-        return [mkTask(ref)];
-      }
-
-      final p1 = await repo.getOrSnapshotPlan(
-        profileId: 1,
-        now: now,
-        buildPlan: () => buildFor('P1 item'),
-      );
-      final p2 = await repo.getOrSnapshotPlan(
-        profileId: 2,
-        now: now,
-        buildPlan: () => buildFor('P2 item'),
-      );
-      expect(buildCount, 2);
-      expect(p1.tasks.single.contentItemSefariaRef, 'P1 item');
-      expect(p2.tasks.single.contentItemSefariaRef, 'P2 item');
-    });
-
-    test('preserves priority ordering from the built plan', () async {
-      final now = DateTime.utc(2026, 4, 19, 10, 0);
-
-      final plan = <DailyTask>[
-        const DailyTask(
-          curriculumId: CurriculumId.mishnayos,
-          contentItemSefariaRef: 'overdue item',
-          stageOrder: 2,
-          stageDefinitionId: 102,
-          priority: DailyTaskPriority.overdueChazara,
-          isOverdue: true,
-          reason: 'Chazara overdue by 1 day(s)',
-          stageName: 'Chazara 1',
-          trackId: 1,
-          trackLabel: 'Personal',
-        ),
-        mkTask('new item'),
-      ];
-
-      final result = await repo.getOrSnapshotPlan(
-        profileId: 1,
-        now: now,
-        buildPlan: () async => plan,
-      );
-      expect(result.tasks.first.priority, DailyTaskPriority.overdueChazara);
-      expect(result.tasks.first.isOverdue, true);
-      expect(result.tasks.last.priority, DailyTaskPriority.newLearning);
-    });
+    expect(result.tasks, hasLength(2));
+    expect(result.tasks.first.contentItemSefariaRef, 'overdue-review');
+    expect(result.tasks.first.priority, DailyTaskPriority.overdueChazara);
+    expect(result.tasks.first.isOverdue, isTrue);
+    expect(result.tasks.last.contentItemSefariaRef, 'new-learning');
+    expect(result.tasks.last.priority, DailyTaskPriority.newLearning);
   });
 }

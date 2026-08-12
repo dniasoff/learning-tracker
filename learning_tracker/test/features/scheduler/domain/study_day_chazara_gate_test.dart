@@ -1,218 +1,141 @@
-/// Regression test: STUDYDAY-CHAZARA-GATE-12 — study-day config screen must
-/// show a chazara-neutral message ("All days are study days for this track.")
-/// for learn-only tracks (stageOrder == 1, i.e. exactly 1 stage), and must
-/// show the full review-day toggle UI for chazara tracks (stageOrder > 1).
-///
-/// Also documents the STUDYDAY-DEADROUTE defect fix: before the fix in
-/// track_detail_screen.dart, `StudyDayConfigRoute` had no push call anywhere
-/// in the widget layer — the study-day configuration screen was unreachable.
-/// The fix adds a "Study Days" tile to `_buildActionsCard` in
-/// `track_detail_screen.dart` for non-program self-paced tracks.
-///
-/// AUD-t-scheduler-02: this file drives the real gate provider —
-/// `curriculumTrackHasChazaraProvider` in `study_day_config_screen.dart` —
-/// through a `ProviderContainer`, rather than re-deriving `count > 1` inline.
-/// The provider was made package-visible (dropped its leading underscore)
-/// specifically so this file can import and exercise it directly. If a
-/// future edit changes the private threshold (e.g. `count > 1` to
-/// `count >= 1`) or reintroduces `track?.id ?? 0`, these tests fail.
+/// Firestore-native coverage for the study-day chazara gate.
 @Tags(['scheduler', 'study_day', 'studyday_chazara_gate_12'])
 library;
 
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/data/firestore/repository_providers.dart';
+import 'package:learning_tracker/data/repositories/firestore_stage_definition_repository.dart';
 import 'package:learning_tracker/features/scheduler/presentation/screens/study_day_config_screen.dart';
+import 'package:learning_tracker/features/tracks/stages/domain/models/stage_definition.dart';
 
-import '../../../helpers/drift_memory.dart';
+import '../../../helpers/firestore_fake.dart';
+import '../../../helpers/firestore_fixtures.dart';
 
-/// Seeds a single stage_definitions row for [trackId] with the given
-/// [stageOrder].
-Future<void> _seedStage(
-  UserDatabase db, {
-  required int trackId,
-  required int stageOrder,
-  String stageName = 'לימוד',
+const _uid = 'study-day-gate-uid';
+const _profileId = '01J9V8J5Q2K7M3N6P4R8T1WXYZ';
+
+Future<bool> _gate({
+  required FakeFirebaseFirestore firestore,
+  required CurriculumId curriculumId,
 }) async {
-  await db
-      .into(db.stageDefinitions)
-      .insert(
-        StageDefinitionsCompanion.insert(
-          profileId: 1,
-          curriculumId: 'mishnayos',
-          trackId: trackId,
-          stageName: stageName,
-          stageOrder: stageOrder,
-        ),
-      );
+  final repository = FirestoreStageDefinitionRepository(
+    firestore: firestore,
+    uid: _uid,
+    profileId: _profileId,
+  );
+  final container = ProviderContainer(
+    overrides: [
+      firestoreStageDefinitionRepositoryProvider.overrideWith(
+        (ref) async => repository,
+      ),
+    ],
+  );
+  addTearDown(container.dispose);
+  return container.read(curriculumTrackHasChazaraProvider(curriculumId).future);
 }
 
-/// Overrides [ActiveProfileId] to always resolve to profile 1, matching
-/// [seedProfile]'s seeded profile.
-class _ProfileIdOverride extends ActiveProfileId {
-  @override
-  int build() => 1;
-}
-
-/// Builds a [ProviderContainer] wired to [db] with the active profile
-/// pinned to 1, so `curriculumTrackHasChazaraProvider` reads real DB state.
-ProviderContainer _buildContainer(UserDatabase db) => ProviderContainer.test(
-  overrides: [
-    userDatabaseProvider.overrideWithValue(db),
-    activeProfileIdProvider.overrideWith(_ProfileIdOverride.new),
-  ],
-);
+List<StageDefinition> _stages(CurriculumId curriculumId, int count) => [
+  for (var i = 1; i <= count; i++)
+    StageDefinition(
+      id: kFirestoreUnmappedStageId,
+      curriculumId: curriculumId,
+      stageOrder: i,
+      stageName: 'Stage $i',
+      delayDays: i == 1 ? 0 : 1,
+      isDefault: false,
+    ),
+];
 
 void main() {
-  late UserDatabase db;
+  test('one stage disables the chazara UI', () async {
+    final firestore = createFakeFirestore(authenticatedUid: _uid);
+    await seedStageDefinitions(
+      firestore,
+      uid: _uid,
+      profileId: _profileId,
+      curriculumId: CurriculumId.mishnayos,
+      stages: _stages(CurriculumId.mishnayos, 1),
+    );
 
-  setUp(() async {
-    db = inMemoryDb();
-    await seedProfile(db);
+    expect(
+      await _gate(firestore: firestore, curriculumId: CurriculumId.mishnayos),
+      isFalse,
+    );
   });
 
-  tearDown(() async {
-    await db.close();
+  test('two stages enable the chazara UI', () async {
+    final firestore = createFakeFirestore(authenticatedUid: _uid);
+    await seedStageDefinitions(
+      firestore,
+      uid: _uid,
+      profileId: _profileId,
+      curriculumId: CurriculumId.mishnayos,
+      stages: _stages(CurriculumId.mishnayos, 2),
+    );
+
+    expect(
+      await _gate(firestore: firestore, curriculumId: CurriculumId.mishnayos),
+      isTrue,
+    );
   });
 
-  // ── STUDYDAY-CHAZARA-GATE-12 ─────────────────────────────────────────────
-
-  group('STUDYDAY-CHAZARA-GATE-12: chazara gate via the real gate provider', () {
-    test(
-      'learn-only track (1 stage): curriculumTrackHasChazaraProvider resolves false',
-      () async {
-        final trackId = await seedTrack(db, profileId: 1);
-        await _seedStage(db, trackId: trackId, stageOrder: 1);
-
-        final container = _buildContainer(db);
-        final hasChazara = await container.read(
-          curriculumTrackHasChazaraProvider(CurriculumId.mishnayos).future,
-        );
-
-        expect(
-          hasChazara,
-          isFalse,
-          reason:
-              'STUDYDAY-CHAZARA-GATE-12: a learn-only track has exactly 1 '
-              'stage; the real gate provider must resolve false so the '
-              'screen shows the neutral fallback without any chazara/review '
-              'terminology.',
-        );
-      },
+  test('an existing track with zero stages disables the chazara UI', () async {
+    final firestore = createFakeFirestore(authenticatedUid: _uid);
+    await seedTrack(
+      firestore,
+      uid: _uid,
+      profileId: _profileId,
+      curriculumId: CurriculumId.mishnayos,
     );
 
-    test(
-      'chazara track (2 stages): curriculumTrackHasChazaraProvider resolves true',
-      () async {
-        final trackId = await seedTrack(db, profileId: 1);
-        await _seedStage(db, trackId: trackId, stageOrder: 1);
-        await _seedStage(
-          db,
-          trackId: trackId,
-          stageOrder: 2,
-          stageName: 'חזרה',
-        );
+    expect(
+      await _gate(firestore: firestore, curriculumId: CurriculumId.mishnayos),
+      isFalse,
+    );
+  });
 
-        final container = _buildContainer(db);
-        final hasChazara = await container.read(
-          curriculumTrackHasChazaraProvider(CurriculumId.mishnayos).future,
-        );
+  test('an absent curriculum has no chazara stages', () async {
+    final firestore = createFakeFirestore(authenticatedUid: _uid);
+    expect(
+      await _gate(firestore: firestore, curriculumId: CurriculumId.bavli),
+      isFalse,
+    );
+  });
 
-        expect(
-          hasChazara,
-          isTrue,
-          reason:
-              'STUDYDAY-CHAZARA-GATE-12: a chazara track has 2+ stages; the '
-              'real gate provider must resolve true so the full review-day '
-              'toggle UI is shown.',
-        );
-      },
+  test('stages from another curriculum do not contaminate the gate', () async {
+    final firestore = createFakeFirestore(authenticatedUid: _uid);
+    await seedTrack(
+      firestore,
+      uid: _uid,
+      profileId: _profileId,
+      curriculumId: CurriculumId.mishnayos,
+    );
+    await seedTrack(
+      firestore,
+      uid: _uid,
+      profileId: _profileId,
+      curriculumId: CurriculumId.bavli,
+    );
+    await seedStageDefinitions(
+      firestore,
+      uid: _uid,
+      profileId: _profileId,
+      curriculumId: CurriculumId.bavli,
+      stages: _stages(CurriculumId.bavli, 3),
     );
 
-    test(
-      'no stages: curriculumTrackHasChazaraProvider resolves false (no crash)',
-      () async {
-        await seedTrack(db, profileId: 1);
-        // No stages seeded.
-
-        final container = _buildContainer(db);
-        final hasChazara = await container.read(
-          curriculumTrackHasChazaraProvider(CurriculumId.mishnayos).future,
-        );
-
-        expect(hasChazara, isFalse);
-      },
+    final mishnayos = await _gate(
+      firestore: firestore,
+      curriculumId: CurriculumId.mishnayos,
     );
-
-    test(
-      'no track for the curriculum: curriculumTrackHasChazaraProvider resolves '
-      'false (no crash) — mirrors the trackId-null branch inside the gate',
-      () async {
-        // No track seeded at all for 'bavli'.
-        final container = _buildContainer(db);
-        final hasChazara = await container.read(
-          curriculumTrackHasChazaraProvider(CurriculumId.bavli).future,
-        );
-
-        expect(hasChazara, isFalse);
-      },
+    final bavli = await _gate(
+      firestore: firestore,
+      curriculumId: CurriculumId.bavli,
     );
-
-    test(
-      'stages for a different curriculum do not count toward this one',
-      () async {
-        final trackId1 = await seedTrack(
-          db,
-          profileId: 1,
-          curriculumId: 'mishnayos',
-        );
-        await _seedStage(db, trackId: trackId1, stageOrder: 1);
-
-        final trackId2 = await seedTrack(
-          db,
-          profileId: 1,
-          curriculumId: 'bavli',
-        );
-        // Seed 3 stages for the bavli track (chazara enabled there).
-        for (var i = 1; i <= 3; i++) {
-          await db
-              .into(db.stageDefinitions)
-              .insert(
-                StageDefinitionsCompanion.insert(
-                  profileId: 1,
-                  curriculumId: 'bavli',
-                  trackId: trackId2,
-                  stageName: 'stage$i',
-                  stageOrder: i,
-                ),
-              );
-        }
-
-        final container = _buildContainer(db);
-
-        final mishnayosGate = await container.read(
-          curriculumTrackHasChazaraProvider(CurriculumId.mishnayos).future,
-        );
-        final bavliGate = await container.read(
-          curriculumTrackHasChazaraProvider(CurriculumId.bavli).future,
-        );
-
-        expect(
-          mishnayosGate,
-          isFalse,
-          reason:
-              "mishnayos's chazara gate must not be contaminated by "
-              "bavli's stages",
-        );
-        expect(
-          bavliGate,
-          isTrue,
-          reason: 'bavli has 3 stages, so its own gate must be true',
-        );
-      },
-    );
+    expect(mishnayos, isFalse);
+    expect(bavli, isTrue);
   });
 }

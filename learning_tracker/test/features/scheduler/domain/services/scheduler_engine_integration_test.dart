@@ -1,182 +1,107 @@
-import 'package:drift/drift.dart';
+/// Scheduler engine integration using its current repository interfaces.
+library;
+
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/features/scheduler/data/repositories/scheduler_completion_repository_impl.dart';
-import 'package:learning_tracker/features/scheduler/data/repositories/scheduler_learning_order_repository_impl.dart';
-import 'package:learning_tracker/features/scheduler/data/repositories/scheduler_stage_repository_impl.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/schedule_config.dart';
+import 'package:learning_tracker/features/scheduler/domain/repositories/scheduler_completion_repository.dart';
 import 'package:learning_tracker/features/scheduler/domain/repositories/scheduler_content_repository.dart';
+import 'package:learning_tracker/features/scheduler/domain/repositories/scheduler_learning_order_repository.dart';
+import 'package:learning_tracker/features/scheduler/domain/repositories/scheduler_stage_repository.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/scheduler_engine.dart';
 
-import '../../../../helpers/drift_memory.dart';
-import '../../../../helpers/test_database.dart';
+class _Content implements SchedulerContentRepository {
+  @override
+  Future<List<SchedulerContentItem>> getLeafItems(CurriculumId id) async => [
+    for (var i = 0; i < 4; i++)
+      SchedulerContentItem(sefariaRef: 'item-$i', sortOrder: i),
+  ];
+}
 
-/// Fake content repository that returns in-memory items (no asset loading).
-class InMemoryContentRepo implements SchedulerContentRepository {
-  final List<SchedulerContentItem> _items;
-  InMemoryContentRepo(this._items);
+class _Stages implements SchedulerStageRepository {
+  @override
+  Future<List<SchedulerStage>> getStages(CurriculumId id) async => const [
+    SchedulerStage(id: -1, stageOrder: 1, stageName: 'Learn', delayDays: 0),
+    SchedulerStage(id: -1, stageOrder: 2, stageName: 'Review', delayDays: 1),
+  ];
+}
+
+class _Completions implements SchedulerCompletionRepository {
+  final List<SchedulerCompletion> values = [];
 
   @override
-  Future<List<SchedulerContentItem>> getLeafItems(CurriculumId id) async =>
-      _items;
+  Future<List<SchedulerCompletion>> getCompletions(CurriculumId id) async =>
+      values;
+}
+
+class _Order implements SchedulerLearningOrderRepository {
+  @override
+  Future<List<SchedulerOrderItem>> getOrder(CurriculumId id) async => const [];
 }
 
 void main() {
-  late UserDatabase db;
-  late int trackId;
+  test('generates new work, then review work after a completion', () async {
+    final completions = _Completions();
+    final engine = SchedulerEngine(
+      contentRepository: _Content(),
+      completionRepository: completions,
+      stageRepository: _Stages(),
+      learningOrderRepository: _Order(),
+    );
+    final dayOne = DateTime.utc(2026, 3, 15);
+    final config = () => ScheduleConfig(
+      curriculumId: CurriculumId.mishnayos,
+      trackLabel: 'Mishnayos',
+      goalDeadline: dayOne.add(const Duration(days: 5)),
+      currentDate: dayOne,
+      pacePerDay: 4,
+      trackStartedAt: dayOne,
+    );
 
-  setUp(() async {
-    db = createTestDatabase();
-    await seedProfile(db);
+    final initial = await engine.generateDailyTasks(config());
+    expect(initial, hasLength(4));
+    expect(
+      initial.every((task) => task.curriculumId == CurriculumId.mishnayos),
+      isTrue,
+    );
+    expect(
+      initial.every((task) => task.priority == DailyTaskPriority.newLearning),
+      isTrue,
+    );
+
+    completions.values.add(
+      SchedulerCompletion(
+        sefariaRef: 'item-0',
+        stageOrder: 1,
+        trackType: 'personal',
+        completedAt: dayOne,
+      ),
+    );
+    final next = await engine.generateDailyTasks(
+      config().copyWith(currentDate: dayOne.add(const Duration(days: 1))),
+    );
+
+    expect(next, hasLength(4));
+    expect(
+      next.where((task) => task.priority == DailyTaskPriority.scheduledChazara),
+      hasLength(1),
+    );
+    expect(
+      next
+          .singleWhere(
+            (task) => task.priority == DailyTaskPriority.scheduledChazara,
+          )
+          .contentItemSefariaRef,
+      'item-0',
+    );
+    expect(
+      next.where((task) => task.priority == DailyTaskPriority.newLearning),
+      hasLength(3),
+    );
+    expect(
+      next.map((task) => task.contentItemSefariaRef),
+      containsAll(['item-0', 'item-1', 'item-2', 'item-3']),
+    );
   });
-
-  tearDown(() async {
-    await db.close();
-  });
-
-  test(
-    'full round-trip: import content, set stages, set goal, generate tasks, mark completions, regenerate',
-    () async {
-      const curriculum = CurriculumId.mishnayos;
-      final now = DateTime.utc(2026, 3, 15);
-
-      // Seed an unrelated track first so the row under test does NOT land
-      // on id 1 by coincidence of insert order (AUD-t-scheduler-09) — this
-      // makes the `trackId` assertions below load-bearing: a hardcoded
-      // `trackId: 1` regression would now diverge from the captured id and
-      // fail.
-      await seedTrack(
-        db,
-        profileId: 99,
-        curriculumId: CurriculumId.bavli.storageKey,
-        activatedAt: now,
-      );
-
-      final trackRow = await db
-          .into(db.curriculumTracks)
-          .insertReturning(
-            CurriculumTracksCompanion.insert(
-              profileId: 0,
-              curriculumId: curriculum.storageKey,
-              stateChangedAt: now,
-              activatedAt: now,
-            ),
-          );
-      trackId = trackRow.id;
-
-      // 1. Set up stages
-      await db.stageDao.insertStageDefinition(
-        StageDefinitionsCompanion.insert(
-          profileId: 1,
-          curriculumId: curriculum.storageKey,
-          trackId: trackId,
-          stageOrder: 1,
-          stageName: 'Learn',
-          schedule: const Value('{"type":"delay","delay_days":0}'),
-        ),
-      );
-      await db.stageDao.insertStageDefinition(
-        StageDefinitionsCompanion.insert(
-          profileId: 1,
-          curriculumId: curriculum.storageKey,
-          trackId: trackId,
-          stageOrder: 2,
-          stageName: 'Chazara 1',
-          schedule: const Value('{"type":"delay","delay_days":1}'),
-        ),
-      );
-
-      // 2. Content (in-memory, simulating imported content)
-      final contentItems = List.generate(
-        10,
-        (i) => SchedulerContentItem(
-          sefariaRef: 'Mishnah_Berakhot_1.$i',
-          sortOrder: i,
-        ),
-      );
-
-      // 3. Build engine with real DB repositories + in-memory content
-      final engine = SchedulerEngine(
-        contentRepository: InMemoryContentRepo(contentItems),
-        completionRepository: SchedulerCompletionRepositoryImpl(
-          completionDao: db.completionDao,
-          stageDao: db.stageDao,
-          profileId: 1,
-        ),
-        stageRepository: SchedulerStageRepositoryImpl(stageDao: db.stageDao),
-        learningOrderRepository: SchedulerLearningOrderRepositoryImpl(
-          learningOrderDao: db.learningOrderDao,
-        ),
-      );
-
-      // 4. Generate initial tasks (no completions yet)
-      var config = ScheduleConfig(
-        curriculumId: curriculum,
-        trackId: trackId,
-        trackLabel: 'Test Track',
-        goalDeadline: now.add(const Duration(days: 5)),
-        currentDate: now,
-      );
-
-      var tasks = await engine.generateDailyTasks(config);
-      // 10 items / 5 days = 2 new items per day
-      expect(
-        tasks.where((t) => t.priority == DailyTaskPriority.newLearning).length,
-        2,
-      );
-      for (final t in tasks) {
-        expect(t.trackId, trackId);
-      }
-
-      // 5. Mark completions for first 2 items (Learn stage)
-      final stages = await db.stageDao.getStageDefinitionsByCurriculum(
-        curriculum.storageKey,
-      );
-      final learnStageId = stages.firstWhere((s) => s.stageOrder == 1).id;
-
-      for (var i = 0; i < 2; i++) {
-        await seedCompletion(
-          db,
-          CompletionEventsCompanion.insert(
-            profileId: 1,
-            curriculumId: curriculum.storageKey,
-            trackId: Value(trackId),
-            sefariaRef: 'Mishnah_Berakhot_1.$i',
-            stageId: learnStageId,
-            trackType: 'personal',
-            eventTimestamp: now,
-            points: const Value(10),
-          ),
-        );
-      }
-
-      // 6. Regenerate next day — should reflect updated state
-      config = ScheduleConfig(
-        curriculumId: curriculum,
-        trackId: trackId,
-        trackLabel: 'Test Track',
-        goalDeadline: now.add(const Duration(days: 5)),
-        currentDate: now.add(const Duration(days: 1)),
-      );
-
-      tasks = await engine.generateDailyTasks(config);
-      for (final t in tasks) {
-        expect(t.trackId, trackId);
-      }
-
-      // Chazara 1 (delayDays=1) should now be due for the 2 completed items
-      final chazaraTasks = tasks.where(
-        (t) => t.priority == DailyTaskPriority.scheduledChazara,
-      );
-      expect(chazaraTasks.length, 2);
-
-      // Should still have new learning items (8 remaining / 4 days = 2)
-      final newTasks = tasks.where(
-        (t) => t.priority == DailyTaskPriority.newLearning,
-      );
-      expect(newTasks.length, 2);
-    },
-  );
 }

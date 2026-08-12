@@ -1,322 +1,222 @@
-import 'package:drift/drift.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/features/scheduler/data/repositories/scheduler_completion_repository_impl.dart';
-import 'package:learning_tracker/features/scheduler/data/repositories/scheduler_learning_order_repository_impl.dart';
-import 'package:learning_tracker/features/scheduler/data/repositories/scheduler_stage_repository_impl.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
+import 'package:learning_tracker/features/scheduler/domain/repositories/scheduler_completion_repository.dart';
 import 'package:learning_tracker/features/scheduler/domain/repositories/scheduler_content_repository.dart';
+import 'package:learning_tracker/features/scheduler/domain/repositories/scheduler_learning_order_repository.dart';
+import 'package:learning_tracker/features/scheduler/domain/repositories/scheduler_stage_repository.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/daily_task_generator.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/scheduler_engine.dart';
 import 'package:test/test.dart';
 
-import '../../../../helpers/drift_memory.dart';
-import '../../../../helpers/test_database.dart';
-
-class _InMemoryContentRepo implements SchedulerContentRepository {
-  final List<SchedulerContentItem> items;
-  _InMemoryContentRepo(this.items);
+class _Content implements SchedulerContentRepository {
   @override
-  Future<List<SchedulerContentItem>> getLeafItems(CurriculumId id) async =>
-      items;
+  Future<List<SchedulerContentItem>> getLeafItems(CurriculumId id) async => [
+    for (var i = 0; i < 4; i++)
+      SchedulerContentItem(sefariaRef: '${id.storageKey}-$i', sortOrder: i),
+  ];
+}
+
+class _Stages implements SchedulerStageRepository {
+  _Stages(this.reviewDelay);
+
+  final int reviewDelay;
+
+  @override
+  Future<List<SchedulerStage>> getStages(CurriculumId id) async =>
+      const [
+        SchedulerStage(id: -1, stageOrder: 1, stageName: 'Learn', delayDays: 0),
+        SchedulerStage(
+          id: -1,
+          stageOrder: 2,
+          stageName: 'Review',
+          delayDays: 1,
+        ),
+      ].map((stage) {
+        if (stage.stageOrder == 2) {
+          return SchedulerStage(
+            id: stage.id,
+            stageOrder: stage.stageOrder,
+            stageName: stage.stageName,
+            delayDays: reviewDelay,
+          );
+        }
+        return stage;
+      }).toList();
+}
+
+class _Completions implements SchedulerCompletionRepository {
+  final List<SchedulerCompletion> values = [];
+
+  @override
+  Future<List<SchedulerCompletion>> getCompletions(CurriculumId id) async =>
+      values;
+}
+
+class _Order implements SchedulerLearningOrderRepository {
+  @override
+  Future<List<SchedulerOrderItem>> getOrder(CurriculumId id) async => const [];
+}
+
+DailyTaskGenerator _generator(_Completions completions, {int reviewDelay = 1}) {
+  return DailyTaskGenerator(
+    engine: SchedulerEngine(
+      contentRepository: _Content(),
+      completionRepository: completions,
+      stageRepository: _Stages(reviewDelay),
+      learningOrderRepository: _Order(),
+    ),
+  );
 }
 
 void main() {
-  late UserDatabase db;
-  late DailyTaskGenerator generator;
-  late int trackId;
-  final now = DateTime.utc(2026, 3, 15);
   const curriculum = CurriculumId.mishnayos;
+  final date = DateTime.utc(2026, 4, 20);
 
-  final contentItems = List.generate(
-    10,
-    (i) =>
-        SchedulerContentItem(sefariaRef: 'Mishnah_Berakhot_1.$i', sortOrder: i),
+  test('empty curriculum input returns no tasks', () async {
+    final generator = _generator(_Completions());
+    expect(await generator.generateAll([], date), isEmpty);
+  });
+
+  test(
+    'generates tasks without a Drift database or integer track id',
+    () async {
+      final generator = _generator(_Completions());
+      final tasks = await generator.generate(
+        curriculum,
+        date,
+        trackLabel: 'Mishnayos',
+      );
+
+      expect(tasks, hasLength(4));
+      expect(tasks.every((task) => task.curriculumId == curriculum), isTrue);
+      expect(tasks.map((task) => task.contentItemSefariaRef), [
+        'mishnayos-0',
+        'mishnayos-1',
+        'mishnayos-2',
+        'mishnayos-3',
+      ]);
+    },
   );
 
-  setUp(() async {
-    db = createTestDatabase();
-    await seedProfile(db);
-    await seedProfileZero(db);
+  test('skipped refs are removed after generation', () async {
+    final generator = _generator(_Completions());
+    final all = await generator.generate(
+      curriculum,
+      date,
+      trackLabel: 'Mishnayos',
+    );
+    final skipped = all.first.contentItemSefariaRef;
 
-    // Seed an unrelated track first so the row under test does NOT land on
-    // id 1 by coincidence of insert order (AUD-t-scheduler-09) — this makes
-    // the `trackId` assertions below load-bearing: a hardcoded `trackId: 1`
-    // regression would now diverge from the captured id and fail.
-    await seedTrack(
-      db,
-      profileId: 99,
-      curriculumId: CurriculumId.bavli.storageKey,
-      activatedAt: now,
+    final filtered = await generator.generate(
+      curriculum,
+      date,
+      trackLabel: 'Mishnayos',
+      skippedRefs: {skipped},
     );
 
-    final trackRow = await db
-        .into(db.curriculumTracks)
-        .insertReturning(
-          CurriculumTracksCompanion.insert(
-            profileId: 0,
-            curriculumId: curriculum.storageKey,
-            stateChangedAt: now,
-            activatedAt: now,
+    expect(
+      filtered.any((task) => task.contentItemSefariaRef == skipped),
+      isFalse,
+    );
+  });
+
+  test('a non-study day suppresses new learning', () async {
+    final completions = _Completions();
+    completions.values.add(
+      SchedulerCompletion(
+        sefariaRef: 'mishnayos-0',
+        stageOrder: 1,
+        trackType: 'personal',
+        completedAt: date.subtract(const Duration(days: 2)),
+      ),
+    );
+    final generator = _generator(completions);
+    final tasks = await generator.generate(
+      curriculum,
+      date,
+      trackLabel: 'Mishnayos',
+      isStudyDay: false,
+    );
+
+    expect(tasks, hasLength(1));
+    expect(tasks.single.contentItemSefariaRef, 'mishnayos-0');
+    expect(tasks.single.priority, DailyTaskPriority.overdueChazara);
+    expect(tasks.single.isOverdue, isTrue);
+    expect(
+      tasks.where((task) => task.priority == DailyTaskPriority.newLearning),
+      isEmpty,
+    );
+  });
+
+  test(
+    'recomputes completion-driven review work on the following day',
+    () async {
+      final completions = _Completions();
+      final generator = _generator(completions);
+      completions.values.add(
+        SchedulerCompletion(
+          sefariaRef: 'mishnayos-0',
+          stageOrder: 1,
+          trackType: 'personal',
+          completedAt: date,
+        ),
+      );
+
+      final today = await generator.generate(
+        curriculum,
+        date,
+        trackLabel: 'Mishnayos',
+      );
+      expect(
+        today.any(
+          (task) =>
+              task.contentItemSefariaRef == 'mishnayos-0' &&
+              task.priority == DailyTaskPriority.scheduledChazara,
+        ),
+        isFalse,
+      );
+
+      final tomorrow = await generator.generate(
+        curriculum,
+        date.add(const Duration(days: 1)),
+        trackLabel: 'Mishnayos',
+      );
+      expect(
+        tomorrow.any(
+          (task) =>
+              task.contentItemSefariaRef == 'mishnayos-0' &&
+              task.priority == DailyTaskPriority.scheduledChazara,
+        ),
+        isTrue,
+      );
+    },
+  );
+
+  test(
+    'delayDays zero schedules review immediately after completion',
+    () async {
+      final completions = _Completions()
+        ..values.add(
+          SchedulerCompletion(
+            sefariaRef: 'mishnayos-0',
+            stageOrder: 1,
+            trackType: 'personal',
+            completedAt: date,
           ),
         );
-    trackId = trackRow.id;
+      final tasks = await _generator(
+        completions,
+        reviewDelay: 0,
+      ).generate(curriculum, date, trackLabel: 'Mishnayos');
 
-    await db.stageDao.insertStageDefinition(
-      StageDefinitionsCompanion.insert(
-        profileId: 1,
-        curriculumId: curriculum.storageKey,
-        trackId: trackId,
-        stageOrder: 1,
-        stageName: 'Learn',
-        schedule: const Value('{"type":"delay","delay_days":0}'),
-      ),
-    );
-    await db.stageDao.insertStageDefinition(
-      StageDefinitionsCompanion.insert(
-        profileId: 1,
-        curriculumId: curriculum.storageKey,
-        trackId: trackId,
-        stageOrder: 2,
-        stageName: 'Chazara 1',
-        schedule: const Value('{"type":"delay","delay_days":1}'),
-      ),
-    );
-    await db.stageDao.insertStageDefinition(
-      StageDefinitionsCompanion.insert(
-        profileId: 1,
-        curriculumId: curriculum.storageKey,
-        trackId: trackId,
-        stageOrder: 3,
-        stageName: 'Chazara 2',
-        schedule: const Value('{"type":"delay","delay_days":7}'),
-      ),
-    );
-
-    final engine = SchedulerEngine(
-      contentRepository: _InMemoryContentRepo(contentItems),
-      completionRepository: SchedulerCompletionRepositoryImpl(
-        completionDao: db.completionDao,
-        stageDao: db.stageDao,
-      ),
-      stageRepository: SchedulerStageRepositoryImpl(stageDao: db.stageDao),
-      learningOrderRepository: SchedulerLearningOrderRepositoryImpl(
-        learningOrderDao: db.learningOrderDao,
-      ),
-    );
-
-    generator = DailyTaskGenerator(engine: engine);
-  });
-
-  tearDown(() async {
-    await db.close();
-  });
-
-  test('generate returns correctly structured DailyTask items', () async {
-    final tasks = await generator.generate(
-      curriculum,
-      now,
-      trackId: trackId,
-      trackLabel: 'Test',
-    );
-
-    expect(tasks, isNotEmpty);
-    for (final task in tasks) {
-      expect(task.curriculumId, curriculum);
-      expect(task.contentItemSefariaRef, isNotEmpty);
-      expect(task.stageDefinitionId, greaterThan(0));
-      expect(task.stageName, isNotEmpty);
-      expect(task.trackId, trackId);
-    }
-  });
-
-  test('prioritization: overdue before scheduled before new', () async {
-    final stages = await db.stageDao.getStageDefinitionsByCurriculum(
-      curriculum.storageKey,
-    );
-    final learnId = stages.firstWhere((s) => s.stageOrder == 1).id;
-    // Item 0: learned 3 days ago → Chazara 1 overdue (delay=1)
-    await seedCompletion(
-      db,
-      CompletionEventsCompanion.insert(
-        profileId: 0,
-        curriculumId: curriculum.storageKey,
-        trackId: Value(trackId),
-        sefariaRef: 'Mishnah_Berakhot_1.0',
-        stageId: learnId,
-        trackType: 'personal',
-        eventTimestamp: now.subtract(const Duration(days: 3)),
-        points: const Value(10),
-      ),
-    );
-
-    // Item 1: learned yesterday → Chazara 1 due today (delay=1)
-    await seedCompletion(
-      db,
-      CompletionEventsCompanion.insert(
-        profileId: 0,
-        curriculumId: curriculum.storageKey,
-        trackId: Value(trackId),
-        sefariaRef: 'Mishnah_Berakhot_1.1',
-        stageId: learnId,
-        trackType: 'personal',
-        eventTimestamp: now.subtract(const Duration(days: 1)),
-        points: const Value(10),
-      ),
-    );
-
-    final tasks = await generator.generate(
-      curriculum,
-      now,
-      trackId: trackId,
-      trackLabel: 'Test',
-    );
-
-    // Should have overdue, scheduled, and new items
-    final overdueIdx = tasks.indexWhere(
-      (t) => t.priority == DailyTaskPriority.overdueChazara,
-    );
-    final scheduledIdx = tasks.indexWhere(
-      (t) => t.priority == DailyTaskPriority.scheduledChazara,
-    );
-    final newIdx = tasks.indexWhere(
-      (t) => t.priority == DailyTaskPriority.newLearning,
-    );
-
-    expect(overdueIdx, greaterThanOrEqualTo(0));
-    expect(scheduledIdx, greaterThan(overdueIdx));
-    expect(newIdx, greaterThan(scheduledIdx));
-  });
-
-  test('skipped tasks excluded from today but isOverdue flag set', () async {
-    final tasks = await generator.generate(
-      curriculum,
-      now,
-      trackId: trackId,
-      trackLabel: 'Test',
-      skippedRefs: {'Mishnah_Berakhot_1.0'},
-    );
-
-    expect(
-      tasks.any((t) => t.contentItemSefariaRef == 'Mishnah_Berakhot_1.0'),
-      isFalse,
-    );
-  });
-
-  test('recomputation after completion adds newly-due chazara', () async {
-    final stages = await db.stageDao.getStageDefinitionsByCurriculum(
-      curriculum.storageKey,
-    );
-    final learnId = stages.firstWhere((s) => s.stageOrder == 1).id;
-
-    // Complete item 0 Learn right now (Chazara 1 delay=1, so not due today)
-    await seedCompletion(
-      db,
-      CompletionEventsCompanion.insert(
-        profileId: 0,
-        curriculumId: curriculum.storageKey,
-        trackId: Value(trackId),
-        sefariaRef: 'Mishnah_Berakhot_1.0',
-        stageId: learnId,
-        trackType: 'personal',
-        eventTimestamp: now,
-        points: const Value(10),
-      ),
-    );
-
-    final tasksToday = await generator.generate(
-      curriculum,
-      now,
-      trackId: trackId,
-      trackLabel: 'Test',
-    );
-    // Item 0 should NOT have chazara due today (delay=1)
-    expect(
-      tasksToday.any(
-        (t) =>
-            t.contentItemSefariaRef == 'Mishnah_Berakhot_1.0' &&
-            t.priority == DailyTaskPriority.scheduledChazara,
-      ),
-      isFalse,
-    );
-
-    // Tomorrow, chazara 1 should be due
-    final tasksTomorrow = await generator.generate(
-      curriculum,
-      now.add(const Duration(days: 1)),
-      trackId: trackId,
-      trackLabel: 'Test',
-    );
-    expect(
-      tasksTomorrow.any(
-        (t) =>
-            t.contentItemSefariaRef == 'Mishnah_Berakhot_1.0' &&
-            t.priority == DailyTaskPriority.scheduledChazara,
-      ),
-      isTrue,
-    );
-  });
-
-  test('recomputation with delay_days=0 adds chazara immediately', () async {
-    // Delete existing stages and create one with delay=0
-    await db.stageDao.deleteAllForCurriculum(curriculum.storageKey);
-
-    await db.stageDao.insertStageDefinition(
-      StageDefinitionsCompanion.insert(
-        profileId: 1,
-        curriculumId: curriculum.storageKey,
-        trackId: trackId,
-        stageOrder: 1,
-        stageName: 'Learn',
-        schedule: const Value('{"type":"delay","delay_days":0}'),
-      ),
-    );
-    await db.stageDao.insertStageDefinition(
-      StageDefinitionsCompanion.insert(
-        profileId: 1,
-        curriculumId: curriculum.storageKey,
-        trackId: trackId,
-        stageOrder: 2,
-        stageName: 'Chazara 1',
-        schedule: const Value('{"type":"delay","delay_days":0}'),
-      ),
-    );
-
-    final stages = await db.stageDao.getStageDefinitionsByCurriculum(
-      curriculum.storageKey,
-    );
-    final learnId = stages.firstWhere((s) => s.stageOrder == 1).id;
-
-    // Complete Learn for item 0
-    await seedCompletion(
-      db,
-      CompletionEventsCompanion.insert(
-        profileId: 0,
-        curriculumId: curriculum.storageKey,
-        trackId: Value(trackId),
-        sefariaRef: 'Mishnah_Berakhot_1.0',
-        stageId: learnId,
-        trackType: 'personal',
-        eventTimestamp: now,
-        points: const Value(10),
-      ),
-    );
-
-    final tasks = await generator.generate(
-      curriculum,
-      now,
-      trackId: trackId,
-      trackLabel: 'Test',
-    );
-
-    // delay_days=0 means Chazara 1 is due immediately (today)
-    expect(
-      tasks.any(
-        (t) =>
-            t.contentItemSefariaRef == 'Mishnah_Berakhot_1.0' &&
-            t.priority == DailyTaskPriority.scheduledChazara,
-      ),
-      isTrue,
-    );
-  });
+      expect(
+        tasks.any(
+          (task) =>
+              task.contentItemSefariaRef == 'mishnayos-0' &&
+              task.priority == DailyTaskPriority.scheduledChazara,
+        ),
+        isTrue,
+      );
+    },
+  );
 }
