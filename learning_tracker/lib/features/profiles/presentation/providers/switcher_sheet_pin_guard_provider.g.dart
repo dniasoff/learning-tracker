@@ -49,4 +49,4 @@ final class SwitcherSheetPinGuardRequiredProvider
 }
 
 String _$switcherSheetPinGuardRequiredHash() =>
-    r'3bc5ea976f8b68fb0a2c8e604f4be919073ee372';
+    r'1341f130a5e226f78b500acd049936bb9d780949';

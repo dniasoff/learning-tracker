@@ -31,12 +31,17 @@ final sacredTimeLocationPinGuardRequiredProvider = FutureProvider<bool>((
   final profiles =
       ref.watch(profileListStreamProvider).asData?.value ??
       <LearnerProfileEntity>[];
-  final activeId = ref.watch(activeProfileIdProvider);
-  final active = profiles.where((p) => p.profileId == activeId).firstOrNull;
+  // T-37: keyed on the DEVICE OWNER's own profile, not activeProfileIdProvider
+  // (which redirects to the talmid's profileId during a tutored session).
+  // Location is a device-scoped setting escalated by whoever's holding the
+  // device, so the PIN gate must evaluate against the tutor's own profile —
+  // mirrors switcherSheetPinGuardRequiredProvider's identical fix.
+  final selectedId = ref.watch(selectedProfileIdProvider);
+  final active = profiles.where((p) => p.profileId == selectedId).firstOrNull;
   if (active == null || active.mode != ProfileMode.child) return false;
-  if (activeId == null) return false;
+  if (selectedId == null) return false;
   final pinService = ref.read(pinServiceProvider);
-  return pinService.hasProfilePin(activeId);
+  return pinService.hasProfilePin(selectedId);
 });
 
 /// Settings card for the Sacred Time feature. Hard-on (no disable toggle).

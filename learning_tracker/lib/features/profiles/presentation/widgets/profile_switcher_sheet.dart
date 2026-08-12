@@ -10,7 +10,6 @@ import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/switcher_sheet_pin_guard_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/add_profile_dialog.dart';
@@ -53,7 +52,15 @@ class ProfileSwitcherSheet extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final profilesAsync = ref.watch(profileListStreamProvider);
     final profiles = profilesAsync.asData?.value ?? <LearnerProfileEntity>[];
-    final activeProfileId = ref.watch(activeProfileIdProvider);
+    // T-37: profileListStreamProvider is scoped to the signed-in account (the
+    // device owner's own profiles), so "active" throughout this widget must
+    // mean "the device owner's own selected profile" — selectedProfileIdProvider,
+    // not activeProfileIdProvider (which redirects to the talmid's profileId
+    // during a tutored session, and would never match any row in this list
+    // anyway). This keeps both the row-highlight AND the PIN-verification
+    // identity (threaded through _guardEscalating below) consistently keyed
+    // on the account actually being escalated.
+    final activeProfileId = ref.watch(selectedProfileIdProvider);
     final accountEmail = ref.watch(authStateProvider).currentUser?.email;
     // AN-2: read whether the active profile is a child with a PIN set.
     // Falls back to false (no guard) while loading or on error.

@@ -5,6 +5,7 @@ import 'package:learning_tracker/core/preferences/profile_scoped_preference.dart
 import 'package:learning_tracker/core/preferences/profile_scoped_preference_keys.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/data/repositories/learning_order_repository_impl.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/domain/models/learning_order_item.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/domain/repositories/learning_order_repository.dart';
@@ -62,7 +63,7 @@ final learningOrderProvider =
 /// Provides whether parent controls ordering (permission setting).
 final parentControlsOrderingProvider = FutureProvider<bool>((ref) async {
   final profileId =
-      ref.watch(activeProfileIdProvider) ?? kNoProfilePreferenceSentinel;
+      ref.watch(selectedProfileIdProvider) ?? kNoProfilePreferenceSentinel;
   final prefs = await SharedPreferences.getInstance();
   return ProfileScopedPreferenceKeys.readLearningOrderParentControls(
     prefs,

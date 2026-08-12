@@ -13,7 +13,6 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
-import 'package:learning_tracker/core/sync/providers/tutored_pull_providers.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart';
@@ -279,17 +278,11 @@ class _GrantRowState extends ConsumerState<_GrantRow> {
       // resignation succeeded.
       switch (result) {
         case TutorGrantSuccess():
-          // R4-M3: wipe the mirror and exit the tutored session so listeners
-          // detach immediately rather than waiting for the next entry attempt.
-          final grantId = widget.grant.grantId;
-          unawaited(
-            buildTutoredMirrorWipeServiceFromWidget(
-              ref: ref,
-              onWipe: (_) => ref
-                  .read(activeTutoredProfileSelectionProvider.notifier)
-                  .exit(),
-            ).wipeMirrorForGrant(grantId),
-          );
+          // Exit an active tutored session if this is the grant being resigned.
+          if (widget.grant.grantId ==
+              ref.read(activeTutoredProfileSelectionProvider)?.grantId) {
+            ref.read(activeTutoredProfileSelectionProvider.notifier).exit();
+          }
           ref.invalidate(incomingTutorGrantsProvider);
           // WS3.3g / M1: fire-and-forget notification — parent is notified of
           // the resignation. The parent email is not readable from the grant

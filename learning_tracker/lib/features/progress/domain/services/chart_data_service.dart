@@ -40,14 +40,15 @@ final DateTime kChartAllTimeFloor = DateTime.utc(2000, 1, 1);
 /// (`FirestoreChartDataRepositoryAdapter`), resolves the repositories per
 /// call, and owns the D-E not-ready policy.
 ///
-/// ## Achievement / configuration split (D-E)
+/// ## Not-ready policy (D-E)
 ///
-/// The two completion reads are ACHIEVEMENT-shaped: an empty list is
-/// indistinguishable from a learner who has completed nothing, so the
-/// adapter THROWS (e.g. [ProgressRepositoryNotReadyException]) when the
-/// backing provider is not ready rather than returning `[]`. [getGoals] is
-/// CONFIGURATION-shaped — an empty list is a legitimate "no goal
-/// configured" state the UI already renders.
+/// All three reads THROW (e.g. [ProgressRepositoryNotReadyException]) when
+/// the backing provider is not ready rather than returning `[]` — including
+/// [getGoals], which was previously treated as configuration-shaped (an
+/// empty list = "no goal configured"). T-37 correctness fix: an empty list
+/// on a not-ready backend was indistinguishable from that legitimate
+/// no-goals-configured state, exactly the D-E failure mode this rule
+/// exists to prevent — the throw is now consistent across every read here.
 abstract class ChartDataRepository {
   /// Completions for [curriculumId] (across all curricula when `null`),
   /// filtered to [tier] and to completions within
@@ -65,8 +66,9 @@ abstract class ChartDataRepository {
   /// Goals for [curriculumId], sorted by `targetDate` (null-first,
   /// ascending).
   ///
-  /// Configuration-shaped — returns an empty list when none are configured
-  /// or the backend is not ready (see the class doc comment).
+  /// Returns an empty list when none are configured. Throws when the
+  /// backend is not ready (see the class doc comment) — a not-ready backend
+  /// must never be mistaken for a genuinely goal-less curriculum.
   Future<List<GoalEntity>> getGoals(CurriculumId curriculumId);
 
   /// Every completion for [curriculumId].

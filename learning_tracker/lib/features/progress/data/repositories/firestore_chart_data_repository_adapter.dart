@@ -15,18 +15,16 @@ import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.da
 /// — read that class's doc comment first; this one only calls out what is
 /// DIFFERENT here.
 ///
-/// ## Achievement / configuration split (D-E) — enforced HERE, not in
-/// [ChartDataService]
+/// ## Not-ready policy (D-E) — enforced HERE, not in [ChartDataService]
 ///
-/// [ChartDataRepository]'s own class doc comment documents the split:
-/// [getCompletionsByTier] / [getCompletionsByCurriculum] are
-/// achievement-shaped (an empty list is indistinguishable from "learned
-/// nothing", so a not-ready backend THROWS rather than returning `[]`);
-/// [getGoals] is configuration-shaped (an empty list is a legitimate "no
-/// goal configured" state the UI already renders). This class is where that
-/// policy is actually implemented — [ChartDataService] itself never resolves
-/// a Firestore repository or decides readiness; see this file's siblings for
-/// why (AD-23/AD-28, `lib/features/**/domain/**` may not import the data
+/// [ChartDataRepository]'s own class doc comment documents the policy:
+/// every read here THROWS when the backing provider is not ready rather
+/// than returning `[]` — including [getGoals], where an empty-list-on-
+/// not-ready would otherwise be indistinguishable from a genuinely
+/// goal-less curriculum. This class is where that policy is actually
+/// implemented — [ChartDataService] itself never resolves a Firestore
+/// repository or decides readiness; see this file's siblings for why
+/// (AD-23/AD-28, `lib/features/**/domain/**` may not import the data
 /// ring).
 ///
 /// Reuses [ProgressRepositoryNotReadyException] (defined in
@@ -71,9 +69,10 @@ class FirestoreChartDataRepositoryAdapter implements ChartDataRepository {
 
   @override
   Future<List<GoalEntity>> getGoals(CurriculumId curriculumId) async {
-    // Configuration-shaped: [] on not-ready, same as every other goals read.
     final repo = await _ref.read(firestoreGoalRepositoryProvider.future);
-    if (repo == null) return const [];
+    if (repo == null) {
+      throw const ProgressRepositoryNotReadyException();
+    }
     return repo.getGoals(curriculumId);
   }
 }

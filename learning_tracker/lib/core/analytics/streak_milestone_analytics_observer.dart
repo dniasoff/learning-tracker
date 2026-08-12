@@ -16,6 +16,7 @@ import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_state_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 
 /// Stays active while watched to monitor streak milestones for the active
 /// profile.
@@ -45,7 +46,17 @@ import 'package:learning_tracker/features/profiles/presentation/providers/active
 /// downgraded to a warning log line (EH-4, AUD-core-analytics-04).
 final streakMilestoneAnalyticsObserverProvider =
     StreamProvider.autoDispose<void>((ref) async* {
-      final profileId = ref.watch(activeProfileIdProvider);
+      // A tutor viewing a talmid must not attribute the talmid's milestone to
+      // the tutor's analytics identity.
+      if (ref.watch(activeTutoredProfileSelectionProvider) != null) return;
+      // Registers the active profile as a dependency (even though the id
+      // itself is unused below — StreakStateService resolves it internally
+      // via `ref`) so this provider rebuilds on every profile switch,
+      // resetting `firedMilestones` and re-subscribing the stream. Without
+      // this watch, switching from profile A (already past a milestone) to
+      // profile B leaves `firedMilestones` stale and silently suppresses B's
+      // own genuine first crossing.
+      ref.watch(activeProfileIdProvider);
       final analytics = ref.watch(analyticsServiceProvider);
       final logger = AppLogger.instance;
 

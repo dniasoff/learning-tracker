@@ -2,6 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
 import 'package:learning_tracker/data/repositories/firestore_study_day_config_repository.dart';
+import 'package:learning_tracker/features/scheduler/data/repositories/study_day_config_repository_impl.dart'
+    show StudyDayConfigRepositoryNotReadyException;
 import 'package:learning_tracker/features/scheduler/domain/models/day_type.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/study_day_config.dart';
 
@@ -18,11 +20,8 @@ import 'package:learning_tracker/features/scheduler/domain/models/study_day_conf
 /// computation to a second place. This is that "scheduler/service layer"
 /// the comment points to, scoped to what dashboard's pace status needs.
 ///
-/// Configuration-shaped, not achievement-shaped (D-E): an unconfigured
-/// study-day schedule is a legitimate, common state (self-paced tracks
-/// never set one) — `[]`/`0` on a not-ready backend is treated the same as
-/// "nothing configured yet", exactly like every other config-shaped read
-/// in this codebase (`FirestoreGoalRepositoryAdapter.getGoals`, etc.).
+/// Throws [StudyDayConfigRepositoryNotReadyException] when the backend is not
+/// ready; an empty configured schedule remains a valid result once ready.
 class FirestoreStudyDayReaderAdapter {
   FirestoreStudyDayReaderAdapter({required Ref ref}) : _ref = ref;
 
@@ -39,8 +38,12 @@ class FirestoreStudyDayReaderAdapter {
   Future<List<StudyDayConfigEntry>> getConfigsForCurriculum(
     CurriculumId curriculumId,
   ) async {
-    final repo = await _ref.read(firestoreStudyDayConfigRepositoryProvider.future);
-    if (repo == null) return const [];
+    final repo = await _ref.read(
+      firestoreStudyDayConfigRepositoryProvider.future,
+    );
+    if (repo == null) {
+      throw const StudyDayConfigRepositoryNotReadyException();
+    }
     return repo.getConfigsForCurriculum(curriculumId);
   }
 

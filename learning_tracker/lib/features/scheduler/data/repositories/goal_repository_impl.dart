@@ -56,9 +56,8 @@ class GoalRepositoryNotReadyException implements Exception {
 ///
 /// ## Not-ready semantics
 ///
-/// [getGoals]/[watchGoals] reuse the interface's own `[]` "nothing yet"
-/// value. [createGoal]/[updateGoal]/[deleteGoal] have no such value and
-/// throw [GoalRepositoryNotReadyException] instead.
+/// All operations throw [GoalRepositoryNotReadyException] when the backend is
+/// not ready; empty reads must not be confused with a real empty result.
 class FirestoreGoalRepositoryAdapter implements GoalRepository {
   FirestoreGoalRepositoryAdapter({required Ref ref}) : _ref = ref;
 
@@ -84,11 +83,10 @@ class FirestoreGoalRepositoryAdapter implements GoalRepository {
   }
 
   /// Returns all goals for [curriculumId], sorted by `targetDate`
-  /// (null-first, ascending). `[]` when not ready.
+  /// (null-first, ascending). Throws when not ready.
   @override
   Future<List<GoalEntity>> getGoals(CurriculumId curriculumId) async {
-    final repo = await _resolveOrNull();
-    if (repo == null) return const [];
+    final repo = await _resolve();
     return repo.getGoals(curriculumId);
   }
 
@@ -97,13 +95,9 @@ class FirestoreGoalRepositoryAdapter implements GoalRepository {
   /// ("Not-ready semantics") for the one-shot-resolve limitation shared by
   /// every `watch*` method built in this wave: this does not re-subscribe
   /// if the active account/profile changes after the stream opens while
-  /// not-ready.
+  /// not-ready. Throws when not ready.
   Stream<List<GoalEntity>> watchGoals(CurriculumId curriculumId) async* {
-    final repo = await _resolveOrNull();
-    if (repo == null) {
-      yield const [];
-      return;
-    }
+    final repo = await _resolve();
     yield* repo.watchGoals(curriculumId);
   }
 

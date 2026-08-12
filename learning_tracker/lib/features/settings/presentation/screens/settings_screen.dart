@@ -58,6 +58,14 @@ class SettingsScreen extends ConsumerWidget {
         .where((p) => p.profileId == activeProfileId)
         .firstOrNull;
     final isChildProfile = activeProfile?.mode == ProfileMode.child;
+    // T-37: Sacred Time's location actions are a DEVICE-scoped setting (DEC-26),
+    // escalated by whoever is holding the device — so its Parent-PIN
+    // verification must be keyed on the device owner's own profile, not
+    // activeProfileId (which redirects to the talmid's profileId during a
+    // tutored session; see sacredTimeLocationPinGuardRequiredProvider's
+    // matching fix). Everything else on this screen (activeProfile,
+    // isChildProfile) is correctly read-shaped and stays on activeProfileId.
+    final deviceOwnerProfileId = ref.watch(selectedProfileIdProvider);
     final activeTutoredSelection = ref.watch(
       activeTutoredProfileSelectionProvider,
     );
@@ -141,7 +149,7 @@ class SettingsScreen extends ConsumerWidget {
                         .asData
                         ?.value ??
                     false,
-                activeProfileId: activeProfileId,
+                activeProfileId: deviceOwnerProfileId,
               ),
               const SizedBox(height: 24),
             ],

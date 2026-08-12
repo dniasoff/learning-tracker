@@ -12,7 +12,6 @@
 //   • Permission-gated UI — to determine available actions (via activeTutorPermissionsProvider)
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/sync/providers/tutored_pull_providers.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -40,14 +39,7 @@ class ActiveTutoredProfileSelection extends _$ActiveTutoredProfileSelection {
 
   /// Exit the talmid context (return to own profile).
   ///
-  /// Also clears the resolved synthetic local profile id and detaches all
-  /// tutored Firestore listeners so no subscriptions survive into the next
-  /// session (D3/D5 lifecycle contract).
   void exit() {
-    ref.read(resolvedTutoredLocalProfileIdProvider.notifier).clear();
-    // D3/D5 — detach tutored listeners; fire-and-forget (detach is idempotent
-    // and safe even when nothing is attached).
-    ref.read(tutoredListenerSupervisorProvider).detach();
     state = null;
   }
 }
@@ -69,26 +61,3 @@ final activeTutorPermissionsProvider = Provider<TutorPermissions?>((ref) {
   final selection = ref.watch(activeTutoredProfileSelectionProvider);
   return selection?.permissions;
 }, name: 'activeTutorPermissionsProvider');
-
-/// Holds the **synthetic local profile id** that was returned by
-/// [TutoredPullService.pull] for the currently active talmid mirror.
-///
-/// Set by S2 (T2.entry-pull) immediately after a successful pull so that
-/// [activeProfileIdProvider] can resolve to the mirror without an async hop.
-/// Cleared by [ActiveTutoredProfileSelection.exit].
-///
-/// `keepAlive: true` — must outlive route changes inside the talmid view.
-@Riverpod(keepAlive: true)
-class ResolvedTutoredLocalProfileId extends _$ResolvedTutoredLocalProfileId {
-  @override
-  int? build() {
-    // Account-switch reset is coordinated by the same AppShell observer that
-    // resets ActiveTutoredProfileSelection — exit() calls clear() on this
-    // provider, so no direct auth watch needed here.
-    return null;
-  }
-
-  void resolve(int localProfileId) => state = localProfileId;
-
-  void clear() => state = null;
-}

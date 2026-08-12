@@ -6,9 +6,6 @@ import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/app/router/router_provider.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/navigation/pin_scope.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
-import 'package:learning_tracker/core/sync/providers/tutored_pull_providers.dart';
-import 'package:learning_tracker/core/sync/tutored_pull_service.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
@@ -447,9 +444,8 @@ class _TutoredChildRow extends ConsumerWidget {
     );
   }
 
-  /// Push the [TutorPinEntryGate] modally. On PIN success, run the tutored
-  /// pull, install the resolved local profile id, then land in the talmid
-  /// dashboard (T2.entry-pull + T2.nav).
+  /// Push the [TutorPinEntryGate] modally. On PIN success, enter the selected
+  /// tutored profile context and land in the regular AppShell dashboard.
   void _enterTalmidView(BuildContext context, WidgetRef ref) {
     // The tutor's own profile ULID is required to key the PIN hash. See
     // _ViewInvitationsRow._openInvitations' identical guard for why there
@@ -490,251 +486,23 @@ class _TutoredChildRow extends ConsumerWidget {
                   .enter(selection);
               // C2: prime the tutor scope as authenticated so the first
               // tutor-scoped edit route after the gate does not re-prompt.
-              ref
-                  .read(routerProvider)
-                  .pinGuard
-                  .markScopeAuthenticated(PinScope.tutor(tutorOwnProfileId));
-              // Pop the PIN gate, then fire the pull + navigate
-              // (T2.entry-pull). The profile-switcher sheet is intentionally
-              // left mounted for now: `_fireEntryPullAndNavigate` runs async
-              // work keyed off this widget's `context`/`ref`, and popping the
-              // sheet here would unmount the row (disposing them) before the
-              // pull completes. The sheet is dismissed at navigation time
-              // inside `_fireEntryPullAndNavigate` (via the root navigator),
-              // immediately before the shell is rebuilt.
+              final router = ref.read(routerProvider);
+              router.pinGuard.markScopeAuthenticated(
+                PinScope.tutor(tutorOwnProfileId),
+              );
+              // Pop the PIN gate, dismiss the switcher sheet, then land on the
+              // same dashboard route used by a regular signed-in user.
               Navigator.of(context).pop();
-              unawaited(_fireEntryPullAndNavigate(context, ref, selection));
+              final navigator = navigatorKey.currentState;
+              if (navigator != null && navigator.canPop()) {
+                navigator.pop();
+              }
+              unawaited(router.replaceAll([const AppShellRoute()]));
             },
             onCancel: () => Navigator.of(context).pop(),
           ),
         ),
       ),
     );
-  }
-
-  /// T2.entry-pull — run the tutored pull after the PIN gate passes, install
-  /// the resolved synthetic local profile id, then replace the stack with the
-  /// talmid's AppShell (T2.nav).  On failure, clears the selection and shows
-  /// an error snackbar so the user lands back at the picker, never crashes.
-  ///
-  /// Offline-first: if a cached mirror exists from a previous session, navigate
-  /// immediately without waiting for the network.  A fresh pull is only required
-  /// on first access when no local data exists; that pull is capped at 15 s so
-  /// the spinner never hangs indefinitely.
-  Future<void> _fireEntryPullAndNavigate(
-    BuildContext context,
-    WidgetRef ref,
-    TutoredProfileSelection selection,
-  ) async {
-    final accountId = ref.read(currentAccountIdProvider);
-    // Capture the stable AppRouter up front: once the switcher sheet is popped
-    // (see dismissSwitcherSheet) this widget unmounts, so `context.router` is
-    // no longer usable — but the router singleton survives.
-    final router = ref.read(routerProvider);
-
-    // Dismiss the profile-switcher sheet that was left mounted beneath the PIN
-    // gate. `router.replaceAll` only rebuilds auto_route's managed page stack;
-    // the imperatively-pushed modal sheet is NOT cleared by it, so without this
-    // explicit pop the sheet lingers on top of the talmid dashboard. Popping it
-    // via the global root navigator key (not the dying widget context) makes
-    // the dismissal robust against the widget unmounting.
-    void dismissSwitcherSheet() {
-      final navigator = navigatorKey.currentState;
-      if (navigator != null && navigator.canPop()) {
-        navigator.pop();
-      }
-    }
-
-    // Offline-first: check for a cached mirror before touching the network.
-    final cachedProfile = await ref
-        .read(userDatabaseProvider)
-        .profileDao
-        .getTutoredProfile(
-          parentUid: selection.ownerUid,
-          remoteChildProfileId: selection.profileId,
-          grantId: selection.grantId,
-        );
-
-    // SM-4: the profile-switcher sheet hosting this row is swipe/backdrop-
-    // dismissible for this entire await (showProfileSwitcherSheet overrides
-    // neither `isDismissible` nor `enableDrag`), so the row can unmount while
-    // the read above is in flight. Bail out before touching `ref` again if
-    // that happened — same liveness discipline as the `router` capture above,
-    // just via `context.mounted` since WidgetRef has no `.mounted` of its own.
-    if (!context.mounted) return;
-
-    if (cachedProfile != null) {
-      // Mirror from a previous session — enter immediately with local data.
-      // Delta listeners will stream any changes once connectivity is restored.
-      ref
-          .read(resolvedTutoredLocalProfileIdProvider.notifier)
-          .resolve(cachedProfile.id);
-      final gateway = buildTutoredGateway(
-        ref: ref,
-        parentUid: selection.ownerUid,
-      );
-      try {
-        unawaited(
-          ref
-              .read(tutoredListenerSupervisorProvider)
-              .attach(
-                localProfileId: cachedProfile.id,
-                gateway: gateway,
-                parentUid: selection.ownerUid,
-                remoteProfileId: selection.profileId,
-              ),
-        );
-      } catch (e, st) {
-        AppLogger.instance.warning(
-          event: 'tutored_listener_attach_error',
-          exception: e,
-          stackTrace: st,
-        );
-      }
-      dismissSwitcherSheet();
-      unawaited(router.replaceAll([const AppShellRoute()]));
-      return;
-    }
-
-    // No cached mirror — first-time access requires a network pull.
-    // Show a blocking progress indicator; cap at 15 s so offline doesn't spin
-    // forever.
-    var loadingShown = false;
-    if (context.mounted) {
-      loadingShown = true;
-      unawaited(
-        showDialog<void>(
-          context: context,
-          barrierDismissible: false,
-          builder: (_) => const Center(child: CircularProgressIndicator()),
-        ),
-      );
-    }
-    void dismissLoading() {
-      if (loadingShown && context.mounted) {
-        Navigator.of(context, rootNavigator: true).pop();
-        loadingShown = false;
-      }
-    }
-
-    try {
-      // R4-M2: pass wipeService so permissionDenied clears the stale mirror
-      // row rather than leaving it until the next pull entry.
-      final svc = buildTutoredPullServiceFromWidget(
-        ref: ref,
-        parentUid: selection.ownerUid,
-        wipeService: buildTutoredMirrorWipeServiceFromWidget(
-          ref: ref,
-          onWipe: (_) =>
-              ref.read(activeTutoredProfileSelectionProvider.notifier).exit(),
-        ),
-      );
-      final result = await svc
-          .pull(
-            accountId: accountId,
-            parentUid: selection.ownerUid,
-            remoteProfileId: selection.profileId,
-            grantId: selection.grantId,
-            childDisplayName: grant.childDisplayLabel,
-            childMode: 'child',
-          )
-          .timeout(
-            const Duration(seconds: 15),
-            onTimeout: () =>
-                (localProfileId: 0, result: TutoredPullResult.error),
-          );
-
-      // SM-4: same liveness guard as above — the pull can take up to 15 s,
-      // plenty of time for the sheet to be dismissed mid-flight.
-      if (!context.mounted) return;
-
-      switch (result.result) {
-        case TutoredPullResult.success:
-          ref
-              .read(resolvedTutoredLocalProfileIdProvider.notifier)
-              .resolve(result.localProfileId);
-          // D3/D5 — attach delta listeners after the initial pull so the
-          // talmid view stays live without full re-pulls.
-          final gateway = buildTutoredGateway(
-            ref: ref,
-            parentUid: selection.ownerUid,
-          );
-          // R4-L4: wrap unawaited attach so synchronous throws are logged
-          // rather than silently swallowed.
-          try {
-            unawaited(
-              ref
-                  .read(tutoredListenerSupervisorProvider)
-                  .attach(
-                    localProfileId: result.localProfileId,
-                    gateway: gateway,
-                    parentUid: selection.ownerUid,
-                    remoteProfileId: selection.profileId,
-                  ),
-            );
-          } catch (e, st) {
-            AppLogger.instance.warning(
-              event: 'tutored_listener_attach_error',
-              exception: e,
-              stackTrace: st,
-            );
-          }
-          dismissLoading();
-          dismissSwitcherSheet();
-          unawaited(router.replaceAll([const AppShellRoute()]));
-        case TutoredPullResult.permissionDenied:
-          AppLogger.instance.warning(
-            event: 'tutored_pull_permission_denied',
-            fields: {'grantId': selection.grantId},
-          );
-          ref.read(activeTutoredProfileSelectionProvider.notifier).exit();
-          dismissLoading();
-          if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  AppLocalizations.of(context)!.tutoredEntryPermissionDenied,
-                ),
-              ),
-            );
-          }
-        case TutoredPullResult.error:
-          AppLogger.instance.warning(
-            event: 'tutored_pull_error',
-            fields: {'grantId': selection.grantId},
-          );
-          ref.read(activeTutoredProfileSelectionProvider.notifier).exit();
-          dismissLoading();
-          if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(AppLocalizations.of(context)!.tutoredEntryError),
-              ),
-            );
-          }
-      }
-    } on StateError catch (e) {
-      // buildTutoredPullServiceFromWidget throws StateError for non-cloud accounts.
-      AppLogger.instance.warning(
-        event: 'tutored_pull_aborted',
-        fields: {'error': e.toString()},
-      );
-      // SM-4: this catch clause's scope spans the second await too, so guard
-      // here as well before touching `ref`.
-      if (!context.mounted) return;
-      ref.read(activeTutoredProfileSelectionProvider.notifier).exit();
-      dismissLoading();
-      // AUD-profiles-10 (EH-2/UX completeness): give feedback consistent with
-      // the permissionDenied/error branches above — without this the user
-      // taps the row, watches the spinner, and it disappears with zero
-      // explanation, indistinguishable from a silent hang.
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context)!.tutoredEntryAborted),
-          ),
-        );
-      }
-    }
   }
 }

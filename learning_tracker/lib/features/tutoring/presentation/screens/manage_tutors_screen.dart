@@ -17,11 +17,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
-import 'package:learning_tracker/core/sync/providers/tutored_pull_providers.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart';
-import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
+import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
 import 'package:learning_tracker/features/tutoring/domain/use_cases/tutor_invite_use_cases.dart';
@@ -56,7 +55,7 @@ class ManageTutorsScreen extends ConsumerWidget {
           // Tutors are granted access to a specific CHILD only — an adult
           // profile is never tutored, so it must not appear here.
           final children = allProfiles
-              .where((p) => p.profileMode == ProfileMode.child)
+              .where((p) => p.mode == ProfileMode.child)
               .toList();
           if (children.isEmpty) {
             return _EmptyProfilesView(theme: theme);
@@ -122,7 +121,7 @@ class _EmptyProfilesView extends StatelessWidget {
 class _PerChildGrantsList extends ConsumerStatefulWidget {
   const _PerChildGrantsList({required this.profiles});
 
-  final List<ProfileModel> profiles;
+  final List<LearnerProfileEntity> profiles;
 
   @override
   ConsumerState<_PerChildGrantsList> createState() =>
@@ -160,7 +159,7 @@ class _PerChildGrantsListState extends ConsumerState<_PerChildGrantsList>
   void _refreshAll() {
     if (!mounted) return;
     for (final profile in widget.profiles) {
-      ref.invalidate(outgoingTutorGrantsProvider(profile.ulid));
+      ref.invalidate(outgoingTutorGrantsProvider(profile.profileId));
     }
   }
 
@@ -170,7 +169,7 @@ class _PerChildGrantsListState extends ConsumerState<_PerChildGrantsList>
     // spinner stays until fresh data is in (or an error surfaces).
     await Future.wait([
       for (final profile in widget.profiles)
-        ref.read(outgoingTutorGrantsProvider(profile.ulid).future),
+        ref.read(outgoingTutorGrantsProvider(profile.profileId).future),
     ]).catchError((_) => const <List<TutorGrant>>[]);
   }
 
@@ -196,13 +195,13 @@ class _PerChildGrantsListState extends ConsumerState<_PerChildGrantsList>
 class _ChildGrantsSection extends ConsumerWidget {
   const _ChildGrantsSection({required this.profile});
 
-  final ProfileModel profile;
+  final LearnerProfileEntity profile;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
-    final grantsAsync = ref.watch(outgoingTutorGrantsProvider(profile.ulid));
+    final grantsAsync = ref.watch(outgoingTutorGrantsProvider(profile.profileId));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -288,12 +287,12 @@ class _ChildGrantsSection extends ConsumerWidget {
                     isActive
                         ? _TutorGrantRow.active(
                             grant: grant,
-                            childProfileId: profile.ulid,
+                            childProfileId: profile.profileId,
                             childName: profile.displayName,
                           )
                         : _TutorGrantRow.pending(
                             grant: grant,
-                            childProfileId: profile.ulid,
+                            childProfileId: profile.profileId,
                             childName: profile.displayName,
                           ),
                 };
@@ -307,7 +306,7 @@ class _ChildGrantsSection extends ConsumerWidget {
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
           child: OutlinedButton.icon(
             onPressed: () => context.pushRoute(
-              InviteTutorRoute(childProfileId: profile.ulid),
+              InviteTutorRoute(childProfileId: profile.profileId),
             ),
             icon: const Icon(Icons.person_add_rounded, size: 18),
             label: Text(l10n.manageTutorsInviteButton),
@@ -415,17 +414,11 @@ class _TutorGrantRowState extends ConsumerState<_TutorGrantRow> {
       // server-side.
       switch (result) {
         case TutorGrantSuccess():
-          // R4-M3: wipe the mirror and exit the tutored session so listeners
-          // detach immediately rather than waiting for the next entry attempt.
-          final grantId = widget.grant.grantId;
-          unawaited(
-            buildTutoredMirrorWipeServiceFromWidget(
-              ref: ref,
-              onWipe: (_) => ref
-                  .read(activeTutoredProfileSelectionProvider.notifier)
-                  .exit(),
-            ).wipeMirrorForGrant(grantId),
-          );
+          // Exit an active tutored session if this is the grant being revoked.
+          if (widget.grant.grantId ==
+              ref.read(activeTutoredProfileSelectionProvider)?.grantId) {
+            ref.read(activeTutoredProfileSelectionProvider.notifier).exit();
+          }
           ref.invalidate(outgoingTutorGrantsProvider(widget.childProfileId));
           // WS3.3g: fire-and-forget notification — tutor is notified of
           // revocation. Parent name from current auth user; falls back to

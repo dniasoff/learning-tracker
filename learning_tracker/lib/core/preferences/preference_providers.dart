@@ -12,7 +12,7 @@ import 'package:learning_tracker/core/preferences/text_display_preference.dart';
 import 'package:learning_tracker/core/preferences/text_display_preferences.dart';
 import 'package:learning_tracker/core/preferences/transliteration_variant_preference.dart';
 import 'package:learning_tracker/core/utils/guarded_persist.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/progress/domain/models/journey_view_model.dart'
     show MilestoneLevel;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -97,10 +97,10 @@ void _bindObserver<T>(
 }
 
 /// Shared IL-1 sentinel guard for keepAlive preference notifiers whose
-/// `build()` follows the `ref.watch(activeProfileIdProvider)` +
+/// `build()` follows the `ref.watch(selectedProfileIdProvider)` +
 /// `_bindObserver(...)` shape.
 ///
-/// `activeProfileIdProvider` transiently emits `null` whenever the active
+/// `selectedProfileIdProvider` transiently emits `null` whenever the selected
 /// profile is being re-resolved (e.g. during an account switch), before
 /// settling back to the real profile id moments later. Without this guard,
 /// `build()` re-fires with a null id, `_bindObserver` reads no stored pref
@@ -115,7 +115,7 @@ void _bindObserver<T>(
 /// ```dart
 /// @override
 /// bool build() {
-///   final profileId = ref.watch(activeProfileIdProvider);
+///   final profileId = ref.watch(selectedProfileIdProvider);
 ///   if (sentinelBlocksRebind(profileId)) return state;
 ///   final pref = ref.watch(hebrewDatePreferenceProvider);
 ///   _bindObserver(ref, pref, profileId ?? kNoProfilePreferenceSentinel, (value) {
@@ -166,7 +166,7 @@ class UseHebrewTerms extends _$UseHebrewTerms
     with _SentinelGuardedPreference<bool> {
   @override
   bool build() {
-    final profileId = ref.watch(activeProfileIdProvider);
+    final profileId = ref.watch(selectedProfileIdProvider);
     // IL-1 fix: do NOT re-bind the SharedPreferences observer when profileId
     // transiently reverts to `null` after a real profile id has already
     // been observed. See _SentinelGuardedPreference for details.
@@ -182,7 +182,7 @@ class UseHebrewTerms extends _$UseHebrewTerms
 
   Future<void> set(bool value) async {
     final profileId =
-        ref.read(activeProfileIdProvider) ?? kNoProfilePreferenceSentinel;
+        ref.read(selectedProfileIdProvider) ?? kNoProfilePreferenceSentinel;
     final pref = ref.read(hebrewTermsPreferenceProvider);
     final previous = state;
     state = value;
@@ -204,7 +204,7 @@ class UseHebrewDate extends _$UseHebrewDate
     with _SentinelGuardedPreference<bool> {
   @override
   bool build() {
-    final profileId = ref.watch(activeProfileIdProvider);
+    final profileId = ref.watch(selectedProfileIdProvider);
     // IL-1 fix: see _SentinelGuardedPreference — do NOT re-bind when
     // profileId transiently reverts to `null`.
     if (sentinelBlocksRebind(profileId)) return state;
@@ -219,7 +219,7 @@ class UseHebrewDate extends _$UseHebrewDate
 
   Future<void> set(bool value) async {
     final profileId =
-        ref.read(activeProfileIdProvider) ?? kNoProfilePreferenceSentinel;
+        ref.read(selectedProfileIdProvider) ?? kNoProfilePreferenceSentinel;
     final pref = ref.read(hebrewDatePreferenceProvider);
     final previous = state;
     state = value;
@@ -240,7 +240,7 @@ class ShowNikudPref extends _$ShowNikudPref
     with _SentinelGuardedPreference<bool> {
   @override
   bool build() {
-    final profileId = ref.watch(activeProfileIdProvider);
+    final profileId = ref.watch(selectedProfileIdProvider);
     // IL-1 fix: see _SentinelGuardedPreference — do NOT re-bind when
     // profileId transiently reverts to `null`.
     if (sentinelBlocksRebind(profileId)) return state;
@@ -258,7 +258,7 @@ class ShowNikudPref extends _$ShowNikudPref
   Future<void> set(bool value) async {
     if (value == state) return;
     final profileId =
-        ref.read(activeProfileIdProvider) ?? kNoProfilePreferenceSentinel;
+        ref.read(selectedProfileIdProvider) ?? kNoProfilePreferenceSentinel;
     final pref = ref.read(nikudPreferenceProvider);
     final previous = state;
     state = value;
@@ -320,7 +320,7 @@ class CurrentTransliterationVariant extends _$CurrentTransliterationVariant
     with _SentinelGuardedPreference<TransliterationVariant> {
   @override
   TransliterationVariant build() {
-    final profileId = ref.watch(activeProfileIdProvider);
+    final profileId = ref.watch(selectedProfileIdProvider);
     // IL-1 fix: see _SentinelGuardedPreference — do NOT re-bind when
     // profileId transiently reverts to `null`.
     if (sentinelBlocksRebind(profileId)) return state;
@@ -335,7 +335,7 @@ class CurrentTransliterationVariant extends _$CurrentTransliterationVariant
 
   Future<void> set(TransliterationVariant variant) async {
     final profileId =
-        ref.read(activeProfileIdProvider) ?? kNoProfilePreferenceSentinel;
+        ref.read(selectedProfileIdProvider) ?? kNoProfilePreferenceSentinel;
     final pref = ref.read(transliterationVariantPreferenceProvider);
     final previous = state;
     state = variant;
@@ -355,7 +355,7 @@ class CurrentFontSize extends _$CurrentFontSize
     with _SentinelGuardedPreference<FontSize> {
   @override
   FontSize build() {
-    final profileId = ref.watch(activeProfileIdProvider);
+    final profileId = ref.watch(selectedProfileIdProvider);
     // IL-1 fix: see _SentinelGuardedPreference — do NOT re-bind when
     // profileId transiently reverts to `null`.
     if (sentinelBlocksRebind(profileId)) return state;
@@ -370,7 +370,7 @@ class CurrentFontSize extends _$CurrentFontSize
 
   Future<void> set(FontSize size) async {
     final profileId =
-        ref.read(activeProfileIdProvider) ?? kNoProfilePreferenceSentinel;
+        ref.read(selectedProfileIdProvider) ?? kNoProfilePreferenceSentinel;
     final pref = ref.read(textDisplayPreferenceProvider);
     final previous = state;
     state = size;
@@ -395,7 +395,7 @@ class SiyumGranularity extends _$SiyumGranularity
     with _SentinelGuardedPreference<MilestoneLevel> {
   @override
   MilestoneLevel build(CurriculumId curriculum) {
-    final profileId = ref.watch(activeProfileIdProvider);
+    final profileId = ref.watch(selectedProfileIdProvider);
     // IL-1 fix: see _SentinelGuardedPreference — do NOT re-bind when
     // profileId transiently reverts to `null`.
     if (sentinelBlocksRebind(profileId)) return state;
@@ -411,7 +411,7 @@ class SiyumGranularity extends _$SiyumGranularity
   Future<void> set(MilestoneLevel level) async {
     if (level == state) return;
     final profileId =
-        ref.read(activeProfileIdProvider) ?? kNoProfilePreferenceSentinel;
+        ref.read(selectedProfileIdProvider) ?? kNoProfilePreferenceSentinel;
     final pref = ref.read(siyumGranularityPreferenceProvider(curriculum));
     final previous = state;
     state = level;
