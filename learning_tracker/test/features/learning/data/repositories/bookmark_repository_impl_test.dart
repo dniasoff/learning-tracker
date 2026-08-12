@@ -4,20 +4,21 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/content/content_index.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/data/firestore/account_firebase.dart';
 import 'package:learning_tracker/data/firestore/active_account_providers.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart'
     show activeProfileDocIdProvider;
+import 'package:learning_tracker/data/repositories/firestore_bookmark_repository.dart';
+import 'package:learning_tracker/data/repositories/firestore_learning_order_repository.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/learning/data/repositories/bookmark_repository_impl.dart';
+import 'package:learning_tracker/features/tracks/whole_curriculum_order/domain/models/learning_order_item.dart';
 import 'package:learning_tracker/features/tutoring/tutoring.dart';
 import 'package:mocktail/mocktail.dart';
 
-import '../../../../helpers/test_database.dart';
+import '../../../../helpers/firestore_fake.dart';
 
 class MockContentRepository extends Mock implements ContentRepository {}
 
@@ -25,6 +26,8 @@ class MockFirebaseApp extends Mock implements FirebaseApp {}
 
 class MockFirebaseAuthHandle extends Mock implements FirebaseAuth {}
 
+const _uid = 'bookmark-uid';
+const _profileId = 'bookmark-profile-ulid';
 const _ref1 = 'Mishnah Berachot 1:1';
 const _ref2 = 'Mishnah Berachot 1:2';
 const _ref3 = 'Mishnah Berachot 1:3';
@@ -34,48 +37,28 @@ void main() {
     registerFallbackValue(CurriculumId.mishnayos);
   });
 
-  late UserDatabase database;
-  late MockContentRepository mockContentRepository;
-  late BookmarkRepositoryImpl repository;
-  late int mishnayosTrackId;
+  late FakeFirebaseFirestore firestore;
+  late MockContentRepository contentRepository;
+  late FirestoreLearningOrderRepository learningOrderRepository;
+  late FirestoreBookmarkRepository repository;
 
-  setUp(() async {
-    database = createTestDatabase();
-    await seedProfileZero(database);
-    // Also seed profile 1 (referenced by learning_order tests).
-    await seedProfile(database);
-    mockContentRepository = MockContentRepository();
-
-    final mishnayosTrack = await database
-        .into(database.curriculumTracks)
-        .insertReturning(
-          CurriculumTracksCompanion.insert(
-            profileId: 0,
-            curriculumId: CurriculumId.mishnayos.storageKey,
-            stateChangedAt: DateTime.utc(2026, 5, 1),
-            activatedAt: DateTime.utc(2026, 5, 1),
-          ),
-        );
-    mishnayosTrackId = mishnayosTrack.id;
-
-    await database
-        .into(database.curriculumTracks)
-        .insert(
-          CurriculumTracksCompanion.insert(
-            profileId: 0,
-            curriculumId: CurriculumId.bavli.storageKey,
-            stateChangedAt: DateTime.utc(2026, 5, 1),
-            activatedAt: DateTime.utc(2026, 5, 1),
-          ),
-        );
-
-    repository = BookmarkRepositoryImpl(
-      database: database,
-      contentRepository: mockContentRepository,
+  setUp(() {
+    firestore = createFakeFirestore(authenticatedUid: _uid);
+    contentRepository = MockContentRepository();
+    learningOrderRepository = FirestoreLearningOrderRepository(
+      firestore: firestore,
+      uid: _uid,
+      profileId: _profileId,
+    );
+    repository = FirestoreBookmarkRepository(
+      firestore: firestore,
+      uid: _uid,
+      profileId: _profileId,
+      contentRepository: contentRepository,
+      learningOrderRepository: learningOrderRepository,
     );
 
-    // Default content order: ref1, ref2, ref3
-    when(() => mockContentRepository.getContentForCurriculum(any())).thenAnswer(
+    when(() => contentRepository.getContentForCurriculum(any())).thenAnswer(
       (_) async => [
         const ContentItem(
           curriculumId: 'mishnayos',
@@ -108,103 +91,60 @@ void main() {
     );
   });
 
-  tearDown(() async {
-    await database.close();
-  });
-
   group('Bookmark creation and initialization', () {
-    test(
-      'initializeBookmark sets sefariaRef to the first item in sort order',
-      () async {
-        final bookmark = await repository.initializeBookmark(
-          curriculumId: CurriculumId.mishnayos,
-        );
+    test('initializeBookmark uses the first item in sort order', () async {
+      final bookmark = await repository.initializeBookmark(
+        curriculumId: CurriculumId.mishnayos,
+      );
 
-        expect(bookmark.sefariaRef, _ref1);
-        expect(bookmark.curriculumId, CurriculumId.mishnayos);
-        expect(bookmark.updatedAt.isUtc, isTrue);
-      },
-    );
+      expect(bookmark.sefariaRef, _ref1);
+      expect(bookmark.curriculumId, CurriculumId.mishnayos);
+      expect(bookmark.updatedAt.isUtc, isTrue);
+    });
   });
 
   group('Bookmark advancement', () {
-    test(
-      'advanceBookmark updates sefariaRef to the next item in sort order',
-      () async {
-        await repository.setBookmark(
-          curriculumId: CurriculumId.mishnayos,
-          sefariaRef: _ref1,
-        );
+    test('advanceBookmark moves to the next item in sort order', () async {
+      await repository.setBookmark(
+        curriculumId: CurriculumId.mishnayos,
+        sefariaRef: _ref1,
+      );
+      await repository.advanceBookmark(
+        curriculumId: CurriculumId.mishnayos,
+        completedSefariaRef: _ref1,
+      );
 
-        await repository.advanceBookmark(
-          curriculumId: CurriculumId.mishnayos,
-          completedSefariaRef: _ref1,
-        );
+      final updated = await repository.getBookmark(
+        curriculumId: CurriculumId.mishnayos,
+      );
+      expect(updated?.sefariaRef, _ref2);
+    });
 
-        final updated = await repository.getBookmark(
-          curriculumId: CurriculumId.mishnayos,
-        );
-        expect(updated?.sefariaRef, _ref2);
-      },
-    );
-
-    test(
-      'advanceBookmark follows custom learning order when one exists',
-      () async {
-        // Custom order: ref3, ref1, ref2. `repository` defaults to
-        // profileId 0, so fixtures must be seeded under the same profile it
-        // reads from (AUD-core-database-02: these rows used to be seeded
-        // under profileId 1 and only "worked" because the DAO ignored
-        // profileId).
-        await database.learningOrderDao.insertLearningOrder(
-          LearningOrderCompanion.insert(
-            profileId: 0,
-            curriculumId: CurriculumId.mishnayos.storageKey,
-            sefariaRef: _ref3,
-            userSortOrder: 0,
-          ),
-        );
-        await database.learningOrderDao.insertLearningOrder(
-          LearningOrderCompanion.insert(
-            profileId: 0,
-            curriculumId: CurriculumId.mishnayos.storageKey,
-            sefariaRef: _ref1,
-            userSortOrder: 1,
-          ),
-        );
-        await database.learningOrderDao.insertLearningOrder(
-          LearningOrderCompanion.insert(
-            profileId: 0,
-            curriculumId: CurriculumId.mishnayos.storageKey,
-            sefariaRef: _ref2,
-            userSortOrder: 2,
-          ),
-        );
-
-        // Start at ref3 (first in custom order)
-        await repository.setBookmark(
-          curriculumId: CurriculumId.mishnayos,
+    test('advanceBookmark follows a saved custom learning order', () async {
+      await learningOrderRepository.saveOrder(CurriculumId.mishnayos, [
+        const LearningOrderItem(
           sefariaRef: _ref3,
-        );
-
-        await repository.advanceBookmark(
-          curriculumId: CurriculumId.mishnayos,
-          completedSefariaRef: _ref3,
-        );
-
-        final updated = await repository.getBookmark(
-          curriculumId: CurriculumId.mishnayos,
-        );
-        expect(updated?.sefariaRef, _ref1); // Next in custom order
-      },
-    );
-
-    test('advanceBookmark keeps bookmark at last item (no overflow)', () async {
+          displayNameHe: '',
+          displayNameEn: 'B 1:3',
+          userSortOrder: 0,
+        ),
+        const LearningOrderItem(
+          sefariaRef: _ref1,
+          displayNameHe: '',
+          displayNameEn: 'B 1:1',
+          userSortOrder: 1,
+        ),
+        const LearningOrderItem(
+          sefariaRef: _ref2,
+          displayNameHe: '',
+          displayNameEn: 'B 1:2',
+          userSortOrder: 2,
+        ),
+      ]);
       await repository.setBookmark(
         curriculumId: CurriculumId.mishnayos,
         sefariaRef: _ref3,
       );
-
       await repository.advanceBookmark(
         curriculumId: CurriculumId.mishnayos,
         completedSefariaRef: _ref3,
@@ -213,14 +153,29 @@ void main() {
       final updated = await repository.getBookmark(
         curriculumId: CurriculumId.mishnayos,
       );
-      expect(updated?.sefariaRef, _ref3); // Unchanged — already at last item
+      expect(updated?.sefariaRef, _ref1);
+    });
+
+    test('advanceBookmark keeps the bookmark at the last item', () async {
+      await repository.setBookmark(
+        curriculumId: CurriculumId.mishnayos,
+        sefariaRef: _ref3,
+      );
+      await repository.advanceBookmark(
+        curriculumId: CurriculumId.mishnayos,
+        completedSefariaRef: _ref3,
+      );
+
+      final updated = await repository.getBookmark(
+        curriculumId: CurriculumId.mishnayos,
+      );
+      expect(updated?.sefariaRef, _ref3);
     });
   });
 
   group('Manual bookmark operations', () {
     test('setBookmark updates sefariaRef and stores a UTC timestamp', () async {
       final before = DateTime.now().toUtc();
-
       final bookmark = await repository.setBookmark(
         curriculumId: CurriculumId.mishnayos,
         sefariaRef: _ref2,
@@ -230,13 +185,14 @@ void main() {
       expect(bookmark.updatedAt.isUtc, isTrue);
       expect(bookmark.updatedAt.isAfter(before), isTrue);
 
-      // No completions should be created
-      final completions = await database.completionDao
-          .internalGetCompletionsByCurriculumCrossProfile(
-            CurriculumId.mishnayos.storageKey,
-            scope: CrossProfileScope.dataExport,
-          );
-      expect(completions, isEmpty);
+      final completions = await firestore
+          .collection('users')
+          .doc(_uid)
+          .collection('learner_profiles')
+          .doc(_profileId)
+          .collection('completions')
+          .get();
+      expect(completions.docs, isEmpty);
     });
   });
 
@@ -246,127 +202,74 @@ void main() {
         curriculumId: CurriculumId.mishnayos,
         sefariaRef: _ref1,
       );
-      expect(bookmark.firestoreId, 'mishnayos');
-
       final bookmark2 = await repository.setBookmark(
         curriculumId: CurriculumId.bavli,
         sefariaRef: _ref1,
       );
+
+      expect(bookmark.firestoreId, 'mishnayos');
       expect(bookmark2.firestoreId, 'bavli');
     });
   });
 
   group('Conflict resolution', () {
     test(
-      'mergeRemoteBookmark: remote wins when it has a newer timestamp',
-      () async {
-        // Local bookmark at ref1 — 1 hour old
-        final localTime = DateTime.now().toUtc().subtract(
-          const Duration(hours: 1),
-        );
-        await database.bookmarkDao.insertBookmark(
-          BookmarksCompanion.insert(
-            profileId: 0,
-            curriculumId: CurriculumId.mishnayos.storageKey,
-            trackId: mishnayosTrackId,
-            sefariaRef: _ref1,
-            updatedAt: localTime,
-          ),
-        );
-
-        // Remote at ref2 — just now
-        final remoteTime = DateTime.now().toUtc();
-        await repository.mergeRemoteBookmark({
-          'curriculum_id': CurriculumId.mishnayos.storageKey,
-          'track_type': 'personal',
-          'content_item_id': _ref2,
-          'updated_at': remoteTime.toIso8601String(),
-        });
-
-        final result = await repository.getBookmark(
-          curriculumId: CurriculumId.mishnayos,
-        );
-        expect(result?.sefariaRef, _ref2); // Remote won
-      },
+      'remote newer bookmark wins',
+      () async {},
+      skip:
+          'The landed Firestore bookmark repository has no mergeRemoteBookmark '
+          'API; this Drift sync-conflict mechanic has no equivalent to test.',
     );
-
     test(
-      'mergeRemoteBookmark: local wins when it has a newer timestamp',
-      () async {
-        // Set local bookmark to ref2 — just now
-        await repository.setBookmark(
-          curriculumId: CurriculumId.mishnayos,
-          sefariaRef: _ref2,
-        );
-
-        // Remote at ref3 — 1 hour old
-        final olderRemoteTime = DateTime.now().toUtc().subtract(
-          const Duration(hours: 1),
-        );
-        await repository.mergeRemoteBookmark({
-          'curriculum_id': CurriculumId.mishnayos.storageKey,
-          'track_type': 'personal',
-          'content_item_id': _ref3,
-          'updated_at': olderRemoteTime.toIso8601String(),
-        });
-
-        final result = await repository.getBookmark(
-          curriculumId: CurriculumId.mishnayos,
-        );
-        expect(result?.sefariaRef, _ref2); // Local won
-      },
+      'local newer bookmark wins',
+      () async {},
+      skip:
+          'The landed Firestore bookmark repository has no mergeRemoteBookmark '
+          'API; this Drift sync-conflict mechanic has no equivalent to test.',
     );
   });
 
   group('FirestoreBookmarkRepositoryAdapter', () {
-    const uid = 'uid-1';
-    const profileDocId = 'profile-ulid-1';
-
-    AccountFirebaseHandles handles(FakeFirebaseFirestore firestore) {
+    AccountFirebaseHandles handles(FakeFirebaseFirestore fake) {
       return AccountFirebaseHandles(
         app: MockFirebaseApp(),
-        firestore: firestore,
+        firestore: fake,
         auth: MockFirebaseAuthHandle(),
-        uid: uid,
+        uid: _uid,
       );
     }
 
-    // Constructing FirestoreBookmarkRepositoryAdapter requires a Ref
-    // (Riverpod's Ref is sealed — it can only come from inside a provider
-    // callback), so tests obtain one the same way production does: read a
-    // throwaway Provider that builds the adapter from the container's ref.
     FirestoreBookmarkRepositoryAdapter buildAdapter(
-      ProviderContainer container,
-      ContentRepository contentRepository, {
+      ProviderContainer providerContainer,
+      ContentRepository content, {
       ContentIndex? contentIndex,
     }) {
       final adapterProvider = Provider<FirestoreBookmarkRepositoryAdapter>(
         (ref) => FirestoreBookmarkRepositoryAdapter(
           ref: ref,
-          contentRepository: contentRepository,
+          contentRepository: content,
           contentIndex: contentIndex,
         ),
       );
-      return container.read(adapterProvider);
+      return providerContainer.read(adapterProvider);
     }
 
     group('not ready (no active account/profile)', () {
       test('getBookmark returns null instead of throwing', () async {
-        final container = ProviderContainer();
-        addTearDown(container.dispose);
-        final adapter = buildAdapter(container, mockContentRepository);
+        final providerContainer = ProviderContainer();
+        addTearDown(providerContainer.dispose);
+        final adapter = buildAdapter(providerContainer, contentRepository);
 
-        final result = await adapter.getBookmark(
-          curriculumId: CurriculumId.mishnayos,
+        expect(
+          await adapter.getBookmark(curriculumId: CurriculumId.mishnayos),
+          isNull,
         );
-
-        expect(result, isNull);
       });
 
       test('setBookmark throws BookmarkRepositoryNotReadyException', () async {
-        final container = ProviderContainer();
-        addTearDown(container.dispose);
-        final adapter = buildAdapter(container, mockContentRepository);
+        final providerContainer = ProviderContainer();
+        addTearDown(providerContainer.dispose);
+        final adapter = buildAdapter(providerContainer, contentRepository);
 
         expect(
           () => adapter.setBookmark(
@@ -377,78 +280,74 @@ void main() {
         );
       });
 
-      test(
-        'initializeBookmark throws BookmarkRepositoryNotReadyException',
-        () async {
-          final container = ProviderContainer();
-          addTearDown(container.dispose);
-          final adapter = buildAdapter(container, mockContentRepository);
+      test('initializeBookmark throws when not ready', () async {
+        final providerContainer = ProviderContainer();
+        addTearDown(providerContainer.dispose);
+        final adapter = buildAdapter(providerContainer, contentRepository);
 
-          expect(
-            () => adapter.initializeBookmark(
-              curriculumId: CurriculumId.mishnayos,
-            ),
-            throwsA(isA<BookmarkRepositoryNotReadyException>()),
-          );
-        },
-      );
+        expect(
+          () =>
+              adapter.initializeBookmark(curriculumId: CurriculumId.mishnayos),
+          throwsA(isA<BookmarkRepositoryNotReadyException>()),
+        );
+      });
 
-      test(
-        'advanceBookmark throws BookmarkRepositoryNotReadyException',
-        () async {
-          final container = ProviderContainer();
-          addTearDown(container.dispose);
-          final adapter = buildAdapter(container, mockContentRepository);
+      test('advanceBookmark throws when not ready', () async {
+        final providerContainer = ProviderContainer();
+        addTearDown(providerContainer.dispose);
+        final adapter = buildAdapter(providerContainer, contentRepository);
 
-          expect(
-            () => adapter.advanceBookmark(
-              curriculumId: CurriculumId.mishnayos,
-              completedSefariaRef: _ref1,
-            ),
-            throwsA(isA<BookmarkRepositoryNotReadyException>()),
-          );
-        },
-      );
+        expect(
+          () => adapter.advanceBookmark(
+            curriculumId: CurriculumId.mishnayos,
+            completedSefariaRef: _ref1,
+          ),
+          throwsA(isA<BookmarkRepositoryNotReadyException>()),
+        );
+      });
     });
 
     group('ready (active account + profile)', () {
-      late FakeFirebaseFirestore firestore;
-      late ProviderContainer container;
+      late FakeFirebaseFirestore readyFirestore;
+      late ProviderContainer providerContainer;
       late FirestoreBookmarkRepositoryAdapter adapter;
 
       setUp(() {
-        firestore = FakeFirebaseFirestore();
-        container = ProviderContainer(
+        readyFirestore = createFakeFirestore(authenticatedUid: _uid);
+        providerContainer = ProviderContainer(
           overrides: [
             activeAccountFirebaseProvider.overrideWith(
-              (ref) async => handles(firestore),
+              (ref) async => handles(readyFirestore),
             ),
           ],
         );
-        container.read(activeProfileDocIdProvider.notifier).set(profileDocId);
-        adapter = buildAdapter(container, mockContentRepository);
+        providerContainer
+            .read(activeProfileDocIdProvider.notifier)
+            .set(_profileId);
+        adapter = buildAdapter(providerContainer, contentRepository);
       });
 
-      tearDown(() => container.dispose());
+      tearDown(() => providerContainer.dispose());
 
-      test('initializeBookmark delegates to FirestoreBookmarkRepository and '
-          'writes a doc reachable at the expected Firestore path', () async {
-        final bookmark = await adapter.initializeBookmark(
-          curriculumId: CurriculumId.mishnayos,
-        );
+      test(
+        'initializeBookmark writes a reachable Firestore document',
+        () async {
+          final bookmark = await adapter.initializeBookmark(
+            curriculumId: CurriculumId.mishnayos,
+          );
+          expect(bookmark.sefariaRef, _ref1);
 
-        expect(bookmark.sefariaRef, _ref1);
-
-        final doc = await firestore
-            .collection('users')
-            .doc(uid)
-            .collection('learner_profiles')
-            .doc(profileDocId)
-            .collection('bookmarks')
-            .doc('mishnayos')
-            .get();
-        expect(doc.exists, isTrue);
-      });
+          final doc = await readyFirestore
+              .collection('users')
+              .doc(_uid)
+              .collection('learner_profiles')
+              .doc(_profileId)
+              .collection('bookmarks')
+              .doc('mishnayos')
+              .get();
+          expect(doc.exists, isTrue);
+        },
+      );
 
       test(
         'setBookmark then getBookmark round-trips through Firestore',
@@ -457,35 +356,29 @@ void main() {
             curriculumId: CurriculumId.mishnayos,
             sefariaRef: _ref2,
           );
-
           final result = await adapter.getBookmark(
             curriculumId: CurriculumId.mishnayos,
           );
-
           expect(result?.sefariaRef, _ref2);
         },
       );
 
-      test('advanceBookmark moves the bookmark to the next item in content '
-          'order', () async {
+      test('advanceBookmark moves to the next content item', () async {
         await adapter.setBookmark(
           curriculumId: CurriculumId.mishnayos,
           sefariaRef: _ref1,
         );
-
         await adapter.advanceBookmark(
           curriculumId: CurriculumId.mishnayos,
           completedSefariaRef: _ref1,
         );
-
         final result = await adapter.getBookmark(
           curriculumId: CurriculumId.mishnayos,
         );
         expect(result?.sefariaRef, _ref2);
       });
 
-      test('initializeBookmark forwards the injected ContentIndex instead of '
-          'falling back to a curriculum content scan', () async {
+      test('initializeBookmark uses the injected ContentIndex', () async {
         final contentIndex = ContentIndex.fromCurricula({
           CurriculumId.mishnayos: [
             const ContentItem(
@@ -509,54 +402,30 @@ void main() {
           ],
         });
         final indexedAdapter = buildAdapter(
-          container,
-          mockContentRepository,
+          providerContainer,
+          contentRepository,
           contentIndex: contentIndex,
         );
 
         final bookmark = await indexedAdapter.initializeBookmark(
           curriculumId: CurriculumId.mishnayos,
         );
-
         expect(bookmark.sefariaRef, _ref1);
-        verifyNever(() => mockContentRepository.getContentForCurriculum(any()));
+        verifyNever(() => contentRepository.getContentForCurriculum(any()));
       });
     });
 
-    // REGRESSION GUARD — a tutor acting inside a talmid's context.
-    //
-    // `activeProfileDocIdProvider` still holds the TUTOR's own profile ULID
-    // during a tutored session (nothing under lib/features/tutoring/ sets it,
-    // and there is nothing to set — the tutored mirror row is Drift-only and
-    // carries no ULID). Left unguarded, the owner path would resolve to
-    // users/{tutorUid}/learner_profiles/{tutorOwnUlid}/bookmarks/... — the
-    // tutor's OWN document — and writing there would overwrite the tutor's
-    // personal reading position with the talmid's while never touching the
-    // talmid's real bookmark, silently.
-    //
-    // T-35 (`docs/planning/firestore-cutover-log.md`) hoisted the guard that
-    // used to live only on this adapter into
-    // `_watchActiveAccountAndProfile` (`repository_providers.dart`), so all
-    // 13 profile-scoped providers now refuse uniformly, before any handle
-    // resolution — this adapter no longer carries its own tutored-session
-    // check. A tutored write consequently reads the same way any other
-    // not-ready write does: [BookmarkRepositoryNotReadyException].
     group('tutored session (tutor acting inside a talmid context)', () {
-      late FakeFirebaseFirestore firestore;
-      late ProviderContainer container;
+      late FakeFirebaseFirestore tutorFirestore;
+      late ProviderContainer providerContainer;
       late FirestoreBookmarkRepositoryAdapter adapter;
 
-      /// Reads `sefaria_ref` straight out of the TUTOR's own bookmark
-      /// document — the one that must never be touched by a write issued
-      /// while the tutor is inside a talmid's context. Read from Firestore
-      /// directly rather than through the adapter, because the adapter
-      /// itself refuses to read during a tutored session.
       Future<Object?> tutorOwnSefariaRef() async {
-        final snapshot = await firestore
+        final snapshot = await tutorFirestore
             .collection('users')
-            .doc(uid)
+            .doc(_uid)
             .collection('learner_profiles')
-            .doc(profileDocId)
+            .doc(_profileId)
             .collection('bookmarks')
             .doc('mishnayos')
             .get();
@@ -564,32 +433,27 @@ void main() {
       }
 
       setUp(() async {
-        firestore = FakeFirebaseFirestore();
-        container = ProviderContainer(
+        tutorFirestore = createFakeFirestore(authenticatedUid: _uid);
+        providerContainer = ProviderContainer(
           overrides: [
             activeAccountFirebaseProvider.overrideWith(
-              (ref) async => handles(firestore),
+              (ref) async => handles(tutorFirestore),
             ),
           ],
         );
-        // The tutor's own account + own profile are active, exactly as they
-        // are in production when the tutor enters a talmid's context.
-        container.read(activeProfileDocIdProvider.notifier).set(profileDocId);
-        adapter = buildAdapter(container, mockContentRepository);
-
-        // The tutor's own bookmark, parked on _ref1.
+        providerContainer
+            .read(activeProfileDocIdProvider.notifier)
+            .set(_profileId);
+        adapter = buildAdapter(providerContainer, contentRepository);
         await adapter.setBookmark(
           curriculumId: CurriculumId.mishnayos,
           sefariaRef: _ref1,
         );
-
-        // Now enter tutor mode for a talmid, exactly as
-        // tutored_children_section.dart does after the PIN gate passes.
-        container
+        providerContainer
             .read(activeTutoredProfileSelectionProvider.notifier)
             .enter(
               const TutoredProfileSelection(
-                profileId: '42', // the talmid's id in the PARENT's account
+                profileId: 'talmid-profile-ulid',
                 ownerUid: 'parent-uid',
                 grantId: 'grant-1',
                 permissions: TutorPermissions(),
@@ -597,39 +461,21 @@ void main() {
             );
       });
 
-      tearDown(() => container.dispose());
+      tearDown(() => providerContainer.dispose());
 
-      test(
-        "advanceBookmark never rewrites the TUTOR's own bookmark document",
-        () async {
-          // Deliberately NOT expressed as `throwsA(...)`: what this test
-          // pins is the absence of the write, not the shape of the refusal.
-          // Swallowing the refusal here means that with the guard reverted
-          // the failure surfaces as the actual corruption — the tutor's
-          // bookmark advanced from _ref1 to _ref2 — rather than as a
-          // missing-exception message.
-          try {
-            await adapter.advanceBookmark(
-              curriculumId: CurriculumId.mishnayos,
-              completedSefariaRef: _ref1,
-            );
-          } on BookmarkRepositoryNotReadyException {
-            // Expected — pinned separately below.
-          }
-
-          expect(
-            await tutorOwnSefariaRef(),
-            _ref1,
-            reason:
-                "the tutor's own bookmark was silently overwritten by a "
-                'write issued during a tutored session (it should still '
-                'point at $_ref1)',
+      test('tutored writes never rewrite the tutor bookmark', () async {
+        try {
+          await adapter.advanceBookmark(
+            curriculumId: CurriculumId.mishnayos,
+            completedSefariaRef: _ref1,
           );
-        },
-      );
+        } on BookmarkRepositoryNotReadyException {
+          // Expected refusal.
+        }
+        expect(await tutorOwnSefariaRef(), _ref1);
+      });
 
-      test('advanceBookmark throws '
-          'BookmarkRepositoryNotReadyException', () async {
+      test('tutored advanceBookmark throws not-ready', () async {
         await expectLater(
           adapter.advanceBookmark(
             curriculumId: CurriculumId.mishnayos,
@@ -639,46 +485,31 @@ void main() {
         );
       });
 
-      test(
-        "setBookmark never rewrites the TUTOR's own bookmark document",
-        () async {
-          try {
-            await adapter.setBookmark(
-              curriculumId: CurriculumId.mishnayos,
-              sefariaRef: _ref3,
-            );
-          } on BookmarkRepositoryNotReadyException {
-            // Expected.
-          }
+      test('tutored setBookmark never rewrites the tutor bookmark', () async {
+        try {
+          await adapter.setBookmark(
+            curriculumId: CurriculumId.mishnayos,
+            sefariaRef: _ref3,
+          );
+        } on BookmarkRepositoryNotReadyException {
+          // Expected refusal.
+        }
+        expect(await tutorOwnSefariaRef(), _ref1);
+      });
 
-          expect(await tutorOwnSefariaRef(), _ref1);
-        },
-      );
-
-      test('initializeBookmark throws '
-          'BookmarkRepositoryNotReadyException', () async {
+      test('tutored initializeBookmark throws not-ready', () async {
         await expectLater(
           adapter.initializeBookmark(curriculumId: CurriculumId.mishnayos),
           throwsA(isA<BookmarkRepositoryNotReadyException>()),
         );
       });
 
-      test(
-        "getBookmark returns null rather than the TUTOR's own bookmark",
-        () async {
-          final result = await adapter.getBookmark(
-            curriculumId: CurriculumId.mishnayos,
-          );
-
-          expect(
-            result,
-            isNull,
-            reason:
-                "presenting the tutor's own reading position as the talmid's "
-                'is the read-side twin of the write corruption',
-          );
-        },
-      );
+      test('tutored getBookmark returns null', () async {
+        expect(
+          await adapter.getBookmark(curriculumId: CurriculumId.mishnayos),
+          isNull,
+        );
+      });
     });
   });
 }
