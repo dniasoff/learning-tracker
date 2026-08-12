@@ -23,18 +23,19 @@ library;
 
 import 'dart:io';
 
-import 'package:drift/drift.dart' show Value;
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
+import 'package:learning_tracker/data/repositories/firestore_completion_repository.dart';
 import 'package:learning_tracker/features/content_browsing/data/repositories/content_repository_impl.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
-import 'package:learning_tracker/features/learning/domain/entities/completion_tier_filter.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/items_learned_providers.dart';
 
-import '../../../../helpers/drift_memory.dart';
+import '../../../../helpers/firestore_fake.dart';
+import '../../../../helpers/firestore_fixtures.dart';
 
 /// Real repository backed by the on-disk bundled assets (rootBundle is empty in
 /// the test environment).
@@ -108,65 +109,44 @@ class _CountingContentRepository implements ContentRepository {
 }
 
 void main() {
-  late UserDatabase db;
+  late FakeFirebaseFirestore firestore;
+  late FirestoreCompletionRepository completionRepository;
   late _CountingContentRepository repo;
-  const profileId = 1;
+  const uid = 'r8-oom-uid';
+  const profileId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
   // A genuine Mussar leaf ref so the active curriculum yields a real learned
   // count (not just a materialization).
   const mussarLeafRef = 'Mesillat Yesharim 1:1';
 
   setUp(() async {
-    final database = inMemoryDb();
-    // TQ-6: close in the same scope as the factory call.
-    addTearDown(database.close);
-    db = database;
-    await seedProfile(db); // profile id 1
-    final trackId = await seedTrack(
-      db,
+    firestore = createFakeFirestore(authenticatedUid: uid);
+    completionRepository = FirestoreCompletionRepository(
+      firestore: firestore,
+      uid: uid,
       profileId: profileId,
-      curriculumId: CurriculumId.mussar.storageKey,
-      activatedAt: DateTime.utc(2026, 1, 1),
-    );
-    final stageId = await db.stageDao.insertStageDefinition(
-      StageDefinitionsCompanion.insert(
-        profileId: profileId,
-        curriculumId: CurriculumId.mussar.storageKey,
-        trackId: trackId,
-        stageOrder: 1,
-        stageName: 'Learn',
-        schedule: const Value('{"type":"delay","delay_days":0}'),
-      ),
     );
     await seedCompletion(
-      db,
-      CompletionEventsCompanion.insert(
-        profileId: profileId,
-        curriculumId: CurriculumId.mussar.storageKey,
-        sefariaRef: mussarLeafRef,
-        stageId: stageId,
-        trackType: 'personal',
-        trackId: Value(trackId),
-        eventTimestamp: DateTime.utc(2026, 3, 15),
-      ),
+      firestore,
+      uid: uid,
+      profileId: profileId,
+      curriculumId: CurriculumId.mussar,
+      sefariaRef: mussarLeafRef,
+      stageId: 1,
+      source: CompletionSource.live,
+      completedAt: DateTime.utc(2026, 3, 15),
     );
     repo = _CountingContentRepository(_DiskContentRepository());
   });
 
   test('precondition: exactly Mussar has track completions', () async {
-    final mussar = await db.completionDao.getCompletionsByTier(
-      profileId: profileId,
-      tier: CompletionTierFilter.trackAchievement,
-      curriculumId: CurriculumId.mussar,
+    final mussar = await completionRepository.getCompletionsForCurriculum(
+      CurriculumId.mussar,
     );
     expect(mussar, isNotEmpty);
     for (final c in CurriculumId.values.where(
       (c) => c != CurriculumId.mussar,
     )) {
-      final other = await db.completionDao.getCompletionsByTier(
-        profileId: profileId,
-        tier: CompletionTierFilter.trackAchievement,
-        curriculumId: c,
-      );
+      final other = await completionRepository.getCompletionsForCurriculum(c);
       expect(other, isEmpty, reason: '${c.storageKey} should have none');
     }
   });
@@ -176,10 +156,10 @@ void main() {
     final summaries = <CurriculumCompletionSummary>[];
     for (final c in CurriculumId.values) {
       final s = await computeItemsLearnedSummary(
-        db: db,
+        trackCompletions: await completionRepository
+            .getCompletionsForCurriculum(c),
         repo: repo,
         curriculum: c,
-        profileId: profileId,
       );
       if (s != null) summaries.add(s);
     }
@@ -204,10 +184,12 @@ void main() {
       final summaries = <CurriculumCompletionSummary>[];
       for (final c in CurriculumId.values) {
         final s = await computeLifetimeViewSummary(
-          db: db,
+          completions: await completionRepository.getCompletionsForCurriculum(
+            c,
+          ),
+          ledger: const [],
           repo: repo,
           curriculum: c,
-          profileId: profileId,
         );
         if (s != null) summaries.add(s);
       }

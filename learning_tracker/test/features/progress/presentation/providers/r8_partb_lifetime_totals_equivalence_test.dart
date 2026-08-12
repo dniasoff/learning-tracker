@@ -23,19 +23,27 @@
 ///     the provider used to before this rewrite.
 library;
 
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/data/firestore/repository_providers.dart'
+    show
+        firestoreCompletionRepositoryProvider,
+        firestoreLearningLedgerRepositoryProvider;
+import 'package:learning_tracker/data/repositories/firestore_completion_repository.dart';
+import 'package:learning_tracker/data/repositories/firestore_learning_ledger_repository.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/domain/strategies/composite_curriculum_strategy.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 
-import '../../../../helpers/drift_memory.dart';
+import '../../../../helpers/firestore_fake.dart';
+import '../../../../helpers/firestore_fixtures.dart';
 
 /// Minimal, controllable [ContentRepository] fixture — implements
 /// [LifetimeUnionLeafSource] too, so `_boundedLeavesFor` takes the "real"
@@ -110,13 +118,8 @@ ContentItem _leaf(
 /// Computes totals the OLD way: union `allLeafRefs`/`learnedLeafRefs` straight
 /// off `lifetimeSummariesProvider` (unchanged by this rewrite — still builds
 /// full per-curriculum trees with subset-bridging).
-Future<LifetimeTotals> _oldWayTotals(
-  ProviderContainer container,
-  int profileId,
-) async {
-  final summaries = await container.read(
-    lifetimeSummariesProvider(profileId).future,
-  );
+Future<LifetimeTotals> _oldWayTotals(ProviderContainer container) async {
+  final summaries = await container.read(lifetimeSummariesProvider.future);
   final allDistinct = <String>{};
   final learnedDistinct = <String>{};
   for (final s in summaries) {
@@ -131,8 +134,9 @@ Future<LifetimeTotals> _oldWayTotals(
 }
 
 void main() {
-  late UserDatabase db;
-  const profileId = 1;
+  late FakeFirebaseFirestore firestore;
+  const uid = 'r8-equivalence-uid';
+  const profileId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
 
   // Chumash ⊂ Tanach, Nach ⊂ Tanach — the ONLY overlap in the app
   // (curriculum_overlap_registry.dart). Tanach's own item list is built via
@@ -180,16 +184,27 @@ void main() {
   };
 
   setUp(() async {
-    final database = inMemoryDb();
-    addTearDown(database.close);
-    db = database;
-    await seedProfile(db);
+    firestore = createFakeFirestore(authenticatedUid: uid);
   });
 
   ProviderContainer buildContainer() {
     final container = ProviderContainer(
       overrides: [
-        userDatabaseProvider.overrideWithValue(db),
+        activeProfileIdProvider.overrideWithValue(profileId),
+        firestoreCompletionRepositoryProvider.overrideWith(
+          (ref) async => FirestoreCompletionRepository(
+            firestore: firestore,
+            uid: uid,
+            profileId: profileId,
+          ),
+        ),
+        firestoreLearningLedgerRepositoryProvider.overrideWith(
+          (ref) async => FirestoreLearningLedgerRepository(
+            firestore: firestore,
+            uid: uid,
+            profileId: profileId,
+          ),
+        ),
         contentRepositoryProvider.overrideWithValue(
           _FakeUnionContentRepository(repoMap),
         ),
@@ -202,9 +217,9 @@ void main() {
   test('baseline — no completions, no ledger: old == new', () async {
     final container = buildContainer();
 
-    final oldTotals = await _oldWayTotals(container, profileId);
+    final oldTotals = await _oldWayTotals(container);
     final newTotals = await container.read(
-      lifetimeTotalsAcrossAllCurriculaProvider(profileId).future,
+      lifetimeTotalsAcrossAllCurriculaProvider.future,
     );
 
     expect(newTotals.totalSections, oldTotals.totalSections);
@@ -215,21 +230,20 @@ void main() {
 
   test('A — Chumash-only live completion is captured in the global union '
       'WITHOUT subset-bridging (old == new)', () async {
-    await db.completionEventDao.appendEvent(
-      CompletionEventsCompanion.insert(
-        profileId: profileId,
-        curriculumId: 'chumash',
-        sefariaRef: 'Genesis 1:1',
-        stageId: 1,
-        trackType: 'personal',
-        eventTimestamp: DateTime.utc(2026, 3, 1),
-      ),
+    await seedCompletion(
+      firestore,
+      uid: uid,
+      profileId: profileId,
+      curriculumId: CurriculumId.chumash,
+      sefariaRef: 'Genesis 1:1',
+      completedAt: DateTime.utc(2026, 3, 1),
+      source: CompletionSource.live,
     );
 
     final container = buildContainer();
-    final oldTotals = await _oldWayTotals(container, profileId);
+    final oldTotals = await _oldWayTotals(container);
     final newTotals = await container.read(
-      lifetimeTotalsAcrossAllCurriculaProvider(profileId).future,
+      lifetimeTotalsAcrossAllCurriculaProvider.future,
     );
 
     expect(newTotals.learnedSections, oldTotals.learnedSections);
@@ -244,21 +258,20 @@ void main() {
 
   test('B — Tanach-DIRECT completion (absent from Chumash/Nach) is still '
       'captured by Tanach\'s own (unbridged) entry (old == new)', () async {
-    await db.completionEventDao.appendEvent(
-      CompletionEventsCompanion.insert(
-        profileId: profileId,
-        curriculumId: 'tanach',
-        sefariaRef: 'Genesis 1:1',
-        stageId: 1,
-        trackType: 'personal',
-        eventTimestamp: DateTime.utc(2026, 3, 1),
-      ),
+    await seedCompletion(
+      firestore,
+      uid: uid,
+      profileId: profileId,
+      curriculumId: CurriculumId.tanach,
+      sefariaRef: 'Genesis 1:1',
+      completedAt: DateTime.utc(2026, 3, 1),
+      source: CompletionSource.live,
     );
 
     final container = buildContainer();
-    final oldTotals = await _oldWayTotals(container, profileId);
+    final oldTotals = await _oldWayTotals(container);
     final newTotals = await container.read(
-      lifetimeTotalsAcrossAllCurriculaProvider(profileId).future,
+      lifetimeTotalsAcrossAllCurriculaProvider.future,
     );
 
     expect(newTotals.learnedSections, oldTotals.learnedSections);
@@ -276,25 +289,24 @@ void main() {
     'C — Chumash ledger sefer-scope mark expands to its leaves, credited via '
     'Chumash\'s own entry, WITHOUT needing Tanach\'s P0 bridging (old == new)',
     () async {
-      await db.learningLedgerDao.insertEntry(
-        LearningLedgerCompanion.insert(
-          profileId: profileId,
-          curriculumId: 'chumash',
-          entryScope: 'sefer',
-          unitIdentifier: 'Bereishis',
-          unitDisplayNameHe: '',
-          unitDisplayNameEn: 'Bereishis',
-          trackType: 'personal',
-          completedAt: DateTime.utc(2026, 3, 1),
-          completionNumber: 1,
-          markedBy: profileId,
-        ),
+      await seedLedgerEntry(
+        firestore,
+        uid: uid,
+        profileId: profileId,
+        ulid: '01ARZ3NDEKTSV4RRFFQ69G5FAW',
+        curriculumId: CurriculumId.chumash,
+        entryScope: 'sefer',
+        unitIdentifier: 'Bereishis',
+        unitDisplayNameHe: '',
+        unitDisplayNameEn: 'Bereishis',
+        completedAt: DateTime.utc(2026, 3, 1),
+        source: CompletionSource.lifetimeOnly,
       );
 
       final container = buildContainer();
-      final oldTotals = await _oldWayTotals(container, profileId);
+      final oldTotals = await _oldWayTotals(container);
       final newTotals = await container.read(
-        lifetimeTotalsAcrossAllCurriculaProvider(profileId).future,
+        lifetimeTotalsAcrossAllCurriculaProvider.future,
       );
 
       expect(newTotals.learnedSections, oldTotals.learnedSections);
@@ -309,25 +321,24 @@ void main() {
   test('D — a stray synthetic-container ("Torah") level1 ledger mark under '
       'Tanach is dropped by the P0 guard in BOTH the old and new paths — it '
       'must NOT blanket-credit Chumash/Nach\'s leaves (old == new)', () async {
-    await db.learningLedgerDao.insertEntry(
-      LearningLedgerCompanion.insert(
-        profileId: profileId,
-        curriculumId: 'tanach',
-        entryScope: 'level1',
-        unitIdentifier: 'Torah',
-        unitDisplayNameHe: '',
-        unitDisplayNameEn: 'Torah',
-        trackType: 'personal',
-        completedAt: DateTime.utc(2026, 3, 1),
-        completionNumber: 1,
-        markedBy: profileId,
-      ),
+    await seedLedgerEntry(
+      firestore,
+      uid: uid,
+      profileId: profileId,
+      ulid: '01ARZ3NDEKTSV4RRFFQ69G5FAX',
+      curriculumId: CurriculumId.tanach,
+      entryScope: 'level1',
+      unitIdentifier: 'Torah',
+      unitDisplayNameHe: '',
+      unitDisplayNameEn: 'Torah',
+      completedAt: DateTime.utc(2026, 3, 1),
+      source: CompletionSource.lifetimeOnly,
     );
 
     final container = buildContainer();
-    final oldTotals = await _oldWayTotals(container, profileId);
+    final oldTotals = await _oldWayTotals(container);
     final newTotals = await container.read(
-      lifetimeTotalsAcrossAllCurriculaProvider(profileId).future,
+      lifetimeTotalsAcrossAllCurriculaProvider.future,
     );
 
     expect(newTotals.learnedSections, oldTotals.learnedSections);
@@ -342,35 +353,33 @@ void main() {
 
   test('combined — mixed live + ledger + direct-Tanach marks across curricula '
       '(old == new)', () async {
-    await db.completionEventDao.appendEvent(
-      CompletionEventsCompanion.insert(
-        profileId: profileId,
-        curriculumId: 'nach',
-        sefariaRef: 'Joshua 1:1',
-        stageId: 1,
-        trackType: 'personal',
-        eventTimestamp: DateTime.utc(2026, 3, 1),
-      ),
+    await seedCompletion(
+      firestore,
+      uid: uid,
+      profileId: profileId,
+      curriculumId: CurriculumId.nach,
+      sefariaRef: 'Joshua 1:1',
+      completedAt: DateTime.utc(2026, 3, 1),
+      source: CompletionSource.live,
     );
-    await db.learningLedgerDao.insertEntry(
-      LearningLedgerCompanion.insert(
-        profileId: profileId,
-        curriculumId: 'chumash',
-        entryScope: 'sefer',
-        unitIdentifier: 'Bereishis',
-        unitDisplayNameHe: '',
-        unitDisplayNameEn: 'Bereishis',
-        trackType: 'personal',
-        completedAt: DateTime.utc(2026, 3, 2),
-        completionNumber: 1,
-        markedBy: profileId,
-      ),
+    await seedLedgerEntry(
+      firestore,
+      uid: uid,
+      profileId: profileId,
+      ulid: '01ARZ3NDEKTSV4RRFFQ69G5FAY',
+      curriculumId: CurriculumId.chumash,
+      entryScope: 'sefer',
+      unitIdentifier: 'Bereishis',
+      unitDisplayNameHe: '',
+      unitDisplayNameEn: 'Bereishis',
+      completedAt: DateTime.utc(2026, 3, 2),
+      source: CompletionSource.lifetimeOnly,
     );
 
     final container = buildContainer();
-    final oldTotals = await _oldWayTotals(container, profileId);
+    final oldTotals = await _oldWayTotals(container);
     final newTotals = await container.read(
-      lifetimeTotalsAcrossAllCurriculaProvider(profileId).future,
+      lifetimeTotalsAcrossAllCurriculaProvider.future,
     );
 
     expect(newTotals.learnedSections, oldTotals.learnedSections);

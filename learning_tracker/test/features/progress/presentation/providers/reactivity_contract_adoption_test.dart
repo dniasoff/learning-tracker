@@ -17,26 +17,39 @@
 @Tags(['progress', 'riverpod', 'contract'])
 library;
 
-import 'package:drift/drift.dart' show Value;
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/data/firestore/repository_providers.dart'
+    show
+        ActiveProfileDocId,
+        activeProfileDocIdProvider,
+        firestoreCompletionRepositoryProvider,
+        firestoreLearnerProfileRepositoryProvider,
+        firestoreLearningLedgerRepositoryProvider,
+        firestoreStageDefinitionRepositoryProvider;
+import 'package:learning_tracker/data/repositories/firestore_completion_repository.dart';
+import 'package:learning_tracker/data/repositories/firestore_learner_profile_repository.dart';
+import 'package:learning_tracker/data/repositories/firestore_learning_ledger_repository.dart';
+import 'package:learning_tracker/data/repositories/firestore_stage_definition_repository.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/items_learned_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/progress_providers.dart';
-import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
+import 'package:learning_tracker/features/tracks/stages/domain/models/schedule_type.dart';
+import 'package:learning_tracker/features/tracks/stages/domain/models/stage_definition.dart';
 
-import '../../../../helpers/drift_memory.dart';
+import '../../../../helpers/firestore_fake.dart';
+import '../../../../helpers/firestore_fixtures.dart';
 import '../../../../helpers/reactivity_contract.dart';
 
-const _profileId = 1;
+const _uid = 'progress-reactivity-uid';
+const _profileId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
 const _curriculumKey = 'mishnayos';
 const _curriculum = CurriculumId.mishnayos;
 const _sefariaRef = 'Mishnah Berakhot 1:1';
@@ -103,7 +116,12 @@ class _FakeContentRepository implements ContentRepository {
 
 class _ProfileIdOverride extends ActiveProfileId {
   @override
-  int build() => _profileId;
+  String? build() => _profileId;
+}
+
+class _ProfileDocIdOverride extends ActiveProfileDocId {
+  @override
+  String? build() => _profileId;
 }
 
 /// Records the one completion each test mutates with, and ticks the
@@ -113,19 +131,16 @@ class _ProfileIdOverride extends ActiveProfileId {
 /// other reactivity guard in this suite).
 Future<void> _recordCompletionAndTick(
   ProviderContainer container,
-  UserDatabase db,
-  int trackId,
+  FakeFirebaseFirestore firestore,
 ) async {
-  await db.completionEventDao.appendEvent(
-    CompletionEventsCompanion.insert(
-      profileId: _profileId,
-      curriculumId: _curriculumKey,
-      sefariaRef: _sefariaRef,
-      stageId: 1,
-      trackType: 'personal',
-      trackId: Value(trackId),
-      eventTimestamp: DateTime.utc(2026, 6, 1, 10),
-    ),
+  await seedCompletion(
+    firestore,
+    uid: _uid,
+    profileId: _profileId,
+    curriculumId: _curriculum,
+    sefariaRef: _sefariaRef,
+    stageId: 1,
+    completedAt: DateTime.utc(2026, 6, 1, 10),
   );
   container.read(completionCommittedProvider.notifier).increment();
 }
@@ -133,33 +148,51 @@ Future<void> _recordCompletionAndTick(
 void main() {
   group('progress providers rebuild on completionCommittedProvider', () {
     test('curriculumProgressProvider', () async {
-      final db = inMemoryDb();
-      addTearDown(db.close);
-      await seedProfile(db);
-      final trackId = await seedTrack(
-        db,
+      final firestore = createFakeFirestore(authenticatedUid: _uid);
+      await seedProfile(firestore, uid: _uid, profileId: _profileId);
+      await seedStageDefinitions(
+        firestore,
+        uid: _uid,
         profileId: _profileId,
-        curriculumId: _curriculumKey,
+        curriculumId: _curriculum,
+        stages: [
+          const StageDefinition(
+            id: kFirestoreUnmappedStageId,
+            curriculumId: _curriculum,
+            stageOrder: 1,
+            stageName: 'Learned',
+            delayDays: 0,
+            isDefault: true,
+            scheduleType: ScheduleType.delay,
+          ),
+        ],
       );
-      await db
-          .into(db.stageDefinitions)
-          .insert(
-            StageDefinitionsCompanion.insert(
-              profileId: _profileId,
-              trackId: trackId,
-              curriculumId: _curriculumKey,
-              stageOrder: 1,
-              stageName: 'Learned',
-              schedule: const Value('{"type":"delay","delay_days":0}'),
-            ),
-          );
 
       final container = ProviderContainer(
         overrides: [
-          userDatabaseProvider.overrideWith((ref) => db),
           contentRepositoryProvider.overrideWithValue(_FakeContentRepository()),
           activeProfileIdProvider.overrideWith(_ProfileIdOverride.new),
-          syncWriteFacadeProvider.overrideWithValue(null),
+          activeProfileDocIdProvider.overrideWith(_ProfileDocIdOverride.new),
+          firestoreCompletionRepositoryProvider.overrideWith(
+            (ref) async => FirestoreCompletionRepository(
+              firestore: firestore,
+              uid: _uid,
+              profileId: _profileId,
+            ),
+          ),
+          firestoreStageDefinitionRepositoryProvider.overrideWith(
+            (ref) async => FirestoreStageDefinitionRepository(
+              firestore: firestore,
+              uid: _uid,
+              profileId: _profileId,
+            ),
+          ),
+          firestoreLearnerProfileRepositoryProvider.overrideWith(
+            (ref) async => FirestoreLearnerProfileRepository(
+              firestore: firestore,
+              uid: _uid,
+            ),
+          ),
         ],
       );
       addTearDown(container.dispose);
@@ -167,7 +200,7 @@ void main() {
       await expectRebuildsOn(
         container,
         curriculumProgressProvider(_curriculumKey),
-        () => _recordCompletionAndTick(container, db, trackId),
+        () => _recordCompletionAndTick(container, firestore),
         reason:
             'CP-02: curriculumProgressProvider must watch '
             'completionCommittedProvider so Breakdown by Level updates live',
@@ -175,32 +208,34 @@ void main() {
     });
 
     test('itemsLearnedDataProvider', () async {
-      final db = inMemoryDb();
-      addTearDown(db.close);
-      await seedProfile(db);
-      final trackId = await seedTrack(
-        db,
-        profileId: _profileId,
-        curriculumId: _curriculumKey,
-      );
+      final firestore = createFakeFirestore(authenticatedUid: _uid);
 
       final container = ProviderContainer(
         overrides: [
-          userDatabaseProvider.overrideWith((ref) => db),
           contentRepositoryProvider.overrideWithValue(_FakeContentRepository()),
           activeProfileIdProvider.overrideWith(_ProfileIdOverride.new),
-          syncWriteFacadeProvider.overrideWithValue(null),
+          firestoreCompletionRepositoryProvider.overrideWith(
+            (ref) async => FirestoreCompletionRepository(
+              firestore: firestore,
+              uid: _uid,
+              profileId: _profileId,
+            ),
+          ),
+          firestoreLearningLedgerRepositoryProvider.overrideWith(
+            (ref) async => FirestoreLearningLedgerRepository(
+              firestore: firestore,
+              uid: _uid,
+              profileId: _profileId,
+            ),
+          ),
         ],
       );
       addTearDown(container.dispose);
 
       await expectRebuildsOn(
         container,
-        itemsLearnedDataProvider((
-          profileId: _profileId,
-          curriculumId: _curriculum,
-        )),
-        () => _recordCompletionAndTick(container, db, trackId),
+        itemsLearnedDataProvider(_curriculum),
+        () => _recordCompletionAndTick(container, firestore),
         reason:
             'ILP-01: itemsLearnedDataProvider must watch '
             'completionCommittedProvider so Items Learned updates live',
@@ -208,32 +243,34 @@ void main() {
     });
 
     test('lifetimeViewDataProvider', () async {
-      final db = inMemoryDb();
-      addTearDown(db.close);
-      await seedProfile(db);
-      final trackId = await seedTrack(
-        db,
-        profileId: _profileId,
-        curriculumId: _curriculumKey,
-      );
+      final firestore = createFakeFirestore(authenticatedUid: _uid);
 
       final container = ProviderContainer(
         overrides: [
-          userDatabaseProvider.overrideWith((ref) => db),
           contentRepositoryProvider.overrideWithValue(_FakeContentRepository()),
           activeProfileIdProvider.overrideWith(_ProfileIdOverride.new),
-          syncWriteFacadeProvider.overrideWithValue(null),
+          firestoreCompletionRepositoryProvider.overrideWith(
+            (ref) async => FirestoreCompletionRepository(
+              firestore: firestore,
+              uid: _uid,
+              profileId: _profileId,
+            ),
+          ),
+          firestoreLearningLedgerRepositoryProvider.overrideWith(
+            (ref) async => FirestoreLearningLedgerRepository(
+              firestore: firestore,
+              uid: _uid,
+              profileId: _profileId,
+            ),
+          ),
         ],
       );
       addTearDown(container.dispose);
 
       await expectRebuildsOn(
         container,
-        lifetimeViewDataProvider((
-          profileId: _profileId,
-          curriculumId: _curriculum,
-        )),
-        () => _recordCompletionAndTick(container, db, trackId),
+        lifetimeViewDataProvider(_curriculum),
+        () => _recordCompletionAndTick(container, firestore),
         reason:
             'ILP-01: lifetimeViewDataProvider must watch '
             'completionCommittedProvider so Lifetime View updates live',

@@ -33,20 +33,27 @@ library;
 
 import 'dart:io';
 
-import 'package:drift/drift.dart' show Value;
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/data/firestore/repository_providers.dart'
+    show
+        firestoreCompletionRepositoryProvider,
+        firestoreLearningLedgerRepositoryProvider;
+import 'package:learning_tracker/data/repositories/firestore_completion_repository.dart';
+import 'package:learning_tracker/data/repositories/firestore_learning_ledger_repository.dart';
 import 'package:learning_tracker/features/content_browsing/data/repositories/content_repository_impl.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 
-import '../../../../helpers/drift_memory.dart';
+import '../../../../helpers/firestore_fake.dart';
+import '../../../../helpers/firestore_fixtures.dart';
 
 /// Real repository backed by the on-disk bundled assets (rootBundle is empty
 /// in the test environment).
@@ -131,36 +138,24 @@ class _CountingUnionRepository
 }
 
 void main() {
-  late UserDatabase db;
+  late FakeFirebaseFirestore firestore;
   late _CountingUnionRepository repo;
-  const profileId = 1;
+  const uid = 'r8-header-uid';
+  const profileId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
   // A genuine Mussar leaf ref so the total reflects a real learned count (not
   // just a materialization count) — mirrors the Part A red-demo fixture.
   const mussarLeafRef = 'Mesillat Yesharim 1:1';
 
   setUp(() async {
-    final database = inMemoryDb();
-    // TQ-6: close in the same scope as the factory call.
-    addTearDown(database.close);
-    db = database;
-    await seedProfile(db); // profile id 1
-    final trackId = await seedTrack(
-      db,
-      profileId: profileId,
-      curriculumId: CurriculumId.mussar.storageKey,
-      activatedAt: DateTime.utc(2026, 1, 1),
-    );
+    firestore = createFakeFirestore(authenticatedUid: uid);
     await seedCompletion(
-      db,
-      CompletionEventsCompanion.insert(
-        profileId: profileId,
-        curriculumId: CurriculumId.mussar.storageKey,
-        sefariaRef: mussarLeafRef,
-        stageId: 1,
-        trackType: 'personal',
-        trackId: Value(trackId),
-        eventTimestamp: DateTime.utc(2026, 3, 15),
-      ),
+      firestore,
+      uid: uid,
+      profileId: profileId,
+      curriculumId: CurriculumId.mussar,
+      sefariaRef: mussarLeafRef,
+      source: CompletionSource.live,
+      completedAt: DateTime.utc(2026, 3, 15),
     );
     repo = _CountingUnionRepository(_DiskContentRepository());
   });
@@ -172,14 +167,37 @@ void main() {
       '(the R8 OOM path)', () async {
     final container = ProviderContainer(
       overrides: [
-        userDatabaseProvider.overrideWithValue(db),
+        activeProfileIdProvider.overrideWithValue(profileId),
+        firestoreCompletionRepositoryProvider.overrideWith(
+          (ref) async => FirestoreCompletionRepository(
+            firestore: firestore,
+            uid: uid,
+            profileId: profileId,
+          ),
+        ),
+        firestoreLearningLedgerRepositoryProvider.overrideWith(
+          (ref) async => FirestoreLearningLedgerRepository(
+            firestore: firestore,
+            uid: uid,
+            profileId: profileId,
+          ),
+        ),
         contentRepositoryProvider.overrideWithValue(repo),
       ],
     );
     addTearDown(container.dispose);
 
+    // Keep the auto-disposed provider alive while its asynchronous Firestore
+    // reads complete. Reading `.future` alone does not establish a listener,
+    // so Riverpod can dispose this provider during its loading state.
+    final subscription = container.listen(
+      lifetimeTotalsAcrossAllCurriculaProvider,
+      (_, __) {},
+    );
+    addTearDown(subscription.close);
+
     final totals = await container.read(
-      lifetimeTotalsAcrossAllCurriculaProvider(profileId).future,
+      lifetimeTotalsAcrossAllCurriculaProvider.future,
     );
 
     expect(

@@ -16,67 +16,63 @@
 /// reactively without any explicit refresh/invalidate.
 library;
 
-import 'package:drift/drift.dart' show Value;
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/data/firestore/repository_providers.dart'
+    show firestoreCompletionRepositoryProvider;
+import 'package:learning_tracker/data/repositories/firestore_completion_repository.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/recent_activity_providers.dart';
 
-import '../../../../helpers/drift_memory.dart';
+import '../../../../helpers/firestore_fake.dart';
+import '../../../../helpers/firestore_fixtures.dart';
 
-const _profileId = 1;
+const _uid = 'recent-activity-reactivity-uid';
+const _profileId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
 
 // 7-day window containing all seeded completions.
 final _start = DateTime.utc(2026, 6, 1);
 final _end = DateTime.utc(2026, 6, 7);
 final _window = RecentActivityWindow(startDate: _start, endDate: _end);
 
-class _ProfileIdOverride extends ActiveProfileId {
-  @override
-  int build() => _profileId;
-}
-
-ProviderContainer _makeContainer(UserDatabase db) => ProviderContainer(
-  overrides: [
-    userDatabaseProvider.overrideWith((ref) => db),
-    activeProfileIdProvider.overrideWith(() => _ProfileIdOverride()),
-  ],
-);
+ProviderContainer _makeContainer(FakeFirebaseFirestore firestore) =>
+    ProviderContainer(
+      overrides: [
+        firestoreCompletionRepositoryProvider.overrideWith(
+          (ref) async => FirestoreCompletionRepository(
+            firestore: firestore,
+            uid: _uid,
+            profileId: _profileId,
+          ),
+        ),
+      ],
+    );
 
 /// Seeds a live (streak-eligible) completion inside the 7-day window.
 Future<void> _seedLiveCompletion(
-  UserDatabase db,
-  int trackId,
+  FakeFirebaseFirestore firestore,
   DateTime at, {
   String ref = 'Berakhot 2a',
 }) async {
-  await db.completionEventDao.appendEvent(
-    CompletionEventsCompanion.insert(
-      profileId: _profileId,
-      curriculumId: 'bavli',
-      sefariaRef: ref,
-      stageId: 1,
-      trackType: 'personal',
-      trackId: Value(trackId),
-      eventTimestamp: at,
-    ),
+  await seedCompletion(
+    firestore,
+    uid: _uid,
+    profileId: _profileId,
+    curriculumId: CurriculumId.bavli,
+    sefariaRef: ref,
+    stageId: 1,
+    completedAt: at,
   );
 }
 
 void main() {
-  late UserDatabase db;
-  late int trackId;
+  late FakeFirebaseFirestore firestore;
 
   setUp(() async {
-    db = inMemoryDb();
-    await seedProfile(db);
-    trackId = await seedTrack(db, profileId: _profileId, curriculumId: 'bavli');
+    firestore = createFakeFirestore(authenticatedUid: _uid);
   });
-
-  tearDown(() => db.close());
 
   group(
     'RA-03: recentActivity providers react to completionCommittedProvider',
@@ -86,9 +82,9 @@ void main() {
         'completionCommittedProvider tick (no pull-to-refresh required)',
         () async {
           // Seed one completion so the first read is non-empty.
-          await _seedLiveCompletion(db, trackId, DateTime.utc(2026, 6, 3, 10));
+          await _seedLiveCompletion(firestore, DateTime.utc(2026, 6, 3, 10));
 
-          final container = _makeContainer(db);
+          final container = _makeContainer(firestore);
           addTearDown(container.dispose);
 
           // Listen to keep the autoDispose provider alive.
@@ -107,8 +103,7 @@ void main() {
 
           // Write a SECOND completion after the first read — must be picked up.
           await _seedLiveCompletion(
-            db,
-            trackId,
+            firestore,
             DateTime.utc(2026, 6, 4, 10),
             ref: 'Berakhot 2b',
           );
@@ -139,7 +134,7 @@ void main() {
         'recentActivityStreakDatesProvider reflects new streak date after '
         'completionCommittedProvider tick (no pull-to-refresh required)',
         () async {
-          final container = _makeContainer(db);
+          final container = _makeContainer(firestore);
           addTearDown(container.dispose);
 
           final sub = container.listen(
@@ -155,7 +150,7 @@ void main() {
           expect(firstDates, isEmpty);
 
           // Write a live completion inside the window.
-          await _seedLiveCompletion(db, trackId, DateTime.utc(2026, 6, 3, 10));
+          await _seedLiveCompletion(firestore, DateTime.utc(2026, 6, 3, 10));
 
           // Tick.
           container.read(completionCommittedProvider.notifier).increment();
