@@ -11,24 +11,24 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
-import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
+import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/add_profile_dialog.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../../../helpers/pump_app.dart';
-import '../../../../helpers/test_database.dart';
 
 class _MockProfileRepository extends Mock implements ProfileRepository {}
 
 void main() {
   setUpAll(() {
     GoogleFonts.config.allowRuntimeFetching = false;
+    registerFallbackValue(ProfileMode.adult);
   });
 
   testWidgets(
@@ -38,27 +38,18 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
 
-      final db = createTestDatabase();
-      await seedProfileWithIds(db, profileId: 1, accountId: 1);
-      addTearDown(() => db.close());
-
       final repo = _MockProfileRepository();
+      when(() => repo.getProfiles()).thenAnswer((_) async => const []);
       when(
         () => repo.createProfile(
-          accountId: any(named: 'accountId'),
           displayName: any(named: 'displayName'),
           mode: any(named: 'mode'),
-          avatarIndex: any(named: 'avatarIndex'),
         ),
       ).thenThrow(Exception('FOREIGN KEY constraint failed'));
 
       await tester.pumpWidget(
         pumpApp(
-          overrides: [
-            userDatabaseProvider.overrideWithValue(db),
-            currentAccountIdProvider.overrideWithValue(1),
-            profileRepositoryProvider.overrideWithValue(repo),
-          ],
+          overrides: [profileRepositoryProvider.overrideWithValue(repo)],
           child: Consumer(
             builder: (ctx, ref, _) => Scaffold(
               body: Center(
@@ -109,19 +100,12 @@ void main() {
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
 
-    final db = createTestDatabase();
-    await seedProfileWithIds(db, profileId: 1, accountId: 1);
-    addTearDown(() => db.close());
-
     final repo = _MockProfileRepository();
+    when(() => repo.getProfiles()).thenAnswer((_) async => const []);
 
     await tester.pumpWidget(
       pumpApp(
-        overrides: [
-          userDatabaseProvider.overrideWithValue(db),
-          currentAccountIdProvider.overrideWithValue(1),
-          profileRepositoryProvider.overrideWithValue(repo),
-        ],
+        overrides: [profileRepositoryProvider.overrideWithValue(repo)],
         child: Consumer(
           builder: (ctx, ref, _) => Scaffold(
             body: Center(
@@ -158,26 +142,18 @@ void main() {
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
 
-    final db = createTestDatabase();
-    await seedProfileWithIds(db, profileId: 1, accountId: 1);
-    addTearDown(() => db.close());
-
     final repo = _MockProfileRepository();
+    when(() => repo.getProfiles()).thenAnswer((_) async => const []);
     when(
       () => repo.createProfile(
-        accountId: any(named: 'accountId'),
         displayName: any(named: 'displayName'),
         mode: any(named: 'mode'),
-        avatarIndex: any(named: 'avatarIndex'),
       ),
     ).thenAnswer(
-      (_) async => ProfileModel(
-        id: 9,
-        ulid: 'ulid-9',
-        accountId: 1,
+      (_) async => LearnerProfileEntity(
+        profileId: 'ulid-9',
         displayName: 'TestKid',
-        mode: 'adult',
-        avatarIndex: 0,
+        mode: ProfileMode.adult,
         createdAt: DateTime.utc(2026, 1, 1),
         updatedAt: DateTime.utc(2026, 1, 1),
       ),
@@ -185,11 +161,7 @@ void main() {
 
     await tester.pumpWidget(
       pumpApp(
-        overrides: [
-          userDatabaseProvider.overrideWithValue(db),
-          currentAccountIdProvider.overrideWithValue(1),
-          profileRepositoryProvider.overrideWithValue(repo),
-        ],
+        overrides: [profileRepositoryProvider.overrideWithValue(repo)],
         child: Consumer(
           builder: (ctx, ref, _) => Scaffold(
             body: Center(
@@ -249,46 +221,32 @@ void main() {
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
 
-    final db = createTestDatabase();
-    await seedProfileWithIds(db, profileId: 1, accountId: 1);
-    addTearDown(() => db.close());
-
     final repo = _MockProfileRepository();
+    when(() => repo.getProfiles()).thenAnswer((_) async => const []);
     when(
       () => repo.createProfile(
-        accountId: any(named: 'accountId'),
         displayName: any(named: 'displayName'),
         mode: any(named: 'mode'),
-        avatarIndex: any(named: 'avatarIndex'),
       ),
     ).thenAnswer(
-      (_) async => ProfileModel(
-        id: 9,
-        ulid: 'ulid-9',
-        accountId: 1,
+      (_) async => LearnerProfileEntity(
+        profileId: 'ulid-9',
         displayName: 'Co-Parent',
-        mode: 'adult',
-        avatarIndex: 0,
+        mode: ProfileMode.adult,
         createdAt: DateTime.utc(2026, 1, 1),
         updatedAt: DateTime.utc(2026, 1, 1),
       ),
     );
 
     final container = ProviderContainer(
-      overrides: [
-        userDatabaseProvider.overrideWithValue(db),
-        currentAccountIdProvider.overrideWithValue(1),
-        profileRepositoryProvider.overrideWithValue(repo),
-      ],
+      overrides: [profileRepositoryProvider.overrideWithValue(repo)],
     );
     addTearDown(container.dispose);
 
     // Sanity: profile 1 is the one currently selected, exactly as it
     // would be before opening "Manage Learners" / the switcher / the
     // picker to add a second (adult) profile.
-    container
-        .read(selectedProfileIdProvider.notifier)
-        .select(1, ulid: 'ulid-1');
+    container.read(selectedProfileIdProvider.notifier).select('ulid-1');
 
     await tester.pumpWidget(
       pumpApp(
@@ -320,7 +278,7 @@ void main() {
 
     expect(
       container.read(selectedProfileIdProvider),
-      9,
+      'ulid-9',
       reason:
           'DEFECT 2 (P2-24; premise corrected at P2-30): at the time this '
           'defect was found, creating an adult profile left '
@@ -355,21 +313,14 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
 
-      final db = createTestDatabase();
-      await seedProfileWithIds(db, profileId: 1, accountId: 1);
-      // Close the DB before pumping so the duplicate-name check's DAO call
-      // throws deterministically once the user types a name.
-      await db.close();
-
       final repo = _MockProfileRepository();
+      when(
+        () => repo.getProfiles(),
+      ).thenThrow(Exception('profile read failed'));
 
       await tester.pumpWidget(
         pumpApp(
-          overrides: [
-            userDatabaseProvider.overrideWithValue(db),
-            currentAccountIdProvider.overrideWithValue(1),
-            profileRepositoryProvider.overrideWithValue(repo),
-          ],
+          overrides: [profileRepositoryProvider.overrideWithValue(repo)],
           child: Consumer(
             builder: (ctx, ref, _) => Scaffold(
               body: Center(
@@ -428,20 +379,13 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
 
-      final db = createTestDatabase();
-      await seedProfileWithIds(db, profileId: 1, accountId: 1);
-      addTearDown(() => db.close());
-
       final repo = _MockProfileRepository();
+      when(() => repo.getProfiles()).thenAnswer((_) async => const []);
 
       await tester.pumpWidget(
         pumpApp(
           theme: AppTheme.darkTheme(),
-          overrides: [
-            userDatabaseProvider.overrideWithValue(db),
-            currentAccountIdProvider.overrideWithValue(1),
-            profileRepositoryProvider.overrideWithValue(repo),
-          ],
+          overrides: [profileRepositoryProvider.overrideWithValue(repo)],
           child: Consumer(
             builder: (ctx, ref, _) => Scaffold(
               body: Center(
@@ -489,19 +433,12 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
 
-      final db = createTestDatabase();
-      await seedProfileWithIds(db, profileId: 1, accountId: 1);
-      addTearDown(() => db.close());
-
       final repo = _MockProfileRepository();
+      when(() => repo.getProfiles()).thenAnswer((_) async => const []);
 
       await tester.pumpWidget(
         pumpApp(
-          overrides: [
-            userDatabaseProvider.overrideWithValue(db),
-            currentAccountIdProvider.overrideWithValue(1),
-            profileRepositoryProvider.overrideWithValue(repo),
-          ],
+          overrides: [profileRepositoryProvider.overrideWithValue(repo)],
           child: Consumer(
             builder: (ctx, ref, _) => Scaffold(
               body: Center(

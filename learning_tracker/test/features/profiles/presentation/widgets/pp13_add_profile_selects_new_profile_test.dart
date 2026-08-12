@@ -15,21 +15,23 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
-import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
+import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
+import 'package:learning_tracker/features/profiles/presentation/widgets/add_profile_mode_pick_card.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/add_profile_dialog.dart';
+import 'package:learning_tracker/features/profiles/presentation/widgets/parent_pin_keypad_dialog.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../../../helpers/pump_app.dart';
-import '../../../../helpers/test_database.dart';
 
 class _MockProfileRepository extends Mock implements ProfileRepository {}
 
 void main() {
   setUpAll(() {
     GoogleFonts.config.allowRuntimeFetching = false;
+    registerFallbackValue(ProfileMode.adult);
   });
 
   group('PP-13 selectedProfileId updated before PIN setup', () {
@@ -39,42 +41,32 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
 
-      const kPrevProfileId = 1;
-      const kNewProfileId = 99;
-
-      final db = createTestDatabase();
-      await seedProfileWithIds(db, profileId: kPrevProfileId, accountId: 1);
-      addTearDown(() => db.close());
+      const kPrevProfileId = 'ulid-prev-profile';
+      const kNewProfileId = 'ulid-new-profile';
 
       final mockRepo = _MockProfileRepository();
+      when(() => mockRepo.getProfiles()).thenAnswer((_) async => const []);
       when(
         () => mockRepo.createProfile(
-          accountId: any(named: 'accountId'),
           displayName: any(named: 'displayName'),
           mode: any(named: 'mode'),
-          avatarIndex: any(named: 'avatarIndex'),
         ),
       ).thenAnswer(
-        (_) async => ProfileModel(
-          id: kNewProfileId,
-          ulid: 'ulid-$kNewProfileId',
-          accountId: 1,
+        (_) async => LearnerProfileEntity(
+          profileId: kNewProfileId,
           displayName: 'Beni',
-          mode: 'child',
-          avatarIndex: 0,
+          mode: ProfileMode.child,
           createdAt: DateTime(2026),
           updatedAt: DateTime(2026),
         ),
       );
 
       // Capture selected id changes.
-      final selectedIds = <int?>[];
+      final selectedIds = <String?>[];
 
       await tester.pumpWidget(
         pumpApp(
           overrides: [
-            userDatabaseProvider.overrideWithValue(db),
-            currentAccountIdProvider.overrideWithValue(1),
             profileRepositoryProvider.overrideWithValue(mockRepo),
             selectedProfileIdProvider.overrideWith(
               () => _FixedSelectedProfileId(kPrevProfileId),
@@ -114,38 +106,46 @@ void main() {
       await tester.enterText(find.byType(TextField).first, 'Beni');
       await tester.pump(const Duration(milliseconds: 400));
 
-      // Select child mode via GestureDetector (avoids InkSparkle).
-      // Look for child mode card: find a GestureDetector near "Learner Mode".
-      final childText = find.textContaining('Learner Mode');
-      if (childText.evaluate().isNotEmpty) {
-        final gestureFinder = find.ancestor(
-          of: childText.first,
-          matching: find.byWidgetPredicate(
-            (w) => w is GestureDetector && w.onTap != null,
-          ),
-        );
-        if (gestureFinder.evaluate().isNotEmpty) {
-          final gd = tester.widget<GestureDetector>(gestureFinder.first);
-          gd.onTap?.call();
-          await tester.pump();
-        }
-      }
+      // Child mode is the contract under test. Require the real mode card,
+      // invoke its callback directly (avoids InkSparkle), and verify its
+      // selected state changed before submitting.
+      final childCard = find.ancestor(
+        of: find.text('Child Mode'),
+        matching: find.byType(AddProfileModePickCard),
+      );
+      expect(
+        childCard,
+        findsOneWidget,
+        reason: 'The add-profile flow must expose the child-mode choice.',
+      );
+      expect(
+        tester.widget<AddProfileModePickCard>(childCard).selected,
+        isFalse,
+      );
+      tester.widget<AddProfileModePickCard>(childCard).onTap();
+      await tester.pump();
+      expect(
+        tester.widget<AddProfileModePickCard>(childCard).selected,
+        isTrue,
+        reason: 'The child-mode choice must actually become selected.',
+      );
 
       // Submit via Create Profile button callback (avoids InkSparkle).
       final createBtns = find.widgetWithText(FilledButton, 'Create Profile');
-      if (createBtns.evaluate().isNotEmpty) {
-        final fb = tester.widget<FilledButton>(createBtns.first);
-        if (fb.onPressed != null) {
-          fb.onPressed!();
-        } else {
-          // Default mode is 'adult' — just tap directly.
-          await tester.tap(find.text('Create Profile'));
-        }
-      } else {
-        await tester.tap(find.text('Create Profile'));
-      }
+      expect(createBtns, findsOneWidget);
+      final createButton = tester.widget<FilledButton>(createBtns);
+      expect(
+        createButton.onPressed,
+        isNotNull,
+        reason:
+            'A named child profile should be creatable after mode selection.',
+      );
+      createButton.onPressed!();
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.byType(PinKeypadDialogFrame), findsOneWidget);
+      expect(find.text('Set Parent PIN'), findsOneWidget);
 
       // PP-13 fix: selectedProfileIdProvider must be updated to the new child.
       // The captured list should contain kNewProfileId after the create.
@@ -167,7 +167,7 @@ void main() {
 
 class _FixedSelectedProfileId extends SelectedProfileId {
   _FixedSelectedProfileId(this._initial);
-  final int? _initial;
+  final String? _initial;
   @override
-  int? build() => _initial;
+  String? build() => _initial;
 }
