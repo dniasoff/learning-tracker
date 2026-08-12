@@ -52,15 +52,27 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:learning_tracker/data/firestore/account_firebase.dart';
+import 'package:learning_tracker/data/firestore/active_account_providers.dart';
+import 'package:learning_tracker/data/firestore/repository_providers.dart'
+    show ActiveProfileDocId, activeProfileDocIdProvider;
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
+import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
+import 'package:learning_tracker/features/learning/domain/entities/learning_ledger_entry.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/learning_ledger_providers.dart';
 import 'package:learning_tracker/features/progress/domain/models/journey_view_model.dart';
 import 'package:learning_tracker/features/progress/domain/services/lifetime_tree_builder.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
@@ -69,11 +81,29 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../fixtures/content_fixtures.dart';
-import '../../helpers/drift_memory.dart' as db_helper;
+import '../../helpers/firestore_fake.dart';
+import '../../helpers/firestore_fixtures.dart';
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
 class _MockContentRepository extends Mock implements ContentRepository {}
+
+class _MockProfileRepository extends Mock implements ProfileRepository {}
+
+class _MockFirebaseApp extends Mock implements FirebaseApp {}
+
+class _MockFirebaseAuth extends Mock implements FirebaseAuth {}
+
+const _uid = 'siyumim-timeline-user';
+const _profileId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+
+AccountFirebaseHandles _handles(FakeFirebaseFirestore firestore) =>
+    AccountFirebaseHandles(
+      app: _MockFirebaseApp(),
+      firestore: firestore,
+      auth: _MockFirebaseAuth(),
+      uid: _uid,
+    );
 
 /// R8 Part B — minimal controllable [ContentRepository] fixture also
 /// implementing [LifetimeUnionLeafSource], so
@@ -140,7 +170,12 @@ class _TrueUseHebrewTerms extends UseHebrewTerms {
 
 class _ProfileIdOverride extends ActiveProfileId {
   @override
-  int build() => 1;
+  String? build() => _profileId;
+}
+
+class _ActiveProfileDocIdOverride extends ActiveProfileDocId {
+  @override
+  String? build() => _profileId;
 }
 
 // ── l10n delegates ─────────────────────────────────────────────────────────────
@@ -237,7 +272,6 @@ Widget _host({
     retry: (_, __) => null,
     overrides: [
       activeProfileIdProvider.overrideWith(() => _ProfileIdOverride()),
-      userDatabaseProvider.overrideWith((ref) => db_helper.inMemoryDb()),
       contentRepositoryProvider.overrideWithValue(_MockContentRepository()),
       useHebrewTermsProvider.overrideWith(
         () => useHebrew ? _TrueUseHebrewTerms() : _FalseUseHebrewTerms(),
@@ -594,27 +628,51 @@ void main() {
   // =========================================================================
 
   group('B — lifetime_knowledge_providers', () {
-    late UserDatabase db;
+    late FakeFirebaseFirestore firestore;
+    late _MockProfileRepository profileRepository;
 
     setUp(() async {
-      db = db_helper.inMemoryDb();
-      await db_helper.seedProfile(db); // profileId = 1
+      firestore = createFakeFirestore(authenticatedUid: _uid);
+      profileRepository = _MockProfileRepository();
+      when(() => profileRepository.getProfileById(_profileId)).thenAnswer(
+        (_) async => LearnerProfileEntity(
+          profileId: _profileId,
+          displayName: 'Test User',
+          mode: ProfileMode.adult,
+          avatar: '',
+          createdAt: DateTime.utc(2026, 1, 1),
+          updatedAt: DateTime.utc(2026, 1, 1),
+        ),
+      );
     });
 
-    tearDown(() => db.close());
+    ProviderContainer makeContainer({ContentRepository? contentRepository}) {
+      return ProviderContainer(
+        overrides: [
+          activeAccountFirebaseProvider.overrideWith(
+            (ref) async => _handles(firestore),
+          ),
+          activeProfileDocIdProvider.overrideWith(
+            () => _ActiveProfileDocIdOverride(),
+          ),
+          activeProfileIdProvider.overrideWith(() => _ProfileIdOverride()),
+          profileRepositoryProvider.overrideWithValue(profileRepository),
+          if (contentRepository != null)
+            contentRepositoryProvider.overrideWithValue(contentRepository),
+        ],
+      );
+    }
 
     // ── B1 priorImportsByProfileProvider — empty DB ────────────────────────
 
     test(
       'B1 — empty DB: priorImportsByProfileProvider returns empty map',
       () async {
-        final container = ProviderContainer(
-          overrides: [userDatabaseProvider.overrideWithValue(db)],
-        );
+        final container = makeContainer();
         addTearDown(container.dispose);
 
         final result = await container.read(
-          priorImportsByProfileProvider(1).future,
+          priorImportsByProfileProvider.future,
         );
 
         expect(
@@ -630,26 +688,20 @@ void main() {
     test(
       'B2 — bulkInTrack rows land in bulkRefs of the correct curriculum',
       () async {
-        await db
-            .into(db.priorCompletionImports)
-            .insert(
-              PriorCompletionImportsCompanion.insert(
-                profileId: 1,
-                curriculumId: 'mishnayos',
-                sefariaRef: 'Berakhot 1:1',
-                stageId: 1,
-                trackType: 'personal',
-                source: 'bulkInTrack',
-              ),
-            );
-
-        final container = ProviderContainer(
-          overrides: [userDatabaseProvider.overrideWithValue(db)],
+        await seedCompletion(
+          firestore,
+          uid: _uid,
+          profileId: _profileId,
+          curriculumId: CurriculumId.mishnayos,
+          sefariaRef: 'Berakhot 1:1',
+          source: CompletionSource.bulkInTrack,
         );
+
+        final container = makeContainer();
         addTearDown(container.dispose);
 
         final result = await container.read(
-          priorImportsByProfileProvider(1).future,
+          priorImportsByProfileProvider.future,
         );
 
         expect(result.containsKey('mishnayos'), isTrue);
@@ -663,78 +715,69 @@ void main() {
       },
     );
 
-    // ── B3 priorImportsByProfileProvider — lifetimeOnly rows ──────────────
+    // ── B3 learningLedgerProvider — lifetimeOnly rows ─────────────────────
 
     test(
-      'B3 — lifetimeOnly rows land in lifetimeRefs of the correct curriculum',
+      'B3 — lifetimeOnly ledger rows retain their curriculum and source',
       () async {
-        await db
-            .into(db.priorCompletionImports)
-            .insert(
-              PriorCompletionImportsCompanion.insert(
-                profileId: 1,
-                curriculumId: 'chumash',
-                sefariaRef: 'Bereishit 1:1',
-                stageId: 1,
-                trackType: 'personal',
-                source: 'lifetimeOnly',
-              ),
-            );
-
-        final container = ProviderContainer(
-          overrides: [userDatabaseProvider.overrideWithValue(db)],
+        await seedLedgerEntry(
+          firestore,
+          uid: _uid,
+          profileId: _profileId,
+          ulid: '01ARZ3NDEKTSV4RRFFQ69G5FB0',
+          curriculumId: CurriculumId.chumash,
+          unitIdentifier: 'Bereishit 1:1',
+          source: CompletionSource.lifetimeOnly,
         );
+
+        final container = makeContainer();
         addTearDown(container.dispose);
 
-        final result = await container.read(
-          priorImportsByProfileProvider(1).future,
-        );
+        final result = await container.read(learningLedgerProvider.future);
 
-        expect(result.containsKey('chumash'), isTrue);
-        expect(result['chumash']!.lifetimeRefs, contains('Bereishit 1:1'));
-        expect(result['chumash']!.bulkRefs, isEmpty);
+        expect(result, hasLength(1));
+        expect(result.single.curriculumId, CurriculumId.chumash);
+        expect(result.single.source, CompletionSource.lifetimeOnly);
+        expect(result.single.unitIdentifier, 'Bereishit 1:1');
       },
     );
 
-    // ── B4 mixed sources under the same curriculum ─────────────────────────
+    // ── B4 mixed completion/ledger sources under one curriculum ────────────
 
     test(
-      'B4 — mixed sources for same curriculum partitioned independently',
+      'B4 — mixed sources for same curriculum remain independently classified',
       () async {
-        final rows = [
-          PriorCompletionImportsCompanion.insert(
-            profileId: 1,
-            curriculumId: 'mishnayos',
-            sefariaRef: 'Bulk Ref 1',
-            stageId: 1,
-            trackType: 'personal',
-            source: 'bulkInTrack',
-          ),
-          PriorCompletionImportsCompanion.insert(
-            profileId: 1,
-            curriculumId: 'mishnayos',
-            sefariaRef: 'Lifetime Ref 1',
-            stageId: 1,
-            trackType: 'personal',
-            source: 'lifetimeOnly',
-          ),
-        ];
-        for (final r in rows) {
-          await db.into(db.priorCompletionImports).insert(r);
-        }
-
-        final container = ProviderContainer(
-          overrides: [userDatabaseProvider.overrideWithValue(db)],
+        await seedCompletion(
+          firestore,
+          uid: _uid,
+          profileId: _profileId,
+          curriculumId: CurriculumId.mishnayos,
+          sefariaRef: 'Bulk Ref 1',
+          source: CompletionSource.bulkInTrack,
         );
+        await seedLedgerEntry(
+          firestore,
+          uid: _uid,
+          profileId: _profileId,
+          ulid: '01ARZ3NDEKTSV4RRFFQ69G5FB1',
+          curriculumId: CurriculumId.mishnayos,
+          unitIdentifier: 'Lifetime Ref 1',
+          source: CompletionSource.lifetimeOnly,
+        );
+
+        final container = makeContainer();
         addTearDown(container.dispose);
 
-        final result = await container.read(
-          priorImportsByProfileProvider(1).future,
+        final priorResult = await container.read(
+          priorImportsByProfileProvider.future,
+        );
+        final ledgerResult = await container.read(
+          learningLedgerProvider.future,
         );
 
-        final mish = result['mishnayos']!;
-        expect(mish.bulkRefs, equals({'Bulk Ref 1'}));
-        expect(mish.lifetimeRefs, equals({'Lifetime Ref 1'}));
+        expect(priorResult['mishnayos']!.bulkRefs, equals({'Bulk Ref 1'}));
+        expect(ledgerResult.single.source, CompletionSource.lifetimeOnly);
+        expect(ledgerResult.single.unitIdentifier, 'Lifetime Ref 1');
       },
     );
 
@@ -743,13 +786,11 @@ void main() {
     test(
       'B5 — empty DB: completionsByProfileForLifetimeProvider returns empty map',
       () async {
-        final container = ProviderContainer(
-          overrides: [userDatabaseProvider.overrideWithValue(db)],
-        );
+        final container = makeContainer();
         addTearDown(container.dispose);
 
         final result = await container.read(
-          completionsByProfileForLifetimeProvider(1).future,
+          completionsByProfileForLifetimeProvider.future,
         );
 
         expect(
@@ -765,44 +806,36 @@ void main() {
     test('B6 — completion events are grouped by curriculumId', () async {
       final ts = DateTime.utc(2026, 5, 1, 10);
 
-      await db.completionEventDao.appendEvent(
-        CompletionEventsCompanion.insert(
-          profileId: 1,
-          curriculumId: 'mishnayos',
-          sefariaRef: 'Berakhot 1:1',
-          stageId: 1,
-          trackType: 'personal',
-          eventTimestamp: ts,
-        ),
+      await seedCompletion(
+        firestore,
+        uid: _uid,
+        profileId: _profileId,
+        curriculumId: CurriculumId.mishnayos,
+        sefariaRef: 'Berakhot 1:1',
+        completedAt: ts,
       );
-      await db.completionEventDao.appendEvent(
-        CompletionEventsCompanion.insert(
-          profileId: 1,
-          curriculumId: 'mishnayos',
-          sefariaRef: 'Berakhot 1:2',
-          stageId: 1,
-          trackType: 'personal',
-          eventTimestamp: ts,
-        ),
+      await seedCompletion(
+        firestore,
+        uid: _uid,
+        profileId: _profileId,
+        curriculumId: CurriculumId.mishnayos,
+        sefariaRef: 'Berakhot 1:2',
+        completedAt: ts,
       );
-      await db.completionEventDao.appendEvent(
-        CompletionEventsCompanion.insert(
-          profileId: 1,
-          curriculumId: 'chumash',
-          sefariaRef: 'Bereishit 1:1',
-          stageId: 1,
-          trackType: 'personal',
-          eventTimestamp: ts,
-        ),
+      await seedCompletion(
+        firestore,
+        uid: _uid,
+        profileId: _profileId,
+        curriculumId: CurriculumId.chumash,
+        sefariaRef: 'Bereishit 1:1',
+        completedAt: ts,
       );
 
-      final container = ProviderContainer(
-        overrides: [userDatabaseProvider.overrideWithValue(db)],
-      );
+      final container = makeContainer();
       addTearDown(container.dispose);
 
       final result = await container.read(
-        completionsByProfileForLifetimeProvider(1).future,
+        completionsByProfileForLifetimeProvider.future,
       );
 
       expect(result['mishnayos'], hasLength(2));
@@ -831,30 +864,23 @@ void main() {
         ];
         final ts = DateTime.utc(2026, 5, 1, 10);
         for (final ref in ['ref_A', 'ref_B', 'ref_C']) {
-          await db.completionEventDao.appendEvent(
-            CompletionEventsCompanion.insert(
-              profileId: 1,
-              curriculumId: 'mishnayos',
-              sefariaRef: ref,
-              stageId: 1,
-              trackType: 'personal',
-              eventTimestamp: ts,
-            ),
+          await seedCompletion(
+            firestore,
+            uid: _uid,
+            profileId: _profileId,
+            curriculumId: CurriculumId.mishnayos,
+            sefariaRef: ref,
+            completedAt: ts,
           );
         }
 
-        final container = ProviderContainer(
-          overrides: [
-            userDatabaseProvider.overrideWithValue(db),
-            contentRepositoryProvider.overrideWithValue(
-              _FakeLeafRepo({CurriculumId.mishnayos: leaves}),
-            ),
-          ],
+        final container = makeContainer(
+          contentRepository: _FakeLeafRepo({CurriculumId.mishnayos: leaves}),
         );
         addTearDown(container.dispose);
 
         final counters = await container.read(
-          lifetimeHeaderCountersProvider(1).future,
+          lifetimeHeaderCountersProvider.future,
         );
 
         expect(
@@ -876,50 +902,40 @@ void main() {
       // policy); a sentinel-dated *limud* (stageId == 1) event is still a
       // limud, not a chazara, so it must NOT inflate totalChazaros.
       final sentinel = DateTime.utc(2000, 1, 1);
-      final events = [
-        CompletionEventsCompanion.insert(
-          profileId: 1,
-          curriculumId: 'mishnayos',
-          sefariaRef: 'Berakhot 1:1',
-          stageId: 1,
-          trackType: 'personal',
-          eventTimestamp: sentinel,
-        ),
-        CompletionEventsCompanion.insert(
-          profileId: 1,
-          curriculumId: 'mishnayos',
-          sefariaRef: 'Berakhot 1:2',
-          stageId: 1,
-          trackType: 'personal',
-          eventTimestamp: DateTime.utc(2026, 5, 1),
-        ),
-      ];
-      for (final e in events) {
-        await db.completionEventDao.appendEvent(e);
-      }
+      await seedCompletion(
+        firestore,
+        uid: _uid,
+        profileId: _profileId,
+        curriculumId: CurriculumId.mishnayos,
+        sefariaRef: 'Berakhot 1:1',
+        completedAt: sentinel,
+      );
+      await seedCompletion(
+        firestore,
+        uid: _uid,
+        profileId: _profileId,
+        curriculumId: CurriculumId.mishnayos,
+        sefariaRef: 'Berakhot 1:2',
+        completedAt: DateTime.utc(2026, 5, 1),
+      );
 
       // R8 Part B: totalChazaros reads completion events directly (independent
       // of lifetimeTotalsAcrossAllCurriculaProvider), but the header counters
       // future still awaits the totals provider — supply a trivial fake repo
       // so that resolves cleanly rather than exercising the real asset-backed
       // repo in a plain (non-widget) test.
-      final container = ProviderContainer(
-        overrides: [
-          userDatabaseProvider.overrideWithValue(db),
-          contentRepositoryProvider.overrideWithValue(
-            _FakeLeafRepo({
-              CurriculumId.mishnayos: [
-                _leaf(level1: 'L1', sefariaRef: 'Berakhot 1:1'),
-                _leaf(level1: 'L1', sefariaRef: 'Berakhot 1:2'),
-              ],
-            }),
-          ),
-        ],
+      final container = makeContainer(
+        contentRepository: _FakeLeafRepo({
+          CurriculumId.mishnayos: [
+            _leaf(level1: 'L1', sefariaRef: 'Berakhot 1:1'),
+            _leaf(level1: 'L1', sefariaRef: 'Berakhot 1:2'),
+          ],
+        }),
       );
       addTearDown(container.dispose);
 
       final counters = await container.read(
-        lifetimeHeaderCountersProvider(1).future,
+        lifetimeHeaderCountersProvider.future,
       );
 
       expect(
@@ -940,58 +956,39 @@ void main() {
         final ts = DateTime.utc(2026, 5, 1, 10);
 
         // Two live events (no import row → they are live in the DB).
-        await db.completionEventDao.appendEvent(
-          CompletionEventsCompanion.insert(
-            profileId: 1,
-            curriculumId: 'mishnayos',
-            sefariaRef: 'Berakhot 1:1',
-            stageId: 1,
-            trackType: 'personal',
-            eventTimestamp: ts,
-          ),
+        await seedCompletion(
+          firestore,
+          uid: _uid,
+          profileId: _profileId,
+          curriculumId: CurriculumId.mishnayos,
+          sefariaRef: 'Berakhot 1:1',
+          completedAt: ts,
         );
-        await db.completionEventDao.appendEvent(
-          CompletionEventsCompanion.insert(
-            profileId: 1,
-            curriculumId: 'mishnayos',
-            sefariaRef: 'Berakhot 1:2',
-            stageId: 1,
-            trackType: 'personal',
-            eventTimestamp: ts,
-          ),
+        await seedCompletion(
+          firestore,
+          uid: _uid,
+          profileId: _profileId,
+          curriculumId: CurriculumId.mishnayos,
+          sefariaRef: 'Berakhot 1:2',
+          completedAt: ts,
         );
 
-        // One lifetimeOnly import row + matching event row.
-        await db
-            .into(db.priorCompletionImports)
-            .insert(
-              PriorCompletionImportsCompanion.insert(
-                profileId: 1,
-                curriculumId: 'mishnayos',
-                sefariaRef: 'LifetimeOnly Ref',
-                stageId: 1,
-                trackType: 'personal',
-                source: 'lifetimeOnly',
-              ),
-            );
-        await db.completionEventDao.appendEvent(
-          CompletionEventsCompanion.insert(
-            profileId: 1,
-            curriculumId: 'mishnayos',
-            sefariaRef: 'LifetimeOnly Ref',
-            stageId: 1,
-            trackType: 'personal',
-            eventTimestamp: ts,
-          ),
+        // A lifetimeOnly ledger row has no completion document in Firestore.
+        await seedLedgerEntry(
+          firestore,
+          uid: _uid,
+          profileId: _profileId,
+          ulid: '01ARZ3NDEKTSV4RRFFQ69G5FB2',
+          curriculumId: CurriculumId.mishnayos,
+          unitIdentifier: 'LifetimeOnly Ref',
+          source: CompletionSource.lifetimeOnly,
         );
 
-        final container = ProviderContainer(
-          overrides: [userDatabaseProvider.overrideWithValue(db)],
-        );
+        final container = makeContainer();
         addTearDown(container.dispose);
 
         final counters = await container.read(
-          trackOnlyHeaderCountersProvider(1).future,
+          trackOnlyHeaderCountersProvider.future,
         );
 
         // trackAchievement tier excludes lifetimeOnly rows. So
@@ -1162,7 +1159,6 @@ void main() {
         completedRefs: {},
         ledgerEntries: [
           _fakeLedgerData(
-            profileId: 1,
             curriculumId: 'mishnayos',
             unitIdentifier: 'Zeraim',
             entryScope: 'seder',
@@ -1215,7 +1211,6 @@ void main() {
           ledgerEntries: [
             // Positive seder mark first.
             _fakeLedgerData(
-              profileId: 1,
               curriculumId: 'mishnayos',
               unitIdentifier: 'Zeraim',
               entryScope: 'seder',
@@ -1227,7 +1222,6 @@ void main() {
             // flip level1Actions['Zeraim'] to false and the assertion below
             // would fail.
             _fakeLedgerData(
-              profileId: 1,
               curriculumId: 'mishnayos',
               unitIdentifier: 'Zeraim',
               entryScope: 'unmark_seder',
@@ -1262,7 +1256,6 @@ void main() {
         ledgerEntries: [
           // unmark FIRST — level1Actions['Zeraim'] = false (first write).
           _fakeLedgerData(
-            profileId: 1,
             curriculumId: 'mishnayos',
             unitIdentifier: 'Zeraim',
             entryScope: 'unmark_seder',
@@ -1270,7 +1263,6 @@ void main() {
           // Positive mark after — ignored because putIfAbsent already has
           // 'Zeraim' = false.
           _fakeLedgerData(
-            profileId: 1,
             curriculumId: 'mishnayos',
             unitIdentifier: 'Zeraim',
             entryScope: 'seder',
@@ -1312,45 +1304,36 @@ void main() {
 
         final ts = DateTime.utc(2026, 5, 1, 10);
         for (final ref in [shared, 'Berakhot 1:2']) {
-          await db.completionEventDao.appendEvent(
-            CompletionEventsCompanion.insert(
-              profileId: 1,
-              curriculumId: 'mishnayos',
-              sefariaRef: ref,
-              stageId: 1,
-              trackType: 'personal',
-              eventTimestamp: ts,
-            ),
+          await seedCompletion(
+            firestore,
+            uid: _uid,
+            profileId: _profileId,
+            curriculumId: CurriculumId.mishnayos,
+            sefariaRef: ref,
+            completedAt: ts,
           );
         }
         for (final ref in [shared, 'Shabbat 2a']) {
-          await db.completionEventDao.appendEvent(
-            CompletionEventsCompanion.insert(
-              profileId: 1,
-              curriculumId: 'bavli',
-              sefariaRef: ref,
-              stageId: 1,
-              trackType: 'personal',
-              eventTimestamp: ts,
-            ),
+          await seedCompletion(
+            firestore,
+            uid: _uid,
+            profileId: _profileId,
+            curriculumId: CurriculumId.bavli,
+            sefariaRef: ref,
+            completedAt: ts,
           );
         }
 
-        final container = ProviderContainer(
-          overrides: [
-            userDatabaseProvider.overrideWithValue(db),
-            contentRepositoryProvider.overrideWithValue(
-              _FakeLeafRepo({
-                CurriculumId.mishnayos: mishLeaves,
-                CurriculumId.bavli: bavliLeaves,
-              }),
-            ),
-          ],
+        final container = makeContainer(
+          contentRepository: _FakeLeafRepo({
+            CurriculumId.mishnayos: mishLeaves,
+            CurriculumId.bavli: bavliLeaves,
+          }),
         );
         addTearDown(container.dispose);
 
         final totals = await container.read(
-          lifetimeTotalsAcrossAllCurriculaProvider(1).future,
+          lifetimeTotalsAcrossAllCurriculaProvider.future,
         );
 
         // Union: {Berakhot 1:1, Berakhot 1:2, Shabbat 2a} = 3 distinct refs.
@@ -1385,17 +1368,22 @@ void main() {
 
         final container = ProviderContainer(
           overrides: [
-            userDatabaseProvider.overrideWithValue(db),
-            lifetimeSummariesProvider(
-              1,
-            ).overrideWith((ref) => Future.value([summary])),
+            activeAccountFirebaseProvider.overrideWith(
+              (ref) async => _handles(firestore),
+            ),
+            activeProfileDocIdProvider.overrideWith(
+              () => _ActiveProfileDocIdOverride(),
+            ),
+            activeProfileIdProvider.overrideWith(() => _ProfileIdOverride()),
+            profileRepositoryProvider.overrideWithValue(profileRepository),
+            lifetimeSummariesProvider.overrideWith(
+              (ref) => Future.value([summary]),
+            ),
           ],
         );
         addTearDown(container.dispose);
 
-        final result = await container.read(
-          lifetimeSummariesProvider(1).future,
-        );
+        final result = await container.read(lifetimeSummariesProvider.future);
 
         expect(result, hasLength(1));
         expect(result.first.curriculumId, CurriculumId.chumash);
@@ -1409,16 +1397,22 @@ void main() {
 
 /// Builds a minimal [LearningLedgerData] from named fields without hitting the
 /// database. The generated data class requires all non-nullable fields.
-LearningLedgerData _fakeLedgerData({
-  required int profileId,
+LearningLedgerEntry _fakeLedgerData({
   required String curriculumId,
   required String unitIdentifier,
   required String entryScope,
   DateTime? completedAt,
-}) => LedgerFixtures.scopeMark(
-  profileId: profileId,
-  curriculumId: curriculumId,
+}) => LearningLedgerEntry(
+  ulid: '01ARZ3NDEKTSV4RRFFQ69G5FC0',
+  curriculumId: CurriculumId.fromStorageKey(curriculumId)!,
   entryScope: entryScope,
   unitIdentifier: unitIdentifier,
-  completedAt: completedAt,
+  unitDisplayNameHe: unitIdentifier,
+  unitDisplayNameEn: unitIdentifier,
+  trackType: 'personal',
+  completedAt: completedAt ?? DateTime.utc(2026, 1, 1),
+  completionNumber: 1,
+  markedBy: _profileId,
+  isManual: false,
+  source: CompletionSource.lifetimeOnly,
 );

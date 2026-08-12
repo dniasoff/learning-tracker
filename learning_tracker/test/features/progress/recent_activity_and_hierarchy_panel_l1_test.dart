@@ -47,43 +47,47 @@ library;
 
 import 'dart:async';
 
-import 'package:drift/drift.dart' show Value;
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
+import 'package:learning_tracker/data/repositories/firestore_completion_repository.dart';
+import 'package:learning_tracker/data/repositories/firestore_goal_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/hierarchy_selection_panel.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/progress/domain/models/chart_data.dart';
 import 'package:learning_tracker/features/progress/domain/services/chart_data_service.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_entity.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_tier_filter.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/chart_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/recent_activity_screen.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../helpers/drift_memory.dart';
+import '../../helpers/firestore_fake.dart';
+import '../../helpers/firestore_fixtures.dart';
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
-const _profileId = 1;
-const _curriculumStorageKey = 'mishnayos';
+const _uid = 'recent-activity-hierarchy-user';
+const _profileId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
 
 // ── Provider notifier overrides ────────────────────────────────────────────
 
 class _FixedProfileId extends ActiveProfileId {
-  _FixedProfileId(this._id);
-  final int _id;
   @override
-  int build() => _id;
+  String? build() => _profileId;
 }
 
 class _FixedUseHebrewTerms extends UseHebrewTerms {
@@ -100,16 +104,28 @@ class _FixedTransliteration extends CurrentTransliterationVariant {
 
 // ── Stub chart services ────────────────────────────────────────────────────
 
+class _NoopChartRepository implements ChartDataRepository {
+  @override
+  Future<List<CompletionEntity>> getCompletionsByTier({
+    required CompletionTierFilter tier,
+    CurriculumId? curriculumId,
+    DateTime? since,
+    DateTime? until,
+  }) async => const [];
+
+  @override
+  Future<List<CompletionEntity>> getCompletionsByCurriculum(
+    CurriculumId curriculumId,
+  ) async => const [];
+
+  @override
+  Future<List<GoalEntity>> getGoals(CurriculumId curriculumId) async =>
+      const [];
+}
+
 /// Immediately-returning stub — no disk access.
 class _StubChartDataService extends ChartDataService {
-  _StubChartDataService() : super(_openDb(), profileId: _profileId);
-
-  // Keep one lazy reference per instance so only one DB is created.
-  static UserDatabase? _db;
-  static UserDatabase _openDb() {
-    _db ??= inMemoryDb();
-    return _db!;
-  }
+  _StubChartDataService() : super(repository: _NoopChartRepository());
 
   var limudChazaraCalls = 0;
 
@@ -148,7 +164,7 @@ class _StubChartDataService extends ChartDataService {
 
 /// Never-completing chart service — simulates the loading state.
 class _HangingChartDataService extends ChartDataService {
-  _HangingChartDataService() : super(inMemoryDb(), profileId: _profileId);
+  _HangingChartDataService() : super(repository: _NoopChartRepository());
 
   @override
   Future<List<DailyLimudChazaraData>> getDailyLimudimAndChazaros({
@@ -182,7 +198,7 @@ class _HangingChartDataService extends ChartDataService {
 
 /// Always-erroring chart service.
 class _ErrorChartDataService extends ChartDataService {
-  _ErrorChartDataService() : super(inMemoryDb(), profileId: _profileId);
+  _ErrorChartDataService() : super(repository: _NoopChartRepository());
 
   @override
   Future<List<DailyLimudChazaraData>> getDailyLimudimAndChazaros({
@@ -214,6 +230,45 @@ class _ErrorChartDataService extends ChartDataService {
   }) => Future.error(Exception('chart error'));
 }
 
+class _FirestoreChartRepository implements ChartDataRepository {
+  _FirestoreChartRepository(FakeFirebaseFirestore firestore)
+    : _completions = FirestoreCompletionRepository(
+        firestore: firestore,
+        uid: _uid,
+        profileId: _profileId,
+      ),
+      _goals = FirestoreGoalRepository(
+        firestore: firestore,
+        uid: _uid,
+        profileId: _profileId,
+      );
+
+  final FirestoreCompletionRepository _completions;
+  final FirestoreGoalRepository _goals;
+
+  @override
+  Future<List<CompletionEntity>> getCompletionsByTier({
+    required CompletionTierFilter tier,
+    CurriculumId? curriculumId,
+    DateTime? since,
+    DateTime? until,
+  }) => _completions.getCompletionsByTier(
+    tier: tier,
+    curriculumId: curriculumId,
+    since: since,
+    until: until,
+  );
+
+  @override
+  Future<List<CompletionEntity>> getCompletionsByCurriculum(
+    CurriculumId curriculumId,
+  ) => _completions.getCompletionsForCurriculum(curriculumId);
+
+  @override
+  Future<List<GoalEntity>> getGoals(CurriculumId curriculumId) =>
+      _goals.getGoals(curriculumId);
+}
+
 // ── Settling helper ────────────────────────────────────────────────────────
 //
 // We avoid pumpAndSettle (which can hang with long-lived streams) and instead
@@ -239,7 +294,7 @@ Widget _buildScreen({
   return ProviderScope(
     retry: (_, __) => null,
     overrides: [
-      activeProfileIdProvider.overrideWith(() => _FixedProfileId(_profileId)),
+      activeProfileIdProvider.overrideWith(() => _FixedProfileId()),
       useHebrewTermsProvider.overrideWith(
         () => _FixedUseHebrewTerms(useHebrew: useHebrewTerms),
       ),
@@ -278,7 +333,7 @@ Widget _buildPanel({
   return ProviderScope(
     retry: (_, __) => null,
     overrides: [
-      activeProfileIdProvider.overrideWith(() => _FixedProfileId(_profileId)),
+      activeProfileIdProvider.overrideWith(() => _FixedProfileId()),
       useHebrewTermsProvider.overrideWith(
         () => _FixedUseHebrewTerms(useHebrew: false),
       ),
@@ -368,56 +423,40 @@ List<ContentItem> _leafOnlyItems() => [
   ),
 ];
 
-// ── DB seeding ─────────────────────────────────────────────────────────────
+// ── Firestore seeding ──────────────────────────────────────────────────────
 
-Future<int> _seedLive(
-  UserDatabase db, {
-  required int trackId,
+Future<void> _seedLive(
+  FakeFirebaseFirestore firestore, {
   required String ref,
   int stageId = 1,
   required DateTime at,
-}) {
-  return db.completionEventDao.appendEvent(
-    CompletionEventsCompanion.insert(
-      profileId: _profileId,
-      curriculumId: _curriculumStorageKey,
-      sefariaRef: ref,
-      stageId: stageId,
-      trackType: 'personal',
-      trackId: Value(trackId),
-      eventTimestamp: at,
-    ),
-  );
-}
+}) => seedCompletion(
+  firestore,
+  uid: _uid,
+  profileId: _profileId,
+  curriculumId: CurriculumId.mishnayos,
+  sefariaRef: ref,
+  stageId: stageId,
+  source: CompletionSource.live,
+  completedAt: at,
+);
 
 Future<void> _seedBulkInTrack(
-  UserDatabase db, {
-  required int trackId,
+  FakeFirebaseFirestore firestore, {
   required String ref,
   int stageId = 1,
   required DateTime at,
 }) async {
-  await db.completionEventDao.appendEvent(
-    CompletionEventsCompanion.insert(
-      profileId: _profileId,
-      curriculumId: _curriculumStorageKey,
-      sefariaRef: ref,
-      stageId: stageId,
-      trackType: 'personal',
-      trackId: Value(trackId),
-      eventTimestamp: at,
-    ),
+  await seedCompletion(
+    firestore,
+    uid: _uid,
+    profileId: _profileId,
+    curriculumId: CurriculumId.mishnayos,
+    sefariaRef: ref,
+    stageId: stageId,
+    source: CompletionSource.bulkInTrack,
+    completedAt: at,
   );
-  await db.priorCompletionImportDao.batchInsertImports([
-    PriorCompletionImportsCompanion.insert(
-      profileId: _profileId,
-      curriculumId: _curriculumStorageKey,
-      sefariaRef: ref,
-      stageId: stageId,
-      trackType: 'personal',
-      source: 'bulkInTrack',
-    ),
-  ]);
 }
 
 // ── Tests ──────────────────────────────────────────────────────────────────
@@ -586,19 +625,12 @@ void main() {
       'A9: sentinel-date bulk-marks (1/1/2000) excluded from Last-7-Days '
       'window (completion-credit policy)',
       (tester) async {
-        final db = inMemoryDb();
-        await seedProfile(db);
-        final trackId = await seedTrack(
-          db,
-          profileId: _profileId,
-          curriculumId: _curriculumStorageKey,
-        );
+        final firestore = createFakeFirestore(authenticatedUid: _uid);
 
         // Seed a bulk-mark at the sentinel date (year 2000 = "all-time floor").
         final sentinelDate = DateTime.utc(2000, 1, 1);
         await _seedBulkInTrack(
-          db,
-          trackId: trackId,
+          firestore,
           ref: 'bulk_sentinel',
           at: sentinelDate,
         );
@@ -606,16 +638,13 @@ void main() {
         // Seed one live completion today.
         final today = DateTimeFactory.nowLocal();
         final todayMorning = DateTime(today.year, today.month, today.day, 9);
-        await _seedLive(
-          db,
-          trackId: trackId,
-          ref: 'live_today',
-          at: todayMorning,
-        );
+        await _seedLive(firestore, ref: 'live_today', at: todayMorning);
 
         // Verify directly through the service:
         // - Last-7-Days window should contain today's live row but NOT year-2000.
-        final svc = ChartDataService(db, profileId: _profileId);
+        final svc = ChartDataService(
+          repository: _FirestoreChartRepository(firestore),
+        );
         final end = DateTime(today.year, today.month, today.day);
         final start = end.subtract(const Duration(days: 6));
         final data = await svc.getDailyLimudimAndChazaros(
@@ -650,7 +679,6 @@ void main() {
               'Last-7-Days window — completion-credit policy',
         );
 
-        await db.close();
         await _teardown(tester);
       },
     );

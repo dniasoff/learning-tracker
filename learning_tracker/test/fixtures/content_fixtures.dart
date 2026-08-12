@@ -1,8 +1,7 @@
-/// Test fixtures for ContentItem and LearningLedgerData
+/// Test fixtures for ContentItem
 /// Factory methods for creating test data with sensible defaults
 library;
 
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 
@@ -158,93 +157,6 @@ class ContentItemFixtures {
       sefariaRef: sefariaRef ?? level2 ?? level1,
       sortOrder: sortOrder,
       isLeaf: false,
-    );
-  }
-}
-
-/// Factory for creating test [LearningLedgerData] rows without touching the
-/// database. Consolidates the 15-field data-class constructor that was
-/// hand-copied across the collision, composite, and siyumim provider tests.
-///
-/// [scopeMark] builds a positive lifetime scope-mark row. To exercise the
-/// production write→read seam faithfully, callers should build the
-/// [unitIdentifier] via `scopeUnitIdentifier(...)` (content_grouping.dart) so
-/// the stored id carries the same ancestor-qualified path the read side keys
-/// on — a bare, hand-written id would not reproduce the collision guard.
-class LedgerFixtures {
-  static LearningLedgerData scopeMark({
-    required String curriculumId,
-    required String entryScope,
-    required String unitIdentifier,
-    int id = 0,
-    int profileId = 1,
-    String ulid = '',
-    String unitDisplayNameHe = '',
-    String unitDisplayNameEn = '',
-    String trackType = 'personal',
-    int? trackId,
-    DateTime? completedAt,
-    int completionNumber = 1,
-    int markedBy = 1,
-    bool isManual = false,
-    DateTime? createdAt,
-  }) {
-    return LearningLedgerData(
-      id: id,
-      profileId: profileId,
-      ulid: ulid,
-      curriculumId: curriculumId,
-      entryScope: entryScope,
-      unitIdentifier: unitIdentifier,
-      unitDisplayNameHe: unitDisplayNameHe,
-      unitDisplayNameEn: unitDisplayNameEn,
-      trackType: trackType,
-      trackId: trackId,
-      completedAt: completedAt ?? DateTime.utc(2026, 1, 1),
-      completionNumber: completionNumber,
-      markedBy: markedBy,
-      isManual: isManual,
-      createdAt: createdAt ?? DateTime.utc(2026, 1, 1),
-    );
-  }
-
-  /// An unmark row — identical to [scopeMark] but with the `entryScope`
-  /// prefixed `unmark_`, which flips the credit action in
-  /// `computeLearnedLeafRefs`. Pass the bare scope (e.g. 'seder'); the prefix
-  /// is applied here.
-  static LearningLedgerData unmark({
-    required String curriculumId,
-    required String entryScope,
-    required String unitIdentifier,
-    int id = 0,
-    int profileId = 1,
-    String ulid = '',
-    String unitDisplayNameHe = '',
-    String unitDisplayNameEn = '',
-    String trackType = 'personal',
-    int? trackId,
-    DateTime? completedAt,
-    int completionNumber = 1,
-    int markedBy = 1,
-    bool isManual = false,
-    DateTime? createdAt,
-  }) {
-    return scopeMark(
-      curriculumId: curriculumId,
-      entryScope: 'unmark_$entryScope',
-      unitIdentifier: unitIdentifier,
-      id: id,
-      profileId: profileId,
-      ulid: ulid,
-      unitDisplayNameHe: unitDisplayNameHe,
-      unitDisplayNameEn: unitDisplayNameEn,
-      trackType: trackType,
-      trackId: trackId,
-      completedAt: completedAt,
-      completionNumber: completionNumber,
-      markedBy: markedBy,
-      isManual: isManual,
-      createdAt: createdAt,
     );
   }
 }

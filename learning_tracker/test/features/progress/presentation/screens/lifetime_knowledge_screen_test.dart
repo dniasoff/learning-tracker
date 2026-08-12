@@ -19,19 +19,25 @@
 library;
 
 import 'package:auto_route/auto_route.dart';
-import 'package:drift/drift.dart' show Value;
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
+import 'package:learning_tracker/data/firestore/account_firebase.dart';
+import 'package:learning_tracker/data/firestore/active_account_providers.dart';
+import 'package:learning_tracker/data/firestore/repository_providers.dart'
+    show ActiveProfileDocId, activeProfileDocIdProvider;
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
-import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/items_learned_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/lifetime_knowledge_screen.dart';
@@ -39,10 +45,24 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../../../fixtures/content_fixtures.dart';
-import '../../../../helpers/drift_memory.dart';
+import '../../../../helpers/firestore_fake.dart';
+import '../../../../helpers/firestore_fixtures.dart';
 
-const _profileId = 1;
+const _uid = 'lifetime-knowledge-screen-user';
+const _profileId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
 const _curriculumKey = 'mishnayos';
+
+class _MockFirebaseApp extends Mock implements FirebaseApp {}
+
+class _MockFirebaseAuth extends Mock implements FirebaseAuth {}
+
+AccountFirebaseHandles _handles(FakeFirebaseFirestore firestore) =>
+    AccountFirebaseHandles(
+      app: _MockFirebaseApp(),
+      firestore: firestore,
+      auth: _MockFirebaseAuth(),
+      uid: _uid,
+    );
 
 // ---------------------------------------------------------------------------
 // Test doubles
@@ -63,10 +83,13 @@ class _FakeContentRepository extends Fake implements ContentRepository {
 }
 
 class _ProfileIdOverride extends ActiveProfileId {
-  _ProfileIdOverride(this._id);
-  final int _id;
   @override
-  int build() => _id;
+  String? build() => _profileId;
+}
+
+class _ActiveProfileDocIdOverride extends ActiveProfileDocId {
+  @override
+  String? build() => _profileId;
 }
 
 class _UseHebrewTermsOverride extends UseHebrewTerms {
@@ -76,18 +99,14 @@ class _UseHebrewTermsOverride extends UseHebrewTerms {
   bool build() => useHebrew;
 }
 
-/// Minimal [ProfileModel] fixture for [activeProfileProvider] overrides —
-/// only `mode` varies across the CTA-visibility tests below.
-ProfileModel _profileModel({required String mode}) => ProfileModel(
-  id: _profileId,
-  ulid: 'ulid-$_profileId',
-  accountId: 1,
-  displayName: 'Test User',
-  mode: mode,
-  avatarIndex: 0,
-  createdAt: DateTime.utc(2026, 1, 1),
-  updatedAt: DateTime.utc(2026, 1, 1),
-);
+LearnerProfileEntity _profileEntity({required ProfileMode mode}) =>
+    LearnerProfileEntity(
+      profileId: _profileId,
+      displayName: 'Test User',
+      mode: mode,
+      createdAt: DateTime.utc(2026, 1, 1),
+      updatedAt: DateTime.utc(2026, 1, 1),
+    );
 
 // ---------------------------------------------------------------------------
 // Seed helpers — mirror the patterns in story_i3_items_learned_test.dart so
@@ -95,83 +114,68 @@ ProfileModel _profileModel({required String mode}) => ProfileModel(
 // ---------------------------------------------------------------------------
 
 Future<void> _seedLive(
-  UserDatabase db, {
-  required int trackId,
+  FakeFirebaseFirestore firestore, {
   required String ref,
   required int stageId,
   required DateTime at,
 }) {
-  return db.completionEventDao.appendEvent(
-    CompletionEventsCompanion.insert(
-      profileId: _profileId,
-      curriculumId: _curriculumKey,
-      sefariaRef: ref,
-      stageId: stageId,
-      trackType: 'personal',
-      trackId: Value(trackId),
-      eventTimestamp: at,
-    ),
+  return seedCompletion(
+    firestore,
+    uid: _uid,
+    profileId: _profileId,
+    curriculumId: CurriculumId.mishnayos,
+    sefariaRef: ref,
+    stageId: stageId,
+    completedAt: at,
+    source: CompletionSource.live,
   );
 }
 
 Future<void> _seedBulkInTrack(
-  UserDatabase db, {
-  required int trackId,
+  FakeFirebaseFirestore firestore, {
   required String ref,
   required int stageId,
   required DateTime at,
 }) async {
-  await db.completionEventDao.appendEvent(
-    CompletionEventsCompanion.insert(
-      profileId: _profileId,
-      curriculumId: _curriculumKey,
-      sefariaRef: ref,
-      stageId: stageId,
-      trackType: 'personal',
-      trackId: Value(trackId),
-      eventTimestamp: at,
-    ),
+  await seedCompletion(
+    firestore,
+    uid: _uid,
+    profileId: _profileId,
+    curriculumId: CurriculumId.mishnayos,
+    sefariaRef: ref,
+    stageId: stageId,
+    completedAt: at,
+    source: CompletionSource.bulkInTrack,
   );
-  await db.priorCompletionImportDao.batchInsertImports([
-    PriorCompletionImportsCompanion.insert(
-      profileId: _profileId,
-      curriculumId: _curriculumKey,
-      sefariaRef: ref,
-      stageId: stageId,
-      trackType: 'personal',
-      source: 'bulkInTrack',
-    ),
-  ]);
 }
 
 Future<void> _seedLifetimeOnly(
-  UserDatabase db, {
-  required int trackId,
+  FakeFirebaseFirestore firestore, {
   required String ref,
   required int stageId,
   required DateTime at,
 }) async {
-  await db.completionEventDao.appendEvent(
-    CompletionEventsCompanion.insert(
-      profileId: _profileId,
-      curriculumId: _curriculumKey,
-      sefariaRef: ref,
-      stageId: stageId,
-      trackType: 'personal',
-      trackId: Value(trackId),
-      eventTimestamp: at,
-    ),
+  const ulids = [
+    '01ARZ3NDEKTSV4RRFFQ69G5FB0',
+    '01ARZ3NDEKTSV4RRFFQ69G5FB1',
+    '01ARZ3NDEKTSV4RRFFQ69G5FB2',
+    '01ARZ3NDEKTSV4RRFFQ69G5FB3',
+    '01ARZ3NDEKTSV4RRFFQ69G5FB4',
+    '01ARZ3NDEKTSV4RRFFQ69G5FB5',
+  ];
+  final ulid = ulids[ref.hashCode.abs() % ulids.length];
+  await seedLedgerEntry(
+    firestore,
+    uid: _uid,
+    profileId: _profileId,
+    ulid: ulid,
+    curriculumId: CurriculumId.mishnayos,
+    entryScope: 'item',
+    unitIdentifier: ref,
+    unitDisplayNameEn: ref,
+    completedAt: at,
+    source: CompletionSource.lifetimeOnly,
   );
-  await db.priorCompletionImportDao.batchInsertImports([
-    PriorCompletionImportsCompanion.insert(
-      profileId: _profileId,
-      curriculumId: _curriculumKey,
-      sefariaRef: ref,
-      stageId: stageId,
-      trackType: 'personal',
-      source: 'lifetimeOnly',
-    ),
-  ]);
 }
 
 ContentItem _leaf(
@@ -196,8 +200,7 @@ ContentItem _leaf(
 // ---------------------------------------------------------------------------
 
 void main() {
-  late UserDatabase db;
-  late int trackId;
+  late FakeFirebaseFirestore firestore;
   late _FakeContentRepository fakeRepo;
 
   // Two distinct refs per provenance class so a "drops one source" toggle
@@ -209,13 +212,7 @@ void main() {
   });
 
   setUp(() async {
-    db = inMemoryDb();
-    await seedProfile(db);
-    trackId = await seedTrack(
-      db,
-      profileId: _profileId,
-      curriculumId: _curriculumKey,
-    );
+    firestore = createFakeFirestore(authenticatedUid: _uid);
 
     // 8 leaves in Berakhot, sorted.
     leaves = List.generate(
@@ -225,14 +222,19 @@ void main() {
     fakeRepo = _FakeContentRepository(leaves);
   });
 
-  tearDown(() => db.close());
+  tearDown(() {});
 
   ProviderContainer buildContainer({bool useHebrew = false}) {
     final container = ProviderContainer(
       overrides: [
-        userDatabaseProvider.overrideWith((ref) => db),
+        activeAccountFirebaseProvider.overrideWith(
+          (ref) async => _handles(firestore),
+        ),
+        activeProfileDocIdProvider.overrideWith(
+          () => _ActiveProfileDocIdOverride(),
+        ),
         contentRepositoryProvider.overrideWithValue(fakeRepo),
-        activeProfileIdProvider.overrideWith(() => _ProfileIdOverride(1)),
+        activeProfileIdProvider.overrideWith(() => _ProfileIdOverride()),
         useHebrewTermsProvider.overrideWith(
           () => _UseHebrewTermsOverride(useHebrew: useHebrew),
         ),
@@ -253,15 +255,13 @@ void main() {
         // 2 distinct refs.
         for (final i in [0, 1]) {
           await _seedLive(
-            db,
-            trackId: trackId,
+            firestore,
             ref: leaves[i].sefariaRef,
             stageId: 1,
             at: DateTime.utc(2026, 5, 1, 10),
           );
           await _seedLive(
-            db,
-            trackId: trackId,
+            firestore,
             ref: leaves[i].sefariaRef,
             stageId: 2,
             at: DateTime.utc(2026, 5, 2, 10),
@@ -269,16 +269,14 @@ void main() {
         }
         // 1 bulkInTrack ref → 1 event, 1 distinct ref.
         await _seedBulkInTrack(
-          db,
-          trackId: trackId,
+          firestore,
           ref: leaves[2].sefariaRef,
           stageId: 1,
           at: DateTime.utc(2026, 5, 3, 10),
         );
         // 1 lifetimeOnly ref → 1 event, 1 distinct ref.
         await _seedLifetimeOnly(
-          db,
-          trackId: trackId,
+          firestore,
           ref: leaves[3].sefariaRef,
           stageId: 1,
           at: DateTime.utc(2026, 5, 4, 10),
@@ -290,7 +288,7 @@ void main() {
         // the stage-1 live/bulk/lifetime rows are limud and are excluded.
         final container = buildContainer();
         final counters = await container.read(
-          lifetimeHeaderCountersProvider(_profileId).future,
+          lifetimeHeaderCountersProvider.future,
         );
 
         expect(
@@ -327,22 +325,19 @@ void main() {
       fakeRepo = _FakeContentRepository(perRefLeaves);
 
       await _seedLive(
-        db,
-        trackId: trackId,
+        firestore,
         ref: perRefLeaves[0].sefariaRef,
         stageId: 1,
         at: DateTime.utc(2026, 5, 1, 10),
       );
       await _seedBulkInTrack(
-        db,
-        trackId: trackId,
+        firestore,
         ref: perRefLeaves[1].sefariaRef,
         stageId: 1,
         at: DateTime.utc(2026, 5, 2, 10),
       );
       await _seedLifetimeOnly(
-        db,
-        trackId: trackId,
+        firestore,
         ref: perRefLeaves[2].sefariaRef,
         stageId: 1,
         at: DateTime.utc(2026, 5, 3, 10),
@@ -352,7 +347,7 @@ void main() {
 
       // All sources path (default toggle).
       final allSummaries = await container.read(
-        lifetimeViewSummariesProvider(_profileId).future,
+        lifetimeViewSummariesProvider.future,
       );
       final allMishnayos = allSummaries.firstWhere(
         (s) => s.curriculumId == CurriculumId.mishnayos,
@@ -372,7 +367,7 @@ void main() {
 
       // Track learning only path (toggle flipped).
       final trackSummaries = await container.read(
-        itemsLearnedSummariesProvider(_profileId).future,
+        itemsLearnedSummariesProvider.future,
       );
       final trackMishnayos = trackSummaries.firstWhere(
         (s) => s.curriculumId == CurriculumId.mishnayos,
@@ -441,8 +436,7 @@ void main() {
       // 1 live ref with 3 stage events (live · 3 chazaros).
       for (final stage in [1, 2, 3]) {
         await _seedLive(
-          db,
-          trackId: trackId,
+          firestore,
           ref: perRefLeaves[0].sefariaRef,
           stageId: stage,
           at: DateTime.utc(2026, 5, stage, 10),
@@ -450,16 +444,14 @@ void main() {
       }
       // 1 bulkInTrack ref.
       await _seedBulkInTrack(
-        db,
-        trackId: trackId,
+        firestore,
         ref: perRefLeaves[1].sefariaRef,
         stageId: 1,
         at: DateTime.utc(2026, 5, 4, 10),
       );
       // 1 lifetimeOnly ref.
       await _seedLifetimeOnly(
-        db,
-        trackId: trackId,
+        firestore,
         ref: perRefLeaves[2].sefariaRef,
         stageId: 1,
         at: DateTime.utc(2026, 5, 5, 10),
@@ -467,10 +459,7 @@ void main() {
 
       final container = buildContainer();
       final summary = await container.read(
-        lifetimeDataProvider((
-          profileId: _profileId,
-          curriculumId: CurriculumId.mishnayos,
-        )).future,
+        lifetimeDataProvider(CurriculumId.mishnayos).future,
       );
       expect(summary, isNotNull);
 
@@ -522,29 +511,25 @@ void main() {
       // Track-only expected:  2 items, 1 chazara (lifetimeOnly item dropped;
       // the lone chazara is a live event, present in both views).
       await _seedLive(
-        db,
-        trackId: trackId,
+        firestore,
         ref: leaves[0].sefariaRef,
         stageId: 1,
         at: DateTime.utc(2026, 5, 1, 10),
       );
       await _seedLive(
-        db,
-        trackId: trackId,
+        firestore,
         ref: leaves[0].sefariaRef,
         stageId: 2,
         at: DateTime.utc(2026, 5, 2, 10),
       );
       await _seedBulkInTrack(
-        db,
-        trackId: trackId,
+        firestore,
         ref: leaves[1].sefariaRef,
         stageId: 1,
         at: DateTime.utc(2026, 5, 3, 10),
       );
       await _seedLifetimeOnly(
-        db,
-        trackId: trackId,
+        firestore,
         ref: leaves[2].sefariaRef,
         stageId: 1,
         at: DateTime.utc(2026, 5, 4, 10),
@@ -553,9 +538,7 @@ void main() {
       final container = buildContainer();
 
       // All-sources counters: includes lifetimeOnly leaf.
-      final all = await container.read(
-        lifetimeHeaderCountersProvider(_profileId).future,
-      );
+      final all = await container.read(lifetimeHeaderCountersProvider.future);
       expect(
         all.itemsLearned,
         3,
@@ -572,7 +555,7 @@ void main() {
       // Track-only counters: lifetimeOnly excluded at the SQL layer via
       // CompletionTierFilter.trackAchievement.
       final track = await container.read(
-        trackOnlyHeaderCountersProvider(_profileId).future,
+        trackOnlyHeaderCountersProvider.future,
       );
       expect(
         track.itemsLearned,
@@ -609,23 +592,22 @@ void main() {
   // ─── F13 — N+1 perf assertion ──────────────────────────────────────────
   //
   // Loading all 9 curricula in parallel via lifetimeSummariesProvider must
-  // share the new batched providers — completionsByProfileForLifetimeProvider
-  // and priorImportsByProfileProvider — exactly ONCE each, not per
-  // curriculum. We assert that via a ProviderObserver that counts
-  // `didAddProvider` events for those provider IDs across the 9-curriculum
-  // resolution.
+  // share completionsByProfileForLifetimeProvider exactly ONCE, not once per
+  // curriculum. Lifetime provenance now comes from the Firestore learning
+  // ledger; the deleted prior_completion_imports provider is not a consumer
+  // in this path. We assert the live provider through its identity in
+  // `didAddProvider`, rather than relying on Riverpod's optional debug names.
 
   group('F13 — N+1 perf assertion', () {
-    test('opening all 9 curricula in parallel resolves the batched providers '
-        'exactly once each (shared across consumers)', () async {
+    test('opening all 9 curricula in parallel resolves the batched '
+        'completions provider exactly once (shared across consumers)', () async {
       // Make leaves available for every curriculum so the data path runs
       // end-to-end (the legacy fixture only covered mishnayos).
       final allCurriculumRepo = _AllCurriculumFakeRepo(leaves);
 
       // Seed minimal data so the provider returns non-null summaries.
       await _seedLive(
-        db,
-        trackId: trackId,
+        firestore,
         ref: leaves[0].sefariaRef,
         stageId: 1,
         at: DateTime.utc(2026, 5, 1, 10),
@@ -635,9 +617,14 @@ void main() {
       final container = ProviderContainer(
         observers: [observer],
         overrides: [
-          userDatabaseProvider.overrideWith((ref) => db),
+          activeAccountFirebaseProvider.overrideWith(
+            (ref) async => _handles(firestore),
+          ),
+          activeProfileDocIdProvider.overrideWith(
+            () => _ActiveProfileDocIdOverride(),
+          ),
           contentRepositoryProvider.overrideWithValue(allCurriculumRepo),
-          activeProfileIdProvider.overrideWith(() => _ProfileIdOverride(1)),
+          activeProfileIdProvider.overrideWith(() => _ProfileIdOverride()),
           useHebrewTermsProvider.overrideWith(
             () => _UseHebrewTermsOverride(useHebrew: false),
           ),
@@ -648,25 +635,17 @@ void main() {
       // Drive the aggregated provider — it expands to all 9 curricula and
       // each one calls lifetimeDataProvider which (post-fix) reads the
       // batched providers.
-      await container.read(lifetimeSummariesProvider(_profileId).future);
+      await container.read(lifetimeSummariesProvider.future);
 
-      // Each batched provider must have been built EXACTLY ONCE across
-      // all 9 curriculum resolutions. Before the fix, completions would
-      // be queried once per (curriculum + subset) and imports once per
-      // curriculum — both well above 1.
+      // The batched completions provider must be built EXACTLY ONCE across
+      // all 9 curriculum resolutions. Before the fix, completions would be
+      // queried once per curriculum.
       expect(
         observer.batchedCompletionsBuilds,
         1,
         reason:
             'completionsByProfileForLifetimeProvider must be shared across '
             'the 9 lifetimeDataProvider consumers — N+1 fix',
-      );
-      expect(
-        observer.batchedImportsBuilds,
-        1,
-        reason:
-            'priorImportsByProfileProvider must be shared across the 9 '
-            'lifetimeDataProvider consumers — N+1 fix',
       );
     });
   });
@@ -697,8 +676,7 @@ void main() {
       // Seed a minimal live entry so the screen renders past loading
       // (empty state would obscure the CTA card).
       await _seedLive(
-        db,
-        trackId: trackId,
+        firestore,
         ref: leaves[0].sefariaRef,
         stageId: 1,
         at: DateTime.utc(2026, 5, 1, 10),
@@ -710,14 +688,19 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            userDatabaseProvider.overrideWith((ref) => db),
+            activeAccountFirebaseProvider.overrideWith(
+              (ref) async => _handles(firestore),
+            ),
+            activeProfileDocIdProvider.overrideWith(
+              () => _ActiveProfileDocIdOverride(),
+            ),
             contentRepositoryProvider.overrideWithValue(fakeRepo),
-            activeProfileIdProvider.overrideWith(() => _ProfileIdOverride(1)),
+            activeProfileIdProvider.overrideWith(() => _ProfileIdOverride()),
             // Real destination route requires childModeGuard — the active
             // profile must be in child mode or the (real, non-faked)
             // navigation silently no-ops. Reflect that precondition here.
             activeProfileProvider.overrideWith(
-              (ref) async => _profileModel(mode: 'child'),
+              (ref) async => _profileEntity(mode: ProfileMode.child),
             ),
             useHebrewTermsProvider.overrideWith(
               () => _UseHebrewTermsOverride(useHebrew: false),
@@ -771,8 +754,7 @@ void main() {
   group('CTA hidden when active profile is not in child mode', () {
     Future<void> pumpWithMode(WidgetTester tester, String mode) async {
       await _seedLive(
-        db,
-        trackId: trackId,
+        firestore,
         ref: leaves[0].sefariaRef,
         stageId: 1,
         at: DateTime.utc(2026, 5, 1, 10),
@@ -781,11 +763,18 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            userDatabaseProvider.overrideWith((ref) => db),
+            activeAccountFirebaseProvider.overrideWith(
+              (ref) async => _handles(firestore),
+            ),
+            activeProfileDocIdProvider.overrideWith(
+              () => _ActiveProfileDocIdOverride(),
+            ),
             contentRepositoryProvider.overrideWithValue(fakeRepo),
-            activeProfileIdProvider.overrideWith(() => _ProfileIdOverride(1)),
+            activeProfileIdProvider.overrideWith(() => _ProfileIdOverride()),
             activeProfileProvider.overrideWith(
-              (ref) async => _profileModel(mode: mode),
+              (ref) async => _profileEntity(
+                mode: ProfileMode.tryFromStorageKey(mode) ?? ProfileMode.adult,
+              ),
             ),
             useHebrewTermsProvider.overrideWith(
               () => _UseHebrewTermsOverride(useHebrew: false),
@@ -893,52 +882,31 @@ class _AllCurriculumFakeRepo extends Fake implements ContentRepository {
   @override
   Future<List<ContentItem>> getContentForCurriculum(
     CurriculumId curriculumId,
-  ) async {
-    // Same leaves for every curriculum — the assertions don't depend on
-    // per-curriculum content, only on provider call-count behaviour.
-    return _leaves
-        .map(
-          (l) => ContentItemFixtures.leaf(
-            curriculumId: curriculumId.storageKey,
-            level1: l.level1,
-            level2: l.level2,
-            level3: l.level3,
-            level4: l.level4,
-            sefariaRef: l.sefariaRef,
-            sortOrder: l.sortOrder,
-            displayNameHe: l.displayNameHe,
-            displayNameEn: l.displayNameEn,
-            isLeaf: l.isLeaf,
-          ),
-        )
-        .toList();
-  }
+  ) async => _leaves
+      .map(
+        (l) => ContentItemFixtures.leaf(
+          curriculumId: curriculumId.storageKey,
+          level1: l.level1,
+          level2: l.level2,
+          level3: l.level3,
+          level4: l.level4,
+          sefariaRef: l.sefariaRef,
+          sortOrder: l.sortOrder,
+          displayNameHe: l.displayNameHe,
+          displayNameEn: l.displayNameEn,
+          isLeaf: l.isLeaf,
+        ),
+      )
+      .toList();
 }
-
-// ---------------------------------------------------------------------------
-// Counting observer — F13 perf assertion. Counts `didAddProvider` events for
-// the two new batched providers introduced by the N+1 fix.
-// ---------------------------------------------------------------------------
 
 final class _CountingObserver extends ProviderObserver {
   int batchedCompletionsBuilds = 0;
-  int batchedImportsBuilds = 0;
 
   @override
   void didAddProvider(ProviderObserverContext context, Object? value) {
-    // Match by the family's debug `name` (set explicitly on the provider
-    // declaration). Falls back to the provider's own toString in case the
-    // provider is non-family (defensive — we declare both targets with
-    // explicit names, so this is the expected hit path).
-    final familyName = context.provider.from?.name;
-    final providerName = context.provider.name;
-    final id = familyName ?? providerName ?? context.provider.toString();
-    if (id == 'completionsByProfileForLifetimeProvider' ||
-        id.contains('completionsByProfileForLifetimeProvider')) {
+    if (context.provider == completionsByProfileForLifetimeProvider) {
       batchedCompletionsBuilds++;
-    } else if (id == 'priorImportsByProfileProvider' ||
-        id.contains('priorImportsByProfileProvider')) {
-      batchedImportsBuilds++;
     }
   }
 }

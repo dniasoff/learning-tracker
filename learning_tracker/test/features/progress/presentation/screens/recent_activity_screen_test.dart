@@ -12,35 +12,63 @@
 @Tags(['progress', 'recent_activity'])
 library;
 
-import 'package:drift/drift.dart' show Value;
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
+import 'package:learning_tracker/data/firestore/account_firebase.dart';
+import 'package:learning_tracker/data/firestore/active_account_providers.dart';
+import 'package:learning_tracker/data/firestore/repository_providers.dart'
+    show ActiveProfileDocId, activeProfileDocIdProvider;
+import 'package:learning_tracker/data/repositories/firestore_completion_repository.dart';
+import 'package:learning_tracker/data/repositories/firestore_goal_repository.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_entity.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_tier_filter.dart';
 import 'package:learning_tracker/features/progress/domain/models/chart_data.dart';
 import 'package:learning_tracker/features/progress/domain/services/chart_data_service.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/chart_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/recent_activity_screen.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/limudim_chazaros_bar_chart.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
+import 'package:mocktail/mocktail.dart';
 
-import '../../../../helpers/drift_memory.dart';
+import '../../../../helpers/firestore_fake.dart';
+import '../../../../helpers/firestore_fixtures.dart';
 
-const _profileId = 1;
-const _curriculumId = 'mishnayos';
+const _uid = 'recent-activity-screen-user';
+const _profileId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+
+class _MockFirebaseApp extends Mock implements FirebaseApp {}
+
+class _MockFirebaseAuth extends Mock implements FirebaseAuth {}
+
+AccountFirebaseHandles _handles(FakeFirebaseFirestore firestore) =>
+    AccountFirebaseHandles(
+      app: _MockFirebaseApp(),
+      firestore: firestore,
+      auth: _MockFirebaseAuth(),
+      uid: _uid,
+    );
 
 /// Test override for [ActiveProfileId] that returns a fixed id.
 class _ProfileIdOverride extends ActiveProfileId {
-  _ProfileIdOverride(this._id);
-  final int _id;
   @override
-  int build() => _id;
+  String? build() => _profileId;
+}
+
+class _ActiveProfileDocIdOverride extends ActiveProfileDocId {
+  @override
+  String? build() => _profileId;
 }
 
 /// Pins the Hebrew Terms toggle to a known value so tests can assert against
@@ -58,7 +86,8 @@ class _UseHebrewTermsOverride extends UseHebrewTerms {
 /// [getDailyLimudimAndChazaros] so the time-range test can assert that
 /// switching the range refetches exactly once.
 class _SpyChartDataService extends ChartDataService {
-  _SpyChartDataService(super.db, {required super.profileId});
+  _SpyChartDataService(ChartDataRepository repository)
+    : super(repository: repository);
 
   int limudChazaraCalls = 0;
 
@@ -77,109 +106,123 @@ class _SpyChartDataService extends ChartDataService {
   }
 }
 
+class _FirestoreChartRepository implements ChartDataRepository {
+  _FirestoreChartRepository(FakeFirebaseFirestore firestore)
+    : _completions = FirestoreCompletionRepository(
+        firestore: firestore,
+        uid: _uid,
+        profileId: _profileId,
+      ),
+      _goals = FirestoreGoalRepository(
+        firestore: firestore,
+        uid: _uid,
+        profileId: _profileId,
+      );
+
+  final FirestoreCompletionRepository _completions;
+  final FirestoreGoalRepository _goals;
+
+  @override
+  Future<List<CompletionEntity>> getCompletionsByTier({
+    required CompletionTierFilter tier,
+    CurriculumId? curriculumId,
+    DateTime? since,
+    DateTime? until,
+  }) => _completions.getCompletionsByTier(
+    tier: tier,
+    curriculumId: curriculumId,
+    since: since,
+    until: until,
+  );
+
+  @override
+  Future<List<CompletionEntity>> getCompletionsByCurriculum(
+    CurriculumId curriculumId,
+  ) => _completions.getCompletionsForCurriculum(curriculumId);
+
+  @override
+  Future<List<GoalEntity>> getGoals(CurriculumId curriculumId) =>
+      _goals.getGoals(curriculumId);
+}
+
 Future<int> _seedLive(
-  UserDatabase db, {
-  required int trackId,
+  FakeFirebaseFirestore firestore, {
   required String ref,
   required int stageId,
   required DateTime at,
-}) {
-  return db.completionEventDao.appendEvent(
-    CompletionEventsCompanion.insert(
-      profileId: _profileId,
-      curriculumId: _curriculumId,
-      sefariaRef: ref,
-      stageId: stageId,
-      trackType: 'personal',
-      trackId: Value(trackId),
-      eventTimestamp: at,
-    ),
+}) async {
+  await seedCompletion(
+    firestore,
+    uid: _uid,
+    profileId: _profileId,
+    curriculumId: CurriculumId.mishnayos,
+    sefariaRef: ref,
+    stageId: stageId,
+    completedAt: at,
+    source: CompletionSource.live,
   );
+  return 0;
 }
 
 Future<void> _seedBulkInTrack(
-  UserDatabase db, {
-  required int trackId,
+  FakeFirebaseFirestore firestore, {
   required String ref,
   required int stageId,
   required DateTime at,
 }) async {
-  await db.completionEventDao.appendEvent(
-    CompletionEventsCompanion.insert(
-      profileId: _profileId,
-      curriculumId: _curriculumId,
-      sefariaRef: ref,
-      stageId: stageId,
-      trackType: 'personal',
-      trackId: Value(trackId),
-      eventTimestamp: at,
-    ),
+  await seedCompletion(
+    firestore,
+    uid: _uid,
+    profileId: _profileId,
+    curriculumId: CurriculumId.mishnayos,
+    sefariaRef: ref,
+    stageId: stageId,
+    completedAt: at,
+    source: CompletionSource.bulkInTrack,
   );
-  await db.priorCompletionImportDao.batchInsertImports([
-    PriorCompletionImportsCompanion.insert(
-      profileId: _profileId,
-      curriculumId: _curriculumId,
-      sefariaRef: ref,
-      stageId: stageId,
-      trackType: 'personal',
-      source: 'bulkInTrack',
-    ),
-  ]);
 }
 
 Future<void> _seedLifetimeOnly(
-  UserDatabase db, {
-  required int trackId,
+  FakeFirebaseFirestore firestore, {
   required String ref,
   required int stageId,
   required DateTime at,
 }) async {
-  await db.completionEventDao.appendEvent(
-    CompletionEventsCompanion.insert(
-      profileId: _profileId,
-      curriculumId: _curriculumId,
-      sefariaRef: ref,
-      stageId: stageId,
-      trackType: 'personal',
-      trackId: Value(trackId),
-      eventTimestamp: at,
-    ),
+  await seedLedgerEntry(
+    firestore,
+    uid: _uid,
+    profileId: _profileId,
+    ulid: '01ARZ3NDEKTSV4RRFFQ69G5FB0',
+    curriculumId: CurriculumId.mishnayos,
+    entryScope: 'item',
+    unitIdentifier: ref,
+    unitDisplayNameEn: ref,
+    completedAt: at,
+    source: CompletionSource.lifetimeOnly,
   );
-  await db.priorCompletionImportDao.batchInsertImports([
-    PriorCompletionImportsCompanion.insert(
-      profileId: _profileId,
-      curriculumId: _curriculumId,
-      sefariaRef: ref,
-      stageId: stageId,
-      trackType: 'personal',
-      source: 'lifetimeOnly',
-    ),
-  ]);
 }
 
 void main() {
-  late UserDatabase db;
+  late FakeFirebaseFirestore firestore;
   late _SpyChartDataService spy;
-  late int trackId;
 
   setUp(() async {
-    db = inMemoryDb();
-    await seedProfile(db);
-    trackId = await seedTrack(
-      db,
-      profileId: _profileId,
-      curriculumId: _curriculumId,
-    );
-    spy = _SpyChartDataService(db, profileId: _profileId);
+    firestore = createFakeFirestore(authenticatedUid: _uid);
+    spy = _SpyChartDataService(_FirestoreChartRepository(firestore));
   });
 
-  tearDown(() => db.close());
+  tearDown(() {});
 
   Widget buildScreen({bool useHebrewTerms = false, bool hasChazara = true}) =>
       ProviderScope(
         overrides: [
-          userDatabaseProvider.overrideWith((ref) => db),
-          activeProfileIdProvider.overrideWith(() => _ProfileIdOverride(1)),
+          activeAccountFirebaseProvider.overrideWith(
+            (ref) async => _handles(firestore),
+          ),
+          activeProfileDocIdProvider.overrideWith(
+            () => _ActiveProfileDocIdOverride(),
+          ),
+          activeProfileIdProvider.overrideWith(() => _ProfileIdOverride()),
           useHebrewTermsProvider.overrideWith(
             () => _UseHebrewTermsOverride(useHebrew: useHebrewTerms),
           ),
@@ -272,23 +315,10 @@ void main() {
     final bulkAt = DateTime(today.year, today.month, today.day, 11);
     final lifetimeAt = DateTime(today.year, today.month, today.day, 12);
 
-    await _seedLive(
-      db,
-      trackId: trackId,
-      ref: 'live_a',
-      stageId: 1,
-      at: liveAt,
-    );
-    await _seedBulkInTrack(
-      db,
-      trackId: trackId,
-      ref: 'bulk_a',
-      stageId: 1,
-      at: bulkAt,
-    );
+    await _seedLive(firestore, ref: 'live_a', stageId: 1, at: liveAt);
+    await _seedBulkInTrack(firestore, ref: 'bulk_a', stageId: 1, at: bulkAt);
     await _seedLifetimeOnly(
-      db,
-      trackId: trackId,
+      firestore,
       ref: 'lifetime_a',
       stageId: 1,
       at: lifetimeAt,
@@ -346,13 +376,7 @@ void main() {
       // fix a single active day must read "1 Active day" (singular).
       final today = DateTimeFactory.nowLocal();
       final at = DateTime(today.year, today.month, today.day, 9);
-      await _seedLive(
-        db,
-        trackId: trackId,
-        ref: 'live_one',
-        stageId: 1,
-        at: at,
-      );
+      await _seedLive(firestore, ref: 'live_one', stageId: 1, at: at);
 
       await tester.pumpWidget(buildScreen());
       await tester.pumpAndSettle();

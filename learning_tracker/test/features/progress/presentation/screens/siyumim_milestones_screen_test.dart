@@ -13,12 +13,17 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/data/firestore/account_firebase.dart';
+import 'package:learning_tracker/data/firestore/active_account_providers.dart';
+import 'package:learning_tracker/data/firestore/repository_providers.dart'
+    show ActiveProfileDocId, activeProfileDocIdProvider;
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/progress/domain/models/journey_view_model.dart';
@@ -26,15 +31,34 @@ import 'package:learning_tracker/features/progress/presentation/providers/journe
 import 'package:learning_tracker/features/progress/presentation/screens/siyumim_milestones_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
+import 'package:mocktail/mocktail.dart';
 
-import '../../../../helpers/drift_memory.dart';
+import '../../../../helpers/firestore_fake.dart';
 
 /// Test override for [ActiveProfileId] that returns a fixed id.
+const _uid = 'siyumim-milestones-screen-user';
+const _profileId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+
+class _MockFirebaseApp extends Mock implements FirebaseApp {}
+
+class _MockFirebaseAuth extends Mock implements FirebaseAuth {}
+
+AccountFirebaseHandles _handles(FakeFirebaseFirestore firestore) =>
+    AccountFirebaseHandles(
+      app: _MockFirebaseApp(),
+      firestore: firestore,
+      auth: _MockFirebaseAuth(),
+      uid: _uid,
+    );
+
 class _ProfileIdOverride extends ActiveProfileId {
-  _ProfileIdOverride(this._id);
-  final int _id;
   @override
-  int build() => _id;
+  String? build() => _profileId;
+}
+
+class _ActiveProfileDocIdOverride extends ActiveProfileDocId {
+  @override
+  String? build() => _profileId;
 }
 
 /// Pins the Hebrew Terms toggle to a known value so tests can assert
@@ -122,22 +146,26 @@ JourneyViewModel _viewModelWithAllThreeLevels() {
 }
 
 void main() {
-  late UserDatabase db;
+  late FakeFirebaseFirestore firestore;
 
   setUp(() async {
-    db = inMemoryDb();
-    await seedProfile(db);
+    firestore = createFakeFirestore(authenticatedUid: _uid);
   });
 
-  tearDown(() async => db.close());
+  tearDown(() async {});
 
   Widget buildScreen({
     required JourneyViewModel viewModel,
     bool useHebrew = false,
   }) => ProviderScope(
     overrides: [
-      userDatabaseProvider.overrideWith((ref) => db),
-      activeProfileIdProvider.overrideWith(() => _ProfileIdOverride(1)),
+      activeAccountFirebaseProvider.overrideWith(
+        (ref) async => _handles(firestore),
+      ),
+      activeProfileDocIdProvider.overrideWith(
+        () => _ActiveProfileDocIdOverride(),
+      ),
+      activeProfileIdProvider.overrideWith(() => _ProfileIdOverride()),
       useHebrewTermsProvider.overrideWith(
         () => _UseHebrewTermsOverride(useHebrew: useHebrew),
       ),
@@ -147,9 +175,7 @@ void main() {
       curriculumContentProvider(
         CurriculumId.mishnayos,
       ).overrideWith((ref) => Future.value(const [])),
-      journeyViewModelProvider(
-        1,
-      ).overrideWith((ref) => Future.value(viewModel)),
+      journeyViewModelProvider.overrideWith((ref) => Future.value(viewModel)),
     ],
     child: const MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -192,8 +218,13 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          userDatabaseProvider.overrideWith((ref) => db),
-          activeProfileIdProvider.overrideWith(() => _ProfileIdOverride(1)),
+          activeAccountFirebaseProvider.overrideWith(
+            (ref) async => _handles(firestore),
+          ),
+          activeProfileDocIdProvider.overrideWith(
+            () => _ActiveProfileDocIdOverride(),
+          ),
+          activeProfileIdProvider.overrideWith(() => _ProfileIdOverride()),
           useHebrewTermsProvider.overrideWith(
             () => _UseHebrewTermsOverride(useHebrew: true),
           ),
@@ -203,9 +234,9 @@ void main() {
           curriculumContentProvider(
             CurriculumId.mishnayos,
           ).overrideWith((ref) => Future.value(const [])),
-          journeyViewModelProvider(
-            1,
-          ).overrideWith((ref) => Future.value(_viewModelWithAllThreeLevels())),
+          journeyViewModelProvider.overrideWith(
+            (ref) => Future.value(_viewModelWithAllThreeLevels()),
+          ),
         ],
         child: const MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
