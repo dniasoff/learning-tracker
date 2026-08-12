@@ -1,12 +1,29 @@
 import 'dart:io';
 
-import 'package:drift/drift.dart' show Value;
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/data/firestore/account_firebase.dart';
+import 'package:learning_tracker/data/firestore/active_account_providers.dart';
+import 'package:learning_tracker/data/firestore/repository_providers.dart'
+    show activeProfileDocIdProvider;
+import 'package:learning_tracker/features/progress/data/repositories/firestore_chart_data_repository_adapter.dart';
 import 'package:learning_tracker/features/progress/domain/services/chart_data_service.dart';
+import 'package:mocktail/mocktail.dart';
 
-import '../../../../helpers/drift_memory.dart';
+import '../../../../helpers/firestore_fake.dart';
+import '../../../../helpers/firestore_fixtures.dart';
+
+class _MockFirebaseApp extends Mock implements FirebaseApp {}
+
+class _MockFirebaseAuth extends Mock implements FirebaseAuth {}
+
+const _uid = 'chart-service-test-user';
+const _profileDocId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
 
 const _chartDataServicePath =
     'lib/features/progress/domain/services/chart_data_service.dart';
@@ -69,71 +86,66 @@ String _extractMethodImpl(String source, String methodName) {
 }
 
 void main() {
-  late UserDatabase db;
+  late FakeFirebaseFirestore firestore;
+  late ProviderContainer container;
   late ChartDataService service;
-  late int trackId;
-  const profileId = 1;
 
   setUp(() async {
-    db = inMemoryDb();
-    await seedProfile(db);
-    trackId = await db
-        .into(db.curriculumTracks)
-        .insert(
-          CurriculumTracksCompanion.insert(
-            profileId: profileId,
-            curriculumId: 'mishnayos',
-            stateChangedAt: DateTime.utc(2026, 1, 1),
-            activatedAt: DateTime.utc(2026, 1, 1),
-          ),
-        );
-    service = ChartDataService(db, profileId: profileId);
+    firestore = createFakeFirestore(authenticatedUid: _uid);
+    final handles = AccountFirebaseHandles(
+      app: _MockFirebaseApp(),
+      firestore: firestore,
+      auth: _MockFirebaseAuth(),
+      uid: _uid,
+    );
+    container = ProviderContainer(
+      overrides: [
+        activeAccountFirebaseProvider.overrideWith((ref) async => handles),
+      ],
+    );
+    container.read(activeProfileDocIdProvider.notifier).set(_profileDocId);
+    final adapterProvider = Provider<FirestoreChartDataRepositoryAdapter>(
+      (ref) => FirestoreChartDataRepositoryAdapter(ref: ref),
+    );
+    service = ChartDataService(repository: container.read(adapterProvider));
   });
 
-  tearDown(() async {
-    await db.close();
-  });
+  tearDown(() => container.dispose());
 
-  Future<int> insertCompletion({
+  Future<String> insertCompletion({
     required DateTime completedAt,
     String curriculumId = 'mishnayos',
     int points = 10,
     int stageId = 1,
     String sefariaRef = 'ref_1',
-    int? trackIdOverride,
   }) => seedCompletion(
-    db,
-    CompletionEventsCompanion.insert(
-      profileId: profileId,
-      curriculumId: curriculumId,
-      sefariaRef: sefariaRef,
-      stageId: stageId,
-      trackType: 'personal',
-      trackId: Value(trackIdOverride ?? trackId),
-      eventTimestamp: completedAt,
-      points: Value(points),
-    ),
+    firestore,
+    uid: _uid,
+    profileId: _profileDocId,
+    curriculumId: CurriculumId.fromStorageKey(curriculumId)!,
+    sefariaRef: sefariaRef,
+    stageId: stageId,
+    trackType: 'personal',
+    completedAt: completedAt,
+    points: points,
   );
 
-  Future<void> insertGoal({
+  Future<String> insertGoal({
     String curriculumId = 'mishnayos',
     DateTime? createdAt,
     DateTime? targetDate,
     DateTime? updatedAt,
   }) {
     final now = DateTime.utc(2026, 1, 1);
-    return db
-        .into(db.goals)
-        .insert(
-          GoalsCompanion.insert(
-            profileId: profileId,
-            curriculumId: curriculumId,
-            trackId: trackId,
-            createdAt: createdAt ?? now,
-            updatedAt: updatedAt ?? now,
-            targetDate: Value(targetDate),
-          ),
-        );
+    return seedGoal(
+      firestore,
+      uid: _uid,
+      profileId: _profileDocId,
+      curriculumId: CurriculumId.fromStorageKey(curriculumId)!,
+      createdAt: createdAt ?? now,
+      updatedAt: updatedAt ?? now,
+      targetDate: targetDate,
+    );
   }
 
   group('ChartDataService', () {
@@ -173,21 +185,10 @@ void main() {
       });
 
       test('filters by curriculumId when provided', () async {
-        // Bavli track for the same profile.
-        final bavliTrack = await db
-            .into(db.curriculumTracks)
-            .insert(
-              CurriculumTracksCompanion.insert(
-                profileId: profileId,
-                curriculumId: 'bavli',
-                stateChangedAt: DateTime.utc(2026, 1, 1),
-                activatedAt: DateTime.utc(2026, 1, 1),
-              ),
-            );
         await insertCompletion(
           completedAt: DateTime(2026, 3, 1, 10),
           curriculumId: 'bavli',
-          trackIdOverride: bavliTrack,
+          sefariaRef: 'bavli_ref',
         );
         // A mishnayos completion on the same day must NOT count.
         await insertCompletion(

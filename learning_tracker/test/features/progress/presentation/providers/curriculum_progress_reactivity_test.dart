@@ -16,16 +16,20 @@
 /// stand-in that could drift from production behaviour undetected.
 library;
 
-import 'package:drift/drift.dart' show Value;
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/data/firestore/account_firebase.dart';
+import 'package:learning_tracker/data/firestore/active_account_providers.dart';
+import 'package:learning_tracker/data/firestore/repository_providers.dart'
+    show activeProfileDocIdProvider;
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/progress_providers.dart';
@@ -33,10 +37,16 @@ import 'package:learning_tracker/features/tracks/stages/domain/models/stage_defi
     as domain_stage;
 import 'package:learning_tracker/features/tracks/stages/domain/repositories/stage_definition_repository.dart';
 import 'package:learning_tracker/features/tracks/stages/presentation/providers/stage_providers.dart';
+import 'package:mocktail/mocktail.dart';
 
-import '../../../../helpers/drift_memory.dart';
+import '../../../../helpers/firestore_fake.dart';
+import '../../../../helpers/firestore_fixtures.dart';
 
-const _profileId = 1;
+class _MockFirebaseApp extends Mock implements FirebaseApp {}
+
+class _MockFirebaseAuth extends Mock implements FirebaseAuth {}
+
+const _profileId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
 const _curriculumKey = 'mishnayos';
 const _curriculum = CurriculumId.mishnayos;
 const _learnStageId = 1;
@@ -115,10 +125,8 @@ class _FakeStageDefinitionRepository extends Fake
 }
 
 class _ProfileIdOverride extends ActiveProfileId {
-  _ProfileIdOverride(this._id);
-  final int _id;
   @override
-  int build() => _id;
+  String? build() => _profileId;
 }
 
 ContentItem _leaf(String ref, {int sortOrder = 0}) => ContentItem(
@@ -142,13 +150,23 @@ void main() {
         'curriculumProgressProvider re-executes after a '
         'completionCommittedProvider tick and reflects the new completion',
         () async {
-          final db = inMemoryDb();
-          addTearDown(db.close);
-          await seedProfile(db);
-          final trackId = await seedTrack(
-            db,
+          final firestore = createFakeFirestore(
+            authenticatedUid: 'curriculum-progress-reactivity-user',
+          );
+          // The initial empty completion read is an achievement-shaped
+          // Firestore read. The adapter's hydration guard verifies the
+          // profile document before it will report a truthful zero; omitting
+          // this seed makes Riverpod retry the failed FutureProvider forever.
+          await seedProfile(
+            firestore,
+            uid: 'curriculum-progress-reactivity-user',
             profileId: _profileId,
-            curriculumId: _curriculumKey,
+          );
+          final handles = AccountFirebaseHandles(
+            app: _MockFirebaseApp(),
+            firestore: firestore,
+            auth: _MockFirebaseAuth(),
+            uid: 'curriculum-progress-reactivity-user',
           );
 
           final leaf = _leaf('Mishnah Berakhot 1:1');
@@ -166,16 +184,17 @@ void main() {
 
           final container = ProviderContainer(
             overrides: [
-              userDatabaseProvider.overrideWith((ref) => db),
-              contentRepositoryProvider.overrideWithValue(repo),
-              activeProfileIdProvider.overrideWith(
-                () => _ProfileIdOverride(_profileId),
+              activeAccountFirebaseProvider.overrideWith(
+                (ref) async => handles,
               ),
+              contentRepositoryProvider.overrideWithValue(repo),
+              activeProfileIdProvider.overrideWith(() => _ProfileIdOverride()),
               stageDefinitionRepositoryProvider.overrideWith(
                 (ref, c) => stageRepo,
               ),
             ],
           );
+          container.read(activeProfileDocIdProvider.notifier).set(_profileId);
           addTearDown(container.dispose);
 
           // Keep the provider alive across the DB mutation + tick — mirrors
@@ -199,16 +218,15 @@ void main() {
 
           // A completion lands directly in the DB (mirrors the write path
           // elsewhere in the app) and the commit signal ticks.
-          await db.completionEventDao.appendEvent(
-            CompletionEventsCompanion.insert(
-              profileId: _profileId,
-              curriculumId: _curriculumKey,
-              sefariaRef: leaf.sefariaRef,
-              stageId: _learnStageId,
-              trackType: 'personal',
-              trackId: Value(trackId),
-              eventTimestamp: DateTime.utc(2026, 5, 1, 10),
-            ),
+          await seedCompletion(
+            firestore,
+            uid: 'curriculum-progress-reactivity-user',
+            profileId: _profileId,
+            curriculumId: _curriculum,
+            sefariaRef: leaf.sefariaRef,
+            stageId: _learnStageId,
+            source: CompletionSource.live,
+            completedAt: DateTime.utc(2026, 5, 1, 10),
           );
           container.read(completionCommittedProvider.notifier).increment();
 

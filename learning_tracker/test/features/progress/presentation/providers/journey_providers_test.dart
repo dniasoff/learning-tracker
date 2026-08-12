@@ -19,23 +19,33 @@
 @Tags(['progress', 'journey'])
 library;
 
-import 'package:drift/drift.dart' show Value;
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/core/time/ulid.dart';
+import 'package:learning_tracker/data/firestore/account_firebase.dart';
+import 'package:learning_tracker/data/firestore/active_account_providers.dart';
+import 'package:learning_tracker/data/firestore/repository_providers.dart'
+    show activeProfileDocIdProvider;
+import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/progress/domain/models/journey_view_model.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/journey_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
+import 'package:mocktail/mocktail.dart';
 
-import '../../../../helpers/drift_memory.dart';
+import '../../../../helpers/firestore_fake.dart';
+import '../../../../helpers/firestore_fixtures.dart';
 
-const _profileId = 1;
+const _uid = 'journey-provider-suite-user';
+const _profileId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
 
 /// Pins the Hebrew Terms toggle off so the milestone detector's call to
 /// `curriculumLabelTextFromRef` (which reads [useHebrewTermsProvider])
@@ -200,56 +210,42 @@ List<ContentItem> _bavliMinimalContent() {
   ];
 }
 
-Future<int> _seedMasechtaLedger(
-  UserDatabase db, {
+Future<void> _seedMasechtaLedger(
+  FakeFirebaseFirestore firestore, {
   required CurriculumId curriculum,
   required String masechta,
   required DateTime at,
-}) {
-  return db.learningLedgerDao.insertEntry(
-    LearningLedgerCompanion.insert(
-      profileId: _profileId,
-      curriculumId: curriculum.storageKey,
-      entryScope: 'masechta',
-      unitIdentifier: masechta,
-      unitDisplayNameHe: masechta,
-      unitDisplayNameEn: masechta,
-      trackType: 'personal',
-      completedAt: at,
-      completionNumber: 1,
-      markedBy: _profileId,
-      isManual: const Value(false),
-    ),
-  );
-}
+}) => seedLedgerEntry(
+  firestore,
+  uid: _uid,
+  profileId: _profileId,
+  ulid: newUlid(),
+  curriculumId: curriculum,
+  entryScope: 'masechta',
+  unitIdentifier: masechta,
+  unitDisplayNameHe: masechta,
+  unitDisplayNameEn: masechta,
+  completedAt: at,
+);
 
-/// Seed a ledger entry with an arbitrary [entryScope] and [unitIdentifier].
-///
-/// Required for F22 tests covering Chumash (scope='sefer') and
-/// Mishna Berurah (scope='siman' / 'chelek').
-Future<int> _seedLedgerEntry(
-  UserDatabase db, {
+Future<void> _seedLedgerEntry(
+  FakeFirebaseFirestore firestore, {
   required CurriculumId curriculum,
   required String entryScope,
   required String unitIdentifier,
   required DateTime at,
-}) {
-  return db.learningLedgerDao.insertEntry(
-    LearningLedgerCompanion.insert(
-      profileId: _profileId,
-      curriculumId: curriculum.storageKey,
-      entryScope: entryScope,
-      unitIdentifier: unitIdentifier,
-      unitDisplayNameHe: unitIdentifier,
-      unitDisplayNameEn: unitIdentifier,
-      trackType: 'personal',
-      completedAt: at,
-      completionNumber: 1,
-      markedBy: _profileId,
-      isManual: const Value(false),
-    ),
-  );
-}
+}) => seedLedgerEntry(
+  firestore,
+  uid: _uid,
+  profileId: _profileId,
+  ulid: newUlid(),
+  curriculumId: curriculum,
+  entryScope: entryScope,
+  unitIdentifier: unitIdentifier,
+  unitDisplayNameHe: unitIdentifier,
+  unitDisplayNameEn: unitIdentifier,
+  completedAt: at,
+);
 
 /// Build a minimal Chumash content list — three sefarim (Bereshit, Shemot,
 /// Vayikra), level-1-only (no level2). This matches the actual Chumash
@@ -332,19 +328,27 @@ List<ContentItem> _mishnaBerurahContent() {
 /// All other providers (the actual milestone detector, the ledger DAO
 /// query, the level tallies) run through their real implementations.
 ProviderContainer _container({
-  required UserDatabase db,
+  required FakeFirebaseFirestore firestore,
   required List<CurriculumId> activeCurricula,
   required Map<CurriculumId, List<ContentItem>> content,
   MilestoneLevel granularity = MilestoneLevel.unit,
 }) {
-  return ProviderContainer(
+  final handles = AccountFirebaseHandles(
+    app: _MockFirebaseApp(),
+    firestore: firestore,
+    auth: _MockFirebaseAuth(),
+    uid: _uid,
+  );
+  final container = ProviderContainer(
     overrides: [
-      userDatabaseProvider.overrideWith((ref) => db),
+      activeAccountFirebaseProvider.overrideWith((ref) async => handles),
+      activeProfileIdProvider.overrideWith(() => _ActiveProfileOverride()),
       useHebrewTermsProvider.overrideWith(_UseHebrewTermsOverride.new),
       currentTransliterationVariantProvider.overrideWith(_VariantOverride.new),
       activeCurriculaProvider.overrideWith(
         (ref) => Future.value(activeCurricula),
       ),
+      contentRepositoryProvider.overrideWithValue(_ContentRepository(content)),
       for (final entry in content.entries)
         curriculumContentProvider(
           entry.key,
@@ -353,6 +357,25 @@ ProviderContainer _container({
         siyumGranularityProvider(curriculum).overrideWithValue(granularity),
     ],
   );
+  container.read(activeProfileDocIdProvider.notifier).set(_profileId);
+  return container;
+}
+
+class _MockFirebaseApp extends Mock implements FirebaseApp {}
+
+class _MockFirebaseAuth extends Mock implements FirebaseAuth {}
+
+class _ActiveProfileOverride extends ActiveProfileId {
+  @override
+  String? build() => _profileId;
+}
+
+class _ContentRepository extends Fake implements ContentRepository {
+  _ContentRepository(this._content);
+  final Map<CurriculumId, List<ContentItem>> _content;
+  @override
+  Future<List<ContentItem>> getContentForCurriculum(CurriculumId c) async =>
+      _content[c] ?? const [];
 }
 
 /// Mishnayos content with a SINGLE seder (Zeraim) of two masechtos — the
@@ -398,14 +421,11 @@ void main() {
   });
 
   group('journeyViewModelProvider — three-level milestone breakdown', () {
-    late UserDatabase db;
+    late FakeFirebaseFirestore firestore;
 
     setUp(() async {
-      db = inMemoryDb();
-      await seedProfile(db);
+      firestore = createFakeFirestore(authenticatedUid: _uid);
     });
-
-    tearDown(() async => db.close());
 
     test(
       'Zeraim fully complete → 11 unit · 1 aggregate · 0 curriculum',
@@ -427,7 +447,7 @@ void main() {
         final base = DateTime(2026, 1, 1);
         for (var i = 0; i < zeraimMasechtos.length; i++) {
           await _seedMasechtaLedger(
-            db,
+            firestore,
             curriculum: CurriculumId.mishnayos,
             masechta: zeraimMasechtos[i],
             at: base.add(Duration(days: i)),
@@ -435,15 +455,13 @@ void main() {
         }
 
         final container = _container(
-          db: db,
+          firestore: firestore,
           activeCurricula: const [CurriculumId.mishnayos],
           content: {CurriculumId.mishnayos: _mishnayosContent()},
         );
         addTearDown(container.dispose);
 
-        final vm = await container.read(
-          journeyViewModelProvider(_profileId).future,
-        );
+        final vm = await container.read(journeyViewModelProvider.future);
 
         expect(
           vm.unitLevelSiyumimCount,
@@ -500,7 +518,7 @@ void main() {
         for (final entry in sederim.entries) {
           for (final masechta in entry.value) {
             await _seedMasechtaLedger(
-              db,
+              firestore,
               curriculum: CurriculumId.mishnayos,
               masechta: masechta,
               at: base.add(Duration(days: i++)),
@@ -509,15 +527,13 @@ void main() {
         }
 
         final container = _container(
-          db: db,
+          firestore: firestore,
           activeCurricula: const [CurriculumId.mishnayos],
           content: {CurriculumId.mishnayos: content},
         );
         addTearDown(container.dispose);
 
-        final vm = await container.read(
-          journeyViewModelProvider(_profileId).future,
-        );
+        final vm = await container.read(journeyViewModelProvider.future);
 
         expect(
           vm.unitLevelSiyumimCount,
@@ -542,22 +558,20 @@ void main() {
       () async {
         // Seed exactly one masechta (Berakhot, Zeraim) into the ledger.
         await _seedMasechtaLedger(
-          db,
+          firestore,
           curriculum: CurriculumId.bavli,
           masechta: 'Berakhot',
           at: DateTime(2026, 5, 4),
         );
 
         final container = _container(
-          db: db,
+          firestore: firestore,
           activeCurricula: const [CurriculumId.bavli],
           content: {CurriculumId.bavli: _bavliMinimalContent()},
         );
         addTearDown(container.dispose);
 
-        final vm = await container.read(
-          journeyViewModelProvider(_profileId).future,
-        );
+        final vm = await container.read(journeyViewModelProvider.future);
 
         expect(
           vm.unitLevelSiyumimCount,
@@ -590,15 +604,13 @@ void main() {
 
     test('empty ledger → 0 milestones at every level', () async {
       final container = _container(
-        db: db,
+        firestore: firestore,
         activeCurricula: const [CurriculumId.mishnayos],
         content: {CurriculumId.mishnayos: _mishnayosContent()},
       );
       addTearDown(container.dispose);
 
-      final vm = await container.read(
-        journeyViewModelProvider(_profileId).future,
-      );
+      final vm = await container.read(journeyViewModelProvider.future);
 
       expect(vm.unitLevelSiyumimCount, 0);
       expect(vm.aggregateLevelSiyumimCount, 0);
@@ -618,37 +630,32 @@ void main() {
   // ─────────────────────────────────────────────────────────────────────────
 
   group('F22 — non-Mishnayos curricula end-to-end', () {
-    late UserDatabase db;
+    late FakeFirebaseFirestore firestore;
 
     setUp(() async {
-      db = inMemoryDb();
-      await seedProfile(db);
+      firestore = createFakeFirestore(authenticatedUid: _uid);
     });
-
-    tearDown(() async => db.close());
 
     test(
       'Chumash: one sefer in ledger → 1 unit · 0 aggregate · 0 curriculum',
       () async {
         // Seed Bereshit as scope='sefer' (the F2 fix outputs this for Chumash).
         await _seedLedgerEntry(
-          db,
+          firestore,
           curriculum: CurriculumId.chumash,
           entryScope: 'sefer',
           unitIdentifier: 'Bereshit',
-          at: DateTime(2026, 5, 1),
+          at: DateTime.utc(2026, 5, 1),
         );
 
         final container = _container(
-          db: db,
+          firestore: firestore,
           activeCurricula: const [CurriculumId.chumash],
           content: {CurriculumId.chumash: _chumashContent()},
         );
         addTearDown(container.dispose);
 
-        final vm = await container.read(
-          journeyViewModelProvider(_profileId).future,
-        );
+        final vm = await container.read(journeyViewModelProvider.future);
 
         expect(
           vm.unitLevelSiyumimCount,
@@ -687,7 +694,7 @@ void main() {
         final base = DateTime(2026, 5, 1);
         for (var i = 0; i < sefarim.length; i++) {
           await _seedLedgerEntry(
-            db,
+            firestore,
             curriculum: CurriculumId.chumash,
             entryScope: 'sefer',
             unitIdentifier: sefarim[i],
@@ -696,15 +703,13 @@ void main() {
         }
 
         final container = _container(
-          db: db,
+          firestore: firestore,
           activeCurricula: const [CurriculumId.chumash],
           content: {CurriculumId.chumash: _chumashContent()},
         );
         addTearDown(container.dispose);
 
-        final vm = await container.read(
-          journeyViewModelProvider(_profileId).future,
-        );
+        final vm = await container.read(journeyViewModelProvider.future);
 
         expect(vm.unitLevelSiyumimCount, 3);
         expect(vm.aggregateLevelSiyumimCount, 0);
@@ -727,7 +732,7 @@ void main() {
       final base = DateTime(2026, 5, 1);
       for (var i = 1; i <= 3; i++) {
         await _seedLedgerEntry(
-          db,
+          firestore,
           curriculum: CurriculumId.mishnaBerurah,
           entryScope: 'siman',
           unitIdentifier: 'Siman $i',
@@ -736,15 +741,13 @@ void main() {
       }
 
       final container = _container(
-        db: db,
+        firestore: firestore,
         activeCurricula: const [CurriculumId.mishnaBerurah],
         content: {CurriculumId.mishnaBerurah: _mishnaBerurahContent()},
       );
       addTearDown(container.dispose);
 
-      final vm = await container.read(
-        journeyViewModelProvider(_profileId).future,
-      );
+      final vm = await container.read(journeyViewModelProvider.future);
 
       expect(
         vm.unitLevelSiyumimCount,
@@ -774,7 +777,7 @@ void main() {
       'Mishna Berurah: only 1 siman complete → 1 unit · 0 aggregate',
       () async {
         await _seedLedgerEntry(
-          db,
+          firestore,
           curriculum: CurriculumId.mishnaBerurah,
           entryScope: 'siman',
           unitIdentifier: 'Siman 1',
@@ -782,15 +785,13 @@ void main() {
         );
 
         final container = _container(
-          db: db,
+          firestore: firestore,
           activeCurricula: const [CurriculumId.mishnaBerurah],
           content: {CurriculumId.mishnaBerurah: _mishnaBerurahContent()},
         );
         addTearDown(container.dispose);
 
-        final vm = await container.read(
-          journeyViewModelProvider(_profileId).future,
-        );
+        final vm = await container.read(journeyViewModelProvider.future);
 
         expect(vm.unitLevelSiyumimCount, 1);
         expect(
@@ -814,42 +815,37 @@ void main() {
   // ─────────────────────────────────────────────────────────────────────────
 
   group('F24 — unit-level dedup by unitIdentifier', () {
-    late UserDatabase db;
+    late FakeFirebaseFirestore firestore;
 
     setUp(() async {
-      db = inMemoryDb();
-      await seedProfile(db);
+      firestore = createFakeFirestore(authenticatedUid: _uid);
     });
-
-    tearDown(() async => db.close());
 
     test(
       'two ledger entries for the same masechta yield exactly one unit milestone',
       () async {
         // Two entries — different timestamps, same unitIdentifier.
         await _seedMasechtaLedger(
-          db,
+          firestore,
           curriculum: CurriculumId.bavli,
           masechta: 'Berakhot',
           at: DateTime(2026, 5, 1),
         );
         await _seedMasechtaLedger(
-          db,
+          firestore,
           curriculum: CurriculumId.bavli,
           masechta: 'Berakhot',
-          at: DateTime(2026, 5, 10),
+          at: DateTime.utc(2026, 5, 10),
         );
 
         final container = _container(
-          db: db,
+          firestore: firestore,
           activeCurricula: const [CurriculumId.bavli],
           content: {CurriculumId.bavli: _bavliMinimalContent()},
         );
         addTearDown(container.dispose);
 
-        final vm = await container.read(
-          journeyViewModelProvider(_profileId).future,
-        );
+        final vm = await container.read(journeyViewModelProvider.future);
 
         expect(
           vm.unitLevelSiyumimCount,
@@ -867,7 +863,7 @@ void main() {
             .toList();
         expect(unitMilestones, hasLength(1));
         // Latest-wins: the milestone's date matches the later entry.
-        expect(unitMilestones.single.achievedAt, DateTime(2026, 5, 10));
+        expect(unitMilestones.single.achievedAt, DateTime.utc(2026, 5, 10));
       },
     );
   });
@@ -882,36 +878,34 @@ void main() {
 
   group('siyum granularity gate — journeyViewModel filtering', () {
     // TQ-6: each test owns its in-memory DB via the sanctioned
-    // `final db = inMemoryDb(); addTearDown(db.close);` form (not a group-level
+    // `final firestore = createFakeFirestore(authenticatedUid: _uid); addTearDown(firestore.close);` form (not a group-level
     // setUp/tearDown), so the native handle is always closed.
-    Future<UserDatabase> freshDb() async {
-      final db = inMemoryDb();
-      addTearDown(db.close);
-      await seedProfile(db);
+    Future<FakeFirebaseFirestore> freshDb() async {
+      final firestore = createFakeFirestore(authenticatedUid: _uid);
       final base = DateTime(2026, 1, 1);
       for (final (i, masechta) in ['Berakhot', 'Peah'].indexed) {
         await _seedMasechtaLedger(
-          db,
+          firestore,
           curriculum: CurriculumId.mishnayos,
           masechta: masechta,
           at: base.add(Duration(days: i)),
         );
       }
-      return db;
+      return firestore;
     }
 
     Future<JourneyViewModel> readVm(
-      UserDatabase db,
+      FakeFirebaseFirestore firestore,
       MilestoneLevel granularity,
     ) async {
       final container = _container(
-        db: db,
+        firestore: firestore,
         activeCurricula: const [CurriculumId.mishnayos],
         content: {CurriculumId.mishnayos: _oneSederContent()},
         granularity: granularity,
       );
       addTearDown(container.dispose);
-      return container.read(journeyViewModelProvider(_profileId).future);
+      return container.read(journeyViewModelProvider.future);
     }
 
     List<MilestoneLevel> levelsFor(JourneyViewModel vm) => vm.curricula
@@ -923,8 +917,8 @@ void main() {
     test(
       'chosen = unit → all three tiers fire (2 unit · 1 agg · 1 curr)',
       () async {
-        final db = await freshDb();
-        final vm = await readVm(db, MilestoneLevel.unit);
+        final firestore = await freshDb();
+        final vm = await readVm(firestore, MilestoneLevel.unit);
 
         expect(vm.unitLevelSiyumimCount, 2);
         expect(vm.aggregateLevelSiyumimCount, 1);
@@ -936,8 +930,8 @@ void main() {
     test(
       'chosen = aggregate → unit suppressed (0 unit · 1 agg · 1 curr)',
       () async {
-        final db = await freshDb();
-        final vm = await readVm(db, MilestoneLevel.aggregate);
+        final firestore = await freshDb();
+        final vm = await readVm(firestore, MilestoneLevel.aggregate);
 
         expect(
           vm.unitLevelSiyumimCount,
@@ -953,8 +947,8 @@ void main() {
     );
 
     test('chosen = curriculum → only the whole siyum fires (0·0·1)', () async {
-      final db = await freshDb();
-      final vm = await readVm(db, MilestoneLevel.curriculum);
+      final firestore = await freshDb();
+      final vm = await readVm(firestore, MilestoneLevel.curriculum);
 
       expect(vm.unitLevelSiyumimCount, 0);
       expect(
@@ -969,19 +963,17 @@ void main() {
     test(
       'DEFAULT-BEHAVIOUR EQUIVALENCE — default (unit) === unfiltered emission',
       () async {
-        final db = await freshDb();
+        final firestore = await freshDb();
         // `_container` defaults granularity to unit (what an unset preference
         // resolves to). The result must be the full three-tier emission,
         // identical to pre-gate behaviour.
         final container = _container(
-          db: db,
+          firestore: firestore,
           activeCurricula: const [CurriculumId.mishnayos],
           content: {CurriculumId.mishnayos: _oneSederContent()},
         );
         addTearDown(container.dispose);
-        final vm = await container.read(
-          journeyViewModelProvider(_profileId).future,
-        );
+        final vm = await container.read(journeyViewModelProvider.future);
 
         expect(vm.unitLevelSiyumimCount, 2);
         expect(vm.aggregateLevelSiyumimCount, 1);

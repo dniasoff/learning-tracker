@@ -1,204 +1,145 @@
-import 'package:drift/drift.dart' as drift;
-import 'package:drift/drift.dart' show Value;
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/features/progress/data/repositories/progress_repository_impl.dart';
-import 'package:learning_tracker/features/progress/domain/repositories/progress_repository.dart';
+import 'package:learning_tracker/data/firestore/account_firebase.dart';
+import 'package:learning_tracker/data/firestore/active_account_providers.dart';
+import 'package:learning_tracker/data/firestore/repository_providers.dart'
+    show activeProfileDocIdProvider;
+import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
+import 'package:learning_tracker/features/progress/data/repositories/firestore_progress_repository_adapter.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
+import 'package:mocktail/mocktail.dart';
 
-import '../../../../helpers/drift_memory.dart';
-import '../../../../helpers/test_database.dart';
+import '../../../../helpers/firestore_fake.dart';
+import '../../../../helpers/firestore_fixtures.dart';
+
+class _MockFirebaseApp extends Mock implements FirebaseApp {}
+
+class _MockFirebaseAuth extends Mock implements FirebaseAuth {}
+
+const _uid = 'progress-repository-test-user';
+const _profileId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
 
 void main() {
-  late UserDatabase database;
-  late ProgressRepository repository;
-  late int trackId;
-  const profileId = 1;
+  late FakeFirebaseFirestore firestore;
+  late ProviderContainer container;
+  late FirestoreProgressRepositoryAdapter repository;
 
-  setUp(() async {
-    database = createTestDatabase();
-    await seedProfile(database);
-    repository = ProgressRepositoryImpl(
-      database: database,
-      profileId: profileId,
+  setUp(() {
+    firestore = createFakeFirestore(authenticatedUid: _uid);
+    final handles = AccountFirebaseHandles(
+      app: _MockFirebaseApp(),
+      firestore: firestore,
+      auth: _MockFirebaseAuth(),
+      uid: _uid,
     );
-
-    final trackRow = await database
-        .into(database.curriculumTracks)
-        .insertReturning(
-          CurriculumTracksCompanion.insert(
-            profileId: profileId,
-            curriculumId: 'bavli',
-            stateChangedAt: DateTime.now(),
-            activatedAt: DateTime.now(),
-          ),
-        );
-    trackId = trackRow.id;
+    container = ProviderContainer(
+      overrides: [
+        activeAccountFirebaseProvider.overrideWith((ref) async => handles),
+      ],
+    );
+    container.read(activeProfileDocIdProvider.notifier).set(_profileId);
+    final adapterProvider = Provider<FirestoreProgressRepositoryAdapter>(
+      (ref) => FirestoreProgressRepositoryAdapter(ref: ref),
+    );
+    repository = container.read(adapterProvider);
   });
 
-  tearDown(() async {
-    await database.close();
-  });
+  tearDown(() => container.dispose());
+
+  Future<void> seedCompletionFor(
+    CurriculumId curriculum,
+    String sefariaRef, {
+    int stageId = 1,
+    String trackType = 'personal',
+    CompletionSource source = CompletionSource.live,
+    int points = 10,
+  }) async {
+    await seedCompletion(
+      firestore,
+      uid: _uid,
+      profileId: _profileId,
+      curriculumId: curriculum,
+      sefariaRef: sefariaRef,
+      stageId: stageId,
+      trackType: trackType,
+      source: source,
+      completedAt: DateTime.utc(2026, 1, 1),
+      points: points,
+    );
+  }
 
   group('ProgressRepository', () {
     group('getTrackBreakdown', () {
       test('returns Map<String, int> with correct counts per track', () async {
-        // Arrange: Insert completions for different tracks
-        await seedCompletion(
-          database,
-          CompletionEventsCompanion.insert(
-            profileId: profileId,
-            curriculumId: 'bavli',
-            trackId: Value(trackId),
-            sefariaRef: 'Berakhot.2a',
-            stageId: 1,
-            trackType: 'personal',
-            eventTimestamp: DateTime.now(),
-            points: const drift.Value(10),
-          ),
-        );
-        await seedCompletion(
-          database,
-          CompletionEventsCompanion.insert(
-            profileId: profileId,
-            curriculumId: 'bavli',
-            trackId: Value(trackId),
-            sefariaRef: 'Berakhot.2b',
-            stageId: 1,
-            trackType: 'personal',
-            eventTimestamp: DateTime.now(),
-            points: const drift.Value(10),
-          ),
-        );
-        await seedCompletion(
-          database,
-          CompletionEventsCompanion.insert(
-            profileId: profileId,
-            curriculumId: 'bavli',
-            trackId: Value(trackId),
-            sefariaRef: 'Berakhot.3a',
-            stageId: 1,
-            trackType: 'personal',
-            eventTimestamp: DateTime.now(),
-            points: const drift.Value(10),
-          ),
-        );
+        await seedCompletionFor(CurriculumId.bavli, 'Berakhot.2a');
+        await seedCompletionFor(CurriculumId.bavli, 'Berakhot.2b');
+        await seedCompletionFor(CurriculumId.bavli, 'Berakhot.3a');
 
-        // Act
         final breakdown = await repository.getTrackBreakdown('bavli');
 
-        // Assert: 3 personal completions inserted
         expect(breakdown['personal'], 3);
       });
 
       test(
         'returns zero counts for inactive tracks that have no completions',
         () async {
-          // Arrange: Insert only personal track completions
-          await seedCompletion(
-            database,
-            CompletionEventsCompanion.insert(
-              profileId: profileId,
-              curriculumId: 'bavli',
-              trackId: Value(trackId),
-              sefariaRef: 'Berakhot.2a',
-              stageId: 1,
-              trackType: 'personal',
-              eventTimestamp: DateTime.now(),
-              points: const drift.Value(10),
-            ),
+          await seedTrack(
+            firestore,
+            uid: _uid,
+            profileId: _profileId,
+            curriculumId: CurriculumId.bavli,
+            state: CurriculumTrackState.retired.storageKey,
           );
+          await seedProfile(firestore, uid: _uid, profileId: _profileId);
 
-          // Act
           final breakdown = await repository.getTrackBreakdown('bavli');
+          final tracks = await repository.getAllTracks();
 
-          // Assert: 1 personal completion, no school/tutor (V1 only has personal)
-          expect(breakdown['personal'], 1);
+          expect(tracks.single.state, CurriculumTrackState.retired.storageKey);
+          expect(breakdown, isEmpty);
         },
       );
 
       test(
         'includes completions from deactivated tracks (data preserved)',
         () async {
-          // Arrange: Insert completions for a track that might be deactivated
-          // Note: Track activation state is managed elsewhere; completions are preserved
-          await seedCompletion(
-            database,
-            CompletionEventsCompanion.insert(
-              profileId: profileId,
-              curriculumId: 'bavli',
-              trackId: Value(trackId),
-              sefariaRef: 'Berakhot.2a',
-              stageId: 1,
-              trackType: 'personal',
-              eventTimestamp: DateTime.now(),
-              points: const drift.Value(10),
-            ),
+          await seedTrack(
+            firestore,
+            uid: _uid,
+            profileId: _profileId,
+            curriculumId: CurriculumId.bavli,
+            state: CurriculumTrackState.archived.storageKey,
           );
-          await seedCompletion(
-            database,
-            CompletionEventsCompanion.insert(
-              profileId: profileId,
-              curriculumId: 'bavli',
-              trackId: Value(trackId),
-              sefariaRef: 'Berakhot.2b',
-              stageId: 1,
-              trackType: 'personal',
-              eventTimestamp: DateTime.now(),
-              points: const drift.Value(10),
-            ),
-          );
+          await seedCompletionFor(CurriculumId.bavli, 'Berakhot.2a');
+          await seedCompletionFor(CurriculumId.bavli, 'Berakhot.2b');
 
-          // Act
           final breakdown = await repository.getTrackBreakdown('bavli');
+          final tracks = await repository.getAllTracks();
 
-          // Assert: School completions are still included even if track is deactivated
+          expect(tracks.single.state, CurriculumTrackState.archived.storageKey);
           expect(breakdown['personal'], 2);
         },
       );
 
       test('returns empty breakdown when no completions exist', () async {
-        // Act
+        await seedProfile(firestore, uid: _uid, profileId: _profileId);
+
         final breakdown = await repository.getTrackBreakdown('bavli');
 
-        // Assert: no completions → no entries.
         expect(breakdown, isEmpty);
       });
 
       test('filters by curriculum correctly', () async {
-        // Arrange: Insert completions for different curricula
-        await seedCompletion(
-          database,
-          CompletionEventsCompanion.insert(
-            profileId: profileId,
-            curriculumId: 'bavli',
-            trackId: Value(trackId),
-            sefariaRef: 'Berakhot.2a',
-            stageId: 1,
-            trackType: 'personal',
-            eventTimestamp: DateTime.now(),
-            points: const drift.Value(10),
-          ),
-        );
-        await seedCompletion(
-          database,
-          CompletionEventsCompanion.insert(
-            profileId: profileId,
-            curriculumId: 'mishnayos',
-            trackId: Value(trackId),
-            sefariaRef: 'Berakhot.1.1',
-            stageId: 1,
-            trackType: 'personal',
-            eventTimestamp: DateTime.now(),
-            points: const drift.Value(10),
-          ),
-        );
+        await seedCompletionFor(CurriculumId.bavli, 'Berakhot.2a');
+        await seedCompletionFor(CurriculumId.mishnayos, 'Berakhot.1.1');
 
-        // Act
         final bavliBreakdown = await repository.getTrackBreakdown('bavli');
         final mishnaBreakdown = await repository.getTrackBreakdown('mishnayos');
 
-        // Assert
         expect(bavliBreakdown['personal'], 1);
         expect(mishnaBreakdown['personal'], 1);
       });
@@ -208,138 +149,50 @@ void main() {
       test(
         'returns sum across all tracks, matching individual track counts',
         () async {
-          // Arrange: Insert completions for different tracks
-          await seedCompletion(
-            database,
-            CompletionEventsCompanion.insert(
-              profileId: profileId,
-              curriculumId: 'bavli',
-              trackId: Value(trackId),
-              sefariaRef: 'Berakhot.2a',
-              stageId: 1,
-              trackType: 'personal',
-              eventTimestamp: DateTime.now(),
-              points: const drift.Value(10),
-            ),
-          );
-          await seedCompletion(
-            database,
-            CompletionEventsCompanion.insert(
-              profileId: profileId,
-              curriculumId: 'bavli',
-              trackId: Value(trackId),
-              sefariaRef: 'Berakhot.2b',
-              stageId: 1,
-              trackType: 'personal',
-              eventTimestamp: DateTime.now(),
-              points: const drift.Value(10),
-            ),
-          );
-          await seedCompletion(
-            database,
-            CompletionEventsCompanion.insert(
-              profileId: profileId,
-              curriculumId: 'bavli',
-              trackId: Value(trackId),
-              sefariaRef: 'Berakhot.3a',
-              stageId: 1,
-              trackType: 'personal',
-              eventTimestamp: DateTime.now(),
-              points: const drift.Value(10),
-            ),
-          );
+          await seedCompletionFor(CurriculumId.bavli, 'Berakhot.2a');
+          await seedCompletionFor(CurriculumId.bavli, 'Berakhot.2b');
+          await seedCompletionFor(CurriculumId.bavli, 'Berakhot.3a');
 
-          // Act
           final breakdown = await repository.getTrackBreakdown('bavli');
           final aggregate = await repository.getAggregateCount('bavli');
-
-          // Assert
           final expectedTotal = breakdown.values.fold<int>(
             0,
             (sum, count) => sum + count,
           );
+
           expect(aggregate, expectedTotal);
           expect(aggregate, 3);
         },
       );
 
       test('returns 0 when no completions exist', () async {
-        // Act
+        await seedProfile(firestore, uid: _uid, profileId: _profileId);
+
         final aggregate = await repository.getAggregateCount('bavli');
 
-        // Assert
         expect(aggregate, 0);
       });
 
       test('filters by curriculum correctly', () async {
-        // Arrange
-        await seedCompletion(
-          database,
-          CompletionEventsCompanion.insert(
-            profileId: profileId,
-            curriculumId: 'bavli',
-            trackId: Value(trackId),
-            sefariaRef: 'Berakhot.2a',
-            stageId: 1,
-            trackType: 'personal',
-            eventTimestamp: DateTime.now(),
-            points: const drift.Value(10),
-          ),
-        );
-        await seedCompletion(
-          database,
-          CompletionEventsCompanion.insert(
-            profileId: profileId,
-            curriculumId: 'mishnayos',
-            trackId: Value(trackId),
-            sefariaRef: 'Berakhot.1.1',
-            stageId: 1,
-            trackType: 'personal',
-            eventTimestamp: DateTime.now(),
-            points: const drift.Value(10),
-          ),
-        );
+        await seedCompletionFor(CurriculumId.bavli, 'Berakhot.2a');
+        await seedCompletionFor(CurriculumId.mishnayos, 'Berakhot.1.1');
 
-        // Act
         final bavliCount = await repository.getAggregateCount('bavli');
         final mishnaCount = await repository.getAggregateCount('mishnayos');
 
-        // Assert
         expect(bavliCount, 1);
         expect(mishnaCount, 1);
       });
     });
 
-    // Owner decision 3 (docs/firestore-rewrite-map.md): these two methods
-    // return CompletionEntity now, not the Drift-era Completion class.
     group('getCompletionsByCurriculum', () {
       test('returns CompletionEntity records scoped to the curriculum and '
           'profile', () async {
-        await seedCompletion(
-          database,
-          CompletionEventsCompanion.insert(
-            profileId: profileId,
-            curriculumId: 'bavli',
-            trackId: Value(trackId),
-            sefariaRef: 'Berakhot.2a',
-            stageId: 1,
-            trackType: 'personal',
-            eventTimestamp: DateTime.utc(2026, 1, 1),
-            points: const drift.Value(10),
-          ),
-        );
-        await seedCompletion(
-          database,
-          CompletionEventsCompanion.insert(
-            profileId: profileId,
-            curriculumId: 'mishnayos',
-            trackId: Value(trackId),
-            sefariaRef: 'Berakhot.1.1',
-            stageId: 1,
-            trackType: 'personal',
-            eventTimestamp: DateTime.utc(2026, 1, 1),
-            points: const drift.Value(5),
-          ),
+        await seedCompletionFor(CurriculumId.bavli, 'Berakhot.2a');
+        await seedCompletionFor(
+          CurriculumId.mishnayos,
+          'Berakhot.1.1',
+          points: 5,
         );
 
         final completions = await repository.getCompletionsByCurriculum(
@@ -353,6 +206,8 @@ void main() {
       });
 
       test('returns an empty list when no completions exist', () async {
+        await seedProfile(firestore, uid: _uid, profileId: _profileId);
+
         final completions = await repository.getCompletionsByCurriculum(
           'bavli',
         );
@@ -364,31 +219,11 @@ void main() {
       test(
         'returns CompletionEntity records across every curriculum',
         () async {
-          await seedCompletion(
-            database,
-            CompletionEventsCompanion.insert(
-              profileId: profileId,
-              curriculumId: 'bavli',
-              trackId: Value(trackId),
-              sefariaRef: 'Berakhot.2a',
-              stageId: 1,
-              trackType: 'personal',
-              eventTimestamp: DateTime.utc(2026, 1, 1),
-              points: const drift.Value(10),
-            ),
-          );
-          await seedCompletion(
-            database,
-            CompletionEventsCompanion.insert(
-              profileId: profileId,
-              curriculumId: 'mishnayos',
-              trackId: Value(trackId),
-              sefariaRef: 'Berakhot.1.1',
-              stageId: 1,
-              trackType: 'personal',
-              eventTimestamp: DateTime.utc(2026, 1, 1),
-              points: const drift.Value(5),
-            ),
+          await seedCompletionFor(CurriculumId.bavli, 'Berakhot.2a');
+          await seedCompletionFor(
+            CurriculumId.mishnayos,
+            'Berakhot.1.1',
+            points: 5,
           );
 
           final completions = await repository.getAllCompletions();
@@ -402,6 +237,8 @@ void main() {
       );
 
       test('returns an empty list when no completions exist', () async {
+        await seedProfile(firestore, uid: _uid, profileId: _profileId);
+
         final completions = await repository.getAllCompletions();
         expect(completions, isEmpty);
       });

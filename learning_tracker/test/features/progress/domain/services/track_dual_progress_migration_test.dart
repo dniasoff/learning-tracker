@@ -1,234 +1,149 @@
-/// Regression tests for the Layer 3 migration of
-/// [trackDualProgressMetricsProvider.currentCyclePercentage] →
-/// [TrackProgressService.completionPercent].
-///
-/// Pre-migration: `getCompletionsByTrackAndProfileSince(activatedAt)` (all tiers,
-/// time-gated), distinct-refs count.
-///
-/// Post-migration: `TrackProgressService.completionPercent` with
-/// `tier: trackAchievement, since: activatedAt, requireAllStages: false`.
-///
-/// Expected changes:
-/// - For live-only profiles, values are identical.
-/// - lifetimeOnly rows that were time-gated SINCE activatedAt would have been
-///   counted by the old path; they are now excluded by trackAchievement.
-///   (In practice, lifetimeOnly imports pre-date activatedAt so the old filter
-///   already excluded them via the `Since` gate — values are equal for real data.)
+/// Regression coverage for the Layer-3 migration to the Firestore completion
+/// tier and curriculum identity model.
 @Tags(['progress', 'migration', 'layer3'])
 library;
 
-import 'package:drift/drift.dart' show InsertMode, Value;
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/data/firestore/account_firebase.dart';
+import 'package:learning_tracker/data/firestore/active_account_providers.dart';
+import 'package:learning_tracker/data/firestore/repository_providers.dart'
+    show activeProfileDocIdProvider;
+import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_tier_filter.dart';
+import 'package:learning_tracker/features/progress/data/repositories/firestore_chart_data_repository_adapter.dart';
 import 'package:learning_tracker/features/tracks/domain/services/track_progress_service.dart';
-import 'package:learning_tracker/features/tracks/stages/data/repositories/stage_definition_repository_impl.dart';
+import 'package:learning_tracker/features/tracks/stages/domain/models/stage_definition.dart';
+import 'package:learning_tracker/features/tracks/stages/domain/repositories/stage_definition_repository.dart';
+import 'package:mocktail/mocktail.dart';
 
-import '../../../../helpers/drift_memory.dart';
+import '../../../../helpers/firestore_fake.dart';
+import '../../../../helpers/firestore_fixtures.dart';
 
-const _profileId = 1;
-const _curriculumId = 'mishnayos';
+class _MockFirebaseApp extends Mock implements FirebaseApp {}
+
+class _MockFirebaseAuth extends Mock implements FirebaseAuth {}
+
+class _Stages extends Fake implements StageDefinitionRepository {
+  @override
+  Future<List<StageDefinition>> getStagesForCurriculum(
+    CurriculumId curriculum,
+  ) async => [
+    const StageDefinition(
+      id: 1,
+      curriculumId: CurriculumId.mishnayos,
+      stageOrder: 1,
+      stageName: 'Learn',
+      delayDays: 0,
+      isDefault: true,
+    ),
+  ];
+}
+
+const _uid = 'track-dual-migration-user';
+const _profileId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+const _curriculum = CurriculumId.mishnayos;
 final _activatedAt = DateTime.utc(2026, 3, 1);
 final _beforeActivation = DateTime.utc(2026, 2, 1);
 final _afterActivation = DateTime.utc(2026, 4, 1);
-final _bulkAt = DateTime.utc(2000, 1, 1);
-
-Future<void> _seedStage(UserDatabase db, {required int trackId}) async {
-  await db
-      .into(db.stageDefinitions)
-      .insert(
-        StageDefinitionsCompanion.insert(
-          curriculumId: _curriculumId,
-          trackId: trackId,
-          profileId: _profileId,
-          stageOrder: 1,
-          stageName: 'Learn',
-          isDefault: const Value(true),
-          schedule: const Value('{"type":"delay","delay_days":0}'),
-        ),
-        mode: InsertMode.insertOrIgnore,
-      );
-}
-
-Future<void> _seedLiveAt(
-  UserDatabase db, {
-  required int trackId,
-  required String ref,
-  required DateTime at,
-}) async {
-  await db.completionEventDao.appendEvent(
-    CompletionEventsCompanion.insert(
-      profileId: _profileId,
-      curriculumId: _curriculumId,
-      sefariaRef: ref,
-      stageId: 1,
-      trackType: 'personal',
-      trackId: Value(trackId),
-      eventTimestamp: at,
-    ),
-  );
-}
-
-Future<void> _seedBulkInTrack(
-  UserDatabase db, {
-  required int trackId,
-  required String ref,
-  DateTime? at,
-}) async {
-  await db.completionEventDao.appendEvent(
-    CompletionEventsCompanion.insert(
-      profileId: _profileId,
-      curriculumId: _curriculumId,
-      sefariaRef: ref,
-      stageId: 1,
-      trackType: 'personal',
-      trackId: Value(trackId),
-      eventTimestamp: at ?? _bulkAt,
-    ),
-  );
-  await db.priorCompletionImportDao.batchInsertImports([
-    PriorCompletionImportsCompanion.insert(
-      profileId: _profileId,
-      curriculumId: _curriculumId,
-      sefariaRef: ref,
-      stageId: 1,
-      trackType: 'personal',
-      source: 'bulkInTrack',
-    ),
-  ]);
-}
 
 void main() {
-  late UserDatabase db;
-  late int trackId;
+  late FakeFirebaseFirestore firestore;
+  late ProviderContainer container;
   late TrackProgressService service;
 
   setUp(() async {
-    db = inMemoryDb();
-    await seedProfile(db);
-    trackId = await seedTrack(
-      db,
-      profileId: _profileId,
-      curriculumId: _curriculumId,
-      activatedAt: _activatedAt,
+    firestore = createFakeFirestore(authenticatedUid: _uid);
+    final handles = AccountFirebaseHandles(
+      app: _MockFirebaseApp(),
+      firestore: firestore,
+      auth: _MockFirebaseAuth(),
+      uid: _uid,
     );
-    await _seedStage(db, trackId: trackId);
+    container = ProviderContainer(
+      overrides: [
+        activeAccountFirebaseProvider.overrideWith((ref) async => handles),
+      ],
+    );
+    container.read(activeProfileDocIdProvider.notifier).set(_profileId);
+    final adapterProvider = Provider<FirestoreChartDataRepositoryAdapter>(
+      (ref) => FirestoreChartDataRepositoryAdapter(ref: ref),
+    );
     service = TrackProgressService(
-      dao: db.completionDao,
-      stageRepo: StageDefinitionRepositoryImpl(
-        stageDao: db.stageDao,
-        completionDao: db.completionDao,
-        pushStageDefinitions: null,
-      ),
+      repository: container.read(adapterProvider),
+      stageRepo: _Stages(),
     );
   });
 
-  tearDown(() => db.close());
+  tearDown(() => container.dispose());
 
-  const denominator = 10;
+  Future<void> mark(
+    String ref, {
+    required DateTime at,
+    CompletionSource source = CompletionSource.live,
+  }) async {
+    await seedCompletion(
+      firestore,
+      uid: _uid,
+      profileId: _profileId,
+      curriculumId: _curriculum,
+      sefariaRef: ref,
+      stageId: 1,
+      source: source,
+      completedAt: at,
+    );
+  }
 
   group('currentCyclePercentage migration consistency', () {
     test(
-      'live-only, all after activatedAt: migrated == pre-migration',
+      'live-only, all after activation: migrated percentage is 2/10',
       () async {
-        await _seedLiveAt(
-          db,
-          trackId: trackId,
-          ref: 'ref1',
-          at: _afterActivation,
-        );
-        await _seedLiveAt(
-          db,
-          trackId: trackId,
-          ref: 'ref2',
-          at: _afterActivation,
-        );
-
-        // Pre-migration path: all rows since activatedAt, distinct refs.
-        final oldRows = await db.completionDao
-            .getCompletionsByTrackAndProfileSince(
-              trackId,
-              _profileId,
-              _activatedAt,
-            );
-        final oldDistinctRefs = oldRows.map((c) => c.sefariaRef).toSet();
-        final oldPct = oldDistinctRefs.length / denominator;
-
-        // Migrated path.
-        final migratedPct = await service.completionPercent(
-          curriculumId: CurriculumId.mishnayos,
-          trackId: trackId,
-          profileId: _profileId,
+        await mark('ref1', at: _afterActivation);
+        await mark('ref2', at: _afterActivation);
+        final migrated = await service.completionPercent(
+          curriculumId: _curriculum,
           tier: CompletionTierFilter.trackAchievement,
-          totalItems: denominator,
+          totalItems: 10,
           requireAllStages: false,
           since: _activatedAt,
         );
-
-        expect(migratedPct, closeTo(oldPct, 1e-9));
-        expect(migratedPct, closeTo(0.2, 1e-9)); // 2/10
+        expect(migrated, closeTo(0.2, 1e-9));
       },
     );
 
-    test(
-      'live before and after activatedAt: since filter applied correctly',
-      () async {
-        // Old ref: before activatedAt → excluded by since gate.
-        await _seedLiveAt(
-          db,
-          trackId: trackId,
-          ref: 'old_ref',
-          at: _beforeActivation,
-        );
-        // New ref: after activatedAt → included.
-        await _seedLiveAt(
-          db,
-          trackId: trackId,
-          ref: 'new_ref',
-          at: _afterActivation,
-        );
+    test('since filter excludes live marks before activation', () async {
+      await mark('old_ref', at: _beforeActivation);
+      await mark('new_ref', at: _afterActivation);
+      final migrated = await service.completionPercent(
+        curriculumId: _curriculum,
+        tier: CompletionTierFilter.trackAchievement,
+        totalItems: 10,
+        requireAllStages: false,
+        since: _activatedAt,
+      );
+      expect(migrated, closeTo(0.1, 1e-9));
+    });
 
-        final migratedPct = await service.completionPercent(
-          curriculumId: CurriculumId.mishnayos,
-          trackId: trackId,
-          profileId: _profileId,
+    test(
+      'bulkInTrack after activation is included in trackAchievement',
+      () async {
+        await mark(
+          'bulk_new',
+          at: _afterActivation,
+          source: CompletionSource.bulkInTrack,
+        );
+        final migrated = await service.completionPercent(
+          curriculumId: _curriculum,
           tier: CompletionTierFilter.trackAchievement,
-          totalItems: denominator,
+          totalItems: 10,
           requireAllStages: false,
           since: _activatedAt,
         );
-
-        expect(
-          migratedPct,
-          closeTo(0.1, 1e-9),
-          reason: 'Only new_ref (after activatedAt) counts: 1/10',
-        );
-      },
-    );
-
-    test(
-      'bulkInTrack after activatedAt: included in trackAchievement cycle',
-      () async {
-        // Bulk import with a post-activation timestamp (unusual but valid).
-        await _seedBulkInTrack(
-          db,
-          trackId: trackId,
-          ref: 'bulk_new',
-          at: _afterActivation,
-        );
-
-        final migratedPct = await service.completionPercent(
-          curriculumId: CurriculumId.mishnayos,
-          trackId: trackId,
-          profileId: _profileId,
-          tier: CompletionTierFilter.trackAchievement,
-          totalItems: denominator,
-          requireAllStages: false,
-          since: _activatedAt,
-        );
-
-        expect(migratedPct, closeTo(0.1, 1e-9)); // 1/10 bulk after activation
+        expect(migrated, closeTo(0.1, 1e-9));
       },
     );
   });

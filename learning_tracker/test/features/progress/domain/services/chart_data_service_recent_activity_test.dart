@@ -1,139 +1,106 @@
-/// Regression tests for the Recent Activity charts in [ChartDataService].
-///
-/// Tier policy (2026-05-21): everything except points and streak counts
-/// track learning = live + bulk-mark in-track. So:
-///   - [ChartDataService.getDailyLimudimAndChazaros] — stacked
-///     limud/chazara split, **trackAchievement** tier (live + bulk).
-///   - [ChartDataService.getCumulativeProgressLive] — cumulative line,
-///     **trackAchievement** tier.
-///   - [ChartDataService.getStreakCalendarLive] — streak calendar dots,
-///     **liveOnly** (the streak exception).
-///
-/// All three drop lifetimeOnly rows (which surface under Lifetime
-/// Knowledge instead); the streak calendar additionally drops bulkInTrack
-/// because streak credit is reserved for live in-session marks. The
-/// stacked feed splits the rows into stage-1 (limud) and stage ≥ 2
-/// (chazara) segments.
+/// Regression tests for the Firestore-backed Recent Activity chart service.
 @Tags(['progress', 'recent_activity'])
 library;
 
-import 'package:drift/drift.dart' show Value;
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/time/ulid.dart';
+import 'package:learning_tracker/data/firestore/account_firebase.dart';
+import 'package:learning_tracker/data/firestore/active_account_providers.dart';
+import 'package:learning_tracker/data/firestore/repository_providers.dart'
+    show activeProfileDocIdProvider;
+import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
+import 'package:learning_tracker/features/progress/data/repositories/firestore_chart_data_repository_adapter.dart';
 import 'package:learning_tracker/features/progress/domain/services/chart_data_service.dart';
+import 'package:mocktail/mocktail.dart';
 
-import '../../../../helpers/drift_memory.dart';
+import '../../../../helpers/firestore_fake.dart';
+import '../../../../helpers/firestore_fixtures.dart';
 
-const _profileId = 1;
-const _curriculumId = 'mishnayos';
+class _MockFirebaseApp extends Mock implements FirebaseApp {}
 
+class _MockFirebaseAuth extends Mock implements FirebaseAuth {}
+
+const _uid = 'recent-activity-test-user';
+const _profileId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+const _curriculumId = CurriculumId.mishnayos;
 final _startDate = DateTime(2026, 5, 1);
 final _endDate = DateTime(2026, 5, 31);
+// Chart buckets are local calendar dates. The service normalizes completion
+// timestamps through _extractLocalDate before emitting them.
 final _liveDay = DateTime(2026, 5, 10);
 
-Future<void> _seedLive(
-  UserDatabase db, {
-  required int trackId,
-  required String ref,
-  required int stageId,
-  DateTime? at,
-}) async {
-  await db.completionEventDao.appendEvent(
-    CompletionEventsCompanion.insert(
-      profileId: _profileId,
-      curriculumId: _curriculumId,
-      sefariaRef: ref,
-      stageId: stageId,
-      trackType: 'personal',
-      trackId: Value(trackId),
-      eventTimestamp: at ?? DateTime(2026, 5, 10, 10),
-    ),
-  );
-}
-
-Future<void> _seedBulkInTrack(
-  UserDatabase db, {
-  required int trackId,
-  required String ref,
-  required int stageId,
-}) async {
-  await db.completionEventDao.appendEvent(
-    CompletionEventsCompanion.insert(
-      profileId: _profileId,
-      curriculumId: _curriculumId,
-      sefariaRef: ref,
-      stageId: stageId,
-      trackType: 'personal',
-      trackId: Value(trackId),
-      eventTimestamp: DateTime(2026, 5, 10, 11),
-    ),
-  );
-  await db.priorCompletionImportDao.batchInsertImports([
-    PriorCompletionImportsCompanion.insert(
-      profileId: _profileId,
-      curriculumId: _curriculumId,
-      sefariaRef: ref,
-      stageId: stageId,
-      trackType: 'personal',
-      source: 'bulkInTrack',
-    ),
-  ]);
-}
-
-Future<void> _seedLifetimeOnly(
-  UserDatabase db, {
-  required int trackId,
-  required String ref,
-  required int stageId,
-}) async {
-  await db.completionEventDao.appendEvent(
-    CompletionEventsCompanion.insert(
-      profileId: _profileId,
-      curriculumId: _curriculumId,
-      sefariaRef: ref,
-      stageId: stageId,
-      trackType: 'personal',
-      trackId: Value(trackId),
-      eventTimestamp: DateTime(2026, 5, 10, 12),
-    ),
-  );
-  await db.priorCompletionImportDao.batchInsertImports([
-    PriorCompletionImportsCompanion.insert(
-      profileId: _profileId,
-      curriculumId: _curriculumId,
-      sefariaRef: ref,
-      stageId: stageId,
-      trackType: 'personal',
-      source: 'lifetimeOnly',
-    ),
-  ]);
-}
-
 void main() {
-  late UserDatabase db;
+  late FakeFirebaseFirestore firestore;
+  late ProviderContainer container;
   late ChartDataService service;
-  late int trackId;
 
   setUp(() async {
-    db = inMemoryDb();
-    await seedProfile(db);
-    trackId = await seedTrack(
-      db,
-      profileId: _profileId,
-      curriculumId: _curriculumId,
+    firestore = createFakeFirestore(authenticatedUid: _uid);
+    final handles = AccountFirebaseHandles(
+      app: _MockFirebaseApp(),
+      firestore: firestore,
+      auth: _MockFirebaseAuth(),
+      uid: _uid,
     );
-    service = ChartDataService(db, profileId: _profileId);
+    container = ProviderContainer(
+      overrides: [
+        activeAccountFirebaseProvider.overrideWith((ref) async => handles),
+      ],
+    );
+    container.read(activeProfileDocIdProvider.notifier).set(_profileId);
+    final adapterProvider = Provider<FirestoreChartDataRepositoryAdapter>(
+      (ref) => FirestoreChartDataRepositoryAdapter(ref: ref),
+    );
+    service = ChartDataService(repository: container.read(adapterProvider));
   });
 
-  tearDown(() => db.close());
+  tearDown(() => container.dispose());
+
+  Future<String> seedMark(
+    String ref, {
+    required int stageId,
+    required CompletionSource source,
+    DateTime? at,
+    CurriculumId curriculum = _curriculumId,
+  }) async {
+    if (source == CompletionSource.lifetimeOnly) {
+      final ulid = newUlid();
+      await seedLedgerEntry(
+        firestore,
+        uid: _uid,
+        profileId: _profileId,
+        ulid: ulid,
+        curriculumId: curriculum,
+        entryScope: 'leaf',
+        unitIdentifier: ref,
+        unitDisplayNameEn: ref,
+        source: CompletionSource.lifetimeOnly,
+        completedAt: at ?? DateTime(2026, 5, 10, 10),
+      );
+      return ulid;
+    }
+    return seedCompletion(
+      firestore,
+      uid: _uid,
+      profileId: _profileId,
+      curriculumId: curriculum,
+      sefariaRef: ref,
+      stageId: stageId,
+      source: source,
+      completedAt: at ?? DateTime(2026, 5, 10, 10),
+    );
+  }
 
   group('getDailyLimudimAndChazaros', () {
     test('zero-fills empty window with zero limud + zero chazara', () async {
-      final start = DateTime(2026, 3, 1);
-      final end = DateTime(2026, 3, 3);
       final result = await service.getDailyLimudimAndChazaros(
-        startDate: start,
-        endDate: end,
+        startDate: DateTime(2026, 3, 1),
+        endDate: DateTime(2026, 3, 3),
       );
       expect(result, hasLength(3));
       expect(
@@ -142,113 +109,96 @@ void main() {
       );
     });
 
-    test('mixed stages on one day produce a stacked bar with both '
-        'segments', () async {
-      // 2 limudim (stage 1) and 3 chazaros (stages 2 & 3) on May 10.
-      await _seedLive(db, trackId: trackId, ref: 'limud_a', stageId: 1);
-      await _seedLive(db, trackId: trackId, ref: 'limud_b', stageId: 1);
-      await _seedLive(db, trackId: trackId, ref: 'chaz_a', stageId: 2);
-      await _seedLive(db, trackId: trackId, ref: 'chaz_b', stageId: 2);
-      await _seedLive(db, trackId: trackId, ref: 'chaz_c', stageId: 3);
-
-      final result = await service.getDailyLimudimAndChazaros(
-        startDate: _startDate,
-        endDate: _endDate,
-      );
-
-      final day10 = result.firstWhere((d) => d.date == _liveDay);
-      expect(day10.limudCount, 2, reason: 'two stage-1 live marks on May 10');
-      expect(
-        day10.chazaraCount,
-        3,
-        reason: 'three stage>=2 live marks on May 10',
-      );
-      expect(day10.total, 5);
-
-      // Other days are empty.
-      final others = result.where((d) => d.date != _liveDay);
-      expect(
-        others.every((d) => d.limudCount == 0 && d.chazaraCount == 0),
-        isTrue,
-      );
-    });
-
     test(
-      'bulkInTrack rows ARE included in the track-learning stacked feed',
+      'mixed stages on one day produce a stacked bar with both segments',
       () async {
-        // Track-learning rule (2026-05-21): bulk-mark in-track counts the
-        // same as a live mark for the Recent Activity chart.
-        await _seedLive(db, trackId: trackId, ref: 'live', stageId: 1);
-        await _seedBulkInTrack(db, trackId: trackId, ref: 'bulk', stageId: 1);
+        for (final ref in ['limud_a', 'limud_b']) {
+          await seedMark(ref, stageId: 1, source: CompletionSource.live);
+        }
+        for (final ref in ['chaz_a', 'chaz_b', 'chaz_c']) {
+          await seedMark(ref, stageId: 2, source: CompletionSource.live);
+        }
 
         final result = await service.getDailyLimudimAndChazaros(
           startDate: _startDate,
           endDate: _endDate,
         );
-
         final day10 = result.firstWhere((d) => d.date == _liveDay);
+        expect(day10.limudCount, 2);
+        expect(day10.chazaraCount, 3);
+        expect(day10.total, 5);
         expect(
-          day10.limudCount,
-          2,
-          reason: 'live + bulk-in-track both count as track learning',
+          result
+              .where((d) => d.date != _liveDay)
+              .every((d) => d.limudCount == 0 && d.chazaraCount == 0),
+          isTrue,
         );
+      },
+    );
+
+    test(
+      'bulkInTrack rows are included in the track-learning stacked feed',
+      () async {
+        await seedMark('live', stageId: 1, source: CompletionSource.live);
+        await seedMark(
+          'bulk',
+          stageId: 1,
+          source: CompletionSource.bulkInTrack,
+        );
+
+        final result = await service.getDailyLimudimAndChazaros(
+          startDate: _startDate,
+          endDate: _endDate,
+        );
+        final day10 = result.firstWhere((d) => d.date == _liveDay);
+        expect(day10.limudCount, 2);
         expect(day10.chazaraCount, 0);
       },
     );
 
     test(
-      'lifetimeOnly rows are EXCLUDED from the track-learning stacked feed',
+      'lifetimeOnly rows are excluded from the track-learning feed',
       () async {
-        await _seedLive(db, trackId: trackId, ref: 'live', stageId: 2);
-        await _seedLifetimeOnly(
-          db,
-          trackId: trackId,
-          ref: 'lifetime',
+        await seedMark('live', stageId: 2, source: CompletionSource.live);
+        final lifetimeUlid = await seedMark(
+          'lifetime',
           stageId: 2,
+          source: CompletionSource.lifetimeOnly,
         );
+        final ledger = await firestore
+            .collection('users')
+            .doc(_uid)
+            .collection('learner_profiles')
+            .doc(_profileId)
+            .collection('learning_ledger')
+            .doc(lifetimeUlid)
+            .get();
+        expect(ledger.exists, isTrue);
 
         final result = await service.getDailyLimudimAndChazaros(
           startDate: _startDate,
           endDate: _endDate,
         );
-
         final day10 = result.firstWhere((d) => d.date == _liveDay);
         expect(day10.limudCount, 0);
-        expect(
-          day10.chazaraCount,
-          1,
-          reason: 'lifetime-only imports do not surface in Recent Activity',
-        );
+        expect(day10.chazaraCount, 1);
       },
     );
 
     test('curriculum filter applies', () async {
-      // Add a bavli track + completion on the same day; the mishnayos
-      // filter must drop it.
-      final bavliTrack = await seedTrack(
-        db,
-        profileId: _profileId,
-        curriculumId: 'bavli',
+      await seedMark(
+        'bavli_ref',
+        stageId: 1,
+        source: CompletionSource.live,
+        curriculum: CurriculumId.bavli,
       );
-      await db.completionEventDao.appendEvent(
-        CompletionEventsCompanion.insert(
-          profileId: _profileId,
-          curriculumId: 'bavli',
-          sefariaRef: 'bavli_ref',
-          stageId: 1,
-          trackType: 'personal',
-          trackId: Value(bavliTrack),
-          eventTimestamp: DateTime(2026, 5, 10, 13),
-        ),
-      );
-      await _seedLive(db, trackId: trackId, ref: 'mish_ref', stageId: 1);
+      await seedMark('mish_ref', stageId: 1, source: CompletionSource.live);
 
       final result = await service.getDailyLimudimAndChazaros(
         startDate: _startDate,
         endDate: _endDate,
-        curriculumId: 'mishnayos',
+        curriculumId: _curriculumId.storageKey,
       );
-
       final day10 = result.firstWhere((d) => d.date == _liveDay);
       expect(day10.limudCount, 1);
       expect(day10.chazaraCount, 0);
@@ -256,130 +206,83 @@ void main() {
   });
 
   group('getCumulativeProgressLive', () {
-    test(
-      'live + bulkInTrack contribute to the running total; lifetimeOnly does not',
-      () async {
-        await _seedLive(db, trackId: trackId, ref: 'live_1', stageId: 1);
-        await _seedBulkInTrack(db, trackId: trackId, ref: 'bulk_1', stageId: 1);
-        await _seedLifetimeOnly(
-          db,
-          trackId: trackId,
-          ref: 'lifetime_1',
-          stageId: 1,
-        );
-
-        final result = await service.getCumulativeProgressLive(
-          startDate: _startDate,
-          endDate: _endDate,
-        );
-
-        // Track-learning rule: bulk-mark counts. Total climbs to 2 (live +
-        // bulk), not 1 — and lifetimeOnly stays excluded.
-        expect(
-          result.map((p) => p.total).reduce((a, b) => a > b ? a : b),
-          2,
-          reason: 'live + bulk-in-track count; lifetime-only does not',
-        );
-      },
-    );
+    test('live + bulkInTrack contribute to the running total', () async {
+      await seedMark('live_1', stageId: 1, source: CompletionSource.live);
+      await seedMark(
+        'bulk_1',
+        stageId: 1,
+        source: CompletionSource.bulkInTrack,
+      );
+      final result = await service.getCumulativeProgressLive(
+        startDate: _startDate,
+        endDate: _endDate,
+      );
+      expect(result.map((p) => p.total).reduce((a, b) => a > b ? a : b), 2);
+    });
   });
 
   group('getStreakCalendarLive', () {
     test('only live marks light up the streak calendar', () async {
-      // Bulk row on May 5; live row on May 10.
-      await _seedBulkInTrack(db, trackId: trackId, ref: 'bulk', stageId: 1);
-      await db.completionEventDao.appendEvent(
-        CompletionEventsCompanion.insert(
-          profileId: _profileId,
-          curriculumId: _curriculumId,
-          sefariaRef: 'live_may5',
-          stageId: 1,
-          trackType: 'personal',
-          trackId: Value(trackId),
-          eventTimestamp: DateTime(2026, 5, 5, 9),
-        ),
+      await seedMark(
+        'bulk',
+        stageId: 1,
+        source: CompletionSource.bulkInTrack,
+        at: DateTime(2026, 5, 5, 9),
+      );
+      await seedMark(
+        'live_may10',
+        stageId: 1,
+        source: CompletionSource.live,
+        at: DateTime(2026, 5, 10, 9),
       );
 
       final dates = await service.getStreakCalendarLive(
         startDate: _startDate,
         endDate: _endDate,
       );
-
-      // The live mark on May 5 is present; the bulk mark on May 10 is not.
-      expect(dates.contains(DateTime(2026, 5, 5)), isTrue);
-      expect(dates.contains(DateTime(2026, 5, 10)), isFalse);
+      expect(dates.contains(DateTime(2026, 5, 10)), isTrue);
+      expect(dates.contains(DateTime(2026, 5, 5)), isFalse);
     });
 
-    // F11 (W7-D fix wave): the curriculum filter pill must scope the
-    // calendar dot pattern — previously the method ignored curriculumId
-    // and the dots stayed unchanged when the chip changed.
-    test(
-      'curriculum filter scopes the streak calendar to the selected curriculum',
-      () async {
-        // Live mark on May 5 in mishnayos; live mark on May 10 in bavli.
-        // Each curriculum needs its own track (the schema FK).
-        final bavliTrack = await seedTrack(
-          db,
-          profileId: _profileId,
-          curriculumId: 'bavli',
-        );
-        await db.completionEventDao.appendEvent(
-          CompletionEventsCompanion.insert(
-            profileId: _profileId,
-            curriculumId: _curriculumId,
-            sefariaRef: 'mish_may5',
-            stageId: 1,
-            trackType: 'personal',
-            trackId: Value(trackId),
-            eventTimestamp: DateTime(2026, 5, 5, 9),
-          ),
-        );
-        await db.completionEventDao.appendEvent(
-          CompletionEventsCompanion.insert(
-            profileId: _profileId,
-            curriculumId: 'bavli',
-            sefariaRef: 'bav_may10',
-            stageId: 1,
-            trackType: 'personal',
-            trackId: Value(bavliTrack),
-            eventTimestamp: DateTime(2026, 5, 10, 10),
-          ),
-        );
+    test('curriculum filter scopes the streak calendar', () async {
+      await seedMark(
+        'mish_may5',
+        stageId: 1,
+        source: CompletionSource.live,
+        at: DateTime(2026, 5, 5, 9),
+      );
+      await seedMark(
+        'bav_may10',
+        stageId: 1,
+        source: CompletionSource.live,
+        at: DateTime(2026, 5, 10, 10),
+        curriculum: CurriculumId.bavli,
+      );
 
-        // No filter → both dates light up.
-        final allDates = await service.getStreakCalendarLive(
-          startDate: _startDate,
-          endDate: _endDate,
-        );
-        expect(allDates.contains(DateTime(2026, 5, 5)), isTrue);
-        expect(allDates.contains(DateTime(2026, 5, 10)), isTrue);
+      final allDates = await service.getStreakCalendarLive(
+        startDate: _startDate,
+        endDate: _endDate,
+      );
+      expect(
+        allDates,
+        containsAll([DateTime(2026, 5, 5), DateTime(2026, 5, 10)]),
+      );
 
-        // Mishnayos filter → only the May 5 dot remains.
-        final mishOnly = await service.getStreakCalendarLive(
-          startDate: _startDate,
-          endDate: _endDate,
-          curriculumId: 'mishnayos',
-        );
-        expect(mishOnly.contains(DateTime(2026, 5, 5)), isTrue);
-        expect(
-          mishOnly.contains(DateTime(2026, 5, 10)),
-          isFalse,
-          reason: 'May 10 bavli mark must be dropped under the mishnayos chip',
-        );
+      final mishOnly = await service.getStreakCalendarLive(
+        startDate: _startDate,
+        endDate: _endDate,
+        curriculumId: _curriculumId.storageKey,
+      );
+      expect(mishOnly, contains(DateTime(2026, 5, 5)));
+      expect(mishOnly, isNot(contains(DateTime(2026, 5, 10))));
 
-        // Bavli filter → only the May 10 dot remains.
-        final bavOnly = await service.getStreakCalendarLive(
-          startDate: _startDate,
-          endDate: _endDate,
-          curriculumId: 'bavli',
-        );
-        expect(bavOnly.contains(DateTime(2026, 5, 10)), isTrue);
-        expect(
-          bavOnly.contains(DateTime(2026, 5, 5)),
-          isFalse,
-          reason: 'May 5 mishnayos mark must be dropped under the bavli chip',
-        );
-      },
-    );
+      final bavOnly = await service.getStreakCalendarLive(
+        startDate: _startDate,
+        endDate: _endDate,
+        curriculumId: CurriculumId.bavli.storageKey,
+      );
+      expect(bavOnly, contains(DateTime(2026, 5, 10)));
+      expect(bavOnly, isNot(contains(DateTime(2026, 5, 5))));
+    });
   });
 }

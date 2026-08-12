@@ -1,244 +1,145 @@
-/// ILP-01 regression guard — itemsLearnedDataProvider and lifetimeViewDataProvider
-/// must re-execute when completionCommittedProvider ticks.
-///
-/// Before the fix both providers never watched completionCommittedProvider, so
-/// the Items Learned and Lifetime View screens showed stale counts after a
-/// completion until the user pulled to refresh.  After the fix a tick on
-/// completionCommittedProvider invalidates both family providers and they
-/// re-query the DB with the new row included.
-///
-/// AUD-t-progress-05: rewritten to drive the REAL providers over an
-/// in-memory Drift DB and a fake content repository, instead of overriding
-/// the providers under test with hand-written stubs that merely re-asserted
-/// the fix's own `ref.watch(completionCommittedProvider)` line. A regression
-/// that drops that watch call now shows up as a stale `learnedLeafCount` on
-/// the REAL provider, not a call-count on a stand-in.
+/// ILP-01 regression guard for the real Firestore-backed providers.
 library;
 
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/data/firestore/account_firebase.dart';
+import 'package:learning_tracker/data/firestore/active_account_providers.dart';
+import 'package:learning_tracker/data/firestore/repository_providers.dart'
+    show activeProfileDocIdProvider;
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/items_learned_providers.dart';
+import 'package:mocktail/mocktail.dart';
 
-import '../../../../helpers/drift_memory.dart';
+import '../../../../helpers/firestore_fake.dart';
+import '../../../../helpers/firestore_fixtures.dart';
 
-const _profileId = 1;
+class _MockFirebaseApp extends Mock implements FirebaseApp {}
 
-// ---------------------------------------------------------------------------
-// Test doubles
-// ---------------------------------------------------------------------------
+class _MockFirebaseAuth extends Mock implements FirebaseAuth {}
 
-class _FakeContentRepository extends Fake implements ContentRepository {
-  _FakeContentRepository(this._byCurriculum);
+class _ActiveProfile extends ActiveProfileId {
+  @override
+  String? build() => _profileId;
+}
 
-  final Map<CurriculumId, List<ContentItem>> _byCurriculum;
+class _ContentRepository extends Fake implements ContentRepository {
+  _ContentRepository(this._items);
+
+  final Map<CurriculumId, List<ContentItem>> _items;
 
   @override
   Future<List<ContentItem>> getContentForCurriculum(
-    CurriculumId curriculumId,
-  ) async => _byCurriculum[curriculumId] ?? const [];
+    CurriculumId curriculum,
+  ) async => _items[curriculum] ?? const [];
 }
 
-ContentItem _leaf(
-  String curriculumKey,
-  String ref, {
-  String level1 = 'Zeraim',
-  String level2 = 'Berakhot',
-  int sortOrder = 0,
-}) => ContentItem(
-  curriculumId: curriculumKey,
+const _uid = 'items-learned-reactivity-user';
+const _profileId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+
+ContentItem _leaf(CurriculumId curriculum, String ref) => ContentItem(
+  curriculumId: curriculum.storageKey,
   sefariaRef: ref,
   displayNameEn: ref,
   displayNameHe: ref,
-  level1: level1,
-  level2: level2,
+  level1: 'Zeraim',
+  level2: 'Berakhot',
   level3: null,
   level4: null,
   isLeaf: true,
-  sortOrder: sortOrder,
-);
-
-Future<void> _insertLiveCompletion(
-  UserDatabase db, {
-  required String curriculumId,
-  required String sefariaRef,
-  required int stageId,
-  DateTime? at,
-}) => db.completionEventDao.appendEvent(
-  CompletionEventsCompanion.insert(
-    profileId: _profileId,
-    curriculumId: curriculumId,
-    sefariaRef: sefariaRef,
-    stageId: stageId,
-    trackType: 'personal',
-    eventTimestamp: at ?? DateTime.utc(2026, 5, 1, 10),
-  ),
+  sortOrder: 0,
 );
 
 void main() {
-  group(
-    'ILP-01: itemsLearnedDataProvider reacts to completionCommittedProvider',
-    () {
-      test('provider re-executes after a completionCommittedProvider tick and '
-          'reflects the new completion', () async {
-        final db = inMemoryDb();
-        addTearDown(db.close);
-        await seedProfile(db);
+  Future<({FakeFirebaseFirestore firestore, ProviderContainer container})>
+  setup(CurriculumId curriculum, ContentItem leaf) async {
+    final firestore = createFakeFirestore(authenticatedUid: _uid);
+    final handles = AccountFirebaseHandles(
+      app: _MockFirebaseApp(),
+      firestore: firestore,
+      auth: _MockFirebaseAuth(),
+      uid: _uid,
+    );
+    final container = ProviderContainer(
+      overrides: [
+        activeAccountFirebaseProvider.overrideWith((ref) async => handles),
+        activeProfileIdProvider.overrideWith(() => _ActiveProfile()),
+        contentRepositoryProvider.overrideWithValue(
+          _ContentRepository({
+            curriculum: [leaf],
+          }),
+        ),
+      ],
+    );
+    container.read(activeProfileDocIdProvider.notifier).set(_profileId);
+    return (firestore: firestore, container: container);
+  }
 
-        final leaf = _leaf('mishnayos', 'Mishnah Berakhot 1:1');
-        final repo = _FakeContentRepository({
-          CurriculumId.mishnayos: [leaf],
-        });
-
-        final container = ProviderContainer(
-          overrides: [
-            userDatabaseProvider.overrideWith((ref) => db),
-            contentRepositoryProvider.overrideWithValue(repo),
-          ],
-        );
-        addTearDown(container.dispose);
-
-        final target = itemsLearnedDataProvider((
-          profileId: _profileId,
-          curriculumId: CurriculumId.mishnayos,
-        ));
-        // Keep the provider alive across the DB mutation + tick — mirrors
-        // the mounted Items Learned screen. Without an active listener the
-        // autoDispose family would tear down between the two reads, which
-        // would mask a missing completionCommittedProvider watch.
-        final sub = container.listen(target, (_, __) {});
-        addTearDown(sub.close);
-
-        final before = await container.read(target.future);
-        expect(before, isNull, reason: 'no track completions seeded yet');
-
-        await _insertLiveCompletion(
-          db,
-          curriculumId: 'mishnayos',
-          sefariaRef: leaf.sefariaRef,
-          stageId: 1,
-        );
-        container.read(completionCommittedProvider.notifier).increment();
-
-        final after = await container.read(target.future);
-        expect(
-          after?.learnedLeafCount,
-          1,
-          reason:
-              'ILP-01: after completionCommittedProvider tick, '
-              'itemsLearnedDataProvider must re-execute and reflect the '
-              'new completion',
-        );
-      });
-    },
+  Future<void> mark(
+    FakeFirebaseFirestore firestore,
+    CurriculumId curriculum,
+    String ref,
+  ) => seedCompletion(
+    firestore,
+    uid: _uid,
+    profileId: _profileId,
+    curriculumId: curriculum,
+    sefariaRef: ref,
+    source: CompletionSource.live,
+    completedAt: DateTime.utc(2026, 5, 1, 10),
   );
 
-  group(
-    'ILP-01: lifetimeViewDataProvider reacts to completionCommittedProvider',
-    () {
-      test('provider re-executes after a completionCommittedProvider tick and '
-          'reflects the new completion', () async {
-        final db = inMemoryDb();
-        addTearDown(db.close);
-        await seedProfile(db);
+  test('itemsLearnedDataProvider reacts to a completion commit', () async {
+    final leaf = _leaf(CurriculumId.mishnayos, 'Mishnah Berakhot 1:1');
+    final fixture = await setup(CurriculumId.mishnayos, leaf);
+    addTearDown(fixture.container.dispose);
+    final target = itemsLearnedDataProvider(CurriculumId.mishnayos);
+    final sub = fixture.container.listen(target, (_, __) {});
+    addTearDown(sub.close);
 
-        final leaf = _leaf('chumash', 'Genesis 1:1');
-        final repo = _FakeContentRepository({
-          CurriculumId.chumash: [leaf],
-        });
+    expect(await fixture.container.read(target.future), isNull);
+    await mark(fixture.firestore, CurriculumId.mishnayos, leaf.sefariaRef);
+    fixture.container.read(completionCommittedProvider.notifier).increment();
 
-        final container = ProviderContainer(
-          overrides: [
-            userDatabaseProvider.overrideWith((ref) => db),
-            contentRepositoryProvider.overrideWithValue(repo),
-          ],
-        );
-        addTearDown(container.dispose);
+    expect((await fixture.container.read(target.future))?.learnedLeafCount, 1);
+  });
 
-        final target = lifetimeViewDataProvider((
-          profileId: _profileId,
-          curriculumId: CurriculumId.chumash,
-        ));
-        final sub = container.listen(target, (_, __) {});
-        addTearDown(sub.close);
+  test('lifetimeViewDataProvider reacts to a completion commit', () async {
+    final leaf = _leaf(CurriculumId.chumash, 'Genesis 1:1');
+    final fixture = await setup(CurriculumId.chumash, leaf);
+    addTearDown(fixture.container.dispose);
+    final target = lifetimeViewDataProvider(CurriculumId.chumash);
+    final sub = fixture.container.listen(target, (_, __) {});
+    addTearDown(sub.close);
 
-        final before = await container.read(target.future);
-        expect(before, isNull, reason: 'no completions seeded yet');
+    expect(await fixture.container.read(target.future), isNull);
+    await mark(fixture.firestore, CurriculumId.chumash, leaf.sefariaRef);
+    fixture.container.read(completionCommittedProvider.notifier).increment();
 
-        await _insertLiveCompletion(
-          db,
-          curriculumId: 'chumash',
-          sefariaRef: leaf.sefariaRef,
-          stageId: 1,
-        );
-        container.read(completionCommittedProvider.notifier).increment();
+    expect((await fixture.container.read(target.future))?.learnedLeafCount, 1);
+  });
 
-        final after = await container.read(target.future);
-        expect(
-          after?.learnedLeafCount,
-          1,
-          reason:
-              'ILP-01: after completionCommittedProvider tick, '
-              'lifetimeViewDataProvider must re-execute and reflect the '
-              'new completion',
-        );
-      });
-    },
-  );
+  test('itemsLearnedSummariesProvider reacts to a completion commit', () async {
+    final leaf = _leaf(CurriculumId.mishnayos, 'Mishnah Berakhot 1:1');
+    final fixture = await setup(CurriculumId.mishnayos, leaf);
+    addTearDown(fixture.container.dispose);
+    final target = itemsLearnedSummariesProvider;
+    final sub = fixture.container.listen(target, (_, __) {});
+    addTearDown(sub.close);
 
-  group(
-    'ILP-01: itemsLearnedSummariesProvider reacts to completionCommittedProvider',
-    () {
-      test('aggregate provider re-executes after a completionCommittedProvider '
-          'tick and reflects the new completion', () async {
-        final db = inMemoryDb();
-        addTearDown(db.close);
-        await seedProfile(db);
+    expect(await fixture.container.read(target.future), isEmpty);
+    await mark(fixture.firestore, CurriculumId.mishnayos, leaf.sefariaRef);
+    fixture.container.read(completionCommittedProvider.notifier).increment();
 
-        final leaf = _leaf('mishnayos', 'Mishnah Berakhot 1:1');
-        final repo = _FakeContentRepository({
-          CurriculumId.mishnayos: [leaf],
-        });
-
-        final container = ProviderContainer(
-          overrides: [
-            userDatabaseProvider.overrideWith((ref) => db),
-            contentRepositoryProvider.overrideWithValue(repo),
-          ],
-        );
-        addTearDown(container.dispose);
-
-        final target = itemsLearnedSummariesProvider(_profileId);
-        final sub = container.listen(target, (_, __) {});
-        addTearDown(sub.close);
-
-        final before = await container.read(target.future);
-        expect(before, isEmpty, reason: 'no track completions seeded yet');
-
-        await _insertLiveCompletion(
-          db,
-          curriculumId: 'mishnayos',
-          sefariaRef: leaf.sefariaRef,
-          stageId: 1,
-        );
-        container.read(completionCommittedProvider.notifier).increment();
-
-        final after = await container.read(target.future);
-        expect(
-          after,
-          hasLength(1),
-          reason:
-              'ILP-01: itemsLearnedSummariesProvider must re-execute on a '
-              'completionCommittedProvider tick and pick up the new '
-              'completion',
-        );
-      });
-    },
-  );
+    expect(await fixture.container.read(target.future), hasLength(1));
+  });
 }

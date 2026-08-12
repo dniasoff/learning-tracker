@@ -1,17 +1,58 @@
-import 'package:drift/drift.dart' show Value;
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/data/firestore/account_firebase.dart';
+import 'package:learning_tracker/data/firestore/active_account_providers.dart';
+import 'package:learning_tracker/data/firestore/repository_providers.dart'
+    show activeProfileDocIdProvider;
+import 'package:learning_tracker/data/repositories/firestore_completion_repository.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
+import 'package:mocktail/mocktail.dart';
 
-import '../../../../helpers/drift_memory.dart' as db_helper;
+import '../../../../helpers/firestore_fake.dart';
+import '../../../../helpers/firestore_fixtures.dart';
+
+class _MockFirebaseApp extends Mock implements FirebaseApp {}
+
+class _MockFirebaseAuth extends Mock implements FirebaseAuth {}
+
+class _ActiveProfile extends ActiveProfileId {
+  @override
+  String? build() => _profileId;
+}
+
+const _uid = 'lifetime-knowledge-providers-user';
+const _profileId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+
+Future<ProviderContainer> _container(
+  FakeFirebaseFirestore firestore,
+  ContentRepository repo,
+) async {
+  final handles = AccountFirebaseHandles(
+    app: _MockFirebaseApp(),
+    firestore: firestore,
+    auth: _MockFirebaseAuth(),
+    uid: _uid,
+  );
+  final container = ProviderContainer(
+    overrides: [
+      activeAccountFirebaseProvider.overrideWith((ref) async => handles),
+      activeProfileIdProvider.overrideWith(() => _ActiveProfile()),
+      contentRepositoryProvider.overrideWithValue(repo),
+    ],
+  );
+  container.read(activeProfileDocIdProvider.notifier).set(_profileId);
+  return container;
+}
 
 /// R8 Part B — minimal controllable [ContentRepository] fixture also
 /// implementing [LifetimeUnionLeafSource], so
@@ -78,21 +119,17 @@ ContentItem _fakeLeaf(String curriculumId, String sefariaRef) => ContentItem(
 
 void main() {
   group('lifetimeDataProvider', () {
-    test('is a family provider keyed by profileId and curriculumId', () {
+    test('is a family provider keyed by curriculumId', () {
       // Verify provider identity: calling with different args gives different
       // provider instances.
-      const arg1 = (profileId: 1, curriculumId: CurriculumId.mishnayos);
-      const arg2 = (profileId: 1, curriculumId: CurriculumId.bavli);
-      const arg3 = (profileId: 2, curriculumId: CurriculumId.mishnayos);
+      const arg1 = CurriculumId.mishnayos;
+      const arg2 = CurriculumId.bavli;
 
       final p1 = lifetimeDataProvider(arg1);
       final p2 = lifetimeDataProvider(arg2);
-      final p3 = lifetimeDataProvider(arg3);
 
       // Different curriculum → different provider.
       expect(p1, isNot(equals(p2)));
-      // Different profileId → different provider.
-      expect(p1, isNot(equals(p3)));
       // Same args → same provider.
       expect(lifetimeDataProvider(arg1), equals(p1));
     });
@@ -100,9 +137,7 @@ void main() {
     test('all nine CurriculumId values can be used as family args', () {
       // Smoke-test that every curriculum resolves to a distinct provider so
       // the family covers the full set without runtime errors.
-      final providers = CurriculumId.values
-          .map((c) => lifetimeDataProvider((profileId: 1, curriculumId: c)))
-          .toList();
+      final providers = CurriculumId.values.map(lifetimeDataProvider).toList();
 
       expect(providers.length, CurriculumId.values.length);
       // All provider instances must be distinct (they are auto-dispose family).
@@ -112,14 +147,6 @@ void main() {
   });
 
   group('lifetimeSummariesProvider', () {
-    test('is a family provider keyed by profileId', () {
-      final p1 = lifetimeSummariesProvider(1);
-      final p2 = lifetimeSummariesProvider(2);
-
-      expect(p1, isNot(equals(p2)));
-      expect(lifetimeSummariesProvider(1), equals(p1));
-    });
-
     test(
       'overrides return expected summaries without hitting database',
       () async {
@@ -133,16 +160,14 @@ void main() {
 
         final container = ProviderContainer(
           overrides: [
-            lifetimeSummariesProvider(
-              42,
-            ).overrideWith((ref) => Future.value([fakeSummary])),
+            lifetimeSummariesProvider.overrideWith(
+              (ref) => Future.value([fakeSummary]),
+            ),
           ],
         );
         addTearDown(container.dispose);
 
-        final result = await container.read(
-          lifetimeSummariesProvider(42).future,
-        );
+        final result = await container.read(lifetimeSummariesProvider.future);
 
         expect(result, hasLength(1));
         expect(result.first.curriculumId, CurriculumId.mishnayos);
@@ -156,10 +181,7 @@ void main() {
     test('single-curriculum override returns only that curriculum', () async {
       final container = ProviderContainer(
         overrides: [
-          lifetimeDataProvider((
-            profileId: 1,
-            curriculumId: CurriculumId.chumash,
-          )).overrideWith(
+          lifetimeDataProvider(CurriculumId.chumash).overrideWith(
             (ref) => Future.value(
               const CurriculumLifetimeSummary(
                 curriculumId: CurriculumId.chumash,
@@ -175,10 +197,7 @@ void main() {
       addTearDown(container.dispose);
 
       final result = await container.read(
-        lifetimeDataProvider((
-          profileId: 1,
-          curriculumId: CurriculumId.chumash,
-        )).future,
+        lifetimeDataProvider(CurriculumId.chumash).future,
       );
 
       expect(result, isNotNull);
@@ -189,19 +208,15 @@ void main() {
     test('null result represents missing curriculum asset', () async {
       final container = ProviderContainer(
         overrides: [
-          lifetimeDataProvider((
-            profileId: 1,
-            curriculumId: CurriculumId.yerushalmi,
-          )).overrideWith((ref) => Future.value(null)),
+          lifetimeDataProvider(
+            CurriculumId.yerushalmi,
+          ).overrideWith((ref) => Future.value(null)),
         ],
       );
       addTearDown(container.dispose);
 
       final result = await container.read(
-        lifetimeDataProvider((
-          profileId: 1,
-          curriculumId: CurriculumId.yerushalmi,
-        )).future,
+        lifetimeDataProvider(CurriculumId.yerushalmi).future,
       );
 
       expect(result, isNull);
@@ -262,8 +277,8 @@ void main() {
     test('is the same provider object as lifetimeSummariesProvider', () {
       // The deprecated alias must forward to the same underlying family.
       // ignore: deprecated_member_use
-      final aliasP = globalLifetimeCurriculaProvider(1);
-      final newP = lifetimeSummariesProvider(1);
+      final aliasP = globalLifetimeCurriculaProvider;
+      final newP = lifetimeSummariesProvider;
 
       expect(aliasP, equals(newP));
     });
@@ -281,55 +296,43 @@ void main() {
   // ---------------------------------------------------------------------------
 
   group('B9 regression — per-curriculum completions do not double-count', () {
-    // ── DAO-level: verify the raw DB produces two rows for the same sefariaRef
-    // under different curricula, and that a Set-union deduplicates them. ──────
-
-    late UserDatabase db;
-
-    setUp(() async {
-      db = db_helper.inMemoryDb();
-      await db_helper.seedProfile(db); // inserts profileId = 1
-    });
-
-    tearDown(() => db.close());
-
     test('DAO: same sefariaRef under two curricula produces two completion_events '
         'rows but deduplicates to ONE distinct ref in a Set-union', () async {
-      const profileId = 1;
       const sharedRef = 'Berakhot 1a';
       final ts = DateTime.utc(2026, 5, 19, 10);
+      final firestore = createFakeFirestore(authenticatedUid: _uid);
 
       // Insert completion for sharedRef under mishnayos.
-      await db.completionEventDao.appendEvent(
-        CompletionEventsCompanion.insert(
-          profileId: profileId,
-          curriculumId: CurriculumId.mishnayos.storageKey,
-          sefariaRef: sharedRef,
-          stageId: 1,
-          trackType: 'personal',
-          eventTimestamp: ts,
-        ),
+      await seedCompletion(
+        firestore,
+        uid: _uid,
+        profileId: _profileId,
+        curriculumId: CurriculumId.mishnayos,
+        sefariaRef: sharedRef,
+        completedAt: ts,
       );
 
       // Insert completion for the SAME sharedRef under bavli.
       // Different curriculumId → different row (unique key includes curriculumId).
-      await db.completionEventDao.appendEvent(
-        CompletionEventsCompanion.insert(
-          profileId: profileId,
-          curriculumId: CurriculumId.bavli.storageKey,
-          sefariaRef: sharedRef,
-          stageId: 1,
-          trackType: 'personal',
-          eventTimestamp: ts,
-          // Use a distinct trackId so the event differs if needed.
-          trackId: const Value<int?>(null),
-        ),
+      await seedCompletion(
+        firestore,
+        uid: _uid,
+        profileId: _profileId,
+        curriculumId: CurriculumId.bavli,
+        sefariaRef: sharedRef,
+        completedAt: ts,
       );
 
       // Two rows exist — one per curriculum.
-      final allRows = await db.select(db.completionEvents).get();
+      final allRows = await firestore
+          .collection('users')
+          .doc(_uid)
+          .collection('learner_profiles')
+          .doc(_profileId)
+          .collection('completions')
+          .get();
       expect(
-        allRows,
+        allRows.docs,
         hasLength(2),
         reason:
             'Two distinct rows must exist — one per curriculum for the same sefariaRef',
@@ -338,16 +341,17 @@ void main() {
       // ── Simulate what lifetimeTotalsAcrossAllCurriculaProvider does ────────
       //   Each curriculum's provider queries per-curriculum, yielding a Set of
       //   sefariaRefs. The totals provider unions those sets.
-      final mishCompletions = await db.completionDao
-          .getCompletionsByCurriculumAndProfile(
-            CurriculumId.mishnayos.storageKey,
-            profileId,
-          );
-      final bavliCompletions = await db.completionDao
-          .getCompletionsByCurriculumAndProfile(
-            CurriculumId.bavli.storageKey,
-            profileId,
-          );
+      final repository = FirestoreCompletionRepository(
+        firestore: firestore,
+        uid: _uid,
+        profileId: _profileId,
+      );
+      final mishCompletions = await repository.getCompletionsForCurriculum(
+        CurriculumId.mishnayos,
+      );
+      final bavliCompletions = await repository.getCompletionsForCurriculum(
+        CurriculumId.bavli,
+      );
 
       final mishRefs = mishCompletions.map((c) => c.sefariaRef).toSet();
       final bavliRefs = bavliCompletions.map((c) => c.sefariaRef).toSet();
@@ -400,42 +404,34 @@ void main() {
         ],
       };
 
+      final firestore = createFakeFirestore(authenticatedUid: _uid);
       final ts = DateTime.utc(2026, 5, 19, 10);
       for (final ref in [sharedRef, exclusiveMishRef]) {
-        await db.completionEventDao.appendEvent(
-          CompletionEventsCompanion.insert(
-            profileId: 1,
-            curriculumId: 'mishnayos',
-            sefariaRef: ref,
-            stageId: 1,
-            trackType: 'personal',
-            eventTimestamp: ts,
-          ),
+        await seedCompletion(
+          firestore,
+          uid: _uid,
+          profileId: _profileId,
+          curriculumId: CurriculumId.mishnayos,
+          sefariaRef: ref,
+          completedAt: ts,
         );
       }
       for (final ref in [sharedRef, exclusiveBavliRef]) {
-        await db.completionEventDao.appendEvent(
-          CompletionEventsCompanion.insert(
-            profileId: 1,
-            curriculumId: 'bavli',
-            sefariaRef: ref,
-            stageId: 1,
-            trackType: 'personal',
-            eventTimestamp: ts,
-          ),
+        await seedCompletion(
+          firestore,
+          uid: _uid,
+          profileId: _profileId,
+          curriculumId: CurriculumId.bavli,
+          sefariaRef: ref,
+          completedAt: ts,
         );
       }
 
-      final container = ProviderContainer(
-        overrides: [
-          userDatabaseProvider.overrideWithValue(db),
-          contentRepositoryProvider.overrideWithValue(_FakeLeafRepo(leaves)),
-        ],
-      );
+      final container = await _container(firestore, _FakeLeafRepo(leaves));
       addTearDown(container.dispose);
 
       final totals = await container.read(
-        lifetimeTotalsAcrossAllCurriculaProvider(1).future,
+        lifetimeTotalsAcrossAllCurriculaProvider.future,
       );
 
       // Naive (wrong) sum would be 2 + 2 = 4; correct union = 3 distinct refs.
@@ -470,27 +466,22 @@ void main() {
     // injectable lifetimeSummariesProvider) — each test below seeds real
     // completion events against a controllable fake content repo instead of
     // injecting fake summaries directly.
-    late UserDatabase db;
+    late FakeFirebaseFirestore firestore;
 
     setUp(() async {
-      // TQ-6: addTearDown right at the factory call (not a separate
-      // tearDown()) — see test/helpers/drift_memory.dart's doc comment.
-      final database = db_helper.inMemoryDb();
-      addTearDown(database.close);
-      db = database;
-      await db_helper.seedProfile(db); // profileId = 1
+      firestore = createFakeFirestore(authenticatedUid: _uid);
     });
 
     Future<void> seedLive(String curriculumId, String sefariaRef) =>
-        db.completionEventDao.appendEvent(
-          CompletionEventsCompanion.insert(
-            profileId: 1,
-            curriculumId: curriculumId,
-            sefariaRef: sefariaRef,
-            stageId: 1,
-            trackType: 'personal',
-            eventTimestamp: DateTime.utc(2026, 5, 1),
+        seedCompletion(
+          firestore,
+          uid: _uid,
+          profileId: _profileId,
+          curriculumId: CurriculumId.values.firstWhere(
+            (c) => c.storageKey == curriculumId,
           ),
+          sefariaRef: sefariaRef,
+          completedAt: DateTime.utc(2026, 5, 1),
         );
 
     test(
@@ -523,16 +514,11 @@ void main() {
           await seedLive('tanach', r);
         }
 
-        final container = ProviderContainer(
-          overrides: [
-            userDatabaseProvider.overrideWithValue(db),
-            contentRepositoryProvider.overrideWithValue(_FakeLeafRepo(leaves)),
-          ],
-        );
+        final container = await _container(firestore, _FakeLeafRepo(leaves));
         addTearDown(container.dispose);
 
         final totals = await container.read(
-          lifetimeTotalsAcrossAllCurriculaProvider(1).future,
+          lifetimeTotalsAcrossAllCurriculaProvider.future,
         );
 
         // Union of all leaf refs: {ref_A, ref_B, ref_C, ref_D, ref_E} = 5
@@ -581,16 +567,11 @@ void main() {
         await seedLive('bavli', r);
       }
 
-      final container = ProviderContainer(
-        overrides: [
-          userDatabaseProvider.overrideWithValue(db),
-          contentRepositoryProvider.overrideWithValue(_FakeLeafRepo(leaves)),
-        ],
-      );
+      final container = await _container(firestore, _FakeLeafRepo(leaves));
       addTearDown(container.dispose);
 
       final totals = await container.read(
-        lifetimeTotalsAcrossAllCurriculaProvider(1).future,
+        lifetimeTotalsAcrossAllCurriculaProvider.future,
       );
 
       expect(totals.totalSections, mishAll.length + bavliAll.length);
@@ -598,16 +579,11 @@ void main() {
     });
 
     test('empty summaries list returns zeros', () async {
-      final container = ProviderContainer(
-        overrides: [
-          userDatabaseProvider.overrideWithValue(db),
-          contentRepositoryProvider.overrideWithValue(_FakeLeafRepo(const {})),
-        ],
-      );
+      final container = await _container(firestore, _FakeLeafRepo(const {}));
       addTearDown(container.dispose);
 
       final totals = await container.read(
-        lifetimeTotalsAcrossAllCurriculaProvider(1).future,
+        lifetimeTotalsAcrossAllCurriculaProvider.future,
       );
 
       expect(totals.totalSections, 0);
@@ -625,16 +601,11 @@ void main() {
       };
       await seedLive('mishnayos', 'x');
 
-      final container = ProviderContainer(
-        overrides: [
-          userDatabaseProvider.overrideWithValue(db),
-          contentRepositoryProvider.overrideWithValue(_FakeLeafRepo(leaves)),
-        ],
-      );
+      final container = await _container(firestore, _FakeLeafRepo(leaves));
       addTearDown(container.dispose);
 
       final totals = await container.read(
-        lifetimeTotalsAcrossAllCurriculaProvider(1).future,
+        lifetimeTotalsAcrossAllCurriculaProvider.future,
       );
 
       expect(totals.totalSections, 3);
@@ -649,45 +620,38 @@ void main() {
     test(
       'completionsByProfileForLifetimeProvider rebuilds after a commit',
       () async {
-        final db = db_helper.inMemoryDb();
-        await db_helper.seedProfile(db); // profileId = 1
-        addTearDown(db.close);
-
-        final container = ProviderContainer(
-          overrides: [userDatabaseProvider.overrideWithValue(db)],
-        );
+        final firestore = createFakeFirestore(authenticatedUid: _uid);
+        final container = await _container(firestore, _FakeLeafRepo(const {}));
         addTearDown(container.dispose);
 
         // Keep the provider alive (mirrors the mounted dashboard).
         final sub = container.listen(
-          completionsByProfileForLifetimeProvider(1),
+          completionsByProfileForLifetimeProvider,
           (_, __) {},
         );
         addTearDown(sub.close);
 
         final before = (await container.read(
-          completionsByProfileForLifetimeProvider(1).future,
+          completionsByProfileForLifetimeProvider.future,
         )).values.fold<int>(0, (a, l) => a + l.length);
         expect(before, 0);
 
         // A new completion lands AND a commit is signalled.
-        await db.completionEventDao.appendEvent(
-          CompletionEventsCompanion.insert(
-            profileId: 1,
-            curriculumId: CurriculumId.mishnayos.storageKey,
-            sefariaRef: 'Berakhot 2a',
-            stageId: 1,
-            trackType: 'personal',
-            eventTimestamp: DateTime.utc(2026, 5, 31, 10),
-          ),
+        await seedCompletion(
+          firestore,
+          uid: _uid,
+          profileId: _profileId,
+          curriculumId: CurriculumId.mishnayos,
+          sefariaRef: 'Berakhot 2a',
+          completedAt: DateTime.utc(2026, 5, 31, 10),
         );
         container.read(completionCommittedProvider.notifier).increment();
 
         // D9: the provider re-queries on commit — without the completionCommitted
         // watch it would stay cached at zero until a pull-to-refresh.
-        await container.read(completionsByProfileForLifetimeProvider(1).future);
+        await container.read(completionsByProfileForLifetimeProvider.future);
         final after = container
-            .read(completionsByProfileForLifetimeProvider(1))
+            .read(completionsByProfileForLifetimeProvider)
             .value!
             .values
             .fold<int>(0, (a, l) => a + l.length);

@@ -31,132 +31,131 @@
 @Tags(['progress', 'migration', 'layer3'])
 library;
 
-import 'package:drift/drift.dart' show Value;
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/time/ulid.dart';
+import 'package:learning_tracker/data/firestore/account_firebase.dart';
+import 'package:learning_tracker/data/firestore/active_account_providers.dart';
+import 'package:learning_tracker/data/firestore/repository_providers.dart'
+    show activeProfileDocIdProvider;
+import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
+import 'package:learning_tracker/features/progress/data/repositories/firestore_chart_data_repository_adapter.dart';
 import 'package:learning_tracker/features/progress/domain/services/chart_data_service.dart';
+import 'package:mocktail/mocktail.dart';
 
-import '../../../../helpers/drift_memory.dart';
+import '../../../../helpers/firestore_fake.dart';
+import '../../../../helpers/firestore_fixtures.dart';
 
-const _profileId = 1;
-const _curriculumId = 'mishnayos';
+class _MockFirebaseApp extends Mock implements FirebaseApp {}
+
+class _MockFirebaseAuth extends Mock implements FirebaseAuth {}
+
+const _uid = 'chart-migration-suite-user';
+const _profileId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
 
 final _liveAt = DateTime.utc(2026, 5, 10, 10);
 final _bulkAt = DateTime.utc(2000, 1, 1);
-
 final _startDate = DateTime(2026, 5, 1);
 final _endDate = DateTime(2026, 5, 31);
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
 Future<void> _seedLive(
-  UserDatabase db, {
-  required int trackId,
+  FakeFirebaseFirestore firestore, {
+  required CurriculumId curriculumId,
   required String ref,
   DateTime? at,
   int points = 10,
 }) async {
-  await db.completionEventDao.appendEvent(
-    CompletionEventsCompanion.insert(
-      profileId: _profileId,
-      curriculumId: _curriculumId,
-      sefariaRef: ref,
-      stageId: 1,
-      trackType: 'personal',
-      trackId: Value(trackId),
-      eventTimestamp: at ?? _liveAt,
-      points: Value(points),
-    ),
+  await seedCompletion(
+    firestore,
+    uid: _uid,
+    profileId: _profileId,
+    curriculumId: curriculumId,
+    sefariaRef: ref,
+    stageId: 1,
+    source: CompletionSource.live,
+    completedAt: at ?? _liveAt,
+    points: points,
   );
 }
 
 Future<void> _seedBulkInTrack(
-  UserDatabase db, {
-  required int trackId,
+  FakeFirebaseFirestore firestore, {
+  required CurriculumId curriculumId,
   required String ref,
   DateTime? at,
 }) async {
-  await db.completionEventDao.appendEvent(
-    CompletionEventsCompanion.insert(
-      profileId: _profileId,
-      curriculumId: _curriculumId,
-      sefariaRef: ref,
-      stageId: 1,
-      trackType: 'personal',
-      trackId: Value(trackId),
-      eventTimestamp: at ?? _bulkAt,
-    ),
+  await seedCompletion(
+    firestore,
+    uid: _uid,
+    profileId: _profileId,
+    curriculumId: curriculumId,
+    sefariaRef: ref,
+    stageId: 1,
+    source: CompletionSource.bulkInTrack,
+    completedAt: at ?? _bulkAt,
   );
-  await db.priorCompletionImportDao.batchInsertImports([
-    PriorCompletionImportsCompanion.insert(
-      profileId: _profileId,
-      curriculumId: _curriculumId,
-      sefariaRef: ref,
-      stageId: 1,
-      trackType: 'personal',
-      source: 'bulkInTrack',
-    ),
-  ]);
 }
 
-Future<void> _seedLifetimeOnly(
-  UserDatabase db, {
-  required int trackId,
+Future<String> _seedLifetimeOnly(
+  FakeFirebaseFirestore firestore, {
+  required CurriculumId curriculumId,
   required String ref,
   DateTime? at,
 }) async {
-  await db.completionEventDao.appendEvent(
-    CompletionEventsCompanion.insert(
-      profileId: _profileId,
-      curriculumId: _curriculumId,
-      sefariaRef: ref,
-      stageId: 1,
-      trackType: 'personal',
-      trackId: Value(trackId),
-      eventTimestamp: at ?? _bulkAt,
-    ),
+  final ulid = newUlid();
+  await seedLedgerEntry(
+    firestore,
+    uid: _uid,
+    profileId: _profileId,
+    ulid: ulid,
+    curriculumId: curriculumId,
+    entryScope: 'leaf',
+    unitIdentifier: ref,
+    unitDisplayNameEn: ref,
+    source: CompletionSource.lifetimeOnly,
+    completedAt: at ?? _bulkAt,
   );
-  await db.priorCompletionImportDao.batchInsertImports([
-    PriorCompletionImportsCompanion.insert(
-      profileId: _profileId,
-      curriculumId: _curriculumId,
-      sefariaRef: ref,
-      stageId: 1,
-      trackType: 'personal',
-      source: 'lifetimeOnly',
-    ),
-  ]);
+  return ulid;
 }
-
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
 
 void main() {
-  late UserDatabase db;
-  late int trackId;
+  late FakeFirebaseFirestore firestore;
+  late ProviderContainer container;
+  late CurriculumId curriculumId;
   late ChartDataService service;
 
   setUp(() async {
-    db = inMemoryDb();
-    await seedProfile(db);
-    trackId = await seedTrack(
-      db,
-      profileId: _profileId,
-      curriculumId: _curriculumId,
+    firestore = createFakeFirestore(authenticatedUid: _uid);
+    curriculumId = CurriculumId.mishnayos;
+    final handles = AccountFirebaseHandles(
+      app: _MockFirebaseApp(),
+      firestore: firestore,
+      auth: _MockFirebaseAuth(),
+      uid: _uid,
     );
-    service = ChartDataService(db, profileId: _profileId);
+    container = ProviderContainer(
+      overrides: [
+        activeAccountFirebaseProvider.overrideWith((ref) async => handles),
+      ],
+    );
+    container.read(activeProfileDocIdProvider.notifier).set(_profileId);
+    final adapterProvider = Provider<FirestoreChartDataRepositoryAdapter>(
+      (ref) => FirestoreChartDataRepositoryAdapter(ref: ref),
+    );
+    service = ChartDataService(repository: container.read(adapterProvider));
   });
 
-  tearDown(() => db.close());
+  tearDown(() => container.dispose());
 
   group('ChartDataService.getDailyCompletions trackAchievement tier', () {
     test('live-only: counts unchanged from pre-W1-B', () async {
-      await _seedLive(db, trackId: trackId, ref: 'ref1');
-      await _seedLive(db, trackId: trackId, ref: 'ref2');
+      await _seedLive(firestore, curriculumId: curriculumId, ref: 'ref1');
+      await _seedLive(firestore, curriculumId: curriculumId, ref: 'ref2');
 
       final result = await service.getDailyCompletions(
         startDate: _startDate,
@@ -178,8 +177,16 @@ void main() {
       // bulkInTrack rows now count under trackAchievement tier — these
       // represent real per-track learning even though they do not earn
       // streak/points.
-      await _seedBulkInTrack(db, trackId: trackId, ref: 'bulk1');
-      await _seedBulkInTrack(db, trackId: trackId, ref: 'bulk2');
+      await _seedBulkInTrack(
+        firestore,
+        curriculumId: curriculumId,
+        ref: 'bulk1',
+      );
+      await _seedBulkInTrack(
+        firestore,
+        curriculumId: curriculumId,
+        ref: 'bulk2',
+      );
 
       // bulkInTrack rows are stamped on _bulkAt = 2000-01-01.
       final result = await service.getDailyCompletions(
@@ -198,7 +205,20 @@ void main() {
     });
 
     test('lifetimeOnly rows: still EXCLUDED', () async {
-      await _seedLifetimeOnly(db, trackId: trackId, ref: 'lt1');
+      final lifetimeUlid = await _seedLifetimeOnly(
+        firestore,
+        curriculumId: curriculumId,
+        ref: 'lt1',
+      );
+      final ledger = await firestore
+          .collection('users')
+          .doc(_uid)
+          .collection('learner_profiles')
+          .doc(_profileId)
+          .collection('learning_ledger')
+          .doc(lifetimeUlid)
+          .get();
+      expect(ledger.exists, isTrue);
 
       final result = await service.getDailyCompletions(
         startDate: DateTime(1990, 1, 1),
@@ -216,11 +236,28 @@ void main() {
       'mixed: live + bulkInTrack both counted, lifetimeOnly excluded',
       () async {
         // Live on May 10.
-        await _seedLive(db, trackId: trackId, ref: 'live1');
+        await _seedLive(firestore, curriculumId: curriculumId, ref: 'live1');
         // bulkInTrack on 2000-01-01 (the bulk epoch).
-        await _seedBulkInTrack(db, trackId: trackId, ref: 'bulk1');
+        await _seedBulkInTrack(
+          firestore,
+          curriculumId: curriculumId,
+          ref: 'bulk1',
+        );
         // lifetimeOnly on 2000-01-01.
-        await _seedLifetimeOnly(db, trackId: trackId, ref: 'lt1');
+        final lifetimeUlid = await _seedLifetimeOnly(
+          firestore,
+          curriculumId: curriculumId,
+          ref: 'lt1',
+        );
+        final ledger = await firestore
+            .collection('users')
+            .doc(_uid)
+            .collection('learner_profiles')
+            .doc(_profileId)
+            .collection('learning_ledger')
+            .doc(lifetimeUlid)
+            .get();
+        expect(ledger.exists, isTrue);
 
         final result = await service.getDailyCompletions(
           startDate: DateTime(2000, 1, 1),
@@ -243,14 +280,14 @@ void main() {
   group('ChartDataService.getCumulativeProgress trackAchievement tier', () {
     test('live-only: cumulative unchanged from pre-W1-B', () async {
       await _seedLive(
-        db,
-        trackId: trackId,
+        firestore,
+        curriculumId: curriculumId,
         ref: 'ref1',
         at: DateTime.utc(2026, 5, 5, 10),
       );
       await _seedLive(
-        db,
-        trackId: trackId,
+        firestore,
+        curriculumId: curriculumId,
         ref: 'ref2',
         at: DateTime.utc(2026, 5, 10, 10),
       );
@@ -273,9 +310,21 @@ void main() {
 
     test('bulkInTrack rows: INCLUDED in cumulative (W1-B / Phase A)', () async {
       // All three bulkInTrack rows stamped on the bulk epoch 2000-01-01.
-      await _seedBulkInTrack(db, trackId: trackId, ref: 'bulk1');
-      await _seedBulkInTrack(db, trackId: trackId, ref: 'bulk2');
-      await _seedBulkInTrack(db, trackId: trackId, ref: 'bulk3');
+      await _seedBulkInTrack(
+        firestore,
+        curriculumId: curriculumId,
+        ref: 'bulk1',
+      );
+      await _seedBulkInTrack(
+        firestore,
+        curriculumId: curriculumId,
+        ref: 'bulk2',
+      );
+      await _seedBulkInTrack(
+        firestore,
+        curriculumId: curriculumId,
+        ref: 'bulk3',
+      );
 
       // Window that contains the bulk epoch.
       final result = await service.getCumulativeProgress(
@@ -295,11 +344,24 @@ void main() {
 
     test('lifetimeOnly excluded; live before startDate accumulates', () async {
       // One lifetimeOnly row (should not contribute to cumulativeBeforeStart).
-      await _seedLifetimeOnly(db, trackId: trackId, ref: 'lt1');
+      final lifetimeUlid = await _seedLifetimeOnly(
+        firestore,
+        curriculumId: curriculumId,
+        ref: 'lt1',
+      );
+      final ledger = await firestore
+          .collection('users')
+          .doc(_uid)
+          .collection('learner_profiles')
+          .doc(_profileId)
+          .collection('learning_ledger')
+          .doc(lifetimeUlid)
+          .get();
+      expect(ledger.exists, isTrue);
       // One live row before the window start (should add to cumulativeBeforeStart).
       await _seedLive(
-        db,
-        trackId: trackId,
+        firestore,
+        curriculumId: curriculumId,
         ref: 'live_before',
         at: DateTime.utc(2026, 4, 15, 10),
       );
@@ -333,16 +395,11 @@ void main() {
         // A row that happens to have the old sentinel timestamp (_bulkAt =
         // 2000-01-01), but is NOT in prior_completion_imports, is treated
         // as live.
-        await db.completionEventDao.appendEvent(
-          CompletionEventsCompanion.insert(
-            profileId: _profileId,
-            curriculumId: _curriculumId,
-            sefariaRef: 'ref_sentinel_only',
-            stageId: 1,
-            trackType: 'personal',
-            trackId: Value(trackId),
-            eventTimestamp: _bulkAt,
-          ),
+        await _seedLive(
+          firestore,
+          curriculumId: curriculumId,
+          ref: 'ref_sentinel_only',
+          at: _bulkAt,
         );
 
         final result = await service.getDailyCompletions(
@@ -372,8 +429,8 @@ void main() {
         // Seed at least one live row near today so the effective-start is
         // a recent date.
         await _seedLive(
-          db,
-          trackId: trackId,
+          firestore,
+          curriculumId: curriculumId,
           ref: 'ref1',
           at: DateTime(2026, 5, 1, 10),
         );
@@ -398,8 +455,8 @@ void main() {
 
     test('weekly buckets have 7-calendar-day boundaries', () async {
       await _seedLive(
-        db,
-        trackId: trackId,
+        firestore,
+        curriculumId: curriculumId,
         ref: 'ref1',
         at: DateTime(2026, 1, 1, 10),
       );
@@ -431,8 +488,8 @@ void main() {
         // start at 2000-01-01 with thousands of empty buckets; post-W1-B
         // it should start at or near 2026-01-15.
         await _seedLive(
-          db,
-          trackId: trackId,
+          firestore,
+          curriculumId: curriculumId,
           ref: 'first',
           at: DateTime(2026, 1, 15, 10),
         );
@@ -457,8 +514,8 @@ void main() {
 
     test('range ≤ kChartDailyMaxDays still gets daily granularity', () async {
       await _seedLive(
-        db,
-        trackId: trackId,
+        firestore,
+        curriculumId: curriculumId,
         ref: 'ref1',
         at: DateTime(2026, 5, 10, 10),
       );
@@ -484,20 +541,20 @@ void main() {
 
     test('cumulative chart also bucketizes for long ranges', () async {
       await _seedLive(
-        db,
-        trackId: trackId,
+        firestore,
+        curriculumId: curriculumId,
         ref: 'ref1',
         at: DateTime(2026, 1, 1, 10),
       );
       await _seedLive(
-        db,
-        trackId: trackId,
+        firestore,
+        curriculumId: curriculumId,
         ref: 'ref2',
         at: DateTime(2026, 3, 1, 10),
       );
       await _seedLive(
-        db,
-        trackId: trackId,
+        firestore,
+        curriculumId: curriculumId,
         ref: 'ref3',
         at: DateTime(2026, 5, 1, 10),
       );
@@ -552,20 +609,20 @@ void main() {
       () async {
         // One completion INSIDE the requested window, one BEFORE, one AFTER.
         await _seedLive(
-          db,
-          trackId: trackId,
+          firestore,
+          curriculumId: curriculumId,
           ref: 'inside',
           at: DateTime(2026, 3, 15, 10),
         );
         await _seedLive(
-          db,
-          trackId: trackId,
+          firestore,
+          curriculumId: curriculumId,
           ref: 'before',
           at: DateTime(2026, 2, 1, 10),
         );
         await _seedLive(
-          db,
-          trackId: trackId,
+          firestore,
+          curriculumId: curriculumId,
           ref: 'after',
           at: DateTime(2026, 5, 1, 10),
         );
@@ -583,8 +640,8 @@ void main() {
 
     test('returns empty when no completions in window', () async {
       await _seedLive(
-        db,
-        trackId: trackId,
+        firestore,
+        curriculumId: curriculumId,
         ref: 'far_before',
         at: DateTime(2026, 1, 1, 10),
       );
@@ -599,8 +656,8 @@ void main() {
 
     test('includes bulkInTrack rows on the streak calendar', () async {
       await _seedBulkInTrack(
-        db,
-        trackId: trackId,
+        firestore,
+        curriculumId: curriculumId,
         ref: 'bulk1',
         at: DateTime(2026, 3, 15, 10),
       );
@@ -620,12 +677,21 @@ void main() {
     });
 
     test('lifetimeOnly rows do NOT light up the streak calendar', () async {
-      await _seedLifetimeOnly(
-        db,
-        trackId: trackId,
+      final lifetimeUlid = await _seedLifetimeOnly(
+        firestore,
+        curriculumId: curriculumId,
         ref: 'lt1',
         at: DateTime(2026, 3, 15, 10),
       );
+      final ledger = await firestore
+          .collection('users')
+          .doc(_uid)
+          .collection('learner_profiles')
+          .doc(_profileId)
+          .collection('learning_ledger')
+          .doc(lifetimeUlid)
+          .get();
+      expect(ledger.exists, isTrue);
 
       final result = await service.getStreakCalendar(
         startDate: DateTime(2026, 3, 15),
@@ -652,22 +718,22 @@ void main() {
       () async {
         // Out of range (BEFORE).
         await _seedLive(
-          db,
-          trackId: trackId,
+          firestore,
+          curriculumId: curriculumId,
           ref: 'before',
           at: DateTime(2026, 1, 1, 10),
         );
         // Out of range (AFTER).
         await _seedLive(
-          db,
-          trackId: trackId,
+          firestore,
+          curriculumId: curriculumId,
           ref: 'after',
           at: DateTime(2026, 6, 1, 10),
         );
         // In range.
         await _seedLive(
-          db,
-          trackId: trackId,
+          firestore,
+          curriculumId: curriculumId,
           ref: 'inside',
           at: DateTime(2026, 3, 15, 10),
         );
@@ -695,28 +761,28 @@ void main() {
       () async {
         // 2 completions before the window — must seed cumulativeBeforeStart = 2.
         await _seedLive(
-          db,
-          trackId: trackId,
+          firestore,
+          curriculumId: curriculumId,
           ref: 'b1',
           at: DateTime(2026, 1, 1, 10),
         );
         await _seedLive(
-          db,
-          trackId: trackId,
+          firestore,
+          curriculumId: curriculumId,
           ref: 'b2',
           at: DateTime(2026, 2, 1, 10),
         );
         // 1 completion AFTER the window — must NOT count anywhere.
         await _seedLive(
-          db,
-          trackId: trackId,
+          firestore,
+          curriculumId: curriculumId,
           ref: 'after',
           at: DateTime(2026, 6, 1, 10),
         );
         // 1 completion in the window.
         await _seedLive(
-          db,
-          trackId: trackId,
+          firestore,
+          curriculumId: curriculumId,
           ref: 'inside',
           at: DateTime(2026, 3, 15, 10),
         );
@@ -740,21 +806,21 @@ void main() {
         // bulkInTrack must not earn points; out-of-range live row must
         // not be summed in.
         await _seedBulkInTrack(
-          db,
-          trackId: trackId,
+          firestore,
+          curriculumId: curriculumId,
           ref: 'bulk',
           at: DateTime(2026, 3, 15, 10),
         );
         await _seedLive(
-          db,
-          trackId: trackId,
+          firestore,
+          curriculumId: curriculumId,
           ref: 'inside',
           at: DateTime(2026, 3, 15, 10),
           points: 7,
         );
         await _seedLive(
-          db,
-          trackId: trackId,
+          firestore,
+          curriculumId: curriculumId,
           ref: 'after',
           at: DateTime(2026, 6, 1, 10),
           points: 99,
@@ -785,15 +851,15 @@ void main() {
         // Seed 30 rows outside the window, one inside.
         for (var i = 0; i < 30; i++) {
           await _seedLive(
-            db,
-            trackId: trackId,
+            firestore,
+            curriculumId: curriculumId,
             ref: 'outside_$i',
             at: DateTime(2025, 1, 1).add(Duration(days: i)),
           );
         }
         await _seedLive(
-          db,
-          trackId: trackId,
+          firestore,
+          curriculumId: curriculumId,
           ref: 'inside',
           at: DateTime(2026, 3, 15, 10),
         );
