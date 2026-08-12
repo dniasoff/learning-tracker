@@ -66,7 +66,6 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/screens/content_search_screen.dart';
@@ -79,8 +78,6 @@ import 'package:learning_tracker/features/tracks/stages/presentation/providers/s
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
-import '../../helpers/drift_memory.dart';
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
@@ -105,11 +102,13 @@ class _FakeStageRepository implements StageDefinitionRepository {
   }) async {}
 
   @override
-  Future<void> resetToDefaults(
-    CurriculumId curriculumId, {
-    required int profileId,
-    required int trackId,
-  }) async {}
+  Future<void> replaceStagesForCurriculum(
+    CurriculumId curriculumId,
+    List<StageDefinition> stages,
+  ) async {}
+
+  @override
+  Future<void> resetToDefaults(CurriculumId curriculumId) async {}
 
   @override
   Future<bool> hasCompletionsForStage(int stageId) async => false;
@@ -144,7 +143,7 @@ class _TrueUseHebrewTerms extends UseHebrewTerms {
 
 class _ProfileIdOverride extends ActiveProfileId {
   @override
-  int build() => 1;
+  String? build() => 'fixture-profile-ulid';
 }
 
 class _AshkenaziVariant extends CurrentTransliterationVariant {
@@ -215,7 +214,6 @@ List<Override> _baseOverrides({
 }) {
   return [
     activeProfileIdProvider.overrideWith(() => _ProfileIdOverride()),
-    userDatabaseProvider.overrideWith((ref) => inMemoryDb()),
     useHebrewTermsProvider.overrideWith(
       () => hebrewTerms ? _TrueUseHebrewTerms() : _FalseUseHebrewTerms(),
     ),

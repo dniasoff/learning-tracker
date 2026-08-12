@@ -13,16 +13,55 @@
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/features/gamification/domain/services/points_service.dart';
+import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
 import 'package:learning_tracker/features/gamification/presentation/providers/achievements_overview_provider.dart';
+import 'package:learning_tracker/features/gamification/presentation/providers/gamification_service_providers.dart';
 import 'package:learning_tracker/features/gamification/presentation/providers/points_providers.dart';
+import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../../../helpers/drift_memory.dart';
 import '../../../../helpers/reactivity_contract.dart';
+
+class _MockCompletionRepository extends Mock implements CompletionRepository {}
+
+class _AlwaysEligible implements CurriculumRewardEligibility {
+  @override
+  Future<bool> isEligible(CurriculumId curriculumId) async => true;
+}
+
+class _ZeroBalance implements PointsBalanceReader {
+  @override
+  Future<int> getBalance() async => 0;
+}
+
+List<Override> _overrides() {
+  final repository = _MockCompletionRepository();
+  when(
+    () => repository.getCompletionsByCurriculum(any()),
+  ).thenAnswer((_) async => const []);
+  return [
+    completionRepositoryProvider.overrideWithValue(repository),
+    pointsServiceProvider.overrideWithValue(
+      PointsService(
+        eligibility: _AlwaysEligible(),
+        balanceReader: _ZeroBalance(),
+      ),
+    ),
+    rewardMilestoneServiceProvider.overrideWithValue(
+      RewardMilestoneService(
+        balanceReader: _ZeroBalance(),
+        profileId: 'fixture-profile-ulid',
+      ),
+    ),
+  ];
+}
 
 Future<void> _tick(ProviderContainer container) async {
   container.read(completionCommittedProvider.notifier).increment();
@@ -38,16 +77,7 @@ void main() {
 
   group('gamification providers rebuild on completionCommittedProvider', () {
     test('curriculumBreakdownProvider (DG-BRKD-01)', () async {
-      final db = inMemoryDb();
-      addTearDown(db.close);
-      await seedProfile(db);
-
-      final container = ProviderContainer(
-        overrides: [
-          userDatabaseProvider.overrideWithValue(db),
-          activeProfileIdProvider.overrideWithValue(1),
-        ],
-      );
+      final container = ProviderContainer(overrides: _overrides());
       addTearDown(container.dispose);
 
       await expectRebuildsOn(
@@ -62,16 +92,7 @@ void main() {
     });
 
     test('achievementsOverviewProvider', () async {
-      final db = inMemoryDb();
-      addTearDown(db.close);
-      await seedProfile(db);
-
-      final container = ProviderContainer(
-        overrides: [
-          userDatabaseProvider.overrideWithValue(db),
-          activeProfileIdProvider.overrideWithValue(1),
-        ],
-      );
+      final container = ProviderContainer(overrides: _overrides());
       addTearDown(container.dispose);
 
       await expectRebuildsOn(

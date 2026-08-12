@@ -16,14 +16,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
     show authRepositoryProvider;
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
-import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
+import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/profile_switcher_sheet.dart';
@@ -32,7 +31,6 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../../helpers/pump_app.dart';
-import '../../../helpers/test_database.dart';
 
 class _MockStackRouter extends Mock implements StackRouter {}
 
@@ -40,25 +38,23 @@ class _MockAuthRepository extends Mock implements AuthRepository {}
 
 class _MockProfileRepo extends Mock implements ProfileRepository {}
 
-ProfileModel _profile({
-  required int id,
+LearnerProfileEntity _profile({
+  required String id,
   required String name,
   required String mode,
-}) => ProfileModel(
-  id: id,
-  ulid: 'ulid-$id',
-  accountId: 1,
+}) => LearnerProfileEntity(
+  profileId: id,
   displayName: name,
-  mode: mode,
-  avatarIndex: 0,
+  mode: ProfileMode.fromStorageKey(mode),
+  avatar: '',
   createdAt: DateTime(2024),
   updatedAt: DateTime(2024),
 );
 
 Widget _wrap({
   required Widget child,
-  required List<ProfileModel> profiles,
-  int? selectedProfileId,
+  required List<LearnerProfileEntity> profiles,
+  String? selectedProfileId,
   StackRouter? router,
 }) {
   final mockRouter = router ?? _MockStackRouter();
@@ -71,11 +67,11 @@ Widget _wrap({
       authStateProvider.overrideWithValue(
         const AuthState.signedIn(
           user: AuthUser(
-            profileId: 1,
+            uid: 'account-1',
             email: 'test@test.com',
             displayName: 'Test',
           ),
-          tier: Tier.localBorn,
+          tier: Tier.local,
         ),
       ),
     ],
@@ -89,9 +85,9 @@ Widget _wrap({
 
 class _FixedSelectedProfileId extends SelectedProfileId {
   _FixedSelectedProfileId(this._initial);
-  final int? _initial;
+  final String? _initial;
   @override
-  int? build() => _initial;
+  String? build() => _initial;
 }
 
 void main() {
@@ -99,6 +95,9 @@ void main() {
     // mocktail needs a concrete fallback for the PageRouteInfo arg used by
     // StackRouter.push(any()) in the FIX#8 Skip-to-Settings test.
     registerFallbackValue(const SettingsRoute());
+    // mocktail needs a concrete fallback for the ProfileMode arg used by
+    // ProfileRepository.createProfile(mode: any()) in the D4-regression test.
+    registerFallbackValue(ProfileMode.adult);
   });
 
   group('Profile header tap → switcher sheet', () {
@@ -106,8 +105,8 @@ void main() {
       tester,
     ) async {
       final profiles = [
-        _profile(id: 1, name: 'Avi', mode: 'adult'),
-        _profile(id: 2, name: 'Beni', mode: 'child'),
+        _profile(id: 'ulid-1', name: 'Avi', mode: 'adult'),
+        _profile(id: 'ulid-2', name: 'Beni', mode: 'child'),
       ];
       final mockAuth = _MockAuthRepository();
       when(() => mockAuth.currentUser).thenReturn(null);
@@ -119,17 +118,17 @@ void main() {
               (ref) => Stream.value(profiles),
             ),
             selectedProfileIdProvider.overrideWith(
-              () => _FixedSelectedProfileId(1),
+              () => _FixedSelectedProfileId('ulid-1'),
             ),
             authRepositoryProvider.overrideWithValue(mockAuth),
             authStateProvider.overrideWithValue(
               const AuthState.signedIn(
                 user: AuthUser(
-                  profileId: 1,
+                  uid: 'account-1',
                   email: 'avi@test.com',
                   displayName: 'Avi',
                 ),
-                tier: Tier.localBorn,
+                tier: Tier.local,
               ),
             ),
           ],
@@ -168,14 +167,14 @@ void main() {
     testWidgets('lists profiles with child/adult labels, marks active, exposes '
         'add + edit/delete affordances', (tester) async {
       final profiles = [
-        _profile(id: 1, name: 'Avi', mode: 'adult'),
-        _profile(id: 2, name: 'Beni', mode: 'child'),
+        _profile(id: 'ulid-1', name: 'Avi', mode: 'adult'),
+        _profile(id: 'ulid-2', name: 'Beni', mode: 'child'),
       ];
 
       await tester.pumpWidget(
         _wrap(
           profiles: profiles,
-          selectedProfileId: 1,
+          selectedProfileId: 'ulid-1',
           child: const ProfileSwitcherSheet(),
         ),
       );
@@ -205,12 +204,12 @@ void main() {
       final mockRouter = _MockStackRouter();
       when(() => mockRouter.push(any())).thenAnswer((_) async => null);
 
-      final profiles = [_profile(id: 1, name: 'Avi', mode: 'adult')];
+      final profiles = [_profile(id: 'ulid-1', name: 'Avi', mode: 'adult')];
 
       await tester.pumpWidget(
         _wrap(
           profiles: profiles,
-          selectedProfileId: 1,
+          selectedProfileId: 'ulid-1',
           router: mockRouter,
           child: const ProfileSwitcherSheet(),
         ),
@@ -238,8 +237,8 @@ void main() {
         when(() => mockRouter.replaceAll(any())).thenAnswer((_) async {});
 
         final profiles = [
-          _profile(id: 1, name: 'Avi', mode: 'adult'),
-          _profile(id: 2, name: 'Beni', mode: 'child'),
+          _profile(id: 'ulid-1', name: 'Avi', mode: 'adult'),
+          _profile(id: 'ulid-2', name: 'Beni', mode: 'child'),
         ];
 
         late ProviderContainer container;
@@ -250,16 +249,16 @@ void main() {
                 (ref) => Stream.value(profiles),
               ),
               selectedProfileIdProvider.overrideWith(
-                () => _FixedSelectedProfileId(1),
+                () => _FixedSelectedProfileId('ulid-1'),
               ),
               authStateProvider.overrideWithValue(
                 const AuthState.signedIn(
                   user: AuthUser(
-                    profileId: 1,
+                    uid: 'account-1',
                     email: 'test@test.com',
                     displayName: 'Test',
                   ),
-                  tier: Tier.localBorn,
+                  tier: Tier.local,
                 ),
               ),
             ],
@@ -277,13 +276,13 @@ void main() {
         );
         await tester.pump();
 
-        expect(container.read(selectedProfileIdProvider), 1);
+        expect(container.read(selectedProfileIdProvider), 'ulid-1');
 
         // Tap the non-active child profile → enters parent-mode for Beni.
         await tester.tap(find.text('Beni'));
         await tester.pump();
 
-        expect(container.read(selectedProfileIdProvider), 2);
+        expect(container.read(selectedProfileIdProvider), 'ulid-2');
         verify(() => mockRouter.replaceAll(any())).called(1);
       },
     );
@@ -292,31 +291,34 @@ void main() {
   group('Parent-mode banner derivation + exit', () {
     /// Mirrors the AppShell derivation: banner shows only when an adult owns the
     /// account AND the active profile is a child (parent mode for that child).
-    bool adultIsViewingChild(List<ProfileModel> profiles, int activeId) {
-      final active = profiles.where((p) => p.id == activeId).firstOrNull;
-      final hasAdult = profiles.any((p) => p.profileMode == ProfileMode.adult);
-      return active?.profileMode == ProfileMode.child && hasAdult;
+    bool adultIsViewingChild(
+      List<LearnerProfileEntity> profiles,
+      String activeId,
+    ) {
+      final active = profiles.where((p) => p.profileId == activeId).firstOrNull;
+      final hasAdult = profiles.any((p) => p.mode == ProfileMode.adult);
+      return active?.mode == ProfileMode.child && hasAdult;
     }
 
     test('triggers when an adult is active in a child profile', () {
       final profiles = [
-        _profile(id: 1, name: 'Avi', mode: 'adult'),
-        _profile(id: 2, name: 'Beni', mode: 'child'),
+        _profile(id: 'ulid-1', name: 'Avi', mode: 'adult'),
+        _profile(id: 'ulid-2', name: 'Beni', mode: 'child'),
       ];
-      expect(adultIsViewingChild(profiles, 2), isTrue);
+      expect(adultIsViewingChild(profiles, 'ulid-2'), isTrue);
     });
 
     test('does NOT trigger for an adult in their own adult profile', () {
       final profiles = [
-        _profile(id: 1, name: 'Avi', mode: 'adult'),
-        _profile(id: 2, name: 'Beni', mode: 'child'),
+        _profile(id: 'ulid-1', name: 'Avi', mode: 'adult'),
+        _profile(id: 'ulid-2', name: 'Beni', mode: 'child'),
       ];
-      expect(adultIsViewingChild(profiles, 1), isFalse);
+      expect(adultIsViewingChild(profiles, 'ulid-1'), isFalse);
     });
 
     test('does NOT trigger for a standalone child account (no adult)', () {
-      final profiles = [_profile(id: 2, name: 'Beni', mode: 'child')];
-      expect(adultIsViewingChild(profiles, 2), isFalse);
+      final profiles = [_profile(id: 'ulid-2', name: 'Beni', mode: 'child')];
+      expect(adultIsViewingChild(profiles, 'ulid-2'), isFalse);
     });
 
     testWidgets('exit-parent-mode label resolves to "Exit parent mode"', (
@@ -354,42 +356,42 @@ void main() {
     testWidgets('keeps the sheet mounted and actually invokes createProfile', (
       tester,
     ) async {
-      final db = createTestDatabase();
-      await seedProfileWithIds(db, profileId: 1, accountId: 1);
-      addTearDown(() => db.close());
-
       final repo = _MockProfileRepo();
       when(
         () => repo.createProfile(
-          accountId: any(named: 'accountId'),
           displayName: any(named: 'displayName'),
           mode: any(named: 'mode'),
-          avatarIndex: any(named: 'avatarIndex'),
         ),
-      ).thenAnswer((_) async => _profile(id: 9, name: 'Newbie', mode: 'adult'));
+      ).thenAnswer(
+        (_) async => _profile(id: 'ulid-9', name: 'Newbie', mode: 'adult'),
+      );
 
       await tester.pumpWidget(
         pumpApp(
           overrides: [
             profileListStreamProvider.overrideWith(
-              (ref) =>
-                  Stream.value([_profile(id: 1, name: 'Avi', mode: 'adult')]),
+              (ref) => Stream.value([
+                _profile(id: 'ulid-1', name: 'Avi', mode: 'adult'),
+              ]),
             ),
             selectedProfileIdProvider.overrideWith(
-              () => _FixedSelectedProfileId(1),
+              () => _FixedSelectedProfileId('ulid-1'),
             ),
             authStateProvider.overrideWithValue(
               const AuthState.signedIn(
                 user: AuthUser(
-                  profileId: 1,
+                  uid: 'account-1',
                   email: 'avi@test.com',
                   displayName: 'Avi',
                 ),
-                tier: Tier.localBorn,
+                tier: Tier.local,
               ),
             ),
-            userDatabaseProvider.overrideWithValue(db),
-            currentAccountIdProvider.overrideWithValue(1),
+            profileListProvider.overrideWith(
+              (ref) async => [
+                _profile(id: 'ulid-1', name: 'Avi', mode: 'adult'),
+              ],
+            ),
             profileRepositoryProvider.overrideWithValue(repo),
           ],
           child: Builder(
@@ -426,10 +428,8 @@ void main() {
       // The actual regression guard: createProfile WAS invoked (not silent).
       verify(
         () => repo.createProfile(
-          accountId: any(named: 'accountId'),
           displayName: any(named: 'displayName'),
           mode: any(named: 'mode'),
-          avatarIndex: any(named: 'avatarIndex'),
         ),
       ).called(1);
       expect(find.text('An unexpected error occurred.'), findsNothing);

@@ -15,37 +15,32 @@
 /// `Icon(semanticLabel: ...)`, which the framework surfaces as
 /// `Semantics(label: ...)` (AX-3's named mechanism).
 ///
-/// NOTE: each test creates + closes its own in-memory db within the same
-/// `testWidgets` body (rather than a shared `setUp`/`tearDown` pair) to
-/// satisfy `tool/check_inmemory_db_close.dart` (TQ-6, AUD-t-gamification-04)
-/// — see `test/track_setup/clear_overdue_button_test.dart` for the same
-/// established shape.
+/// No Firestore/DB seeding is needed: every provider [RecentActivityScreen]
+/// reads (`dashboardStreakProvider`, `dashboardUserModeProvider`,
+/// `anyActiveTrackHasChazaraProvider`) is directly overridden below with a
+/// fixed value, and the back button's semantics label depends only on
+/// locale, not on any seeded data.
 @Tags(['progress', 'a11y'])
 library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/recent_activity_screen.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
-import '../../../../helpers/drift_memory.dart';
-
-const _profileId = 1;
-const _curriculumId = 'mishnayos';
+const _profileId = 'a11y-progress-02-profile';
 
 /// Test override for [ActiveProfileId] that returns a fixed id.
 class _ProfileIdOverride extends ActiveProfileId {
   _ProfileIdOverride(this._id);
-  final int _id;
+  final String _id;
   @override
-  int build() => _id;
+  String? build() => _id;
 }
 
 class _UseHebrewTermsOverride extends UseHebrewTerms {
@@ -55,31 +50,27 @@ class _UseHebrewTermsOverride extends UseHebrewTerms {
   bool build() => useHebrew;
 }
 
-Widget _buildScreen(UserDatabase db, {Locale locale = const Locale('en')}) =>
-    ProviderScope(
-      overrides: [
-        userDatabaseProvider.overrideWith((ref) => db),
-        activeProfileIdProvider.overrideWith(() => _ProfileIdOverride(1)),
-        useHebrewTermsProvider.overrideWith(
-          () => _UseHebrewTermsOverride(useHebrew: false),
-        ),
-        dashboardUserModeProvider.overrideWith(
-          (ref) => Future.value(ProfileMode.adult),
-        ),
-        dashboardStreakProvider.overrideWith(
-          (ref) => Stream.value((currentStreak: 3, maxStreak: 7)),
-        ),
-        anyActiveTrackHasChazaraProvider.overrideWith(
-          (ref) => Future.value(true),
-        ),
-      ],
-      child: MaterialApp(
-        locale: locale,
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        home: const RecentActivityScreen(),
-      ),
-    );
+Widget _buildScreen({Locale locale = const Locale('en')}) => ProviderScope(
+  overrides: [
+    activeProfileIdProvider.overrideWith(() => _ProfileIdOverride(_profileId)),
+    useHebrewTermsProvider.overrideWith(
+      () => _UseHebrewTermsOverride(useHebrew: false),
+    ),
+    dashboardUserModeProvider.overrideWith(
+      (ref) => Future.value(ProfileMode.adult),
+    ),
+    dashboardStreakProvider.overrideWith(
+      (ref) => Stream.value((currentStreak: 3, maxStreak: 7)),
+    ),
+    anyActiveTrackHasChazaraProvider.overrideWith((ref) => Future.value(true)),
+  ],
+  child: MaterialApp(
+    locale: locale,
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
+    home: const RecentActivityScreen(),
+  ),
+);
 
 Future<void> _tearDownSemantics(
   WidgetTester tester,
@@ -95,14 +86,9 @@ void main() {
     testWidgets('EN: back IconButton exposes a non-empty Semantics label', (
       tester,
     ) async {
-      final db = inMemoryDb();
-      addTearDown(db.close);
-      await seedProfile(db);
-      await seedTrack(db, profileId: _profileId, curriculumId: _curriculumId);
-
       final handle = tester.ensureSemantics();
 
-      await tester.pumpWidget(_buildScreen(db));
+      await tester.pumpWidget(_buildScreen());
       await tester.pump();
 
       final backButton = find.widgetWithIcon(
@@ -131,14 +117,9 @@ void main() {
     testWidgets(
       'HE: back IconButton exposes the Hebrew MaterialLocalizations label',
       (tester) async {
-        final db = inMemoryDb();
-        addTearDown(db.close);
-        await seedProfile(db);
-        await seedTrack(db, profileId: _profileId, curriculumId: _curriculumId);
-
         final handle = tester.ensureSemantics();
 
-        await tester.pumpWidget(_buildScreen(db, locale: const Locale('he')));
+        await tester.pumpWidget(_buildScreen(locale: const Locale('he')));
         await tester.pump();
 
         expect(

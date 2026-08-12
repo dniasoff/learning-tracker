@@ -20,26 +20,45 @@ library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/features/gamification/domain/services/points_service.dart';
 import 'package:learning_tracker/features/gamification/presentation/providers/points_providers.dart';
+import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:mocktail/mocktail.dart';
 
-import '../../../../helpers/drift_memory.dart';
+class _MockCompletionRepository extends Mock implements CompletionRepository {}
+
+class _AlwaysEligible implements CurriculumRewardEligibility {
+  @override
+  Future<bool> isEligible(CurriculumId curriculumId) async => true;
+}
+
+class _ZeroBalance implements PointsBalanceReader {
+  @override
+  Future<int> getBalance() async => 0;
+}
 
 void main() {
   group('curriculumBreakdownProvider — rebuild after completionCommitted '
       '(DG-BRKD-01)', () {
     test('curriculumBreakdownProvider is invalidated (re-evaluated) after '
         'completionCommittedProvider increments', () async {
-      final db = inMemoryDb();
-      addTearDown(db.close);
-      await seedProfile(db);
+      final repository = _MockCompletionRepository();
+      when(
+        () => repository.getCompletionsByCurriculum(any()),
+      ).thenAnswer((_) async => const []);
 
       final container = ProviderContainer(
         overrides: [
-          userDatabaseProvider.overrideWithValue(db),
-          activeProfileIdProvider.overrideWithValue(1),
+          completionRepositoryProvider.overrideWithValue(repository),
+          pointsServiceProvider.overrideWithValue(
+            PointsService(
+              eligibility: _AlwaysEligible(),
+              balanceReader: _ZeroBalance(),
+            ),
+          ),
         ],
       );
       addTearDown(container.dispose);

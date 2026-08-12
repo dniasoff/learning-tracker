@@ -19,28 +19,48 @@
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/features/gamification/domain/services/points_service.dart';
 import 'package:learning_tracker/features/gamification/presentation/providers/points_providers.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
+import 'package:mocktail/mocktail.dart';
 
-import '../../../../helpers/drift_memory.dart';
+class _MockCompletionRepository extends Mock implements CompletionRepository {}
+
+class _AlwaysEligible implements CurriculumRewardEligibility {
+  @override
+  Future<bool> isEligible(CurriculumId curriculumId) async => true;
+}
+
+class _ZeroBalance implements PointsBalanceReader {
+  @override
+  Future<int> getBalance() async => 0;
+}
+
+List<Override> _overrides() {
+  final repository = _MockCompletionRepository();
+  when(
+    () => repository.getCompletionsByCurriculum(any()),
+  ).thenAnswer((_) async => const []);
+  return [
+    completionRepositoryProvider.overrideWithValue(repository),
+    pointsServiceProvider.overrideWithValue(
+      PointsService(
+        eligibility: _AlwaysEligible(),
+        balanceReader: _ZeroBalance(),
+      ),
+    ),
+  ];
+}
 
 void main() {
   group('points_providers — SM-6 autoDispose (AUD-gamification-13)', () {
     test('curriculumPointsProvider disposes its state once the last listener '
         'unsubscribes (must be .autoDispose)', () async {
-      final db = inMemoryDb();
-      addTearDown(db.close);
-      await seedProfile(db);
-
-      final container = ProviderContainer(
-        overrides: [
-          userDatabaseProvider.overrideWithValue(db),
-          activeProfileIdProvider.overrideWithValue(1),
-        ],
-      );
+      final container = ProviderContainer(overrides: _overrides());
       addTearDown(container.dispose);
 
       final provider = curriculumPointsProvider(CurriculumId.mishnayos);
@@ -72,16 +92,7 @@ void main() {
 
     test('pointsHistoryProvider disposes its state once the last listener '
         'unsubscribes (must be .autoDispose)', () async {
-      final db = inMemoryDb();
-      addTearDown(db.close);
-      await seedProfile(db);
-
-      final container = ProviderContainer(
-        overrides: [
-          userDatabaseProvider.overrideWithValue(db),
-          activeProfileIdProvider.overrideWithValue(1),
-        ],
-      );
+      final container = ProviderContainer(overrides: _overrides());
       addTearDown(container.dispose);
 
       final provider = pointsHistoryProvider(CurriculumId.mishnayos);
