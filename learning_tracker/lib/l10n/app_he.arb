@@ -3160,6 +3160,7 @@
   "onboardingParentPinFallbackChildName": "הילד/ה שלך",
   "onboardingPinReenterSubtitle": "הזינו שוב את הקוד לאישור",
   "bulkMarkCannotUnmarkAllError": "עליכם להשאיר לפחות מעט תוכן לא מסומן כדי להמשיך ללמוד.",
+  "bulkMarkExpungeError": "לא ניתן היה להסיר את הסימון. נסו שוב.",
   "bulkMarkSearchHint": "חיפוש תוכן...",
   "bulkMarkCompletionRecordsCount": "{count, plural, one{רשומת השלמה אחת תיווצר} other{{count} רשומות השלמה ייווצרו}}",
   "wizardHowDoesChildReview": "איך {childName} חוזר/ת על החומר?",

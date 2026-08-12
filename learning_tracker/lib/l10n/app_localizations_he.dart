@@ -5474,6 +5474,9 @@ class AppLocalizationsHe extends AppLocalizations {
       'עליכם להשאיר לפחות מעט תוכן לא מסומן כדי להמשיך ללמוד.';
 
   @override
+  String get bulkMarkExpungeError => 'לא ניתן היה להסיר את הסימון. נסו שוב.';
+
+  @override
   String get bulkMarkSearchHint => 'חיפוש תוכן...';
 
   @override

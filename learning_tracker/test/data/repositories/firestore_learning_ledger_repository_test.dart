@@ -209,6 +209,280 @@ void main() {
     );
   });
 
+  group('restoring a tombstoned entry at the same deterministic ulid '
+      '(Fix 2 — closes the re-earn trapdoor)', () {
+    test('clears purged_at, leaves completedAt/completionNumber untouched, '
+        'does not create a second document', () async {
+      final repo = buildRepo();
+      const ulid = 'RESTOREULID0000000000AAA';
+
+      final original = await record(
+        repo,
+        unitIdentifier: 'unit-1',
+        completedAt: DateTime.utc(2026, 1, 1),
+        ulid: ulid,
+      );
+      expect(original.completionNumber, 1);
+      expect(original.purgedAt, isNull);
+
+      await repo.purgeEntry(ulid: ulid, purgedAt: DateTime.utc(2026, 3, 1));
+      // getLedgerForCurriculum excludes tombstoned rows at its
+      // `_decodeAll` choke point — read the raw doc instead to confirm
+      // the tombstone actually landed.
+      final tombstonedData = (await rawDoc(ulid).get()).data()!;
+      expect(tombstonedData['purged_at'], isNotNull);
+
+      // Re-earn: CompletionDetectionService always resolves the SAME
+      // deterministic ulid for a given unit, so this mirrors its call
+      // shape exactly.
+      final restored = await record(
+        repo,
+        unitIdentifier: 'unit-1',
+        completedAt: DateTime.utc(2026, 4, 1),
+        ulid: ulid,
+      );
+
+      expect(restored.purgedAt, isNull, reason: 'restore must clear purged_at');
+      expect(
+        restored.completedAt,
+        DateTime.utc(2026, 1, 1),
+        reason:
+            'completedAt is NOT re-stamped to the new re-earning moment — '
+            'firestore.rules only allows purged_at to change on this '
+            'collection (see recordCompletion\'s doc comment)',
+      );
+      expect(
+        restored.completionNumber,
+        1,
+        reason: 'completionNumber must not be recomputed on restore',
+      );
+
+      final all = await repo.getLedgerForCurriculum(CurriculumId.mishnayos);
+      expect(
+        all,
+        hasLength(1),
+        reason: 'restore must not create a second document',
+      );
+      expect(all.single.purgedAt, isNull);
+    });
+
+    test('restoring one entry does not corrupt completionNumber for a sibling '
+        'entry of the same unit', () async {
+      final repo = buildRepo();
+      const ulidA = 'RESTOREULIDAAAAAAAAAAA01';
+
+      final a = await record(
+        repo,
+        unitIdentifier: 'unit-1',
+        completedAt: DateTime.utc(2026, 1, 1),
+        ulid: ulidA,
+      );
+      expect(a.completionNumber, 1);
+
+      await repo.purgeEntry(ulid: ulidA, purgedAt: DateTime.utc(2026, 2, 1));
+
+      // A second, genuinely different completion of the SAME unit while
+      // `a` is tombstoned — `_nextCompletionNumber` counts the tombstoned
+      // doc too, so this is 2, not 1.
+      final b = await record(
+        repo,
+        unitIdentifier: 'unit-1',
+        completedAt: DateTime.utc(2026, 3, 1),
+      );
+      expect(b.completionNumber, 2);
+
+      // Restore `a`.
+      final restoredA = await record(
+        repo,
+        unitIdentifier: 'unit-1',
+        completedAt: DateTime.utc(2026, 4, 1),
+        ulid: ulidA,
+      );
+      expect(
+        restoredA.completionNumber,
+        1,
+        reason: 'restoring a must not change its own original number',
+      );
+
+      final all = await repo.getLedgerForCurriculum(CurriculumId.mishnayos);
+      final bReloaded = all.firstWhere((e) => e.ulid == b.ulid);
+      expect(
+        bReloaded.completionNumber,
+        2,
+        reason: 'restoring a sibling entry must not renumber b',
+      );
+    });
+  });
+
+  group('getLedgerForCurriculumIncludingTombstoned — D-M epoch-rule seam', () {
+    // `BulkPriorCompletionService.expungePriorCompletions`'s "epoch rule"
+    // (retract at most one ledger entry per unit per genuine coverage-loss
+    // event, never cascade down to older historical entries) depends on
+    // this method actually returning tombstoned entries. A prior round of
+    // this feature had the algorithm right but read from the
+    // tombstone-FILTERING `getLedgerForCurriculum` instead — the safety
+    // check it needed could never fire, and the service-level test suite
+    // didn't catch it because a hand-written fake diverged from production.
+    // These tests pin the PRODUCTION repository/adapter layer directly, so
+    // a regression here (e.g. `_decodeAll`'s `includeTombstoned` flag or the
+    // `includeTombstoned: true` argument being dropped) fails on its own,
+    // without depending on any other test's fake staying in sync.
+    test('returns tombstoned AND non-tombstoned entries, including the '
+        'true-highest-completionNumber entry when it is the tombstoned one — '
+        'while every ordinary reader still hides it', () async {
+      final repo = buildRepo();
+      const ulidLow = 'EPOCHULIDLOW00000000001';
+      const ulidHigh = 'EPOCHULIDHIGH0000000001';
+      const ulidOther = 'EPOCHULIDOTHER000000001';
+
+      final low = await record(
+        repo,
+        unitIdentifier: 'berachos',
+        completedAt: DateTime.utc(2026, 1, 1),
+        ulid: ulidLow,
+      );
+      final high = await record(
+        repo,
+        unitIdentifier: 'berachos',
+        completedAt: DateTime.utc(2026, 2, 1),
+        ulid: ulidHigh,
+      );
+      final other = await record(
+        repo,
+        unitIdentifier: 'shabbos',
+        completedAt: DateTime.utc(2026, 1, 1),
+        ulid: ulidOther,
+      );
+      expect(low.completionNumber, 1);
+      expect(high.completionNumber, 2);
+      expect(other.completionNumber, 1);
+
+      await repo.purgeEntry(ulid: ulidHigh, purgedAt: DateTime.utc(2026, 3, 1));
+
+      final includingTombstoned = await repo
+          .getLedgerForCurriculumIncludingTombstoned(CurriculumId.mishnayos);
+      expect(
+        includingTombstoned.map((e) => e.ulid).toSet(),
+        {ulidLow, ulidHigh, ulidOther},
+        reason: 'must include the tombstoned entry, not silently drop it',
+      );
+      final highReloaded = includingTombstoned.firstWhere(
+        (e) => e.ulid == ulidHigh,
+      );
+      expect(highReloaded.purgedAt, isNotNull);
+      final berachosEntries =
+          includingTombstoned
+              .where((e) => e.unitIdentifier == 'berachos')
+              .toList()
+            ..sort((a, b) => b.completionNumber.compareTo(a.completionNumber));
+      expect(
+        berachosEntries.first.ulid,
+        ulidHigh,
+        reason:
+            'the true-highest-completionNumber entry for the unit is the '
+            'tombstoned one — this is exactly what the epoch rule needs '
+            'to see to correctly stop retracting further',
+      );
+
+      // Every ORDINARY reader must still hide the tombstoned entry — the
+      // D-M "invisible to every reader" invariant is unaffected by adding
+      // this one narrow exception.
+      final plain = await repo.getLedgerForCurriculum(CurriculumId.mishnayos);
+      expect(plain.map((e) => e.ulid).toSet(), {ulidLow, ulidOther});
+
+      final lifetime = await repo.getLifetimeLedger();
+      expect(lifetime.map((e) => e.ulid).toSet(), {ulidLow, ulidOther});
+
+      final stats = await repo.getCompletionStats(CurriculumId.mishnayos);
+      expect(
+        stats['total'],
+        2,
+        reason:
+            'getCompletionStats delegates to getLedgerForCurriculum, '
+            'which excludes the tombstoned entry',
+      );
+    });
+
+    test('returns the identical doc set as getLedgerForCurriculum when nothing '
+        'is tombstoned (query-shape parity — both build the same underlying '
+        'query, only the decode step differs)', () async {
+      final repo = buildRepo();
+      final ids = List.generate(5, (_) => newUlid());
+      for (final id in ids) {
+        await record(repo, unitIdentifier: id, ulid: id);
+      }
+      // A different curriculum's entry must never leak into either read.
+      await record(
+        repo,
+        curriculumId: CurriculumId.bavli,
+        unitIdentifier: 'other-curriculum',
+      );
+
+      final plain = await repo.getLedgerForCurriculum(CurriculumId.mishnayos);
+      final includingTombstoned = await repo
+          .getLedgerForCurriculumIncludingTombstoned(CurriculumId.mishnayos);
+
+      expect(plain.map((e) => e.ulid).toSet(), ids.toSet());
+      expect(includingTombstoned.map((e) => e.ulid).toSet(), ids.toSet());
+    });
+
+    test(
+      'paginates past the 500-item page size identically to '
+      'getLedgerForCurriculum — including tombstoned rows in the count',
+      () async {
+        final repo = buildRepo();
+        final ids = List.generate(501, (_) => newUlid());
+
+        final batch1 = firestore.batch();
+        for (final id in ids.take(500)) {
+          batch1.set(
+            rawDoc(id),
+            rawLedgerData(
+              ulid: id,
+              curriculumId: CurriculumId.mishnayos,
+              unitIdentifier: id,
+            ),
+          );
+        }
+        await batch1.commit();
+        final batch2 = firestore.batch();
+        batch2.set(
+          rawDoc(ids.last),
+          rawLedgerData(
+            ulid: ids.last,
+            curriculumId: CurriculumId.mishnayos,
+            unitIdentifier: ids.last,
+          ),
+        );
+        await batch2.commit();
+
+        // Tombstone exactly half of the 501 documents directly (bypassing
+        // repo.purgeEntry, which would be 251 round trips) — a raw write is
+        // fine here since this test only cares about the READ side.
+        final tombstoneBatch = firestore.batch();
+        for (final id in ids.take(250)) {
+          tombstoneBatch.update(rawDoc(id), {
+            'purged_at': DateTime.utc(2026, 5, 1),
+          });
+        }
+        await tombstoneBatch.commit();
+
+        final includingTombstoned = await repo
+            .getLedgerForCurriculumIncludingTombstoned(CurriculumId.mishnayos);
+        final plain = await repo.getLedgerForCurriculum(CurriculumId.mishnayos);
+
+        expect(
+          includingTombstoned,
+          hasLength(501),
+          reason:
+              'the including-tombstoned read must reassemble all 501 '
+              'documents across pages, tombstoned or not',
+        );
+        expect(plain, hasLength(251), reason: '501 total minus 250 tombstoned');
+      },
+    );
+  });
+
   group('completionNumber auto-increment', () {
     test(
       'increments per (curriculumId, unitIdentifier), independent of other units',
@@ -316,7 +590,7 @@ void main() {
     });
   });
 
-  group('source — provenance for the bulk-mark-deletion Cloud Function', () {
+  group('source — write-time provenance (not a retraction key)', () {
     test('recordCompletion defaults to CompletionSource.live', () async {
       final repo = buildRepo();
       final entry = await repo.recordCompletion(
@@ -368,8 +642,9 @@ void main() {
           data['source'],
           'bulkInTrack',
           reason:
-              'written via CompletionSource.name — the exact string the '
-              'bulk-mark-deletion Cloud Function filters on',
+              'written via CompletionSource.name — the exact enum '
+              'member-name string, for write-time policy and display, not '
+              'for keying retraction',
         );
       },
     );

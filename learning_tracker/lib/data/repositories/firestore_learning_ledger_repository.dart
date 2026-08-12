@@ -235,24 +235,30 @@ class FirestoreLearningLedgerRepository {
   /// Decodes every document in [docs], skipping (and logging) any single
   /// document whose decode fails rather than letting one malformed row
   /// fail the whole read (see the class doc comment).
+  ///
+  /// [includeTombstoned] defaults to `false` — D-M: a retracted siyum is
+  /// invisible to every ordinary reader. This is the single choke point —
+  /// `getLifetimeLedger`, `getLedgerForCurriculum` and `getCompletionStats`
+  /// all funnel through here with the default. The ONE narrow, deliberate
+  /// exception is [getLedgerForCurriculumIncludingTombstoned], which passes
+  /// `true` — see that method's doc comment for why it needs to.
+  ///
+  /// NOTE the deliberate asymmetry with `_countAll` / `_nextCompletionNumber`:
+  /// those never filter tombstones regardless of this parameter, because
+  /// `completionNumber` must stay monotonic — a retracted entry still
+  /// consumes its number and no later entry ever reuses one. Do not "fix"
+  /// that to match this filter.
   List<LearningLedgerEntry> _decodeAll(
-    Iterable<QueryDocumentSnapshot<Map<String, dynamic>>> docs,
-  ) {
+    Iterable<QueryDocumentSnapshot<Map<String, dynamic>>> docs, {
+    bool includeTombstoned = false,
+  }) {
     final results = <LearningLedgerEntry>[];
     for (final doc in docs) {
       try {
         final entry = learningLedgerEntryFromFirestore(
           _normalizeForDecode(doc.data()),
         );
-        // D-M: a retracted siyum is invisible to every reader. This is the
-        // single choke point — `getLifetimeLedger`, `getLedgerForCurriculum`
-        // and `getCompletionStats` all funnel through here.
-        //
-        // NOTE the deliberate asymmetry: `_countAll` / `_nextCompletionNumber`
-        // do NOT filter tombstones. `completionNumber` must stay monotonic, so
-        // a retracted entry still consumes its number and no later entry ever
-        // reuses one. Do not "fix" that to match this filter.
-        if (entry.purgedAt != null) continue;
+        if (!includeTombstoned && entry.purgedAt != null) continue;
         results.add(entry);
       } catch (error, stackTrace) {
         _logger.warning(
@@ -361,6 +367,52 @@ class FirestoreLearningLedgerRepository {
   /// idempotently instead of a wrongly-recomputed `completionNumber` — see
   /// the class doc comment's "Retry-safe `completionNumber`" section. Omit
   /// [ulid] to have a fresh one minted.
+  ///
+  /// ### Restoring a tombstoned entry at the same deterministic ulid
+  ///
+  /// [CompletionDetectionService] (the auto-siyum-detection caller) always
+  /// passes the SAME deterministic ulid for a given `(curriculumId,
+  /// entryScope, unitIdentifier)` triple (`_siyumDocId`), so that a learner
+  /// who un-ticks a unit (retracting its siyum via
+  /// `BulkPriorCompletionService.expungePriorCompletions` → [purgeEntry])
+  /// and then re-ticks it back to full coverage resolves to the SAME
+  /// existing-but-tombstoned document here, not a fresh one.
+  ///
+  /// Before this method restored anything, that branch returned the
+  /// tombstoned document exactly as found — `purged_at` stayed set, so the
+  /// siyum stayed permanently invisible after one retract-then-re-earn
+  /// cycle. This now RESTORES it instead: when the existing document has
+  /// `purged_at != null`, this clears exactly that one field and returns
+  /// the entry with `purgedAt: null`.
+  ///
+  /// **`completedAt` and `completionNumber` are deliberately NOT re-stamped
+  /// to the new re-earning moment — three independent reasons, not one:**
+  /// 1. `firestore.rules`' `learning_ledger` update rule is
+  ///    `affectedKeys().hasOnly(['purged_at'])` — `completed_at` is not in
+  ///    the mutable allowlist at all (unlike `completions`, whose allowlist
+  ///    is `['purged_at', 'source', 'completed_at']`); attempting to change
+  ///    it here would be a rules-level permission-denied, not merely a
+  ///    stylistic choice.
+  /// 2. Philosophically, this ledger is append-only (see the class doc
+  ///    comment): an entry records WHEN a unit was first covered. Restoring
+  ///    it un-hides that historical record; it does not rewrite history to
+  ///    look like the coverage happened again just now. `purged_at` is
+  ///    visibility metadata, not part of the record itself.
+  /// 3. Recomputing `completionNumber` via [_nextCompletionNumber] would be
+  ///    actively wrong here, not just unnecessary: that helper counts EVERY
+  ///    doc matching `(curriculumId, unitIdentifier)` including the
+  ///    tombstoned one being restored (it has no `purged_at` filter), so
+  ///    the count already includes this entry once — recomputing would
+  ///    double-count it and hand back a number one too high, corrupting
+  ///    ordering for every other entry of the same unit.
+  ///
+  /// This intentionally diverges from
+  /// `FirestoreCompletionRepository.restoreCompletion`'s design (which DOES
+  /// re-stamp `completed_at`) — the two collections share the tombstone
+  /// concept but not the mutable-field allowlist, and "restore = clear
+  /// exactly the fields the rules allow, nothing invented" is the
+  /// consistent thread between them, not "restore = identical fields
+  /// changed on both".
   Future<LearningLedgerEntry> recordCompletion({
     required CurriculumId curriculumId,
     required String entryScope,
@@ -380,8 +432,29 @@ class FirestoreLearningLedgerRepository {
     final existingSnapshot = await ref.get();
     final existingData = existingSnapshot.data();
     if (existingData != null) {
-      return learningLedgerEntryFromFirestore(
+      final existing = learningLedgerEntryFromFirestore(
         _normalizeForDecode(existingData),
+      );
+      if (existing.purgedAt == null) {
+        return existing;
+      }
+      // Restore path — see this method's doc comment for why only
+      // `purged_at` changes here.
+      await ref.update({'purged_at': null}).orQueuedOffline;
+      return LearningLedgerEntry(
+        ulid: existing.ulid,
+        curriculumId: existing.curriculumId,
+        entryScope: existing.entryScope,
+        unitIdentifier: existing.unitIdentifier,
+        unitDisplayNameHe: existing.unitDisplayNameHe,
+        unitDisplayNameEn: existing.unitDisplayNameEn,
+        trackType: existing.trackType,
+        completedAt: existing.completedAt,
+        completionNumber: existing.completionNumber,
+        markedBy: existing.markedBy,
+        isManual: existing.isManual,
+        source: existing.source,
+        purgedAt: null,
       );
     }
 
@@ -526,6 +599,22 @@ class FirestoreLearningLedgerRepository {
       _ledger.where('curriculum_id', isEqualTo: curriculumId.storageKey),
     );
     return _decodeAll(docs);
+  }
+
+  /// Same query as [getLedgerForCurriculum], but INCLUDES tombstoned
+  /// entries. FOR RETRACTION BOOKKEEPING ONLY — see
+  /// [LearningLedgerRepository.getLedgerByCurriculumIncludingTombstoned]'s
+  /// doc comment for why this narrow exception exists. Deliberately the
+  /// exact same underlying query as [getLedgerForCurriculum] (no new
+  /// Firestore query shape, no new composite index) — only the decode step
+  /// differs.
+  Future<List<LearningLedgerEntry>> getLedgerForCurriculumIncludingTombstoned(
+    CurriculumId curriculumId,
+  ) async {
+    final docs = await _fetchAllPages(
+      _ledger.where('curriculum_id', isEqualTo: curriculumId.storageKey),
+    );
+    return _decodeAll(docs, includeTombstoned: true);
   }
 
   /// Completion stats for [curriculumId] — mirrors the Drift-era

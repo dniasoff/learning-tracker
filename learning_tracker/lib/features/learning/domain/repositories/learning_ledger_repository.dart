@@ -87,7 +87,31 @@ abstract class LearningLedgerRepository {
   Future<List<LearningLedgerEntry>> getLifetimeLedger();
 
   /// The lifetime ledger for the active profile, filtered to one curriculum.
+  ///
+  /// Tombstoned (purged) entries are never included — see the class doc
+  /// comment's "tombstoned entries are invisible to every read declared
+  /// below" invariant. If you need to see tombstoned entries too, that is
+  /// almost certainly wrong; the one narrow, deliberate exception is
+  /// [getLedgerByCurriculumIncludingTombstoned].
   Future<List<LearningLedgerEntry>> getLedgerByCurriculum(
+    CurriculumId curriculumId,
+  );
+
+  /// **FOR RETRACTION BOOKKEEPING ONLY (D-M epoch rule) — do not use this for
+  /// a general read.** Every other caller must use [getLedgerByCurriculum],
+  /// which correctly hides tombstoned entries.
+  ///
+  /// [BulkPriorCompletionService.expungePriorCompletions] needs to tell
+  /// apart "the true highest-completionNumber entry for a unit has already
+  /// been retracted" (stop — an earlier call already handled this
+  /// coverage-loss epoch) from "it has not" (retract it) — a distinction
+  /// that is impossible to make from [getLedgerByCurriculum] alone, since
+  /// that method's whole job is to make tombstoned entries disappear. Without
+  /// this method, repeated calls while a unit stays uncovered would walk
+  /// down the completionNumber stack and destroy older, separate legitimate
+  /// completion cycles (see the epoch-rule doc comment on
+  /// `expungePriorCompletions` for the full story).
+  Future<List<LearningLedgerEntry>> getLedgerByCurriculumIncludingTombstoned(
     CurriculumId curriculumId,
   );
 
@@ -102,10 +126,7 @@ abstract class LearningLedgerRepository {
   /// `purged_at` on the entry keyed by [ulid]. Throws [StateError] when the
   /// entry is absent — a retraction that cannot find its target fails loudly,
   /// never a silent no-op (owner ruling D-E).
-  Future<void> purgeEntry({
-    required String ulid,
-    required DateTime purgedAt,
-  });
+  Future<void> purgeEntry({required String ulid, required DateTime purgedAt});
 }
 
 /// Thrown when a child profile attempts to self-mark a manual completion.

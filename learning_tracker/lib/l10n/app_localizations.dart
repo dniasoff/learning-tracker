@@ -9236,6 +9236,12 @@ abstract class AppLocalizations {
   /// **'You must leave at least some content unmarked to continue learning.'**
   String get bulkMarkCannotUnmarkAllError;
 
+  /// Friendly fallback shown instead of a raw exception when un-ticking a previously bulk-marked item fails to remove its completion record(s) (Fix 3b).
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t remove that mark. Please try again.'**
+  String get bulkMarkExpungeError;
+
   /// No description provided for @bulkMarkSearchHint.
   ///
   /// In en, this message translates to:

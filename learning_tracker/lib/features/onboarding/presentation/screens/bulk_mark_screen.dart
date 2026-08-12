@@ -307,34 +307,63 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
   Future<void> _expungeRefs(List<String> refs) async {
     final service = ref.read(bulkPriorCompletionServiceProvider);
 
-    // AUD-onboarding-07: await every expunge write (each ref individually —
-    // service API is per-ref) BEFORE signalling the dependent providers
-    // below. completionCommittedProvider watchers are reactively derived,
-    // not directly written here, so signalling first let a listener refetch
-    // before the write landed, showing a stale (pre-expunge) value with
-    // nothing to correct it once the write actually completed. A failed ref
-    // is logged and does not block the others.
-    await Future.wait(
-      refs.map((ref_) async {
-        try {
-          await service.expungePriorCompletions(
-            sefariaRef: ref_,
-            curriculumId: widget.curriculumId,
-          );
-        } catch (e, st) {
-          AppLogger.instance.error(
-            event: 'expunge failed',
-            exception: e,
-            stackTrace: st,
-          );
-        }
-      }),
-    );
+    // Fix 4: ONE batched call covering every un-ticked ref from this user
+    // action, not one `expungePriorCompletions` call per ref. The service
+    // itself tombstones every matched completion across all the given refs
+    // first, then runs exactly one coverage-check-and-retract pass per
+    // DISTINCT affected unit (see that method's doc comment) — un-ticking an
+    // entire masechta no longer fans out into N concurrent full-curriculum
+    // reads, and there is no concurrent race left on a shared unit's
+    // coverage check for a screen-level fix to worry about.
+    //
+    // AUD-onboarding-07: still await the write BEFORE signalling the
+    // dependent providers below — completionCommittedProvider watchers are
+    // reactively derived, not directly written here, so signalling first
+    // let a listener refetch before the write landed, showing a stale
+    // (pre-expunge) value with nothing to correct it once the write later
+    // completed.
+    var failed = false;
+    try {
+      await service.expungePriorCompletions(
+        sefariaRefs: refs,
+        curriculumId: widget.curriculumId,
+      );
+    } catch (e, st) {
+      failed = true;
+      AppLogger.instance.error(
+        event: 'expunge failed',
+        exception: e,
+        stackTrace: st,
+      );
+    }
 
-    // AUD-onboarding-01 (SM-4): the awaits above may outlive this screen
-    // (backgrounding, popping mid-expunge) — touching ref below unconditionally
-    // after them throws once this State is disposed.
+    // AUD-onboarding-01 (SM-4): the await above may outlive this screen
+    // (backgrounding, popping mid-expunge) — touching ref/context below
+    // unconditionally after it throws once this State is disposed.
     if (!mounted) return;
+
+    if (failed) {
+      // Fix 3b: expungePriorCompletions's D-E throws (missing collaborators,
+      // content item not found, indeterminate coverage) used to be caught
+      // here, logged, and otherwise swallowed — the UI reported success on
+      // every failure. Surface it instead, matching this app's established
+      // save/load-failure pattern (lifetime_marking_screen.dart's
+      // `l10n.lifetimeMarkSaveError` SnackBar): a friendly, localized
+      // message, never the raw exception. expungePriorCompletions is
+      // retry-safe (Fix 3a: an empty match no longer short-circuits the
+      // coverage-check-and-retract step), so no bespoke retry UI is needed
+      // here — un-ticking again converges correctly.
+      // Untested: this screen's own test files (bulk_mark_screen_expunge_
+      // ordering_test.dart, onboarding_bulk_l1_test.dart) cannot currently
+      // even LOAD (pre-existing, unrelated compile break from the
+      // mid-migration Drift/tutoring cluster elsewhere in the repo), so
+      // there is no way to write a runnable test for this SnackBar right
+      // now — tracked separately, pending that suite's rewrite.
+      final l10n = AppLocalizations.of(context)!;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.bulkMarkExpungeError)));
+    }
 
     // Signal completion-aware providers to rebuild — mirrors the live mark
     // path (text_display_screen.dart, Story 26.13/DNI-356) instead of
@@ -345,7 +374,11 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
     // (lifetimeTotalsAcrossAllCurriculaProvider, trackDualProgressMetricsProvider,
     // journeyViewModelProvider) kept showing stale numbers after an
     // un-mark — those tiles all watch completionCommittedProvider, and
-    // nothing else was refreshing them once mounted.
+    // nothing else was refreshing them once mounted. Signalled even on
+    // failure: step 1/2 (tombstoning) runs before the step that can throw,
+    // so a mid-batch failure can still have left real tombstones behind —
+    // leaving the UI stale on failure is the exact bug class
+    // AUD-onboarding-07 already fixed for the success path.
     ref.read(completionCommittedProvider.notifier).increment();
   }
 

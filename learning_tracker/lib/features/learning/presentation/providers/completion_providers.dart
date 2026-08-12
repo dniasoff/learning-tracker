@@ -85,6 +85,26 @@ CompletionStreakPort completionStreakPort(Ref ref) {
   return FirestoreCompletionStreakRecorder(ref: ref);
 }
 
+/// Provides the [CompletionDetectionService] — the single "is this unit
+/// covered" + siyum-crediting service, shared (Riverpod-cached) between
+/// [completionOrchestratorProvider] and (via `onboarding_providers.dart`)
+/// `BulkPriorCompletionService`'s D-M retraction path, rather than each
+/// constructing its own instance.
+@riverpod
+CompletionDetectionService completionDetectionService(Ref ref) {
+  final contentRepository = ref.watch(contentRepositoryProvider);
+  final stageRepository = ref.watch(globalStageRepositoryProvider);
+  final ledgerRepository = ref.watch(learningLedgerRepositoryProvider);
+  final completionRepository = ref.watch(completionRepositoryProvider);
+
+  return CompletionDetectionService(
+    completionRepository: completionRepository,
+    contentRepository: contentRepository,
+    ledgerRepository: ledgerRepository,
+    stageRepository: stageRepository,
+  );
+}
+
 /// Provides the [CompletionOrchestrator] — the single place the five
 /// completion side effects live (`docs/firestore-rewrite-map.md`, owner
 /// decision 1). [MarkCompletionUseCase], [BulkMarkCompletionUseCase], and
@@ -94,19 +114,9 @@ CompletionStreakPort completionStreakPort(Ref ref) {
 CompletionOrchestrator completionOrchestrator(Ref ref) {
   final contentRepository = ref.watch(contentRepositoryProvider);
   final profileId = ref.watch(activeProfileIdProvider);
-  final stageRepository = ref.watch(globalStageRepositoryProvider);
-  final ledgerRepository = ref.watch(learningLedgerRepositoryProvider);
-
   final bookmarkRepository = ref.watch(bookmarkRepositoryProvider);
-
   final completionRepository = ref.watch(completionRepositoryProvider);
-
-  final detectionService = CompletionDetectionService(
-    completionRepository: completionRepository,
-    contentRepository: contentRepository,
-    ledgerRepository: ledgerRepository,
-    stageRepository: stageRepository,
-  );
+  final detectionService = ref.watch(completionDetectionServiceProvider);
 
   return CompletionOrchestrator(
     repository: completionRepository,

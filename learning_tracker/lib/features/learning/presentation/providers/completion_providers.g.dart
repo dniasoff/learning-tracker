@@ -200,6 +200,72 @@ final class CompletionStreakPortProvider
 String _$completionStreakPortHash() =>
     r'12e5cdb6ffc62d66c38c1e50146daeeb46be6ad3';
 
+/// Provides the [CompletionDetectionService] — the single "is this unit
+/// covered" + siyum-crediting service, shared (Riverpod-cached) between
+/// [completionOrchestratorProvider] and (via `onboarding_providers.dart`)
+/// `BulkPriorCompletionService`'s D-M retraction path, rather than each
+/// constructing its own instance.
+
+@ProviderFor(completionDetectionService)
+final completionDetectionServiceProvider =
+    CompletionDetectionServiceProvider._();
+
+/// Provides the [CompletionDetectionService] — the single "is this unit
+/// covered" + siyum-crediting service, shared (Riverpod-cached) between
+/// [completionOrchestratorProvider] and (via `onboarding_providers.dart`)
+/// `BulkPriorCompletionService`'s D-M retraction path, rather than each
+/// constructing its own instance.
+
+final class CompletionDetectionServiceProvider
+    extends
+        $FunctionalProvider<
+          CompletionDetectionService,
+          CompletionDetectionService,
+          CompletionDetectionService
+        >
+    with $Provider<CompletionDetectionService> {
+  /// Provides the [CompletionDetectionService] — the single "is this unit
+  /// covered" + siyum-crediting service, shared (Riverpod-cached) between
+  /// [completionOrchestratorProvider] and (via `onboarding_providers.dart`)
+  /// `BulkPriorCompletionService`'s D-M retraction path, rather than each
+  /// constructing its own instance.
+  CompletionDetectionServiceProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'completionDetectionServiceProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$completionDetectionServiceHash();
+
+  @$internal
+  @override
+  $ProviderElement<CompletionDetectionService> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  CompletionDetectionService create(Ref ref) {
+    return completionDetectionService(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(CompletionDetectionService value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<CompletionDetectionService>(value),
+    );
+  }
+}
+
+String _$completionDetectionServiceHash() =>
+    r'53888901b8dcd407eb4cc94299e93d384b84cd53';
+
 /// Provides the [CompletionOrchestrator] — the single place the five
 /// completion side effects live (`docs/firestore-rewrite-map.md`, owner
 /// decision 1). [MarkCompletionUseCase], [BulkMarkCompletionUseCase], and
@@ -263,7 +329,7 @@ final class CompletionOrchestratorProvider
 }
 
 String _$completionOrchestratorHash() =>
-    r'9ee0aa332ed3396c4035b40e072d966bdc855e8e';
+    r'18264e41bff30bb185012ad0ec1155f22569d330';
 
 /// Provides the mark completion use case.
 

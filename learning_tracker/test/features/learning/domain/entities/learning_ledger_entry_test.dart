@@ -126,6 +126,7 @@ void main() {
         'marked_by',
         'is_manual',
         'source',
+        'purged_at',
       });
     });
 
@@ -270,16 +271,14 @@ void main() {
       expect(decoded.completedAt, DateTime.utc(2026, 3, 1));
     });
 
-    test(
-      'source defaults to CompletionSource.live when missing — the fail-SAFE '
-      'default (never bulkInTrack, so an unknown-provenance entry can never '
-      'be mistaken for one the bulk-mark-deletion Cloud Function may sweep)',
-      () {
-        final data = validMap()..remove('source');
-        final decoded = learningLedgerEntryFromFirestore(data);
-        expect(decoded.source, CompletionSource.live);
-      },
-    );
+    test('source defaults to CompletionSource.live when missing — an honest '
+        'default for an unmarked-provenance legacy document, not a retraction '
+        'fail-safe (retraction keys on coverage, not source — see '
+        'LearningLedgerEntry\'s class doc comment)', () {
+      final data = validMap()..remove('source');
+      final decoded = learningLedgerEntryFromFirestore(data);
+      expect(decoded.source, CompletionSource.live);
+    });
 
     test('an unrecognised source value decodes as CompletionSource.live rather '
         'than throwing', () {

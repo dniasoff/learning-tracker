@@ -1223,8 +1223,7 @@ void main() {
 
       when(
         () => service.expungePriorCompletions(
-          profileId: any(named: 'profileId'),
-          sefariaRef: any(named: 'sefariaRef'),
+          sefariaRefs: any(named: 'sefariaRefs'),
           curriculumId: any(named: 'curriculumId'),
         ),
       ).thenAnswer((_) async {});
@@ -1256,14 +1255,14 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));
 
-      // expungePriorCompletions must have been called
+      // expungePriorCompletions must have been called — once, batched, with
+      // every un-ticked pre-ticked ref (Fix 4), not once per ref.
       verify(
         () => service.expungePriorCompletions(
-          profileId: any(named: 'profileId'),
-          sefariaRef: any(named: 'sefariaRef'),
+          sefariaRefs: any(named: 'sefariaRefs'),
           curriculumId: any(named: 'curriculumId'),
         ),
-      ).called(greaterThanOrEqualTo(1));
+      ).called(1);
 
       await _tearDown(tester);
     });

@@ -3,6 +3,7 @@ import 'package:learning_tracker/core/analytics/analytics_provider.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/bookmark_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/learning_ledger_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/bulk_prior_completion_service.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/curriculum_import_service.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
@@ -29,31 +30,39 @@ final goalRepositoryProvider = Provider<GoalRepository>((ref) {
 });
 
 /// Provider for BulkPriorCompletionService used during onboarding.
-final bulkPriorCompletionServiceProvider = Provider<BulkPriorCompletionService>(
-  (ref) {
-    final contentRepo = ref.watch(contentRepositoryProvider);
-    final completionRepo = ref.watch(completionRepositoryProvider);
-    final bookmarkRepo = ref.watch(bookmarkRepositoryProvider);
-    final analytics = ref.watch(analyticsServiceProvider);
-    // B6: inject StageDefinitionRepository so execute() can enumerate all
-    // configured stages and write completion records for learn + every chazara.
-    final stageRepo = FirestoreStageDefinitionRepositoryAdapter(ref: ref);
-    // Post completion-orchestrator lift (`docs/firestore-rewrite-map.md`,
-    // owner decision 1): route the bulk-mark write through
-    // CompletionOrchestrator so achievement (siyum) detection still fires —
-    // CompletionRepositoryImpl no longer does that itself. See
-    // BulkPriorCompletionService's `_orchestrator` field doc comment.
-    final orchestrator = ref.watch(completionOrchestratorProvider);
-    return BulkPriorCompletionService(
-      contentRepository: contentRepo,
-      completionRepository: completionRepo,
-      bookmarkRepository: bookmarkRepo,
-      analytics: analytics,
-      stageRepository: stageRepo,
-      orchestrator: orchestrator,
-    );
-  },
-);
+final bulkPriorCompletionServiceProvider = Provider<BulkPriorCompletionService>((
+  ref,
+) {
+  final contentRepo = ref.watch(contentRepositoryProvider);
+  final completionRepo = ref.watch(completionRepositoryProvider);
+  final bookmarkRepo = ref.watch(bookmarkRepositoryProvider);
+  final analytics = ref.watch(analyticsServiceProvider);
+  // B6: inject StageDefinitionRepository so execute() can enumerate all
+  // configured stages and write completion records for learn + every chazara.
+  final stageRepo = FirestoreStageDefinitionRepositoryAdapter(ref: ref);
+  // Post completion-orchestrator lift (`docs/firestore-rewrite-map.md`,
+  // owner decision 1): route the bulk-mark write through
+  // CompletionOrchestrator so achievement (siyum) detection still fires —
+  // CompletionRepositoryImpl no longer does that itself. See
+  // BulkPriorCompletionService's `_orchestrator` field doc comment.
+  final orchestrator = ref.watch(completionOrchestratorProvider);
+  // D-M: siyum retraction collaborators for expungePriorCompletions.
+  // Shares the same CompletionDetectionService instance completionOrchestrator
+  // uses (completionDetectionServiceProvider), rather than constructing a
+  // second one.
+  final detectionService = ref.watch(completionDetectionServiceProvider);
+  final ledgerRepo = ref.watch(learningLedgerRepositoryProvider);
+  return BulkPriorCompletionService(
+    contentRepository: contentRepo,
+    completionRepository: completionRepo,
+    bookmarkRepository: bookmarkRepo,
+    analytics: analytics,
+    stageRepository: stageRepo,
+    orchestrator: orchestrator,
+    completionDetectionService: detectionService,
+    ledgerRepository: ledgerRepo,
+  );
+});
 
 /// Provider for LearningProcessWizardService used during onboarding.
 final learningProcessWizardServiceProvider =
@@ -61,6 +70,8 @@ final learningProcessWizardServiceProvider =
       return LearningProcessWizardService(
         stageRepository: FirestoreStageDefinitionRepositoryAdapter(ref: ref),
         learningProgramRepo: ref.read(learningProgramRepositoryProvider),
-        profileProgramRepository: FirestoreProfileProgramRepositoryAdapter(ref: ref),
+        profileProgramRepository: FirestoreProfileProgramRepositoryAdapter(
+          ref: ref,
+        ),
       );
     });

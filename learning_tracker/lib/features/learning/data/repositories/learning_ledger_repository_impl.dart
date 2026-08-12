@@ -194,6 +194,14 @@ class FirestoreLearningLedgerRepositoryAdapter
   }
 
   @override
+  Future<List<LearningLedgerEntry>> getLedgerByCurriculumIncludingTombstoned(
+    CurriculumId curriculumId,
+  ) async {
+    final repo = await _resolve();
+    return repo.getLedgerForCurriculumIncludingTombstoned(curriculumId);
+  }
+
+  @override
   Future<Map<String, int>> getCompletionStats(CurriculumId curriculumId) async {
     final repo = await _resolve();
     return repo.getCompletionStats(curriculumId);

@@ -5532,6 +5532,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'You must leave at least some content unmarked to continue learning.';
 
   @override
+  String get bulkMarkExpungeError =>
+      'Couldn\'t remove that mark. Please try again.';
+
+  @override
   String get bulkMarkSearchHint => 'Search content...';
 
   @override

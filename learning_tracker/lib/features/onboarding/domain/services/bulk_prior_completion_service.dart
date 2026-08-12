@@ -7,10 +7,13 @@ import 'package:learning_tracker/core/learning/completion_constants.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_entity.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/bookmark_repository.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
+import 'package:learning_tracker/features/learning/domain/repositories/learning_ledger_repository.dart';
+import 'package:learning_tracker/features/learning/domain/services/completion_detection_service.dart';
 import 'package:learning_tracker/features/learning/domain/services/completion_orchestrator.dart';
 import 'package:learning_tracker/features/tracks/stages/domain/repositories/stage_definition_repository.dart';
 
@@ -64,17 +67,22 @@ class BulkPriorCompletionResult {
 /// with the caller-supplied [stageIds] before writing completions. This
 /// guarantees that prior-marked items show 100% completion, not 0%.
 ///
-  /// ### B8 — Expunge API
-  /// [expungePriorCompletions] tombstones (sets `purgedAt`) the completion
-  /// documents that were created by a prior-marking run for an item. Under
-  /// the Firestore schema, provenance lives on the document's `source` field:
-  /// a bulk-imported row has `source == bulkInTrack` (its `completedAt` is the
-  /// `DateTime.utc(2000, 1, 1)` sentinel written by [execute]); once
-  /// [CompletionOrchestrator] upgrades it to real learning its `source`
-  /// becomes `live` and it is INVISIBLE to expunge. That reproduces the old
-  /// `prior_completion_imports`-table semantics with no second table (that
-  /// table is deleted). Agent F (UI layer) calls this method when the user
-  /// un-selects a previously bulk-marked item.
+/// ### B8 — Expunge API
+/// [expungePriorCompletions] tombstones (sets `purgedAt`) the completion
+/// documents that were created by a prior-marking run for one or more
+/// items (a single caller-supplied batch of `sefariaRef`s, not one call
+/// per ref — see the method doc comment's "batched, not per-ref" section).
+/// Under the Firestore schema, provenance lives on the document's `source`
+/// field: a bulk-imported row has `source == bulkInTrack` (its
+/// `completedAt` is the `DateTime.utc(2000, 1, 1)` sentinel written by
+/// [execute]); once [CompletionOrchestrator] upgrades it to real learning
+/// its `source` becomes `live` and it is INVISIBLE to expunge's
+/// tombstone-selection step (the SIYUM-RETRACTION step that follows is a
+/// separate filter with a different rule — see the method doc comment).
+/// That reproduces the old `prior_completion_imports`-table semantics with
+/// no second table (that table is deleted). Agent F (UI layer) calls this
+/// method when the user un-selects one or more previously bulk-marked
+/// items in a single action.
 class BulkPriorCompletionService {
   final ContentRepository _contentRepository;
   final CompletionRepository _completionRepository;
@@ -100,6 +108,15 @@ class BulkPriorCompletionService {
   /// care about those side effects may omit it.
   final CompletionOrchestrator? _orchestrator;
 
+  /// D-M — siyum retraction collaborators. Both optional, mirroring
+  /// [_orchestrator]'s precedent, so existing test call sites that never
+  /// exercise [expungePriorCompletions]'s real body do not need a
+  /// constructor change. Production wiring (`onboarding_providers.dart`)
+  /// always supplies both; see [expungePriorCompletions]'s doc comment for
+  /// what happens when a caller purges completions without wiring them.
+  final CompletionDetectionService? _completionDetectionService;
+  final LearningLedgerRepository? _ledgerRepository;
+
   /// Cached content items from the last [resolveSelections] call.
   List<ContentItem>? _cachedAllItems;
   CurriculumId? _cachedCurriculumId;
@@ -123,12 +140,16 @@ class BulkPriorCompletionService {
     AnalyticsService? analytics,
     StageDefinitionRepository? stageRepository,
     CompletionOrchestrator? orchestrator,
+    CompletionDetectionService? completionDetectionService,
+    LearningLedgerRepository? ledgerRepository,
   }) : _contentRepository = contentRepository,
        _completionRepository = completionRepository,
        _bookmarkRepository = bookmarkRepository,
        _analytics = analytics ?? const NullAnalyticsService(),
        _stageRepository = stageRepository,
-       _orchestrator = orchestrator;
+       _orchestrator = orchestrator,
+       _completionDetectionService = completionDetectionService,
+       _ledgerRepository = ledgerRepository;
 
   /// Resolve hierarchy selections into leaf-level sefariaRefs.
   ///
@@ -329,10 +350,12 @@ class BulkPriorCompletionService {
     );
   }
 
-  /// B8 — Tombstone prior-mark completions for an item.
+  /// B8 — Tombstone prior-mark completions for one or more items.
   ///
   /// Identifies the completion documents that a prior-marking run created for
-  /// [sefariaRef] and tombstones them (stamps `purged_at`).
+  /// any ref in [sefariaRefs] (a single caller-supplied batch, not one call
+  /// per ref — see the "Batched, not per-ref" section below) and tombstones
+  /// them (stamps `purged_at`).
   ///
   /// Under the Firestore schema, provenance lives on the document's `source`
   /// field (`docs/firestore-rewrite-map.md`, "RESOLVED: prior-import tier
@@ -361,7 +384,93 @@ class BulkPriorCompletionService {
   /// `creditsAchievement: true`, each one earned a siyum in `learning_ledger`.
   /// Un-ticking must retract that ledger entry alongside the completion, or the
   /// two collections disagree permanently. That path goes through
-  /// `FirestoreLearningLedgerRepository.purgeEntry({ulid, purgedAt})`.
+  /// `FirestoreLearningLedgerRepository.purgeEntry({ulid, purgedAt})` — but
+  /// ONLY when the affected unit's remaining, non-purged completions no
+  /// longer cover it (re-checked via
+  /// [CompletionDetectionService.isUnitLimudComplete] AFTER the tombstones
+  /// above are written), and only the HIGHEST-`completionNumber` matching
+  /// entry is retracted.
+  ///
+  /// **Retraction is keyed on coverage, not provenance (owner ruling,
+  /// 2026-08-11 — supersedes the original D-M text, which was silent on
+  /// `source` and got read two contradictory ways by different parts of this
+  /// codebase).** The candidate filter below does NOT check `source` at all:
+  /// once a unit's remaining, non-purged completions genuinely no longer
+  /// cover it, the highest-`completionNumber` non-purged ledger entry for
+  /// that unit is retracted regardless of whether it happened to be earned
+  /// by a bulk-mark or by live day-to-day learning. A `learning_ledger` entry
+  /// represents "this unit was covered as of this `completionNumber`" — once
+  /// that stops being true, WHICH action originally triggered the credit is
+  /// not a reason to leave a now-false siyum standing. (`LearningLedgerEntry`'s
+  /// class doc comment and this repository's `_parseSource` doc comment have
+  /// been updated to match — neither claims a `live` entry is unretractable
+  /// any more.)
+  ///
+  /// **The re-earn trapdoor is closed.** Earlier revisions of this method
+  /// flagged, but did not fix, a gap where re-ticking every leaf of a unit
+  /// whose siyum was retracted here left the siyum permanently invisible:
+  /// [CompletionDetectionService] always resolves the SAME deterministic
+  /// ulid for a given unit, so re-crediting found the tombstoned doc and
+  /// returned it as-is. `FirestoreLearningLedgerRepository.recordCompletion`
+  /// now RESTORES a tombstoned doc found at that ulid (clears `purged_at`,
+  /// leaves `completedAt`/`completionNumber` untouched — see that method's
+  /// doc comment for why) instead of returning it inert, so a
+  /// retract-then-re-earn cycle round-trips correctly with no caller-side
+  /// change needed here.
+  ///
+  /// **Batched, not per-ref.** This method takes [sefariaRefs] (plural) and
+  /// processes them as ONE pass: every matched completion across every given
+  /// ref is tombstoned first, then the DISTINCT set of affected units across
+  /// all of them is computed (deduped by `(entryScope, unitIdentifier,
+  /// trackType)` — un-ticking two pages of the same masechta in one user
+  /// action affects the masechta unit exactly once), and exactly one
+  /// coverage-check-and-retract pass runs per distinct unit within THIS call.
+  /// `bulk_mark_screen.dart` calls this ONCE per user action with every
+  /// un-ticked ref, not once per ref — an earlier revision's "known
+  /// concurrency caveat" doc block described N interleaved `Future.wait`-
+  /// driven per-ref calls racing the same unit's coverage check; that
+  /// specific caller shape is gone. `getLedgerByCurriculumIncludingTombstoned`
+  /// is likewise fetched once for the whole batch, not once per unit,
+  /// cutting the redundant-reads cost the old concurrent per-ref shape used
+  /// to multiply by un-ticked-item count.
+  ///
+  /// **This does NOT mean overlapping calls are impossible — they are just
+  /// benign now.** `bulk_mark_screen.dart` still fires
+  /// `unawaited(_expungeRefs(refs))` once per checkbox tap with no
+  /// serialization between taps, so two rapid taps CAN still produce two
+  /// overlapping `expungePriorCompletions` calls (e.g. un-ticking two
+  /// different items of the same masechta in quick succession). Under the
+  /// epoch rule this method's retraction step now follows (see the
+  /// `candidates`/`highest` logic below), that race is benign rather than
+  /// destructive: both overlapping calls target the same true-highest ledger
+  /// entry for any unit they both touch, and `purgeEntry` is an idempotent
+  /// stamp — a second purge of an already-purged doc, or a second call
+  /// finding the true-highest entry already purged and stopping there
+  /// (rather than reaching for the next-highest), is a safe no-op either
+  /// way. Concurrent taps converge correctly instead of double-damaging
+  /// anything; no caller-side serialization was needed to make that true.
+  ///
+  /// **Retry-safe / resumable.** An empty match for a given ref (nothing left
+  /// to tombstone — e.g. a prior call already tombstoned it before throwing
+  /// partway through) does NOT short-circuit this method. The content item
+  /// and its affected unit(s) are still resolved for EVERY ref in
+  /// [sefariaRefs], and the coverage-check-and-retract step still runs for
+  /// every distinct affected unit regardless of whether anything was
+  /// tombstoned this call — a no-op when the unit is still covered or its
+  /// siyum was already retracted. Calling this repeatedly for the same
+  /// `(sefariaRefs, curriculumId)` therefore converges correctly instead of
+  /// getting stuck after one failed attempt (the failure mode a caller-side
+  /// `if (toExpunge.isEmpty) return;` short-circuit used to produce).
+  ///
+  /// **`trackType` is derived, not hardcoded.** The coverage-check call
+  /// passes the `trackType` actually carried by the purged completion(s) for
+  /// that unit (falling back to `'personal'` — the only value the
+  /// tombstone-selection filter below currently admits — when nothing was
+  /// purged for a ref this call). Units are grouped by `(unit, trackType)`,
+  /// so if this method ever purges completions across more than one
+  /// `trackType` in a single call, each `trackType` gets its own
+  /// coverage-check-and-retract pass rather than one call silently deciding
+  /// for both.
   ///
   /// `profileId` is intentionally gone: the Firestore repositories are profile-
   /// scoped by their collection path (`.../learner_profiles/{profileId}/...`),
@@ -370,78 +479,250 @@ class BulkPriorCompletionService {
   /// cross-profile id switched the session's active profile before this runs.
   ///
   /// Agent F (UI layer, `bulk_mark_screen.dart`) calls this when the user
-  /// un-selects a previously bulk-marked item so the item reverts to "not
-  /// started" status.
+  /// un-selects one or more previously bulk-marked items so they revert to
+  /// "not started" status.
   Future<void> expungePriorCompletions({
-    required String sefariaRef,
+    required List<String> sefariaRefs,
     required CurriculumId curriculumId,
   }) async {
-    // ── 1. Identify the bulkInTrack completions to tombstone ─────────────────
+    if (sefariaRefs.isEmpty) return; // nothing requested — a genuine no-op.
+
+    // ── 0. Fail BEFORE mutating anything (D-E, fail-before-mutate) ─────────
+    // Checked first, before step 1/2 tombstone ANY completion document. A
+    // misconfigured caller (missing collaborators) must fail with the store
+    // left untouched — checking this only after the tombstone loop (the
+    // earlier shape) would leave completions tombstoned with no way to
+    // retract the siyum they were backing, on every single call from that
+    // caller, not just some.
+    final detectionService = _completionDetectionService;
+    final ledgerRepository = _ledgerRepository;
+    if (detectionService == null || ledgerRepository == null) {
+      // D-E: unconditional — the coverage-check-and-retract step always runs
+      // (that is what makes this method retry-safe), so a caller that didn't
+      // wire the retraction collaborators is a real gap on every call, not
+      // only the ones that happen to tombstone something.
+      throw StateError(
+        'BulkPriorCompletionService.expungePriorCompletions: no '
+        'CompletionDetectionService/LearningLedgerRepository was supplied to '
+        'check/retract the siyum(s) affected by (curriculum='
+        '${curriculumId.storageKey}, sefariaRefs=$sefariaRefs) (D-M). Wire '
+        "both in onboarding_providers.dart's "
+        'bulkPriorCompletionServiceProvider.',
+      );
+    }
+
+    // ── 1. Identify the bulkInTrack completions to tombstone, across ALL
+    // given refs ─────────────────────────────────────────────────────────
     // D-L: reads are profile-scoped to the active profile via
     // `getCompletionsForContentItem` (no `profileId` parameter needed),
     // replacing the Drift path-segment lookup. A row upgraded to `live` by
     // [CompletionOrchestrator] (the B8 upgrade) carries `source == live` and is
     // therefore excluded here and left untouched — provenance is on the
     // document, not a separate import table.
-    final candidates =
-        await _completionRepository.getCompletionsForContentItem(sefariaRef);
-    final toExpunge = candidates
-        .where((c) =>
-            c.curriculumId == curriculumId &&
-            c.trackType == 'personal' &&
-            c.source == CompletionSource.bulkInTrack &&
-            c.purgedAt == null)
-        .toList();
-
-    if (toExpunge.isEmpty) {
-      // Nothing to expunge. An empty result is a valid, loud answer (D-E): it
-      // means no `bulkInTrack` rows exist for this item — it is NOT a silent
-      // "0".
-      return;
+    final toExpunge = <CompletionEntity>[];
+    for (final sefariaRef in sefariaRefs) {
+      final candidates = await _completionRepository
+          .getCompletionsForContentItem(sefariaRef);
+      toExpunge.addAll(
+        candidates.where(
+          (c) =>
+              c.curriculumId == curriculumId &&
+              c.trackType == 'personal' &&
+              c.source == CompletionSource.bulkInTrack &&
+              c.purgedAt == null,
+        ),
+      );
     }
 
-    // ── 2. Tombstone + retract the siyum each earned (D-L / D-M) ───────────
-    // D-E: a path that cannot do its job must fail LOUDLY, never silently no-op.
+    // ── 2. Tombstone every matched completion document (D-L) ───────────────
+    final purgedAt = DateTime.now().toUtc();
+    for (final c in toExpunge) {
+      await _completionRepository.purgeCompletion(
+        curriculumId: curriculumId,
+        sefariaRef: c.sefariaRef,
+        stageId: c.stageId,
+        purgedAt: purgedAt,
+      );
+    }
+
+    // ── 3. Retract the siyum(s) that no longer hold (D-M) ──────────────────
+    // Retry-safe (see doc comment): this step runs regardless of whether
+    // step 1/2 found anything to tombstone THIS call. Collaborators were
+    // already validated in step 0, above, before anything was mutated.
+
+    // Distinct affected units across every ref, keyed by
+    // (entryScope, unitIdentifier, trackType) so un-ticking multiple refs
+    // that share a unit only checks/retracts that unit once.
+    final affectedUnits =
+        <
+          String,
+          ({
+            String entryScope,
+            String unitIdentifier,
+            String level1,
+            String? level2,
+            String trackType,
+          })
+        >{};
+
+    for (final sefariaRef in sefariaRefs) {
+      final item = await _contentRepository.getContentByRef(
+        curriculumId: curriculumId,
+        sefariaRef: sefariaRef,
+      );
+      if (item == null) {
+        // D-E: even on a retry where nothing was tombstoned this call, being
+        // unable to resolve the content item for a ref the caller explicitly
+        // asked to expunge must not silently skip retraction for it.
+        throw StateError(
+          'BulkPriorCompletionService.expungePriorCompletions: '
+          'ContentRepository.getContentByRef could not resolve the content '
+          'item for sefariaRef=$sefariaRef, so the affected unit(s) for D-M '
+          'retraction cannot be determined.',
+        );
+      }
+
+      // Fix 5: derive trackType from what was actually purged for THIS ref
+      // rather than hardcoding a literal — falls back to 'personal' (the
+      // only value step 1's filter currently admits) when this ref had
+      // nothing to tombstone this call (the retry-safe path).
+      final purgedForRef = toExpunge.where((c) => c.sefariaRef == sefariaRef);
+      final trackType = purgedForRef.isNotEmpty
+          ? purgedForRef.first.trackType
+          : 'personal';
+
+      final unitsForItem =
+          <
+            ({
+              String entryScope,
+              String unitIdentifier,
+              String level1,
+              String? level2,
+              String trackType,
+            })
+          >[
+            if (item.level2 != null && hasNamedLevel2Unit(curriculumId))
+              (
+                entryScope: unitScopeFor(curriculumId, level: 2),
+                unitIdentifier: item.level2!,
+                level1: item.level1,
+                level2: item.level2,
+                trackType: trackType,
+              ),
+            (
+              entryScope: unitScopeFor(curriculumId, level: 1),
+              unitIdentifier: item.level1,
+              level1: item.level1,
+              level2: null,
+              trackType: trackType,
+            ),
+          ];
+
+      for (final unit in unitsForItem) {
+        // Null-byte-separated key (mirrors the composite-key convention
+        // FirestoreLearningLedgerRepository._nextCompletionNumber uses) so a
+        // unitIdentifier/trackType value can never collide with the
+        // delimiter itself.
+        affectedUnits['${unit.entryScope}\u0000${unit.unitIdentifier}\u0000'
+                '${unit.trackType}'] =
+            unit;
+      }
+    }
+
+    if (affectedUnits.isEmpty) return;
+
+    // Fetched ONCE for the whole batch (Fix 4) — filtered in-memory per unit
+    // below, which is safe because distinct units can never share a ledger
+    // entry (entries are keyed by (entryScope, unitIdentifier)).
     //
-    // Purging the completion documents (stamping `purged_at` via
-    // `FirestoreCompletionRepository.purgeCompletion`) and retracting each siyum
-    // (via
-    // `FirestoreLearningLedgerRepository.purgeEntry({ulid, purgedAt})`)
-    // requires seams the domain's repository interfaces do NOT yet expose — and
-    // reaching the Firestore concrete classes directly from this domain service
-    // is forbidden by AD-23/AD-28 (domain may not depend on the data-access
-    // ring) and infeasible (`FirestoreCompletionRepository` /
-    // `FirestoreLearningLedgerRepository` are not Riverpod providers and need
-    // `FirebaseFirestore`/`uid`/`profileId`, which Rule 3 confines to
-    // `core/sync` + `core/auth`).
-    //
-    // A silent return here (the Drift-era "if no outbox, log + skip") would
-    // leave the bulk-marked completions AND their siyum both alive — a silent
-    // `completions` / `learning_ledger` disagreement no gate can catch. Throwing
-    // keeps it visible.
-    throw UnsupportedError(
-      'BulkPriorCompletionService.expungePriorCompletions: located '
-      '${toExpunge.length} bulkInTrack completion(s) for '
-      '(curriculum=${curriculumId.storageKey}, sefariaRef=$sefariaRef) that '
-      'require tombstoning (D-L: purgeCompletion) and siyum retraction '
-      '(D-M: purgeEntry), but the domain repository interfaces do not yet '
-      'expose either seam. Migration path: (1) add '
-      'Future<void> purgeCompletion({required CurriculumId curriculumId, '
-      'required String sefariaRef, required int stageId, required DateTime '
-      'purgedAt}) to CompletionRepository '
-      '(lib/features/learning/domain/repositories/completion_repository.dart), '
-      'implemented in FirestoreCompletionRepositoryAdapter '
-      '(lib/features/learning/data/repositories/completion_repository_impl.dart) '
-      'by delegating to FirestoreCompletionRepository.purgeCompletion '
-      '(lib/data/repositories/firestore_completion_repository.dart); (2) add '
-      'Future<void> purgeEntry({required String ulid, required DateTime '
-      'purgedAt}) to LearningLedgerRepository '
-      '(lib/features/learning/domain/repositories/learning_ledger_repository.dart), '
-      'implemented in its adapter, and inject a LearningLedgerRepository into '
-      'this service so each purged completion can retract the ledger entry it '
-      'earned. Until those exist, expunge must fail loud rather than leave '
-      'bulk-marked completions and their siyum both alive.',
-    );
+    // Deliberately `getLedgerByCurriculumIncludingTombstoned`, NOT the plain
+    // `getLedgerByCurriculum`. The epoch rule below needs to see already-
+    // purged entries too (see that method's doc comment) — `getLedgerByCurriculum`
+    // makes tombstoned entries invisible by design (D-M), which would make
+    // the "already purged, stop here" check below unreachable and silently
+    // degrade this back into the non-idempotent bug it exists to fix.
+    final ledgerEntries = await ledgerRepository
+        .getLedgerByCurriculumIncludingTombstoned(curriculumId);
+
+    for (final unit in affectedUnits.values) {
+      final stillCovered = await detectionService.isUnitLimudComplete(
+        curriculum: curriculumId,
+        level1: unit.level1,
+        level2: unit.level2,
+        trackType: unit.trackType,
+      );
+      // `null` (indeterminate — no leaves / no stage definitions found for
+      // this unit) must NOT be read as "not covered": that would retract a
+      // real siyum on missing/unreadable content data instead of failing
+      // loudly (D-E). It also cannot be read as "still covered" (silently
+      // stranding a phantom siyum), so it gets its own loud failure.
+      if (stillCovered == null) {
+        throw StateError(
+          'BulkPriorCompletionService.expungePriorCompletions: coverage for '
+          'unit (entryScope=${unit.entryScope}, '
+          'unitIdentifier=${unit.unitIdentifier}) could not be determined '
+          '(no leaf content items or no stage definitions found) — cannot '
+          'safely decide whether to retract its siyum (D-M).',
+        );
+      }
+      if (stillCovered) continue; // still covered — nothing to retract.
+
+      // Epoch rule (owner ruling, 2026-08-11 — fixes the non-idempotent
+      // retraction a code review caught): the candidate filter here does NOT
+      // exclude already-purged entries. It must consider EVERY ledger entry
+      // for this unit — purged or not — to find the TRUE highest
+      // `completionNumber`, because `completionNumber` is monotonic and
+      // counts tombstoned docs too (established when [purgeEntry]/
+      // `_nextCompletionNumber` were built). Filtering to `purgedAt == null`
+      // first (the old, buggy approach) meant a SECOND call — made while the
+      // unit was still uncovered, whether a genuine retry or simply a later
+      // unrelated call — would find a NEW "highest surviving" candidate and
+      // retract that too, walking down the whole stack of historical entries
+      // for the unit across repeated calls. That is exactly what D-M's
+      // ruling text warns against: "retracting by unit alone would erase
+      // earlier legitimate cycles" (e.g. two manually-marked chazara-cycle
+      // entries for the same masechta).
+      final candidates =
+          ledgerEntries
+              .where(
+                (e) =>
+                    e.entryScope == unit.entryScope &&
+                    e.unitIdentifier == unit.unitIdentifier &&
+                    e.trackType == unit.trackType,
+              )
+              .toList()
+            ..sort((a, b) => b.completionNumber.compareTo(a.completionNumber));
+      if (candidates.isEmpty) continue; // never earned — nothing to retract.
+
+      final highest = candidates.first;
+      if (highest.purgedAt != null) {
+        // The true-highest entry for this unit is ALREADY purged: an
+        // earlier call already handled this coverage-loss epoch. Do NOT
+        // reach past it to the next-highest entry — that would be exactly
+        // the bug this rule fixes. This makes retraction idempotent: once
+        // the highest entry is purged, every subsequent call for this unit
+        // (while it remains uncovered) sees it purged and stops here,
+        // leaving older, genuinely separate completion cycles untouched.
+        continue;
+      }
+
+      // Owner ruling: only the HIGHEST-completionNumber entry is retracted,
+      // regardless of its `source`. `source` is also irrelevant to WHO
+      // originally earned this entry: a manually-marked entry (Lifetime
+      // Marking screen, `entryScope` values `'level1'`/`'level2'`) is
+      // subject to the same epoch rule as an auto-siyum entry
+      // (`entryScope` values from [unitScopeFor]: `'masechta'`, `'seder'`,
+      // `'siman'`, `'chelek'`, `'hilchos'`, `'sefer'`) if it ever shares this
+      // unit's exact `(entryScope, unitIdentifier, trackType)` key — factual
+      // coverage governs, not provenance/origin of the entry (owner
+      // principle, stated twice). In practice the two vocabularies above are
+      // disjoint (verified by grep across `lib/`: `unitScopeFor` never
+      // returns `'level1'`/`'level2'`, and the Lifetime Marking screen never
+      // writes anything but `'level${n}'`), so this collision cannot
+      // currently occur for any shipped curriculum — this is a defence for
+      // the rule's generality, not a currently-reachable case.
+      await ledgerRepository.purgeEntry(ulid: highest.ulid, purgedAt: purgedAt);
+    }
   }
 
   /// Find the first uncompleted leaf item in learning order.

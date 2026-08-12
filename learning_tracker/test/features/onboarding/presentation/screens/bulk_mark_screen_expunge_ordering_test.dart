@@ -124,8 +124,7 @@ void main() {
 
       when(
         () => service.expungePriorCompletions(
-          profileId: any(named: 'profileId'),
-          sefariaRef: any(named: 'sefariaRef'),
+          sefariaRefs: any(named: 'sefariaRefs'),
           curriculumId: any(named: 'curriculumId'),
         ),
       ).thenAnswer((_) async {

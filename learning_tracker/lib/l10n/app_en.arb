@@ -3665,6 +3665,10 @@
   "onboardingParentPinFallbackChildName": "your child",
   "onboardingPinReenterSubtitle": "Re-enter the PIN to confirm",
   "bulkMarkCannotUnmarkAllError": "You must leave at least some content unmarked to continue learning.",
+  "bulkMarkExpungeError": "Couldn't remove that mark. Please try again.",
+  "@bulkMarkExpungeError": {
+    "description": "Friendly fallback shown instead of a raw exception when un-ticking a previously bulk-marked item fails to remove its completion record(s) (Fix 3b)."
+  },
   "bulkMarkSearchHint": "Search content...",
   "bulkMarkCompletionRecordsCount": "{count, plural, one{1 completion record will be created} other{{count} completion records will be created}}",
   "@bulkMarkCompletionRecordsCount": {

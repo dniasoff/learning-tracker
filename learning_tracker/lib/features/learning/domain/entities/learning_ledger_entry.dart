@@ -44,18 +44,30 @@ import 'package:learning_tracker/features/learning/domain/entities/completion_so
 ///
 /// **[source] is new — added after the initial build, additively.** No
 /// Drift column carried it (`CompletionSource` is a B1 write-time policy
-/// discriminator, not a persisted `LearningLedger` column) but a downstream
-/// consumer needs it: the bulk-mark-deletion Cloud Function must retract
-/// only the lifetime ledger entries a bulk-mark created, never a `live`
-/// entry that happens to share the same `(curriculumId, unitIdentifier)`
-/// from a different track years earlier — and because
-/// [completionNumber] means that collision is real and structurally
-/// possible, there is no other field on this entry a deletion sweep could
-/// safely key on. See [LearningLedgerEntryFirestoreCodec.toFirestore] for
-/// the encoding and [learningLedgerEntryFromFirestore] for why a
-/// missing/unrecognised value decodes as [CompletionSource.live] rather
-/// than throwing — the fail-safe direction here is "never deletable",
-/// not "best guess".
+/// discriminator, not a persisted `LearningLedger` column). It records
+/// PROVENANCE — which action (`live` day-to-day learning, `bulkInTrack`
+/// onboarding import, `lifetimeOnly` manual backfill) originally earned this
+/// entry — for analytics/display purposes and for the B1 write-time policy
+/// itself, but it is NOT the field
+/// `BulkPriorCompletionService.expungePriorCompletions`'s siyum-retraction
+/// step keys its decision on.
+///
+/// **Retraction is keyed on coverage, not provenance (owner ruling,
+/// 2026-08-11).** An earlier revision of this codebase read [source] as a
+/// retraction fail-safe — "never retract a `live` entry, only a
+/// `bulkInTrack` one" — reasoning that a `(curriculumId, unitIdentifier)`
+/// collision between a bulk-marked entry and an unrelated `live` entry from
+/// a different track years earlier (real and structurally possible, because
+/// of [completionNumber]) made `source` the only safe thing to key a
+/// deletion sweep on. The owner ruling supersedes that: once a unit's
+/// remaining, non-purged completions genuinely no longer cover it, the
+/// HIGHEST-`completionNumber` non-purged entry for that unit is retracted
+/// regardless of its [source] — a ledger entry represents "this unit was
+/// covered as of this `completionNumber`", and once that stops being true,
+/// which action originally triggered the credit is not a reason to leave a
+/// now-false siyum standing. See
+/// `BulkPriorCompletionService.expungePriorCompletions`'s doc comment for
+/// the exact retraction rule.
 ///
 /// **`curriculumId` is deliberately KEPT despite the "no FK to tracks or
 /// curricula" invariant.** `docs/firestore-rewrite-map.md` ("RESOLVED:
@@ -277,15 +289,19 @@ extension LearningLedgerEntryFirestoreCodec on LearningLedgerEntry {
 /// design, not oversight.** A document with no `source` key (written
 /// before this field existed) or an unrecognised value decodes as
 /// [CompletionSource.live] rather than throwing — see [_parseSource].
-/// [CompletionSource.live] is the fail-SAFE default for this specific
-/// field: it is the one value a bulk-mark-deletion sweep (`source ==
-/// 'bulkInTrack'`) can never match, so an entry with unknown provenance is
-/// never mistakenly treated as safe to delete. Throwing instead (like every
-/// other field here) would be the wrong kind of strict — it would make a
-/// pre-existing, perfectly valid entry invisible from every read
-/// ([_decodeAll] skips a document whose decode throws) purely because it
-/// predates this field, which is worse than decoding it into the
-/// safe-by-construction default.
+/// `CompletionSource.live` is chosen as an honest default, not a retraction
+/// fail-safe — see [LearningLedgerEntry]'s class doc comment for why
+/// retraction no longer keys on [source] at all (owner ruling, 2026-08-11),
+/// so decoding to `live` no longer confers any immunity from
+/// `BulkPriorCompletionService.expungePriorCompletions`'s retraction step.
+/// It is chosen simply because `live` is this codebase's ordinary,
+/// unmarked-provenance value — the same reasoning `_parseSource` uses for
+/// every other unrecognised-enum-value default in this codebase. Throwing
+/// instead (like every other field here) would be the wrong kind of strict —
+/// it would make a pre-existing, perfectly valid entry invisible from every
+/// read ([_decodeAll] skips a document whose decode throws) purely because
+/// it predates this field, which is worse than decoding it into a
+/// reasonable default.
 LearningLedgerEntry learningLedgerEntryFromFirestore(
   Map<String, dynamic> data,
 ) {

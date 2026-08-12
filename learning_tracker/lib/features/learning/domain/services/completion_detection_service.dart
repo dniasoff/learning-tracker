@@ -1,4 +1,5 @@
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
@@ -183,7 +184,6 @@ class CompletionDetectionService {
         hasNamedLevel2Unit(curriculum)) {
       await _checkUnitCompletion(
         curriculum: curriculum,
-        curriculumId: curriculumId,
         entryScope: unitScopeFor(curriculum, level: 2),
         unitIdentifier: item.level2!,
         level1: item.level1,
@@ -202,7 +202,6 @@ class CompletionDetectionService {
     if (includeAggregateLevelCheck) {
       await _checkUnitCompletion(
         curriculum: curriculum,
-        curriculumId: curriculumId,
         entryScope: unitScopeFor(curriculum, level: 1),
         unitIdentifier: item.level1,
         level1: item.level1,
@@ -214,38 +213,82 @@ class CompletionDetectionService {
     }
   }
 
-  Future<void> _checkUnitCompletion({
+  /// Whether every leaf under (curriculum, [level1][, level2]) has a
+  /// limud (stage 1) completion for [trackType] — the reusable "is this
+  /// unit covered" check that both siyum-crediting ([_checkUnitCompletion])
+  /// and siyum-retraction (`BulkPriorCompletionService.expungePriorCompletions`,
+  /// D-M) need.
+  ///
+  /// Siyum/coverage fires on **limud (stage 1) completion** — finishing the
+  /// learning of every leaf in the unit. Chazara (stages ≥ 2) is review of
+  /// already-learned material and does NOT gate coverage. This is the
+  /// standard product semantic per docs/hebrew-terms.md §6 ("siyum =
+  /// completing a unit of learning") and is required for bulk-mark on a
+  /// chazara-enabled track to produce siyumim — bulk-mark only writes stage
+  /// 1, so requiring all stages would silently zero out siyumim every time a
+  /// user bulk-marks an entire masechta during onboarding.
+  ///
+  /// Returns a TRI-STATE result, not a plain bool:
+  ///   - `true` — every leaf has a limud completion; the unit is covered.
+  ///   - `false` — at least one leaf lacks a limud completion.
+  ///   - `null` — INDETERMINATE: no leaf items were found for this unit, or
+  ///     no stage definitions exist for this curriculum. A caller must NOT
+  ///     read `null` as `false`: on the crediting side that would (falsely)
+  ///     look like "not yet covered" (harmless — [_checkUnitCompletion]
+  ///     already treats it as "don't credit"); on the retraction side
+  ///     (`expungePriorCompletions`) treating "cannot determine" the same as
+  ///     "not covered" would retract a real siyum on missing/unreadable
+  ///     content data instead of failing loudly (D-E).
+  Future<bool?> isUnitLimudComplete({
     required CurriculumId curriculum,
-    required String curriculumId,
-    required String entryScope,
-    required String unitIdentifier,
     required String level1,
     String? level2,
     required String trackType,
-    int? trackId,
-    CompletionSource source = CompletionSource.live,
   }) async {
-    // Get all leaf items for this unit
+    final result = await _unitLimudCompletion(
+      curriculum: curriculum,
+      level1: level1,
+      level2: level2,
+      trackType: trackType,
+    );
+    return result.complete;
+  }
+
+  /// Shared implementation behind [isUnitLimudComplete] — also returns the
+  /// resolved [allItems] (leaves AND containers) so [_checkUnitCompletion]
+  /// can reuse them for its display-name lookup instead of issuing a second,
+  /// identical [ContentRepository.filterByLevel] read for every unit it
+  /// credits (this method and [_checkUnitCompletion] used to each call it
+  /// independently).
+  Future<({bool? complete, List<ContentItem> allItems})> _unitLimudCompletion({
+    required CurriculumId curriculum,
+    required String level1,
+    String? level2,
+    required String trackType,
+  }) async {
+    // Get all items (leaves AND containers) for this unit.
     final allItems = await _contentRepository.filterByLevel(
       curriculumId: curriculum,
       level1: level1,
       level2: level2,
     );
     final leafItems = allItems.where((item) => item.isLeaf).toList();
-    if (leafItems.isEmpty) return;
+    if (leafItems.isEmpty) {
+      return (
+        complete: null,
+        allItems: allItems,
+      ); // indeterminate — see doc comment.
+    }
 
-    // Siyum fires on **limud (stage 1) completion** — finishing the
-    // learning of every leaf in the unit. Chazara (stages ≥ 2) is review
-    // of already-learned material and does NOT gate siyum. This is the
-    // standard product semantic per docs/hebrew-terms.md §6 ("siyum =
-    // completing a unit of learning") and is required for bulk-mark on a
-    // chazara-enabled track to produce siyumim — bulk-mark only writes
-    // stage 1, so requiring all stages would silently zero out siyumim
-    // every time a user bulk-marks an entire masechta during onboarding.
     final stages = _stageRepository != null
         ? await _stageRepository.getStagesForCurriculum(curriculum)
         : const <domain_stage.StageDefinition>[];
-    if (stages.isEmpty) return;
+    if (stages.isEmpty) {
+      return (
+        complete: null,
+        allItems: allItems,
+      ); // indeterminate — see doc comment.
+    }
 
     // Find the limud (stage 1) row. Defensive fallback: if no stage has
     // `stageOrder == 1`, take the lowest-ordered stage we have.
@@ -270,8 +313,14 @@ class CompletionDetectionService {
     // Drift int here made the adapter throw
     // CompletionRepositoryDelegatedProfileUnsupportedException — which
     // _dispatchSiyumDetection then SWALLOWED, silently disabling every siyum.
+    //
+    // Also the seam retraction relies on: `getCompletionsByCurriculum`
+    // excludes tombstoned (`purgedAt != null`) rows at its single choke
+    // point (`FirestoreCompletionRepository._decodeAll`, D-L), so calling
+    // this method AFTER purging the just-expunged completions correctly
+    // reflects the post-purge world with no extra filtering needed here.
     final allCompletions = await _completionRepository
-        .getCompletionsByCurriculum(curriculumId);
+        .getCompletionsByCurriculum(curriculum.storageKey);
     final stagesByRef = <String, Set<int>>{};
     for (final c in allCompletions) {
       if (c.trackType != trackType) continue;
@@ -282,9 +331,41 @@ class CompletionDetectionService {
     for (final leaf in leafItems) {
       final completedStages = stagesByRef[leaf.sefariaRef] ?? const <int>{};
       if (!completedStages.any(limudStageIds.contains)) {
-        return; // Limud not complete for this leaf — siyum not yet reached.
+        return (
+          complete: false,
+          allItems: allItems,
+        ); // Limud not complete for this leaf.
       }
     }
+    return (complete: true, allItems: allItems);
+  }
+
+  Future<void> _checkUnitCompletion({
+    required CurriculumId curriculum,
+    required String entryScope,
+    required String unitIdentifier,
+    required String level1,
+    String? level2,
+    required String trackType,
+    int? trackId,
+    CompletionSource source = CompletionSource.live,
+  }) async {
+    final result = await _unitLimudCompletion(
+      curriculum: curriculum,
+      level1: level1,
+      level2: level2,
+      trackType: trackType,
+    );
+    // `null` (indeterminate: no leaves / no stage definitions) and `false`
+    // (not yet covered) both mean "don't credit" here — matches this
+    // method's original behavior before the check was extracted.
+    if (result.complete != true) return;
+
+    // Reuses the SAME `filterByLevel` read [_unitLimudCompletion] already
+    // did above, rather than issuing a second, identical one for display
+    // names (this method used to call `filterByLevel` independently).
+    final allItems = result.allItems;
+    final leafItems = allItems.where((item) => item.isLeaf).toList();
 
     // All leaves complete across all stages — record completion
     // Get display names from the first leaf's parent level
@@ -353,5 +434,4 @@ class CompletionDetectionService {
     final safeUnit = unitIdentifier.replaceAll(RegExp('[^A-Za-z0-9_-]'), '_');
     return 'siyum_${curriculumId.storageKey}_${entryScope}_$safeUnit';
   }
-
 }
