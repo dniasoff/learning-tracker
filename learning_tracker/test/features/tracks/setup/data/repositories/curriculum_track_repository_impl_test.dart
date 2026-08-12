@@ -47,7 +47,7 @@ class MockFirebaseAuthHandle extends Mock implements FirebaseAuth {}
 void main() {
   group('FirestoreCurriculumTrackRepositoryAdapter', () {
     const uid = 'uid-1';
-    const profileDocId = 'profile-ulid-1';
+    const profileDocId = '01J6Q2H4A8M7K3P9R5T6V8WXYB';
 
     AccountFirebaseHandles handles(FakeFirebaseFirestore firestore) {
       return AccountFirebaseHandles(

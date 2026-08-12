@@ -44,7 +44,7 @@ class MockFirebaseAuthHandle extends Mock implements FirebaseAuth {}
 void main() {
   group('FirestoreStageDefinitionRepositoryAdapter', () {
     const uid = 'uid-1';
-    const profileDocId = 'profile-ulid-1';
+    const profileDocId = '01J6Q2H4A8M7K3P9R5T6V8WXYB';
 
     AccountFirebaseHandles handles(FakeFirebaseFirestore firestore) {
       return AccountFirebaseHandles(
@@ -101,29 +101,32 @@ void main() {
 
     group('not ready (no active account/profile)', () {
       test(
-        'getStagesForCurriculum returns an empty list instead of throwing',
+        'getStagesForCurriculum throws StageDefinitionRepositoryNotReadyException',
         () async {
           final container = ProviderContainer();
           addTearDown(container.dispose);
           final adapter = buildAdapter(container);
 
-          final result = await adapter.getStagesForCurriculum(
-            CurriculumId.mishnayos,
+          expect(
+            () => adapter.getStagesForCurriculum(CurriculumId.mishnayos),
+            throwsA(isA<StageDefinitionRepositoryNotReadyException>()),
           );
-
-          expect(result, isEmpty);
         },
       );
 
-      test('getAllStageDefinitions returns an empty list', () async {
-        final container = ProviderContainer();
-        addTearDown(container.dispose);
-        final adapter = buildAdapter(container);
+      test(
+        'getAllStageDefinitions throws StageDefinitionRepositoryNotReadyException',
+        () async {
+          final container = ProviderContainer();
+          addTearDown(container.dispose);
+          final adapter = buildAdapter(container);
 
-        final result = await adapter.getAllStageDefinitions();
-
-        expect(result, isEmpty);
-      });
+          expect(
+            () => adapter.getAllStageDefinitions(),
+            throwsA(isA<StageDefinitionRepositoryNotReadyException>()),
+          );
+        },
+      );
 
       test(
         'initializeDefaults throws StageDefinitionRepositoryNotReadyException',

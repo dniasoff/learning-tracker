@@ -56,20 +56,16 @@ import 'package:learning_tracker/core/constants/curriculum_defaults.dart'
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
-import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/steps/step_chazara_readonly.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/steps/step_goal.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
-import '../../../../../helpers/drift_memory.dart';
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
@@ -89,7 +85,7 @@ class _FalseUseHebrewDate extends UseHebrewDate {
 
 class _ProfileIdOverride extends ActiveProfileId {
   @override
-  int build() => 1;
+  String? build() => '01J6Q2H4A8M7K3P9R5T6V8WXYC';
 }
 
 class _SephardiVariant extends CurrentTransliterationVariant {
@@ -148,7 +144,6 @@ List<Override> _goalStepOverrides({
   int scopeCount = _kScopeCount,
   Completer<int>? scopeCompleter,
 }) {
-  final db = inMemoryDb();
   final contentRepo = _MockContentRepository();
 
   when(
@@ -156,7 +151,6 @@ List<Override> _goalStepOverrides({
   ).thenAnswer((_) async => []);
 
   return [
-    userDatabaseProvider.overrideWithValue(db),
     contentRepositoryProvider.overrideWith((ref) => contentRepo),
     if (sephardi)
       currentTransliterationVariantProvider.overrideWith(_SephardiVariant.new),
@@ -164,7 +158,6 @@ List<Override> _goalStepOverrides({
     useHebrewDateProvider.overrideWith(
       () => useHebrewDate ? _TrueUseHebrewDate() : _FalseUseHebrewDate(),
     ),
-    syncWriteFacadeProvider.overrideWithValue(null),
     activeProfileIdProvider.overrideWith(_ProfileIdOverride.new),
     scopedCurriculumContentProvider(CurriculumId.mishnayos).overrideWith((
       ref,
@@ -588,11 +581,10 @@ void main() {
 
         // Tap the decrease button many times to drive value toward zero.
         final decreaseBtn = find.byIcon(Icons.remove_circle_outline_rounded);
+        expect(decreaseBtn, findsOneWidget);
         for (var i = 0; i < 20; i++) {
-          if (decreaseBtn.evaluate().isNotEmpty) {
-            await tester.tap(decreaseBtn.first);
-            await tester.pump();
-          }
+          await tester.tap(decreaseBtn);
+          await tester.pump();
         }
 
         // Tap Continue to capture the emitted goal.
@@ -638,24 +630,23 @@ void main() {
       final initial = emittedGoal?.paceValue ?? 0;
 
       // Increase by 1 — then decrease by 1 — should return to initial.
-      if (increaseBtn.evaluate().isNotEmpty &&
-          decreaseBtn.evaluate().isNotEmpty) {
-        await tester.tap(increaseBtn.first);
-        await tester.pump();
-        await tester.tap(decreaseBtn.first);
-        await tester.pump();
+      expect(increaseBtn, findsOneWidget);
+      expect(decreaseBtn, findsOneWidget);
+      await tester.tap(increaseBtn);
+      await tester.pump();
+      await tester.tap(decreaseBtn);
+      await tester.pump();
 
-        await tester.ensureVisible(continueBtn);
-        await tester.pump();
-        await tester.tap(continueBtn);
-        await _settle(tester);
+      await tester.ensureVisible(continueBtn);
+      await tester.pump();
+      await tester.tap(continueBtn);
+      await _settle(tester);
 
-        expect(
-          emittedGoal?.paceValue,
-          equals(initial),
-          reason: '+1 then -1 must return to initial pace',
-        );
-      }
+      expect(
+        emittedGoal?.paceValue,
+        equals(initial),
+        reason: '+1 then -1 must return to initial pace',
+      );
 
       addTearDown(() => _tearDown(tester));
     });
@@ -678,10 +669,9 @@ void main() {
 
         // Tap the 'Per day' segment.
         final perDaySegment = find.text('Per day');
-        if (perDaySegment.evaluate().isNotEmpty) {
-          await tester.tap(perDaySegment.first);
-          await tester.pump();
-        }
+        expect(perDaySegment, findsOneWidget);
+        await tester.tap(perDaySegment);
+        await tester.pump();
 
         final continueBtn = find.widgetWithText(FilledButton, 'Continue');
         await tester.ensureVisible(continueBtn);
@@ -717,14 +707,12 @@ void main() {
         final perDaySeg = find.text('Per day');
         final perWeekSeg = find.text('Per week');
 
-        if (perDaySeg.evaluate().isNotEmpty) {
-          await tester.tap(perDaySeg.first);
-          await tester.pump();
-        }
-        if (perWeekSeg.evaluate().isNotEmpty) {
-          await tester.tap(perWeekSeg.first);
-          await tester.pump();
-        }
+        expect(perDaySeg, findsOneWidget);
+        expect(perWeekSeg, findsOneWidget);
+        await tester.tap(perDaySeg);
+        await tester.pump();
+        await tester.tap(perWeekSeg);
+        await tester.pump();
 
         final continueBtn = find.widgetWithText(FilledButton, 'Continue');
         await tester.ensureVisible(continueBtn);
@@ -759,10 +747,9 @@ void main() {
         // 'Mishnayot' (fine). Tap the coarse segment to switch granularity.
         // The label is the plural of the coarse unit in English.
         final coarseSeg = find.text('Perakim');
-        if (coarseSeg.evaluate().isNotEmpty) {
-          await tester.tap(coarseSeg.first);
-          await tester.pump();
-        }
+        expect(coarseSeg, findsOneWidget);
+        await tester.tap(coarseSeg);
+        await tester.pump();
 
         final continueBtn = find.widgetWithText(FilledButton, 'Continue');
         await tester.ensureVisible(continueBtn);
@@ -1000,15 +987,14 @@ void main() {
         await tester.pump();
 
         final continueBtn = find.widgetWithText(FilledButton, 'Continue');
-        if (continueBtn.evaluate().isNotEmpty) {
-          final btn = tester.widget<FilledButton>(continueBtn);
-          expect(
-            btn.onPressed,
-            isNotNull,
-            reason:
-                'Continue must be enabled in pace mode even while scope loads',
-          );
-        }
+        expect(continueBtn, findsOneWidget);
+        final btn = tester.widget<FilledButton>(continueBtn);
+        expect(
+          btn.onPressed,
+          isNotNull,
+          reason:
+              'Continue must be enabled in pace mode even while scope loads',
+        );
 
         // Resolve completer before teardown.
         scopeCompleter.complete(60);

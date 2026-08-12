@@ -29,20 +29,16 @@ import 'package:learning_tracker/core/constants/curriculum_defaults.dart'
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart'
     show ActiveProfileId, activeProfileIdProvider;
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
-import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/steps/goal_cards.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/steps/step_goal.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
-import '../../../../../helpers/drift_memory.dart';
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
@@ -63,7 +59,7 @@ class _FalseUseHebrewDate extends UseHebrewDate {
 
 class _ProfileIdOverride extends ActiveProfileId {
   @override
-  int build() => 1;
+  String? build() => '01J6Q2H4A8M7K3P9R5T6V8WXYC';
 }
 
 class _AshkenaziVariant extends CurrentTransliterationVariant {
@@ -74,8 +70,6 @@ class _AshkenaziVariant extends CurrentTransliterationVariant {
 // ── Setup ─────────────────────────────────────────────────────────────────────
 
 List<Override> _overrides() {
-  final db = inMemoryDb();
-  addTearDown(db.close);
   final contentRepo = _MockContentRepository();
 
   when(
@@ -83,11 +77,9 @@ List<Override> _overrides() {
   ).thenAnswer((_) async => []);
 
   return [
-    userDatabaseProvider.overrideWithValue(db),
     contentRepositoryProvider.overrideWith((ref) => contentRepo),
     useHebrewTermsProvider.overrideWith(() => _FalseUseHebrewTerms()),
     useHebrewDateProvider.overrideWith(() => _FalseUseHebrewDate()),
-    syncWriteFacadeProvider.overrideWithValue(null),
     activeProfileIdProvider.overrideWith(_ProfileIdOverride.new),
     scopedCurriculumContentProvider(
       CurriculumId.mishnayos,

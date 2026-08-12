@@ -34,22 +34,17 @@
   'TRK-EDIT-STALE-01',
 ])
 library;
+// ignore_for_file: directives_ordering, unused_element_parameter, prefer_const_constructors
 
-import 'dart:async' show unawaited;
-
-import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart'
     show FakeLocalDayClock, localDayClockProvider;
-import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
@@ -57,7 +52,14 @@ import 'package:learning_tracker/features/settings/presentation/providers/curric
 import 'package:learning_tracker/features/tracks/setup/presentation/screens/track_detail_screen.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
-import '../../../../../helpers/drift_memory.dart';
+import '../../../../../helpers/firestore_fake.dart';
+import '../../../../../helpers/firestore_fixtures.dart';
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
+import 'package:learning_tracker/data/firestore/repository_providers.dart';
+import 'package:learning_tracker/data/repositories/firestore_goal_repository.dart';
+import 'package:learning_tracker/data/repositories/firestore_stage_definition_repository.dart';
+import 'package:learning_tracker/data/repositories/firestore_study_day_config_repository.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -71,73 +73,82 @@ class _FakeUseHebrewDate extends UseHebrewDate {
   bool build() => false;
 }
 
-/// Minimal [CurriculumTrack] fixture.
-CurriculumTrack _track({int id = 1, int profileId = 0}) => CurriculumTrack(
-  id: id,
-  profileId: profileId,
-  curriculumId: 'mishnayos',
+late FirestoreGoalRepository goalRepository;
+late FirestoreStageDefinitionRepository stageRepository;
+
+const _uid = 'track-detail-stale-test-uid';
+const _profileId = '01J6Q2H4A8M7K3P9R5T6V8WXY5';
+
+CurriculumTrackEntity _track() => CurriculumTrackEntity(
+  curriculumId: CurriculumId.mishnayos,
   state: 'active',
   stateChangedAt: DateTime.utc(2026, 1, 1),
   activatedAt: DateTime.utc(2026, 1, 1),
 );
 
-/// Seeds a pace goal row for [trackId].
-Future<int> _seedGoal(
-  UserDatabase db, {
-  required int profileId,
-  required int trackId,
+Future<String> _seedGoal(
+  FakeFirebaseFirestore firestore, {
   int paceValue = 3,
   String pacePeriod = 'per_week',
-}) async {
-  return db
-      .into(db.goals)
-      .insert(
-        GoalsCompanion.insert(
-          profileId: profileId,
-          curriculumId: 'mishnayos',
-          trackId: trackId,
-          description: const Value('Test Track'),
-          goalType: const Value('pace'),
-          paceValue: Value(paceValue),
-          pacePeriod: Value(pacePeriod),
-          createdAt: DateTimeFactory.nowUtc(),
-          updatedAt: DateTimeFactory.nowUtc(),
-        ),
-      );
-}
+}) => seedGoal(
+  firestore,
+  uid: _uid,
+  profileId: _profileId,
+  curriculumId: CurriculumId.mishnayos,
+  description: 'Test Track',
+  goalType: 'pace',
+  paceValue: paceValue,
+  pacePeriod: pacePeriod,
+);
 
-/// Directly updates the pace_value of the goal row identified by [goalId].
 Future<void> _updateGoalPaceValue(
-  UserDatabase db, {
-  required int goalId,
+  FakeFirebaseFirestore firestore, {
+  required String goalId,
   required int newPaceValue,
 }) async {
-  await (db.update(db.goals)..where((t) => t.id.equals(goalId))).write(
-    GoalsCompanion(paceValue: Value(newPaceValue)),
-  );
+  await firestore
+      .collection('users')
+      .doc(_uid)
+      .collection('learner_profiles')
+      .doc(_profileId)
+      .collection('goals')
+      .doc(goalId)
+      .update({'pace_value': newPaceValue});
 }
 
 Widget _buildDetailApp({
-  required CurriculumTrack track,
-  required UserDatabase db,
+  required CurriculumTrackEntity track,
+  required FakeFirebaseFirestore db,
 }) {
   const curriculum = CurriculumId.mishnayos;
   return ProviderScope(
     overrides: [
-      userDatabaseProvider.overrideWith((ref) => db),
+      firestoreGoalRepositoryProvider.overrideWith(
+        (ref) async => goalRepository,
+      ),
+      firestoreStageDefinitionRepositoryProvider.overrideWith(
+        (ref) async => stageRepository,
+      ),
+      firestoreStudyDayConfigRepositoryProvider.overrideWith(
+        (ref) async => FirestoreStudyDayConfigRepository(
+          firestore: db,
+          uid: _uid,
+          profileId: _profileId,
+        ),
+      ),
       useHebrewTermsProvider.overrideWith(() => _FakeUseHebrewTerms()),
       useHebrewDateProvider.overrideWith(() => _FakeUseHebrewDate()),
       localDayClockProvider.overrideWithValue(
         FakeLocalDayClock(DateTime.utc(2026, 5, 30)),
       ),
       dashboardTrackCompletionPercentageProvider(
-        track.id,
+        track.curriculumId,
       ).overrideWith((ref) async => 0.0),
       dashboardHasProgramEnrollmentProvider(
         curriculum,
       ).overrideWith((ref) async => false),
       scopedItemCountProvider(curriculum).overrideWith((ref) async => 100),
-      trackDualProgressMetricsProvider(track.profileId).overrideWith(
+      trackDualProgressMetricsProvider.overrideWith(
         (ref) async => [
           TrackDualProgressMetric(
             trackLabel: 'mishnayos',
@@ -148,7 +159,9 @@ Widget _buildDetailApp({
           ),
         ],
       ),
-      trackHasChazaraProvider(track.id).overrideWith((ref) async => false),
+      trackHasChazaraProvider(
+        track.curriculumId,
+      ).overrideWith((ref) async => false),
       allDailyTasksProvider.overrideWith((ref) async => []),
     ],
     child: MaterialApp(
@@ -176,16 +189,23 @@ void main() {
     GoogleFonts.config.allowRuntimeFetching = false;
   });
 
-  late UserDatabase db;
+  late FakeFirebaseFirestore db;
 
   setUp(() async {
-    db = inMemoryDb();
-    await seedProfileZero(db);
+    db = createFakeFirestore(authenticatedUid: _uid);
+    goalRepository = FirestoreGoalRepository(
+      firestore: db,
+      uid: _uid,
+      profileId: _profileId,
+    );
+    stageRepository = FirestoreStageDefinitionRepository(
+      firestore: db,
+      uid: _uid,
+      profileId: _profileId,
+    );
   });
 
-  tearDown(() async {
-    await db.close();
-  });
+  tearDown(() {});
 
   group('TRK-EDIT-STALE-01: TrackDetailScreen goal refresh after Edit Track', () {
     testWidgets(
@@ -196,12 +216,10 @@ void main() {
         addTearDown(tester.view.resetPhysicalSize);
         addTearDown(tester.view.resetDevicePixelRatio);
 
-        final trackId = await seedTrack(db, profileId: 0);
         // Seed with paceValue = 3.
-        final goalId = await _seedGoal(db, profileId: 0, trackId: trackId);
-        await _seedLearnStage(db, profileId: 0, trackId: trackId);
+        final goalId = await _seedGoal(db);
 
-        final track = _track(id: trackId);
+        final track = _track();
 
         await tester.pumpWidget(_buildDetailApp(track: track, db: db));
         await tester.pump();
@@ -209,31 +227,31 @@ void main() {
 
         // Step 1: verify initial goal value shown.
         // "3 · Per week" — see TrackDetailScreen._goalLabel.
+        final goalRow = find
+            .ancestor(of: find.text('Goal'), matching: find.byType(Row))
+            .first;
+        final oldGoal = find.descendant(
+          of: goalRow,
+          matching: find.text('3 · Per week'),
+        );
         expect(
-          find.textContaining('3'),
-          findsWidgets,
+          oldGoal,
+          findsOneWidget,
           reason:
               'TRK-EDIT-STALE-01: initial goal "3 · Per week" must be visible',
         );
 
-        // Step 2: simulate what EditTrackScreen.editTrack() would do — update
-        // the goal row in the DB directly (paceValue 3 → 7).
-        await _updateGoalPaceValue(db, goalId: goalId, newPaceValue: 7);
-
-        // Step 3: simulate the Edit Track navigation by pushing a dummy screen
-        // and then popping back. This triggers the .then() handler that
-        // invalidates _trackGoalProvider.
+        // Step 2: use the real Edit Track action. Its route-completion handler
+        // is the production seam that invalidates _trackGoalProvider.
         final navigator = tester.state<NavigatorState>(find.byType(Navigator));
-        unawaited(
-          navigator.push<void>(
-            MaterialPageRoute<void>(
-              builder: (_) => const Scaffold(body: Text('Edit Track Screen')),
-            ),
-          ),
-        );
+        final editTrack = find.text('Edit Track');
+        expect(editTrack, findsOneWidget);
+        await tester.tap(editTrack);
         await tester.pumpAndSettle();
 
-        // Step 4: pop back to TrackDetailScreen.
+        // Step 3: the real Edit Track screen is now open. The DB update models
+        // its successful save before returning to the detail screen.
+        await _updateGoalPaceValue(db, goalId: goalId, newPaceValue: 7);
         navigator.pop();
         await tester.pumpAndSettle();
         await tester.pump(const Duration(seconds: 1));
@@ -242,9 +260,18 @@ void main() {
         // With the fix, _trackGoalProvider is invalidated on pop → re-reads DB
         // → shows "7 · Per week".
         // Without the fix, the cached "3" from before navigation is shown.
+        final newGoal = find.descendant(
+          of: goalRow,
+          matching: find.text('7 · Per week'),
+        );
         expect(
-          find.textContaining('7'),
-          findsWidgets,
+          oldGoal,
+          findsNothing,
+          reason: 'the stale pace value must disappear after the refresh',
+        );
+        expect(
+          newGoal,
+          findsOneWidget,
           reason:
               'TRK-EDIT-STALE-01: after EditTrackScreen returns, the goal must '
               'reflect the updated pace value (7), not the stale cached value (3). '
@@ -254,22 +281,4 @@ void main() {
       },
     );
   });
-}
-
-Future<void> _seedLearnStage(
-  UserDatabase db, {
-  required int profileId,
-  required int trackId,
-}) async {
-  await db
-      .into(db.stageDefinitions)
-      .insert(
-        StageDefinitionsCompanion.insert(
-          profileId: profileId,
-          curriculumId: 'mishnayos',
-          trackId: trackId,
-          stageOrder: 1,
-          stageName: 'Learn',
-        ),
-      );
 }

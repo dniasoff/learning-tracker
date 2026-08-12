@@ -23,7 +23,6 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
@@ -33,10 +32,8 @@ import 'package:learning_tracker/features/tracks/track_order/presentation/screen
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/domain/models/learning_order_item.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/presentation/widgets/draggable_order_item.dart';
 
-import '../../../../helpers/drift_memory.dart';
 import '../../../../helpers/pump_app.dart';
 
-const _kTrackId = 1;
 const _kCurriculumId = CurriculumId.mishnaBerurah;
 const _kMasechtosCount = 700;
 
@@ -64,30 +61,30 @@ LearningOrderItem _item(String ref, int sortOrder) => LearningOrderItem(
 class _LargeFixtureTrackRepository implements TrackLearningOrderRepository {
   @override
   Future<List<LearningOrderItem>> getSedarimOrder(
-    int trackId,
+    CurriculumId curriculumId,
     List<ContentItem> allItems,
   ) async => const [];
 
   @override
   Future<List<LearningOrderItem>> getMasechtosOrder(
-    int trackId,
+    CurriculumId curriculumId,
     List<ContentItem> allItems,
   ) async => [for (var i = 0; i < _kMasechtosCount; i++) _item('Siman_$i', i)];
 
   @override
   Future<void> saveSedarimOrder(
-    int trackId,
+    CurriculumId curriculumId,
     List<LearningOrderItem> items,
   ) async {}
 
   @override
   Future<void> saveMasechtosOrder(
-    int trackId,
+    CurriculumId curriculumId,
     List<LearningOrderItem> items,
   ) async {}
 
   @override
-  Future<void> resetToDefault(int trackId) async {}
+  Future<void> resetToDefault(CurriculumId curriculumId) async {}
 }
 
 /// Minimal [ContentRepository] stub — [_LargeFixtureTrackRepository] never
@@ -152,13 +149,9 @@ void main() {
     'rows for a 700-item (Mishna Berurah-sized) track, not all 700 (PF-2)',
     (tester) async {
       final repo = _LargeFixtureTrackRepository();
-      final db = inMemoryDb();
-      addTearDown(db.close);
-
       await tester.pumpWidget(
         pumpApp(
           overrides: [
-            userDatabaseProvider.overrideWith((ref) => db),
             trackLearningOrderRepositoryProvider.overrideWithValue(repo),
             contentRepositoryProvider.overrideWithValue(
               const _EmptyContentRepository(),
@@ -168,10 +161,7 @@ void main() {
             ).overrideWith((ref) async => 0),
             useHebrewTermsProvider.overrideWith(() => _HebrewTermsOff()),
           ],
-          child: const TrackLearningOrderScreen(
-            trackId: _kTrackId,
-            curriculumId: _kCurriculumId,
-          ),
+          child: const TrackLearningOrderScreen(curriculumId: _kCurriculumId),
         ),
       );
 

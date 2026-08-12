@@ -1,200 +1,208 @@
-// AUD-tracks-19: TrackCreationService and TrackEditService previously each
-// carried a byte-for-byte-identical private "delete then loop-await-upsert"
-// study-day method, and TrackCreationService additionally hand-rolled an
-// awaited per-row scope insert loop directly against the table. Both now
-// delegate to shared, batched DAO helpers
-// (StudyDayConfigDao.replaceAllForTrack / CurriculumScopeDao
-// .insertScopesForTrack). These tests pin the observable behavior — the
-// persisted rows — so the extraction cannot silently change what gets
-// written.
+// AUD-tracks-19: creation and editing delegate their study-day/scope writes
+// to the Firestore-era repository seams exactly once.
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/bookmark_repository.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/day_type.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/features/scheduler/domain/repositories/goal_repository.dart';
+import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
 import 'package:learning_tracker/features/tracks/domain/services/curriculum_activation_service.dart';
+import 'package:learning_tracker/features/tracks/setup/data/repositories/curriculum_track_repository_impl.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/add_track_result.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/entities/profile_program.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/repositories/curriculum_scope_write_repository.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/repositories/profile_program_repository.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/repositories/study_day_write_repository.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/services/track_creation_service.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/services/track_edit_service.dart';
+import 'package:learning_tracker/features/tracks/stages/domain/models/stage_definition.dart';
 import 'package:learning_tracker/features/tracks/stages/domain/repositories/stage_definition_repository.dart';
 import 'package:mocktail/mocktail.dart';
 
-import '../../../../../helpers/drift_memory.dart';
+class _Activation extends Mock implements CurriculumActivationService {}
 
-class _MockActivation extends Mock implements CurriculumActivationService {}
+class _Tracks extends Mock
+    implements FirestoreCurriculumTrackRepositoryAdapter {}
 
-class _MockWizard extends Mock implements LearningProcessWizardService {}
+class _Stages extends Mock implements StageDefinitionRepository {}
 
-class _MockGoalRepo extends Mock implements GoalRepository {}
+class _Goals extends Mock implements GoalRepository {}
 
-class _MockStageRepo extends Mock implements StageDefinitionRepository {}
+class _Programs implements ProfileProgramRepository {
+  @override
+  Future<ProfileProgramEntity?> getProgram(CurriculumId curriculumId) async =>
+      null;
 
-class _MockBookmarkRepo extends Mock implements BookmarkRepository {}
+  @override
+  Future<void> setProgram({
+    required CurriculumId curriculumId,
+    required int programId,
+    DateTime? trackingStartDate,
+    String? trackingStartRef,
+  }) async {}
+
+  @override
+  Future<void> removeProgram(CurriculumId curriculumId) async {}
+}
+
+class _Bookmarks extends Mock implements BookmarkRepository {}
+
+class _StudyDays implements StudyDayWriteRepository {
+  Map<int, DayType>? last;
+
+  @override
+  Future<void> replaceAllForCurriculum({
+    required CurriculumId curriculumId,
+    required Map<int, DayType> studyDays,
+  }) async {
+    last = studyDays;
+  }
+}
+
+class _Scopes implements CurriculumScopeWriteRepository {
+  List<({int level, String value})> last = const [];
+
+  @override
+  Future<void> clearScopes(CurriculumId curriculumId) async {}
+
+  @override
+  Future<void> insertScopes({
+    required CurriculumId curriculumId,
+    required List<({int level, String value})> scopes,
+  }) async {
+    last = scopes;
+  }
+}
+
+TrackCreationService _creationService({
+  required _StudyDays studyDays,
+  required _Scopes scopes,
+}) {
+  final activation = _Activation();
+  when(
+    () => activation.activateForProfile(any(), any()),
+  ).thenAnswer((_) async {});
+  final tracks = _Tracks();
+  when(() => tracks.activateTrack(any())).thenAnswer(
+    (_) async => CurriculumTrackEntity(
+      curriculumId: CurriculumId.mishnayos,
+      state: 'active',
+      stateChangedAt: DateTime.utc(2026, 1, 1),
+      activatedAt: DateTime.utc(2026, 1, 1),
+    ),
+  );
+  final stageRepository = _Stages();
+  when(
+    () => stageRepository.replaceStagesForCurriculum(any(), any()),
+  ).thenAnswer((_) async {});
+  final goals = _Goals();
+  when(() => goals.getGoals(any())).thenAnswer((_) async => const []);
+  final programs = _Programs();
+  return TrackCreationService(
+    activationService: activation,
+    wizardService: LearningProcessWizardService(
+      stageRepository: stageRepository,
+      learningProgramRepo: LearningProgramRepository.instance,
+      profileProgramRepository: programs,
+    ),
+    goalRepository: goals,
+    trackRepository: tracks,
+    studyDayRepository: studyDays,
+    scopeRepository: scopes,
+    profileProgramRepository: programs,
+    bookmarkRepository: _Bookmarks(),
+  );
+}
 
 void main() {
-  late UserDatabase db;
-
   setUpAll(() {
     registerFallbackValue(CurriculumId.bavli);
-    registerFallbackValue(
-      const WizardResult(
-        curriculumId: CurriculumId.bavli,
-        choice: WizardChoice.noReview,
-      ),
-    );
+    registerFallbackValue(<int, DayType>{});
+    registerFallbackValue(<StageDefinition>[]);
   });
 
-  setUp(() async {
-    db = inMemoryDb();
-    await seedProfile(db); // learner_profiles(id = 1)
-  });
-
-  tearDown(() async {
-    await db.close();
-  });
-
-  group('TrackCreationService — study days & scopes (AUD-tracks-19)', () {
-    Future<TrackCreationService> buildService() async {
-      final stageRepo = _MockStageRepo();
-      when(
-        () => stageRepo.deleteStagesForTrack(any()),
-      ).thenAnswer((_) async {});
-      when(
-        () => stageRepo.pushStagesForTrack(
-          trackId: any(named: 'trackId'),
-          curriculumId: any(named: 'curriculumId'),
-        ),
-      ).thenAnswer((_) async {});
-
-      final activation = _MockActivation();
-      when(
-        () => activation.activateForProfile(any(), any()),
-      ).thenAnswer((_) async {});
-
-      final wizard = _MockWizard();
-      when(
-        () => wizard.applyWizardResult(
-          any(),
-          profileId: any(named: 'profileId'),
-          trackId: any(named: 'trackId'),
-        ),
-      ).thenAnswer((_) async {});
-
-      return TrackCreationService(
-        database: db,
-        activationService: activation,
-        wizardService: wizard,
-        goalRepository: _MockGoalRepo(),
-        stageRepository: stageRepo,
-        // None of these tests set a programId, so setBookmark is never
-        // reached — no stubbing needed.
-        bookmarkRepository: _MockBookmarkRepo(),
-      );
-    }
-
-    test(
-      'persists every study day passed in AddTrackResult.studyDays',
-      () async {
-        final service = await buildService();
-        const result = AddTrackResult(
+  test(
+    'creation persists every supplied study day through the writer',
+    () async {
+      final studyDays = _StudyDays();
+      final scopes = _Scopes();
+      await _creationService(studyDays: studyDays, scopes: scopes).createTrack(
+        result: const AddTrackResult(
           curriculumId: CurriculumId.bavli,
           label: 'Bavli',
           studyDays: {1: 'study', 2: 'rest', 5: 'study'},
-        );
+        ),
+      );
 
-        await service.createTrack(result: result, profileId: 1);
+      expect(studyDays.last, {
+        1: DayType.study,
+        2: DayType.review,
+        5: DayType.study,
+      });
+    },
+  );
 
-        final rows = await db.studyDayConfigDao
-            .getConfigsByCurriculumAndProfile(CurriculumId.bavli.storageKey, 1);
-        expect(
-          {for (final r in rows) r.dayOfWeek: r.dayType},
-          {1: 'study', 2: 'rest', 5: 'study'},
-        );
-      },
+  test('creation forwards mixed-level scope selections once', () async {
+    final studyDays = _StudyDays();
+    final scopes = _Scopes();
+    await _creationService(studyDays: studyDays, scopes: scopes).createTrack(
+      result: const AddTrackResult(
+        curriculumId: CurriculumId.mishnayos,
+        label: 'Mishnayos',
+        studyDays: {1: 'study'},
+        scopeSelections: [
+          ScopeEntry(level: 1, value: 'Seder Zeraim'),
+          ScopeEntry(level: 2, value: 'Berachos'),
+        ],
+      ),
     );
 
-    test(
-      'persists mixed-level scope selections (breadcrumb drill-down)',
-      () async {
-        final service = await buildService();
-        const result = AddTrackResult(
-          curriculumId: CurriculumId.mishnayos,
-          label: 'Mishnayos',
-          studyDays: {1: 'study'},
-          scopeSelections: [
-            ScopeEntry(level: 1, value: 'Seder Zeraim'),
-            ScopeEntry(level: 2, value: 'Berachos'),
-          ],
-        );
+    expect(scopes.last, [
+      (level: 1, value: 'Seder Zeraim'),
+      (level: 2, value: 'Berachos'),
+    ]);
+  });
 
-        await service.createTrack(result: result, profileId: 1);
-
-        final trackId = (await db.select(db.curriculumTracks).getSingle()).id;
-        final scopes = await db.curriculumScopeDao.getScopesByTrack(trackId);
-        expect(
-          {for (final s in scopes) s.scopeLevel: s.scopeValue},
-          {1: 'Seder Zeraim', 2: 'Berachos'},
-        );
-      },
-    );
-
-    test('writes no scope rows when scopeSelections is omitted', () async {
-      final service = await buildService();
-      const result = AddTrackResult(
+  test('creation writes no scopes when selections are omitted', () async {
+    final scopes = _Scopes();
+    await _creationService(studyDays: _StudyDays(), scopes: scopes).createTrack(
+      result: const AddTrackResult(
         curriculumId: CurriculumId.bavli,
         label: 'Bavli',
         studyDays: {1: 'study'},
-      );
-
-      await service.createTrack(result: result, profileId: 1);
-
-      final trackId = (await db.select(db.curriculumTracks).getSingle()).id;
-      final scopes = await db.curriculumScopeDao.getScopesByTrack(trackId);
-      expect(scopes, isEmpty);
-    });
+      ),
+    );
+    expect(scopes.last, isEmpty);
   });
 
-  group('TrackEditService — study days (AUD-tracks-19)', () {
-    test(
-      'replaceAllForTrack fully replaces a prior study-day set on edit',
-      () async {
-        final trackId = await seedTrack(
-          db,
-          profileId: 1,
-          curriculumId: 'bavli',
-        );
-        await db.studyDayConfigDao.seedDefaultsForTrack(trackId: trackId);
-
-        final service = TrackEditService(
-          database: db,
-          wizardService: _MockWizard(),
-          goalRepository: _MockGoalRepo(),
-        );
-
-        await service.editTrack(
-          trackId: trackId,
-          // No goal-changing field is passed below, so this value is never
-          // read (hasGoalChange stays false) — a minimal stand-in is enough.
-          goal: GoalEntity(
-            id: 1,
-            curriculumId: CurriculumId.bavli,
-            createdAt: DateTime.utc(2026, 1, 1),
-            updatedAt: DateTime.utc(2026, 1, 1),
-          ),
-          profileId: 1,
-          curriculum: CurriculumId.bavli,
-          studyDays: const {3: 'rest'},
-        );
-
-        final rows = await db.studyDayConfigDao
-            .getConfigsByCurriculumAndProfile(CurriculumId.bavli.storageKey, 1);
-        expect(rows, hasLength(1));
-        expect(rows.single.dayOfWeek, 3);
-        expect(rows.single.dayType, 'rest');
-      },
+  test('editing replaces the study-day set through the writer', () async {
+    final studyDays = _StudyDays();
+    final stageRepository = _Stages();
+    final programs = _Programs();
+    final service = TrackEditService(
+      wizardService: LearningProcessWizardService(
+        stageRepository: stageRepository,
+        learningProgramRepo: LearningProgramRepository.instance,
+        profileProgramRepository: programs,
+      ),
+      goalRepository: _Goals(),
+      studyDayRepository: studyDays,
     );
+
+    await service.editTrack(
+      goal: GoalEntity(
+        curriculumId: CurriculumId.bavli,
+        createdAt: DateTime.utc(2026, 1, 1),
+        updatedAt: DateTime.utc(2026, 1, 1),
+      ),
+      curriculum: CurriculumId.bavli,
+      studyDays: const {3: 'rest'},
+    );
+
+    expect(studyDays.last, {3: DayType.review});
   });
 }

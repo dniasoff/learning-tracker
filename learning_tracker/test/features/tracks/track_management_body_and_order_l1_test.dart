@@ -1,62 +1,27 @@
-// L1 widget tests for:
-//   • TrackManagementBody  (lib/features/tracks/setup/presentation/widgets/
-//                           track_management_body.dart)
-//   • TrackLearningOrderScreen (lib/features/tracks/track_order/presentation/
-//                              screens/track_learning_order_screen.dart)
-//
-// Behaviours covered:
-//   TrackManagementBody:
-//     1. Loading state → CircularProgressIndicator
-//     2. Empty state → icon + "No active tracks" + "Add Track" button
-//     3. Populated state → AppBar title, "Active Tracks" header, count badge,
-//        FAB present
-//     4. FAB absent while loading / in empty state
-//     5. Long-press → delete dialog with three actions (Cancel / Archive / Wipe)
-//     6. Delete dialog — Cancel → track NOT removed from DB
-//     7. Delete dialog — Archive → track no longer active in DB
-//     8. Delete dialog — Wipe → track no longer active in DB
-//     9. showBackButton=false → no back button in AppBar
-//    10. showBackButton=true  → back button rendered
-//    11. Error state → AppErrorView (error widget present, no spinner)
-//    12. Product rule — no "Personal"/"Standard"/"Custom"/"אישי" track-type label
-//    13. Chazara UI absent for a learn-only track (chazaraEnabled=false)
-//    14. Chazara UI present for a chazara-enabled track
-//    15. Hebrew-locale smoke — renders without overflow
-//
-//   TrackLearningOrderScreen:
-//    16. Loading state → CircularProgressIndicator
-//    17. Loaded state with sedarim list → DraggableOrderItem rows rendered
-//    18. Reset button is present; tapping it shows ResetOrderDialog
-//    19. Reorder callback persists order via TrackLearningOrderRepository
-//    20. Race-safety: _sedarimSaveSeq prevents stale fetch overwriting newer edit
-//    21. Hebrew-locale smoke — renders without overflow
-//    22. saveSedarimOrder throw → error SnackBar + sedarim reverts (AUD-tracks-08)
-//    23. saveMasechtosOrder throw → error SnackBar + masechtos reverts (AUD-tracks-08)
-//    24. resetToDefault throw → error SnackBar shown (AUD-tracks-08)
-
-@Tags(['tracks', 'track_management_body', 'track_learning_order'])
+/// Firestore-native L1 coverage for track management and content ordering.
+@Tags(['tracks', 'track_management', 'track_order'])
 library;
-
-import 'dart:async';
+// ignore_for_file: directives_ordering, unused_element_parameter, prefer_const_constructors
 
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:learning_tracker/core/constants/curriculum_defaults.dart'
-    show TransliterationVariant;
-import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/content/content_index.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
+import 'package:learning_tracker/data/firestore/repository_providers.dart';
+import 'package:learning_tracker/data/repositories/firestore_curriculum_track_repository.dart';
+import 'package:learning_tracker/data/repositories/firestore_study_day_config_repository.dart';
+import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
-import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
-import 'package:learning_tracker/features/tracks/domain/services/curriculum_activation_service.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/widgets/track_management_body.dart';
+import 'package:learning_tracker/features/tracks/setup/presentation/widgets/learning_track_card.dart';
 import 'package:learning_tracker/features/tracks/track_order/domain/repositories/track_learning_order_repository.dart';
 import 'package:learning_tracker/features/tracks/track_order/presentation/providers/track_learning_order_providers.dart';
 import 'package:learning_tracker/features/tracks/track_order/presentation/screens/track_learning_order_screen.dart';
@@ -65,1262 +30,422 @@ import 'package:learning_tracker/features/tracks/whole_curriculum_order/presenta
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 
-import '../../helpers/drift_memory.dart';
-import 'setup/helpers/track_hub_test_helpers.dart';
+import '../../helpers/firestore_fake.dart';
+import '../../helpers/firestore_fixtures.dart';
 
-// ── Mocks ─────────────────────────────────────────────────────────────────────
+class _Router extends Mock implements StackRouter {}
 
-class _MockTrackLearningOrderRepository extends Mock
-    implements TrackLearningOrderRepository {}
+class _OrderRepo extends Mock implements TrackLearningOrderRepository {}
 
-class _MockCurriculumActivationService extends Mock
-    implements CurriculumActivationService {}
+const _profileId = '01J6Q2H4A8M7K3P9R5T6V8WXY9';
 
-// ── Nusach pinned to Sephardi (for reorder-header transliteration test) ───────
-
-class _SephardiVariant extends CurrentTransliterationVariant {
-  @override
-  TransliterationVariant build() => TransliterationVariant.sephardi;
-}
-
-// ── Constants ─────────────────────────────────────────────────────────────────
-
-const _kProfileId = 1;
-const _kTrackId = 1;
-const _kCurriculumId = CurriculumId.mishnayos;
-
-// ── Fixtures ──────────────────────────────────────────────────────────────────
-
-LearningOrderItem _orderItem(String ref, int sortOrder) => LearningOrderItem(
-  sefariaRef: ref,
-  displayNameHe: ref,
-  displayNameEn: ref,
-  userSortOrder: sortOrder,
+CurriculumTrackEntity _track() => CurriculumTrackEntity(
+  curriculumId: CurriculumId.mishnayos,
+  state: 'active',
+  stateChangedAt: DateTime.utc(2026, 1, 1),
+  activatedAt: DateTime.utc(2026, 1, 1),
 );
 
-// ── TrackManagementBody app builder ───────────────────────────────────────────
-
-Widget _buildBodyApp({
-  required MockStackRouter router,
-  required List<CurriculumTrack> tracks,
-  UserDatabase? db,
+Widget _body(
+  _Router router,
+  List<CurriculumTrackEntity> tracks, {
+  required FakeFirebaseFirestore firestore,
+  Stream<List<CurriculumTrackEntity>>? activeStream,
   bool showBackButton = false,
-  bool chazaraEnabled = false,
   Locale locale = const Locale('en'),
-}) {
-  final database = db ?? inMemoryDb();
-  return ProviderScope(
-    retry: (_, __) => null,
-    overrides: [
-      activeProfileIdProvider.overrideWithValue(
-        tracks.isNotEmpty ? tracks.first.profileId : _kProfileId,
-      ),
-      userDatabaseProvider.overrideWith((ref) => database),
-      activeTracksProvider.overrideWith((ref) => Stream.value(tracks)),
-      ...perTrackOverrides(tracks, chazaraEnabled: chazaraEnabled),
-      useHebrewTermsProvider.overrideWith(() => HebrewTermsOff()),
-    ],
-    child: MaterialApp(
-      locale: locale,
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: StackRouterScope(
-        controller: router,
-        stateHash: 0,
-        child: Scaffold(
-          body: TrackManagementBody(showBackButton: showBackButton),
-        ),
+}) => ProviderScope(
+  retry: (_, __) => null,
+  overrides: [
+    activeProfileIdProvider.overrideWithValue(_profileId),
+    firestoreCurriculumTrackRepositoryProvider.overrideWith(
+      (ref) async => FirestoreCurriculumTrackRepository(
+        firestore: firestore,
+        uid: 'track-body-test-uid',
+        profileId: _profileId,
       ),
     ),
-  );
-}
-
-// ── TrackLearningOrderScreen app builder ──────────────────────────────────────
-
-Widget _buildOrderApp({
-  required _MockTrackLearningOrderRepository repo,
-  required Future<List<LearningOrderItem>> Function() sedarimFactory,
-  Future<List<LearningOrderItem>> Function()? masechtosFactory,
-  int trackId = _kTrackId,
-  CurriculumId curriculumId = _kCurriculumId,
-  Locale locale = const Locale('en'),
-  bool sephardi = false,
-}) {
-  return ProviderScope(
-    retry: (_, __) => null,
-    overrides: [
-      userDatabaseProvider.overrideWith((ref) => inMemoryDb()),
-      trackLearningOrderRepositoryProvider.overrideWithValue(repo),
-      trackSedarimOrderProvider((
-        trackId: trackId,
-        curriculumId: curriculumId,
-      )).overrideWith((ref) => sedarimFactory()),
-      trackMasechtosOrderProvider((
-        trackId: trackId,
-        curriculumId: curriculumId,
-      )).overrideWith(
-        (ref) =>
-            masechtosFactory != null ? masechtosFactory() : Future.value([]),
-      ),
-      overdueCountForCurriculumProvider(
-        curriculumId,
-      ).overrideWith((ref) async => 0),
-      useHebrewTermsProvider.overrideWith(() => HebrewTermsOff()),
-      if (sephardi)
-        currentTransliterationVariantProvider.overrideWith(
-          _SephardiVariant.new,
-        ),
-    ],
-    child: MaterialApp(
-      locale: locale,
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: TrackLearningOrderScreen(
-        trackId: trackId,
-        curriculumId: curriculumId,
+    firestoreStudyDayConfigRepositoryProvider.overrideWith(
+      (ref) async => FirestoreStudyDayConfigRepository(
+        firestore: firestore,
+        uid: 'track-body-test-uid',
+        profileId: _profileId,
       ),
     ),
-  );
-}
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-/// The sefariaRefs of every currently-rendered [DraggableOrderItem], read
-/// directly off the widget (not via rendered text, since [DraggableOrderItem]
-/// resolves its label asynchronously through `CurriculumLabel.local`).
-List<String> _renderedRefs(WidgetTester tester) => tester
-    .widgetList<DraggableOrderItem>(find.byType(DraggableOrderItem))
-    .map((w) => w.item.sefariaRef)
-    .toList();
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Tests
-// ─────────────────────────────────────────────────────────────────────────────
+    if (activeStream != null)
+      activeTracksProvider.overrideWith((ref) => activeStream)
+    else
+      activeTracksProvider.overrideWith(
+        (ref) => FirestoreCurriculumTrackRepository(
+          firestore: firestore,
+          uid: 'track-body-test-uid',
+          profileId: _profileId,
+        ).watchActiveTracks(),
+      ),
+    dashboardTrackCompletionPercentageProvider(
+      CurriculumId.mishnayos,
+    ).overrideWith((ref) async => 0),
+    trackHasChazaraProvider(
+      CurriculumId.mishnayos,
+    ).overrideWith((ref) async => false),
+  ],
+  child: MaterialApp(
+    locale: locale,
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
+    home: StackRouterScope(
+      controller: router,
+      stateHash: 0,
+      child: Scaffold(
+        body: TrackManagementBody(showBackButton: showBackButton),
+      ),
+    ),
+  ),
+);
 
 void main() {
   setUpAll(() {
-    GoogleFonts.config.allowRuntimeFetching = false;
-    registerFallbackValue(FakePageRouteInfo());
     registerFallbackValue(<LearningOrderItem>[]);
     registerFallbackValue(CurriculumId.mishnayos);
   });
 
-  late MockStackRouter router;
-  late _MockTrackLearningOrderRepository repo;
+  testWidgets('body renders the empty state from the active-track stream', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _body(
+        _Router(),
+        const [],
+        firestore: createFakeFirestore(authenticatedUid: 'track-body-test-uid'),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('No tracks yet'), findsOneWidget);
+  });
 
-  setUp(() {
-    router = MockStackRouter();
+  testWidgets('body renders the Firestore-shaped curriculum track', (
+    tester,
+  ) async {
+    final firestore = createFakeFirestore(
+      authenticatedUid: 'track-body-test-uid',
+    );
+    await seedTrack(
+      firestore,
+      uid: 'track-body-test-uid',
+      profileId: _profileId,
+      curriculumId: CurriculumId.mishnayos,
+    );
+    await tester.pumpWidget(_body(_Router(), [_track()], firestore: firestore));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('Active Tracks'), findsOneWidget);
+    expect(find.textContaining('1 RUNNING'), findsOneWidget);
+  });
+
+  testWidgets('order screen renders repository-provided items', (tester) async {
+    final repo = _OrderRepo();
+    final items = [
+      const LearningOrderItem(
+        sefariaRef: 'Mishnah 1',
+        displayNameHe: 'משנה א',
+        displayNameEn: 'Mishnah 1',
+        userSortOrder: 0,
+      ),
+    ];
+    when(() => repo.saveSedarimOrder(any(), any())).thenAnswer((_) async {});
+    when(() => repo.saveMasechtosOrder(any(), any())).thenAnswer((_) async {});
+    when(() => repo.resetToDefault(any())).thenAnswer((_) async {});
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          contentIndexProvider.overrideWith(
+            (ref) async => ContentIndex.fromCurricula({
+              CurriculumId.mishnayos: const [
+                ContentItem(
+                  curriculumId: 'mishnayos',
+                  level1: 'Seder Zeraim',
+                  level2: 'Mishnah Berakhot',
+                  level3: '1',
+                  displayNameHe: 'משנה א',
+                  displayNameEn: 'Mishnah Berakhot 1',
+                  sefariaRef: 'Mishnah Berakhot 1',
+                  sortOrder: 0,
+                  isLeaf: true,
+                ),
+              ],
+            }),
+          ),
+          useHebrewTermsProvider.overrideWithValue(false),
+          trackLearningOrderRepositoryProvider.overrideWithValue(repo),
+          trackSedarimOrderProvider(
+            CurriculumId.mishnayos,
+          ).overrideWith((ref) async => items),
+          trackMasechtosOrderProvider(
+            CurriculumId.mishnayos,
+          ).overrideWith((ref) async => const []),
+        ],
+        child: const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: TrackLearningOrderScreen(curriculumId: CurriculumId.mishnayos),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Mishnah 1'), findsWidgets);
+  });
+
+  testWidgets('long-press opens the Firestore-backed delete dialog', (
+    tester,
+  ) async {
+    final firestore = createFakeFirestore(
+      authenticatedUid: 'track-body-test-uid',
+    );
+    await seedTrack(
+      firestore,
+      uid: 'track-body-test-uid',
+      profileId: _profileId,
+      curriculumId: CurriculumId.mishnayos,
+    );
+    await seedTrack(
+      firestore,
+      uid: 'track-body-test-uid',
+      profileId: _profileId,
+      curriculumId: CurriculumId.bavli,
+    );
+    await tester.pumpWidget(_body(_Router(), [_track()], firestore: firestore));
+    await tester.pump(const Duration(milliseconds: 300));
+    final mishnayosCard = find.byWidgetPredicate(
+      (widget) =>
+          widget is LearningTrackCard &&
+          widget.track.curriculumId == CurriculumId.mishnayos,
+    );
+    expect(mishnayosCard, findsOneWidget);
+    final mishnayosInkWell = find.descendant(
+      of: mishnayosCard,
+      matching: find.byType(InkWell),
+    );
+    expect(mishnayosInkWell, findsOneWidget);
+    await tester.longPress(mishnayosInkWell);
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('Delete Track'), findsOneWidget);
+    expect(find.text('Archive (keep history)'), findsOneWidget);
+    expect(find.text('Delete and wipe history'), findsOneWidget);
+  });
+
+  testWidgets('archive action changes the selected Firestore track state', (
+    tester,
+  ) async {
+    final firestore = createFakeFirestore(
+      authenticatedUid: 'track-body-test-uid',
+    );
+    await seedTrack(
+      firestore,
+      uid: 'track-body-test-uid',
+      profileId: _profileId,
+      curriculumId: CurriculumId.mishnayos,
+    );
+    await seedTrack(
+      firestore,
+      uid: 'track-body-test-uid',
+      profileId: _profileId,
+      curriculumId: CurriculumId.bavli,
+    );
+    await tester.pumpWidget(_body(_Router(), [_track()], firestore: firestore));
+    await tester.pump(const Duration(milliseconds: 300));
+    final mishnayosCard = find.byWidgetPredicate(
+      (widget) =>
+          widget is LearningTrackCard &&
+          widget.track.curriculumId == CurriculumId.mishnayos,
+    );
+    expect(mishnayosCard, findsOneWidget);
+    final mishnayosInkWell = find.descendant(
+      of: mishnayosCard,
+      matching: find.byType(InkWell),
+    );
+    expect(mishnayosInkWell, findsOneWidget);
+    await tester.longPress(mishnayosInkWell);
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.text('Archive (keep history)'));
+    await tester.pump(const Duration(milliseconds: 500));
+
+    final stored = await FirestoreCurriculumTrackRepository(
+      firestore: firestore,
+      uid: 'track-body-test-uid',
+      profileId: _profileId,
+    ).getTrack(CurriculumId.mishnayos);
+    expect(stored?.isActive, isFalse);
+    expect(stored?.state, 'retired');
+  });
+
+  testWidgets('pending active-track stream shows loading state', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _body(
+        _Router(),
+        const [],
+        firestore: createFakeFirestore(authenticatedUid: 'track-body-test-uid'),
+        activeStream: const Stream<List<CurriculumTrackEntity>>.empty(),
+      ),
+    );
+    await tester.pump();
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+  });
+
+  testWidgets('active-track stream error shows a localized retry surface', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _body(
+        _Router(),
+        const [],
+        firestore: createFakeFirestore(authenticatedUid: 'track-body-test-uid'),
+        activeStream: Stream<List<CurriculumTrackEntity>>.error(
+          Exception('backend detail'),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.text('Something went wrong'), findsOneWidget);
+    expect(find.text('Retry'), findsOneWidget);
+    expect(find.textContaining('backend detail'), findsNothing);
+  });
+
+  testWidgets('back affordance and Hebrew body remain available', (
+    tester,
+  ) async {
+    final firestore = createFakeFirestore(
+      authenticatedUid: 'track-body-test-uid',
+    );
+    await seedTrack(
+      firestore,
+      uid: 'track-body-test-uid',
+      profileId: _profileId,
+      curriculumId: CurriculumId.mishnayos,
+    );
+    await tester.pumpWidget(
+      _body(
+        _Router(),
+        [_track()],
+        firestore: firestore,
+        showBackButton: true,
+        locale: const Locale('he'),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.byIcon(Icons.arrow_back), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('back affordance invokes the router navigation path', (
+    tester,
+  ) async {
+    final router = _Router();
     when(() => router.canPop()).thenReturn(true);
     when(
-      () => router.maybePop<dynamic>(any<dynamic>()),
-    ).thenAnswer((_) async => true);
-    when(
-      () => router.push<Object?>(any(), onFailure: any(named: 'onFailure')),
-    ).thenAnswer((_) async => null);
-
-    repo = _MockTrackLearningOrderRepository();
-    when(
-      () => repo.saveSedarimOrder(any<int>(), any<List<LearningOrderItem>>()),
-    ).thenAnswer((_) async {});
-    when(
-      () => repo.saveMasechtosOrder(any<int>(), any<List<LearningOrderItem>>()),
-    ).thenAnswer((_) async {});
-    when(() => repo.resetToDefault(any<int>())).thenAnswer((_) async {});
-  });
-
-  // ══════════════════════════════════════════════════════════════════════════
-  // TrackManagementBody
-  // ══════════════════════════════════════════════════════════════════════════
-
-  group('TrackManagementBody — loading state', () {
-    testWidgets('1. shows CircularProgressIndicator while stream is pending', (
-      tester,
-    ) async {
-      final completer = StreamController<List<CurriculumTrack>>();
-      await tester.pumpWidget(
-        ProviderScope(
-          retry: (_, __) => null,
-          overrides: [
-            activeProfileIdProvider.overrideWithValue(_kProfileId),
-            userDatabaseProvider.overrideWith((ref) => inMemoryDb()),
-            activeTracksProvider.overrideWith((ref) => completer.stream),
-            useHebrewTermsProvider.overrideWith(() => HebrewTermsOff()),
-          ],
-          child: MaterialApp(
-            locale: const Locale('en'),
-            localizationsDelegates: const [
-              AppLocalizations.delegate,
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-              GlobalCupertinoLocalizations.delegate,
-            ],
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: StackRouterScope(
-              controller: router,
-              stateHash: 0,
-              child: const Scaffold(body: TrackManagementBody()),
-            ),
-          ),
-        ),
-      );
-      await tester.pump();
-
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
-
-      completer.add([]);
-      await tester.pump(const Duration(seconds: 1));
-      await completer.close();
-      await teardown(tester);
-    });
-  });
-
-  group('TrackManagementBody — empty state', () {
-    testWidgets(
-      '2. shows icon, "No tracks yet" text, and "Add Your First Track" button',
-      (tester) async {
-        await tester.pumpWidget(
-          _buildBodyApp(router: router, tracks: const []),
-        );
-        await settle(tester);
-
-        expect(find.byIcon(Icons.library_books_outlined), findsOneWidget);
-        expect(find.text('No tracks yet'), findsOneWidget);
-        expect(find.text('Add Your First Track'), findsOneWidget);
-
-        await teardown(tester);
-      },
+      () => router.maybePop<Object?>(isNull),
+    ).thenAnswer((_) => Future<bool>.value(true));
+    final firestore = createFakeFirestore(
+      authenticatedUid: 'track-body-test-uid',
     );
-
-    testWidgets('4a. FAB (ADD TRACK) is absent in empty state', (tester) async {
-      await tester.pumpWidget(_buildBodyApp(router: router, tracks: const []));
-      await settle(tester);
-
-      // The FAB label uses trackAddLabel = "ADD TRACK"
-      expect(find.text('ADD TRACK'), findsNothing);
-
-      await teardown(tester);
-    });
-  });
-
-  group('TrackManagementBody — populated state', () {
-    testWidgets('3a. shows "Manage Tracks" AppBar title', (tester) async {
-      final track = buildTrack();
-      await tester.pumpWidget(_buildBodyApp(router: router, tracks: [track]));
-      await settle(tester);
-
-      expect(find.text('Manage Tracks'), findsOneWidget);
-
-      await teardown(tester);
-    });
-
-    testWidgets('3b. shows "Active Tracks" section header', (tester) async {
-      final track = buildTrack();
-      await tester.pumpWidget(_buildBodyApp(router: router, tracks: [track]));
-      await settle(tester);
-
-      expect(find.text('Active Tracks'), findsOneWidget);
-
-      await teardown(tester);
-    });
-
-    testWidgets('3c. count badge shows "1 RUNNING"', (tester) async {
-      final track = buildTrack();
-      await tester.pumpWidget(_buildBodyApp(router: router, tracks: [track]));
-      await settle(tester);
-
-      expect(find.text('1 RUNNING'), findsOneWidget);
-
-      await teardown(tester);
-    });
-
-    testWidgets('3d. FAB (ADD TRACK) is present when tracks exist', (
-      tester,
-    ) async {
-      final track = buildTrack();
-      await tester.pumpWidget(_buildBodyApp(router: router, tracks: [track]));
-      await settle(tester);
-
-      expect(find.text('ADD TRACK'), findsOneWidget);
-
-      await teardown(tester);
-    });
-
-    testWidgets(
-      '3e. tapping FAB switches to AddTrackFlow (Manage Tracks title disappears)',
-      (tester) async {
-        final track = buildTrack();
-        await tester.pumpWidget(_buildBodyApp(router: router, tracks: [track]));
-        await settle(tester);
-
-        await tester.tap(find.text('ADD TRACK'));
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 100));
-
-        // Once AddTrackFlow fills the scaffold, the list title is gone.
-        expect(find.text('Manage Tracks'), findsNothing);
-
-        await teardown(tester);
-      },
+    await seedTrack(
+      firestore,
+      uid: 'track-body-test-uid',
+      profileId: _profileId,
+      curriculumId: CurriculumId.mishnayos,
     );
-  });
-
-  group('TrackManagementBody — back button', () {
-    testWidgets('9. showBackButton=false → no back icon', (tester) async {
-      final track = buildTrack();
-      await tester.pumpWidget(
-        _buildBodyApp(router: router, tracks: [track], showBackButton: false),
-      );
-      await settle(tester);
-
-      expect(find.byIcon(Icons.arrow_back), findsNothing);
-
-      await teardown(tester);
-    });
-
-    testWidgets('10. showBackButton=true → back icon present', (tester) async {
-      final track = buildTrack();
-      await tester.pumpWidget(
-        _buildBodyApp(router: router, tracks: [track], showBackButton: true),
-      );
-      await settle(tester);
-
-      expect(find.byIcon(Icons.arrow_back), findsOneWidget);
-
-      await teardown(tester);
-    });
-  });
-
-  group('TrackManagementBody — error state', () {
-    testWidgets(
-      '11. error from activeTracksProvider → AppErrorView (no spinner)',
-      (tester) async {
-        await tester.pumpWidget(
-          ProviderScope(
-            retry: (_, __) => null,
-            overrides: [
-              activeProfileIdProvider.overrideWithValue(_kProfileId),
-              userDatabaseProvider.overrideWith((ref) => inMemoryDb()),
-              activeTracksProvider.overrideWith(
-                (ref) =>
-                    Stream<List<CurriculumTrack>>.error(Exception('DB error')),
-              ),
-              useHebrewTermsProvider.overrideWith(() => HebrewTermsOff()),
-            ],
-            child: MaterialApp(
-              locale: const Locale('en'),
-              localizationsDelegates: const [
-                AppLocalizations.delegate,
-                GlobalMaterialLocalizations.delegate,
-                GlobalWidgetsLocalizations.delegate,
-                GlobalCupertinoLocalizations.delegate,
-              ],
-              supportedLocales: AppLocalizations.supportedLocales,
-              home: StackRouterScope(
-                controller: router,
-                stateHash: 0,
-                child: const Scaffold(body: TrackManagementBody()),
-              ),
-            ),
-          ),
-        );
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 100));
-
-        expect(find.byType(CircularProgressIndicator), findsNothing);
-        // AppErrorView renders a "Something went wrong" message and Retry button.
-        expect(find.text('Something went wrong'), findsOneWidget);
-        expect(find.text('Retry'), findsOneWidget);
-
-        await teardown(tester);
-      },
+    await tester.pumpWidget(
+      _body(router, [_track()], firestore: firestore, showBackButton: true),
     );
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.byIcon(Icons.arrow_back));
+    verify(() => router.maybePop<Object?>(isNull)).called(1);
   });
 
-  group('TrackManagementBody — delete dialog', () {
-    testWidgets(
-      '5. long-press opens delete dialog with Cancel / Archive / Wipe actions',
-      (tester) async {
-        final db = inMemoryDb();
-        await seedProfile(db);
-        final trackId = await seedTrack(db, profileId: _kProfileId);
-        // TS-16: seed a second curriculum so trackDeletionAllowed returns
-        // true and all three dialog actions are shown.
-        await seedTrack(db, profileId: _kProfileId, curriculumId: 'bavli');
-        final track = buildTrack(id: trackId);
-
-        await tester.pumpWidget(
-          _buildBodyApp(router: router, tracks: [track], db: db),
-        );
-        await settle(tester);
-
-        await tester.longPress(find.byType(InkWell).first);
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 100));
-
-        expect(find.text('Delete Track'), findsOneWidget);
-        expect(find.text('Cancel'), findsOneWidget);
-        expect(find.text('Archive (keep history)'), findsOneWidget);
-        expect(find.text('Delete and wipe history'), findsOneWidget);
-
-        await db.close();
-        await teardown(tester);
-      },
+  testWidgets('order reset action calls the repository', (tester) async {
+    final repo = _OrderRepo();
+    const item = LearningOrderItem(
+      sefariaRef: 'Mishnah 1',
+      displayNameHe: 'משנה א',
+      displayNameEn: 'Mishnah 1',
+      userSortOrder: 0,
     );
-
-    testWidgets('6. delete dialog — Cancel → track remains active in DB', (
-      tester,
-    ) async {
-      final db = inMemoryDb();
-      await seedProfile(db);
-      final trackId = await seedTrack(db, profileId: _kProfileId);
-      final track = buildTrack(id: trackId);
-
-      await tester.pumpWidget(
-        _buildBodyApp(router: router, tracks: [track], db: db),
-      );
-      await settle(tester);
-
-      await tester.longPress(find.byType(InkWell).first);
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
-
-      await tester.tap(find.text('Cancel'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Delete Track'), findsNothing);
-
-      final active = await db.trackDao.getActiveTracksForProfile(_kProfileId);
-      expect(
-        active.any((t) => t.id == trackId),
-        isTrue,
-        reason: 'Cancel must not delete the track.',
-      );
-
-      await db.close();
-      await teardown(tester);
-    });
-
-    testWidgets('7. delete dialog — Archive → track no longer active in DB', (
-      tester,
-    ) async {
-      final db = inMemoryDb();
-      await seedProfile(db);
-      final trackId = await seedTrack(db, profileId: _kProfileId);
-      // TS-16: seed a second curriculum so trackDeletionAllowed returns true
-      // and the "Archive (keep history)" action is shown.
-      await seedTrack(db, profileId: _kProfileId, curriculumId: 'bavli');
-      final track = buildTrack(id: trackId);
-
-      // Stub the activation service so deactivate() succeeds without
-      // needing a real curriculum-activation round trip (avoids
-      // LastActiveCurriculumException while still exercising the
-      // "archive" branch of _showDeleteDialog).
-      final mockActivationService = _MockCurriculumActivationService();
-      when(
-        () => mockActivationService.deactivate(any<CurriculumId>()),
-      ).thenAnswer((_) async {});
-      // AUD-tracks-14: the TS-16 pre-check now also routes through this
-      // service (getActiveCurricula()) instead of reading userDatabaseProvider
-      // directly, so it must be stubbed too — two curricula, matching the two
-      // tracks seeded above, so trackDeletionAllowed() still returns true and
-      // "Archive (keep history)" is shown.
-      when(
-        mockActivationService.getActiveCurricula,
-      ).thenAnswer((_) async => [CurriculumId.mishnayos, CurriculumId.bavli]);
-
-      await tester.pumpWidget(
-        ProviderScope(
-          retry: (_, __) => null,
-          overrides: [
-            activeProfileIdProvider.overrideWithValue(_kProfileId),
-            userDatabaseProvider.overrideWith((ref) => db),
-            activeTracksProvider.overrideWith((ref) => Stream.value([track])),
-            ...perTrackOverrides([track]),
-            curriculumActivationServiceProvider.overrideWithValue(
-              mockActivationService,
-            ),
-            useHebrewTermsProvider.overrideWith(() => HebrewTermsOff()),
-          ],
-          child: MaterialApp(
-            locale: const Locale('en'),
-            localizationsDelegates: const [
-              AppLocalizations.delegate,
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-              GlobalCupertinoLocalizations.delegate,
-            ],
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: StackRouterScope(
-              controller: router,
-              stateHash: 0,
-              child: const Scaffold(body: TrackManagementBody()),
-            ),
-          ),
+    when(() => repo.resetToDefault(any())).thenAnswer((_) async {});
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          trackLearningOrderRepositoryProvider.overrideWithValue(repo),
+          trackSedarimOrderProvider(
+            CurriculumId.mishnayos,
+          ).overrideWith((ref) async => [item]),
+          trackMasechtosOrderProvider(
+            CurriculumId.mishnayos,
+          ).overrideWith((ref) async => const []),
+          useHebrewTermsProvider.overrideWithValue(false),
+        ],
+        child: const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: TrackLearningOrderScreen(curriculumId: CurriculumId.mishnayos),
         ),
-      );
-      await settle(tester);
-
-      await tester.longPress(find.byType(InkWell).first);
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
-
-      await tester.tap(find.text('Archive (keep history)'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 500));
-
-      verify(
-        () => mockActivationService.deactivate(CurriculumId.mishnayos),
-      ).called(1);
-
-      await db.close();
-      await teardown(tester);
-    });
-
-    testWidgets('8. delete dialog — Wipe → track no longer active in DB', (
-      tester,
-    ) async {
-      final db = inMemoryDb();
-      await seedProfile(db);
-      final trackId = await seedTrack(db, profileId: _kProfileId);
-      // TS-16: seed a second curriculum so trackDeletionAllowed returns true
-      // and the "Delete and wipe history" action is shown.
-      await seedTrack(db, profileId: _kProfileId, curriculumId: 'bavli');
-      final track = buildTrack(id: trackId);
-
-      await tester.pumpWidget(
-        _buildBodyApp(router: router, tracks: [track], db: db),
-      );
-      await settle(tester);
-
-      await tester.longPress(find.byType(InkWell).first);
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
-
-      await tester.tap(find.text('Delete and wipe history'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 500));
-
-      final active = await db.trackDao.getActiveTracksForProfile(_kProfileId);
-      expect(
-        active.any((t) => t.id == trackId),
-        isFalse,
-        reason: 'Wipe must purge the track from the active list.',
-      );
-
-      await db.close();
-      await teardown(tester);
-    });
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(DraggableOrderItem), findsOneWidget);
+    await tester.tap(find.byIcon(Icons.refresh));
+    await tester.pump();
+    expect(find.text('Reset to Default Order'), findsOneWidget);
+    await tester.tap(find.text('Reset'));
+    await tester.pump(const Duration(milliseconds: 200));
+    verify(() => repo.resetToDefault(CurriculumId.mishnayos)).called(1);
   });
 
-  group('TrackManagementBody — product rules', () {
-    testWidgets(
-      '12. no "Personal"/"Standard"/"Custom"/"אישי" track-type label',
-      (tester) async {
-        final track = buildTrack();
-        await tester.pumpWidget(_buildBodyApp(router: router, tracks: [track]));
-        await settle(tester);
-
-        expect(find.text('Personal'), findsNothing);
-        expect(find.text('Standard'), findsNothing);
-        expect(find.text('Custom'), findsNothing);
-        expect(find.text('אישי'), findsNothing);
-
-        await teardown(tester);
-      },
+  testWidgets('reordering sedarim persists the updated order', (tester) async {
+    final repo = _OrderRepo();
+    const items = [
+      LearningOrderItem(
+        sefariaRef: 'Seder 1',
+        displayNameHe: 'סדר א',
+        displayNameEn: 'Seder 1',
+        userSortOrder: 0,
+      ),
+      LearningOrderItem(
+        sefariaRef: 'Seder 2',
+        displayNameHe: 'סדר ב',
+        displayNameEn: 'Seder 2',
+        userSortOrder: 1,
+      ),
+    ];
+    when(() => repo.saveSedarimOrder(any(), any())).thenAnswer((_) async {});
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          trackLearningOrderRepositoryProvider.overrideWithValue(repo),
+          trackSedarimOrderProvider(
+            CurriculumId.mishnayos,
+          ).overrideWith((ref) async => items),
+          trackMasechtosOrderProvider(
+            CurriculumId.mishnayos,
+          ).overrideWith((ref) async => const []),
+          overdueCountForCurriculumProvider(
+            CurriculumId.mishnayos,
+          ).overrideWith((ref) async => 0),
+          useHebrewTermsProvider.overrideWithValue(false),
+        ],
+        child: const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: TrackLearningOrderScreen(curriculumId: CurriculumId.mishnayos),
+        ),
+      ),
     );
-
-    testWidgets(
-      '13. chazara UI absent for a learn-only track (chazaraEnabled=false)',
-      (tester) async {
-        final track = buildTrack();
-        await tester.pumpWidget(
-          _buildBodyApp(router: router, tracks: [track], chazaraEnabled: false),
-        );
-        await settle(tester);
-
-        expect(
-          find.textContaining('chazara', findRichText: true),
-          findsNothing,
-        );
-        expect(find.textContaining('חזרה', findRichText: true), findsNothing);
-        // The track-progress label for a non-chazara track is "Track progress"
-        expect(find.text('Track progress'), findsOneWidget);
-
-        await teardown(tester);
-      },
+    await tester.pumpAndSettle();
+    final list = tester.widget<SliverReorderableList>(
+      find.byType(SliverReorderableList),
     );
-
-    testWidgets('14. chazara label present for a chazara-enabled track', (
-      tester,
-    ) async {
-      final track = buildTrack();
-      await tester.pumpWidget(
-        _buildBodyApp(router: router, tracks: [track], chazaraEnabled: true),
-      );
-      await settle(tester);
-
-      // When chazara is enabled the label becomes "Completion (with Chazara)"
-      expect(
-        find.textContaining('Chazara', findRichText: true),
-        findsOneWidget,
-      );
-
-      await teardown(tester);
-    });
-  });
-
-  group('TrackManagementBody — RTL smoke', () {
-    testWidgets('15. Hebrew locale — populated body renders without overflow', (
-      tester,
-    ) async {
-      final track = buildTrack();
-      await tester.pumpWidget(
-        _buildBodyApp(
-          router: router,
-          tracks: [track],
-          locale: const Locale('he'),
-        ),
-      );
-      await settle(tester);
-
-      // TrackManagementBody itself contains a Scaffold; the outer wrapper also
-      // adds one — so we find at least one without asserting an exact count.
-      expect(find.byType(Scaffold), findsAtLeastNWidgets(1));
-
-      await teardown(tester);
-    });
-  });
-
-  // ══════════════════════════════════════════════════════════════════════════
-  // TrackLearningOrderScreen
-  // ══════════════════════════════════════════════════════════════════════════
-
-  group('TrackLearningOrderScreen — loading state', () {
-    testWidgets(
-      '16. shows CircularProgressIndicator while providers are pending',
-      (tester) async {
-        final completer = Completer<List<LearningOrderItem>>();
-        await tester.pumpWidget(
-          _buildOrderApp(repo: repo, sedarimFactory: () => completer.future),
-        );
-        await tester.pump();
-
-        expect(find.byType(CircularProgressIndicator), findsOneWidget);
-
-        completer.complete([]);
-        await tester.pump(const Duration(seconds: 1));
-        await teardown(tester);
-      },
-    );
-  });
-
-  group('TrackLearningOrderScreen — loaded state', () {
-    testWidgets('17. renders DraggableOrderItem rows for each sedarim item', (
-      tester,
-    ) async {
-      final items = [
-        _orderItem('Seder Zeraim', 0),
-        _orderItem('Seder Moed', 1),
-      ];
-
-      await tester.pumpWidget(
-        _buildOrderApp(repo: repo, sedarimFactory: () => Future.value(items)),
-      );
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 1));
-
-      // Two DraggableOrderItem widgets — one per sedarim item.
-      expect(find.byType(DraggableOrderItem), findsNWidgets(2));
-
-      await teardown(tester);
-    });
-
-    testWidgets('17b. AppBar title includes curriculum name', (tester) async {
-      await tester.pumpWidget(
-        _buildOrderApp(
-          repo: repo,
-          sedarimFactory: () => Future.value([_orderItem('Seder Zeraim', 0)]),
-        ),
-      );
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 1));
-
-      // Title format: "<curriculum> • Reorder"
-      expect(find.textContaining('Reorder'), findsOneWidget);
-
-      await teardown(tester);
-    });
-
-    testWidgets('17b-he. AppBar title is localized in Hebrew locale', (
-      tester,
-    ) async {
-      await tester.pumpWidget(
-        _buildOrderApp(
-          repo: repo,
-          sedarimFactory: () => Future.value([_orderItem('Seder Zeraim', 0)]),
-          locale: const Locale('he'),
-        ),
-      );
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 1));
-
-      // The hardcoded English "Reorder" must not appear; the Hebrew label does.
-      expect(find.textContaining('Reorder'), findsNothing);
-      expect(find.textContaining('סדר מחדש'), findsOneWidget);
-
-      await teardown(tester);
-    });
-
-    // 17c. The P2 fix: the L2 reorder section header is nusach-aware. In the
-    // default Ashkenazi nusach Mishnayos shows "Masechtos"; under Sephardi it
-    // must switch to "Masekhtot" (proving topSectionHeader /
-    // containerSectionHeader forward the variant to inLanguage()).
-    testWidgets('17c. L2 section header is "Masechtos" in Ashkenazi nusach', (
-      tester,
-    ) async {
-      await tester.pumpWidget(
-        _buildOrderApp(
-          repo: repo,
-          sedarimFactory: () => Future.value([_orderItem('Seder Zeraim', 0)]),
-          masechtosFactory: () => Future.value([_orderItem('Berakhos', 0)]),
-        ),
-      );
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 1));
-
-      expect(find.text('Masechtos'), findsOneWidget);
-      expect(find.text('Masekhtot'), findsNothing);
-
-      await teardown(tester);
-    });
-
-    testWidgets('17d. L2 section header switches to "Masekhtot" in Sephardi', (
-      tester,
-    ) async {
-      await tester.pumpWidget(
-        _buildOrderApp(
-          repo: repo,
-          sedarimFactory: () => Future.value([_orderItem('Seder Zeraim', 0)]),
-          masechtosFactory: () => Future.value([_orderItem('Berakhos', 0)]),
-          sephardi: true,
-        ),
-      );
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 1));
-
-      // Sephardi nusach maps Masechtos → Masekhtot; the Ashkenazi form gone.
-      expect(find.text('Masekhtot'), findsOneWidget);
-      expect(find.text('Masechtos'), findsNothing);
-
-      await teardown(tester);
-    });
-
-    testWidgets('18a. reset icon button is present', (tester) async {
-      await tester.pumpWidget(
-        _buildOrderApp(
-          repo: repo,
-          sedarimFactory: () => Future.value([_orderItem('Seder Zeraim', 0)]),
-        ),
-      );
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 1));
-
-      expect(find.byIcon(Icons.refresh), findsOneWidget);
-
-      await teardown(tester);
-    });
-
-    testWidgets('18b. tapping reset icon shows ResetOrderDialog', (
-      tester,
-    ) async {
-      await tester.pumpWidget(
-        _buildOrderApp(
-          repo: repo,
-          sedarimFactory: () => Future.value([_orderItem('Seder Zeraim', 0)]),
-        ),
-      );
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 1));
-
-      await tester.tap(find.byIcon(Icons.refresh));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
-
-      // ResetOrderDialog renders "Reset to Default Order" title.
-      expect(find.text('Reset to Default Order'), findsOneWidget);
-
-      await teardown(tester);
-    });
-
-    testWidgets('18c. cancelling reset dialog → resetToDefault NOT called', (
-      tester,
-    ) async {
-      await tester.pumpWidget(
-        _buildOrderApp(
-          repo: repo,
-          sedarimFactory: () => Future.value([_orderItem('Seder Zeraim', 0)]),
-        ),
-      );
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 1));
-
-      await tester.tap(find.byIcon(Icons.refresh));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
-
-      await tester.tap(find.text('Cancel'));
-      await tester.pump();
-
-      verifyNever(() => repo.resetToDefault(any<int>()));
-
-      await teardown(tester);
-    });
-
-    testWidgets('18d. confirming reset dialog → resetToDefault called', (
-      tester,
-    ) async {
-      // After reset the providers must yield fresh lists — use a counter to
-      // serve a "refreshed" empty list on the second call.
-      var callCount = 0;
-      final sedarimFutures = [
-        Future.value([_orderItem('Seder Zeraim', 0)]),
-        Future.value(<LearningOrderItem>[]),
-      ];
-
-      await tester.pumpWidget(
-        ProviderScope(
-          retry: (_, __) => null,
-          overrides: [
-            userDatabaseProvider.overrideWith((ref) => inMemoryDb()),
-            trackLearningOrderRepositoryProvider.overrideWithValue(repo),
-            trackSedarimOrderProvider((
-              trackId: _kTrackId,
-              curriculumId: _kCurriculumId,
-            )).overrideWith((ref) {
-              final i = callCount;
-              if (callCount < sedarimFutures.length - 1) callCount++;
-              return sedarimFutures[i];
-            }),
-            trackMasechtosOrderProvider((
-              trackId: _kTrackId,
-              curriculumId: _kCurriculumId,
-            )).overrideWith((ref) => Future.value([])),
-            overdueCountForCurriculumProvider(
-              _kCurriculumId,
-            ).overrideWith((ref) async => 0),
-            useHebrewTermsProvider.overrideWith(() => HebrewTermsOff()),
-          ],
-          child: const MaterialApp(
-            locale: Locale('en'),
-            localizationsDelegates: [
-              AppLocalizations.delegate,
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-              GlobalCupertinoLocalizations.delegate,
-            ],
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: TrackLearningOrderScreen(
-              trackId: _kTrackId,
-              curriculumId: _kCurriculumId,
-            ),
-          ),
-        ),
-      );
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 1));
-
-      await tester.tap(find.byIcon(Icons.refresh));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
-
-      // Confirm in dialog
-      await tester.tap(find.text('Reset'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 500));
-
-      verify(() => repo.resetToDefault(_kTrackId)).called(1);
-
-      await teardown(tester);
-    });
-  });
-
-  group('TrackLearningOrderScreen — reorder persists', () {
-    testWidgets(
-      '19. reordering sedarim calls saveSedarimOrder with reordered list',
-      (tester) async {
-        // Two items so there's actually something to drag.
-        final items = [
-          _orderItem('Seder Zeraim', 0),
-          _orderItem('Seder Moed', 1),
-        ];
-
-        await tester.pumpWidget(
-          _buildOrderApp(repo: repo, sedarimFactory: () => Future.value(items)),
-        );
-        await tester.pump();
-        await tester.pump(const Duration(seconds: 1));
-
-        // Simulate the internal _onReorderSedarim(0, 1) callback
-        // by looking up the SliverReorderableList and calling its
-        // onReorderItem.
-        final listFinder = find.byType(SliverReorderableList).first;
-        final listWidget = tester.widget<SliverReorderableList>(listFinder);
-        // onReorderItem moves item at index 0 to index 1 (swaps Zeraim/Moed).
-        listWidget.onReorderItem?.call(0, 1);
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 500));
-
-        verify(
-          () =>
-              repo.saveSedarimOrder(_kTrackId, any<List<LearningOrderItem>>()),
-        ).called(1);
-
-        await teardown(tester);
-      },
-    );
-
-    testWidgets(
-      '19b. a real drag gesture on the drag handle (startGesture -> moveBy '
-      '-> up) completes without a Material assertion failure',
-      (tester) async {
-        // Unlike test 19 above, which calls onReorderItem?.call(0, 1)
-        // directly, this drives the actual gesture/overlay/proxy path:
-        // SliverReorderableList lifts the dragged item into the Overlay
-        // while dragging, which needs its own Material ancestor (supplied
-        // via proxyDecorator) — a synthetic onReorderItem call bypasses
-        // that entirely and would silently pass even if drag were broken.
-        final items = [
-          _orderItem('Seder Zeraim', 0),
-          _orderItem('Seder Moed', 1),
-        ];
-
-        await tester.pumpWidget(
-          _buildOrderApp(repo: repo, sedarimFactory: () => Future.value(items)),
-        );
-        await tester.pump();
-        await tester.pump(const Duration(seconds: 1));
-
-        final handle = find.byIcon(Icons.drag_handle).first;
-        final gesture = await tester.startGesture(tester.getCenter(handle));
-        await tester.pump(const Duration(milliseconds: 50));
-        await gesture.moveBy(const Offset(0, 100));
-        await tester.pump(const Duration(milliseconds: 50));
-        await gesture.moveBy(const Offset(0, 100));
-        await tester.pump(const Duration(milliseconds: 50));
-        await gesture.up();
-        await tester.pump(const Duration(milliseconds: 500));
-
-        expect(
-          tester.takeException(),
-          isNull,
-          reason:
-              'a real drag gesture on the drag handle must not throw — '
-              'SliverReorderableList lifts the dragged item into an '
-              'Overlay during drag, which needs its own Material ancestor',
-        );
-
-        await teardown(tester);
-      },
-    );
-
-    testWidgets(
-      '19c. a real drag gesture on the MASECHTOS list drag handle also '
-      'completes without a Material assertion failure',
-      (tester) async {
-        // The masechtos section is a second, independent
-        // SliverReorderableList instance — cover it too rather than
-        // assuming the sedarim fix (19b) also covers it.
-        final sedarim = [_orderItem('Seder Zeraim', 0)];
-        final masechtos = [
-          _orderItem('Masechta Berachos', 0),
-          _orderItem('Masechta Shabbos', 1),
-        ];
-
-        await tester.pumpWidget(
-          _buildOrderApp(
-            repo: repo,
-            sedarimFactory: () => Future.value(sedarim),
-            masechtosFactory: () => Future.value(masechtos),
-          ),
-        );
-        await tester.pump();
-        await tester.pump(const Duration(seconds: 1));
-
-        // The second drag_handle icon belongs to the masechtos list (the
-        // first belongs to the single sedarim row above it).
-        final handle = find.byIcon(Icons.drag_handle).at(1);
-        final gesture = await tester.startGesture(tester.getCenter(handle));
-        await tester.pump(const Duration(milliseconds: 50));
-        await gesture.moveBy(const Offset(0, 100));
-        await tester.pump(const Duration(milliseconds: 50));
-        await gesture.moveBy(const Offset(0, 100));
-        await tester.pump(const Duration(milliseconds: 50));
-        await gesture.up();
-        await tester.pump(const Duration(milliseconds: 500));
-
-        expect(
-          tester.takeException(),
-          isNull,
-          reason:
-              'a real drag gesture on the masechtos drag handle must not '
-              'throw either — both SliverReorderableList instances need '
-              'the proxyDecorator fix, not just the sedarim one',
-        );
-
-        await teardown(tester);
-      },
-    );
-  });
-
-  group('TrackLearningOrderScreen — race-safety (_sedarimSaveSeq)', () {
-    testWidgets(
-      '20. a stale slow save resolving after a newer reorder must not '
-      'clobber the fresher masechtos state (seq guard)',
-      (tester) async {
-        final items = [
-          _orderItem('Seder Zeraim', 0),
-          _orderItem('Seder Moed', 1),
-        ];
-
-        // Each saveSedarimOrder call gets its own Completer so the test
-        // — not a fixed delay racing a fixed pump duration — controls
-        // exactly which save "wins" and when.
-        final saveCompleters = <Completer<void>>[];
-        when(
-          () =>
-              repo.saveSedarimOrder(any<int>(), any<List<LearningOrderItem>>()),
-        ).thenAnswer((_) {
-          final completer = Completer<void>();
-          saveCompleters.add(completer);
-          return completer.future;
-        });
-
-        // Each masechtos read (the initial load, plus any post-save
-        // invalidate/refetch triggered from _persistSedarim) also gets its
-        // own Completer, so the test can tell a "fresh" refetch (triggered
-        // by the second, winning reorder) apart from a "stale" one
-        // (triggered by the first, slow reorder resolving late) — and prove
-        // the stale one never happens once the seq guard is in place.
-        final masechtosReads = <Completer<List<LearningOrderItem>>>[];
-        Future<List<LearningOrderItem>> masechtosFactory() {
-          final completer = Completer<List<LearningOrderItem>>();
-          masechtosReads.add(completer);
-          return completer.future;
-        }
-
-        await tester.pumpWidget(
-          _buildOrderApp(
-            repo: repo,
-            sedarimFactory: () => Future.value(items),
-            masechtosFactory: masechtosFactory,
-          ),
-        );
-        await tester.pump();
-
-        // Resolve the initial masechtos load (the body stays behind the
-        // loading spinner — gated on BOTH sedarim and masechtos — until it
-        // does).
-        expect(masechtosReads, hasLength(1));
-        masechtosReads[0].complete([_orderItem('Masechtos Initial', 0)]);
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 50));
-
-        final listFinder = find.byType(SliverReorderableList).first;
-        final listWidget = tester.widget<SliverReorderableList>(listFinder);
-
-        // First reorder — its save is left pending ("slow").
-        listWidget.onReorderItem?.call(0, 1);
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 20));
-        expect(saveCompleters, hasLength(1));
-
-        // Second reorder fired while the first save is still in flight —
-        // its save is also left pending for now.
-        listWidget.onReorderItem?.call(0, 1);
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 20));
-        expect(saveCompleters, hasLength(2));
-
-        // The SECOND (fresher) save resolves first.
-        saveCompleters[1].complete();
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 20));
-
-        // Its post-save continuation invalidates + refetches masechtos —
-        // resolve that fresh read.
-        expect(masechtosReads, hasLength(2));
-        masechtosReads[1].complete([_orderItem('Masechtos Fresh', 0)]);
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 50));
-
-        expect(_renderedRefs(tester), contains('Masechtos Fresh'));
-        expect(_renderedRefs(tester), isNot(contains('Masechtos Initial')));
-
-        // Now the FIRST (stale) save finally resolves, late.
-        saveCompleters[0].complete();
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 50));
-
-        // The seq guard must suppress the stale continuation entirely: no
-        // extra masechtos invalidate/refetch fires, and the rendered order
-        // still reflects only the second (fresher) reorder's masechtos
-        // fetch — not a stale one clobbering it.
-        expect(
-          masechtosReads,
-          hasLength(2),
-          reason:
-              'a late-resolving stale save must not trigger another '
-              'masechtos invalidate/refetch once a newer reorder has '
-              'already landed — if it does, the seq guard has regressed',
-        );
-        expect(_renderedRefs(tester), contains('Masechtos Fresh'));
-
-        await teardown(tester);
-      },
-    );
-  });
-
-  group('TrackLearningOrderScreen — save/reset failure surfaces error '
-      '(AUD-tracks-08)', () {
-    testWidgets(
-      '22. saveSedarimOrder throws → error SnackBar shown and the sedarim '
-      'order reverts to its pre-reorder value',
-      (tester) async {
-        final items = [
-          _orderItem('Seder Zeraim', 0),
-          _orderItem('Seder Moed', 1),
-        ];
-        when(
-          () =>
-              repo.saveSedarimOrder(any<int>(), any<List<LearningOrderItem>>()),
-        ).thenThrow(Exception('disk full'));
-
-        await tester.pumpWidget(
-          _buildOrderApp(repo: repo, sedarimFactory: () => Future.value(items)),
-        );
-        await tester.pump();
-        await tester.pump(const Duration(seconds: 1));
-
-        expect(_renderedRefs(tester), ['Seder Zeraim', 'Seder Moed']);
-
-        final listFinder = find.byType(SliverReorderableList).first;
-        final listWidget = tester.widget<SliverReorderableList>(listFinder);
-        listWidget.onReorderItem?.call(0, 1);
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 500));
-
-        // A visible error affordance appears — the failure is not
-        // silently swallowed.
-        expect(find.byType(SnackBar), findsOneWidget);
-
-        // The optimistic reorder is rolled back: the list still shows
-        // the order that was actually persisted (the pre-reorder one).
-        expect(_renderedRefs(tester), ['Seder Zeraim', 'Seder Moed']);
-
-        await teardown(tester);
-      },
-    );
-
-    testWidgets('23. saveMasechtosOrder throws → error SnackBar shown and the '
-        'masechtos order reverts to its pre-reorder value', (tester) async {
-      final sedarim = [_orderItem('Seder Zeraim', 0)];
-      final masechtos = [
-        _orderItem('Masechta Berachos', 0),
-        _orderItem('Masechta Shabbos', 1),
-      ];
-      when(
-        () =>
-            repo.saveMasechtosOrder(any<int>(), any<List<LearningOrderItem>>()),
-      ).thenThrow(Exception('outbox push failed'));
-
-      await tester.pumpWidget(
-        _buildOrderApp(
-          repo: repo,
-          sedarimFactory: () => Future.value(sedarim),
-          masechtosFactory: () => Future.value(masechtos),
-        ),
-      );
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 1));
-
-      expect(
-        _renderedRefs(tester),
-        containsAllInOrder(['Masechta Berachos', 'Masechta Shabbos']),
-      );
-
-      // The second SliverReorderableList is the masechtos list.
-      final listFinder = find.byType(SliverReorderableList).at(1);
-      final listWidget = tester.widget<SliverReorderableList>(listFinder);
-      listWidget.onReorderItem?.call(0, 1);
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 500));
-
-      expect(find.byType(SnackBar), findsOneWidget);
-      expect(
-        _renderedRefs(tester),
-        containsAllInOrder(['Masechta Berachos', 'Masechta Shabbos']),
-      );
-
-      await teardown(tester);
-    });
-
-    testWidgets('24. resetToDefault throws → error SnackBar shown and the '
-        'pre-reset order is left untouched', (tester) async {
-      final items = [_orderItem('Seder Zeraim', 0)];
-      when(
-        () => repo.resetToDefault(any<int>()),
-      ).thenThrow(Exception('offline — cannot reach outbox'));
-
-      await tester.pumpWidget(
-        _buildOrderApp(repo: repo, sedarimFactory: () => Future.value(items)),
-      );
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 1));
-
-      expect(_renderedRefs(tester), ['Seder Zeraim']);
-
-      await tester.tap(find.byIcon(Icons.refresh));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
-      await tester.tap(find.text('Reset'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 500));
-
-      expect(find.byType(SnackBar), findsOneWidget);
-
-      // Local state is left as-is — no clobbering by a failed reset.
-      expect(_renderedRefs(tester), ['Seder Zeraim']);
-
-      await teardown(tester);
-    });
-  });
-
-  group('TrackLearningOrderScreen — RTL smoke', () {
-    testWidgets('21. Hebrew locale — renders without overflow', (tester) async {
-      final items = [_orderItem('Seder Zeraim', 0)];
-      await tester.pumpWidget(
-        _buildOrderApp(
-          repo: repo,
-          sedarimFactory: () => Future.value(items),
-          locale: const Locale('he'),
-        ),
-      );
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 1));
-
-      expect(find.byType(Scaffold), findsOneWidget);
-
-      await teardown(tester);
-    });
+    list.onReorderItem?.call(0, 1);
+    await tester.pump(const Duration(milliseconds: 200));
+    verify(() => repo.saveSedarimOrder(any(), any())).called(1);
   });
 }

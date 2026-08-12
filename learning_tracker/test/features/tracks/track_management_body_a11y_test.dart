@@ -17,33 +17,59 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/widgets/track_management_body.dart';
 import 'package:mocktail/mocktail.dart';
 
-import '../../helpers/drift_memory.dart';
 import '../../helpers/pump_app.dart';
-import 'setup/helpers/track_hub_test_helpers.dart';
+
+class MockStackRouter extends Mock implements StackRouter {}
+
+class FakePageRouteInfo extends Fake implements PageRouteInfo {}
+
+class HebrewTermsOff extends UseHebrewTerms {
+  @override
+  bool build() => false;
+}
+
+CurriculumTrackEntity buildTrack() => CurriculumTrackEntity(
+  curriculumId: CurriculumId.mishnayos,
+  state: 'active',
+  stateChangedAt: DateTime.utc(2026, 1, 1),
+  activatedAt: DateTime.utc(2026, 1, 1),
+);
+
+Future<void> settle(WidgetTester tester) async {
+  await tester.pumpAndSettle(const Duration(milliseconds: 100));
+}
+
+Future<void> teardown(WidgetTester tester) async {
+  await tester.pumpWidget(const SizedBox.shrink());
+}
 
 Widget _buildApp({
   required MockStackRouter router,
-  required UserDatabase database,
-  required List<CurriculumTrack> tracks,
+  required List<CurriculumTrackEntity> tracks,
   Locale locale = const Locale('en'),
 }) {
   return pumpApp(
     retry: (_, __) => null,
     overrides: [
       activeProfileIdProvider.overrideWithValue(
-        tracks.isNotEmpty ? tracks.first.profileId : 1,
+        '01J6Q2H4A8M7K3P9R5T6V8WXY8',
       ),
-      userDatabaseProvider.overrideWith((ref) => database),
       activeTracksProvider.overrideWith((ref) => Stream.value(tracks)),
-      ...perTrackOverrides(tracks),
+      dashboardHasProgramEnrollmentProvider(
+        CurriculumId.mishnayos,
+      ).overrideWith((ref) async => false),
+      trackHasChazaraProvider(
+        CurriculumId.mishnayos,
+      ).overrideWith((ref) async => false),
       useHebrewTermsProvider.overrideWith(() => HebrewTermsOff()),
     ],
     locale: locale,
@@ -76,13 +102,9 @@ void main() {
       tester,
     ) async {
       final handle = tester.ensureSemantics();
-      final database = inMemoryDb();
-      addTearDown(database.close);
       final track = buildTrack();
 
-      await tester.pumpWidget(
-        _buildApp(router: router, database: database, tracks: [track]),
-      );
+      await tester.pumpWidget(_buildApp(router: router, tracks: [track]));
       await settle(tester);
 
       final backButton = find.widgetWithIcon(IconButton, Icons.arrow_back);
@@ -110,14 +132,11 @@ void main() {
       'HE: back IconButton exposes the Hebrew MaterialLocalizations label',
       (tester) async {
         final handle = tester.ensureSemantics();
-        final database = inMemoryDb();
-        addTearDown(database.close);
         final track = buildTrack();
 
         await tester.pumpWidget(
           _buildApp(
             router: router,
-            database: database,
             tracks: [track],
             locale: const Locale('he'),
           ),

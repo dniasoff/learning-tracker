@@ -34,7 +34,6 @@ import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/providers/calendar_providers.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
@@ -43,15 +42,12 @@ import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.da
 import 'package:learning_tracker/features/scheduler/domain/services/calendar_program_service.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
-import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/steps/step_goal.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/steps/step_starting_position.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/steps/step_starting_position_calendar.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
-import '../../../../../helpers/drift_memory.dart';
 
 // ── Mocks ──────────────────────────────────────────────────────────────────────
 
@@ -79,7 +75,7 @@ class _FalseUseHebrewDate extends UseHebrewDate {
 
 class _ProfileIdOverride extends ActiveProfileId {
   @override
-  int build() => 1;
+  String? build() => '01J6Q2H4A8M7K3P9R5T6V8WXYC';
 }
 
 // ── Widget harness helpers ─────────────────────────────────────────────────────
@@ -220,26 +216,20 @@ Widget _buildGoalStepApp({
 List<Override> _baseOverridesWithContentRepo(
   _MockContentRepository contentRepo,
 ) {
-  final db = inMemoryDb();
   return [
-    userDatabaseProvider.overrideWithValue(db),
     contentRepositoryProvider.overrideWith((ref) => contentRepo),
     useHebrewTermsProvider.overrideWith(() => _FalseUseHebrewTerms()),
-    syncWriteFacadeProvider.overrideWithValue(null),
     activeProfileIdProvider.overrideWith(_ProfileIdOverride.new),
   ];
 }
 
 /// Base overrides for [StartingPositionCalendarMode] tests.
 List<Override> _calendarModeOverrides(_MockCalendarProgramService calendarSvc) {
-  final db = inMemoryDb();
   return [
-    userDatabaseProvider.overrideWithValue(db),
     calendarProgramServiceProvider.overrideWith(
       (ref) => Future.value(calendarSvc),
     ),
     useHebrewTermsProvider.overrideWith(() => _FalseUseHebrewTerms()),
-    syncWriteFacadeProvider.overrideWithValue(null),
     activeProfileIdProvider.overrideWith(_ProfileIdOverride.new),
   ];
 }
@@ -249,7 +239,6 @@ List<Override> _goalStepOverrides({
   bool useHebrewDate = false,
   int scopeCount = 60,
 }) {
-  final db = inMemoryDb();
   final contentRepo = _MockContentRepository();
   when(
     () => contentRepo.getContentForCurriculum(any()),
@@ -262,13 +251,11 @@ List<Override> _goalStepOverrides({
     ),
   );
   return [
-    userDatabaseProvider.overrideWithValue(db),
     contentRepositoryProvider.overrideWith((ref) => contentRepo),
     useHebrewTermsProvider.overrideWith(() => _FalseUseHebrewTerms()),
     useHebrewDateProvider.overrideWith(
       () => useHebrewDate ? _TrueUseHebrewDate() : _FalseUseHebrewDate(),
     ),
-    syncWriteFacadeProvider.overrideWithValue(null),
     activeProfileIdProvider.overrideWith(_ProfileIdOverride.new),
     scopedCurriculumContentProvider(CurriculumId.mishnayos).overrideWith((
       ref,
@@ -1302,14 +1289,11 @@ void main() {
         () => calendarSvc.getEntry(any(), any()),
       ).thenAnswer((_) async => null);
 
-      final db = inMemoryDb();
       final overrides = [
-        userDatabaseProvider.overrideWithValue(db),
         calendarProgramServiceProvider.overrideWith(
           (ref) => Future.value(calendarSvc),
         ),
         useHebrewTermsProvider.overrideWith(() => _TrueUseHebrewTerms()),
-        syncWriteFacadeProvider.overrideWithValue(null),
         activeProfileIdProvider.overrideWith(_ProfileIdOverride.new),
       ];
 
@@ -1360,14 +1344,11 @@ void main() {
         () => calendarSvc.getEntry(any(), any()),
       ).thenAnswer((_) async => null);
 
-      final db = inMemoryDb();
       final overrides = [
-        userDatabaseProvider.overrideWithValue(db),
         calendarProgramServiceProvider.overrideWith(
           (ref) => Future.value(calendarSvc),
         ),
         useHebrewTermsProvider.overrideWith(() => _TrueUseHebrewTerms()),
-        syncWriteFacadeProvider.overrideWithValue(null),
         activeProfileIdProvider.overrideWith(_ProfileIdOverride.new),
       ];
 
@@ -1412,14 +1393,11 @@ void main() {
         () => calendarSvc.getEntry(any(), any()),
       ).thenAnswer((_) async => null);
 
-      final db = inMemoryDb();
       final overrides = [
-        userDatabaseProvider.overrideWithValue(db),
         calendarProgramServiceProvider.overrideWith(
           (ref) => Future.value(calendarSvc),
         ),
         useHebrewTermsProvider.overrideWith(() => _TrueUseHebrewTerms()),
-        syncWriteFacadeProvider.overrideWithValue(null),
         activeProfileIdProvider.overrideWith(_ProfileIdOverride.new),
       ];
 
@@ -1582,32 +1560,27 @@ void main() {
       );
       await _settle(tester);
 
-      // Capture initial pace by tapping Continue.
+      // Capture the initial pace before interacting with the increment control.
       final continueBtn = find.widgetWithText(FilledButton, 'Continue');
       await tester.ensureVisible(continueBtn);
       await tester.pump();
+      const initialPace = 7;
+
+      // Find the + increment button — it may be off-screen.
+      final addBtn = find.byIcon(Icons.add_circle_outline_rounded);
+      expect(addBtn, findsOneWidget);
+      await tester.ensureVisible(addBtn);
+      await tester.tap(addBtn);
+      await _settle(tester);
+
       await tester.tap(continueBtn);
       await _settle(tester);
-      final initialPace = emittedGoal?.paceValue ?? 0;
 
-      // Find the + increment button (add icon) — may be off-screen.
-      final addBtn = find.byIcon(Icons.add_rounded);
-      if (addBtn.evaluate().isNotEmpty) {
-        await tester.ensureVisible(addBtn.first);
-        await tester.tap(addBtn.first);
-        await _settle(tester);
-
-        await tester.ensureVisible(continueBtn);
-        await tester.pump();
-        await tester.tap(continueBtn);
-        await _settle(tester);
-
-        expect(
-          emittedGoal!.paceValue ?? 0,
-          greaterThanOrEqualTo(initialPace),
-          reason: 'Tapping + should increase the paceValue',
-        );
-      }
+      expect(
+        emittedGoal!.paceValue ?? 0,
+        greaterThan(initialPace),
+        reason: 'Tapping + should increase the paceValue',
+      );
       addTearDown(() => _tearDown(tester));
     });
 
@@ -1617,15 +1590,13 @@ void main() {
       );
       await _settle(tester);
 
-      // The deadline blur overlay shows its hint when inactive.
-      // Try finding the hint text for tap to use deadline.
-      final deadlineHint = find.textContaining('Use deadline');
-      if (deadlineHint.evaluate().isNotEmpty) {
-        await tester.ensureVisible(deadlineHint.first);
-        await tester.pump();
-        await tester.tap(deadlineHint.first);
-        await _settle(tester);
-      }
+      // The deadline blur overlay exposes this localized hint when inactive.
+      final deadlineHint = find.textContaining('tap here to use a deadline');
+      expect(deadlineHint, findsOneWidget);
+      await tester.ensureVisible(deadlineHint);
+      await tester.pump();
+      await tester.tap(deadlineHint);
+      await _settle(tester);
 
       // Widget must remain mounted — Continue button still visible.
       final continueBtn = find.widgetWithText(FilledButton, 'Continue');

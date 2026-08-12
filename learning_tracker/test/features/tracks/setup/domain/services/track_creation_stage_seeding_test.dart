@@ -1,166 +1,134 @@
-// Regression: a track created WITHOUT a learning-process (chazara) wizard
-// result must still be seeded with the primary לימוד stage. Without at least
-// one stage, the scheduler's projection does `if (stages.isEmpty) continue;`
-// and skips the track entirely, so the dashboard shows "No projection" / 0 due
-// despite a valid goal + computed pace (the on-device bug Daniel reported:
-// goal set, track-detail shows the required pace, but the dashboard projects
-// nothing). A null wizardResult must fall back to a noReview/learn-only seed —
-// and must NOT add any chazara stages (chazara is per-track conditional).
+// Regression: a track created without running the chazara wizard still gets
+// the primary לימוד stage. The test uses the Firestore-era repository seam;
+// no Drift row or integer track identity is involved.
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/analytics/analytics_service.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/features/learning/data/repositories/track_repository_impl.dart';
-import 'package:learning_tracker/features/learning/domain/entities/bookmark.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/bookmark_repository.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
-import 'package:learning_tracker/features/scheduler/data/repositories/goal_repository_impl.dart';
-import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/day_type.dart';
+import 'package:learning_tracker/features/scheduler/scheduler.dart';
 import 'package:learning_tracker/features/tracks/domain/services/curriculum_activation_service.dart';
+import 'package:learning_tracker/features/tracks/setup/data/repositories/curriculum_track_repository_impl.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/add_track_result.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/entities/profile_program.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/repositories/curriculum_scope_write_repository.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/repositories/profile_program_repository.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/repositories/study_day_write_repository.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/services/track_creation_service.dart';
-import 'package:learning_tracker/features/tracks/stages/data/repositories/stage_definition_repository_impl.dart';
+import 'package:learning_tracker/features/tracks/stages/domain/models/stage_definition.dart';
+import 'package:learning_tracker/features/tracks/stages/domain/repositories/stage_definition_repository.dart';
+import 'package:mocktail/mocktail.dart';
 
-import '../../../../../helpers/drift_memory.dart';
+class _Activation extends Mock implements CurriculumActivationService {}
 
-/// No-op [BookmarkRepository]: every test in this file is self-paced (no
-/// programId), so createTrack's `setBookmark` branch is never reached — this
-/// exists only to satisfy the required constructor param.
-class _NoopBookmarkRepository implements BookmarkRepository {
+class _TrackRepository extends Mock
+    implements FirestoreCurriculumTrackRepositoryAdapter {}
+
+class _Stages extends Mock implements StageDefinitionRepository {
+  List<StageDefinition> written = const [];
+}
+
+class _Goals extends Mock implements GoalRepository {}
+
+class _StudyDays extends Mock implements StudyDayWriteRepository {}
+
+class _Scopes extends Mock implements CurriculumScopeWriteRepository {}
+
+class _Programs implements ProfileProgramRepository {
   @override
-  Future<BookmarkEntity?> getBookmark({required CurriculumId curriculumId}) =>
-      throw UnimplementedError();
+  Future<ProfileProgramEntity?> getProgram(CurriculumId curriculumId) async =>
+      null;
 
   @override
-  Future<BookmarkEntity> setBookmark({
+  Future<void> setProgram({
     required CurriculumId curriculumId,
-    required String sefariaRef,
-  }) => throw UnimplementedError();
+    required int programId,
+    DateTime? trackingStartDate,
+    String? trackingStartRef,
+  }) async {}
 
   @override
-  Future<void> advanceBookmark({
-    required CurriculumId curriculumId,
-    required String completedSefariaRef,
-  }) => throw UnimplementedError();
+  Future<void> removeProgram(CurriculumId curriculumId) async {}
+}
 
-  @override
-  Future<BookmarkEntity> initializeBookmark({
-    required CurriculumId curriculumId,
-  }) => throw UnimplementedError();
+class _Bookmarks extends Mock implements BookmarkRepository {}
+
+TrackCreationService _service(_Stages stages) {
+  final activation = _Activation();
+  when(
+    () => activation.activateForProfile(any(), any()),
+  ).thenAnswer((_) async {});
+  final tracks = _TrackRepository();
+  when(() => tracks.activateTrack(any())).thenAnswer(
+    (_) async => CurriculumTrackEntity(
+      curriculumId: CurriculumId.mishnayos,
+      state: 'active',
+      stateChangedAt: DateTime.utc(2026, 1, 1),
+      activatedAt: DateTime.utc(2026, 1, 1),
+    ),
+  );
+  final studyDays = _StudyDays();
+  when(
+    () => studyDays.replaceAllForCurriculum(
+      curriculumId: any(named: 'curriculumId'),
+      studyDays: any(named: 'studyDays'),
+    ),
+  ).thenAnswer((_) async {});
+  final scopes = _Scopes();
+  when(() => scopes.clearScopes(any())).thenAnswer((_) async {});
+  final goals = _Goals();
+  when(() => goals.getGoals(any())).thenAnswer((_) async => const []);
+  when(() => stages.replaceStagesForCurriculum(any(), any())).thenAnswer((
+    invocation,
+  ) async {
+    stages.written = invocation.positionalArguments[1] as List<StageDefinition>;
+  });
+
+  final programs = _Programs();
+  return TrackCreationService(
+    activationService: activation,
+    wizardService: LearningProcessWizardService(
+      stageRepository: stages,
+      learningProgramRepo: LearningProgramRepository.instance,
+      profileProgramRepository: programs,
+    ),
+    goalRepository: goals,
+    trackRepository: tracks,
+    studyDayRepository: studyDays,
+    scopeRepository: scopes,
+    profileProgramRepository: programs,
+    bookmarkRepository: _Bookmarks(),
+  );
 }
 
 void main() {
-  late UserDatabase db;
-
-  setUp(() async {
-    db = inMemoryDb();
-    await seedProfile(db); // learner_profiles(id = 1)
+  setUpAll(() {
+    registerFallbackValue(CurriculumId.mishnayos);
+    registerFallbackValue(<int, DayType>{});
+    registerFallbackValue(<StageDefinition>[]);
   });
 
-  tearDown(() async {
-    await db.close();
-  });
-
-  TrackCreationService buildService({PushStageDefinitionsFn? pushStages}) =>
-      TrackCreationService(
-        database: db,
-        activationService: CurriculumActivationService(
-          database: db,
-          pushCurriculumTrack: null,
-          trackRepository: TrackRepositoryImpl(database: db),
-        ),
-        wizardService: LearningProcessWizardService(
-          stageDao: db.stageDao,
-          learningProgramRepo: LearningProgramRepository.instance,
-          profileProgramDao: db.profileProgramDao,
-        ),
-        goalRepository: GoalRepositoryImpl(database: db),
-        stageRepository: StageDefinitionRepositoryImpl(
-          stageDao: db.stageDao,
-          completionDao: db.completionDao,
-          pushStageDefinitions: pushStages,
-        ),
-        bookmarkRepository: _NoopBookmarkRepository(),
-        analytics: const NullAnalyticsService(),
-      );
-
-  test('track created without a wizard result is seeded with the לימוד stage '
-      '(no "No projection")', () async {
-    await buildService().createTrack(
+  test('no wizard result seeds exactly the לימוד stage', () async {
+    final stages = _Stages();
+    await _service(stages).createTrack(
       result: const AddTrackResult(
         curriculumId: CurriculumId.mishnayos,
         label: 'Mishnayos',
         studyDays: {1: 'study', 2: 'study'},
-        // No wizardResult, no programId — the quick add-track path that
-        // previously left the track with zero stages.
       ),
-      profileId: 1,
     );
 
-    final tracks = await db.trackDao.getActiveTracksForProfile(1);
-    expect(tracks, isNotEmpty, reason: 'the track row must exist');
-    final trackId = tracks.first.id;
-
-    final stages = await db.stageDao.getStagesByTrack(trackId);
-    expect(
-      stages,
-      isNotEmpty,
-      reason: 'a stage-less track is skipped by the scheduler projection',
-    );
-    expect(
-      stages.map((s) => s.stageName),
-      contains('לימוד'),
-      reason: 'the primary learning stage must be seeded',
-    );
-    // Honour the per-track chazara rule: no chazara rounds when the wizard
-    // (chazara step) was never run.
-    expect(
-      stages.length,
-      1,
-      reason: 'noReview fallback seeds ONLY לימוד — no chazara stages',
-    );
+    expect(stages.written, hasLength(1));
+    expect(stages.written.single.stageName, 'לימוד');
+    expect(stages.written.single.curriculumId, CurriculumId.mishnayos);
   });
 
-  test('track creation pushes the seeded stages to the cloud '
-      '(so a tutor mirror / second device projects too)', () async {
-    // The seed is local-only; without an explicit push the stage_definitions
-    // subcollection stays empty and a tutor pulls zero stages → "No
-    // projection". Capture the push to prove createTrack closes that gap.
-    final pushed = <Map<String, dynamic>>[];
-    int? pushedTrackId;
-    String? pushedCurriculum;
-    Future<void> spy({
-      required int trackId,
-      required String curriculumId,
-      required List<Map<String, dynamic>> stages,
-      required DateTime updatedAt,
-    }) async {
-      pushedTrackId = trackId;
-      pushedCurriculum = curriculumId;
-      pushed.addAll(stages);
-    }
-
-    await buildService(pushStages: spy).createTrack(
-      result: const AddTrackResult(
-        curriculumId: CurriculumId.mishnayos,
-        label: 'Mishnayos',
-        studyDays: {1: 'study'},
-      ),
-      profileId: 1,
-    );
-
-    expect(
-      pushed,
-      isNotEmpty,
-      reason: 'seeded stages must be pushed to Firestore for tutors/devices',
-    );
-    expect(pushedCurriculum, CurriculumId.mishnayos.storageKey);
-    expect(pushedTrackId, isNotNull);
-    expect(
-      pushed.map((s) => s['stage_name']),
-      contains('לימוד'),
-      reason: 'the לימוד stage must be in the pushed payload',
-    );
-  });
+  test(
+    'stage push is not a separate Firestore operation after direct writes',
+    skip:
+        'The old pushStagesForTrack seam was Drift outbox plumbing; Firestore stage writes are direct and the production adapter has no push method to observe.',
+    () async {},
+  );
 }

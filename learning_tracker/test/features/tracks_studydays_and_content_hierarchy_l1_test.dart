@@ -61,7 +61,6 @@ import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/screens/content_hierarchy_screen.dart';
@@ -71,8 +70,6 @@ import 'package:learning_tracker/features/tracks/setup/presentation/steps/step_s
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
-import '../helpers/drift_memory.dart';
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
@@ -91,7 +88,7 @@ class _FalseUseHebrewTerms extends UseHebrewTerms {
 
 class _ProfileIdOverride extends ActiveProfileId {
   @override
-  int build() => 1;
+  String? build() => 'test-profile-ulid';
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -141,7 +138,6 @@ Widget _buildStudyDaysEditableApp({
     retry: (_, __) => null,
     overrides: [
       activeProfileIdProvider.overrideWith(() => _ProfileIdOverride()),
-      userDatabaseProvider.overrideWith((ref) => inMemoryDb()),
       useHebrewTermsProvider.overrideWith(() => _FalseUseHebrewTerms()),
     ],
     child: MaterialApp(
@@ -163,7 +159,6 @@ Widget _buildStudyDaysReadOnlyApp({
     retry: (_, __) => null,
     overrides: [
       activeProfileIdProvider.overrideWith(() => _ProfileIdOverride()),
-      userDatabaseProvider.overrideWith((ref) => inMemoryDb()),
       useHebrewTermsProvider.overrideWith(() => _FalseUseHebrewTerms()),
     ],
     child: MaterialApp(
@@ -208,7 +203,6 @@ Widget _buildContentHierarchyApp({
     retry: (_, __) => null,
     overrides: [
       activeProfileIdProvider.overrideWith(() => _ProfileIdOverride()),
-      userDatabaseProvider.overrideWith((ref) => inMemoryDb()),
       useHebrewTermsProvider.overrideWith(() => _FalseUseHebrewTerms()),
       contentRepositoryProvider.overrideWithValue(mockRepo),
       contentTreeProvider.overrideWith((ref) async => emptyTree),
@@ -641,7 +635,6 @@ void main() {
           retry: (_, __) => null,
           overrides: [
             activeProfileIdProvider.overrideWith(() => _ProfileIdOverride()),
-            userDatabaseProvider.overrideWith((ref) => inMemoryDb()),
             useHebrewTermsProvider.overrideWith(() => _FalseUseHebrewTerms()),
             contentRepositoryProvider.overrideWithValue(mockRepo),
             // Resolves immediately to empty tree.

@@ -43,20 +43,18 @@
 
 @Tags(['tracks', 'edit_track', 'track_detail', 'l1'])
 library;
+// ignore_for_file: directives_ordering, unused_element_parameter, prefer_const_constructors
 
-import 'package:drift/drift.dart' show Value;
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart'
     show FakeLocalDayClock, localDayClockProvider;
-import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
@@ -65,30 +63,42 @@ import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.da
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/services/track_edit_service.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_edit_providers.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/screens/edit_track_screen.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/screens/track_detail_screen.dart';
-import 'package:learning_tracker/features/tutoring/data/routers/tutored_write_router.dart'
-    show TutorWriteException;
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 
-import '../../../../../helpers/drift_memory.dart';
+import '../../../../../helpers/firestore_fake.dart';
+import '../../../../../helpers/firestore_fixtures.dart' as fixtures;
+import 'package:learning_tracker/data/firestore/repository_providers.dart';
+import 'package:learning_tracker/data/repositories/firestore_goal_repository.dart';
+import 'package:learning_tracker/data/repositories/firestore_stage_definition_repository.dart';
+import 'package:learning_tracker/data/repositories/firestore_study_day_config_repository.dart';
+import 'package:learning_tracker/features/tracks/stages/domain/models/schedule_type.dart';
+import 'package:learning_tracker/features/tracks/stages/domain/models/stage_definition.dart';
 
 // ── Mocks ──────────────────────────────────────────────────────────────────────
 
 class _MockTrackEditService extends Mock implements TrackEditService {}
 
+class TutorWriteException implements Exception {
+  const TutorWriteException(this.message, {this.code});
+  final String message;
+  final String? code;
+}
+
 // ── Fake Riverpod notifiers ────────────────────────────────────────────────────
 
 class _FakeActiveProfileId extends ActiveProfileId {
   _FakeActiveProfileId(this._value);
-  final int _value;
+  final String _value;
   @override
-  int build() => _value;
+  String build() => _value;
 }
 
 class _FakeActiveTutoredProfileSelection extends ActiveTutoredProfileSelection {
@@ -102,7 +112,7 @@ class _FakeActiveTutoredProfileSelectionWithPerms
   final TutorPermissions _perms;
   @override
   TutoredProfileSelection? build() => TutoredProfileSelection(
-    profileId: '1',
+    profileId: _profileId,
     ownerUid: 'parent_uid',
     grantId: 'grant_1',
     permissions: _perms,
@@ -119,13 +129,16 @@ class _FakeUseHebrewDate extends UseHebrewDate {
   bool build() => false;
 }
 
-// ── DB helpers ────────────────────────────────────────────────────────────────
+// ── Firestore fixtures ───────────────────────────────────────────────────────
 
-/// Seeds a goal row for the given track.
-Future<int> _seedGoal(
+typedef UserDatabase = FakeFirebaseFirestore;
+const _uid = 'edit-detail-test-uid';
+const _profileId = '01J6Q2H4A8M7K3P9R5T6V8WXY4';
+
+UserDatabase inMemoryDb() => createFakeFirestore(authenticatedUid: _uid);
+
+Future<void> _seedGoal(
   UserDatabase db, {
-  required int profileId,
-  required int trackId,
   String curriculumId = 'mishnayos',
   String description = 'Test Track',
   String goalType = 'pace',
@@ -133,84 +146,57 @@ Future<int> _seedGoal(
   String pacePeriod = 'per_week',
   DateTime? targetDate,
 }) async {
-  return db
-      .into(db.goals)
-      .insert(
-        GoalsCompanion.insert(
-          profileId: profileId,
-          curriculumId: curriculumId,
-          trackId: trackId,
-          description: Value(description),
-          goalType: Value(goalType),
-          paceValue: Value(paceValue),
-          pacePeriod: Value(pacePeriod),
-          targetDate: Value(targetDate),
-          createdAt: DateTimeFactory.nowUtc(),
-          updatedAt: DateTimeFactory.nowUtc(),
-        ),
-      );
+  await fixtures.seedGoal(
+    db,
+    uid: _uid,
+    profileId: _profileId,
+    curriculumId: CurriculumId.fromStorageKey(curriculumId)!,
+    description: description,
+    goalType: goalType,
+    paceValue: goalType == 'pace' ? paceValue : null,
+    pacePeriod: goalType == 'pace' ? pacePeriod : null,
+    targetDate: targetDate,
+  );
 }
 
-/// Seeds a single learn-only stage.
 Future<void> _seedLearnStage(
   UserDatabase db, {
-  required int profileId,
-  required int trackId,
   String curriculumId = 'mishnayos',
-}) async {
-  await db
-      .into(db.stageDefinitions)
-      .insert(
-        StageDefinitionsCompanion.insert(
-          profileId: profileId,
-          curriculumId: curriculumId,
-          trackId: trackId,
-          stageOrder: 1,
-          stageName: 'Learn',
-        ),
-      );
-}
+}) => fixtures.seedStageDefinitions(
+  db,
+  uid: _uid,
+  profileId: _profileId,
+  curriculumId: CurriculumId.fromStorageKey(curriculumId)!,
+  stages: [
+    StageDefinition(
+      id: kFirestoreUnmappedStageId,
+      curriculumId: CurriculumId.fromStorageKey(curriculumId)!,
+      stageOrder: 1,
+      stageName: 'Learn',
+      delayDays: 0,
+      isDefault: false,
+      scheduleType: ScheduleType.delay,
+    ),
+  ],
+);
 
-/// Seeds a learn + chazara stage pair.
 Future<void> _seedChazaraStages(
   UserDatabase db, {
-  required int profileId,
-  required int trackId,
   String curriculumId = 'mishnayos',
-}) async {
-  await _seedLearnStage(
-    db,
-    profileId: profileId,
-    trackId: trackId,
-    curriculumId: curriculumId,
-  );
-  await db
-      .into(db.stageDefinitions)
-      .insert(
-        StageDefinitionsCompanion.insert(
-          profileId: profileId,
-          curriculumId: curriculumId,
-          trackId: trackId,
-          stageOrder: 2,
-          stageName: 'Chazara 1',
-          schedule: const Value('{"delay_days": 1}'),
-        ),
-      );
-}
-
-/// Minimal [CurriculumTrack] fixture.
-CurriculumTrack _track({
-  int id = 1,
-  int profileId = 1,
-  String curriculumId = 'mishnayos',
-}) => CurriculumTrack(
-  id: id,
-  profileId: profileId,
-  curriculumId: curriculumId,
-  state: 'active',
-  stateChangedAt: DateTime.utc(2026, 1, 1),
-  activatedAt: DateTime.utc(2026, 1, 1),
+}) => fixtures.seedStageDefinitions(
+  db,
+  uid: _uid,
+  profileId: _profileId,
+  curriculumId: CurriculumId.fromStorageKey(curriculumId)!,
 );
+
+CurriculumTrackEntity _track({String curriculumId = 'mishnayos'}) =>
+    CurriculumTrackEntity(
+      curriculumId: CurriculumId.fromStorageKey(curriculumId)!,
+      state: 'active',
+      stateChangedAt: DateTime.utc(2026, 1, 1),
+      activatedAt: DateTime.utc(2026, 1, 1),
+    );
 
 // ── EditTrackScreen widget builder ────────────────────────────────────────────
 
@@ -221,8 +207,8 @@ CurriculumTrack _track({
 /// [dailyTasks] overrides [allDailyTasksProvider].
 /// [tutorPerms] — when non-null, configures a tutored session with those perms.
 Widget _buildEditApp({
-  required CurriculumTrack track,
-  required UserDatabase db,
+  required CurriculumTrackEntity track,
+  required FakeFirebaseFirestore db,
   required _MockTrackEditService mockService,
   bool hasChazara = false,
   bool hasProgramEnrollment = false,
@@ -231,13 +217,41 @@ Widget _buildEditApp({
   Locale locale = const Locale('en'),
 }) {
   final curriculum = CurriculumId.values
-      .where((c) => c.storageKey == track.curriculumId)
+      .where((c) => c == track.curriculumId)
       .firstOrNull;
   return ProviderScope(
     overrides: [
-      userDatabaseProvider.overrideWith((ref) => db),
+      firestoreGoalRepositoryProvider.overrideWith(
+        (ref) => Future.value(
+          FirestoreGoalRepository(
+            firestore: db,
+            uid: _uid,
+            profileId: _profileId,
+          ),
+        ),
+      ),
+      firestoreStageDefinitionRepositoryProvider.overrideWith(
+        (ref) => Future.value(
+          FirestoreStageDefinitionRepository(
+            firestore: db,
+            uid: _uid,
+            profileId: _profileId,
+          ),
+        ),
+      ),
+      firestoreStudyDayConfigRepositoryProvider.overrideWith(
+        (ref) => Future.value(
+          FirestoreStudyDayConfigRepository(
+            firestore: db,
+            uid: _uid,
+            profileId: _profileId,
+          ),
+        ),
+      ),
       trackEditServiceProvider.overrideWithValue(mockService),
-      activeProfileIdProvider.overrideWith(() => _FakeActiveProfileId(1)),
+      activeProfileIdProvider.overrideWith(
+        () => _FakeActiveProfileId(_profileId),
+      ),
       activeTutoredProfileSelectionProvider.overrideWith(
         tutorPerms != null
             ? () => _FakeActiveTutoredProfileSelectionWithPerms(tutorPerms)
@@ -245,7 +259,7 @@ Widget _buildEditApp({
       ),
       if (curriculum != null)
         trackHasChazaraProvider(
-          track.id,
+          track.curriculumId,
         ).overrideWith((ref) async => hasChazara),
       if (curriculum != null)
         dashboardHasProgramEnrollmentProvider(
@@ -271,7 +285,6 @@ Widget _buildEditApp({
 // ── TrackDetailScreen widget builder ─────────────────────────────────────────
 
 TrackDualProgressMetric _dualMetric({
-  int trackId = 1,
   CurriculumId curriculum = CurriculumId.mishnayos,
   double currentCycle = 0.0,
   double lifetime = 0.0,
@@ -284,20 +297,53 @@ TrackDualProgressMetric _dualMetric({
 );
 
 Widget _buildDetailApp({
-  required CurriculumTrack track,
-  required UserDatabase db,
+  required CurriculumTrackEntity track,
+  required FakeFirebaseFirestore db,
   bool hasChazara = false,
   bool hasProgramEnrollment = false,
   double currentCycle = 0.0,
   double lifetime = 0.0,
+  List<CurriculumId> activeCurricula = const [CurriculumId.mishnayos],
   Locale locale = const Locale('en'),
 }) {
   final curriculum = CurriculumId.values
-      .where((c) => c.storageKey == track.curriculumId)
+      .where((c) => c == track.curriculumId)
       .firstOrNull;
   return ProviderScope(
     overrides: [
-      userDatabaseProvider.overrideWith((ref) => db),
+      firestoreGoalRepositoryProvider.overrideWith(
+        (ref) => Future.value(
+          FirestoreGoalRepository(
+            firestore: db,
+            uid: _uid,
+            profileId: _profileId,
+          ),
+        ),
+      ),
+      firestoreStageDefinitionRepositoryProvider.overrideWith(
+        (ref) => Future.value(
+          FirestoreStageDefinitionRepository(
+            firestore: db,
+            uid: _uid,
+            profileId: _profileId,
+          ),
+        ),
+      ),
+      firestoreStudyDayConfigRepositoryProvider.overrideWith(
+        (ref) => Future.value(
+          FirestoreStudyDayConfigRepository(
+            firestore: db,
+            uid: _uid,
+            profileId: _profileId,
+          ),
+        ),
+      ),
+      activeProfileIdProvider.overrideWith(
+        () => _FakeActiveProfileId(_profileId),
+      ),
+      dashboardActiveCurriculaProvider.overrideWith(
+        (ref) async => activeCurricula,
+      ),
       useHebrewTermsProvider.overrideWith(() => _FakeUseHebrewTerms()),
       useHebrewDateProvider.overrideWith(() => _FakeUseHebrewDate()),
       localDayClockProvider.overrideWithValue(
@@ -305,7 +351,7 @@ Widget _buildDetailApp({
       ),
       if (curriculum != null)
         dashboardTrackCompletionPercentageProvider(
-          track.id,
+          track.curriculumId,
         ).overrideWith((ref) async => currentCycle),
       if (curriculum != null)
         dashboardHasProgramEnrollmentProvider(
@@ -313,17 +359,18 @@ Widget _buildDetailApp({
         ).overrideWith((ref) async => hasProgramEnrollment),
       if (curriculum != null)
         scopedItemCountProvider(curriculum).overrideWith((ref) async => 100),
-      trackDualProgressMetricsProvider(track.profileId).overrideWith(
+      trackDualProgressMetricsProvider.overrideWith(
         (ref) async => [
           _dualMetric(
-            trackId: track.id,
             curriculum: curriculum ?? CurriculumId.mishnayos,
             currentCycle: currentCycle,
             lifetime: lifetime,
           ),
         ],
       ),
-      trackHasChazaraProvider(track.id).overrideWith((ref) async => hasChazara),
+      trackHasChazaraProvider(
+        track.curriculumId,
+      ).overrideWith((ref) async => hasChazara),
     ],
     child: MaterialApp(
       locale: locale,
@@ -374,18 +421,15 @@ void main() {
     );
   });
 
-  late UserDatabase db;
+  late FakeFirebaseFirestore db;
   late _MockTrackEditService mockService;
 
   setUp(() async {
-    db = inMemoryDb();
-    await seedProfile(db);
+    db = createFakeFirestore(authenticatedUid: _uid);
     mockService = _MockTrackEditService();
     when(
       () => mockService.editTrack(
-        trackId: any(named: 'trackId'),
         goal: any(named: 'goal'),
-        profileId: any(named: 'profileId'),
         curriculum: any(named: 'curriculum'),
         label: any(named: 'label'),
         studyDays: any(named: 'studyDays'),
@@ -397,9 +441,7 @@ void main() {
     ).thenAnswer((_) async {});
   });
 
-  tearDown(() async {
-    await db.close();
-  });
+  tearDown(() {});
 
   // ════════════════════════════════════════════════════════════════════════════
   // EditTrackScreen
@@ -407,15 +449,10 @@ void main() {
 
   group('EditTrackScreen — initial render', () {
     testWidgets('shows AppBar with "Edit Track" title', (tester) async {
-      final trackId = await seedTrack(db, profileId: 1);
-      await _seedGoal(db, profileId: 1, trackId: trackId);
+      await _seedGoal(db);
 
       await tester.pumpWidget(
-        _buildEditApp(
-          track: _track(id: trackId),
-          db: db,
-          mockService: mockService,
-        ),
+        _buildEditApp(track: _track(), db: db, mockService: mockService),
       );
       await _pump(tester);
 
@@ -428,20 +465,10 @@ void main() {
     testWidgets('pre-populates name field with goal description', (
       tester,
     ) async {
-      final trackId = await seedTrack(db, profileId: 1);
-      await _seedGoal(
-        db,
-        profileId: 1,
-        trackId: trackId,
-        description: 'My Mishnayos',
-      );
+      await _seedGoal(db, description: 'My Mishnayos');
 
       await tester.pumpWidget(
-        _buildEditApp(
-          track: _track(id: trackId),
-          db: db,
-          mockService: mockService,
-        ),
+        _buildEditApp(track: _track(), db: db, mockService: mockService),
       );
       await _pump(tester);
 
@@ -451,15 +478,10 @@ void main() {
     });
 
     testWidgets('shows Goal section when goal exists', (tester) async {
-      final trackId = await seedTrack(db, profileId: 1);
-      await _seedGoal(db, profileId: 1, trackId: trackId);
+      await _seedGoal(db);
 
       await tester.pumpWidget(
-        _buildEditApp(
-          track: _track(id: trackId),
-          db: db,
-          mockService: mockService,
-        ),
+        _buildEditApp(track: _track(), db: db, mockService: mockService),
       );
       await _pump(tester);
 
@@ -471,15 +493,10 @@ void main() {
     testWidgets('shows Study Days section for non-program track', (
       tester,
     ) async {
-      final trackId = await seedTrack(db, profileId: 1);
-      await _seedGoal(db, profileId: 1, trackId: trackId);
+      await _seedGoal(db);
 
       await tester.pumpWidget(
-        _buildEditApp(
-          track: _track(id: trackId),
-          db: db,
-          mockService: mockService,
-        ),
+        _buildEditApp(track: _track(), db: db, mockService: mockService),
       );
       await _pump(tester);
 
@@ -489,15 +506,10 @@ void main() {
     });
 
     testWidgets('shows "Save Changes" button in AppBar', (tester) async {
-      final trackId = await seedTrack(db, profileId: 1);
-      await _seedGoal(db, profileId: 1, trackId: trackId);
+      await _seedGoal(db);
 
       await tester.pumpWidget(
-        _buildEditApp(
-          track: _track(id: trackId),
-          db: db,
-          mockService: mockService,
-        ),
+        _buildEditApp(track: _track(), db: db, mockService: mockService),
       );
       await _pump(tester);
 
@@ -507,22 +519,15 @@ void main() {
     });
 
     testWidgets('pace goal shows current pace value', (tester) async {
-      final trackId = await seedTrack(db, profileId: 1);
       await _seedGoal(
         db,
-        profileId: 1,
-        trackId: trackId,
         goalType: 'pace',
         paceValue: 5,
         pacePeriod: 'per_week',
       );
 
       await tester.pumpWidget(
-        _buildEditApp(
-          track: _track(id: trackId),
-          db: db,
-          mockService: mockService,
-        ),
+        _buildEditApp(track: _track(), db: db, mockService: mockService),
       );
       await _pump(tester);
 
@@ -534,22 +539,15 @@ void main() {
     testWidgets('pace goal shows per_day and per_week period chips', (
       tester,
     ) async {
-      final trackId = await seedTrack(db, profileId: 1);
       await _seedGoal(
         db,
-        profileId: 1,
-        trackId: trackId,
         goalType: 'pace',
         paceValue: 2,
         pacePeriod: 'per_day',
       );
 
       await tester.pumpWidget(
-        _buildEditApp(
-          track: _track(id: trackId),
-          db: db,
-          mockService: mockService,
-        ),
+        _buildEditApp(track: _track(), db: db, mockService: mockService),
       );
       await _pump(tester);
 
@@ -561,21 +559,14 @@ void main() {
     });
 
     testWidgets('deadline goal shows calendar date picker row', (tester) async {
-      final trackId = await seedTrack(db, profileId: 1);
       await _seedGoal(
         db,
-        profileId: 1,
-        trackId: trackId,
         goalType: 'deadline',
         targetDate: DateTime.utc(2027, 6, 1),
       );
 
       await tester.pumpWidget(
-        _buildEditApp(
-          track: _track(id: trackId),
-          db: db,
-          mockService: mockService,
-        ),
+        _buildEditApp(track: _track(), db: db, mockService: mockService),
       );
       await _pump(tester);
 
@@ -592,12 +583,11 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
-      final trackId = await seedTrack(db, profileId: 1);
-      await _seedGoal(db, profileId: 1, trackId: trackId);
+      await _seedGoal(db);
 
       await tester.pumpWidget(
         _buildEditApp(
-          track: _track(id: trackId),
+          track: _track(),
           db: db,
           mockService: mockService,
           hasProgramEnrollment: true,
@@ -620,15 +610,10 @@ void main() {
     testWidgets('tapping Save Changes opens confirmation dialog', (
       tester,
     ) async {
-      final trackId = await seedTrack(db, profileId: 1);
-      await _seedGoal(db, profileId: 1, trackId: trackId);
+      await _seedGoal(db);
 
       await tester.pumpWidget(
-        _buildEditApp(
-          track: _track(id: trackId),
-          db: db,
-          mockService: mockService,
-        ),
+        _buildEditApp(track: _track(), db: db, mockService: mockService),
       );
       await _pump(tester);
 
@@ -644,15 +629,10 @@ void main() {
     testWidgets('confirming dialog calls trackEditService.editTrack', (
       tester,
     ) async {
-      final trackId = await seedTrack(db, profileId: 1);
-      await _seedGoal(db, profileId: 1, trackId: trackId);
+      await _seedGoal(db);
 
       await tester.pumpWidget(
-        _buildEditApp(
-          track: _track(id: trackId),
-          db: db,
-          mockService: mockService,
-        ),
+        _buildEditApp(track: _track(), db: db, mockService: mockService),
       );
       await _pump(tester);
 
@@ -668,9 +648,7 @@ void main() {
 
       verify(
         () => mockService.editTrack(
-          trackId: trackId,
           goal: any(named: 'goal'),
-          profileId: 1,
           curriculum: CurriculumId.mishnayos,
           label: any(named: 'label'),
           studyDays: any(named: 'studyDays'),
@@ -687,15 +665,10 @@ void main() {
     testWidgets('cancelling confirmation dialog does NOT call editTrack', (
       tester,
     ) async {
-      final trackId = await seedTrack(db, profileId: 1);
-      await _seedGoal(db, profileId: 1, trackId: trackId);
+      await _seedGoal(db);
 
       await tester.pumpWidget(
-        _buildEditApp(
-          track: _track(id: trackId),
-          db: db,
-          mockService: mockService,
-        ),
+        _buildEditApp(track: _track(), db: db, mockService: mockService),
       );
       await _pump(tester);
 
@@ -709,9 +682,7 @@ void main() {
 
       verifyNever(
         () => mockService.editTrack(
-          trackId: any(named: 'trackId'),
           goal: any(named: 'goal'),
-          profileId: any(named: 'profileId'),
           curriculum: any(named: 'curriculum'),
           label: any(named: 'label'),
           studyDays: any(named: 'studyDays'),
@@ -726,20 +697,10 @@ void main() {
     });
 
     testWidgets('editing name sends new label to editTrack', (tester) async {
-      final trackId = await seedTrack(db, profileId: 1);
-      await _seedGoal(
-        db,
-        profileId: 1,
-        trackId: trackId,
-        description: 'Old Name',
-      );
+      await _seedGoal(db, description: 'Old Name');
 
       await tester.pumpWidget(
-        _buildEditApp(
-          track: _track(id: trackId),
-          db: db,
-          mockService: mockService,
-        ),
+        _buildEditApp(track: _track(), db: db, mockService: mockService),
       );
       await _pump(tester);
 
@@ -755,9 +716,7 @@ void main() {
 
       final captured = verify(
         () => mockService.editTrack(
-          trackId: trackId,
           goal: any(named: 'goal'),
-          profileId: 1,
           curriculum: CurriculumId.mishnayos,
           label: captureAny(named: 'label'),
           studyDays: any(named: 'studyDays'),
@@ -776,22 +735,15 @@ void main() {
     testWidgets(
       'pace increment button is disabled when paceValue is 1 (minimum)',
       (tester) async {
-        final trackId = await seedTrack(db, profileId: 1);
         await _seedGoal(
           db,
-          profileId: 1,
-          trackId: trackId,
           goalType: 'pace',
           paceValue: 1,
           pacePeriod: 'per_week',
         );
 
         await tester.pumpWidget(
-          _buildEditApp(
-            track: _track(id: trackId),
-            db: db,
-            mockService: mockService,
-          ),
+          _buildEditApp(track: _track(), db: db, mockService: mockService),
         );
         await _pump(tester);
 
@@ -838,22 +790,15 @@ void main() {
     );
 
     testWidgets('increment pace button increases pace value', (tester) async {
-      final trackId = await seedTrack(db, profileId: 1);
       await _seedGoal(
         db,
-        profileId: 1,
-        trackId: trackId,
         goalType: 'pace',
         paceValue: 3,
         pacePeriod: 'per_week',
       );
 
       await tester.pumpWidget(
-        _buildEditApp(
-          track: _track(id: trackId),
-          db: db,
-          mockService: mockService,
-        ),
+        _buildEditApp(track: _track(), db: db, mockService: mockService),
       );
       await _pump(tester);
 
@@ -872,8 +817,7 @@ void main() {
         'TutorWriteException surfaces an error SnackBar (not silent failure)', (
       tester,
     ) async {
-      final trackId = await seedTrack(db, profileId: 1);
-      await _seedGoal(db, profileId: 1, trackId: trackId);
+      await _seedGoal(db);
       final l10n = await AppLocalizations.delegate.load(const Locale('en'));
 
       // 'internal' (a plausible flaky-connection code per
@@ -882,9 +826,7 @@ void main() {
       // block handled.
       when(
         () => mockService.editTrack(
-          trackId: any(named: 'trackId'),
           goal: any(named: 'goal'),
-          profileId: any(named: 'profileId'),
           curriculum: any(named: 'curriculum'),
           label: any(named: 'label'),
           studyDays: any(named: 'studyDays'),
@@ -898,11 +840,7 @@ void main() {
       );
 
       await tester.pumpWidget(
-        _buildEditApp(
-          track: _track(id: trackId),
-          db: db,
-          mockService: mockService,
-        ),
+        _buildEditApp(track: _track(), db: db, mockService: mockService),
       );
       await _pump(tester);
 
@@ -952,13 +890,12 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
-      final trackId = await seedTrack(db, profileId: 1);
-      await _seedGoal(db, profileId: 1, trackId: trackId);
-      await _seedChazaraStages(db, profileId: 1, trackId: trackId);
+      await _seedGoal(db);
+      await _seedChazaraStages(db);
 
       await tester.pumpWidget(
         _buildEditApp(
-          track: _track(id: trackId),
+          track: _track(),
           db: db,
           mockService: mockService,
           hasChazara: true,
@@ -983,13 +920,12 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
-      final trackId = await seedTrack(db, profileId: 1);
-      await _seedGoal(db, profileId: 1, trackId: trackId);
-      await _seedLearnStage(db, profileId: 1, trackId: trackId);
+      await _seedGoal(db);
+      await _seedLearnStage(db);
 
       await tester.pumpWidget(
         _buildEditApp(
-          track: _track(id: trackId),
+          track: _track(),
           db: db,
           mockService: mockService,
           hasChazara: false,
@@ -1010,12 +946,11 @@ void main() {
         addTearDown(tester.view.resetPhysicalSize);
         addTearDown(tester.view.resetDevicePixelRatio);
 
-        final trackId = await seedTrack(db, profileId: 1);
-        await _seedGoal(db, profileId: 1, trackId: trackId);
+        await _seedGoal(db);
 
         await tester.pumpWidget(
           _buildEditApp(
-            track: _track(id: trackId),
+            track: _track(),
             db: db,
             mockService: mockService,
             hasChazara: false,
@@ -1038,13 +973,12 @@ void main() {
         addTearDown(tester.view.resetPhysicalSize);
         addTearDown(tester.view.resetDevicePixelRatio);
 
-        final trackId = await seedTrack(db, profileId: 1);
-        await _seedGoal(db, profileId: 1, trackId: trackId);
-        await _seedChazaraStages(db, profileId: 1, trackId: trackId);
+        await _seedGoal(db);
+        await _seedChazaraStages(db);
 
         await tester.pumpWidget(
           _buildEditApp(
-            track: _track(id: trackId),
+            track: _track(),
             db: db,
             mockService: mockService,
             hasChazara: true,
@@ -1070,15 +1004,10 @@ void main() {
     testWidgets(
       'no Personal / Standard / Custom / אישי / Track Type label visible',
       (tester) async {
-        final trackId = await seedTrack(db, profileId: 1);
-        await _seedGoal(db, profileId: 1, trackId: trackId);
+        await _seedGoal(db);
 
         await tester.pumpWidget(
-          _buildEditApp(
-            track: _track(id: trackId),
-            db: db,
-            mockService: mockService,
-          ),
+          _buildEditApp(track: _track(), db: db, mockService: mockService),
         );
         await _pump(tester);
 
@@ -1102,8 +1031,7 @@ void main() {
       (tester) async {
         // When a tutor doesn't have edit permissions the button must still
         // render (it just shows a permission snackbar on tap).
-        final trackId = await seedTrack(db, profileId: 1);
-        await _seedGoal(db, profileId: 1, trackId: trackId);
+        await _seedGoal(db);
 
         const noEditPerms = TutorPermissions(
           canEditGoals: false,
@@ -1112,7 +1040,7 @@ void main() {
 
         await tester.pumpWidget(
           _buildEditApp(
-            track: _track(id: trackId),
+            track: _track(),
             db: db,
             mockService: mockService,
             tutorPerms: noEditPerms,
@@ -1130,8 +1058,7 @@ void main() {
     testWidgets(
       'tutor with canEditGoals=false: tapping Save shows snackbar, not dialog',
       (tester) async {
-        final trackId = await seedTrack(db, profileId: 1);
-        await _seedGoal(db, profileId: 1, trackId: trackId);
+        await _seedGoal(db);
 
         const noEditPerms = TutorPermissions(
           canEditGoals: false,
@@ -1140,7 +1067,7 @@ void main() {
 
         await tester.pumpWidget(
           _buildEditApp(
-            track: _track(id: trackId),
+            track: _track(),
             db: db,
             mockService: mockService,
             tutorPerms: noEditPerms,
@@ -1182,12 +1109,11 @@ void main() {
 
   group('EditTrackScreen — Hebrew locale smoke test', () {
     testWidgets('Hebrew locale: screen mounts without crash', (tester) async {
-      final trackId = await seedTrack(db, profileId: 1);
-      await _seedGoal(db, profileId: 1, trackId: trackId);
+      await _seedGoal(db);
 
       await tester.pumpWidget(
         _buildEditApp(
-          track: _track(id: trackId),
+          track: _track(),
           db: db,
           mockService: mockService,
           locale: const Locale('he'),
@@ -1212,12 +1138,11 @@ void main() {
         addTearDown(tester.view.resetPhysicalSize);
         addTearDown(tester.view.resetDevicePixelRatio);
 
-        final trackId = await seedTrack(db, profileId: 1);
-        await _seedGoal(db, profileId: 1, trackId: trackId);
+        await _seedGoal(db);
 
         await tester.pumpWidget(
           _buildEditApp(
-            track: _track(id: trackId),
+            track: _track(),
             db: db,
             mockService: mockService,
             locale: const Locale('he'),
@@ -1256,15 +1181,10 @@ void main() {
         addTearDown(tester.view.resetPhysicalSize);
         addTearDown(tester.view.resetDevicePixelRatio);
 
-        final trackId = await seedTrack(db, profileId: 1);
-        await _seedGoal(db, profileId: 1, trackId: trackId);
+        await _seedGoal(db);
 
         await tester.pumpWidget(
-          _buildEditApp(
-            track: _track(id: trackId),
-            db: db,
-            mockService: mockService,
-          ),
+          _buildEditApp(track: _track(), db: db, mockService: mockService),
         );
         await _pump(tester);
 
@@ -1291,10 +1211,9 @@ void main() {
       tester,
     ) async {
       final db2 = inMemoryDb();
-      await seedProfileZero(db2);
-      addTearDown(() => db2.close());
+      addTearDown(() {});
 
-      final track = _track(id: 1, profileId: 0);
+      final track = _track();
 
       await tester.pumpWidget(_buildDetailApp(track: track, db: db2));
       await tester.pump();
@@ -1314,20 +1233,13 @@ void main() {
       'AppBar title, not the curriculum label',
       (tester) async {
         final db2 = inMemoryDb();
-        await seedProfileZero(db2);
-        addTearDown(() => db2.close());
+        addTearDown(() {});
 
         // Seed a real track row so the goal's FK is satisfied.
-        final trackId = await seedTrack(db2, profileId: 0);
-        final track = _track(id: trackId, profileId: 0);
+        final track = _track();
         // Seed a goal whose description is a USER-CHOSEN name distinct from the
         // curriculum label ("Mishnayos").
-        await _seedGoal(
-          db2,
-          profileId: 0,
-          trackId: trackId,
-          description: 'My Shas Journey',
-        );
+        await _seedGoal(db2, description: 'My Shas Journey');
 
         await tester.pumpWidget(_buildDetailApp(track: track, db: db2));
         await tester.pump();
@@ -1357,10 +1269,9 @@ void main() {
       'B-EDIT-NAME: no custom name → falls back to the curriculum label',
       (tester) async {
         final db2 = inMemoryDb();
-        await seedProfileZero(db2);
-        addTearDown(() => db2.close());
+        addTearDown(() {});
 
-        final track = _track(id: 1, profileId: 0);
+        final track = _track();
         // No goal seeded → no custom name → fall back to curriculum label.
         await tester.pumpWidget(_buildDetailApp(track: track, db: db2));
         await tester.pump();
@@ -1382,10 +1293,9 @@ void main() {
       tester,
     ) async {
       final db2 = inMemoryDb();
-      await seedProfileZero(db2);
-      addTearDown(() => db2.close());
+      addTearDown(() {});
 
-      final track = _track(id: 1, profileId: 0);
+      final track = _track();
 
       await tester.pumpWidget(_buildDetailApp(track: track, db: db2));
       await tester.pump();
@@ -1407,10 +1317,9 @@ void main() {
       tester,
     ) async {
       final db2 = inMemoryDb();
-      await seedProfileZero(db2);
-      addTearDown(() => db2.close());
+      addTearDown(() {});
 
-      final track = _track(id: 1, profileId: 0);
+      final track = _track();
 
       await tester.pumpWidget(
         _buildDetailApp(
@@ -1444,10 +1353,9 @@ void main() {
       'track WITHOUT chazara: header shows track progress label, not chazara',
       (tester) async {
         final db2 = inMemoryDb();
-        await seedProfileZero(db2);
-        addTearDown(() => db2.close());
+        addTearDown(() {});
 
-        final track = _track(id: 1, profileId: 0);
+        final track = _track();
 
         await tester.pumpWidget(
           _buildDetailApp(
@@ -1472,10 +1380,9 @@ void main() {
       'track WITH chazara: header shows chazara term in cycle label',
       (tester) async {
         final db2 = inMemoryDb();
-        await seedProfileZero(db2);
-        addTearDown(() => db2.close());
+        addTearDown(() {});
 
-        final track = _track(id: 1, profileId: 0);
+        final track = _track();
 
         await tester.pumpWidget(
           _buildDetailApp(
@@ -1503,19 +1410,15 @@ void main() {
   group('TrackDetailScreen — goal row', () {
     testWidgets('pace goal row shows pace value + period', (tester) async {
       final db2 = inMemoryDb();
-      await seedProfileZero(db2);
-      addTearDown(() => db2.close());
+      addTearDown(() {});
 
-      final trackId = await seedTrack(db2, profileId: 0);
       await _seedGoal(
         db2,
-        profileId: 0,
-        trackId: trackId,
         goalType: 'pace',
         paceValue: 4,
         pacePeriod: 'per_week',
       );
-      final track = _track(id: trackId, profileId: 0);
+      final track = _track();
 
       await tester.pumpWidget(_buildDetailApp(track: track, db: db2));
       await tester.pump();
@@ -1531,18 +1434,14 @@ void main() {
 
     testWidgets('deadline goal row shows formatted date', (tester) async {
       final db2 = inMemoryDb();
-      await seedProfileZero(db2);
-      addTearDown(() => db2.close());
+      addTearDown(() {});
 
-      final trackId = await seedTrack(db2, profileId: 0);
       await _seedGoal(
         db2,
-        profileId: 0,
-        trackId: trackId,
         goalType: 'deadline',
         targetDate: DateTime.utc(2027, 12, 31),
       );
-      final track = _track(id: trackId, profileId: 0);
+      final track = _track();
 
       await tester.pumpWidget(_buildDetailApp(track: track, db: db2));
       await tester.pump();
@@ -1560,10 +1459,9 @@ void main() {
   group('TrackDetailScreen — action tiles', () {
     testWidgets('Edit Track tile is always present', (tester) async {
       final db2 = inMemoryDb();
-      await seedProfileZero(db2);
-      addTearDown(() => db2.close());
+      addTearDown(() {});
 
-      final track = _track(id: 1, profileId: 0);
+      final track = _track();
 
       await tester.pumpWidget(_buildDetailApp(track: track, db: db2));
       await tester.pump();
@@ -1576,10 +1474,9 @@ void main() {
 
     testWidgets('Delete Track tile is always present', (tester) async {
       final db2 = inMemoryDb();
-      await seedProfileZero(db2);
-      addTearDown(() => db2.close());
+      addTearDown(() {});
 
-      final track = _track(id: 1, profileId: 0);
+      final track = _track();
 
       await tester.pumpWidget(_buildDetailApp(track: track, db: db2));
       await tester.pump();
@@ -1594,10 +1491,9 @@ void main() {
       'non-program track: bulk-prior tile uses "previously learned" copy',
       (tester) async {
         final db2 = inMemoryDb();
-        await seedProfileZero(db2);
-        addTearDown(() => db2.close());
+        addTearDown(() {});
 
-        final track = _track(id: 1, profileId: 0);
+        final track = _track();
 
         await tester.pumpWidget(
           _buildDetailApp(track: track, db: db2, hasProgramEnrollment: false),
@@ -1616,10 +1512,9 @@ void main() {
       tester,
     ) async {
       final db2 = inMemoryDb();
-      await seedProfileZero(db2);
-      addTearDown(() => db2.close());
+      addTearDown(() {});
 
-      final track = _track(id: 1, profileId: 0);
+      final track = _track();
 
       await tester.pumpWidget(
         _buildDetailApp(track: track, db: db2, hasProgramEnrollment: false),
@@ -1636,10 +1531,9 @@ void main() {
       tester,
     ) async {
       final db2 = inMemoryDb();
-      await seedProfileZero(db2);
-      addTearDown(() => db2.close());
+      addTearDown(() {});
 
-      final track = _track(id: 1, profileId: 0);
+      final track = _track();
 
       await tester.pumpWidget(
         _buildDetailApp(track: track, db: db2, hasProgramEnrollment: true),
@@ -1669,20 +1563,20 @@ void main() {
       addTearDown(tester.view.resetDevicePixelRatio);
 
       final db2 = inMemoryDb();
-      await seedProfileZero(db2);
       // Two active curricula so the delete is NOT the profile's last active
       // track — otherwise the min-1 invariant pre-check intercepts and shows the
       // last-curriculum explanation instead of the archive/wipe dialog.
-      await db2.activeCurriculumDao.activateByProfile(
-        CurriculumId.mishnayos,
-        0,
+      addTearDown(() {});
+
+      final track = _track();
+
+      await tester.pumpWidget(
+        _buildDetailApp(
+          track: track,
+          db: db2,
+          activeCurricula: const [CurriculumId.mishnayos, CurriculumId.bavli],
+        ),
       );
-      await db2.activeCurriculumDao.activateByProfile(CurriculumId.bavli, 0);
-      addTearDown(() => db2.close());
-
-      final track = _track(id: 1, profileId: 0);
-
-      await tester.pumpWidget(_buildDetailApp(track: track, db: db2));
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
 
@@ -1714,17 +1608,12 @@ void main() {
         addTearDown(tester.view.resetDevicePixelRatio);
 
         final db2 = inMemoryDb();
-        await seedProfileZero(db2);
         // Exactly ONE active curriculum → removing it is blocked by the min-1
         // invariant (TRK-HUB-04). The pre-check must surface the explanation
         // up-front instead of offering Archive/Delete options that all fail.
-        await db2.activeCurriculumDao.activateByProfile(
-          CurriculumId.mishnayos,
-          0,
-        );
-        addTearDown(() => db2.close());
+        addTearDown(() {});
 
-        final track = _track(id: 1, profileId: 0);
+        final track = _track();
 
         await tester.pumpWidget(_buildDetailApp(track: track, db: db2));
         await tester.pump();
@@ -1760,10 +1649,9 @@ void main() {
       'no Personal / Standard / Custom / אישי / Track Type label visible',
       (tester) async {
         final db2 = inMemoryDb();
-        await seedProfileZero(db2);
-        addTearDown(() => db2.close());
+        addTearDown(() {});
 
-        final track = _track(id: 1, profileId: 0);
+        final track = _track();
 
         await tester.pumpWidget(_buildDetailApp(track: track, db: db2));
         await tester.pump();
@@ -1786,10 +1674,9 @@ void main() {
   group('TrackDetailScreen — Hebrew locale smoke test', () {
     testWidgets('Hebrew locale: screen mounts without crash', (tester) async {
       final db2 = inMemoryDb();
-      await seedProfileZero(db2);
-      addTearDown(() => db2.close());
+      addTearDown(() {});
 
-      final track = _track(id: 1, profileId: 0);
+      final track = _track();
 
       await tester.pumpWidget(
         _buildDetailApp(track: track, db: db2, locale: const Locale('he')),

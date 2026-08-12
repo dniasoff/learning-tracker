@@ -47,7 +47,7 @@ void main() {
     test('every field survives toFirestore -> fromFirestore, including the '
         'tracking window', () {
       final decoded = profileProgramFromFirestore(
-        base.toFirestore(profileId: 'profile-ulid-1'),
+        base.toFirestore(profileId: '01J6Q2H4A8M7K3P9R5T6V8WXYB'),
       );
 
       expect(decoded.curriculumId, base.curriculumId);
@@ -65,7 +65,9 @@ void main() {
         updatedAt: DateTime.utc(2026, 1, 3),
       );
 
-      final payload = noWindow.toFirestore(profileId: 'profile-ulid-1');
+      final payload = noWindow.toFirestore(
+        profileId: '01J6Q2H4A8M7K3P9R5T6V8WXYB',
+      );
       expect(payload, isNot(contains('tracking_start_date')));
       expect(payload, isNot(contains('tracking_start_ref')));
 
@@ -84,7 +86,9 @@ void main() {
         syncedAt: DateTime.utc(2026, 1, 5),
       );
 
-      final payload = withSynced.toFirestore(profileId: 'profile-ulid-1');
+      final payload = withSynced.toFirestore(
+        profileId: '01J6Q2H4A8M7K3P9R5T6V8WXYB',
+      );
       expect(
         payload,
         isNot(contains('synced_at')),
@@ -104,7 +108,9 @@ void main() {
   group('field names match the firestore.rules `profile_programs` .hasOnly() '
       'whitelist', () {
     test('toFirestore emits exactly the expected snake_case keys', () {
-      final payload = base.toFirestore(profileId: 'profile-ulid-1');
+      final payload = base.toFirestore(
+        profileId: '01J6Q2H4A8M7K3P9R5T6V8WXYB',
+      );
 
       expect(payload.keys.toSet(), <String>{
         'profile_id',
@@ -118,12 +124,14 @@ void main() {
 
     test('every key toFirestore can ever emit is inside the rules '
         '.hasOnly() whitelist', () {
-      final full = base.toFirestore(profileId: 'profile-ulid-1');
+      final full = base.toFirestore(
+        profileId: '01J6Q2H4A8M7K3P9R5T6V8WXYB',
+      );
       final minimal = ProfileProgramEntity(
         curriculumId: CurriculumId.bavli,
         programId: 1,
         updatedAt: DateTime.utc(2026, 1, 1),
-      ).toFirestore(profileId: 'profile-ulid-1');
+      ).toFirestore(profileId: '01J6Q2H4A8M7K3P9R5T6V8WXYB');
 
       expect(_rulesWhitelist.containsAll(full.keys), isTrue);
       expect(_rulesWhitelist.containsAll(minimal.keys), isTrue);
@@ -131,15 +139,19 @@ void main() {
 
     test('profile_id is written as the String profileId param', () {
       expect(
-        base.toFirestore(profileId: 'profile-ulid-1')['profile_id'],
-        'profile-ulid-1',
+        base.toFirestore(
+          profileId: '01J6Q2H4A8M7K3P9R5T6V8WXYB',
+        )['profile_id'],
+        '01J6Q2H4A8M7K3P9R5T6V8WXYB',
       );
     });
   });
 
   group('no forbidden fields (AD-25/MCF-11)', () {
     test('toFirestore never writes track_id or a Drift-style id', () {
-      final payload = base.toFirestore(profileId: 'profile-ulid-1');
+      final payload = base.toFirestore(
+        profileId: '01J6Q2H4A8M7K3P9R5T6V8WXYB',
+      );
       expect(payload, isNot(contains('track_id')));
       expect(payload, isNot(contains('id')));
     });
@@ -148,7 +160,9 @@ void main() {
   group('tracking_start_date/updated_at are ISO-8601 Strings — documented-safe '
       'here: profile_programs has no is-timestamp rules guard at all', () {
     test('toFirestore encodes both date fields as String, not DateTime', () {
-      final payload = base.toFirestore(profileId: 'profile-ulid-1');
+      final payload = base.toFirestore(
+        profileId: '01J6Q2H4A8M7K3P9R5T6V8WXYB',
+      );
       expect(payload['tracking_start_date'], isA<String>());
       expect(payload['updated_at'], isA<String>());
     });
@@ -156,7 +170,7 @@ void main() {
 
   group('profileProgramFromFirestore — malformed input', () {
     Map<String, dynamic> validMap() => {
-      'profile_id': 'profile-ulid-1',
+      'profile_id': '01J6Q2H4A8M7K3P9R5T6V8WXYB',
       'curriculum_id': 'chumash',
       'program_id': 7,
       'tracking_start_date': '2026-01-01T00:00:00.000Z',

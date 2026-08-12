@@ -17,7 +17,6 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
@@ -28,9 +27,6 @@ import 'package:learning_tracker/features/tracks/whole_curriculum_order/domain/m
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/presentation/widgets/draggable_order_item.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
-import '../../../../helpers/drift_memory.dart';
-
-const _kTrackId = 1;
 const _kCurriculumId = CurriculumId.mishnayos;
 
 /// Minimal [ContentRepository] stub returning empty results for every
@@ -109,7 +105,7 @@ class _ControlledTrackRepository implements TrackLearningOrderRepository {
 
   @override
   Future<List<LearningOrderItem>> getSedarimOrder(
-    int trackId,
+    CurriculumId curriculumId,
     List<ContentItem> allItems,
   ) {
     final completer = Completer<List<LearningOrderItem>>();
@@ -119,24 +115,24 @@ class _ControlledTrackRepository implements TrackLearningOrderRepository {
 
   @override
   Future<List<LearningOrderItem>> getMasechtosOrder(
-    int trackId,
+    CurriculumId curriculumId,
     List<ContentItem> allItems,
   ) async => const [];
 
   @override
   Future<void> saveSedarimOrder(
-    int trackId,
+    CurriculumId curriculumId,
     List<LearningOrderItem> items,
   ) async {}
 
   @override
   Future<void> saveMasechtosOrder(
-    int trackId,
+    CurriculumId curriculumId,
     List<LearningOrderItem> items,
   ) async {}
 
   @override
-  Future<void> resetToDefault(int trackId) async {
+  Future<void> resetToDefault(CurriculumId curriculumId) async {
     wasReset = true;
   }
 }
@@ -163,7 +159,6 @@ void main() {
         ProviderScope(
           retry: (_, __) => null,
           overrides: [
-            userDatabaseProvider.overrideWith((ref) => inMemoryDb()),
             trackLearningOrderRepositoryProvider.overrideWithValue(repo),
             contentRepositoryProvider.overrideWithValue(
               const _EmptyContentRepository(),
@@ -182,10 +177,7 @@ void main() {
               GlobalCupertinoLocalizations.delegate,
             ],
             supportedLocales: AppLocalizations.supportedLocales,
-            home: TrackLearningOrderScreen(
-              trackId: _kTrackId,
-              curriculumId: _kCurriculumId,
-            ),
+            home: TrackLearningOrderScreen(curriculumId: _kCurriculumId),
           ),
         ),
       );
