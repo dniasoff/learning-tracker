@@ -3,23 +3,25 @@ import 'dart:io';
 
 import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:drift/native.dart';
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter/foundation.dart' show ByteData, Uint8List, debugPrint;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/content/content_database.dart';
-import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
 import 'package:learning_tracker/core/database/seed/learning_program_seeds.dart';
 import 'package:learning_tracker/core/database/seed_manager.dart';
 import 'package:learning_tracker/core/database/seed_version.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/calendar_program_registry.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/calendar_program_service.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/local_calendar_engine.dart';
-import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
 import 'package:sqlite3/sqlite3.dart' as sqlite;
 
-import '../helpers/test_database.dart';
+import '../helpers/firestore_fixtures.dart' as firestore_fixtures;
+
+ContentDatabase _createTestContentDatabase() {
+  return ContentDatabase(NativeDatabase.memory());
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -69,34 +71,28 @@ void main() {
 
   // ─── Story 19.2: Two-Database Split ──────────────────────────────
   group('Story 19.2 — Two-Database Split', () {
-    late UserDatabase userDb;
+    late FakeFirebaseFirestore firestore;
     late ContentDatabase contentDb;
 
     setUp(() {
-      userDb = createTestUserDatabase();
-      contentDb = createTestContentDatabase();
+      firestore = FakeFirebaseFirestore();
+      contentDb = _createTestContentDatabase();
     });
 
     tearDown(() async {
-      await userDb.close();
       await contentDb.close();
     });
 
-    test('UserDatabase creates with user tables', () async {
-      await userDb
-          .into(userDb.accounts)
-          .insert(
-            UserProfilesCompanion.insert(
-              email: 'test@test.local',
-              tier: 'cloudBorn',
-              displayName: 'Test User',
-              createdAt: DateTimeFactory.nowUtc(),
-              updatedAt: DateTimeFactory.nowUtc(),
-            ),
-          );
-      final profiles = await userDb.select(userDb.accounts).get();
-      expect(profiles, hasLength(1));
-      expect(profiles.first.email, 'test@test.local');
+    test('Firestore account document creates with account fields', () async {
+      await firestore_fixtures.seedAccount(
+        firestore,
+        uid: 'test-user',
+        email: 'test@test.local',
+        displayName: 'Test User',
+      );
+      final account = await firestore.collection('users').doc('test-user').get();
+      expect(account.exists, isTrue);
+      expect(account.data()!['email'], 'test@test.local');
     });
 
     test('ContentDatabase creates with content tables', () async {
@@ -105,25 +101,19 @@ void main() {
       expect(programs, isList);
     });
 
-    test(
-      'UserProfiles stores local-born account without firebaseUid',
-      () async {
-        await userDb
-            .into(userDb.accounts)
-            .insert(
-              UserProfilesCompanion.insert(
-                email: 'localonly@test.local',
-                tier: 'localBorn',
-                passwordHash: const Value(r'argon2id$placeholder'),
-                displayName: 'Local User',
-                createdAt: DateTimeFactory.nowUtc(),
-                updatedAt: DateTimeFactory.nowUtc(),
-              ),
-            );
-        final profile = await userDb.select(userDb.accounts).getSingle();
-        expect(profile.email, 'localonly@test.local');
-        expect(profile.firebaseUid, isNull);
-        expect(profile.tier, 'localBorn');
+    test('account identity is the Firebase uid, not a local tier row', () async {
+      await firestore_fixtures.seedAccount(
+        firestore,
+        uid: 'localonly-user',
+        email: 'localonly@test.local',
+        displayName: 'Local User',
+      );
+      final account = await firestore
+          .collection('users')
+          .doc('localonly-user')
+          .get();
+      expect(account.id, 'localonly-user');
+      expect(account.data()!['display_name'], 'Local User');
       },
     );
   });
@@ -140,7 +130,7 @@ void main() {
     late ContentDatabase contentDb;
 
     setUp(() {
-      contentDb = createTestContentDatabase();
+      contentDb = _createTestContentDatabase();
     });
 
     tearDown(() async {
@@ -257,7 +247,7 @@ void main() {
         return buf.toString();
       }
 
-      final otherDb = createTestContentDatabase();
+      final otherDb = _createTestContentDatabase();
       try {
         final a = await buildAndHash(contentDb);
         final b = await buildAndHash(otherDb);
@@ -435,7 +425,7 @@ void main() {
     late LocalCalendarEngine engine;
 
     setUp(() async {
-      calDb = createTestContentDatabase();
+      calDb = _createTestContentDatabase();
       engine = LocalCalendarEngine(calDb);
       // Seed 20 calendar rows for the test date (2026-03-29),
       // plus 5 days of daf_yomi for range query tests.
@@ -624,11 +614,4 @@ void main() {
   // 'isCloudBorn and isLocalBorn reflect tier' and
   // 'isSignedIn is true only when signedIn' in that file.
 
-  // ─── Story 19.8: SyncEngine Conditional ──────────────────────────
-  group('Story 19.8 — SyncEngine Conditional Activation', () {
-    test('SyncStatus.localOnly represents no-account state', () {
-      const status = SyncStatus.localOnly();
-      expect(status, isA<SyncStatusLocalOnly>());
-    });
-  });
 }

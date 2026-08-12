@@ -1,5 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
@@ -10,7 +9,8 @@ import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../helpers/fake_secure_storage.dart';
-import '../../../../helpers/test_database.dart';
+
+const _profileId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
 
 class MockAuthRepository extends Mock implements AuthRepository {}
 
@@ -64,7 +64,6 @@ AppUser _makeUser(String uid) => AppUser(
 
 void main() {
   late MockAuthRepository mockAuthRepo;
-  late UserDatabase db;
   late MockFlutterSecureStorage secureStorage;
   late AccountManagementService service;
 
@@ -72,17 +71,11 @@ void main() {
     TestWidgetsFlutterBinding.ensureInitialized();
     SharedPreferences.setMockInitialValues({});
     mockAuthRepo = MockAuthRepository();
-    db = createTestDatabase();
     secureStorage = createMockSecureStorage();
     service = AccountManagementService(
       authRepository: mockAuthRepo,
-      database: db,
       secureStorage: secureStorage,
     );
-  });
-
-  tearDown(() async {
-    await db.close();
   });
 
   group('signOut', () {
@@ -99,23 +92,6 @@ void main() {
       expect(prefs.containsKey('add_track_step'), isFalse);
     });
 
-    test('preserves local database data after sign out', () async {
-      // Insert test profile
-      await db.userProfileDao.upsertProfile(
-        firebaseUid: 'test-uid',
-        displayName: 'Test User',
-        updatedAt: DateTime.now(),
-      );
-
-      await service.signOut();
-
-      // Verify local data is still there
-      final profile = await db.userProfileDao.getUserProfileByFirebaseUid(
-        'test-uid',
-      );
-      expect(profile, isNotNull);
-      expect(profile!.displayName, 'Test User');
-    });
   });
 
   group('deleteAccount', () {
@@ -163,49 +139,6 @@ void main() {
             'silently dropped',
       );
     });
-
-    test('clears local database', () async {
-      await db.userProfileDao.upsertProfile(
-        firebaseUid: 'test-uid',
-        displayName: 'Test User',
-        updatedAt: DateTime.now(),
-      );
-
-      await service.deleteAccount('test-uid');
-
-      final profile = await db.userProfileDao.getUserProfileByFirebaseUid(
-        'test-uid',
-      );
-      expect(profile, isNull);
-    });
-
-    test(
-      'clears the outbox — no pending push survives account deletion',
-      () async {
-        await db
-            .into(db.outbox)
-            .insert(
-              OutboxCompanion.insert(
-                profileId: 1,
-                entityKind: 'completion',
-                entityKey: '1:Berakhot 1:1:1:personal',
-                payload: '{}',
-                createdAt: DateTime.utc(2026, 5, 18),
-              ),
-            );
-        expect(await db.select(db.outbox).get(), isNotEmpty);
-
-        await service.deleteAccount('test-uid');
-
-        expect(
-          await db.select(db.outbox).get(),
-          isEmpty,
-          reason:
-              'the outbox is a pending-command queue — it must not survive '
-              'account deletion (a stale row would push to the next account)',
-        );
-      },
-    );
 
     // ── R4-11 regression: UID guard ──────────────────────────────────────────
 
@@ -287,18 +220,21 @@ void main() {
     test('clears the tutor PIN so the old PIN no longer verifies', () async {
       final pinService = PinService(secureStorage);
       final tutorPinService = TutorPinService(pinService);
-      await tutorPinService.setTutorPin(profileId: 7, rawPin: '1234');
-      expect(await tutorPinService.hasTutorPin(7), isTrue);
+      await tutorPinService.setTutorPin(profileId: _profileId, rawPin: '1234');
+      expect(await tutorPinService.hasTutorPin(_profileId), isTrue);
 
       await service.deleteAccount('test-uid');
 
       expect(
-        await tutorPinService.hasTutorPin(7),
+        await tutorPinService.hasTutorPin(_profileId),
         isFalse,
         reason: 'the tutor PIN must be wiped on account deletion',
       );
       expect(
-        await tutorPinService.verifyTutorPin(profileId: 7, rawPin: '1234'),
+        await tutorPinService.verifyTutorPin(
+          profileId: _profileId,
+          rawPin: '1234',
+        ),
         isA<TutorPinIncorrect>(),
         reason: 'the old PIN must no longer verify after deletion',
       );
@@ -314,7 +250,10 @@ void main() {
         ).thenThrow(StateError('requires-recent-login'));
         final pinService = PinService(secureStorage);
         final tutorPinService = TutorPinService(pinService);
-        await tutorPinService.setTutorPin(profileId: 7, rawPin: '1234');
+        await tutorPinService.setTutorPin(
+          profileId: _profileId,
+          rawPin: '1234',
+        );
 
         await expectLater(
           () => service.deleteAccount('test-uid'),
@@ -324,7 +263,7 @@ void main() {
         // Local teardown ran in `finally` despite the auth failure.
         final prefs = await SharedPreferences.getInstance();
         expect(prefs.getBool('onboarding_complete') ?? false, isFalse);
-        expect(await tutorPinService.hasTutorPin(7), isFalse);
+        expect(await tutorPinService.hasTutorPin(_profileId), isFalse);
       },
     );
   });

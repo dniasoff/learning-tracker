@@ -1,677 +1,159 @@
-/// Story acceptance tests for Epic 18 -- Onboarding & Track Management Overhaul.
-@Tags(['epic_18'])
-library;
-
 import 'dart:convert';
 
-import 'package:drift/drift.dart' hide isNotNull, isNull;
-import 'package:drift/native.dart';
-import 'package:flutter_test/flutter_test.dart'
-    hide expect, group, setUp, setUpAll, tearDown, tearDownAll, test;
-import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/constants/hebrew_terms.dart';
 import 'package:learning_tracker/core/database/seed/learning_program_seeds.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/utils/date_utils.dart';
-import 'package:learning_tracker/features/learning/data/repositories/track_repository_impl.dart';
-import 'package:learning_tracker/features/learning/domain/entities/bookmark.dart';
-import 'package:learning_tracker/features/learning/domain/repositories/bookmark_repository.dart';
-import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
-import 'package:learning_tracker/features/onboarding/presentation/screens/onboarding_screen.dart';
-import 'package:learning_tracker/features/scheduler/data/repositories/goal_repository_impl.dart';
-import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
-import 'package:learning_tracker/features/tracks/domain/services/curriculum_activation_service.dart';
+import 'package:learning_tracker/data/repositories/firestore_curriculum_track_repository.dart';
+import 'package:learning_tracker/data/repositories/firestore_point_config_repository.dart';
+import 'package:learning_tracker/data/repositories/firestore_stage_definition_repository.dart';
+import 'package:learning_tracker/features/onboarding/presentation/screens/onboarding_screen.dart'
+    show childAwareText;
 import 'package:learning_tracker/features/tracks/setup/domain/entities/add_track_result.dart';
-import 'package:learning_tracker/features/tracks/setup/domain/services/track_creation_service.dart';
-import 'package:learning_tracker/features/tracks/stages/data/repositories/stage_definition_repository_impl.dart';
-import 'package:test/test.dart' hide isNotNull, isNull;
 
-import '../helpers/drift_memory.dart' show seedTrack;
-import '../helpers/test_database.dart' show seedProfile;
+import '../helpers/firestore_fixtures.dart';
 
-/// No-op [BookmarkRepository] for AC-6 point-seeding tests: none of them set
-/// a programId/startingRef, so createTrack's `setBookmark` branch is never
-/// reached — this exists only to satisfy the required constructor param.
-class _NoopBookmarkRepository implements BookmarkRepository {
-  @override
-  Future<BookmarkEntity?> getBookmark({required CurriculumId curriculumId}) =>
-      throw UnimplementedError();
-
-  @override
-  Future<BookmarkEntity> setBookmark({
-    required CurriculumId curriculumId,
-    required String sefariaRef,
-  }) => throw UnimplementedError();
-
-  @override
-  Future<void> advanceBookmark({
-    required CurriculumId curriculumId,
-    required String completedSefariaRef,
-  }) => throw UnimplementedError();
-
-  @override
-  Future<BookmarkEntity> initializeBookmark({
-    required CurriculumId curriculumId,
-  }) => throw UnimplementedError();
-}
+const _uid = 'epic-18-user';
+const _profileId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
 
 void main() {
-  // ── Story 18.1: AddTrackFlow has no rewards step ──────────────────────────
+  late FakeFirebaseFirestore firestore;
 
-  group(
-    'Story 18.1 -- AddTrackFlow has no rewards step',
-    tags: ['story_18_1'],
-    () {
-      test('AddTrackStep enum does not contain a rewards step', () {
-        final stepNames = AddTrackStep.values.map((s) => s.name).toList();
-        expect(stepNames, isNot(contains('rewards')));
-        expect(stepNames, isNot(contains('rewardsSetup')));
-        expect(stepNames, isNot(contains('reward')));
-      });
+  setUp(() => firestore = FakeFirebaseFirestore());
 
-      test('AddTrackStep enum has exactly 8 steps ending at bulkMark', () {
-        expect(AddTrackStep.values.length, 8);
-        expect(AddTrackStep.values.last, AddTrackStep.bulkMark);
-      });
+  group('Story 18.1 -- AddTrackFlow has no rewards step', () {
+    test('AddTrackStep enum does not contain a rewards step', () {
+      final names = AddTrackStep.values.map((step) => step.name.toLowerCase());
+      expect(names, isNot(contains('reward')));
+      expect(names, isNot(contains('rewards')));
+    });
 
-      test(
-        'AddTrackStep steps are in expected order (program before scope)',
-        () {
-          expect(AddTrackStep.values, [
-            AddTrackStep.curriculum,
-            AddTrackStep.program,
-            AddTrackStep.scope,
-            AddTrackStep.studyDays,
-            AddTrackStep.chazaraSetup,
-            AddTrackStep.goal,
-            AddTrackStep.trackName,
-            AddTrackStep.bulkMark,
-          ]);
-        },
+    test('AddTrackStep has exactly 8 steps ending at bulkMark', () {
+      expect(AddTrackStep.values.length, 8);
+      expect(AddTrackStep.values.last, AddTrackStep.bulkMark);
+    });
+
+    test('AddTrackStep keeps program before scope', () {
+      expect(AddTrackStep.values, [
+        AddTrackStep.curriculum,
+        AddTrackStep.program,
+        AddTrackStep.scope,
+        AddTrackStep.studyDays,
+        AddTrackStep.chazaraSetup,
+        AddTrackStep.goal,
+        AddTrackStep.trackName,
+        AddTrackStep.bulkMark,
+      ]);
+    });
+  });
+
+  group('Story 18.6 -- Child Mode Onboarding & Post-Setup Rewards', () {
+    test('AddTrackResult has no rewards fields', () {
+      const result = AddTrackResult(
+        curriculumId: CurriculumId.mishnayos,
+        label: 'Test Track',
+        studyDays: {1: 'study'},
       );
-    },
-  );
-
-  // ── Story 18.6: Child Mode Onboarding & Post-Setup Rewards ────────────────
-
-  group(
-    'Story 18.6 -- Child Mode Onboarding & Post-Setup Rewards',
-    tags: ['story_18_6'],
-    () {
-      // ── AC-1: No rewards during track setup ──
-
-      group('AC-1: No rewards during track setup', () {
-        test('AddTrackFlow steps contain no rewards-related step', () {
-          // Verify the enum has no rewards step for either adult or child mode
-          final allSteps = AddTrackStep.values.map((s) => s.name.toLowerCase());
-          for (final step in allSteps) {
-            expect(
-              step.contains('reward'),
-              isFalse,
-              reason: 'Step "$step" should not relate to rewards',
-            );
-          }
-        });
-
-        test('AddTrackResult does not contain rewards fields', () {
-          // Construct a minimal result — no rewards field exists
-          const result = AddTrackResult(
-            curriculumId: CurriculumId.mishnayos,
-            label: 'Test Track',
-            studyDays: {1: 'study', 2: 'study'},
-          );
-          // If this compiles, there is no required rewards field
-          expect(result.curriculumId, CurriculumId.mishnayos);
-          expect(result.label, 'Test Track');
-        });
-      });
-
-      // ── AC-6: Points initialization per track ──
-
-      group('AC-6: Points initialization per track', () {
-        late UserDatabase db;
-        late TrackCreationService service;
-
-        setUp(() async {
-          db = UserDatabase(NativeDatabase.memory());
-          // Point configs are only seeded for child-mode profiles.
-          // Create a child profile manually so _seedPointConfigsIfNeeded fires.
-          final accountId = await db
-              .into(db.accounts)
-              .insert(
-                AccountsCompanion.insert(
-                  email: 'child@example.com',
-                  tier: 'localBorn',
-                  displayName: 'Test Child',
-                  createdAt: DateTimeFactory.nowUtc(),
-                  updatedAt: DateTimeFactory.nowUtc(),
-                ),
-              );
-          await db
-              .into(db.learnerProfiles)
-              .insert(
-                LearnerProfilesCompanion.insert(
-                  accountId: accountId,
-                  displayName: 'Test Child',
-                  mode: 'child',
-                  createdAt: DateTimeFactory.nowUtc(),
-                  updatedAt: DateTimeFactory.nowUtc(),
-                ),
-              );
-          await seedTrack(db, profileId: 1);
-
-          final activationService = CurriculumActivationService(
-            database: db,
-            pushCurriculumTrack: (_) async {},
-            trackRepository: TrackRepositoryImpl(database: db),
-          );
-
-          final wizardService = LearningProcessWizardService(
-            stageDao: db.stageDao,
-            learningProgramRepo: LearningProgramRepository.instance,
-            profileProgramDao: db.profileProgramDao,
-          );
-
-          final goalRepo = GoalRepositoryImpl(database: db);
-
-          service = TrackCreationService(
-            database: db,
-            activationService: activationService,
-            wizardService: wizardService,
-            goalRepository: goalRepo,
-            stageRepository: StageDefinitionRepositoryImpl(
-              stageDao: db.stageDao,
-              completionDao: db.completionDao,
-              pushStageDefinitions: null,
-            ),
-            bookmarkRepository: _NoopBookmarkRepository(),
-          );
-        });
-
-        tearDown(() async {
-          await db.close();
-        });
-
-        test('creating a track seeds default point_configs '
-            'when none exist for the curriculum', () async {
-          // Verify no configs exist initially
-          final before = await db.pointConfigDao.getConfigsByCurriculum(
-            CurriculumId.mishnayos.storageKey,
-          );
-          expect(before, isEmpty);
-
-          // Create a track
-          await service.createTrack(
-            result: const AddTrackResult(
-              curriculumId: CurriculumId.mishnayos,
-              label: 'Mishnayos Track',
-              studyDays: {
-                1: 'study',
-                2: 'study',
-                3: 'study',
-                4: 'study',
-                5: 'study',
-                6: 'review',
-                7: 'review',
-              },
-            ),
-            profileId: 1,
-          );
-
-          // Verify point configs were seeded
-          final after = await db.pointConfigDao.getConfigsByCurriculum(
-            CurriculumId.mishnayos.storageKey,
-          );
-          expect(
-            after,
-            isNotEmpty,
-            reason: 'point_configs should be seeded after track creation',
-          );
-
-          // A track created without configuring chazara is learn-only — a
-          // single לימוד stage (stageOrder 1) — so exactly one point config is
-          // seeded, worth the default 10 points. Chazara stages (and their
-          // point configs) only exist when the chazara wizard added them, per
-          // the per-track chazara rule. (The 3-stage fallback in
-          // PointConfigDao.seedDefaults is now only reachable defensively, when
-          // a track somehow has zero stage_definitions.)
-          final stage1 = after.where((c) => c.stageOrder == 1).firstOrNull;
-          expect(stage1, isNotNull);
-          expect(stage1!.points, 10);
-
-          expect(
-            after.where((c) => c.stageOrder > 1),
-            isEmpty,
-            reason:
-                'a learn-only track has no chazara stages, so no stage 2/3 '
-                'point configs are seeded',
-          );
-        });
-
-        test('creating a second track for the same curriculum '
-            'does not duplicate point_configs', () async {
-          // Create first track
-          await service.createTrack(
-            result: const AddTrackResult(
-              curriculumId: CurriculumId.mishnayos,
-              label: 'Track 1',
-              studyDays: {1: 'study'},
-            ),
-            profileId: 1,
-          );
-
-          final afterFirst = await db.pointConfigDao.getConfigsByCurriculum(
-            CurriculumId.mishnayos.storageKey,
-          );
-          final countAfterFirst = afterFirst.length;
-
-          // Re-add the same curriculum for the same profile (there is one track
-          // per curriculum per profile — no track types). restoreOrCreate
-          // returns the same track, and _seedPointConfigsIfNeeded skips seeding
-          // when configs already exist — so the count must not grow.
-          await service.createTrack(
-            result: const AddTrackResult(
-              curriculumId: CurriculumId.mishnayos,
-              label: 'Track 2',
-              studyDays: {1: 'study'},
-            ),
-            profileId: 1,
-          );
-
-          final afterSecond = await db.pointConfigDao.getConfigsByCurriculum(
-            CurriculumId.mishnayos.storageKey,
-          );
-          expect(
-            afterSecond.length,
-            countAfterFirst,
-            reason: 'should not duplicate point_configs',
-          );
-        });
-
-        test('point_configs are seeded per curriculum independently', () async {
-          // Create a track for Mishnayos
-          await service.createTrack(
-            result: const AddTrackResult(
-              curriculumId: CurriculumId.mishnayos,
-              label: 'Mishnayos',
-              studyDays: {1: 'study'},
-            ),
-            profileId: 1,
-          );
-
-          // Create a track for Bavli
-          await service.createTrack(
-            result: const AddTrackResult(
-              curriculumId: CurriculumId.bavli,
-              label: 'Bavli',
-              studyDays: {1: 'study'},
-            ),
-            profileId: 1,
-          );
-
-          final mishnayosConfigs = await db.pointConfigDao
-              .getConfigsByCurriculum(CurriculumId.mishnayos.storageKey);
-          final bavliConfigs = await db.pointConfigDao.getConfigsByCurriculum(
-            CurriculumId.bavli.storageKey,
-          );
-
-          expect(mishnayosConfigs, isNotEmpty);
-          expect(bavliConfigs, isNotEmpty);
-        });
-      });
-
-      // ── AC-2, AC-3: Handoff screen content (structural verification) ──
-
-      group('AC-2/AC-3: Handoff screen content', () {
-        test(
-          'childAwareText returns child template with name substitution',
-          () {
-            const adultText = "You're all set!";
-            const childTemplate = "{name}'s learning is all set up!";
-            const childName = 'Sarah';
-
-            // Adult mode returns adult text
-            expect(
-              childAwareText(adultText, childTemplate, childName),
-              adultText,
-            );
-
-            // Child mode returns personalized text
-            expect(
-              childAwareText(
-                adultText,
-                childTemplate,
-                childName,
-                isChildMode: true,
-              ),
-              "Sarah's learning is all set up!",
-            );
-
-            // Child mode with null name falls back to adult text
-            expect(
-              childAwareText(adultText, childTemplate, null, isChildMode: true),
-              adultText,
-            );
-          },
-        );
-      });
-    },
-  );
-
-  // ── Story 18.4: Hebrew Terms for Chazara & Curriculum Names ──────────────
-
-  group(
-    'Story 18.4 -- Hebrew Terms for Chazara & Curriculum Names',
-    tags: ['story_18_4'],
-    () {
-      // ── AC-1: Default stage names use Hebrew ──
-
-      group('AC-1: Default stage names use Hebrew', () {
-        test('CurriculumDefaults.defaultStages has Hebrew names', () {
-          const stages = CurriculumDefaults.defaultStages;
-          expect(stages[0].stageName, 'לימוד');
-          expect(stages[1].stageName, 'חזרה א׳');
-          expect(stages[2].stageName, 'חזרה ב׳');
-        });
-
-        test(
-          'StageDefinitionRepositoryImpl.initializeDefaults creates Hebrew stages',
-          () async {
-            final db = UserDatabase(NativeDatabase.memory());
-            addTearDown(db.close);
-            await seedProfile(db);
-            final trackId = await seedTrack(db, profileId: 1);
-
-            final repo = StageDefinitionRepositoryImpl(
-              stageDao: db.stageDao,
-              completionDao: db.completionDao,
-              pushStageDefinitions:
-                  ({
-                    required int trackId,
-                    required String curriculumId,
-                    required List<Map<String, dynamic>> stages,
-                    required DateTime updatedAt,
-                  }) async {},
-            );
-
-            await repo.initializeDefaults(
-              CurriculumId.mishnayos,
-              profileId: 1,
-              trackId: trackId,
-            );
-            final stages = await repo.getStagesForCurriculum(
-              CurriculumId.mishnayos,
-            );
-
-            expect(stages[0].stageName, 'לימוד');
-            expect(stages[1].stageName, 'חזרה א׳');
-            expect(stages[2].stageName, 'חזרה ב׳');
-          },
-        );
-
-        test(
-          'LearningProcessWizardService._applyCustom creates לימוד stage',
-          () async {
-            final db = UserDatabase(NativeDatabase.memory());
-            addTearDown(db.close);
-            await seedProfile(db);
-
-            final service = LearningProcessWizardService(
-              stageDao: db.stageDao,
-              learningProgramRepo: LearningProgramRepository.instance,
-              profileProgramDao: db.profileProgramDao,
-            );
-
-            final bavliTrack = await db
-                .into(db.curriculumTracks)
-                .insertReturning(
-                  CurriculumTracksCompanion.insert(
-                    profileId: 1,
-                    curriculumId: 'bavli',
-                    stateChangedAt: DateTimeFactory.nowUtc(),
-                    activatedAt: DateTimeFactory.nowUtc(),
-                  ),
-                );
-
-            await service.applyWizardResult(
-              const WizardResult(
-                curriculumId: CurriculumId.bavli,
-                choice: WizardChoice.custom,
-                customRounds: [],
-              ),
-              profileId: 1,
-              trackId: bavliTrack.id,
-            );
-
-            final stages = await db.stageDao.getStageDefinitionsByCurriculum(
-              'bavli',
-            );
-            expect(stages, hasLength(1));
-            expect(stages.first.stageName, 'לימוד');
-          },
-        );
-
-        test(
-          'LearningProcessWizardService._applyNoReview creates לימוד stage',
-          () async {
-            final db = UserDatabase(NativeDatabase.memory());
-            addTearDown(db.close);
-            await seedProfile(db);
-
-            final bavliTrack = await db
-                .into(db.curriculumTracks)
-                .insertReturning(
-                  CurriculumTracksCompanion.insert(
-                    profileId: 1,
-                    curriculumId: 'bavli',
-                    stateChangedAt: DateTimeFactory.nowUtc(),
-                    activatedAt: DateTimeFactory.nowUtc(),
-                  ),
-                );
-
-            final service = LearningProcessWizardService(
-              stageDao: db.stageDao,
-              learningProgramRepo: LearningProgramRepository.instance,
-              profileProgramDao: db.profileProgramDao,
-            );
-
-            await service.applyWizardResult(
-              const WizardResult(
-                curriculumId: CurriculumId.bavli,
-                choice: WizardChoice.noReview,
-              ),
-              profileId: 1,
-              trackId: bavliTrack.id,
-            );
-
-            final stages = await db.stageDao.getStageDefinitionsByCurriculum(
-              'bavli',
-            );
-            expect(stages, hasLength(1));
-            expect(stages.first.stageName, 'לימוד');
-          },
-        );
-      });
-
-      // ── AC-2: Curriculum names display in Hebrew ──
-
-      group('AC-2: Curriculum names display in Hebrew', () {
-        test('every CurriculumId has a non-empty displayNameHe', () {
-          for (final id in CurriculumId.values) {
-            expect(
-              id.displayNameHe,
-              isNotEmpty,
-              reason: '${id.name} should have Hebrew display name',
-            );
-          }
-        });
-      });
-
-      // ── AC-4: Learning process wizard presets use Hebrew ──
-
-      group('AC-4: Seed data labels are Hebrew', () {
-        test('all learning_program_seeds have Hebrew labels', () {
-          for (final seed in learningProgramSeeds) {
-            final stagesJson = seed['stages_config']! as String;
-            final stages = (jsonDecode(stagesJson) as List)
-                .cast<Map<String, dynamic>>();
-            for (final stage in stages) {
-              final label = stage['label'] as String;
-              // Should NOT be English defaults
-              expect(label, isNot('Learn'), reason: 'seed ${seed['name']}');
-              expect(
-                label,
-                isNot(matches(RegExp(r'^Chazara \d+$'))),
-                reason: 'seed ${seed['name']}',
-              );
-              expect(
-                label,
-                isNot('Next-Day Review'),
-                reason: 'seed ${seed['name']}',
-              );
-              expect(
-                label,
-                isNot('Weekly Review'),
-                reason: 'seed ${seed['name']}',
-              );
-              expect(
-                label,
-                isNot('Rolling Back-20'),
-                reason: 'seed ${seed['name']}',
-              );
-            }
-          }
-        });
-      });
-
-      // ── AC-5: Existing data migrated ──
-
-      group('AC-5: Data migration v23→v24', () {
-        test('migration converts English defaults to Hebrew', () async {
-          final db = UserDatabase(NativeDatabase.memory());
-          addTearDown(db.close);
-          await seedProfile(db);
-          final trackId = await seedTrack(db, profileId: 1);
-
-          // Insert English defaults
-          await db.stageDao.insertStageDefinition(
-            StageDefinitionsCompanion.insert(
-              profileId: 1,
-              curriculumId: 'bavli',
-              trackId: trackId,
-              stageOrder: 1,
-              stageName: 'Learn',
-              schedule: const Value('{"type":"delay","delay_days":0}'),
-              isDefault: const Value(true),
-            ),
-          );
-          await db.stageDao.insertStageDefinition(
-            StageDefinitionsCompanion.insert(
-              profileId: 1,
-              curriculumId: 'bavli',
-              trackId: trackId,
-              stageOrder: 2,
-              stageName: 'Chazara 1',
-              schedule: const Value('{"type":"delay","delay_days":1}'),
-            ),
-          );
-
-          // Run migration SQL
-          for (final entry in HebrewTerms.stageNameMap.entries) {
-            await db.customStatement(
-              "UPDATE stage_definitions SET stage_name = '${entry.value}' "
-              "WHERE stage_name = '${entry.key}'",
-            );
-          }
-
-          final stages = await db.stageDao.getStageDefinitionsByCurriculum(
-            'bavli',
-          );
-          expect(stages[0].stageName, 'לימוד');
-          expect(stages[1].stageName, 'חזרה א׳');
-        });
-
-        test('migration does not touch user-customized names', () async {
-          final db = UserDatabase(NativeDatabase.memory());
-          addTearDown(db.close);
-          await seedProfile(db);
-          final trackId = await seedTrack(db, profileId: 1);
-
-          await db.stageDao.insertStageDefinition(
-            StageDefinitionsCompanion.insert(
-              profileId: 1,
-              curriculumId: 'mishnayos',
-              trackId: trackId,
-              stageOrder: 1,
-              stageName: 'My Custom Stage',
-              schedule: const Value('{"type":"delay","delay_days":0}'),
-            ),
-          );
-
-          for (final entry in HebrewTerms.stageNameMap.entries) {
-            await db.customStatement(
-              "UPDATE stage_definitions SET stage_name = '${entry.value}' "
-              "WHERE stage_name = '${entry.key}'",
-            );
-          }
-
-          final stages = await db.stageDao.getStageDefinitionsByCurriculum(
-            'mishnayos',
-          );
-          expect(stages.first.stageName, 'My Custom Stage');
-        });
-
-        test('migration is idempotent', () async {
-          final db = UserDatabase(NativeDatabase.memory());
-          addTearDown(db.close);
-          await seedProfile(db);
-          final trackId = await seedTrack(db, profileId: 1);
-
-          await db.stageDao.insertStageDefinition(
-            StageDefinitionsCompanion.insert(
-              profileId: 1,
-              curriculumId: 'bavli',
-              trackId: trackId,
-              stageOrder: 1,
-              stageName: 'Learn',
-              schedule: const Value('{"type":"delay","delay_days":0}'),
-            ),
-          );
-
-          // Run twice
-          for (var i = 0; i < 2; i++) {
-            for (final entry in HebrewTerms.stageNameMap.entries) {
-              await db.customStatement(
-                "UPDATE stage_definitions SET stage_name = '${entry.value}' "
-                "WHERE stage_name = '${entry.key}'",
-              );
-            }
-          }
-
-          final stages = await db.stageDao.getStageDefinitionsByCurriculum(
-            'bavli',
-          );
-          expect(stages.first.stageName, 'לימוד');
-        });
-      });
-
-      // ── HebrewTerms helpers ──
-
-      group('HebrewTerms helpers', () {
-        test('getDefaultStageName returns correct Hebrew names', () {
-          expect(HebrewTerms.getDefaultStageName(0), 'לימוד');
-          expect(HebrewTerms.getDefaultStageName(1), 'חזרה א׳');
-          expect(HebrewTerms.getDefaultStageName(2), 'חזרה ב׳');
-          expect(HebrewTerms.getDefaultStageName(3), 'חזרה ג׳');
-        });
-
-        test('toHebrew converts known English defaults', () {
-          expect(HebrewTerms.toHebrew('Learn'), 'לימוד');
-          expect(HebrewTerms.toHebrew('Chazara 1'), 'חזרה א׳');
-          expect(HebrewTerms.toHebrew('My Custom'), isNull);
-        });
-      });
-    },
-  );
+      expect(result.curriculumId, CurriculumId.mishnayos);
+      expect(result.label, 'Test Track');
+    });
+
+    test('track setup stores one Firestore track by CurriculumId', () async {
+      await seedTrack(
+        firestore,
+        uid: _uid,
+        profileId: _profileId,
+        curriculumId: CurriculumId.mishnayos,
+      );
+      final repo = FirestoreCurriculumTrackRepository(
+        firestore: firestore,
+        uid: _uid,
+        profileId: _profileId,
+      );
+      final track = await repo.getTrack(CurriculumId.mishnayos);
+      expect(track?.curriculumId, CurriculumId.mishnayos);
+      expect(await repo.getTrack(CurriculumId.bavli), isNull);
+    });
+
+    test('default reward ladder is applied without point-config seeding', () async {
+      final repo = FirestorePointConfigRepository(
+        firestore: firestore,
+        uid: _uid,
+        profileId: _profileId,
+      );
+      expect(await repo.getConfigsForCurriculum(CurriculumId.mishnayos), isEmpty);
+      expect(defaultPointsForStage(1), 10);
+      expect(defaultPointsForStage(2), 5);
+      expect(defaultPointsForStage(3), 3);
+    });
+
+    test('childAwareText keeps adult and child handoff copy distinct', () {
+      const adultText = "You're all set!";
+      const childTemplate = "{name}'s learning is all set up!";
+      expect(childAwareText(adultText, childTemplate, 'Sarah'), adultText);
+      expect(
+        childAwareText(adultText, childTemplate, 'Sarah', isChildMode: true),
+        "Sarah's learning is all set up!",
+      );
+      expect(
+        childAwareText(adultText, childTemplate, null, isChildMode: true),
+        adultText,
+      );
+    });
+  });
+
+  group('Story 18.4 -- Hebrew Terms for Chazara & Curriculum Names', () {
+    test('Firestore stage defaults use Hebrew names', () async {
+      await seedStageDefinitions(
+        firestore,
+        uid: _uid,
+        profileId: _profileId,
+        curriculumId: CurriculumId.mishnayos,
+      );
+      final repo = FirestoreStageDefinitionRepository(
+        firestore: firestore,
+        uid: _uid,
+        profileId: _profileId,
+      );
+      final stages = await repo.getStagesForCurriculum(
+        CurriculumId.mishnayos,
+      );
+      expect(stages.map((stage) => stage.stageName), [
+        'לימוד',
+        'חזרה א׳',
+        'חזרה ב׳',
+      ]);
+    });
+
+    test('every CurriculumId has a Hebrew display name', () {
+      for (final id in CurriculumId.values) {
+        expect(id.displayNameHe, isNotEmpty);
+      }
+    });
+
+    test('learning program seed labels are Hebrew', () {
+      for (final seed in learningProgramSeeds) {
+        final stages = (jsonDecode(seed['stages_config']! as String) as List)
+            .cast<Map<String, dynamic>>();
+        for (final stage in stages) {
+          final label = stage['label'] as String;
+          expect(label, isNot('Learn'));
+          expect(label, isNot(matches(RegExp(r'^Chazara \d+$'))));
+          expect(label, isNot('Next-Day Review'));
+          expect(label, isNot('Weekly Review'));
+          expect(label, isNot('Rolling Back-20'));
+        }
+      }
+    });
+
+    test('HebrewTerms helpers preserve the stage-name mapping', () {
+      expect(HebrewTerms.getDefaultStageName(0), 'לימוד');
+      expect(HebrewTerms.getDefaultStageName(1), 'חזרה א׳');
+      expect(HebrewTerms.getDefaultStageName(2), 'חזרה ב׳');
+      expect(HebrewTerms.toHebrew('Learn'), 'לימוד');
+      expect(HebrewTerms.toHebrew('Chazara 1'), 'חזרה א׳');
+      expect(HebrewTerms.toHebrew('My Custom'), isNull);
+    });
+  });
 }

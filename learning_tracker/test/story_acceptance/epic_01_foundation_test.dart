@@ -7,27 +7,20 @@ import 'dart:io';
 
 import 'package:auto_route/auto_route.dart';
 import 'package:dio/dio.dart';
-import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart' show TestWidgetsFlutterBinding;
 import 'package:kosher_dart/kosher_dart.dart';
 import 'package:learning_tracker/app/router/guards/auth_guard.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
-import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/navigation/guards/pin_guard.dart';
 import 'package:learning_tracker/core/network/sefaria/curriculum_content_fetcher.dart';
-import 'package:learning_tracker/core/sync/sync_orchestrator.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
-import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/core/utils/hebrew_calendar_utils.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
-import 'package:learning_tracker/features/sync/data/outbox_sync_write_facade.dart';
-import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
 
@@ -43,14 +36,10 @@ import '../../tool/lib/sefaria/mishna_fetcher.dart';
 import '../../tool/lib/sefaria/sefaria_fetcher_base.dart';
 // ignore: avoid_relative_lib_imports
 import '../../tool/lib/sefaria/yerushalmi_fetcher.dart';
-import '../helpers/drift_memory.dart';
-import '../helpers/test_database.dart';
 
 // ── Mocks ──────────────────────────────────────────────────────────
 
 class _MockSecureStorage extends Mock implements FlutterSecureStorage {}
-
-class _MockSyncOrchestrator extends Mock implements SyncOrchestrator {}
 
 // ── Tests ──────────────────────────────────────────────────────────
 
@@ -87,99 +76,6 @@ void main() {
           reason: 'pubspec.yaml must declare $dependency',
         );
       }
-    });
-  });
-
-  // ── Story 1.2: Database layer ─────────────────────────────────
-
-  group('Story 1.2 -- Database layer', tags: ['story_1_2'], () {
-    late UserDatabase db;
-    late int trackId;
-
-    setUp(() async {
-      db = createTestDatabase();
-      await seedProfile(db);
-      trackId = await seedTrack(db, profileId: 1);
-    });
-
-    tearDown(() async {
-      await db.close();
-    });
-
-    test('in-memory database instantiates successfully', () async {
-      // AUD-t-story-acceptance-06: `db` is a non-nullable local, so
-      // `expect(db, isNotNull)` is a compile-time tautology. Assert that
-      // the instance is actually a working, connected database instead --
-      // it must see the account row seeded by setUp.
-      final accounts = await db.select(db.accounts).get();
-      expect(accounts, hasLength(1));
-    });
-
-    test('schema version is at least 1 (W3.19 fresh-install schema reset)', () {
-      expect(db.schemaVersion, greaterThanOrEqualTo(1));
-    });
-
-    test('all 12 DAOs are accessible', () async {
-      // AUD-t-story-acceptance-06: DAO getters are non-nullable, so
-      // `expect(db.xDao, isNotNull)` is a compile-time tautology for all 12.
-      // Exercise a representative real query on each DAO instead -- a
-      // regression that breaks a DAO's wiring to its table (wrong table,
-      // broken migration, mis-scoped query) throws or returns the wrong
-      // shape here, where a bare isNotNull check could not.
-      // trackId was seeded by setUp with the default (active) state.
-      expect(
-        await db.activeCurriculumDao.getActiveCurriculaByProfile(1),
-        equals(['mishnayos']),
-      );
-      expect(await db.completionDao.getCompletionsByProfile(1), isEmpty);
-      expect(await db.goalDao.getAllGoals(), isEmpty);
-      expect(
-        await db.pointConfigDao.getConfigsByCurriculum(
-          CurriculumId.mishnayos.storageKey,
-        ),
-        isEmpty,
-      );
-      expect(await db.stageDao.getAllStageDefinitions(), isEmpty);
-      expect(await db.bookmarkDao.getAllBookmarks(), isEmpty);
-      expect(await db.learningOrderDao.getAllLearningOrders(), isEmpty);
-      expect(await db.streakEventDao.getEventsByProfile(1), isEmpty);
-      // trackId was seeded by setUp -- the track DAO must actually see it.
-      expect(
-        await db.trackDao.getAllTracks(CurriculumId.mishnayos),
-        hasLength(1),
-      );
-      // seedProfile inserted one account -- the profile DAO must see it.
-      expect(await db.userProfileDao.getAllUserProfiles(), hasLength(1));
-      // syncQueueDao removed in W2.37 (offline_queue deleted)
-      expect(
-        await db.textDownloadStatusDao.isDownloaded(
-          CurriculumId.mishnayos.storageKey,
-        ),
-        isFalse,
-      );
-      expect(await db.learningLedgerDao.getEntriesByProfile(1), isEmpty);
-    });
-
-    test('basic CRUD round-trip on completions', () async {
-      final id = await seedCompletion(
-        db,
-        CompletionEventsCompanion.insert(
-          profileId: 1,
-          curriculumId: CurriculumId.mishnayos.storageKey,
-          sefariaRef: 'Mishnah Berachos 1.1',
-          stageId: 1,
-          trackType: 'personal',
-          trackId: Value(trackId),
-          eventTimestamp: DateTime.now(),
-          points: const Value(10),
-        ),
-      );
-      expect(id, greaterThan(0));
-
-      final all = await db.completionDao.internalGetAllCompletionsCrossProfile(
-        scope: CrossProfileScope.dataExport,
-      );
-      expect(all, hasLength(1));
     });
   });
 
@@ -265,7 +161,7 @@ void main() {
       expect(content, contains('class AppRouter extends RootStackRouter'));
       expect(
         content,
-        contains('guards: [authGuard, restoreGuard, profileGuard]'),
+        contains('guards: [authGuard, profileGuard]'),
       );
     });
 
@@ -345,59 +241,6 @@ void main() {
     test('SensitiveDataPatterns detects sensitive fields', () {
       expect(SensitiveDataPatterns.containsSensitiveData('email'), isTrue);
       expect(SensitiveDataPatterns.containsSensitiveData('hello'), isFalse);
-    });
-  });
-
-  // ── Story 1.9: Sync infrastructure ───────────────────────────
-
-  group('Story 1.9 -- Sync infrastructure', tags: ['story_1_9'], () {
-    test('SyncOrchestrator interface dispatches pushAllLocalData()', () async {
-      // W2.35: SyncEngine deleted — SyncOrchestrator is the new public surface.
-      // AUD-t-story-acceptance-06: `expect(SyncOrchestrator, isNotNull)` on
-      // a Type literal is a compile-time tautology. Exercise a real
-      // implementation of the interface instead.
-      final orchestrator = _MockSyncOrchestrator();
-      when(() => orchestrator.pushAllLocalData()).thenAnswer((_) async {});
-
-      await orchestrator.pushAllLocalData();
-
-      verify(() => orchestrator.pushAllLocalData()).called(1);
-    });
-
-    test('OutboxSyncWriteFacade enqueues a real outbox row', () async {
-      // W2.35: OfflineQueue deleted — OutboxSyncWriteFacade is the replacement.
-      // AUD-t-story-acceptance-06: `expect(OutboxSyncWriteFacade, isNotNull)`
-      // on a Type literal is a compile-time tautology. Construct a real
-      // facade backed by an in-memory database and prove it actually writes
-      // to the outbox table.
-      final db = createTestDatabase();
-      addTearDown(() => db.close());
-      final facade = OutboxSyncWriteFacade(
-        outboxDao: db.outboxDao,
-        database: db,
-        resolveProfileId: () => 1,
-        clock: const SystemLocalDayClock(),
-      );
-
-      expect(await db.outboxDao.totalDepth(), equals(0));
-
-      await facade.pushBookmark({'curriculum_id': 'mishnayos'});
-
-      expect(await db.outboxDao.totalDepth(), equals(1));
-    });
-
-    test('SyncStatus freezed union has expected factories', () {
-      // Story 1.5 / AD-11: collapsed to exactly four states — localOnly,
-      // syncing, synced, offline. Verify all four compile.
-      const localOnly = SyncStatus.localOnly();
-      final syncing = SyncStatus.syncing(startedAt: DateTime.now());
-      final synced = SyncStatus.synced(lastSyncedAt: DateTime.now());
-      const offline = SyncStatus.offline();
-
-      expect(localOnly, isA<SyncStatus>());
-      expect(syncing, isA<SyncStatus>());
-      expect(synced, isA<SyncStatus>());
-      expect(offline, isA<SyncStatus>());
     });
   });
 
