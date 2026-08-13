@@ -80,6 +80,8 @@ void main() {
   FirestoreCompletionPointsAwarder buildAwarder({
     FirestorePointConfigRepository? Function()? pointConfigRepo,
     FirestoreGoalRepository? Function()? goalRepo,
+    bool pointConfigRepoNotReady = false,
+    bool goalRepoNotReady = false,
   }) {
     final container = ProviderContainer(
       overrides: [
@@ -91,21 +93,25 @@ void main() {
         ),
         firestoreGoalRepositoryProvider.overrideWith(
           (ref) async =>
-              goalRepo?.call() ??
-              FirestoreGoalRepository(
-                firestore: firestore,
-                uid: _uid,
-                profileId: _profileId,
-              ),
+              goalRepoNotReady
+                  ? null
+                  : goalRepo?.call() ??
+                      FirestoreGoalRepository(
+                        firestore: firestore,
+                        uid: _uid,
+                        profileId: _profileId,
+                      ),
         ),
         firestorePointConfigRepositoryProvider.overrideWith(
           (ref) async =>
-              pointConfigRepo?.call() ??
-              FirestorePointConfigRepository(
-                firestore: firestore,
-                uid: _uid,
-                profileId: _profileId,
-              ),
+              pointConfigRepoNotReady
+                  ? null
+                  : pointConfigRepo?.call() ??
+                      FirestorePointConfigRepository(
+                        firestore: firestore,
+                        uid: _uid,
+                        profileId: _profileId,
+                      ),
         ),
       ],
     );
@@ -197,7 +203,7 @@ void main() {
       () async {
         await seedProfile(mode: ProfileMode.child);
         await seedGoal(CurriculumId.mishnayos);
-        final awarder = buildAwarder(pointConfigRepo: () => null);
+        final awarder = buildAwarder(pointConfigRepoNotReady: true);
 
         expect(
           () => awarder.calculatePoints(
@@ -215,7 +221,7 @@ void main() {
       'resolves to null, same reasoning as the point_configs branch',
       () async {
         await seedProfile(mode: ProfileMode.child);
-        final awarder = buildAwarder(goalRepo: () => null);
+        final awarder = buildAwarder(goalRepoNotReady: true);
 
         expect(
           () => awarder.calculatePoints(

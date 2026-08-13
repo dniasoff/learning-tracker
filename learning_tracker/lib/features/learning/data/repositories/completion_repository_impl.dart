@@ -257,8 +257,8 @@ class FirestoreCompletionRepositoryAdapter implements CompletionRepository {
   }
 
   /// Like [_resolveOrNull], but throws [CompletionRepositoryNotReadyException]
-  /// instead of returning `null` — for the two write methods, which have no
-  /// nullable "not ready" value of their own to return.
+  /// instead of returning `null` — for achievement reads and writes, where a
+  /// fabricated empty/false result would hide an unavailable backend.
   Future<FirestoreCompletionRepository> _resolve() async {
     final repo = await _resolveOrNull();
     if (repo == null) {
@@ -451,8 +451,10 @@ class FirestoreCompletionRepositoryAdapter implements CompletionRepository {
     required int stageId,
     required String trackType,
   }) async {
-    final repo = await _resolveOrNull();
-    if (repo == null) return false;
+    // D-E: completion status is achievement-shaped. `false` is a valid
+    // answer when the backend contains no matching completion, but it must
+    // not stand in for an unavailable profile-scoped repository.
+    final repo = await _resolve();
     final entities = await repo.getCompletionsForContent(sefariaRef);
     return entities.any(
       (e) => e.trackType == trackType && e.stageId == stageId,

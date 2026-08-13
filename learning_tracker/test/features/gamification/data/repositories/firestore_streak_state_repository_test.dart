@@ -11,8 +11,6 @@ import 'package:learning_tracker/data/firestore/repository_providers.dart'
     show activeProfileDocIdProvider;
 import 'package:learning_tracker/features/gamification/data/repositories/firestore_streak_state_repository.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_event_entry.dart';
-import 'package:learning_tracker/features/gamification/streak/streak_reducer.dart'
-    show StreakState;
 import 'package:mocktail/mocktail.dart';
 
 class MockFirebaseApp extends Mock implements FirebaseApp {}
@@ -31,50 +29,51 @@ void main() {
   }
 
   group('not ready (no active account/profile)', () {
-    test('getStreak returns StreakState.empty instead of throwing', () async {
+    test('getStreak throws instead of returning StreakState.empty', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
       final adapter = buildAdapter(container);
 
-      final result = await adapter.getStreak();
-
-      expect(result.currentStreak, 0);
-      expect(result.maxStreak, 0);
-      expect(result.lastCompletionDayLocal, isNull);
-    });
-
-    test('getRecoveryInfo reflects the empty streak', () async {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-      final adapter = buildAdapter(container);
-
-      final result = await adapter.getRecoveryInfo();
-
-      expect(result.wasRecovered, isFalse);
-      expect(result.currentStreak, 0);
-    });
-
-    test('getStreakCalendar returns an empty set', () async {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-      final adapter = buildAdapter(container);
-
-      final result = await adapter.getStreakCalendar(
-        startUtc: DateTime.utc(2026, 5, 1),
-        endUtc: DateTime.utc(2026, 5, 31),
+      await expectLater(
+        adapter.getStreak(),
+        throwsA(isA<StreakStateRepositoryNotReadyException>()),
       );
-
-      expect(result, isEmpty);
     });
 
-    test('watchStreak emits StreakState.empty once and completes', () async {
+    test('getRecoveryInfo throws instead of reflecting an empty streak', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
       final adapter = buildAdapter(container);
 
-      final states = await adapter.watchStreak().toList();
+      await expectLater(
+        adapter.getRecoveryInfo(),
+        throwsA(isA<StreakStateRepositoryNotReadyException>()),
+      );
+    });
 
-      expect(states, [StreakState.empty]);
+    test('getStreakCalendar throws instead of returning an empty set', () async {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+      final adapter = buildAdapter(container);
+
+      await expectLater(
+        adapter.getStreakCalendar(
+          startUtc: DateTime.utc(2026, 5, 1),
+          endUtc: DateTime.utc(2026, 5, 31),
+        ),
+        throwsA(isA<StreakStateRepositoryNotReadyException>()),
+      );
+    });
+
+    test('watchStreak emits a not-ready error instead of a zero state', () async {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+      final adapter = buildAdapter(container);
+
+      await expectLater(
+        adapter.watchStreak().toList(),
+        throwsA(isA<StreakStateRepositoryNotReadyException>()),
+      );
     });
   });
 

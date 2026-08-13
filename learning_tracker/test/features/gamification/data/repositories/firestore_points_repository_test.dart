@@ -56,13 +56,16 @@ void main() {
       // are covered in the group below.
 
       test(
-        'not ready (no active account/profile): returns 0, does not throw',
+        'not ready (no active account/profile): throws instead of returning 0',
         () async {
           final container = ProviderContainer();
           addTearDown(container.dispose);
           final adapter = buildAdapter(container);
 
-          expect(await adapter.getGlobalTotal(), 0);
+          await expectLater(
+            adapter.getGlobalTotal(),
+            throwsA(isA<PointsRepositoryNotReadyException>()),
+          );
         },
       );
 

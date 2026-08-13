@@ -125,11 +125,10 @@ extension CompletionEntityFirestoreCodec on CompletionEntity {
     'source': source.name,
     'completed_at': completedAt.toUtc(),
     'points': points,
-    // ALWAYS emitted, `null` while active, so every document carries the
-    // field. A Firestore `where('purged_at', isNull: true)` does NOT match
-    // documents where the field is ABSENT, so writing it unconditionally keeps
-    // a later switch to server-side filtering possible without a backfill.
-    'purged_at': purgedAt?.toUtc(),
+    // Optional on active documents; retractions add the UTC tombstone. The
+    // rules permit the field to be absent on create and C3 requires the
+    // retraction path to stamp it rather than delete the document.
+    if (purgedAt != null) 'purged_at': purgedAt!.toUtc(),
   };
 }
 

@@ -47,8 +47,10 @@ class FirestoreRewardRedemptionRepositoryAdapter {
   Stream<List<RewardRedemptionEntity>> watchPendingRedemptions() async* {
     final repo = await _ref.read(firestoreRewardRedemptionRepositoryProvider.future);
     if (repo == null) {
-      yield const [];
-      return;
+      // Pending redemptions are learner spend state, not configuration. An
+      // empty stream here would claim that the learner has no pending
+      // requests when the profile-scoped backend simply is not ready.
+      throw const RewardRedemptionRepositoryNotReadyException();
     }
     yield* repo.watchPendingRedemptions();
   }

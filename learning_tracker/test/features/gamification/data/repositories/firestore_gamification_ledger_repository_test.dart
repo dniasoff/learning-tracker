@@ -29,26 +29,28 @@ void main() {
 
   group('not ready (no active account/profile)', () {
     test(
-      'getLifetimeLedger returns an empty list instead of throwing',
+      'getLifetimeLedger throws instead of returning an empty list',
       () async {
         final container = ProviderContainer();
         addTearDown(container.dispose);
         final adapter = buildAdapter(container);
 
-        final result = await adapter.getLifetimeLedger();
-
-        expect(result, isEmpty);
+        await expectLater(
+          adapter.getLifetimeLedger(),
+          throwsA(isA<GamificationLedgerNotReadyException>()),
+        );
       },
     );
 
-    test('getCompletionStats returns all-zero counts', () async {
+    test('getCompletionStats throws instead of returning all-zero counts', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
       final adapter = buildAdapter(container);
 
-      final result = await adapter.getCompletionStats(CurriculumId.bavli);
-
-      expect(result, {'total': 0, 'manual': 0, 'auto': 0});
+      await expectLater(
+        adapter.getCompletionStats(CurriculumId.bavli),
+        throwsA(isA<GamificationLedgerNotReadyException>()),
+      );
     });
   });
 
