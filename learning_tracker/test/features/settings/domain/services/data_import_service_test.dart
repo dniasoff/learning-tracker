@@ -1,208 +1,236 @@
-/// Tests for DataExportImportService.importData() and related round-trip
-/// behaviour.
-library;
-
 import 'dart:convert';
 
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/features/settings/domain/exceptions/import_validation_exception.dart';
-import 'package:learning_tracker/features/settings/domain/services/data_export_import_service.dart';
 
-import '../../../../helpers/data_export_fixtures.dart';
-import '../../../../helpers/drift_memory.dart';
+import '../../../../helpers/data_export_firestore_test_support.dart';
+import '../../../../helpers/firestore_fixtures.dart';
+
+Future<FakeFirebaseFirestore> restoreForTest(
+  Map<String, dynamic> payload,
+) async {
+  final restored = FakeFirebaseFirestore();
+  await backupService(restored).importData(jsonEncode(payload));
+  return restored;
+}
 
 void main() {
-  group('DataExportImportService.importData — round-trip empty DB', () {
-    test('export→import on empty DB leaves DB empty again', () async {
-      final db = inMemoryDb();
-      addTearDown(() => db.close());
+  test(
+    'export→import on an empty Firestore instance leaves it empty again',
+    () async {
+      final source = FakeFirebaseFirestore();
+      final payload = await backupService(source).exportData();
+      final target = FakeFirebaseFirestore();
+      await backupService(target).importData(payload);
+      expect((await target.collection('users').get()).docs, isEmpty);
+    },
+  );
 
-      final service = DataExportImportService(
-        database: db,
-        appVersionFetcher: () async => '1.0.0',
-      );
-
-      final jsonStr = await service.exportData();
-      // Should not throw.
-      await service.importData(jsonStr);
-
-      // After round-trip, DB is still empty.
-      final tracks = await db.select(db.curriculumTracks).get();
-      expect(tracks, isEmpty);
-    });
-
-    test(
-      'importData throws ImportValidationException on malformed JSON',
-      () async {
-        final db = inMemoryDb();
-        addTearDown(() => db.close());
-
-        final service = DataExportImportService(
-          database: db,
-          appVersionFetcher: () async => '1.0.0',
-        );
-
-        expect(
-          () => service.importData('not json'),
-          throwsA(isA<ImportValidationException>()),
-        );
-      },
-    );
-
-    test(
-      'importData throws ImportValidationException when formatVersion missing',
-      () async {
-        final db = inMemoryDb();
-        addTearDown(() => db.close());
-
-        final service = DataExportImportService(
-          database: db,
-          appVersionFetcher: () async => '1.0.0',
-        );
-
-        final payload = jsonEncode(exportPayloadMap()..remove('formatVersion'));
-
-        expect(
-          () => service.importData(payload),
-          throwsA(isA<ImportValidationException>()),
-        );
-      },
-    );
-
-    test('importData throws ImportValidationException when required section '
-        'missing', () async {
-      final db = inMemoryDb();
-      addTearDown(() => db.close());
-
-      final service = DataExportImportService(
-        database: db,
-        appVersionFetcher: () async => '1.0.0',
-      );
-
-      // Missing 'completions' section.
-      final payload = jsonEncode(exportPayloadMap()..remove('completions'));
-
+  test(
+    'import rejects malformed JSON with ImportValidationException',
+    () async {
       expect(
-        () => service.importData(payload),
+        () => backupService(FakeFirebaseFirestore()).importData('not json'),
         throwsA(isA<ImportValidationException>()),
       );
-    });
+    },
+  );
+
+  test('validateAndPreview rejects completely invalid JSON', () async {
+    expect(
+      () => backupService(
+        FakeFirebaseFirestore(),
+      ).validateAndPreview('{bad json'),
+      throwsA(isA<ImportValidationException>()),
+    );
   });
 
-  group('DataExportImportService.importData — with data', () {
-    test('import clears existing data before inserting new data', () async {
-      final db = inMemoryDb();
-      addTearDown(() => db.close());
+  test('import rejects a payload with no version field', () async {
+    final payload = {
+      'uid': testUid,
+      'account': {'id': testUid, 'data': null},
+      'profileSnapshot': <dynamic>[],
+      'diagnosticLogs': <dynamic>[],
+      'profiles': <dynamic>[],
+    };
+    expect(
+      () => backupService(
+        FakeFirebaseFirestore(),
+      ).importData(jsonEncode(payload)),
+      throwsA(isA<ImportValidationException>()),
+    );
+  });
 
-      final service = DataExportImportService(
-        database: db,
-        appVersionFetcher: () async => '1.0.0',
+  test('import rejects unsupported future versions', () async {
+    final source = FakeFirebaseFirestore();
+    final payload = await exportedMap(backupService(source));
+    payload['version'] = 2;
+    expect(
+      () => backupService(source).importData(jsonEncode(payload)),
+      throwsA(isA<ImportValidationException>()),
+    );
+  });
+
+  test(
+    'import rejects a payload missing a required top-level section',
+    () async {
+      final payload = {
+        'version': 1,
+        'uid': testUid,
+        'account': {'id': testUid, 'data': null},
+        'profileSnapshot': <dynamic>[],
+        'profiles': <dynamic>[],
+      };
+      expect(
+        () => backupService(
+          FakeFirebaseFirestore(),
+        ).importData(jsonEncode(payload)),
+        throwsA(isA<ImportValidationException>()),
       );
+    },
+  );
 
-      // Build a minimal valid payload with one user profile (no FK deps).
-      final payload = jsonEncode(
-        exportPayloadMap(userProfiles: [userProfileMap()]),
-      );
+  test('import never deletes documents absent from the backup', () async {
+    final firestore = FakeFirebaseFirestore();
+    await seedProfile(firestore, uid: testUid, profileId: testProfileId);
+    final service = backupService(firestore);
+    final payload = await exportedMap(service);
+    final profile = profileFrom(payload, testProfileId);
+    final collections = profile['collections'] as Map<String, dynamic>;
+    collections['preferences'] = [
+      {
+        'id': 'kept',
+        'data': {'value': 1},
+      },
+    ];
 
+    await firestore
+        .collection('users')
+        .doc(testUid)
+        .collection('learner_profiles')
+        .doc(testProfileId)
+        .collection('preferences')
+        .doc('unrelated')
+        .set({'value': 2});
+    await service.importData(jsonEncode(payload));
+
+    final docs = await firestore
+        .collection('users')
+        .doc(testUid)
+        .collection('learner_profiles')
+        .doc(testProfileId)
+        .collection('preferences')
+        .get();
+    expect(docs.docs.map((doc) => doc.id), containsAll(['kept', 'unrelated']));
+  });
+
+  test('import inserts an account document from a valid backup', () async {
+    final source = FakeFirebaseFirestore();
+    await seedAccount(source, uid: testUid, displayName: 'First');
+    final target = FakeFirebaseFirestore();
+    await backupService(
+      target,
+    ).importData(await backupService(source).exportData());
+    final account = await target.collection('users').doc(testUid).get();
+    expect(account.exists, isTrue);
+    expect(account.data()!['display_name'], 'First');
+  });
+
+  test(
+    'second import is idempotent rather than wiping the first backup',
+    () async {
+      final source = FakeFirebaseFirestore();
+      await seedProfile(source, uid: testUid, profileId: testProfileId);
+      await source
+          .collection('users')
+          .doc(testUid)
+          .collection('learner_profiles')
+          .doc(testProfileId)
+          .collection('preferences')
+          .doc('one')
+          .set({'value': 1});
+      final payload = await backupService(source).exportData();
+      final target = FakeFirebaseFirestore();
+      final service = backupService(target);
       await service.importData(payload);
-
-      // The account should have been inserted.
-      final accounts = await db.select(db.accounts).get();
-      expect(accounts, hasLength(1));
-      expect(accounts.first.displayName, 'Test User');
-    });
-
-    test('second importData wipes data from first import', () async {
-      final db = inMemoryDb();
-      addTearDown(() => db.close());
-
-      final service = DataExportImportService(
-        database: db,
-        appVersionFetcher: () async => '1.0.0',
+      await service.importData(payload);
+      expect(
+        (await target
+                .collection('users')
+                .doc(testUid)
+                .collection('learner_profiles')
+                .doc(testProfileId)
+                .collection('preferences')
+                .get())
+            .docs,
+        hasLength(1),
       );
+    },
+  );
 
-      Map<String, dynamic> buildPayload(String displayName) => exportPayloadMap(
-        userProfiles: [userProfileMap(displayName: displayName)],
-      );
-
-      await service.importData(jsonEncode(buildPayload('First')));
-      await service.importData(jsonEncode(buildPayload('Second')));
-
-      final accounts = await db.select(db.accounts).get();
-      expect(accounts, hasLength(1));
-      expect(accounts.first.displayName, 'Second');
-    });
-
-    test('export→import→export produces structurally identical JSON', () async {
-      final db = inMemoryDb();
-      addTearDown(() => db.close());
-
-      final service = DataExportImportService(
-        database: db,
-        appVersionFetcher: () async => '1.0.0',
-      );
-
-      final firstExport = await service.exportData();
-      await service.importData(firstExport);
-      final secondExport = await service.exportData();
-
-      final first = jsonDecode(firstExport) as Map<String, dynamic>;
-      final second = jsonDecode(secondExport) as Map<String, dynamic>;
-
-      // Same set of required list sections and same lengths.
-      for (final key in [
-        'userProfiles',
-        'curriculumTracks',
-        'stageDefinitions',
-        'completions',
-        'goals',
-        'bookmarks',
-        'learningOrder',
-        'streaks',
-      ]) {
-        expect(
-          (second[key] as List).length,
-          (first[key] as List).length,
-          reason: 'length mismatch for $key',
-        );
-      }
-    });
+  test('export→import→export preserves the complete logical payload', () async {
+    final source = FakeFirebaseFirestore();
+    await seedProfile(source, uid: testUid, profileId: testProfileId);
+    await source
+        .collection('users')
+        .doc(testUid)
+        .collection('learner_profiles')
+        .doc(testProfileId)
+        .collection('preferences')
+        .doc('one')
+        .set({
+          'value': 1,
+          'nested': {'kept': true},
+        });
+    final first = await exportedMap(backupService(source));
+    final restored = await restoreForTest(first);
+    final second = await exportedMap(backupService(restored));
+    first.remove('exportedAt');
+    second.remove('exportedAt');
+    expect(second, first);
   });
 
-  group('DataExportImportService.validateAndPreview — error cases', () {
-    test('throws ImportValidationException when a section is not a list', () {
-      final db = inMemoryDb();
-      addTearDown(() => db.close());
-
-      final service = DataExportImportService(
-        database: db,
-        appVersionFetcher: () async => '1.0.0',
-      );
-
-      final bad = jsonEncode(<String, dynamic>{
-        ...exportPayloadMap(),
-        'userProfiles': 'not-a-list', // wrong type
-      });
-
-      expect(
-        () => service.validateAndPreview(bad),
-        throwsA(isA<ImportValidationException>()),
-      );
-    });
-
-    test('throws ImportValidationException for completely invalid JSON', () {
-      final db = inMemoryDb();
-      addTearDown(() => db.close());
-
-      final service = DataExportImportService(
-        database: db,
-        appVersionFetcher: () async => '1.0.0',
-      );
-
-      expect(
-        () => service.validateAndPreview('{bad json'),
-        throwsA(isA<ImportValidationException>()),
-      );
-    });
+  test('validateAndPreview rejects a non-list profile section', () async {
+    final source = FakeFirebaseFirestore();
+    final payload = await exportedMap(backupService(source));
+    payload['profiles'] = 'not-a-list';
+    expect(
+      () => backupService(source).validateAndPreview(jsonEncode(payload)),
+      throwsA(isA<ImportValidationException>()),
+    );
   });
+
+  test(
+    'preflight validation prevents partial writes for malformed nested data',
+    () async {
+      final source = FakeFirebaseFirestore();
+      await seedProfile(source, uid: testUid, profileId: testProfileId);
+      final payload = await exportedMap(backupService(source));
+      final profile = profileFrom(payload, testProfileId);
+      final collections = profile['collections'] as Map<String, dynamic>;
+      collections['preferences'] = [
+        {'id': 'bad', 'data': 'not-an-object'},
+      ];
+
+      final target = FakeFirebaseFirestore();
+      expect(
+        () => backupService(target).importData(jsonEncode(payload)),
+        throwsA(isA<ImportValidationException>()),
+      );
+      expect((await target.collection('users').get()).docs, isEmpty);
+    },
+  );
+
+  test(
+    'preview counts nested collections and accepts an empty backup',
+    () async {
+      final firestore = FakeFirebaseFirestore();
+      final service = backupService(firestore);
+      final preview = service.validateAndPreview(await service.exportData());
+      expect(preview.totalRecords, 0);
+      expect(preview.userProfileCount, 0);
+      expect(preview.ledgerCount, 0);
+    },
+  );
 }
