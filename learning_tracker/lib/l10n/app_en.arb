@@ -3749,5 +3749,35 @@
   "backupSyncStatusUnavailable": "Cloud backup is active. Detailed sync status is unavailable in this version.",
   "@backupSyncStatusUnavailable": {
     "description": "Shown on the Backup & Sync card for a cloud-born account when the detailed sync status cannot be determined. Must never imply that data is or is not synced."
-  }
+  },
+  "backupExportAction": "Export backup",
+  "backupImportAction": "Import backup",
+  "backupDataLoading": "Preparing backup tools…",
+  "backupDataUnavailable": "Backup is unavailable for this account.",
+  "backupExportSuccess": "Backup is ready to share.",
+  "backupExportError": "Couldn't create the backup. Please try again.",
+  "backupImportPasteTitle": "Paste backup",
+  "backupImportPasteBody": "Paste the JSON backup below to preview it before restoring.",
+  "backupImportPasteLabel": "Backup JSON",
+  "backupImportPasteHint": "Paste the exported JSON here",
+  "backupImportPreviewAction": "Preview backup",
+  "backupImportInvalid": "This backup is invalid or belongs to a different account.",
+  "backupImportPreviewTitle": "Review backup before restoring",
+  "backupImportPreviewBody": "This backup contains {totalDocuments} documents across {profiles} profiles.\nExported at: {exportedAt}\nRestoring will merge these records into your account. Existing records will not be deleted.",
+  "@backupImportPreviewBody": {
+    "placeholders": {
+      "totalDocuments": {
+        "type": "int"
+      },
+      "profiles": {
+        "type": "int"
+      },
+      "exportedAt": {
+        "type": "String"
+      }
+    }
+  },
+  "backupImportConfirm": "Restore backup",
+  "backupImportSuccess": "Backup restored successfully.",
+  "backupImportError": "Couldn't restore the backup. Please try again."
 }

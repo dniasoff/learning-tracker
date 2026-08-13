@@ -5649,4 +5649,65 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get backupSyncStatusUnavailable =>
       'Cloud backup is active. Detailed sync status is unavailable in this version.';
+
+  @override
+  String get backupExportAction => 'Export backup';
+
+  @override
+  String get backupImportAction => 'Import backup';
+
+  @override
+  String get backupDataLoading => 'Preparing backup tools…';
+
+  @override
+  String get backupDataUnavailable => 'Backup is unavailable for this account.';
+
+  @override
+  String get backupExportSuccess => 'Backup is ready to share.';
+
+  @override
+  String get backupExportError =>
+      'Couldn\'t create the backup. Please try again.';
+
+  @override
+  String get backupImportPasteTitle => 'Paste backup';
+
+  @override
+  String get backupImportPasteBody =>
+      'Paste the JSON backup below to preview it before restoring.';
+
+  @override
+  String get backupImportPasteLabel => 'Backup JSON';
+
+  @override
+  String get backupImportPasteHint => 'Paste the exported JSON here';
+
+  @override
+  String get backupImportPreviewAction => 'Preview backup';
+
+  @override
+  String get backupImportInvalid =>
+      'This backup is invalid or belongs to a different account.';
+
+  @override
+  String get backupImportPreviewTitle => 'Review backup before restoring';
+
+  @override
+  String backupImportPreviewBody(
+    int totalDocuments,
+    int profiles,
+    String exportedAt,
+  ) {
+    return 'This backup contains $totalDocuments documents across $profiles profiles.\nExported at: $exportedAt\nRestoring will merge these records into your account. Existing records will not be deleted.';
+  }
+
+  @override
+  String get backupImportConfirm => 'Restore backup';
+
+  @override
+  String get backupImportSuccess => 'Backup restored successfully.';
+
+  @override
+  String get backupImportError =>
+      'Couldn\'t restore the backup. Please try again.';
 }

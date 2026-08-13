@@ -94,6 +94,8 @@ dependencies:
 
   # Filesystem path resolution (app documents dir for SeedManager)
   path_provider: ^2.1.4
+  # Settings backup export delivery
+  share_plus: ^12.0.2
 
   # HTTP client
   dio: ^5.9.1

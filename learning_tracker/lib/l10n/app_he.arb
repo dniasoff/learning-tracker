@@ -3182,5 +3182,35 @@
   "wizardEveryDaysLabel": "כל {days}",
   "wizardRoundDelayAfterLearning": "{days, plural, one{יום אחד אחרי הלימוד} other{{days} ימים אחרי הלימוד}}",
   "wizardRoundDelayAfter": "{days, plural, one{יום אחד אחרי} other{{days} ימים אחרי}}",
-  "backupSyncStatusUnavailable": "גיבוי הענן פעיל. מצב הסנכרון המפורט אינו זמין בגרסה זו."
+  "backupSyncStatusUnavailable": "גיבוי הענן פעיל. מצב הסנכרון המפורט אינו זמין בגרסה זו.",
+  "backupExportAction": "ייצוא גיבוי",
+  "backupImportAction": "ייבוא גיבוי",
+  "backupDataLoading": "מכין את כלי הגיבוי…",
+  "backupDataUnavailable": "הגיבוי אינו זמין עבור חשבון זה.",
+  "backupExportSuccess": "הגיבוי מוכן לשיתוף.",
+  "backupExportError": "לא ניתן ליצור את הגיבוי. נסו שוב.",
+  "backupImportPasteTitle": "הדבקת גיבוי",
+  "backupImportPasteBody": "הדביקו למטה את גיבוי ה־JSON כדי לצפות בו לפני השחזור.",
+  "backupImportPasteLabel": "JSON של הגיבוי",
+  "backupImportPasteHint": "הדביקו כאן את ה־JSON שיוצא",
+  "backupImportPreviewAction": "תצוגה מקדימה של הגיבוי",
+  "backupImportInvalid": "הגיבוי אינו תקין או שייך לחשבון אחר.",
+  "backupImportPreviewTitle": "בדקו את הגיבוי לפני השחזור",
+  "backupImportPreviewBody": "הגיבוי מכיל {totalDocuments} מסמכים על פני {profiles} פרופילים.\nיוצא בתאריך: {exportedAt}\nהשחזור ימזג את הרשומות לחשבון שלכם. רשומות קיימות לא יימחקו.",
+  "@backupImportPreviewBody": {
+    "placeholders": {
+      "totalDocuments": {
+        "type": "int"
+      },
+      "profiles": {
+        "type": "int"
+      },
+      "exportedAt": {
+        "type": "String"
+      }
+    }
+  },
+  "backupImportConfirm": "שחזור גיבוי",
+  "backupImportSuccess": "הגיבוי שוחזר בהצלחה.",
+  "backupImportError": "לא ניתן לשחזר את הגיבוי. נסו שוב."
 }

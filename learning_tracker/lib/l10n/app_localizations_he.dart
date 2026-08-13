@@ -5589,4 +5589,62 @@ class AppLocalizationsHe extends AppLocalizations {
   @override
   String get backupSyncStatusUnavailable =>
       'גיבוי הענן פעיל. מצב הסנכרון המפורט אינו זמין בגרסה זו.';
+
+  @override
+  String get backupExportAction => 'ייצוא גיבוי';
+
+  @override
+  String get backupImportAction => 'ייבוא גיבוי';
+
+  @override
+  String get backupDataLoading => 'מכין את כלי הגיבוי…';
+
+  @override
+  String get backupDataUnavailable => 'הגיבוי אינו זמין עבור חשבון זה.';
+
+  @override
+  String get backupExportSuccess => 'הגיבוי מוכן לשיתוף.';
+
+  @override
+  String get backupExportError => 'לא ניתן ליצור את הגיבוי. נסו שוב.';
+
+  @override
+  String get backupImportPasteTitle => 'הדבקת גיבוי';
+
+  @override
+  String get backupImportPasteBody =>
+      'הדביקו למטה את גיבוי ה־JSON כדי לצפות בו לפני השחזור.';
+
+  @override
+  String get backupImportPasteLabel => 'JSON של הגיבוי';
+
+  @override
+  String get backupImportPasteHint => 'הדביקו כאן את ה־JSON שיוצא';
+
+  @override
+  String get backupImportPreviewAction => 'תצוגה מקדימה של הגיבוי';
+
+  @override
+  String get backupImportInvalid => 'הגיבוי אינו תקין או שייך לחשבון אחר.';
+
+  @override
+  String get backupImportPreviewTitle => 'בדקו את הגיבוי לפני השחזור';
+
+  @override
+  String backupImportPreviewBody(
+    int totalDocuments,
+    int profiles,
+    String exportedAt,
+  ) {
+    return 'הגיבוי מכיל $totalDocuments מסמכים על פני $profiles פרופילים.\nיוצא בתאריך: $exportedAt\nהשחזור ימזג את הרשומות לחשבון שלכם. רשומות קיימות לא יימחקו.';
+  }
+
+  @override
+  String get backupImportConfirm => 'שחזור גיבוי';
+
+  @override
+  String get backupImportSuccess => 'הגיבוי שוחזר בהצלחה.';
+
+  @override
+  String get backupImportError => 'לא ניתן לשחזר את הגיבוי. נסו שוב.';
 }

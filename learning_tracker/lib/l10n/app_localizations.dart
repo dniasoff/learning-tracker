@@ -9373,6 +9373,112 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Cloud backup is active. Detailed sync status is unavailable in this version.'**
   String get backupSyncStatusUnavailable;
+
+  /// No description provided for @backupExportAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Export backup'**
+  String get backupExportAction;
+
+  /// No description provided for @backupImportAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Import backup'**
+  String get backupImportAction;
+
+  /// No description provided for @backupDataLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing backup tools…'**
+  String get backupDataLoading;
+
+  /// No description provided for @backupDataUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Backup is unavailable for this account.'**
+  String get backupDataUnavailable;
+
+  /// No description provided for @backupExportSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Backup is ready to share.'**
+  String get backupExportSuccess;
+
+  /// No description provided for @backupExportError.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t create the backup. Please try again.'**
+  String get backupExportError;
+
+  /// No description provided for @backupImportPasteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste backup'**
+  String get backupImportPasteTitle;
+
+  /// No description provided for @backupImportPasteBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste the JSON backup below to preview it before restoring.'**
+  String get backupImportPasteBody;
+
+  /// No description provided for @backupImportPasteLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Backup JSON'**
+  String get backupImportPasteLabel;
+
+  /// No description provided for @backupImportPasteHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste the exported JSON here'**
+  String get backupImportPasteHint;
+
+  /// No description provided for @backupImportPreviewAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview backup'**
+  String get backupImportPreviewAction;
+
+  /// No description provided for @backupImportInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'This backup is invalid or belongs to a different account.'**
+  String get backupImportInvalid;
+
+  /// No description provided for @backupImportPreviewTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Review backup before restoring'**
+  String get backupImportPreviewTitle;
+
+  /// No description provided for @backupImportPreviewBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This backup contains {totalDocuments} documents across {profiles} profiles.\nExported at: {exportedAt}\nRestoring will merge these records into your account. Existing records will not be deleted.'**
+  String backupImportPreviewBody(
+    int totalDocuments,
+    int profiles,
+    String exportedAt,
+  );
+
+  /// No description provided for @backupImportConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore backup'**
+  String get backupImportConfirm;
+
+  /// No description provided for @backupImportSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Backup restored successfully.'**
+  String get backupImportSuccess;
+
+  /// No description provided for @backupImportError.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t restore the backup. Please try again.'**
+  String get backupImportError;
 }
 
 class _AppLocalizationsDelegate
