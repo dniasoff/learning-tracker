@@ -10,9 +10,12 @@ import 'package:learning_tracker/features/gamification/presentation/providers/re
 import 'package:learning_tracker/features/gamification/presentation/widgets/reward_form.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class _Balance implements PointsBalanceReader {
+class _Balance implements PointsBalanceReader, PointsLifetimeEarnedReader {
   @override
   Future<int> getBalance() async => 0;
+
+  @override
+  Future<int> getLifetimeEarned() async => 0;
 }
 
 ProviderContainer _container() => ProviderContainer(
@@ -20,6 +23,7 @@ ProviderContainer _container() => ProviderContainer(
     rewardMilestoneServiceProvider.overrideWithValue(
       RewardMilestoneService(
         balanceReader: _Balance(),
+        lifetimeEarnedReader: _Balance(),
         profileId: '01J0000000000000000000000E',
       ),
     ),

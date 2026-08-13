@@ -20,9 +20,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// history ("tracks is hardcoded to const [] ... every reward is now a
 /// single global priced spend-item").
 class RewardMilestoneService {
-  RewardMilestoneService({required this.balanceReader, required this.profileId});
+  RewardMilestoneService({
+    required this.balanceReader,
+    required this.lifetimeEarnedReader,
+    required this.profileId,
+  });
 
   final PointsBalanceReader balanceReader;
+  final PointsLifetimeEarnedReader lifetimeEarnedReader;
   final String profileId;
 
   static const _configKeyPrefix = 'reward_milestones_config_v1_';
@@ -45,6 +50,14 @@ class RewardMilestoneService {
   /// Reads from [PointsBalanceReader] — the spend-economy source of truth (DEC-32).
   Future<int> getGlobalPointsForRewards() async {
     return balanceReader.getBalance();
+  }
+
+  /// Lifetime-earned points used to determine whether a milestone was earned.
+  ///
+  /// This is intentionally separate from [getGlobalPointsForRewards], which
+  /// remains the current spendable balance for affordability checks.
+  Future<int> getGlobalLifetimeEarnedForRewards() async {
+    return lifetimeEarnedReader.getLifetimeEarned();
   }
 
   Future<List<RewardMilestone>> getAllMilestones() async {

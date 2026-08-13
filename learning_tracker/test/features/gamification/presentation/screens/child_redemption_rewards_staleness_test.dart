@@ -11,9 +11,12 @@ import 'package:learning_tracker/features/gamification/presentation/providers/re
 import 'package:learning_tracker/features/gamification/presentation/screens/child_redemption_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class _Balance implements PointsBalanceReader {
+class _Balance implements PointsBalanceReader, PointsLifetimeEarnedReader {
   @override
   Future<int> getBalance() async => 0;
+
+  @override
+  Future<int> getLifetimeEarned() async => 0;
 }
 
 void main() {
@@ -24,6 +27,7 @@ void main() {
     () async {
       final service = RewardMilestoneService(
         balanceReader: _Balance(),
+        lifetimeEarnedReader: _Balance(),
         profileId: '01J0000000000000000000000F',
       );
       final container = ProviderContainer(

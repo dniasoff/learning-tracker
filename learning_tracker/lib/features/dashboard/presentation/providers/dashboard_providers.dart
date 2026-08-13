@@ -206,8 +206,7 @@ Future<DateTime?> dashboardLastCompletion(
 Stream<({int currentStreak, int maxStreak})> dashboardStreak(Ref ref) async* {
   final stateProvider = ref.watch(streakStateProvider);
   yield* stateProvider.watch().map(
-    (state) =>
-        (currentStreak: state.currentStreak, maxStreak: state.maxStreak),
+    (state) => (currentStreak: state.currentStreak, maxStreak: state.maxStreak),
   );
 }
 
@@ -301,7 +300,8 @@ Future<DashboardChildNextReward?> dashboardChildNextReward(Ref ref) async {
 
   final milestoneService = ref.watch(rewardMilestoneServiceProvider);
 
-  final globalPoints = await milestoneService.getGlobalPointsForRewards();
+  final globalPoints = await milestoneService
+      .getGlobalLifetimeEarnedForRewards();
   final globalMilestones = await milestoneService.getMilestones();
 
   const selector = NextRewardSelector();

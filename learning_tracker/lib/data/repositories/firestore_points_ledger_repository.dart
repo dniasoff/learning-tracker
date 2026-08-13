@@ -104,6 +104,12 @@ import 'package:learning_tracker/features/learning/domain/entities/completion_so
 /// a reference (that redemption's own stable ulid), exactly like
 /// `PointsBalanceDao._redemptionUlidFor`'s resolution on the Drift side.
 class FirestorePointsLedgerRepository {
+  /// Entry kinds that represent points earned toward lifetime milestones.
+  ///
+  /// Keep this allowlist explicit: `redemption_refund` has a positive delta,
+  /// but returns spent points and is not newly earned lifetime progress.
+  static const _lifetimeEarnedEntryKinds = <String>{'completion', 'parent_add'};
+
   FirestorePointsLedgerRepository({
     required FirebaseFirestore firestore,
     required String uid,
@@ -296,6 +302,23 @@ class FirestorePointsLedgerRepository {
       );
     }
     return rawSum.clamp(0, 1 << 30);
+  }
+
+  /// Returns lifetime-earned points for milestone progression.
+  ///
+  /// Unlike [getBalance], this view intentionally ignores debits and refunds;
+  /// it is derived from the append-only ledger and therefore never decreases
+  /// when points are spent.
+  Future<int> getLifetimeEarned() async {
+    final entries = await getLedger();
+    final earned = entries.fold<int>(0, (total, entry) {
+      if (!_lifetimeEarnedEntryKinds.contains(entry.entryKind) ||
+          entry.delta <= 0) {
+        return total;
+      }
+      return total + entry.delta;
+    });
+    return earned.clamp(0, 1 << 30);
   }
 
   /// Live updates for one entry by [ulid], or `null` if it does not exist.

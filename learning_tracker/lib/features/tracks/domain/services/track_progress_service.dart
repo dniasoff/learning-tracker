@@ -1,4 +1,5 @@
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_tier_filter.dart';
 import 'package:learning_tracker/features/progress/domain/models/chart_data.dart';
 import 'package:learning_tracker/features/progress/domain/services/chart_data_service.dart'
@@ -89,12 +90,20 @@ class TrackProgressService {
     // Multi-stage gate: item "done" iff every required stageOrder is present.
     final requiredStageOrders = stages.map((s) => s.stageOrder).toSet();
     final completedStagesByRef = <String, Set<int>>{};
+    final lifetimeOnlyRefs = <String>{};
     for (final c in completions) {
       completedStagesByRef.putIfAbsent(c.sefariaRef, () => {}).add(c.stageId);
+      if (c.source == CompletionSource.lifetimeOnly) {
+        lifetimeOnlyRefs.add(c.sefariaRef);
+      }
     }
 
-    final doneItems = completedStagesByRef.values
-        .where((done) => requiredStageOrders.every(done.contains))
+    final doneItems = completedStagesByRef.entries
+        .where(
+          (entry) =>
+              lifetimeOnlyRefs.contains(entry.key) ||
+              requiredStageOrders.every(entry.value.contains),
+        )
         .length;
 
     return (doneItems / totalItems).clamp(0.0, 1.0);

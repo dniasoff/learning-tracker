@@ -36,9 +36,12 @@ class _AlwaysEligible implements CurriculumRewardEligibility {
   Future<bool> isEligible(CurriculumId curriculumId) async => true;
 }
 
-class _ZeroBalance implements PointsBalanceReader {
+class _ZeroBalance implements PointsBalanceReader, PointsLifetimeEarnedReader {
   @override
   Future<int> getBalance() async => 0;
+
+  @override
+  Future<int> getLifetimeEarned() async => 0;
 }
 
 List<Override> _overrides() {
@@ -57,7 +60,8 @@ List<Override> _overrides() {
     rewardMilestoneServiceProvider.overrideWithValue(
       RewardMilestoneService(
         balanceReader: _ZeroBalance(),
-        profileId: 'fixture-profile-ulid',
+        lifetimeEarnedReader: _ZeroBalance(),
+        profileId: '01J0000000000000000000000C',
       ),
     ),
   ];

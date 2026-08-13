@@ -47,7 +47,7 @@ class _RecordingStreakPort implements CompletionStreakPort {
 
 void main() {
   const uid = 'routing-uid';
-  const profileId = 'routing-profile-ulid';
+  const profileId = '01J6Q2H4A8M7K3P9R5T6V8WXY4';
   const curriculum = CurriculumId.mishnayos;
   const leafRef = 'Mishnah_Berakhot_1';
 
@@ -166,6 +166,7 @@ void main() {
         repository: repository,
         contentRepository: contentRepository,
         activeProfileId: profileId,
+        learningLedgerRepository: container.read(ledgerRepository),
         completionDetectionService: detection,
         streakPort: streakPort,
       ),
@@ -194,15 +195,24 @@ void main() {
         },
       );
 
-      test(
-        'lifetimeOnly does not write a siyum or streak',
-        () async {},
-        skip:
-            'Production gap: MarkCompletionUseCase routes lifetimeOnly through '
-            'CompletionOrchestrator.markComplete, whose Firestore completion '
-            'adapter rejects the (false, false) lifetimeOnly source. The '
-            'Firestore ledger adapter is not wired into this route yet.',
-      );
+      test('lifetimeOnly does not write a siyum or streak', () async {
+        await useCase.call(
+          const CompletionRequest(
+            curriculumId: 'mishnayos',
+            sefariaRef: leafRef,
+            stageId: 1,
+            trackType: 'personal',
+          ),
+          source: CompletionSource.lifetimeOnly,
+        );
+        await Future<void>.delayed(Duration.zero);
+
+        final entries = await ledgerStore.getLifetimeLedger();
+        expect(entries, hasLength(1));
+        expect(entries.single.source, CompletionSource.lifetimeOnly);
+        expect(entries.single.isManual, isTrue);
+        expect(streakPort.calls, 0);
+      });
 
       test(
         'live completion writes a siyum and records one study day',

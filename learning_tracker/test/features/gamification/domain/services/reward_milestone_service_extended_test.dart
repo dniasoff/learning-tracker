@@ -5,15 +5,21 @@ import 'package:learning_tracker/features/gamification/domain/services/points_se
 import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class _Balance implements PointsBalanceReader {
+class _Balance implements PointsBalanceReader, PointsLifetimeEarnedReader {
   @override
   Future<int> getBalance() async => 0;
+
+  @override
+  Future<int> getLifetimeEarned() async => 0;
 }
 
 const _profileId = '01J00000000000000000000001';
 
-RewardMilestoneService _service() =>
-    RewardMilestoneService(balanceReader: _Balance(), profileId: _profileId);
+RewardMilestoneService _service() => RewardMilestoneService(
+  balanceReader: _Balance(),
+  lifetimeEarnedReader: _Balance(),
+  profileId: _profileId,
+);
 
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));

@@ -39,7 +39,7 @@ import 'package:talker/talker.dart';
 import '../../helpers/firestore_fake.dart';
 
 const _uid = 'uid-1';
-const _profileId = 'profile-ulid-1';
+const _profileId = '01J0000000000000000000000P';
 
 void main() {
   late FakeFirebaseFirestore firestore;
@@ -413,6 +413,48 @@ void main() {
         await done;
       },
     );
+  });
+
+  group('derived lifetime-earned points', () {
+    test(
+      'sums only explicit earning kinds and excludes debits and refunds',
+      () async {
+        final repo = buildRepo();
+        await repo.append(
+          entryKind: 'completion',
+          delta: 100,
+          createdAt: DateTime.utc(2026, 6, 1),
+        );
+        await repo.append(
+          entryKind: 'parent_add',
+          delta: 50,
+          createdAt: DateTime.utc(2026, 6, 2),
+        );
+        await repo.append(
+          entryKind: 'redemption_debit',
+          delta: -100,
+          createdAt: DateTime.utc(2026, 6, 3),
+        );
+        await repo.append(
+          entryKind: 'redemption_refund',
+          delta: 100,
+          createdAt: DateTime.utc(2026, 6, 4),
+        );
+        await repo.append(
+          entryKind: 'parent_deduct',
+          delta: -10,
+          createdAt: DateTime.utc(2026, 6, 5),
+        );
+
+        expect(await repo.getLifetimeEarned(), 150);
+        expect(await repo.getBalance(), 140);
+      },
+    );
+
+    test('returns 0 for a profile with no ledger entries', () async {
+      final repo = buildRepo();
+      expect(await repo.getLifetimeEarned(), 0);
+    });
   });
 
   group('pagination past the 500-item page size', () {

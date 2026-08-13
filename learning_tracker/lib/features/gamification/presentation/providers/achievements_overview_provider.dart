@@ -78,10 +78,11 @@ final achievementsOverviewProvider =
       // entirely — every reward is a single global priced spend-item now, so
       // there is no per-track loop left to run (see
       // reward_config_controller.dart's doc comment for the fuller product
-      // history). A reward is "unlocked" (affordable / achievable) when the
-      // relevant points total has reached or crossed its threshold.
-      // Classification is derived purely from threshold <= points — no
-      // historical unlock records are consulted.
+      // history). An achievement is unlocked when lifetime-earned points have
+      // reached or crossed its threshold. Spendable balance remains separate
+      // for affordability and redemption checks. Classification is derived
+      // purely from threshold <= lifetime-earned points — no historical
+      // unlock records are consulted.
       final rows = <AchievementRowVm>[];
       final filterOptions = <AchievementTrackFilterVm>[];
 
@@ -99,28 +100,18 @@ final achievementsOverviewProvider =
           ),
         );
 
-        // R-GA2 is NOT fully honored here: the "lifetime-earned, never
-        // decremented" total it calls for (so a milestone stays unlocked
-        // after a redemption debits the spendable balance) had no working
-        // implementation even before this Firestore rewrite —
-        // `getGlobalLifetimeEarnedForRewards` was already a deprecated stub
-        // returning 0 unconditionally, which made every milestone show as
-        // permanently locked. Using the current spendable balance instead is
-        // a real behavior change (a redemption CAN now re-lock a milestone),
-        // but it replaces an always-locked screen with a correct one for the
-        // common case. True lifetime-earned tracking needs its own
-        // monotonic ledger view — tracked separately, not rebuilt here.
-        final globalPoints = await service.getGlobalPointsForRewards();
+        final lifetimeEarnedPoints = await service
+            .getGlobalLifetimeEarnedForRewards();
         RewardMilestone? firstLockedGlobal;
         for (final m in enabledGlobal) {
-          if (globalPoints < m.thresholdPoints) {
+          if (lifetimeEarnedPoints < m.thresholdPoints) {
             firstLockedGlobal = m;
             break;
           }
         }
 
         for (final m in enabledGlobal) {
-          final unlocked = globalPoints >= m.thresholdPoints;
+          final unlocked = lifetimeEarnedPoints >= m.thresholdPoints;
           final isNext = !unlocked && firstLockedGlobal?.id == m.id;
           rows.add(
             AchievementRowVm(
@@ -128,7 +119,7 @@ final achievementsOverviewProvider =
               trackLabel: '',
               curriculumId: null,
               milestone: m,
-              trackPoints: globalPoints,
+              trackPoints: lifetimeEarnedPoints,
               isUnlocked: unlocked,
               isNextUp: isNext,
               isLegendTier: false,

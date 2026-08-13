@@ -33,3 +33,28 @@ class FirestorePointsBalanceReaderAdapter implements PointsBalanceReader {
     return repo.getBalance();
   }
 }
+
+/// Firestore adapter for the monotonic points total used by achievements.
+class FirestorePointsLifetimeEarnedReaderAdapter
+    implements PointsLifetimeEarnedReader {
+  FirestorePointsLifetimeEarnedReaderAdapter({required Ref ref}) : _ref = ref;
+
+  final Ref _ref;
+
+  @override
+  Future<int> getLifetimeEarned() async {
+    final repo = await _ref.read(
+      firestorePointsLedgerRepositoryProvider.future,
+    );
+    if (repo == null) {
+      throw StateError(
+        'FirestorePointsLifetimeEarnedReaderAdapter.getLifetimeEarned: '
+        'firestorePointsLedgerRepositoryProvider resolved to null (no '
+        'active account, or no active learner profile, yet) — refusing to '
+        'report lifetime-earned points as 0 when the true value could not be '
+        'read.',
+      );
+    }
+    return repo.getLifetimeEarned();
+  }
+}

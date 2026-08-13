@@ -12,6 +12,8 @@ library;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/curriculum_overlap_registry.dart';
+import 'package:learning_tracker/core/labels/curriculum_label.dart';
+import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
@@ -19,6 +21,7 @@ import 'package:learning_tracker/features/content_browsing/domain/strategies/com
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_entity.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_tier_filter.dart';
 import 'package:learning_tracker/features/learning/domain/entities/learning_ledger_entry.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
@@ -27,6 +30,13 @@ import 'package:learning_tracker/features/profiles/presentation/providers/active
 import 'package:learning_tracker/features/progress/domain/models/lifetime_knowledge.dart';
 import 'package:learning_tracker/features/progress/domain/services/lifetime_tree_builder.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/progress_lens_refresh_tick_provider.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
+import 'package:learning_tracker/features/dashboard/presentation/providers/calendar_position_providers.dart';
+import 'package:learning_tracker/features/tracks/domain/services/track_progress_service.dart';
+import 'package:learning_tracker/features/tracks/presentation/providers/track_progress_providers.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/entities/profile_program.dart';
+import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart';
 
 // ---------------------------------------------------------------------------
 // Re-exports (backward compatibility — consumers continue to import from here)
@@ -403,61 +413,31 @@ final lifetimeSummariesProvider =
 final globalLifetimeCurriculaProvider = lifetimeSummariesProvider;
 
 /// Profile-wide completions load for [trackDualProgressMetricsProvider],
-/// partitioned by trackId.
-///
-/// **BLOCKED** — [CompletionEntity] has no `trackId` field (AD-25 retired
-/// per-device track ids from every synced payload). Partition by
-/// `c.trackId` cannot be expressed on the Firestore-shaped entity.
-///
-/// Track/points eligibility is CURRICULUM-keyed now (`CompletionEntity.curriculumId`
-/// is the canonical stable track key). The replacement partition lives in
-/// [completionsByProfileForLifetimeProvider] (keyed by `curriculumId.storageKey`).
-///
-/// This provider retains its original signature so existing call sites compile;
-/// it throws [UnsupportedError] at runtime rather than returning a fabricated
-/// `Map` that would be indistinguishable from a real "no completions" result.
+/// partitioned by the curriculum storage key (the sole track identity).
 final trackCompletionsByProfileProvider =
-    FutureProvider.autoDispose<Map<int, List<CompletionEntity>>>((ref) async {
-      ref.watch(progressLensRefreshTickProvider);
-      ref.watch<int>(completionCommittedProvider);
-      _assertActiveProfile(ref);
-      throw UnsupportedError(
-        'trackCompletionsByProfileProvider is BLOCKED: CompletionEntity has '
-        'no trackId (AD-25 retired per-device track ids). Track/points '
-        'eligibility is curriculum-keyed now. Use '
-        'completionsByProfileForLifetimeProvider (partitioned by '
-        'curriculumId.storageKey) instead.',
-      );
-    });
-
-/// Profile-wide learning-ledger load for [trackDualProgressMetricsProvider],
-/// partitioned by trackId.
-///
-/// **BLOCKED** — [LearningLedgerEntry] has no `trackId` field (the Firestore
-/// ledger is keyed by unit, not by a per-device track row; AD-25 retired
-/// per-device track ids from every synced payload).
-///
-/// Track eligibility is CURRICULUM-keyed now. The replacement partition lives
-/// in [ledgerEntriesByCurriculumForProfileProvider] (keyed by
-/// `curriculumId.storageKey`).
-final trackLedgerEntriesByProfileProvider =
-    FutureProvider.autoDispose<Map<int, List<LearningLedgerEntry>>>((
+    FutureProvider.autoDispose<Map<String, List<CompletionEntity>>>((
       ref,
     ) async {
       ref.watch(progressLensRefreshTickProvider);
       ref.watch<int>(completionCommittedProvider);
       _assertActiveProfile(ref);
-      throw UnsupportedError(
-        'trackLedgerEntriesByProfileProvider is BLOCKED: LearningLedgerEntry '
-        'has no trackId (AD-25 retired per-device track ids from every '
-        'synced payload). Track/points eligibility is curriculum-keyed now. '
-        'Use ledgerEntriesByCurriculumForProfileProvider (partitioned by '
-        'curriculumId.storageKey) instead.',
-      );
+      return ref.watch(completionsByProfileForLifetimeProvider.future);
+    });
+
+/// Profile-wide learning-ledger load for [trackDualProgressMetricsProvider],
+/// partitioned by the curriculum storage key (the sole track identity).
+final trackLedgerEntriesByProfileProvider =
+    FutureProvider.autoDispose<Map<String, List<LearningLedgerEntry>>>((
+      ref,
+    ) async {
+      ref.watch(progressLensRefreshTickProvider);
+      ref.watch<int>(completionCommittedProvider);
+      _assertActiveProfile(ref);
+      return ref.watch(ledgerEntriesByCurriculumForProfileProvider.future);
     });
 
 /// Profile-wide learning-ledger load for [trackDualProgressMetricsProvider]'s
-/// `lifetimePercentage`, partitioned by curriculumId (not trackId).
+/// `lifetimePercentage`, partitioned by curriculum storage key.
 ///
 /// Replaces the deleted `db.learningLedgerDao.getEntriesGroupedByCurriculum()`
 /// call with a single [learningLedgerProvider] read + in-memory partition
@@ -478,55 +458,65 @@ final ledgerEntriesByCurriculumForProfileProvider =
     });
 
 /// Profile-wide program-enrollment load for [trackDualProgressMetricsProvider],
-/// partitioned by curriculumType.
-///
-/// **BLOCKED** — `ProfileProgram` was the Drift-era generated data class from
-/// the deleted `profile_programs` table. The Firestore replacement is
-/// `ProfileProgramEntity` (in `features/tracks/setup/domain/entities/`), but
-/// no presentation-legal provider for it has been wired yet.
-///
-/// This provider retains its signature so existing call sites compile; it
-/// throws [UnsupportedError] at runtime rather than returning a fabricated
-/// empty map.
+/// partitioned by curriculum storage key through the existing adapter seam.
 final profileProgramsByProfileProvider =
-    FutureProvider.autoDispose<Map<String, Object>>((ref) async {
+    FutureProvider.autoDispose<Map<String, ProfileProgramEntity>>((ref) async {
       ref.watch(progressLensRefreshTickProvider);
       ref.watch<int>(completionCommittedProvider);
       _assertActiveProfile(ref);
-      throw UnsupportedError(
-        'profileProgramsByProfileProvider is BLOCKED: ProfileProgram was the '
-        'Drift-era generated data class (deleted). The Firestore replacement '
-        'ProfileProgramEntity has no presentation-legal provider wired yet. '
-        'Migration path: provide a profile-program repository provider in '
-        'features/tracks and rewire this provider to use it.',
+      final repository = ref.watch(profileProgramRepositoryProvider);
+      final programs = await Future.wait(
+        CurriculumId.values.map((curriculum) async {
+          final program = await repository.getProgram(curriculum);
+          return (curriculum: curriculum, program: program);
+        }),
       );
+      return {
+        for (final (:curriculum, :program) in programs)
+          if (program != null) curriculum.storageKey: program,
+      };
     });
 
 /// Per-track dual-progress metrics for the active-track dashboard card.
 ///
-/// **BLOCKED** — this provider requires active tracks (formerly from
-/// `db.trackDao.getActiveTracksForProfile`) and profile programs
-/// (formerly `db.profileProgramDao.getProgramsForProfile`), neither of which
-/// has a presentation-legal provider wired yet. Additionally, the
-/// `c.trackId` / `e.trackId` partitioning it relied on is impossible on
-/// `CompletionEntity` / `LearningLedgerEntry` (both lack `trackId` per AD-25).
-///
-/// Track/points eligibility is CURRICULUM-keyed now. The lifetime portion of
-/// this provider's computation is covered by [lifetimeTotalsAcrossAllCurriculaProvider].
+/// Active tracks, completions, ledger entries, and program enrollment are all
+/// read through their Firestore-backed presentation providers. The curriculum
+/// is the sole track identity.
 final trackDualProgressMetricsProvider =
     FutureProvider.autoDispose<List<TrackDualProgressMetric>>((ref) async {
       ref.watch(progressLensRefreshTickProvider);
       ref.watch<int>(completionCommittedProvider);
       _assertActiveProfile(ref);
-      throw UnsupportedError(
-        'trackDualProgressMetricsProvider is BLOCKED: it requires '
-        'CompletionEntity.trackId (absent — AD-25 retired per-device track '
-        'ids) and active-track/program data that has no presentation-legal '
-        'provider yet. Track/points eligibility is curriculum-keyed now. '
-        'Migration path: use completionsByProfileForLifetimeProvider + '
-        'curriculumLedgerProvider + CurriculumId-scoped reads, and wire a '
-        'Firestore-backed active-tracks + profile-program provider.',
+      final progressService = ref.watch(trackProgressServiceProvider);
+      final useHebrewTerms = domainTermLabelsFromRef(ref).isHebrew;
+      final completionsByCurriculumFuture = ref.watch(
+        trackCompletionsByProfileProvider.future,
       );
+      final ledgerByCurriculumFuture = ref.watch(
+        trackLedgerEntriesByProfileProvider.future,
+      );
+      final programsByCurriculumFuture = ref.watch(
+        profileProgramsByProfileProvider.future,
+      );
+      final tracks = (await ref.watch(
+        activeTracksProvider.future,
+      )).where((track) => track.isActive).toList();
+
+      final results = await Future.wait(
+        tracks.map(
+          (track) => _computeTrackDualProgressMetric(
+            ref: ref,
+            progressService: progressService,
+            useHebrewTerms: useHebrewTerms,
+            track: track,
+            completionsByCurriculumFuture: completionsByCurriculumFuture,
+            ledgerEntriesByCurriculumFuture: ledgerByCurriculumFuture,
+            programsByCurriculumFuture: programsByCurriculumFuture,
+          ),
+        ),
+      );
+
+      return results.whereType<TrackDualProgressMetric>().toList();
     });
 
 /// Computes a single track's [TrackDualProgressMetric], reading the
@@ -536,26 +526,88 @@ final trackDualProgressMetricsProvider =
 /// zero-item scope) — extracted from [trackDualProgressMetricsProvider] so
 /// it can run concurrently across tracks via `Future.wait`.
 ///
-/// **BLOCKED** — see [trackDualProgressMetricsProvider]'s doc comment.
-// ignore: unused_element
+/// Uses the already-batched curriculum-keyed reads, so concurrent tracks do
+/// not issue one completion, ledger, or program query per row.
 Future<TrackDualProgressMetric?> _computeTrackDualProgressMetric({
   required Ref ref,
-  required ContentRepository repo,
-  required CurriculumId curriculum,
-  required Object track,
+  required TrackProgressService progressService,
+  required bool useHebrewTerms,
+  required CurriculumTrackEntity track,
   required Future<Map<String, List<CompletionEntity>>>
   completionsByCurriculumFuture,
   required Future<Map<String, List<LearningLedgerEntry>>>
   ledgerEntriesByCurriculumFuture,
-  required Future<Map<String, Object>> programsByCurriculumFuture,
+  required Future<Map<String, ProfileProgramEntity>> programsByCurriculumFuture,
 }) async {
-  throw UnsupportedError(
-    '_computeTrackDualProgressMetric is BLOCKED: the track-partitioned '
-    'computation requires CompletionEntity.trackId (absent) and '
-    'CurriculumTrack / ProfileProgram, which are not available through '
-    'presentation-legal providers. Track/points eligibility is '
-    'curriculum-keyed now. See trackDualProgressMetricsProvider for the '
-    'full migration path.',
+  final curriculum = track.curriculumId;
+  final scopedItems = await ref.watch(
+    scopedCurriculumContentProvider(curriculum).future,
+  );
+  final leaves = scopedItems.where((item) => item.isLeaf).toList();
+  final denominator = leaves.length;
+  if (denominator == 0) return null;
+
+  final currentCyclePercentage = await progressService.completionPercent(
+    curriculumId: curriculum,
+    tier: CompletionTierFilter.trackAchievement,
+    totalItems: denominator,
+    requireAllStages: false,
+    since: track.activatedAt,
+  );
+
+  final completionsByCurriculum = await completionsByCurriculumFuture;
+  final ledgerByCurriculum = await ledgerEntriesByCurriculumFuture;
+  final key = curriculum.storageKey;
+  final completions =
+      completionsByCurriculum[key] ?? const <CompletionEntity>[];
+  final ledgerEntries =
+      ledgerByCurriculum[key] ?? const <LearningLedgerEntry>[];
+
+  // The Firestore repositories used by these providers already exclude
+  // purged documents. Keep the filter here as a defensive invariant so a
+  // future repository implementation cannot resurrect retracted learning.
+  final activeCompletions = completions.where((c) => c.purgedAt == null);
+  final activeLedgerEntries = ledgerEntries.where((e) => e.purgedAt == null);
+  const builder = LifetimeTreeBuilder();
+  final lifetimeRefs = builder.computeLearnedLeafRefs(
+    leaves: leaves,
+    completedRefs: activeCompletions.map((c) => c.sefariaRef).toSet(),
+    ledgerEntries: activeLedgerEntries.toList()
+      ..sort((a, b) => b.completedAt.compareTo(a.completedAt)),
+  );
+
+  final programsByCurriculum = await programsByCurriculumFuture;
+  final enrollment = programsByCurriculum[key];
+  int? todayDueCount;
+  int? overdueCount;
+  if (enrollment != null) {
+    try {
+      final calendarPosition = await ref.read(
+        programCalendarPositionProvider(curriculum).future,
+      );
+      final delta = calendarPosition.delta;
+      overdueCount = delta < 0 ? (-delta - 1).clamp(0, 9999) : 0;
+      todayDueCount = delta > 0 ? 0 : 1;
+    } catch (e, st) {
+      AppLogger.instance.warning(
+        event: 'track_dual_progress_calendar_position_failed',
+        fields: {'curriculum': key},
+        exception: e,
+        stackTrace: st,
+      );
+      overdueCount = 0;
+      todayDueCount = 0;
+    }
+  }
+
+  return TrackDualProgressMetric(
+    trackLabel: curriculumLabelFor(curriculum, useHebrewTerms: useHebrewTerms),
+    curriculumId: curriculum,
+    currentCyclePercentage: currentCyclePercentage.clamp(0.0, 1.0),
+    lifetimePercentage: (lifetimeRefs.length / denominator).clamp(0.0, 1.0),
+    isProgramTrack: enrollment != null,
+    todayDueCount: todayDueCount,
+    overdueCount: overdueCount,
   );
 }
 
@@ -818,27 +870,4 @@ Future<Map<String, String>> _safeHeLabelLookup(
     );
     return const {};
   }
-}
-
-/// Loads scoped leaf items for a track.
-///
-/// **BLOCKED** — the Firestore model has no per-device `trackId` on
-/// completions or ledger entries (AD-25), and no presentation-legal provider
-/// for `CurriculumScopeDao` or `TrackDao`. Track-specific scoping is
-/// curriculum-keyed now.
-// ignore: unused_element
-Future<List<ContentItem>?> _safeLoadLeavesForTrack(
-  ContentRepository repo,
-  CurriculumId curriculum,
-  int trackId,
-) async {
-  throw UnsupportedError(
-    '_safeLoadLeavesForTrack is BLOCKED: it depends on the deleted '
-    'UserDatabase / CurriculumScopeDao / TrackDao and on trackId (absent '
-    'from CompletionEntity / LearningLedgerEntry per AD-25). Curriculum-scoped '
-    'leaf loading is now handled via _safeLoadLeaves + '
-    'ContentRepository.getScopedContent. If track scoping is needed, wire a '
-    'Firestore-backed curriculum-scope repository provider and rewrite this '
-    'helper.',
-  );
 }

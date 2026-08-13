@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/learning/completion_constants.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_entity.dart';
@@ -9,6 +10,7 @@ import 'package:learning_tracker/features/learning/domain/entities/completion_so
 import 'package:learning_tracker/features/learning/domain/entities/mark_completion_result.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/bookmark_repository.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
+import 'package:learning_tracker/features/learning/domain/repositories/learning_ledger_repository.dart';
 import 'package:learning_tracker/features/learning/domain/services/completion_detection_service.dart';
 
 /// Points-award collaborator for [CompletionOrchestrator].
@@ -63,7 +65,10 @@ abstract class CompletionStreakPort {
   /// day) — a duplicate call for the same day is expected (e.g. a second
   /// completion later the same day) and must be a silent no-op, not an
   /// error.
-  Future<void> recordStudyDay({required String? profileId, required DateTime at});
+  Future<void> recordStudyDay({
+    required String? profileId,
+    required DateTime at,
+  });
 }
 
 /// Owns the five app-rule side effects that fire when a completion is
@@ -178,6 +183,7 @@ class CompletionOrchestrator {
     required CompletionRepository repository,
     required ContentRepository contentRepository,
     required String? activeProfileId,
+    LearningLedgerRepository? learningLedgerRepository,
     BookmarkRepository? bookmarkRepository,
     CompletionDetectionService? completionDetectionService,
     CompletionPointsPort? pointsPort,
@@ -185,6 +191,7 @@ class CompletionOrchestrator {
   }) : _repository = repository,
        _contentRepository = contentRepository,
        _activeProfileId = activeProfileId,
+       _learningLedgerRepository = learningLedgerRepository,
        _bookmarkRepository = bookmarkRepository,
        _completionDetectionService = completionDetectionService,
        _pointsPort = pointsPort,
@@ -193,6 +200,7 @@ class CompletionOrchestrator {
   final CompletionRepository _repository;
   final ContentRepository _contentRepository;
   final String? _activeProfileId;
+  final LearningLedgerRepository? _learningLedgerRepository;
   final BookmarkRepository? _bookmarkRepository;
   final CompletionDetectionService? _completionDetectionService;
   final CompletionPointsPort? _pointsPort;
@@ -214,6 +222,14 @@ class CompletionOrchestrator {
     bool awardGamificationPoints = true,
     bool creditsAchievement = true,
   }) async {
+    final source = CompletionSourceX.fromCredits(
+      awardGamificationPoints: awardGamificationPoints,
+      creditsAchievement: creditsAchievement,
+    );
+    if (source == CompletionSource.lifetimeOnly) {
+      return _recordLifetimeOnly(request);
+    }
+
     // 1. Order validation — before any write.
     final existing = await _repository.getCompletionsForContentItem(
       request.sefariaRef,
@@ -255,11 +271,6 @@ class CompletionOrchestrator {
 
     // 3–5. Post-write side effects — best-effort, independently caught (see
     // the class doc comment, "Atomicity"). None may roll back the write.
-    final source = CompletionSourceX.fromCredits(
-      awardGamificationPoints: awardGamificationPoints,
-      creditsAchievement: creditsAchievement,
-    );
-
     if (creditsAchievement) {
       unawaited(
         _dispatchSiyumDetection(
@@ -303,6 +314,66 @@ class CompletionOrchestrator {
     );
 
     return result;
+  }
+
+  /// Lifetime-only marks have no active-track completion row. They are
+  /// intentionally routed straight to the append-only learning ledger so the
+  /// completion repository never has to accept a source it cannot store.
+  Future<MarkCompletionResult> _recordLifetimeOnly(
+    CompletionRequest request,
+  ) async {
+    final ledger = _learningLedgerRepository;
+    if (ledger == null) {
+      throw StateError(
+        'A learning-ledger repository is required for lifetime-only marks.',
+      );
+    }
+
+    final curriculum = CurriculumId.values.firstWhere(
+      (value) => value.storageKey == request.curriculumId,
+      orElse: () =>
+          throw ArgumentError('Unknown curriculumId: ${request.curriculumId}'),
+    );
+    final item = await _contentRepository.getContentByRef(
+      curriculumId: curriculum,
+      sefariaRef: request.sefariaRef,
+    );
+    if (item == null) {
+      throw StateError(
+        'Cannot record lifetime-only mark for unknown content '
+        '${request.sefariaRef}.',
+      );
+    }
+
+    final level = item.level4 != null
+        ? 4
+        : item.level3 != null
+        ? 3
+        : item.level2 != null
+        ? 2
+        : 1;
+    await ledger.recordCompletion(
+      curriculumId: curriculum,
+      entryScope: 'level$level',
+      unitIdentifier: item.sefariaRef,
+      unitDisplayNameHe: item.displayNameHe,
+      unitDisplayNameEn: item.displayNameEn,
+      trackType: request.trackType,
+      isManual: true,
+      source: CompletionSource.lifetimeOnly,
+    );
+
+    return MarkCompletionResult(
+      completion: CompletionEntity(
+        curriculumId: curriculum,
+        sefariaRef: request.sefariaRef,
+        stageId: request.stageId,
+        trackType: request.trackType,
+        source: CompletionSource.lifetimeOnly,
+        completedAt: kBulkPriorSentinelDate,
+      ),
+      isNew: true,
+    );
   }
 
   Future<void> _creditPointsIfAny({
@@ -472,9 +543,7 @@ class CompletionOrchestrator {
     // CompletionDetectionService._checkUnitCompletion) -- passing one here
     // throws CompletionRepositoryDelegatedProfileUnsupportedException,
     // which made every bulk-mark order validation fail before this fix.
-    final existing = await _repository.getCompletionsByCurriculum(
-      curriculumId,
-    );
+    final existing = await _repository.getCompletionsByCurriculum(curriculumId);
     final byRef = <String, List<CompletionEntity>>{};
     for (final c in existing) {
       if (c.trackType != trackType || !refSet.contains(c.sefariaRef)) {

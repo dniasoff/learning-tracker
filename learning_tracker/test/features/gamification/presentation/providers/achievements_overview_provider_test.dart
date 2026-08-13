@@ -9,12 +9,15 @@ import 'package:learning_tracker/features/gamification/presentation/providers/ac
 import 'package:learning_tracker/features/gamification/presentation/providers/gamification_service_providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class _Balance implements PointsBalanceReader {
+class _Balance implements PointsBalanceReader, PointsLifetimeEarnedReader {
   _Balance(this.value);
   final int value;
 
   @override
   Future<int> getBalance() async => value;
+
+  @override
+  Future<int> getLifetimeEarned() async => value;
 }
 
 void main() {
@@ -23,6 +26,7 @@ void main() {
   test('classifies affordable and unaffordable global rewards', () async {
     final service = RewardMilestoneService(
       balanceReader: _Balance(72),
+      lifetimeEarnedReader: _Balance(72),
       profileId: '01J00000000000000000000008',
     );
     await service.upsertMilestone(
@@ -58,6 +62,7 @@ void main() {
     () async {
       final service = RewardMilestoneService(
         balanceReader: _Balance(0),
+        lifetimeEarnedReader: _Balance(0),
         profileId: '01J00000000000000000000009',
       );
       await service.upsertMilestone(

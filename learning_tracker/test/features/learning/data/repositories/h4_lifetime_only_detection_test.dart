@@ -15,6 +15,7 @@ import 'package:learning_tracker/features/content_browsing/domain/repositories/c
 import 'package:learning_tracker/features/learning/data/repositories/completion_repository_impl.dart';
 import 'package:learning_tracker/features/learning/data/repositories/learning_ledger_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/learning_ledger_repository.dart';
 import 'package:learning_tracker/features/learning/domain/services/completion_detection_service.dart';
@@ -32,7 +33,7 @@ class _MockContentRepository extends Mock implements ContentRepository {}
 
 void main() {
   const uid = 'h4-uid';
-  const profileId = 'h4-profile-ulid';
+  const profileId = '01J6Q2H4A8M7K3P9R5T6V8WXY3';
   const curriculum = CurriculumId.mishnayos;
 
   setUpAll(() {
@@ -162,6 +163,7 @@ void main() {
       repository: repository,
       contentRepository: contentRepository,
       activeProfileId: profileId,
+      learningLedgerRepository: ledger,
       completionDetectionService: detection,
     );
   }
@@ -188,12 +190,22 @@ void main() {
   group('H4 — creditsAchievement gate on CompletionDetectionService', () {
     test(
       'lifetimeOnly (creditsAchievement=false): does NOT create siyum',
-      () async {},
-      skip:
-          'Production gap: MarkCompletionUseCase routes lifetimeOnly through '
-          'CompletionOrchestrator.markComplete, whose Firestore completion '
-          'adapter rejects the (false, false) lifetimeOnly source. The '
-          'Firestore ledger adapter is not wired into this route yet.',
+      () async {
+        await markBoth(buildOrchestrator(), creditsAchievement: false);
+
+        final entries = await ledgerStore.getLifetimeLedger();
+        expect(
+          entries.where((entry) => !entry.isManual),
+          isEmpty,
+          reason: 'lifetimeOnly marks must not create siyum entries',
+        );
+        expect(
+          entries.where(
+            (entry) => entry.source == CompletionSource.lifetimeOnly,
+          ),
+          hasLength(2),
+        );
+      },
     );
 
     test(

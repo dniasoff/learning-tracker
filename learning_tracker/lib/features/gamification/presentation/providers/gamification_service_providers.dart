@@ -27,6 +27,7 @@ final rewardMilestoneServiceProvider = Provider<RewardMilestoneService>((ref) {
   final profileId = ref.watch(activeProfileIdProvider);
   return RewardMilestoneService(
     balanceReader: FirestorePointsBalanceReaderAdapter(ref: ref),
+    lifetimeEarnedReader: FirestorePointsLifetimeEarnedReaderAdapter(ref: ref),
     profileId: profileId ?? '',
   );
 });

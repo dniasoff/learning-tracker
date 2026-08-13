@@ -3,16 +3,20 @@ import 'package:learning_tracker/features/gamification/domain/services/points_se
 import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class _Balance implements PointsBalanceReader {
+class _Balance implements PointsBalanceReader, PointsLifetimeEarnedReader {
   _Balance(this.value);
   final int value;
 
   @override
   Future<int> getBalance() async => value;
+
+  @override
+  Future<int> getLifetimeEarned() async => value;
 }
 
 RewardMilestoneService _service() => RewardMilestoneService(
   balanceReader: _Balance(100),
+  lifetimeEarnedReader: _Balance(100),
   profileId: '01J00000000000000000000002',
 );
 

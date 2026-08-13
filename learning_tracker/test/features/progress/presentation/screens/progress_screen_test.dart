@@ -128,11 +128,6 @@ List<TrackDualProgressMetric> _metrics({
   ];
 }
 
-bool _skipBlockedProviderTest(String reason) {
-  markTestSkipped(reason);
-  return true;
-}
-
 Widget _wrap({
   required List<CurriculumId> activeCurricula,
   required JourneyViewModel journey,
@@ -147,11 +142,10 @@ Widget _wrap({
   Locale locale = const Locale('en'),
   // P2 fix (deferred/track-rename-propagation): [db] + [metricsOverride] let
   // a test supply a seeded in-memory database + a metrics list whose
-  // trackId matches a real seeded track/goal row, so `_PerTrackRow`'s
-  // `trackCustomNameProvider(metric.trackId)` watch resolves against real
-  // data instead of the default `_metrics()` synthetic trackIds (which have
-  // no backing track/goal row). Both default to the pre-existing behaviour
-  // when omitted, so every other test in this file is unaffected.
+  // curriculum matches a real seeded track/goal row, so `_PerTrackRow`'s
+  // custom-name watch resolves against real data instead of the default
+  // synthetic metrics. Both default to the pre-existing behaviour when
+  // omitted, so every other test in this file is unaffected.
   FakeFirebaseFirestore? firestore,
   List<TrackDualProgressMetric>? metricsOverride,
   // Run-11 progress-area dark-mode sweep: lets a test pump the real
@@ -256,8 +250,8 @@ void main() {
       expect(find.text('Siyumim & Milestones'), findsOneWidget);
       expect(find.text('Lifetime Knowledge'), findsOneWidget);
 
-      // The exact per-track percentages are omitted: they are computed by the
-      // blocked trackDualProgressMetricsProvider.
+      expect(find.text('Track progress: 31%'), findsOneWidget);
+      expect(find.text('Lifetime: 33%'), findsOneWidget);
 
       // 5. Section header for tracks.
       expect(find.text('ACTIVE TRACKS'), findsOneWidget);
@@ -484,11 +478,6 @@ void main() {
     testWidgets(
       'a tiny non-zero fraction (7/5846) renders "0.1%" instead of "0%"',
       (tester) async {
-        if (_skipBlockedProviderTest(
-          'blocked: trackDualProgressMetricsProvider computation is not wired '
-          'to Firestore',
-        ))
-          return;
         const tiny = 7 / 5846; // ≈ 0.0011974 → 0.1%
         await tester.pumpWidget(
           _wrap(
@@ -513,11 +502,6 @@ void main() {
     testWidgets('a whole-number percentage still renders without a decimal', (
       tester,
     ) async {
-      if (_skipBlockedProviderTest(
-        'blocked: trackDualProgressMetricsProvider computation is not wired '
-        'to Firestore',
-      ))
-        return;
       await tester.pumpWidget(
         _wrap(
           activeCurricula: const [CurriculumId.mishnayos],

@@ -15,9 +15,11 @@ import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/data/firestore/doc_ids.dart';
 import 'package:learning_tracker/data/firestore/resilient_doc_stream.dart';
 import 'package:learning_tracker/data/firestore/write_ack.dart';
+import 'package:learning_tracker/data/repositories/firestore_learning_ledger_repository.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_entity.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_tier_filter.dart';
+import 'package:learning_tracker/features/learning/domain/entities/learning_ledger_entry.dart';
 
 /// Firestore-backed completions repository: `users/{uid}/learner_profiles/
 /// {profileId}/completions/{completionId}` — append-only, deterministic
@@ -70,22 +72,16 @@ import 'package:learning_tracker/features/learning/domain/entities/completion_ti
 /// Drift call sites (`CompletionDao`) become the plain field filter in
 /// [getCompletionsByTier] below.
 ///
-/// ### A consequence worth being explicit about: `trackAchievement` ==
-/// `lifetime` for THIS repository
+/// ### A consequence worth being explicit about: `trackAchievement` excludes
+/// ledger-only lifetime imports
 ///
 /// Under the old Drift model, `CompletionTierFilter.lifetime` included
 /// `lifetimeOnly` rows (imported historical data) that lived in the same
 /// table as everything else. Under this model, `lifetimeOnly` rows never
-/// enter `completions` at all — so, scoped to this collection alone, every
-/// document already qualifies for `trackAchievement` (`live` or
-/// `bulkInTrack`), which means [getCompletionsByTier] returns the *same*
-/// result set for [CompletionTierFilter.trackAchievement] and
-/// [CompletionTierFilter.lifetime] — see that method's doc comment. A
-/// caller that needs the OLD `lifetime` semantics (this collection PLUS
-/// historical `lifetimeOnly` imports) must separately query
-/// `FirestoreLearningLedgerRepository`, whose ledger entries are the only
-/// place a `lifetimeOnly` completion is recorded — this repository cannot
-/// reach across that collection boundary itself.
+/// enter `completions` at all — so every document in that collection already
+/// qualifies for `trackAchievement` (`live` or `bulkInTrack`). The lifetime
+/// tier additionally merges active `lifetimeOnly` entries from
+/// `FirestoreLearningLedgerRepository` — see [getCompletionsByTier].
 ///
 /// ## No delete method — server-side only, by design
 ///
@@ -264,12 +260,18 @@ class FirestoreCompletionRepository {
   }) : _firestore = firestore,
        _uid = uid,
        _profileId = profileId,
-       _logger = logger ?? AppLogger.instance;
+       _logger = logger ?? AppLogger.instance,
+       _learningLedgerRepository = FirestoreLearningLedgerRepository(
+         firestore: firestore,
+         uid: uid,
+         profileId: profileId,
+       );
 
   final FirebaseFirestore _firestore;
   final String _uid;
   final String _profileId;
   final AppLogger _logger;
+  final FirestoreLearningLedgerRepository _learningLedgerRepository;
 
   /// Firestore's hard per-`WriteBatch` operation cap, and also exactly
   /// `firestore.rules`' SR-4 `list()` cap for this collection
@@ -837,17 +839,10 @@ class FirestoreCompletionRepository {
   /// section).
   ///
   /// - [CompletionTierFilter.liveOnly] → `source == 'live'`.
-  /// - [CompletionTierFilter.trackAchievement] and
-  ///   [CompletionTierFilter.lifetime] → **no source filter at all**, and
-  ///   therefore return the SAME result set. Every document in this
-  ///   collection already has `source` ∈ {`live`, `bulkInTrack`} (a
-  ///   `lifetimeOnly` document can never exist here — enforced by
-  ///   [recordCompletion]/[recordCompletionsBatch]), so both tiers already
-  ///   include everything this collection can hold. See the class doc
-  ///   comment's "A consequence worth being explicit about" section for why
-  ///   a caller wanting the historical `lifetime` semantics (this PLUS
-  ///   `lifetimeOnly` imports) must separately query
-  ///   `FirestoreLearningLedgerRepository`.
+  /// - [CompletionTierFilter.trackAchievement] → no source filter on this
+  ///   collection, which contains only `live` and `bulkInTrack` rows.
+  /// - [CompletionTierFilter.lifetime] → those completion rows plus active
+  ///   `lifetimeOnly` entries projected from the learning ledger.
   ///
   /// Every filter combination here is equality/`whereIn` only — no
   /// composite index needed (see the class doc comment).
@@ -866,23 +861,47 @@ class FirestoreCompletionRepository {
     }
     final docs = await _fetchAllPagesByDocId(query);
     var entities = _decodeAll(docs);
+    if (tier == CompletionTierFilter.lifetime) {
+      final ledgerEntries = curriculumId == null
+          ? await _learningLedgerRepository.getLifetimeLedger()
+          : await _learningLedgerRepository.getLedgerForCurriculum(
+              curriculumId,
+            );
+      entities = [
+        ...entities,
+        for (final entry in ledgerEntries)
+          if (entry.source == CompletionSource.lifetimeOnly)
+            _completionFromLifetimeLedgerEntry(entry),
+      ];
+    }
     // Filtered client-side, not via a Firestore range query: this method
     // already mixes two equality filters (curriculum_id, source) that would
     // need a composite index to also range-filter completed_at server-side,
     // and every caller (ChartDataService) already does bucketing/cumulative
     // math client-side over this same bounded, paginated result set.
     if (since != null) {
-      entities = entities
-          .where((e) => !e.completedAt.isBefore(since))
-          .toList();
+      entities = entities.where((e) => !e.completedAt.isBefore(since)).toList();
     }
     if (until != null) {
-      entities = entities
-          .where((e) => !e.completedAt.isAfter(until))
-          .toList();
+      entities = entities.where((e) => !e.completedAt.isAfter(until)).toList();
     }
     return entities;
   }
+
+  /// Projects a leaf-level lifetime ledger mark into the completion-shaped
+  /// read contract used by progress services. Ledger entries do not carry a
+  /// stage: [TrackProgressService] treats this source as stage-independent,
+  /// while other tiers remain backed exclusively by real completion rows.
+  static CompletionEntity _completionFromLifetimeLedgerEntry(
+    LearningLedgerEntry entry,
+  ) => CompletionEntity(
+    curriculumId: entry.curriculumId,
+    sefariaRef: entry.unitIdentifier,
+    stageId: 1,
+    trackType: entry.trackType,
+    source: CompletionSource.lifetimeOnly,
+    completedAt: entry.completedAt,
+  );
 
   // ── Client-side aggregates ───────────────────────────────────────────
   //

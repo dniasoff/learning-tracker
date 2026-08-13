@@ -211,8 +211,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     // and Lifetime (all-time) — sourced from [trackDualProgressMetricsProvider]
     // so the Track Detail header matches the same numbers shown on the
     // Dashboard active-track card and the Progress hub per-track rows.
-    // trackDualProgressMetricsProvider is a deliberate throw-stub (task
-    // #5/#19) scoped to the active profile — no argument to pass.
+    // The provider is scoped to the active profile — no argument to pass.
     final dualMetricsAsync = ref.watch(trackDualProgressMetricsProvider);
     final dualMetricMatches = dualMetricsAsync.asData?.value
         .where((m) => m.curriculumId == curriculum)

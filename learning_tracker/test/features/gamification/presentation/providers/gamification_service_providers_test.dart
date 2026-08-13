@@ -15,9 +15,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../helpers/firestore_fake.dart';
 
-class _Balance implements PointsBalanceReader {
+class _Balance implements PointsBalanceReader, PointsLifetimeEarnedReader {
   @override
   Future<int> getBalance() async => 0;
+
+  @override
+  Future<int> getLifetimeEarned() async => 0;
 }
 
 void main() {
@@ -34,6 +37,14 @@ void main() {
       container.read(rewardMilestoneServiceProvider).profileId,
       '01J0000000000000000000000B',
     );
+  });
+
+  test('lifetime-earned reader throws while Firestore is not ready', () async {
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+
+    final service = container.read(rewardMilestoneServiceProvider);
+    expect(service.getGlobalLifetimeEarnedForRewards, throwsStateError);
   });
 
   test(
@@ -73,6 +84,7 @@ void main() {
   test('service providers can be overridden directly', () {
     final service = RewardMilestoneService(
       balanceReader: _Balance(),
+      lifetimeEarnedReader: _Balance(),
       profileId: '01J0000000000000000000000D',
     );
     final container = ProviderContainer(

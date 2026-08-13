@@ -34,6 +34,15 @@ abstract class PointsBalanceReader {
   Future<int> getBalance();
 }
 
+/// Reads points that were earned for milestone progression.
+///
+/// This is deliberately separate from [PointsBalanceReader]: points spent on
+/// rewards reduce the debitable balance but never undo lifetime-earned
+/// progress.
+abstract class PointsLifetimeEarnedReader {
+  Future<int> getLifetimeEarned();
+}
+
 /// Service for querying gamification points.
 ///
 /// Points are awarded as a side effect of completion (via CompletionRepository).
@@ -159,5 +168,4 @@ class PointsService {
       return sum + c.points;
     });
   }
-
 }

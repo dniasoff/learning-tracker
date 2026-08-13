@@ -4,15 +4,26 @@ import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart'
     show goalRepositoryProvider;
 import 'package:learning_tracker/features/tracks/setup/data/repositories/curriculum_track_repository_impl.dart';
+import 'package:learning_tracker/features/tracks/setup/data/repositories/profile_program_repository_impl.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/repositories/profile_program_repository.dart';
 
 /// Stream provider for active tracks for the current profile.
-final activeTracksProvider = StreamProvider<List<CurriculumTrackEntity>>((
-  ref,
-) {
+final activeTracksProvider = StreamProvider<List<CurriculumTrackEntity>>((ref) {
   final adapter = ref.watch(curriculumTrackRepositoryAdapterProvider);
   return adapter.watchActiveTracks();
 });
+
+/// Firestore-backed profile-program reads for presentation consumers.
+///
+/// Keeping the adapter behind a feature-owned provider gives progress and
+/// dashboard consumers a presentation-legal seam without importing the raw
+/// Firestore repository directly. [ProfileProgramRepository.getProgram]
+/// returns `null` for a self-paced curriculum (and while the profile backend
+/// is not ready), which is the repository's configuration-shaped contract.
+final profileProgramRepositoryProvider = Provider<ProfileProgramRepository>(
+  (ref) => FirestoreProfileProgramRepositoryAdapter(ref: ref),
+);
 
 /// Firestore-backed adapter for curriculum-track lifecycle (activate/retire/
 /// archive/query) — **wired Phase 3, T-20**.

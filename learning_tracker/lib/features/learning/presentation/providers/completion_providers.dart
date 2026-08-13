@@ -116,12 +116,14 @@ CompletionOrchestrator completionOrchestrator(Ref ref) {
   final profileId = ref.watch(activeProfileIdProvider);
   final bookmarkRepository = ref.watch(bookmarkRepositoryProvider);
   final completionRepository = ref.watch(completionRepositoryProvider);
+  final learningLedgerRepository = ref.watch(learningLedgerRepositoryProvider);
   final detectionService = ref.watch(completionDetectionServiceProvider);
 
   return CompletionOrchestrator(
     repository: completionRepository,
     contentRepository: contentRepository,
     activeProfileId: profileId,
+    learningLedgerRepository: learningLedgerRepository,
     bookmarkRepository: bookmarkRepository,
     completionDetectionService: detectionService,
     pointsPort: ref.watch(completionPointsPortProvider),

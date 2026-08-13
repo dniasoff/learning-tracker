@@ -384,7 +384,13 @@ void main() {
             'trackDualProgressMetricsProvider — the same source Progress hub '
             'and Track Detail use for the identical label.',
       );
-      // The exact 25% value is omitted: it is computed by the blocked provider.
+      expect(
+        find.descendant(
+          of: find.byType(OverallStatsCard),
+          matching: find.text('25%'),
+        ),
+        findsOneWidget,
+      );
 
       // Lifetime: 2 of 4 leaves have at least one completion (live ref +
       // lifetimeOnly ref) → 50%.
@@ -483,7 +489,13 @@ void main() {
             'must not ALSO render under "Track progress" — that was the '
             'run-9 mislabel. It should only appear once, under Lifetime.',
       );
-      // The exact 10% value is omitted: it is computed by the blocked provider.
+      expect(
+        find.descendant(
+          of: find.byType(OverallStatsCard),
+          matching: find.text('10%'),
+        ),
+        findsOneWidget,
+      );
     },
   );
 

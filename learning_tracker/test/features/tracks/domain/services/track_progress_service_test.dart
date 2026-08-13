@@ -117,7 +117,8 @@ class _FirestoreChartDataRepository implements ChartDataRepository {
   Future<List<GoalEntity>> getGoals(CurriculumId curriculumId) async => [];
 }
 
-class _FirestoreStageRepository extends Mock implements StageDefinitionRepository {
+class _FirestoreStageRepository extends Mock
+    implements StageDefinitionRepository {
   _FirestoreStageRepository(this._repository);
 
   final FirestoreStageDefinitionRepository _repository;
@@ -305,77 +306,59 @@ void main() {
       );
     });
 
-    test(
-      'lifetime counts lifetimeOnly completions',
-      () async {
-        await seedStages(firestore);
-        await seedLifetimeOnly(firestore, sefariaRef: 'ref1');
+    test('lifetime counts lifetimeOnly completions', () async {
+      await seedStages(firestore);
+      await seedLifetimeOnly(firestore, sefariaRef: 'ref1');
 
-        final pct = await service.completionPercent(
-          curriculumId: CurriculumId.mishnayos,
-          tier: CompletionTierFilter.lifetime,
-          totalItems: 5,
-        );
-        expect(pct, closeTo(0.2, 1e-9));
-      },
-      skip:
-          'Known migration gap (third confirmed instance): seedLifetimeOnly '
-          'writes only learning_ledger, while TrackProgressService delegates '
-          'to FirestoreCompletionRepository.getCompletionsByTier, which reads '
-          'only completions. Evidence: this test and '
-          'lib/data/repositories/firestore_completion_repository.dart:854.',
-    );
+      final pct = await service.completionPercent(
+        curriculumId: CurriculumId.mishnayos,
+        tier: CompletionTierFilter.lifetime,
+        totalItems: 5,
+      );
+      expect(pct, closeTo(0.2, 1e-9));
+    });
   });
 
   // ── Mixed profile ─────────────────────────────────────────────────────────
 
   group('completionPercent — mixed profile (live + bulk + lifetime)', () {
-    test(
-      'tier isolation: liveOnly < trackAchievement <= lifetime',
-      () async {
-        await seedStages(firestore);
-        await seedLive(firestore, sefariaRef: 'ref_live');
-        await seedBulkInTrack(firestore, sefariaRef: 'ref_bulk');
-        await seedLifetimeOnly(firestore, sefariaRef: 'ref_lt');
+    test('tier isolation: liveOnly < trackAchievement <= lifetime', () async {
+      await seedStages(firestore);
+      await seedLive(firestore, sefariaRef: 'ref_live');
+      await seedBulkInTrack(firestore, sefariaRef: 'ref_bulk');
+      await seedLifetimeOnly(firestore, sefariaRef: 'ref_lt');
 
-        const totalItems = 10;
-        final liveOnlyPct = await service.completionPercent(
-          curriculumId: CurriculumId.mishnayos,
-          tier: CompletionTierFilter.liveOnly,
-          totalItems: totalItems,
-        );
-        final achievePct = await service.completionPercent(
-          curriculumId: CurriculumId.mishnayos,
-          tier: CompletionTierFilter.trackAchievement,
-          totalItems: totalItems,
-        );
-        final lifetimePct = await service.completionPercent(
-          curriculumId: CurriculumId.mishnayos,
-          tier: CompletionTierFilter.lifetime,
-          totalItems: totalItems,
-        );
+      const totalItems = 10;
+      final liveOnlyPct = await service.completionPercent(
+        curriculumId: CurriculumId.mishnayos,
+        tier: CompletionTierFilter.liveOnly,
+        totalItems: totalItems,
+      );
+      final achievePct = await service.completionPercent(
+        curriculumId: CurriculumId.mishnayos,
+        tier: CompletionTierFilter.trackAchievement,
+        totalItems: totalItems,
+      );
+      final lifetimePct = await service.completionPercent(
+        curriculumId: CurriculumId.mishnayos,
+        tier: CompletionTierFilter.lifetime,
+        totalItems: totalItems,
+      );
 
-        expect(liveOnlyPct, closeTo(0.1, 1e-9), reason: '1/10 live');
-        expect(achievePct, closeTo(0.2, 1e-9), reason: '2/10 live+bulk');
-        expect(lifetimePct, closeTo(0.3, 1e-9), reason: '3/10 all sources');
-        expect(
-          liveOnlyPct,
-          lessThanOrEqualTo(achievePct),
-          reason: 'liveOnly ≤ trackAchievement',
-        );
-        expect(
-          achievePct,
-          lessThanOrEqualTo(lifetimePct),
-          reason: 'trackAchievement ≤ lifetime',
-        );
-      },
-      skip:
-          'Known migration gap (third confirmed instance): the lifetimeOnly '
-          'ledger entry is not returned by '
-          'FirestoreCompletionRepository.getCompletionsByTier. Evidence: '
-          'this test and '
-          'lib/data/repositories/firestore_completion_repository.dart:854.',
-    );
+      expect(liveOnlyPct, closeTo(0.1, 1e-9), reason: '1/10 live');
+      expect(achievePct, closeTo(0.2, 1e-9), reason: '2/10 live+bulk');
+      expect(lifetimePct, closeTo(0.3, 1e-9), reason: '3/10 all sources');
+      expect(
+        liveOnlyPct,
+        lessThanOrEqualTo(achievePct),
+        reason: 'liveOnly ≤ trackAchievement',
+      );
+      expect(
+        achievePct,
+        lessThanOrEqualTo(lifetimePct),
+        reason: 'trackAchievement ≤ lifetime',
+      );
+    });
 
     test('multi-stage gate: item requires all stages to be done', () async {
       await seedStages(firestore, stageCount: 2);
