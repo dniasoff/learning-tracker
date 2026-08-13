@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
+import 'package:learning_tracker/core/widgets/inline_async_error.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
@@ -109,8 +110,6 @@ class _GamificationScreenState extends ConsumerState<GamificationScreen> {
     final calendarAsync = ref.watch(streakCalendarProvider);
     final userMode = userModeAsync.asData?.value ?? ProfileMode.adult;
     final streakData = streakAsync.asData?.value;
-    final currentStreak = streakData?.currentStreak ?? 0;
-    final maxStreak = streakData?.maxStreak ?? 0;
 
     return Scaffold(
       backgroundColor: _kPageBg(context),
@@ -252,11 +251,22 @@ class _GamificationScreenState extends ConsumerState<GamificationScreen> {
                                 24,
                               ),
                               children: [
-                                StreakWidget(
-                                  currentStreak: currentStreak,
-                                  maxStreak: maxStreak,
-                                  userMode: userMode,
-                                ),
+                                if (streakAsync.hasError)
+                                  InlineAsyncError(
+                                    error: streakAsync.error!,
+                                    onRetry: () =>
+                                        ref.invalidate(dashboardStreakProvider),
+                                  )
+                                else if (streakAsync.isLoading)
+                                  const Center(
+                                    child: CircularProgressIndicator(),
+                                  )
+                                else
+                                  StreakWidget(
+                                    currentStreak: streakData!.currentStreak,
+                                    maxStreak: streakData.maxStreak,
+                                    userMode: userMode,
+                                  ),
                                 const SizedBox(height: 16),
                                 Text(
                                   l10n.activityCalendar,

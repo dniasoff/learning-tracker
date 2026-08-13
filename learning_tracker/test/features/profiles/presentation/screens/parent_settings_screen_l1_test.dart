@@ -2,6 +2,8 @@
 @Tags(['profiles', 'parent_settings'])
 library;
 
+import 'dart:async';
+
 import 'package:auto_route/auto_route.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -58,7 +60,8 @@ class _FixedActiveProfileDocId extends ActiveProfileDocId {
 }
 
 const _uid = 'uid-parent-settings';
-const _profileId = '01HPARENTSETTINGSPROFILE000';
+// AD-24: valid 26-character Crockford ULID (counted explicitly).
+const _profileId = '01J00000000000000000000003';
 
 LearnerProfileEntity _childProfile() => LearnerProfileEntity(
   profileId: _profileId,
@@ -76,6 +79,7 @@ Widget _buildApp({
   Locale locale = const Locale('en'),
   ThemeData? theme,
   int pendingCount = 0,
+  Stream<int>? pendingStream,
   int pointsBalance = 0,
 }) {
   final auth = _MockAuthRepository();
@@ -104,7 +108,7 @@ Widget _buildApp({
       ),
       activeTutorPermissionsProvider.overrideWithValue(tutorPerms),
       pendingRedemptionsCountProvider.overrideWith(
-        (ref) => Stream.value(pendingCount),
+        (ref) => pendingStream ?? Stream.value(pendingCount),
       ),
       activeProfilePointsBalanceProvider.overrideWith(
         (ref) async => pointsBalance,
@@ -212,6 +216,52 @@ void main() {
     await _settle(tester);
     await _reveal(tester, find.text('Pending Prizes'));
     expect(find.text('2 prize requests waiting'), findsOneWidget);
+    await _teardown(tester);
+  });
+
+  testWidgets(
+    'pending prizes error shows an inline error and retry instead of zero',
+    (tester) async {
+      await tester.pumpWidget(
+        _buildApp(
+          router: router,
+          firestore: firestore,
+          pendingStream: Stream<int>.error(
+            Exception('pending requests unavailable'),
+            StackTrace.empty,
+          ),
+        ),
+      );
+      await _settle(tester);
+      await _reveal(tester, find.text('Pending Prizes'));
+
+      expect(find.byIcon(Icons.error_outline), findsOneWidget);
+      expect(find.byIcon(Icons.refresh), findsOneWidget);
+      expect(find.text('No pending prize requests.'), findsNothing);
+      expect(find.text('0 prize requests waiting'), findsNothing);
+      await _teardown(tester);
+    },
+  );
+
+  testWidgets('pending prizes loading shows a spinner instead of zero', (
+    tester,
+  ) async {
+    final pendingController = StreamController<int>();
+    await tester.pumpWidget(
+      _buildApp(
+        router: router,
+        firestore: firestore,
+        pendingStream: pendingController.stream,
+      ),
+    );
+    await _settle(tester);
+    await _reveal(tester, find.text('Pending Prizes'));
+
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.text('No pending prize requests.'), findsNothing);
+    expect(find.text('0 prize requests waiting'), findsNothing);
+
+    await pendingController.close();
     await _teardown(tester);
   });
 

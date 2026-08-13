@@ -1,6 +1,8 @@
 @Tags(['needs_flutter', 'gamification', 'child_redemption'])
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
@@ -23,11 +25,20 @@ Future<void> _pump(
   WidgetTester tester, {
   required int balance,
   required List<RewardMilestone> rewards,
+  Exception? balanceError,
+  bool balanceLoading = false,
 }) async {
   await tester.pumpWidget(
     pumpApp(
+      retry: (_, __) => null,
       overrides: [
-        childRedemptionBalanceProvider.overrideWith((ref) async => balance),
+        childRedemptionBalanceProvider.overrideWith((ref) {
+          if (balanceLoading) return Completer<int>().future;
+          if (balanceError != null) {
+            return Future<int>.error(balanceError, StackTrace.empty);
+          }
+          return Future.value(balance);
+        }),
         childRedemptionRewardsProvider.overrideWith((ref) async => rewards),
       ],
       child: const ChildRedemptionScreen(),
@@ -60,5 +71,37 @@ void main() {
     expect(find.text('Not enough points'), findsOneWidget);
     final button = tester.widget<FilledButton>(find.byType(FilledButton).last);
     expect(button.onPressed, isNull);
+  });
+
+  testWidgets(
+    'balance error shows an error affordance instead of a fabricated zero',
+    (tester) async {
+      await _pump(
+        tester,
+        balance: 0,
+        rewards: [_reward('Movie', 50)],
+        balanceError: Exception('balance unavailable'),
+      );
+
+      expect(find.text('Something went wrong'), findsOneWidget);
+      expect(find.text('Retry'), findsOneWidget);
+      expect(find.text('0 Points'), findsNothing);
+      expect(find.text('Not enough points'), findsNothing);
+    },
+  );
+
+  testWidgets('balance loading stays loading instead of showing zero', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      balance: 0,
+      rewards: [_reward('Movie', 50)],
+      balanceLoading: true,
+    );
+
+    expect(find.byType(CircularProgressIndicator), findsWidgets);
+    expect(find.text('0 Points'), findsNothing);
+    expect(find.text('Not enough points'), findsNothing);
   });
 }

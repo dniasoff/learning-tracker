@@ -919,10 +919,10 @@ void main() {
   // ── 18. R6-4 regression: streak provider loading/error states ───────────────
   //
   // When dashboardStreakProvider is in AsyncLoading or AsyncError state,
-  // currentStreak/maxStreak must fall back to 0 and the screen must not throw.
+  // the streak hero owns the state without fabricating a streak value.
 
   testWidgets(
-    'R6-4 regression: streak provider in AsyncLoading — renders without NPE, streak defaults to 0',
+    'streak provider in AsyncLoading — hero shows loading, not a zero streak',
     (tester) async {
       // Use a StreamController so the stream never emits — provider stays in
       // loading.
@@ -938,8 +938,8 @@ void main() {
 
       // Screen must render without throwing.
       expect(find.byType(Scaffold), findsWidgets);
-      // Streak card renders with fallback 0-day streak.
-      expect(find.text('0 Day Streak'), findsOneWidget);
+      expect(find.byType(CircularProgressIndicator), findsWidgets);
+      expect(find.text('0 Day Streak'), findsNothing);
 
       await ctrl.close();
       await tester.pumpWidget(const SizedBox.shrink());
@@ -948,7 +948,7 @@ void main() {
   );
 
   testWidgets(
-    'R6-4 regression: streak provider in AsyncError — renders without NPE, streak defaults to 0',
+    'streak provider in AsyncError — hero shows an error affordance, not a zero streak',
     (tester) async {
       await tester.pumpWidget(
         _buildScreen(
@@ -967,8 +967,9 @@ void main() {
 
       // Screen must render without throwing.
       expect(find.byType(Scaffold), findsWidgets);
-      // Streak card renders with fallback 0-day streak.
-      expect(find.text('0 Day Streak'), findsOneWidget);
+      expect(find.byIcon(Icons.error_outline), findsOneWidget);
+      expect(find.text('Retry'), findsOneWidget);
+      expect(find.text('0 Day Streak'), findsNothing);
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(Duration.zero);

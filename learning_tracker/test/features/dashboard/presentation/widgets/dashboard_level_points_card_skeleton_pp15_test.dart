@@ -93,6 +93,55 @@ void main() {
   });
 
   group('PP-15: STATS card skeleton guard', () {
+    testWidgets(
+      'when a task or lifetime read errors: an error affordance replaces the value',
+      (tester) async {
+        var retries = 0;
+        await tester.pumpWidget(
+          ProviderScope(
+            child: MaterialApp(
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: StackRouterScope(
+                controller: router,
+                stateHash: 0,
+                child: Scaffold(
+                  body: SingleChildScrollView(
+                    child: DashboardLevelPointsCard(
+                      userMode: ProfileMode.adult,
+                      level: 3,
+                      totalPoints: 0,
+                      overdueCount: 0,
+                      todayCount: 0,
+                      reviewCount: 0,
+                      doneDisplay: '0%',
+                      lifetimeSectionsDetail: '0 of 0 sections',
+                      cumulativeLifetime: 0.0,
+                      tasksReady: false,
+                      lifetimeReady: false,
+                      tasksError: StateError('tasks unavailable'),
+                      lifetimeError: StateError('lifetime unavailable'),
+                      onRetryTasks: () => retries++,
+                      onRetryLifetime: () => retries++,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+        expect(find.text(l10n.errorWithMessage), findsWidgets);
+        expect(find.text('0%'), findsNothing);
+        expect(find.text('0 of 0 sections'), findsNothing);
+        expect(find.text(l10n.retry), findsWidgets);
+        await tester.tap(find.text(l10n.retry).first);
+        expect(retries, 1);
+      },
+    );
+
     testWidgets('when tasksReady=false: bubble values show "…" not real zeros', (
       tester,
     ) async {

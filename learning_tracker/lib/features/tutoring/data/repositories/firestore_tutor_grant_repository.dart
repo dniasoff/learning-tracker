@@ -218,11 +218,9 @@ class FirestoreTutorGrantRepository implements TutorGrantRepository {
       // failure), so let it propagate so the UI can surface an error state instead
       // of silently showing an empty list — which would mask a revoked grant.
       if (e.code == 'permission-denied') rethrow;
-      // For other Firebase errors (offline, unavailable, etc.) return empty so
-      // the screen degrades gracefully when the server is temporarily unreachable.
-      return const [];
+      rethrow;
     } catch (_) {
-      return const [];
+      rethrow;
     }
   }
 
@@ -236,9 +234,9 @@ class FirestoreTutorGrantRepository implements TutorGrantRepository {
       // ignore: avoid_dynamic_calls
       return _grantsFromCallableData(result.data);
     } on FirebaseFunctionsException {
-      return const [];
+      rethrow;
     } catch (_) {
-      return const [];
+      rethrow;
     }
   }
 

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
+import 'package:learning_tracker/core/widgets/inline_async_error.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/journey_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
@@ -32,10 +33,7 @@ class ProgressTierCounterRow extends ConsumerWidget {
   /// When true, renders the fourth ⭐ points counter (child mode).
   final bool showPoints;
 
-  /// Placeholder rendered in place of a number while any underlying provider
-  /// is still loading (or has errored). Avoids the "0-day streak · 0 siyumim
-  /// · 0 items in lifetime" flash during first paint that the IA redesign
-  /// was explicitly meant to eliminate.
+  /// Placeholder rendered in place of a number while its provider is loading.
   static const String _loadingPlaceholder = '…';
 
   @override
@@ -48,19 +46,6 @@ class ProgressTierCounterRow extends ConsumerWidget {
       lifetimeTotalsAcrossAllCurriculaProvider,
     );
     final pointsAsync = ref.watch(dashboardGlobalPointsProvider);
-
-    // Gate the numeric render on every dependency having resolved data. The
-    // counters are visually homogeneous so showing real numbers for some
-    // while the rest still read "0" produces the "1336 vs 0" confusion the
-    // redesign was meant to eliminate — see docs/planning/progress-ia-
-    // redesign.md §2. We use `hasValue` (not `!hasError`) so an errored
-    // provider keeps the placeholder rather than rendering a misleading 0.
-    final pointsReady = !showPoints || pointsAsync.hasValue;
-    final allReady =
-        streakAsync.hasValue &&
-        journeyAsync.hasValue &&
-        lifetimeTotalsAsync.hasValue &&
-        pointsReady;
 
     final currentStreak = streakAsync.asData?.value.currentStreak ?? 0;
     final journey = journeyAsync.asData?.value;
@@ -79,51 +64,74 @@ class ProgressTierCounterRow extends ConsumerWidget {
     final locale = Localizations.localeOf(context).toString();
     final numberFormat = NumberFormat.decimalPattern(locale);
 
-    final streakValue = allReady
+    final streakValue = streakAsync.hasValue
         ? numberFormat.format(currentStreak)
         : _loadingPlaceholder;
-    final siyumimValue = allReady
+    final siyumimValue = journeyAsync.hasValue
         ? numberFormat.format(totalSiyumim)
         : _loadingPlaceholder;
-    final lifetimeValue = allReady
+    final lifetimeValue = lifetimeTotalsAsync.hasValue
         ? numberFormat.format(lifetimeItems)
         : _loadingPlaceholder;
-    final pointsValue = allReady
+    final pointsValue = pointsAsync.hasValue
         ? numberFormat.format(points)
         : _loadingPlaceholder;
+
+    String semanticLabel(AsyncValue<dynamic> value, String dataLabel) {
+      if (value.hasError) return l10n.errorWithMessage;
+      if (!value.hasValue) return l10n.loading;
+      return dataLabel;
+    }
 
     final counters = <Widget>[
       _Counter(
         emoji: '🔥',
         value: streakValue,
         label: l10n.tierTileLabelStreak,
-        semanticLabel: l10n.tierCounterStreakDays(currentStreak),
+        semanticLabel: semanticLabel(
+          streakAsync,
+          l10n.tierCounterStreakDays(currentStreak),
+        ),
         accent: context.colors.progressTierStreakAccent,
+        error: streakAsync.error,
+        onRetry: () => ref.invalidate(dashboardStreakProvider),
       ),
       _Counter(
         emoji: '🏆',
         value: siyumimValue,
         label: l10n.tierTileLabelSiyumim(terms.siyumim),
-        semanticLabel: l10n.tierCounterSiyumimEarned(
-          totalSiyumim,
-          terms.siyumim,
+        semanticLabel: semanticLabel(
+          journeyAsync,
+          l10n.tierCounterSiyumimEarned(totalSiyumim, terms.siyumim),
         ),
         accent: context.colors.progressTierSiyumimAccent,
+        error: journeyAsync.error,
+        onRetry: () => ref.invalidate(journeyViewModelProvider),
       ),
       _Counter(
         emoji: '📚',
         value: lifetimeValue,
         label: l10n.tierTileLabelLifetime,
-        semanticLabel: l10n.tierCounterLifetimeItems(lifetimeItems),
+        semanticLabel: semanticLabel(
+          lifetimeTotalsAsync,
+          l10n.tierCounterLifetimeItems(lifetimeItems),
+        ),
         accent: context.colors.brandBlue,
+        error: lifetimeTotalsAsync.error,
+        onRetry: () => ref.invalidate(lifetimeTotalsAcrossAllCurriculaProvider),
       ),
       if (showPoints)
         _Counter(
           emoji: '⭐',
           value: pointsValue,
           label: l10n.tierTileLabelPoints,
-          semanticLabel: l10n.tierCounterPoints(points),
+          semanticLabel: semanticLabel(
+            pointsAsync,
+            l10n.tierCounterPoints(points),
+          ),
           accent: context.colors.progressTierPointsAccent,
+          error: pointsAsync.error,
+          onRetry: () => ref.invalidate(dashboardGlobalPointsProvider),
         ),
     ];
 
@@ -159,6 +167,8 @@ class _Counter extends StatelessWidget {
     required this.label,
     required this.semanticLabel,
     required this.accent,
+    this.error,
+    this.onRetry,
   });
 
   final String emoji;
@@ -166,6 +176,8 @@ class _Counter extends StatelessWidget {
   final String label;
   final String semanticLabel;
   final Color accent;
+  final Object? error;
+  final VoidCallback? onRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -194,18 +206,21 @@ class _Counter extends StatelessWidget {
             // separated number (e.g. "1,336") would otherwise wrap on the
             // narrower Progress-hub tile width. The Dashboard tile is wider
             // and the value renders at its natural size there.
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(
-                value,
-                maxLines: 1,
-                softWrap: false,
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: accent,
+            if (error != null)
+              InlineAsyncError(error: error!, onRetry: onRetry)
+            else
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  value,
+                  maxLines: 1,
+                  softWrap: false,
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: accent,
+                  ),
                 ),
               ),
-            ),
             const SizedBox(height: 2),
             Text(
               label,

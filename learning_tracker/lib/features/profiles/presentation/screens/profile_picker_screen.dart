@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
+import 'package:learning_tracker/core/widgets/inline_async_error.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
@@ -154,19 +155,33 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
 
   Widget _buildPendingInvites(BuildContext context) {
     final pendingAsync = ref.watch(pendingTutorInvitesProvider);
-    final pending = pendingAsync.asData?.value ?? const <TutorGrant>[];
-    if (pending.isEmpty) return const SizedBox.shrink();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        for (final grant in pending) ...[
-          _PendingInviteCard(
-            grant: grant,
-            onAccept: () => unawaited(_acceptPendingInvite(grant)),
-          ),
-          const SizedBox(height: 16),
-        ],
-      ],
+    return pendingAsync.when(
+      loading: () => const Padding(
+        padding: EdgeInsets.symmetric(vertical: 8),
+        child: Center(child: CircularProgressIndicator()),
+      ),
+      error: (e, s) => Padding(
+        padding: const EdgeInsets.only(bottom: 16),
+        child: InlineAsyncError(
+          error: e,
+          onRetry: () => ref.invalidate(pendingTutorInvitesProvider),
+        ),
+      ),
+      data: (pending) {
+        if (pending.isEmpty) return const SizedBox.shrink();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (final grant in pending) ...[
+              _PendingInviteCard(
+                grant: grant,
+                onAccept: () => unawaited(_acceptPendingInvite(grant)),
+              ),
+              const SizedBox(height: 16),
+            ],
+          ],
+        );
+      },
     );
   }
 

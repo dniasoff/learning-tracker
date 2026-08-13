@@ -107,7 +107,6 @@ DailyTask _task({required String ref, int stageOrder = 1}) => DailyTask(
   isOverdue: false,
   reason: 'test',
   stageName: 'Learn',
-  trackId: 1,
   trackLabel: 'Test Track',
   estimatedEffortMinutes: 5,
 );
@@ -179,6 +178,8 @@ Widget _buildApp({
   TextContent? content,
   List<DailyTask>? dailyTasks,
   bool isCompleted = false,
+  Exception? completionStatusError,
+  bool completionStatusLoading = false,
   bool isTutorSession = false,
   bool showNikud = true,
   bool disableRetry = false,
@@ -191,6 +192,11 @@ Widget _buildApp({
   final adj = adjacentRefs ?? (prev: null, next: null);
   final tc = content ?? _content();
   final chainTitle = resolvedChainTitle ?? _kRef;
+  final completionStatus = completionStatusLoading
+      ? const AsyncLoading<bool>()
+      : completionStatusError != null
+      ? AsyncError<bool>(completionStatusError, StackTrace.empty)
+      : AsyncData<bool>(isCompleted);
 
   final selection = isTutorSession
       ? const TutoredProfileSelection(
@@ -222,10 +228,14 @@ Widget _buildApp({
         }
         return Future.value(tasks);
       }),
-      trackStorageKeyForTrackIdProvider.overrideWith(
-        (ref, trackId) async => 'personal',
-      ),
-      isStageCompletedProvider.overrideWith((ref, params) async => isCompleted),
+      trackStorageKeyForTrackIdProvider(
+        CurriculumId.mishnayos,
+      ).overrideWithValue(const AsyncData<String>('personal')),
+      isStageCompletedProvider((
+        sefariaRef: _kRef,
+        stageId: 1,
+        trackType: 'personal',
+      )).overrideWithValue(completionStatus),
       completionCommittedProvider.overrideWith(
         () => _FakeCompletionCommitted(),
       ),
@@ -482,6 +492,45 @@ void main() {
       await _tearDown(tester);
     },
   );
+
+  testWidgets(
+    'E2: completion read error shows an error affordance instead of "not completed"',
+    (tester) async {
+      await tester.pumpWidget(
+        _buildApp(
+          router: router,
+          content: _content(),
+          completionStatusError: Exception('completion unavailable'),
+          disableRetry: true,
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.byIcon(Icons.error_outline), findsOneWidget);
+      expect(find.text('Retry'), findsOneWidget);
+      expect(find.text('Mark Complete'), findsNothing);
+
+      await _tearDown(tester);
+    },
+  );
+
+  testWidgets('E3: completion read loading shows a spinner', (tester) async {
+    await tester.pumpWidget(
+      _buildApp(
+        router: router,
+        content: _content(),
+        completionStatusLoading: true,
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.text('Mark Complete'), findsNothing);
+
+    await _tearDown(tester);
+  });
 
   // ── F. Next-daily-task navigation ───────────────────────────────────────────
 
@@ -774,15 +823,21 @@ void main() {
 
   // ── Extra: TutoredProfileSelection equality + tutorOwnProfileId ──────────────
 
-  test('TutoredProfileSelection tutorOwnProfileId defaults to 0', () {
-    const sel = TutoredProfileSelection(
-      profileId: 'p1',
-      ownerUid: 'u1',
-      grantId: 'g1',
-      permissions: TutorPermissions(),
-    );
-    expect(sel.tutorOwnProfileId, equals(0));
-  });
+  test(
+    'TutoredProfileSelection tutorOwnProfileId defaults to empty sentinel',
+    () {
+      const sel = TutoredProfileSelection(
+        profileId: 'p1',
+        ownerUid: 'u1',
+        grantId: 'g1',
+        permissions: TutorPermissions(),
+      );
+      // Profile identity is now String-based. A profile-less tutor uses the
+      // documented empty-string sentinel; this is identity state, not an
+      // achievement-shaped read fallback.
+      expect(sel.tutorOwnProfileId, isEmpty);
+    },
+  );
 
   test('TutorPermissions equality is value-based', () {
     const a = TutorPermissions();

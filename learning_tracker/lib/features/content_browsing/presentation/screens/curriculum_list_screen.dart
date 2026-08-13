@@ -10,6 +10,7 @@ import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
+import 'package:learning_tracker/core/widgets/inline_async_error.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -130,7 +131,9 @@ class _CurriculumCard extends ConsumerWidget {
     );
     final curriculumColor = context.colors.curriculumFor(curriculum);
     final percentage = completionAsync.asData?.value ?? 0.0;
-    final pctDisplay = formatFractionAsPercent(percentage);
+    final pctDisplay = completionAsync.hasValue
+        ? formatFractionAsPercent(percentage)
+        : '';
 
     return contentAsync.when(
       data: (items) {
@@ -145,6 +148,10 @@ class _CurriculumCard extends ConsumerWidget {
           percentage: percentage,
           leafCount: leafCount,
           containerCount: containerCount,
+          completionLoading: completionAsync.isLoading,
+          completionError: completionAsync.error,
+          onRetryCompletion: () =>
+              ref.invalidate(dashboardCompletionPercentageProvider(curriculum)),
         );
       },
       loading: () => _buildCard(
@@ -153,7 +160,10 @@ class _CurriculumCard extends ConsumerWidget {
         curriculumColor: curriculumColor,
         pctDisplay: pctDisplay,
         percentage: percentage,
-        isLoading: true,
+        completionLoading: completionAsync.isLoading,
+        completionError: completionAsync.error,
+        onRetryCompletion: () =>
+            ref.invalidate(dashboardCompletionPercentageProvider(curriculum)),
       ),
       error: (_, __) => _buildCard(
         context: context,
@@ -161,6 +171,10 @@ class _CurriculumCard extends ConsumerWidget {
         curriculumColor: curriculumColor,
         pctDisplay: pctDisplay,
         percentage: percentage,
+        completionLoading: completionAsync.isLoading,
+        completionError: completionAsync.error,
+        onRetryCompletion: () =>
+            ref.invalidate(dashboardCompletionPercentageProvider(curriculum)),
       ),
     );
   }
@@ -173,7 +187,9 @@ class _CurriculumCard extends ConsumerWidget {
     required double percentage,
     int leafCount = 0,
     int containerCount = 0,
-    bool isLoading = false,
+    bool completionLoading = false,
+    Object? completionError,
+    VoidCallback? onRetryCompletion,
   }) {
     final l10n = AppLocalizations.of(context)!;
     return GestureDetector(
@@ -228,7 +244,18 @@ class _CurriculumCard extends ConsumerWidget {
                     ],
                   ),
                 ),
-                if (percentage > 0)
+                if (completionError != null)
+                  InlineAsyncError(
+                    error: completionError,
+                    onRetry: onRetryCompletion,
+                  )
+                else if (completionLoading)
+                  const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                else if (percentage > 0)
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 10,
@@ -258,12 +285,6 @@ class _CurriculumCard extends ConsumerWidget {
                       ],
                     ),
                   )
-                else if (isLoading)
-                  const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
                 else
                   Container(
                     padding: const EdgeInsets.symmetric(
@@ -285,7 +306,7 @@ class _CurriculumCard extends ConsumerWidget {
                   ),
               ],
             ),
-            if (percentage > 0) ...[
+            if (completionError == null && percentage > 0) ...[
               const SizedBox(height: 16),
               ClipRRect(
                 borderRadius: BorderRadius.circular(4),

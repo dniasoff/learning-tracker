@@ -12,6 +12,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
+import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/features/gamification/data/repositories/firestore_points_balance_reader_adapter.dart';
 import 'package:learning_tracker/features/gamification/data/repositories/reward_redemption_repository_impl.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
@@ -105,41 +106,48 @@ class ChildRedemptionScreen extends ConsumerWidget {
           _BalanceCard(balanceAsync: balanceAsync, l10n: l10n, theme: theme),
           // Reward list
           Expanded(
-            child: rewardsAsync.when(
+            child: balanceAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) =>
-                  Center(child: Text(l10n.errorGeneric(e.toString()))),
-              data: (rewards) {
-                if (rewards.isEmpty) {
-                  return Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(32),
-                      child: Text(
-                        l10n.redeemScreenNoRewards,
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: context.colors.brandInkMuted,
+              error: (error, stackTrace) => AppErrorView(
+                error: error,
+                stackTrace: stackTrace,
+                onRetry: () => ref.invalidate(childRedemptionBalanceProvider),
+              ),
+              data: (balance) => rewardsAsync.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (e, _) =>
+                    Center(child: Text(l10n.errorGeneric(e.toString()))),
+                data: (rewards) {
+                  if (rewards.isEmpty) {
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(32),
+                        child: Text(
+                          l10n.redeemScreenNoRewards,
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: context.colors.brandInkMuted,
+                          ),
                         ),
                       ),
+                    );
+                  }
+                  return ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                    itemCount: rewards.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 12),
+                    itemBuilder: (ctx, i) => _RewardCard(
+                      reward: rewards[i],
+                      balance: balance,
+                      isTutoredSession: isTutoredSession,
+                      l10n: l10n,
+                      theme: theme,
+                      onRedeem: () =>
+                          _confirmRedeem(context, ref, rewards[i], l10n),
                     ),
                   );
-                }
-                final balance = balanceAsync.asData?.value ?? 0;
-                return ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                  itemCount: rewards.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 12),
-                  itemBuilder: (ctx, i) => _RewardCard(
-                    reward: rewards[i],
-                    balance: balance,
-                    isTutoredSession: isTutoredSession,
-                    l10n: l10n,
-                    theme: theme,
-                    onRedeem: () =>
-                        _confirmRedeem(context, ref, rewards[i], l10n),
-                  ),
-                );
-              },
+                },
+              ),
             ),
           ),
         ],
@@ -274,7 +282,8 @@ class _BalanceCard extends StatelessWidget {
                 color: Colors.white,
               ),
             ),
-            error: (_, __) => const SizedBox.shrink(),
+            error: (_, __) =>
+                const Icon(Icons.error_outline, color: Colors.white, size: 28),
             data: (balance) => Text(
               l10n.dashboardPointsValue(balance.toString()),
               style: theme.textTheme.headlineSmall?.copyWith(

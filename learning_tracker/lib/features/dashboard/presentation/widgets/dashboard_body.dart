@@ -21,6 +21,7 @@ import 'package:learning_tracker/features/dashboard/presentation/widgets/empty_d
 import 'package:learning_tracker/features/dashboard/presentation/widgets/main_focus_mission_card.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/skipped_onboarding_cta_banner.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/streak_recovery_banner.dart';
+import 'package:learning_tracker/core/widgets/inline_async_error.dart';
 import 'package:learning_tracker/features/gamification/presentation/widgets/gamification_route_push_guard.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
@@ -37,7 +38,10 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 class DashboardBody extends ConsumerWidget {
   final List<CurriculumTrackEntity> activeTracks;
   final ProfileMode userMode;
-  final int currentStreak;
+  final int? currentStreak;
+  final Object? streakError;
+  final bool streakLoading;
+  final VoidCallback? onRetryStreak;
   final String? profileName;
 
   const DashboardBody({
@@ -45,6 +49,9 @@ class DashboardBody extends ConsumerWidget {
     required this.activeTracks,
     required this.userMode,
     required this.currentStreak,
+    this.streakError,
+    this.streakLoading = false,
+    this.onRetryStreak,
     this.profileName,
   });
 
@@ -108,9 +115,8 @@ class DashboardBody extends ConsumerWidget {
     // Use .select() so this widget only rebuilds when the integer value
     // changes — not on every completion-triggered AsyncValue re-emission
     // when points remain the same (e.g. adult users where this is always 0).
-    final totalPoints = ref.watch(
-      dashboardGlobalPointsProvider.select((v) => v.asData?.value ?? 0),
-    );
+    final pointsAsync = ref.watch(dashboardGlobalPointsProvider);
+    final totalPoints = pointsAsync.asData?.value ?? 0;
     final lifetimeTotalsAsync = ref.watch(
       lifetimeTotalsAcrossAllCurriculaProvider,
     );
@@ -201,6 +207,8 @@ class DashboardBody extends ConsumerWidget {
     // in this gate.
     final tasksReady = dailyTasksAsync.hasValue;
     final lifetimeReady = lifetimeTotalsAsync.hasValue;
+    final tasksError = dailyTasksAsync.hasError;
+    final lifetimeError = lifetimeTotalsAsync.hasError;
     // "All caught up" is suppressed until tasks are ready: showing it before
     // sync completes would mislead the user into thinking there's nothing to do
     // when in fact the data hasn't arrived yet.
@@ -290,79 +298,94 @@ class DashboardBody extends ConsumerWidget {
             // instead of the raw number "1". `excludeSemantics: true` prevents
             // the inner Icon + Text from also being announced, which would
             // produce a redundant bare "3" after the meaningful label.
-            Semantics(
-              label: l10n.tierCounterStreakDays(currentStreak),
-              excludeSemantics: true,
-              child: GestureDetector(
-                // E1: register taps across the whole chip (incl. padding/gaps),
-                // not just where the icon/text render objects sit. Without
-                // `opaque`, GestureDetector defers to its children and taps on
-                // the transparent padding area are a dead no-op on-device.
-                behavior: HitTestBehavior.opaque,
-                // E1 (real root cause): GamificationRoute is gated by
-                // `childModeGuard`, which silently rejects (`resolver.next(false)`)
-                // navigation whenever the active profile is NOT in child mode. The
-                // streak chip is rendered for every mode, so in adult / tutor mode
-                // the tap fired but the guard swallowed it — "tapping does
-                // nothing". Gamification is child-only (adults have no points), so
-                // only route to it in child mode; for other modes the chip is a
-                // passive streak indicator with no dead navigation.
-                //
-                // GA-4: Also guard against double-push — if GamificationRoute is
-                // already active, a second tap would push a duplicate.
-                // Use isRouteActive (safe — no null dereference) instead of
-                // router.current.name which throws when the stack is empty or
-                // the router is a partial mock.
-                onTap: userMode == ProfileMode.child
-                    ? () {
-                        final alreadyActive = context.router.isRouteActive(
-                          const GamificationRoute().routeName,
-                        );
-                        if (GamificationRoutePushGuard.canPush(
-                          isGamificationRouteActive: alreadyActive,
-                        )) {
-                          context.router.push(const GamificationRoute());
+            if (streakError != null)
+              SizedBox(
+                width: 150,
+                child: InlineAsyncError(
+                  error: streakError!,
+                  onRetry: onRetryStreak,
+                ),
+              )
+            else if (streakLoading)
+              const SizedBox(
+                width: 32,
+                height: 32,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            else
+              Semantics(
+                label: l10n.tierCounterStreakDays(currentStreak ?? 0),
+                excludeSemantics: true,
+                child: GestureDetector(
+                  // E1: register taps across the whole chip (incl. padding/gaps),
+                  // not just where the icon/text render objects sit. Without
+                  // `opaque`, GestureDetector defers to its children and taps on
+                  // the transparent padding area are a dead no-op on-device.
+                  behavior: HitTestBehavior.opaque,
+                  // E1 (real root cause): GamificationRoute is gated by
+                  // `childModeGuard`, which silently rejects (`resolver.next(false)`)
+                  // navigation whenever the active profile is NOT in child mode. The
+                  // streak chip is rendered for every mode, so in adult / tutor mode
+                  // the tap fired but the guard swallowed it — "tapping does
+                  // nothing". Gamification is child-only (adults have no points), so
+                  // only route to it in child mode; for other modes the chip is a
+                  // passive streak indicator with no dead navigation.
+                  //
+                  // GA-4: Also guard against double-push — if GamificationRoute is
+                  // already active, a second tap would push a duplicate.
+                  // Use isRouteActive (safe — no null dereference) instead of
+                  // router.current.name which throws when the stack is empty or
+                  // the router is a partial mock.
+                  onTap: userMode == ProfileMode.child
+                      ? () {
+                          final alreadyActive = context.router.isRouteActive(
+                            const GamificationRoute().routeName,
+                          );
+                          if (GamificationRoutePushGuard.canPush(
+                            isGamificationRouteActive: alreadyActive,
+                          )) {
+                            context.router.push(const GamificationRoute());
+                          }
                         }
-                      }
-                    : null,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: context.colors.statusDanger,
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: context.colors.statusDanger.withValues(
-                          alpha: 0.28,
+                      : null,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: context.colors.statusDanger,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: context.colors.statusDanger.withValues(
+                            alpha: 0.28,
+                          ),
+                          blurRadius: 12,
+                          offset: const Offset(0, 6),
                         ),
-                        blurRadius: 12,
-                        offset: const Offset(0, 6),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.local_fire_department_rounded,
-                        color: Colors.white,
-                        size: 18,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '$currentStreak',
-                        style: theme.textTheme.titleMedium?.copyWith(
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.local_fire_department_rounded,
                           color: Colors.white,
-                          fontWeight: FontWeight.w800,
+                          size: 18,
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 4),
+                        Text(
+                          '${currentStreak ?? 0}',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ), // Semantics
+              ), // Semantics
           ],
         ),
         const SizedBox(height: 18),
@@ -372,15 +395,23 @@ class DashboardBody extends ConsumerWidget {
         ProgressTierCounterRow(showPoints: userMode == ProfileMode.child),
         const SizedBox(height: 22),
         if (userMode == ProfileMode.child) ...[
-          ChildPointsRewardsTabCard(
-            totalPoints: totalPoints,
-            l10n: l10n,
-            theme: theme,
-            numberFormat: numberFormat,
-            // WS7.child-ui: opens the child's prize redemption screen.
-            onOpenRewards: () =>
-                context.router.push(const ChildRedemptionRoute()),
-          ),
+          if (pointsAsync.hasError)
+            InlineAsyncError(
+              error: pointsAsync.error!,
+              onRetry: () => ref.invalidate(dashboardGlobalPointsProvider),
+            )
+          else if (pointsAsync.isLoading)
+            const Center(child: CircularProgressIndicator())
+          else
+            ChildPointsRewardsTabCard(
+              totalPoints: totalPoints,
+              l10n: l10n,
+              theme: theme,
+              numberFormat: numberFormat,
+              // WS7.child-ui: opens the child's prize redemption screen.
+              onOpenRewards: () =>
+                  context.router.push(const ChildRedemptionRoute()),
+            ),
           const SizedBox(height: 18),
         ],
         if (showAllCaughtUp)
@@ -402,6 +433,11 @@ class DashboardBody extends ConsumerWidget {
             chazaraLabel: chazaraBubbleLabel,
             tasksReady: tasksReady,
             lifetimeReady: lifetimeReady,
+            tasksError: dailyTasksAsync.error,
+            lifetimeError: lifetimeTotalsAsync.error,
+            onRetryTasks: () => ref.invalidate(allDailyTasksProvider),
+            onRetryLifetime: () =>
+                ref.invalidate(lifetimeTotalsAcrossAllCurriculaProvider),
           ),
         const SizedBox(height: 30),
         // R1v2-(6): the heading previously shared a horizontal Row with the
@@ -533,7 +569,8 @@ class DashboardBody extends ConsumerWidget {
         ),
         if (userMode == ProfileMode.child) ...[
           const SizedBox(height: 14),
-          StreakRecoveryBanner(currentStreak: currentStreak),
+          if (currentStreak != null)
+            StreakRecoveryBanner(currentStreak: currentStreak!),
         ],
       ],
     );

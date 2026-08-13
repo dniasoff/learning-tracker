@@ -100,11 +100,38 @@ class ParentSettingsScreen extends ConsumerWidget {
 
     // #33: reactive pending-redemption count → live subtitle on the
     // "Pending Prizes" row (0 → empty copy, N → "N prize requests waiting").
-    final pendingCount =
-        ref.watch(pendingRedemptionsCountProvider).asData?.value ?? 0;
-    final pendingSubtitle = pendingCount > 0
-        ? l10n.pendingRedemptionsCountSubtitle(pendingCount)
-        : l10n.pendingRedemptionsEmpty;
+    final pendingAsync = ref.watch(pendingRedemptionsCountProvider);
+    final pendingSubtitle = pendingAsync.when(
+      loading: () => const SizedBox(
+        height: 20,
+        width: 20,
+        child: CircularProgressIndicator(strokeWidth: 2),
+      ),
+      error: (error, _) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.error_outline,
+            color: context.colors.brandWarning,
+            size: 18,
+          ),
+          const SizedBox(width: 6),
+          Flexible(child: Text(l10n.errorGeneric(error.toString()))),
+          IconButton(
+            onPressed: () => ref.invalidate(pendingRedemptionsCountProvider),
+            icon: const Icon(Icons.refresh, size: 18),
+            tooltip: l10n.actionRetry,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+          ),
+        ],
+      ),
+      data: (pendingCount) => Text(
+        pendingCount > 0
+            ? l10n.pendingRedemptionsCountSubtitle(pendingCount)
+            : l10n.pendingRedemptionsEmpty,
+      ),
+    );
 
     // Ownership gate helpers — whether each category tile should be shown.
     // Owners always see every tile; tutors see only what they're permitted.
@@ -274,7 +301,7 @@ class ParentSettingsScreen extends ConsumerWidget {
                       icon: Icons.redeem_rounded,
                       iconColor: const Color(0xFF388E3C),
                       title: l10n.pendingRedemptionsTitle,
-                      subtitle: pendingSubtitle,
+                      subtitleWidget: pendingSubtitle,
                       trailing: const Icon(
                         Icons.chevron_right_rounded,
                         color: _chevronMuted,
@@ -563,6 +590,7 @@ class _ManageRow extends StatelessWidget {
     required this.iconColor,
     required this.title,
     this.subtitle,
+    this.subtitleWidget,
     required this.trailing,
     this.titleColor,
     this.subtitleColor,
@@ -575,6 +603,7 @@ class _ManageRow extends StatelessWidget {
   final Color iconColor;
   final String title;
   final String? subtitle;
+  final Widget? subtitleWidget;
   final Widget trailing;
   final Color? titleColor;
   final Color? subtitleColor;
@@ -619,16 +648,17 @@ class _ManageRow extends StatelessWidget {
                         fontSize: 17,
                       ),
                     ),
-                    if (subtitle != null) ...[
+                    if (subtitle != null || subtitleWidget != null) ...[
                       const SizedBox(height: 4),
-                      Text(
-                        subtitle!,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: subtitleColor ?? context.colors.inkMidGrey,
-                          fontSize: 14,
-                          height: 1.25,
-                        ),
-                      ),
+                      subtitleWidget ??
+                          Text(
+                            subtitle!,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: subtitleColor ?? context.colors.inkMidGrey,
+                              fontSize: 14,
+                              height: 1.25,
+                            ),
+                          ),
                     ],
                   ],
                 ),

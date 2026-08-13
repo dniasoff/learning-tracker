@@ -4,6 +4,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
+import 'package:learning_tracker/core/widgets/inline_async_error.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart';
@@ -38,7 +39,9 @@ class LearningTrackCard extends ConsumerWidget {
       dashboardTrackCompletionPercentageProvider(track.curriculumId),
     );
     final cycleFraction = completionAsync.asData?.value ?? 0.0;
-    final cyclePercentDisplay = formatFractionAsPercent(cycleFraction);
+    final cyclePercentDisplay = completionAsync.hasValue
+        ? formatFractionAsPercent(cycleFraction)
+        : null;
 
     // Per-track chazara gate: only render the chazara-aware label when this
     // track actually has chazara stages. Tracks without chazara show a neutral
@@ -71,8 +74,13 @@ class LearningTrackCard extends ConsumerWidget {
     const icon = Icons.menu_book_rounded;
 
     final cardTitle = trackDisplayTitle(ref, track);
+    final progressSemantics = completionAsync.hasError
+        ? l10n.errorWithMessage
+        : completionAsync.isLoading
+        ? l10n.loading
+        : cyclePercentDisplay!;
     final semanticsLabel = showProgress && !hasProgramEnrollment
-        ? '$cardTitle, $cyclePercentDisplay'
+        ? '$cardTitle, $progressSemantics'
         : cardTitle;
 
     return Semantics(
@@ -149,29 +157,54 @@ class LearningTrackCard extends ConsumerWidget {
                                 ),
                               ),
                               const Spacer(),
-                              Text(
-                                cyclePercentDisplay,
-                                style: theme.textTheme.labelMedium?.copyWith(
-                                  color: context.colors.brandInk,
-                                  fontWeight: FontWeight.w700,
+                              if (completionAsync.hasError)
+                                InlineAsyncError(
+                                  error: completionAsync.error!,
+                                  onRetry: () => ref.invalidate(
+                                    dashboardTrackCompletionPercentageProvider(
+                                      track.curriculumId,
+                                    ),
+                                  ),
+                                )
+                              else if (completionAsync.isLoading)
+                                SizedBox(
+                                  width: 28,
+                                  height: 12,
+                                  child: DecoratedBox(
+                                    decoration: BoxDecoration(
+                                      color: context.colors.brandCreamSoft,
+                                      borderRadius: BorderRadius.circular(999),
+                                    ),
+                                  ),
+                                )
+                              else
+                                Text(
+                                  cyclePercentDisplay!,
+                                  style: theme.textTheme.labelMedium?.copyWith(
+                                    color: context.colors.brandInk,
+                                    fontWeight: FontWeight.w700,
+                                  ),
                                 ),
-                              ),
                             ],
                           ),
                           const SizedBox(height: 6),
-                          ExcludeSemantics(
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(999),
-                              child: LinearProgressIndicator(
-                                value: cycleFraction,
-                                minHeight: 10,
-                                backgroundColor: context.colors.brandCreamSoft,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  curriculumBarColor,
+                          if (completionAsync.hasValue)
+                            ExcludeSemantics(
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(999),
+                                child: LinearProgressIndicator(
+                                  value: cycleFraction,
+                                  minHeight: 10,
+                                  backgroundColor:
+                                      context.colors.brandCreamSoft,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    curriculumBarColor,
+                                  ),
                                 ),
                               ),
-                            ),
-                          ),
+                            )
+                          else
+                            const SizedBox(height: 10),
                           const SizedBox(height: 8),
                         ],
                       ],

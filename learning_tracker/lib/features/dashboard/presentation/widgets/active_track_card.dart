@@ -8,6 +8,7 @@ import 'package:learning_tracker/core/labels/curriculum_label_providers.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
+import 'package:learning_tracker/core/widgets/inline_async_error.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/active_track_focus_pill.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/dashboard_helpers.dart';
@@ -327,20 +328,28 @@ class ActiveTrackCard extends ConsumerWidget {
                     spacing: 12,
                     runSpacing: 2,
                     children: [
-                      Text(
-                        '${l10n.trackProgress}: $currentCycleDisplay',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: context.colors.brandInkMuted,
-                          fontWeight: FontWeight.w600,
+                      if (dualMetricsAsync.hasError)
+                        InlineAsyncError(
+                          error: dualMetricsAsync.error!,
+                          onRetry: () =>
+                              ref.invalidate(trackDualProgressMetricsProvider),
+                        )
+                      else ...[
+                        Text(
+                          '${l10n.trackProgress}: $currentCycleDisplay',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: context.colors.brandInkMuted,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                      ),
-                      Text(
-                        '${l10n.lifetimeLabel}: $lifetimeDisplay',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: context.colors.brandInkMuted,
-                          fontWeight: FontWeight.w600,
+                        Text(
+                          '${l10n.lifetimeLabel}: $lifetimeDisplay',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: context.colors.brandInkMuted,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                      ),
+                      ],
                     ],
                   ),
                   const SizedBox(height: 10),

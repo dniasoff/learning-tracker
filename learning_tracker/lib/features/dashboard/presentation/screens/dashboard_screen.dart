@@ -93,7 +93,6 @@ class DashboardScreen extends ConsumerWidget {
             data: (activeTracks) {
               final userMode = userModeAsync.asData?.value ?? ProfileMode.adult;
               final streakData = streakAsync.asData?.value;
-              final currentStreak = streakData?.currentStreak ?? 0;
 
               return RefreshIndicator(
                 onRefresh: () async =>
@@ -101,7 +100,10 @@ class DashboardScreen extends ConsumerWidget {
                 child: DashboardBody(
                   activeTracks: activeTracks,
                   userMode: userMode,
-                  currentStreak: currentStreak,
+                  currentStreak: streakData?.currentStreak,
+                  streakError: streakAsync.error,
+                  streakLoading: streakAsync.isLoading,
+                  onRetryStreak: () => ref.invalidate(dashboardStreakProvider),
                   profileName: profileName,
                 ),
               );

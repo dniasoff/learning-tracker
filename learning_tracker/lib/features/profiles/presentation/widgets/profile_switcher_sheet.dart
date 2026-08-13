@@ -7,6 +7,7 @@ import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/app/router/router_provider.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
+import 'package:learning_tracker/core/widgets/inline_async_error.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
@@ -51,7 +52,6 @@ class ProfileSwitcherSheet extends ConsumerWidget {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
     final profilesAsync = ref.watch(profileListStreamProvider);
-    final profiles = profilesAsync.asData?.value ?? <LearnerProfileEntity>[];
     // T-37: profileListStreamProvider is scoped to the signed-in account (the
     // device owner's own profiles), so "active" throughout this widget must
     // mean "the device owner's own selected profile" — selectedProfileIdProvider,
@@ -179,40 +179,57 @@ class ProfileSwitcherSheet extends ConsumerWidget {
                 // The profiles list lays out at its natural height; the whole
                 // sheet scrolls as one unit inside the bounded SingleChildScroll-
                 // View above, so no inner same-axis scroll view is needed here.
-                for (final profile in profiles)
-                  _SwitcherProfileTile(
-                    profile: profile,
-                    isActive: profile.profileId == activeProfileId,
-                    // AN-2: switching to an adult profile from a child context
-                    // is an escalating action — require Parent PIN.
-                    onTap: () => _guardEscalating(
-                      context,
-                      ref,
-                      pinGuardRequired: pinGuardRequired,
-                      activeProfileId: activeProfileId,
-                      subtitle: l10n.pinDialogSubtitleSwitchProfile,
-                      action: () =>
-                          _switchProfile(context, ref, profile.profileId),
-                    ),
-                    onEdit: () => _guardEscalating(
-                      context,
-                      ref,
-                      pinGuardRequired: pinGuardRequired,
-                      activeProfileId: activeProfileId,
-                      subtitle: l10n.pinDialogSubtitleEditProfile,
-                      action: () =>
-                          unawaited(editProfileFlow(context, ref, profile)),
-                    ),
-                    onDelete: () => _guardEscalating(
-                      context,
-                      ref,
-                      pinGuardRequired: pinGuardRequired,
-                      activeProfileId: activeProfileId,
-                      subtitle: l10n.pinDialogSubtitleDeleteProfile,
-                      action: () =>
-                          unawaited(deleteProfileFlow(context, ref, profile)),
-                    ),
+                profilesAsync.when(
+                  loading: () => const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                    child: Center(child: CircularProgressIndicator()),
                   ),
+                  error: (e, s) => InlineAsyncError(
+                    error: e,
+                    onRetry: () => ref.invalidate(profileListStreamProvider),
+                  ),
+                  data: (profiles) => Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      for (final profile in profiles)
+                        _SwitcherProfileTile(
+                          profile: profile,
+                          isActive: profile.profileId == activeProfileId,
+                          // AN-2: switching to an adult profile from a child context
+                          // is an escalating action — require Parent PIN.
+                          onTap: () => _guardEscalating(
+                            context,
+                            ref,
+                            pinGuardRequired: pinGuardRequired,
+                            activeProfileId: activeProfileId,
+                            subtitle: l10n.pinDialogSubtitleSwitchProfile,
+                            action: () =>
+                                _switchProfile(context, ref, profile.profileId),
+                          ),
+                          onEdit: () => _guardEscalating(
+                            context,
+                            ref,
+                            pinGuardRequired: pinGuardRequired,
+                            activeProfileId: activeProfileId,
+                            subtitle: l10n.pinDialogSubtitleEditProfile,
+                            action: () => unawaited(
+                              editProfileFlow(context, ref, profile),
+                            ),
+                          ),
+                          onDelete: () => _guardEscalating(
+                            context,
+                            ref,
+                            pinGuardRequired: pinGuardRequired,
+                            activeProfileId: activeProfileId,
+                            subtitle: l10n.pinDialogSubtitleDeleteProfile,
+                            action: () => unawaited(
+                              deleteProfileFlow(context, ref, profile),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
                 // Talmid profiles — self-gating: renders only when the current
                 // user has ≥1 active or pending tutor grant.
                 const TutoredChildrenSection(),

@@ -5,6 +5,7 @@ import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/animated_progress_bar.dart';
+import 'package:learning_tracker/core/widgets/inline_async_error.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/dashboard_stat_bubble.dart';
 import 'package:learning_tracker/features/scheduler/scheduler.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -24,6 +25,10 @@ class DashboardLevelPointsCard extends ConsumerWidget {
     this.chazaraLabel,
     this.tasksReady = true,
     this.lifetimeReady = true,
+    this.tasksError,
+    this.lifetimeError,
+    this.onRetryTasks,
+    this.onRetryLifetime,
   });
 
   final ProfileMode userMode;
@@ -59,6 +64,10 @@ class DashboardLevelPointsCard extends ConsumerWidget {
   /// of "0%" / "0 of 0 sections" — which are indistinguishable from "no data"
   /// and mislead the user during the 1-2 s load window.
   final bool lifetimeReady;
+  final Object? tasksError;
+  final Object? lifetimeError;
+  final VoidCallback? onRetryTasks;
+  final VoidCallback? onRetryLifetime;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -151,6 +160,14 @@ class DashboardLevelPointsCard extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 10),
+          if (tasksError != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: InlineAsyncError(
+                error: tasksError!,
+                onRetry: onRetryTasks,
+              ),
+            ),
           Row(
             children: [
               for (var i = 0; i < bubbles.length; i++) ...[
@@ -184,45 +201,61 @@ class DashboardLevelPointsCard extends ConsumerWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              Text(
-                doneLabel,
-                style: theme.textTheme.titleSmall?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w800,
+              if (lifetimeError != null)
+                InlineAsyncError(
+                  error: lifetimeError!,
+                  onRetry: onRetryLifetime,
+                )
+              else
+                Text(
+                  doneLabel,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
-              ),
             ],
           ),
           const SizedBox(height: 4),
-          Text(
-            sectionsLabel,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: Colors.white.withValues(alpha: 0.75),
-              fontWeight: FontWeight.w500,
-              height: 1.25,
-            ),
-          ),
-          const SizedBox(height: 7),
-          Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: () => context.router.navigate(const ProgressRoute()),
-              borderRadius: BorderRadius.circular(999),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(999),
-                child: AnimatedProgressBar(
-                  value: cumulativeLifetime,
-                  color: context.colors.goldOnColouredSurface,
-                  backgroundColor: Colors.white.withValues(alpha: 0.22),
-                  height: 12,
-                  duration: const Duration(milliseconds: 700),
-                  curve: Curves.easeOutCubic,
-                ),
+          if (lifetimeError == null)
+            Text(
+              sectionsLabel,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: Colors.white.withValues(alpha: 0.75),
+                fontWeight: FontWeight.w500,
+                height: 1.25,
               ),
             ),
-          ),
+          const SizedBox(height: 7),
+          if (lifetimeError == null)
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () => context.router.navigate(const ProgressRoute()),
+                borderRadius: BorderRadius.circular(999),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(999),
+                  child: AnimatedProgressBar(
+                    value: cumulativeLifetime,
+                    color: context.colors.goldOnColouredSurface,
+                    backgroundColor: Colors.white.withValues(alpha: 0.22),
+                    height: 12,
+                    duration: const Duration(milliseconds: 700),
+                    curve: Curves.easeOutCubic,
+                  ),
+                ),
+              ),
+            )
+          else
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: InlineAsyncError(
+                error: lifetimeError!,
+                onRetry: onRetryLifetime,
+              ),
+            ),
         ],
       ),
     );

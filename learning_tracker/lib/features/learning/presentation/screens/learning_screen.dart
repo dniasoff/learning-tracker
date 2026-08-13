@@ -59,9 +59,6 @@ class LearningScreen extends ConsumerWidget {
     );
     final isTutoredSession = activeTutoredSelection != null;
     final tutorPerms = ref.watch(activeTutorPermissionsProvider);
-    final currentStreak = streakAsync.asData?.value.currentStreak ?? 0;
-    final maxStreak = streakAsync.asData?.value.maxStreak ?? 0;
-
     return Scaffold(
       backgroundColor: context.colors.surfaceF4,
       body: Theme(
@@ -111,8 +108,8 @@ class LearningScreen extends ConsumerWidget {
                   children: [
                     const SizedBox(height: 18),
                     _StreakHeroCard(
-                      currentStreak: currentStreak,
-                      maxStreak: maxStreak,
+                      streakAsync: streakAsync,
+                      onRetry: () => ref.invalidate(dashboardStreakProvider),
                     ),
                     const SizedBox(height: 36),
                     _DailyTasksSection(
@@ -134,17 +131,19 @@ class LearningScreen extends ConsumerWidget {
 }
 
 class _StreakHeroCard extends StatelessWidget {
-  const _StreakHeroCard({required this.currentStreak, required this.maxStreak});
+  const _StreakHeroCard({required this.streakAsync, required this.onRetry});
 
-  final int currentStreak;
-  final int maxStreak;
+  final AsyncValue<({int currentStreak, int maxStreak})> streakAsync;
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     return GestureDetector(
-      onTap: () => context.router.push(const RecentActivityRoute()),
+      onTap: streakAsync.hasValue
+          ? () => context.router.push(const RecentActivityRoute())
+          : null,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
@@ -184,39 +183,84 @@ class _StreakHeroCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 6),
-                      Text(
-                        l10n.learnStreakDayStreak(currentStreak),
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 38,
-                          height: 1.02,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.16),
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.workspace_premium_rounded,
-                              color: Color(0xFFF7E7AF),
-                              size: 14,
+                      streakAsync.when(
+                        loading: () => const SizedBox(
+                          height: 70,
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
                             ),
-                            const SizedBox(width: 4),
-                            Text(
-                              l10n.learnStreakPersonalBest(maxStreak),
-                              style: theme.textTheme.labelSmall?.copyWith(
+                          ),
+                        ),
+                        error: (error, _) => SizedBox(
+                          height: 110,
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.error_outline,
                                 color: Colors.white,
-                                fontWeight: FontWeight.w700,
+                                size: 28,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  l10n.errorGeneric(error.toString()),
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                              TextButton(
+                                onPressed: onRetry,
+                                child: Text(
+                                  l10n.actionRetry,
+                                  style: const TextStyle(color: Colors.white),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        data: (streak) => Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              l10n.learnStreakDayStreak(streak.currentStreak),
+                              style: theme.textTheme.titleLarge?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 38,
+                                height: 1.02,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.16),
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.workspace_premium_rounded,
+                                    color: Color(0xFFF7E7AF),
+                                    size: 14,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    l10n.learnStreakPersonalBest(
+                                      streak.maxStreak,
+                                    ),
+                                    style: theme.textTheme.labelSmall?.copyWith(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],

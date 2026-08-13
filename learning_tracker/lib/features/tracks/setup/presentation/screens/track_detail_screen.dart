@@ -11,6 +11,7 @@ import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/core/utils/hebrew_calendar_utils.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
+import 'package:learning_tracker/core/widgets/inline_async_error.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_tier_filter.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
@@ -204,8 +205,10 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     final completionAsync = ref.watch(
       dashboardTrackCompletionPercentageProvider(curriculum),
     );
-    final cycleFraction = completionAsync.asData?.value ?? 0.0;
-    final cyclePercentDisplay = formatFractionAsPercent(cycleFraction);
+    final cycleFraction = completionAsync.asData?.value;
+    final cyclePercentDisplay = completionAsync.hasValue
+        ? formatFractionAsPercent(cycleFraction!)
+        : null;
 
     // W5-B (Task #16): dual-progress labels — Track progress (current cycle)
     // and Lifetime (all-time) — sourced from [trackDualProgressMetricsProvider]
@@ -264,7 +267,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
 
     final totalScopeAsync = ref.watch(scopedItemCountProvider(curriculum));
     final totalScope = totalScopeAsync.asData?.value;
-    final itemsRemaining = totalScope != null
+    final itemsRemaining = totalScope != null && cycleFraction != null
         ? (totalScope * (1 - cycleFraction)).ceil().clamp(0, totalScope)
         : null;
 
@@ -277,7 +280,12 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
         ? ref.watch(scopedCoarseUnitCountProvider(curriculum)).asData?.value
         : null;
     final remainingInPaceUnit = (paceIsCoarse && coarseTotal != null)
-        ? (coarseTotal * (1 - cycleFraction)).ceil().clamp(0, coarseTotal)
+        ? (cycleFraction == null
+              ? null
+              : (coarseTotal * (1 - cycleFraction)).ceil().clamp(
+                  0,
+                  coarseTotal,
+                ))
         : itemsRemaining;
 
     final useHebrewCalendar = ref.watch(useHebrewDateProvider);
@@ -337,6 +345,10 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
             trackProgressDisplay: trackProgressDisplay,
             lifetimeLabel: l10n.lifetimeLabel,
             lifetimeDisplay: lifetimeDisplay,
+            completionError: completionAsync.error,
+            completionLoading: completionAsync.isLoading,
+            dualMetricsError: dualMetricsAsync.error,
+            dualMetricsLoading: dualMetricsAsync.isLoading,
             trackHasChazara: trackHasChazara,
             locale: locale,
             goal: goal,
@@ -370,14 +382,18 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     IconData icon,
     String activatedDate,
     bool hasProgramEnrollment,
-    double cycleFraction,
-    String cyclePercentDisplay,
+    double? cycleFraction,
+    String? cyclePercentDisplay,
     Color curriculumBarColor,
     String chazaraTerm, {
     required String trackProgressLabel,
     required String trackProgressDisplay,
     required String lifetimeLabel,
     required String lifetimeDisplay,
+    Object? completionError,
+    required bool completionLoading,
+    Object? dualMetricsError,
+    required bool dualMetricsLoading,
     required bool trackHasChazara,
     required String locale,
     required bool useHebrewCalendar,
@@ -434,26 +450,34 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
           // cycle since activation) and Lifetime (all-time tier). These two
           // numbers must always be visible so the user can distinguish
           // "this cycle" engagement from total knowledge accumulated.
-          Wrap(
-            spacing: 16,
-            runSpacing: 4,
-            children: [
-              Text(
-                '$trackProgressLabel: $trackProgressDisplay',
-                style: theme.textTheme.labelMedium?.copyWith(
-                  color: context.colors.brandInk,
-                  fontWeight: FontWeight.w700,
+          if (dualMetricsError != null)
+            InlineAsyncError(
+              error: dualMetricsError,
+              onRetry: () => ref.invalidate(trackDualProgressMetricsProvider),
+            )
+          else if (dualMetricsLoading)
+            const Center(child: CircularProgressIndicator(strokeWidth: 2))
+          else
+            Wrap(
+              spacing: 16,
+              runSpacing: 4,
+              children: [
+                Text(
+                  '$trackProgressLabel: $trackProgressDisplay',
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: context.colors.brandInk,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
-              ),
-              Text(
-                '$lifetimeLabel: $lifetimeDisplay',
-                style: theme.textTheme.labelMedium?.copyWith(
-                  color: context.colors.brandInk,
-                  fontWeight: FontWeight.w700,
+                Text(
+                  '$lifetimeLabel: $lifetimeDisplay',
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: context.colors.brandInk,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
           const SizedBox(height: 12),
           if (!hasProgramEnrollment) ...[
             Row(
@@ -481,27 +505,48 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
                   ),
                 ),
                 const Spacer(),
-                Text(
-                  cyclePercentDisplay,
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    color: context.colors.brandInk,
-                    fontWeight: FontWeight.w700,
+                if (completionError != null)
+                  InlineAsyncError(
+                    error: completionError,
+                    onRetry: () => ref.invalidate(
+                      dashboardTrackCompletionPercentageProvider(
+                        track.curriculumId,
+                      ),
+                    ),
+                  )
+                else if (completionLoading)
+                  const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                else
+                  Text(
+                    cyclePercentDisplay!,
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: context.colors.brandInk,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
-                ),
               ],
             ),
             const SizedBox(height: 6),
-            ExcludeSemantics(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(999),
-                child: LinearProgressIndicator(
-                  value: cycleFraction,
-                  minHeight: 10,
-                  backgroundColor: context.colors.brandCreamSoft,
-                  valueColor: AlwaysStoppedAnimation<Color>(curriculumBarColor),
+            if (cycleFraction != null)
+              ExcludeSemantics(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(999),
+                  child: LinearProgressIndicator(
+                    value: cycleFraction,
+                    minHeight: 10,
+                    backgroundColor: context.colors.brandCreamSoft,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      curriculumBarColor,
+                    ),
+                  ),
                 ),
-              ),
-            ),
+              )
+            else
+              const SizedBox(height: 10),
             const SizedBox(height: 10),
           ],
           const SizedBox(height: 16),

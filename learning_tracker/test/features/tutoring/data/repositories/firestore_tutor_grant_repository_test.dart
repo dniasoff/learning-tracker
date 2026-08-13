@@ -7,7 +7,7 @@
 //   - inviteTutor, acceptInvite, declineInvite, rescindInvite, revokeGrant,
 //     resignGrant: success ↔ TutorGrantSuccess, FirebaseFunctionsException ↔
 //     TutorGrantFailure with code, generic Exception ↔ TutorGrantFailure.
-//   - All list methods return [] on FirebaseFunctionsException / generic error.
+//   - Successful empty lists remain empty; callable failures propagate.
 //   - Mapping Firestore docs ↔ domain TutorGrant for every GrantState.
 //   - incoming / outgoing / pending_for_me callable mode arg.
 //   - Empty/missing grants list.
@@ -501,7 +501,7 @@ void main() {
     );
 
     test(
-      'returns [] on other FirebaseFunctionsException (offline/unavailable)',
+      'rethrows other FirebaseFunctionsException (offline/unavailable)',
       () async {
         final repo = _buildRepo(
           (_, __) async => throw FirebaseFunctionsException(
@@ -510,16 +510,20 @@ void main() {
           ),
         );
 
-        final result = await repo.listOutgoingGrants(childProfileId: 'x');
-        expect(result, isEmpty);
+        await expectLater(
+          () => repo.listOutgoingGrants(childProfileId: 'x'),
+          throwsA(isA<FirebaseFunctionsException>()),
+        );
       },
     );
 
-    test('returns [] on generic error', () async {
+    test('rethrows generic error', () async {
       final repo = _buildRepo((_, __) async => throw StateError('timeout'));
 
-      final result = await repo.listOutgoingGrants(childProfileId: 'y');
-      expect(result, isEmpty);
+      await expectLater(
+        () => repo.listOutgoingGrants(childProfileId: 'y'),
+        throwsA(isA<StateError>()),
+      );
     });
 
     test('returns empty list when callable returns empty grants', () async {
@@ -565,7 +569,7 @@ void main() {
       expect(grants.every((g) => g.grantState is PendingGrant), isTrue);
     });
 
-    test('returns [] on FirebaseFunctionsException', () async {
+    test('rethrows FirebaseFunctionsException', () async {
       final repo = _buildRepo(
         (_, __) async => throw FirebaseFunctionsException(
           code: 'unauthenticated',
@@ -573,17 +577,21 @@ void main() {
         ),
       );
 
-      final result = await repo.listPendingInvitesForMe();
-      expect(result, isEmpty);
+      await expectLater(
+        () => repo.listPendingInvitesForMe(),
+        throwsA(isA<FirebaseFunctionsException>()),
+      );
     });
 
-    test('returns [] on generic error', () async {
+    test('rethrows generic error', () async {
       final repo = _buildRepo(
         (_, __) async => throw Exception('no connection'),
       );
 
-      final result = await repo.listPendingInvitesForMe();
-      expect(result, isEmpty);
+      await expectLater(
+        () => repo.listPendingInvitesForMe(),
+        throwsA(isA<Exception>()),
+      );
     });
   });
 

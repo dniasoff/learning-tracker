@@ -938,23 +938,83 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
           ),
           error: (_, __) => const SizedBox.shrink(),
           data: (trackType) {
+            final completedByOrderParams = (
+              sefariaRef: widget.sefariaRef,
+              stageId: task.stageOrder,
+              trackType: trackType,
+            );
+            final completedByDefinitionIdParams = (
+              sefariaRef: widget.sefariaRef,
+              stageId: task.stageDefinitionId,
+              trackType: trackType,
+            );
             final isCompletedByOrderAsync = ref.watch(
-              isStageCompletedProvider((
-                sefariaRef: widget.sefariaRef,
-                stageId: task.stageOrder,
-                trackType: trackType,
-              )),
+              isStageCompletedProvider(completedByOrderParams),
             );
             final isCompletedByDefinitionIdAsync = ref.watch(
-              isStageCompletedProvider((
-                sefariaRef: widget.sefariaRef,
-                stageId: task.stageDefinitionId,
-                trackType: trackType,
-              )),
+              isStageCompletedProvider(completedByDefinitionIdParams),
             );
+
+            final completionError = isCompletedByOrderAsync.hasError
+                ? isCompletedByOrderAsync.error!
+                : isCompletedByDefinitionIdAsync.hasError
+                ? isCompletedByDefinitionIdAsync.error!
+                : null;
+            if (completionError != null) {
+              return SizedBox(
+                height: 110,
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.error_outline,
+                      color: context.colors.brandWarning,
+                      size: 24,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        AppLocalizations.of(
+                          context,
+                        )!.errorGeneric(completionError.toString()),
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: context.colors.brandInkMuted,
+                        ),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        ref.invalidate(
+                          isStageCompletedProvider(completedByOrderParams),
+                        );
+                        ref.invalidate(
+                          isStageCompletedProvider(
+                            completedByDefinitionIdParams,
+                          ),
+                        );
+                      },
+                      child: Text(AppLocalizations.of(context)!.actionRetry),
+                    ),
+                  ],
+                ),
+              );
+            }
+            if (isCompletedByOrderAsync.asData == null ||
+                isCompletedByDefinitionIdAsync.asData == null) {
+              return const SizedBox(
+                height: 44,
+                child: Center(
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
+              );
+            }
             final isDone =
-                (isCompletedByOrderAsync.asData?.value ?? false) ||
-                (isCompletedByDefinitionIdAsync.asData?.value ?? false);
+                isCompletedByOrderAsync.requireValue ||
+                isCompletedByDefinitionIdAsync.requireValue;
 
             final nextLabel =
                 AppLocalizations.of(context)?.textReaderNextDailyTask ??
