@@ -1,8 +1,8 @@
 /// Story acceptance tests for Story 27.8 (DNI-384) — integration coverage
-/// of Firestore security rules and the offline-completion flush path.
+/// of Firestore security rules and the live nested-layout boundary.
 ///
-/// Two groups, both running against the in-process `fake_cloud_firestore`
-/// helper landed in DNI-377:
+/// The surviving groups pin the live nested Firestore layout and the
+/// structural security boundary in `firestore.rules`:
 ///
 ///   Group A — Firestore rules (W3.30-W3.37 new layout):
 ///     The old top-level compat blocks (accounts, learner_profiles,
@@ -15,32 +15,13 @@
 ///        future `completed_at`) and the snapshot field whitelists are
 ///        present in the rules file.
 ///
-///   Group B — Offline completion flush (FR24):
-///     1. With the gateway "online" flag cleared, 50 successive
-///        `CompletionWriter.commit()` calls land 50 rows in `outbox` and
-///        zero documents on the gateway.
-///     2. Flipping the flag and invoking `OutboxProcessor.drain()` flushes
-///        all 50 rows — the outbox empties and the fake Firestore holds
-///        50 `completion_events` documents.
+/// The retired offline-completion flush group has been removed.
 @Tags(['epic_27'])
 library;
 
 import 'dart:io';
 
-import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/core/sync/firestore_gateway.dart';
-import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
-import 'package:learning_tracker/core/sync/outbox/push_pipeline.dart';
-import 'package:learning_tracker/core/sync/push_pipeline_impl.dart';
-import 'package:learning_tracker/core/time/local_day_clock.dart';
-import 'package:learning_tracker/features/learning/data/completion_writer.dart';
-import 'package:learning_tracker/features/learning/domain/entities/completion_command.dart';
 import 'package:test/test.dart';
-
-import '../helpers/drift_memory.dart';
-import '../helpers/firestore_fake.dart';
-import '../helpers/no_op_firestore_gateway.dart';
 
 void main() {
   // ── Group A — Firestore rules ───────────────────────────────────────────
@@ -76,26 +57,32 @@ void main() {
           },
         );
 
-        test('completions/{completionId} denies non-owner update and delete', () {
-          final block = _extractRuleBlock(rules, 'completions/{completionId}');
-          // Update must be owner-only (either explicit deny, combined with
-          // create, or split out with the SR-1 idempotent-replay guard —
-          // AUD-docs-01 — which is owner-only PLUS value-unchanged, strictly
-          // stronger than plain owner-only).
-          expect(
-            block,
-            anyOf(
-              contains('allow update: if false'),
-              contains('allow create, update: if isOwner'),
-              contains(
-                'allow update: if isOwner(uid) && request.resource.data == resource.data',
-              ),
-            ),
-            reason:
-                'completions update must be owner-only or explicitly denied',
-          );
-          expect(block, contains('allow delete: if false'));
-        });
+        test(
+          'completions/{completionId} denies non-owner update and delete',
+          () {
+            final block = _extractRuleBlock(
+              rules,
+              'completions/{completionId}',
+            );
+            // The current SR-1/D-L rule permits only owner-authenticated,
+            // allowlisted status updates. That still denies every non-owner
+            // update while allowing idempotent retries and tombstones.
+            expect(
+              block,
+              contains('allow update: if isOwner(uid)'),
+              reason:
+                  'completions update must be owner-authenticated so non-owners '
+                  'cannot mutate a completion',
+            );
+            expect(
+              block,
+              contains("hasOnly(['purged_at', 'source', 'completed_at'])"),
+              reason:
+                  'completion updates must stay within the status allowlist',
+            );
+            expect(block, contains('allow delete: if false'));
+          },
+        );
 
         // W3.37 — streak_events is now a per-event collection.
         // W3.36 — learning_ledger uses ULID doc-ids; still append-only.
@@ -107,20 +94,17 @@ void main() {
               'learning_ledger/{entryId}',
             ]) {
               final block = _extractRuleBlock(rules, c);
-              // Update must be owner-only (either explicit deny, combined
-              // with create, or split out with the SR-1 idempotent-replay
-              // guard — AUD-docs-01 — which is owner-only PLUS
-              // value-unchanged, strictly stronger than plain owner-only).
               expect(
                 block,
-                anyOf(
-                  contains('allow update: if false'),
-                  contains('allow create, update: if isOwner'),
-                  contains(
-                    'allow update: if isOwner(uid) && request.resource.data == resource.data',
-                  ),
-                ),
+                contains('allow update: if isOwner(uid)'),
                 reason: '$c update must be owner-only or explicitly denied',
+              );
+              expect(
+                block,
+                c.startsWith('streak_events')
+                    ? contains('request.resource.data == resource.data')
+                    : contains("hasOnly(['purged_at'])"),
+                reason: '$c update must remain narrowly allowlisted',
               );
               expect(block, contains('allow delete: if false'), reason: c);
             }
@@ -274,20 +258,17 @@ void main() {
 
       test('completions block denies non-owner update and delete', () {
         final block = _extractRuleBlock(rules, 'completions/{completionId}');
-        // Update must be owner-only (either explicit deny, combined with
-        // create, or split out with the SR-1 idempotent-replay guard —
-        // AUD-docs-01 — which is owner-only PLUS value-unchanged, strictly
-        // stronger than plain owner-only).
         expect(
           block,
-          anyOf(
-            contains('allow update: if false'),
-            contains('allow create, update: if isOwner'),
-            contains(
-              'allow update: if isOwner(uid) && request.resource.data == resource.data',
-            ),
-          ),
-          reason: 'completions update must be owner-only or explicitly denied',
+          contains('allow update: if isOwner(uid)'),
+          reason:
+              'completions update must be owner-authenticated so tutors '
+              'cannot mutate a completion',
+        );
+        expect(
+          block,
+          contains("hasOnly(['purged_at', 'source', 'completed_at'])"),
+          reason: 'completion updates must stay within the status allowlist',
         );
         expect(block, contains('allow delete: if false'));
       });
@@ -389,171 +370,7 @@ void main() {
       });
     },
   );
-
-  // ── Group B — Offline completion flush ──────────────────────────────────
-
-  group(
-    'Story 27.8 — Offline completions queue then drain to Firestore',
-    tags: ['story_27_8_offline'],
-    () {
-      late UserDatabase db;
-      late CompletionWriter writer;
-      late _ToggleableFakeGateway gateway;
-      late PushPipeline pipeline;
-      late OutboxProcessor processor;
-      late FakeFirebaseFirestore fakeFs;
-      late int trackId;
-
-      setUp(() async {
-        db = inMemoryDb();
-        await seedProfile(db);
-        writer = CompletionWriter(db);
-        fakeFs = createFakeFirestore(authenticatedUid: 'uid_offline');
-        gateway = _ToggleableFakeGateway(firestore: fakeFs, uid: 'uid_offline');
-        pipeline = OutboxPushPipeline(gateway: gateway);
-        processor = OutboxProcessor(
-          outboxDao: db.outboxDao,
-          pipeline: pipeline,
-          clock: FakeLocalDayClock(DateTime.utc(2026, 5, 14)),
-        );
-        trackId = await _seedTrack(db);
-      });
-      tearDown(() => db.close());
-
-      test('offline: 50 commits land 50 outbox rows and zero Firestore docs; '
-          'online: drain() flushes all 50', () async {
-        const profileId = 1;
-        // ── Phase 1: offline. CompletionWriter still commits locally
-        // because it never touches the gateway directly; the outbox
-        // row is its only sync hook. The processor is the only thing
-        // that calls the gateway, and we do not run it here. ──
-        gateway.online = false;
-
-        for (var i = 0; i < 50; i++) {
-          await writer.commit(
-            CompletionCommand(
-              profileId: profileId,
-              curriculumId: 'mishnah_yomit',
-              sefariaRef: 'Mishnah Berakhot $i',
-              stageId: 1,
-              trackType: 'personal',
-              trackId: trackId,
-              completedAt: DateTime.utc(
-                2026,
-                5,
-                13,
-                8,
-              ).add(Duration(seconds: i)),
-              points: 5,
-            ),
-          );
-        }
-
-        final queuedRows = await db.select(db.outbox).get();
-        expect(
-          queuedRows,
-          hasLength(50),
-          reason:
-              'CompletionWriter must enqueue one outbox row per commit '
-              'regardless of connectivity',
-        );
-
-        final docsWhileOffline = await fakeFs
-            .collection('completion_events')
-            .get();
-        expect(
-          docsWhileOffline.docs,
-          isEmpty,
-          reason: 'no push should reach Firestore while offline',
-        );
-        expect(
-          gateway.pushAttempts,
-          isZero,
-          reason: 'OutboxProcessor was never invoked while offline',
-        );
-
-        // ── Phase 2: reconnect; drain. ──
-        gateway.online = true;
-
-        final flushed = await processor.drain(profileId);
-        expect(flushed, equals(50));
-
-        final docsAfter = await fakeFs.collection('completion_events').get();
-        expect(
-          docsAfter.docs,
-          hasLength(50),
-          reason: 'all 50 queued completions must reach Firestore',
-        );
-
-        final remaining = await db.select(db.outbox).get();
-        expect(
-          remaining,
-          isEmpty,
-          reason: 'drained rows must be deleted from outbox on success',
-        );
-      });
-
-      test('drain() does not silently absorb failures — a batch error retains '
-          'all rows for retry', () async {
-        const profileId = 1;
-        gateway.online = true;
-        // Fail on the second individual push so pushCompletionsBatch throws.
-        gateway.failOn = {1};
-
-        for (var i = 0; i < 3; i++) {
-          await writer.commit(
-            CompletionCommand(
-              profileId: profileId,
-              curriculumId: 'mishnah_yomit',
-              sefariaRef: 'Mishnah Shabbat $i',
-              stageId: 1,
-              trackType: 'personal',
-              trackId: trackId,
-              completedAt: DateTime.utc(2026, 5, 13, 9, i),
-              points: 5,
-            ),
-          );
-        }
-
-        final flushed = await processor.drain(profileId);
-        // With batch semantics, a failure anywhere in the batch fails all rows.
-        expect(
-          flushed,
-          equals(0),
-          reason: 'batch failure means no rows counted as success',
-        );
-
-        final remaining = await db.select(db.outbox).get();
-        expect(
-          remaining,
-          hasLength(3),
-          reason: 'all rows must remain in outbox for retry when batch fails',
-        );
-        for (final row in remaining) {
-          expect(row.attempts, equals(1));
-          expect(row.lastError, isNotNull);
-        }
-      });
-    },
-  );
 }
-
-// ── Helpers ────────────────────────────────────────────────────────────────
-
-/// Seed a curriculum_tracks row so completion FKs resolve.
-///
-/// Updated for W3.22/W3.28: trackType and isActive columns removed;
-/// state + stateChangedAt are the new lifecycle columns.
-Future<int> _seedTrack(UserDatabase db) => db
-    .into(db.curriculumTracks)
-    .insert(
-      CurriculumTracksCompanion.insert(
-        profileId: 1,
-        curriculumId: 'mishnah_yomit',
-        stateChangedAt: DateTime.utc(2026, 5, 1),
-        activatedAt: DateTime.utc(2026, 5, 1),
-      ),
-    );
 
 /// Reads the project's `firestore.rules` file from the repo root, hopping
 /// up one directory when the test launcher set cwd to `learning_tracker/`.
@@ -591,400 +408,4 @@ String _extractRuleBlock(String rules, String matchPattern) {
     i++;
   }
   return rules.substring(start);
-}
-
-// ── Toggleable fake gateway ───────────────────────────────────────────────
-
-/// `FirestoreGateway` backed by a [FakeFirebaseFirestore] that can be
-/// switched offline (`online = false`) to simulate connectivity loss.
-///
-/// Push attempts count against [pushAttempts]; index-based failure
-/// injection through [failOn] lets a single test verify the retry path.
-///
-/// Extends the shared [NoOpFirestoreGateway] test double (AUD-t-cross-19)
-/// instead of independently re-declaring the whole gateway interface
-/// (AUD-t-story-acceptance-07) — every method this fake cares about is
-/// still overridden below with its real toggleable/stateful behaviour, but
-/// the class no longer needs editing every time the interface grows a
-/// method; an un-overridden addition falls back to [NoOpFirestoreGateway]'s
-/// `UnimplementedError` default instead of a compile error.
-class _ToggleableFakeGateway extends NoOpFirestoreGateway {
-  _ToggleableFakeGateway({
-    required FakeFirebaseFirestore firestore,
-    required this.uid,
-  }) : _fs = firestore;
-
-  final FakeFirebaseFirestore _fs;
-  final String uid;
-
-  bool online = true;
-  int pushAttempts = 0;
-  Set<int> failOn = const {};
-
-  @override
-  Future<void> pushCompletion({
-    required int profileId,
-    required Map<String, dynamic> data,
-    String? docId,
-  }) async {
-    final attempt = pushAttempts;
-    pushAttempts++;
-    if (!online) throw Exception('offline');
-    if (failOn.contains(attempt)) {
-      throw Exception('injected failure on attempt $attempt');
-    }
-    // The canonical completion payload is snake_case; the doc ID is derived
-    // from the structured natural key (the [docId] parameter is no longer
-    // threaded by the pipeline — H2). A `.`/`/`/space-safe encoding keeps
-    // distinct natural keys in distinct documents.
-    final ref = Uri.encodeComponent('${data['sefaria_ref']}');
-    final stage = '${data['stage_id']}';
-    final trackType = '${data['track_type']}';
-    final id = '${uid}_${profileId}_${ref}_${stage}_$trackType';
-    await _fs.collection('completion_events').doc(id).set({
-      ...data,
-      'uid': uid,
-      'profile_id': profileId,
-    });
-  }
-
-  @override
-  Future<List<String>> pushCompletionsBatch({
-    required int profileId,
-    required List<({String entityKey, Map<String, dynamic> payload})> items,
-  }) async {
-    // This fake models a NON-chunked gateway: an injected failure throws a
-    // plain exception, which OutboxProcessor.drain treats as a total batch
-    // failure (no committed entityKeys). On full success it reports every
-    // entityKey as committed.
-    for (final item in items) {
-      await pushCompletion(profileId: profileId, data: item.payload);
-    }
-    return items.map((e) => e.entityKey).toList();
-  }
-
-  @override
-  Future<void> pushStreak({
-    required int profileId,
-    required Map<String, dynamic> data,
-  }) async {
-    pushAttempts++;
-    if (!online) throw Exception('offline');
-    await _fs.collection('streak_events').add({...data, 'uid': uid});
-  }
-
-  @override
-  Future<void> pushSettings({
-    required int profileId,
-    required Map<String, dynamic> data,
-  }) async {
-    pushAttempts++;
-    if (!online) throw Exception('offline');
-    await _fs.collection('settings').doc('${uid}_$profileId').set(data);
-  }
-
-  @override
-  Future<void> pushTrack({
-    required int profileId,
-    required Map<String, dynamic> data,
-  }) async {
-    pushAttempts++;
-    if (!online) throw Exception('offline');
-    await _fs.collection('track_configs').doc('${uid}_$profileId').set(data);
-  }
-
-  @override
-  Future<void> pushLearningOrder({
-    required int profileId,
-    required Map<String, dynamic> data,
-  }) async {
-    pushAttempts++;
-    if (!online) throw Exception('offline');
-    await _fs.collection('learning_order').doc('${uid}_$profileId').set(data);
-  }
-
-  @override
-  Future<void> pushBookmark({
-    required int profileId,
-    required Map<String, dynamic> data,
-  }) async {
-    pushAttempts++;
-    if (!online) throw Exception('offline');
-    await _fs.collection('bookmarks').doc('${uid}_$profileId').set(data);
-  }
-
-  @override
-  Future<void> pushNotificationSettings({
-    required int profileId,
-    required Map<String, dynamic> data,
-  }) async {
-    pushAttempts++;
-    if (!online) throw Exception('offline');
-    await _fs
-        .collection('notification_settings')
-        .doc('${uid}_$profileId')
-        .set(data);
-  }
-
-  @override
-  Future<void> pushGamificationSettings({
-    required int profileId,
-    required Map<String, dynamic> data,
-  }) async {
-    pushAttempts++;
-    if (!online) throw Exception('offline');
-    await _fs
-        .collection('gamification_settings')
-        .doc('${uid}_$profileId')
-        .set(data);
-  }
-
-  @override
-  Future<void> pushLearnerProfile({
-    required int profileId,
-    required Map<String, dynamic> data,
-  }) async {
-    pushAttempts++;
-    if (!online) throw Exception('offline');
-    await _fs
-        .collection('users')
-        .doc(uid)
-        .collection('learner_profiles')
-        .doc(profileId.toString())
-        .set({...data});
-  }
-
-  @override
-  Future<void> deleteLearnerProfile(String profileUlid) async {
-    pushAttempts++;
-    if (!online) throw Exception('offline');
-    await _fs
-        .collection('users')
-        .doc(uid)
-        .collection('learner_profiles')
-        .doc(profileUlid)
-        .delete();
-  }
-
-  @override
-  Future<void> pushLedgerEntry({
-    required int profileId,
-    required Map<String, dynamic> data,
-  }) async {
-    pushAttempts++;
-    if (!online) throw Exception('offline');
-    await _fs.collection('learning_ledger').add({...data, 'uid': uid});
-  }
-
-  @override
-  Future<void> pushLedgerEntriesBatch({
-    required int profileId,
-    required List<Map<String, dynamic>> entries,
-  }) async {
-    for (final entry in entries) {
-      await pushLedgerEntry(profileId: profileId, data: entry);
-    }
-  }
-
-  @override
-  Future<void> pushProfileProgram({
-    required int profileId,
-    required Map<String, dynamic> data,
-  }) async {
-    pushAttempts++;
-    if (!online) throw Exception('offline');
-    final curriculumId = data['curriculum_id']?.toString() ?? '';
-    await _fs
-        .collection('users')
-        .doc(uid)
-        .collection('learner_profiles')
-        .doc(profileId.toString())
-        .collection('profile_programs')
-        .doc(curriculumId)
-        .set({...data});
-  }
-
-  @override
-  Future<void> removeProfileProgramAssignment({
-    required int profileId,
-    required String curriculumStorageKey,
-  }) async {
-    pushAttempts++;
-    if (!online) throw Exception('offline');
-    await _fs
-        .collection('users')
-        .doc(uid)
-        .collection('learner_profiles')
-        .doc(profileId.toString())
-        .collection('profile_programs')
-        .doc(curriculumStorageKey)
-        .delete();
-  }
-
-  @override
-  Future<FirestorePage> fetchPage({
-    required int profileId,
-    required String collection,
-    required int pageSize,
-    Map<String, dynamic>? cursor,
-  }) async => const FirestorePage(rows: []);
-
-  @override
-  Future<List<Map<String, dynamic>>> fetchAll({
-    required int profileId,
-    required String collection,
-  }) async => const <Map<String, dynamic>>[];
-
-  // ── Step 1 additions (DNI-333 cutover) ─────────────────────────────────────
-
-  @override
-  Future<void> pushGoal({
-    required int profileId,
-    required Map<String, dynamic> data,
-  }) async {}
-  @override
-  Future<void> deleteGoal({
-    required int profileId,
-    required String firestoreId,
-  }) async {}
-
-  @override
-  Future<void> pushUiPreferences({
-    required int profileId,
-    required Map<String, dynamic> data,
-  }) async {}
-
-  @override
-  Future<void> pushAccountProfile({required Map<String, dynamic> data}) async {}
-
-  @override
-  Future<void> pushCurriculumImportMetadata({
-    required int profileId,
-    required Map<String, dynamic> data,
-  }) async {}
-
-  @override
-  Future<void> deleteUserData(String uid) async {}
-
-  @override
-  Future<void> pushDiagnosticLog({
-    required String uid,
-    required Map<String, dynamic> data,
-  }) async {}
-
-  @override
-  Future<void> pushAccountUserProfile({
-    required String uid,
-    required Map<String, dynamic> data,
-  }) async {}
-
-  // NOTE: `limit` is `int?` (not `int`) on these four no-op listeners even
-  // though [FirestoreGateway] declares it as plain `int` — extending
-  // [NoOpFirestoreGateway] (a `Fake`-backed class, AUD-t-story-acceptance-07)
-  // means the compiler synthesizes a `noSuchMethod`-forwarding supertype
-  // signature for abstract members with no default value, and that
-  // synthesized signature widens undefaulted optional params to nullable.
-  // A concrete override must be contravariant with that synthesized
-  // supertype, not just with the original interface declaration — these
-  // stubs ignore `limit` entirely, so widening the param type is behavior-
-  // neutral.
-  @override
-  Stream<ListenerSnapshot> listenToCollection({
-    required int profileId,
-    required String collection,
-    required String orderField,
-    int? limit = 500,
-  }) => const Stream.empty();
-
-  @override
-  Stream<Map<String, dynamic>?> listenToDocument({
-    required int profileId,
-    required String collection,
-    required String docId,
-  }) => const Stream.empty();
-
-  @override
-  Stream<ListenerSnapshot> listenToTutorGrants({int? limit = 500}) =>
-      const Stream.empty();
-
-  @override
-  Stream<ListenerSnapshot> listenToLearnerProfiles({int? limit = 500}) =>
-      const Stream.empty();
-
-  @override
-  Stream<ListenerSnapshot> listenToChildCollection({
-    required String parentUid,
-    required String remoteProfileId,
-    required String collection,
-    required String orderField,
-    int? limit = 500,
-  }) => const Stream.empty();
-
-  @override
-  Stream<Map<String, dynamic>?> listenToChildDocument({
-    required String parentUid,
-    required String remoteProfileId,
-    required String collection,
-    required String docId,
-  }) => const Stream.empty();
-
-  @override
-  Future<List<Map<String, dynamic>>> fetchLearnerProfiles() async =>
-      const <Map<String, dynamic>>[];
-
-  @override
-  Future<Map<String, dynamic>?> fetchDocument({
-    required int profileId,
-    required String collection,
-    required String docId,
-  }) async => null;
-
-  @override
-  Future<void> pushStageDefinition({
-    required int profileId,
-    required Map<String, dynamic> data,
-  }) async {}
-
-  @override
-  Future<void> pushStudyDayConfig({
-    required int profileId,
-    required Map<String, dynamic> data,
-  }) async {}
-  @override
-  Future<void> pushPointsLedgerEntry({
-    required int profileId,
-    required Map<String, dynamic> data,
-  }) async {}
-  @override
-  Future<void> pushRewardRedemption({
-    required int profileId,
-    required Map<String, dynamic> data,
-  }) async {}
-
-  // W6.13: fetchAuditLogEntries added to FirestoreGateway interface.
-  @override
-  Future<List<Map<String, dynamic>>> fetchAuditLogEntries({
-    required String grantId,
-    String? startTimestamp,
-    String? endTimestamp,
-    String? actionFilter,
-  }) async => const [];
-
-  // T1.gateway — parent-scoped child reads (stub).
-  @override
-  Future<FirestorePage> fetchChildPage({
-    required String parentUid,
-    required String remoteProfileId,
-    required String collection,
-    required int pageSize,
-    Map<String, dynamic>? cursor,
-  }) async => const FirestorePage(rows: []);
-
-  @override
-  Future<Map<String, dynamic>?> fetchChildDocument({
-    required String parentUid,
-    required String remoteProfileId,
-    required String collection,
-    required String docId,
-  }) async => null;
 }

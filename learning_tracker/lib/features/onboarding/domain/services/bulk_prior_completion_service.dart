@@ -6,6 +6,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/learning/completion_constants.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
+import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_entity.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
@@ -89,6 +90,7 @@ class BulkPriorCompletionService {
   final BookmarkRepository _bookmarkRepository;
   final AnalyticsService _analytics;
   final StageDefinitionRepository? _stageRepository;
+  final LocalDayClock _clock;
 
   /// Post completion-orchestrator lift (`docs/firestore-rewrite-map.md`,
   /// owner decision 1). When set, [execute] routes its bulk-mark write
@@ -142,6 +144,7 @@ class BulkPriorCompletionService {
     CompletionOrchestrator? orchestrator,
     CompletionDetectionService? completionDetectionService,
     LearningLedgerRepository? ledgerRepository,
+    LocalDayClock? clock,
   }) : _contentRepository = contentRepository,
        _completionRepository = completionRepository,
        _bookmarkRepository = bookmarkRepository,
@@ -149,7 +152,8 @@ class BulkPriorCompletionService {
        _stageRepository = stageRepository,
        _orchestrator = orchestrator,
        _completionDetectionService = completionDetectionService,
-       _ledgerRepository = ledgerRepository;
+       _ledgerRepository = ledgerRepository,
+       _clock = clock ?? const SystemLocalDayClock();
 
   /// Resolve hierarchy selections into leaf-level sefariaRefs.
   ///
@@ -535,7 +539,7 @@ class BulkPriorCompletionService {
     }
 
     // ── 2. Tombstone every matched completion document (D-L) ───────────────
-    final purgedAt = DateTime.now().toUtc();
+    final purgedAt = _clock.nowUtc();
     for (final c in toExpunge) {
       await _completionRepository.purgeCompletion(
         curriculumId: curriculumId,

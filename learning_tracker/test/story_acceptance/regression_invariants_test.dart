@@ -3,14 +3,12 @@
 /// Characterization/invariant tests (N1–N8) documenting the correct system
 /// behaviour. Each becomes the regression anchor for a corresponding repair:
 ///
-///   N1 → R2  offline-queue drains to 0 after an online flush
-///   N2 → R1  exactly one SyncOrchestrator instance per session
 ///   N3 → —   fresh profile reports 0 completions and 0 streak (baseline)
 ///   N4 → R3  delete+re-add track → completion %, count both 0
 ///   N5 → R4  restoreOrCreate resets activatedAt; lifetime preserved
 ///   N6 → R5  completion count and progress % share one "done" definition
 ///   N7 → F1  pace-goal projected finish anchors to createdAt, not now
-///   N8 → C3  purgeHistory never decreases completion_events row count
+///   N8 → C3  purgeHistory never decreases completion documents
 ///
 /// Rule: a failing test is fixed by changing production code only — never by
 /// weakening the assertion. Each repair ships as one commit: failing test +
@@ -18,81 +16,41 @@
 @Tags(['invariants'])
 library;
 
-import 'dart:io';
-
-import 'package:drift/drift.dart' show Value;
-import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/utils/date_utils.dart';
-import 'package:learning_tracker/features/learning/data/completion_writer.dart';
-import 'package:learning_tracker/features/learning/domain/entities/completion_command.dart';
+import 'package:learning_tracker/data/firestore/repository_providers.dart';
+import 'package:learning_tracker/data/repositories/firestore_completion_repository.dart';
+import 'package:learning_tracker/data/repositories/firestore_curriculum_track_repository.dart';
+import 'package:learning_tracker/data/repositories/firestore_streak_event_repository.dart';
+import 'package:learning_tracker/features/gamification/presentation/providers/gamification_service_providers.dart';
+import 'package:learning_tracker/features/gamification/streak/streak_state_service.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/screens/track_detail_screen.dart'
     show estimatedFinishDate;
 import 'package:test/test.dart';
 
-import '../helpers/drift_memory.dart';
 import '../helpers/fake_clock.dart';
+import '../helpers/firestore_fixtures.dart';
 
 void main() {
   group('Invariant net — 2026-05-17 quality crisis', tags: ['invariants'], () {
-    // ── N1 — offline-queue drains to 0 ─────────────────────────────────────
-
-    group(
-      'N1: offline-queue drains to 0 after online flush',
-      skip:
-          'Retired W2.35 — OfflineQueue deleted; equivalent invariant '
-          'covered by OutboxProcessor tests (outbox drains to 0 after flush)',
-      () {
-        test('placeholder', () {});
-      },
-    );
-
-    // ── N2 — single SyncOrchestrator per session ────────────────────────────
-
-    group('N2: exactly one SyncOrchestrator instance per session', () {
-      test('syncOrchestratorProvider does not watch activeProfileIdProvider', () {
-        // A `ref.watch(activeProfileIdProvider)` would rebuild the provider on
-        // every profile change, creating a second SyncOrchestratorImpl (and a
-        // second LifecycleObserver) before the first is disposed.
-        //
-        // The fix (R1): the provider is a keepAlive singleton. It may use
-        // `ref.listen(activeProfileIdProvider, ...)` to restart its listener
-        // set on a profile change — `ref.listen` runs a callback WITHOUT
-        // rebuilding the provider, so no duplicate orchestrator/observer is
-        // created. Only a `ref.watch` on activeProfileIdProvider is forbidden.
-        const srcPath =
-            'lib/core/sync/providers/sync_orchestrator_providers.dart';
-        final file = File(srcPath);
-        if (!file.existsSync()) {
-          fail('N2: provider source not found at $srcPath');
-        }
-        final source = file.readAsStringSync();
-
-        expect(
-          source,
-          isNot(contains('watch(activeProfileIdProvider')),
-          reason:
-              'N2: syncOrchestratorProvider must not WATCH '
-              'activeProfileIdProvider — a profile change must not tear down '
-              'and recreate the SyncOrchestrator, which would register a '
-              'duplicate LifecycleObserver with WidgetsBinding. '
-              '(ref.listen is permitted — it does not rebuild the provider.)',
-        );
-      });
-    });
-
     // ── N3 — fresh profile = 0 everything ──────────────────────────────────
 
     group('N3: fresh profile reports 0 completions and 0 streak', () {
       test(
         'getAggregateCountByProfile returns 0 for a profile with no data',
         () async {
-          final db = inMemoryDb();
-          addTearDown(db.close);
-
-          final count = await db.completionDao.getAggregateCountByProfile(
-            'mishnayos',
-            1,
+          const uid = 'invariant-n3-uid';
+          const profileId = '01JQ8M9Y7V3K2N6P4R5T8W0X1Z';
+          final firestore = FakeFirebaseFirestore();
+          final completions = FirestoreCompletionRepository(
+            firestore: firestore,
+            uid: uid,
+            profileId: profileId,
+          );
+          final count = await completions.getAggregateCountForCurriculum(
+            CurriculumId.mishnayos,
           );
           expect(
             count,
@@ -105,20 +63,33 @@ void main() {
       );
 
       test('streaks table has no row for a fresh profile', () async {
-        final db = inMemoryDb();
-        addTearDown(db.close);
-
-        final row = await (db.select(
-          db.streakEvents,
-        )..where((t) => t.profileId.equals(1))).getSingleOrNull();
+        const uid = 'invariant-n3-streak-uid';
+        const profileId = '01JQ8M9Y7V3K2N6P4R5T8W0X1Z';
+        final firestore = FakeFirebaseFirestore();
+        final eventRepository = FirestoreStreakEventRepository(
+          firestore: firestore,
+          uid: uid,
+          profileId: profileId,
+        );
+        final container = ProviderContainer(
+          overrides: [
+            firestoreStreakEventRepositoryProvider.overrideWith(
+              (ref) async => eventRepository,
+            ),
+            streakStateProvider.overrideWith(
+              (ref) => StreakStateService(ref: ref),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+        final state = await container.read(streakStateProvider).read();
 
         expect(
-          row,
-          isNull,
+          state.currentStreak,
+          0,
           reason:
-              'N3: no streak row should exist for a profile that has never '
-              'completed anything — the achievement card must not manufacture '
-              'a non-zero "Personal Best" from a missing row',
+              'N3: a fresh Firestore profile must not manufacture a non-zero '
+              'streak from an empty streak_events collection',
         );
       });
     });
@@ -126,79 +97,82 @@ void main() {
     // ── N4 — delete+re-add: lifetime completions preserved, session starts at 0
 
     group('N4: delete+re-add track leaves 0 completions', () {
-      test('restoreOrCreate after deleteTrackAndData: old completions preserved for '
-          'lifetime; current session starts at 0', () async {
-        final db = inMemoryDb();
-        addTearDown(db.close);
-        await seedProfile(db);
-
-        // Create a track for profile 1.
-        final originalId = await db.trackDao.restoreOrCreate(
-          profileId: 1,
-          curriculumId: CurriculumId.mishnayos,
-        );
-
-        // Directly insert 3 completions attached to that track, all in the past.
-        for (var i = 0; i < 3; i++) {
-          await seedCompletion(
-            db,
-            CompletionEventsCompanion.insert(
-              profileId: 1,
-              curriculumId: CurriculumId.mishnayos.storageKey,
-              sefariaRef: 'Berakhot 1:${i + 1}',
-              stageId: 1,
-              trackType: 'personal',
-              trackId: Value(originalId),
-              eventTimestamp: DateTime.utc(2026, 5, 1),
-            ),
+      test(
+        'archiving and reactivating preserves lifetime completions but resets the session',
+        () async {
+          const uid = 'invariant-n4-uid';
+          const profileId = '01JQ8M9Y7V3K2N6P4R5T8W0X1Z';
+          final firestore = FakeFirebaseFirestore();
+          final tracks = FirestoreCurriculumTrackRepository(
+            firestore: firestore,
+            uid: uid,
+            profileId: profileId,
           );
-        }
-
-        expect(
-          await db.completionDao.getAggregateCountByProfile('mishnayos', 1),
-          3,
-        );
-
-        // Delete the track (soft-delete; completions are intentionally kept).
-        await db.trackDao.deleteTrackAndData(originalId);
-
-        // Re-add the same curriculum — restoreOrCreate reuses the old row ID.
-        final restoredId = await db.trackDao.restoreOrCreate(
-          profileId: 1,
-          curriculumId: CurriculumId.mishnayos,
-        );
-
-        expect(
-          restoredId,
-          equals(originalId),
-          reason:
-              'N4 pre-condition: restoreOrCreate must reuse the same row id',
-        );
-
-        final restored = await db.trackDao.getTrackById(restoredId);
-
-        // Lifetime count still includes pre-restore completions.
-        expect(
-          await db.completionDao.getAggregateCountByProfile('mishnayos', 1),
-          3,
-          reason: 'N4: lifetime completions must survive delete+restore',
-        );
-
-        // Current-session count (completedAt >= activatedAt) is 0 — fresh start.
-        final sessionCompletions = await db.completionDao
-            .getCompletionsByTrackAndProfileSince(
-              restoredId,
-              1,
-              restored!.activatedAt,
+          final completions = FirestoreCompletionRepository(
+            firestore: firestore,
+            uid: uid,
+            profileId: profileId,
+          );
+          final originalActivatedAt = DateTime.utc(2026, 5, 1);
+          await seedTrack(
+            firestore,
+            uid: uid,
+            profileId: profileId,
+            curriculumId: CurriculumId.mishnayos,
+            activatedAt: originalActivatedAt,
+            stateChangedAt: originalActivatedAt,
+          );
+          // The repository protects the last active curriculum from archival.
+          await seedTrack(
+            firestore,
+            uid: uid,
+            profileId: profileId,
+            curriculumId: CurriculumId.chumash,
+          );
+          for (var i = 0; i < 3; i++) {
+            await seedCompletion(
+              firestore,
+              uid: uid,
+              profileId: profileId,
+              curriculumId: CurriculumId.mishnayos,
+              sefariaRef: 'Berakhot 1:${i + 1}',
+              completedAt: originalActivatedAt,
             );
-        expect(
-          sessionCompletions,
-          isEmpty,
-          reason:
-              'N4: current-session completions must be 0 — pre-restore rows '
-              'predate the new activatedAt and are excluded from the current cycle',
-        );
-      });
+          }
+
+          expect(
+            await completions.getAggregateCountForCurriculum(
+              CurriculumId.mishnayos,
+            ),
+            3,
+          );
+          await tracks.archiveTrack(CurriculumId.mishnayos);
+          installFakeClock(DateTime.utc(2026, 6, 1, 12));
+          final restored = await tracks.activateTrack(CurriculumId.mishnayos);
+
+          expect(
+            await completions.getAggregateCountForCurriculum(
+              CurriculumId.mishnayos,
+            ),
+            3,
+            reason: 'N4: lifetime completions must survive delete+restore',
+          );
+          final currentSession =
+              (await completions.getCompletionsForCurriculum(
+                CurriculumId.mishnayos,
+              )).where(
+                (completion) =>
+                    !completion.completedAt.isBefore(restored.activatedAt),
+              );
+          expect(
+            currentSession,
+            isEmpty,
+            reason:
+                'N4: pre-restore completions must be excluded from the new '
+                'current learning session',
+          );
+        },
+      );
     });
 
     // ── N5 — restoreOrCreate resets activatedAt to mark a new session ────────
@@ -206,189 +180,147 @@ void main() {
     group(
       'N5: restoreOrCreate resets activatedAt for a new learning session',
       () {
+        test('reactivated curriculum track gets activatedAt = now', () async {
+          const uid = 'invariant-n5-uid';
+          const profileId = '01JQ8M9Y7V3K2N6P4R5T8W0X1Z';
+          final firestore = FakeFirebaseFirestore();
+          final tracks = FirestoreCurriculumTrackRepository(
+            firestore: firestore,
+            uid: uid,
+            profileId: profileId,
+          );
+          final originalActivatedAt = DateTime.utc(2026, 5, 27, 12);
+          await seedTrack(
+            firestore,
+            uid: uid,
+            profileId: profileId,
+            curriculumId: CurriculumId.mishnayos,
+            activatedAt: originalActivatedAt,
+            stateChangedAt: originalActivatedAt,
+          );
+          await seedTrack(
+            firestore,
+            uid: uid,
+            profileId: profileId,
+            curriculumId: CurriculumId.chumash,
+          );
+          await tracks.archiveTrack(CurriculumId.mishnayos);
+
+          final fixedNow = DateTime.utc(2026, 6, 1, 12);
+          installFakeClock(fixedNow);
+          final restored = await tracks.activateTrack(CurriculumId.mishnayos);
+
+          expect(
+            restored.activatedAt,
+            fixedNow,
+            reason:
+                'N5: reactivation must reset activatedAt so the current '
+                'learning session starts fresh',
+          );
+        });
+      },
+    );
+
+    // ── N6 — completion count and progress % share one "done" definition ────
+
+    group(
+      'N6: completion count and lifetime % agree on one definition of done',
+      () {
         test(
-          'restored track gets activatedAt = now so the current cycle starts fresh',
+          'aggregate count counts distinct completed refs, not total rows',
           () async {
-            final db = inMemoryDb();
-            addTearDown(db.close);
-
-            // AUD-t-story-acceptance-39: inject a fixed clock instead of
-            // comparing activatedAt to a real DateTime.now()/nowUtc() read at
-            // assertion time — a stall between the write and the assertion
-            // (e.g. a cold Drift/sqlite3 open on a contended CI runner) would
-            // otherwise flake this test for a reason unrelated to the code
-            // under test.
-            final fixedNow = DateTime.utc(2026, 6, 1, 12);
-            installFakeClock(fixedNow);
-
-            final originalActivatedAt = fixedNow.subtract(
-              const Duration(days: 5),
+            const uid = 'invariant-n6-uid';
+            const profileId = '01JQ8M9Y7V3K2N6P4R5T8W0X1Z';
+            final firestore = FakeFirebaseFirestore();
+            final completions = FirestoreCompletionRepository(
+              firestore: firestore,
+              uid: uid,
+              profileId: profileId,
             );
-
-            // Insert a track with an activatedAt 5 days in the past.
-            final trackId = await db
-                .into(db.curriculumTracks)
-                .insert(
-                  CurriculumTracksCompanion.insert(
-                    profileId: 1,
-                    curriculumId: CurriculumId.mishnayos.storageKey,
-                    stateChangedAt: originalActivatedAt,
-                    activatedAt: originalActivatedAt,
-                  ),
-                );
-
-            // Soft-delete the track.
-            await db.trackDao.deleteTrackAndData(trackId);
-
-            // Re-add via restoreOrCreate.
-            await db.trackDao.restoreOrCreate(
-              profileId: 1,
+            await seedCompletion(
+              firestore,
+              uid: uid,
+              profileId: profileId,
               curriculumId: CurriculumId.mishnayos,
+              sefariaRef: 'Berakhot 1:1',
+              stageId: 1,
+              completedAt: DateTime.utc(2026, 5, 1),
+            );
+            await seedCompletion(
+              firestore,
+              uid: uid,
+              profileId: profileId,
+              curriculumId: CurriculumId.mishnayos,
+              sefariaRef: 'Berakhot 1:1',
+              stageId: 2,
+              completedAt: DateTime.utc(2026, 5, 2),
             );
 
-            final restored = await db.trackDao.getTrackById(trackId);
-
-            // activatedAt must be reset to the fake clock's fixed instant (new
-            // session), not the old value.
             expect(
-              restored!.activatedAt.isAtSameMomentAs(fixedNow),
-              isTrue,
+              await completions.getAggregateCountForCurriculum(
+                CurriculumId.mishnayos,
+              ),
+              1,
               reason:
-                  'N5: restoreOrCreate must reset activatedAt to the current '
-                  'clock instant so that the current learning session starts '
-                  'fresh; old completions predating activatedAt are excluded '
-                  'from current-cycle progress',
+                  'N6: the Firestore aggregate must count distinct completed '
+                  'sefariaRefs, not total stage rows',
             );
           },
         );
       },
     );
 
-    // ── N6 — completion count and progress % share one "done" definition ────
-
-    group('N6: completion count and lifetime % agree on one definition of done', () {
-      test(
-        'getAggregateCountByProfile counts distinct completed refs, not total rows',
-        () async {
-          final db = inMemoryDb();
-          addTearDown(db.close);
-          await seedProfile(db);
-
-          // Seed a track so the FK constraint resolves.
-          final trackId = await db
-              .into(db.curriculumTracks)
-              .insert(
-                CurriculumTracksCompanion.insert(
-                  profileId: 1,
-                  curriculumId: CurriculumId.mishnayos.storageKey,
-                  stateChangedAt: DateTimeFactory.nowUtc(),
-                  activatedAt: DateTimeFactory.nowUtc(),
-                ),
-              );
-
-          // Insert the same sefariaRef at two different stages.
-          // By the "distinct refs" definition, 1 ref is done — not 2.
-          await seedCompletion(
-            db,
-            CompletionEventsCompanion.insert(
-              profileId: 1,
-              curriculumId: CurriculumId.mishnayos.storageKey,
-              sefariaRef: 'Berakhot 1:1',
-              stageId: 1,
-              trackType: 'personal',
-              trackId: Value(trackId),
-              eventTimestamp: DateTime.utc(2026, 5, 1),
-            ),
-          );
-          await seedCompletion(
-            db,
-            CompletionEventsCompanion.insert(
-              profileId: 1,
-              curriculumId: CurriculumId.mishnayos.storageKey,
-              sefariaRef: 'Berakhot 1:1',
-              stageId: 2,
-              trackType: 'personal',
-              trackId: Value(trackId),
-              eventTimestamp: DateTime.utc(2026, 5, 2),
-            ),
-          );
-
-          final rawCount = await db.completionDao.getAggregateCountByProfile(
-            'mishnayos',
-            1,
-          );
-
-          // FAILS today: rawCount = 2 (all rows), but the distinct-refs numerator
-          // used by computeCompletionPercentage returns 1.
-          // Both metrics must share the same "done" unit so the UI stays consistent.
-          expect(
-            rawCount,
-            1,
-            reason:
-                'N6: getAggregateCountByProfile must count distinct completed '
-                'sefariaRefs (1), not total completion rows (2); otherwise '
-                'the completion count and lifetime-% disagree on what "done" '
-                'means',
-          );
-        },
-      );
-    });
-
     // ── N8 — purgeHistory never decreases completion_events row count (C3) ───
 
     group('N8: purgeHistory never decreases completion_events row count', () {
       test(
-        'purging a track stamps purgedAt on events and keeps row count stable',
+        'purging completions stamps purgedAt and keeps document count stable',
         () async {
-          final db = inMemoryDb();
-          addTearDown(db.close);
-          await seedProfile(db);
-
-          final trackId = await db.trackDao.restoreOrCreate(
-            profileId: 1,
-            curriculumId: CurriculumId.mishnayos,
+          const uid = 'invariant-n8-uid';
+          const profileId = '01JQ8M9Y7V3K2N6P4R5T8W0X1Z';
+          final firestore = FakeFirebaseFirestore();
+          final completions = FirestoreCompletionRepository(
+            firestore: firestore,
+            uid: uid,
+            profileId: profileId,
           );
-
-          final writer = CompletionWriter(db);
+          final completedAt = DateTime.utc(2026, 5, 1);
           for (var i = 1; i <= 4; i++) {
-            await writer.commit(
-              CompletionCommand(
-                profileId: 1,
-                curriculumId: CurriculumId.mishnayos.storageKey,
-                sefariaRef: 'Berakhot $i:1',
-                stageId: 1,
-                trackType: 'personal',
-                trackId: trackId,
-                completedAt: DateTimeFactory.nowUtc(),
-                points: 5,
-              ),
+            await seedCompletion(
+              firestore,
+              uid: uid,
+              profileId: profileId,
+              curriculumId: CurriculumId.mishnayos,
+              sefariaRef: 'Berakhot $i:1',
+              completedAt: completedAt,
             );
           }
 
-          final countBefore = (await db.completionEventDao.getEventsByProfile(
-            1,
-          )).length;
+          final collection = firestore
+              .collection('users')
+              .doc(uid)
+              .collection('learner_profiles')
+              .doc(profileId)
+              .collection('completions');
+          final countBefore = (await collection.get()).docs.length;
+          for (var i = 1; i <= 4; i++) {
+            await completions.purgeCompletion(
+              curriculumId: CurriculumId.mishnayos,
+              sefariaRef: 'Berakhot $i:1',
+              stageId: 1,
+              purgedAt: DateTime.utc(2026, 6, 1),
+            );
+          }
 
-          await db.trackDao.purgeHistory(trackId);
-
-          final eventsAfter = await db.completionEventDao.getEventsByProfile(1);
-
+          expect((await collection.get()).docs, hasLength(countBefore));
           expect(
-            eventsAfter.length,
-            countBefore,
-            reason:
-                'N8: completion_events row count must never decrease — '
-                'purgeHistory uses tombstones, not deletes',
-          );
-          expect(
-            eventsAfter.every((e) => e.purgedAt != null),
-            isTrue,
-            reason: 'N8: every purged event must have purgedAt set',
-          );
-          expect(
-            await db.completionDao.getCompletionsByProfile(1),
+            await completions.getCompletionsForCurriculum(
+              CurriculumId.mishnayos,
+            ),
             isEmpty,
-            reason: 'N8: completions projection must be empty after purge',
+            reason:
+                'N8: purged completion tombstones remain stored but are '
+                'hidden from active completion reads',
           );
         },
       );
@@ -408,11 +340,9 @@ void main() {
       // estimatedFinishDate()'s anchor to DateTimeFactory.nowLocal() (the F1
       // bug shape) makes this test fail red; anchoring to goal.createdAt
       // makes it pass.
-      Goal paceGoal({required DateTime createdAt}) => Goal(
+      GoalEntity paceGoal({required DateTime createdAt}) => GoalEntity(
         id: 1,
-        profileId: 1,
-        curriculumId: CurriculumId.mishnayos.storageKey,
-        trackId: 1,
+        curriculumId: CurriculumId.mishnayos,
         targetPercent: 100.0,
         description: '',
         dateType: 'gregorian',

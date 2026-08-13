@@ -1,563 +1,247 @@
-/// Story acceptance tests for Epic 25 / Story 25.16 (DNI-337):
-/// `core/streak/` — event log + reducer + round-trip sync.
-///
-/// Scope (mirrors Linear DNI-337):
-///   * `StreakEventLog`         — thin `append` wrapper over `streak_events`.
-///   * `StreakReducer`          — pure `(events, today) → (current, max)`.
-///   * `StreakRestorer`         — reconstitutes events from `completions`
-///                                when the local log is empty.
-///   * `StreakStateService`    — the *only* read path for streak values.
-///   * `StreakEventMerger`      — append-only merger (round-trip via sync).
-@Tags(['epic_25'])
+/// Story acceptance tests for the Firestore-backed streak log and reducer.
+@Tags(['epic_25', 'story_25_16'])
 library;
 
-import 'package:drift/drift.dart' show Value;
-import 'package:drift/native.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/core/sync/merge/streak_event_merger.dart';
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
-import 'package:learning_tracker/features/gamification/streak/streak_event_log.dart';
-import 'package:learning_tracker/features/gamification/streak/streak_log_event.dart';
+import 'package:learning_tracker/data/firestore/repository_providers.dart';
+import 'package:learning_tracker/data/repositories/firestore_completion_repository.dart';
+import 'package:learning_tracker/data/repositories/firestore_streak_event_repository.dart';
+import 'package:learning_tracker/features/gamification/data/repositories/firestore_streak_state_repository.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_reducer.dart';
-import 'package:learning_tracker/features/gamification/streak/streak_restorer.dart';
-import 'package:learning_tracker/features/gamification/streak/streak_state_service.dart';
 import 'package:test/test.dart';
 
-import '../helpers/drift_memory.dart';
+import '../helpers/firestore_fixtures.dart';
 
-UserDatabase _createDb() => UserDatabase(NativeDatabase.memory());
+const _uid = 'uid_story_25_16';
+const _profileId = '01J00000000000000000000004';
 
-/// Inserts the minimal FK rows the schema requires so we can write
-/// `completions` rows in restore tests.
-Future<int> _seedTrack(UserDatabase db, {int profileId = 1}) async {
-  await db
-      .into(db.curriculumTracks)
-      .insert(
-        CurriculumTracksCompanion.insert(
-          profileId: profileId,
-          curriculumId: 'shas-bavli',
-          stateChangedAt: DateTime.utc(2026, 5, 1),
-          activatedAt: DateTime.utc(2026, 5, 1),
-        ),
-      );
-  final row = await (db.select(
-    db.curriculumTracks,
-  )..where((t) => t.profileId.equals(profileId))).getSingle();
-  return row.id;
+DateTime _utcDay(DateTime value) {
+  final utc = value.toUtc();
+  return DateTime.utc(utc.year, utc.month, utc.day);
 }
 
-Future<void> _seedCompletion(
-  UserDatabase db, {
-  required int profileId,
-  required int trackId,
-  required DateTime completedAt,
-  String sefariaRef = 'Mishnah Berakhot 1',
-  int stageId = 1,
+Future<StreakState> _readState(
+  FakeFirebaseFirestore firestore, {
+  required DateTime now,
 }) async {
-  await seedCompletion(
-    db,
-    CompletionEventsCompanion.insert(
-      profileId: profileId,
-      curriculumId: 'shas-bavli',
-      sefariaRef: sefariaRef,
-      stageId: stageId,
-      trackType: 'programmed',
-      trackId: Value(trackId),
-      eventTimestamp: completedAt,
+  final eventRepository = FirestoreStreakEventRepository(
+    firestore: firestore,
+    uid: _uid,
+    profileId: _profileId,
+  );
+  final container = ProviderContainer(
+    overrides: [
+      firestoreStreakEventRepositoryProvider.overrideWith(
+        (ref) async => eventRepository,
+      ),
+    ],
+  );
+  addTearDown(container.dispose);
+  final provider = Provider<FirestoreStreakStateRepository>(
+    (ref) => FirestoreStreakStateRepository(
+      ref: ref,
+      clock: FakeLocalDayClock(now),
+      dayOf: _utcDay,
     ),
   );
+  return container.read(provider).getStreak();
 }
 
 void main() {
-  group(
-    'Story 25.16 — core/streak/ event log + reducer + round-trip sync',
-    tags: ['story_25_16'],
-    () {
-      late UserDatabase db;
+  group('AC1 — Firestore streak-event append', () {
+    test('appends and reads one event for a ULID profile path', () async {
+      final firestore = FakeFirebaseFirestore();
+      final repository = FirestoreStreakEventRepository(
+        firestore: firestore,
+        uid: _uid,
+        profileId: _profileId,
+      );
 
-      setUp(() async {
-        db = _createDb();
-        await seedProfile(db);
-      });
-      tearDown(() => db.close());
+      final event = await repository.append(
+        eventType: 'completion',
+        eventTimestamp: DateTime.utc(2026, 5, 10, 10),
+        ulid: '01J00000000000000000000006',
+      );
 
-      // ── AC1: StreakEventLog.append ─────────────────────────────────────
+      expect(event.eventType, 'completion');
+      expect(event.dayUtc, DateTime.utc(2026, 5, 10));
+      expect(await repository.getAllEvents(), hasLength(1));
+    });
 
-      group('AC1 — StreakEventLog.append', () {
-        test('appends a single event for a profile', () async {
-          final log = StreakEventLog(db);
-          await log.append(
-            StreakLogEvent(
-              profileId: 1,
-              eventType: 'completion',
-              eventTimestamp: DateTime.utc(2026, 5, 10, 10),
-            ),
-          );
+    test('retrying the same ULID is idempotent', () async {
+      final firestore = FakeFirebaseFirestore();
+      final repository = FirestoreStreakEventRepository(
+        firestore: firestore,
+        uid: _uid,
+        profileId: _profileId,
+      );
+      const ulid = '01J00000000000000000000007';
+      final timestamp = DateTime.utc(2026, 5, 10, 10);
 
-          final rows = await (db.select(
-            db.streakEvents,
-          )..where((t) => t.profileId.equals(1))).get();
-          expect(rows, hasLength(1));
-          expect(rows.first.eventType, 'completion');
-        });
+      await repository.append(
+        eventType: 'completion',
+        eventTimestamp: timestamp,
+        ulid: ulid,
+      );
+      await repository.append(
+        eventType: 'completion',
+        eventTimestamp: timestamp,
+        ulid: ulid,
+      );
 
-        test(
-          'same (profileId, eventTimestamp, eventType) is idempotent',
-          () async {
-            final log = StreakEventLog(db);
-            final e = StreakLogEvent(
-              profileId: 1,
-              eventType: 'completion',
-              eventTimestamp: DateTime.utc(2026, 5, 10, 10),
-            );
-            await log.append(e);
-            await log.append(e); // second call must NOT throw
+      expect(await repository.getAllEvents(), hasLength(1));
+    });
+  });
 
-            final rows = await (db.select(
-              db.streakEvents,
-            )..where((t) => t.profileId.equals(1))).get();
-            expect(
-              rows,
-              hasLength(1),
-              reason:
-                  'UNIQUE (profileId, eventTimestamp, eventType) '
-                  'must collapse duplicates',
-            );
-          },
+  group('AC2 — streak state reducer uses local-day buckets', () {
+    test('consecutive days produce current and maximum streaks', () async {
+      final firestore = FakeFirebaseFirestore();
+      final repository = FirestoreStreakEventRepository(
+        firestore: firestore,
+        uid: _uid,
+        profileId: _profileId,
+      );
+      for (final (index, day) in [
+        DateTime.utc(2026, 5, 8, 12),
+        DateTime.utc(2026, 5, 9, 12),
+        DateTime.utc(2026, 5, 10, 12),
+      ].indexed) {
+        await repository.append(
+          eventType: 'completion',
+          eventTimestamp: day,
+          ulid: '01J000000000000000000000${index + 10}',
         );
-      });
+      }
 
-      // ── AC2: StreakReducer (LOCAL day boundaries — D16) ───────────────
-      //
-      // D16 (2026-05-31) reversed Story 25.16's original UTC-day choice: the
-      // streak now buckets by LOCAL day so the headline agrees with the
-      // Recent-Activity calendar dots (which use LocalDayUtils.extractLocalDate),
-      // the scheduler, and LocalDayClock. Timestamps here use ~noon UTC so the
-      // local date is identical across every real timezone (offset within
-      // ±12h), keeping the assertions deterministic regardless of the host TZ.
-      group('AC2 — StreakReducer uses LOCAL day boundaries (D16)', () {
-        test('consecutive local days extend the streak', () {
-          final events = [
-            StreakLogEvent(
-              profileId: 1,
-              eventType: 'completion',
-              eventTimestamp: DateTime.utc(2026, 5, 8, 12),
-            ),
-            StreakLogEvent(
-              profileId: 1,
-              eventType: 'completion',
-              eventTimestamp: DateTime.utc(2026, 5, 9, 12),
-            ),
-            StreakLogEvent(
-              profileId: 1,
-              eventType: 'completion',
-              eventTimestamp: DateTime.utc(2026, 5, 10, 12),
-            ),
-          ];
-          final today = DateTime.utc(2026, 5, 10, 12);
+      final state = await _readState(
+        firestore,
+        now: DateTime.utc(2026, 5, 10, 12),
+      );
+      expect(state.currentStreak, 3);
+      expect(state.maxStreak, 3);
+    });
 
-          final state = const StreakReducer().reduce(events, today: today);
+    test('duplicate events on one day count as one day', () async {
+      final firestore = FakeFirebaseFirestore();
+      final repository = FirestoreStreakEventRepository(
+        firestore: firestore,
+        uid: _uid,
+        profileId: _profileId,
+      );
+      await repository.append(
+        eventType: 'completion',
+        eventTimestamp: DateTime.utc(2026, 5, 10, 10),
+        ulid: '01J00000000000000000000013',
+      );
+      await repository.append(
+        eventType: 'completion',
+        eventTimestamp: DateTime.utc(2026, 5, 10, 14),
+        ulid: '01J00000000000000000000014',
+      );
 
-          expect(state.currentStreak, 3);
-          expect(state.maxStreak, 3);
-        });
+      final state = await _readState(
+        firestore,
+        now: DateTime.utc(2026, 5, 10, 12),
+      );
+      expect(state.currentStreak, 1);
+    });
 
-        test('multiple events on the SAME local day count as one day', () {
-          final events = [
-            StreakLogEvent(
-              profileId: 1,
-              eventType: 'completion',
-              eventTimestamp: DateTime.utc(2026, 5, 10, 10),
-            ),
-            StreakLogEvent(
-              profileId: 1,
-              eventType: 'completion',
-              eventTimestamp: DateTime.utc(2026, 5, 10, 14),
-            ),
-          ];
-          final today = DateTime.utc(2026, 5, 10, 12);
+    test('a gap resets currentStreak while maxStreak survives', () async {
+      final firestore = FakeFirebaseFirestore();
+      final repository = FirestoreStreakEventRepository(
+        firestore: firestore,
+        uid: _uid,
+        profileId: _profileId,
+      );
+      for (final (index, day) in [
+        DateTime.utc(2026, 5, 1),
+        DateTime.utc(2026, 5, 2),
+        DateTime.utc(2026, 5, 3),
+        DateTime.utc(2026, 5, 8),
+        DateTime.utc(2026, 5, 9),
+      ].indexed) {
+        await repository.append(
+          eventType: 'completion',
+          eventTimestamp: day,
+          ulid: '01J000000000000000000000${index + 20}',
+        );
+      }
 
-          final state = const StreakReducer().reduce(events, today: today);
+      final state = await _readState(firestore, now: DateTime.utc(2026, 5, 9));
+      expect(state.currentStreak, 2);
+      expect(state.maxStreak, 3);
+    });
 
-          expect(state.currentStreak, 1);
-        });
+    test('empty input produces zero streak', () async {
+      final state = await _readState(
+        FakeFirebaseFirestore(),
+        now: DateTime.utc(2026, 5, 10),
+      );
+      expect(state.currentStreak, 0);
+      expect(state.maxStreak, 0);
+    });
+  });
 
-        test(
-          'a >1-day UTC gap resets currentStreak but maxStreak survives',
-          () {
-            final events = [
-              StreakLogEvent(
-                profileId: 1,
-                eventType: 'completion',
-                eventTimestamp: DateTime.utc(2026, 5, 1),
-              ),
-              StreakLogEvent(
-                profileId: 1,
-                eventType: 'completion',
-                eventTimestamp: DateTime.utc(2026, 5, 2),
-              ),
-              StreakLogEvent(
-                profileId: 1,
-                eventType: 'completion',
-                eventTimestamp: DateTime.utc(2026, 5, 3),
-              ),
-              // 4-day gap.
-              StreakLogEvent(
-                profileId: 1,
-                eventType: 'completion',
-                eventTimestamp: DateTime.utc(2026, 5, 8),
-              ),
-              StreakLogEvent(
-                profileId: 1,
-                eventType: 'completion',
-                eventTimestamp: DateTime.utc(2026, 5, 9),
-              ),
-            ];
-            final today = DateTime.utc(2026, 5, 9);
-
-            final state = const StreakReducer().reduce(events, today: today);
-
-            expect(state.currentStreak, 2);
-            expect(state.maxStreak, 3);
-          },
+  group('AC7 — bulk-mark-prior sentinel does not inflate streak', () {
+    test(
+      'historical sentinel completion is not a current streak event',
+      () async {
+        final firestore = FakeFirebaseFirestore();
+        await seedCompletion(
+          firestore,
+          uid: _uid,
+          profileId: _profileId,
+          curriculumId: CurriculumId.mishnayos,
+          completedAt: DateTime.utc(2000, 1, 1),
         );
 
-        test(
-          'currentStreak drops to 0 once today is >1 UTC day past last event',
-          () {
-            final events = [
-              StreakLogEvent(
-                profileId: 1,
-                eventType: 'completion',
-                eventTimestamp: DateTime.utc(2026, 5, 1),
-              ),
-              StreakLogEvent(
-                profileId: 1,
-                eventType: 'completion',
-                eventTimestamp: DateTime.utc(2026, 5, 2),
-              ),
-            ];
-            // Today is May 5 — well past yesterday's grace.
-            final today = DateTime.utc(2026, 5, 5);
-
-            final state = const StreakReducer().reduce(events, today: today);
-
-            expect(state.currentStreak, 0);
-            expect(
-              state.maxStreak,
-              2,
-              reason: 'max should survive even when current resets',
-            );
-          },
+        final completionRepository = FirestoreCompletionRepository(
+          firestore: firestore,
+          uid: _uid,
+          profileId: _profileId,
         );
+        final completions = await completionRepository
+            .getCompletionsForCurriculum(CurriculumId.mishnayos);
+        expect(completions.single.completedAt, DateTime.utc(2000, 1, 1));
 
-        test('D16: two completions on consecutive LOCAL days that share one UTC '
-            'day count as TWO days (matches the local calendar dots) — '
-            'supersedes the original UTC-boundary choice', () {
-          // US-Pacific (UTC-8), pinned via dayOf so the host TZ is irrelevant:
-          //   Mon 23:00 PT = Tue 07:00 UTC
-          //   Tue 01:00 PT = Tue 09:00 UTC   (same UTC day, two LOCAL days)
-          DateTime pacificDay(DateTime t) {
-            final pt = t.toUtc().subtract(const Duration(hours: 8));
-            return DateTime.utc(pt.year, pt.month, pt.day);
-          }
-
-          final events = [
-            StreakLogEvent(
-              profileId: 1,
-              eventType: 'completion',
-              eventTimestamp: DateTime.utc(2026, 5, 12, 7),
-            ),
-            StreakLogEvent(
-              profileId: 1,
-              eventType: 'completion',
-              eventTimestamp: DateTime.utc(2026, 5, 12, 9),
-            ),
-          ];
-          final today = DateTime.utc(2026, 5, 12, 9);
-
-          final state = const StreakReducer().reduce(
-            events,
-            today: today,
-            dayOf: pacificDay,
-          );
-          expect(state.currentStreak, 2);
-        });
-
-        test('empty input → zero streak', () {
-          final state = const StreakReducer().reduce(
-            <StreakLogEvent>[],
-            today: DateTime.utc(2026, 5, 10),
-          );
-          expect(state.currentStreak, 0);
-          expect(state.maxStreak, 0);
-        });
-      });
-
-      // ── AC4 + AC6: StreakEventMerger round-trip + UNIQUE collapse ─────
-
-      group('AC4/AC6 — StreakEventMerger round-trip', () {
-        test(
-          'two devices writing the same UTC-day event collapse to one row',
-          () async {
-            final merger = StreakEventMerger(db);
-            // Both devices generate a `completion` event at the exact same
-            // UTC instant. Identical natural key → UNIQUE must dedup.
-            final instant = DateTime.utc(2026, 5, 10, 10);
-            await merger.merge(
-              profileId: 1,
-              rows: [
-                {
-                  'event_type': 'completion',
-                  'event_timestamp': instant.toIso8601String(),
-                  'client_device_id': 'dev-A',
-                },
-                {
-                  'event_type': 'completion',
-                  'event_timestamp': instant.toIso8601String(),
-                  'client_device_id': 'dev-B',
-                },
-              ],
-            );
-
-            final rows = await (db.select(
-              db.streakEvents,
-            )..where((t) => t.profileId.equals(1))).get();
-            expect(rows, hasLength(1));
-          },
+        final state = await _readState(
+          firestore,
+          now: DateTime.utc(2026, 5, 14, 9),
         );
+        expect(state.currentStreak, 0);
+      },
+    );
+  });
 
-        test('merger inserts unseen rows and ignores duplicates', () async {
-          final merger = StreakEventMerger(db);
-          await merger.merge(
-            profileId: 1,
-            rows: [
-              {
-                'event_type': 'completion',
-                'event_timestamp': DateTime.utc(2026, 5, 9).toIso8601String(),
-              },
-              {
-                'event_type': 'completion',
-                'event_timestamp': DateTime.utc(2026, 5, 10).toIso8601String(),
-              },
-            ],
-          );
-          // Second pull repeats the first row + adds a third.
-          await merger.merge(
-            profileId: 1,
-            rows: [
-              {
-                'event_type': 'completion',
-                'event_timestamp': DateTime.utc(2026, 5, 9).toIso8601String(),
-              },
-              {
-                'event_type': 'completion',
-                'event_timestamp': DateTime.utc(2026, 5, 11).toIso8601String(),
-              },
-            ],
-          );
-
-          final rows = await (db.select(
-            db.streakEvents,
-          )..where((t) => t.profileId.equals(1))).get();
-          expect(rows, hasLength(3));
-        });
-      });
-
-      // ── AC5: empty-log restore from completions ───────────────────────
-
-      group('AC5 — empty-log restore reconstitutes from completions', () {
-        setUp(() async {
-          // Seed a second learner profile so profileId=2 completions satisfy FK.
-          await db
-              .into(db.learnerProfiles)
-              .insert(
-                LearnerProfilesCompanion.insert(
-                  accountId: 1,
-                  displayName: 'Test User 2',
-                  mode: 'adult',
-                  createdAt: DateTime.utc(2026, 1, 1),
-                  updatedAt: DateTime.utc(2026, 1, 1),
-                ),
-              );
-        });
-
-        test('one streak_events row per distinct UTC completion day', () async {
-          final trackId = await _seedTrack(db);
-          // Three completions on two distinct UTC days for profile 1.
-          await _seedCompletion(
-            db,
-            profileId: 1,
-            trackId: trackId,
-            completedAt: DateTime.utc(2026, 5, 9, 8),
-          );
-          await _seedCompletion(
-            db,
-            profileId: 1,
-            trackId: trackId,
-            completedAt: DateTime.utc(2026, 5, 9, 22),
-            sefariaRef: 'Mishnah Berakhot 2',
-          );
-          await _seedCompletion(
-            db,
-            profileId: 1,
-            trackId: trackId,
-            completedAt: DateTime.utc(2026, 5, 10, 8),
-            sefariaRef: 'Mishnah Berakhot 3',
-          );
-          // Profile 2 must not leak into profile 1's restore.
-          await _seedCompletion(
-            db,
-            profileId: 2,
-            trackId: trackId,
-            completedAt: DateTime.utc(2026, 5, 10, 8),
-            sefariaRef: 'Mishnah Berakhot 1',
-          );
-
-          await StreakRestorer(db).restoreIfEmpty(profileId: 1);
-
-          final rows = await (db.select(
-            db.streakEvents,
-          )..where((t) => t.profileId.equals(1))).get();
-          expect(rows, hasLength(2));
-          final days = rows
-              .map(
-                (r) => DateTime.utc(
-                  r.eventTimestamp.year,
-                  r.eventTimestamp.month,
-                  r.eventTimestamp.day,
-                ),
-              )
-              .toSet();
-          expect(days, {DateTime.utc(2026, 5, 9), DateTime.utc(2026, 5, 10)});
-        });
-
-        test('does NOT overwrite a non-empty streak_events log', () async {
-          final trackId = await _seedTrack(db);
-          // Pre-existing event from sync.
-          await StreakEventLog(db).append(
-            StreakLogEvent(
-              profileId: 1,
-              eventType: 'completion',
-              eventTimestamp: DateTime.utc(2026, 5, 1, 12),
-            ),
-          );
-          await _seedCompletion(
-            db,
-            profileId: 1,
-            trackId: trackId,
-            completedAt: DateTime.utc(2026, 5, 9),
-          );
-
-          await StreakRestorer(db).restoreIfEmpty(profileId: 1);
-
-          final rows = await (db.select(
-            db.streakEvents,
-          )..where((t) => t.profileId.equals(1))).get();
-          // The seeded May-1 event is the only row — May-9 was not
-          // back-filled because the log was non-empty.
-          expect(rows, hasLength(1));
-          // Drift serialises `DateTime` columns as a local-epoch second
-          // and Dart reads them back as local time; compare the UTC
-          // instant rather than the wall-clock representation.
-          expect(
-            rows.first.eventTimestamp.toUtc(),
-            DateTime.utc(2026, 5, 1, 12),
-          );
-        });
-      });
-
-      // ── AC7: bulk-mark-prior sentinel date must not inflate streak ───
-
-      group('AC7 — bulk-mark-prior does not inflate streak', () {
-        test(
-          'fresh install: bulk-mark-prior with sentinel date yields currentStreak==0',
-          () async {
-            final trackId = await _seedTrack(db);
-            // Simulate what BulkPriorCompletionService writes via the optimised path.
-            await _seedCompletion(
-              db,
-              profileId: 1,
-              trackId: trackId,
-              completedAt: DateTime.utc(2000, 1, 1), // sentinel historical date
-            );
-
-            // StreakRestorer sees empty streak_events → restores from completions.
-            final state = await StreakStateService(
-              db: db,
-              clock: FakeLocalDayClock(DateTime.utc(2026, 5, 14, 9)),
-            ).read(profileId: 1);
-
-            // A 26-year-old completion must NOT produce a current streak.
-            expect(state.currentStreak, 0);
-          },
+  group('AC3 — Firestore streak-state read path', () {
+    test('reads current and maximum state from the event repository', () async {
+      final firestore = FakeFirebaseFirestore();
+      final repository = FirestoreStreakEventRepository(
+        firestore: firestore,
+        uid: _uid,
+        profileId: _profileId,
+      );
+      for (final (index, day) in [
+        DateTime.utc(2026, 5, 8, 8),
+        DateTime.utc(2026, 5, 9, 8),
+        DateTime.utc(2026, 5, 10, 8),
+      ].indexed) {
+        await repository.append(
+          eventType: 'completion',
+          eventTimestamp: day,
+          ulid: '01J000000000000000000000${index + 30}',
         );
-      });
+      }
 
-      // ── AC3: StreakStateService is the only read path ────────────────
-
-      group('AC3 — StreakStateService is the only read path', () {
-        test('computes (current, max) end-to-end from streak_events', () async {
-          await StreakEventLog(db).append(
-            StreakLogEvent(
-              profileId: 1,
-              eventType: 'completion',
-              eventTimestamp: DateTime.utc(2026, 5, 8, 8),
-            ),
-          );
-          await StreakEventLog(db).append(
-            StreakLogEvent(
-              profileId: 1,
-              eventType: 'completion',
-              eventTimestamp: DateTime.utc(2026, 5, 9, 8),
-            ),
-          );
-          await StreakEventLog(db).append(
-            StreakLogEvent(
-              profileId: 1,
-              eventType: 'completion',
-              eventTimestamp: DateTime.utc(2026, 5, 10, 8),
-            ),
-          );
-
-          final provider = StreakStateService(
-            db: db,
-            clock: FakeLocalDayClock(DateTime.utc(2026, 5, 10, 9)),
-          );
-          final state = await provider.read(profileId: 1);
-
-          expect(state.currentStreak, 3);
-          expect(state.maxStreak, 3);
-        });
-
-        test(
-          'first read on an empty log auto-restores from completions',
-          () async {
-            final trackId = await _seedTrack(db);
-            await _seedCompletion(
-              db,
-              profileId: 1,
-              trackId: trackId,
-              completedAt: DateTime.utc(2026, 5, 9),
-            );
-            await _seedCompletion(
-              db,
-              profileId: 1,
-              trackId: trackId,
-              completedAt: DateTime.utc(2026, 5, 10),
-              sefariaRef: 'Mishnah Berakhot 2',
-            );
-
-            final state = await StreakStateService(
-              db: db,
-              clock: FakeLocalDayClock(DateTime.utc(2026, 5, 10, 12)),
-            ).read(profileId: 1);
-
-            expect(state.currentStreak, 2);
-            expect(state.maxStreak, 2);
-          },
-        );
-      });
-    },
-  );
+      final state = await _readState(
+        firestore,
+        now: DateTime.utc(2026, 5, 10, 9),
+      );
+      expect(state.currentStreak, 3);
+      expect(state.maxStreak, 3);
+    });
+  });
 }
