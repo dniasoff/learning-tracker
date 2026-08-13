@@ -1,10 +1,14 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/content/content_grouping.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
+import 'package:learning_tracker/features/learning/domain/entities/learning_ledger_entry.dart';
 import 'package:learning_tracker/features/progress/domain/services/lifetime_tree_builder.dart';
 
 import '../../../../fixtures/content_fixtures.dart';
+import '../../../../helpers/firestore_fixtures.dart';
 
 /// Composite-curriculum (Tanach = Chumash + Nach) lifetime-credit invariant.
 ///
@@ -50,16 +54,41 @@ ContentItem _tanachTorahLeaf(
   sortOrder: sortOrder,
 );
 
-LearningLedgerData _ledger({
-  required String curriculumId,
+const _uid = 'lifetime-tree-composite-test-user';
+const _profileId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+const _ledgerUlid = '01ARZ3NDEKTSV4RRFFQ69G5FB1';
+
+Future<LearningLedgerEntry> _ledger({
+  required CurriculumId curriculumId,
   required String entryScope,
   required String unitIdentifier,
-}) => LedgerFixtures.scopeMark(
-  curriculumId: curriculumId,
-  entryScope: entryScope,
-  unitIdentifier: unitIdentifier,
-  isManual: true,
-);
+}) async {
+  final firestore = FakeFirebaseFirestore();
+  await seedLedgerEntry(
+    firestore,
+    uid: _uid,
+    profileId: _profileId,
+    ulid: _ledgerUlid,
+    curriculumId: curriculumId,
+    entryScope: entryScope,
+    unitIdentifier: unitIdentifier,
+    isManual: true,
+  );
+  final snapshot = await firestore
+      .collection('users')
+      .doc(_uid)
+      .collection('learner_profiles')
+      .doc(_profileId)
+      .collection('learning_ledger')
+      .doc(_ledgerUlid)
+      .get();
+  final data = snapshot.data()!;
+  final completedAt = data['completed_at'];
+  if (completedAt is Timestamp) {
+    data['completed_at'] = completedAt.toDate().toUtc();
+  }
+  return learningLedgerEntryFromFirestore(data);
+}
 
 void main() {
   const builder = LifetimeTreeBuilder();
@@ -82,26 +111,29 @@ void main() {
   ];
 
   group('composite credit invariant — mark one book (Bereishis)', () {
-    test('standalone Chumash: level1 sefer mark credits exactly that book', () {
-      // In standalone Chumash, Bereishis is level1 → bare unitIdentifier.
-      final chumashLearned = builder.computeLearnedLeafRefs(
-        leaves: chumashLeaves,
-        completedRefs: const {},
-        ledgerEntries: [
-          _ledger(
-            curriculumId: 'chumash',
-            entryScope: 'level1',
-            unitIdentifier: 'Genesis',
-          ),
-        ],
-      );
-      expect(chumashLearned, {'Genesis 1:1', 'Genesis 1:2', 'Genesis 2:1'});
-    });
+    test(
+      'standalone Chumash: level1 sefer mark credits exactly that book',
+      () async {
+        // In standalone Chumash, Bereishis is level1 → bare unitIdentifier.
+        final chumashLearned = builder.computeLearnedLeafRefs(
+          leaves: chumashLeaves,
+          completedRefs: const {},
+          ledgerEntries: [
+            await _ledger(
+              curriculumId: CurriculumId.chumash,
+              entryScope: 'level1',
+              unitIdentifier: 'Genesis',
+            ),
+          ],
+        );
+        expect(chumashLearned, {'Genesis 1:1', 'Genesis 1:2', 'Genesis 2:1'});
+      },
+    );
 
     test(
       'Tanach credits the SAME leaves via the unioned subset (Chumash) ledger '
       '— equals the standalone Chumash total, NOT the whole Torah',
-      () {
+      () async {
         // Models the provider fix: compute the subset (Chumash) learned refs
         // from the subset ledger, then union those canonical sefariaRefs into
         // the composite's completedRefs. Tanach's own ledger is empty.
@@ -109,8 +141,8 @@ void main() {
           leaves: chumashLeaves,
           completedRefs: const {},
           ledgerEntries: [
-            _ledger(
-              curriculumId: 'chumash',
+            await _ledger(
+              curriculumId: CurriculumId.chumash,
               entryScope: 'level1',
               unitIdentifier: 'Genesis',
             ),
@@ -134,7 +166,7 @@ void main() {
     );
 
     test('marking Bereishis under Tanach→Torah (qualified level2) credits only '
-        'that book — matches the standalone Chumash total', () {
+        'that book — matches the standalone Chumash total', () async {
       // Tanach UI path: drill into Torah, check Bereishis → qualified level2
       // mark 'Torah|Genesis'.
       final markId = scopeUnitIdentifier(
@@ -146,8 +178,8 @@ void main() {
         leaves: tanachLeaves,
         completedRefs: const {},
         ledgerEntries: [
-          _ledger(
-            curriculumId: 'tanach',
+          await _ledger(
+            curriculumId: CurriculumId.tanach,
             entryScope: 'level2',
             unitIdentifier: markId,
           ),
@@ -161,7 +193,7 @@ void main() {
   group('synthetic-container over-credit (the bug the migration removes)', () {
     test(
       'a tanach/level1/Torah blanket mark over-credits the ENTIRE Torah',
-      () {
+      () async {
         // This is the spurious row: marking the synthetic 'Torah' container
         // credits every leaf beneath it (whole Torah) from what the user
         // intended as a single-book mark. The v32 migration deletes such rows;
@@ -170,8 +202,8 @@ void main() {
           leaves: tanachLeaves,
           completedRefs: const {},
           ledgerEntries: [
-            _ledger(
-              curriculumId: 'tanach',
+            await _ledger(
+              curriculumId: CurriculumId.tanach,
               entryScope: 'level1',
               unitIdentifier: 'Torah',
             ),

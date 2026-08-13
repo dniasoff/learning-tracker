@@ -25,9 +25,10 @@
 library;
 
 import 'package:learning_tracker/core/content/content_grouping.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
+import 'package:learning_tracker/features/learning/domain/entities/learning_ledger_entry.dart';
 
 import 'content_fixtures.dart';
 
@@ -67,7 +68,7 @@ class CollisionScenario {
   final List<ContentItem> leaves;
 
   /// The single positive scope-mark ledger row, targeting parent A.
-  final List<LearningLedgerData> ledger;
+  final List<LearningLedgerEntry> ledger;
 
   /// Parent A's leaf refs — the EXACT set a correct build must credit.
   final Set<String> expectedCredited;
@@ -229,10 +230,19 @@ CollisionScenario buildCollisionScenario({
     markUnitIdentifier: markUnitIdentifier,
     leaves: [...parentALeaves, ...parentBLeaves],
     ledger: [
-      LedgerFixtures.scopeMark(
-        curriculumId: storageKey,
+      LearningLedgerEntry(
+        ulid: '01ARZ3NDEKTSV4RRFFQ69G5FB1',
+        curriculumId: curriculum,
         entryScope: scope,
         unitIdentifier: markUnitIdentifier,
+        unitDisplayNameHe: '',
+        unitDisplayNameEn: '',
+        trackType: 'personal',
+        completedAt: DateTime.utc(2026, 1, 1, 12),
+        completionNumber: 1,
+        markedBy: '01ARZ3NDEKTSV4RRFFQ69G5FAV',
+        isManual: false,
+        source: CompletionSource.lifetimeOnly,
       ),
     ],
     expectedCredited: parentALeaves.map((l) => l.sefariaRef).toSet(),
