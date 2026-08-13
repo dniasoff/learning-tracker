@@ -26,3 +26,10 @@ firebase-debug.log
 # this covers the repo root in case a tool script is ever run from there.
 /build/
 /*.log
+
+# Serena MCP local index
+.serena/
+**/.serena/
+
+# Generated Drift files inside the archived (non-building) snapshot
+docs/_archive/**/*.g.dart
