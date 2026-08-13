@@ -1,3 +1,5 @@
+> **ARCHIVED 2026-08-13 — superseded.** Superseded by `docs/firestore-rewrite-map.md`. Retained for history only; do not treat as current. See `docs/planning/firestore-finish-line-plan.md` for the live plan.
+
 # Traceability — capability ↔ AD ↔ phase ↔ MCF
 
 Companion to `SPEC.md`. Downstream (epics/stories) cite a **CAP-N** for scope and an **AD-N** for the governing rule; this table joins them to the migration-plan phase and the baseline MCF classes. The authoritative fine-grain **MCF-1..35 → target location + governing AD** map lives in the adopted `ARCHITECTURE-SPINE.md` ("Capability → Architecture Map"); this file is the capability-level projection, not a replacement.

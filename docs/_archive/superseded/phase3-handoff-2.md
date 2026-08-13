@@ -1,3 +1,5 @@
+> **ARCHIVED 2026-08-13 — superseded.** Superseded by `docs/planning/phase3-wave-plan.md` and `docs/planning/phase3-handoff-5.md`. Retained for history only; do not treat as current. See `docs/planning/firestore-finish-line-plan.md` for the live plan.
+
 # Phase 3 handoff #2 — "Drift is gone; finish the migration"
 
 **You are a fresh agent with no memory of the session that wrote this.** This

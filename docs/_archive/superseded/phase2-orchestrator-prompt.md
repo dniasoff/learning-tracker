@@ -12,6 +12,8 @@ model_policy: "opus for planning + review; sonnet for all build work"
 created: 2026-08-02
 ---
 
+> **ARCHIVED 2026-08-13 — superseded.** Superseded by `docs/firestore-rewrite-map.md`. Retained for history only; do not treat as current. See `docs/planning/firestore-finish-line-plan.md` for the live plan.
+
 # Phase 2 Orchestrator Prompt
 
 Everything below the line is the prompt. It assumes a clean session with no

@@ -13,6 +13,15 @@ per-account Drift user database are being replaced with direct Firestore in one 
 it in full and 27 Cloud Functions already write to it. `lib/data/firestore/doc_ids.dart`
 already holds every doc-id formula (golden-tested). Build on those; do not redesign.
 
+## Superseded migration contract
+
+The archived `docs/_archive/superseded/SPEC.md` required existing-user backfill
+with byte verification. That contract is superseded: the ruling is **GREENFIELD —
+no backfill**. The Drift stack was wholesale-archived to
+`docs/_archive/drift-user-db/`, so no code path can read a legacy SQLite DB;
+backfill is impossible by construction, not deferred. `SPEC.md` is archived and
+is not the current migration contract.
+
 ## Roots
 
 ```

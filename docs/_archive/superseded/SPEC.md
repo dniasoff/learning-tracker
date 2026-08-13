@@ -10,6 +10,8 @@ sources:
   - ../../planning/architecture/architecture-learning-tracker-2026-07-30/.memlog.md
 ---
 
+> **ARCHIVED 2026-08-13 — superseded.** Superseded by `docs/firestore-rewrite-map.md`. Retained for history only; do not treat as current. See `docs/planning/firestore-finish-line-plan.md` for the live plan.
+
 > **Canonical contract.** This SPEC and the files in `companions:` are the complete, preservation-validated contract for what to build, test, and validate. The **ARCHITECTURE-SPINE** (30 ADs, doc-id/predicate/registry detail, diagrams, the MCF→AD completeness map), the **migration-plan** (Phase 0–7 entry/exit/rollback), and the **baseline** (the MCF-1..35 register) are adopted whole: the kernel cites them, it does not duplicate them. AD-N and MCF-N ids are stable and citable. Source documents in `sources:` are for traceability only.
 
 # Drift → Firestore-Native Migration

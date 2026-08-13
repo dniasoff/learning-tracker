@@ -1,3 +1,5 @@
+> **ARCHIVED 2026-08-13 — superseded.** Superseded by `docs/firestore-rewrite-map.md`. Retained for history only; do not treat as current. See `docs/planning/firestore-finish-line-plan.md` for the live plan.
+
 # Tutor "Talmid View" — Stream Tracker
 
 Maintained by the Talmid-View Orchestrator. Status legend:

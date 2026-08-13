@@ -31,6 +31,7 @@ For domain-specific deep dives, see the flows and planning sections below.
 - [Source Tree Analysis](source-tree-analysis.md)
 - [Testing Guide](testing-guide.md)
 - [Privacy Policy](privacy-policy.md)
+- [Firestore Rewrite Map](firestore-rewrite-map.md) — active migration map and greenfield/no-backfill contract
 
 ## Planning and design (`planning/`)
 
@@ -39,8 +40,7 @@ Active planning artifacts — the design intent and the rationale behind the cur
 - [PRD](planning/prd.md)
 - [Architecture — Design Intent](planning/architecture-design.md) — comprehensive design-level doc
 - [Architecture Quick Reference](planning/architecture-quick-reference.md)
-- [Offline-First Architecture v2](planning/architecture-offline-v2.md) — current direction for the auth refactor (Epic 20 b)
-- [Two-Database Architecture](planning/two-database-architecture.md) — Content DB + User DB split (Epic 19)
+- [Firestore Finish-Line Plan](planning/firestore-finish-line-plan.md) — live migration execution plan
 - [Overdue System — Refactor Architecture](planning/overdue-refactor-architecture.md) — target design for the overdue/scheduler refactor (2026-05-19)
 - [Epics](planning/epics.md) — detailed epic + story breakdowns
 - [v1 Developer Roadmap](planning/v1-developer-roadmap.md)
@@ -63,7 +63,6 @@ Feature-flow documentation — how a specific user flow works end-to-end.
 
 UX scenario specifications driving upcoming epics.
 
-- [Dashboard Redesign Set](scenarios/dashboard-redesign-set/) — Epic 20 (a)
 - [Evolution Set](scenarios/evolution/) — **superseded 2026-05-19**; catch-up/amnesty design replaced by [Overdue System — Refactor Architecture](planning/overdue-refactor-architecture.md)
 - [Stitch Prompts](scenarios/stitch-prompts/) — AI-generated UI design prompts
 
@@ -77,7 +76,7 @@ Story-level implementation specs, produced before each story is coded.
 
 Machine-readable project status files, managed by BMAD workflows.
 
-- [`sprint-status.yaml`](status/sprint-status.yaml) — per-epic per-story status (source of truth)
+- [`sprint-status.yaml`](status/sprint-status.yaml) — authoritative per-epic/per-story status for Epics ≤21; for Epics 24–27, see [Project Status (Linear)](linear-status.md)
 - [`linear-mapping.yaml`](status/linear-mapping.yaml) — Linear ticket ID mapping
 - [`bmm-workflow-status.yaml`](status/bmm-workflow-status.yaml) — BMAD workflow state
 - [`wds-workflow-status.yaml`](status/wds-workflow-status.yaml) — WDS workflow state

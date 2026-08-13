@@ -1,3 +1,5 @@
+> **ARCHIVED 2026-08-13 — superseded.** Superseded by `docs/firestore-rewrite-map.md`. Retained for history only; do not treat as current. See `docs/planning/firestore-finish-line-plan.md` for the live plan.
+
 # Orchestration Kickoff Prompt — Tutor "Talmid View" (2026-05-26)
 
 > Paste the body of this file as the first message to a fresh Claude Code session (orchestrator = **Opus**). The agent reading it becomes **the Talmid-View Orchestrator** and builds the tutor "view & configure a talmid" feature end-to-end via a parallel **Sonnet** sub-agent squad — then adversarial-review-and-fix until `make ci` is green and the tutor charter flow passes, without doing code work itself.
