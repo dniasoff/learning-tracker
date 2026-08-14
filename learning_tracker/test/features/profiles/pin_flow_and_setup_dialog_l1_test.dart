@@ -86,15 +86,15 @@ class _MockAppRouter extends Mock implements AppRouter {
 /// Minimal PinGuard stub — markAuthenticated is a no-op.
 class _FakePinGuard extends Fake implements PinGuard {
   @override
-  void markAuthenticated(int profileId) {}
+  void markAuthenticated(String profileId) {}
 }
 
 /// PinGuard spy that records every [markAuthenticated] call.
 class _SpyPinGuard extends Fake implements PinGuard {
-  final List<int> markAuthenticatedCalls = [];
+  final List<String> markAuthenticatedCalls = [];
 
   @override
-  void markAuthenticated(int profileId) {
+  void markAuthenticated(String profileId) {
     markAuthenticatedCalls.add(profileId);
   }
 }
@@ -112,14 +112,14 @@ class _SpyAppRouter extends Mock implements AppRouter {
 /// Fixed selectedProfileId notifier so the controller can resolve a profile id.
 class _FixedSelectedProfileId extends SelectedProfileId {
   _FixedSelectedProfileId(this._id);
-  final int? _id;
+  final String? _id;
   @override
-  int? build() => _id;
+  String? build() => _id;
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const int _kProfileId = 42;
+const String _kProfileId = '01HPINPROFILE00000000000000';
 
 // ── Harness builders ──────────────────────────────────────────────────────────
 
@@ -134,7 +134,7 @@ Widget _buildScreen(
   required _MockPinService pinService,
   required _MockStackRouter router,
   required _MockAppRouter appRouter,
-  int? profileId = _kProfileId,
+  String? profileId = _kProfileId,
   Locale locale = const Locale('en'),
 }) {
   return pumpApp(
@@ -845,7 +845,7 @@ void main() {
 
     /// Builds a harness that shows [showParentPinSetupDialog] via a button tap.
     Widget buildDialogHarness({
-      int profileId = _kProfileId,
+      String profileId = _kProfileId,
       String? profileName,
       Locale locale = const Locale('en'),
     }) {
@@ -1269,7 +1269,7 @@ void main() {
     });
 
     Widget buildChangeHarness({
-      int profileId = _kProfileId,
+      String profileId = _kProfileId,
       Locale locale = const Locale('en'),
     }) {
       return pumpApp(

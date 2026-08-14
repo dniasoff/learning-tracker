@@ -19,9 +19,10 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/app_shell.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
-import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
+import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/parent_pin_session_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
@@ -41,18 +42,18 @@ class _StubAuthStateNotifier extends AuthStateNotifier {
 
 class _StubParentPinNotifier extends ParentPinAuthenticatedProfileId {
   _StubParentPinNotifier(this._value);
-  final int? _value;
+  final String? _value;
 
   @override
-  int? build() => _value;
+  String? build() => _value;
 }
 
 class _StubActiveProfileId extends ActiveProfileId {
   _StubActiveProfileId(this._id);
-  final int _id;
+  final String _id;
 
   @override
-  int build() => _id;
+  String build() => _id;
 }
 
 class _StubActiveTutoredProfileSelection extends ActiveTutoredProfileSelection {
@@ -65,55 +66,49 @@ class _StubActiveTutoredProfileSelection extends ActiveTutoredProfileSelection {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-const _kChildProfileId = 42;
-const _kAccountId = 1;
+const _kChildProfileId = '01HCHILDPROFILE000000000000';
+const _kAdultProfileId = '01HADULTPROFILE000000000000';
 final _kNow = DateTime(2024);
 
-ProfileModel _childProfile() => ProfileModel(
-  id: _kChildProfileId,
-  ulid: 'ulid-$_kChildProfileId',
-  accountId: _kAccountId,
+LearnerProfileEntity _childProfile() => LearnerProfileEntity(
+  profileId: _kChildProfileId,
   displayName: 'Junior',
-  mode: 'child',
-  avatarIndex: 0,
+  mode: ProfileMode.child,
   createdAt: _kNow,
   updatedAt: _kNow,
 );
 
-ProfileModel _adultProfile() => ProfileModel(
-  id: 99,
-  ulid: 'ulid-99',
-  accountId: _kAccountId,
+LearnerProfileEntity _adultProfile() => LearnerProfileEntity(
+  profileId: _kAdultProfileId,
   displayName: 'Parent',
-  mode: 'adult',
-  avatarIndex: 0,
+  mode: ProfileMode.adult,
   createdAt: _kNow,
   updatedAt: _kNow,
 );
 
 const _kLocalAuthState = AuthState.signedIn(
   user: AuthUser(
-    profileId: _kChildProfileId,
+    uid: 'account-parent',
     email: 'parent@example.test',
     displayName: 'Parent',
   ),
-  tier: Tier.localBorn,
+  tier: Tier.local,
 );
 
 const _kAdultAuthState = AuthState.signedIn(
   user: AuthUser(
-    profileId: 99,
+    uid: 'account-parent',
     email: 'parent@example.test',
     displayName: 'Parent',
   ),
-  tier: Tier.localBorn,
+  tier: Tier.local,
 );
 
 Widget _buildBar({
   required AuthState authState,
-  required int activeId,
-  required ProfileModel? profile,
-  required int? parentAuthedId,
+  required String activeId,
+  required LearnerProfileEntity? profile,
+  required String? parentAuthedId,
 }) {
   return ProviderScope(
     overrides: [
@@ -122,7 +117,9 @@ Widget _buildBar({
         () => _StubActiveProfileId(activeId),
       ),
       profileListStreamProvider.overrideWith(
-        (ref) => Stream.value(profile != null ? [profile] : <ProfileModel>[]),
+        (ref) => Stream.value(
+          profile != null ? [profile] : <LearnerProfileEntity>[],
+        ),
       ),
       activeProfileProvider.overrideWith((ref) async => profile),
       activeTutoredProfileSelectionProvider.overrideWith(
@@ -207,7 +204,7 @@ void main() {
       await tester.pumpWidget(
         _buildBar(
           authState: _kAdultAuthState,
-          activeId: 99,
+          activeId: _kAdultProfileId,
           profile: _adultProfile(),
           parentAuthedId: null,
         ),
@@ -227,7 +224,7 @@ void main() {
             authState: _kLocalAuthState,
             activeId: _kChildProfileId,
             profile: _childProfile(),
-            parentAuthedId: 99, // Different profile ID
+            parentAuthedId: _kAdultProfileId, // Different profile ID
           ),
         );
         await tester.pump();

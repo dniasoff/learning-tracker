@@ -25,13 +25,14 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/network/connectivity_gateway.dart';
 import 'package:learning_tracker/core/providers/network_providers.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
-import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
+import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/screens/manage_learners_screen.dart';
@@ -51,20 +52,16 @@ class _FakePageRouteInfo extends Fake implements PageRouteInfo {}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-ProfileModel _profile({
+LearnerProfileEntity _profile({
   required int id,
   required String name,
-  required String mode,
-  int accountId = 1,
+  required ProfileMode mode,
 }) {
   final now = DateTime.utc(2026, 1, 1);
-  return ProfileModel(
-    id: id,
-    ulid: 'ulid-$id',
-    accountId: accountId,
+  return LearnerProfileEntity(
+    profileId: 'ulid-$id',
     displayName: name,
     mode: mode,
-    avatarIndex: 0,
     createdAt: now,
     updatedAt: now,
   );
@@ -74,19 +71,19 @@ ProfileModel _profile({
 /// do not try to read the real database on build.
 class _FixedSelectedProfileId extends SelectedProfileId {
   _FixedSelectedProfileId(this._initial);
-  final int? _initial;
+  final String? _initial;
   @override
-  int? build() => _initial;
+  String? build() => _initial;
 }
 
 const _kLocalBornAuthState = AuthState.signedIn(
-  user: AuthUser(profileId: 1, email: 'test@test.com', displayName: 'Test'),
-  tier: Tier.localBorn,
+  user: AuthUser(uid: 'account-1', email: 'test@test.com', displayName: 'Test'),
+  tier: Tier.local,
 );
 
 const _kCloudBornAuthState = AuthState.signedIn(
-  user: AuthUser(profileId: 1, email: 'test@test.com', displayName: 'Test'),
-  tier: Tier.cloudBorn,
+  user: AuthUser(uid: 'account-1', email: 'test@test.com', displayName: 'Test'),
+  tier: Tier.cloud,
 );
 
 /// Build ManageLearnersScreen with a controlled stream and mock providers.
@@ -104,7 +101,7 @@ const _kCloudBornAuthState = AuthState.signedIn(
 ///                   Riverpod's built-in retry loop.
 Widget _buildApp({
   required _MockStackRouter router,
-  required AsyncValue<List<ProfileModel>> profilesState,
+  required AsyncValue<List<LearnerProfileEntity>> profilesState,
   _MockProfileRepository? repo,
   _MockConnectivityGateway? connectivity,
   AuthState authState = _kLocalBornAuthState,
@@ -124,16 +121,19 @@ Widget _buildApp({
   }
 
   // Build a stream that matches the requested AsyncValue.
-  Stream<List<ProfileModel>> makeStream() {
+  Stream<List<LearnerProfileEntity>> makeStream() {
     switch (profilesState) {
-      case AsyncData<List<ProfileModel>>(:final value):
+      case AsyncData<List<LearnerProfileEntity>>(:final value):
         return Stream.value(value);
-      case AsyncError<List<ProfileModel>>(:final error, :final stackTrace):
-        return Stream<List<ProfileModel>>.error(error, stackTrace);
+      case AsyncError<List<LearnerProfileEntity>>(
+        :final error,
+        :final stackTrace,
+      ):
+        return Stream<List<LearnerProfileEntity>>.error(error, stackTrace);
       default:
         // AsyncLoading — never emits and never closes so the provider remains
         // in the loading state for the duration of the test.
-        return StreamController<List<ProfileModel>>().stream;
+        return StreamController<List<LearnerProfileEntity>>().stream;
     }
   }
 
@@ -143,10 +143,11 @@ Widget _buildApp({
     overrides: [
       profileListStreamProvider.overrideWith((ref) => makeStream()),
       profileRepositoryProvider.overrideWithValue(mockRepo),
-      currentAccountIdProvider.overrideWithValue(1),
       authStateProvider.overrideWithValue(authState),
       connectivityServiceProvider.overrideWithValue(mockConnectivity),
-      selectedProfileIdProvider.overrideWith(() => _FixedSelectedProfileId(1)),
+      selectedProfileIdProvider.overrideWith(
+        () => _FixedSelectedProfileId('ulid-1'),
+      ),
     ],
     locale: locale,
     child: StackRouterScope(
@@ -243,8 +244,8 @@ void main() {
   group('List rendering', () {
     testWidgets('lists profiles by display name', (tester) async {
       final profiles = [
-        _profile(id: 1, name: 'Avi', mode: 'adult'),
-        _profile(id: 2, name: 'Beni', mode: 'child'),
+        _profile(id: 1, name: 'Avi', mode: ProfileMode.adult),
+        _profile(id: 2, name: 'Beni', mode: ProfileMode.child),
       ];
 
       await tester.pumpWidget(
@@ -262,7 +263,7 @@ void main() {
     testWidgets('shows l10n profileTypeChild subtitle for child profile', (
       tester,
     ) async {
-      final profiles = [_profile(id: 1, name: 'Dani', mode: 'child')];
+      final profiles = [_profile(id: 1, name: 'Dani', mode: ProfileMode.child)];
 
       await tester.pumpWidget(
         _buildApp(router: router, profilesState: AsyncData(profiles)),
@@ -279,7 +280,9 @@ void main() {
     testWidgets('shows l10n profileTypeAdult subtitle for adult profile', (
       tester,
     ) async {
-      final profiles = [_profile(id: 1, name: 'Sarah', mode: 'adult')];
+      final profiles = [
+        _profile(id: 1, name: 'Sarah', mode: ProfileMode.adult),
+      ];
 
       await tester.pumpWidget(
         _buildApp(router: router, profilesState: AsyncData(profiles)),
@@ -298,8 +301,8 @@ void main() {
     ) async {
       // Product rule: only child + adult profile types exist — no "parent" type.
       final profiles = [
-        _profile(id: 1, name: 'Reuven', mode: 'adult'),
-        _profile(id: 2, name: 'Shimon', mode: 'child'),
+        _profile(id: 1, name: 'Reuven', mode: ProfileMode.adult),
+        _profile(id: 2, name: 'Shimon', mode: ProfileMode.child),
       ];
 
       await tester.pumpWidget(
@@ -316,7 +319,9 @@ void main() {
     testWidgets(
       'each profile tile exposes an Edit and a Delete popup menu item',
       (tester) async {
-        final profiles = [_profile(id: 1, name: 'Avi', mode: 'adult')];
+        final profiles = [
+          _profile(id: 1, name: 'Avi', mode: ProfileMode.adult),
+        ];
 
         await tester.pumpWidget(
           _buildApp(router: router, profilesState: AsyncData(profiles)),
@@ -363,7 +368,11 @@ void main() {
       // (buggy) behavior; see DNI-414 for the fix.
       final profiles = List.generate(
         10,
-        (i) => _profile(id: i + 1, name: 'Profile ${i + 1}', mode: 'adult'),
+        (i) => _profile(
+          id: i + 1,
+          name: 'Profile ${i + 1}',
+          mode: ProfileMode.adult,
+        ),
       );
 
       await tester.pumpWidget(
@@ -383,18 +392,17 @@ void main() {
 
   group('Edit flow', () {
     testWidgets('tapping Edit opens the ProfileEditFormDialog', (tester) async {
-      final profile = _profile(id: 1, name: 'Avi', mode: 'adult');
+      final profile = _profile(id: 1, name: 'Avi', mode: ProfileMode.adult);
       final repo = _MockProfileRepository();
       when(
         () => repo.updateProfile(
-          id: any(named: 'id'),
+          profileId: any(named: 'profileId'),
           displayName: any(named: 'displayName'),
-          avatarIndex: any(named: 'avatarIndex'),
+          mode: any(named: 'mode'),
+          avatar: any(named: 'avatar'),
         ),
       ).thenAnswer((_) async => profile);
-      when(
-        () => repo.getProfilesByAccount(any()),
-      ).thenAnswer((_) async => [profile]);
+      when(() => repo.getProfiles()).thenAnswer((_) async => [profile]);
 
       await tester.pumpWidget(
         _buildApp(
@@ -422,21 +430,20 @@ void main() {
     testWidgets('confirming the edit dialog calls repo.updateProfile', (
       tester,
     ) async {
-      final profile = _profile(id: 1, name: 'Avi', mode: 'adult');
+      final profile = _profile(id: 1, name: 'Avi', mode: ProfileMode.adult);
       final repo = _MockProfileRepository();
       when(
         () => repo.updateProfile(
-          id: any(named: 'id'),
+          profileId: any(named: 'profileId'),
           displayName: any(named: 'displayName'),
           mode: any(named: 'mode'),
-          avatarIndex: any(named: 'avatarIndex'),
+          avatar: any(named: 'avatar'),
         ),
       ).thenAnswer(
-        (_) async => _profile(id: 1, name: 'Avi Renamed', mode: 'adult'),
+        (_) async =>
+            _profile(id: 1, name: 'Avi Renamed', mode: ProfileMode.adult),
       );
-      when(
-        () => repo.getProfilesByAccount(any()),
-      ).thenAnswer((_) async => [profile]);
+      when(() => repo.getProfiles()).thenAnswer((_) async => [profile]);
 
       await tester.pumpWidget(
         _buildApp(
@@ -462,14 +469,14 @@ void main() {
       await tester.pumpAndSettle();
 
       // PP-2: editProfileFlow now persists the selected mode. The Edit dialog
-      // pre-selects the profile's existing mode ('adult'), so the renamed
-      // profile is saved with mode: 'adult' preserved.
+      // pre-selects the profile's existing mode (ProfileMode.adult), so the
+      // renamed profile is saved with that typed mode preserved.
       verify(
         () => repo.updateProfile(
-          id: 1,
+          profileId: 'ulid-1',
           displayName: 'Avi Renamed',
-          mode: 'adult',
-          avatarIndex: any(named: 'avatarIndex'),
+          mode: ProfileMode.adult,
+          avatar: any(named: 'avatar'),
         ),
       ).called(1);
 
@@ -480,7 +487,7 @@ void main() {
     testWidgets('cancelling the edit dialog does NOT call repo.updateProfile', (
       tester,
     ) async {
-      final profile = _profile(id: 1, name: 'Avi', mode: 'adult');
+      final profile = _profile(id: 1, name: 'Avi', mode: ProfileMode.adult);
       final repo = _MockProfileRepository();
 
       await tester.pumpWidget(
@@ -503,9 +510,10 @@ void main() {
 
       verifyNever(
         () => repo.updateProfile(
-          id: any(named: 'id'),
+          profileId: any(named: 'profileId'),
           displayName: any(named: 'displayName'),
-          avatarIndex: any(named: 'avatarIndex'),
+          mode: any(named: 'mode'),
+          avatar: any(named: 'avatar'),
         ),
       );
 
@@ -520,11 +528,9 @@ void main() {
     testWidgets('tapping Delete shows a confirm dialog with the profile name', (
       tester,
     ) async {
-      final profile = _profile(id: 1, name: 'Beni', mode: 'child');
+      final profile = _profile(id: 1, name: 'Beni', mode: ProfileMode.child);
       final repo = _MockProfileRepository();
-      when(
-        () => repo.countProfilesForAccount(any()),
-      ).thenAnswer((_) async => 2);
+      when(() => repo.countProfiles()).thenAnswer((_) async => 2);
 
       await tester.pumpWidget(
         _buildApp(
@@ -550,17 +556,13 @@ void main() {
     testWidgets('confirming Delete calls repo.deleteProfile with profile id', (
       tester,
     ) async {
-      final profile = _profile(id: 42, name: 'Beni', mode: 'child');
+      final profile = _profile(id: 42, name: 'Beni', mode: ProfileMode.child);
       final repo = _MockProfileRepository();
-      when(
-        () => repo.countProfilesForAccount(any()),
-      ).thenAnswer((_) async => 2);
+      when(() => repo.countProfiles()).thenAnswer((_) async => 2);
       when(
         () => repo.deleteProfile(any(), allowLast: any(named: 'allowLast')),
       ).thenAnswer((_) async {});
-      when(
-        () => repo.getProfilesByAccount(any()),
-      ).thenAnswer((_) async => [profile]);
+      when(() => repo.getProfiles()).thenAnswer((_) async => [profile]);
 
       await tester.pumpWidget(
         _buildApp(
@@ -584,7 +586,7 @@ void main() {
       await tester.pumpAndSettle();
 
       verify(
-        () => repo.deleteProfile(42, allowLast: any(named: 'allowLast')),
+        () => repo.deleteProfile('ulid-42', allowLast: any(named: 'allowLast')),
       ).called(1);
 
       await tester.pumpWidget(const SizedBox.shrink());
@@ -594,11 +596,9 @@ void main() {
     testWidgets('cancelling Delete does NOT call repo.deleteProfile', (
       tester,
     ) async {
-      final profile = _profile(id: 1, name: 'Beni', mode: 'child');
+      final profile = _profile(id: 1, name: 'Beni', mode: ProfileMode.child);
       final repo = _MockProfileRepository();
-      when(
-        () => repo.countProfilesForAccount(any()),
-      ).thenAnswer((_) async => 2);
+      when(() => repo.countProfiles()).thenAnswer((_) async => 2);
 
       await tester.pumpWidget(
         _buildApp(
@@ -629,18 +629,14 @@ void main() {
     testWidgets(
       'deleting the last profile shows the last-profile confirm dialog',
       (tester) async {
-        final profile = _profile(id: 1, name: 'Solo', mode: 'adult');
+        final profile = _profile(id: 1, name: 'Solo', mode: ProfileMode.adult);
         final repo = _MockProfileRepository();
-        // countProfilesForAccount returns 1 → this is the last profile.
-        when(
-          () => repo.countProfilesForAccount(any()),
-        ).thenAnswer((_) async => 1);
+        // countProfiles returns 1 → this is the last profile.
+        when(() => repo.countProfiles()).thenAnswer((_) async => 1);
         when(
           () => repo.deleteProfile(any(), allowLast: any(named: 'allowLast')),
         ).thenAnswer((_) async {});
-        when(
-          () => repo.getProfilesByAccount(any()),
-        ).thenAnswer((_) async => []);
+        when(() => repo.getProfiles()).thenAnswer((_) async => []);
 
         await tester.pumpWidget(
           _buildApp(
@@ -670,12 +666,10 @@ void main() {
       'cloud-born offline: confirming Delete STILL calls repo.deleteProfile '
       '(offline-first — R3-10)',
       (tester) async {
-        final profile = _profile(id: 1, name: 'Beni', mode: 'child');
+        final profile = _profile(id: 1, name: 'Beni', mode: ProfileMode.child);
         final repo = _MockProfileRepository();
         final connectivity = _MockConnectivityGateway();
-        when(
-          () => repo.countProfilesForAccount(any()),
-        ).thenAnswer((_) async => 2);
+        when(() => repo.countProfiles()).thenAnswer((_) async => 2);
         when(
           () => repo.deleteProfile(any(), allowLast: any(named: 'allowLast')),
         ).thenAnswer((_) async {});
@@ -683,8 +677,8 @@ void main() {
         // to auto-switch the selection. id=1 is the only profile, so none
         // remain after delete and the flow clears the selection.
         when(
-          () => repo.getProfilesByAccount(any()),
-        ).thenAnswer((_) async => <ProfileModel>[]);
+          () => repo.getProfiles(),
+        ).thenAnswer((_) async => <LearnerProfileEntity>[]);
         // Simulate offline.
         when(() => connectivity.isOnline).thenAnswer((_) async => false);
 
@@ -712,7 +706,8 @@ void main() {
 
         // R3-10: offline-first — the delete must proceed offline (no online gate).
         verify(
-          () => repo.deleteProfile(1, allowLast: any(named: 'allowLast')),
+          () =>
+              repo.deleteProfile('ulid-1', allowLast: any(named: 'allowLast')),
         ).called(1);
 
         await tester.pumpWidget(const SizedBox.shrink());
@@ -732,8 +727,8 @@ void main() {
         addTearDown(tester.view.reset);
 
         final profiles = [
-          _profile(id: 1, name: 'אבי', mode: 'adult'),
-          _profile(id: 2, name: 'בני', mode: 'child'),
+          _profile(id: 1, name: 'אבי', mode: ProfileMode.adult),
+          _profile(id: 2, name: 'בני', mode: ProfileMode.child),
         ];
 
         await tester.pumpWidget(
@@ -808,7 +803,7 @@ void main() {
       'dark mode: avatar gradient reads profileAvatarGradientStart/End (not '
       'the old hardcoded 0xFFF2F5FC/0xFFE6ECF8 literals)',
       (tester) async {
-        final profile = _profile(id: 1, name: 'Moshe', mode: 'child');
+        final profile = _profile(id: 1, name: 'Moshe', mode: ProfileMode.child);
         await tester.pumpWidget(
           _buildApp(
             router: router,
@@ -842,7 +837,7 @@ void main() {
 
     testWidgets('light mode: avatar gradient stays the original '
         '0xFFF2F5FC/0xFFE6ECF8 (no regression)', (tester) async {
-      final profile = _profile(id: 1, name: 'Moshe', mode: 'child');
+      final profile = _profile(id: 1, name: 'Moshe', mode: ProfileMode.child);
       await tester.pumpWidget(
         _buildApp(router: router, profilesState: AsyncData([profile])),
       );

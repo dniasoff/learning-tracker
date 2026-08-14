@@ -20,9 +20,10 @@ library;
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
-import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
+import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/screens/profile_picker_screen.dart';
@@ -64,43 +65,44 @@ class _UnrelatedOverflowProbe extends StatelessWidget {
 
 class _FixedSelectedProfileId extends SelectedProfileId {
   _FixedSelectedProfileId(this._initial);
-  final int? _initial;
+  final String? _initial;
   @override
-  int? build() => _initial;
+  String? build() => _initial;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 final _epoch = DateTime.utc(2026, 1, 1);
 
-ProfileModel _profile({
+LearnerProfileEntity _profile({
   required int id,
   required String name,
-  String mode = 'child',
-}) => ProfileModel(
-  id: id,
-  ulid: 'ulid-$id',
-  accountId: 1,
+  ProfileMode mode = ProfileMode.child,
+}) => LearnerProfileEntity(
+  profileId: 'ulid-$id',
   displayName: name,
   mode: mode,
-  avatarIndex: 0,
   createdAt: _epoch,
   updatedAt: _epoch,
 );
 
 const _kCloudBorn = AuthState.signedIn(
   user: AuthUser(
-    profileId: 1,
+    uid: 'account-cloud',
     email: 'cloud@test.com',
     displayName: 'Cloud',
     firebaseUid: 'uid123',
   ),
-  tier: Tier.cloudBorn,
+  tier: Tier.cloud,
 );
 
 const _kLocalBorn = AuthState.signedIn(
-  user: AuthUser(profileId: 1, email: 'local@test.com', displayName: 'Local'),
-  tier: Tier.localBorn,
+  user: AuthUser(
+    uid: 'account-local',
+    email: 'local@test.com',
+    displayName: 'Local',
+  ),
+  tier: Tier.local,
 );
 
 /// Pumps [ProfilePickerScreen] with two profiles and a mock repository.
@@ -115,9 +117,9 @@ const _kLocalBorn = AuthState.signedIn(
 Widget _buildApp({
   required _MockStackRouter router,
   required _MockProfileRepository repo,
-  required List<ProfileModel> profiles,
+  required List<LearnerProfileEntity> profiles,
   required AuthState authState,
-  int? selectedId,
+  String? selectedId,
   Widget? debugOverflowProbe,
 }) {
   return pumpApp(
@@ -126,7 +128,6 @@ Widget _buildApp({
       incomingTutorGrantsProvider.overrideWith((ref) async => []),
       pendingTutorInvitesProvider.overrideWith((ref) async => []),
       authStateProvider.overrideWithValue(authState),
-      currentAccountIdProvider.overrideWithValue(1),
       profileRepositoryProvider.overrideWithValue(repo),
       selectedProfileIdProvider.overrideWith(
         () => _FixedSelectedProfileId(selectedId),
@@ -176,12 +177,12 @@ void main() {
 
   group('R-PR2 — picker _showDeleteDialog: no connectivity gate (offline-first)', () {
     // Shared mock repo setup reused by both cloud-born and local-born tests.
-    _MockProfileRepository makeRepo({required List<ProfileModel> profiles}) {
+    _MockProfileRepository makeRepo({
+      required List<LearnerProfileEntity> profiles,
+    }) {
       final repo = _MockProfileRepository();
       // Two profiles → isLast == false.
-      when(
-        () => repo.countProfilesForAccount(any()),
-      ).thenAnswer((_) async => profiles.length);
+      when(() => repo.countProfiles()).thenAnswer((_) async => profiles.length);
       // deleteProfile succeeds (simulates the offline-first local Drift delete).
       when(
         () => repo.deleteProfile(any(), allowLast: any(named: 'allowLast')),
@@ -200,7 +201,7 @@ void main() {
       WidgetTester tester,
       _MockStackRouter router,
       _MockProfileRepository repo,
-      List<ProfileModel> profiles,
+      List<LearnerProfileEntity> profiles,
       AuthState authState,
       String profileNameToDelete,
     ) async {
@@ -260,8 +261,8 @@ void main() {
       'cloud-born + offline: repo.deleteProfile IS called (no online gate)',
       (tester) async {
         final profiles = [
-          _profile(id: 1, name: 'Avi', mode: 'adult'),
-          _profile(id: 2, name: 'Beni', mode: 'child'),
+          _profile(id: 1, name: 'Avi', mode: ProfileMode.adult),
+          _profile(id: 2, name: 'Beni', mode: ProfileMode.child),
         ];
         final repo = makeRepo(profiles: profiles);
 
@@ -269,7 +270,7 @@ void main() {
 
         // R-PR2: the repository must be called regardless of connectivity.
         // Before the fix this would NOT be called when offline for cloud-born.
-        verify(() => repo.deleteProfile(2, allowLast: false)).called(1);
+        verify(() => repo.deleteProfile('ulid-2', allowLast: false)).called(1);
 
         // The old offline snackbar must NOT appear.
         expect(
@@ -289,8 +290,8 @@ void main() {
       'local-born + offline: repo.deleteProfile IS called (unchanged behavior)',
       (tester) async {
         final profiles = [
-          _profile(id: 1, name: 'Avi', mode: 'adult'),
-          _profile(id: 2, name: 'Beni', mode: 'child'),
+          _profile(id: 1, name: 'Avi', mode: ProfileMode.adult),
+          _profile(id: 2, name: 'Beni', mode: ProfileMode.child),
         ];
         final repo = makeRepo(profiles: profiles);
 
@@ -298,7 +299,7 @@ void main() {
 
         // Local-born always passed the old guard (isLocalBorn == true skipped
         // the check). Must still work after the fix.
-        verify(() => repo.deleteProfile(2, allowLast: false)).called(1);
+        verify(() => repo.deleteProfile('ulid-2', allowLast: false)).called(1);
 
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pump(Duration.zero);
@@ -335,8 +336,8 @@ void main() {
         };
 
         final profiles = [
-          _profile(id: 1, name: 'Avi', mode: 'adult'),
-          _profile(id: 2, name: 'Beni', mode: 'child'),
+          _profile(id: 1, name: 'Avi', mode: ProfileMode.adult),
+          _profile(id: 2, name: 'Beni', mode: ProfileMode.child),
         ];
         final repo = makeRepo(profiles: profiles);
 

@@ -59,6 +59,7 @@
 library;
 
 import 'package:auto_route/auto_route.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -80,6 +81,9 @@ import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 
+import '../../helpers/firestore_fake.dart';
+import '../../helpers/firestore_fixtures.dart';
+
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
 class _MockStackRouter extends Mock implements StackRouter {}
@@ -90,9 +94,9 @@ class _FakePageRouteInfo extends Fake implements PageRouteInfo {}
 
 class _FixedSelectedProfileId extends SelectedProfileId {
   _FixedSelectedProfileId(this._initial);
-  final int? _initial;
+  final String? _initial;
   @override
-  int? build() => _initial;
+  String? build() => _initial;
 }
 
 // ── Test data factories ────────────────────────────────────────────────────────
@@ -101,21 +105,21 @@ final _epoch = DateTime.utc(2026, 1, 1);
 
 LearnerProfileEntity _child({int id = 1, String name = 'Yosef'}) =>
     LearnerProfileEntity(
-  profileId: 'ulid-$id',
-  displayName: name,
-  mode: ProfileMode.child,
-  createdAt: _epoch,
-  updatedAt: _epoch,
-);
+      profileId: 'ulid-$id',
+      displayName: name,
+      mode: ProfileMode.child,
+      createdAt: _epoch,
+      updatedAt: _epoch,
+    );
 
 LearnerProfileEntity _adult({int id = 2, String name = 'Avraham'}) =>
     LearnerProfileEntity(
-  profileId: 'ulid-$id',
-  displayName: name,
-  mode: ProfileMode.adult,
-  createdAt: _epoch,
-  updatedAt: _epoch,
-);
+      profileId: 'ulid-$id',
+      displayName: name,
+      mode: ProfileMode.adult,
+      createdAt: _epoch,
+      updatedAt: _epoch,
+    );
 
 TutorGrant _activeGrant({
   String grantId = 'grant-active-1',
@@ -277,7 +281,11 @@ Widget _buildPicker({
   final resolvedAuth =
       authState ??
       const AuthState.signedIn(
-        user: AuthUser(uid: 'account-picker', email: 't@t.com', displayName: 'Test'),
+        user: AuthUser(
+          uid: 'account-picker',
+          email: 't@t.com',
+          displayName: 'Test',
+        ),
         tier: Tier.local,
       );
   final firestore = createFakeFirestore(authenticatedUid: 'account-picker');
@@ -286,7 +294,21 @@ Widget _buildPicker({
   return ProviderScope(
     retry: (_, __) => null,
     overrides: [
-      profileListProvider.overrideWith((ref) => Future.value(profiles)),
+      profileListProvider.overrideWith((ref) async {
+        for (final profile in profiles) {
+          await seedProfile(
+            firestore,
+            uid: 'account-picker',
+            profileId: profile.profileId,
+            displayName: profile.displayName,
+            mode: profile.mode,
+            avatar: profile.avatar,
+            createdAt: profile.createdAt,
+            updatedAt: profile.updatedAt,
+          );
+        }
+        return profiles;
+      }),
       profileRepositoryProvider.overrideWithValue(profileRepository),
       incomingTutorGrantsProvider.overrideWith((ref) async => grants),
       pendingTutorInvitesProvider.overrideWith((ref) async => pendingInvites),
@@ -379,10 +401,10 @@ void main() {
     testWidgets(
       'D2: single profile long-press → Delete tile is tappable and opens '
       'the last-profile confirm dialog',
-      (tester) async {\n
+      (tester) async {
         final profiles = [_adult(id: 1, name: 'OnlyOne')];
         await tester.pumpWidget(
-          _buildPicker(router: router, profiles: profiles, db: db),
+          _buildPicker(router: router, profiles: profiles),
         );
         await tester.pump();
         await tester.pump(const Duration(seconds: 1));
@@ -564,18 +586,19 @@ void main() {
 
   group('F: Delete flow', () {
     // F1 — Delete opens confirm dialog for non-last profile.
-    // Requires a real in-memory DB so _showDeleteDialog can call
-    // repo.countProfilesForAccount without crashing.
+    // Requires the fake Firestore-backed repository so deleteProfileFlow can
+    // call repo.countProfiles without crashing.
     testWidgets(
       'F1: Delete (>1 profiles) opens confirm dialog with profile name',
       (tester) async {
-        // Seed the in-memory DB with 2 profiles so countProfilesForAccount > 1.\n
+        // Seed the fake Firestore-backed repository with 2 profiles so
+        // countProfiles() reports more than one.
         final profiles = [
           _adult(id: 1, name: 'Avi'),
           _child(id: 2, name: 'Yosef'),
         ];
         await tester.pumpWidget(
-          _buildPicker(router: router, profiles: profiles, db: db),
+          _buildPicker(router: router, profiles: profiles),
         );
         await tester.pump();
         await tester.pump(const Duration(seconds: 1));
@@ -600,14 +623,12 @@ void main() {
     // F2 — Cancel on delete dialog → no router interaction.
     testWidgets('F2: Cancel on delete dialog dismisses without navigation', (
       tester,
-    ) async {\n
+    ) async {
       final profiles = [
         _adult(id: 1, name: 'Avi'),
         _child(id: 2, name: 'Yosef'),
       ];
-      await tester.pumpWidget(
-        _buildPicker(router: router, profiles: profiles, db: db),
-      );
+      await tester.pumpWidget(_buildPicker(router: router, profiles: profiles));
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
 
@@ -638,22 +659,21 @@ void main() {
     testWidgets(
       'F3: last-profile long-press → Delete title is "Delete your only '
       'profile?" variant',
-      (tester) async {\n
+      (tester) async {
         final profiles = [_adult(id: 1, name: 'OnlyOne')];
         await tester.pumpWidget(
           _buildPicker(
             router: router,
             profiles: profiles,
-            db: db,
             // For a localBorn account, online check is skipped so deletion can
             // reach the dialog without needing a real connectivity provider.
             authState: const AuthState.signedIn(
               user: AuthUser(
-                profileId: 1,
+                uid: 'account-picker',
                 email: 't@t.com',
                 displayName: 'Test',
               ),
-              tier: Tier.localBorn,
+              tier: Tier.local,
             ),
           ),
         );
@@ -687,7 +707,7 @@ void main() {
     testWidgets('F4: deleting the currently-selected profile via long-press '
         'auto-switches selectedProfileIdProvider to a remaining profile', (
       tester,
-    ) async {\n
+    ) async {
       final profiles = [
         _adult(id: 1, name: 'Avi'),
         _child(id: 2, name: 'Yosef'),
@@ -696,10 +716,9 @@ void main() {
         _buildPicker(
           router: router,
           profiles: profiles,
-          db: db,
           // Avi (id=1), the profile about to be deleted, is ALSO the
           // currently-selected profile.
-          selectedId: 1,
+          selectedId: 'ulid-1',
         ),
       );
       await tester.pump();

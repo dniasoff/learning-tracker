@@ -40,7 +40,7 @@ class _MockAnalytics extends Mock implements AnalyticsService {}
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const int _kProfileId = 42;
+const String _kProfileId = '01HPINKEYPAD00000000000000';
 
 // ── Harness ───────────────────────────────────────────────────────────────────
 
@@ -323,7 +323,7 @@ void main() {
       final completer = Completer<bool>();
       final svc = _MockPinService();
       when(
-        () => svc.verifyProfilePin(any<int>(), any<String>()),
+        () => svc.verifyProfilePin(any<String>(), any<String>()),
       ).thenAnswer((_) => completer.future);
 
       await tester.pumpWidget(
@@ -362,13 +362,13 @@ void main() {
         setViewSize(tester);
         final svc = _MockPinService();
         bool? dialogResult;
-        int? capturedProfileId;
+        String? capturedProfileId;
         String? capturedPin;
 
-        when(() => svc.verifyProfilePin(any<int>(), any<String>())).thenAnswer((
-          inv,
-        ) async {
-          capturedProfileId = inv.positionalArguments[0] as int;
+        when(
+          () => svc.verifyProfilePin(any<String>(), any<String>()),
+        ).thenAnswer((inv) async {
+          capturedProfileId = inv.positionalArguments[0] as String;
           capturedPin = inv.positionalArguments[1] as String;
           return true;
         });
@@ -399,7 +399,7 @@ void main() {
         final svc = _MockPinService();
         final analytics = _MockAnalytics();
         when(
-          () => svc.verifyProfilePin(any<int>(), any<String>()),
+          () => svc.verifyProfilePin(any<String>(), any<String>()),
         ).thenAnswer((_) async => true);
         when(() => analytics.logParentModeEntered()).thenAnswer((_) async {});
 
@@ -433,7 +433,7 @@ void main() {
       bool? dialogResult;
 
       when(
-        () => svc.verifyProfilePin(any<int>(), any<String>()),
+        () => svc.verifyProfilePin(any<String>(), any<String>()),
       ).thenAnswer((_) async => false);
 
       await tester.pumpWidget(
@@ -467,7 +467,7 @@ void main() {
       final svc = _MockPinService();
 
       when(
-        () => svc.verifyProfilePin(any<int>(), any<String>()),
+        () => svc.verifyProfilePin(any<String>(), any<String>()),
       ).thenAnswer((_) async => false);
 
       await tester.pumpWidget(
@@ -491,7 +491,7 @@ void main() {
         final svc = _MockPinService();
 
         when(
-          () => svc.verifyProfilePin(any<int>(), any<String>()),
+          () => svc.verifyProfilePin(any<String>(), any<String>()),
         ).thenAnswer((_) async => false);
 
         await tester.pumpWidget(
@@ -524,7 +524,7 @@ void main() {
         bool? dialogResult;
 
         when(
-          () => svc.verifyProfilePin(any<int>(), any<String>()),
+          () => svc.verifyProfilePin(any<String>(), any<String>()),
         ).thenThrow(const PinLockoutException(7));
 
         await tester.pumpWidget(
@@ -619,11 +619,11 @@ void main() {
 
         // verifyProfilePin succeeds on 1st call
         when(
-          () => svc.verifyProfilePin(any<int>(), any<String>()),
+          () => svc.verifyProfilePin(any<String>(), any<String>()),
         ).thenAnswer((_) async => true);
         // setProfilePin succeeds
         when(
-          () => svc.setProfilePin(any<int>(), any<String>()),
+          () => svc.setProfilePin(any<String>(), any<String>()),
         ).thenAnswer((_) async {});
 
         await tester.pumpWidget(
@@ -670,7 +670,7 @@ void main() {
         bool? dialogResult;
 
         when(
-          () => svc.verifyProfilePin(any<int>(), any<String>()),
+          () => svc.verifyProfilePin(any<String>(), any<String>()),
         ).thenAnswer((_) async => false);
 
         await tester.pumpWidget(
@@ -700,7 +700,7 @@ void main() {
         final svc = _MockPinService();
 
         when(
-          () => svc.verifyProfilePin(any<int>(), any<String>()),
+          () => svc.verifyProfilePin(any<String>(), any<String>()),
         ).thenAnswer((_) async => true);
 
         await tester.pumpWidget(
@@ -742,7 +742,7 @@ void main() {
       final svc = _MockPinService();
 
       when(
-        () => svc.verifyProfilePin(any<int>(), any<String>()),
+        () => svc.verifyProfilePin(any<String>(), any<String>()),
       ).thenThrow(const PinLockoutException(3));
 
       await tester.pumpWidget(

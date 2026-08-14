@@ -23,9 +23,10 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
-import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
+import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/screens/profile_picker_screen.dart';
@@ -69,36 +70,32 @@ class _UnrelatedOverflowProbe extends StatelessWidget {
 
 class _FixedSelectedProfileId extends SelectedProfileId {
   _FixedSelectedProfileId(this._initial);
-  final int? _initial;
+  final String? _initial;
   @override
-  int? build() => _initial;
+  String? build() => _initial;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 final _epoch = DateTime.utc(2026, 1, 1);
 
-ProfileModel _child({int id = 1, String name = 'Yosef'}) => ProfileModel(
-  id: id,
-  ulid: 'ulid-$id',
-  accountId: 1,
-  displayName: name,
-  mode: 'child',
-  avatarIndex: 0,
-  createdAt: _epoch,
-  updatedAt: _epoch,
-);
+LearnerProfileEntity _child({int id = 1, String name = 'Yosef'}) =>
+    LearnerProfileEntity(
+      profileId: 'ulid-$id',
+      displayName: name,
+      mode: ProfileMode.child,
+      createdAt: _epoch,
+      updatedAt: _epoch,
+    );
 
-ProfileModel _adult({int id = 2, String name = 'Avraham'}) => ProfileModel(
-  id: id,
-  ulid: 'ulid-$id',
-  accountId: 1,
-  displayName: name,
-  mode: 'adult',
-  avatarIndex: 0,
-  createdAt: _epoch,
-  updatedAt: _epoch,
-);
+LearnerProfileEntity _adult({int id = 2, String name = 'Avraham'}) =>
+    LearnerProfileEntity(
+      profileId: 'ulid-$id',
+      displayName: name,
+      mode: ProfileMode.adult,
+      createdAt: _epoch,
+      updatedAt: _epoch,
+    );
 
 /// Build the widget-under-test.
 ///
@@ -118,12 +115,12 @@ ProfileModel _adult({int id = 2, String name = 'Avraham'}) => ProfileModel(
 /// FlutterError.onError filter. Never used by a non-regression test.
 Widget _buildApp({
   required _MockStackRouter router,
-  AsyncValue<List<ProfileModel>>? profilesState,
-  List<ProfileModel>? profiles,
+  AsyncValue<List<LearnerProfileEntity>>? profilesState,
+  List<LearnerProfileEntity>? profiles,
   List<TutorGrant> grants = const [],
   List<TutorGrant> pendingInvites = const [],
   AuthState? authState,
-  int? selectedId,
+  String? selectedId,
   bool disableRetry = false,
   Locale locale = const Locale('en'),
   ProfileRepository? repo,
@@ -132,12 +129,12 @@ Widget _buildApp({
   final resolvedAuth =
       authState ??
       const AuthState.signedIn(
-        user: AuthUser(profileId: 1, email: 't@t.com', displayName: 'Test'),
-        tier: Tier.localBorn,
+        user: AuthUser(uid: 'account-1', email: 't@t.com', displayName: 'Test'),
+        tier: Tier.local,
       );
 
   // Derive profilesState from the convenience [profiles] list if provided.
-  final AsyncValue<List<ProfileModel>> pState;
+  final AsyncValue<List<LearnerProfileEntity>> pState;
   if (profilesState != null) {
     pState = profilesState;
   } else {
@@ -155,7 +152,7 @@ Widget _buildApp({
           case AsyncError(:final error, :final stackTrace):
             return Future.error(error, stackTrace);
           case _:
-            return Completer<List<ProfileModel>>().future;
+            return Completer<List<LearnerProfileEntity>>().future;
         }
       }),
       incomingTutorGrantsProvider.overrideWith((ref) async => grants),
@@ -306,7 +303,7 @@ void main() {
       expect(find.text('CHILD MODE'), findsOneWidget);
       expect(find.text('ADULT MODE'), findsOneWidget);
 
-      // HARD RULE: no "parent" profile type label (project_profile_model).
+      // HARD RULE: no "parent" profile type label (LearnerProfileEntity).
       expect(find.textContaining('PARENT'), findsNothing);
       expect(find.textContaining('Parent Mode'), findsNothing);
 
@@ -355,11 +352,11 @@ void main() {
             authStateProvider.overrideWithValue(
               const AuthState.signedIn(
                 user: AuthUser(
-                  profileId: 1,
+                  uid: 'account-1',
                   email: 't@t.com',
                   displayName: 'Test',
                 ),
-                tier: Tier.localBorn,
+                tier: Tier.local,
               ),
             ),
             selectedProfileIdProvider.overrideWith(
@@ -391,7 +388,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 200));
 
       // selectedProfileIdProvider should now hold profile id 5.
-      expect(container.read(selectedProfileIdProvider), 5);
+      expect(container.read(selectedProfileIdProvider), 'ulid-5');
 
       // Router should have been asked to replace the stack (navigate to AppShell).
       verify(() => router.replaceAll(any<List<PageRouteInfo>>())).called(1);
@@ -441,8 +438,12 @@ void main() {
         router: router,
         profiles: [],
         authState: const AuthState.signedIn(
-          user: AuthUser(profileId: 1, email: 't@t.com', displayName: 'Test'),
-          tier: Tier.localBorn,
+          user: AuthUser(
+            uid: 'account-1',
+            email: 't@t.com',
+            displayName: 'Test',
+          ),
+          tier: Tier.local,
         ),
       ),
     );
@@ -465,12 +466,12 @@ void main() {
         profiles: [],
         authState: const AuthState.signedIn(
           user: AuthUser(
-            profileId: 1,
+            uid: 'account-1',
             email: 'cloud@t.com',
             displayName: 'Cloud',
             firebaseUid: 'uid123',
           ),
-          tier: Tier.cloudBorn,
+          tier: Tier.cloud,
         ),
       ),
     );
@@ -512,8 +513,12 @@ void main() {
         router: router,
         profiles: [_adult(name: 'Avi')],
         authState: const AuthState.signedIn(
-          user: AuthUser(profileId: 1, email: 't@t.com', displayName: 'Test'),
-          tier: Tier.localBorn,
+          user: AuthUser(
+            uid: 'account-1',
+            email: 't@t.com',
+            displayName: 'Test',
+          ),
+          tier: Tier.local,
         ),
       ),
     );
@@ -914,15 +919,13 @@ void main() {
           final profile = _child(id: 1, name: 'יוסף');
           final repo = _MockProfileRepository();
           // Exactly one profile on the account → the "last profile" branch.
-          when(
-            () => repo.countProfilesForAccount(any()),
-          ).thenAnswer((_) async => 1);
+          when(() => repo.countProfiles()).thenAnswer((_) async => 1);
           when(
             () => repo.deleteProfile(any(), allowLast: any(named: 'allowLast')),
           ).thenAnswer((_) async {});
           when(
-            () => repo.getProfilesByAccount(any()),
-          ).thenAnswer((_) async => <ProfileModel>[]);
+            () => repo.getProfiles(),
+          ).thenAnswer((_) async => <LearnerProfileEntity>[]);
 
           await tester.pumpWidget(
             _buildApp(
