@@ -36,7 +36,6 @@ import 'package:learning_tracker/features/notifications/presentation/providers/n
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
-import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz_lib;
@@ -47,13 +46,13 @@ import 'package:timezone/timezone.dart' as tz_lib;
 // ---------------------------------------------------------------------------
 
 class _RecordingNotificationGateway implements NotificationGateway {
-  final List<int> scheduledBatchProfiles = [];
-  final List<int> cancelledBatchProfiles = [];
-  final List<int> cancelledDailyProfiles = [];
+  final List<String> scheduledBatchProfiles = [];
+  final List<String> cancelledBatchProfiles = [];
+  final List<String> cancelledDailyProfiles = [];
 
   @override
   Future<void> scheduleBatchRemindersForProfile({
-    required int profileId,
+    required String profileId,
     required List<tz_lib.TZDateTime> fireTimes,
     required String title,
     required String body,
@@ -62,12 +61,12 @@ class _RecordingNotificationGateway implements NotificationGateway {
   }
 
   @override
-  Future<void> cancelBatchRemindersForProfile(int profileId) async {
+  Future<void> cancelBatchRemindersForProfile(String profileId) async {
     cancelledBatchProfiles.add(profileId);
   }
 
   @override
-  Future<void> cancelDailyReminderForProfile(int profileId) async {
+  Future<void> cancelDailyReminderForProfile(String profileId) async {
     cancelledDailyProfiles.add(profileId);
   }
 
@@ -86,7 +85,7 @@ class _RecordingNotificationGateway implements NotificationGateway {
 
   @override
   Future<void> scheduleDailyReminderForProfile({
-    required int profileId,
+    required String profileId,
     required int hour,
     required int minute,
     required String title,
@@ -95,7 +94,7 @@ class _RecordingNotificationGateway implements NotificationGateway {
 
   @override
   Future<void> scheduleStreakAlertForProfile({
-    required int profileId,
+    required String profileId,
     required int hour,
     required int minute,
     required String body,
@@ -103,7 +102,7 @@ class _RecordingNotificationGateway implements NotificationGateway {
   }) async {}
 
   @override
-  Future<void> cancelStreakAlertForProfile(int profileId) async {}
+  Future<void> cancelStreakAlertForProfile(String profileId) async {}
 }
 
 // ---------------------------------------------------------------------------
@@ -112,19 +111,17 @@ class _RecordingNotificationGateway implements NotificationGateway {
 
 class _ProfileId1 extends ActiveProfileId {
   @override
-  int build() => 1;
+  String? build() => 'profile-1';
 }
 
 DailyTask _todayTask() => const DailyTask(
   curriculumId: CurriculumId.bavli,
   contentItemSefariaRef: 'Berakhot 2a',
   stageOrder: 1,
-  stageDefinitionId: 1,
   priority: DailyTaskPriority.todayProgram,
   isOverdue: false,
   reason: 'test',
   stageName: 'Learn',
-  trackId: 1,
   trackLabel: 'Test Track',
 );
 
@@ -151,7 +148,6 @@ void main() {
       overrides: [
         activeProfileIdProvider.overrideWith(_ProfileId1.new),
         currentAppLocaleProvider.overrideWithValue(const Locale('en')),
-        outboxSyncWriteFacadeProvider.overrideWithValue(null),
         notificationSchedulerProvider.overrideWithValue(scheduler),
         isSacredTimeActiveProvider.overrideWithValue(sacredTimeActive),
         allDailyTasksProvider.overrideWith((ref) async => tasks),
@@ -177,7 +173,7 @@ void main() {
 
         expect(
           gateway.scheduledBatchProfiles,
-          contains(1),
+          contains('profile-1'),
           reason:
               'A live Sacred Time window must NOT cancel the whole batch. The '
               'per-fire-time filter inside the scheduler already drops Shabbos '
@@ -208,7 +204,7 @@ void main() {
 
         await container.read(reminderSyncEffectProvider.future);
 
-        expect(gateway.scheduledBatchProfiles, contains(1));
+        expect(gateway.scheduledBatchProfiles, contains('profile-1'));
         expect(gateway.cancelledBatchProfiles, isEmpty);
       },
     );
@@ -217,7 +213,8 @@ void main() {
       'reminders DISABLED still cancels regardless of Sacred Time',
       () async {
         SharedPreferences.setMockInitialValues({
-          NotificationPreferencesRepository.reminderEnabledKey(1): false,
+          NotificationPreferencesRepository.reminderEnabledKey('profile-1'):
+              false,
         });
         final gateway = _RecordingNotificationGateway();
         final container = makeContainer(
@@ -244,7 +241,7 @@ void main() {
         );
         expect(
           gateway.cancelledBatchProfiles,
-          contains(1),
+          contains('profile-1'),
           reason: 'Disabled reminders still cancel the per-profile batch.',
         );
       },

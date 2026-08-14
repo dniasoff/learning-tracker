@@ -63,7 +63,6 @@ import 'package:learning_tracker/features/notifications/presentation/providers/n
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
-import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
@@ -84,7 +83,7 @@ class _RecordingNotificationGateway implements NotificationGateway {
 
   @override
   Future<void> scheduleBatchRemindersForProfile({
-    required int profileId,
+    required String profileId,
     required List<tz_lib.TZDateTime> fireTimes,
     required String title,
     required String body,
@@ -93,12 +92,12 @@ class _RecordingNotificationGateway implements NotificationGateway {
   }
 
   @override
-  Future<void> cancelBatchRemindersForProfile(int profileId) async {
+  Future<void> cancelBatchRemindersForProfile(String profileId) async {
     cancelBatchCount++;
   }
 
   @override
-  Future<void> cancelDailyReminderForProfile(int profileId) async {
+  Future<void> cancelDailyReminderForProfile(String profileId) async {
     cancelDailyCount++;
   }
 
@@ -117,7 +116,7 @@ class _RecordingNotificationGateway implements NotificationGateway {
 
   @override
   Future<void> scheduleDailyReminderForProfile({
-    required int profileId,
+    required String profileId,
     required int hour,
     required int minute,
     required String title,
@@ -126,7 +125,7 @@ class _RecordingNotificationGateway implements NotificationGateway {
 
   @override
   Future<void> scheduleStreakAlertForProfile({
-    required int profileId,
+    required String profileId,
     required int hour,
     required int minute,
     required String body,
@@ -134,7 +133,7 @@ class _RecordingNotificationGateway implements NotificationGateway {
   }) async {}
 
   @override
-  Future<void> cancelStreakAlertForProfile(int profileId) async {}
+  Future<void> cancelStreakAlertForProfile(String profileId) async {}
 }
 
 /// Fixes the active profile to 0 — the profile-0 block the doc comment above
@@ -142,7 +141,7 @@ class _RecordingNotificationGateway implements NotificationGateway {
 /// driving in production.
 class _ProfileId0 extends ActiveProfileId {
   @override
-  int build() => 0;
+  String? build() => 'legacy';
 }
 
 // ---------------------------------------------------------------------------
@@ -176,12 +175,10 @@ DailyTask _makeTask({
     curriculumId: curriculumId,
     contentItemSefariaRef: 'ref-$suffix-${curriculumId.name}',
     stageOrder: 1,
-    stageDefinitionId: 1,
     priority: priority,
     isOverdue: isOverdue,
     reason: 'test',
     stageName: 'Test Stage',
-    trackId: 1,
     trackLabel: 'Test Track',
   );
 }
@@ -201,7 +198,6 @@ ProviderContainer _makeContainer(
     overrides: [
       activeProfileIdProvider.overrideWith(_ProfileId0.new),
       currentAppLocaleProvider.overrideWithValue(const Locale('en')),
-      outboxSyncWriteFacadeProvider.overrideWithValue(null),
       notificationSchedulerProvider.overrideWithValue(scheduler),
       isSacredTimeActiveProvider.overrideWithValue(false),
       allDailyTasksProvider.overrideWith((ref) async => tasks),
