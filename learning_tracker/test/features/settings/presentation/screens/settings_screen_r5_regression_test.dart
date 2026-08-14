@@ -21,24 +21,20 @@
 library;
 
 import 'package:auto_route/auto_route.dart';
-import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
-import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
     show authRepositoryProvider;
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
-import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
+import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/parent_pin_session_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/settings_screen.dart';
-import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
@@ -71,42 +67,42 @@ class _NoTutorSession extends ActiveTutoredProfileSelection {
 
 class _NoPinAuth extends ParentPinAuthenticatedProfileId {
   @override
-  int? build() => null;
+  String? build() => null;
 }
 
 class _PinAuthedForProfile extends ParentPinAuthenticatedProfileId {
   _PinAuthedForProfile(this._id);
-  final int _id;
+  final String _id;
 
   @override
-  int? build() => _id;
+  String? build() => _id;
 }
 
 // ─── Test helpers ─────────────────────────────────────────────────────────────
 
-ProfileModel _childProfile({int id = 2}) {
+const _uid = 'settings-r5-test-uid';
+const _adultProfileId = '01J6Q2H4A8M7K3P9R5T6V8WXY7';
+const _childProfileId = '01J6Q2H4A8M7K3P9R5T6V8WXY8';
+
+LearnerProfileEntity _childProfile({String id = _childProfileId}) {
   final now = DateTime.utc(2026, 1, 1);
-  return ProfileModel(
-    id: id,
-    ulid: 'ulid-$id',
-    accountId: 1,
+  return LearnerProfileEntity(
+    profileId: id,
     displayName: 'Child',
-    mode: 'child',
-    avatarIndex: 0,
+    mode: ProfileMode.child,
+    avatar: '',
     createdAt: now,
     updatedAt: now,
   );
 }
 
-ProfileModel _adultProfile({int id = 1}) {
+LearnerProfileEntity _adultProfile({String id = _adultProfileId}) {
   final now = DateTime.utc(2026, 1, 1);
-  return ProfileModel(
-    id: id,
-    ulid: 'ulid-$id',
-    accountId: 1,
+  return LearnerProfileEntity(
+    profileId: id,
     displayName: 'Adult',
-    mode: 'adult',
-    avatarIndex: 0,
+    mode: ProfileMode.adult,
+    avatar: '',
     createdAt: now,
     updatedAt: now,
   );
@@ -151,59 +147,30 @@ TutorGrant _activeGrant({String childName = 'Avigail'}) {
   );
 }
 
-Future<UserDatabase> _dbWithProfile({required String mode}) async {
-  final db = UserDatabase(NativeDatabase.memory());
-  await db
-      .into(db.accounts)
-      .insert(
-        AccountsCompanion.insert(
-          email: 'test@test.com',
-          tier: 'localBorn',
-          displayName: 'Test',
-          createdAt: DateTimeFactory.nowUtc(),
-          updatedAt: DateTimeFactory.nowUtc(),
-        ),
-      );
-  await db
-      .into(db.learnerProfiles)
-      .insert(
-        LearnerProfilesCompanion.insert(
-          accountId: 1,
-          displayName: mode == 'child' ? 'Child' : 'Adult',
-          mode: mode,
-          createdAt: DateTimeFactory.nowUtc(),
-          updatedAt: DateTimeFactory.nowUtc(),
-        ),
-      );
-  return db;
-}
-
 Widget _buildSettings({
-  required UserDatabase db,
   required _MockAuthRepository auth,
   required _MockStackRouter router,
-  required ProfileModel profile,
+  required LearnerProfileEntity profile,
   required _MockPinService pinService,
   Locale locale = const Locale('en'),
   List<TutorGrant> pendingGrants = const [],
   List<TutorGrant> activeGrants = const [],
   bool pinAuthForProfile = false,
-  int profileId = 1,
+  String profileId = _adultProfileId,
 }) {
   return pumpApp(
     locale: locale,
     retry: (_, __) => null,
     overrides: [
-      userDatabaseProvider.overrideWithValue(db),
       authRepositoryProvider.overrideWithValue(auth),
       authStateProvider.overrideWithValue(
         AuthState.signedIn(
           user: AuthUser(
-            profileId: profileId,
+            uid: _uid,
             email: 'test@test.com',
             displayName: 'Test',
           ),
-          tier: Tier.localBorn,
+          tier: Tier.cloud,
         ),
       ),
       activeProfileIdProvider.overrideWithValue(profileId),
@@ -223,7 +190,6 @@ Widget _buildSettings({
             : _NoPinAuth.new,
       ),
       pinServiceProvider.overrideWithValue(pinService),
-      syncWriteFacadeProvider.overrideWithValue(null),
     ],
     child: StackRouterScope(
       controller: router,
@@ -284,8 +250,7 @@ void main() {
 
         await tester.pumpWidget(
           _buildSettings(
-            db: db,
-            auth: auth,
+                        auth: auth,
             router: router,
             profile: _adultProfile(),
             pinService: pinService,
@@ -326,8 +291,7 @@ void main() {
 
         await tester.pumpWidget(
           _buildSettings(
-            db: db,
-            auth: auth,
+                        auth: auth,
             router: router,
             profile: _adultProfile(),
             pinService: pinService,
@@ -356,8 +320,7 @@ void main() {
 
         await tester.pumpWidget(
           _buildSettings(
-            db: db,
-            auth: auth,
+                        auth: auth,
             router: router,
             profile: _adultProfile(),
             pinService: pinService,
@@ -397,8 +360,7 @@ void main() {
 
         await tester.pumpWidget(
           _buildSettings(
-            db: db,
-            auth: auth,
+                        auth: auth,
             router: router,
             profile: _adultProfile(),
             pinService: pinService,
@@ -440,8 +402,7 @@ void main() {
 
         await tester.pumpWidget(
           _buildSettings(
-            db: db,
-            auth: auth,
+                        auth: auth,
             router: router,
             profile: _adultProfile(),
             pinService: pinService,
@@ -485,12 +446,11 @@ void main() {
 
         await tester.pumpWidget(
           _buildSettings(
-            db: db,
-            auth: auth,
+                        auth: auth,
             router: router,
             profile: _childProfile(),
             pinService: pinService,
-            profileId: 2,
+            profileId: _childProfileId,
             pinAuthForProfile: false,
           ),
         );
@@ -524,12 +484,11 @@ void main() {
 
         await tester.pumpWidget(
           _buildSettings(
-            db: db,
-            auth: auth,
+                        auth: auth,
             router: router,
             profile: _childProfile(),
             pinService: pinService,
-            profileId: 2,
+            profileId: _childProfileId,
             pinAuthForProfile: true,
           ),
         );
@@ -571,8 +530,7 @@ void main() {
 
         await tester.pumpWidget(
           _buildSettings(
-            db: db,
-            auth: auth,
+                        auth: auth,
             router: router,
             profile: _adultProfile(),
             pinService: pinService,

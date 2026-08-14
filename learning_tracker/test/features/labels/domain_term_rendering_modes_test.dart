@@ -44,25 +44,21 @@
 @Tags(['labels', 'hebrew_terms'])
 library;
 
-import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/screens/curriculum_list_screen.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/progress/domain/models/curriculum_progress_data.dart';
 import 'package:learning_tracker/features/progress/domain/models/journey_view_model.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/hierarchy_progress_card.dart';
@@ -73,7 +69,6 @@ import 'package:learning_tracker/features/sacred_time/presentation/widgets/sacre
 import 'package:learning_tracker/features/sacred_time/presentation/widgets/sacred_time_settings_card.dart';
 import 'package:learning_tracker/features/scheduler/presentation/screens/goal_setup_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/scope_selection_screen.dart';
-import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -83,11 +78,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 class _MockContentRepository extends Mock implements ContentRepository {}
 
 // ── Provider notifier overrides ──────────────────────────────────────────────
-
-class _ProfileId1 extends ActiveProfileId {
-  @override
-  int build() => 1;
-}
 
 class _HebrewTermsOn extends UseHebrewTerms {
   @override
@@ -349,17 +339,12 @@ Widget _buildCurriculumListApp(_Mode mode, ContentRepository repo) {
 
 Widget _buildScopeApp(
   _Mode mode,
-  UserDatabase db,
   ContentRepository repo,
   CurriculumId curriculum,
 ) {
   return ProviderScope(
     overrides: [
       ...mode.providerOverrides,
-      userDatabaseProvider.overrideWith((ref) => db),
-      activeProfileIdProvider.overrideWith(() => _ProfileId1()),
-      syncWriteFacadeProvider.overrideWithValue(null),
-      outboxSyncWriteFacadeProvider.overrideWithValue(null),
       contentRepositoryProvider.overrideWithValue(repo),
     ],
     child: MaterialApp(
@@ -645,11 +630,6 @@ void main() {
   // storage path is not echoed.
 
   group('Layer 3b — ScopeSelectionScreen level word (chumash)', () {
-    late UserDatabase db;
-
-    setUp(() => db = UserDatabase(NativeDatabase.memory()));
-    tearDown(() async => db.close());
-
     final expectedWord = {
       _Mode.hebrew: 'חומש',
       _Mode.ashkenazi: 'Sefer',
@@ -660,7 +640,7 @@ void main() {
       testWidgets('level word switches — ${mode.label}', (tester) async {
         final repo = _makeRepoFor(CurriculumId.chumash, _kChumashItems);
         await tester.pumpWidget(
-          _buildScopeApp(mode, db, repo, CurriculumId.chumash),
+          _buildScopeApp(mode, repo, CurriculumId.chumash),
         );
         // Settle the async content load.
         await tester.pump();

@@ -27,36 +27,33 @@
 @Tags(['settings', 'scope_selection', 'curriculum_settings', 'aud_settings_02'])
 library;
 
-import 'package:drift/native.dart';
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/data/firestore/repository_providers.dart';
+import 'package:learning_tracker/data/repositories/firestore_curriculum_scope_repository.dart';
+import 'package:learning_tracker/data/repositories/firestore_profile_program_repository.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/curriculum_settings_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/scope_selection_screen.dart';
-import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
+
+import '../../../../helpers/firestore_fake.dart';
+import '../../../../helpers/firestore_fixtures.dart';
 
 // ── Mocks ──────────────────────────────────────────────────────────────────────
 
 class _MockContentRepository extends Mock implements ContentRepository {}
 
 // ── Provider stubs ─────────────────────────────────────────────────────────────
-
-class _ProfileId1 extends ActiveProfileId {
-  @override
-  int build() => 1;
-}
 
 class _HebrewTermsOn extends UseHebrewTerms {
   @override
@@ -218,15 +215,14 @@ Future<void> _tearDown(WidgetTester tester) async {
 // ── Widget factories ──────────────────────────────────────────────────────────
 
 Widget _buildScopeApp({
-  required UserDatabase db,
+  required FirestoreCurriculumScopeRepository scopeRepository,
   ContentRepository? contentRepo,
 }) {
   return ProviderScope(
     overrides: [
-      userDatabaseProvider.overrideWith((ref) => db),
-      activeProfileIdProvider.overrideWith(() => _ProfileId1()),
-      syncWriteFacadeProvider.overrideWithValue(null),
-      outboxSyncWriteFacadeProvider.overrideWithValue(null),
+      firestoreCurriculumScopeRepositoryProvider.overrideWith(
+        (ref) async => scopeRepository,
+      ),
       contentRepositoryProvider.overrideWithValue(
         contentRepo ?? _makeContentRepo(),
       ),
@@ -255,15 +251,14 @@ Widget _buildScopeApp({
 /// widget tree (including the ScaffoldMessenger's SnackBar), so the
 /// SnackBar-content assertions need a real "screen underneath" to pop to.
 Widget _buildScopeAppPushed({
-  required UserDatabase db,
+  required FirestoreCurriculumScopeRepository scopeRepository,
   ContentRepository? contentRepo,
 }) {
   return ProviderScope(
     overrides: [
-      userDatabaseProvider.overrideWith((ref) => db),
-      activeProfileIdProvider.overrideWith(() => _ProfileId1()),
-      syncWriteFacadeProvider.overrideWithValue(null),
-      outboxSyncWriteFacadeProvider.overrideWithValue(null),
+      firestoreCurriculumScopeRepositoryProvider.overrideWith(
+        (ref) async => scopeRepository,
+      ),
       contentRepositoryProvider.overrideWithValue(
         contentRepo ?? _makeContentRepo(),
       ),
@@ -302,12 +297,14 @@ Widget _buildScopeAppPushed({
   );
 }
 
-Widget _buildCurriculumSettingsApp({required UserDatabase db}) {
+Widget _buildCurriculumSettingsApp({
+  required FirestoreProfileProgramRepository profileProgramRepository,
+}) {
   return ProviderScope(
     overrides: [
-      userDatabaseProvider.overrideWith((ref) => db),
-      activeProfileIdProvider.overrideWith(() => _ProfileId1()),
-      syncWriteFacadeProvider.overrideWithValue(null),
+      firestoreProfileProgramRepositoryProvider.overrideWith(
+        (ref) async => profileProgramRepository,
+      ),
       useHebrewTermsProvider.overrideWith(() => _HebrewTermsOn()),
     ],
     child: const MaterialApp(
@@ -326,47 +323,11 @@ Widget _buildCurriculumSettingsApp({required UserDatabase db}) {
 
 // ── Shared state ───────────────────────────────────────────────────────────────
 
-late UserDatabase _db;
-
-/// Seeds account + profile id=1 to satisfy FK constraints on tables that
-/// reference `learner_profiles(id)` (e.g. curriculum_scopes).
-Future<void> _seedProfile(UserDatabase db) async {
-  final accountId = await db
-      .into(db.accounts)
-      .insert(
-        AccountsCompanion.insert(
-          email: 'test@example.com',
-          tier: 'localBorn',
-          displayName: 'Test User',
-          createdAt: DateTime.now().toUtc(),
-          updatedAt: DateTime.now().toUtc(),
-        ),
-      );
-  await db
-      .into(db.learnerProfiles)
-      .insert(
-        LearnerProfilesCompanion.insert(
-          accountId: accountId,
-          displayName: 'Test User',
-          mode: 'adult',
-          createdAt: DateTime.now().toUtc(),
-          updatedAt: DateTime.now().toUtc(),
-        ),
-      );
-}
-
-Future<int> _seedTrack(UserDatabase db, {required int profileId}) {
-  return db
-      .into(db.curriculumTracks)
-      .insert(
-        CurriculumTracksCompanion.insert(
-          profileId: profileId,
-          curriculumId: 'mishnayos',
-          stateChangedAt: DateTime.now().toUtc(),
-          activatedAt: DateTime.now().toUtc(),
-        ),
-      );
-}
+const _uid = 'aud-settings-02-test-uid';
+const _profileId = '01J6Q2H4A8M7K3P9R5T6V8WXY7';
+late FakeFirebaseFirestore _firestore;
+late FirestoreCurriculumScopeRepository _scopeRepository;
+late FirestoreProfileProgramRepository _profileProgramRepository;
 
 // ── Main ───────────────────────────────────────────────────────────────────────
 
@@ -375,12 +336,20 @@ void main() {
     registerFallbackValue(CurriculumId.mishnayos);
   });
 
-  setUp(() {
-    _db = UserDatabase(NativeDatabase.memory());
-  });
-
-  tearDown(() async {
-    await _db.close();
+  setUp(() async {
+    _firestore = createFakeFirestore(authenticatedUid: _uid);
+    await seedAccount(_firestore, uid: _uid);
+    await seedProfile(_firestore, uid: _uid, profileId: _profileId);
+    _scopeRepository = FirestoreCurriculumScopeRepository(
+      firestore: _firestore,
+      uid: _uid,
+      profileId: _profileId,
+    );
+    _profileProgramRepository = FirestoreProfileProgramRepository(
+      firestore: _firestore,
+      uid: _uid,
+      profileId: _profileId,
+    );
   });
 
   group('ScopeSelectionScreen — he locale: no Latin fragments', () {
@@ -388,7 +357,7 @@ void main() {
       'select-all default state (app-bar title + "All content is included" '
       'subtitle) is fully Hebrew',
       (tester) async {
-        await _pump(tester, _buildScopeApp(db: _db));
+        await _pump(tester, _buildScopeApp(scopeRepository: _scopeRepository));
 
         // Sanity: the screen actually rendered (would be trivially "empty" if
         // the localized subtitle silently vanished instead of translating).
@@ -404,7 +373,7 @@ void main() {
       'level-list state ("Select Scope Level" header + "N options" subtitle) '
       'is fully Hebrew',
       (tester) async {
-        await _pump(tester, _buildScopeApp(db: _db));
+        await _pump(tester, _buildScopeApp(scopeRepository: _scopeRepository));
 
         await tester.tap(find.byType(SwitchListTile));
         await tester.pump();
@@ -422,7 +391,7 @@ void main() {
       'value-checkbox + summary state (item-count line, "Summary" header) '
       'is fully Hebrew',
       (tester) async {
-        await _pump(tester, _buildScopeApp(db: _db));
+        await _pump(tester, _buildScopeApp(scopeRepository: _scopeRepository));
 
         await tester.tap(find.byType(SwitchListTile));
         await tester.pump();
@@ -451,7 +420,10 @@ void main() {
       'save-confirmation SnackBar for selectAll=true ("Scope set to entire '
       'curriculum") is fully Hebrew',
       (tester) async {
-        await _pump(tester, _buildScopeAppPushed(db: _db));
+        await _pump(
+          tester,
+          _buildScopeAppPushed(scopeRepository: _scopeRepository),
+        );
         await tester.tap(find.text('פתח'));
         await tester.pump();
         await tester.pump(const Duration(seconds: 1));
@@ -479,10 +451,10 @@ void main() {
       'save-confirmation SnackBar for a saved subset ("Scope updated: …") '
       'is fully Hebrew',
       (tester) async {
-        await _seedProfile(_db);
-        await _seedTrack(_db, profileId: 1);
-
-        await _pump(tester, _buildScopeAppPushed(db: _db));
+        await _pump(
+          tester,
+          _buildScopeAppPushed(scopeRepository: _scopeRepository),
+        );
         await tester.tap(find.text('פתח'));
         await tester.pump();
         await tester.pump(const Duration(seconds: 1));
@@ -522,7 +494,12 @@ void main() {
     testWidgets(
       'default render ("Custom schedule" state, all tiles) is fully Hebrew',
       (tester) async {
-        await _pump(tester, _buildCurriculumSettingsApp(db: _db));
+        await _pump(
+          tester,
+          _buildCurriculumSettingsApp(
+            profileProgramRepository: _profileProgramRepository,
+          ),
+        );
 
         // Sanity: the screen actually rendered its tiles.
         expect(find.byType(ListTile), findsWidgets);
@@ -539,7 +516,12 @@ void main() {
       _setUpUrlLauncherMock(canLaunch: false);
       addTearDown(_clearUrlLauncherMock);
 
-      await _pump(tester, _buildCurriculumSettingsApp(db: _db));
+      await _pump(
+        tester,
+        _buildCurriculumSettingsApp(
+          profileProgramRepository: _profileProgramRepository,
+        ),
+      );
 
       await tester.tap(find.byIcon(Icons.mail_outline));
       await tester.pump();

@@ -27,6 +27,7 @@ library;
 import 'dart:async';
 
 import 'package:auto_route/auto_route.dart';
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
@@ -36,10 +37,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
-import 'package:learning_tracker/core/sync/providers/sync_orchestrator_providers.dart';
+import 'package:learning_tracker/data/firestore/repository_providers.dart';
+import 'package:learning_tracker/data/repositories/firestore_account_repository.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
@@ -54,6 +54,8 @@ import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../mocks/mock_repositories.dart';
+import '../../../../helpers/firestore_fake.dart';
+import '../../../../helpers/firestore_fixtures.dart';
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -78,7 +80,7 @@ class _StubAuthStateNotifier extends AuthStateNotifier {
 /// SelectedProfileId that stays at null without touching the sync facade.
 class _StubSelectedProfileId extends SelectedProfileId {
   @override
-  int? build() => null;
+  String? build() => null;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -95,6 +97,7 @@ DeviceAccountsCompanion _localAccount({
   email: email,
   displayName: displayName,
   tier: 'localBorn',
+  firebaseUid: const Value('fb-uid-local-1'),
   dbFileName: dbFileName,
   createdAt: _kNow,
   lastUsedAt: _kNow,
@@ -130,54 +133,41 @@ AppUser _fakeCloudUser({String uid = 'fb-uid-1'}) => AppUser(
 class _Fixture {
   _Fixture({
     required this.registry,
-    required this.userDb,
+    required this.firestore,
     required this.auth,
     required this.router,
   });
 
   final DeviceRegistryDatabase registry;
-  final UserDatabase userDb;
+  final FakeFirebaseFirestore firestore;
   final MockAuthRepository auth;
   final _MockStackRouter router;
 
-  /// Seed a matching local-born account row in userDb so that
-  /// findLocalBornByEmail resolves during the switch flow.
-  Future<void> seedLocalUserDbRow({
+  /// Seed the Firestore account document used by the switch flow.
+  Future<void> seedLocalAccountDoc({
     String email = 'local@example.test',
     String displayName = 'Local Learner',
   }) async {
-    await userDb
-        .into(userDb.accounts)
-        .insert(
-          AccountsCompanion.insert(
-            email: email,
-            tier: 'localBorn',
-            displayName: displayName,
-            createdAt: _kNow,
-            updatedAt: _kNow,
-          ),
-        );
+    await seedAccount(
+      firestore,
+      uid: 'fb-uid-local-1',
+      email: email,
+      displayName: displayName,
+    );
   }
 
-  /// Seed a matching cloud-born account row in userDb so that
-  /// findCloudBornByFirebaseUid resolves during the switch flow.
-  Future<void> seedCloudUserDbRow({
+  /// Seed a matching `users/{uid}` Firestore account document.
+  Future<void> seedCloudAccountDoc({
     String email = 'cloud@example.test',
     String displayName = 'Cloud User',
     String firebaseUid = 'fb-uid-1',
   }) async {
-    await userDb
-        .into(userDb.accounts)
-        .insert(
-          AccountsCompanion.insert(
-            email: email,
-            tier: 'cloudBorn',
-            firebaseUid: Value(firebaseUid),
-            displayName: displayName,
-            createdAt: _kNow,
-            updatedAt: _kNow,
-          ),
-        );
+    await seedAccount(
+      firestore,
+      uid: firebaseUid,
+      email: email,
+      displayName: displayName,
+    );
   }
 
   Widget buildSubject({
@@ -189,10 +179,12 @@ class _Fixture {
       overrides: [
         deviceRegistryProvider.overrideWithValue(registry),
         authRepositoryProvider.overrideWithValue(auth),
-        userDatabaseProvider.overrideWith((ref) => userDb),
-        // No real Firestore orchestrator in widget tests — the cloud-switch
-        // path reads it to kick a best-effort launch pull.
-        syncOrchestratorProvider.overrideWithValue(null),
+        firestoreAccountRepositoryProvider.overrideWith(
+          (ref) async => FirestoreAccountRepository(
+            firestore: firestore,
+            uid: auth.currentUser?.uid ?? 'fb-uid-local-1',
+          ),
+        ),
         if (connectivityChecker != null)
           internetConnectionCheckerProvider.overrideWithValue(
             connectivityChecker,
@@ -229,7 +221,7 @@ class _Fixture {
 Future<_Fixture> _buildFixture() async {
   SharedPreferences.setMockInitialValues({});
   final registry = DeviceRegistryDatabase(NativeDatabase.memory());
-  final userDb = UserDatabase(NativeDatabase.memory());
+  final firestore = createFakeFirestore();
   final auth = MockAuthRepository();
   final router = _MockStackRouter();
 
@@ -248,7 +240,7 @@ Future<_Fixture> _buildFixture() async {
 
   return _Fixture(
     registry: registry,
-    userDb: userDb,
+    firestore: firestore,
     auth: auth,
     router: router,
   );
@@ -258,7 +250,6 @@ Future<void> _tearDown(WidgetTester tester, _Fixture fixture) async {
   await tester.pumpWidget(const SizedBox.shrink());
   await tester.pump(Duration.zero);
   await fixture.registry.close();
-  await fixture.userDb.close();
 }
 
 // ── Tests ────────────────────────────────────────────────────────────────────
@@ -292,7 +283,12 @@ void main() {
           overrides: [
             deviceRegistryProvider.overrideWithValue(mockRegistry),
             authRepositoryProvider.overrideWithValue(fixture.auth),
-            userDatabaseProvider.overrideWith((ref) => fixture.userDb),
+            firestoreAccountRepositoryProvider.overrideWith(
+              (ref) async => FirestoreAccountRepository(
+                firestore: fixture.firestore,
+                uid: 'fb-uid-1',
+              ),
+            ),
             authStateProvider.overrideWith(
               () => _StubAuthStateNotifier(const AuthState.signedOut()),
             ),
@@ -537,7 +533,7 @@ void main() {
       final fixture = await _buildFixture();
       addTearDown(() => _tearDown(tester, fixture));
       await fixture.registry.addAccount(_localAccount());
-      await fixture.seedLocalUserDbRow();
+      await fixture.seedLocalAccountDoc();
 
       await tester.pumpWidget(fixture.buildSubject());
       await tester.pump();
@@ -580,7 +576,7 @@ void main() {
       final fixture = await _buildFixture();
       addTearDown(() => _tearDown(tester, fixture));
       await fixture.registry.addAccount(_cloudAccount());
-      await fixture.seedCloudUserDbRow();
+      await fixture.seedCloudAccountDoc();
 
       // Valid session — Firebase currentUser matches the registry uid.
       when(
@@ -758,7 +754,7 @@ void main() {
       await fixture.registry.addAccount(_cloudAccount(firebaseUid: 'fb-uid-1'));
       // Seed the matching cloud-born profile row so the local restore resolves
       // a profile without any network call.
-      await fixture.seedCloudUserDbRow(firebaseUid: 'fb-uid-1');
+      await fixture.seedCloudAccountDoc(firebaseUid: 'fb-uid-1');
 
       // Expired session — Firebase currentUser is null → "SIGN IN AGAIN".
       when(() => fixture.auth.currentUser).thenReturn(null);

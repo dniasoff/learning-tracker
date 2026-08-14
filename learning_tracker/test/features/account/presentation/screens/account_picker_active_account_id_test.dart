@@ -14,6 +14,7 @@
 library;
 
 import 'package:auto_route/auto_route.dart';
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
@@ -21,11 +22,10 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
-import 'package:learning_tracker/core/sync/providers/sync_orchestrator_providers.dart';
 import 'package:learning_tracker/data/firestore/active_account_providers.dart';
+import 'package:learning_tracker/data/firestore/repository_providers.dart';
+import 'package:learning_tracker/data/repositories/firestore_account_repository.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
     show authRepositoryProvider;
@@ -35,6 +35,8 @@ import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../mocks/mock_repositories.dart';
+import '../../../../helpers/firestore_fake.dart';
+import '../../../../helpers/firestore_fixtures.dart';
 
 class _MockStackRouter extends Mock implements StackRouter {}
 
@@ -52,7 +54,7 @@ void main() {
   setUpAll(() => registerFallbackValue(_FakePageRouteInfo()));
 
   late DeviceRegistryDatabase registry;
-  late UserDatabase userDb;
+  late FakeFirebaseFirestore firestore;
   late MockAuthRepository auth;
   late _MockStackRouter router;
   late ProviderContainer container;
@@ -60,7 +62,7 @@ void main() {
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
     registry = DeviceRegistryDatabase(NativeDatabase.memory());
-    userDb = UserDatabase(NativeDatabase.memory());
+    firestore = createFakeFirestore();
     auth = MockAuthRepository();
     router = _MockStackRouter();
 
@@ -78,29 +80,22 @@ void main() {
         email: 'local@test.local',
         displayName: 'Local User',
         tier: 'localBorn',
+        firebaseUid: const Value('fb-uid-local'),
         dbFileName: 'user_acc_acc-local.db',
         createdAt: DateTime.utc(2026, 1, 1),
         lastUsedAt: DateTime.utc(2026, 1, 1),
       ),
     );
-    // …with a matching local-born account row in the user DB so the switch
-    // (findLocalBornByEmail) resolves and completes through to AppShell.
-    await userDb
-        .into(userDb.accounts)
-        .insert(
-          AccountsCompanion.insert(
-            email: 'local@test.local',
-            tier: 'localBorn',
-            displayName: 'Local User',
-            createdAt: DateTime.utc(2026, 1, 1),
-            updatedAt: DateTime.utc(2026, 1, 1),
-          ),
-        );
+    await seedAccount(
+      firestore,
+      uid: 'fb-uid-local',
+      email: 'local@test.local',
+      displayName: 'Local User',
+    );
   });
 
   tearDown(() async {
     await registry.close();
-    await userDb.close();
   });
 
   Widget buildApp() {
@@ -108,8 +103,12 @@ void main() {
       overrides: [
         deviceRegistryProvider.overrideWithValue(registry),
         authRepositoryProvider.overrideWithValue(auth),
-        userDatabaseProvider.overrideWith((ref) => userDb),
-        syncOrchestratorProvider.overrideWithValue(null),
+        firestoreAccountRepositoryProvider.overrideWith(
+          (ref) async => FirestoreAccountRepository(
+            firestore: firestore,
+            uid: auth.currentUser?.uid ?? 'fb-uid-local',
+          ),
+        ),
       ],
     );
     addTearDown(container.dispose);
@@ -178,18 +177,12 @@ void main() {
           lastUsedAt: DateTime.utc(2026, 1, 3),
         ),
       );
-      await userDb
-          .into(userDb.accounts)
-          .insert(
-            AccountsCompanion.insert(
-              email: cloudEmail,
-              tier: 'cloudBorn',
-              displayName: 'Instant Cloud',
-              firebaseUid: const Value(cloudUid),
-              createdAt: DateTime.utc(2026, 1, 3),
-              updatedAt: DateTime.utc(2026, 1, 3),
-            ),
-          );
+      await seedAccount(
+        firestore,
+        uid: cloudUid,
+        email: cloudEmail,
+        displayName: 'Instant Cloud',
+      );
     }
 
     testWidgets(

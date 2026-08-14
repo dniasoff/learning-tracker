@@ -19,11 +19,9 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
-import 'package:learning_tracker/core/sync/initial_sync_state.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/dashboard_body.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
@@ -35,6 +33,7 @@ import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dar
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -45,7 +44,7 @@ class _FakePageRouteInfo extends Fake implements PageRouteInfo {}
 
 class _ActiveProfileIdOverride extends ActiveProfileId {
   @override
-  int build() => 1;
+  String build() => '01J6Q2H4A8M7K3P9R5T6V8WXYB';
 }
 
 class _HebrewTermsOff extends UseHebrewTerms {
@@ -58,10 +57,8 @@ class _NoTutorSession extends ActiveTutoredProfileSelection {
   TutoredProfileSelection? build() => null;
 }
 
-CurriculumTrack _track() => CurriculumTrack(
-  id: 1,
-  profileId: 1,
-  curriculumId: CurriculumId.mishnayos.storageKey,
+CurriculumTrackEntity _track() => CurriculumTrackEntity(
+  curriculumId: CurriculumId.mishnayos,
   state: 'active',
   stateChangedAt: DateTime.utc(2026, 1, 1),
   activatedAt: DateTime.utc(2026, 1, 1),
@@ -108,38 +105,28 @@ Widget _buildApp({
       dashboardUserModeProvider.overrideWith(
         (ref) => Future.value(ProfileMode.adult),
       ),
-      dashboardGlobalPointsProvider.overrideWith((ref) => Stream.value(0)),
-      // AUD-t-dashboard-02: dashboardStreak (watched unconditionally
-      // somewhere in the pumped DashboardBody tree) reaches streakStateProvider
-      // -> userDatabaseProvider, a SECOND real-database path alongside
-      // ActiveTrackCard's trackHasChazaraProvider below. Overriding
-      // userDatabaseProvider itself here (instead of both leaf providers)
-      // was tried and rejected: closing the shared in-memory db in
-      // tearDown left a "Timer is still pending" flutter_test invariant
-      // failure, because drift's watch() stream teardown races the
-      // ProviderScope disposal. Overriding each real-database-reaching leaf
-      // provider directly (as already done for anyActiveTrackHasChazaraProvider)
-      // avoids that and is just as hermetic for this widget test's purposes.
+      dashboardGlobalPointsProvider.overrideWith((ref) => Future.value(0)),
+      // Keep the Firestore-backed dashboard data seams deterministic; this
+      // widget test is focused on heading layout.
       dashboardStreakProvider.overrideWith(
         (ref) => Stream.value((currentStreak: 7, maxStreak: 7)),
       ),
       allDailyTasksProvider.overrideWith(
         (ref) => dailyTasksFuture ?? Future.value(const []),
       ),
-      initialSyncCompleteProvider.overrideWith((ref) => Future.value(true)),
-      journeyViewModelProvider(
-        1,
-      ).overrideWith((ref) => Future.value(_journey())),
-      lifetimeTotalsAcrossAllCurriculaProvider(
-        1,
-      ).overrideWith((ref) => Future.value(_lifetimeTotals())),
-      trackDualProgressMetricsProvider(
-        1,
-      ).overrideWith((ref) => Future.value(const [])),
+      journeyViewModelProvider.overrideWith((ref) => Future.value(_journey())),
+      lifetimeTotalsAcrossAllCurriculaProvider.overrideWith(
+        (ref) => Future.value(_lifetimeTotals()),
+      ),
+      trackDualProgressMetricsProvider.overrideWith(
+        (ref) => Future.value(const []),
+      ),
       anyActiveTrackHasChazaraProvider.overrideWith(
         (ref) => Future.value(false),
       ),
-      trackHasChazaraProvider(1).overrideWith((ref) => Future.value(false)),
+      trackHasChazaraProvider(
+        CurriculumId.mishnayos,
+      ).overrideWith((ref) => Future.value(false)),
       for (final c in CurriculumId.values)
         dashboardHasProgramEnrollmentProvider(
           c,

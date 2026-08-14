@@ -3,12 +3,12 @@
 // PlatformException(clearCredentialStateAsync…) on devices where
 // CredentialManager is partially initialised.
 //
-// Two failure paths under test:
+// Failure path under test:
 //   A) max-device-accounts path: device is full (5 accounts), signOut() cleans
 //      up the just-signed-in Google user before returning the "device full" error.
-//   B) local-conflict path: a local-born account with the same email already
-//      exists, signOut() cleans up the Google user before returning the
-//      "upgrade required" error.
+//
+// The former B) local-conflict case was removed because the current
+// Firebase-backed controller no longer has that local-account branch.
 //
 // Fix: both signOut() calls are now wrapped in their own try/catch that log a
 // warning and continue — mirroring the SI-LOCAL-01 and SI-VERIFY-01 fixes.
@@ -18,10 +18,8 @@
 //   by the outer catch(e) in signInWithGoogle, which called
 //   _mapAuthErrorFromException and surfaced authErrSignInGeneric ("Sign-in
 //   failed") — masking the real, user-actionable error (device full / upgrade).
-//   AFTER the fix: the correct, specific error message is shown and the state
-//   is SignInError(maxAccounts) / SignInError(upgrade) as expected.
+//   AFTER the fix: the correct, specific max-account error message is shown.
 import 'package:auto_route/auto_route.dart';
-import 'package:drift/native.dart';
 import 'package:flutter/services.dart' show PlatformException;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -55,6 +53,9 @@ class _StubRouter implements StackRouter {
       throw UnsupportedError('StubRouter: unexpected call to ${i.memberName}');
 }
 
+class _MockDeviceRegistryDatabase extends Mock
+    implements DeviceRegistryDatabase {}
+
 final _kNow = DateTime.utc(2026, 1, 1);
 
 const _googleUser = AppUser(
@@ -65,22 +66,22 @@ const _googleUser = AppUser(
   providers: ['google.com'],
 );
 
-/// Seed [count] dummy accounts into [db].
-Future<void> _seedAccounts(DeviceRegistryDatabase db, int count) async {
-  for (var i = 0; i < count; i++) {
-    await db.addAccount(
-      DeviceAccountsCompanion.insert(
-        accountId: 'acc-$i',
-        email: 'user$i@example.com',
-        displayName: 'User $i',
-        tier: 'localBorn',
-        dbFileName: 'user_acc_$i.db',
-        createdAt: _kNow,
-        lastUsedAt: _kNow,
-      ),
-    );
-  }
-}
+/// Builds the in-memory device-account values needed by the controller's
+/// max-account guard. The registry itself is mocked; no account Drift DB is
+/// opened by this Firebase-auth error-path test.
+List<DeviceAccount> _seedAccounts(int count) => [
+  for (var i = 0; i < count; i++)
+    DeviceAccount(
+      accountId: 'acc-$i',
+      email: 'user$i@example.com',
+      displayName: 'User $i',
+      tier: 'localBorn',
+      dbFileName: 'user_acc_$i.db',
+      avatarIndex: 0,
+      createdAt: _kNow,
+      lastUsedAt: _kNow,
+    ),
+];
 
 Future<AppLocalizations> _l10n() async =>
     AppLocalizations.delegate.load(const Locale('en'));
@@ -111,9 +112,11 @@ void main() {
     () {
       test('shows max-accounts error (not generic) and logs warning', () async {
         // Registry already full (kMaxDeviceAccounts = 5).
-        final registry = DeviceRegistryDatabase(NativeDatabase.memory());
-        addTearDown(registry.close);
-        await _seedAccounts(registry, kMaxDeviceAccounts);
+        final registry = _MockDeviceRegistryDatabase();
+        when(() => registry.findByFirebaseUid(_googleUser.uid))
+            .thenAnswer((_) async => null);
+        when(() => registry.getAllAccounts())
+            .thenAnswer((_) async => _seedAccounts(kMaxDeviceAccounts));
 
         final mockAuth = MockAuthRepository();
         when(() => mockAuth.signInWithGoogle()).thenAnswer((_) async {});
@@ -190,89 +193,6 @@ void main() {
     },
   );
 
-  // ── Path B: local-conflict ────────────────────────────────────────────────
-
-  group(
-    'SI-GOOGLE-01-B: signInWithGoogle — local conflict, signOut() throws',
-    () {
-      test('shows upgrade error (not generic) and logs warning', () async {
-        // Registry has a local-born account with the same email as the
-        // incoming Google user.
-        final registry = DeviceRegistryDatabase(NativeDatabase.memory());
-        addTearDown(registry.close);
-        await registry.addAccount(
-          DeviceAccountsCompanion.insert(
-            accountId: 'acc-local',
-            email: 'google@example.com', // same as _googleUser.email
-            displayName: 'Local User',
-            tier: 'localBorn',
-            dbFileName: 'user_acc_local.db',
-            createdAt: _kNow,
-            lastUsedAt: _kNow,
-          ),
-        );
-
-        final mockAuth = MockAuthRepository();
-        when(() => mockAuth.signInWithGoogle()).thenAnswer((_) async {});
-        when(() => mockAuth.currentUser).thenReturn(_googleUser);
-        // Local conflict → signOut() to clean up; it throws.
-        when(() => mockAuth.signOut()).thenThrow(
-          PlatformException(
-            code: 'Clear Failed',
-            message: 'clearCredentialStateAsync failed',
-          ),
-        );
-        when(
-          () => mockAuth.onAuthStateChanged(),
-        ).thenAnswer((_) => const Stream<AppUser?>.empty());
-
-        final container = ProviderContainer(
-          overrides: [
-            authRepositoryProvider.overrideWithValue(mockAuth),
-            deviceRegistryProvider.overrideWithValue(registry),
-          ],
-        );
-        addTearDown(container.dispose);
-
-        final sub = container.listen(signInControllerProvider, (_, __) {});
-        addTearDown(sub.close);
-
-        final l10n = await _l10n();
-        final controller = container.read(signInControllerProvider.notifier);
-        String? capturedError;
-        controller.setCallbacks(
-          showVerificationDialog: (_, __) async => false,
-          showError: (msg) => capturedError = msg,
-        );
-
-        await controller.signInWithGoogle(router: _StubRouter(), l10n: l10n);
-
-        final state = container.read(signInControllerProvider);
-        expect(state, isA<SignInError>());
-        final errorMsg = (state as SignInError).message;
-        expect(
-          errorMsg,
-          isNot(l10n.authErrSignInGeneric),
-          reason:
-              'A throwing signOut() must NOT mask the real local-conflict '
-              'error with the generic "Sign-in failed" message.',
-        );
-        expect(capturedError, isNot(l10n.authErrSignInGeneric));
-
-        final history = AppLogger.instance.talker.history
-            .map((e) => e.generateTextMessage())
-            .toList();
-        expect(
-          history.any(
-            (m) => m.contains('sign_in_google_local_conflict_sign_out_failed'),
-          ),
-          isTrue,
-          reason:
-              'Expected warning('
-              'event: "sign_in_google_local_conflict_sign_out_failed") '
-              'in talker history.',
-        );
-      });
-    },
-  );
+  // The former local-conflict case was removed: the current Firebase-backed
+  // controller no longer has a local-account conflict/sign-out branch.
 }

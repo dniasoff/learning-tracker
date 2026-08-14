@@ -9,7 +9,6 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/active_tracks_carousel_section.dart';
@@ -17,14 +16,15 @@ import 'package:learning_tracker/features/dashboard/presentation/widgets/arrow_b
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const _profileId = 1;
+const _profileId = '01J6Q2H4A8M7K3P9R5T6V8WXYB';
 
 class _ProfileIdOverride extends ActiveProfileId {
   @override
-  int build() => _profileId;
+  String build() => _profileId;
 }
 
 class _UseHebrewTermsOverride extends UseHebrewTerms {
@@ -34,10 +34,8 @@ class _UseHebrewTermsOverride extends UseHebrewTerms {
   bool build() => _useHebrew;
 }
 
-CurriculumTrack _track(int id) => CurriculumTrack(
-  id: id,
-  profileId: _profileId,
-  curriculumId: CurriculumId.mishnayos.storageKey,
+CurriculumTrackEntity _track() => CurriculumTrackEntity(
+  curriculumId: CurriculumId.mishnayos,
   state: 'active',
   stateChangedAt: DateTime.utc(2026, 1, 1),
   activatedAt: DateTime.utc(2026, 1, 1),
@@ -45,7 +43,7 @@ CurriculumTrack _track(int id) => CurriculumTrack(
 
 Widget _buildCarousel({
   required Locale locale,
-  required List<CurriculumTrack> tracks,
+  required List<CurriculumTrackEntity> tracks,
 }) {
   return ProviderScope(
     overrides: [
@@ -53,10 +51,9 @@ Widget _buildCarousel({
       useHebrewTermsProvider.overrideWith(
         () => _UseHebrewTermsOverride(locale.languageCode == 'he'),
       ),
-      // Stub the dual-progress provider to avoid real DB calls.
-      trackDualProgressMetricsProvider(
-        _profileId,
-      ).overrideWith((ref) async => []),
+      // Stub the Firestore-backed progress provider to keep this directionality
+      // test focused on the carousel controls.
+      trackDualProgressMetricsProvider.overrideWith((ref) async => []),
     ],
     child: MaterialApp(
       locale: locale,
@@ -83,7 +80,7 @@ Widget _buildCarousel({
 void main() {
   // Provide two tracks so both arrow buttons are rendered; when only one track
   // exists the carousel buttons are disabled and only one is rendered.
-  final twoTracks = [_track(1), _track(2)];
+  final twoTracks = [_track(), _track()];
 
   group('ActiveTracksCarouselSection — ArrowButton chevron RTL (R6-17)', () {
     testWidgets(

@@ -19,10 +19,10 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 import 'package:mocktail/mocktail.dart';
 
 // ─── Mocks ────────────────────────────────────────────────────────────────────
@@ -42,13 +42,9 @@ class HebrewTermsOff extends UseHebrewTerms {
 
 /// Builds a minimal active [CurriculumTrack] fixture for hub/body/order
 /// widget tests.
-CurriculumTrack buildTrack({
-  int id = 1,
-  int profileId = 1,
-  String curriculumId = 'mishnayos',
-}) => CurriculumTrack(
-  id: id,
-  profileId: profileId,
+CurriculumTrackEntity buildTrack({
+  CurriculumId curriculumId = CurriculumId.mishnayos,
+}) => CurriculumTrackEntity(
   curriculumId: curriculumId,
   state: 'active',
   stateChangedAt: DateTime.utc(2026, 1, 1),
@@ -61,18 +57,20 @@ CurriculumTrack buildTrack({
 /// similar per-track summary widgets) resolve synchronously without hanging
 /// on futures.
 List<Override> perTrackOverrides(
-  List<CurriculumTrack> tracks, {
+  List<CurriculumTrackEntity> tracks, {
   bool chazaraEnabled = false,
 }) {
   final overrides = <Override>[];
   for (final t in tracks) {
     overrides.add(
       dashboardTrackCompletionPercentageProvider(
-        t.id,
+        t.curriculumId,
       ).overrideWith((ref) async => 0.0),
     );
     overrides.add(
-      trackHasChazaraProvider(t.id).overrideWith((ref) async => chazaraEnabled),
+      trackHasChazaraProvider(
+        t.curriculumId,
+      ).overrideWith((ref) async => chazaraEnabled),
     );
   }
   // The program-enrollment provider is keyed by CurriculumId. Stub mishnayos

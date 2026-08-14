@@ -14,8 +14,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/features/onboarding/presentation/steps/onboarding_profile_creation_step.dart';
-import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
+import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -25,7 +26,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class _MockProfileRepository extends Mock implements ProfileRepository {}
 
 void _noopCreated({
-  required ProfileModel profile,
+  required LearnerProfileEntity profile,
   required bool isChildMode,
   required bool useHebrewCalendar,
   required bool useHebrewTerms,
@@ -35,7 +36,7 @@ void _noopCreated({
 
 void main() {
   setUpAll(() {
-    registerFallbackValue('adult');
+    registerFallbackValue(ProfileMode.adult);
   });
 
   testWidgets(
@@ -46,16 +47,13 @@ void main() {
 
       final repo = _MockProfileRepository();
       when(
-        () => repo.getProfilesByAccount(any()),
-      ).thenAnswer((_) async => <ProfileModel>[]);
-      final createGate = Completer<ProfileModel>();
-      final createdProfile = ProfileModel(
-        id: 7,
-        ulid: 'ulid-7',
-        accountId: 1,
+        () => repo.getProfiles(),
+      ).thenAnswer((_) async => <LearnerProfileEntity>[]);
+      final createGate = Completer<LearnerProfileEntity>();
+      final createdProfile = LearnerProfileEntity(
+        profileId: 'ulid-7',
         displayName: 'Yael',
-        mode: 'adult',
-        avatarIndex: 0,
+        mode: ProfileMode.adult,
         createdAt: DateTime.utc(2026, 1, 1),
         updatedAt: DateTime.utc(2026, 1, 1),
       );
@@ -65,10 +63,8 @@ void main() {
 
       when(
         () => repo.createProfile(
-          accountId: any(named: 'accountId'),
           displayName: any(named: 'displayName'),
           mode: any(named: 'mode'),
-          avatarIndex: any(named: 'avatarIndex'),
         ),
       ).thenAnswer((_) => createGate.future);
 
@@ -82,7 +78,6 @@ void main() {
         ProviderScope(
           overrides: [
             profileRepositoryProvider.overrideWithValue(repo),
-            currentAccountIdProvider.overrideWithValue(1),
           ],
           child: MaterialApp(
             localizationsDelegates: AppLocalizations.localizationsDelegates,

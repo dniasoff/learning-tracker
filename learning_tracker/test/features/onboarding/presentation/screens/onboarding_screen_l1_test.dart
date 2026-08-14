@@ -31,11 +31,15 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
+import 'package:learning_tracker/core/providers/active_account_id_provider.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
+import 'package:learning_tracker/data/firestore/active_account_providers.dart'
+    show ActiveAccountId;
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_resume_store.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/onboarding_screen.dart';
-import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
+import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -69,14 +73,23 @@ class _FakeAuthStateNotifier extends AuthStateNotifier {
 
 class _NullSelectedProfileId extends SelectedProfileId {
   @override
-  int? build() => null;
+  String? build() => null;
+}
+
+class _FixedActiveAccountId extends ActiveAccountId {
+  @override
+  String? build() => 'account-1';
 }
 
 // ── Default signed-in state ───────────────────────────────────────────────────
 
 const _kSignedIn = AuthState.signedIn(
-  user: AuthUser(profileId: 1, email: 'test@test.com', displayName: 'Tester'),
-  tier: Tier.localBorn,
+  user: AuthUser(
+    uid: 'account-1',
+    email: 'test@test.com',
+    displayName: 'Tester',
+  ),
+  tier: Tier.local,
 );
 
 // ── Test rig ─────────────────────────────────────────────────────────────────
@@ -89,14 +102,14 @@ Widget _rig({
 }) {
   final state = authState ?? _kSignedIn;
   final repo = profileRepo ?? _MockProfileRepository();
-  when(() => repo.getProfilesByAccount(any())).thenAnswer((_) async => []);
+  when(() => repo.getProfiles()).thenAnswer((_) async => []);
 
   return ProviderScope(
     overrides: [
       authStateProvider.overrideWith(() => _FakeAuthStateNotifier(state)),
       profileRepositoryProvider.overrideWithValue(repo),
       selectedProfileIdProvider.overrideWith(() => _NullSelectedProfileId()),
-      currentAccountIdProvider.overrideWithValue(1),
+      activeAccountIdProvider.overrideWith(() => _FixedActiveAccountId()),
     ],
     child: MaterialApp(
       locale: locale,
@@ -119,7 +132,7 @@ Widget _rig({
 /// Shared prefs snapshot that puts the screen at [phase].
 Map<String, Object> _phasePrefs(
   String phase, {
-  int profileId = 2,
+  String profileId = 'ulid-2',
   String profileName = 'Moshe',
   String profileMode = 'adult',
 }) => {
@@ -511,7 +524,7 @@ void main() {
       SharedPreferences.setMockInitialValues(
         _phasePrefs(
           'handoff',
-          profileId: 4,
+          profileId: 'ulid-4',
           profileName: 'Yitzchak',
           profileMode: 'child',
         ),
@@ -594,15 +607,12 @@ void main() {
         // Single profile on the account → the direct-to-dashboard branch.
         final repo = _MockProfileRepository();
         final now = DateTime(2026, 1, 1);
-        when(() => repo.getProfilesByAccount(any())).thenAnswer(
+        when(() => repo.getProfiles()).thenAnswer(
           (_) async => [
-            ProfileModel(
-              id: 4, // matches onboarding_profile_id in this group's prefs
-              ulid: 'ulid-4',
-              accountId: 1,
+            LearnerProfileEntity(
+              profileId: 'ulid-4', // matches onboarding_profile_id in this group's prefs
               displayName: 'Yitzchak',
-              mode: 'child',
-              avatarIndex: 0,
+              mode: ProfileMode.child,
               createdAt: now,
               updatedAt: now,
             ),
@@ -618,7 +628,7 @@ void main() {
               () => _FakeAuthStateNotifier(_kSignedIn),
             ),
             profileRepositoryProvider.overrideWithValue(repo),
-            currentAccountIdProvider.overrideWithValue(1),
+            activeAccountIdProvider.overrideWith(() => _FixedActiveAccountId()),
           ],
         );
         addTearDown(container.dispose);
@@ -654,7 +664,7 @@ void main() {
 
         // The created profile is now selected — ProfileGuard short-circuits
         // (profile_guard_already_selected) instead of bouncing to a picker.
-        expect(container.read(selectedProfileIdProvider), 4);
+        expect(container.read(selectedProfileIdProvider), 'ulid-4');
 
         // And navigation lands directly on the dashboard, NOT the account/profile
         // picker.

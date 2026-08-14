@@ -40,7 +40,6 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
@@ -54,15 +53,15 @@ import 'package:learning_tracker/features/dashboard/presentation/widgets/main_fo
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 
 import '../../../../helpers/pump_app.dart';
 
-const _profileId = 11;
-const _trackId = 99;
+const _profileId = '01J6Q2H4A8M7K3P9R5T6V8WXYB';
 
 class _ProfileIdOverride extends ActiveProfileId {
   @override
-  int build() => _profileId;
+  String build() => _profileId;
 }
 
 class _UseHebrewTermsOverride extends UseHebrewTerms {
@@ -93,10 +92,8 @@ double _contrast(Color a, Color b) {
   return (hi + 0.05) / (lo + 0.05);
 }
 
-CurriculumTrack _track() => CurriculumTrack(
-  id: _trackId,
-  profileId: _profileId,
-  curriculumId: CurriculumId.bavli.storageKey,
+CurriculumTrackEntity _track() => CurriculumTrackEntity(
+  curriculumId: CurriculumId.bavli,
   state: 'active',
   stateChangedAt: DateTime.utc(2026, 1, 1),
   activatedAt: DateTime.utc(2026, 1, 1),
@@ -106,12 +103,10 @@ DailyTask _todayTask() => const DailyTask(
   curriculumId: CurriculumId.bavli,
   contentItemSefariaRef: 'Chullin 25a',
   stageOrder: 1,
-  stageDefinitionId: 1,
   priority: DailyTaskPriority.todayProgram,
   isOverdue: false,
   reason: 'test',
   stageName: 'Learn',
-  trackId: _trackId,
   trackLabel: 'personal',
   estimatedEffortMinutes: 5,
   unitDisplayHe: 'חולין דף כ״ה',
@@ -127,10 +122,12 @@ Widget _activeTrackCardHarness({required ThemeData? theme}) {
       dashboardHasProgramEnrollmentProvider(
         CurriculumId.bavli,
       ).overrideWith((ref) async => true),
-      trackHasChazaraProvider(_trackId).overrideWith((ref) async => false),
-      trackDualProgressMetricsProvider(
-        _profileId,
-      ).overrideWith((ref) async => const <TrackDualProgressMetric>[]),
+      trackHasChazaraProvider(
+        CurriculumId.bavli,
+      ).overrideWith((ref) async => false),
+      trackDualProgressMetricsProvider.overrideWith(
+        (ref) async => const <TrackDualProgressMetric>[],
+      ),
     ],
     child: Scaffold(
       body: SizedBox(

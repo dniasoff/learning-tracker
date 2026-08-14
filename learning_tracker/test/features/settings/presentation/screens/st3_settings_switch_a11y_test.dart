@@ -21,11 +21,8 @@
 @Tags(['settings', 'st3', 'a11y'])
 library;
 
-import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/widgets/preference_list_tile.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
@@ -51,16 +48,14 @@ class _StubAuthStateNotifier extends AuthStateNotifier {
 
 class _FakeActiveProfileId extends ActiveProfileId {
   @override
-  int build() => 0; // sentinel — non-child, non-tutored
+  String? build() => null; // signed-out test has no active profile
 }
 
 Widget _buildSettings({
-  required UserDatabase db,
   required _MockAuthRepository authRepo,
 }) {
   return pumpApp(
     overrides: [
-      userDatabaseProvider.overrideWithValue(db),
       authRepositoryProvider.overrideWithValue(authRepo),
       authStateProvider.overrideWith(() => _StubAuthStateNotifier()),
       activeProfileIdProvider.overrideWith(() => _FakeActiveProfileId()),
@@ -83,12 +78,10 @@ void main() {
     );
   });
 
-  late UserDatabase db;
   late _MockAuthRepository authRepo;
 
   setUp(() {
     SharedPreferences.setMockInitialValues({});
-    db = UserDatabase(NativeDatabase.memory());
     authRepo = _MockAuthRepository();
     when(() => authRepo.currentUser).thenReturn(null);
     when(
@@ -96,16 +89,12 @@ void main() {
     ).thenAnswer((_) => const Stream.empty());
   });
 
-  tearDown(() async {
-    await db.close();
-  });
-
   // ── S1: Hebrew Terms Switch has a semantics label ───────────────────────────
 
   testWidgets(
     'S1. Hebrew Terms switch exposes a non-empty accessibility label',
     (tester) async {
-      await tester.pumpWidget(_buildSettings(db: db, authRepo: authRepo));
+      await tester.pumpWidget(_buildSettings(authRepo: authRepo));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 

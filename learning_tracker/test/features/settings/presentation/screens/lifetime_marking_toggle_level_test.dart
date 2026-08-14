@@ -29,7 +29,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
@@ -41,13 +40,15 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 
 class _FakeActiveProfileId extends ActiveProfileId {
   @override
-  int build() => 1;
+  String build() => _profileId;
 }
 
 class _FakeUseHebrewTerms extends UseHebrewTerms {
   @override
   bool build() => false;
 }
+
+const _profileId = '01J6Q2H4A8M7K3P9R5T6V8WXY7';
 
 /// Bavli-shaped content: level1=Seder, level2=Masechta, level3=Daf,
 /// level4=Amud, with explicit non-leaf rows at every intermediate depth so the

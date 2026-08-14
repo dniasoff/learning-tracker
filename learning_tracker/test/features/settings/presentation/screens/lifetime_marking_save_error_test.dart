@@ -23,14 +23,11 @@
 @Tags(['settings', 'lifetime_marking', 'l1'])
 library;
 
-import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
@@ -52,7 +49,7 @@ class _MockLearningLedgerRepository extends Mock
 
 class _FakeActiveProfileId extends ActiveProfileId {
   @override
-  int build() => 1;
+  String build() => _profileId;
 }
 
 class _FakeUseHebrewTerms extends UseHebrewTerms {
@@ -64,6 +61,7 @@ class _FakeUseHebrewTerms extends UseHebrewTerms {
 
 const _kSeder1 = 'Seder Zeraim';
 const _kMasechta1 = 'Berakhot';
+const _profileId = '01J6Q2H4A8M7K3P9R5T6V8WXY7';
 
 final _kFakeItems = [
   const ContentItem(
@@ -129,14 +127,12 @@ _MockContentRepository _makeFakeContentRepo() {
 // ── harness ───────────────────────────────────────────────────────────────────
 
 Widget _buildScreen({
-  required UserDatabase db,
   required LearningLedgerRepository ledgerRepository,
   Locale locale = const Locale('en'),
 }) {
   return pumpApp(
     locale: locale,
     overrides: [
-      userDatabaseProvider.overrideWith((ref) => db),
       activeProfileIdProvider.overrideWith(() => _FakeActiveProfileId()),
       syncWriteFacadeProvider.overrideWithValue(null),
       outboxSyncWriteFacadeProvider.overrideWithValue(null),
@@ -198,11 +194,9 @@ void main() {
     registerFallbackValue(''); // query / sefariaRef
   });
 
-  late UserDatabase db;
   late _MockLearningLedgerRepository ledgerRepository;
 
   setUp(() {
-    db = UserDatabase(NativeDatabase.memory());
     ledgerRepository = _MockLearningLedgerRepository();
     when(
       () => ledgerRepository.recordCompletionsBatch(
@@ -212,16 +206,12 @@ void main() {
     ).thenThrow(Exception('test-forced ledger write failure'));
   });
 
-  tearDown(() async {
-    await db.close();
-  });
-
   testWidgets(
     'save failure -> SnackBar shows the fixed localized fallback, never the '
     'raw exception (AUD-settings-07, EH-5/ST-4)',
     (tester) async {
       await tester.pumpWidget(
-        _buildScreen(db: db, ledgerRepository: ledgerRepository),
+        _buildScreen(ledgerRepository: ledgerRepository),
       );
       await _selectAllAndSave(tester);
 
@@ -248,7 +238,6 @@ void main() {
     (tester) async {
       await tester.pumpWidget(
         _buildScreen(
-          db: db,
           ledgerRepository: ledgerRepository,
           locale: const Locale('he'),
         ),

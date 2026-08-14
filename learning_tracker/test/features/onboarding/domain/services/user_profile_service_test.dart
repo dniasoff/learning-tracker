@@ -1,78 +1,63 @@
-// Tests for UserProfileService.updateDisplayName.
-//
-// WS9.flows: setUserMode / getUserMode removed from UserProfileService.
-// Mode belongs to LearnerProfiles, not to an Account.
-import 'package:drift/native.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/features/onboarding/domain/services/user_profile_service.dart';
+// Firestore account persistence tests replacing the archived UserProfileService
+// and its Drift UserDatabase test double.
+import 'package:learning_tracker/data/repositories/firestore_account_repository.dart';
 import 'package:test/test.dart';
 
+import '../../../../helpers/firestore_fake.dart';
+
 void main() {
-  late UserDatabase db;
-  late UserProfileService service;
-  late List<Map<String, String>> firestorePushes;
+  const uid = 'uid-123';
+  late FirestoreAccountRepository repository;
 
   setUp(() {
-    db = UserDatabase(NativeDatabase.memory());
-    firestorePushes = [];
-    service = UserProfileService(
-      userProfileDao: db.userProfileDao,
-      pushUserProfile:
-          ({required String firebaseUid, required String displayName}) async {
-            firestorePushes.add({
-              'firebaseUid': firebaseUid,
-              'displayName': displayName,
-            });
-          },
+    repository = FirestoreAccountRepository(
+      firestore: createFakeFirestore(authenticatedUid: uid),
+      uid: uid,
     );
   });
 
-  tearDown(() async {
-    await db.close();
-  });
-
-  group('UserProfileService', () {
-    test('updateDisplayName persists to local database', () async {
-      await service.updateDisplayName(
-        firebaseUid: 'uid-123',
+  group('Firestore account repository', () {
+    test('createAccount persists the display name to Firestore', () async {
+      await repository.createAccount(
         displayName: 'Alice',
+        email: 'alice@example.com',
       );
 
-      final profile = await db.userProfileDao.getUserProfileByFirebaseUid(
-        'uid-123',
-      );
-      expect(profile, isNotNull);
-      expect(profile!.displayName, 'Alice');
+      final account = await repository.getAccount();
+      expect(account, isNotNull);
+      expect(account!.displayName, 'Alice');
+      expect(account.email, 'alice@example.com');
     });
 
-    test('updateDisplayName writes to Firestore', () async {
-      await service.updateDisplayName(
-        firebaseUid: 'uid-789',
+    test('updateAccount writes the account document to Firestore', () async {
+      final account = await repository.createAccount(
+        displayName: 'Test User',
+      );
+
+      final updated = await repository.updateAccount(
+        account: account,
         displayName: 'Bob',
       );
 
-      expect(firestorePushes, hasLength(1));
-      expect(firestorePushes.first['firebaseUid'], 'uid-789');
-      expect(firestorePushes.first['displayName'], 'Bob');
-      // userMode is no longer pushed — mode belongs to LearnerProfiles
-      expect(firestorePushes.first.containsKey('userMode'), isFalse);
+      expect(updated.displayName, 'Bob');
+      final snapshot = await repository.getAccount();
+      expect(snapshot!.displayName, 'Bob');
+      // userMode is intentionally absent: learner mode belongs to profiles.
+      expect(await repository.getProfileSnapshot(), isNull);
     });
 
-    test('updateDisplayName updates existing entry', () async {
-      await service.updateDisplayName(
-        firebaseUid: 'uid-update',
+    test('updateAccount updates the existing account entry', () async {
+      final account = await repository.createAccount(
         displayName: 'First Name',
       );
 
-      await service.updateDisplayName(
-        firebaseUid: 'uid-update',
+      await repository.updateAccount(
+        account: account,
         displayName: 'Updated Name',
       );
 
-      final profile = await db.userProfileDao.getUserProfileByFirebaseUid(
-        'uid-update',
-      );
-      expect(profile!.displayName, 'Updated Name');
+      final snapshot = await repository.getAccount();
+      expect(snapshot!.displayName, 'Updated Name');
     });
   });
 }

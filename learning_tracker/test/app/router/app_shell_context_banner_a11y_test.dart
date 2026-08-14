@@ -34,7 +34,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/app_shell.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
-import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
+import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/parent_pin_session_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
@@ -54,18 +55,18 @@ class _StubAuthStateNotifier extends AuthStateNotifier {
 
 class _StubParentPinNotifier extends ParentPinAuthenticatedProfileId {
   _StubParentPinNotifier(this._value);
-  final int? _value;
+  final String? _value;
 
   @override
-  int? build() => _value;
+  String? build() => _value;
 }
 
 class _StubActiveProfileId extends ActiveProfileId {
   _StubActiveProfileId(this._id);
-  final int _id;
+  final String _id;
 
   @override
-  int build() => _id;
+  String build() => _id;
 }
 
 class _StubActiveTutoredProfileSelection extends ActiveTutoredProfileSelection {
@@ -82,24 +83,23 @@ final _kNow = DateTime(2024);
 
 const _kAuthState = AuthState.signedIn(
   user: AuthUser(
-    profileId: 1,
+    uid: 'account-1',
     email: 'parent@example.test',
     displayName: 'Parent',
   ),
-  tier: Tier.localBorn,
+  tier: Tier.local,
 );
 
-ProfileModel _profile({required String name, required String mode}) =>
-    ProfileModel(
-      id: 1,
-      ulid: 'ulid-1',
-      accountId: 1,
-      displayName: name,
-      mode: mode,
-      avatarIndex: 0,
-      createdAt: _kNow,
-      updatedAt: _kNow,
-    );
+LearnerProfileEntity _profile({
+  required String name,
+  required ProfileMode mode,
+}) => LearnerProfileEntity(
+  profileId: 'ulid-1',
+  displayName: name,
+  mode: mode,
+  createdAt: _kNow,
+  updatedAt: _kNow,
+);
 
 // ── Harness ──────────────────────────────────────────────────────────────────
 
@@ -172,13 +172,18 @@ void main() {
                 () => _StubAuthStateNotifier(_kAuthState),
               ),
               activeProfileIdProvider.overrideWith(
-                () => _StubActiveProfileId(1),
+                () => _StubActiveProfileId('ulid-1'),
               ),
               profileListStreamProvider.overrideWith(
-                (ref) => Stream.value([_profile(name: 'הורה', mode: 'adult')]),
+                (ref) => Stream.value([
+                  _profile(name: 'הורה', mode: ProfileMode.adult),
+                ]),
               ),
               activeProfileProvider.overrideWith(
-                (ref) async => _profile(name: 'הורה', mode: 'adult'),
+                (ref) async => _profile(
+                  name: 'הורה',
+                  mode: ProfileMode.adult,
+                ),
               ),
               activeTutoredProfileSelectionProvider.overrideWith(
                 () => _StubActiveTutoredProfileSelection(null),
@@ -226,7 +231,10 @@ void main() {
             child: const TutorModeIndicatorBar(),
             overrides: [
               activeProfileProvider.overrideWith(
-                (ref) async => _profile(name: 'תלמיד ארוך מאוד', mode: 'child'),
+                (ref) async => _profile(
+                  name: 'תלמיד ארוך מאוד',
+                  mode: ProfileMode.child,
+                ),
               ),
             ],
           ),

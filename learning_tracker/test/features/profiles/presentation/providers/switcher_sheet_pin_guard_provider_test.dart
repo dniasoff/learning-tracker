@@ -11,7 +11,8 @@ library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
+import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
@@ -23,18 +24,18 @@ class _MockPinService extends Mock implements PinService {}
 /// Fixes [activeProfileIdProvider] to a constant id for the container.
 class _FixedActiveProfileId extends ActiveProfileId {
   _FixedActiveProfileId(this._id);
-  final int _id;
+  final String _id;
   @override
-  int build() => _id;
+  String build() => _id;
 }
 
-ProfileModel _profile({required int id, required String mode}) => ProfileModel(
-  id: id,
-  ulid: 'ulid-$id',
-  accountId: 1,
-  displayName: 'Test $id',
+LearnerProfileEntity _profile({
+  required String profileId,
+  required ProfileMode mode,
+}) => LearnerProfileEntity(
+  profileId: profileId,
+  displayName: 'Test $profileId',
   mode: mode,
-  avatarIndex: 0,
   createdAt: DateTime(2024),
   updatedAt: DateTime(2024),
 );
@@ -46,8 +47,8 @@ ProfileModel _profile({required int id, required String mode}) => ProfileModel(
 /// already emitted before the guard provider is read, exactly as the
 /// widget-level test achieves via `tester.pump()`.
 Future<ProviderContainer> _makeContainer({
-  required List<ProfileModel> profiles,
-  required int activeProfileId,
+  required List<LearnerProfileEntity> profiles,
+  required String activeProfileId,
   required PinService pinService,
 }) async {
   final container = ProviderContainer(
@@ -80,8 +81,10 @@ void main() {
 
   test('returns false when no profile matches the active profile id', () async {
     final container = await _makeContainer(
-      profiles: [_profile(id: 1, mode: 'adult')],
-      activeProfileId: 999,
+      profiles: [
+        _profile(profileId: 'ulid-1', mode: ProfileMode.adult),
+      ],
+      activeProfileId: 'ulid-999',
       pinService: pinService,
     );
 
@@ -95,8 +98,10 @@ void main() {
 
   test('returns false when the active profile is adult', () async {
     final container = await _makeContainer(
-      profiles: [_profile(id: 1, mode: 'adult')],
-      activeProfileId: 1,
+      profiles: [
+        _profile(profileId: 'ulid-1', mode: ProfileMode.adult),
+      ],
+      activeProfileId: 'ulid-1',
       pinService: pinService,
     );
 
@@ -112,10 +117,14 @@ void main() {
   test(
     'returns true when the active profile is a child with a configured PIN',
     () async {
-      when(() => pinService.hasProfilePin(2)).thenAnswer((_) async => true);
+      when(
+        () => pinService.hasProfilePin('ulid-2'),
+      ).thenAnswer((_) async => true);
       final container = await _makeContainer(
-        profiles: [_profile(id: 2, mode: 'child')],
-        activeProfileId: 2,
+        profiles: [
+          _profile(profileId: 'ulid-2', mode: ProfileMode.child),
+        ],
+        activeProfileId: 'ulid-2',
         pinService: pinService,
       );
 
@@ -124,17 +133,21 @@ void main() {
       );
 
       expect(result, isTrue);
-      verify(() => pinService.hasProfilePin(2)).called(1);
+      verify(() => pinService.hasProfilePin('ulid-2')).called(1);
     },
   );
 
   test(
     'returns false when the active profile is a child with no PIN configured',
     () async {
-      when(() => pinService.hasProfilePin(2)).thenAnswer((_) async => false);
+      when(
+        () => pinService.hasProfilePin('ulid-2'),
+      ).thenAnswer((_) async => false);
       final container = await _makeContainer(
-        profiles: [_profile(id: 2, mode: 'child')],
-        activeProfileId: 2,
+        profiles: [
+          _profile(profileId: 'ulid-2', mode: ProfileMode.child),
+        ],
+        activeProfileId: 'ulid-2',
         pinService: pinService,
       );
 
@@ -143,7 +156,7 @@ void main() {
       );
 
       expect(result, isFalse);
-      verify(() => pinService.hasProfilePin(2)).called(1);
+      verify(() => pinService.hasProfilePin('ulid-2')).called(1);
     },
   );
 }

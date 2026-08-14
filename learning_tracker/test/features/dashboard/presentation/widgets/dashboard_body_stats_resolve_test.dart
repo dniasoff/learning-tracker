@@ -1,11 +1,11 @@
 // Regression test for BUG-#35 — the dashboard OVERDUE / TODAY DUE / CHAZARA
 // stat tiles must resolve to concrete counts for a CHILD profile, even when the
-// "initial sync complete" flag was never set.
+// remote sync completion flag was never set.
 //
 // Root cause: the count tiles were gated on
 //   `dailyTasksAsync.hasValue && initialSyncComplete`.
 // A CHILD profile / tutored session never runs `pullOnLaunch`, so
-// `initialSyncCompleteProvider` stays `false` forever and the tiles were
+// the remote-sync readiness state stays pending and the tiles were
 // stranded on the "…" placeholder permanently — even though the local Drift
 // query had already resolved.  Per the offline-first rule the local DB is the
 // source of truth and sync is informational only, so the tiles must resolve
@@ -18,11 +18,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
-import 'package:learning_tracker/core/sync/initial_sync_state.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/dashboard_body.dart';
 import 'package:learning_tracker/features/gamification/domain/models/streak_recovery_info.dart';
@@ -35,6 +33,7 @@ import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dar
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -49,7 +48,7 @@ class _FakePageRouteInfo extends Fake implements PageRouteInfo {}
 
 class _ActiveProfileIdOverride extends ActiveProfileId {
   @override
-  int build() => 1;
+  String build() => '01J6Q2H4A8M7K3P9R5T6V8WXYB';
 }
 
 class _HebrewTermsOff extends UseHebrewTerms {
@@ -64,10 +63,8 @@ class _NoTutorSession extends ActiveTutoredProfileSelection {
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 
-CurriculumTrack _track() => CurriculumTrack(
-  id: 1,
-  profileId: 1,
-  curriculumId: CurriculumId.mishnayos.storageKey,
+CurriculumTrackEntity _track() => CurriculumTrackEntity(
+  curriculumId: CurriculumId.mishnayos,
   state: 'active',
   stateChangedAt: DateTime.utc(2026, 1, 1),
   activatedAt: DateTime.utc(2026, 1, 1),
@@ -93,12 +90,10 @@ DailyTask _task(DailyTaskPriority priority, {required bool isOverdue}) =>
       curriculumId: CurriculumId.mishnayos,
       contentItemSefariaRef: 'Mishnah_Berakhot.1.1',
       stageOrder: 1,
-      stageDefinitionId: 1,
       priority: priority,
       isOverdue: isOverdue,
       reason: 'test',
       stageName: 'learn',
-      trackId: 1,
       trackLabel: 'Mishnayos',
     );
 
@@ -136,26 +131,21 @@ Widget _buildApp({required _MockStackRouter router}) {
       dashboardStreakProvider.overrideWith(
         (ref) => Stream.value((currentStreak: 7, maxStreak: 7)),
       ),
-      dashboardGlobalPointsProvider.overrideWith((ref) => Stream.value(72)),
+      dashboardGlobalPointsProvider.overrideWith((ref) => Future.value(72)),
       dashboardStreakRecoveryProvider.overrideWith(
         (ref) => Future.value(
           const StreakRecoveryInfo(wasRecovered: false, currentStreak: 0),
         ),
       ),
-      // Local Drift query HAS resolved with real tasks…
+      // Firestore-backed task projection HAS resolved with real tasks…
       allDailyTasksProvider.overrideWith((ref) => Future.value(_tasks)),
-      // …but the initial-sync flag was NEVER set (the CHILD-profile scenario
-      // that never runs pullOnLaunch). Pre-#35 this stranded the tiles on "…".
-      initialSyncCompleteProvider.overrideWith((ref) => Future.value(false)),
-      journeyViewModelProvider(
-        1,
-      ).overrideWith((ref) => Future.value(_journey())),
-      lifetimeTotalsAcrossAllCurriculaProvider(
-        1,
-      ).overrideWith((ref) => Future.value(_lifetimeTotals())),
-      trackDualProgressMetricsProvider(
-        1,
-      ).overrideWith((ref) => Future.value(const [])),
+      journeyViewModelProvider.overrideWith((ref) => Future.value(_journey())),
+      lifetimeTotalsAcrossAllCurriculaProvider.overrideWith(
+        (ref) => Future.value(_lifetimeTotals()),
+      ),
+      trackDualProgressMetricsProvider.overrideWith(
+        (ref) => Future.value(const []),
+      ),
       anyActiveTrackHasChazaraProvider.overrideWith(
         (ref) => Future.value(false),
       ),

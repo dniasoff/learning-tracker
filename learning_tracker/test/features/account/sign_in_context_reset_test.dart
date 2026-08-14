@@ -94,7 +94,7 @@ class _MockFirestoreAccountRepository extends Mock
     implements FirestoreAccountRepository {}
 
 /// The profile list the sign-in funnel routes on. Replaces the old in-memory
-/// Drift `UserDatabase` fixture: post-P3-5 `_navigateAfterSignIn` reads
+/// Firestore account/profile fixtures: post-P3-5 `_navigateAfterSignIn` reads
 /// `profileRepositoryProvider.getProfiles()` (Firestore-direct) rather than
 /// a locally materialised profile table, so "this account has N profiles" is
 /// now controlled by the list handed to this fake.

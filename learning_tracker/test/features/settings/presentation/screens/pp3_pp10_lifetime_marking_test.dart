@@ -30,15 +30,12 @@
 @Tags(['settings', 'lifetime_marking', 'pp3', 'pp10'])
 library;
 
-import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_ledger_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/lifetime_marking_screen.dart';
@@ -48,8 +45,10 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 
 class _FakeActiveProfileId extends ActiveProfileId {
   @override
-  int build() => 1;
+  String build() => _profileId;
 }
+
+const _profileId = '01J6Q2H4A8M7K3P9R5T6V8WXY7';
 
 // A UseHebrewTerms subclass that always returns false (English) without
 // touching SharedPreferences.
@@ -58,10 +57,9 @@ class _FakeUseHebrewTerms extends UseHebrewTerms {
   bool build() => false;
 }
 
-Widget _buildScreen({required UserDatabase db, required String curriculumId}) {
+Widget _buildScreen({required String curriculumId}) {
   return ProviderScope(
     overrides: [
-      userDatabaseProvider.overrideWithValue(db),
       activeProfileIdProvider.overrideWith(() => _FakeActiveProfileId()),
       // Return an empty ledger so the screen renders without real DB data.
       curriculumLedgerProvider.overrideWith(
@@ -86,16 +84,6 @@ Widget _buildScreen({required UserDatabase db, required String curriculumId}) {
 // ── tests ─────────────────────────────────────────────────────────────────────
 
 void main() {
-  late UserDatabase db;
-
-  setUp(() {
-    db = UserDatabase(NativeDatabase.memory());
-  });
-
-  tearDown(() async {
-    await db.close();
-  });
-
   // ── PP-3: l10n key has no "level" token ─────────────────────────────────────
 
   testWidgets(
@@ -141,7 +129,7 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      _buildScreen(db: db, curriculumId: CurriculumId.mishnayos.storageKey),
+      _buildScreen(curriculumId: CurriculumId.mishnayos.storageKey),
     );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
@@ -202,7 +190,7 @@ void main() {
     'PP-10: "Select all in this list" button is shown in screen by default',
     (tester) async {
       await tester.pumpWidget(
-        _buildScreen(db: db, curriculumId: CurriculumId.mishnayos.storageKey),
+        _buildScreen(curriculumId: CurriculumId.mishnayos.storageKey),
       );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));

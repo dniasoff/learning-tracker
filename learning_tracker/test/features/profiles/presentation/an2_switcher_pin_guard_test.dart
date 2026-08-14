@@ -18,9 +18,10 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
-import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
+import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
@@ -43,22 +44,19 @@ class _MockPinService extends Mock implements PinService {}
 /// mirrors `switcher_sheet_pin_guard_provider_test.dart`'s identical helper.
 class _FixedActiveProfileId extends ActiveProfileId {
   _FixedActiveProfileId(this._id);
-  final int _id;
+  final String _id;
   @override
-  int build() => _id;
+  String build() => _id;
 }
 
-ProfileModel _profile({
-  required int id,
+LearnerProfileEntity _profile({
+  required String profileId,
   required String name,
-  required String mode,
-}) => ProfileModel(
-  id: id,
-  ulid: 'ulid-$id',
-  accountId: 1,
+  required ProfileMode mode,
+}) => LearnerProfileEntity(
+  profileId: profileId,
   displayName: name,
   mode: mode,
-  avatarIndex: 0,
   createdAt: DateTime(2024),
   updatedAt: DateTime(2024),
 );
@@ -66,8 +64,8 @@ ProfileModel _profile({
 /// Build the sheet with [pinGuardRequired] injected via a provider override
 /// so tests can control the guard without touching FlutterSecureStorage.
 Widget _buildSheet({
-  required List<ProfileModel> profiles,
-  required int activeProfileId,
+  required List<LearnerProfileEntity> profiles,
+  required String activeProfileId,
   required bool pinGuardRequired,
   StackRouter? router,
 }) {
@@ -81,11 +79,11 @@ Widget _buildSheet({
       authStateProvider.overrideWithValue(
         const AuthState.signedIn(
           user: AuthUser(
-            profileId: 1,
+            uid: 'account-1',
             email: 'parent@test.com',
             displayName: 'Parent',
           ),
-          tier: Tier.localBorn,
+          tier: Tier.local,
         ),
       ),
       // AN-2: inject the guard state directly, bypassing FlutterSecureStorage.
@@ -103,9 +101,9 @@ Widget _buildSheet({
 
 class _FixedSelectedProfileId extends SelectedProfileId {
   _FixedSelectedProfileId(this._initial);
-  final int _initial;
+  final String _initial;
   @override
-  int? build() => _initial;
+  String? build() => _initial;
 }
 
 void main() {
@@ -113,11 +111,19 @@ void main() {
     registerFallbackValue(_FakePageRouteInfo());
   });
 
-  // Two profiles: child (id=2, active) and adult (id=1).
-  final childProfile = _profile(id: 2, name: 'Beni', mode: 'child');
-  final adultProfile = _profile(id: 1, name: 'Avi', mode: 'adult');
+  // Two profiles: child (ULID ulid-2, active) and adult (ULID ulid-1).
+  final childProfile = _profile(
+    profileId: 'ulid-2',
+    name: 'Beni',
+    mode: ProfileMode.child,
+  );
+  final adultProfile = _profile(
+    profileId: 'ulid-1',
+    name: 'Avi',
+    mode: ProfileMode.adult,
+  );
   final profiles = [adultProfile, childProfile];
-  const activeChildId = 2;
+  const activeChildId = 'ulid-2';
 
   group('AN-2 PIN guard for escalating actions', () {
     testWidgets(
@@ -269,7 +275,7 @@ void main() {
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 300));
 
-        // adultProfile (id=1) is not the active profile (activeChildId=2) —
+        // adultProfile (ulid-1) is not the active profile (activeChildId=ulid-2) —
         // tapping its row is the "switch to adult profile" escalating action.
         await tester.tap(find.text(adultProfile.displayName));
         await tester.pump();
@@ -351,8 +357,8 @@ void main() {
       });
 
       Future<ProviderContainer> makeContainer({
-        required List<ProfileModel> profiles,
-        required int activeProfileId,
+        required List<LearnerProfileEntity> profiles,
+        required String activeProfileId,
       }) async {
         final container = ProviderContainer(
           overrides: [
@@ -379,7 +385,7 @@ void main() {
           'consulted', () async {
         final container = await makeContainer(
           profiles: [adultProfile],
-          activeProfileId: adultProfile.id,
+          activeProfileId: adultProfile.profileId,
         );
 
         final result = await container.read(
@@ -399,11 +405,11 @@ void main() {
       test('returns true for a child active profile with a configured Parent '
           'PIN', () async {
         when(
-          () => pinService.hasProfilePin(childProfile.id),
+          () => pinService.hasProfilePin(childProfile.profileId),
         ).thenAnswer((_) async => true);
         final container = await makeContainer(
           profiles: [childProfile],
-          activeProfileId: childProfile.id,
+          activeProfileId: childProfile.profileId,
         );
 
         final result = await container.read(
@@ -419,17 +425,19 @@ void main() {
               'exact condition the widget tests above rely on to show the '
               'PIN dialog.',
         );
-        verify(() => pinService.hasProfilePin(childProfile.id)).called(1);
+        verify(
+          () => pinService.hasProfilePin(childProfile.profileId),
+        ).called(1);
       });
 
       test('returns false for a child active profile with no Parent PIN '
           'configured', () async {
         when(
-          () => pinService.hasProfilePin(childProfile.id),
+          () => pinService.hasProfilePin(childProfile.profileId),
         ).thenAnswer((_) async => false);
         final container = await makeContainer(
           profiles: [childProfile],
-          activeProfileId: childProfile.id,
+          activeProfileId: childProfile.profileId,
         );
 
         final result = await container.read(
@@ -443,7 +451,9 @@ void main() {
               'AN-2: no PIN configured means no escalation guard — the '
               'child can use the switcher sheet unimpeded.',
         );
-        verify(() => pinService.hasProfilePin(childProfile.id)).called(1);
+        verify(
+          () => pinService.hasProfilePin(childProfile.profileId),
+        ).called(1);
       });
     });
   });

@@ -48,18 +48,17 @@ library;
 import 'dart:async';
 import 'dart:collection';
 
-import 'package:drift/native.dart';
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
-import 'package:learning_tracker/core/utils/date_utils.dart';
+import 'package:learning_tracker/data/firestore/repository_providers.dart';
+import 'package:learning_tracker/data/repositories/firestore_curriculum_scope_repository.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
@@ -68,11 +67,12 @@ import 'package:learning_tracker/features/learning/presentation/providers/learni
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/lifetime_marking_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/scope_selection_screen.dart';
-import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../../../helpers/pump_app.dart';
+import '../../../../helpers/firestore_fake.dart';
+import '../../../../helpers/firestore_fixtures.dart';
 
 // ── Mocks ──────────────────────────────────────────────────────────────────────
 
@@ -85,7 +85,7 @@ class _MockLearningLedgerRepository extends Mock
 
 class _ProfileId1 extends ActiveProfileId {
   @override
-  int build() => 1;
+  String build() => _profileId;
 }
 
 class _HebrewTermsOff extends UseHebrewTerms {
@@ -115,6 +115,8 @@ class _VariantAshkenazi extends CurrentTransliterationVariant {
 // is enough to exercise all scope-selection branches without loading disk files.
 
 const _kSeder1 = 'Seder Zeraim';
+const _uid = 'scope-lifetime-test-uid';
+const _profileId = '01J6Q2H4A8M7K3P9R5T6V8WXY7';
 const _kSeder2 = 'Seder Moed';
 const _kMasechta1 = 'Berakhot';
 const _kMasechta2 = 'Shabbat';
@@ -322,7 +324,7 @@ Future<void> _tearDown(WidgetTester tester) async {
 // ── Widget factory — ScopeSelectionScreen ────────────────────────────────────
 
 Widget _buildScopeApp({
-  required UserDatabase db,
+  FirestoreCurriculumScopeRepository scopeRepository = _scopeRepository,
   ContentRepository? contentRepo,
   bool useHebrew = false,
   Locale locale = const Locale('en'),
@@ -333,10 +335,10 @@ Widget _buildScopeApp({
   return pumpApp(
     locale: locale,
     overrides: [
-      userDatabaseProvider.overrideWith((ref) => db),
+      firestoreCurriculumScopeRepositoryProvider.overrideWith(
+        (ref) async => scopeRepository,
+      ),
       activeProfileIdProvider.overrideWith(() => _ProfileId1()),
-      syncWriteFacadeProvider.overrideWithValue(null),
-      outboxSyncWriteFacadeProvider.overrideWithValue(null),
       contentRepositoryProvider.overrideWithValue(repo),
       if (useHebrew)
         useHebrewTermsProvider.overrideWith(() => _HebrewTermsOn())
@@ -358,7 +360,6 @@ Widget _buildScopeApp({
 // ── Widget factory — LifetimeMarkingScreen ────────────────────────────────────
 
 Widget _buildLifetimeApp({
-  required UserDatabase db,
   ContentRepository? contentRepo,
   LearningLedgerRepository? ledgerRepo,
   bool useHebrew = false,
@@ -368,10 +369,7 @@ Widget _buildLifetimeApp({
   return pumpApp(
     locale: locale,
     overrides: [
-      userDatabaseProvider.overrideWith((ref) => db),
       activeProfileIdProvider.overrideWith(() => _ProfileId1()),
-      syncWriteFacadeProvider.overrideWithValue(null),
-      outboxSyncWriteFacadeProvider.overrideWithValue(null),
       contentRepositoryProvider.overrideWithValue(repo),
       if (ledgerRepo != null)
         learningLedgerRepositoryProvider.overrideWithValue(ledgerRepo),
@@ -387,7 +385,6 @@ Widget _buildLifetimeApp({
 // ── Widget factory — LifetimeCurriculumMarkingScreen ─────────────────────────
 
 Widget _buildCurriculumMarkingApp({
-  required UserDatabase db,
   ContentRepository? contentRepo,
   LearningLedgerRepository? ledgerRepo,
   bool useHebrew = false,
@@ -398,10 +395,7 @@ Widget _buildCurriculumMarkingApp({
   return pumpApp(
     locale: locale,
     overrides: [
-      userDatabaseProvider.overrideWith((ref) => db),
       activeProfileIdProvider.overrideWith(() => _ProfileId1()),
-      syncWriteFacadeProvider.overrideWithValue(null),
-      outboxSyncWriteFacadeProvider.overrideWithValue(null),
       contentRepositoryProvider.overrideWithValue(repo),
       if (ledgerRepo != null)
         learningLedgerRepositoryProvider.overrideWithValue(ledgerRepo),
@@ -458,50 +452,8 @@ _MockContentRepository _makeDefaultRepo({List<ContentItem>? items}) {
 
 // ── Shared state ───────────────────────────────────────────────────────────────
 
-late UserDatabase _db;
-
-/// Seeds account + profile id=1 into [db] to satisfy FK constraints on tables
-/// that reference `learner_profiles(id)` (e.g. curriculum_scopes).
-Future<void> _seedProfile(UserDatabase db) async {
-  final accountId = await db
-      .into(db.accounts)
-      .insert(
-        AccountsCompanion.insert(
-          email: 'test@example.com',
-          tier: 'localBorn',
-          displayName: 'Test User',
-          createdAt: DateTimeFactory.nowUtc(),
-          updatedAt: DateTimeFactory.nowUtc(),
-        ),
-      );
-  await db
-      .into(db.learnerProfiles)
-      .insert(
-        LearnerProfilesCompanion.insert(
-          accountId: accountId,
-          displayName: 'Test User',
-          mode: 'adult',
-          createdAt: DateTimeFactory.nowUtc(),
-          updatedAt: DateTimeFactory.nowUtc(),
-        ),
-      );
-}
-
-/// Seeds a curriculum_tracks row for [profileId], returning the new track id.
-///
-/// Required before inserting curriculum_scopes rows (trackId FK).
-Future<int> _seedTrack(UserDatabase db, {required int profileId}) {
-  return db
-      .into(db.curriculumTracks)
-      .insert(
-        CurriculumTracksCompanion.insert(
-          profileId: profileId,
-          curriculumId: 'mishnayos',
-          stateChangedAt: DateTimeFactory.nowUtc(),
-          activatedAt: DateTimeFactory.nowUtc(),
-        ),
-      );
-}
+late FakeFirebaseFirestore _firestore;
+late FirestoreCurriculumScopeRepository _scopeRepository;
 
 // ── Main ───────────────────────────────────────────────────────────────────────
 
@@ -517,12 +469,15 @@ void main() {
     registerFallbackValue(''); // query / sefariaRef
   });
 
-  setUp(() {
-    _db = UserDatabase(NativeDatabase.memory());
-  });
-
-  tearDown(() async {
-    await _db.close();
+  setUp(() async {
+    _firestore = createFakeFirestore(authenticatedUid: _uid);
+    await seedAccount(_firestore, uid: _uid);
+    await seedProfile(_firestore, uid: _uid, profileId: _profileId);
+    _scopeRepository = FirestoreCurriculumScopeRepository(
+      firestore: _firestore,
+      uid: _uid,
+      profileId: _profileId,
+    );
   });
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -531,7 +486,7 @@ void main() {
 
   group('ScopeSelectionScreen — AppBar', () {
     testWidgets('AppBar renders and contains Save action', (tester) async {
-      await _pump(tester, _buildScopeApp(db: _db));
+      await _pump(tester, _buildScopeApp());
 
       expect(find.byType(AppBar), findsOneWidget);
       // l10n key: scopeSelectionSave => 'Save'
@@ -543,7 +498,7 @@ void main() {
     testWidgets('AppBar title contains curriculum label (English)', (
       tester,
     ) async {
-      await _pump(tester, _buildScopeApp(db: _db));
+      await _pump(tester, _buildScopeApp());
 
       // The title format is 'Learning Scope — Mishnayos'
       expect(find.textContaining('Mishnayos'), findsWidgets);
@@ -556,7 +511,7 @@ void main() {
       (tester) async {
         await _pump(
           tester,
-          _buildScopeApp(db: _db, useHebrew: true, locale: const Locale('he')),
+          _buildScopeApp(, useHebrew: true, locale: const Locale('he')),
         );
 
         // CurriculumId.mishnayos.displayNameHe = 'משניות'
@@ -575,7 +530,7 @@ void main() {
       tester,
     ) async {
       // No scope rows in DB → _selectAll = true on load.
-      await _pump(tester, _buildScopeApp(db: _db));
+      await _pump(tester, _buildScopeApp());
 
       final switchFinder = find.byType(SwitchListTile);
       expect(switchFinder, findsOneWidget);
@@ -593,7 +548,7 @@ void main() {
     testWidgets('"All content is included" subtitle shown when toggle is ON', (
       tester,
     ) async {
-      await _pump(tester, _buildScopeApp(db: _db));
+      await _pump(tester, _buildScopeApp());
 
       expect(find.text('All content is included'), findsOneWidget);
 
@@ -603,7 +558,7 @@ void main() {
     testWidgets('Level-selection tiles are NOT shown when selectAll is ON', (
       tester,
     ) async {
-      await _pump(tester, _buildScopeApp(db: _db));
+      await _pump(tester, _buildScopeApp());
 
       // Level picker / scope checkboxes must not appear when selectAll=true.
       expect(find.text('Select Scope Level'), findsNothing);
@@ -618,7 +573,7 @@ void main() {
       testWidgets(
         'Toggling "Track Entire Curriculum" OFF reveals "Select Scope Level" header',
         (tester) async {
-          await _pump(tester, _buildScopeApp(db: _db));
+          await _pump(tester, _buildScopeApp());
 
           // Tap the SwitchListTile to turn selectAll OFF.
           await tester.tap(find.byType(SwitchListTile));
@@ -633,7 +588,7 @@ void main() {
       testWidgets(
         'After toggling OFF, level-1 tile (e.g. "Seder") is visible',
         (tester) async {
-          await _pump(tester, _buildScopeApp(db: _db));
+          await _pump(tester, _buildScopeApp());
 
           await tester.tap(find.byType(SwitchListTile));
           await tester.pump();
@@ -649,7 +604,7 @@ void main() {
       testWidgets(
         '"Only selected sections are tracked" subtitle when selectAll is OFF',
         (tester) async {
-          await _pump(tester, _buildScopeApp(db: _db));
+          await _pump(tester, _buildScopeApp());
 
           await tester.tap(find.byType(SwitchListTile));
           await tester.pump();
@@ -669,7 +624,7 @@ void main() {
     testWidgets(
       'Tapping first level tile shows CheckboxListTiles for scope values',
       (tester) async {
-        await _pump(tester, _buildScopeApp(db: _db));
+        await _pump(tester, _buildScopeApp());
 
         // Toggle selectAll OFF.
         await tester.tap(find.byType(SwitchListTile));
@@ -697,7 +652,7 @@ void main() {
     testWidgets(
       'Fake content produces exactly 2 distinct level-1 values as checkboxes',
       (tester) async {
-        await _pump(tester, _buildScopeApp(db: _db));
+        await _pump(tester, _buildScopeApp());
 
         await tester.tap(find.byType(SwitchListTile));
         await tester.pump();
@@ -720,7 +675,7 @@ void main() {
     testWidgets('Tapping a CheckboxListTile selects it (value flips to true)', (
       tester,
     ) async {
-      await _pump(tester, _buildScopeApp(db: _db));
+      await _pump(tester, _buildScopeApp());
 
       await tester.tap(find.byType(SwitchListTile));
       await tester.pump();
@@ -751,7 +706,7 @@ void main() {
     testWidgets('"Change Level" button appears once a level is selected', (
       tester,
     ) async {
-      await _pump(tester, _buildScopeApp(db: _db));
+      await _pump(tester, _buildScopeApp());
 
       await tester.tap(find.byType(SwitchListTile));
       await tester.pump();
@@ -796,8 +751,7 @@ void main() {
           await _pump(
             tester,
             _buildScopeApp(
-              db: _db,
-              contentRepo: repo,
+                            contentRepo: repo,
               curriculum: CurriculumId.mishnaBerurah,
             ),
           );
@@ -866,7 +820,7 @@ void main() {
     testWidgets('Save with selectAll=true clears scope rows in DB', (
       tester,
     ) async {
-      await _pump(tester, _buildScopeApp(db: _db));
+      await _pump(tester, _buildScopeApp());
 
       // Tap Save while selectAll=true.
       await tester.tap(find.text('Save'));
@@ -874,10 +828,7 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
 
       // After save-as-all, DB should have no scope rows for profile 1.
-      final rows = await _db.curriculumScopeDao.getScopes(
-        1,
-        CurriculumId.mishnayos,
-      );
+      final rows = await _scopeRepository.getScopes(CurriculumId.mishnayos);
       expect(rows, isEmpty, reason: 'clearScopes must have been called');
 
       await _tearDown(tester);
@@ -886,11 +837,7 @@ void main() {
     testWidgets('Save with selected scope values persists rows to DB', (
       tester,
     ) async {
-      // curriculum_scopes has FKs on profileId + trackId — seed both.
-      await _seedProfile(_db);
-      await _seedTrack(_db, profileId: 1);
-
-      await _pump(tester, _buildScopeApp(db: _db));
+      await _pump(tester, _buildScopeApp());
 
       // Toggle OFF + drill to level values + select first.
       await tester.tap(find.byType(SwitchListTile));
@@ -910,11 +857,8 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
 
-      // After save, at least one scope row exists for profile 1.
-      final rows = await _db.curriculumScopeDao.getScopes(
-        1,
-        CurriculumId.mishnayos,
-      );
+      // After save, at least one Firestore scope document exists.
+      final rows = await _scopeRepository.getScopes(CurriculumId.mishnayos);
       expect(rows, isNotEmpty, reason: 'setScopes must have been called');
 
       await _tearDown(tester);
@@ -924,7 +868,7 @@ void main() {
       'Save is DISABLED for an empty subset (selectAll OFF + no values) — '
       'guards the silent no-op that falsely reported success',
       (tester) async {
-        await _pump(tester, _buildScopeApp(db: _db));
+        await _pump(tester, _buildScopeApp());
 
         // Turn "select all" OFF and drill into a level, but tick NO values.
         await tester.tap(find.byType(SwitchListTile));
@@ -969,20 +913,14 @@ void main() {
     testWidgets(
       'Existing scope rows are pre-loaded: toggle starts OFF and level/values shown',
       (tester) async {
-        // Seed a scope row before opening the screen.
-        // curriculum_scopes has two FKs: profileId → learner_profiles AND
-        // trackId → curriculum_tracks. Both must exist before setScopes.
-        await _seedProfile(_db);
-        final trackId = await _seedTrack(_db, profileId: 1);
-        await _db.curriculumScopeDao.setScopes(
-          1,
-          CurriculumId.mishnayos,
-          trackId,
-          1,
-          [_kSeder1],
+        // Seed a Firestore scope document before opening the screen.
+        await _scopeRepository.setScopes(
+          curriculumId: CurriculumId.mishnayos,
+          scopeLevel: 1,
+          scopeValues: [_kSeder1],
         );
 
-        await _pump(tester, _buildScopeApp(db: _db));
+        await _pump(tester, _buildScopeApp());
 
         final switchFinder = find.byType(SwitchListTile);
         final tile = tester.widget<SwitchListTile>(switchFinder);
@@ -1012,7 +950,7 @@ void main() {
         return c.future;
       });
 
-      await tester.pumpWidget(_buildScopeApp(db: _db, contentRepo: repo));
+      await tester.pumpWidget(_buildScopeApp(, contentRepo: repo));
       await tester.pump(); // One frame to start async.
 
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
@@ -1036,10 +974,7 @@ void main() {
       // state surface in one pump cycle.
       final app = ProviderScope(
         overrides: [
-          userDatabaseProvider.overrideWith((ref) => _db),
           activeProfileIdProvider.overrideWith(() => _ProfileId1()),
-          syncWriteFacadeProvider.overrideWithValue(null),
-          outboxSyncWriteFacadeProvider.overrideWithValue(null),
           // Override the generated FutureProvider directly.
           curriculumContentProvider(CurriculumId.mishnayos).overrideWith(
             (ref) => Future<List<ContentItem>>.error(
@@ -1076,13 +1011,13 @@ void main() {
 
   group('ScopeSelectionScreen — product rule: no track-type labels', () {
     testWidgets('no "Personal" track-type label on screen', (tester) async {
-      await _pump(tester, _buildScopeApp(db: _db));
+      await _pump(tester, _buildScopeApp());
       expect(find.text('Personal'), findsNothing);
       await _tearDown(tester);
     });
 
     testWidgets('no "Standard" track-type label on screen', (tester) async {
-      await _pump(tester, _buildScopeApp(db: _db));
+      await _pump(tester, _buildScopeApp());
       expect(find.text('Standard'), findsNothing);
       await _tearDown(tester);
     });
@@ -1090,7 +1025,7 @@ void main() {
     testWidgets('no standalone "Custom" track-type label on screen', (
       tester,
     ) async {
-      await _pump(tester, _buildScopeApp(db: _db));
+      await _pump(tester, _buildScopeApp());
       // "Custom" as a standalone track-type label is forbidden.
       expect(find.text('Custom'), findsNothing);
       expect(find.textContaining('Custom track'), findsNothing);
@@ -1102,7 +1037,7 @@ void main() {
     ) async {
       await _pump(
         tester,
-        _buildScopeApp(db: _db, useHebrew: true, locale: const Locale('he')),
+        _buildScopeApp(, useHebrew: true, locale: const Locale('he')),
       );
       expect(find.text('אישי'), findsNothing);
       await _tearDown(tester);
@@ -1134,8 +1069,7 @@ void main() {
         await _pump(
           tester,
           _buildScopeApp(
-            db: _db,
-            curriculum: CurriculumId.chumash,
+                        curriculum: CurriculumId.chumash,
             contentRepo: _makeDefaultRepo(items: _kChumashItems),
           ),
         );
@@ -1148,8 +1082,7 @@ void main() {
         await _pump(
           tester,
           _buildScopeApp(
-            db: _db,
-            curriculum: CurriculumId.chumash,
+                        curriculum: CurriculumId.chumash,
             useHebrew: true,
             locale: const Locale('he'),
             contentRepo: _makeDefaultRepo(items: _kChumashItems),
@@ -1174,8 +1107,7 @@ void main() {
         await _pump(
           tester,
           _buildScopeApp(
-            db: _db,
-            curriculum: CurriculumId.chumash,
+                        curriculum: CurriculumId.chumash,
             useHebrew: true,
             locale: const Locale('he'),
             contentRepo: _makeDefaultRepo(items: _kChumashItems),
@@ -1202,8 +1134,7 @@ void main() {
         await _pump(
           tester,
           _buildScopeApp(
-            db: _db,
-            curriculum: CurriculumId.chumash,
+                        curriculum: CurriculumId.chumash,
             contentRepo: _makeDefaultRepo(items: _kChumashItems),
           ),
         );
@@ -1220,8 +1151,7 @@ void main() {
         await _pump(
           tester,
           _buildScopeApp(
-            db: _db,
-            curriculum: CurriculumId.chumash,
+                        curriculum: CurriculumId.chumash,
             variant: TransliterationVariant.sephardi,
             contentRepo: _makeDefaultRepo(items: _kChumashItems),
           ),
@@ -1239,7 +1169,7 @@ void main() {
         // Drill to the Masechta level (level 2) and verify the Hebrew name.
         await _pump(
           tester,
-          _buildScopeApp(db: _db, useHebrew: true, locale: const Locale('he')),
+          _buildScopeApp(, useHebrew: true, locale: const Locale('he')),
         );
         await tester.tap(find.byType(SwitchListTile));
         await tester.pump();
@@ -1267,7 +1197,7 @@ void main() {
     testWidgets('renders under Hebrew locale without crash', (tester) async {
       await _pump(
         tester,
-        _buildScopeApp(db: _db, useHebrew: true, locale: const Locale('he')),
+        _buildScopeApp(, useHebrew: true, locale: const Locale('he')),
       );
 
       expect(find.byType(Scaffold), findsOneWidget);
@@ -1279,7 +1209,7 @@ void main() {
     testWidgets('Hebrew locale sets RTL text direction', (tester) async {
       await _pump(
         tester,
-        _buildScopeApp(db: _db, useHebrew: true, locale: const Locale('he')),
+        _buildScopeApp(, useHebrew: true, locale: const Locale('he')),
       );
 
       final dirFinder = find.byType(Directionality);
@@ -1297,7 +1227,7 @@ void main() {
 
   group('LifetimeMarkingScreen — AppBar', () {
     testWidgets('AppBar title matches l10n.addWhatYouLearned', (tester) async {
-      await _pump(tester, _buildLifetimeApp(db: _db));
+      await _pump(tester, _buildLifetimeApp());
 
       // l10n key: addWhatYouLearned => 'Add Lifetime Learning'
       expect(find.text('Add Lifetime Learning'), findsOneWidget);
@@ -1308,7 +1238,7 @@ void main() {
 
   group('LifetimeMarkingScreen — subtitle policy text', () {
     testWidgets('lifetimeMarkingSubtitle is rendered', (tester) async {
-      await _pump(tester, _buildLifetimeApp(db: _db));
+      await _pump(tester, _buildLifetimeApp());
 
       // l10n key: lifetimeMarkingSubtitle
       // "Items you've learned in your life, outside the app's tracks. Counted
@@ -1325,7 +1255,7 @@ void main() {
     testWidgets(
       'At least one "Not started" card is visible (scroll list renders lazily)',
       (tester) async {
-        await _pump(tester, _buildLifetimeApp(db: _db));
+        await _pump(tester, _buildLifetimeApp());
 
         // The screen renders CurriculumId.values.length curriculum cards in a
         // ListView, which lazily builds only the visible cards. Each card that
@@ -1340,7 +1270,7 @@ void main() {
     testWidgets(
       'At least one card has a chevron_right_rounded icon (tappable)',
       (tester) async {
-        await _pump(tester, _buildLifetimeApp(db: _db));
+        await _pump(tester, _buildLifetimeApp());
 
         // ListView lazy rendering — at least one card is in view.
         expect(find.byIcon(Icons.chevron_right_rounded), findsWidgets);
@@ -1352,7 +1282,7 @@ void main() {
     testWidgets(
       'Tapping a curriculum card pushes LifetimeCurriculumMarkingScreen',
       (tester) async {
-        await _pump(tester, _buildLifetimeApp(db: _db));
+        await _pump(tester, _buildLifetimeApp());
 
         // Tap the first card (Mishnayos).
         await tester.tap(find.byIcon(Icons.chevron_right_rounded).first);
@@ -1371,7 +1301,7 @@ void main() {
     testWidgets('renders under Hebrew locale without crash', (tester) async {
       await _pump(
         tester,
-        _buildLifetimeApp(db: _db, useHebrew: true, locale: const Locale('he')),
+        _buildLifetimeApp(, useHebrew: true, locale: const Locale('he')),
       );
 
       expect(find.byType(Scaffold), findsOneWidget);
@@ -1382,7 +1312,7 @@ void main() {
     testWidgets('Hebrew locale sets RTL text direction', (tester) async {
       await _pump(
         tester,
-        _buildLifetimeApp(db: _db, useHebrew: true, locale: const Locale('he')),
+        _buildLifetimeApp(, useHebrew: true, locale: const Locale('he')),
       );
 
       final dirFinder = find.byType(Directionality);
@@ -1400,7 +1330,7 @@ void main() {
 
   group('LifetimeCurriculumMarkingScreen — AppBar', () {
     testWidgets('AppBar title contains curriculum label', (tester) async {
-      await _pump(tester, _buildCurriculumMarkingApp(db: _db));
+      await _pump(tester, _buildCurriculumMarkingApp());
 
       // CurriculumId.mishnayos.displayNameEn = 'Mishnayos'
       expect(find.textContaining('Mishnayos'), findsWidgets);
@@ -1413,7 +1343,7 @@ void main() {
     testWidgets('"Select what you\'ve learned" section title is present', (
       tester,
     ) async {
-      await _pump(tester, _buildCurriculumMarkingApp(db: _db));
+      await _pump(tester, _buildCurriculumMarkingApp());
 
       // l10n key: lifetimeSelectScreenTitle => "Select what you've learned"
       expect(find.text("Select what you've learned"), findsOneWidget);
@@ -1422,7 +1352,7 @@ void main() {
     });
 
     testWidgets('"Mark as lifetime learned" header is present', (tester) async {
-      await _pump(tester, _buildCurriculumMarkingApp(db: _db));
+      await _pump(tester, _buildCurriculumMarkingApp());
 
       // l10n key: lifetimeMarkAsLearnedTitle => 'Mark as lifetime learned'
       expect(find.text('Mark as lifetime learned'), findsOneWidget);
@@ -1431,7 +1361,7 @@ void main() {
     });
 
     testWidgets('"Select all in this list" button is present', (tester) async {
-      await _pump(tester, _buildCurriculumMarkingApp(db: _db));
+      await _pump(tester, _buildCurriculumMarkingApp());
 
       // l10n key: selectAllInThisList => 'Select all in this list'
       expect(find.text('Select all in this list'), findsOneWidget);
@@ -1444,7 +1374,7 @@ void main() {
     testWidgets('Save button is disabled when no selections made', (
       tester,
     ) async {
-      await _pump(tester, _buildCurriculumMarkingApp(db: _db));
+      await _pump(tester, _buildCurriculumMarkingApp());
 
       // The FilledButton (Save) with l10n.save ('Save') is disabled when
       // _selections is empty.
@@ -1464,7 +1394,7 @@ void main() {
     testWidgets('Clear button is disabled when no selections made', (
       tester,
     ) async {
-      await _pump(tester, _buildCurriculumMarkingApp(db: _db));
+      await _pump(tester, _buildCurriculumMarkingApp());
 
       // l10n key: clearSelection => 'Clear selection'
       final clearButtons = find.widgetWithText(
@@ -1505,7 +1435,7 @@ void main() {
 
         await _pump(
           tester,
-          _buildCurriculumMarkingApp(db: _db, ledgerRepo: mockRepo),
+          _buildCurriculumMarkingApp(, ledgerRepo: mockRepo),
         );
 
         // The HierarchySelectionPanel loads content from the mock repo.
@@ -1567,7 +1497,7 @@ void main() {
 
         await _pump(
           tester,
-          _buildCurriculumMarkingApp(db: _db, ledgerRepo: mockRepo),
+          _buildCurriculumMarkingApp(, ledgerRepo: mockRepo),
         );
 
         await tester.tap(find.text('Select all in this list'));
@@ -1630,8 +1560,7 @@ void main() {
       await _pump(
         tester,
         _buildCurriculumMarkingApp(
-          db: _db,
-          useHebrew: true,
+                    useHebrew: true,
           locale: const Locale('he'),
         ),
       );
@@ -1645,8 +1574,7 @@ void main() {
       await _pump(
         tester,
         _buildCurriculumMarkingApp(
-          db: _db,
-          useHebrew: true,
+                    useHebrew: true,
           locale: const Locale('he'),
         ),
       );
@@ -1665,8 +1593,7 @@ void main() {
         await _pump(
           tester,
           _buildCurriculumMarkingApp(
-            db: _db,
-            useHebrew: true,
+                        useHebrew: true,
             locale: const Locale('he'),
           ),
         );

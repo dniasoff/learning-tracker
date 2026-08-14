@@ -33,8 +33,6 @@ import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
-import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart'
-    show syncWriteFacadeProvider;
 import 'package:learning_tracker/features/tracks/setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/steps/scope_views.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/steps/step_scope.dart';
@@ -123,7 +121,6 @@ List<Override> _overrides({
 }) {
   return [
     contentRepositoryProvider.overrideWith((ref) => contentRepo),
-    syncWriteFacadeProvider.overrideWith((ref) => null),
     useHebrewTermsProvider.overrideWith(
       useHebrew ? _HebrewTermsOn.new : _HebrewTermsOff.new,
     ),
@@ -167,7 +164,6 @@ Widget _buildHierarchyView({
   return ProviderScope(
     retry: (_, __) => null,
     overrides: [
-      syncWriteFacadeProvider.overrideWith((ref) => null),
       useHebrewTermsProvider.overrideWith(
         useHebrew ? _HebrewTermsOn.new : _HebrewTermsOff.new,
       ),

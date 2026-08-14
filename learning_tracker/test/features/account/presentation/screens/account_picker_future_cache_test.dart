@@ -5,7 +5,7 @@
 // BUG LOG:
 //   - RED (pre-fix): AccountPickerScreen was a ConsumerWidget calling
 //     `FutureBuilder(future: registry.getAllAccounts())` directly inside
-//     `build()`. An unrelated provider rebuild (accountDbFileNameProvider
+//     `build()`. An unrelated provider rebuild (activeAccountIdProvider
 //     changing, e.g. from a background account switch) constructed a brand
 //     new Future, restarting the FutureBuilder into ConnectionState.waiting
 //     and re-invoking getAllAccounts() a second time.
@@ -13,16 +13,17 @@
 library;
 
 import 'package:auto_route/auto_route.dart';
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
-import 'package:learning_tracker/core/sync/providers/sync_orchestrator_providers.dart';
+import 'package:learning_tracker/data/firestore/active_account_providers.dart';
+import 'package:learning_tracker/data/firestore/repository_providers.dart';
+import 'package:learning_tracker/data/repositories/firestore_account_repository.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
     show authRepositoryProvider;
@@ -35,6 +36,8 @@ import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../mocks/mock_repositories.dart';
+import '../../../../helpers/firestore_fake.dart';
+import '../../../../helpers/firestore_fixtures.dart';
 
 class _FakePageRouteInfo extends Fake implements PageRouteInfo {}
 
@@ -49,7 +52,7 @@ class _StubAuthStateNotifier extends AuthStateNotifier {
 
 class _StubSelectedProfileId extends SelectedProfileId {
   @override
-  int? build() => null;
+  String? build() => null;
 }
 
 /// Counts every call to getAllAccounts() so the test can assert the
@@ -78,6 +81,13 @@ void main() {
     (tester) async {
       SharedPreferences.setMockInitialValues({});
       final registry = _CountingRegistry();
+      final firestore = createFakeFirestore();
+      await seedAccount(
+        firestore,
+        uid: 'fb-uid-cache',
+        email: 'cache@example.test',
+        displayName: 'Cache User',
+      );
       await registry
           .into(registry.deviceAccounts)
           .insert(
@@ -94,8 +104,6 @@ void main() {
 
       final auth = MockAuthRepository();
       when(() => auth.currentUser).thenReturn(null);
-      final userDb = UserDatabase(NativeDatabase.memory());
-      addTearDown(userDb.close);
       final router = _MockStackRouter();
       when(
         () => router.push(any<PageRouteInfo>()),
@@ -110,8 +118,12 @@ void main() {
           overrides: [
             deviceRegistryProvider.overrideWithValue(registry),
             authRepositoryProvider.overrideWithValue(auth),
-            userDatabaseProvider.overrideWith((ref) => userDb),
-            syncOrchestratorProvider.overrideWithValue(null),
+            firestoreAccountRepositoryProvider.overrideWith(
+              (ref) async => FirestoreAccountRepository(
+                firestore: firestore,
+                uid: 'fb-uid-cache',
+              ),
+            ),
             authStateProvider.overrideWith(
               () => _StubAuthStateNotifier(const AuthState.signedOut()),
             ),
@@ -144,13 +156,13 @@ void main() {
       expect(registry.getAllAccountsCallCount, 1);
 
       // Trigger an UNRELATED provider rebuild: AccountPickerScreen watches
-      // accountDbFileNameProvider (AN-4, to pin the active tile first) —
+      // activeAccountIdProvider (the current active-account selector) —
       // changing it forces build() to re-run without touching
       // deviceRegistryProvider or the account data itself.
       final container = ProviderScope.containerOf(
         tester.element(find.byType(AccountPickerScreen)),
       );
-      container.read(accountDbFileNameProvider.notifier).setFileName('other');
+      container.read(activeAccountIdProvider.notifier).set('other');
       await tester.pump();
 
       // Must NOT flash back to the loading spinner...

@@ -25,19 +25,27 @@ library;
 
 import 'dart:async';
 
-import 'package:drift/drift.dart' show Value;
-import 'package:drift/native.dart';
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:learning_tracker/data/firestore/active_account_providers.dart';
+import 'package:learning_tracker/data/firestore/account_firebase.dart';
+import 'package:learning_tracker/data/firestore/repository_providers.dart';
+import 'package:learning_tracker/data/repositories/firestore_account_repository.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:mocktail/mocktail.dart';
 
+import '../../../../helpers/firestore_fake.dart';
+import '../../../../helpers/firestore_fixtures.dart';
 import '../../../../mocks/mock_repositories.dart';
+
+class _MockFirebaseApp extends Mock implements FirebaseApp {}
+class _MockFirebaseAuth extends Mock implements FirebaseAuth {}
 
 const _uid = 'fb-uid-live-session';
 
@@ -50,24 +58,13 @@ AppUser _cloudUser() => const AppUser(
 );
 
 void main() {
-  late UserDatabase userDb;
   late MockAuthRepository auth;
   late StreamController<AppUser?> sessionController;
+  late FakeFirebaseFirestore firestore;
 
   setUp(() async {
-    userDb = UserDatabase(NativeDatabase.memory());
-    await userDb
-        .into(userDb.accounts)
-        .insert(
-          AccountsCompanion.insert(
-            email: 'live@example.test',
-            tier: 'cloudBorn',
-            firebaseUid: const Value(_uid),
-            displayName: 'Live Session',
-            createdAt: DateTime.utc(2026, 1, 1),
-            updatedAt: DateTime.utc(2026, 1, 1),
-          ),
-        );
+    firestore = createFakeFirestore(authenticatedUid: _uid);
+    await seedAccount(firestore, uid: _uid, email: 'live@example.test', displayName: 'Live Session');
 
     auth = MockAuthRepository();
     sessionController = StreamController<AppUser?>.broadcast();
@@ -82,7 +79,6 @@ void main() {
 
   tearDown(() async {
     await sessionController.close();
-    await userDb.close();
   });
 
   test(
@@ -92,7 +88,20 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           authRepositoryProvider.overrideWithValue(auth),
-          userDatabaseProvider.overrideWithValue(userDb),
+          activeAccountFirebaseProvider.overrideWith(
+            (ref) async => AccountFirebaseHandles(
+              app: _MockFirebaseApp(),
+              firestore: firestore,
+              auth: _MockFirebaseAuth(),
+              uid: _uid,
+            ),
+          ),
+          firestoreAccountRepositoryProvider.overrideWith(
+            (ref) async => FirestoreAccountRepository(
+              firestore: firestore,
+              uid: _uid,
+            ),
+          ),
         ],
       );
       addTearDown(container.dispose);
@@ -140,8 +149,21 @@ void main() {
       're-derivation of an already-active session)', () async {
     final container = ProviderContainer(
       overrides: [
-        authRepositoryProvider.overrideWithValue(auth),
-        userDatabaseProvider.overrideWithValue(userDb),
+      authRepositoryProvider.overrideWithValue(auth),
+        activeAccountFirebaseProvider.overrideWith(
+          (ref) async => AccountFirebaseHandles(
+            app: _MockFirebaseApp(),
+            firestore: firestore,
+            auth: _MockFirebaseAuth(),
+            uid: _uid,
+          ),
+        ),
+        firestoreAccountRepositoryProvider.overrideWith(
+          (ref) async => FirestoreAccountRepository(
+            firestore: firestore,
+            uid: _uid,
+          ),
+        ),
       ],
     );
     addTearDown(container.dispose);

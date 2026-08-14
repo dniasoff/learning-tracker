@@ -48,22 +48,24 @@ library;
 
 import 'dart:async';
 
-import 'package:drift/native.dart';
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/data/firestore/repository_providers.dart';
+import 'package:learning_tracker/data/repositories/firestore_profile_program_repository.dart';
 import 'package:learning_tracker/features/account/domain/services/account_management_service.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/curriculum_settings_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/change_password_dialog.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
+
+import '../../../helpers/firestore_fake.dart';
 
 // ── Mocks ──────────────────────────────────────────────────────────────────────
 
@@ -87,11 +89,6 @@ class _ThrowingLearningProgramRepository extends Mock
 
 // ── Notifier stubs ─────────────────────────────────────────────────────────────
 
-class _ProfileId1 extends ActiveProfileId {
-  @override
-  int build() => 1;
-}
-
 class _HebrewTermsOff extends UseHebrewTerms {
   @override
   bool build() => false;
@@ -105,6 +102,8 @@ class _HebrewTermsOn extends UseHebrewTerms {
 // ── Constants ──────────────────────────────────────────────────────────────────
 
 const _curriculumKey = 'mishnayos';
+const _profileUid = 'curriculum-settings-error-test-uid';
+const _profileId = '01J6Q2H4A8M7K3P9R5T6V8WXY7';
 
 // ── Widget builders ────────────────────────────────────────────────────────────
 
@@ -115,7 +114,7 @@ const _curriculumKey = 'mishnayos';
 /// tests.  The caller is responsible for seeding a profile_program row in
 /// [db] so that the provider reaches the `getProgramById` call.
 Widget _buildCurriculumApp({
-  required UserDatabase db,
+  required FirestoreProfileProgramRepository profileProgramRepository,
   LearningProgramRepository? lprOverride,
   bool useHebrew = false,
   Locale locale = const Locale('en'),
@@ -123,9 +122,9 @@ Widget _buildCurriculumApp({
   return ProviderScope(
     retry: (_, __) => null,
     overrides: [
-      userDatabaseProvider.overrideWith((ref) => db),
-      activeProfileIdProvider.overrideWith(() => _ProfileId1()),
-      syncWriteFacadeProvider.overrideWithValue(null),
+      firestoreProfileProgramRepositoryProvider.overrideWith(
+        (ref) async => profileProgramRepository,
+      ),
       if (lprOverride != null)
         learningProgramRepositoryProvider.overrideWithValue(lprOverride),
       if (useHebrew)
@@ -206,33 +205,34 @@ void main() {
   // ════════════════════════════════════════════════════════════════════════════
 
   group('CurriculumSettingsScreen — error branch', () {
-    // Strategy: seed a real profile_program row so the provider does reach the
-    // getProgramById call, then override learningProgramRepositoryProvider with
-    // a stub that throws.  This drives the .error(...) branch of the
-    // programInfo.when() widget switch.
-    late UserDatabase db;
+    // Strategy: seed a real Firestore profile_program document so the provider
+    // reaches getProgramById, then override the catalog repository with a stub
+    // that throws. This drives the .error(...) branch of programInfo.when().
+    late FakeFirebaseFirestore firestore;
+    late FirestoreProfileProgramRepository profileProgramRepository;
     late _ThrowingLearningProgramRepository throwingLpr;
 
     setUp(() async {
-      db = UserDatabase(NativeDatabase.memory());
-      throwingLpr = _ThrowingLearningProgramRepository();
-      // Seed a profile_program row so the provider finds a non-null row and
-      // then calls getProgramById (which will throw on the stub).
-      await db.profileProgramDao.setProfileProgram(
-        profileId: 1,
-        curriculumType: _curriculumKey,
-        programId: 999, // arbitrary — the stub throws regardless of id
+      firestore = createFakeFirestore(authenticatedUid: _profileUid);
+      profileProgramRepository = FirestoreProfileProgramRepository(
+        firestore: firestore,
+        uid: _profileUid,
+        profileId: _profileId,
       );
-    });
-
-    tearDown(() async {
-      await db.close();
+      await profileProgramRepository.setProgram(
+        curriculumId: CurriculumId.mishnayos,
+        programId: 999,
+      );
+      throwingLpr = _ThrowingLearningProgramRepository();
     });
 
     testWidgets('A1: school icon present in error tile', (tester) async {
       await _pumpAndSettle1s(
         tester,
-        _buildCurriculumApp(db: db, lprOverride: throwingLpr),
+        _buildCurriculumApp(
+          profileProgramRepository: profileProgramRepository,
+          lprOverride: throwingLpr,
+        ),
       );
 
       // The error branch renders Icon(Icons.school) + title "Program".
@@ -247,7 +247,10 @@ void main() {
       (tester) async {
         await _pumpAndSettle1s(
           tester,
-          _buildCurriculumApp(db: db, lprOverride: throwingLpr),
+          _buildCurriculumApp(
+            profileProgramRepository: profileProgramRepository,
+            lprOverride: throwingLpr,
+          ),
         );
 
         // l10n: curriculumSettingsProgramError is now a fixed,
@@ -273,7 +276,10 @@ void main() {
     testWidgets('A3: "Program" title visible in error tile', (tester) async {
       await _pumpAndSettle1s(
         tester,
-        _buildCurriculumApp(db: db, lprOverride: throwingLpr),
+        _buildCurriculumApp(
+          profileProgramRepository: profileProgramRepository,
+          lprOverride: throwingLpr,
+        ),
       );
 
       // l10n: curriculumSettingsProgramTitle → "Program"
@@ -289,7 +295,7 @@ void main() {
       await _pumpAndSettle1s(
         tester,
         _buildCurriculumApp(
-          db: db,
+          profileProgramRepository: profileProgramRepository,
           lprOverride: throwingLpr,
           useHebrew: true,
           locale: const Locale('he'),

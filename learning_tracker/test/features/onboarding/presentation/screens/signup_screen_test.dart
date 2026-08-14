@@ -1,13 +1,9 @@
 import 'package:auto_route/auto_route.dart';
-import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart'
-    show userDatabaseProvider;
 import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
@@ -27,7 +23,6 @@ void main() {
   late MockStackRouter mockRouter;
 
   setUpAll(() {
-    driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
     registerFallbackValue(const OnboardingRoute());
     registerFallbackValue(SignupRoute());
   });
@@ -62,8 +57,7 @@ void main() {
     );
   }
 
-  Widget createTestWidgetWithDatabase({
-    required UserDatabase database,
+  Widget createTestWidgetWithRegistry({
     bool online = true,
     Locale locale = const Locale('en'),
   }) {
@@ -73,7 +67,6 @@ void main() {
       locale: locale,
       overrides: [
         authRepositoryProvider.overrideWithValue(mockAuthRepo),
-        userDatabaseProvider.overrideWithValue(database),
         deviceRegistryProvider.overrideWithValue(testRegistry),
         authStateProvider.overrideWithValue(const AuthState.signedOut()),
         connectivityStreamProvider.overrideWith((ref) => Stream.value(online)),
@@ -176,11 +169,8 @@ void main() {
     testWidgets('offline stream shows local warning and offline CTA', (
       tester,
     ) async {
-      final db = UserDatabase(NativeDatabase.memory());
-      addTearDown(() async => db.close());
-
       await tester.pumpWidget(
-        createTestWidgetWithDatabase(database: db, online: false),
+        createTestWidgetWithRegistry(online: false),
       );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
@@ -202,10 +192,6 @@ void main() {
         emailVerified: true,
         providers: ['google.com'],
       );
-      final db = UserDatabase(NativeDatabase.memory());
-
-      addTearDown(() async => db.close());
-
       when(() => mockAuthRepo.signInWithGoogle()).thenAnswer((_) async {});
       when(() => mockAuthRepo.currentUser).thenReturn(mockUser);
 
@@ -222,7 +208,7 @@ void main() {
       };
       addTearDown(() => FlutterError.onError = originalOnError);
 
-      await tester.pumpWidget(createTestWidgetWithDatabase(database: db));
+      await tester.pumpWidget(createTestWidgetWithRegistry());
 
       final googleButton = find.text('Sign Up with Google');
       await tester.ensureVisible(googleButton);
@@ -409,12 +395,8 @@ void main() {
     testWidgets('Hebrew offline mode: local-only warning card renders in Hebrew', (
       tester,
     ) async {
-      final db = UserDatabase(NativeDatabase.memory());
-      addTearDown(() async => db.close());
-
       await tester.pumpWidget(
-        createTestWidgetWithDatabase(
-          database: db,
+        createTestWidgetWithRegistry(
           online: false,
           locale: const Locale('he'),
         ),

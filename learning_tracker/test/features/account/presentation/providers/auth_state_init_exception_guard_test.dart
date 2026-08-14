@@ -18,13 +18,9 @@
 @Tags(['unit', 'account', 'auth'])
 library;
 
-import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart';
@@ -32,26 +28,6 @@ import 'package:learning_tracker/features/account/presentation/providers/auth_st
 import 'package:mocktail/mocktail.dart';
 
 import '../../../../mocks/mock_repositories.dart';
-
-/// DAO that throws on [findByTier] — simulates a DB read failure during
-/// _init()'s local-born restore step (AUD-account-11's "and separately from
-/// the DAO" acceptance criterion).
-class _ThrowingUserProfileDao extends UserProfileDao {
-  _ThrowingUserProfileDao(super.db);
-
-  @override
-  Future<List<UserProfile>> findByTier(UserTier tier) =>
-      Future<List<UserProfile>>.error(
-        Exception('simulated DB read failure (findByTier)'),
-      );
-}
-
-class _ThrowingDaoUserDatabase extends UserDatabase {
-  _ThrowingDaoUserDatabase(super.e);
-
-  @override
-  late final UserProfileDao userProfileDao = _ThrowingUserProfileDao(this);
-}
 
 const _uid = 'fb-uid-offline-cold-start';
 
@@ -81,13 +57,14 @@ Future<AuthState> _settledStateOrTimeout(
 
 void main() {
   group('AUD-account-03: reloadCurrentUser() throws (offline cold start)', () {
-    late UserDatabase userDb;
     late MockAuthRepository auth;
 
     setUp(() {
-      userDb = UserDatabase(NativeDatabase.memory());
       auth = MockAuthRepository();
       when(() => auth.currentUser).thenReturn(_cloudUser());
+      when(
+        () => auth.onAuthStateChanged(),
+      ).thenAnswer((_) => const Stream<AppUser?>.empty());
       // Simulates User.reload() throwing FirebaseAuthException(
       // network-request-failed) on an offline device — an ordinary
       // cold-start condition for an offline-first app.
@@ -96,8 +73,6 @@ void main() {
       ).thenThrow(Exception('network-request-failed (simulated offline)'));
     });
 
-    tearDown(() async => userDb.close());
-
     test(
       'AuthStateNotifier resolves to a terminal SessionStatus within a '
       'bounded time instead of remaining initializing indefinitely',
@@ -105,7 +80,6 @@ void main() {
         final container = ProviderContainer(
           overrides: [
             authRepositoryProvider.overrideWithValue(auth),
-            userDatabaseProvider.overrideWithValue(userDb),
           ],
         );
         addTearDown(container.dispose);
@@ -142,52 +116,7 @@ void main() {
     );
   });
 
-  group('AUD-account-11: DAO throws during the local-born restore step', () {
-    late _ThrowingDaoUserDatabase userDb;
-    late MockAuthRepository auth;
-
-    setUp(() {
-      userDb = _ThrowingDaoUserDatabase(NativeDatabase.memory());
-      auth = MockAuthRepository();
-      // No Firebase session at all — _init() should go straight to the
-      // local-born restore path, which is where the DAO throws.
-      when(() => auth.currentUser).thenReturn(null);
-    });
-
-    tearDown(() async => userDb.close());
-
-    test('AuthStateNotifier settles to a terminal state (not stuck at '
-        'initializing) when the local-born DAO query throws', () async {
-      final container = ProviderContainer(
-        overrides: [
-          authRepositoryProvider.overrideWithValue(auth),
-          userDatabaseProvider.overrideWithValue(userDb),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      final settled = await _settledStateOrTimeout(container);
-
-      expect(
-        settled.isInitializing,
-        isFalse,
-        reason:
-            'AUD-account-11: _init() cannot leave sessionStatus at '
-            'initializing on any exception path — it must resolve to '
-            'signedIn or signedOut every time.',
-      );
-      expect(settled.isSignedIn, isFalse);
-
-      final history = AppLogger.instance.talker.history
-          .map((e) => e.generateTextMessage())
-          .toList();
-      expect(
-        history.any((m) => m.contains('auth_state_init_failed')),
-        isTrue,
-        reason:
-            'Expected error(event: "auth_state_init_failed") in talker '
-            'history.',
-      );
-    });
-  });
+  // AUD-account-11's local-born DAO-throwing case was removed: local-born
+  // restore through the archived local profile store no longer exists. AuthStateNotifier
+  // now has only the Firebase-backed initialization path, covered above.
 }

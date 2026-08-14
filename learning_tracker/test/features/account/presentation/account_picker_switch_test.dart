@@ -9,6 +9,7 @@
 library;
 
 import 'package:auto_route/auto_route.dart';
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
@@ -20,10 +21,9 @@ import 'package:google_sign_in/google_sign_in.dart'
 import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
-import 'package:learning_tracker/core/sync/providers/sync_orchestrator_providers.dart';
+import 'package:learning_tracker/data/firestore/repository_providers.dart';
+import 'package:learning_tracker/data/repositories/firestore_account_repository.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
     show authRepositoryProvider;
@@ -34,6 +34,8 @@ import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../mocks/mock_repositories.dart';
+import '../../../helpers/firestore_fake.dart';
+import '../../../helpers/firestore_fixtures.dart';
 
 class _MockStackRouter extends Mock implements StackRouter {}
 
@@ -54,14 +56,14 @@ void main() {
   setUpAll(() => registerFallbackValue(_FakePageRouteInfo()));
 
   late DeviceRegistryDatabase registry;
-  late UserDatabase userDb;
+  late FakeFirebaseFirestore firestore;
   late MockAuthRepository auth;
   late _MockStackRouter router;
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
     registry = DeviceRegistryDatabase(NativeDatabase.memory());
-    userDb = UserDatabase(NativeDatabase.memory());
+    firestore = createFakeFirestore();
     auth = MockAuthRepository();
     router = _MockStackRouter();
 
@@ -83,40 +85,34 @@ void main() {
         email: 'local@test.local',
         displayName: 'Local User',
         tier: 'localBorn',
+        firebaseUid: const Value('fb-uid-local'),
         dbFileName: 'user_acc_acc-local.db',
         createdAt: DateTime.utc(2026, 1, 1),
         lastUsedAt: DateTime.utc(2026, 1, 1),
       ),
     );
-    // …with a matching local-born account row in the user DB so the switch
-    // (findLocalBornByEmail) resolves and completes through to AppShell.
-    await userDb
-        .into(userDb.accounts)
-        .insert(
-          AccountsCompanion.insert(
-            email: 'local@test.local',
-            tier: 'localBorn',
-            displayName: 'Local User',
-            createdAt: DateTime.utc(2026, 1, 1),
-            updatedAt: DateTime.utc(2026, 1, 1),
-          ),
-        );
+    await seedAccount(
+      firestore,
+      uid: 'fb-uid-local',
+      email: 'local@test.local',
+      displayName: 'Local User',
+    );
   });
 
   tearDown(() async {
     await registry.close();
-    await userDb.close();
   });
 
   Widget buildApp({InternetConnectionChecker? connectivity}) => ProviderScope(
     overrides: [
       deviceRegistryProvider.overrideWithValue(registry),
       authRepositoryProvider.overrideWithValue(auth),
-      userDatabaseProvider.overrideWith((ref) => userDb),
-      // No real Firestore orchestrator in widget tests — the switch path reads
-      // it to kick a best-effort launch pull; null is the not-cloud/unavailable
-      // case and keeps the test offline.
-      syncOrchestratorProvider.overrideWithValue(null),
+      firestoreAccountRepositoryProvider.overrideWith(
+        (ref) async => FirestoreAccountRepository(
+          firestore: firestore,
+          uid: auth.currentUser?.uid ?? 'fb-uid-local',
+        ),
+      ),
       if (connectivity != null)
         internetConnectionCheckerProvider.overrideWithValue(connectivity),
     ],
@@ -192,7 +188,7 @@ void main() {
         () => auth.currentUser,
       ).thenReturn(_user('fb-uid-B', 'b@test.cloud'));
       when(() => auth.signOut()).thenAnswer((_) async {});
-      // authStateProvider._init() reloads the live user on first build.
+      // The live Firebase-auth fake is the source of the active identity.
       when(
         () => auth.reloadCurrentUser(),
       ).thenAnswer((_) async => auth.currentUser);
@@ -212,20 +208,12 @@ void main() {
           lastUsedAt: DateTime.utc(2026, 1, 2),
         ),
       );
-      // Matching cloud-born profile row so _activateCloudAccountFromLocalData
-      // resolves a profile and completes the switch.
-      await userDb
-          .into(userDb.accounts)
-          .insert(
-            AccountsCompanion.insert(
-              email: targetEmail,
-              tier: 'cloudBorn',
-              displayName: 'Cloud A',
-              firebaseUid: const Value(targetUid),
-              createdAt: DateTime.utc(2026, 1, 2),
-              updatedAt: DateTime.utc(2026, 1, 2),
-            ),
-          );
+      await seedAccount(
+        firestore,
+        uid: targetUid,
+        email: targetEmail,
+        displayName: 'Cloud A',
+      );
     }
 
     testWidgets(
@@ -481,20 +469,12 @@ void main() {
           lastUsedAt: DateTime.utc(2026, 1, 3),
         ),
       );
-      // Matching cloud-born profile row so _activateCloudAccountFromLocalData
-      // resolves a profile and completes the switch.
-      await userDb
-          .into(userDb.accounts)
-          .insert(
-            AccountsCompanion.insert(
-              email: cloudEmail,
-              tier: 'cloudBorn',
-              displayName: 'Instant Cloud',
-              firebaseUid: const Value(cloudUid),
-              createdAt: DateTime.utc(2026, 1, 3),
-              updatedAt: DateTime.utc(2026, 1, 3),
-            ),
-          );
+      await seedAccount(
+        firestore,
+        uid: cloudUid,
+        email: cloudEmail,
+        displayName: 'Instant Cloud',
+      );
     }
 
     testWidgets('valid session → instant switch to AppShell, no re-auth called', (

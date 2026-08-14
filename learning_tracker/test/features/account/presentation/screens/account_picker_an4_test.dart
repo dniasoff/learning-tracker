@@ -20,7 +20,7 @@
 // the real [AccountPickerScreen] / `_AccountTile` and drives both assertions
 // through production code:
 //   - Ordering: seeds real accounts via the device registry, overrides
-//     [accountDbFileNameProvider] to select the "active" one, and asserts the
+//     [activeAccountIdProvider] to select the "active" one, and asserts the
 //     rendered tile order (top-to-bottom) produced by AccountPickerScreen.build.
 //   - Tap guard: taps the real `_AccountTile`'s InkWell twice in quick
 //     succession. The re-entrancy window is held open by a slow-resolving
@@ -34,6 +34,7 @@ library;
 import 'dart:async';
 
 import 'package:auto_route/auto_route.dart';
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
@@ -43,10 +44,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
-import 'package:learning_tracker/core/sync/providers/sync_orchestrator_providers.dart';
+import 'package:learning_tracker/data/firestore/active_account_providers.dart';
+import 'package:learning_tracker/data/firestore/repository_providers.dart';
+import 'package:learning_tracker/data/repositories/firestore_account_repository.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
     show authRepositoryProvider;
@@ -60,6 +61,8 @@ import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../mocks/mock_repositories.dart';
+import '../../../../helpers/firestore_fake.dart';
+import '../../../../helpers/firestore_fixtures.dart';
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -84,18 +87,16 @@ class _StubAuthStateNotifier extends AuthStateNotifier {
 /// SelectedProfileId that stays at null without touching the sync facade.
 class _StubSelectedProfileId extends SelectedProfileId {
   @override
-  int? build() => null;
+  String? build() => null;
 }
 
-/// AccountDbFileName that starts pinned at a given "active" account's DB
-/// file — lets the ordering test control which seeded account is active
-/// without touching real SharedPreferences/session-persistence plumbing.
-class _StubAccountDbFileName extends AccountDbFileName {
-  _StubAccountDbFileName(this._initial);
+/// Active-account selector pinned to a chosen device account id.
+class _StubActiveAccountId extends ActiveAccountId {
+  _StubActiveAccountId(this._initial);
   final String _initial;
 
   @override
-  String build() => _initial;
+  String? build() => _initial;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -133,35 +134,28 @@ DeviceAccountsCompanion _cloudAccount({
   lastUsedAt: DateTime.utc(2026),
 );
 
-Future<void> _seedCloudUserDbRow(
-  UserDatabase userDb, {
+Future<void> _seedCloudAccount(
+  FakeFirebaseFirestore firestore, {
   required String email,
   required String displayName,
   required String firebaseUid,
 }) async {
-  final now = DateTime.utc(2026);
-  await userDb
-      .into(userDb.accounts)
-      .insert(
-        AccountsCompanion.insert(
-          email: email,
-          tier: 'cloudBorn',
-          firebaseUid: Value(firebaseUid),
-          displayName: displayName,
-          createdAt: now,
-          updatedAt: now,
-        ),
-      );
+  await seedAccount(
+    firestore,
+    uid: firebaseUid,
+    email: email,
+    displayName: displayName,
+  );
 }
 
 // ── App wrapper ──────────────────────────────────────────────────────────────
 
 Widget _buildApp({
   required DeviceRegistryDatabase registry,
-  required UserDatabase userDb,
+  required FakeFirebaseFirestore firestore,
   required MockAuthRepository auth,
   required _MockStackRouter router,
-  required String activeDbFileName,
+  required String activeAccountId,
   InternetConnectionChecker? connectivity,
 }) {
   return ProviderScope(
@@ -169,10 +163,14 @@ Widget _buildApp({
     overrides: [
       deviceRegistryProvider.overrideWithValue(registry),
       authRepositoryProvider.overrideWithValue(auth),
-      userDatabaseProvider.overrideWith((ref) => userDb),
-      syncOrchestratorProvider.overrideWithValue(null),
-      accountDbFileNameProvider.overrideWith(
-        () => _StubAccountDbFileName(activeDbFileName),
+      firestoreAccountRepositoryProvider.overrideWith(
+        (ref) async => FirestoreAccountRepository(
+          firestore: firestore,
+          uid: 'fb-uid-1',
+        ),
+      ),
+      activeAccountIdProvider.overrideWith(
+        () => _StubActiveAccountId(activeAccountId),
       ),
       if (connectivity != null)
         internetConnectionCheckerProvider.overrideWithValue(connectivity),
@@ -207,14 +205,14 @@ void main() {
   });
 
   late DeviceRegistryDatabase registry;
-  late UserDatabase userDb;
+  late FakeFirebaseFirestore firestore;
   late MockAuthRepository auth;
   late _MockStackRouter router;
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
     registry = DeviceRegistryDatabase(NativeDatabase.memory());
-    userDb = UserDatabase(NativeDatabase.memory());
+    firestore = createFakeFirestore();
     auth = MockAuthRepository();
     router = _MockStackRouter();
 
@@ -230,7 +228,6 @@ void main() {
 
   tearDown(() async {
     await registry.close();
-    await userDb.close();
   });
 
   // ── Ordering ───────────────────────────────────────────────────────────────
@@ -275,10 +272,10 @@ void main() {
     await tester.pumpWidget(
       _buildApp(
         registry: registry,
-        userDb: userDb,
+        firestore: firestore,
         auth: auth,
         router: router,
-        activeDbFileName: 'user_acc_z.db',
+        activeAccountId: 'acc-z',
       ),
     );
     await tester.pump();
@@ -320,8 +317,8 @@ void main() {
     'first switch is genuinely in flight',
     (tester) async {
       await registry.addAccount(_cloudAccount(firebaseUid: 'fb-uid-1'));
-      await _seedCloudUserDbRow(
-        userDb,
+      await _seedCloudAccount(
+        firestore,
         email: 'cloud@example.test',
         displayName: 'Cloud User',
         firebaseUid: 'fb-uid-1',
@@ -339,10 +336,10 @@ void main() {
       await tester.pumpWidget(
         _buildApp(
           registry: registry,
-          userDb: userDb,
+          firestore: firestore,
           auth: auth,
           router: router,
-          activeDbFileName: 'learning_tracker',
+          activeAccountId: 'none',
           connectivity: checker,
         ),
       );
@@ -396,8 +393,8 @@ void main() {
     'tile is accepted (guard resets)',
     (tester) async {
       await registry.addAccount(_cloudAccount(firebaseUid: 'fb-uid-1'));
-      await _seedCloudUserDbRow(
-        userDb,
+      await _seedCloudAccount(
+        firestore,
         email: 'cloud@example.test',
         displayName: 'Cloud User',
         firebaseUid: 'fb-uid-1',
@@ -410,10 +407,10 @@ void main() {
       await tester.pumpWidget(
         _buildApp(
           registry: registry,
-          userDb: userDb,
+          firestore: firestore,
           auth: auth,
           router: router,
-          activeDbFileName: 'learning_tracker',
+          activeAccountId: 'none',
           connectivity: checker,
         ),
       );

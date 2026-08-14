@@ -2,7 +2,7 @@
 /// [dashboardCompletionPercentageProvider].
 ///
 /// Every test drives the REAL providers through a [ProviderContainer] over an
-/// in-memory Drift database.  There are NO mirror/helper functions that
+/// fake Firestore database. There are NO mirror/helper functions that
 /// re-implement the logic under test (Finding 3).
 ///
 /// Finding 1 guard: the production code already scopes completions to the
@@ -10,23 +10,46 @@
 /// so a future regression would fail the suite.
 library;
 
-import 'package:drift/drift.dart';
-import 'package:drift/native.dart';
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/data/firestore/account_firebase.dart';
+import 'package:learning_tracker/data/firestore/active_account_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
-import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
+import 'package:learning_tracker/features/tracks/stages/domain/models/schedule_type.dart';
+import 'package:learning_tracker/features/tracks/stages/domain/models/stage_definition.dart';
 import 'package:learning_tracker/features/tracks/stages/presentation/providers/stage_providers.dart';
+import 'package:mocktail/mocktail.dart';
+
+import '../../../../helpers/firestore_fake.dart';
+import '../../../../helpers/firestore_fixtures.dart';
+
+class _MockFirebaseApp extends Mock implements FirebaseApp {}
+
+class _MockFirebaseAuth extends Mock implements FirebaseAuth {}
+
+const _uid = 'dashboard-completion-test';
+
+AccountFirebaseHandles _handles(FakeFirebaseFirestore firestore) {
+  return AccountFirebaseHandles(
+    app: _MockFirebaseApp(),
+    firestore: firestore,
+    auth: _MockFirebaseAuth(),
+    uid: _uid,
+  );
+}
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-/// The profile ID seeded into every test database via [_seedProfile].
-const _profileId = 1;
+/// The profile document id seeded into every test database via [_seedProfile].
+const _profileId = '01J6Q2H4A8M7K3P9R5T6V8WXYB';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -34,48 +57,34 @@ const _profileId = 1;
 ///
 /// Required before any FK-constrained insert into completion_events or
 /// curriculum_tracks.
-Future<void> _seedProfile(UserDatabase db) async {
-  final now = DateTime.utc(2026, 1, 1);
-  final accountId = await db
-      .into(db.accounts)
-      .insert(
-        AccountsCompanion.insert(
-          email: 'test@example.com',
-          tier: 'localBorn',
-          displayName: 'Test User',
-          createdAt: now,
-          updatedAt: now,
-        ),
-      );
-  await db
-      .into(db.learnerProfiles)
-      .insert(
-        LearnerProfilesCompanion.insert(
-          accountId: accountId,
-          displayName: 'Test User',
-          mode: 'adult',
-          createdAt: now,
-          updatedAt: now,
-        ),
-      );
+Future<void> _seedProfile(FakeFirebaseFirestore firestore) async {
+  await seedAccount(firestore, uid: _uid);
+  await seedProfile(
+    firestore,
+    uid: _uid,
+    profileId: _profileId,
+    mode: ProfileMode.adult,
+  );
 }
 
 /// Creates a track row and returns its auto-generated id.
-Future<int> _insertTrack(
-  UserDatabase db, {
+Future<CurriculumId> _insertTrack(
+  FakeFirebaseFirestore firestore, {
   required String curriculumId,
-  int profileId = _profileId,
+  String profileId = _profileId,
+  Object? trackId,
 }) async {
-  return db
-      .into(db.curriculumTracks)
-      .insert(
-        CurriculumTracksCompanion.insert(
-          profileId: profileId,
-          curriculumId: curriculumId,
-          stateChangedAt: DateTime.utc(2026, 1, 1),
-          activatedAt: DateTime.utc(2026, 1, 1),
-        ),
-      );
+  final curriculum = CurriculumId.fromStorageKey(curriculumId);
+  if (curriculum == null) {
+    throw ArgumentError.value(curriculumId, 'curriculumId');
+  }
+  await seedTrack(
+    firestore,
+    uid: _uid,
+    profileId: profileId,
+    curriculumId: curriculum,
+  );
+  return curriculum;
 }
 
 /// Inserts a stage definition row with an explicit [stageOrder].
@@ -84,25 +93,33 @@ Future<int> _insertTrack(
 /// [stageOrder] whenever more than one row has been inserted, which is the
 /// deliberate id≠stageOrder discipline required by the task brief.
 Future<void> _insertStage(
-  UserDatabase db, {
-  required int trackId,
+  FakeFirebaseFirestore firestore, {
+  Object? trackId,
   required int stageOrder,
   required String stageName,
   required String curriculumId,
-  int profileId = _profileId,
+  String profileId = _profileId,
 }) async {
-  await db
-      .into(db.stageDefinitions)
-      .insert(
-        StageDefinitionsCompanion.insert(
-          profileId: profileId,
-          trackId: trackId,
-          curriculumId: curriculumId,
-          stageOrder: stageOrder,
-          stageName: stageName,
-          schedule: const Value('{"type":"delay","delay_days":0}'),
-        ),
-      );
+  final curriculum = CurriculumId.fromStorageKey(curriculumId);
+  if (curriculum == null) {
+    throw ArgumentError.value(curriculumId, 'curriculumId');
+  }
+  await seedStageDefinitions(
+    firestore,
+    uid: _uid,
+    profileId: profileId,
+    curriculumId: curriculum,
+    stages: [
+      StageDefinition(
+        curriculumId: curriculum,
+        stageOrder: stageOrder,
+        stageName: stageName,
+        delayDays: 0,
+        isDefault: false,
+        scheduleType: ScheduleType.delay,
+      ),
+    ],
+  );
 }
 
 /// Records a completion event for the given [sefariaRef] + [stageOrder] pair.
@@ -110,71 +127,65 @@ Future<void> _insertStage(
 /// [stageOrder] is what gets stored in [CompletionEvents.stageId] — the value
 /// the dashboard providers look up against [StageDefinition.stageOrder].
 Future<void> _insertCompletion(
-  UserDatabase db, {
-  required int trackId,
+  FakeFirebaseFirestore firestore, {
+  Object? trackId,
   required String curriculumId,
   required String sefariaRef,
   required int stageOrder,
-  int profileId = _profileId,
+  String profileId = _profileId,
   DateTime? completedAt,
 }) async {
-  final ts = completedAt ?? DateTime.utc(2026, 1, 1);
-  await db
-      .into(db.completionEvents)
-      .insert(
-        CompletionEventsCompanion.insert(
-          profileId: profileId,
-          curriculumId: curriculumId,
-          sefariaRef: sefariaRef,
-          stageId: stageOrder, // stored as the stageOrder value, NOT the row id
-          trackType: 'personal',
-          trackId: Value(trackId),
-          eventTimestamp: ts,
-        ),
-        mode: InsertMode.insertOrIgnore,
-      );
+  final curriculum = CurriculumId.fromStorageKey(curriculumId);
+  if (curriculum == null) {
+    throw ArgumentError.value(curriculumId, 'curriculumId');
+  }
+  await seedCompletion(
+    firestore,
+    uid: _uid,
+    profileId: profileId,
+    curriculumId: curriculum,
+    sefariaRef: sefariaRef,
+    stageId: stageOrder,
+    completedAt: completedAt,
+  );
 }
 
 /// Builds a [ProviderContainer] that:
-/// - wires [userDatabaseProvider] → in-memory [db]
-/// - fixes [activeProfileIdProvider] → [_profileId]
-/// - fixes [completionCommittedProvider] → 0 (no rebuild needed in tests)
-/// - stubs [syncEngineProvider] → null (no Firestore in tests)
+/// - wires [activeAccountFirebaseProvider] → [firestore]
+/// - selects [activeProfileIdProvider] → [_profileId]
 /// - fixes [scopedItemCountProvider] for every [CurriculumId] to [totalItems]
 ///
 /// The [globalStageRepositoryProvider] is NOT overridden; it resolves through
 /// the real [StageDefinitionRepositoryImpl] backed by the in-memory DB.
 ProviderContainer _makeContainer(
-  UserDatabase db, {
+  FakeFirebaseFirestore firestore, {
   Map<CurriculumId, int> totalItemsBycurriculum = const {},
 }) {
-  return ProviderContainer(
+  final container = ProviderContainer(
     overrides: [
-      userDatabaseProvider.overrideWithValue(db),
-      activeProfileIdProvider.overrideWithValue(_profileId),
-      syncWriteFacadeProvider.overrideWithValue(null),
-      // Override scopedItemCountProvider for every CurriculumId so tests do
-      // not touch the content database.
+      activeAccountFirebaseProvider.overrideWith(
+        (ref) async => _handles(firestore),
+      ),
       for (final curriculum in CurriculumId.values)
         scopedItemCountProvider(curriculum).overrideWith(
           (ref) => Future.value(totalItemsBycurriculum[curriculum] ?? 0),
         ),
     ],
   );
+  container
+      .read(selectedProfileIdProvider.notifier)
+      .select(_profileId);
+  return container;
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 void main() {
-  late UserDatabase db;
+  late FakeFirebaseFirestore db;
 
   setUp(() async {
-    db = UserDatabase(NativeDatabase.memory());
+    db = createFakeFirestore(authenticatedUid: _uid);
     await _seedProfile(db);
-  });
-
-  tearDown(() async {
-    await db.close();
   });
 
   // ── dashboardTrackCompletionPercentage ────────────────────────────────────
@@ -205,7 +216,7 @@ void main() {
       addTearDown(container.dispose);
 
       final pct = await container.read(
-        dashboardTrackCompletionPercentageProvider(trackId).future,
+        dashboardTrackCompletionPercentageProvider(CurriculumId.mishnayos).future,
       );
       expect(pct, 0.0, reason: 'no completions → 0.0');
     });
@@ -236,7 +247,7 @@ void main() {
       addTearDown(container.dispose);
 
       final pct = await container.read(
-        dashboardTrackCompletionPercentageProvider(trackId).future,
+        dashboardTrackCompletionPercentageProvider(CurriculumId.mishnayos).future,
       );
       expect(pct, 0.0, reason: 'zero-item track must return 0.0');
     });
@@ -276,7 +287,7 @@ void main() {
         addTearDown(container.dispose);
 
         final pct = await container.read(
-          dashboardTrackCompletionPercentageProvider(trackId).future,
+          dashboardTrackCompletionPercentageProvider(CurriculumId.mishnayos).future,
         );
         expect(
           pct,
@@ -358,7 +369,7 @@ void main() {
         addTearDown(container.dispose);
 
         final pct = await container.read(
-          dashboardTrackCompletionPercentageProvider(trackId).future,
+          dashboardTrackCompletionPercentageProvider(CurriculumId.mishnayos).future,
         );
         // 1 done / 4 total = 0.25
         expect(
@@ -416,7 +427,7 @@ void main() {
 
         // Mishnayos track should see the completion (1/3).
         final mishPct = await container.read(
-          dashboardTrackCompletionPercentageProvider(mishTrackId).future,
+          dashboardTrackCompletionPercentageProvider(CurriculumId.mishnayos).future,
         );
         expect(
           mishPct,
@@ -426,7 +437,7 @@ void main() {
 
         // Bavli track must return 0.0 — the mishnayos completion must NOT bleed over.
         final bavliPct = await container.read(
-          dashboardTrackCompletionPercentageProvider(bavliTrackId).future,
+          dashboardTrackCompletionPercentageProvider(CurriculumId.bavli).future,
         );
         expect(
           bavliPct,
@@ -485,7 +496,7 @@ void main() {
       addTearDown(container.dispose);
 
       final pct = await container.read(
-        dashboardTrackCompletionPercentageProvider(trackId).future,
+        dashboardTrackCompletionPercentageProvider(CurriculumId.mishnayos).future,
       );
       // If provider used stage id (≥3) instead of stageOrder (1), pct = 0.0.
       expect(

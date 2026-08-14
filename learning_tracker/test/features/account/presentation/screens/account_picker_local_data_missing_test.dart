@@ -1,7 +1,7 @@
 // Regression test for ACCTPICK-03 / SI-04 (loop-iter1):
 //
 // When a cloud account tile is tapped offline (stale session) and the
-// local SQLite DB does NOT contain a matching profile row for that account,
+// Firestore's users/{uid} account document does NOT exist,
 // `_activateCloudAccountFromLocalData` was silently returning without any
 // user feedback — the picker screen stayed visible with no indication of the
 // failure. The user had no way to know what went wrong or what to do next.
@@ -10,19 +10,20 @@
 // told "local data is missing, connect to restore it" rather than being
 // left in a silent, unresolvable state.
 //
-// Similarly, when a local-born account tile is tapped and the local profile
-// row is absent (DB deleted / corrupted), the same silent-return bug applied.
+// The same failure applies when a device account points at a missing
+// Firestore users/{uid} document.
 //
 // Covered cases:
-//   C1 — cloud account, offline, NO local profile row → SnackBar shown,
+//   C1 — cloud account, offline, NO Firestore account doc → SnackBar shown,
 //        router.replaceAll NOT called (no navigation to AppShell).
-//   C2 — local-born account, NO local profile row → SnackBar shown,
+//   C2 — local-born account, NO Firestore account doc → SnackBar shown,
 //        router.replaceAll NOT called.
 
 @Tags(['needs_flutter', 'account', 'multi_account'])
 library;
 
 import 'package:auto_route/auto_route.dart';
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
@@ -31,10 +32,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
-import 'package:learning_tracker/core/sync/providers/sync_orchestrator_providers.dart';
+import 'package:learning_tracker/data/firestore/repository_providers.dart';
+import 'package:learning_tracker/data/repositories/firestore_account_repository.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
     show authRepositoryProvider;
@@ -48,6 +48,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../mocks/mock_repositories.dart';
+import '../../../../helpers/firestore_fake.dart';
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -70,7 +71,7 @@ class _StubAuthStateNotifier extends AuthStateNotifier {
 
 class _StubSelectedProfileId extends SelectedProfileId {
   @override
-  int? build() => null;
+  String? build() => null;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -80,7 +81,7 @@ final _kNow = DateTime.utc(2026, 1, 1);
 Future<AppLocalizations> _l10n() async =>
     AppLocalizations.delegate.load(const Locale('en'));
 
-/// A cloud account row in the device registry (NO matching row in userDb).
+/// A cloud account row in the device registry (NO matching users/{uid} doc).
 DeviceAccountsCompanion _cloudAccountEntry({
   String accountId = 'acc-cloud-missing',
   String email = 'cloud-missing@example.test',
@@ -98,17 +99,19 @@ DeviceAccountsCompanion _cloudAccountEntry({
   lastUsedAt: _kNow,
 );
 
-/// A local-born account row in the device registry (NO matching row in userDb).
+/// A local-born account row in the device registry (NO matching users/{uid} doc).
 DeviceAccountsCompanion _localAccountEntry({
   String accountId = 'acc-local-missing',
   String email = 'local-missing@example.test',
   String displayName = 'Local Missing',
   String dbFileName = 'user_acc_local_missing.db',
+  String firebaseUid = 'fb-uid-missing',
 }) => DeviceAccountsCompanion.insert(
   accountId: accountId,
   email: email,
   displayName: displayName,
   tier: 'localBorn',
+  firebaseUid: Value(firebaseUid),
   dbFileName: dbFileName,
   createdAt: _kNow,
   lastUsedAt: _kNow,
@@ -118,7 +121,7 @@ DeviceAccountsCompanion _localAccountEntry({
 
 Widget _buildApp({
   required DeviceRegistryDatabase registry,
-  required UserDatabase userDb,
+  required FakeFirebaseFirestore firestore,
   required MockAuthRepository auth,
   required _MockStackRouter router,
   InternetConnectionChecker? connectivity,
@@ -128,8 +131,12 @@ Widget _buildApp({
     overrides: [
       deviceRegistryProvider.overrideWithValue(registry),
       authRepositoryProvider.overrideWithValue(auth),
-      userDatabaseProvider.overrideWith((ref) => userDb),
-      syncOrchestratorProvider.overrideWithValue(null),
+      firestoreAccountRepositoryProvider.overrideWith(
+        (ref) async => FirestoreAccountRepository(
+          firestore: firestore,
+          uid: 'fb-uid-missing',
+        ),
+      ),
       if (connectivity != null)
         internetConnectionCheckerProvider.overrideWithValue(connectivity),
       authStateProvider.overrideWith(
@@ -163,15 +170,15 @@ void main() {
   });
 
   late DeviceRegistryDatabase registry;
-  late UserDatabase userDb;
+  late FakeFirebaseFirestore firestore;
   late MockAuthRepository auth;
   late _MockStackRouter router;
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
     registry = DeviceRegistryDatabase(NativeDatabase.memory());
-    // INTENTIONALLY empty userDb — no profile rows for the accounts below.
-    userDb = UserDatabase(NativeDatabase.memory());
+    // INTENTIONALLY empty Firestore — no users/{uid} account doc exists.
+    firestore = createFakeFirestore();
     auth = MockAuthRepository();
     router = _MockStackRouter();
 
@@ -191,12 +198,11 @@ void main() {
 
   tearDown(() async {
     await registry.close();
-    await userDb.close();
   });
 
   // ── C1: cloud account, offline, NO local profile ──────────────────────────
 
-  testWidgets('C1 — cloud account offline, local DB missing profile: '
+  testWidgets('C1 — cloud account offline, Firestore account doc missing: '
       'shows authLocalDataMissing SnackBar, does NOT navigate to AppShell', (
     tester,
   ) async {
@@ -212,7 +218,7 @@ void main() {
     await tester.pumpWidget(
       _buildApp(
         registry: registry,
-        userDb: userDb,
+        firestore: firestore,
         auth: auth,
         router: router,
         connectivity: offline,
@@ -247,7 +253,7 @@ void main() {
 
   // ── C2: local-born account, NO local profile ──────────────────────────────
 
-  testWidgets('C2 — local-born account, local DB missing profile: '
+  testWidgets('C2 — local-born account, Firestore account doc missing: '
       'shows authLocalDataMissing SnackBar, does NOT navigate to AppShell', (
     tester,
   ) async {
@@ -258,7 +264,7 @@ void main() {
     when(() => auth.currentUser).thenReturn(null);
 
     await tester.pumpWidget(
-      _buildApp(registry: registry, userDb: userDb, auth: auth, router: router),
+      _buildApp(registry: registry, firestore: firestore, auth: auth, router: router),
     );
     await tester.pump(); // resolve FutureBuilder
 

@@ -25,6 +25,7 @@ library;
 import 'dart:async';
 
 import 'package:auto_route/auto_route.dart';
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
@@ -32,10 +33,9 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
-import 'package:learning_tracker/core/sync/providers/sync_orchestrator_providers.dart';
+import 'package:learning_tracker/data/firestore/repository_providers.dart';
+import 'package:learning_tracker/data/repositories/firestore_account_repository.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
@@ -49,6 +49,8 @@ import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../mocks/mock_repositories.dart';
+import '../../../../helpers/firestore_fake.dart';
+import '../../../../helpers/firestore_fixtures.dart';
 
 class _MockStackRouter extends Mock implements StackRouter {}
 
@@ -64,7 +66,7 @@ class _StubAuthStateNotifier extends AuthStateNotifier {
 
 class _StubSelectedProfileId extends SelectedProfileId {
   @override
-  int? build() => null;
+  String? build() => null;
 }
 
 final _kNow = DateTime.utc(2026, 1, 1);
@@ -90,7 +92,7 @@ void main() {
     (tester) async {
       SharedPreferences.setMockInitialValues({});
       final registry = DeviceRegistryDatabase(NativeDatabase.memory());
-      final userDb = UserDatabase(NativeDatabase.memory());
+      final firestore = createFakeFirestore();
       final auth = MockAuthRepository();
       final router = _MockStackRouter();
       final sessionController = StreamController<AppUser?>.broadcast();
@@ -119,6 +121,12 @@ void main() {
           lastUsedAt: _kNow,
         ),
       );
+      await seedAccount(
+        firestore,
+        uid: _targetUid,
+        email: '$_targetUid@example.test',
+        displayName: 'Reactive Cloud',
+      );
 
       await tester.pumpWidget(
         ProviderScope(
@@ -126,8 +134,12 @@ void main() {
           overrides: [
             deviceRegistryProvider.overrideWithValue(registry),
             authRepositoryProvider.overrideWithValue(auth),
-            userDatabaseProvider.overrideWith((ref) => userDb),
-            syncOrchestratorProvider.overrideWithValue(null),
+            firestoreAccountRepositoryProvider.overrideWith(
+              (ref) async => FirestoreAccountRepository(
+                firestore: firestore,
+                uid: _targetUid,
+              ),
+            ),
             authStateProvider.overrideWith(_StubAuthStateNotifier.new),
             selectedProfileIdProvider.overrideWith(
               () => _StubSelectedProfileId(),
@@ -190,7 +202,6 @@ void main() {
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(Duration.zero);
       await registry.close();
-      await userDb.close();
     },
   );
 }

@@ -77,7 +77,6 @@ library;
 import 'dart:math' as math;
 
 import 'package:auto_route/auto_route.dart';
-import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
@@ -85,13 +84,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/app/router/router_provider.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/navigation/guards/pin_guard.dart';
 import 'package:learning_tracker/core/network/connectivity_gateway.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/network_providers.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
@@ -104,18 +102,15 @@ import 'package:learning_tracker/features/account/presentation/providers/auth_pr
     show authRepositoryProvider;
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
-import 'package:learning_tracker/features/learning/data/repositories/track_repository_impl.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_ledger_providers.dart';
-import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
+import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/account_management_providers.dart';
-import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/lifetime_marking_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/settings_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/utils/account_actions.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/user_profile_header_card.dart';
-import 'package:learning_tracker/features/tracks/domain/services/curriculum_activation_service.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/manage_tutors_providers.dart'
@@ -159,6 +154,9 @@ class _MockAccountManagementService extends Mock
 
 class _MockConnectivityGateway extends Mock implements ConnectivityGateway {}
 
+class _MockDeviceRegistryDatabase extends Mock
+    implements DeviceRegistryDatabase {}
+
 class _MockAppRouter extends Mock implements AppRouter {
   @override
   final PinGuard pinGuard = _FakePinGuard();
@@ -178,14 +176,14 @@ class _StubAuthStateNotifier extends AuthStateNotifier {
 
 class _FakeProfileId extends ActiveProfileId {
   @override
-  int build() => 1;
+  String build() => _profileId;
 }
 
 /// A CHILD-mode profile id, so `_ParentalControlsSection` (the "Parent Mode"
 /// tile, Finding 2) actually renders — it early-returns for adult profiles.
 class _FakeChildProfileId extends ActiveProfileId {
   @override
-  int build() => 2;
+  String build() => _childProfileId;
 }
 
 class _FakeUseHebrewTerms extends UseHebrewTerms {
@@ -213,7 +211,6 @@ Widget _buildSignOutApp({
   required _MockAccountManagementService service,
   required _MockConnectivityGateway connectivity,
   required DeviceRegistryDatabase registry,
-  required UserDatabase userDb,
   ThemeData? theme,
 }) {
   return pumpApp(
@@ -223,9 +220,7 @@ Widget _buildSignOutApp({
       authRepositoryProvider.overrideWithValue(authRepo),
       accountManagementServiceProvider.overrideWithValue(service),
       connectivityServiceProvider.overrideWithValue(connectivity),
-      userDatabaseProvider.overrideWithValue(userDb),
       deviceRegistryProvider.overrideWithValue(registry),
-      currentAccountIdProvider.overrideWith((ref) => 1),
       authStateProvider.overrideWith(() => _StubAuthStateNotifier()),
     ],
     child: const _SignOutHost(),
@@ -247,7 +242,6 @@ Widget _buildSignOutApp({
 /// [extraOverrides] layers in the per-finding provider state (a child
 /// profile for Finding 2, tutor-grant data for Finding 3).
 Widget _buildSettingsScreen({
-  required UserDatabase db,
   required _MockAuthRepository authRepo,
   ThemeData? theme,
   List<Override> extraOverrides = const [],
@@ -255,26 +249,17 @@ Widget _buildSettingsScreen({
   return pumpApp(
     theme: theme,
     overrides: [
-      appDatabaseProvider.overrideWithValue(db),
-      userDatabaseProvider.overrideWithValue(db),
       authRepositoryProvider.overrideWithValue(authRepo),
       authStateProvider.overrideWithValue(
         const AuthState.signedIn(
           user: AuthUser(
-            profileId: 1,
+            uid: _profileUid,
             email: 'test@test.com',
             displayName: 'Test',
           ),
-          tier: Tier.localBorn,
+          tier: Tier.cloud,
         ),
       ),
-      curriculumActivationServiceProvider.overrideWith((ref) {
-        return CurriculumActivationService(
-          database: db,
-          pushCurriculumTrack: (_) async {},
-          trackRepository: TrackRepositoryImpl(database: db),
-        );
-      }),
       ...extraOverrides,
     ],
     child: const SettingsScreen(),
@@ -283,19 +268,21 @@ Widget _buildSettingsScreen({
 
 /// A child-mode [ProfileModel] fixture (Finding 2 — the "Parent Mode" tile
 /// only renders `_ParentalControlsSection` for a child profile).
-ProfileModel _childProfileFixture() {
+LearnerProfileEntity _childProfileFixture() {
   final fixedNow = DateTime.utc(2026, 1, 1);
-  return ProfileModel(
-    id: 2,
-    ulid: 'ulid-2',
-    accountId: 1,
+  return LearnerProfileEntity(
+    profileId: _childProfileId,
     displayName: 'Child',
-    mode: 'child',
-    avatarIndex: 0,
+    mode: ProfileMode.child,
+    avatar: '',
     createdAt: fixedNow,
     updatedAt: fixedNow,
   );
 }
+
+const _profileUid = 'darkmode-settings-test-uid';
+const _profileId = '01J6Q2H4A8M7K3P9R5T6V8WXY7';
+const _childProfileId = '01J6Q2H4A8M7K3P9R5T6V8WXY8';
 
 /// A pending tutor-grant fixture (Finding 3 — renders as a `_TutorGrantTile`
 /// with `isPending: true`, the `statusWarningSoft` background).
@@ -678,16 +665,14 @@ void main() {
     late _MockAuthRepository authRepo;
     late _MockAccountManagementService service;
     late _MockConnectivityGateway connectivity;
-    late DeviceRegistryDatabase registry;
-    late UserDatabase userDb;
+    late _MockDeviceRegistryDatabase registry;
 
     setUp(() {
       router = _MockAppRouter();
       authRepo = _MockAuthRepository();
       service = _MockAccountManagementService();
       connectivity = _MockConnectivityGateway();
-      registry = DeviceRegistryDatabase(NativeDatabase.memory());
-      userDb = UserDatabase(NativeDatabase.memory());
+      registry = _MockDeviceRegistryDatabase();
       registerFallbackValue(_FakePageRouteInfo());
       registerFallbackValue(<PageRouteInfo>[]);
       when(
@@ -703,8 +688,6 @@ void main() {
     });
 
     tearDown(() async {
-      await registry.close();
-      await userDb.close();
     });
 
     testWidgets('the real Sign Out button + "?" badge read theme.colorScheme'
@@ -716,8 +699,7 @@ void main() {
           service: service,
           connectivity: connectivity,
           registry: registry,
-          userDb: userDb,
-          theme: AppTheme.darkTheme(),
+                    theme: AppTheme.darkTheme(),
         ),
       );
       await tester.pump();
@@ -754,16 +736,14 @@ void main() {
     late _MockAuthRepository authRepo;
     late _MockAccountManagementService service;
     late _MockConnectivityGateway connectivity;
-    late DeviceRegistryDatabase registry;
-    late UserDatabase userDb;
+    late _MockDeviceRegistryDatabase registry;
 
     setUp(() {
       router = _MockAppRouter();
       authRepo = _MockAuthRepository();
       service = _MockAccountManagementService();
       connectivity = _MockConnectivityGateway();
-      registry = DeviceRegistryDatabase(NativeDatabase.memory());
-      userDb = UserDatabase(NativeDatabase.memory());
+      registry = _MockDeviceRegistryDatabase();
       registerFallbackValue(_FakePageRouteInfo());
       registerFallbackValue(<PageRouteInfo>[]);
       when(
@@ -779,8 +759,6 @@ void main() {
     });
 
     tearDown(() async {
-      await registry.close();
-      await userDb.close();
     });
 
     testWidgets(
@@ -794,8 +772,7 @@ void main() {
             service: service,
             connectivity: connectivity,
             registry: registry,
-            userDb: userDb,
-            theme: AppTheme.darkTheme(),
+                        theme: AppTheme.darkTheme(),
           ),
         );
         await tester.pump();
@@ -884,17 +861,14 @@ void main() {
   // rendered tile's own decoration.
 
   group('Finding 1 (widget) — Send Diagnostic Logs icon-pill background', () {
-    late UserDatabase db;
     late _MockAuthRepository authRepo;
 
     setUp(() {
-      db = UserDatabase(NativeDatabase.memory());
       authRepo = _MockAuthRepository();
       when(() => authRepo.currentUser).thenReturn(null);
     });
 
     tearDown(() async {
-      await db.close();
     });
 
     testWidgets(
@@ -903,8 +877,7 @@ void main() {
       (tester) async {
         await tester.pumpWidget(
           _buildSettingsScreen(
-            db: db,
-            authRepo: authRepo,
+                        authRepo: authRepo,
             theme: AppTheme.darkTheme(),
           ),
         );
@@ -940,7 +913,7 @@ void main() {
       'light mode too (no regression)',
       (tester) async {
         await tester.pumpWidget(
-          _buildSettingsScreen(db: db, authRepo: authRepo),
+          _buildSettingsScreen( authRepo: authRepo),
         );
         await tester.pump();
         await tester.pump(const Duration(seconds: 1));
@@ -972,25 +945,21 @@ void main() {
   // ── Finding 2 (widget) — Parent Mode icon-pill background ────────────────
 
   group('Finding 2 (widget) — Parent Mode icon-pill background', () {
-    late UserDatabase db;
     late _MockAuthRepository authRepo;
 
     setUp(() {
-      db = UserDatabase(NativeDatabase.memory());
       authRepo = _MockAuthRepository();
       when(() => authRepo.currentUser).thenReturn(null);
     });
 
     tearDown(() async {
-      await db.close();
     });
 
     testWidgets('the real Parent Mode icon-pill reads brandCoralSoft (not the '
         'hardcoded 0xFFF8E3E7 literal) in dark mode', (tester) async {
       await tester.pumpWidget(
         _buildSettingsScreen(
-          db: db,
-          authRepo: authRepo,
+                    authRepo: authRepo,
           theme: AppTheme.darkTheme(),
           extraOverrides: [
             activeProfileIdProvider.overrideWith(_FakeChildProfileId.new),
@@ -1032,8 +1001,7 @@ void main() {
       (tester) async {
         await tester.pumpWidget(
           _buildSettingsScreen(
-            db: db,
-            authRepo: authRepo,
+                        authRepo: authRepo,
             extraOverrides: [
               activeProfileIdProvider.overrideWith(_FakeChildProfileId.new),
               profileListStreamProvider.overrideWith(
@@ -1072,17 +1040,14 @@ void main() {
   // ── Finding 3 (widget) — Tutor grant preview tile background ─────────────
 
   group('Finding 3 (widget) — Tutor grant preview tile background', () {
-    late UserDatabase db;
     late _MockAuthRepository authRepo;
 
     setUp(() {
-      db = UserDatabase(NativeDatabase.memory());
       authRepo = _MockAuthRepository();
       when(() => authRepo.currentUser).thenReturn(null);
     });
 
     tearDown(() async {
-      await db.close();
     });
 
     testWidgets(
@@ -1091,8 +1056,7 @@ void main() {
       (tester) async {
         await tester.pumpWidget(
           _buildSettingsScreen(
-            db: db,
-            authRepo: authRepo,
+                        authRepo: authRepo,
             theme: AppTheme.darkTheme(),
             extraOverrides: [
               incomingTutorGrantsProvider.overrideWith(
@@ -1142,8 +1106,7 @@ void main() {
       (tester) async {
         await tester.pumpWidget(
           _buildSettingsScreen(
-            db: db,
-            authRepo: authRepo,
+                        authRepo: authRepo,
             extraOverrides: [
               incomingTutorGrantsProvider.overrideWith(
                 (ref) => Future.value([_activeGrantFixture()]),
@@ -1196,16 +1159,14 @@ void main() {
     late _MockAuthRepository authRepo;
     late _MockAccountManagementService service;
     late _MockConnectivityGateway connectivity;
-    late DeviceRegistryDatabase registry;
-    late UserDatabase userDb;
+    late _MockDeviceRegistryDatabase registry;
 
     setUp(() {
       router = _MockAppRouter();
       authRepo = _MockAuthRepository();
       service = _MockAccountManagementService();
       connectivity = _MockConnectivityGateway();
-      registry = DeviceRegistryDatabase(NativeDatabase.memory());
-      userDb = UserDatabase(NativeDatabase.memory());
+      registry = _MockDeviceRegistryDatabase();
       registerFallbackValue(_FakePageRouteInfo());
       registerFallbackValue(<PageRouteInfo>[]);
       when(
@@ -1226,8 +1187,6 @@ void main() {
     });
 
     tearDown(() async {
-      await registry.close();
-      await userDb.close();
     });
 
     testWidgets(
@@ -1242,8 +1201,7 @@ void main() {
             service: service,
             connectivity: connectivity,
             registry: registry,
-            userDb: userDb,
-            theme: darkTheme,
+                        theme: darkTheme,
           ),
         );
         await tester.pump();
@@ -1278,8 +1236,7 @@ void main() {
             service: service,
             connectivity: connectivity,
             registry: registry,
-            userDb: userDb,
-            theme: lightTheme,
+                        theme: lightTheme,
           ),
         );
         await tester.pump();

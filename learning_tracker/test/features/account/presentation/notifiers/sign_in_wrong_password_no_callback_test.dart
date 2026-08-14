@@ -28,20 +28,13 @@
 library;
 
 import 'package:auto_route/auto_route.dart';
-import 'package:drift/drift.dart' show Value;
-import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
-import 'package:learning_tracker/core/sync/providers/outbox_providers.dart'
-    show firestoreGatewayProvider;
-import 'package:learning_tracker/core/sync/providers/sync_orchestrator_providers.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/presentation/notifiers/sign_in_controller.dart';
@@ -63,6 +56,9 @@ class _MockInternetConnectionChecker extends Mock
     implements InternetConnectionChecker {}
 
 class _MockTutorGrantRepository extends Mock implements TutorGrantRepository {}
+
+class _MockDeviceRegistryDatabase extends Mock
+    implements DeviceRegistryDatabase {}
 
 // ── Stub AuthStateNotifier ────────────────────────────────────────────────────
 
@@ -89,12 +85,6 @@ class _SpyRouter implements StackRouter {
   dynamic noSuchMethod(Invocation invocation) => null;
 }
 
-// ── In-memory UserDatabase ────────────────────────────────────────────────────
-
-class _InMemoryUserDatabase extends UserDatabase {
-  _InMemoryUserDatabase() : super(NativeDatabase.memory());
-}
-
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 Future<GlobalKey<FormState>> _buildValidFormKey(WidgetTester tester) async {
@@ -112,45 +102,35 @@ Future<GlobalKey<FormState>> _buildValidFormKey(WidgetTester tester) async {
 Future<AppLocalizations> _l10n() async =>
     AppLocalizations.delegate.load(const Locale('en'));
 
-Future<DeviceAccount> _seedCloudAccount(
-  DeviceRegistryDatabase registry, {
+DeviceAccount _cloudAccount({
   String accountId = 'acc-cloud-wp',
   String email = 'cloud@example.com',
   String firebaseUid = 'fb-uid-wp',
   String dbFileName = 'user_acc_cloud_wp.db',
-}) async {
-  await registry.addAccount(
-    DeviceAccountsCompanion.insert(
-      accountId: accountId,
-      email: email,
-      displayName: 'Cloud User',
-      tier: 'cloudBorn',
-      firebaseUid: Value(firebaseUid),
-      dbFileName: dbFileName,
-      createdAt: DateTime.utc(2026, 1, 1),
-      lastUsedAt: DateTime.utc(2026, 1, 1),
-    ),
-  );
-  return (await registry.findByEmail(email))!;
-}
+}) => DeviceAccount(
+  accountId: accountId,
+  email: email,
+  displayName: 'Cloud User',
+  tier: 'cloudBorn',
+  firebaseUid: firebaseUid,
+  dbFileName: dbFileName,
+  avatarIndex: 0,
+  createdAt: DateTime.utc(2026, 1, 1),
+  lastUsedAt: DateTime.utc(2026, 1, 1),
+);
 
 ProviderContainer _makeContainer({
   required MockAuthRepository authRepo,
-  required DeviceRegistryDatabase registry,
+  required _MockDeviceRegistryDatabase registry,
   required _MockInternetConnectionChecker checker,
   required _MockTutorGrantRepository tutorGrantRepo,
-  _InMemoryUserDatabase? userDb,
 }) {
-  final db = userDb ?? _InMemoryUserDatabase();
   return ProviderContainer(
     overrides: [
       authRepositoryProvider.overrideWithValue(authRepo),
       deviceRegistryProvider.overrideWithValue(registry),
       internetConnectionCheckerProvider.overrideWithValue(checker),
-      syncOrchestratorProvider.overrideWithValue(null),
-      firestoreGatewayProvider.overrideWithValue(null),
       tutorGrantRepositoryProvider.overrideWithValue(tutorGrantRepo),
-      userDatabaseProvider.overrideWithValue(db),
       authStateProvider.overrideWith(_NoInitAuthStateNotifier.new),
     ],
   );
@@ -203,9 +183,9 @@ void main() {
       '(baseline: correct behaviour when callbacks are registered)',
       (tester) async {
         final formKey = await _buildValidFormKey(tester);
-        final registry = DeviceRegistryDatabase(NativeDatabase.memory());
-        addTearDown(registry.close);
-        await _seedCloudAccount(registry);
+        final registry = _MockDeviceRegistryDatabase();
+        final account = _cloudAccount();
+        when(() => registry.findByEmail(account.email)).thenAnswer((_) async => account);
 
         final authRepo = MockAuthRepository();
         final checker = _MockInternetConnectionChecker();
@@ -287,9 +267,9 @@ void main() {
       'race — callbacks are null when sign-in errors)',
       (tester) async {
         final formKey = await _buildValidFormKey(tester);
-        final registry = DeviceRegistryDatabase(NativeDatabase.memory());
-        addTearDown(registry.close);
-        await _seedCloudAccount(registry);
+        final registry = _MockDeviceRegistryDatabase();
+        final account = _cloudAccount();
+        when(() => registry.findByEmail(account.email)).thenAnswer((_) async => account);
 
         final authRepo = MockAuthRepository();
         final checker = _MockInternetConnectionChecker();
@@ -363,9 +343,9 @@ void main() {
       'invalid-credential) also surfaces correctly via _showError',
       (tester) async {
         final formKey = await _buildValidFormKey(tester);
-        final registry = DeviceRegistryDatabase(NativeDatabase.memory());
-        addTearDown(registry.close);
-        await _seedCloudAccount(registry);
+        final registry = _MockDeviceRegistryDatabase();
+        final account = _cloudAccount();
+        when(() => registry.findByEmail(account.email)).thenAnswer((_) async => account);
 
         final authRepo = MockAuthRepository();
         final checker = _MockInternetConnectionChecker();

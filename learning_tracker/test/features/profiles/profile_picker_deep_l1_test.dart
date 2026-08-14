@@ -59,17 +59,16 @@
 library;
 
 import 'package:auto_route/auto_route.dart';
-import 'package:drift/drift.dart' show Value;
-import 'package:drift/native.dart';
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
-import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
+import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
+import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/screens/profile_picker_screen.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/tutored_children_section.dart';
@@ -100,24 +99,20 @@ class _FixedSelectedProfileId extends SelectedProfileId {
 
 final _epoch = DateTime.utc(2026, 1, 1);
 
-ProfileModel _child({int id = 1, String name = 'Yosef'}) => ProfileModel(
-  id: id,
-  ulid: 'ulid-$id',
-  accountId: 1,
+LearnerProfileEntity _child({int id = 1, String name = 'Yosef'}) =>
+    LearnerProfileEntity(
+  profileId: 'ulid-$id',
   displayName: name,
-  mode: 'child',
-  avatarIndex: 0,
+  mode: ProfileMode.child,
   createdAt: _epoch,
   updatedAt: _epoch,
 );
 
-ProfileModel _adult({int id = 2, String name = 'Avraham'}) => ProfileModel(
-  id: id,
-  ulid: 'ulid-$id',
-  accountId: 1,
+LearnerProfileEntity _adult({int id = 2, String name = 'Avraham'}) =>
+    LearnerProfileEntity(
+  profileId: 'ulid-$id',
   displayName: name,
-  mode: 'adult',
-  avatarIndex: 0,
+  mode: ProfileMode.adult,
   createdAt: _epoch,
   updatedAt: _epoch,
 );
@@ -199,40 +194,106 @@ Widget _buildSection(
   );
 }
 
+/// Small Firestore-backed test repository for the picker flows. It keeps the
+/// list in sync with the fake's learner-profile collection so delete/rename
+/// dialogs exercise the current ULID-based repository contract without
+/// resurrecting the archived Drift database.
+class _FirestoreProfileRepository implements ProfileRepository {
+  _FirestoreProfileRepository(this._firestore, this._profiles);
+
+  final FakeFirebaseFirestore _firestore;
+  final List<LearnerProfileEntity> _profiles;
+
+  @override
+  Future<List<LearnerProfileEntity>> getProfiles() async => _profiles;
+
+  @override
+  Stream<List<LearnerProfileEntity>> watchProfiles() => Stream.value(_profiles);
+
+  @override
+  Future<LearnerProfileEntity?> getProfileById(String profileId) async {
+    for (final profile in _profiles) {
+      if (profile.profileId == profileId) return profile;
+    }
+    return null;
+  }
+
+  @override
+  Future<int> countProfiles() async => _profiles.length;
+
+  @override
+  Future<LearnerProfileEntity> createProfile({
+    required String displayName,
+    required ProfileMode mode,
+    String avatar = '',
+  }) => throw UnimplementedError();
+
+  @override
+  Future<LearnerProfileEntity> updateProfile({
+    required String profileId,
+    String? displayName,
+    ProfileMode? mode,
+    String? avatar,
+  }) async {
+    final index = _profiles.indexWhere((p) => p.profileId == profileId);
+    if (index < 0) throw StateError('Profile $profileId not found');
+    final current = _profiles[index];
+    final updated = current.copyWith(
+      displayName: displayName ?? current.displayName,
+      mode: mode ?? current.mode,
+      avatar: avatar ?? current.avatar,
+      updatedAt: _epoch,
+    );
+    _profiles[index] = updated;
+    await _profileDoc(profileId).set(updated.toFirestore());
+    return updated;
+  }
+
+  @override
+  Future<void> deleteProfile(String profileId, {bool allowLast = false}) async {
+    _profiles.removeWhere((p) => p.profileId == profileId);
+    await _profileDoc(profileId).delete();
+  }
+
+  DocumentReference<Map<String, dynamic>> _profileDoc(String profileId) =>
+      _firestore
+          .collection('users')
+          .doc('account-picker')
+          .collection('learner_profiles')
+          .doc(profileId);
+}
+
 // ── Full-picker builder ────────────────────────────────────────────────────────
 
-/// [db] — optional in-memory DB; when provided, also overrides
-///   [userDatabaseProvider] so flows that call the real repository (rename,
-///   delete) don't crash because the default DB provider tries to open a
-///   file-backed database.
 Widget _buildPicker({
   required _MockStackRouter router,
-  List<ProfileModel> profiles = const [],
+  List<LearnerProfileEntity> profiles = const [],
   List<TutorGrant> grants = const [],
   List<TutorGrant> pendingInvites = const [],
   AuthState? authState,
-  int? selectedId,
+  String? selectedId,
   Locale locale = const Locale('en'),
-  UserDatabase? db,
 }) {
   final resolvedAuth =
       authState ??
       const AuthState.signedIn(
-        user: AuthUser(profileId: 1, email: 't@t.com', displayName: 'Test'),
-        tier: Tier.localBorn,
+        user: AuthUser(uid: 'account-picker', email: 't@t.com', displayName: 'Test'),
+        tier: Tier.local,
       );
+  final firestore = createFakeFirestore(authenticatedUid: 'account-picker');
+  final profileRepository = _FirestoreProfileRepository(firestore, profiles);
 
   return ProviderScope(
     retry: (_, __) => null,
     overrides: [
       profileListProvider.overrideWith((ref) => Future.value(profiles)),
+      profileRepositoryProvider.overrideWithValue(profileRepository),
       incomingTutorGrantsProvider.overrideWith((ref) async => grants),
       pendingTutorInvitesProvider.overrideWith((ref) async => pendingInvites),
       authStateProvider.overrideWithValue(resolvedAuth),
       selectedProfileIdProvider.overrideWith(
         () => _FixedSelectedProfileId(selectedId),
       ),
-      if (db != null) userDatabaseProvider.overrideWithValue(db),
     ],
     child: MaterialApp(
       locale: locale,
@@ -318,33 +379,7 @@ void main() {
     testWidgets(
       'D2: single profile long-press → Delete tile is tappable and opens '
       'the last-profile confirm dialog',
-      (tester) async {
-        final db = UserDatabase(NativeDatabase.memory());
-        addTearDown(db.close);
-        final accountId = await db
-            .into(db.accounts)
-            .insert(
-              AccountsCompanion.insert(
-                email: 't@t.com',
-                tier: 'localBorn',
-                displayName: 'Test',
-                createdAt: _epoch,
-                updatedAt: _epoch,
-              ),
-            );
-        await db
-            .into(db.learnerProfiles)
-            .insert(
-              LearnerProfilesCompanion.insert(
-                accountId: accountId,
-                displayName: 'OnlyOne',
-                ulid: const Value('ulid-picker-onlyone-2'),
-                mode: 'adult',
-                createdAt: _epoch,
-                updatedAt: _epoch,
-              ),
-            );
-
+      (tester) async {\n
         final profiles = [_adult(id: 1, name: 'OnlyOne')];
         await tester.pumpWidget(
           _buildPicker(router: router, profiles: profiles, db: db),
@@ -534,45 +569,7 @@ void main() {
     testWidgets(
       'F1: Delete (>1 profiles) opens confirm dialog with profile name',
       (tester) async {
-        // Seed the in-memory DB with 2 profiles so countProfilesForAccount > 1.
-        final db = UserDatabase(NativeDatabase.memory());
-        addTearDown(db.close);
-        final accountId = await db
-            .into(db.accounts)
-            .insert(
-              AccountsCompanion.insert(
-                email: 't@t.com',
-                tier: 'localBorn',
-                displayName: 'Test',
-                createdAt: _epoch,
-                updatedAt: _epoch,
-              ),
-            );
-        await db
-            .into(db.learnerProfiles)
-            .insert(
-              LearnerProfilesCompanion.insert(
-                accountId: accountId,
-                displayName: 'Avi',
-                ulid: const Value('ulid-picker-avi-3'),
-                mode: 'adult',
-                createdAt: _epoch,
-                updatedAt: _epoch,
-              ),
-            );
-        await db
-            .into(db.learnerProfiles)
-            .insert(
-              LearnerProfilesCompanion.insert(
-                accountId: accountId,
-                displayName: 'Yosef',
-                ulid: const Value('ulid-picker-yosef-3'),
-                mode: 'child',
-                createdAt: _epoch,
-                updatedAt: _epoch,
-              ),
-            );
-
+        // Seed the in-memory DB with 2 profiles so countProfilesForAccount > 1.\n
         final profiles = [
           _adult(id: 1, name: 'Avi'),
           _child(id: 2, name: 'Yosef'),
@@ -603,45 +600,7 @@ void main() {
     // F2 — Cancel on delete dialog → no router interaction.
     testWidgets('F2: Cancel on delete dialog dismisses without navigation', (
       tester,
-    ) async {
-      final db = UserDatabase(NativeDatabase.memory());
-      addTearDown(db.close);
-      final accountId = await db
-          .into(db.accounts)
-          .insert(
-            AccountsCompanion.insert(
-              email: 't@t.com',
-              tier: 'localBorn',
-              displayName: 'Test',
-              createdAt: _epoch,
-              updatedAt: _epoch,
-            ),
-          );
-      await db
-          .into(db.learnerProfiles)
-          .insert(
-            LearnerProfilesCompanion.insert(
-              accountId: accountId,
-              displayName: 'Avi',
-              ulid: const Value('ulid-picker-avi-2'),
-              mode: 'adult',
-              createdAt: _epoch,
-              updatedAt: _epoch,
-            ),
-          );
-      await db
-          .into(db.learnerProfiles)
-          .insert(
-            LearnerProfilesCompanion.insert(
-              accountId: accountId,
-              displayName: 'Yosef',
-              ulid: const Value('ulid-picker-yosef-2'),
-              mode: 'child',
-              createdAt: _epoch,
-              updatedAt: _epoch,
-            ),
-          );
-
+    ) async {\n
       final profiles = [
         _adult(id: 1, name: 'Avi'),
         _child(id: 2, name: 'Yosef'),
@@ -679,33 +638,7 @@ void main() {
     testWidgets(
       'F3: last-profile long-press → Delete title is "Delete your only '
       'profile?" variant',
-      (tester) async {
-        final db = UserDatabase(NativeDatabase.memory());
-        addTearDown(db.close);
-        final accountId = await db
-            .into(db.accounts)
-            .insert(
-              AccountsCompanion.insert(
-                email: 't@t.com',
-                tier: 'localBorn',
-                displayName: 'Test',
-                createdAt: _epoch,
-                updatedAt: _epoch,
-              ),
-            );
-        await db
-            .into(db.learnerProfiles)
-            .insert(
-              LearnerProfilesCompanion.insert(
-                accountId: accountId,
-                displayName: 'OnlyOne',
-                ulid: const Value('ulid-picker-onlyone-1'),
-                mode: 'adult',
-                createdAt: _epoch,
-                updatedAt: _epoch,
-              ),
-            );
-
+      (tester) async {\n
         final profiles = [_adult(id: 1, name: 'OnlyOne')];
         await tester.pumpWidget(
           _buildPicker(
@@ -754,45 +687,7 @@ void main() {
     testWidgets('F4: deleting the currently-selected profile via long-press '
         'auto-switches selectedProfileIdProvider to a remaining profile', (
       tester,
-    ) async {
-      final db = UserDatabase(NativeDatabase.memory());
-      addTearDown(db.close);
-      final accountId = await db
-          .into(db.accounts)
-          .insert(
-            AccountsCompanion.insert(
-              email: 't@t.com',
-              tier: 'localBorn',
-              displayName: 'Test',
-              createdAt: _epoch,
-              updatedAt: _epoch,
-            ),
-          );
-      await db
-          .into(db.learnerProfiles)
-          .insert(
-            LearnerProfilesCompanion.insert(
-              accountId: accountId,
-              displayName: 'Avi',
-              ulid: const Value('ulid-picker-avi-1'),
-              mode: 'adult',
-              createdAt: _epoch,
-              updatedAt: _epoch,
-            ),
-          );
-      await db
-          .into(db.learnerProfiles)
-          .insert(
-            LearnerProfilesCompanion.insert(
-              accountId: accountId,
-              displayName: 'Yosef',
-              ulid: const Value('ulid-picker-yosef-1'),
-              mode: 'child',
-              createdAt: _epoch,
-              updatedAt: _epoch,
-            ),
-          );
-
+    ) async {\n
       final profiles = [
         _adult(id: 1, name: 'Avi'),
         _child(id: 2, name: 'Yosef'),
