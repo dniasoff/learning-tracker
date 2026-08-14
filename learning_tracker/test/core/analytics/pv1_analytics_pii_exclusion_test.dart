@@ -50,12 +50,12 @@ library;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
-import 'package:learning_tracker/core/database/daos/completion_dao.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/exceptions/permission_exception.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_entity.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 import 'package:learning_tracker/features/learning/domain/entities/mark_completion_result.dart';
@@ -590,34 +590,43 @@ class _FakeCompletionRepository implements CompletionRepository {
     bool awardGamificationPoints = true,
     bool creditsAchievement = true,
   }) async => MarkCompletionResult(
-    completion: Completion(
-      id: 1,
-      profileId: 1,
-      curriculumId: request.curriculumId,
+    completion: CompletionEntity(
+      curriculumId: CurriculumId.fromStorageKey(request.curriculumId)!,
       sefariaRef: request.sefariaRef,
       stageId: request.stageId,
       trackType: request.trackType,
-      trackId: 1,
+      source: CompletionSource.live,
       completedAt: DateTime.utc(2026, 5, 1),
       points: 0,
     ),
   );
 
   @override
-  Future<List<Completion>> bulkMarkComplete(
+  Future<List<CompletionEntity>> bulkMarkComplete(
     BulkCompletionRequest request,
   ) async => [];
 
   @override
-  Future<List<Completion>> getCompletionsByCurriculum(
+  Future<List<CompletionEntity>> getCompletionsByCurriculum(
     String curriculumId, {
     int? profileId,
   }) async => [];
 
   @override
-  Future<List<Completion>> getCompletionsForContentItem(
+  Future<List<CompletionEntity>> getCompletionsForContentItem(
     String sefariaRef,
   ) async => [];
+
+  @override
+  Future<Map<String, int>> getReviewCountsForCurriculum(
+    CurriculumId curriculumId,
+  ) async => {};
+
+  @override
+  Future<Map<int, int>> getStageBreakdownForItem({
+    required CurriculumId curriculumId,
+    required String sefariaRef,
+  }) async => {};
 
   @override
   Future<bool> isStageCompleted({
@@ -625,6 +634,14 @@ class _FakeCompletionRepository implements CompletionRepository {
     required int stageId,
     required String trackType,
   }) async => false;
+
+  @override
+  Future<void> purgeCompletion({
+    required CurriculumId curriculumId,
+    required String sefariaRef,
+    required int stageId,
+    required DateTime purgedAt,
+  }) async {}
 }
 
 /// Minimal [ContentRepository] stub — [CompletionOrchestrator] requires one
@@ -689,7 +706,7 @@ MarkCompletionUseCase _useCase(AnalyticsService analytics) =>
       CompletionOrchestrator(
         repository: _FakeCompletionRepository(),
         contentRepository: _FakeContentRepository(),
-        activeProfileId: 1,
+        activeProfileId: '01J8M6H7QK2P4N9R5T6V8W0XYZ',
       ),
       analytics: analytics,
     );

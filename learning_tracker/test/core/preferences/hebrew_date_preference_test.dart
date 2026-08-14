@@ -12,6 +12,7 @@ library;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/preferences/hebrew_date_preference.dart';
+import 'package:learning_tracker/core/preferences/profile_scoped_preference.dart';
 import 'package:learning_tracker/core/preferences/profile_scoped_preference_keys.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -28,15 +29,15 @@ void main() {
     test(
       'read() for a never-written profile returns defaultValue=true',
       () async {
-        final value = await HebrewDatePreference().read(7);
+        final value = await HebrewDatePreference().read('profile-7');
         expect(value, isTrue);
       },
     );
 
     test('writing false persists and reads back false', () async {
       final pref = HebrewDatePreference();
-      await pref.write(3, false);
-      expect(await pref.read(3), isFalse);
+      await pref.write('profile-3', false);
+      expect(await pref.read('profile-3'), isFalse);
     });
   });
 
@@ -45,7 +46,7 @@ void main() {
     test(
       'both codepaths return true for a never-written (fresh) profile',
       () async {
-        const profileId = 42;
+        const profileId = '01J8M6H7QK2P4N9R5T6V8W0XYZ';
         final prefs = await SharedPreferences.getInstance();
 
         final viaPreference = await HebrewDatePreference().read(profileId);
@@ -74,14 +75,16 @@ void main() {
       },
     );
 
-    test('both codepaths agree for profileId 0 (legacy-key fallback path) '
+    test('both codepaths agree for the null sentinel (legacy-key fallback path) '
         'with no legacy key set', () async {
       final prefs = await SharedPreferences.getInstance();
 
-      final viaPreference = await HebrewDatePreference().read(0);
+      final viaPreference = await HebrewDatePreference().read(
+        kNoProfilePreferenceSentinel,
+      );
       final viaKeys = ProfileScopedPreferenceKeys.readUseHebrewCalendar(
         prefs,
-        0,
+        kNoProfilePreferenceSentinel,
       );
 
       expect(viaPreference, isTrue);

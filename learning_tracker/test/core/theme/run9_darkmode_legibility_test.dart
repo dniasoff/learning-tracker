@@ -20,30 +20,25 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/core/sync/providers/sync_status_providers.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/stat_card.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/backup_sync_section.dart';
-import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/widgets/learning_track_card.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../helpers/pump_app.dart';
 
-/// Minimal `CurriculumTrack` row — mirrors the helper in
-/// epic_27_story_4_widget_golden_test.dart. Drift's generated constructor
-/// needs every column, but these tests only care about the ones that drive
-/// [LearningTrackCard]'s rendering.
-CurriculumTrack _track({required int id, required String curriculumId}) {
+/// Minimal Firestore-shaped [CurriculumTrackEntity] — these tests only care
+/// about the fields that drive [LearningTrackCard]'s rendering.
+CurriculumTrackEntity _track({required String curriculumId}) {
   final now = DateTime.utc(2026, 1, 1);
-  return CurriculumTrack(
-    id: id,
-    profileId: 1,
-    curriculumId: curriculumId,
+  return CurriculumTrackEntity(
+    curriculumId: CurriculumId.fromStorageKey(curriculumId)!,
     state: 'active',
     stateChangedAt: now,
     activatedAt: now,
@@ -51,8 +46,12 @@ CurriculumTrack _track({required int id, required String curriculumId}) {
 }
 
 const _kLocalUser = AuthState.signedIn(
-  user: AuthUser(profileId: 2, email: 'local@test.com', displayName: 'Local'),
-  tier: Tier.localBorn,
+  user: AuthUser(
+    uid: 'local-account-uid',
+    email: 'local@test.com',
+    displayName: 'Local',
+  ),
+  tier: Tier.local,
 );
 
 void main() {
@@ -140,7 +139,7 @@ void main() {
             data: AppTheme.darkTheme(),
             child: Scaffold(
               body: LearningTrackCard(
-                track: _track(id: 1, curriculumId: 'mishnayos'),
+                track: _track(curriculumId: 'mishnayos'),
               ),
             ),
           ),
@@ -207,7 +206,6 @@ void main() {
       ),
       overrides: [
         authStateProvider.overrideWithValue(_kLocalUser),
-        syncStatusProvider.overrideWith((_) => const SyncStatus.localOnly()),
       ],
     );
 
