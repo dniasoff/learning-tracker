@@ -35,27 +35,31 @@
 import 'dart:async';
 
 import 'package:auto_route/auto_route.dart';
-import 'package:drift/native.dart';
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
-import 'package:learning_tracker/core/utils/date_utils.dart';
+import 'package:learning_tracker/data/firestore/repository_providers.dart';
+import 'package:learning_tracker/data/repositories/firestore_point_config_repository.dart';
+import 'package:learning_tracker/data/repositories/firestore_stage_definition_repository.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
     show authRepositoryProvider;
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/gamification/presentation/screens/point_config_screen.dart';
-import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
+import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/settings_screen.dart';
-import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
+import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart'
+    show activeTracksProvider;
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
@@ -68,6 +72,9 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
+import '../../helpers/firestore_fake.dart';
+import '../../helpers/firestore_fixtures.dart';
+
 // ─── Mocks ───────────────────────────────────────────────────────────────────
 
 class _MockAuthRepository extends Mock implements AuthRepository {}
@@ -75,6 +82,14 @@ class _MockAuthRepository extends Mock implements AuthRepository {}
 class _MockStackRouter extends Mock implements StackRouter {}
 
 class _FakePageRouteInfo extends Fake implements PageRouteInfo {}
+
+class _FixedActiveProfileDocId extends ActiveProfileDocId {
+  _FixedActiveProfileDocId(this._id);
+  final String _id;
+
+  @override
+  String? build() => _id;
+}
 
 // ─── Notifier stubs ───────────────────────────────────────────────────────────
 
@@ -91,7 +106,7 @@ class _TutorSession extends ActiveTutoredProfileSelection {
 
   @override
   TutoredProfileSelection? build() => TutoredProfileSelection(
-    profileId: '2',
+    profileId: _childProfileId,
     ownerUid: 'owner_uid',
     grantId: 'grant_1',
     permissions: _perms,
@@ -112,15 +127,20 @@ class _HebrewTermsOn extends UseHebrewTerms {
 
 // ─── Profile helpers ──────────────────────────────────────────────────────────
 
-ProfileModel _adultProfile({int id = 1, String name = 'Adult'}) {
+const _uid = 'settings-point-config-test-uid';
+const _adultProfileId = '01J6Q2H4A8M7K3P9R5T6V8WXY1';
+const _childProfileId = '01J6Q2H4A8M7K3P9R5T6V8WXY2';
+
+LearnerProfileEntity _adultProfile({
+  String id = _adultProfileId,
+  String name = 'Adult',
+}) {
   final now = DateTime.utc(2026, 1, 1);
-  return ProfileModel(
-    id: id,
-    ulid: 'ulid-$id',
-    accountId: 1,
+  return LearnerProfileEntity(
+    profileId: id,
     displayName: name,
-    mode: 'adult',
-    avatarIndex: 0,
+    mode: ProfileMode.adult,
+    avatar: '',
     createdAt: now,
     updatedAt: now,
   );
@@ -143,102 +163,103 @@ TutorGrant _pendingInviteGrant({required String grantId}) {
   return TutorGrant.fromDoc(doc);
 }
 
-ProfileModel _childProfile({int id = 2, String name = 'Child'}) {
+LearnerProfileEntity _childProfile({
+  String id = _childProfileId,
+  String name = 'Child',
+}) {
   final now = DateTime.utc(2026, 1, 1);
-  return ProfileModel(
-    id: id,
-    ulid: 'ulid-$id',
-    accountId: 1,
+  return LearnerProfileEntity(
+    profileId: id,
     displayName: name,
-    mode: 'child',
-    avatarIndex: 0,
+    mode: ProfileMode.child,
+    avatar: '',
     createdAt: now,
     updatedAt: now,
   );
 }
 
-// ─── DB setup helpers ─────────────────────────────────────────────────────────
+// ─── Firestore setup helpers ──────────────────────────────────────────────────
 
-Future<UserDatabase> _dbWithAdultProfile() async {
-  final db = UserDatabase(NativeDatabase.memory());
-  await db
-      .into(db.accounts)
-      .insert(
-        AccountsCompanion.insert(
-          email: 'test@test.com',
-          tier: 'localBorn',
-          displayName: 'Test User',
-          createdAt: DateTimeFactory.nowUtc(),
-          updatedAt: DateTimeFactory.nowUtc(),
-        ),
-      );
-  await db
-      .into(db.learnerProfiles)
-      .insert(
-        LearnerProfilesCompanion.insert(
-          accountId: 1,
-          displayName: 'Test User',
-          mode: 'adult',
-          createdAt: DateTimeFactory.nowUtc(),
-          updatedAt: DateTimeFactory.nowUtc(),
-        ),
-      );
-  return db;
+class _SettingsFixture {
+  _SettingsFixture({required this.firestore, required this.profile});
+
+  final FakeFirebaseFirestore firestore;
+  final LearnerProfileEntity profile;
+  List<CurriculumTrackEntity> activeTracks = const [];
+
+  Future<void> close() async {}
 }
 
-Future<UserDatabase> _dbWithChildProfile() async {
-  final db = UserDatabase(NativeDatabase.memory());
-  await db
-      .into(db.accounts)
-      .insert(
-        AccountsCompanion.insert(
-          email: 'test@test.com',
-          tier: 'localBorn',
-          displayName: 'Test User',
-          createdAt: DateTimeFactory.nowUtc(),
-          updatedAt: DateTimeFactory.nowUtc(),
-        ),
-      );
-  await db
-      .into(db.learnerProfiles)
-      .insert(
-        LearnerProfilesCompanion.insert(
-          accountId: 1,
-          displayName: 'Child',
-          mode: 'child',
-          createdAt: DateTimeFactory.nowUtc(),
-          updatedAt: DateTimeFactory.nowUtc(),
-        ),
-      );
-  return db;
+Future<_SettingsFixture> _dbWithAdultProfile() async {
+  final firestore = createFakeFirestore(authenticatedUid: _uid);
+  await seedAccount(firestore, uid: _uid);
+  await seedProfile(
+    firestore,
+    uid: _uid,
+    profileId: _adultProfileId,
+    mode: ProfileMode.adult,
+  );
+  return _SettingsFixture(
+    firestore: firestore,
+    profile: _adultProfile(),
+  );
 }
 
-/// Seeds account + adult profile + one mishnayos track. Returns (db, trackId).
-Future<(UserDatabase, int)> _dbWithTrack({
+Future<_SettingsFixture> _dbWithChildProfile() async {
+  final firestore = createFakeFirestore(authenticatedUid: _uid);
+  await seedAccount(firestore, uid: _uid);
+  await seedProfile(
+    firestore,
+    uid: _uid,
+    profileId: _childProfileId,
+    displayName: 'Child',
+    mode: ProfileMode.child,
+  );
+  return _SettingsFixture(
+    firestore: firestore,
+    profile: _childProfile(),
+  );
+}
+
+/// Seeds account + profile + one Firestore curriculum track and its stages.
+Future<(_SettingsFixture, CurriculumId)> _dbWithTrack({
   String curriculumId = 'mishnayos',
 }) async {
-  final db = await _dbWithAdultProfile();
-  final trackId = await db
-      .into(db.curriculumTracks)
-      .insert(
-        CurriculumTracksCompanion.insert(
-          profileId: 1,
-          curriculumId: curriculumId,
-          stateChangedAt: DateTimeFactory.nowUtc(),
-          activatedAt: DateTimeFactory.nowUtc(),
-        ),
-      );
-  return (db, trackId);
+  final fixture = await _dbWithAdultProfile();
+  final curriculum = CurriculumId.values.firstWhere(
+    (value) => value.storageKey == curriculumId,
+  );
+  await seedTrack(
+    fixture.firestore,
+    uid: _uid,
+    profileId: _adultProfileId,
+    curriculumId: curriculum,
+  );
+  await seedStageDefinitions(
+    fixture.firestore,
+    uid: _uid,
+    profileId: _adultProfileId,
+    curriculumId: curriculum,
+  );
+  fixture.activeTracks = [
+    CurriculumTrackEntity(
+      curriculumId: curriculum,
+      state: 'active',
+      stateChangedAt: DateTime.utc(2026, 1, 1),
+      activatedAt: DateTime.utc(2026, 1, 1),
+    ),
+  ];
+  return (fixture, curriculum);
 }
 
 // ─── Widget builders ──────────────────────────────────────────────────────────
 
 Widget _buildSettings({
-  required UserDatabase db,
+  required _SettingsFixture db,
   required _MockAuthRepository auth,
   required _MockStackRouter router,
   String profileMode = 'adult',
-  int profileId = 1,
+  String profileId = _adultProfileId,
   bool isTutored = false,
   TutorPermissions tutorPerms = const TutorPermissions(),
   Locale locale = const Locale('en'),
@@ -252,19 +273,21 @@ Widget _buildSettings({
   return ProviderScope(
     retry: (_, __) => null,
     overrides: [
-      userDatabaseProvider.overrideWithValue(db),
       authRepositoryProvider.overrideWithValue(auth),
       authStateProvider.overrideWithValue(
-        AuthState.signedIn(
+        const AuthState.signedIn(
           user: AuthUser(
-            profileId: profileId,
+            uid: _uid,
             email: 'test@test.com',
             displayName: 'Test User',
           ),
-          tier: Tier.localBorn,
+          tier: Tier.cloud,
         ),
       ),
       activeProfileIdProvider.overrideWithValue(profileId),
+      activeProfileDocIdProvider.overrideWith(
+        () => _FixedActiveProfileDocId(profileId),
+      ),
       profileListStreamProvider.overrideWith((ref) => Stream.value([profile])),
       selectedProfileIdProvider.overrideWithValue(profileId),
       activeTutoredProfileSelectionProvider.overrideWith(
@@ -279,7 +302,6 @@ Widget _buildSettings({
       pendingTutorInvitesProvider.overrideWith(
         (ref) => Future<List<TutorGrant>>.value(pendingInvites),
       ),
-      syncWriteFacadeProvider.overrideWithValue(null),
       ...extraOverrides,
     ],
     child: MaterialApp(
@@ -301,9 +323,9 @@ Widget _buildSettings({
 }
 
 Widget _buildPointConfig({
-  required UserDatabase db,
+  required _SettingsFixture db,
   required _MockStackRouter router,
-  int profileId = 1,
+  String profileId = _adultProfileId,
   bool isTutored = false,
   TutorPermissions tutorPerms = const TutorPermissions(),
   Locale locale = const Locale('en'),
@@ -312,15 +334,33 @@ Widget _buildPointConfig({
   return ProviderScope(
     retry: (_, __) => null,
     overrides: [
-      userDatabaseProvider.overrideWithValue(db),
       activeProfileIdProvider.overrideWithValue(profileId),
+      activeProfileDocIdProvider.overrideWith(
+        () => _FixedActiveProfileDocId(profileId),
+      ),
+      activeTracksProvider.overrideWith(
+        (ref) => Stream.value(db.activeTracks),
+      ),
+      firestorePointConfigRepositoryProvider.overrideWith(
+        (ref) async => FirestorePointConfigRepository(
+          firestore: db.firestore,
+          uid: _uid,
+          profileId: profileId,
+        ),
+      ),
+      firestoreStageDefinitionRepositoryProvider.overrideWith(
+        (ref) async => FirestoreStageDefinitionRepository(
+          firestore: db.firestore,
+          uid: _uid,
+          profileId: profileId,
+        ),
+      ),
       activeTutoredProfileSelectionProvider.overrideWith(
         isTutored ? () => _TutorSession(tutorPerms) : _NoTutorSession.new,
       ),
       activeTutorPermissionsProvider.overrideWithValue(
         isTutored ? tutorPerms : null,
       ),
-      syncWriteFacadeProvider.overrideWithValue(null),
       ...extraOverrides,
     ],
     child: MaterialApp(
@@ -411,7 +451,7 @@ void main() {
           auth: auth,
           router: router,
           profileMode: 'child',
-          profileId: 2,
+          profileId: _childProfileId,
         ),
       );
       await tester.pump();
@@ -520,7 +560,7 @@ void main() {
           auth: auth,
           router: router,
           profileMode: 'child',
-          profileId: 2,
+          profileId: _childProfileId,
         ),
       );
       await tester.pump();
@@ -549,7 +589,7 @@ void main() {
           auth: auth,
           router: router,
           profileMode: 'child',
-          profileId: 2,
+          profileId: _childProfileId,
         ),
       );
       await tester.pump();

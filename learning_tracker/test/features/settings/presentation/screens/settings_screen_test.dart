@@ -1,22 +1,18 @@
-import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/data/firestore/repository_providers.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
     show authRepositoryProvider;
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
-import 'package:learning_tracker/features/learning/data/repositories/track_repository_impl.dart';
-import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
+import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
-import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/settings_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/user_profile_header_card.dart';
-import 'package:learning_tracker/features/tracks/domain/services/curriculum_activation_service.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
@@ -27,10 +23,21 @@ import '../../../../helpers/pump_app.dart';
 
 class MockAuthRepository extends Mock implements AuthRepository {}
 
-/// Pins the active profile id to the talmid's synthetic local mirror (id 99).
-class _MirrorActiveProfileId extends ActiveProfileId {
+class _FixedActiveProfileDocId extends ActiveProfileDocId {
+  _FixedActiveProfileDocId(this._id);
+  final String _id;
+
   @override
-  int build() => 99;
+  String? build() => _id;
+}
+
+const _uid = 'settings-screen-test-uid';
+const _adultProfileId = '01J6Q2H4A8M7K3P9R5T6V8WXY1';
+const _childProfileId = '01J6Q2H4A8M7K3P9R5T6V8WXY2';
+
+class _NoTutoredSelection extends ActiveTutoredProfileSelection {
+  @override
+  TutoredProfileSelection? build() => null;
 }
 
 /// A fixed non-null tutored selection → the screen treats this as a live tutor
@@ -38,8 +45,8 @@ class _MirrorActiveProfileId extends ActiveProfileId {
 class _ActiveTutoredSelection extends ActiveTutoredProfileSelection {
   @override
   TutoredProfileSelection? build() => const TutoredProfileSelection(
-    profileId: 'talmid-remote-id',
-    ownerUid: 'owner-uid',
+    profileId: _childProfileId,
+    ownerUid: _uid,
     grantId: 'grant-id',
     permissions: TutorPermissions(),
   );
@@ -57,84 +64,60 @@ void main() {
     );
   });
 
-  late UserDatabase database;
   late MockAuthRepository mockAuth;
 
   setUp(() {
-    database = UserDatabase(NativeDatabase.memory());
     mockAuth = MockAuthRepository();
     when(() => mockAuth.currentUser).thenReturn(null);
-  });
-
-  tearDown(() async {
-    await database.close();
   });
 
   Widget createTestWidget({
     List<CurriculumId> initialActive = const [],
     bool tutoredSession = false,
   }) {
-    final talmidMirror = ProfileModel(
-      id: 99,
-      ulid: 'ulid-99',
-      accountId: 1,
+    // SettingsScreen no longer reads the deleted Drift activation service;
+    // retain this parameter because the test cases intentionally document
+    // which routes were previously presented with an active curriculum.
+    final _ = initialActive;
+    final profile = LearnerProfileEntity(
+      profileId: tutoredSession ? _childProfileId : _adultProfileId,
       displayName: 'Kid',
-      mode: 'child',
-      avatarIndex: 0,
+      mode: tutoredSession ? ProfileMode.child : ProfileMode.adult,
+      avatar: '',
       createdAt: DateTime(2024),
       updatedAt: DateTime(2024),
     );
-    return FutureBuilder(
-      future: Future(() async {
-        for (final curriculum in initialActive) {
-          await database.activeCurriculumDao.activate(curriculum);
-        }
-      }),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) {
-          return const MaterialApp(
-            home: Scaffold(body: CircularProgressIndicator()),
-          );
-        }
-
-        return pumpApp(
-          overrides: [
-            appDatabaseProvider.overrideWithValue(database),
-            userDatabaseProvider.overrideWithValue(database),
-            authRepositoryProvider.overrideWithValue(mockAuth),
-            authStateProvider.overrideWithValue(
-              const AuthState.signedIn(
-                user: AuthUser(
-                  profileId: 1,
-                  email: 'test@test.com',
-                  displayName: 'Test',
-                ),
-                tier: Tier.localBorn,
-              ),
+    return pumpApp(
+      overrides: [
+        authRepositoryProvider.overrideWithValue(mockAuth),
+        authStateProvider.overrideWithValue(
+          const AuthState.signedIn(
+            user: AuthUser(
+              uid: _uid,
+              email: 'test@test.com',
+              displayName: 'Test',
             ),
-            curriculumActivationServiceProvider.overrideWith((ref) {
-              return CurriculumActivationService(
-                database: database,
-                pushCurriculumTrack: (_) async {},
-                trackRepository: TrackRepositoryImpl(database: database),
-              );
-            }),
-            if (tutoredSession) ...[
-              activeTutoredProfileSelectionProvider.overrideWith(
-                _ActiveTutoredSelection.new,
-              ),
-              activeProfileIdProvider.overrideWith(_MirrorActiveProfileId.new),
-              activeProfileProvider.overrideWith(
-                (ref) => Future.value(talmidMirror),
-              ),
-              profileListStreamProvider.overrideWith(
-                (ref) => Stream.value(<ProfileModel>[]),
-              ),
-            ],
-          ],
-          child: const SettingsScreen(),
-        );
-      },
+            tier: Tier.cloud,
+          ),
+        ),
+        activeProfileIdProvider.overrideWithValue(profile.profileId),
+        activeProfileDocIdProvider.overrideWith(
+          () => _FixedActiveProfileDocId(profile.profileId),
+        ),
+        selectedProfileIdProvider.overrideWithValue(profile.profileId),
+        profileListStreamProvider.overrideWith(
+          (ref) => Stream.value(<LearnerProfileEntity>[profile]),
+        ),
+        activeTutoredProfileSelectionProvider.overrideWith(
+          tutoredSession
+              ? _ActiveTutoredSelection.new
+              : _NoTutoredSelection.new,
+        ),
+        activeTutorPermissionsProvider.overrideWithValue(
+          tutoredSession ? const TutorPermissions() : null,
+        ),
+      ],
+      child: const SettingsScreen(),
     );
   }
 

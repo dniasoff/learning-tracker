@@ -62,6 +62,7 @@ import 'package:learning_tracker/data/repositories/firestore_curriculum_scope_re
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
+import 'package:learning_tracker/features/learning/domain/entities/learning_ledger_entry.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/learning_ledger_repository.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_ledger_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
@@ -70,9 +71,9 @@ import 'package:learning_tracker/features/settings/presentation/screens/scope_se
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 
-import '../../../../helpers/pump_app.dart';
 import '../../../../helpers/firestore_fake.dart';
 import '../../../../helpers/firestore_fixtures.dart';
+import '../../../../helpers/pump_app.dart';
 
 // ── Mocks ──────────────────────────────────────────────────────────────────────
 
@@ -324,7 +325,7 @@ Future<void> _tearDown(WidgetTester tester) async {
 // ── Widget factory — ScopeSelectionScreen ────────────────────────────────────
 
 Widget _buildScopeApp({
-  FirestoreCurriculumScopeRepository scopeRepository = _scopeRepository,
+  FirestoreCurriculumScopeRepository? scopeRepository,
   ContentRepository? contentRepo,
   bool useHebrew = false,
   Locale locale = const Locale('en'),
@@ -336,7 +337,7 @@ Widget _buildScopeApp({
     locale: locale,
     overrides: [
       firestoreCurriculumScopeRepositoryProvider.overrideWith(
-        (ref) async => scopeRepository,
+        (ref) async => scopeRepository ?? _scopeRepository,
       ),
       activeProfileIdProvider.overrideWith(() => _ProfileId1()),
       contentRepositoryProvider.overrideWithValue(repo),
@@ -461,7 +462,7 @@ void main() {
   setUpAll(() {
     // CurriculumId is an enum — register a real value as fallback.
     registerFallbackValue(CurriculumId.mishnayos);
-    registerFallbackValue(<LedgerManualBatchItem>[]);
+    registerFallbackValue(<LedgerEntryDraft>[]);
     registerFallbackValue(CompletionSource.lifetimeOnly);
     // Named parameter fallbacks for content repository mocks.
     registerFallbackValue(0); // scopeLevel
@@ -511,7 +512,7 @@ void main() {
       (tester) async {
         await _pump(
           tester,
-          _buildScopeApp(, useHebrew: true, locale: const Locale('he')),
+          _buildScopeApp(useHebrew: true, locale: const Locale('he')),
         );
 
         // CurriculumId.mishnayos.displayNameHe = 'משניות'
@@ -950,7 +951,7 @@ void main() {
         return c.future;
       });
 
-      await tester.pumpWidget(_buildScopeApp(, contentRepo: repo));
+      await tester.pumpWidget(_buildScopeApp(contentRepo: repo));
       await tester.pump(); // One frame to start async.
 
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
@@ -1037,7 +1038,7 @@ void main() {
     ) async {
       await _pump(
         tester,
-        _buildScopeApp(, useHebrew: true, locale: const Locale('he')),
+        _buildScopeApp(useHebrew: true, locale: const Locale('he')),
       );
       expect(find.text('אישי'), findsNothing);
       await _tearDown(tester);
@@ -1169,7 +1170,7 @@ void main() {
         // Drill to the Masechta level (level 2) and verify the Hebrew name.
         await _pump(
           tester,
-          _buildScopeApp(, useHebrew: true, locale: const Locale('he')),
+          _buildScopeApp(useHebrew: true, locale: const Locale('he')),
         );
         await tester.tap(find.byType(SwitchListTile));
         await tester.pump();
@@ -1197,7 +1198,7 @@ void main() {
     testWidgets('renders under Hebrew locale without crash', (tester) async {
       await _pump(
         tester,
-        _buildScopeApp(, useHebrew: true, locale: const Locale('he')),
+        _buildScopeApp(useHebrew: true, locale: const Locale('he')),
       );
 
       expect(find.byType(Scaffold), findsOneWidget);
@@ -1209,7 +1210,7 @@ void main() {
     testWidgets('Hebrew locale sets RTL text direction', (tester) async {
       await _pump(
         tester,
-        _buildScopeApp(, useHebrew: true, locale: const Locale('he')),
+        _buildScopeApp(useHebrew: true, locale: const Locale('he')),
       );
 
       final dirFinder = find.byType(Directionality);
@@ -1301,7 +1302,7 @@ void main() {
     testWidgets('renders under Hebrew locale without crash', (tester) async {
       await _pump(
         tester,
-        _buildLifetimeApp(, useHebrew: true, locale: const Locale('he')),
+        _buildLifetimeApp(useHebrew: true, locale: const Locale('he')),
       );
 
       expect(find.byType(Scaffold), findsOneWidget);
@@ -1312,7 +1313,7 @@ void main() {
     testWidgets('Hebrew locale sets RTL text direction', (tester) async {
       await _pump(
         tester,
-        _buildLifetimeApp(, useHebrew: true, locale: const Locale('he')),
+        _buildLifetimeApp(useHebrew: true, locale: const Locale('he')),
       );
 
       final dirFinder = find.byType(Directionality);
@@ -1428,14 +1429,14 @@ void main() {
         final mockRepo = _MockLearningLedgerRepository();
         when(
           () => mockRepo.recordCompletionsBatch(
-            any<List<LedgerManualBatchItem>>(),
+            any<List<LedgerEntryDraft>>(),
             source: any<CompletionSource>(named: 'source'),
           ),
         ).thenAnswer((_) async => []);
 
         await _pump(
           tester,
-          _buildCurriculumMarkingApp(, ledgerRepo: mockRepo),
+          _buildCurriculumMarkingApp(ledgerRepo: mockRepo),
         );
 
         // The HierarchySelectionPanel loads content from the mock repo.
@@ -1452,7 +1453,7 @@ void main() {
         // Verify the mock was NOT called (no spurious calls on idle render).
         verifyNever(
           () => mockRepo.recordCompletionsBatch(
-            any<List<LedgerManualBatchItem>>(),
+            any<List<LedgerEntryDraft>>(),
             source: any<CompletionSource>(named: 'source'),
           ),
         );
@@ -1487,7 +1488,7 @@ void main() {
         Invocation? captured;
         when(
           () => mockRepo.recordCompletionsBatch(
-            any<List<LedgerManualBatchItem>>(),
+            any<List<LedgerEntryDraft>>(),
             source: any<CompletionSource>(named: 'source'),
           ),
         ).thenAnswer((inv) async {
@@ -1497,7 +1498,7 @@ void main() {
 
         await _pump(
           tester,
-          _buildCurriculumMarkingApp(, ledgerRepo: mockRepo),
+          _buildCurriculumMarkingApp(ledgerRepo: mockRepo),
         );
 
         await tester.tap(find.text('Select all in this list'));
@@ -1519,7 +1520,7 @@ void main() {
 
         verify(
           () => mockRepo.recordCompletionsBatch(
-            any<List<LedgerManualBatchItem>>(),
+            any<List<LedgerEntryDraft>>(),
             source: any<CompletionSource>(named: 'source'),
           ),
         ).called(1);

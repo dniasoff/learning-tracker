@@ -3,8 +3,8 @@
 //
 // send_logs_service coverage (0% baseline):
 //   S1. uid == null → SnackBar with errorSendLogsMustBeSignedIn
-//   S2. gateway == null → SnackBar with errorSendLogsNoGateway
-//   S3. success path: pushDiagnosticLog called with correct uid + field shape
+//   S2. repository unavailable → SnackBar with errorSendLogsNoGateway
+//   S3. obsolete gateway uid-forwarding premise documented inline below
 //   S4. success SnackBar contains entry count
 //   S5. log window filter: only entries within 10 min are included
 //   S6. exception path: SnackBar shows the fixed localized fallback, never
@@ -25,9 +25,9 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
-import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
+import 'package:learning_tracker/features/settings/data/repositories/firestore_diagnostic_log_repository_impl.dart';
 import 'package:learning_tracker/features/settings/presentation/utils/send_logs_service.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
@@ -38,7 +38,8 @@ import 'package:talker/talker.dart';
 
 class _MockAuthRepository extends Mock implements AuthRepository {}
 
-class _MockFirestoreGateway extends Mock implements FirestoreGateway {}
+class _MockDiagnosticLogRepository extends Mock
+    implements FirestoreDiagnosticLogRepositoryAdapter {}
 
 // ─── Minimal host for pumping dialogs/snackbars ───────────────────────────────
 
@@ -63,12 +64,12 @@ Widget _buildHost(Widget child, {Locale locale = const Locale('en')}) {
 class _SendLogsHost extends StatelessWidget {
   const _SendLogsHost({
     required this.logger,
-    required this.gateway,
+    required this.repository,
     required this.auth,
   });
 
   final AppLogger logger;
-  final FirestoreGateway? gateway;
+  final FirestoreDiagnosticLogRepositoryAdapter repository;
   final AuthRepository auth;
 
   @override
@@ -78,7 +79,7 @@ class _SendLogsHost extends StatelessWidget {
         onPressed: () => sendLogsToFirebase(
           context: context,
           logger: logger,
-          gateway: gateway,
+          repository: repository,
           auth: auth,
         ),
         child: const Text('send'),
@@ -120,7 +121,7 @@ AppLogger _buildLogger(List<TalkerLog> entries) {
 
 void main() {
   late _MockAuthRepository auth;
-  late _MockFirestoreGateway gateway;
+  late _MockDiagnosticLogRepository repository;
 
   setUpAll(() {
     registerFallbackValue(<String, dynamic>{});
@@ -136,7 +137,7 @@ void main() {
 
   setUp(() {
     auth = _MockAuthRepository();
-    gateway = _MockFirestoreGateway();
+    repository = _MockDiagnosticLogRepository();
   });
 
   // ── S1: uid == null → SnackBar ─────────────────────────────────────────────
@@ -148,7 +149,9 @@ void main() {
     final logger = _buildLogger([]);
 
     await tester.pumpWidget(
-      _buildHost(_SendLogsHost(logger: logger, gateway: gateway, auth: auth)),
+      _buildHost(
+        _SendLogsHost(logger: logger, repository: repository, auth: auth),
+      ),
     );
     await tester.pump();
     await tester.tap(find.text('send'));
@@ -157,25 +160,27 @@ void main() {
 
     expect(find.text('Must be signed in to send logs'), findsOneWidget);
     verifyNever(
-      () => gateway.pushDiagnosticLog(
-        uid: any(named: 'uid'),
-        data: any(named: 'data'),
-      ),
+      () => repository.pushLog(any<Map<String, dynamic>>()),
     );
 
     await _teardown(tester);
   });
 
-  // ── S2: gateway == null → SnackBar ────────────────────────────────────────
+  // ── S2: repository unavailable → SnackBar ─────────────────────────────────
 
-  testWidgets('S2: gateway null → SnackBar with errorSendLogsNoGateway', (
+  testWidgets('S2: repository unavailable → SnackBar with errorSendLogsNoGateway', (
     tester,
   ) async {
     when(() => auth.currentUser).thenReturn(_user());
     final logger = _buildLogger([]);
 
+    when(() => repository.pushLog(any<Map<String, dynamic>>())).thenThrow(
+      const DiagnosticLogRepositoryNotReadyException(),
+    );
     await tester.pumpWidget(
-      _buildHost(_SendLogsHost(logger: logger, gateway: null, auth: auth)),
+      _buildHost(
+        _SendLogsHost(logger: logger, repository: repository, auth: auth),
+      ),
     );
     await tester.pump();
     await tester.tap(find.text('send'));
@@ -185,65 +190,23 @@ void main() {
     // errorSendLogsNoGateway = 'Sync not available — account not linked to cloud'
     expect(find.textContaining('Sync not available'), findsOneWidget);
     verifyNever(
-      () => gateway.pushDiagnosticLog(
-        uid: any(named: 'uid'),
-        data: any(named: 'data'),
-      ),
+      () => repository.pushLog(any<Map<String, dynamic>>()),
     );
 
     await _teardown(tester);
   });
 
-  // ── S3: success path — pushDiagnosticLog called with correct uid + shape ──
-
-  testWidgets(
-    'S3: success path — pushDiagnosticLog called with correct uid and required fields',
-    (tester) async {
-      String? capturedUid;
-      Map<String, dynamic>? capturedData;
-      when(() => auth.currentUser).thenReturn(_user(uid: 'abc123'));
-      when(
-        () => gateway.pushDiagnosticLog(
-          uid: any(named: 'uid'),
-          data: any(named: 'data'),
-        ),
-      ).thenAnswer((inv) async {
-        capturedUid = inv.namedArguments[const Symbol('uid')] as String;
-        capturedData =
-            inv.namedArguments[const Symbol('data')] as Map<String, dynamic>;
-      });
-
-      final logger = _buildLogger([]);
-
-      await tester.pumpWidget(
-        _buildHost(_SendLogsHost(logger: logger, gateway: gateway, auth: auth)),
-      );
-      await tester.pump();
-      await tester.tap(find.text('send'));
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 1));
-
-      expect(capturedUid, equals('abc123'));
-      expect(capturedData, isNotNull);
-      expect(capturedData!.containsKey('version'), isTrue);
-      expect(capturedData!.containsKey('window_minutes'), isTrue);
-      expect(capturedData!.containsKey('entry_count'), isTrue);
-      expect(capturedData!.containsKey('entries'), isTrue);
-      expect(capturedData!.containsKey('expires_at'), isTrue);
-
-      await _teardown(tester);
-    },
-  );
+  // S3 was removed: the deleted FirestoreGateway accepted `uid` and `data`
+  // as named arguments, while the current account-scoped adapter accepts only
+  // the payload and obtains its uid from its construction-time account.
+  // The remaining success/payload tests cover the current pushLog contract.
 
   // ── S4: success SnackBar contains entry count ─────────────────────────────
 
   testWidgets('S4: success SnackBar contains entry count', (tester) async {
     when(() => auth.currentUser).thenReturn(_user());
     when(
-      () => gateway.pushDiagnosticLog(
-        uid: any(named: 'uid'),
-        data: any(named: 'data'),
-      ),
+      () => repository.pushLog(any<Map<String, dynamic>>()),
     ).thenAnswer((_) async {});
 
     final now = DateTime.now().toUtc();
@@ -254,7 +217,7 @@ void main() {
     final logger = _buildLogger(entries);
 
     await tester.pumpWidget(
-      _buildHost(_SendLogsHost(logger: logger, gateway: gateway, auth: auth)),
+      _buildHost(_SendLogsHost(logger: logger, repository: repository, auth: auth)),
     );
     await tester.pump();
     await tester.tap(find.text('send'));
@@ -275,14 +238,10 @@ void main() {
 
     Map<String, dynamic>? capturedData;
     when(
-      () => gateway.pushDiagnosticLog(
-        uid: any(named: 'uid'),
-        data: any(named: 'data'),
-      ),
+      () => repository.pushLog(any<Map<String, dynamic>>()),
     ).thenAnswer((invocation) async {
       capturedData =
-          invocation.namedArguments[const Symbol('data')]
-              as Map<String, dynamic>;
+          invocation.positionalArguments.single as Map<String, dynamic>;
     });
 
     final now = DateTime.now().toUtc();
@@ -299,7 +258,7 @@ void main() {
     final logger = _buildLogger([recent, old]);
 
     await tester.pumpWidget(
-      _buildHost(_SendLogsHost(logger: logger, gateway: gateway, auth: auth)),
+      _buildHost(_SendLogsHost(logger: logger, repository: repository, auth: auth)),
     );
     await tester.pump();
     await tester.tap(find.text('send'));
@@ -324,21 +283,18 @@ void main() {
   // must never reach the widget tree.
 
   testWidgets(
-    'S6: gateway throws → SnackBar shows the localized friendly fallback, '
+    'S6: repository throws → SnackBar shows the localized friendly fallback, '
     'never the raw exception (AUD-settings-07)',
     (tester) async {
       when(() => auth.currentUser).thenReturn(_user());
       when(
-        () => gateway.pushDiagnosticLog(
-          uid: any(named: 'uid'),
-          data: any(named: 'data'),
-        ),
+        () => repository.pushLog(any<Map<String, dynamic>>()),
       ).thenThrow(Exception('upload failed'));
 
       final logger = _buildLogger([]);
 
       await tester.pumpWidget(
-        _buildHost(_SendLogsHost(logger: logger, gateway: gateway, auth: auth)),
+        _buildHost(_SendLogsHost(logger: logger, repository: repository, auth: auth)),
       );
       await tester.pump();
       await tester.tap(find.text('send'));
@@ -362,23 +318,20 @@ void main() {
     },
   );
 
-  testWidgets('S6b: gateway throws under Hebrew locale → SnackBar shows only '
+  testWidgets('S6b: repository throws under Hebrew locale → SnackBar shows only '
       'ARB-sourced Hebrew text, never the raw exception (AUD-settings-07)', (
     tester,
   ) async {
     when(() => auth.currentUser).thenReturn(_user());
     when(
-      () => gateway.pushDiagnosticLog(
-        uid: any(named: 'uid'),
-        data: any(named: 'data'),
-      ),
+      () => repository.pushLog(any<Map<String, dynamic>>()),
     ).thenThrow(Exception('upload failed'));
 
     final logger = _buildLogger([]);
 
     await tester.pumpWidget(
       _buildHost(
-        _SendLogsHost(logger: logger, gateway: gateway, auth: auth),
+        _SendLogsHost(logger: logger, repository: repository, auth: auth),
         locale: const Locale('he'),
       ),
     );
@@ -402,13 +355,10 @@ void main() {
 
       Map<String, dynamic>? capturedData;
       when(
-        () => gateway.pushDiagnosticLog(
-          uid: any(named: 'uid'),
-          data: any(named: 'data'),
-        ),
+        () => repository.pushLog(any<Map<String, dynamic>>()),
       ).thenAnswer((inv) async {
         capturedData =
-            inv.namedArguments[const Symbol('data')] as Map<String, dynamic>;
+            inv.positionalArguments.single as Map<String, dynamic>;
       });
 
       final now = DateTime.now().toUtc();
@@ -420,7 +370,7 @@ void main() {
       final logger = _buildLogger([entry]);
 
       await tester.pumpWidget(
-        _buildHost(_SendLogsHost(logger: logger, gateway: gateway, auth: auth)),
+        _buildHost(_SendLogsHost(logger: logger, repository: repository, auth: auth)),
       );
       await tester.pump();
       await tester.tap(find.text('send'));
@@ -451,13 +401,10 @@ void main() {
 
     Map<String, dynamic>? capturedData;
     when(
-      () => gateway.pushDiagnosticLog(
-        uid: any(named: 'uid'),
-        data: any(named: 'data'),
-      ),
+      () => repository.pushLog(any<Map<String, dynamic>>()),
     ).thenAnswer((inv) async {
       capturedData =
-          inv.namedArguments[const Symbol('data')] as Map<String, dynamic>;
+          inv.positionalArguments.single as Map<String, dynamic>;
     });
 
     final now = DateTime.now().toUtc();
@@ -470,7 +417,7 @@ void main() {
     final logger = _buildLogger([entry]);
 
     await tester.pumpWidget(
-      _buildHost(_SendLogsHost(logger: logger, gateway: gateway, auth: auth)),
+      _buildHost(_SendLogsHost(logger: logger, repository: repository, auth: auth)),
     );
     await tester.pump();
     await tester.tap(find.text('send'));
@@ -496,13 +443,10 @@ void main() {
 
     Map<String, dynamic>? capturedData;
     when(
-      () => gateway.pushDiagnosticLog(
-        uid: any(named: 'uid'),
-        data: any(named: 'data'),
-      ),
+      () => repository.pushLog(any<Map<String, dynamic>>()),
     ).thenAnswer((inv) async {
       capturedData =
-          inv.namedArguments[const Symbol('data')] as Map<String, dynamic>;
+          inv.positionalArguments.single as Map<String, dynamic>;
     });
 
     final now = DateTime.now().toUtc();
@@ -515,7 +459,7 @@ void main() {
     final logger = _buildLogger([entry]);
 
     await tester.pumpWidget(
-      _buildHost(_SendLogsHost(logger: logger, gateway: gateway, auth: auth)),
+      _buildHost(_SendLogsHost(logger: logger, repository: repository, auth: auth)),
     );
     await tester.pump();
     await tester.tap(find.text('send'));
@@ -540,20 +484,17 @@ void main() {
 
     Map<String, dynamic>? capturedData;
     when(
-      () => gateway.pushDiagnosticLog(
-        uid: any(named: 'uid'),
-        data: any(named: 'data'),
-      ),
+      () => repository.pushLog(any<Map<String, dynamic>>()),
     ).thenAnswer((inv) async {
       capturedData =
-          inv.namedArguments[const Symbol('data')] as Map<String, dynamic>;
+          inv.positionalArguments.single as Map<String, dynamic>;
     });
 
     final beforeCall = DateTime.now().toUtc();
     final logger = _buildLogger([]);
 
     await tester.pumpWidget(
-      _buildHost(_SendLogsHost(logger: logger, gateway: gateway, auth: auth)),
+      _buildHost(_SendLogsHost(logger: logger, repository: repository, auth: auth)),
     );
     await tester.pump();
     await tester.tap(find.text('send'));
@@ -589,19 +530,16 @@ void main() {
 
     Map<String, dynamic>? capturedData;
     when(
-      () => gateway.pushDiagnosticLog(
-        uid: any(named: 'uid'),
-        data: any(named: 'data'),
-      ),
+      () => repository.pushLog(any<Map<String, dynamic>>()),
     ).thenAnswer((inv) async {
       capturedData =
-          inv.namedArguments[const Symbol('data')] as Map<String, dynamic>;
+          inv.positionalArguments.single as Map<String, dynamic>;
     });
 
     final logger = _buildLogger([]);
 
     await tester.pumpWidget(
-      _buildHost(_SendLogsHost(logger: logger, gateway: gateway, auth: auth)),
+      _buildHost(_SendLogsHost(logger: logger, repository: repository, auth: auth)),
     );
     await tester.pump();
     await tester.tap(find.text('send'));
