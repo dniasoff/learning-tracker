@@ -15,6 +15,12 @@ import 'package:learning_tracker/core/preferences/siyum_granularity_preference.d
 import 'package:learning_tracker/features/progress/domain/models/journey_view_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+const profileA = '01J5K7M2N4P6Q8R0S1T3V5W7X9';
+const profileB = '01J5K7M2N4P6Q8R0S1T3V5W7Y9';
+const profileC = '01J5K7M2N4P6Q8R0S1T3V5W8X9';
+const profileD = '01J5K7M2N4P6Q8R0S1T3V6W7X9';
+const profileE = '01J5K7M2N4P6Q8R0S1T4V5W7X9';
+
 void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues({});
@@ -33,7 +39,7 @@ void main() {
       () async {
         final value = await SiyumGranularityPreference(
           CurriculumId.mishnayos,
-        ).read(7);
+        ).read(profileA);
         expect(value, MilestoneLevel.unit);
       },
     );
@@ -41,13 +47,13 @@ void main() {
     test('write/read round-trips every level', () async {
       final pref = SiyumGranularityPreference(CurriculumId.bavli);
       for (final level in MilestoneLevel.values) {
-        await pref.write(3, level);
-        expect(await pref.read(3), level);
+        await pref.write(profileA, level);
+        expect(await pref.read(profileA), level);
       }
     });
 
     test('two curricula for the same profile are independent', () async {
-      const profileId = 5;
+      const profileId = profileB;
       final bavli = SiyumGranularityPreference(CurriculumId.bavli);
       final chumash = SiyumGranularityPreference(CurriculumId.chumash);
 
@@ -73,17 +79,17 @@ void main() {
     test('two profiles for the same curriculum are independent', () async {
       final pref = SiyumGranularityPreference(CurriculumId.bavli);
 
-      await pref.write(1, MilestoneLevel.curriculum);
-      await pref.write(2, MilestoneLevel.aggregate);
+      await pref.write(profileC, MilestoneLevel.curriculum);
+      await pref.write(profileD, MilestoneLevel.aggregate);
 
-      expect(await pref.read(1), MilestoneLevel.curriculum);
+      expect(await pref.read(profileC), MilestoneLevel.curriculum);
       expect(
-        await pref.read(2),
+        await pref.read(profileD),
         MilestoneLevel.aggregate,
-        reason: 'profile 2 must not read back profile 1\'s value',
+        reason: 'profile D must not read back profile C\'s value',
       );
       expect(
-        await pref.read(3),
+        await pref.read(profileE),
         MilestoneLevel.unit,
         reason: 'a never-written profile still defaults to unit',
       );
@@ -96,18 +102,21 @@ void main() {
         addTearDown(pref.dispose);
 
         final seen = <MilestoneLevel>[];
-        final sub = pref.observe(9).listen(seen.add);
+        final sub = pref.observe(profileD).listen(seen.add);
         addTearDown(sub.cancel);
 
-        await pref.write(9, MilestoneLevel.aggregate);
-        await pref.write(8, MilestoneLevel.curriculum); // different profile
-        await pref.write(9, MilestoneLevel.curriculum);
+        await pref.write(profileD, MilestoneLevel.aggregate);
+        await pref.write(
+          profileE,
+          MilestoneLevel.curriculum,
+        ); // different profile
+        await pref.write(profileD, MilestoneLevel.curriculum);
         await Future<void>.delayed(Duration.zero);
 
         expect(seen, [
           MilestoneLevel.aggregate,
           MilestoneLevel.curriculum,
-        ], reason: 'only writes for profile 9 reach the profile-9 observer');
+        ], reason: 'only writes for profile D reach the profile-D observer');
       },
     );
   });
