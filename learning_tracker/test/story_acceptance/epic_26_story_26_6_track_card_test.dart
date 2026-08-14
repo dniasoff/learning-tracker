@@ -19,21 +19,19 @@ import 'package:test/test.dart';
 /// scheduler_providers_test.dart, trimmed to the fields
 /// firstTaskInTrackForCategory actually branches on.
 DailyTask _task({
-  int trackId = 1,
+  CurriculumId curriculum = CurriculumId.mishnayos,
   String ref = 'Mishnah_Berakhot_1.1',
   DailyTaskPriority priority = DailyTaskPriority.newLearning,
   bool isOverdue = false,
 }) {
   return DailyTask(
-    curriculumId: CurriculumId.mishnayos,
+    curriculumId: curriculum,
     contentItemSefariaRef: ref,
     stageOrder: 1,
-    stageDefinitionId: 1,
     priority: priority,
     isOverdue: isOverdue,
     reason: 'test reason',
     stageName: 'Learn',
-    trackId: trackId,
     trackLabel: 'personal',
   );
 }
@@ -75,17 +73,15 @@ void main() {
         final container = _withTasks([
           _task(
             ref: 'other_track_task',
-            trackId: 99,
+            curriculum: CurriculumId.bavli,
             priority: DailyTaskPriority.newLearning,
           ),
           _task(
             ref: 'today_task',
-            trackId: 1,
             priority: DailyTaskPriority.todayProgram,
           ),
           _task(
             ref: 'chazara_task',
-            trackId: 1,
             priority: DailyTaskPriority.scheduledChazara,
           ),
         ]);
@@ -93,7 +89,7 @@ void main() {
 
         final task = await container.read(
           firstTaskInTrackForCategoryProvider(
-            trackId: 1,
+            curriculumId: CurriculumId.mishnayos,
             category: TrackTaskCategory.dueToday,
           ).future,
         );
@@ -102,9 +98,9 @@ void main() {
           task?.contentItemSefariaRef,
           'today_task',
           reason:
-              'must select the dueToday-bucket task for trackId 1, '
-              'ignoring the review-bucket task on the same track and the '
-              'task belonging to a different track',
+          'must select the dueToday-bucket task for the mishnayos curriculum, '
+              'ignoring the review-bucket task on the same curriculum and the '
+              'task belonging to a different curriculum',
         );
       });
 
@@ -113,13 +109,13 @@ void main() {
         'tasks (provider genuinely evaluates the bucket, not a stub)',
         () async {
           final container = _withTasks([
-            _task(trackId: 1, priority: DailyTaskPriority.newLearning),
+            _task(priority: DailyTaskPriority.newLearning),
           ]);
           addTearDown(container.dispose);
 
           final task = await container.read(
             firstTaskInTrackForCategoryProvider(
-              trackId: 1,
+              curriculumId: CurriculumId.mishnayos,
               category: TrackTaskCategory.review,
             ).future,
           );

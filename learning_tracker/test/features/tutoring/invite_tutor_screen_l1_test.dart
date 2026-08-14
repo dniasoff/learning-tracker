@@ -22,9 +22,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
-import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
+import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/tutoring/domain/use_cases/tutor_invite_use_cases.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/manage_tutors_providers.dart';
@@ -45,36 +46,34 @@ class _MockInviteTutorUseCase extends Mock implements InviteTutorUseCase {}
 /// lets tests reach the use-case call without a real Firebase session.
 const _cloudBornAuthState = AuthState.signedIn(
   user: AuthUser(
-    profileId: 1,
+    uid: 'cloud-account-1',
     email: 'cloud@test.com',
     displayName: 'Cloud User',
     firebaseUid: 'uid-test',
   ),
-  tier: Tier.cloudBorn,
+  tier: Tier.cloud,
 );
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const _childProfileId = 'ulid-42';
 
-ProfileModel _profile({
+LearnerProfileEntity _profile({
   required int id,
   required String name,
   required String mode,
-}) => ProfileModel(
-  id: id,
-  ulid: 'ulid-$id',
-  accountId: 1,
+}) => LearnerProfileEntity(
+  profileId: 'ulid-$id',
   displayName: name,
-  mode: mode,
-  avatarIndex: 0,
+  mode: ProfileMode.fromStorageKey(mode),
+  avatar: '',
   createdAt: DateTime(2024),
   updatedAt: DateTime(2024),
 );
 
 Widget _buildApp({
   required InviteTutorUseCase useCase,
-  List<ProfileModel>? profiles,
+  List<LearnerProfileEntity>? profiles,
   String childProfileId = _childProfileId,
   // AUD-t-tutoring-07: parameterized so RTL (Hebrew) coverage can reuse the
   // exact same harness instead of hardcoding Locale('en') with no way to
@@ -125,7 +124,7 @@ Widget _buildApp({
 Future<void> _pumpScreen(
   WidgetTester tester, {
   required InviteTutorUseCase useCase,
-  List<ProfileModel>? profiles,
+  List<LearnerProfileEntity>? profiles,
   String childProfileId = _childProfileId,
   Locale locale = const Locale('en'),
 }) async {

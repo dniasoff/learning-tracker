@@ -23,13 +23,13 @@ import 'package:learning_tracker/features/progress/presentation/providers/lifeti
 import 'package:learning_tracker/features/progress/presentation/widgets/progress_tier_counter_row.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
-const _profileId = 1;
+const _profileId = 'profile-1';
 
 class _ProfileIdOverride extends ActiveProfileId {
   _ProfileIdOverride(this._id);
-  final int _id;
+  final String _id;
   @override
-  int build() => _id;
+  String? build() => _id;
 }
 
 /// Pin the Hebrew Terms toggle off so we can assert against the English
@@ -81,13 +81,11 @@ Widget _wrap({
           maxStreak: currentStreak,
         )),
       ),
-      journeyViewModelProvider(
-        _profileId,
-      ).overrideWith((ref) => Future.value(journey)),
-      lifetimeTotalsAcrossAllCurriculaProvider(
-        _profileId,
-      ).overrideWith((ref) => Future.value(totals)),
-      dashboardGlobalPointsProvider.overrideWith((ref) => Stream.value(points)),
+      journeyViewModelProvider.overrideWith((ref) => Future.value(journey)),
+      lifetimeTotalsAcrossAllCurriculaProvider.overrideWith(
+        (ref) => Future.value(totals),
+      ),
+      dashboardGlobalPointsProvider.overrideWith((ref) => Future.value(points)),
     ],
     child: MaterialApp(
       localizationsDelegates: const [
@@ -230,14 +228,14 @@ void main() {
             // back to zeros — it should render the "…" placeholder until
             // every dependency resolves.
             dashboardStreakProvider.overrideWith((ref) => const Stream.empty()),
-            journeyViewModelProvider(
-              _profileId,
-            ).overrideWith((ref) => Completer<JourneyViewModel>().future),
-            lifetimeTotalsAcrossAllCurriculaProvider(
-              _profileId,
-            ).overrideWith((ref) => Completer<LifetimeTotals>().future),
+            journeyViewModelProvider.overrideWith(
+              (ref) => Completer<JourneyViewModel>().future,
+            ),
+            lifetimeTotalsAcrossAllCurriculaProvider.overrideWith(
+              (ref) => Completer<LifetimeTotals>().future,
+            ),
             dashboardGlobalPointsProvider.overrideWith(
-              (ref) => Completer<int>().future.asStream(),
+              (ref) => Completer<int>().future,
             ),
           ],
           child: const MaterialApp(
@@ -294,14 +292,14 @@ void main() {
               dashboardStreakProvider.overrideWith(
                 (ref) => Stream.value((currentStreak: 7, maxStreak: 7)),
               ),
-              journeyViewModelProvider(
-                _profileId,
-              ).overrideWith((ref) => Future.value(_journey(unit: 3))),
-              lifetimeTotalsAcrossAllCurriculaProvider(
-                _profileId,
-              ).overrideWith((ref) => Completer<LifetimeTotals>().future),
+              journeyViewModelProvider.overrideWith(
+                (ref) => Future.value(_journey(unit: 3)),
+              ),
+              lifetimeTotalsAcrossAllCurriculaProvider.overrideWith(
+                (ref) => Completer<LifetimeTotals>().future,
+              ),
               dashboardGlobalPointsProvider.overrideWith(
-                (ref) => Stream.value(42),
+                (ref) => Future.value(42),
               ),
             ],
             child: const MaterialApp(

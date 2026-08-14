@@ -165,16 +165,16 @@ void main() {
     });
 
     test('AC4e: PinScope.tutor resolves correct profileId', () {
-      const scope = PinScope.tutor(42);
+      const scope = PinScope.tutor('42');
       expect(scope, isA<PinScopeTutor>());
-      expect(scope.profileId, 42);
+      expect(scope.profileId, '42');
     });
 
     test(
       'AC4f: PinScope.parent and PinScope.tutor with same ID are not equal',
       () {
-        const parent = PinScope.parent(1);
-        const tutor = PinScope.tutor(1);
+        const parent = PinScope.parent('1');
+        const tutor = PinScope.tutor('1');
         expect(parent, isNot(equals(tutor)));
       },
     );

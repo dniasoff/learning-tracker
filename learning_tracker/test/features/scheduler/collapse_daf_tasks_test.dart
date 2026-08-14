@@ -23,16 +23,18 @@ ContentItem _leaf(String ref, String l1, String l2, String l3) => ContentItem(
   isLeaf: true,
 );
 
-DailyTask _task(String ref, {int trackId = 1, int stageOrder = 1}) => DailyTask(
-  curriculumId: CurriculumId.bavli,
+DailyTask _task(
+  String ref, {
+  CurriculumId curriculum = CurriculumId.bavli,
+  int stageOrder = 1,
+}) => DailyTask(
+  curriculumId: curriculum,
   contentItemSefariaRef: ref,
   stageOrder: stageOrder,
-  stageDefinitionId: 1,
   priority: DailyTaskPriority.todayProgram,
   isOverdue: false,
   reason: '',
   stageName: 'Learn',
-  trackId: trackId,
   trackLabel: 'Bavli',
 );
 
@@ -56,7 +58,7 @@ void main() {
       ];
       final out = collapseDafTasks(
         tasks,
-        coarsePacedTrackIds: {1},
+        coarsePacedTrackIds: {CurriculumId.bavli},
         index: index,
       );
       expect(out.map((t) => t.contentItemSefariaRef), [
@@ -69,7 +71,7 @@ void main() {
       final tasks = [_task('Berakhot 2a'), _task('Berakhot 2b')];
       final out = collapseDafTasks(
         tasks,
-        coarsePacedTrackIds: <int>{}, // no coarse tracks
+        coarsePacedTrackIds: <CurriculumId>{}, // no coarse tracks
         index: index,
       );
       expect(out.length, 2);
@@ -84,27 +86,30 @@ void main() {
       ];
       final out = collapseDafTasks(
         tasks,
-        coarsePacedTrackIds: {1},
+        coarsePacedTrackIds: {CurriculumId.bavli},
         index: index,
       );
       expect(out.length, 2); // one Learn card + one Chazara card
       expect(out.map((t) => t.stageOrder), [1, 2]);
     });
 
-    test('groups per-track (same daf number on two tracks stays separate)', () {
+    test('groups per curriculum (same daf number stays separate)', () {
       final tasks = [
-        _task('Berakhot 2a', trackId: 1),
-        _task('Berakhot 2b', trackId: 1),
-        _task('Berakhot 2a', trackId: 2),
-        _task('Berakhot 2b', trackId: 2),
+        _task('Berakhot 2a'),
+        _task('Berakhot 2b'),
+        _task('Berakhot 2a', curriculum: CurriculumId.mishnayos),
+        _task('Berakhot 2b', curriculum: CurriculumId.mishnayos),
       ];
       final out = collapseDafTasks(
         tasks,
-        coarsePacedTrackIds: {1, 2},
+        coarsePacedTrackIds: {CurriculumId.bavli, CurriculumId.mishnayos},
         index: index,
       );
       expect(out.length, 2);
-      expect(out.map((t) => t.trackId), [1, 2]);
+      expect(out.map((t) => t.curriculumId), [
+        CurriculumId.bavli,
+        CurriculumId.mishnayos,
+      ]);
     });
 
     // AUD-core-content-06: collapseDafTasks used a bare ContentIndex.lookup
@@ -121,7 +126,7 @@ void main() {
       ];
       final out = collapseDafTasks(
         tasks,
-        coarsePacedTrackIds: {1},
+        coarsePacedTrackIds: {CurriculumId.bavli},
         index: index,
       );
       expect(out.map((t) => t.contentItemSefariaRef), ['Berakhot  2a']);

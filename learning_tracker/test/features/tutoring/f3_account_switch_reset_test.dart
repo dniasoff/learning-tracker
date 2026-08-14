@@ -22,6 +22,7 @@ import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
@@ -105,7 +106,7 @@ void main() {
           canViewProgress: true,
           canViewContent: true,
         ),
-        tutorOwnProfileId: 42,
+        tutorOwnProfileId: 'tutor-profile-42',
       );
 
       container
@@ -136,24 +137,17 @@ void main() {
       final selectionNotifier = container.read(
         activeTutoredProfileSelectionProvider.notifier,
       );
-      final resolvedNotifier = container.read(
-        resolvedTutoredLocalProfileIdProvider.notifier,
-      );
-
-      // Enter a tutored session and set a resolved mirror id.
+      // Enter a tutored session. The Firestore migration removed the former
+      // local mirror-id provider; active profile identity is now the selected
+      // Firestore ULID exposed by activeProfileIdProvider.
       selectionNotifier.enter(selection);
-      resolvedNotifier.resolve(99);
 
       expect(
         container.read(activeTutoredProfileSelectionProvider),
         isNotNull,
         reason: 'selection must be non-null after enter()',
       );
-      expect(
-        container.read(resolvedTutoredLocalProfileIdProvider),
-        99,
-        reason: 'resolved id must be set after resolve()',
-      );
+      expect(container.read(activeProfileIdProvider), 'profile-456');
 
       // exit() simulates what AppShell's ref.listen calls on uid change.
       selectionNotifier.exit();
@@ -164,9 +158,9 @@ void main() {
         reason: 'exit() must clear the selection (account-switch reset)',
       );
       expect(
-        container.read(resolvedTutoredLocalProfileIdProvider),
+        container.read(activeProfileIdProvider),
         isNull,
-        reason: 'exit() must also clear the resolved mirror id',
+        reason: 'exit() must clear the active Firestore profile identity',
       );
     });
 
@@ -179,11 +173,7 @@ void main() {
         isNull,
         reason: 'initial state must be null — no tutored context on fresh boot',
       );
-      expect(
-        container.read(resolvedTutoredLocalProfileIdProvider),
-        isNull,
-        reason: 'initial resolved id must be null on fresh boot',
-      );
+      expect(container.read(activeProfileIdProvider), isNull);
     });
   });
 }

@@ -50,15 +50,18 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
-import 'package:learning_tracker/core/database/daos/completion_dao.dart'
-    show Completion;
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/learning/completion_constants.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
+import 'package:learning_tracker/core/providers/active_account_id_provider.dart';
+import 'package:learning_tracker/data/firestore/active_account_providers.dart'
+    show ActiveAccountId;
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_entity.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/bulk_prior_completion_service.dart';
@@ -126,13 +129,13 @@ Widget _onboardingRig({
   final state =
       authState ??
       const AuthState.signedIn(
-        user: AuthUser(profileId: 1, email: 't@t.com', displayName: 'T'),
-        tier: Tier.localBorn,
+        user: AuthUser(uid: 'account-1', email: 't@t.com', displayName: 'T'),
+        tier: Tier.local,
       );
 
   final repo = profileRepo ?? _MockProfileRepository();
   // Default: empty profiles list
-  when(() => repo.getProfilesByAccount(any())).thenAnswer((_) async => []);
+  when(() => repo.getProfiles()).thenAnswer((_) async => []);
 
   return ProviderScope(
     overrides: [
@@ -140,7 +143,7 @@ Widget _onboardingRig({
       profileRepositoryProvider.overrideWithValue(repo),
       // selectedProfileId has no side-effects in these tests
       selectedProfileIdProvider.overrideWith(() => _NullSelectedProfileId()),
-      currentAccountIdProvider.overrideWithValue(1),
+      activeAccountIdProvider.overrideWith(() => _FixedActiveAccountId()),
     ],
     child: MaterialApp(
       locale: locale,
@@ -169,7 +172,7 @@ Widget _bulkMarkRig({
   List<ContentItem> allItems = const [],
 
   /// Only applied when completionRepo is null (auto-created).
-  List<Completion> existingCompletions = const [],
+  List<CompletionEntity> existingCompletions = const [],
   Locale locale = const Locale('en'),
 }) {
   final cRepo = completionRepo ?? _MockCompletionRepository();
@@ -206,7 +209,7 @@ Widget _bulkMarkRig({
       contentSearchProvider.overrideWith((ref, args) => Future.value([])),
       completionRepositoryProvider.overrideWithValue(cRepo),
       bulkPriorCompletionServiceProvider.overrideWithValue(svc),
-      activeProfileIdProvider.overrideWithValue(1),
+      activeProfileIdProvider.overrideWithValue('profile-1'),
     ],
     child: MaterialApp(
       locale: locale,
@@ -234,7 +237,12 @@ class _FakeAuthStateNotifier extends AuthStateNotifier {
 
 class _NullSelectedProfileId extends SelectedProfileId {
   @override
-  int? build() => null;
+  String? build() => null;
+}
+
+class _FixedActiveAccountId extends ActiveAccountId {
+  @override
+  String? build() => 'account-1';
 }
 
 // ── Tear-down helper ──────────────────────────────────────────────────────────
@@ -670,14 +678,12 @@ void main() {
       // leafA has a sentinel-dated completion → pre-ticked
       when(() => completionRepo.getCompletionsByCurriculum(any())).thenAnswer(
         (_) async => [
-          Completion(
-            id: 1,
-            profileId: 1,
-            curriculumId: 'mishnayos',
+          CompletionEntity(
+            curriculumId: CurriculumId.mishnayos,
             sefariaRef: _leafA.sefariaRef,
             stageId: 1,
             trackType: 'daily',
-            trackId: 1,
+            source: CompletionSource.bulkInTrack,
             completedAt: kBulkPriorSentinelDate, // sentinel 2000-01-01 UTC
             points: 0,
           ),
@@ -767,14 +773,12 @@ void main() {
       // Pre-tick leafA via sentinel completion so Next is enabled immediately
       when(() => completionRepo.getCompletionsByCurriculum(any())).thenAnswer(
         (_) async => [
-          Completion(
-            id: 1,
-            profileId: 1,
-            curriculumId: 'mishnayos',
+          CompletionEntity(
+            curriculumId: CurriculumId.mishnayos,
             sefariaRef: _leafA.sefariaRef,
             stageId: 1,
             trackType: 'daily',
-            trackId: 1,
+            source: CompletionSource.bulkInTrack,
             completedAt: kBulkPriorSentinelDate,
             points: 0,
           ),
@@ -872,14 +876,12 @@ void main() {
 
       when(() => completionRepo.getCompletionsByCurriculum(any())).thenAnswer(
         (_) async => [
-          Completion(
-            id: 1,
-            profileId: 1,
-            curriculumId: 'mishnayos',
+          CompletionEntity(
+            curriculumId: CurriculumId.mishnayos,
             sefariaRef: _leafA.sefariaRef,
             stageId: 1,
             trackType: 'daily',
-            trackId: 1,
+            source: CompletionSource.bulkInTrack,
             completedAt: kBulkPriorSentinelDate,
             points: 0,
           ),
@@ -988,7 +990,7 @@ void main() {
             contentSearchProvider.overrideWith((ref, args) => Future.value([])),
             completionRepositoryProvider.overrideWithValue(completionRepo),
             bulkPriorCompletionServiceProvider.overrideWithValue(service),
-            activeProfileIdProvider.overrideWithValue(1),
+            activeProfileIdProvider.overrideWithValue('profile-1'),
           ],
           child: MaterialApp(
             locale: const Locale('en'),
@@ -1138,14 +1140,12 @@ void main() {
       // Pre-tick the only leaf (sentinel completion)
       when(() => completionRepo.getCompletionsByCurriculum(any())).thenAnswer(
         (_) async => [
-          Completion(
-            id: 1,
-            profileId: 1,
-            curriculumId: 'mishnayos',
+          CompletionEntity(
+            curriculumId: CurriculumId.mishnayos,
             sefariaRef: singleLeaf.sefariaRef,
             stageId: 1,
             trackType: 'daily',
-            trackId: 1,
+            source: CompletionSource.bulkInTrack,
             completedAt: kBulkPriorSentinelDate,
             points: 0,
           ),
@@ -1207,14 +1207,12 @@ void main() {
 
       when(() => completionRepo.getCompletionsByCurriculum(any())).thenAnswer(
         (_) async => [
-          Completion(
-            id: 1,
-            profileId: 1,
-            curriculumId: 'mishnayos',
+          CompletionEntity(
+            curriculumId: CurriculumId.mishnayos,
             sefariaRef: _leafA.sefariaRef,
             stageId: 1,
             trackType: 'daily',
-            trackId: 1,
+            source: CompletionSource.bulkInTrack,
             completedAt: kBulkPriorSentinelDate,
             points: 0,
           ),

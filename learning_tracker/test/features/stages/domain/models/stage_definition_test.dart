@@ -6,7 +6,6 @@ void main() {
   const mishnayos = CurriculumId.mishnayos;
 
   const stage = StageDefinition(
-    id: 1,
     curriculumId: mishnayos,
     stageOrder: 1,
     stageName: 'Learn',
@@ -17,7 +16,6 @@ void main() {
   group('StageDefinition', () {
     test('equality — identical instances are equal', () {
       const other = StageDefinition(
-        id: 1,
         curriculumId: mishnayos,
         stageOrder: 1,
         stageName: 'Learn',
@@ -27,11 +25,10 @@ void main() {
       expect(stage, equals(other));
     });
 
-    test('equality — different id produces unequal instances', () {
+    test('equality — different stageOrder produces unequal instances', () {
       const other = StageDefinition(
-        id: 2,
         curriculumId: mishnayos,
-        stageOrder: 1,
+        stageOrder: 2,
         stageName: 'Learn',
         delayDays: 0,
         isDefault: true,
@@ -42,7 +39,7 @@ void main() {
     test('copyWith — updates stageName', () {
       final updated = stage.copyWith(stageName: 'Chazara 1');
       expect(updated.stageName, 'Chazara 1');
-      expect(updated.id, stage.id);
+      expect(updated.curriculumId, stage.curriculumId);
       expect(updated.stageOrder, stage.stageOrder);
     });
 

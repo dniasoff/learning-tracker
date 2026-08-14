@@ -46,23 +46,23 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Minimal AuthUser for test overrides.
 const _cloudUser = AuthUser(
-  profileId: 1,
+  uid: 'cloud-account-1',
   email: 'cloud@test.com',
   displayName: 'Cloud User',
   firebaseUid: 'uid-cloud',
 );
 
 const _localUser = AuthUser(
-  profileId: 2,
+  uid: 'local-account-2',
   email: 'local@test.local',
   displayName: 'Local User',
 );
 
 AuthState _cloudBornSignedIn() =>
-    const AuthState.signedIn(user: _cloudUser, tier: Tier.cloudBorn);
+    const AuthState.signedIn(user: _cloudUser, tier: Tier.cloud);
 
 AuthState _localBornSignedIn() =>
-    const AuthState.signedIn(user: _localUser, tier: Tier.localBorn);
+    const AuthState.signedIn(user: _localUser, tier: Tier.local);
 
 /// Wraps [OfflineTopBanner] in the canonical pump rig.
 Widget _buildBanner({
