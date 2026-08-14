@@ -1,7 +1,7 @@
 /// Regression test for PP-2 — editProfileFlow silently drops the selected mode.
 ///
 /// ROOT CAUSE: `editProfileFlow` in `profile_edit_delete_actions.dart` calls
-/// `repo.updateProfile(id: …, displayName: …, avatarIndex: …)` but never
+/// `repo.updateProfile(profileId: …, displayName: …, avatar: …)` but never
 /// passes the `mode` from the dialog result. The [SegmentedButton] visibly
 /// toggles `_mode` in `ProfileEditFormDialog`, but the value is discarded on
 /// Save — only name and avatar are persisted.
@@ -16,7 +16,8 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
+import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/profile_edit_delete_actions.dart';
@@ -34,28 +35,25 @@ class _MockProfileRepository extends Mock implements ProfileRepository {}
 // Helpers
 // ---------------------------------------------------------------------------
 
-ProfileModel _makeProfile({
-  int id = 1,
+LearnerProfileEntity _makeProfile({
+  String id = 'profile-1',
   String displayName = 'Alice',
-  String mode = 'adult',
-  int avatarIndex = 0,
-  int accountId = 10,
+  ProfileMode mode = ProfileMode.adult,
+  String avatar = '0',
 }) {
-  return ProfileModel(
-    id: id,
-    ulid: 'ulid-$id',
-    accountId: accountId,
+  return LearnerProfileEntity(
+    profileId: id,
     displayName: displayName,
     mode: mode,
-    avatarIndex: avatarIndex,
-    createdAt: DateTime(2024, 1, 1),
-    updatedAt: DateTime(2024, 1, 1),
+    avatar: avatar,
+    createdAt: DateTime.utc(2024, 1, 1),
+    updatedAt: DateTime.utc(2024, 1, 1),
   );
 }
 
 Widget _buildHarness({
   required ProfileRepository repo,
-  required ProfileModel profile,
+  required LearnerProfileEntity profile,
   required VoidCallback onEditPressed,
 }) {
   return pumpApp(
@@ -64,9 +62,8 @@ Widget _buildHarness({
       profileRepositoryProvider.overrideWithValue(repo),
       // Active profile + selected profile: needed by editProfileFlow invalidation.
       selectedProfileIdProvider.overrideWith(
-        () => _FixedIdNotifier(profile.id),
+        () => _FixedIdNotifier(profile.profileId),
       ),
-      currentAccountIdProvider.overrideWithValue(profile.accountId),
     ],
     child: Consumer(
       builder: (ctx, ref, _) => Scaffold(
@@ -86,9 +83,9 @@ Widget _buildHarness({
 
 class _FixedIdNotifier extends SelectedProfileId {
   _FixedIdNotifier(this._id);
-  final int _id;
+  final String _id;
   @override
-  int? build() => _id;
+  String? build() => _id;
 }
 
 void main() {
@@ -101,24 +98,22 @@ void main() {
         addTearDown(tester.view.resetPhysicalSize);
 
         final repo = _MockProfileRepository();
-        final profile = _makeProfile(mode: 'adult');
+        final profile = _makeProfile(mode: ProfileMode.adult);
 
         // Mock updateProfile to record the call — return same profile updated.
         when(
           () => repo.updateProfile(
-            id: any(named: 'id'),
+            profileId: any(named: 'profileId'),
             displayName: any(named: 'displayName'),
             mode: any(named: 'mode'),
-            avatarIndex: any(named: 'avatarIndex'),
+            avatar: any(named: 'avatar'),
           ),
-        ).thenAnswer((_) async => _makeProfile(mode: 'child'));
+        ).thenAnswer((_) async => _makeProfile(mode: ProfileMode.child));
+        when(() => repo.getProfiles()).thenAnswer((_) async => [profile]);
         when(
-          () => repo.getProfilesByAccount(any()),
-        ).thenAnswer((_) async => [profile]);
-        when(() => repo.getProfileById(any())).thenAnswer((_) async => profile);
-        when(
-          () => repo.countProfilesForAccount(any()),
-        ).thenAnswer((_) async => 1);
+          () => repo.getProfileById(any<String>()),
+        ).thenAnswer((_) async => profile);
+        when(() => repo.countProfiles()).thenAnswer((_) async => 1);
 
         await tester.pumpWidget(
           _buildHarness(repo: repo, profile: profile, onEditPressed: () {}),
@@ -148,10 +143,10 @@ void main() {
         // (or with null mode) so the database kept 'adult'.
         final captured = verify(
           () => repo.updateProfile(
-            id: 1,
+            profileId: profile.profileId,
             displayName: captureAny(named: 'displayName'),
             mode: captureAny(named: 'mode'),
-            avatarIndex: captureAny(named: 'avatarIndex'),
+            avatar: captureAny(named: 'avatar'),
           ),
         ).captured;
 
@@ -160,7 +155,7 @@ void main() {
         // With the bug it would be null or absent.
         expect(
           captured[1],
-          equals('child'),
+          equals(ProfileMode.child),
           reason:
               'updateProfile must be called with the newly-selected mode "child"; '
               'before the fix, mode was silently dropped from the call.',

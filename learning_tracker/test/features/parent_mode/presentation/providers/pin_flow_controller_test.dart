@@ -26,7 +26,7 @@ class _MockPinService extends Mock implements PinService {}
 /// Creates a container with provider overrides for PIN tests.
 ProviderContainer _makeContainer({
   required PinService pinService,
-  int? profileId = 1,
+  String? profileId = 'profile-1',
 }) {
   return ProviderContainer(
     overrides: [
@@ -40,10 +40,10 @@ ProviderContainer _makeContainer({
 
 class _FixedProfileIdNotifier extends SelectedProfileId {
   _FixedProfileIdNotifier(this._fixed);
-  final int? _fixed;
+  final String? _fixed;
 
   @override
-  int? build() => _fixed;
+  String? build() => _fixed;
 }
 
 /// Enters [pin] into [ctrl] one digit at a time.
@@ -166,7 +166,10 @@ void main() {
         );
         when(() => ps.setProfilePin(any(), any())).thenAnswer((_) async {});
 
-        final container = _makeContainer(pinService: ps, profileId: 42);
+        final container = _makeContainer(
+          pinService: ps,
+          profileId: 'profile-42',
+        );
         addTearDown(container.dispose);
         final ctrl = container.read(pinFlowControllerProvider.notifier);
         final token = Object();
@@ -216,7 +219,7 @@ void main() {
     test('initializeForMount is idempotent within one mount (late microtask '
         'does not wipe in-progress entry)', () async {
       final ps = _MockPinService();
-      final container = _makeContainer(pinService: ps, profileId: 42);
+      final container = _makeContainer(pinService: ps, profileId: 'profile-42');
       addTearDown(container.dispose);
       final ctrl = container.read(pinFlowControllerProvider.notifier);
       final token = Object();
@@ -242,7 +245,7 @@ void main() {
       when(
         () => ps.verifyProfilePin(any(), any()),
       ).thenAnswer((_) => Future.delayed(const Duration(days: 1), () => false));
-      final container = _makeContainer(pinService: ps, profileId: 42);
+      final container = _makeContainer(pinService: ps, profileId: 'profile-42');
       addTearDown(container.dispose);
       final ctrl = container.read(pinFlowControllerProvider.notifier);
 
@@ -422,7 +425,9 @@ void main() {
   group('PinFlowController — verify mode (async)', () {
     test('correct PIN → completed == true', () async {
       final ps = _MockPinService();
-      when(() => ps.verifyProfilePin(1, '1234')).thenAnswer((_) async => true);
+      when(
+        () => ps.verifyProfilePin('profile-1', '1234'),
+      ).thenAnswer((_) async => true);
 
       final container = _makeContainer(pinService: ps);
       addTearDown(container.dispose);
@@ -440,7 +445,9 @@ void main() {
 
     test('wrong PIN → errorMessage is set, digits cleared', () async {
       final ps = _MockPinService();
-      when(() => ps.verifyProfilePin(1, '0000')).thenAnswer((_) async => false);
+      when(
+        () => ps.verifyProfilePin('profile-1', '0000'),
+      ).thenAnswer((_) async => false);
 
       final container = _makeContainer(pinService: ps);
       addTearDown(container.dispose);
@@ -460,7 +467,7 @@ void main() {
     test('lockout → lockedOut == true', () async {
       final ps = _MockPinService();
       when(
-        () => ps.verifyProfilePin(1, '9999'),
+        () => ps.verifyProfilePin('profile-1', '9999'),
       ).thenThrow(const PinLockoutException(5));
 
       final container = _makeContainer(pinService: ps);
@@ -487,7 +494,9 @@ void main() {
   group('PinFlowController — digits cleared on completion (linger fix)', () {
     test('setup: digits are empty after matching confirm PIN saves', () async {
       final ps = _MockPinService();
-      when(() => ps.setProfilePin(1, '1234')).thenAnswer((_) async {});
+      when(
+        () => ps.setProfilePin('profile-1', '1234'),
+      ).thenAnswer((_) async {});
 
       final container = _makeContainer(pinService: ps);
       addTearDown(container.dispose);
@@ -517,8 +526,12 @@ void main() {
 
     test('change: digits are empty after confirm step saves', () async {
       final ps = _MockPinService();
-      when(() => ps.verifyProfilePin(1, '0000')).thenAnswer((_) async => true);
-      when(() => ps.setProfilePin(1, '5678')).thenAnswer((_) async {});
+      when(
+        () => ps.verifyProfilePin('profile-1', '0000'),
+      ).thenAnswer((_) async => true);
+      when(
+        () => ps.setProfilePin('profile-1', '5678'),
+      ).thenAnswer((_) async {});
 
       final container = _makeContainer(pinService: ps);
       addTearDown(container.dispose);
@@ -556,7 +569,9 @@ void main() {
 
     test('verify: digits are empty after correct PIN', () async {
       final ps = _MockPinService();
-      when(() => ps.verifyProfilePin(1, '9999')).thenAnswer((_) async => true);
+      when(
+        () => ps.verifyProfilePin('profile-1', '9999'),
+      ).thenAnswer((_) async => true);
 
       final container = _makeContainer(pinService: ps);
       addTearDown(container.dispose);
@@ -603,7 +618,7 @@ void main() {
         final ps = _MockPinService();
         final completer = Completer<bool>();
         when(
-          () => ps.verifyProfilePin(1, '1234'),
+          () => ps.verifyProfilePin('profile-1', '1234'),
         ).thenAnswer((_) => completer.future);
 
         final container = _makeContainer(pinService: ps);
@@ -646,7 +661,7 @@ void main() {
         final ps = _MockPinService();
         final completer = Completer<void>();
         when(
-          () => ps.setProfilePin(1, '1234'),
+          () => ps.setProfilePin('profile-1', '1234'),
         ).thenAnswer((_) => completer.future);
 
         final container = _makeContainer(pinService: ps);
@@ -687,7 +702,7 @@ void main() {
         final ps = _MockPinService();
         final completer = Completer<bool>();
         when(
-          () => ps.verifyProfilePin(1, '0000'),
+          () => ps.verifyProfilePin('profile-1', '0000'),
         ).thenAnswer((_) => completer.future);
 
         final container = _makeContainer(pinService: ps);
@@ -716,10 +731,12 @@ void main() {
     test('change mode confirm step: container disposed mid-setProfilePin await '
         '(no try/catch prior to the fix)', () async {
       final ps = _MockPinService();
-      when(() => ps.verifyProfilePin(1, '0000')).thenAnswer((_) async => true);
+      when(
+        () => ps.verifyProfilePin('profile-1', '0000'),
+      ).thenAnswer((_) async => true);
       final completer = Completer<void>();
       when(
-        () => ps.setProfilePin(1, '5678'),
+        () => ps.setProfilePin('profile-1', '5678'),
       ).thenAnswer((_) => completer.future);
 
       final container = _makeContainer(pinService: ps);
@@ -832,9 +849,11 @@ void main() {
     test('a rapid extra tap immediately after the 4th enterNew digit is '
         'swallowed, not appended as digit 1 of the confirm buffer', () async {
       final ps = _MockPinService();
-      when(() => ps.verifyProfilePin(7, '0000')).thenAnswer((_) async => true);
+      when(
+        () => ps.verifyProfilePin('profile-7', '0000'),
+      ).thenAnswer((_) async => true);
 
-      final container = _makeContainer(pinService: ps, profileId: 7);
+      final container = _makeContainer(pinService: ps, profileId: 'profile-7');
       addTearDown(container.dispose);
       final ctrl = container.read(pinFlowControllerProvider.notifier);
       ctrl.reset(PinFlowMode.change);

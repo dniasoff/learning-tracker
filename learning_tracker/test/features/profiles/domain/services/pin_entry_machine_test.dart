@@ -22,7 +22,7 @@ class _MockPinService extends Mock implements PinService {}
 /// assertions that don't want to re-derive intermediate transitions.
 ({PinEntryMachine machine, List<PinFlowState> states}) _build({
   required PinService pinService,
-  int? profileId = 1,
+  String? profileId = 'profile-1',
   PinFlowMode initialMode = PinFlowMode.verify,
   bool Function() isActive = _alwaysTrue,
 }) {
@@ -120,7 +120,7 @@ void main() {
           final ps = _MockPinService();
           final b = _build(
             pinService: ps,
-            profileId: 1,
+            profileId: 'profile-1',
             initialMode: PinFlowMode.setup,
           );
 
@@ -149,10 +149,12 @@ void main() {
     test('a rapid extra digit right after the 4th enterNew digit is '
         'swallowed, exactly like setup mode', () async {
       final ps = _MockPinService();
-      when(() => ps.verifyProfilePin(1, '0000')).thenAnswer((_) async => true);
+      when(
+        () => ps.verifyProfilePin('profile-1', '0000'),
+      ).thenAnswer((_) async => true);
       final b = _build(
         pinService: ps,
-        profileId: 1,
+        profileId: 'profile-1',
         initialMode: PinFlowMode.change,
       );
 
@@ -183,7 +185,9 @@ void main() {
   group('PinEntryMachine — verify mode', () {
     test('correct PIN completes the flow', () async {
       final ps = _MockPinService();
-      when(() => ps.verifyProfilePin(1, '1234')).thenAnswer((_) async => true);
+      when(
+        () => ps.verifyProfilePin('profile-1', '1234'),
+      ).thenAnswer((_) async => true);
       final b = _build(pinService: ps, initialMode: PinFlowMode.verify);
 
       _enterDigits(b.machine, '1234');
@@ -195,7 +199,9 @@ void main() {
 
     test('wrong PIN sets incorrectPin error and clears digits', () async {
       final ps = _MockPinService();
-      when(() => ps.verifyProfilePin(1, '0000')).thenAnswer((_) async => false);
+      when(
+        () => ps.verifyProfilePin('profile-1', '0000'),
+      ).thenAnswer((_) async => false);
       final b = _build(pinService: ps, initialMode: PinFlowMode.verify);
 
       _enterDigits(b.machine, '0000');
@@ -209,7 +215,7 @@ void main() {
     test('lockout sets lockedOut + lockoutMinutes', () async {
       final ps = _MockPinService();
       when(
-        () => ps.verifyProfilePin(1, '9999'),
+        () => ps.verifyProfilePin('profile-1', '9999'),
       ).thenThrow(const PinLockoutException(5));
       final b = _build(pinService: ps, initialMode: PinFlowMode.verify);
 
@@ -250,7 +256,7 @@ void main() {
         'busy and surfaces PinFlowError.unexpected', () async {
       final ps = _MockPinService();
       when(
-        () => ps.verifyProfilePin(1, '1234'),
+        () => ps.verifyProfilePin('profile-1', '1234'),
       ).thenThrow(StateError('bcrypt hashing error'));
       final b = _build(pinService: ps, initialMode: PinFlowMode.verify);
 
@@ -271,7 +277,7 @@ void main() {
       () async {
         final ps = _MockPinService();
         when(
-          () => ps.verifyProfilePin(1, '0000'),
+          () => ps.verifyProfilePin('profile-1', '0000'),
         ).thenThrow(StateError('secure-storage read failure'));
         final b = _build(pinService: ps, initialMode: PinFlowMode.change);
 
@@ -291,7 +297,7 @@ void main() {
         'clears busy and surfaces PinFlowError.unexpected', () async {
       final ps = _MockPinService();
       when(
-        () => ps.setProfilePin(1, '1234'),
+        () => ps.setProfilePin('profile-1', '1234'),
       ).thenThrow(StateError('disk full'));
       final b = _build(pinService: ps, initialMode: PinFlowMode.setup);
 
@@ -313,9 +319,11 @@ void main() {
     test('change mode confirm+save: a generic StateError from setProfilePin '
         'clears busy and surfaces PinFlowError.unexpected', () async {
       final ps = _MockPinService();
-      when(() => ps.verifyProfilePin(1, '0000')).thenAnswer((_) async => true);
       when(
-        () => ps.setProfilePin(1, '1234'),
+        () => ps.verifyProfilePin('profile-1', '0000'),
+      ).thenAnswer((_) async => true);
+      when(
+        () => ps.setProfilePin('profile-1', '1234'),
       ).thenThrow(StateError('disk full'));
       final b = _build(pinService: ps, initialMode: PinFlowMode.change);
 
@@ -347,7 +355,7 @@ void main() {
         final ps = _MockPinService();
         final completer = Completer<bool>();
         when(
-          () => ps.verifyProfilePin(1, '1234'),
+          () => ps.verifyProfilePin('profile-1', '1234'),
         ).thenAnswer((_) => completer.future);
 
         var active = true;

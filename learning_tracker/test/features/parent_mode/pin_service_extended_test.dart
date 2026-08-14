@@ -69,7 +69,7 @@ void main() {
   // ── setProfilePin / verifyProfilePin ──────────────────────────────────────
 
   group('PinService profile PIN', () {
-    const profileId = 5;
+    const profileId = 'profile-5';
 
     test('setProfilePin rejects non-4-digit PINs', () async {
       // AUD-onboarding-16: PinService now throws a typed
@@ -124,13 +124,13 @@ void main() {
     });
 
     test('profile PINs for different profiles are independent', () async {
-      await service.setProfilePin(1, '1111');
-      await service.setProfilePin(2, '2222');
+      await service.setProfilePin('profile-1', '1111');
+      await service.setProfilePin('profile-2', '2222');
 
-      expect(await service.verifyProfilePin(1, '2222'), isFalse);
-      expect(await service.verifyProfilePin(2, '1111'), isFalse);
-      expect(await service.verifyProfilePin(1, '1111'), isTrue);
-      expect(await service.verifyProfilePin(2, '2222'), isTrue);
+      expect(await service.verifyProfilePin('profile-1', '2222'), isFalse);
+      expect(await service.verifyProfilePin('profile-2', '1111'), isFalse);
+      expect(await service.verifyProfilePin('profile-1', '1111'), isTrue);
+      expect(await service.verifyProfilePin('profile-2', '2222'), isTrue);
     });
 
     test('setProfilePin resets lockout state', () async {
@@ -206,7 +206,7 @@ void main() {
   // ── setTutorPin / verifyTutorPin ──────────────────────────────────────────
 
   group('PinService tutor PIN', () {
-    const profileId = 7;
+    const profileId = 'profile-7';
 
     test('setTutorPin validates 4-digit numeric PIN', () async {
       // AUD-onboarding-16: PinService now throws a typed
