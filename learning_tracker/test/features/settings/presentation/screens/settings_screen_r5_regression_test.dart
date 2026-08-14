@@ -23,12 +23,12 @@ library;
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
     show authRepositoryProvider;
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
-import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
@@ -164,7 +164,7 @@ Widget _buildSettings({
     overrides: [
       authRepositoryProvider.overrideWithValue(auth),
       authStateProvider.overrideWithValue(
-        AuthState.signedIn(
+        const AuthState.signedIn(
           user: AuthUser(
             uid: _uid,
             email: 'test@test.com',
@@ -245,9 +245,6 @@ void main() {
     testWidgets(
       'Hebrew locale: shows Hebrew section header, not hardcoded English',
       (tester) async {
-        final db = await _dbWithProfile(mode: 'adult');
-        addTearDown(db.close);
-
         await tester.pumpWidget(
           _buildSettings(
                         auth: auth,
@@ -286,9 +283,6 @@ void main() {
     testWidgets(
       'English locale: section header rendered via l10n (no regression)',
       (tester) async {
-        final db = await _dbWithProfile(mode: 'adult');
-        addTearDown(db.close);
-
         await tester.pumpWidget(
           _buildSettings(
                         auth: auth,
@@ -315,9 +309,6 @@ void main() {
     testWidgets(
       'Hebrew locale + pending grant: shows Hebrew pending status, not English',
       (tester) async {
-        final db = await _dbWithProfile(mode: 'adult');
-        addTearDown(db.close);
-
         await tester.pumpWidget(
           _buildSettings(
                         auth: auth,
@@ -355,9 +346,6 @@ void main() {
     testWidgets(
       'Hebrew locale + active grant: shows Hebrew tutoring status, not English',
       (tester) async {
-        final db = await _dbWithProfile(mode: 'adult');
-        addTearDown(db.close);
-
         await tester.pumpWidget(
           _buildSettings(
                         auth: auth,
@@ -397,9 +385,6 @@ void main() {
     testWidgets(
       'Hebrew locale + pending grant: Accept button shows Hebrew label',
       (tester) async {
-        final db = await _dbWithProfile(mode: 'adult');
-        addTearDown(db.close);
-
         await tester.pumpWidget(
           _buildSettings(
                         auth: auth,
@@ -441,9 +426,6 @@ void main() {
     testWidgets(
       'child profile (no parent-mode auth): Parent PIN tile is hidden',
       (tester) async {
-        final db = await _dbWithProfile(mode: 'child');
-        addTearDown(db.close);
-
         await tester.pumpWidget(
           _buildSettings(
                         auth: auth,
@@ -479,9 +461,6 @@ void main() {
     testWidgets(
       'child profile (parent-mode authenticated): Parent PIN tile is visible',
       (tester) async {
-        final db = await _dbWithProfile(mode: 'child');
-        addTearDown(db.close);
-
         await tester.pumpWidget(
           _buildSettings(
                         auth: auth,
@@ -525,9 +504,6 @@ void main() {
     testWidgets(
       'adult profile: Parental Controls section (including PIN tile) is absent',
       (tester) async {
-        final db = await _dbWithProfile(mode: 'adult');
-        addTearDown(db.close);
-
         await tester.pumpWidget(
           _buildSettings(
                         auth: auth,

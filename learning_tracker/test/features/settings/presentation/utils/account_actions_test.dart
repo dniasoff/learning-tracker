@@ -53,10 +53,8 @@ import 'package:learning_tracker/app/router/router_provider.dart';
 import 'package:learning_tracker/core/auth/firebase_auth_gateway_impl.dart'
     show NotAuthenticatedException;
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/navigation/guards/pin_guard.dart';
 import 'package:learning_tracker/core/network/connectivity_gateway.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/network_providers.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/data/firestore/active_account_providers.dart';
@@ -68,8 +66,6 @@ import 'package:learning_tracker/features/account/presentation/providers/auth_pr
     show authRepositoryProvider;
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 // ignore_for_file: directives_ordering
-import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart'
-    show currentAccountIdProvider;
 import 'package:learning_tracker/features/settings/presentation/providers/account_management_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/utils/account_actions.dart';
 import 'package:mocktail/mocktail.dart';
@@ -177,7 +173,6 @@ Widget _buildApp({
   required _MockAccountManagementService service,
   required _MockConnectivityGateway connectivity,
   required DeviceRegistryDatabase registry,
-  required UserDatabase userDb,
   List<Override> extra = const [],
   Locale locale = const Locale('en'),
 }) {
@@ -188,9 +183,7 @@ Widget _buildApp({
       authRepositoryProvider.overrideWithValue(authRepo),
       accountManagementServiceProvider.overrideWithValue(service),
       connectivityServiceProvider.overrideWithValue(connectivity),
-      userDatabaseProvider.overrideWithValue(userDb),
       deviceRegistryProvider.overrideWithValue(registry),
-      currentAccountIdProvider.overrideWith((ref) => 1),
       authStateProvider.overrideWith(() => _StubAuthStateNotifier()),
       ...extra,
     ],
@@ -206,7 +199,6 @@ void main() {
   late _MockAccountManagementService service;
   late _MockConnectivityGateway connectivity;
   late DeviceRegistryDatabase registry;
-  late UserDatabase userDb;
 
   setUpAll(() {
     registerFallbackValue(_FakePageRouteInfo());
@@ -219,7 +211,6 @@ void main() {
     service = _MockAccountManagementService();
     connectivity = _MockConnectivityGateway();
     registry = DeviceRegistryDatabase(NativeDatabase.memory());
-    userDb = UserDatabase(NativeDatabase.memory());
 
     when(
       () => router.replaceAll(any<List<PageRouteInfo>>()),
@@ -235,7 +226,6 @@ void main() {
 
   tearDown(() async {
     await registry.close();
-    await userDb.close();
   });
 
   // ── showSignOutConfirmation — Dialog content ─────────────────────────────────
@@ -248,8 +238,7 @@ void main() {
         authRepo: authRepo,
         service: service,
         connectivity: connectivity,
-        registry: registry,
-        userDb: userDb,
+       registry: registry,
       ),
     );
     await tester.pump();
@@ -273,8 +262,7 @@ void main() {
         authRepo: authRepo,
         service: service,
         connectivity: connectivity,
-        registry: registry,
-        userDb: userDb,
+       registry: registry,
       ),
     );
     await tester.pump();
@@ -300,8 +288,7 @@ void main() {
         authRepo: authRepo,
         service: service,
         connectivity: connectivity,
-        registry: registry,
-        userDb: userDb,
+       registry: registry,
       ),
     );
     await tester.pump();
@@ -322,8 +309,7 @@ void main() {
         authRepo: authRepo,
         service: service,
         connectivity: connectivity,
-        registry: registry,
-        userDb: userDb,
+       registry: registry,
       ),
     );
     await tester.pump();
@@ -348,8 +334,7 @@ void main() {
           authRepo: authRepo,
           service: service,
           connectivity: connectivity,
-          registry: registry,
-          userDb: userDb,
+       registry: registry,
         ),
       );
       await tester.pump();
@@ -380,8 +365,7 @@ void main() {
           authRepo: authRepo,
           service: service,
           connectivity: connectivity,
-          registry: registry,
-          userDb: userDb,
+       registry: registry,
         ),
       );
       await tester.pump();
@@ -412,8 +396,7 @@ void main() {
           authRepo: authRepo,
           service: service,
           connectivity: connectivity,
-          registry: registry,
-          userDb: userDb,
+       registry: registry,
         ),
       );
       await tester.pump();
@@ -446,8 +429,7 @@ void main() {
         authRepo: authRepo,
         service: service,
         connectivity: connectivity,
-        registry: registry,
-        userDb: userDb,
+       registry: registry,
       ),
     );
     await tester.pump();
@@ -480,8 +462,7 @@ void main() {
           authRepo: authRepo,
           service: service,
           connectivity: connectivity,
-          registry: registry,
-          userDb: userDb,
+       registry: registry,
         ),
       );
       await tester.pump();
@@ -514,8 +495,7 @@ void main() {
         authRepo: authRepo,
         service: service,
         connectivity: connectivity,
-        registry: registry,
-        userDb: userDb,
+       registry: registry,
         locale: const Locale('he'),
       ),
     );
@@ -541,8 +521,7 @@ void main() {
         authRepo: authRepo,
         service: service,
         connectivity: connectivity,
-        registry: registry,
-        userDb: userDb,
+       registry: registry,
       ),
     );
     await tester.pump();
@@ -571,8 +550,7 @@ void main() {
         authRepo: authRepo,
         service: service,
         connectivity: connectivity,
-        registry: registry,
-        userDb: userDb,
+       registry: registry,
       ),
     );
     await tester.pump();
@@ -602,8 +580,7 @@ void main() {
           authRepo: authRepo,
           service: service,
           connectivity: connectivity,
-          registry: registry,
-          userDb: userDb,
+         registry: registry,
         ),
       );
       await tester.pump();
@@ -631,8 +608,7 @@ void main() {
           authRepo: authRepo,
           service: service,
           connectivity: connectivity,
-          registry: registry,
-          userDb: userDb,
+         registry: registry,
         ),
       );
       await tester.pump();
@@ -667,8 +643,7 @@ void main() {
         authRepo: authRepo,
         service: service,
         connectivity: connectivity,
-        registry: registry,
-        userDb: userDb,
+         registry: registry,
       ),
     );
     await tester.pump();
@@ -703,8 +678,7 @@ void main() {
         authRepo: authRepo,
         service: service,
         connectivity: connectivity,
-        registry: registry,
-        userDb: userDb,
+         registry: registry,
       ),
     );
     await tester.pump();
@@ -740,8 +714,7 @@ void main() {
         authRepo: authRepo,
         service: service,
         connectivity: connectivity,
-        registry: registry,
-        userDb: userDb,
+         registry: registry,
       ),
     );
     await tester.pump();
@@ -780,8 +753,7 @@ void main() {
           authRepo: authRepo,
           service: service,
           connectivity: connectivity,
-          registry: registry,
-          userDb: userDb,
+         registry: registry,
         ),
       );
       await tester.pump();
@@ -818,8 +790,7 @@ void main() {
           authRepo: authRepo,
           service: service,
           connectivity: connectivity,
-          registry: registry,
-          userDb: userDb,
+         registry: registry,
         ),
       );
       await tester.pump();
@@ -863,8 +834,7 @@ void main() {
           authRepo: authRepo,
           service: service,
           connectivity: connectivity,
-          registry: registry,
-          userDb: userDb,
+         registry: registry,
         ),
       );
       await tester.pump();
@@ -904,8 +874,7 @@ void main() {
           authRepo: authRepo,
           service: service,
           connectivity: connectivity,
-          registry: registry,
-          userDb: userDb,
+         registry: registry,
         ),
       );
       await tester.pump();
@@ -936,12 +905,11 @@ void main() {
   // Red-demo: before `_runDeletion` (account_actions.dart) called
   // `activeAccountIdProvider.notifier.set(null)`, this provider stayed
   // whatever it was forever — deleting the active account never cleared it.
-  // Requires a device-registry row matching the deleted Firebase uid AND
-  // accountDbFileNameProvider already pointing at that row's dbFileName
-  // (mirrors a real prior sign-in/switch) so `_runDeletion`'s `if (account
-  // != null && ref.read(accountDbFileNameProvider) == account.dbFileName)`
-  // reset branch actually runs — the existing "success" test above seeds no
-  // registry row, so it never exercises this branch.
+  // Requires a device-registry row matching the deleted Firebase uid so the
+  // current Firestore-era `_runDeletion` path clears activeAccountIdProvider
+  // before removing that account from the device registry. The existing
+  // "success" test above seeds no registry row, so it never exercises this
+  // branch.
   testWidgets(
     'DeletingAccountOverlay success resets activeAccountIdProvider to null '
     'when the deleted account is the currently-active device account',
@@ -973,18 +941,13 @@ void main() {
           authRepositoryProvider.overrideWithValue(authRepo),
           accountManagementServiceProvider.overrideWithValue(service),
           connectivityServiceProvider.overrideWithValue(connectivity),
-          userDatabaseProvider.overrideWithValue(userDb),
           deviceRegistryProvider.overrideWithValue(registry),
-          currentAccountIdProvider.overrideWith((ref) => 1),
           authStateProvider.overrideWith(() => _StubAuthStateNotifier()),
         ],
       );
       addTearDown(container.dispose);
       // Seed the "currently active" state exactly as a prior sign-in/switch
-      // would have — see the two real providers this task wires.
-      container
-          .read(accountDbFileNameProvider.notifier)
-          .setFileName(dbFileName);
+      // would have through the live Firestore account selector.
       container.read(activeAccountIdProvider.notifier).set('acc-active-del');
 
       await tester.pumpWidget(
@@ -1028,8 +991,7 @@ void main() {
           authRepo: authRepo,
           service: service,
           connectivity: connectivity,
-          registry: registry,
-          userDb: userDb,
+         registry: registry,
         ),
       );
       await tester.pump();
@@ -1081,8 +1043,7 @@ void main() {
           authRepo: authRepo,
           service: service,
           connectivity: connectivity,
-          registry: registry,
-          userDb: userDb,
+         registry: registry,
         ),
       );
       await tester.pump();
@@ -1142,8 +1103,7 @@ void main() {
         authRepo: authRepo,
         service: service,
         connectivity: connectivity,
-        registry: registry,
-        userDb: userDb,
+         registry: registry,
         locale: const Locale('he'),
       ),
     );
@@ -1198,8 +1158,7 @@ void main() {
           authRepo: authRepo,
           service: service,
           connectivity: connectivity,
-          registry: registry,
-          userDb: userDb,
+         registry: registry,
         ),
       );
       await tester.pump();
@@ -1245,8 +1204,7 @@ void main() {
           authRepo: authRepo,
           service: service,
           connectivity: connectivity,
-          registry: registry,
-          userDb: userDb,
+         registry: registry,
         ),
       );
       await tester.pump();
@@ -1294,8 +1252,7 @@ void main() {
           authRepo: authRepo,
           service: service,
           connectivity: connectivity,
-          registry: registry,
-          userDb: userDb,
+         registry: registry,
           locale: const Locale('he'),
         ),
       );

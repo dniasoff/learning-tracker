@@ -51,7 +51,9 @@ Widget _buildCardWidget({
     overrides: [
       authStateProvider.overrideWithValue(authState),
       authRepositoryProvider.overrideWithValue(auth),
-      activeProfileIdProvider.overrideWithValue(1),
+      activeProfileIdProvider.overrideWithValue(
+        '01ARZ3NDEKTSV4RRFFQ69G5FAV',
+      ),
       profileListStreamProvider.overrideWith((_) => Stream.value([])),
     ],
     child: MaterialApp(
@@ -102,15 +104,15 @@ void main() {
     'signed in local-born, user==null → shows local-born profile row',
     (tester) async {
       const authUser = AuthUser(
-        profileId: 1,
         email: 'local@test.local',
         displayName: 'Local Tester',
+        uid: 'local-user',
       );
       await tester.pumpWidget(
         _buildCardWidget(
           authState: const AuthState.signedIn(
             user: authUser,
-            tier: Tier.localBorn,
+            tier: Tier.local,
           ),
         ),
       );
@@ -142,16 +144,16 @@ void main() {
     'iter9 regression: signed-in cloud-born, user==null → must NOT show "Not signed in"',
     (tester) async {
       const authUser = AuthUser(
-        profileId: 2,
         email: 'cloud@test.cloud',
         displayName: 'Cloud Tester',
+        uid: 'cloud-user',
         firebaseUid: 'fb-uid-cloud',
       );
       await tester.pumpWidget(
         _buildCardWidget(
           authState: const AuthState.signedIn(
             user: authUser,
-            tier: Tier.cloudBorn,
+            tier: Tier.cloud,
           ),
           firebaseUser: null, // user param to widget is null (transient)
         ),

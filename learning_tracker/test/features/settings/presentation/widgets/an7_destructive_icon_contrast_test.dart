@@ -25,9 +25,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/app/router/router_provider.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/navigation/guards/pin_guard.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
@@ -38,7 +36,7 @@ import 'package:learning_tracker/features/account/presentation/providers/auth_pr
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart'
-    show currentAccountIdProvider, profileListStreamProvider;
+    show profileListStreamProvider;
 import 'package:learning_tracker/features/settings/presentation/providers/account_management_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/account_actions_sheet.dart';
 import 'package:mocktail/mocktail.dart';
@@ -71,7 +69,7 @@ class _StubAuthStateNotifier extends AuthStateNotifier {
 
 class _ActiveProfileIdOverride extends ActiveProfileId {
   @override
-  int build() => 0; // sentinel — no matching profile → treated as non-child
+  String? build() => '01ARZ3NDEKTSV4RRFFQ69G5FAV';
 }
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
@@ -103,16 +101,13 @@ Widget _buildApp({
   required _MockAuthRepository authRepo,
   required _MockAccountManagementService service,
   required DeviceRegistryDatabase registry,
-  required UserDatabase userDb,
 }) {
   return pumpApp(
     overrides: [
       routerProvider.overrideWithValue(router),
       authRepositoryProvider.overrideWithValue(authRepo),
       accountManagementServiceProvider.overrideWithValue(service),
-      userDatabaseProvider.overrideWithValue(userDb),
       deviceRegistryProvider.overrideWithValue(registry),
-      currentAccountIdProvider.overrideWith((ref) => 1),
       authStateProvider.overrideWith(() => _StubAuthStateNotifier()),
       activeProfileIdProvider.overrideWith(() => _ActiveProfileIdOverride()),
       profileListStreamProvider.overrideWith((ref) => Stream.value(const [])),
@@ -128,7 +123,6 @@ void main() {
   late _MockAuthRepository authRepo;
   late _MockAccountManagementService service;
   late DeviceRegistryDatabase registry;
-  late UserDatabase userDb;
 
   setUpAll(() {
     registerFallbackValue(_FakePageRouteInfo());
@@ -140,7 +134,6 @@ void main() {
     authRepo = _MockAuthRepository();
     service = _MockAccountManagementService();
     registry = DeviceRegistryDatabase(NativeDatabase.memory());
-    userDb = UserDatabase(NativeDatabase.memory());
 
     when(
       () => router.replaceAll(any<List<PageRouteInfo>>()),
@@ -156,7 +149,6 @@ void main() {
 
   tearDown(() async {
     await registry.close();
-    await userDb.close();
   });
 
   Future<void> openSheet(WidgetTester tester) async {
@@ -177,7 +169,6 @@ void main() {
           authRepo: authRepo,
           service: service,
           registry: registry,
-          userDb: userDb,
         ),
       );
       await openSheet(tester);
@@ -219,7 +210,6 @@ void main() {
           authRepo: authRepo,
           service: service,
           registry: registry,
-          userDb: userDb,
         ),
       );
       await openSheet(tester);
