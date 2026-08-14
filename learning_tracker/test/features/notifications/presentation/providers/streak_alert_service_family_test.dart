@@ -24,16 +24,15 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/features/notifications/domain/repositories/notification_preferences_repository.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_gateway.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_scheduler.dart';
 import 'package:learning_tracker/features/notifications/domain/services/streak_alert_service.dart';
 import 'package:learning_tracker/features/notifications/presentation/providers/notification_providers.dart';
-import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
-import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/timezone.dart' as tz_lib;
@@ -43,16 +42,16 @@ import 'package:timezone/timezone.dart' as tz_lib;
 /// Records the per-profile schedule/cancel calls without touching the OS
 /// notification stack. Mirrors reminder_sync_sacred_time_test.dart's fake.
 class _RecordingNotificationGateway implements NotificationGateway {
-  final List<int> cancelledBatchProfiles = [];
-  final List<int> cancelledDailyProfiles = [];
+  final List<String> cancelledBatchProfiles = [];
+  final List<String> cancelledDailyProfiles = [];
 
   @override
-  Future<void> cancelBatchRemindersForProfile(int profileId) async {
+  Future<void> cancelBatchRemindersForProfile(String profileId) async {
     cancelledBatchProfiles.add(profileId);
   }
 
   @override
-  Future<void> cancelDailyReminderForProfile(int profileId) async {
+  Future<void> cancelDailyReminderForProfile(String profileId) async {
     cancelledDailyProfiles.add(profileId);
   }
 
@@ -71,7 +70,7 @@ class _RecordingNotificationGateway implements NotificationGateway {
 
   @override
   Future<void> scheduleDailyReminderForProfile({
-    required int profileId,
+    required String profileId,
     required int hour,
     required int minute,
     required String title,
@@ -80,7 +79,7 @@ class _RecordingNotificationGateway implements NotificationGateway {
 
   @override
   Future<void> scheduleBatchRemindersForProfile({
-    required int profileId,
+    required String profileId,
     required List<tz_lib.TZDateTime> fireTimes,
     required String title,
     required String body,
@@ -88,7 +87,7 @@ class _RecordingNotificationGateway implements NotificationGateway {
 
   @override
   Future<void> scheduleStreakAlertForProfile({
-    required int profileId,
+    required String profileId,
     required int hour,
     required int minute,
     required String body,
@@ -96,24 +95,25 @@ class _RecordingNotificationGateway implements NotificationGateway {
   }) async {}
 
   @override
-  Future<void> cancelStreakAlertForProfile(int profileId) async {}
+  Future<void> cancelStreakAlertForProfile(String profileId) async {}
 }
 
 class _MockStreakAlertService extends Mock implements StreakAlertService {}
 
-ProfileModel _profile(int id) {
+LearnerProfileEntity _profile(String profileId) {
   final now = DateTime.utc(2026, 1, 1);
-  return ProfileModel(
-    id: id,
-    ulid: 'ulid-$id',
-    accountId: 1,
-    displayName: 'Profile $id',
-    mode: 'adult',
-    avatarIndex: 0,
+  return LearnerProfileEntity(
+    profileId: profileId,
+    displayName: 'Profile $profileId',
+    mode: ProfileMode.adult,
+    avatar: '',
     createdAt: now,
     updatedAt: now,
   );
 }
+
+const activeProfileId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+const inactiveProfileId = '01ARZ3NDEKTSV4RRFFQ69G5FB0';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -121,9 +121,6 @@ void main() {
   test('overriding streakAlertServiceProvider(profileId) for one INACTIVE '
       'profile observably changes allProfilesReminderBootstrap behavior for '
       'that profile (AUD-notifications-03)', () async {
-    const activeProfileId = 1;
-    const inactiveProfileId = 5;
-
     // Reminder disabled for the inactive profile so the daily-reminder
     // branch takes the trivial cancelForProfile() path — the streak branch
     // (routed through the family provider under test) is what this test
@@ -154,14 +151,13 @@ void main() {
 
     final container = ProviderContainer(
       overrides: [
-        activeProfileIdProvider.overrideWithValue(activeProfileId),
+        selectedProfileIdProvider.overrideWithValue(activeProfileId),
         currentAppLocaleProvider.overrideWithValue(const Locale('en')),
         notificationServiceProvider.overrideWithValue(gateway),
         notificationSchedulerProvider.overrideWithValue(
           NotificationScheduler(service: gateway),
         ),
         isSacredTimeActiveProvider.overrideWithValue(false),
-        outboxSyncWriteFacadeProvider.overrideWithValue(null),
         profileListStreamProvider.overrideWith(
           (ref) => Stream.value([
             _profile(activeProfileId),

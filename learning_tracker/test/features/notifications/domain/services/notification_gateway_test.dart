@@ -3,12 +3,12 @@
 /// Mocks [FlutterLocalNotificationsPlugin] at the plugin boundary so no real
 /// platform code runs.  Covers:
 ///   - initialize (success / null / callback wiring)
-///   - per-profile daily reminder (ID = profileId*1000, payload carries
+///   - per-profile daily reminder (ULID-hash-derived ID, payload carries
 ///     profileId)
-///   - per-profile batch (baseId = profileId*1000+10, payload carries
+///   - per-profile batch (ULID-hash-derived base ID, payload carries
 ///     profileId)
 ///   - cancelDailyReminderForProfile / cancelBatchRemindersForProfile
-///   - per-profile streak alert (ID = profileId*1000+1, payload carries
+///   - per-profile streak alert (ULID-hash-derived ID, payload carries
 ///     profileId)
 ///   - cancelStreakAlertForProfile
 ///   - requestPermission: non-mobile fallback, Android branch (permission +
@@ -40,6 +40,17 @@ import 'package:learning_tracker/features/notifications/domain/services/notifica
 import 'package:mocktail/mocktail.dart';
 import 'package:timezone/data/latest_all.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
+
+const _profile0 = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+const _profile1 = '01ARZ3NDEKTSV4RRFFQ69G5FB0';
+const _profile2 = '01ARZ3NDEKTSV4RRFFQ69G5FB1';
+const _profile3 = '01ARZ3NDEKTSV4RRFFQ69G5FB2';
+const _profile4 = '01ARZ3NDEKTSV4RRFFQ69G5FB3';
+const _profile5 = '01ARZ3NDEKTSV4RRFFQ69G5FB4';
+const _profile7 = '01ARZ3NDEKTSV4RRFFQ69G5FB6';
+const _profile9 = '01ARZ3NDEKTSV4RRFFQ69G5FB8';
+const _profile10 = '01ARZ3NDEKTSV4RRFFQ69G5FB9';
+const _profile42 = '01ARZ3NDEKTSV4RRFFQ69G5FC0';
 
 // ---------------------------------------------------------------------------
 // Mock
@@ -422,9 +433,9 @@ void main() {
   // -------------------------------------------------------------------------
 
   group('scheduleDailyReminderForProfile', () {
-    test('uses id = profileId * 1000 for profile 0', () async {
+    test('uses the deterministic ULID-derived ID for profile 0', () async {
       await gw.scheduleDailyReminderForProfile(
-        profileId: 0,
+        profileId: _profile0,
         hour: 8,
         minute: 0,
         title: 'T',
@@ -450,12 +461,12 @@ void main() {
         ),
       ).captured;
 
-      expect(idsCaptured.single, equals(dailyReminderIdForProfile(0)));
+      expect(idsCaptured.single, equals(1523713000));
     });
 
-    test('uses id = 1000 for profile 1', () async {
+    test('uses the deterministic ULID-derived ID for profile 1', () async {
       await gw.scheduleDailyReminderForProfile(
-        profileId: 1,
+        profileId: _profile1,
         hour: 8,
         minute: 0,
         title: 'T',
@@ -481,12 +492,12 @@ void main() {
         ),
       ).captured;
 
-      expect(idsCaptured.single, equals(1000));
+      expect(idsCaptured.single, equals(28042000));
     });
 
     test('embeds profileId in payload: "daily_reminder:<profileId>"', () async {
       await gw.scheduleDailyReminderForProfile(
-        profileId: 7,
+        profileId: _profile7,
         hour: 8,
         minute: 0,
         title: 'T',
@@ -512,19 +523,19 @@ void main() {
         ),
       ).captured;
 
-      expect(payloadsCaptured.single, equals('$dailyReminderPayload:7'));
+      expect(payloadsCaptured.single, equals('$dailyReminderPayload:$_profile7'));
     });
 
     test('different profiles produce different notification IDs', () async {
       await gw.scheduleDailyReminderForProfile(
-        profileId: 2,
+        profileId: _profile2,
         hour: 8,
         minute: 0,
         title: 'T',
         body: 'B',
       );
       await gw.scheduleDailyReminderForProfile(
-        profileId: 3,
+        profileId: _profile3,
         hour: 8,
         minute: 0,
         title: 'T',
@@ -560,7 +571,7 @@ void main() {
     // behaviour keeps coverage (AUD-notifications-04).
     test('scheduled time is never in the past', () async {
       await gw.scheduleDailyReminderForProfile(
-        profileId: 0,
+        profileId: _profile0,
         hour: 0,
         minute: 0,
         title: 'T',
@@ -600,7 +611,7 @@ void main() {
       'rolls time forward by exactly one day when hour:minute is in the past',
       () async {
         await gw.scheduleDailyReminderForProfile(
-          profileId: 0,
+          profileId: _profile0,
           hour: 0,
           minute: 0,
           title: 'T',
@@ -638,17 +649,17 @@ void main() {
   });
 
   group('cancelDailyReminderForProfile', () {
-    test('cancels id = profileId * 1000', () async {
-      await gw.cancelDailyReminderForProfile(3);
+    test('cancels the deterministic ID for the profile', () async {
+      await gw.cancelDailyReminderForProfile(_profile3);
 
-      verify(() => plugin.cancel(id: 3000)).called(1);
+      verify(() => plugin.cancel(id: 472804000)).called(1);
     });
 
     test('does not cancel profile 0 when cancelling profile 1', () async {
-      await gw.cancelDailyReminderForProfile(1);
+      await gw.cancelDailyReminderForProfile(_profile1);
 
-      verify(() => plugin.cancel(id: 1000)).called(1);
-      verifyNever(() => plugin.cancel(id: 0));
+      verify(() => plugin.cancel(id: 28042000)).called(1);
+      verifyNever(() => plugin.cancel(id: 1523713000));
     });
   });
 
@@ -659,23 +670,24 @@ void main() {
   group('scheduleBatchRemindersForProfile', () {
     test('cancels profile batch range before scheduling', () async {
       final times = _futureTimes(3);
-      // Profile 1: batchBase = 1010
+      // Profile 1's base is derived from its ULID hash.
       await gw.scheduleBatchRemindersForProfile(
-        profileId: 1,
+        profileId: _profile1,
         fireTimes: times,
         title: 'T',
         body: 'B',
       );
 
-      for (var i = 1010; i < 1024; i++) {
-        verify(() => plugin.cancel(id: i)).called(1);
+      final base = batchBaseIdForProfile(_profile1);
+      for (var i = 0; i < 14; i++) {
+        verify(() => plugin.cancel(id: base + i)).called(1);
       }
     });
 
-    test('schedules with correct IDs for profile 2 (base 2010)', () async {
+    test('schedules with correct IDs for profile 2', () async {
       final times = _futureTimes(3);
       await gw.scheduleBatchRemindersForProfile(
-        profileId: 2,
+        profileId: _profile2,
         fireTimes: times,
         title: 'T',
         body: 'B',
@@ -700,13 +712,14 @@ void main() {
         ),
       ).captured.cast<int>();
 
-      expect(idsCaptured, equals([2010, 2011, 2012]));
+      final base = batchBaseIdForProfile(_profile2);
+      expect(idsCaptured, equals([base, base + 1, base + 2]));
     });
 
     test('embeds profileId in payload for each batch entry', () async {
       final times = _futureTimes(2);
       await gw.scheduleBatchRemindersForProfile(
-        profileId: 5,
+        profileId: _profile5,
         fireTimes: times,
         title: 'T',
         body: 'B',
@@ -732,40 +745,42 @@ void main() {
       ).captured.cast<String>();
 
       for (final p in payloadsCaptured) {
-        expect(p, equals('$dailyReminderPayload:5'));
+        expect(p, equals('$dailyReminderPayload:$_profile5'));
       }
     });
 
     test('no overlap between profile 0 and profile 1 batch IDs', () {
       final ids0 = List.generate(
         14,
-        (i) => batchBaseIdForProfile(0) + i,
+        (i) => batchBaseIdForProfile(_profile0) + i,
       ).toSet();
       final ids1 = List.generate(
         14,
-        (i) => batchBaseIdForProfile(1) + i,
+        (i) => batchBaseIdForProfile(_profile1) + i,
       ).toSet();
       expect(ids0.intersection(ids1), isEmpty);
     });
   });
 
   group('cancelBatchRemindersForProfile', () {
-    test('cancels IDs in range batchBaseIdForProfile(0)..+14', () async {
-      await gw.cancelBatchRemindersForProfile(0);
+    test('cancels IDs in range batchBaseIdForProfile(_profile0)..+14', () async {
+      await gw.cancelBatchRemindersForProfile(_profile0);
 
-      for (var i = 10; i < 24; i++) {
-        verify(() => plugin.cancel(id: i)).called(1);
+      final base = batchBaseIdForProfile(_profile0);
+      for (var i = 0; i < 14; i++) {
+        verify(() => plugin.cancel(id: base + i)).called(1);
       }
     });
 
-    test('cancels IDs in range batchBaseIdForProfile(1)..+14', () async {
-      await gw.cancelBatchRemindersForProfile(1);
+    test('cancels IDs in range batchBaseIdForProfile(_profile1)..+14', () async {
+      await gw.cancelBatchRemindersForProfile(_profile1);
 
-      for (var i = 1010; i < 1024; i++) {
-        verify(() => plugin.cancel(id: i)).called(1);
+      final base = batchBaseIdForProfile(_profile1);
+      for (var i = 0; i < 14; i++) {
+        verify(() => plugin.cancel(id: base + i)).called(1);
       }
       // Profile 0 IDs untouched.
-      verifyNever(() => plugin.cancel(id: 10));
+      verifyNever(() => plugin.cancel(id: batchBaseIdForProfile(_profile0)));
     });
   });
 
@@ -774,9 +789,9 @@ void main() {
   // -------------------------------------------------------------------------
 
   group('scheduleStreakAlertForProfile', () {
-    test('uses id = profileId * 1000 + 1', () async {
+    test('uses the deterministic ULID-derived streak ID', () async {
       await gw.scheduleStreakAlertForProfile(
-        profileId: 4,
+        profileId: _profile4,
         hour: 21,
         minute: 0,
         body: 'body',
@@ -801,14 +816,14 @@ void main() {
         ),
       ).captured;
 
-      expect(idsCaptured.single, equals(streakAlertIdForProfile(4)));
+      expect(idsCaptured.single, equals(1695185001));
     });
 
     test(
       'embeds profileId in payload: "streak_protection:<profileId>"',
       () async {
         await gw.scheduleStreakAlertForProfile(
-          profileId: 9,
+          profileId: _profile9,
           hour: 21,
           minute: 0,
           body: 'body',
@@ -833,25 +848,27 @@ void main() {
           ),
         ).captured;
 
-        expect(payloadsCaptured.single, equals('$streakAlertPayload:9'));
+        expect(
+          payloadsCaptured.single,
+          equals('$streakAlertPayload:$_profile9'),
+        );
       },
     );
 
     test('different profiles produce non-overlapping streak IDs', () {
-      final id0 = streakAlertIdForProfile(0);
-      final id1 = streakAlertIdForProfile(1);
+      final id0 = streakAlertIdForProfile(_profile0);
+      final id1 = streakAlertIdForProfile(_profile1);
       expect(id0, isNot(equals(id1)));
       // streak IDs must not collide with daily reminder IDs.
-      expect(id0, isNot(equals(dailyReminderIdForProfile(0))));
+      expect(id0, isNot(equals(dailyReminderIdForProfile(_profile0))));
     });
   });
 
   group('cancelStreakAlertForProfile', () {
-    test('cancels id = profileId * 1000 + 1', () async {
-      await gw.cancelStreakAlertForProfile(2);
+    test('cancels the deterministic streak ID for the profile', () async {
+      await gw.cancelStreakAlertForProfile(_profile2);
 
-      // streakAlertIdForProfile(2) == 2001
-      verify(() => plugin.cancel(id: 2001)).called(1);
+      verify(() => plugin.cancel(id: 1250423001)).called(1);
     });
   });
 
@@ -860,28 +877,29 @@ void main() {
   // -------------------------------------------------------------------------
 
   group('ID allocation helpers', () {
-    test('dailyReminderIdForProfile(N) = N * 1000', () {
-      expect(dailyReminderIdForProfile(0), equals(0));
-      expect(dailyReminderIdForProfile(1), equals(1000));
-      expect(dailyReminderIdForProfile(10), equals(10000));
+    test('dailyReminderIdForProfile derives IDs from the ULID hash', () {
+      expect(dailyReminderIdForProfile(_profile0), equals(1523713000));
+      expect(dailyReminderIdForProfile(_profile1), equals(28042000));
+      expect(dailyReminderIdForProfile(_profile10), equals(1471375000));
     });
 
-    test('streakAlertIdForProfile(N) = N * 1000 + 1', () {
-      expect(streakAlertIdForProfile(0), equals(1));
-      expect(streakAlertIdForProfile(1), equals(1001));
-      expect(streakAlertIdForProfile(5), equals(5001));
+    test('streakAlertIdForProfile derives IDs from the ULID hash', () {
+      expect(streakAlertIdForProfile(_profile0), equals(1523713001));
+      expect(streakAlertIdForProfile(_profile1), equals(28042001));
+      expect(streakAlertIdForProfile(_profile5), equals(1138518001));
     });
 
-    test('batchBaseIdForProfile(N) = N * 1000 + 10', () {
-      expect(batchBaseIdForProfile(0), equals(10));
-      expect(batchBaseIdForProfile(1), equals(1010));
-      expect(batchBaseIdForProfile(3), equals(3010));
+    test('batchBaseIdForProfile derives IDs from the ULID hash', () {
+      expect(batchBaseIdForProfile(_profile0), equals(1523713010));
+      expect(batchBaseIdForProfile(_profile1), equals(28042010));
+      expect(batchBaseIdForProfile(_profile3), equals(472804010));
     });
 
-    test('no overlap between any two adjacent profile batch ranges', () {
-      for (var p = 0; p < 5; p++) {
-        final baseA = batchBaseIdForProfile(p);
-        final baseB = batchBaseIdForProfile(p + 1);
+    test('no overlap between any two selected profile batch ranges', () {
+      const profileIds = [_profile0, _profile1, _profile2, _profile3, _profile4];
+      for (var p = 0; p < profileIds.length - 1; p++) {
+        final baseA = batchBaseIdForProfile(profileIds[p]);
+        final baseB = batchBaseIdForProfile(profileIds[p + 1]);
         final idsA = List.generate(14, (i) => baseA + i).toSet();
         final idsB = List.generate(14, (i) => baseB + i).toSet();
         expect(idsA.intersection(idsB), isEmpty);
@@ -891,12 +909,13 @@ void main() {
     test(
       'streak ID does not overlap with daily or batch IDs for any profile',
       () {
-        for (var p = 0; p < 5; p++) {
-          final streakId = streakAlertIdForProfile(p);
-          final dailyId = dailyReminderIdForProfile(p);
+        const profileIds = [_profile0, _profile1, _profile2, _profile3, _profile4];
+        for (final profileId in profileIds) {
+          final streakId = streakAlertIdForProfile(profileId);
+          final dailyId = dailyReminderIdForProfile(profileId);
           final batchIds = List.generate(
             14,
-            (i) => batchBaseIdForProfile(p) + i,
+            (i) => batchBaseIdForProfile(profileId) + i,
           ).toSet();
           expect(streakId, isNot(equals(dailyId)));
           expect(batchIds, isNot(contains(streakId)));
@@ -921,12 +940,12 @@ void main() {
     test(
       'per-profile payloads can be parsed to extract profileId after ":"',
       () {
-        const profileId = 42;
+        const profileId = _profile42;
         const daily = '$dailyReminderPayload:$profileId';
         const streak = '$streakAlertPayload:$profileId';
 
-        expect(int.tryParse(daily.split(':').last), equals(profileId));
-        expect(int.tryParse(streak.split(':').last), equals(profileId));
+        expect(daily.split(':').last, equals(profileId));
+        expect(streak.split(':').last, equals(profileId));
       },
     );
   });

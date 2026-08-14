@@ -12,6 +12,13 @@ import 'package:mocktail/mocktail.dart';
 import 'package:timezone/data/latest_all.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
+const _profile0 = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+const _profile1 = '01ARZ3NDEKTSV4RRFFQ69G5FB0';
+const _profile2 = '01ARZ3NDEKTSV4RRFFQ69G5FB1';
+const _profile5 = '01ARZ3NDEKTSV4RRFFQ69G5FB4';
+const _profile10 = '01ARZ3NDEKTSV4RRFFQ69G5FB9';
+const _profile42 = '01ARZ3NDEKTSV4RRFFQ69G5FC0';
+
 /// Mocks [FlutterLocalNotificationsPlugin] at the plugin boundary so the
 /// per-profile payload-format tests below drive the real
 /// [NotificationGateway] and capture what it actually sends, instead of
@@ -58,30 +65,30 @@ void main() {
   });
 
   group('WS5.per-profile — per-profile notification ID allocation', () {
-    test('profile 0 gets dailyReminderId 0', () {
-      expect(dailyReminderIdForProfile(0), equals(0));
+    test('profile 0 gets its deterministic ULID-derived daily reminder ID', () {
+      expect(dailyReminderIdForProfile(_profile0), equals(1523713000));
     });
 
-    test('profile 1 gets dailyReminderId 1000', () {
-      expect(dailyReminderIdForProfile(1), equals(1000));
+    test('profile 1 gets its deterministic ULID-derived daily reminder ID', () {
+      expect(dailyReminderIdForProfile(_profile1), equals(28042000));
     });
 
-    test('profile N gets dailyReminderId N*1000', () {
-      expect(dailyReminderIdForProfile(5), equals(5000));
-      expect(dailyReminderIdForProfile(10), equals(10000));
+    test('different ULIDs get their deterministic daily reminder IDs', () {
+      expect(dailyReminderIdForProfile(_profile5), equals(1138518000));
+      expect(dailyReminderIdForProfile(_profile10), equals(1471375000));
     });
 
     test('two different profiles have different daily reminder IDs', () {
-      final idA = dailyReminderIdForProfile(1);
-      final idB = dailyReminderIdForProfile(2);
+      final idA = dailyReminderIdForProfile(_profile1);
+      final idB = dailyReminderIdForProfile(_profile2);
       expect(idA, isNot(equals(idB)));
     });
 
     test(
       'streakAlertIdForProfile returns different IDs for different profiles',
       () {
-        final idA = streakAlertIdForProfile(0);
-        final idB = streakAlertIdForProfile(1);
+        final idA = streakAlertIdForProfile(_profile0);
+        final idB = streakAlertIdForProfile(_profile1);
         expect(idA, isNot(equals(idB)));
       },
     );
@@ -89,8 +96,8 @@ void main() {
     test(
       'batchBaseIdForProfile returns different bases for different profiles',
       () {
-        final baseA = batchBaseIdForProfile(0);
-        final baseB = batchBaseIdForProfile(1);
+        final baseA = batchBaseIdForProfile(_profile0);
+        final baseB = batchBaseIdForProfile(_profile1);
         expect(baseA, isNot(equals(baseB)));
         // Batch base + 13 (last slot) must still be < next profile's base.
         expect(baseA + 13, lessThan(baseB));
@@ -99,8 +106,8 @@ void main() {
 
     test('no overlap between profile 0 and profile 1 batch ID ranges', () {
       const batchSize = 14;
-      final base0 = batchBaseIdForProfile(0);
-      final base1 = batchBaseIdForProfile(1);
+      final base0 = batchBaseIdForProfile(_profile0);
+      final base1 = batchBaseIdForProfile(_profile1);
       final ids0 = List.generate(batchSize, (i) => base0 + i).toSet();
       final ids1 = List.generate(batchSize, (i) => base1 + i).toSet();
       expect(ids0.intersection(ids1), isEmpty);
@@ -121,7 +128,7 @@ void main() {
       // expected string, so this fails if the gateway's payload format
       // ever changes.
       await gateway.scheduleDailyReminderForProfile(
-        profileId: 42,
+        profileId: _profile42,
         hour: 8,
         minute: 0,
         title: 'T',
@@ -148,13 +155,13 @@ void main() {
       ).captured;
 
       final payload = payloadsCaptured.single as String;
-      expect(payload, equals('daily_reminder:42'));
+      expect(payload, equals('daily_reminder:$_profile42'));
 
       // The tap handler splits on ':' to extract the profileId — verify
       // that parsing works against what the gateway actually produced.
       final parts = payload.split(':');
       expect(parts.length, equals(2));
-      expect(int.tryParse(parts[1]), equals(42));
+      expect(parts[1], equals(_profile42));
     });
 
     test('profile B payload does not match profile A payload', () async {
@@ -163,14 +170,14 @@ void main() {
       _stubZonedSchedule(plugin);
 
       await gateway.scheduleDailyReminderForProfile(
-        profileId: 1,
+        profileId: _profile1,
         hour: 8,
         minute: 0,
         title: 'T',
         body: 'B',
       );
       await gateway.scheduleDailyReminderForProfile(
-        profileId: 2,
+        profileId: _profile2,
         hour: 8,
         minute: 0,
         title: 'T',
