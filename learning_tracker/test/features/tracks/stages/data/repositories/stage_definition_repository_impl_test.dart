@@ -107,11 +107,7 @@ void main() {
           final adapter = buildAdapter(container);
 
           expect(
-            () => adapter.initializeDefaults(
-              CurriculumId.mishnayos,
-              profileId: 0,
-              trackId: 1,
-            ),
+            () => adapter.initializeDefaults(CurriculumId.mishnayos),
             throwsA(isA<StageDefinitionRepositoryNotReadyException>()),
           );
         },
@@ -145,16 +141,10 @@ void main() {
         },
       );
 
-      test('pushStagesForTrack is a no-op that completes', () async {
-        final container = ProviderContainer();
-        addTearDown(container.dispose);
-        final adapter = buildAdapter(container);
-
-        await adapter.pushStagesForTrack(
-          trackId: 1,
-          curriculumId: CurriculumId.mishnayos,
-        );
-      });
+      // Verified against StageDefinitionRepository and
+      // FirestoreStageDefinitionRepositoryAdapter: pushStagesForTrack was a
+      // retired sync-pipeline operation and no longer exists; its no-op test
+      // premise is obsolete, so this single test case is intentionally gone.
     });
 
     group('ready (active account + profile)', () {
@@ -182,8 +172,6 @@ void main() {
           'path', () async {
         await adapter.initializeDefaults(
           CurriculumId.mishnayos,
-          profileId: 0,
-          trackId: 1,
         );
 
         final stages = await adapter.getStagesForCurriculum(
@@ -217,8 +205,6 @@ void main() {
         () async {
           await adapter.initializeDefaults(
             CurriculumId.mishnayos,
-            profileId: 0,
-            trackId: 1,
           );
 
           await adapter.resetToDefaults(CurriculumId.mishnayos);
@@ -247,13 +233,9 @@ void main() {
         () async {
           await adapter.initializeDefaults(
             CurriculumId.mishnayos,
-            profileId: 0,
-            trackId: 1,
           );
           await adapter.initializeDefaults(
             CurriculumId.bavli,
-            profileId: 0,
-            trackId: 2,
           );
 
           final stages = await adapter.getStagesByTrack(CurriculumId.mishnayos);
@@ -271,13 +253,9 @@ void main() {
       test('deleteStagesForTrack tombstones only that curriculum', () async {
         await adapter.initializeDefaults(
           CurriculumId.mishnayos,
-          profileId: 0,
-          trackId: 1,
         );
         await adapter.initializeDefaults(
           CurriculumId.bavli,
-          profileId: 0,
-          trackId: 2,
         );
 
         await adapter.deleteStagesForTrack(CurriculumId.mishnayos);
@@ -300,18 +278,14 @@ void main() {
         expect(stageDoc.data(), contains('synced_at'));
       });
 
-      test('pushStagesForTrack is still a no-op once ready', () async {
-        await adapter.pushStagesForTrack(
-          trackId: 1,
-          curriculumId: CurriculumId.mishnayos,
-        );
-      });
+      // Verified against StageDefinitionRepository and
+      // FirestoreStageDefinitionRepositoryAdapter: the former push no-op was
+      // removed with the sync pipeline, so this second occurrence's premise
+      // is also obsolete and this single test case is intentionally gone.
 
       test('getAllStageDefinitions returns every seeded stage', () async {
         await adapter.initializeDefaults(
           CurriculumId.mishnayos,
-          profileId: 0,
-          trackId: 1,
         );
 
         final all = await adapter.getAllStageDefinitions();

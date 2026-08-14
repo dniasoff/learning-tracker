@@ -156,12 +156,11 @@ void main() {
       expect(learn.scheduleType, ScheduleType.delay);
       expect(learn.delayDays, 0);
       expect(learn.isDefault, isTrue);
-      expect(learn.id, kFirestoreUnmappedStageId);
+      expect(learn.stageOrder, 1);
     });
 
     test('a weekly-schedule stage round-trips daysOfWeek', () async {
       const custom = StageDefinition(
-        id: kFirestoreUnmappedStageId,
         curriculumId: CurriculumId.bavli,
         stageOrder: 4,
         stageName: 'Weekly review',
@@ -185,7 +184,6 @@ void main() {
 
     test('a rolling-schedule stage round-trips rollingWindowSize', () async {
       const custom = StageDefinition(
-        id: kFirestoreUnmappedStageId,
         curriculumId: CurriculumId.bavli,
         stageOrder: 5,
         stageName: 'Rolling review',
@@ -329,7 +327,6 @@ void main() {
       final repo = buildRepo();
       await repo.initializeDefaults(CurriculumId.mishnayos);
       const extra = StageDefinition(
-        id: kFirestoreUnmappedStageId,
         curriculumId: CurriculumId.mishnayos,
         stageOrder: 4,
         stageName: 'Custom extra stage',

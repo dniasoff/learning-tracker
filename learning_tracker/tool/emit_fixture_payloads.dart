@@ -22,43 +22,51 @@ library;
 
 import 'dart:convert';
 
-import 'package:learning_tracker/core/sync/codec/bookmark_codec.dart';
-import 'package:learning_tracker/core/sync/codec/completion_event_codec.dart';
-import 'package:learning_tracker/core/sync/codec/goal_codec.dart';
-import 'package:learning_tracker/core/sync/codec/learning_ledger_codec.dart';
-import 'package:learning_tracker/core/sync/codec/learning_order_codec.dart';
-import 'package:learning_tracker/core/sync/codec/profile_program_codec.dart';
-import 'package:learning_tracker/core/sync/codec/settings_codec.dart';
-import 'package:learning_tracker/core/sync/codec/stage_definition_codec.dart';
-import 'package:learning_tracker/core/sync/codec/study_day_config_codec.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/features/learning/domain/entities/bookmark.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_entity.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
+import 'package:learning_tracker/features/learning/domain/entities/learning_ledger_entry.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/day_type.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/study_day_config.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/entities/profile_program.dart';
+import 'package:learning_tracker/features/tracks/stages/domain/models/schedule_type.dart';
+import 'package:learning_tracker/features/tracks/stages/domain/models/stage_definition.dart';
 
 void main() {
   final past = DateTime.utc(2020, 1, 1);
 
   // completions — codec encode() shape (what the outbox processor writes).
-  final completions = const CompletionEventCodec().encode(
-    CompletionEventRow(
-      profileId: 5,
-      curriculumId: 'c1',
+  final completions = {
+    ...CompletionEntity(
+      curriculumId: CurriculumId.mishnayos,
       sefariaRef: 'Berakhot.2a',
       stageId: 1,
-      trackType: 'primary',
-      eventTimestamp: past,
+      trackType: 'personal',
+      source: CompletionSource.live,
+      completedAt: past,
       points: 10,
-    ),
-  );
+    ).toFirestore(),
+    // CompletionEntity.toFirestore() uses a DateTime for the Firestore SDK;
+    // this CLI serializes the same payload as JSON for the emulator fixture.
+    'completed_at': past.toIso8601String(),
+  };
 
   // bookmarks — minimal codec encode() shape (curriculum_id, sefaria_ref,
   // updated_at). The rules hasOnly also allows profile_id, content_item_id,
   // stage_id — kept out of the fixture to reflect the actual write path.
-  final bookmarks = const BookmarkCodec().encode(
-    BookmarkRow(curriculumId: 'c1', sefariaRef: 'Berakhot.2a', updatedAt: past),
-  );
+  final bookmarks = BookmarkEntity(
+    curriculumId: CurriculumId.mishnayos,
+    sefariaRef: 'Berakhot.2a',
+    updatedAt: past,
+  ).toFirestore();
 
   // settings — open bag; minimal codec encode() shape.
-  final settings = const SettingsCodec().encode(
-    SettingsRow(curriculumId: 'c1', updatedAt: past),
-  );
+  final settings = <String, dynamic>{
+    'curriculum_id': CurriculumId.mishnayos.storageKey,
+    'updated_at': past.toIso8601String(),
+  };
 
   // curriculum_tracks — LocalDataUploadService shape (includes profile_id,
   // track_id which the codec's encode() omits but the live write includes).
@@ -74,128 +82,85 @@ void main() {
   };
 
   // stage_definitions — codec encode() shape.
-  final stageDefinitions = const StageDefinitionCodec().encode(
-    StageDefinitionRow(
-      curriculumId: 'c1',
-      trackId: 1,
-      stageOrder: 1,
-      stageName: 'Stage 1',
-      schedule: '{"type":"delay","delay_days":7}',
-      isDefault: true,
-      updatedAt: past,
-    ),
-  );
+  final stageDefinitions = const StageDefinition(
+    curriculumId: CurriculumId.mishnayos,
+    stageOrder: 1,
+    stageName: 'Stage 1',
+    delayDays: 7,
+    isDefault: true,
+    scheduleType: ScheduleType.delay,
+  ).toFirestore(updatedAt: past);
 
   // study_day_configs — codec encode() shape.
-  final studyDayConfigs = const StudyDayConfigCodec().encode(
-    StudyDayConfigRow(
-      profileId: 5,
-      curriculumId: 'c1',
-      trackId: 1,
-      dayOfWeek: 1,
-      dayType: 'study',
-      updatedAt: past,
-    ),
+  final studyDayConfigsOut = const StudyDayConfigEntry(
+    dayOfWeek: 1,
+    dayType: DayType.study,
+  ).toFirestore(
+    curriculumId: CurriculumId.mishnayos,
+    updatedAt: past,
   );
-  // Cast profile_id to string to match test constant '5'.
-  final studyDayConfigsOut = {
-    ...studyDayConfigs,
-    'profile_id': '${studyDayConfigs["profile_id"]}',
-  };
 
   // goals — GoalCodec.encode() shape (the widest valid set for hasOnly).
   // Note: GoalRow.profileId is int; the test constant is string '5'. We emit
   // the string form to match the path segment.
-  final goalEncoded = const GoalCodec().encode(
-    GoalRow(
-      firestoreId: 'g1',
-      profileId: 5,
-      curriculumId: 'c1',
-      updatedAt: past,
-      createdAt: past,
-      paceValue: 2,
-      pacePeriod: 'daily',
-      targetDate: DateTime.utc(2025, 12, 31),
-    ),
+  final goal = GoalEntity(
+    curriculumId: CurriculumId.mishnayos,
+    updatedAt: past,
+    createdAt: past,
+    paceValue: 2,
+    pacePeriod: 'daily',
+    targetDate: DateTime.utc(2025, 12, 31),
+    description: 'Finish Berakhot',
+    targetPercent: 80,
+    dateType: 'fixed',
+    goalType: 'completion',
   );
-  // Augment with additional LocalDataUploadService fields (description, id,
-  // goal_type, date_type, target_percent, track_id) which also need to pass
-  // the hasOnly() whitelist. Override profile_id to string '5'.
+  // The current repository injects the stable entity identity as `id` before
+  // writing; preserve that current write shape in the fixture.
   final goals = {
-    'id': 'g1',
-    ...goalEncoded,
-    'profile_id': '5',
-    'track_id': '1',
-    'description': 'Finish Berakhot',
-    'target_percent': 80,
-    'date_type': 'fixed',
-    'goal_type': 'completion',
+    'id': goal.firestoreId,
+    ...goal.toFirestore(),
   };
 
   // learning_order — codec encode() shape.
-  final learningOrder = const LearningOrderCodec().encode(
-    LearningOrderRow(
-      curriculumId: 'c1',
-      sefariaRef: 'Berakhot.2a',
-      userSortOrder: 1,
-      updatedAt: past,
-    ),
-  );
+  final learningOrder = <String, dynamic>{
+    'curriculum_id': CurriculumId.mishnayos.storageKey,
+    'sefaria_ref': 'Berakhot.2a',
+    'user_sort_order': 1,
+    'updated_at': past.toIso8601String(),
+  };
 
   // profile_programs — LocalDataUploadService shape (enqueueProfileProgram).
   // The codec encode() also produces the same keys so either is fine.
-  final profilePrograms = const ProfileProgramCodec().encode(
-    ProfileProgramRow(
-      profileId: 5,
-      curriculumId: 'c1',
-      programId: 1,
-      trackingStartDate: past,
-      trackingStartRef: 'Berakhot.2a',
-    ),
-  );
-  // Override profile_id to string '5' to match path segment constant.
-  final profileProgramsOut = {
-    ...profilePrograms,
-    'profile_id': '${profilePrograms["profile_id"]}',
-    'program_id': profilePrograms['program_id'],
-  };
+  final profileProgramsOut = ProfileProgramEntity(
+    curriculumId: CurriculumId.mishnayos,
+    programId: 1,
+    trackingStartDate: past,
+    trackingStartRef: 'Berakhot.2a',
+    updatedAt: past,
+  ).toFirestore(profileId: '5');
 
   // learning_ledger — LocalDataUploadService enqueueLedgerEntry map literal.
   // The codec encode() shape is the PULL shape (sefaria_ref, entry_type,
   // points) and differs from the PUSH shape. No hasOnly rule exists for this
   // collection so either is valid, but we use the push shape as it is more
   // representative.
-  final learningLedger = const LearningLedgerCodec().encode(
-    LearningLedgerRow(
+  final learningLedgerOut = {
+    ...LearningLedgerEntry(
       ulid: 'ULID0001',
-      profileId: 5,
-      curriculumId: 'c1',
+      curriculumId: CurriculumId.mishnayos,
       entryScope: 'unit',
       unitIdentifier: 'Berakhot.2a',
       unitDisplayNameHe: 'ברכות ב',
       unitDisplayNameEn: 'Berakhot 2',
-      trackType: 'primary',
+      trackType: 'personal',
       completedAt: past,
       completionNumber: 1,
-      markedBy: 5,
+      markedBy: '5',
       isManual: false,
-    ),
-  );
-  // Augment with the LocalDataUploadService push-shape fields.
-  final learningLedgerOut = {
-    'ulid': 'ULID0001',
-    'profile_id': '5',
-    'curriculum_id': 'c1',
-    'entry_scope': 'unit',
-    'unit_identifier': 'Berakhot.2a',
-    'unit_display_name_he': 'ברכות ב',
-    'unit_display_name_en': 'Berakhot 2',
-    'track_type': 'primary',
-    'track_id': '1',
+      source: CompletionSource.live,
+    ).toFirestore(),
     'completed_at': past.toIso8601String(),
-    'completion_number': 1,
-    'marked_by': 'self',
-    'is_manual': false,
   };
 
   // import_metadata — direct map (no codec; written by FirestoreGatewayImpl).
@@ -241,11 +206,6 @@ void main() {
     'created_at': past.toIso8601String(),
     'updated_at': past.toIso8601String(),
   };
-
-  // Unused: learningLedger (codec shape); use learningLedgerOut instead.
-  // The local binding prevents the `unused_local_variable` analyzer warning.
-  // ignore: unused_local_variable
-  final droppedCodecShape = learningLedger;
 
   final payloads = <String, dynamic>{
     '_comment':
