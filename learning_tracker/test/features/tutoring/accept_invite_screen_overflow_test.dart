@@ -51,33 +51,33 @@ class _MockStackRouter extends Mock implements StackRouter {}
 
 class _StubTutorPinService implements TutorPinService {
   @override
-  Future<bool> hasTutorPin(int profileId) async => true;
+  Future<bool> hasTutorPin(String profileId) async => true;
   @override
   Future<TutorPinResult> setTutorPin({
-    required int profileId,
+    required String profileId,
     required String rawPin,
   }) async => const TutorPinSuccess();
   @override
   Future<TutorPinResult> verifyTutorPin({
-    required int profileId,
+    required String profileId,
     required String rawPin,
   }) async => const TutorPinSuccess();
   @override
-  Future<void> clearTutorPin(int profileId) async {}
+  Future<void> clearTutorPin(String profileId) async {}
   @override
-  Future<int> lockoutRemainingMinutes(int profileId) async => 0;
+  Future<int> lockoutRemainingMinutes(String profileId) async => 0;
 }
 
 class _FixedSelectedProfileId extends SelectedProfileId {
   _FixedSelectedProfileId(this._initial);
-  final int? _initial;
+  final String? _initial;
   @override
-  int? build() => _initial;
+  String? build() => _initial;
 }
 
 const _signedInState = AuthState.signedIn(
-  user: AuthUser(profileId: 1, email: 't@t.com', displayName: 'T'),
-  tier: Tier.localBorn,
+  user: AuthUser(uid: 'tutor-account-id', email: 't@t.com', displayName: 'T'),
+  tier: Tier.local,
 );
 
 TutorGrant _pendingGrant({String grantId = 'test-grant-id'}) {
@@ -103,7 +103,9 @@ List<Override> _overrides({
 }) {
   return [
     authStateProvider.overrideWithValue(_signedInState),
-    selectedProfileIdProvider.overrideWith(() => _FixedSelectedProfileId(1)),
+    selectedProfileIdProvider.overrideWith(
+      () => _FixedSelectedProfileId('tutor-profile-id'),
+    ),
     acceptTutorInviteUseCaseProvider.overrideWithValue(useCase),
     tutorPinServiceProvider.overrideWithValue(_StubTutorPinService()),
     incomingTutorGrantsProvider.overrideWith((ref) async => grants ?? []),

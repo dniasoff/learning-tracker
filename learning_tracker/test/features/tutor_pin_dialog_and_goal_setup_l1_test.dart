@@ -99,7 +99,7 @@ class _FalseUseHebrewTerms extends UseHebrewTerms {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const int _kTutorProfileId = 11;
+const String _kTutorProfileId = 'tutor-profile-id';
 
 /// Fixed "now" for scheduler clock so projected-completion math is stable.
 final DateTime _kNow = DateTime.utc(2026, 6, 1);
@@ -439,7 +439,7 @@ void main() {
 
         verifyNever(
           () => mockService.verifyTutorPin(
-            profileId: any<int>(named: 'profileId'),
+            profileId: any<String>(named: 'profileId'),
             rawPin: any<String>(named: 'rawPin'),
           ),
         );
@@ -456,7 +456,7 @@ void main() {
 
         when(
           () => mockService.verifyTutorPin(
-            profileId: any<int>(named: 'profileId'),
+            profileId: any<String>(named: 'profileId'),
             rawPin: any<String>(named: 'rawPin'),
           ),
         ).thenAnswer((_) async => const TutorPinSuccess());
@@ -507,7 +507,7 @@ void main() {
         // No verify call since we backspaced before completing 4 digits.
         verifyNever(
           () => mockService.verifyTutorPin(
-            profileId: any<int>(named: 'profileId'),
+            profileId: any<String>(named: 'profileId'),
             rawPin: any<String>(named: 'rawPin'),
           ),
         );
@@ -530,7 +530,7 @@ void main() {
 
       when(
         () => mockService.verifyTutorPin(
-          profileId: any<int>(named: 'profileId'),
+          profileId: any<String>(named: 'profileId'),
           rawPin: any<String>(named: 'rawPin'),
         ),
       ).thenAnswer((_) async => const TutorPinSuccess());
@@ -561,7 +561,7 @@ void main() {
 
         when(
           () => mockService.verifyTutorPin(
-            profileId: any<int>(named: 'profileId'),
+            profileId: any<String>(named: 'profileId'),
             rawPin: any<String>(named: 'rawPin'),
           ),
         ).thenAnswer((_) async => const TutorPinIncorrect());
@@ -598,7 +598,7 @@ void main() {
 
         when(
           () => mockService.verifyTutorPin(
-            profileId: any<int>(named: 'profileId'),
+            profileId: any<String>(named: 'profileId'),
             rawPin: any<String>(named: 'rawPin'),
           ),
         ).thenAnswer((_) async => const TutorPinLockedOut(remainingMinutes: 7));
@@ -639,7 +639,7 @@ void main() {
 
         when(
           () => mockService.verifyTutorPin(
-            profileId: any<int>(named: 'profileId'),
+            profileId: any<String>(named: 'profileId'),
             rawPin: any<String>(named: 'rawPin'),
           ),
         ).thenAnswer((_) async {
@@ -690,7 +690,7 @@ void main() {
         // pre-formatted message — the dialog resolves it via l10n.
         when(
           () => mockService.verifyTutorPin(
-            profileId: any<int>(named: 'profileId'),
+            profileId: any<String>(named: 'profileId'),
             rawPin: any<String>(named: 'rawPin'),
           ),
         ).thenAnswer(
