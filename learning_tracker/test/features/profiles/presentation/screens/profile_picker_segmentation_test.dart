@@ -19,7 +19,8 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
+import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/my_children_section.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
@@ -29,24 +30,18 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 
 final _epoch = DateTime(2026);
 
-ProfileModel _adult(int id) => ProfileModel(
-  id: id,
-  ulid: 'ulid-$id',
-  accountId: 1,
+LearnerProfileEntity _adult(int id) => LearnerProfileEntity(
+  profileId: 'ulid-$id',
   displayName: 'Adult $id',
-  mode: 'adult',
-  avatarIndex: 0,
+  mode: ProfileMode.adult,
   createdAt: _epoch,
   updatedAt: _epoch,
 );
 
-ProfileModel _child(int id) => ProfileModel(
-  id: id,
-  ulid: 'ulid-$id',
-  accountId: 1,
+LearnerProfileEntity _child(int id) => LearnerProfileEntity(
+  profileId: 'ulid-$id',
   displayName: 'Child $id',
-  mode: 'child',
-  avatarIndex: 0,
+  mode: ProfileMode.child,
   createdAt: _epoch,
   updatedAt: _epoch,
 );
@@ -64,8 +59,9 @@ Future<void> _pump(WidgetTester tester, Widget widget) async {
   await tester.pumpAndSettle();
 }
 
-void _noop1(int _) {}
-void _noop2(ProfileModel _, int __) {}
+void _noopProfileTap(String _) {}
+void _noopAdd(int _) {}
+void _noop2(LearnerProfileEntity _, int __) {}
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -82,9 +78,9 @@ void main() {
           profiles: [_adult(1), _adult(2)],
           showHeader: false,
           isSelectingProfile: false,
-          onProfileTap: _noop1,
+          onProfileTap: _noopProfileTap,
           onProfileLongPress: _noop2,
-          onAddProfile: _noop1,
+          onAddProfile: _noopAdd,
         ),
       );
 
@@ -103,9 +99,9 @@ void main() {
             profiles: [_adult(1), _child(2)],
             showHeader: false,
             isSelectingProfile: false,
-            onProfileTap: _noop1,
+            onProfileTap: _noopProfileTap,
             onProfileLongPress: _noop2,
-            onAddProfile: _noop1,
+            onAddProfile: _noopAdd,
           ),
         );
 
@@ -125,9 +121,9 @@ void main() {
           profiles: [_adult(1), _child(2)],
           showHeader: true,
           isSelectingProfile: false,
-          onProfileTap: _noop1,
+          onProfileTap: _noopProfileTap,
           onProfileLongPress: _noop2,
-          onAddProfile: _noop1,
+          onAddProfile: _noopAdd,
         ),
       );
 

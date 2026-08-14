@@ -19,15 +19,15 @@ void main() {
   group('AUD-profiles-12 — ProfileSession value semantics', () {
     test('two sessions with the same profileId are equal and share a '
         'hashCode', () {
-      const a = ProfileSession(profileId: 7);
-      const b = ProfileSession(profileId: 7);
+      const a = ProfileSession(profileId: 'ulid-7');
+      const b = ProfileSession(profileId: 'ulid-7');
       expect(a, equals(b));
       expect(a.hashCode, equals(b.hashCode));
     });
 
     test('sessions with different profileIds are not equal', () {
-      const a = ProfileSession(profileId: 7);
-      const b = ProfileSession(profileId: 8);
+      const a = ProfileSession(profileId: 'ulid-7');
+      const b = ProfileSession(profileId: 'ulid-8');
       expect(a, isNot(equals(b)));
     });
 
@@ -39,7 +39,7 @@ void main() {
     });
 
     test('a session with a profileId is active', () {
-      const session = ProfileSession(profileId: 1);
+      const session = ProfileSession(profileId: 'ulid-1');
       expect(session.isActive, isTrue);
     });
 

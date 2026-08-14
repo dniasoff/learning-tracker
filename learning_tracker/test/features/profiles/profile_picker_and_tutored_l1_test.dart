@@ -44,10 +44,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
-import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
+import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/screens/profile_picker_screen.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/tutored_children_section.dart';
@@ -69,36 +70,32 @@ class _FakePageRouteInfo extends Fake implements PageRouteInfo {}
 
 class _FixedSelectedProfileId extends SelectedProfileId {
   _FixedSelectedProfileId(this._initial);
-  final int? _initial;
+  final String? _initial;
   @override
-  int? build() => _initial;
+  String? build() => _initial;
 }
 
 // ── Test data factories ────────────────────────────────────────────────────────
 
 final _epoch = DateTime.utc(2026, 1, 1);
 
-ProfileModel _child({int id = 1, String name = 'Yosef'}) => ProfileModel(
-  id: id,
-  ulid: 'ulid-$id',
-  accountId: 1,
-  displayName: name,
-  mode: 'child',
-  avatarIndex: 0,
-  createdAt: _epoch,
-  updatedAt: _epoch,
-);
+LearnerProfileEntity _child({int id = 1, String name = 'Yosef'}) =>
+    LearnerProfileEntity(
+      profileId: 'ulid-$id',
+      displayName: name,
+      mode: ProfileMode.child,
+      createdAt: _epoch,
+      updatedAt: _epoch,
+    );
 
-ProfileModel _adult({int id = 2, String name = 'Avraham'}) => ProfileModel(
-  id: id,
-  ulid: 'ulid-$id',
-  accountId: 1,
-  displayName: name,
-  mode: 'adult',
-  avatarIndex: 0,
-  createdAt: _epoch,
-  updatedAt: _epoch,
-);
+LearnerProfileEntity _adult({int id = 2, String name = 'Avraham'}) =>
+    LearnerProfileEntity(
+      profileId: 'ulid-$id',
+      displayName: name,
+      mode: ProfileMode.adult,
+      createdAt: _epoch,
+      updatedAt: _epoch,
+    );
 
 TutorGrant _activeGrant({
   String grantId = 'grant-active-1',
@@ -171,7 +168,7 @@ Widget _buildSection(
 
 Widget _buildPicker({
   required _MockStackRouter router,
-  List<ProfileModel> profiles = const [],
+  List<LearnerProfileEntity> profiles = const [],
   List<TutorGrant> grants = const [],
   List<TutorGrant> pendingInvites = const [],
   Locale locale = const Locale('en'),
@@ -184,8 +181,12 @@ Widget _buildPicker({
       pendingTutorInvitesProvider.overrideWith((ref) async => pendingInvites),
       authStateProvider.overrideWithValue(
         const AuthState.signedIn(
-          user: AuthUser(profileId: 1, email: 't@t.com', displayName: 'Test'),
-          tier: Tier.localBorn,
+          user: AuthUser(
+            uid: 'account-1',
+            email: 't@t.com',
+            displayName: 'Test',
+          ),
+          tier: Tier.local,
         ),
       ),
       selectedProfileIdProvider.overrideWith(
