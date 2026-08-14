@@ -14,7 +14,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$SchedulerStage {
 
- int get id; int get stageOrder; String get stageName; int get delayDays; ScheduleType get scheduleType; List<int>? get daysOfWeek; int? get rollingWindowSize;
+ int get stageOrder; String get stageName; int get delayDays; ScheduleType get scheduleType; List<int>? get daysOfWeek; int? get rollingWindowSize;
 /// Create a copy of SchedulerStage
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -25,16 +25,16 @@ $SchedulerStageCopyWith<SchedulerStage> get copyWith => _$SchedulerStageCopyWith
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is SchedulerStage&&(identical(other.id, id) || other.id == id)&&(identical(other.stageOrder, stageOrder) || other.stageOrder == stageOrder)&&(identical(other.stageName, stageName) || other.stageName == stageName)&&(identical(other.delayDays, delayDays) || other.delayDays == delayDays)&&(identical(other.scheduleType, scheduleType) || other.scheduleType == scheduleType)&&const DeepCollectionEquality().equals(other.daysOfWeek, daysOfWeek)&&(identical(other.rollingWindowSize, rollingWindowSize) || other.rollingWindowSize == rollingWindowSize));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is SchedulerStage&&(identical(other.stageOrder, stageOrder) || other.stageOrder == stageOrder)&&(identical(other.stageName, stageName) || other.stageName == stageName)&&(identical(other.delayDays, delayDays) || other.delayDays == delayDays)&&(identical(other.scheduleType, scheduleType) || other.scheduleType == scheduleType)&&const DeepCollectionEquality().equals(other.daysOfWeek, daysOfWeek)&&(identical(other.rollingWindowSize, rollingWindowSize) || other.rollingWindowSize == rollingWindowSize));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,id,stageOrder,stageName,delayDays,scheduleType,const DeepCollectionEquality().hash(daysOfWeek),rollingWindowSize);
+int get hashCode => Object.hash(runtimeType,stageOrder,stageName,delayDays,scheduleType,const DeepCollectionEquality().hash(daysOfWeek),rollingWindowSize);
 
 @override
 String toString() {
-  return 'SchedulerStage(id: $id, stageOrder: $stageOrder, stageName: $stageName, delayDays: $delayDays, scheduleType: $scheduleType, daysOfWeek: $daysOfWeek, rollingWindowSize: $rollingWindowSize)';
+  return 'SchedulerStage(stageOrder: $stageOrder, stageName: $stageName, delayDays: $delayDays, scheduleType: $scheduleType, daysOfWeek: $daysOfWeek, rollingWindowSize: $rollingWindowSize)';
 }
 
 
@@ -45,7 +45,7 @@ abstract mixin class $SchedulerStageCopyWith<$Res>  {
   factory $SchedulerStageCopyWith(SchedulerStage value, $Res Function(SchedulerStage) _then) = _$SchedulerStageCopyWithImpl;
 @useResult
 $Res call({
- int id, int stageOrder, String stageName, int delayDays, ScheduleType scheduleType, List<int>? daysOfWeek, int? rollingWindowSize
+ int stageOrder, String stageName, int delayDays, ScheduleType scheduleType, List<int>? daysOfWeek, int? rollingWindowSize
 });
 
 
@@ -62,10 +62,9 @@ class _$SchedulerStageCopyWithImpl<$Res>
 
 /// Create a copy of SchedulerStage
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? stageOrder = null,Object? stageName = null,Object? delayDays = null,Object? scheduleType = null,Object? daysOfWeek = freezed,Object? rollingWindowSize = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? stageOrder = null,Object? stageName = null,Object? delayDays = null,Object? scheduleType = null,Object? daysOfWeek = freezed,Object? rollingWindowSize = freezed,}) {
   return _then(_self.copyWith(
-id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
-as int,stageOrder: null == stageOrder ? _self.stageOrder : stageOrder // ignore: cast_nullable_to_non_nullable
+stageOrder: null == stageOrder ? _self.stageOrder : stageOrder // ignore: cast_nullable_to_non_nullable
 as int,stageName: null == stageName ? _self.stageName : stageName // ignore: cast_nullable_to_non_nullable
 as String,delayDays: null == delayDays ? _self.delayDays : delayDays // ignore: cast_nullable_to_non_nullable
 as int,scheduleType: null == scheduleType ? _self.scheduleType : scheduleType // ignore: cast_nullable_to_non_nullable
@@ -156,10 +155,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  int stageOrder,  String stageName,  int delayDays,  ScheduleType scheduleType,  List<int>? daysOfWeek,  int? rollingWindowSize)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int stageOrder,  String stageName,  int delayDays,  ScheduleType scheduleType,  List<int>? daysOfWeek,  int? rollingWindowSize)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _SchedulerStage() when $default != null:
-return $default(_that.id,_that.stageOrder,_that.stageName,_that.delayDays,_that.scheduleType,_that.daysOfWeek,_that.rollingWindowSize);case _:
+return $default(_that.stageOrder,_that.stageName,_that.delayDays,_that.scheduleType,_that.daysOfWeek,_that.rollingWindowSize);case _:
   return orElse();
 
 }
@@ -177,10 +176,10 @@ return $default(_that.id,_that.stageOrder,_that.stageName,_that.delayDays,_that.
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  int stageOrder,  String stageName,  int delayDays,  ScheduleType scheduleType,  List<int>? daysOfWeek,  int? rollingWindowSize)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int stageOrder,  String stageName,  int delayDays,  ScheduleType scheduleType,  List<int>? daysOfWeek,  int? rollingWindowSize)  $default,) {final _that = this;
 switch (_that) {
 case _SchedulerStage():
-return $default(_that.id,_that.stageOrder,_that.stageName,_that.delayDays,_that.scheduleType,_that.daysOfWeek,_that.rollingWindowSize);case _:
+return $default(_that.stageOrder,_that.stageName,_that.delayDays,_that.scheduleType,_that.daysOfWeek,_that.rollingWindowSize);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -197,10 +196,10 @@ return $default(_that.id,_that.stageOrder,_that.stageName,_that.delayDays,_that.
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  int stageOrder,  String stageName,  int delayDays,  ScheduleType scheduleType,  List<int>? daysOfWeek,  int? rollingWindowSize)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int stageOrder,  String stageName,  int delayDays,  ScheduleType scheduleType,  List<int>? daysOfWeek,  int? rollingWindowSize)?  $default,) {final _that = this;
 switch (_that) {
 case _SchedulerStage() when $default != null:
-return $default(_that.id,_that.stageOrder,_that.stageName,_that.delayDays,_that.scheduleType,_that.daysOfWeek,_that.rollingWindowSize);case _:
+return $default(_that.stageOrder,_that.stageName,_that.delayDays,_that.scheduleType,_that.daysOfWeek,_that.rollingWindowSize);case _:
   return null;
 
 }
@@ -212,10 +211,9 @@ return $default(_that.id,_that.stageOrder,_that.stageName,_that.delayDays,_that.
 
 
 class _SchedulerStage implements SchedulerStage {
-  const _SchedulerStage({required this.id, required this.stageOrder, required this.stageName, required this.delayDays, this.scheduleType = ScheduleType.delay, final  List<int>? daysOfWeek, this.rollingWindowSize}): _daysOfWeek = daysOfWeek;
+  const _SchedulerStage({required this.stageOrder, required this.stageName, required this.delayDays, this.scheduleType = ScheduleType.delay, final  List<int>? daysOfWeek, this.rollingWindowSize}): _daysOfWeek = daysOfWeek;
   
 
-@override final  int id;
 @override final  int stageOrder;
 @override final  String stageName;
 @override final  int delayDays;
@@ -241,16 +239,16 @@ _$SchedulerStageCopyWith<_SchedulerStage> get copyWith => __$SchedulerStageCopyW
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _SchedulerStage&&(identical(other.id, id) || other.id == id)&&(identical(other.stageOrder, stageOrder) || other.stageOrder == stageOrder)&&(identical(other.stageName, stageName) || other.stageName == stageName)&&(identical(other.delayDays, delayDays) || other.delayDays == delayDays)&&(identical(other.scheduleType, scheduleType) || other.scheduleType == scheduleType)&&const DeepCollectionEquality().equals(other._daysOfWeek, _daysOfWeek)&&(identical(other.rollingWindowSize, rollingWindowSize) || other.rollingWindowSize == rollingWindowSize));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _SchedulerStage&&(identical(other.stageOrder, stageOrder) || other.stageOrder == stageOrder)&&(identical(other.stageName, stageName) || other.stageName == stageName)&&(identical(other.delayDays, delayDays) || other.delayDays == delayDays)&&(identical(other.scheduleType, scheduleType) || other.scheduleType == scheduleType)&&const DeepCollectionEquality().equals(other._daysOfWeek, _daysOfWeek)&&(identical(other.rollingWindowSize, rollingWindowSize) || other.rollingWindowSize == rollingWindowSize));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,id,stageOrder,stageName,delayDays,scheduleType,const DeepCollectionEquality().hash(_daysOfWeek),rollingWindowSize);
+int get hashCode => Object.hash(runtimeType,stageOrder,stageName,delayDays,scheduleType,const DeepCollectionEquality().hash(_daysOfWeek),rollingWindowSize);
 
 @override
 String toString() {
-  return 'SchedulerStage(id: $id, stageOrder: $stageOrder, stageName: $stageName, delayDays: $delayDays, scheduleType: $scheduleType, daysOfWeek: $daysOfWeek, rollingWindowSize: $rollingWindowSize)';
+  return 'SchedulerStage(stageOrder: $stageOrder, stageName: $stageName, delayDays: $delayDays, scheduleType: $scheduleType, daysOfWeek: $daysOfWeek, rollingWindowSize: $rollingWindowSize)';
 }
 
 
@@ -261,7 +259,7 @@ abstract mixin class _$SchedulerStageCopyWith<$Res> implements $SchedulerStageCo
   factory _$SchedulerStageCopyWith(_SchedulerStage value, $Res Function(_SchedulerStage) _then) = __$SchedulerStageCopyWithImpl;
 @override @useResult
 $Res call({
- int id, int stageOrder, String stageName, int delayDays, ScheduleType scheduleType, List<int>? daysOfWeek, int? rollingWindowSize
+ int stageOrder, String stageName, int delayDays, ScheduleType scheduleType, List<int>? daysOfWeek, int? rollingWindowSize
 });
 
 
@@ -278,10 +276,9 @@ class __$SchedulerStageCopyWithImpl<$Res>
 
 /// Create a copy of SchedulerStage
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? stageOrder = null,Object? stageName = null,Object? delayDays = null,Object? scheduleType = null,Object? daysOfWeek = freezed,Object? rollingWindowSize = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? stageOrder = null,Object? stageName = null,Object? delayDays = null,Object? scheduleType = null,Object? daysOfWeek = freezed,Object? rollingWindowSize = freezed,}) {
   return _then(_SchedulerStage(
-id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
-as int,stageOrder: null == stageOrder ? _self.stageOrder : stageOrder // ignore: cast_nullable_to_non_nullable
+stageOrder: null == stageOrder ? _self.stageOrder : stageOrder // ignore: cast_nullable_to_non_nullable
 as int,stageName: null == stageName ? _self.stageName : stageName // ignore: cast_nullable_to_non_nullable
 as String,delayDays: null == delayDays ? _self.delayDays : delayDays // ignore: cast_nullable_to_non_nullable
 as int,scheduleType: null == scheduleType ? _self.scheduleType : scheduleType // ignore: cast_nullable_to_non_nullable

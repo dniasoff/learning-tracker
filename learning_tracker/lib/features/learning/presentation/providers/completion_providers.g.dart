@@ -329,7 +329,7 @@ final class CompletionOrchestratorProvider
 }
 
 String _$completionOrchestratorHash() =>
-    r'18264e41bff30bb185012ad0ec1155f22569d330';
+    r'c079e80f6c3df54608070d65cc43dfb90e91ea30';
 
 /// Provides the mark completion use case.
 

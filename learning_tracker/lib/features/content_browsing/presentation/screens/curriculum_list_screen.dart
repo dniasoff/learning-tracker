@@ -130,9 +130,9 @@ class _CurriculumCard extends ConsumerWidget {
       dashboardCompletionPercentageProvider(curriculum),
     );
     final curriculumColor = context.colors.curriculumFor(curriculum);
-    final percentage = completionAsync.asData?.value ?? 0.0;
+    final percentage = completionAsync.value;
     final pctDisplay = completionAsync.hasValue
-        ? formatFractionAsPercent(percentage)
+        ? formatFractionAsPercent(percentage!)
         : '';
 
     return contentAsync.when(
@@ -184,7 +184,7 @@ class _CurriculumCard extends ConsumerWidget {
     required WidgetRef ref,
     required Color curriculumColor,
     required String pctDisplay,
-    required double percentage,
+    required double? percentage,
     int leafCount = 0,
     int containerCount = 0,
     bool completionLoading = false,
@@ -255,7 +255,7 @@ class _CurriculumCard extends ConsumerWidget {
                     height: 16,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                else if (percentage > 0)
+                else if (percentage != null && percentage > 0)
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 10,
@@ -306,12 +306,12 @@ class _CurriculumCard extends ConsumerWidget {
                   ),
               ],
             ),
-            if (completionError == null && percentage > 0) ...[
+            if (completionError == null && percentage != null && percentage > 0) ...[
               const SizedBox(height: 16),
               ClipRRect(
                 borderRadius: BorderRadius.circular(4),
                 child: LinearProgressIndicator(
-                  value: percentage,
+                  value: percentage!,
                   minHeight: 4,
                   backgroundColor: context.colors.brandOutline.withValues(
                     alpha: 0.5,

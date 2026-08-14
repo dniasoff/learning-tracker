@@ -63,13 +63,8 @@ Future<CurriculumCompletionSummary?> computeItemsLearnedSummary({
   if (trackCompletions.isEmpty) return null;
 
   // Load all leaves for this curriculum.
-  List<ContentItem> leaves;
-  try {
-    final content = await repo.getContentForCurriculum(curriculum);
-    leaves = content.where((item) => item.isLeaf).toList();
-  } catch (_) {
-    return null;
-  }
+  final content = await repo.getContentForCurriculum(curriculum);
+  final leaves = content.where((item) => item.isLeaf).toList();
   if (leaves.isEmpty) return null;
 
   final completedRefs = trackCompletions.map((c) => c.sefariaRef).toSet();
@@ -162,13 +157,8 @@ Future<CurriculumCompletionSummary?> computeLifetimeViewSummary({
   final orderedLedger = [...rawLedger]
     ..sort((a, b) => b.completedAt.compareTo(a.completedAt));
 
-  List<ContentItem> leaves;
-  try {
-    final content = await repo.getContentForCurriculum(curriculum);
-    leaves = content.where((item) => item.isLeaf).toList();
-  } catch (_) {
-    return null;
-  }
+  final content = await repo.getContentForCurriculum(curriculum);
+  final leaves = content.where((item) => item.isLeaf).toList();
   if (leaves.isEmpty) return null;
 
   const builder = LifetimeTreeBuilder();

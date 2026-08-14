@@ -825,7 +825,7 @@ final class StripStockMilestonesEffectProvider
 }
 
 String _$stripStockMilestonesEffectHash() =>
-    r'c3ba54a77521dc1cc0ebe52aebec4c76eac983d3';
+    r'a3442fdad3e54cf61decf4336a10219df3bfce9d';
 
 /// Next reward milestone for the child dashboard (closest threshold not yet met).
 ///
@@ -896,7 +896,7 @@ final class DashboardChildNextRewardProvider
 }
 
 String _$dashboardChildNextRewardHash() =>
-    r'2b612129ee1b8c91b711cedc4ab8d22f78df647d';
+    r'e975de7cbf536ab6f39d7777574e64da506d82a8';
 
 /// Streak recovery info — whether the streak was just saved by grace period.
 

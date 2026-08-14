@@ -943,22 +943,12 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
               stageId: task.stageOrder,
               trackType: trackType,
             );
-            final completedByDefinitionIdParams = (
-              sefariaRef: widget.sefariaRef,
-              stageId: task.stageDefinitionId,
-              trackType: trackType,
-            );
             final isCompletedByOrderAsync = ref.watch(
               isStageCompletedProvider(completedByOrderParams),
-            );
-            final isCompletedByDefinitionIdAsync = ref.watch(
-              isStageCompletedProvider(completedByDefinitionIdParams),
             );
 
             final completionError = isCompletedByOrderAsync.hasError
                 ? isCompletedByOrderAsync.error!
-                : isCompletedByDefinitionIdAsync.hasError
-                ? isCompletedByDefinitionIdAsync.error!
                 : null;
             if (completionError != null) {
               return SizedBox(
@@ -987,11 +977,6 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
                         ref.invalidate(
                           isStageCompletedProvider(completedByOrderParams),
                         );
-                        ref.invalidate(
-                          isStageCompletedProvider(
-                            completedByDefinitionIdParams,
-                          ),
-                        );
                       },
                       child: Text(AppLocalizations.of(context)!.actionRetry),
                     ),
@@ -999,8 +984,7 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
                 ),
               );
             }
-            if (isCompletedByOrderAsync.asData == null ||
-                isCompletedByDefinitionIdAsync.asData == null) {
+            if (isCompletedByOrderAsync.asData == null) {
               return const SizedBox(
                 height: 44,
                 child: Center(
@@ -1012,9 +996,7 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
                 ),
               );
             }
-            final isDone =
-                isCompletedByOrderAsync.requireValue ||
-                isCompletedByDefinitionIdAsync.requireValue;
+            final isDone = isCompletedByOrderAsync.requireValue;
 
             final nextLabel =
                 AppLocalizations.of(context)?.textReaderNextDailyTask ??

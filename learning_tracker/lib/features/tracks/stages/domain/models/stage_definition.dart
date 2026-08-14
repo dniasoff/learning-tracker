@@ -24,7 +24,6 @@ part 'stage_definition.freezed.dart';
 @freezed
 abstract class StageDefinition with _$StageDefinition {
   const factory StageDefinition({
-    required int id,
     required CurriculumId curriculumId,
     required int stageOrder,
     required String stageName,
@@ -52,29 +51,6 @@ extension StageDefinitionScheduleSpec on StageDefinition {
   );
 }
 
-/// **TEMPORARY stopgap — exists only until the Drift stack is deleted.**
-/// Sentinel [StageDefinition.id] for instances decoded from Firestore
-/// (`docs/firestore-rewrite-map.md`; see [stageDefinitionFromFirestore]).
-///
-/// Firestore's `stage_definitions` doc-id is the **String**
-/// `{curriculumId}_{stageOrder}` (`DocIds.stageDefinitionDocId`) — there is
-/// no Drift-local autoincrement `int` for a Firestore-sourced row to carry.
-/// The real fix is removing `id` from [StageDefinition] entirely once
-/// `{curriculumId}_{stageOrder}` is the sole identity — not introducing a
-/// magic negative number. That isn't done now because [StageDefinition.id]
-/// is `required int` and widening/removing it ripples into the validator,
-/// scheduler, and UI, all of which are being rewired onto the Firestore
-/// repositories in a later stage anyway (touch it once, not twice). Until
-/// that rewiring deletes the Drift stack and this sentinel along with it,
-/// Firestore-sourced instances carry this negative value instead of a real
-/// id — Drift autoincrement primary keys are always positive, so a
-/// negative value can never collide with one.
-///
-/// **Never pass a Firestore-sourced [StageDefinition.id] to a method that
-/// expects a real Drift row id** (e.g. `StageDefinitionRepositoryImpl
-/// .hasCompletionsForStage`) — this value has no meaning there.
-const int kFirestoreUnmappedStageId = -1;
-
 /// Firestore document codec for `stage_definitions/{curriculumId}_
 /// {stageOrder}` (`docs/firestore-rewrite-map.md`, `firestore.rules`
 /// `match /stage_definitions/{stageId}`).
@@ -96,8 +72,7 @@ const int kFirestoreUnmappedStageId = -1;
 /// ratchet (`tool/check_mcf11_autoincrement_id_in_payload_ratchet.dart`) as
 /// a brand-new site outside `lib/core/sync/merge/`.
 extension StageDefinitionFirestoreCodec on StageDefinition {
-  /// Encodes this stage for a Firestore write. [id] is never included — see
-  /// [kFirestoreUnmappedStageId]'s doc comment.
+  /// Encodes this stage for a Firestore write.
   Map<String, dynamic> toFirestore({required DateTime updatedAt}) {
     final spec = schedule;
     return {
@@ -141,7 +116,6 @@ StageDefinition stageDefinitionFromFirestore(Map<String, dynamic> data) {
   }
 
   return StageDefinition(
-    id: kFirestoreUnmappedStageId,
     curriculumId: curriculumId,
     stageOrder: FirestoreCodec.parseInt(data['stage_order']) ?? 0,
     stageName: data['stage_name'] as String? ?? '',

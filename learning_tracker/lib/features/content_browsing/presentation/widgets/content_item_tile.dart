@@ -332,6 +332,6 @@ class _StageBreakdownSheet extends ConsumerWidget {
     CurriculumId curriculumId,
   ) async {
     final stages = await stageRepository.getStagesForCurriculum(curriculumId);
-    return {for (final s in stages) s.id: s.stageName};
+    return {for (final s in stages) s.stageOrder: s.stageName};
   }
 }

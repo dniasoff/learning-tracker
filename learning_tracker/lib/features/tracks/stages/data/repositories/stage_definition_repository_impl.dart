@@ -44,13 +44,6 @@ class StageDefinitionRepositoryNotReadyException implements Exception {
 /// implemented as a rules-legal tombstone because `firestore.rules` denies
 /// deletes on `stage_definitions`.
 ///
-/// ## [pushStagesForTrack] — no-op, not unsupported
-///
-/// The Drift-era push-pipeline step ("flush the local write to Firestore")
-/// has nothing left to flush here: [initializeDefaults]/[resetToDefaults]
-/// already write straight to Firestore. Silently succeeding, not throwing,
-/// since callers (e.g. `TrackCreationService.createTrack`) treat it as a
-/// fire-and-forget step, not a not-ready-sensitive write.
 class FirestoreStageDefinitionRepositoryAdapter
     implements StageDefinitionRepository {
   FirestoreStageDefinitionRepositoryAdapter({required Ref ref}) : _ref = ref;
@@ -97,15 +90,7 @@ class FirestoreStageDefinitionRepositoryAdapter
   }
 
   @override
-  Future<void> initializeDefaults(
-    CurriculumId curriculumId, {
-    required int profileId,
-    required int trackId,
-  }) async {
-    // profileId/trackId dropped — the resolved repository is already
-    // profile-scoped (constructor-level), and AD-25 makes curriculumId the
-    // sole canonical track key; see FirestoreStageDefinitionRepository's
-    // class doc comment ("Kept, still flagged").
+  Future<void> initializeDefaults(CurriculumId curriculumId) async {
     final repo = await _resolve();
     await repo.initializeDefaults(curriculumId);
   }
@@ -148,14 +133,6 @@ class FirestoreStageDefinitionRepositoryAdapter
   Future<void> deleteStagesForTrack(CurriculumId curriculumId) async {
     final repo = await _resolve();
     await repo.deleteStagesForCurriculum(curriculumId);
-  }
-
-  @override
-  Future<void> pushStagesForTrack({
-    required int trackId,
-    required CurriculumId curriculumId,
-  }) async {
-    // No-op — see the class doc comment's "pushStagesForTrack" section.
   }
 
   @override

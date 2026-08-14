@@ -297,10 +297,7 @@ class CompletionDetectionService {
       orElse: () =>
           stages.reduce((a, b) => a.stageOrder < b.stageOrder ? a : b),
     );
-    // Completion rows in the live codebase write `stageId` as EITHER the
-    // stage_definitions.id (autoincrement FK) OR the stageOrder (1, 2, 3…).
-    // Accept both formats when checking limud completion.
-    final limudStageIds = <int>{limudStage.id, limudStage.stageOrder};
+    final limudStageIds = <int>{limudStage.stageOrder};
 
     // Issue ONE bulk query for all completions in this curriculum + profile,
     // then index by sefariaRef in memory. Previously this loop ran one DAO

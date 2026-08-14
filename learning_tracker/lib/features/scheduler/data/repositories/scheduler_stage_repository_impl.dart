@@ -24,7 +24,6 @@ class SchedulerStageRepositoryImpl implements SchedulerStageRepository {
 
   static SchedulerStage _toSchedulerStage(StageDefinition s) {
     return SchedulerStage(
-      id: s.id,
       stageOrder: s.stageOrder,
       stageName: s.stageName,
       delayDays: s.delayDays,

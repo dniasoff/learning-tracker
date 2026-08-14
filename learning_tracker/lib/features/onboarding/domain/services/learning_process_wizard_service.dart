@@ -123,7 +123,6 @@ class LearningProcessWizardService {
 
       definitions.add(
         StageDefinition(
-          id: kFirestoreUnmappedStageId,
           curriculumId: result.curriculumId,
           stageOrder: i + 1,
           stageName: stage['label'] as String,
@@ -147,7 +146,6 @@ class LearningProcessWizardService {
   List<StageDefinition> _buildCustomStages(WizardResult result) {
     final definitions = <StageDefinition>[
       StageDefinition(
-        id: kFirestoreUnmappedStageId,
         curriculumId: result.curriculumId,
         stageOrder: 1,
         stageName: kLimudStageName,
@@ -162,7 +160,6 @@ class LearningProcessWizardService {
       final round = rounds[i];
       definitions.add(
         StageDefinition(
-          id: kFirestoreUnmappedStageId,
           curriculumId: result.curriculumId,
           stageOrder: i + 2,
           stageName: round.label,
@@ -185,7 +182,6 @@ class LearningProcessWizardService {
   List<StageDefinition> _buildNoReviewStages(WizardResult result) {
     return [
       StageDefinition(
-        id: kFirestoreUnmappedStageId,
         curriculumId: result.curriculumId,
         stageOrder: 1,
         stageName: kLimudStageName,

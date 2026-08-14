@@ -325,7 +325,6 @@ Future<void> seedStageDefinitions(
           (3, 'חזרה ב׳', 7),
         ])
           StageDefinition(
-            id: kFirestoreUnmappedStageId,
             curriculumId: curriculumId,
             stageOrder: stage.$1,
             stageName: stage.$2,

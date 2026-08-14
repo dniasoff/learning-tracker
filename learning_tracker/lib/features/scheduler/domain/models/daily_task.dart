@@ -43,7 +43,6 @@ abstract class DailyTask with _$DailyTask {
     required CurriculumId curriculumId,
     required String contentItemSefariaRef,
     required int stageOrder,
-    required int stageDefinitionId,
     required DailyTaskPriority priority,
     required bool isOverdue,
     required String reason,

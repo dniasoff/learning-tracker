@@ -222,14 +222,16 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     final dualMetric = (dualMetricMatches == null || dualMetricMatches.isEmpty)
         ? null
         : dualMetricMatches.first;
-    final currentCyclePct = dualMetric?.currentCyclePercentage ?? 0.0;
-    final lifetimePct = dualMetric?.lifetimePercentage ?? 0.0;
-    final trackProgressDisplay = dualMetricsAsync.isLoading
+    final dualMetricsError = dualMetricsAsync.error ??
+        (dualMetricsAsync.hasValue && dualMetric == null
+            ? StateError('Progress metrics did not include this track')
+            : null);
+    final trackProgressDisplay = dualMetric == null
         ? '…'
-        : formatFractionAsPercent(currentCyclePct);
-    final lifetimeDisplay = dualMetricsAsync.isLoading
+        : formatFractionAsPercent(dualMetric.currentCyclePercentage);
+    final lifetimeDisplay = dualMetric == null
         ? '…'
-        : formatFractionAsPercent(lifetimePct);
+        : formatFractionAsPercent(dualMetric.lifetimePercentage);
 
     final hasProgramEnrollment =
         ref
@@ -347,7 +349,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
             lifetimeDisplay: lifetimeDisplay,
             completionError: completionAsync.error,
             completionLoading: completionAsync.isLoading,
-            dualMetricsError: dualMetricsAsync.error,
+            dualMetricsError: dualMetricsError,
             dualMetricsLoading: dualMetricsAsync.isLoading,
             trackHasChazara: trackHasChazara,
             locale: locale,

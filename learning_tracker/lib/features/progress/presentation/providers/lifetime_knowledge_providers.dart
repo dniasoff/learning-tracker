@@ -817,15 +817,15 @@ Future<List<ContentItem>?> _boundedLeavesFor(
     try {
       return await leafSource.loadLeavesTransient(curriculum);
     } catch (e, st) {
-      // F20: mirror _safeLoadLeaves's failure handling below — log and skip
-      // rather than let a bad asset take down the whole totals computation.
+      // F20/D-E: log the asset failure, then propagate it so the achievement
+      // totals provider exposes an error instead of omitting this curriculum.
       AppLogger.instance.warning(
         event: 'lifetime_totals_bounded_load_failed',
         fields: {'curriculum': curriculum.storageKey},
         exception: e,
         stackTrace: st,
       );
-      return null;
+      rethrow;
     }
   }
   return _safeLoadLeaves(repo, curriculum);
@@ -839,16 +839,15 @@ Future<List<ContentItem>?> _safeLoadLeaves(
     final content = await repo.getContentForCurriculum(curriculum);
     return content.where((item) => item.isLeaf).toList();
   } catch (e, st) {
-    // F20: surface content-asset load failures so a missing/corrupt asset is
-    // diagnosable instead of silently producing an empty Lifetime Knowledge
-    // tree. Return null on the cold path so callers skip the curriculum.
+    // F20/D-E: surface content-asset load failures instead of silently
+    // producing an incomplete Lifetime Knowledge tree.
     AppLogger.instance.warning(
       event: 'lifetime_safe_load_failed',
       fields: {'curriculum': curriculum.storageKey, 'phase': 'leaves'},
       exception: e,
       stackTrace: st,
     );
-    return null;
+    rethrow;
   }
 }
 

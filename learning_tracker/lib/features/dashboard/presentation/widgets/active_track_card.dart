@@ -55,14 +55,16 @@ class ActiveTrackCard extends ConsumerWidget {
     final dualMetric = (dualMetricMatches == null || dualMetricMatches.isEmpty)
         ? null
         : dualMetricMatches.first;
-    final currentCyclePct = dualMetric?.currentCyclePercentage ?? 0.0;
-    final lifetimePct = dualMetric?.lifetimePercentage ?? 0.0;
-    final currentCycleDisplay = dualMetricsAsync.isLoading
+    final dualMetricsError = dualMetricsAsync.error ??
+        (dualMetricsAsync.hasValue && dualMetric == null
+            ? StateError('Progress metrics did not include this track')
+            : null);
+    final currentCycleDisplay = dualMetric == null
         ? '…'
-        : formatFractionAsPercent(currentCyclePct);
-    final lifetimeDisplay = dualMetricsAsync.isLoading
+        : formatFractionAsPercent(dualMetric.currentCyclePercentage);
+    final lifetimeDisplay = dualMetric == null
         ? '…'
-        : formatFractionAsPercent(lifetimePct);
+        : formatFractionAsPercent(dualMetric.lifetimePercentage);
 
     final curriculumTasks = allTasks
         .where((t) => t.curriculumId == curriculum)
@@ -328,9 +330,9 @@ class ActiveTrackCard extends ConsumerWidget {
                     spacing: 12,
                     runSpacing: 2,
                     children: [
-                      if (dualMetricsAsync.hasError)
+                      if (dualMetricsError != null)
                         InlineAsyncError(
-                          error: dualMetricsAsync.error!,
+                          error: dualMetricsError,
                           onRetry: () =>
                               ref.invalidate(trackDualProgressMetricsProvider),
                         )

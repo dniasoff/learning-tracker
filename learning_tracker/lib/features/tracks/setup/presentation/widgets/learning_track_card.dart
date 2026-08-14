@@ -38,9 +38,9 @@ class LearningTrackCard extends ConsumerWidget {
     final completionAsync = ref.watch(
       dashboardTrackCompletionPercentageProvider(track.curriculumId),
     );
-    final cycleFraction = completionAsync.asData?.value ?? 0.0;
+    final cycleFraction = completionAsync.value;
     final cyclePercentDisplay = completionAsync.hasValue
-        ? formatFractionAsPercent(cycleFraction)
+        ? formatFractionAsPercent(cycleFraction!)
         : null;
 
     // Per-track chazara gate: only render the chazara-aware label when this
@@ -193,7 +193,7 @@ class LearningTrackCard extends ConsumerWidget {
                               child: ClipRRect(
                                 borderRadius: BorderRadius.circular(999),
                                 child: LinearProgressIndicator(
-                                  value: cycleFraction,
+                                  value: cycleFraction!,
                                   minHeight: 10,
                                   backgroundColor:
                                       context.colors.brandCreamSoft,

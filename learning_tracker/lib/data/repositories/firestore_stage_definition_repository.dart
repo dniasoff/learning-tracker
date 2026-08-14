@@ -330,7 +330,6 @@ class FirestoreStageDefinitionRepository {
     final batch = _firestore.batch();
     for (final d in _defaultStages) {
       final stage = StageDefinition(
-        id: kFirestoreUnmappedStageId,
         curriculumId: curriculumId,
         stageOrder: d.stageOrder,
         stageName: d.stageName,

@@ -47,16 +47,15 @@ class ProgressTierCounterRow extends ConsumerWidget {
     );
     final pointsAsync = ref.watch(dashboardGlobalPointsProvider);
 
-    final currentStreak = streakAsync.asData?.value.currentStreak ?? 0;
+    final currentStreak = streakAsync.value?.currentStreak;
     final journey = journeyAsync.asData?.value;
     final totalSiyumim = journey == null
-        ? 0
+        ? null
         : journey.unitLevelSiyumimCount +
               journey.aggregateLevelSiyumimCount +
               journey.curriculumLevelSiyumimCount;
-    final lifetimeItems =
-        lifetimeTotalsAsync.asData?.value.learnedSections ?? 0;
-    final points = pointsAsync.asData?.value ?? 0;
+    final lifetimeItems = lifetimeTotalsAsync.value?.learnedSections;
+    final points = pointsAsync.value;
 
     // Locale-aware thousands separator (1336 → "1,336" in en-US,
     // "1,336" in he-IL).  Keeps four-digit counts (and beyond)
@@ -65,16 +64,16 @@ class ProgressTierCounterRow extends ConsumerWidget {
     final numberFormat = NumberFormat.decimalPattern(locale);
 
     final streakValue = streakAsync.hasValue
-        ? numberFormat.format(currentStreak)
+        ? numberFormat.format(currentStreak!)
         : _loadingPlaceholder;
     final siyumimValue = journeyAsync.hasValue
-        ? numberFormat.format(totalSiyumim)
+        ? numberFormat.format(totalSiyumim!)
         : _loadingPlaceholder;
     final lifetimeValue = lifetimeTotalsAsync.hasValue
-        ? numberFormat.format(lifetimeItems)
+        ? numberFormat.format(lifetimeItems!)
         : _loadingPlaceholder;
     final pointsValue = pointsAsync.hasValue
-        ? numberFormat.format(points)
+        ? numberFormat.format(points!)
         : _loadingPlaceholder;
 
     String semanticLabel(AsyncValue<dynamic> value, String dataLabel) {
@@ -90,7 +89,9 @@ class ProgressTierCounterRow extends ConsumerWidget {
         label: l10n.tierTileLabelStreak,
         semanticLabel: semanticLabel(
           streakAsync,
-          l10n.tierCounterStreakDays(currentStreak),
+          currentStreak == null
+              ? l10n.loading
+              : l10n.tierCounterStreakDays(currentStreak),
         ),
         accent: context.colors.progressTierStreakAccent,
         error: streakAsync.error,
@@ -102,7 +103,9 @@ class ProgressTierCounterRow extends ConsumerWidget {
         label: l10n.tierTileLabelSiyumim(terms.siyumim),
         semanticLabel: semanticLabel(
           journeyAsync,
-          l10n.tierCounterSiyumimEarned(totalSiyumim, terms.siyumim),
+          totalSiyumim == null
+              ? l10n.loading
+              : l10n.tierCounterSiyumimEarned(totalSiyumim, terms.siyumim),
         ),
         accent: context.colors.progressTierSiyumimAccent,
         error: journeyAsync.error,
@@ -114,7 +117,9 @@ class ProgressTierCounterRow extends ConsumerWidget {
         label: l10n.tierTileLabelLifetime,
         semanticLabel: semanticLabel(
           lifetimeTotalsAsync,
-          l10n.tierCounterLifetimeItems(lifetimeItems),
+          lifetimeItems == null
+              ? l10n.loading
+              : l10n.tierCounterLifetimeItems(lifetimeItems),
         ),
         accent: context.colors.brandBlue,
         error: lifetimeTotalsAsync.error,
@@ -127,7 +132,7 @@ class ProgressTierCounterRow extends ConsumerWidget {
           label: l10n.tierTileLabelPoints,
           semanticLabel: semanticLabel(
             pointsAsync,
-            l10n.tierCounterPoints(points),
+            points == null ? l10n.loading : l10n.tierCounterPoints(points),
           ),
           accent: context.colors.progressTierPointsAccent,
           error: pointsAsync.error,

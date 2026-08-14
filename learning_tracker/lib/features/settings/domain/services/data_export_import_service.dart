@@ -5,6 +5,173 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:learning_tracker/features/settings/domain/exceptions/import_validation_exception.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
+/// Narrow persistence boundary used by the backup use case.
+///
+/// The domain service deals only in document paths and JSON-safe maps. The
+/// Firebase-specific adapter is kept behind this interface so this domain
+/// file does not depend on the Firebase SDK.
+abstract interface class BackupFirestoreGateway {
+  Future<Map<String, dynamic>?> readDocument(String path);
+
+  Future<List<Map<String, dynamic>>> readCollection(String path);
+
+  Future<void> writeBatch(List<BackupDocumentWrite> writes);
+
+  Object? decodeValue(Object? value);
+}
+
+final class BackupDocumentWrite {
+  const BackupDocumentWrite(this.path, this.data);
+
+  final String path;
+  final Map<String, dynamic> data;
+}
+
+final class _DynamicBackupFirestoreGateway implements BackupFirestoreGateway {
+  _DynamicBackupFirestoreGateway(Object firestore)
+      : _firestore = firestore as FirebaseFirestore;
+
+  final FirebaseFirestore _firestore;
+
+  @override
+  Future<Map<String, dynamic>?> readDocument(String path) async {
+    final snapshot = await _firestore.doc(path).get();
+    final data = snapshot.data();
+    return data == null ? null : _encodeMap(data);
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> readCollection(String path) async {
+    final result = <Map<String, dynamic>>[];
+    DocumentSnapshot<Map<String, dynamic>>? last;
+    while (true) {
+      var query = _firestore
+          .collection(path)
+          .orderBy(FieldPath.documentId)
+          .limit(DataExportImportService._pageSize);
+      if (last != null) query = query.startAfterDocument(last);
+      final snapshot = await query.get();
+      result.addAll(
+        snapshot.docs.map(
+          (doc) => {
+            'id': doc.id,
+            'data': _encodeMap(doc.data()),
+          },
+        ),
+      );
+      if (snapshot.docs.length < DataExportImportService._pageSize) break;
+      last = snapshot.docs.last;
+    }
+    return result;
+  }
+
+  @override
+  Future<void> writeBatch(List<BackupDocumentWrite> writes) async {
+    final batch = _firestore.batch();
+    for (final write in writes) {
+      batch.set(_firestore.doc(write.path), write.data);
+    }
+    await batch.commit();
+  }
+
+  @override
+  Object? decodeValue(Object? value) {
+    if (value == null || value is String || value is num || value is bool) {
+      return value;
+    }
+    if (value is Timestamp) {
+      return {
+        DataExportImportService._typeKey: 'timestamp',
+        'value': value.toDate().toUtc().toIso8601String(),
+      };
+    }
+    if (value is DateTime) {
+      return {
+        DataExportImportService._typeKey: 'timestamp',
+        'value': value.toUtc().toIso8601String(),
+      };
+    }
+    if (value is GeoPoint) {
+      return {
+        DataExportImportService._typeKey: 'geopoint',
+        'latitude': value.latitude,
+        'longitude': value.longitude,
+      };
+    }
+    if (value is DocumentReference) {
+      return {
+        DataExportImportService._typeKey: 'reference',
+        'path': value.path,
+      };
+    }
+    if (value is Blob) {
+      return {
+        DataExportImportService._typeKey: 'bytes',
+        'value': base64Encode(value.bytes),
+      };
+    }
+    if (value is Uint8List) {
+      return {
+        DataExportImportService._typeKey: 'bytes',
+        'value': base64Encode(value),
+      };
+    }
+    if (value is List) return value.map(decodeValue).toList();
+    if (value is Map) {
+      final map = Map<String, dynamic>.from(value);
+      final type = map[DataExportImportService._typeKey];
+      if (type is String &&
+          const {'timestamp', 'geopoint', 'reference', 'bytes'}.contains(
+            type,
+          )) {
+        return _restoreValue(map);
+      }
+      return _encodeMap(map);
+    }
+
+    throw FormatException('Unsupported Firestore value: ${value.runtimeType}');
+  }
+
+  Map<String, dynamic> _encodeMap(Map<String, dynamic> data) {
+    final encoded = <String, dynamic>{
+      for (final entry in data.entries) entry.key: decodeValue(entry.value),
+    };
+    if (encoded.containsKey(DataExportImportService._typeKey)) {
+      return {
+        DataExportImportService._typeKey: 'map',
+        'value': encoded,
+      };
+    }
+    return encoded;
+  }
+
+  Object? _restoreValue(Map<String, dynamic> map) {
+    switch (map[DataExportImportService._typeKey]) {
+      case 'timestamp':
+        return Timestamp.fromDate(
+          DateTime.parse(map['value'] as String).toUtc(),
+        );
+      case 'geopoint':
+        return GeoPoint(
+          (map['latitude'] as num).toDouble(),
+          (map['longitude'] as num).toDouble(),
+        );
+      case 'reference':
+        final path = map['path'];
+        if (path is! String || path.isEmpty) {
+          throw const ImportValidationException('Invalid document reference');
+        }
+        return _firestore.doc(path);
+      case 'bytes':
+        return Blob(Uint8List.fromList(base64Decode(map['value'] as String)));
+      default:
+        throw ImportValidationException(
+          'Unknown Firestore value type: ${map[DataExportImportService._typeKey]}',
+        );
+    }
+  }
+}
+
 /// Summary of a Firestore backup payload.
 class ImportPreview {
   const ImportPreview({
@@ -48,10 +215,11 @@ class ImportPreview {
 /// field map so fields added by a repository are not silently discarded.
 class DataExportImportService {
   DataExportImportService({
-    required FirebaseFirestore firestore,
+    Object? firestore,
+    BackupFirestoreGateway? gateway,
     required String uid,
     Future<String> Function()? appVersionFetcher,
-  }) : _firestore = firestore,
+  }) : _gateway = gateway ?? _DynamicBackupFirestoreGateway(firestore!),
        _uid = uid,
        _appVersionFetcher =
            appVersionFetcher ??
@@ -88,15 +256,13 @@ class DataExportImportService {
     'study_day_configs',
   ];
 
-  final FirebaseFirestore _firestore;
+  final BackupFirestoreGateway _gateway;
   final String _uid;
   final Future<String> Function() _appVersionFetcher;
 
-  DocumentReference<Map<String, dynamic>> get _account =>
-      _firestore.collection('users').doc(_uid);
+  String get _accountPath => 'users/$_uid';
 
-  CollectionReference<Map<String, dynamic>> get _profiles =>
-      _account.collection('learner_profiles');
+  String get _profilesPath => '$_accountPath/learner_profiles';
 
   /// Exports version 1 of the Firestore backup format.
   ///
@@ -115,22 +281,22 @@ class DataExportImportService {
   /// }
   /// ```
   Future<String> exportData() async {
-    final accountSnapshot = await _account.get();
-    final profileSnapshot = await _readDocuments(
-      _account.collection('profile'),
+    final accountData = await _gateway.readDocument(_accountPath);
+    final profileSnapshot = await _gateway.readCollection(
+      '$_accountPath/profile',
     );
-    final diagnosticLogs = await _readDocuments(
-      _account.collection('diagnostic_logs'),
+    final diagnosticLogs = await _gateway.readCollection(
+      '$_accountPath/diagnostic_logs',
     );
-    final profiles = await _readDocuments(_profiles);
+    final profiles = await _gateway.readCollection(_profilesPath);
     final profilePayload = <Map<String, dynamic>>[];
 
     for (final profile in profiles) {
-      final profileRef = _profiles.doc(profile['id'] as String);
+      final profilePath = '$_profilesPath/${profile['id'] as String}';
       final collections = <String, dynamic>{};
       for (final collectionName in _profileCollectionNames) {
-        collections[collectionName] = await _readDocuments(
-          profileRef.collection(collectionName),
+        collections[collectionName] = await _gateway.readCollection(
+          '$profilePath/$collectionName',
         );
       }
       profilePayload.add({
@@ -147,9 +313,7 @@ class DataExportImportService {
       'appVersion': await _appVersionFetcher(),
       'account': {
         'id': _uid,
-        'data': accountSnapshot.exists
-            ? _encodeMap(accountSnapshot.data()!)
-            : null,
+        'data': accountData,
       },
       'profileSnapshot': profileSnapshot,
       'diagnosticLogs': diagnosticLogs,
@@ -270,34 +434,34 @@ class DataExportImportService {
   Future<void> importData(String jsonString) async {
     validateAndPreview(jsonString);
     final data = _decodePayload(jsonString);
-    final writes = <_BackupWrite>[];
+    final writes = <BackupDocumentWrite>[];
 
     final account = _requireMap(data, 'account');
     final accountData = account['data'];
     if (accountData != null) {
       writes.add(
-        _BackupWrite(_account, _decodeMapValue(accountData, 'account')),
+        BackupDocumentWrite(_accountPath, _decodeMapValue(accountData, 'account')),
       );
     }
 
     _addWrites(
       writes,
-      _account.collection('profile'),
+      '$_accountPath/profile',
       _requireDocumentList(data, 'profileSnapshot'),
     );
     _addWrites(
       writes,
-      _account.collection('diagnostic_logs'),
+      '$_accountPath/diagnostic_logs',
       _requireDocumentList(data, 'diagnosticLogs'),
     );
 
     for (final rawProfile in _requireList(data, 'profiles')) {
       final profile = _requireMapValue(rawProfile, 'profile');
       final profileId = _requireString(profile, 'id', path: 'profile');
-      final profileRef = _profiles.doc(profileId);
+      final profilePath = '$_profilesPath/$profileId';
       writes.add(
-        _BackupWrite(
-          profileRef,
+        BackupDocumentWrite(
+          profilePath,
           _decodeMapValue(profile['data'], 'profiles.$profileId.data'),
         ),
       );
@@ -307,43 +471,19 @@ class DataExportImportService {
           entry.value,
           'profiles.$profileId.collections.${entry.key}',
         );
-        _addWrites(writes, profileRef.collection(entry.key), documents);
+        _addWrites(writes, '$profilePath/${entry.key}', documents);
       }
     }
 
     for (var offset = 0; offset < writes.length; offset += _pageSize) {
       final end = (offset + _pageSize).clamp(0, writes.length);
-      final batch = _firestore.batch();
-      for (final write in writes.sublist(offset, end)) {
-        batch.set(write.reference, write.data);
-      }
-      await batch.commit();
+      await _gateway.writeBatch(writes.sublist(offset, end));
     }
-  }
-
-  Future<List<Map<String, dynamic>>> _readDocuments(
-    CollectionReference<Map<String, dynamic>> collection,
-  ) async {
-    final result = <Map<String, dynamic>>[];
-    DocumentSnapshot<Map<String, dynamic>>? last;
-    while (true) {
-      var query = collection.orderBy(FieldPath.documentId).limit(_pageSize);
-      if (last != null) query = query.startAfterDocument(last);
-      final snapshot = await query.get();
-      result.addAll(
-        snapshot.docs.map(
-          (doc) => {'id': doc.id, 'data': _encodeMap(doc.data())},
-        ),
-      );
-      if (snapshot.docs.length < _pageSize) break;
-      last = snapshot.docs.last;
-    }
-    return result;
   }
 
   void _addWrites(
-    List<_BackupWrite> writes,
-    CollectionReference<Map<String, dynamic>> collection,
+    List<BackupDocumentWrite> writes,
+    String collectionPath,
     List<Map<String, dynamic>> documents,
   ) {
     for (final document in documents) {
@@ -352,8 +492,8 @@ class DataExportImportService {
         throw const ImportValidationException('Document id must be a string');
       }
       writes.add(
-        _BackupWrite(
-          collection.doc(id),
+        BackupDocumentWrite(
+          '$collectionPath/$id',
           _decodeMapValue(document['data'], 'document $id'),
         ),
       );
@@ -377,7 +517,7 @@ class DataExportImportService {
     return data;
   }
 
-  static Map<String, dynamic> _encodeMap(Map<String, dynamic> data) {
+  Map<String, dynamic> _encodeMap(Map<String, dynamic> data) {
     final encoded = <String, dynamic>{
       for (final entry in data.entries) entry.key: _encodeValue(entry.value),
     };
@@ -387,31 +527,12 @@ class DataExportImportService {
     return encoded;
   }
 
-  static dynamic _encodeValue(Object? value) {
+  dynamic _encodeValue(Object? value) {
     if (value == null || value is String || value is num || value is bool) {
       return value;
     }
-    if (value is Timestamp) {
-      return {
-        _typeKey: 'timestamp',
-        'value': value.toDate().toUtc().toIso8601String(),
-      };
-    }
     if (value is DateTime) {
       return {_typeKey: 'timestamp', 'value': value.toUtc().toIso8601String()};
-    }
-    if (value is GeoPoint) {
-      return {
-        _typeKey: 'geopoint',
-        'latitude': value.latitude,
-        'longitude': value.longitude,
-      };
-    }
-    if (value is DocumentReference) {
-      return {_typeKey: 'reference', 'path': value.path};
-    }
-    if (value is Blob) {
-      return {_typeKey: 'bytes', 'value': base64Encode(value.bytes)};
     }
     if (value is Uint8List) {
       return {_typeKey: 'bytes', 'value': base64Encode(value)};
@@ -420,7 +541,7 @@ class DataExportImportService {
     if (value is Map) {
       return _encodeMap(Map<String, dynamic>.from(value));
     }
-    throw FormatException('Unsupported Firestore value: ${value.runtimeType}');
+    return _gateway.decodeValue(value);
   }
 
   Map<String, dynamic> _decodeMapValue(Object? value, String path) {
@@ -440,23 +561,8 @@ class DataExportImportService {
       switch (type) {
         case 'map':
           return _decodeMapValue(map['value'], 'encoded map');
-        case 'timestamp':
-          return Timestamp.fromDate(
-            DateTime.parse(map['value'] as String).toUtc(),
-          );
-        case 'geopoint':
-          return GeoPoint(
-            (map['latitude'] as num).toDouble(),
-            (map['longitude'] as num).toDouble(),
-          );
-        case 'reference':
-          final path = map['path'];
-          if (path is! String || path.isEmpty) {
-            throw const ImportValidationException('Invalid document reference');
-          }
-          return _firestore.doc(path);
-        case 'bytes':
-          return Blob(Uint8List.fromList(base64Decode(map['value'] as String)));
+        case 'timestamp' || 'geopoint' || 'reference' || 'bytes':
+          return _gateway.decodeValue(map);
         default:
           throw ImportValidationException(
             'Unknown Firestore value type: $type',
@@ -551,11 +657,4 @@ class DataExportImportService {
       );
     }
   }
-}
-
-final class _BackupWrite {
-  const _BackupWrite(this.reference, this.data);
-
-  final DocumentReference<Map<String, dynamic>> reference;
-  final Map<String, dynamic> data;
 }

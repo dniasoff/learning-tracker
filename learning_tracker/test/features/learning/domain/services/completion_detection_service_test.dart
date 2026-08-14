@@ -88,7 +88,6 @@ void main() {
       stages: [
         for (var order = 1; order <= count; order++)
           StageDefinition(
-            id: kFirestoreUnmappedStageId,
             curriculumId: curriculum,
             stageOrder: order,
             stageName: 'Stage $order',

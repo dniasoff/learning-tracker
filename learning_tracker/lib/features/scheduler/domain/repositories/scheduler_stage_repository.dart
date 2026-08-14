@@ -8,7 +8,6 @@ part 'scheduler_stage_repository.freezed.dart';
 @freezed
 abstract class SchedulerStage with _$SchedulerStage {
   const factory SchedulerStage({
-    required int id,
     required int stageOrder,
     required String stageName,
     required int delayDays,

@@ -14,7 +14,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$DailyTask {
 
- CurriculumId get curriculumId; String get contentItemSefariaRef; int get stageOrder; int get stageDefinitionId; DailyTaskPriority get priority; bool get isOverdue; String get reason; String get stageName;/// Display label for the track (e.g., "Daf Yomi", "Mishnayos - School").
+ CurriculumId get curriculumId; String get contentItemSefariaRef; int get stageOrder; DailyTaskPriority get priority; bool get isOverdue; String get reason; String get stageName;/// Display label for the track (e.g., "Daf Yomi", "Mishnayos - School").
  String get trackLabel;/// Estimated effort in minutes. Defaults based on priority:
 /// newLearning = 5 min, chazara = 3 min.
  int get estimatedEffortMinutes;/// Seed-sourced day-level unit label in Hebrew (e.g. "חולין דף כ״ה" for a
@@ -41,16 +41,16 @@ $DailyTaskCopyWith<DailyTask> get copyWith => _$DailyTaskCopyWithImpl<DailyTask>
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is DailyTask&&(identical(other.curriculumId, curriculumId) || other.curriculumId == curriculumId)&&(identical(other.contentItemSefariaRef, contentItemSefariaRef) || other.contentItemSefariaRef == contentItemSefariaRef)&&(identical(other.stageOrder, stageOrder) || other.stageOrder == stageOrder)&&(identical(other.stageDefinitionId, stageDefinitionId) || other.stageDefinitionId == stageDefinitionId)&&(identical(other.priority, priority) || other.priority == priority)&&(identical(other.isOverdue, isOverdue) || other.isOverdue == isOverdue)&&(identical(other.reason, reason) || other.reason == reason)&&(identical(other.stageName, stageName) || other.stageName == stageName)&&(identical(other.trackLabel, trackLabel) || other.trackLabel == trackLabel)&&(identical(other.estimatedEffortMinutes, estimatedEffortMinutes) || other.estimatedEffortMinutes == estimatedEffortMinutes)&&(identical(other.unitDisplayHe, unitDisplayHe) || other.unitDisplayHe == unitDisplayHe)&&(identical(other.unitDisplayEn, unitDisplayEn) || other.unitDisplayEn == unitDisplayEn));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is DailyTask&&(identical(other.curriculumId, curriculumId) || other.curriculumId == curriculumId)&&(identical(other.contentItemSefariaRef, contentItemSefariaRef) || other.contentItemSefariaRef == contentItemSefariaRef)&&(identical(other.stageOrder, stageOrder) || other.stageOrder == stageOrder)&&(identical(other.priority, priority) || other.priority == priority)&&(identical(other.isOverdue, isOverdue) || other.isOverdue == isOverdue)&&(identical(other.reason, reason) || other.reason == reason)&&(identical(other.stageName, stageName) || other.stageName == stageName)&&(identical(other.trackLabel, trackLabel) || other.trackLabel == trackLabel)&&(identical(other.estimatedEffortMinutes, estimatedEffortMinutes) || other.estimatedEffortMinutes == estimatedEffortMinutes)&&(identical(other.unitDisplayHe, unitDisplayHe) || other.unitDisplayHe == unitDisplayHe)&&(identical(other.unitDisplayEn, unitDisplayEn) || other.unitDisplayEn == unitDisplayEn));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,curriculumId,contentItemSefariaRef,stageOrder,stageDefinitionId,priority,isOverdue,reason,stageName,trackLabel,estimatedEffortMinutes,unitDisplayHe,unitDisplayEn);
+int get hashCode => Object.hash(runtimeType,curriculumId,contentItemSefariaRef,stageOrder,priority,isOverdue,reason,stageName,trackLabel,estimatedEffortMinutes,unitDisplayHe,unitDisplayEn);
 
 @override
 String toString() {
-  return 'DailyTask(curriculumId: $curriculumId, contentItemSefariaRef: $contentItemSefariaRef, stageOrder: $stageOrder, stageDefinitionId: $stageDefinitionId, priority: $priority, isOverdue: $isOverdue, reason: $reason, stageName: $stageName, trackLabel: $trackLabel, estimatedEffortMinutes: $estimatedEffortMinutes, unitDisplayHe: $unitDisplayHe, unitDisplayEn: $unitDisplayEn)';
+  return 'DailyTask(curriculumId: $curriculumId, contentItemSefariaRef: $contentItemSefariaRef, stageOrder: $stageOrder, priority: $priority, isOverdue: $isOverdue, reason: $reason, stageName: $stageName, trackLabel: $trackLabel, estimatedEffortMinutes: $estimatedEffortMinutes, unitDisplayHe: $unitDisplayHe, unitDisplayEn: $unitDisplayEn)';
 }
 
 
@@ -61,7 +61,7 @@ abstract mixin class $DailyTaskCopyWith<$Res>  {
   factory $DailyTaskCopyWith(DailyTask value, $Res Function(DailyTask) _then) = _$DailyTaskCopyWithImpl;
 @useResult
 $Res call({
- CurriculumId curriculumId, String contentItemSefariaRef, int stageOrder, int stageDefinitionId, DailyTaskPriority priority, bool isOverdue, String reason, String stageName, String trackLabel, int estimatedEffortMinutes, String? unitDisplayHe, String? unitDisplayEn
+ CurriculumId curriculumId, String contentItemSefariaRef, int stageOrder, DailyTaskPriority priority, bool isOverdue, String reason, String stageName, String trackLabel, int estimatedEffortMinutes, String? unitDisplayHe, String? unitDisplayEn
 });
 
 
@@ -78,12 +78,11 @@ class _$DailyTaskCopyWithImpl<$Res>
 
 /// Create a copy of DailyTask
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? curriculumId = null,Object? contentItemSefariaRef = null,Object? stageOrder = null,Object? stageDefinitionId = null,Object? priority = null,Object? isOverdue = null,Object? reason = null,Object? stageName = null,Object? trackLabel = null,Object? estimatedEffortMinutes = null,Object? unitDisplayHe = freezed,Object? unitDisplayEn = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? curriculumId = null,Object? contentItemSefariaRef = null,Object? stageOrder = null,Object? priority = null,Object? isOverdue = null,Object? reason = null,Object? stageName = null,Object? trackLabel = null,Object? estimatedEffortMinutes = null,Object? unitDisplayHe = freezed,Object? unitDisplayEn = freezed,}) {
   return _then(_self.copyWith(
 curriculumId: null == curriculumId ? _self.curriculumId : curriculumId // ignore: cast_nullable_to_non_nullable
 as CurriculumId,contentItemSefariaRef: null == contentItemSefariaRef ? _self.contentItemSefariaRef : contentItemSefariaRef // ignore: cast_nullable_to_non_nullable
 as String,stageOrder: null == stageOrder ? _self.stageOrder : stageOrder // ignore: cast_nullable_to_non_nullable
-as int,stageDefinitionId: null == stageDefinitionId ? _self.stageDefinitionId : stageDefinitionId // ignore: cast_nullable_to_non_nullable
 as int,priority: null == priority ? _self.priority : priority // ignore: cast_nullable_to_non_nullable
 as DailyTaskPriority,isOverdue: null == isOverdue ? _self.isOverdue : isOverdue // ignore: cast_nullable_to_non_nullable
 as bool,reason: null == reason ? _self.reason : reason // ignore: cast_nullable_to_non_nullable
@@ -177,10 +176,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( CurriculumId curriculumId,  String contentItemSefariaRef,  int stageOrder,  int stageDefinitionId,  DailyTaskPriority priority,  bool isOverdue,  String reason,  String stageName,  String trackLabel,  int estimatedEffortMinutes,  String? unitDisplayHe,  String? unitDisplayEn)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( CurriculumId curriculumId,  String contentItemSefariaRef,  int stageOrder,  DailyTaskPriority priority,  bool isOverdue,  String reason,  String stageName,  String trackLabel,  int estimatedEffortMinutes,  String? unitDisplayHe,  String? unitDisplayEn)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _DailyTask() when $default != null:
-return $default(_that.curriculumId,_that.contentItemSefariaRef,_that.stageOrder,_that.stageDefinitionId,_that.priority,_that.isOverdue,_that.reason,_that.stageName,_that.trackLabel,_that.estimatedEffortMinutes,_that.unitDisplayHe,_that.unitDisplayEn);case _:
+return $default(_that.curriculumId,_that.contentItemSefariaRef,_that.stageOrder,_that.priority,_that.isOverdue,_that.reason,_that.stageName,_that.trackLabel,_that.estimatedEffortMinutes,_that.unitDisplayHe,_that.unitDisplayEn);case _:
   return orElse();
 
 }
@@ -198,10 +197,10 @@ return $default(_that.curriculumId,_that.contentItemSefariaRef,_that.stageOrder,
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( CurriculumId curriculumId,  String contentItemSefariaRef,  int stageOrder,  int stageDefinitionId,  DailyTaskPriority priority,  bool isOverdue,  String reason,  String stageName,  String trackLabel,  int estimatedEffortMinutes,  String? unitDisplayHe,  String? unitDisplayEn)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( CurriculumId curriculumId,  String contentItemSefariaRef,  int stageOrder,  DailyTaskPriority priority,  bool isOverdue,  String reason,  String stageName,  String trackLabel,  int estimatedEffortMinutes,  String? unitDisplayHe,  String? unitDisplayEn)  $default,) {final _that = this;
 switch (_that) {
 case _DailyTask():
-return $default(_that.curriculumId,_that.contentItemSefariaRef,_that.stageOrder,_that.stageDefinitionId,_that.priority,_that.isOverdue,_that.reason,_that.stageName,_that.trackLabel,_that.estimatedEffortMinutes,_that.unitDisplayHe,_that.unitDisplayEn);case _:
+return $default(_that.curriculumId,_that.contentItemSefariaRef,_that.stageOrder,_that.priority,_that.isOverdue,_that.reason,_that.stageName,_that.trackLabel,_that.estimatedEffortMinutes,_that.unitDisplayHe,_that.unitDisplayEn);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -218,10 +217,10 @@ return $default(_that.curriculumId,_that.contentItemSefariaRef,_that.stageOrder,
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( CurriculumId curriculumId,  String contentItemSefariaRef,  int stageOrder,  int stageDefinitionId,  DailyTaskPriority priority,  bool isOverdue,  String reason,  String stageName,  String trackLabel,  int estimatedEffortMinutes,  String? unitDisplayHe,  String? unitDisplayEn)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( CurriculumId curriculumId,  String contentItemSefariaRef,  int stageOrder,  DailyTaskPriority priority,  bool isOverdue,  String reason,  String stageName,  String trackLabel,  int estimatedEffortMinutes,  String? unitDisplayHe,  String? unitDisplayEn)?  $default,) {final _that = this;
 switch (_that) {
 case _DailyTask() when $default != null:
-return $default(_that.curriculumId,_that.contentItemSefariaRef,_that.stageOrder,_that.stageDefinitionId,_that.priority,_that.isOverdue,_that.reason,_that.stageName,_that.trackLabel,_that.estimatedEffortMinutes,_that.unitDisplayHe,_that.unitDisplayEn);case _:
+return $default(_that.curriculumId,_that.contentItemSefariaRef,_that.stageOrder,_that.priority,_that.isOverdue,_that.reason,_that.stageName,_that.trackLabel,_that.estimatedEffortMinutes,_that.unitDisplayHe,_that.unitDisplayEn);case _:
   return null;
 
 }
@@ -233,13 +232,12 @@ return $default(_that.curriculumId,_that.contentItemSefariaRef,_that.stageOrder,
 
 
 class _DailyTask implements DailyTask {
-  const _DailyTask({required this.curriculumId, required this.contentItemSefariaRef, required this.stageOrder, required this.stageDefinitionId, required this.priority, required this.isOverdue, required this.reason, required this.stageName, required this.trackLabel, this.estimatedEffortMinutes = 3, this.unitDisplayHe, this.unitDisplayEn});
+  const _DailyTask({required this.curriculumId, required this.contentItemSefariaRef, required this.stageOrder, required this.priority, required this.isOverdue, required this.reason, required this.stageName, required this.trackLabel, this.estimatedEffortMinutes = 3, this.unitDisplayHe, this.unitDisplayEn});
   
 
 @override final  CurriculumId curriculumId;
 @override final  String contentItemSefariaRef;
 @override final  int stageOrder;
-@override final  int stageDefinitionId;
 @override final  DailyTaskPriority priority;
 @override final  bool isOverdue;
 @override final  String reason;
@@ -275,16 +273,16 @@ _$DailyTaskCopyWith<_DailyTask> get copyWith => __$DailyTaskCopyWithImpl<_DailyT
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _DailyTask&&(identical(other.curriculumId, curriculumId) || other.curriculumId == curriculumId)&&(identical(other.contentItemSefariaRef, contentItemSefariaRef) || other.contentItemSefariaRef == contentItemSefariaRef)&&(identical(other.stageOrder, stageOrder) || other.stageOrder == stageOrder)&&(identical(other.stageDefinitionId, stageDefinitionId) || other.stageDefinitionId == stageDefinitionId)&&(identical(other.priority, priority) || other.priority == priority)&&(identical(other.isOverdue, isOverdue) || other.isOverdue == isOverdue)&&(identical(other.reason, reason) || other.reason == reason)&&(identical(other.stageName, stageName) || other.stageName == stageName)&&(identical(other.trackLabel, trackLabel) || other.trackLabel == trackLabel)&&(identical(other.estimatedEffortMinutes, estimatedEffortMinutes) || other.estimatedEffortMinutes == estimatedEffortMinutes)&&(identical(other.unitDisplayHe, unitDisplayHe) || other.unitDisplayHe == unitDisplayHe)&&(identical(other.unitDisplayEn, unitDisplayEn) || other.unitDisplayEn == unitDisplayEn));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _DailyTask&&(identical(other.curriculumId, curriculumId) || other.curriculumId == curriculumId)&&(identical(other.contentItemSefariaRef, contentItemSefariaRef) || other.contentItemSefariaRef == contentItemSefariaRef)&&(identical(other.stageOrder, stageOrder) || other.stageOrder == stageOrder)&&(identical(other.priority, priority) || other.priority == priority)&&(identical(other.isOverdue, isOverdue) || other.isOverdue == isOverdue)&&(identical(other.reason, reason) || other.reason == reason)&&(identical(other.stageName, stageName) || other.stageName == stageName)&&(identical(other.trackLabel, trackLabel) || other.trackLabel == trackLabel)&&(identical(other.estimatedEffortMinutes, estimatedEffortMinutes) || other.estimatedEffortMinutes == estimatedEffortMinutes)&&(identical(other.unitDisplayHe, unitDisplayHe) || other.unitDisplayHe == unitDisplayHe)&&(identical(other.unitDisplayEn, unitDisplayEn) || other.unitDisplayEn == unitDisplayEn));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,curriculumId,contentItemSefariaRef,stageOrder,stageDefinitionId,priority,isOverdue,reason,stageName,trackLabel,estimatedEffortMinutes,unitDisplayHe,unitDisplayEn);
+int get hashCode => Object.hash(runtimeType,curriculumId,contentItemSefariaRef,stageOrder,priority,isOverdue,reason,stageName,trackLabel,estimatedEffortMinutes,unitDisplayHe,unitDisplayEn);
 
 @override
 String toString() {
-  return 'DailyTask(curriculumId: $curriculumId, contentItemSefariaRef: $contentItemSefariaRef, stageOrder: $stageOrder, stageDefinitionId: $stageDefinitionId, priority: $priority, isOverdue: $isOverdue, reason: $reason, stageName: $stageName, trackLabel: $trackLabel, estimatedEffortMinutes: $estimatedEffortMinutes, unitDisplayHe: $unitDisplayHe, unitDisplayEn: $unitDisplayEn)';
+  return 'DailyTask(curriculumId: $curriculumId, contentItemSefariaRef: $contentItemSefariaRef, stageOrder: $stageOrder, priority: $priority, isOverdue: $isOverdue, reason: $reason, stageName: $stageName, trackLabel: $trackLabel, estimatedEffortMinutes: $estimatedEffortMinutes, unitDisplayHe: $unitDisplayHe, unitDisplayEn: $unitDisplayEn)';
 }
 
 
@@ -295,7 +293,7 @@ abstract mixin class _$DailyTaskCopyWith<$Res> implements $DailyTaskCopyWith<$Re
   factory _$DailyTaskCopyWith(_DailyTask value, $Res Function(_DailyTask) _then) = __$DailyTaskCopyWithImpl;
 @override @useResult
 $Res call({
- CurriculumId curriculumId, String contentItemSefariaRef, int stageOrder, int stageDefinitionId, DailyTaskPriority priority, bool isOverdue, String reason, String stageName, String trackLabel, int estimatedEffortMinutes, String? unitDisplayHe, String? unitDisplayEn
+ CurriculumId curriculumId, String contentItemSefariaRef, int stageOrder, DailyTaskPriority priority, bool isOverdue, String reason, String stageName, String trackLabel, int estimatedEffortMinutes, String? unitDisplayHe, String? unitDisplayEn
 });
 
 
@@ -312,12 +310,11 @@ class __$DailyTaskCopyWithImpl<$Res>
 
 /// Create a copy of DailyTask
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? curriculumId = null,Object? contentItemSefariaRef = null,Object? stageOrder = null,Object? stageDefinitionId = null,Object? priority = null,Object? isOverdue = null,Object? reason = null,Object? stageName = null,Object? trackLabel = null,Object? estimatedEffortMinutes = null,Object? unitDisplayHe = freezed,Object? unitDisplayEn = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? curriculumId = null,Object? contentItemSefariaRef = null,Object? stageOrder = null,Object? priority = null,Object? isOverdue = null,Object? reason = null,Object? stageName = null,Object? trackLabel = null,Object? estimatedEffortMinutes = null,Object? unitDisplayHe = freezed,Object? unitDisplayEn = freezed,}) {
   return _then(_DailyTask(
 curriculumId: null == curriculumId ? _self.curriculumId : curriculumId // ignore: cast_nullable_to_non_nullable
 as CurriculumId,contentItemSefariaRef: null == contentItemSefariaRef ? _self.contentItemSefariaRef : contentItemSefariaRef // ignore: cast_nullable_to_non_nullable
 as String,stageOrder: null == stageOrder ? _self.stageOrder : stageOrder // ignore: cast_nullable_to_non_nullable
-as int,stageDefinitionId: null == stageDefinitionId ? _self.stageDefinitionId : stageDefinitionId // ignore: cast_nullable_to_non_nullable
 as int,priority: null == priority ? _self.priority : priority // ignore: cast_nullable_to_non_nullable
 as DailyTaskPriority,isOverdue: null == isOverdue ? _self.isOverdue : isOverdue // ignore: cast_nullable_to_non_nullable
 as bool,reason: null == reason ? _self.reason : reason // ignore: cast_nullable_to_non_nullable

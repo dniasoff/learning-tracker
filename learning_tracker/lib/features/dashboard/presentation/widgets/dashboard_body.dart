@@ -116,7 +116,12 @@ class DashboardBody extends ConsumerWidget {
     // changes — not on every completion-triggered AsyncValue re-emission
     // when points remain the same (e.g. adult users where this is always 0).
     final pointsAsync = ref.watch(dashboardGlobalPointsProvider);
-    final totalPoints = pointsAsync.asData?.value ?? 0;
+    // Adults do not have a points balance by product rule. Child points stay
+    // nullable until the achievement read resolves so the child UI can show
+    // its loading/error state instead of a fabricated zero.
+    final int? totalPoints = userMode == ProfileMode.child
+        ? pointsAsync.value
+        : 0;
     final lifetimeTotalsAsync = ref.watch(
       lifetimeTotalsAcrossAllCurriculaProvider,
     );
@@ -149,11 +154,13 @@ class DashboardBody extends ConsumerWidget {
     final lifetimeTotals = lifetimeTotalsAsync.hasValue
         ? lifetimeTotalsAsync.value
         : null;
-    final cumulativeLifetime = lifetimeTotals?.percentage ?? 0.0;
+    final cumulativeLifetime = lifetimeTotals?.percentage;
     final numberFormat = NumberFormat.decimalPattern();
-    final lifetimePercentStr = formatFractionAsPercent(cumulativeLifetime);
+    final lifetimePercentStr = lifetimeTotals == null
+        ? null
+        : formatFractionAsPercent(lifetimeTotals.percentage);
     final lifetimeSectionsStr = lifetimeTotals == null
-        ? l10n.lifetimeSectionsSummary('0', '0', CurriculumId.values.length)
+        ? null
         : l10n.lifetimeSectionsSummary(
             numberFormat.format(lifetimeTotals.learnedSections),
             numberFormat.format(lifetimeTotals.totalSections),
@@ -188,7 +195,9 @@ class DashboardBody extends ConsumerWidget {
     final overdueCount = groupedTasks.overdueTasks.length;
     final reviewCount = groupedTasks.reviewTasks.length;
     final totalRemaining = todayCount + overdueCount + reviewCount;
-    final level = (1 + (cumulativeLifetime * 19)).clamp(1, 20).round();
+    final level = cumulativeLifetime == null
+        ? null
+        : (1 + (cumulativeLifetime * 19)).clamp(1, 20).round();
     final doneDisplay = lifetimePercentStr;
     final sectionsDetail = lifetimeSectionsStr;
 
@@ -402,9 +411,11 @@ class DashboardBody extends ConsumerWidget {
             )
           else if (pointsAsync.isLoading)
             const Center(child: CircularProgressIndicator())
+          else if (!pointsAsync.hasValue)
+            const Center(child: CircularProgressIndicator())
           else
             ChildPointsRewardsTabCard(
-              totalPoints: totalPoints,
+              totalPoints: totalPoints!,
               l10n: l10n,
               theme: theme,
               numberFormat: numberFormat,
@@ -414,22 +425,37 @@ class DashboardBody extends ConsumerWidget {
             ),
           const SizedBox(height: 18),
         ],
-        if (showAllCaughtUp)
+        if (lifetimeTotalsAsync.hasError)
+          InlineAsyncError(
+            error: lifetimeTotalsAsync.error!,
+            onRetry: () =>
+                ref.invalidate(lifetimeTotalsAcrossAllCurriculaProvider),
+          )
+        else if (!lifetimeTotalsAsync.hasValue)
+          const Center(child: CircularProgressIndicator())
+        else if (userMode == ProfileMode.child && pointsAsync.hasError)
+          InlineAsyncError(
+            error: pointsAsync.error!,
+            onRetry: () => ref.invalidate(dashboardGlobalPointsProvider),
+          )
+        else if (userMode == ProfileMode.child && !pointsAsync.hasValue)
+          const Center(child: CircularProgressIndicator())
+        else if (showAllCaughtUp)
           DashboardAllCaughtUpCard(
-            doneDisplay: doneDisplay,
-            cumulativeLifetime: cumulativeLifetime,
+            doneDisplay: doneDisplay!,
+            cumulativeLifetime: cumulativeLifetime!,
           )
         else
           DashboardLevelPointsCard(
             userMode: userMode,
-            level: level,
-            totalPoints: totalPoints,
+            level: level!,
+            totalPoints: totalPoints!,
             overdueCount: overdueCount,
             todayCount: todayCount,
             reviewCount: reviewCount,
-            doneDisplay: doneDisplay,
-            lifetimeSectionsDetail: sectionsDetail,
-            cumulativeLifetime: cumulativeLifetime,
+            doneDisplay: doneDisplay!,
+            lifetimeSectionsDetail: sectionsDetail!,
+            cumulativeLifetime: cumulativeLifetime!,
             chazaraLabel: chazaraBubbleLabel,
             tasksReady: tasksReady,
             lifetimeReady: lifetimeReady,

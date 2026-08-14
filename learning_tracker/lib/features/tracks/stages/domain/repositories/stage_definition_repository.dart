@@ -18,10 +18,8 @@ abstract class StageDefinitionRepository {
   ///
   /// Idempotent — no-op if stages already exist for this track.
   Future<void> initializeDefaults(
-    CurriculumId curriculumId, {
-    required int profileId,
-    required int trackId,
-  });
+    CurriculumId curriculumId,
+  );
 
   /// Overwrites a curriculum's full stage set with [stages] (already
   /// ordered 1..N by the caller). See
@@ -52,18 +50,6 @@ abstract class StageDefinitionRepository {
   /// Does NOT push settings — the caller is responsible for pushing after
   /// the replacement is complete.
   Future<void> deleteStagesForTrack(CurriculumId curriculumId);
-
-  /// Pushes the stage definitions of a single [trackId] to the cloud.
-  ///
-  /// Stage seeding (via the chazara wizard / noReview fallback) writes only to
-  /// the local DB. Without an explicit push the `stage_definitions` Firestore
-  /// subcollection stays empty, so a tutor mirror (and any second device) pulls
-  /// zero stages and the scheduler shows "No projection" for the track. Track
-  /// creation calls this after committing the local seed.
-  Future<void> pushStagesForTrack({
-    required int trackId,
-    required CurriculumId curriculumId,
-  });
 
   /// Returns every stage definition in the database (cross-curriculum).
   ///
