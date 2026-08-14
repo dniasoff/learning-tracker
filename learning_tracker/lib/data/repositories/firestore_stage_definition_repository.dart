@@ -8,6 +8,7 @@
 library;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:learning_tracker/core/codec/firestore_codec.dart';
 import 'package:learning_tracker/core/constants/hebrew_terms.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
@@ -15,6 +16,7 @@ import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/data/firestore/doc_ids.dart';
 import 'package:learning_tracker/data/firestore/resilient_doc_stream.dart';
 import 'package:learning_tracker/data/firestore/write_ack.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_entity.dart';
 import 'package:learning_tracker/features/tracks/stages/domain/models/stage_definition.dart';
 
 /// Default stage definitions (לימוד, חזרה א׳, חזרה ב׳) — same three stages
@@ -26,6 +28,12 @@ const _defaultStages = [
   (stageOrder: 2, stageName: 'חזרה א׳', delayDays: 1),
   (stageOrder: 3, stageName: 'חזרה ב׳', delayDays: 7),
 ];
+
+// `firestore.rules` permits `synced_at` on stage definitions but denies
+// delete. Presence of this field is therefore the rules-legal tombstone
+// marker used by deleteStagesForCurriculum. Active stage writes replace the
+// whole document and consequently clear the marker.
+const _stageTombstoneField = 'synced_at';
 
 /// Firestore-backed stage-definitions repository: `users/{uid}/
 /// learner_profiles/{profileId}/stage_definitions/{curriculumId}_
@@ -86,18 +94,9 @@ const _defaultStages = [
 /// all of them (the exact `implements`-shaped busywork dropping the
 /// interface avoids), the ones with no real meaning here are simply absent:
 ///
-/// - **`getStagesByTrack(int trackId)` and `deleteStagesForTrack(int
-///   trackId)` do not exist on this class.** Both took ONLY a Drift-local
-///   `int trackId` — no `curriculumId` — and AD-25 retired the per-device
-///   track id for this collection entirely (`curriculum_id` is the sole
-///   canonical stable track key; see `docs/firestore-rewrite-map.md`).
-///   There is no way to resolve which curriculum a bare `trackId` int
-///   refers to without reaching into Drift, which this repository
-///   deliberately does not do. `deleteStagesForTrack` had a second,
-///   independent reason it could never work even with a `curriculumId`:
-///   `firestore.rules` denies `delete` on this collection outright (`allow
-///   delete: if false`). A caller that needs a curriculum's stages should
-///   call [getStagesForCurriculum] directly.
+/// - **`getStagesByTrack(int trackId)` does not exist on this class.** The
+///   adapter re-expresses that operation as a [CurriculumId] lookup and calls
+///   [getStagesForCurriculum] directly.
 /// - **`pushStagesForTrack` does not exist on this class.** It was a
 ///   push-pipeline-era "flush the local write to Firestore" step;
 ///   [initializeDefaults]/[resetToDefaults] already write straight to
@@ -112,17 +111,10 @@ const _defaultStages = [
 ///
 /// ## Kept, still flagged — NOT silently guessed at
 ///
-/// - **[hasCompletionsForStage] throws [UnimplementedError].**
-///   `FirestoreCompletionRepository` (`firestore_completion_repository.dart`)
-///   now exists and has exactly the query this needs — its own
-///   `hasCompletionsForStage({curriculumId, stageOrder})`, built for this
-///   purpose. This method still can't delegate to it: `stageId` here is an
-///   `int`, a Drift-only concept — a real Firestore stage has no integer
-///   row id (see [kFirestoreUnmappedStageId]'s doc comment) — and this
-///   repository has no way to translate that `int` into the
-///   `(curriculumId, stageOrder)` pair the completions repository needs.
-///   Bridging the two requires changing this method's own signature (the
-///   `StageDefinitionRepository` interface), which has not happened yet.
+/// - **[hasCompletionsForStage] accepts the legacy method's integer but treats
+///   it as the Firestore `stage_id`/`stage_order` ordinal.** It queries real
+///   completion documents and throws if a matching document cannot be decoded
+///   safely, rather than treating malformed data as no completions.
 /// - **[resetToDefaults] does not actually "remove all" stages.** Its
 ///   Drift-era doc comment said "Removes all stages and restores the 3
 ///   defaults", but `firestore.rules` denies `delete` on
@@ -157,6 +149,13 @@ class FirestoreStageDefinitionRepository {
       .collection('learner_profiles')
       .doc(_profileId)
       .collection('stage_definitions');
+
+  CollectionReference<Map<String, dynamic>> get _completions => _firestore
+      .collection('users')
+      .doc(_uid)
+      .collection('learner_profiles')
+      .doc(_profileId)
+      .collection('completions');
 
   DocumentReference<Map<String, dynamic>> _doc({
     required CurriculumId curriculumId,
@@ -194,8 +193,10 @@ class FirestoreStageDefinitionRepository {
   ) {
     final results = <StageDefinition>[];
     for (final doc in docs) {
+      final data = doc.data();
+      if (data.containsKey(_stageTombstoneField)) continue;
       try {
-        results.add(stageDefinitionFromFirestore(doc.data()));
+        results.add(stageDefinitionFromFirestore(data));
       } catch (error, stackTrace) {
         _logger.warning(
           event: 'firestore_stage_definitions_decode_error',
@@ -208,6 +209,22 @@ class FirestoreStageDefinitionRepository {
     return results;
   }
 
+  Map<String, dynamic> _normalizeCompletionForDecode(Map<String, dynamic> raw) {
+    var normalized = raw;
+    final completedAt = normalized['completed_at'];
+    if (completedAt is Timestamp) {
+      normalized = {
+        ...normalized,
+        'completed_at': completedAt.toDate().toUtc(),
+      };
+    }
+    final purgedAt = normalized['purged_at'];
+    if (purgedAt is Timestamp) {
+      normalized = {...normalized, 'purged_at': purgedAt.toDate().toUtc()};
+    }
+    return normalized;
+  }
+
   /// Live updates for [curriculumId]'s ordered stage list. Resubscribes
   /// with bounded exponential backoff if the underlying listener errors
   /// (`resilientQueryStream`) — see the class doc comment (point 2) for how
@@ -216,15 +233,21 @@ class FirestoreStageDefinitionRepository {
   Stream<List<StageDefinition>> watchStagesForCurriculum(
     CurriculumId curriculumId,
   ) {
-    return resilientQueryStream<StageDefinition>(
+    return resilientQueryStream<StageDefinition?>(
       openStream: () => _queryForCurriculum(curriculumId).snapshots(),
-      decode: (doc) => stageDefinitionFromFirestore(doc.data()),
+      decode: (doc) {
+        final data = doc.data();
+        if (data.containsKey(_stageTombstoneField)) return null;
+        return stageDefinitionFromFirestore(data);
+      },
       onError: (error, stackTrace) => _logger.warning(
         event: 'firestore_stage_definitions_watch_error',
         exception: error,
         stackTrace: stackTrace,
         fields: {'curriculum_id': curriculumId.storageKey},
       ),
+    ).map(
+      (stages) => stages.whereType<StageDefinition>().toList(growable: false),
     );
   }
 
@@ -285,6 +308,23 @@ class FirestoreStageDefinitionRepository {
     await batch.commit().orQueuedOffline;
   }
 
+  /// Tombstones every stage document for [curriculumId]. Firestore rules
+  /// explicitly deny deletes on `stage_definitions`, so this preserves the
+  /// documents while making all repository reads treat them as absent.
+  Future<void> deleteStagesForCurriculum(CurriculumId curriculumId) async {
+    final snapshot = await _queryForCurriculum(curriculumId).get();
+    if (snapshot.docs.isEmpty) return;
+
+    final now = DateTimeFactory.nowUtc();
+    final batch = _firestore.batch();
+    for (final doc in snapshot.docs) {
+      batch.set(doc.reference, {
+        _stageTombstoneField: FirestoreCodec.encodeDateTime(now),
+      }, SetOptions(merge: true));
+    }
+    await batch.commit().orQueuedOffline;
+  }
+
   Future<void> _writeDefaults(CurriculumId curriculumId) async {
     final now = DateTimeFactory.nowUtc(); // P5: UTC timestamps
     final batch = _firestore.batch();
@@ -305,18 +345,33 @@ class FirestoreStageDefinitionRepository {
     await batch.commit().orQueuedOffline;
   }
 
-  /// Returns true if any completions reference [stageId].
-  ///
-  /// See the class doc comment's "Kept, still flagged" section.
-  Future<bool> hasCompletionsForStage(int stageId) {
-    throw UnimplementedError(
-      'hasCompletionsForStage: no Firestore completions repository exists '
-      'yet — building one is out of this repository\'s scope. stageId is '
-      'also a Drift-only concept: a real Firestore stage has no integer '
-      'row id (see kFirestoreUnmappedStageId). Whoever builds the '
-      'Firestore completions repository should own this method, keyed by '
-      '(curriculumId, stageOrder) or the stage doc-id string, not an int.',
-    );
+  /// Returns true if any active completion references [stageId]. In the
+  /// Firestore schema this value is the stage-order ordinal, not a Drift row
+  /// id. Tombstoned completions do not count; malformed matching documents
+  /// throw because returning false would make stage deletion unsafe.
+  Future<bool> hasCompletionsForStage(int stageId) async {
+    final snapshot = await _completions
+        .where('stage_id', isEqualTo: stageId)
+        .get();
+
+    for (final doc in snapshot.docs) {
+      final data = _normalizeCompletionForDecode(doc.data());
+      final purgedAtRaw = data['purged_at'];
+      if (purgedAtRaw != null) {
+        if (FirestoreCodec.parseDateTime(purgedAtRaw) == null) {
+          throw FormatException(
+            'Completion ${doc.id} has an invalid purged_at value',
+          );
+        }
+        continue;
+      }
+
+      // Decode the complete entity so a malformed relevant document fails
+      // closed instead of being silently treated as no completion.
+      completionEntityFromFirestore(data);
+      return true;
+    }
+    return false;
   }
 
   /// Returns every stage definition in this profile's whole

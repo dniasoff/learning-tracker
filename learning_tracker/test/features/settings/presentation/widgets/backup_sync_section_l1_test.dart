@@ -3,6 +3,7 @@ library;
 
 import 'dart:convert';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -13,8 +14,10 @@ import 'package:learning_tracker/features/account/domain/models/auth_state.dart'
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/settings/domain/services/data_export_import_service.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/data_export_import_providers.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/firestore_sync_status_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/backup_sync_section.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
+import 'package:mocktail/mocktail.dart';
 
 import '../../../../helpers/data_export_firestore_test_support.dart';
 import '../../../../helpers/firestore_fixtures.dart';
@@ -53,6 +56,12 @@ class _TrackingService extends DataExportImportService {
   }
 }
 
+class _MockSnapshotMetadata extends Mock implements SnapshotMetadata {}
+
+// ignore: subtype_of_sealed_class
+class _MockDocumentSnapshot extends Mock
+    implements DocumentSnapshot<Map<String, dynamic>> {}
+
 Future<FakeFirebaseFirestore> _seedFirestore() async {
   final firestore = FakeFirebaseFirestore();
   await seedAccount(firestore, uid: testUid);
@@ -65,6 +74,7 @@ Widget _buildHarness({
   required Locale locale,
   BackupFileDelivery? delivery,
   AsyncValue<DataExportImportService?>? serviceState,
+  Stream<FirestoreSyncStatus> Function(Ref ref)? syncStatusStreamFactory,
 }) {
   return ProviderScope(
     overrides: [
@@ -73,6 +83,8 @@ Widget _buildHarness({
         dataExportImportServiceProvider.overrideWithValue(serviceState)
       else
         dataExportImportServiceProvider.overrideWith((ref) async => service),
+      if (syncStatusStreamFactory != null)
+        firestoreSyncStatusProvider.overrideWith(syncStatusStreamFactory),
       if (delivery != null)
         backupFileDeliveryProvider.overrideWithValue(delivery),
     ],
@@ -164,6 +176,92 @@ void main() {
 
     expect(find.byType(AppErrorView), findsOneWidget);
     expect(find.text('Something went wrong'), findsOneWidget);
+  });
+
+  testWidgets('Firestore metadata with no pending writes shows Synced', (
+    tester,
+  ) async {
+    final firestore = await _seedFirestore();
+    final statusStream = firestore
+        .collection('users')
+        .doc(testUid)
+        .snapshots(includeMetadataChanges: true)
+        .map(firestoreSyncStatusFromSnapshot);
+
+    await tester.pumpWidget(
+      _buildHarness(
+        service: null,
+        locale: const Locale('en'),
+        syncStatusStreamFactory: (_) => statusStream,
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('Synced'), findsOneWidget);
+    expect(find.text('Syncing — pending changes'), findsNothing);
+  });
+
+  testWidgets('Firestore metadata with pending writes shows Syncing', (
+    tester,
+  ) async {
+    final firestore = await _seedFirestore();
+    final metadata = _MockSnapshotMetadata();
+    when(() => metadata.hasPendingWrites).thenReturn(true);
+    when(() => metadata.isFromCache).thenReturn(true);
+    final snapshot = _MockDocumentSnapshot();
+    when(() => snapshot.metadata).thenReturn(metadata);
+
+    await tester.pumpWidget(
+      _buildHarness(
+        service: null,
+        locale: const Locale('en'),
+        syncStatusStreamFactory: (_) =>
+            Stream.value(firestoreSyncStatusFromSnapshot(snapshot)),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('Syncing — pending changes'), findsOneWidget);
+    expect(find.text('Synced'), findsNothing);
+    // Keep the fixture in this test: the status is still derived from the
+    // same SDK snapshot metadata shape used by the live Firestore stream.
+    expect(await firestore.collection('users').doc(testUid).get(), isNotNull);
+  });
+
+  testWidgets('terminal Firestore stream error shows Offline and Retry', (
+    tester,
+  ) async {
+    final firestore = await _seedFirestore();
+    var attempts = 0;
+
+    await tester.pumpWidget(
+      _buildHarness(
+        service: null,
+        locale: const Locale('en'),
+        syncStatusStreamFactory: (_) {
+          attempts += 1;
+          return attempts == 1
+              ? Stream<FirestoreSyncStatus>.error(
+                  StateError('listener stopped'),
+                  StackTrace.current,
+                )
+              : firestore
+                    .collection('users')
+                    .doc(testUid)
+                    .snapshots()
+                    .map(firestoreSyncStatusFromSnapshot);
+        },
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('Offline — sync listener stopped'), findsOneWidget);
+    expect(find.text('Retry'), findsOneWidget);
+
+    await tester.tap(find.text('Retry'));
+    await tester.pumpAndSettle();
+    expect(find.text('Synced'), findsOneWidget);
+    expect(attempts, 2);
   });
 
   testWidgets('Hebrew RTL renders backup actions and paste dialog', (

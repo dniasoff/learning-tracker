@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/data/repositories/firestore_reward_settings_repository.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
 import 'package:learning_tracker/features/gamification/presentation/providers/gamification_service_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
@@ -72,6 +73,10 @@ final achievementsOverviewProvider =
     FutureProvider.autoDispose<AchievementsOverview>((ref) async {
       ref.watch<int>(completionCommittedProvider);
       final service = ref.watch(rewardMilestoneServiceProvider);
+      final repository = await ref.read(
+        firestoreRewardSettingsRepositoryProvider.future,
+      );
+      await service.mergeCloudPayload(await repository?.readRewardSettings());
 
       // R4o-C1 / DEC-32/GA-3: the auto-unlock achievement ladder was replaced
       // by the spend economy, and per-track rewards were removed from it
@@ -161,11 +166,13 @@ class GamificationMaintenanceController extends Notifier<void> {
     // SM-4: the screen that triggered this can be disposed while the
     // strip write above is in flight.
     if (!ref.mounted) return;
-    // TODO(gamification-settings-sync): see dashboard_providers.dart's
-    // stripStockMilestonesEffect doc comment — the cloud-settings push that
-    // used to run here was deleted along with the archived SyncWriteFacade
-    // (task tracker #22); the strip above is local-only until a real
-    // replacement is built.
+    final repository = await ref.read(
+      firestoreRewardSettingsRepositoryProvider.future,
+    );
+    if (repository != null) {
+      await repository.writeRewardSettings(await service.exportCloudPayload());
+    }
+    if (!ref.mounted) return;
     ref.invalidate(achievementsOverviewProvider);
   }
 }

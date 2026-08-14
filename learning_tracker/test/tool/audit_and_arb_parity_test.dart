@@ -143,18 +143,9 @@ void main() {
     );
 
     test(
-      'exits 0 when codebase is fully clean [skip until Epics 26–27 violations resolved]',
+      'exits 0 when codebase is fully clean',
       () async {
-        // This test is skipped until all enforcement violations from
-        // Epics 25–26 are resolved (Stories 25.9, 25.10, 25.11, 25.19,
-        // 25.21, 26.31, etc.).
-        //
-        // To re-enable: remove the `skip:` parameter from this group()
-        // when `make audit` exits 0 on the main branch.
       },
-      skip:
-          'Pre-existing violations from Epics 25–26 not yet resolved; '
-          're-enable once make audit is fully clean (DNI-389 tracks this)',
     );
 
     test(

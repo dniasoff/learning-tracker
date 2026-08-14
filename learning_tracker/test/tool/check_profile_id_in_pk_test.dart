@@ -12,6 +12,8 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  const dart = '/home/daniel/flutter/bin/dart';
+
   // `flutter test` runs with cwd = the package dir (`learning_tracker/`).
   final repoRoot = Directory.current.path;
   final scriptPath = '$repoRoot/tool/check_profile_id_in_pk.dart';
@@ -49,7 +51,7 @@ class UserDatabase extends _\$UserDatabase {}
     File('${tablesDir.path}/$fileName').writeAsStringSync(body);
   }
 
-  Future<ProcessResult> runCheck({String? exempt}) => Process.run('dart', [
+  Future<ProcessResult> runCheck({String? exempt}) => Process.run(dart, [
     'run',
     scriptPath,
     '--user-database-file',
@@ -122,10 +124,9 @@ class TrackLearningOrder extends Table {
       reason: 'failure output should name the missing concept',
     );
 
-    // Restoring the fix (profileId column present) makes it clean again.
+    // Restoring the profile-scoping column makes it clean again.
     writeTable('track_learning_order.dart', '''
 import 'package:drift/drift.dart';
-import 'package:learning_tracker/core/database/tables/learner_profiles.dart';
 
 class TrackLearningOrder extends Table {
   IntColumn get id => integer().autoIncrement()();
@@ -176,7 +177,7 @@ class TextDownloadStatuses extends Table {
 
   test('returns 2 when --tables-dir does not exist', () async {
     writeUserDb('    Bookmarks,');
-    final result = await Process.run('dart', [
+    final result = await Process.run(dart, [
       'run',
       scriptPath,
       '--user-database-file',
@@ -188,21 +189,31 @@ class TextDownloadStatuses extends Table {
     expect(result.stderr.toString(), contains('not found'));
   });
 
-  test('default invocation passes against the live UserDatabase schema '
-      '(AUD-t-cross-06)', () async {
-    // No --user-database-file / --tables-dir / --exempt: exercise the
-    // real defaults so the check is actually wired to the repo.
-    final result = await Process.run('dart', [
+  test('the retired UserDatabase default is reported as unavailable', () async {
+    // The live app now has only the content DB and device registry DB. The
+    // old user-DB checker has no default target, so this obsolete premise is
+    // asserted explicitly rather than pretending a user schema still exists.
+    final result = await Process.run(dart, [
       'run',
       scriptPath,
     ], workingDirectory: repoRoot);
     expect(
       result.exitCode,
-      0,
+      2,
       reason:
-          'live UserDatabase schema must satisfy the invariant.\n'
+          'the retired user-DB checker should report its missing target.\n'
           'stdout=${result.stdout}\nstderr=${result.stderr}',
     );
-    expect(result.stdout.toString(), contains('check_profile_id_in_pk OK'));
+    expect(result.stderr.toString(), contains('user_database.dart not found'));
+    expect(
+      File('lib/core/database/content/content_database.dart').existsSync(),
+      isTrue,
+    );
+    expect(
+      File(
+        'lib/core/database/registry/device_registry_database.dart',
+      ).existsSync(),
+      isTrue,
+    );
   });
 }

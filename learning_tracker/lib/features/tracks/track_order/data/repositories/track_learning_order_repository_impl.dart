@@ -53,40 +53,12 @@ class TrackLearningOrderRepositoryNotReadyException implements Exception {
 /// "nothing yet" value. [saveSedarimOrder]/[saveMasechtosOrder] have no such
 /// value and throw [TrackLearningOrderRepositoryNotReadyException] instead.
 ///
-/// ## [resetToDefault] — propagated, not re-solved
+/// ## Reset and reorder-amnesty
 ///
-/// `FirestoreTrackLearningOrderRepository.resetToDefault` itself throws
-/// [UnimplementedError] unconditionally — `firestore.rules` denies `delete`
-/// on `track_learning_order`, and there is no fixed doc-id universe to
-/// overwrite in place instead (see that class's doc comment, "Trimmed").
-/// This method still resolves the provider first (so a genuinely not-ready
-/// caller sees [TrackLearningOrderRepositoryNotReadyException] rather than
-/// the permanently-unimplemented one), then delegates — once ready, the
-/// [UnimplementedError] propagates unchanged.
-///
-/// ## Reorder-amnesty (`last_reorder_at`) — NOT co-written here
-///
-/// The Drift impl this replaces co-stamped `curriculum_tracks.last_reorder_at`
-/// inside the same transaction as every order write.
-/// `last_reorder_at` IS in `firestore.rules`' `curriculum_tracks`
-/// `.hasOnly()` whitelist (confirmed by reading the rules file directly),
-/// but neither [FirestoreTrackLearningOrderRepository] nor
-/// [FirestoreCurriculumTrackRepository] (`lib/data/repositories/
-/// firestore_curriculum_track_repository.dart`) exposes a method that
-/// writes it, and adding one to either means editing a file under
-/// `lib/data/repositories/`, out of this task's scope. A raw
-/// `cloud_firestore` write from here is not an option either —
-/// `tool/check_firebase_confinement.dart` (`make audit` check 2/15, hard
-/// gate) only allows `FirebaseFirestore`/`cloud_firestore` symbols inside
-/// `lib/core/sync/`, `lib/core/auth/`, `lib/data/firestore/`, and
-/// `lib/data/repositories/` — not `lib/features/tracks/**`. See
-/// [FirestoreCurriculumTrackRepositoryAdapter]'s class doc comment
-/// (`lib/features/tracks/setup/data/repositories/
-/// curriculum_track_repository_impl.dart`) for the other half of this same
-/// gap. [saveSedarimOrder]/[saveMasechtosOrder] below write ONLY the order
-/// data — the amnesty baseline is left untouched by the Firestore path
-/// until a `stampReorderAt`-shaped method is added to
-/// [FirestoreCurriculumTrackRepository].
+/// The resolved Firestore repository handles reset with field tombstones and
+/// co-writes `last_reorder_at` in the same atomic batch as every order
+/// mutation. This adapter remains the provider-resolution seam and delegates
+/// the complete operation unchanged.
 class FirestoreTrackLearningOrderRepositoryAdapter
     implements TrackLearningOrderRepository {
   FirestoreTrackLearningOrderRepositoryAdapter({required Ref ref})
@@ -140,7 +112,6 @@ class FirestoreTrackLearningOrderRepositoryAdapter
     List<LearningOrderItem> items,
   ) async {
     final repo = await _resolve();
-    // Reorder-amnesty NOT co-written — see the class doc comment.
     await repo.saveSedarimOrder(curriculumId, items);
   }
 
@@ -150,15 +121,12 @@ class FirestoreTrackLearningOrderRepositoryAdapter
     List<LearningOrderItem> items,
   ) async {
     final repo = await _resolve();
-    // Reorder-amnesty NOT co-written — see the class doc comment.
     await repo.saveMasechtosOrder(curriculumId, items);
   }
 
   @override
   Future<void> resetToDefault(CurriculumId curriculumId) async {
     final repo = await _resolve();
-    // Always throws UnimplementedError once ready — see the class doc
-    // comment's "resetToDefault" section.
     await repo.resetToDefault(curriculumId);
   }
 }

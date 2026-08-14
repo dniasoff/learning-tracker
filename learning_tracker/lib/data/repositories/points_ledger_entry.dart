@@ -6,9 +6,8 @@ import 'package:learning_tracker/features/learning/domain/entities/completion_so
 /// /points_ledger/{entryId}`).
 ///
 /// **Firestore-shaped, built directly against the target schema — there is
-/// no portable Drift-era domain model to port from.** `PointsLedgerData`
-/// (`lib/core/database/tables/points_balance.dart`'s generated Drift row) is
-/// a device-local row: autoincrement `id`, local-int `profileId`, local-int
+/// no portable Drift-era domain model to port from.** The former device-local
+/// row had an autoincrement `id`, local-int `profileId`, and local-int
 /// `redemptionId` FK — none of it survives the rewrite (AD-5: no
 /// autoincrement id may appear inside a synced payload).
 ///

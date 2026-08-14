@@ -36,6 +36,10 @@ Color _kHeroBlueTop(BuildContext context) =>
 Color _kHeroBlueBottom(BuildContext context) =>
     context.colors.gamifPointConfigHeroBlueBottom;
 
+const _tutorPointConfigReadOnlyReason =
+    'Point configuration is read-only in tutor view because only the profile '
+    'owner can write point values.';
+
 class _StagePointConfig {
   const _StagePointConfig({required this.stage, required this.config});
 
@@ -211,7 +215,14 @@ class _PointConfigScreenState extends ConsumerState<PointConfigScreen> {
     final l10n = AppLocalizations.of(context)!;
     final pointsAsync = ref.watch(pointConfigDataProvider);
     final tutorPerms = ref.watch(activeTutorPermissionsProvider);
-    final canEdit = tutorPerms == null || tutorPerms.canEditPoints;
+    final isTutoredSession =
+        ref.watch(activeTutoredProfileSelectionProvider) != null;
+    // firestore.rules permits tutor reads of point_configs but owner-only
+    // creates/updates/deletes. The existing tutor callable writes the separate
+    // preferences/gamification_settings document, not point_configs, so this
+    // screen must not advertise an edit that cannot legally land.
+    final canEdit = !isTutoredSession &&
+        (tutorPerms == null || tutorPerms.canEditPoints);
 
     return Scaffold(
       backgroundColor: _kScreenBg(context),
@@ -260,6 +271,13 @@ class _PointConfigScreenState extends ConsumerState<PointConfigScreen> {
                   physics: const BouncingScrollPhysics(),
                   slivers: [
                     SliverToBoxAdapter(child: _HeroHeader(l10n: l10n)),
+                    if (isTutoredSession)
+                      const SliverToBoxAdapter(
+                        child: Padding(
+                          padding: EdgeInsets.fromLTRB(20, 16, 20, 0),
+                          child: Text(_tutorPointConfigReadOnlyReason),
+                        ),
+                      ),
                     SliverToBoxAdapter(
                       child: Padding(
                         padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
@@ -319,6 +337,9 @@ class _PointConfigScreenState extends ConsumerState<PointConfigScreen> {
                 enabled: _hasPendingEdits && !_saving && canEdit,
                 busy: _saving,
                 onPressed: () => _savePending(pointData),
+                readOnlyReason: isTutoredSession
+                    ? _tutorPointConfigReadOnlyReason
+                    : null,
                 onNothingToSave: () {
                   if (!canEdit) {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -709,6 +730,7 @@ class _SaveBar extends StatelessWidget {
     required this.busy,
     required this.onPressed,
     required this.onNothingToSave,
+    this.readOnlyReason,
   });
 
   final AppLocalizations l10n;
@@ -716,6 +738,7 @@ class _SaveBar extends StatelessWidget {
   final bool busy;
   final VoidCallback onPressed;
   final VoidCallback onNothingToSave;
+  final String? readOnlyReason;
 
   @override
   Widget build(BuildContext context) {
@@ -771,6 +794,17 @@ class _SaveBar extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 10),
+            if (readOnlyReason != null) ...[
+              Text(
+                readOnlyReason!,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.error,
+                  height: 1.3,
+                ),
+              ),
+              const SizedBox(height: 6),
+            ],
             Text(
               l10n.pointSettingsSaveFooter,
               textAlign: TextAlign.center,

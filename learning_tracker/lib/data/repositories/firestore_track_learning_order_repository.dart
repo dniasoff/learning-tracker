@@ -52,34 +52,18 @@
 /// is a pure, synchronous function, so nothing about combining the two steps
 /// needs a second network round trip.
 ///
-/// ## Trimmed, same reasoning as the sibling
+/// ## Reorder-amnesty and reset
 ///
 /// - **No `saveOrder`'s parent-lock guard** — a UI-layer policy concern, not
 ///   a Firestore data-shape concern; see the sibling's "Trimmed" section.
-/// - **No `TrackDao.stampReorderAt` co-commit (reorder-amnesty).** The Drift
-///   impl wraps every `saveSedarimOrder`/`saveMasechtosOrder`/`resetToDefault`
-///   in a transaction that ALSO stamps `curriculum_tracks.last_reorder_at`.
-///   That field was just added to `curriculum_tracks`' rules whitelist, but
-///   it belongs to the curriculum-track repository/collection, not this one
-///   — this repository does not reach into another collection to write it.
-///   **Coordination point:** whoever wires this repository into the app (or
-///   builds the curriculum-track repository) needs to co-write
-///   `last_reorder_at` on `curriculum_tracks/{curriculumId}` alongside every
-///   call to [saveSedarimOrder]/[saveMasechtosOrder] here — most naturally
-///   as two calls in the same caller-level use case, since Firestore has no
-///   cross-collection client transaction primitive as convenient as Drift's
-///   `database.transaction()` for two unrelated top-level collections under
-///   the same profile document tree (a `WriteBatch` spanning both doc
-///   references would work and is the natural choice if atomicity matters).
-/// - **[resetToDefault] throws [UnimplementedError]**, exactly like the
-///   sibling's, and for the same two reasons: `firestore.rules` denies
-///   `delete` on `track_learning_order` unconditionally (`allow delete: if
-///   false`), and there is no fixed, small set of known doc-ids to
-///   overwrite in place instead — a track's custom order (sedarim AND
-///   masechtos rows share this one collection, distinguished only by which
-///   `sefariaRef`s the caller's index recognises, never by a stored
-///   discriminator field) can touch an arbitrary, caller-chosen subset of
-///   items, with no fixed universe to target.
+/// - Every order mutation uses one [WriteBatch] spanning
+///   `track_learning_order` and `curriculum_tracks`; the batch also writes
+///   `last_reorder_at` through [FirestoreCurriculumTrackRepository].
+///   Firestore batches are atomic across these collections, including when
+///   the offline-aware commit is queued.
+/// - [resetToDefault] uses field tombstones because the rules deny document
+///   deletes. Removing `user_sort_order` makes the existing ordered query
+///   exclude those rows, so reads fall back to natural content order.
 library;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -91,6 +75,7 @@ import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/data/firestore/doc_ids.dart';
 import 'package:learning_tracker/data/firestore/resilient_doc_stream.dart';
 import 'package:learning_tracker/data/firestore/write_ack.dart';
+import 'package:learning_tracker/data/repositories/firestore_curriculum_track_repository.dart';
 import 'package:learning_tracker/features/tracks/track_order/domain/services/masechta_ordering_policy.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/domain/models/learning_order_item.dart';
 
@@ -131,6 +116,13 @@ class FirestoreTrackLearningOrderRepository {
   final String _uid;
   final String _profileId;
   final AppLogger _logger;
+  late final FirestoreCurriculumTrackRepository _curriculumTrackRepository =
+      FirestoreCurriculumTrackRepository(
+        firestore: _firestore,
+        uid: _uid,
+        profileId: _profileId,
+        logger: _logger,
+      );
 
   CollectionReference<Map<String, dynamic>> get _orders => _firestore
       .collection('users')
@@ -382,9 +374,8 @@ class FirestoreTrackLearningOrderRepository {
   /// by which refs the caller passes in, never by a stored discriminator.
   /// Uses the LIST POSITION rather than each item's own `userSortOrder`
   /// field as the written value (the incoming list order IS the new order)
-  /// — same as the sibling's `saveOrder`. Does not co-write
-  /// `curriculum_tracks.last_reorder_at` — see the class doc comment's
-  /// "Coordination point".
+  /// — same as the sibling's `saveOrder`. Co-writes
+  /// `curriculum_tracks.last_reorder_at` in the same atomic batch.
   Future<void> _saveOrder(
     CurriculumId curriculumId,
     List<LearningOrderItem> items,
@@ -399,6 +390,11 @@ class FirestoreTrackLearningOrderRepository {
         'updated_at': FirestoreCodec.encodeDateTime(updatedAt),
       }, SetOptions(merge: true));
     }
+    _curriculumTrackRepository.addReorderStampToBatch(
+      batch,
+      curriculumId,
+      updatedAt,
+    );
     await batch.commit().orQueuedOffline;
   }
 
@@ -418,23 +414,28 @@ class FirestoreTrackLearningOrderRepository {
   /// Resets [curriculumId]'s custom track order (sedarim AND masechtos) to
   /// natural content order.
   ///
-  /// **Not implemented — no honest Firestore mapping exists today.** See
-  /// the class doc comment's "Trimmed" section: the Drift path DELETEs
-  /// every row for the track, but `firestore.rules` denies `delete` on
-  /// `track_learning_order` unconditionally, and there is no fixed doc-id
-  /// set to overwrite-in-place either — a custom track order can touch an
-  /// arbitrary, caller-chosen subset of sedarim and masechtos refs. Whoever
-  /// wires this repository into the app needs a rules change (a soft-delete
-  /// marker field, or a narrow one-time `delete` allowance) or a
-  /// server-side reset path (Cloud Function, Admin SDK) — not a
-  /// client-side workaround here.
-  Future<void> resetToDefault(CurriculumId curriculumId) {
-    throw UnimplementedError(
-      'resetToDefault: firestore.rules denies delete on '
-      'track_learning_order (allow delete: if false) and there is no '
-      'fixed set of doc-ids to overwrite in place — see the class doc '
-      'comment\'s "Trimmed" section. Needs a rules change or a '
-      'server-side reset path, not a client-side workaround.',
+  /// `track_learning_order` denies document deletion, so each matching row is
+  /// tombstoned by removing its `user_sort_order` field. The existing query
+  /// orders by that field and therefore excludes the tombstoned rows; reads
+  /// then take their normal natural-order fallback. The track stamp is added
+  /// to the same batch as the tombstones.
+  Future<void> resetToDefault(CurriculumId curriculumId) async {
+    final snapshot = await _queryForCurriculum(curriculumId).get();
+    if (snapshot.docs.isEmpty) return;
+
+    final updatedAt = DateTimeFactory.nowUtc(); // P5: UTC timestamps
+    final batch = _firestore.batch();
+    for (final doc in snapshot.docs) {
+      batch.update(doc.reference, {
+        'user_sort_order': FieldValue.delete(),
+        'updated_at': FirestoreCodec.encodeDateTime(updatedAt),
+      });
+    }
+    _curriculumTrackRepository.addReorderStampToBatch(
+      batch,
+      curriculumId,
+      updatedAt,
     );
+    await batch.commit().orQueuedOffline;
   }
 }

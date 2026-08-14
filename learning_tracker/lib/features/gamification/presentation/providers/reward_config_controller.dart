@@ -1,6 +1,8 @@
+import 'package:learning_tracker/data/repositories/firestore_reward_settings_repository.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
 import 'package:learning_tracker/features/gamification/domain/reward_milestone_icons.dart';
+import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
 import 'package:learning_tracker/features/gamification/presentation/providers/achievements_overview_provider.dart';
 import 'package:learning_tracker/features/gamification/presentation/providers/gamification_service_providers.dart';
 import 'package:learning_tracker/features/gamification/presentation/screens/child_redemption_screen.dart';
@@ -116,15 +118,30 @@ class RewardConfigController extends _$RewardConfigController {
   /// ever one, global, ladder now).
   Future<List<RewardMilestone>> milestonesForCurrentLadder() async {
     final svc = ref.read(rewardMilestoneServiceProvider);
+    await _hydrateFromFirestore(svc);
     return svc.getMilestones();
   }
 
+  Future<void> _hydrateFromFirestore(RewardMilestoneService svc) async {
+    final repository = await ref.read(
+      firestoreRewardSettingsRepositoryProvider.future,
+    );
+    await svc.mergeCloudPayload(await repository?.readRewardSettings());
+  }
+
+  Future<void> _writeToFirestore(RewardMilestoneService svc) async {
+    final repository = await ref.read(
+      firestoreRewardSettingsRepositoryProvider.future,
+    );
+    if (repository == null) return;
+    await repository.writeRewardSettings(await svc.exportCloudPayload());
+  }
+
   Future<void> _persistAndSync() async {
-    // TODO(gamification-settings-sync): the cloud-settings push that used to
-    // run here was deleted along with the archived SyncWriteFacade (lib/core/
-    // database + lib/features/sync were removed wholesale, task tracker
-    // #22) — a saved/toggled/deleted reward is local-only (SharedPreferences)
-    // until a real, non-outbox replacement is built. SM-4 (AUD-gamification-01):
+    if (!ref.mounted) return;
+    final svc = ref.read(rewardMilestoneServiceProvider);
+    await _writeToFirestore(svc);
+    // SM-4 (AUD-gamification-01):
     // the screen/notifier can still be torn down between the write above (in
     // the caller) and the invalidate calls below (e.g. a fast back-gesture) —
     // touching `ref` after disposal throws, so this guard stays.

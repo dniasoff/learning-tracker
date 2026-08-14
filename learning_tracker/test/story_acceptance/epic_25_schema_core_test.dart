@@ -1124,13 +1124,63 @@ void main() {
   );
 
   // --------------------------------------------------------------------------
-  // Story 25.17 remains pending until both identities are ULID/CurriculumId.
+  // Story 25.17 — the old user Drift database layer is retired.
   group(
-    'Story 25.17 — BaseDao + TrackScope; cross-profile DAO methods deleted',
+    'Story 25.17 — legacy user-DB artefacts are absent',
     tags: ['story_25_17'],
-    skip:
-        'Blocked by TrackScope.profileId/trackId in lib/core/database/track_scope.dart:14-15; the production API still requires int identities, which violates AD-24 and AD-25.',
-    () {},
+    () {
+      test('only the current content tables remain in the database layer', () {
+        final tableNames = Directory('lib/core/database/tables')
+            .listSync()
+            .whereType<File>()
+            .map((file) => file.uri.pathSegments.last)
+            .toSet();
+
+        expect(
+          tableNames,
+          equals({
+            'calendar_cycles.dart',
+            'daily_content.dart',
+            'seed_metadata.dart',
+            'text_cache.dart',
+          }),
+        );
+        expect(File('lib/core/database/base_dao.dart').existsSync(), isFalse);
+        expect(
+          File('lib/core/database/track_scope.dart').existsSync(),
+          isFalse,
+        );
+        expect(
+          File('lib/core/database/track_scope.freezed.dart').existsSync(),
+          isFalse,
+        );
+
+        // Deliberately retained architecture: content DB, registry DB,
+        // content seeding/health support, and the shared Drift file resolver.
+        expect(
+          File('lib/core/database/content/content_database.dart').existsSync(),
+          isTrue,
+        );
+        expect(
+          File(
+            'lib/core/database/registry/device_registry_database.dart',
+          ).existsSync(),
+          isTrue,
+        );
+        expect(
+          File('lib/core/database/seed_manager.dart').existsSync(),
+          isTrue,
+        );
+        expect(
+          File('lib/core/database/content_db_health_checker.dart').existsSync(),
+          isTrue,
+        );
+        expect(
+          File('lib/core/database/drift_db_file.dart').existsSync(),
+          isTrue,
+        );
+      });
+    },
   );
 }
 

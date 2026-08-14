@@ -37,39 +37,12 @@ class StageDefinitionRepositoryNotReadyException implements Exception {
 /// methods ([initializeDefaults], [resetToDefaults]) have no such value and
 /// throw [StageDefinitionRepositoryNotReadyException] instead.
 ///
-/// ## Two methods have no honest Firestore mapping at all — not "not ready",
-/// permanently unsupported
+/// ## Track-scoped operations use CurriculumId
 ///
-/// [getStagesByTrack] and [deleteStagesForTrack] both take ONLY a
-/// Drift-local `int trackId` — no [CurriculumId] — and
-/// `FirestoreStageDefinitionRepository`'s own class doc comment explains why
-/// it dropped both: AD-25 retired the per-device track id as this
-/// collection's key entirely, `curriculum_id` is the sole canonical stable
-/// key post-rewrite, and there is no Drift-free way inside this adapter to
-/// resolve a bare `trackId` back to the `curriculumId` it belongs to. Unlike
-/// [hasCompletionsForStage] (a genuine "not built yet" gap — see below),
-/// this is not something a future task can simply implement: the
-/// information the method needs (a curriculum-scoped view of a Drift-local
-/// integer) does not exist on the Firestore side by design. Both throw
-/// [UnimplementedError] unconditionally — this is a permanent limitation of
-/// the target architecture, not a not-ready state, so it is not gated behind
-/// [_resolve].
-///
-/// ## [hasCompletionsForStage] — propagated, not re-solved
-///
-/// `FirestoreStageDefinitionRepository.hasCompletionsForStage` itself throws
-/// [UnimplementedError] — not because a Firestore completions repository is
-/// missing (`FirestoreCompletionRepository.hasCompletionsForStage({curriculumId,
-/// stageOrder})` now exists and runs exactly this query), but because
-/// `stageId` here is a Drift-only concept a real Firestore stage has no
-/// integer row id for (see `kFirestoreUnmappedStageId`'s doc comment), with
-/// no way to translate it into the `(curriculumId, stageOrder)` pair that
-/// repository needs.
-/// This method still resolves the provider first ([_resolve], which throws
-/// [StageDefinitionRepositoryNotReadyException] when not ready) before
-/// delegating, so a genuinely not-ready caller sees that exception rather
-/// than the permanently-unimplemented one — but once ready, the
-/// [UnimplementedError] propagates unchanged.
+/// [getStagesByTrack] and [deleteStagesForTrack] are expressed in terms of
+/// [CurriculumId], the sole canonical track identity under AD-25. Deletion is
+/// implemented as a rules-legal tombstone because `firestore.rules` denies
+/// deletes on `stage_definitions`.
 ///
 /// ## [pushStagesForTrack] — no-op, not unsupported
 ///
@@ -160,36 +133,21 @@ class FirestoreStageDefinitionRepositoryAdapter
   @override
   Future<bool> hasCompletionsForStage(int stageId) async {
     final repo = await _resolve();
-    // Always throws UnimplementedError once ready — see the class doc
-    // comment's "hasCompletionsForStage" section.
     return repo.hasCompletionsForStage(stageId);
   }
 
   @override
-  Future<List<StageDefinition>> getStagesByTrack(int trackId) {
-    throw UnimplementedError(
-      'StageDefinitionRepository.getStagesByTrack(int trackId) has no '
-      'Firestore mapping: FirestoreStageDefinitionRepository dropped it '
-      'outright (AD-25 retired the per-device trackId as this collection\'s '
-      'key; curriculum_id is now the sole canonical key), and this adapter '
-      'has no Drift-free way to resolve a bare trackId back to a '
-      'curriculumId. Callers must migrate to getStagesForCurriculum '
-      '(CurriculumId) instead. Known callers this breaks: '
-      'CalendarPositionProviders, DashboardProviders, '
-      'DailyTaskProjectionService (two call sites), TrackProgressService, '
-      'PointConfigScreen (three call sites).',
-    );
+  Future<List<StageDefinition>> getStagesByTrack(
+    CurriculumId curriculumId,
+  ) async {
+    final repo = await _resolve();
+    return repo.getStagesForCurriculum(curriculumId);
   }
 
   @override
-  Future<void> deleteStagesForTrack(int trackId) {
-    throw UnimplementedError(
-      'StageDefinitionRepository.deleteStagesForTrack(int trackId) has no '
-      'Firestore mapping — same AD-25 gap as getStagesByTrack: no '
-      'trackId->curriculumId resolution is available here. Known caller '
-      'this breaks: TrackCreationService.createTrack\'s stage-reseed step '
-      '(it deletes then reseeds stages for a possibly-restored track).',
-    );
+  Future<void> deleteStagesForTrack(CurriculumId curriculumId) async {
+    final repo = await _resolve();
+    await repo.deleteStagesForCurriculum(curriculumId);
   }
 
   @override

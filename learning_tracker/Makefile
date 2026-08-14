@@ -1353,7 +1353,7 @@ audit: lint-rules-test ## Run all 68 enforcement greps (NFR19) — exits non-zer
 	else \
 	  rm -f /tmp/dependency_direction_check.$$$$.log; \
 	fi; \
-	echo "103/103 — PROFILE-KEY-SPLIT (docs/firestore-rewrite-map.md item 10): every profile-scoped Firestore collection has exactly one live production keying scheme (Drift int vs ULID) across lib/core/sync/**, functions/src/**, and lib/data/repositories/** plus lib/features/**/data/repositories/** (liveness-filtered, no firestore_-prefix filename requirement) — RATCHET, only growth above the tracked baseline (tool/profile_path_keying_baseline.txt) fails the gate; today's tracked split is bookmarks + learning_order (the DNI-333/334/335 cutover regression)"; \
+		echo "103/103 — PROFILE-KEY-SPLIT (docs/firestore-rewrite-map.md item 10): the checker registry matches all 18 profile-scoped collections in firestore.rules, then detects collections touched by both deployed functions/src/** code and live ULID repositories (liveness-filtered, no firestore_-prefix filename requirement); only checker-observed splits not recorded in tool/profile_path_keying_baseline.txt fail the ratchet. The baseline retains the two genuine historical splits plus reviewed ULID-keyed Cloud Function false positives."; \
 	if ! dart run tool/check_profile_path_keying.dart > /tmp/profile_path_keying_check.$$$$.log 2>&1; then \
 	  cat /tmp/profile_path_keying_check.$$$$.log; \
 	  rm -f /tmp/profile_path_keying_check.$$$$.log; \

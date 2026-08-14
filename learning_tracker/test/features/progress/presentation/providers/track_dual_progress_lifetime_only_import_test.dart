@@ -74,11 +74,12 @@ final class _FakeStageRepository implements StageDefinitionRepository {
       throw UnimplementedError();
 
   @override
-  Future<List<StageDefinition>> getStagesByTrack(int trackId) =>
+  Future<List<StageDefinition>> getStagesByTrack(CurriculumId curriculumId) =>
       throw UnimplementedError();
 
   @override
-  Future<void> deleteStagesForTrack(int trackId) => throw UnimplementedError();
+  Future<void> deleteStagesForTrack(CurriculumId curriculumId) =>
+      throw UnimplementedError();
 
   @override
   Future<void> pushStagesForTrack({

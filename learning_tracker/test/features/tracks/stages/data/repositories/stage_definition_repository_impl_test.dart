@@ -12,10 +12,7 @@
 /// unit-test file to extend — its behavior is covered by the story
 /// acceptance suite — so this file covers ONLY the new adapter class.
 ///
-/// **What these tests cannot see**: the two permanently-unsupported methods
-/// ([getStagesByTrack], [deleteStagesForTrack]) throw [UnimplementedError]
-/// unconditionally, by construction — there is no "ready" branch to exercise
-/// for them, so each gets exactly one test. `fake_cloud_firestore`'s own
+/// **What these tests cannot see**: `fake_cloud_firestore`'s own
 /// limitations (no composite-index enforcement, no `resource.data` rules
 /// evaluation) are already documented in
 /// `firestore_stage_definition_repository_test.dart` and are not
@@ -36,6 +33,8 @@ import 'package:learning_tracker/data/firestore/repository_providers.dart'
     show activeProfileDocIdProvider;
 import 'package:learning_tracker/features/tracks/stages/data/repositories/stage_definition_repository_impl.dart';
 import 'package:mocktail/mocktail.dart';
+
+import '../../../../../helpers/firestore_fixtures.dart';
 
 class MockFirebaseApp extends Mock implements FirebaseApp {}
 
@@ -70,34 +69,6 @@ void main() {
           );
       return container.read(adapterProvider);
     }
-
-    group('permanently unsupported (not a not-ready state)', () {
-      test(
-        'getStagesByTrack throws UnimplementedError regardless of readiness',
-        () async {
-          final container = ProviderContainer();
-          addTearDown(container.dispose);
-          final adapter = buildAdapter(container);
-
-          expect(
-            () => adapter.getStagesByTrack(1),
-            throwsA(isA<UnimplementedError>()),
-          );
-        },
-      );
-
-      test('deleteStagesForTrack throws UnimplementedError regardless of '
-          'readiness', () async {
-        final container = ProviderContainer();
-        addTearDown(container.dispose);
-        final adapter = buildAdapter(container);
-
-        expect(
-          () => adapter.deleteStagesForTrack(1),
-          throwsA(isA<UnimplementedError>()),
-        );
-      });
-    });
 
     group('not ready (no active account/profile)', () {
       test(
@@ -259,12 +230,74 @@ void main() {
         },
       );
 
-      test('hasCompletionsForStage still throws UnimplementedError once ready '
-          '(propagated, not re-solved)', () async {
-        expect(
-          () => adapter.hasCompletionsForStage(1),
-          throwsA(isA<UnimplementedError>()),
+      test('hasCompletionsForStage delegates to completion data', () async {
+        await seedCompletion(
+          firestore,
+          uid: uid,
+          profileId: profileDocId,
+          stageId: 1,
         );
+
+        expect(await adapter.hasCompletionsForStage(1), isTrue);
+        expect(await adapter.hasCompletionsForStage(2), isFalse);
+      });
+
+      test(
+        'getStagesByTrack uses CurriculumId and returns only its stages',
+        () async {
+          await adapter.initializeDefaults(
+            CurriculumId.mishnayos,
+            profileId: 0,
+            trackId: 1,
+          );
+          await adapter.initializeDefaults(
+            CurriculumId.bavli,
+            profileId: 0,
+            trackId: 2,
+          );
+
+          final stages = await adapter.getStagesByTrack(CurriculumId.mishnayos);
+
+          expect(stages, hasLength(3));
+          expect(
+            stages.every(
+              (stage) => stage.curriculumId == CurriculumId.mishnayos,
+            ),
+            isTrue,
+          );
+        },
+      );
+
+      test('deleteStagesForTrack tombstones only that curriculum', () async {
+        await adapter.initializeDefaults(
+          CurriculumId.mishnayos,
+          profileId: 0,
+          trackId: 1,
+        );
+        await adapter.initializeDefaults(
+          CurriculumId.bavli,
+          profileId: 0,
+          trackId: 2,
+        );
+
+        await adapter.deleteStagesForTrack(CurriculumId.mishnayos);
+
+        expect(await adapter.getStagesByTrack(CurriculumId.mishnayos), isEmpty);
+        expect(
+          await adapter.getStagesByTrack(CurriculumId.bavli),
+          hasLength(3),
+        );
+
+        final stageDoc = await firestore
+            .collection('users')
+            .doc(uid)
+            .collection('learner_profiles')
+            .doc(profileDocId)
+            .collection('stage_definitions')
+            .doc('mishnayos_1')
+            .get();
+        expect(stageDoc.exists, isTrue);
+        expect(stageDoc.data(), contains('synced_at'));
       });
 
       test('pushStagesForTrack is still a no-op once ready', () async {

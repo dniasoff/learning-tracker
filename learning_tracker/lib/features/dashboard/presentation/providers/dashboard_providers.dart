@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
+import 'package:learning_tracker/data/repositories/firestore_reward_settings_repository.dart';
 import 'package:learning_tracker/features/dashboard/data/repositories/firestore_profile_program_reader_adapter.dart';
 import 'package:learning_tracker/features/dashboard/data/repositories/firestore_study_day_reader_adapter.dart';
 import 'package:learning_tracker/features/dashboard/domain/services/next_reward_selector.dart';
@@ -259,19 +260,22 @@ Future<int> dashboardGlobalPoints(Ref ref) async {
 Future<void> stripStockMilestonesEffect(Ref ref) async {
   final milestoneService = ref.watch(rewardMilestoneServiceProvider);
 
-  await milestoneService.stripStockTemplateMilestones();
+  final changed = await milestoneService.stripStockTemplateMilestones();
+  if (!ref.mounted) return;
+  if (changed) {
+    final repository = await ref.read(
+      firestoreRewardSettingsRepositoryProvider.future,
+    );
+    if (repository != null) {
+      await repository.writeRewardSettings(
+        await milestoneService.exportCloudPayload(),
+      );
+    }
+  }
   // Guard: this autoDispose provider may have been disposed during the async
   // gap above (e.g. the user navigated away before the strip completed) —
   // see dashboardChildNextReward's identical guard (SM-4, AUD-dashboard-06).
   if (!ref.mounted) return;
-  // TODO(gamification-settings-sync): the strip above is a local
-  // (SharedPreferences) write only — it used to also push a cloud snapshot
-  // via the now-archived SyncWriteFacade (lib/core/database + lib/features/
-  // sync were deliberately deleted wholesale, commit 04897ebc; see
-  // docs/planning task tracker #22). RewardMilestoneService has no
-  // Firestore mirror yet, so a stripped stock milestone stays local-only
-  // until a real (non-outbox) settings-sync replacement is built — a real,
-  // disclosed gap, not silently dropped.
 }
 
 /// Next reward milestone for the child dashboard (closest threshold not yet met).
@@ -300,6 +304,12 @@ Future<DashboardChildNextReward?> dashboardChildNextReward(Ref ref) async {
 
   final milestoneService = ref.watch(rewardMilestoneServiceProvider);
 
+  final repository = await ref.read(
+    firestoreRewardSettingsRepositoryProvider.future,
+  );
+  await milestoneService.mergeCloudPayload(
+    await repository?.readRewardSettings(),
+  );
   final globalPoints = await milestoneService
       .getGlobalLifetimeEarnedForRewards();
   final globalMilestones = await milestoneService.getMilestones();

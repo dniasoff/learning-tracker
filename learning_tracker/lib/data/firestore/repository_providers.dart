@@ -136,46 +136,82 @@ class ActiveProfileDocId extends Notifier<String?> {
 final activeProfileDocIdProvider =
     NotifierProvider<ActiveProfileDocId, String?>(ActiveProfileDocId.new);
 
-/// Resolves the active account's handles and active profile id together as
-/// one optional pair. Every profile-scoped provider below funnels through
-/// this so "no account active", "no profile active" and "a tutor is acting
-/// inside a talmid's context" all collapse to the same `null` signal
-/// instead of each provider — or each feature's own repository adapter —
-/// re-deriving it.
+/// Resolves the active account's handles and effective profile path together.
+/// Every profile-scoped provider below funnels through this one seam.
 ///
-/// **The tutored-session check below is deliberately first, before any
-/// handle resolution.** [activeProfileDocIdProvider] still holds the
-/// TUTOR's own profile ULID during a tutored session — nothing under
-/// `lib/features/tutoring/` sets it. **Corrected reason (P2-12; the
-/// previous wording here was false and is Phase 3's T-37 trap):** the
-/// tutored mirror row is NOT missing a ULID — `ProfileDao.upsertTutoredProfile`
-/// has recorded the talmid's own remote id as `ulid` since P2-2
-/// (`profile_dao.dart`'s `ulid: Value(remoteChildProfileId)`, inside its
-/// insert branch). The real reason nothing wires that value in here is
-/// architectural, not an absent value: this provider pairs whatever id it
-/// is given with [activeAccountFirebaseProvider]'s handles, which during a
-/// tutored session are the **signed-in tutor's own** handles — so setting
-/// the talmid's ULID here would resolve to
-/// `users/{TUTOR}/learner_profiles/{talmid ULID}`, a document that does not
-/// exist, not the parent's real `users/{ownerUid}/learner_profiles/{talmid
-/// ULID}`. Reading the parent's tree needs an owner-uid-scoped handle
-/// seam — Phase 3's `T-37`, not a value plugged in here. Resolving handles
-/// first and only then checking would still hand back `(tutorHandles, tutorOwnProfileId)`
-/// on every path that doesn't itself repeat the check — which is exactly
-/// the bug this hoist closes: before this, only the bookmark adapter
-/// carried its own copy of this guard, so the other 12 profile-scoped
-/// providers silently served the tutor's own tree during a tutored
-/// session. Checking here makes all 13 refuse uniformly, with one seam
-/// instead of 13 (or 1, as it was).
-Future<(AccountFirebaseHandles, String)?> _watchActiveAccountAndProfile(
+/// In a tutored session the Firestore handle remains authenticated as the
+/// tutor, while the path uid comes from the active grant's `parent_uid`.
+/// Firestore rules then apply `hasActiveTutorAccess(ownerUid, profileId)` to
+/// every profile-scoped read. A missing or mismatched grant is an error, not
+/// a null/empty data signal.
+///
+/// The tutor's own profile id is intentionally ignored in that branch: it
+/// would point at `users/{tutorUid}/...`, not the child's owner namespace.
+/// The grant is checked before returning the effective `(handles, ownerUid,
+/// profileId)` tuple so a stale selection cannot become an empty read.
+Future<(AccountFirebaseHandles, String, String)?> _watchActiveAccountAndProfile(
   Ref ref,
 ) async {
-  if (ref.watch(activeTutoredProfileSelectionProvider) != null) return null;
   final handles = await ref.watch(activeAccountFirebaseProvider.future);
   if (handles == null) return null;
+
+  final tutored = ref.watch(activeTutoredProfileSelectionProvider);
+  if (tutored != null) {
+    _assertValidProfileUlid(tutored.profileId);
+    if (tutored.ownerUid.isEmpty || tutored.grantId.isEmpty) {
+      throw StateError(
+        'Tutored profile selection is missing its ownerUid or grantId',
+      );
+    }
+
+    // The tutor grant is itself readable by the tutor (firestore.rules:
+    // 141-145). Validate the selection against that server-owned record so a
+    // stale/revoked selection fails before a profile-scoped repository can
+    // present an empty result in a non-rules test double.
+    final grantSnapshot = await handles.firestore
+        .collection('tutor_grants')
+        .doc(tutored.grantId)
+        .get();
+    final grant = grantSnapshot.data();
+    if (!grantSnapshot.exists || grant == null) {
+      throw StateError(
+        'Active tutor grant not found: ' + tutored.grantId,
+      );
+    }
+    final ownerUid = grant['parent_uid'];
+    final profileId = grant['child_profile_id']?.toString();
+    if (grant['state'] != 'active' ||
+        grant['tutor_uid'] != handles.uid ||
+        ownerUid is! String ||
+        profileId is! String ||
+        profileId != tutored.profileId ||
+        ownerUid != tutored.ownerUid) {
+      throw StateError(
+        'Active tutor grant does not authorize ' +
+        tutored.ownerUid + '/' + tutored.profileId,
+      );
+    }
+    return (handles, ownerUid, profileId);
+  }
+
   final profileId = ref.watch(activeProfileDocIdProvider);
   if (profileId == null) return null;
-  return (handles, profileId);
+  _assertValidProfileUlid(profileId);
+  return (handles, handles.uid, profileId);
+}
+
+final _profileUlidPattern = RegExp(
+  r'^[0-9A-HJKMNP-TV-Z]{26}$',
+  caseSensitive: false,
+);
+
+void _assertValidProfileUlid(String profileId) {
+  if (profileId.length != 26 || !_profileUlidPattern.hasMatch(profileId)) {
+    throw FormatException(
+      'profileId must be a valid 26-character Crockford ULID; '
+      'got ${profileId.length} characters',
+    );
+  }
 }
 
 /// `users/{uid}` — the account document and its legacy free-form profile
@@ -313,16 +349,16 @@ final firestoreBookmarkRepositoryProvider =
       (ref, deps) async {
         final resolved = await _watchActiveAccountAndProfile(ref);
         if (resolved == null) return null;
-        final (handles, profileId) = resolved;
+        final (handles, ownerUid, profileId) = resolved;
         return FirestoreBookmarkRepository(
           firestore: handles.firestore,
-          uid: handles.uid,
+          uid: ownerUid,
           profileId: profileId,
           contentRepository: deps.contentRepository,
           contentIndex: deps.contentIndex,
           learningOrderRepository: FirestoreLearningOrderRepository(
             firestore: handles.firestore,
-            uid: handles.uid,
+            uid: ownerUid,
             profileId: profileId,
           ),
         );
@@ -334,10 +370,10 @@ final firestoreCompletionRepositoryProvider =
     FutureProvider<FirestoreCompletionRepository?>((ref) async {
       final resolved = await _watchActiveAccountAndProfile(ref);
       if (resolved == null) return null;
-      final (handles, profileId) = resolved;
+      final (handles, ownerUid, profileId) = resolved;
       return FirestoreCompletionRepository(
         firestore: handles.firestore,
-        uid: handles.uid,
+        uid: ownerUid,
         profileId: profileId,
       );
     });
@@ -347,10 +383,10 @@ final firestoreCurriculumScopeRepositoryProvider =
     FutureProvider<FirestoreCurriculumScopeRepository?>((ref) async {
       final resolved = await _watchActiveAccountAndProfile(ref);
       if (resolved == null) return null;
-      final (handles, profileId) = resolved;
+      final (handles, ownerUid, profileId) = resolved;
       return FirestoreCurriculumScopeRepository(
         firestore: handles.firestore,
-        uid: handles.uid,
+        uid: ownerUid,
         profileId: profileId,
       );
     });
@@ -360,10 +396,10 @@ final firestoreCurriculumTrackRepositoryProvider =
     FutureProvider<FirestoreCurriculumTrackRepository?>((ref) async {
       final resolved = await _watchActiveAccountAndProfile(ref);
       if (resolved == null) return null;
-      final (handles, profileId) = resolved;
+      final (handles, ownerUid, profileId) = resolved;
       return FirestoreCurriculumTrackRepository(
         firestore: handles.firestore,
-        uid: handles.uid,
+        uid: ownerUid,
         profileId: profileId,
       );
     });
@@ -373,10 +409,10 @@ final firestoreGoalRepositoryProvider =
     FutureProvider<FirestoreGoalRepository?>((ref) async {
       final resolved = await _watchActiveAccountAndProfile(ref);
       if (resolved == null) return null;
-      final (handles, profileId) = resolved;
+      final (handles, ownerUid, profileId) = resolved;
       return FirestoreGoalRepository(
         firestore: handles.firestore,
-        uid: handles.uid,
+        uid: ownerUid,
         profileId: profileId,
       );
     });
@@ -386,10 +422,10 @@ final firestoreLearningLedgerRepositoryProvider =
     FutureProvider<FirestoreLearningLedgerRepository?>((ref) async {
       final resolved = await _watchActiveAccountAndProfile(ref);
       if (resolved == null) return null;
-      final (handles, profileId) = resolved;
+      final (handles, ownerUid, profileId) = resolved;
       return FirestoreLearningLedgerRepository(
         firestore: handles.firestore,
-        uid: handles.uid,
+        uid: ownerUid,
         profileId: profileId,
       );
     });
@@ -399,10 +435,10 @@ final firestoreLearningOrderRepositoryProvider =
     FutureProvider<FirestoreLearningOrderRepository?>((ref) async {
       final resolved = await _watchActiveAccountAndProfile(ref);
       if (resolved == null) return null;
-      final (handles, profileId) = resolved;
+      final (handles, ownerUid, profileId) = resolved;
       return FirestoreLearningOrderRepository(
         firestore: handles.firestore,
-        uid: handles.uid,
+        uid: ownerUid,
         profileId: profileId,
       );
     });
@@ -412,10 +448,10 @@ final firestorePointConfigRepositoryProvider =
     FutureProvider<FirestorePointConfigRepository?>((ref) async {
       final resolved = await _watchActiveAccountAndProfile(ref);
       if (resolved == null) return null;
-      final (handles, profileId) = resolved;
+      final (handles, ownerUid, profileId) = resolved;
       return FirestorePointConfigRepository(
         firestore: handles.firestore,
-        uid: handles.uid,
+        uid: ownerUid,
         profileId: profileId,
       );
     });
@@ -425,10 +461,10 @@ final firestorePointsLedgerRepositoryProvider =
     FutureProvider<FirestorePointsLedgerRepository?>((ref) async {
       final resolved = await _watchActiveAccountAndProfile(ref);
       if (resolved == null) return null;
-      final (handles, profileId) = resolved;
+      final (handles, ownerUid, profileId) = resolved;
       return FirestorePointsLedgerRepository(
         firestore: handles.firestore,
-        uid: handles.uid,
+        uid: ownerUid,
         profileId: profileId,
       );
     });
@@ -438,10 +474,10 @@ final firestoreProfileProgramRepositoryProvider =
     FutureProvider<FirestoreProfileProgramRepository?>((ref) async {
       final resolved = await _watchActiveAccountAndProfile(ref);
       if (resolved == null) return null;
-      final (handles, profileId) = resolved;
+      final (handles, ownerUid, profileId) = resolved;
       return FirestoreProfileProgramRepository(
         firestore: handles.firestore,
-        uid: handles.uid,
+        uid: ownerUid,
         profileId: profileId,
       );
     });
@@ -451,10 +487,10 @@ final firestoreRewardRedemptionRepositoryProvider =
     FutureProvider<FirestoreRewardRedemptionRepository?>((ref) async {
       final resolved = await _watchActiveAccountAndProfile(ref);
       if (resolved == null) return null;
-      final (handles, profileId) = resolved;
+      final (handles, ownerUid, profileId) = resolved;
       return FirestoreRewardRedemptionRepository(
         firestore: handles.firestore,
-        uid: handles.uid,
+        uid: ownerUid,
         profileId: profileId,
       );
     });
@@ -464,10 +500,10 @@ final firestoreStageDefinitionRepositoryProvider =
     FutureProvider<FirestoreStageDefinitionRepository?>((ref) async {
       final resolved = await _watchActiveAccountAndProfile(ref);
       if (resolved == null) return null;
-      final (handles, profileId) = resolved;
+      final (handles, ownerUid, profileId) = resolved;
       return FirestoreStageDefinitionRepository(
         firestore: handles.firestore,
-        uid: handles.uid,
+        uid: ownerUid,
         profileId: profileId,
       );
     });
@@ -485,10 +521,10 @@ final firestoreTrackLearningOrderRepositoryProvider =
     FutureProvider<FirestoreTrackLearningOrderRepository?>((ref) async {
       final resolved = await _watchActiveAccountAndProfile(ref);
       if (resolved == null) return null;
-      final (handles, profileId) = resolved;
+      final (handles, ownerUid, profileId) = resolved;
       return FirestoreTrackLearningOrderRepository(
         firestore: handles.firestore,
-        uid: handles.uid,
+        uid: ownerUid,
         profileId: profileId,
       );
     });
@@ -498,10 +534,10 @@ final firestoreStreakEventRepositoryProvider =
     FutureProvider<FirestoreStreakEventRepository?>((ref) async {
       final resolved = await _watchActiveAccountAndProfile(ref);
       if (resolved == null) return null;
-      final (handles, profileId) = resolved;
+      final (handles, ownerUid, profileId) = resolved;
       return FirestoreStreakEventRepository(
         firestore: handles.firestore,
-        uid: handles.uid,
+        uid: ownerUid,
         profileId: profileId,
       );
     });
@@ -511,10 +547,10 @@ final firestoreStudyDayConfigRepositoryProvider =
     FutureProvider<FirestoreStudyDayConfigRepository?>((ref) async {
       final resolved = await _watchActiveAccountAndProfile(ref);
       if (resolved == null) return null;
-      final (handles, profileId) = resolved;
+      final (handles, ownerUid, profileId) = resolved;
       return FirestoreStudyDayConfigRepository(
         firestore: handles.firestore,
-        uid: handles.uid,
+        uid: ownerUid,
         profileId: profileId,
       );
     });

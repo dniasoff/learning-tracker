@@ -5,7 +5,7 @@
 /// touches. Covers: doc-id correctness, the composite-index query shape,
 /// model round-trip, the stream emitting on change, the "one bad document
 /// doesn't blank the list" behavior (both the stream AND the one-shot
-/// reads), the documented `hasCompletionsForStage` throw, and
+/// reads), completion existence checks, and
 /// `resetToDefaults`' documented can't-actually-delete limitation.
 ///
 /// **What these tests cannot see** (same limitation as
@@ -37,9 +37,10 @@ import 'package:learning_tracker/features/tracks/stages/domain/models/schedule_t
 import 'package:learning_tracker/features/tracks/stages/domain/models/stage_definition.dart';
 
 import '../../helpers/firestore_fake.dart';
+import '../../helpers/firestore_fixtures.dart';
 
 const _uid = 'uid-1';
-const _profileId = 'profile-ulid-1';
+const _profileId = '01J6Q2H4A8M7K3P9R5T6V8WXYB';
 
 void main() {
   late FakeFirebaseFirestore firestore;
@@ -351,12 +352,34 @@ void main() {
     });
   });
 
-  group('hasCompletionsForStage — no Firestore completions repository yet', () {
-    test('throws UnimplementedError', () {
+  group('hasCompletionsForStage', () {
+    test('detects active and absent stage-order completions', () async {
+      await seedCompletion(
+        firestore,
+        uid: _uid,
+        profileId: _profileId,
+        stageId: 1,
+      );
       final repo = buildRepo();
+
+      expect(await repo.hasCompletionsForStage(1), isTrue);
+      expect(await repo.hasCompletionsForStage(2), isFalse);
+    });
+
+    test('throws when a matching completion cannot be decoded', () async {
+      await firestore
+          .collection('users')
+          .doc(_uid)
+          .collection('learner_profiles')
+          .doc(_profileId)
+          .collection('completions')
+          .doc('malformed')
+          .set({'stage_id': 1});
+      final repo = buildRepo();
+
       expect(
         () => repo.hasCompletionsForStage(1),
-        throwsA(isA<UnimplementedError>()),
+        throwsA(isA<ArgumentError>()),
       );
     });
   });

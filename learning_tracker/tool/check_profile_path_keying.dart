@@ -35,6 +35,12 @@
 /// WATCHLIST section below for collections one wiring change away from
 /// joining them).
 ///
+/// The baseline also records eight collections whose Cloud Functions touches
+/// are correctly keyed by the profile ULID, but which appear in the
+/// conservative INT-B bucket because every deployed `functions/src/**` touch
+/// is scanned unconditionally. Those entries are not production splits; they
+/// are reviewed exceptions for that bucket definition.
+///
 /// ## Step 0: the collection registry is self-validated every run
 ///
 /// A prior phase's coordinator handoff claimed "24 collections" when the
@@ -223,7 +229,7 @@ library;
 
 import 'dart:io';
 
-/// The 17 profile-scoped Firestore collections nested directly under
+/// The 18 profile-scoped Firestore collections nested directly under
 /// `users/{uid}/learner_profiles/{profileId}/` in `firestore.rules` today.
 /// Verified by direct reading of `firestore.rules:211-584` (the
 /// `match /learner_profiles/{profileId} { ... }` block), NOT inherited from
@@ -238,6 +244,7 @@ const _kCollections = <String>{
   'reward_redemptions',
   'settings',
   'stage_definitions',
+  'point_configs',
   'curriculum_tracks',
   'bookmarks',
   'learning_order',

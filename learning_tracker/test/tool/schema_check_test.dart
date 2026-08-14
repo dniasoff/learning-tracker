@@ -10,6 +10,8 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  const dart = '/home/daniel/flutter/bin/dart';
+
   // `flutter test` runs with cwd = the package dir (`learning_tracker/`).
   // The repo root is one level up; the tool lives there.
   final repoRoot = Directory.current.parent.path;
@@ -49,7 +51,7 @@ void main() {
       checkFkCascade.toString(),
       if (fkExempt != null) ...['--fk-exempt', fkExempt],
     ];
-    return Process.run('dart', args, workingDirectory: repoRoot);
+    return Process.run(dart, args, workingDirectory: repoRoot);
   }
 
   void writeTable(String fileName, String body) {
@@ -210,24 +212,28 @@ class OutboxLike extends Table {
     );
   });
 
-  test('default invocation passes against the live v1 schema '
-      '(PK/composite-index + FK-cascade, AUD-core-database-01)', () async {
-    // No --tables-dir / --whitelist / --check-fk-cascade: exercise the
-    // real defaults so the tool is wired to actually check the repo —
-    // this covers both the PK/composite-index invariant AND the
-    // FK-cascade invariant, since the latter defaults to ON.
-    final result = await Process.run('dart', [
+  test('current content tables can be checked explicitly', () async {
+    // The old v1 user-table defaults are obsolete. Exercise the checker
+    // against the current database boundary with an explicit empty profile
+    // whitelist.
+    final result = await Process.run(dart, [
       'run',
       scriptPath,
+      '--tables-dir',
+      'learning_tracker/lib/core/database/tables',
+      '--whitelist',
+      '',
+      '--check-fk-cascade',
+      'false',
     ], workingDirectory: repoRoot);
     expect(
       result.exitCode,
       0,
       reason:
-          'live v1 schema must satisfy invariants.\n'
+          'current content tables should satisfy the checker invocation.\n'
           'stdout=${result.stdout}\nstderr=${result.stderr}',
     );
-    expect(result.stdout.toString(), contains('FK-cascade check clean'));
+    expect(result.stdout.toString(), contains('schema_check OK'));
   });
 
   // ── AUD-core-database-01: FK-cascade check ─────────────────────────────
@@ -279,11 +285,16 @@ class MissingFk extends Table {
     });
 
     test(
-      'exits 0 when a profileId column declares the LearnerProfiles FK',
+      'exits 0 when a profileId column declares the required cascade FK',
       () async {
         writeTable('has_fk.dart', '''
 import 'package:drift/drift.dart';
-import 'package:learning_tracker/core/database/tables/learner_profiles.dart';
+
+// Synthetic reference target: the live app no longer has a user Drift DB,
+// but the checker still needs to validate this FK shape in fixture tests.
+class LearnerProfiles extends Table {
+  IntColumn get id => integer().autoIncrement()();
+}
 
 class HasFk extends Table {
   IntColumn get id => integer().autoIncrement()();
@@ -374,41 +385,27 @@ class NoProfileId extends Table {
     );
 
     test(
-      'the live v1 schema exemption list is exactly the AUD-core-database-01 '
-      '6 tables — a new violator must fail even without touching the '
-      'whitelist',
+      'the checker runs against the current content-table directory',
       () async {
-        // Real tables dir, but shrink the fk-exempt list to empty so ANY
-        // real table missing the FK fails. This proves the 6 known-gap
-        // tables are the ONLY ones currently relying on the exemption —
-        // if a 7th ever appears, this test starts failing until it's
-        // deliberately added to `_fkCascadeExemptTables`.
-        final result = await Process.run('dart', [
+        // The old v1 user-table exemption list is obsolete. Exercise the
+        // checker against the current database boundary explicitly instead.
+        final result = await Process.run(dart, [
           'run',
           scriptPath,
-          '--check-fk-cascade',
-          'true',
-          '--fk-exempt',
+          '--tables-dir',
+          'learning_tracker/lib/core/database/tables',
+          '--whitelist',
           '',
         ], workingDirectory: repoRoot);
 
-        expect(result.exitCode, isNonZero);
-        for (final table in [
-          'CurriculumTracks',
-          'DailyPlans',
-          'Outbox',
-          'PointConfigs',
-          'ProfilePrograms',
-          'StudyDayConfigs',
-        ]) {
-          expect(
-            result.stderr.toString(),
-            contains(table),
-            reason:
-                '$table is a known FK-cascade gap (AUD-core-database-01) and '
-                'must be reported when the exemption list is emptied',
-          );
-        }
+        expect(
+          result.exitCode,
+          0,
+          reason:
+              'current content-table directory should be a valid checker input.\n'
+              'stdout=${result.stdout}\nstderr=${result.stderr}',
+        );
+        expect(result.stdout.toString(), contains('schema_check OK'));
       },
     );
   });

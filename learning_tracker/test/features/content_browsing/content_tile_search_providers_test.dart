@@ -114,10 +114,12 @@ class _FakeStageRepository implements StageDefinitionRepository {
   Future<bool> hasCompletionsForStage(int stageId) async => false;
 
   @override
-  Future<List<StageDefinition>> getStagesByTrack(int trackId) async => [];
+  Future<List<StageDefinition>> getStagesByTrack(
+    CurriculumId curriculumId,
+  ) async => [];
 
   @override
-  Future<void> deleteStagesForTrack(int trackId) async {}
+  Future<void> deleteStagesForTrack(CurriculumId curriculumId) async {}
 
   @override
   Future<void> pushStagesForTrack({

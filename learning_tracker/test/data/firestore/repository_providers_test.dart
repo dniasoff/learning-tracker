@@ -61,6 +61,7 @@ import 'package:learning_tracker/data/repositories/firestore_study_day_config_re
 import 'package:learning_tracker/features/tutoring/tutoring.dart';
 import 'package:mocktail/mocktail.dart';
 
+import '../../helpers/firestore_fixtures.dart';
 import '../../mocks/mock_repositories.dart';
 
 class MockFirebaseApp extends Mock implements FirebaseApp {}
@@ -68,8 +69,8 @@ class MockFirebaseApp extends Mock implements FirebaseApp {}
 class MockFirebaseAuthHandle extends Mock implements FirebaseAuth {}
 
 const _uid = 'uid-1';
-const _profileId = 'profile-ulid-1';
-const _otherProfileId = 'profile-ulid-2';
+const _profileId = '01ARZ3NDEKTSV4RRFFQ69G5FB1';
+const _otherProfileId = '01ARZ3NDEKTSV4RRFFQ69G5FB2';
 
 /// Builds an [AccountFirebaseHandles] bundle over [firestore]. [app]/[auth]
 /// are unstubbed mocks — every provider under test only ever reads
@@ -317,15 +318,91 @@ void main() {
       expect(secondProfileGoals.docs, hasLength(1));
     });
 
-    // T-35 (docs/planning/firestore-cutover-log.md): the hoisted branch in
-    // _watchActiveAccountAndProfile. Before this, only the bookmark adapter
-    // carried its own copy of this check — every other profile-scoped
-    // provider, including this one, resolved the TUTOR's own account +
-    // profile during a tutored session. This is the regression guard for
-    // that defect at the shared-gate level, not just for bookmarks.
-    test('resolves to null when a tutored session is active — even with both '
-        'account and profile also active, which would otherwise resolve to '
-        "the TUTOR's own repository", () async {
+    test('a valid tutor grant reads the child through the owner path', () async {
+      final firestore = FakeFirebaseFirestore();
+      await seedGoal(
+        firestore,
+        uid: 'parent-uid',
+        profileId: _profileId,
+        curriculumId: CurriculumId.chumash,
+        targetPercent: 50,
+      );
+      await firestore.collection('tutor_grants').doc('grant-1').set({
+        'state': 'active',
+        'tutor_uid': _uid,
+        'parent_uid': 'parent-uid',
+        'child_profile_id': _profileId,
+      });
+      final container = ProviderContainer(
+        retry: (_, __) => null,
+        overrides: [
+          activeAccountFirebaseProvider.overrideWith(
+            (ref) async => _handles(firestore),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      container.read(activeProfileDocIdProvider.notifier).set(_profileId);
+      final keepAlive = container.listen(
+        firestoreGoalRepositoryProvider,
+        (_, __) {},
+      );
+      addTearDown(keepAlive.close);
+      container
+          .read(activeTutoredProfileSelectionProvider.notifier)
+          .enter(
+            const TutoredProfileSelection(
+              profileId: _profileId,
+              ownerUid: 'parent-uid',
+              grantId: 'grant-1',
+              permissions: TutorPermissions(),
+            ),
+          );
+
+      final repo = await container.read(firestoreGoalRepositoryProvider.future);
+
+      expect(repo, isA<FirestoreGoalRepository>());
+      final goals = await repo!.getGoals(CurriculumId.chumash);
+      expect(goals, hasLength(1));
+      expect(goals.single.targetPercent, 50);
+    });
+
+    test('a tutor selection without its grant throws instead of returning null',
+        () async {
+      final firestore = FakeFirebaseFirestore();
+      final container = ProviderContainer(
+        retry: (_, __) => null,
+        overrides: [
+          activeAccountFirebaseProvider.overrideWith(
+            (ref) async => _handles(firestore),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      final keepAlive = container.listen(
+        firestoreGoalRepositoryProvider,
+        (_, __) {},
+      );
+      addTearDown(keepAlive.close);
+      container
+          .read(activeTutoredProfileSelectionProvider.notifier)
+          .enter(
+            const TutoredProfileSelection(
+              profileId: _profileId,
+              ownerUid: 'parent-uid',
+              grantId: 'missing-grant',
+              permissions: TutorPermissions(),
+            ),
+          );
+
+      await expectLater(
+        container.read(firestoreGoalRepositoryProvider.future),
+        throwsA(isA<StateError>()),
+      );
+    });
+
+    test('non-tutored selection still resolves the signed-in owner path',
+        () async {
       final firestore = FakeFirebaseFirestore();
       final container = ProviderContainer(
         overrides: [
@@ -336,59 +413,11 @@ void main() {
       );
       addTearDown(container.dispose);
       container.read(activeProfileDocIdProvider.notifier).set(_profileId);
-      container
-          .read(activeTutoredProfileSelectionProvider.notifier)
-          .enter(
-            const TutoredProfileSelection(
-              profileId: '42', // the talmid's id in the PARENT's account
-              ownerUid: 'parent-uid',
-              grantId: 'grant-1',
-              permissions: TutorPermissions(),
-            ),
-          );
-
-      final repo = await container.read(firestoreGoalRepositoryProvider.future);
-
-      expect(repo, isNull);
+      expect(
+        await container.read(firestoreGoalRepositoryProvider.future),
+        isA<FirestoreGoalRepository>(),
+      );
     });
-
-    test(
-      'exiting the tutored session lets the gate resolve again, scoped to '
-      "the account/profile that were active all along (the TUTOR's own)",
-      () async {
-        final firestore = FakeFirebaseFirestore();
-        final container = ProviderContainer(
-          overrides: [
-            activeAccountFirebaseProvider.overrideWith(
-              (ref) async => _handles(firestore),
-            ),
-          ],
-        );
-        addTearDown(container.dispose);
-        container.read(activeProfileDocIdProvider.notifier).set(_profileId);
-        container
-            .read(activeTutoredProfileSelectionProvider.notifier)
-            .enter(
-              const TutoredProfileSelection(
-                profileId: '42',
-                ownerUid: 'parent-uid',
-                grantId: 'grant-1',
-                permissions: TutorPermissions(),
-              ),
-            );
-        expect(
-          await container.read(firestoreGoalRepositoryProvider.future),
-          isNull,
-        );
-
-        container.read(activeTutoredProfileSelectionProvider.notifier).exit();
-
-        expect(
-          await container.read(firestoreGoalRepositoryProvider.future),
-          isA<FirestoreGoalRepository>(),
-        );
-      },
-    );
   });
 
   group('firestoreBookmarkRepositoryProvider (family, parameterized on '

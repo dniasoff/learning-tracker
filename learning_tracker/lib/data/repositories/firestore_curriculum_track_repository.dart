@@ -12,6 +12,7 @@ import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/data/firestore/doc_ids.dart';
 import 'package:learning_tracker/data/firestore/resilient_doc_stream.dart';
+import 'package:learning_tracker/data/firestore/write_ack.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 
 /// Firestore-backed curriculum-track repository: `users/{uid}/
@@ -81,7 +82,7 @@ import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculu
 /// [getTrack] returning `null`, never a fourth state value. This repository
 /// never constructs, writes, or exposes a `'deleted'` state.
 ///
-/// ## `reorder-amnesty stamp` — rules gap closed, code gap remains
+/// ## `reorder-amnesty stamp` — rules and write path
 ///
 /// `TrackDao.stampReorderAt` (`lastReorderAt`) used to have **no Firestore
 /// field to carry it**: `firestore.rules`' `curriculum_tracks` `.hasOnly()`
@@ -96,18 +97,11 @@ import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculu
 /// `last_reorder_at` today, so a client write from this repository CAN
 /// legally carry the stamp without endangering the rest of the document.
 ///
-/// **This repository was never updated to use that opening, though.** There
-/// is still no method here that writes `last_reorder_at` — `TrackDao
-/// .stampReorderAt` has no counterpart in this class, so the field goes
-/// unwritten regardless of what the rules now permit. And even once such a
-/// method exists, `daily_task_projection_service.dart` still reads
-/// `lastReorderAt` from **Drift** (`db.trackDao.getActiveTracksForProfile`),
-/// not from Firestore, so a write from here would not yet reach that
-/// consumer either. Porting the reorder-amnesty feature needs (1) a write
-/// method on this class and (2) rewiring the projection service's read
-/// side — the `firestore.rules`/`tutor_writes.ts` blocker that used to make
-/// this impossible outright is gone; what remains is a code/wiring gap, not
-/// a rules-imposed one.
+/// [stampReorderAt] now writes the field, and
+/// [addReorderStampToBatch] lets order repositories co-write it atomically
+/// with their order mutations. The scheduler projection receives the decoded
+/// [CurriculumTrackEntity.lastReorderAt] value through its [activeTracks]
+/// input and applies the amnesty cutoff from that value.
 ///
 /// ## `purged` / `purged_at` are in the whitelist but likewise unused here
 ///
@@ -401,9 +395,22 @@ class FirestoreCurriculumTrackRepository {
   /// Stamps the reorder timestamp for [curriculumId] (Reorder Amnesty).
   /// Sets `last_reorder_at` to now. Mirrors `TrackDao.stampReorderAt`.
   Future<void> stampReorderAt(CurriculumId curriculumId) async {
-    final now = DateTimeFactory.nowUtc(); // P5: UTC timestamps
-    await _doc(curriculumId).set({
-      'last_reorder_at': FirestoreCodec.encodeDateTime(now),
+    final batch = _firestore.batch();
+    addReorderStampToBatch(batch, curriculumId, DateTimeFactory.nowUtc());
+    await batch.commit().orQueuedOffline;
+  }
+
+  /// Adds the reorder-amnesty stamp to [batch] for [curriculumId].
+  ///
+  /// Order writes use this helper so the order rows and their amnesty
+  /// baseline are committed atomically in one cross-collection batch.
+  void addReorderStampToBatch(
+    WriteBatch batch,
+    CurriculumId curriculumId,
+    DateTime timestamp,
+  ) {
+    batch.set(_doc(curriculumId), {
+      'last_reorder_at': FirestoreCodec.encodeDateTime(timestamp),
     }, SetOptions(merge: true));
   }
 }

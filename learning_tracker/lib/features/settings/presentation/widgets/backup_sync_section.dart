@@ -5,6 +5,7 @@ import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/settings/domain/services/data_export_import_service.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/data_export_import_providers.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/firestore_sync_status_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Cloud backup controls for the Settings screen and Parent Settings hero.
@@ -32,12 +33,14 @@ class _BackupSyncSectionState extends ConsumerState<BackupSyncSection> {
     }
 
     final serviceAsync = ref.watch(dataExportImportServiceProvider);
-    return _buildCloudCard(context, serviceAsync);
+    final syncStatusAsync = ref.watch(firestoreSyncStatusProvider);
+    return _buildCloudCard(context, serviceAsync, syncStatusAsync);
   }
 
   Widget _buildCloudCard(
     BuildContext context,
     AsyncValue<DataExportImportService?> serviceAsync,
+    AsyncValue<FirestoreSyncStatus> syncStatusAsync,
   ) {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
@@ -71,16 +74,7 @@ class _BackupSyncSectionState extends ConsumerState<BackupSyncSection> {
               ),
             ),
             const SizedBox(height: 8),
-            Text(
-              l10n.backupSyncStatusUnavailable,
-              textAlign: widget.parentSettingsHeroLayout
-                  ? TextAlign.center
-                  : TextAlign.start,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: Colors.white.withValues(alpha: 0.9),
-                height: 1.35,
-              ),
-            ),
+            _buildSyncStatus(context, syncStatusAsync),
             const SizedBox(height: 16),
             serviceAsync.when(
               loading: () => _buildLoadingState(context),
@@ -99,6 +93,64 @@ class _BackupSyncSectionState extends ConsumerState<BackupSyncSection> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildSyncStatus(
+    BuildContext context,
+    AsyncValue<FirestoreSyncStatus> syncStatusAsync,
+  ) {
+    final l10n = AppLocalizations.of(context)!;
+    return syncStatusAsync.when(
+      loading: () => _buildStatusLine(
+        icon: Icons.help_outline,
+        label: 'Sync status unknown',
+      ),
+      error: (error, stackTrace) => Row(
+        children: [
+          const Icon(Icons.cloud_off_outlined, color: Colors.white),
+          const SizedBox(width: 8),
+          const Expanded(child: Text('Offline — sync listener stopped')),
+          TextButton(
+            onPressed: () => ref.refresh(firestoreSyncStatusProvider),
+            style: TextButton.styleFrom(foregroundColor: Colors.white),
+            child: Text(l10n.actionRetry),
+          ),
+        ],
+      ),
+      data: (status) => switch (status) {
+        FirestoreSyncStatus.unknown => _buildStatusLine(
+          icon: Icons.help_outline,
+          label: 'Sync status unknown',
+        ),
+        FirestoreSyncStatus.synced => _buildStatusLine(
+          icon: Icons.cloud_done_outlined,
+          label: 'Synced',
+        ),
+        FirestoreSyncStatus.syncing => _buildStatusLine(
+          icon: Icons.sync,
+          label: 'Syncing — pending changes',
+        ),
+        FirestoreSyncStatus.offline => _buildStatusLine(
+          icon: Icons.cloud_off_outlined,
+          label: 'Offline',
+        ),
+      },
+    );
+  }
+
+  Widget _buildStatusLine({required IconData icon, required String label}) {
+    return Row(
+      children: [
+        Icon(icon, color: Colors.white),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            label,
+            style: TextStyle(color: Colors.white.withValues(alpha: 0.9)),
+          ),
+        ),
+      ],
     );
   }
 

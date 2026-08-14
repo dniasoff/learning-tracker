@@ -379,23 +379,37 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
       }
     }
 
-    // Re-anchor: move tracking_start_date to today (UTC midnight).
-    // tracking_start_ref is today's calendar unit (or null if the calendar
-    // engine cannot resolve it — the projection uses the date, not the ref).
-    // TODO(task-22): the old cloud push for this write
-    // (syncFacade?.pushProfileProgram) is dead code now -- setProgram()
-    // already writes directly to Firestore, there is no separate push
-    // step left to perform (every SyncWriteFacade caller for data with a
-    // native Firestore*Repository is now obsolete the same way, see task
-    // tracker #22's resolution). The tutored-session routing
-    // (tutorSetProfileProgram) the old push comment mentions still needs
-    // its own resolution -- not rebuilt here.
-    await programRepo.setProgram(
-      curriculumId: curriculum,
-      programId: enrollment.programId,
-      trackingStartDate: todayUtc,
-      trackingStartRef: todayRef,
-    );
+    // Re-anchor: move tracking_start_date to today (UTC midnight). A tutor
+    // cannot write the owner's profile namespace directly; the Firestore
+    // rules allow this mutation only for the owner, so use the existing
+    // owner-scoped callable in a tutored session.
+    final selection = ref.read(activeTutoredProfileSelectionProvider);
+    if (selection != null) {
+      final result = await TutorWriteService().setProfileProgram(
+        grantId: selection.grantId,
+        ownerUid: selection.ownerUid,
+        profileId: selection.profileId,
+        programId: curriculum.storageKey,
+        programData: {
+          'profile_id': selection.profileId,
+          'curriculum_id': curriculum.storageKey,
+          'program_id': enrollment.programId,
+          'tracking_start_date': todayUtc.toIso8601String(),
+          'tracking_start_ref': todayRef,
+          'updated_at': DateTimeFactory.nowUtc().toIso8601String(),
+        },
+      );
+      if (result is TutorWriteFailure) {
+        throw StateError(result.message);
+      }
+    } else {
+      await programRepo.setProgram(
+        curriculumId: curriculum,
+        programId: enrollment.programId,
+        trackingStartDate: todayUtc,
+        trackingStartRef: todayRef,
+      );
+    }
 
     await onTrackChanged(ref);
 
