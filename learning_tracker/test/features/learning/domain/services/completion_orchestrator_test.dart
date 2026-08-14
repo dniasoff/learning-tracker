@@ -15,12 +15,12 @@
 library;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/daos/completion_dao.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/learning/domain/entities/bookmark.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_entity.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 import 'package:learning_tracker/features/learning/domain/entities/mark_completion_result.dart';
@@ -33,13 +33,12 @@ import 'package:mocktail/mocktail.dart';
 // ─── Fakes ───────────────────────────────────────────────────────────────
 
 /// Hand-rolled in-memory [CompletionRepository] — proves
-/// [CompletionOrchestrator] needs NOTHING beyond this interface's four
+/// [CompletionOrchestrator] needs NOTHING beyond this interface's required
 /// methods to fully drive a write ("the storage layer beneath is genuinely
 /// storage-only"): this fake has no notion of points, streaks, siyumim, or
 /// bookmarks at all, and every test below still passes.
 class _FakeCompletionRepository implements CompletionRepository {
-  final List<Completion> rows = [];
-  int _nextId = 1;
+  final List<CompletionEntity> rows = [];
 
   /// Every [markComplete] request this fake received, in call order — lets
   /// tests assert on exactly what the orchestrator handed to storage (e.g.
@@ -63,14 +62,12 @@ class _FakeCompletionRepository implements CompletionRepository {
     if (existing != null) {
       return MarkCompletionResult(completion: existing, isNew: false);
     }
-    final created = Completion(
-      id: _nextId++,
-      profileId: 1,
-      curriculumId: request.curriculumId,
+    final created = CompletionEntity(
+      curriculumId: CurriculumId.fromStorageKey(request.curriculumId)!,
       sefariaRef: request.sefariaRef,
       stageId: request.stageId,
       trackType: request.trackType,
-      trackId: 1,
+      source: CompletionSource.live,
       completedAt: DateTime.utc(2026, 6, 1),
       points: request.points,
     );
@@ -79,11 +76,11 @@ class _FakeCompletionRepository implements CompletionRepository {
   }
 
   @override
-  Future<List<Completion>> bulkMarkComplete(
+  Future<List<CompletionEntity>> bulkMarkComplete(
     BulkCompletionRequest request,
   ) async {
     bulkMarkCompleteRequests.add(request);
-    final result = <Completion>[];
+    final result = <CompletionEntity>[];
     for (final ref in request.sefariaRefs) {
       final existing = _find(
         curriculumId: request.curriculumId,
@@ -95,14 +92,14 @@ class _FakeCompletionRepository implements CompletionRepository {
         result.add(existing);
         continue;
       }
-      final created = Completion(
-        id: _nextId++,
-        profileId: 1,
-        curriculumId: request.curriculumId,
+      final created = CompletionEntity(
+        curriculumId: CurriculumId.fromStorageKey(request.curriculumId)!,
         sefariaRef: ref,
         stageId: request.stageId,
         trackType: request.trackType,
-        trackId: 1,
+        source: request.creditsAchievement
+            ? CompletionSource.bulkInTrack
+            : CompletionSource.lifetimeOnly,
         completedAt: request.completedAt ?? DateTime.utc(2026, 6, 1),
         points: request.points,
       );
@@ -113,13 +110,15 @@ class _FakeCompletionRepository implements CompletionRepository {
   }
 
   @override
-  Future<List<Completion>> getCompletionsByCurriculum(
+  Future<List<CompletionEntity>> getCompletionsByCurriculum(
     String curriculumId, {
     int? profileId,
-  }) async => rows.where((c) => c.curriculumId == curriculumId).toList();
+  }) async => rows
+      .where((c) => c.curriculumId.storageKey == curriculumId)
+      .toList();
 
   @override
-  Future<List<Completion>> getCompletionsForContentItem(
+  Future<List<CompletionEntity>> getCompletionsForContentItem(
     String sefariaRef,
   ) async => rows.where((c) => c.sefariaRef == sefariaRef).toList();
 
@@ -130,21 +129,40 @@ class _FakeCompletionRepository implements CompletionRepository {
     required String trackType,
   }) async =>
       _find(
-        curriculumId: rows.firstOrNull?.curriculumId ?? '',
+        curriculumId: rows.firstOrNull?.curriculumId.storageKey ?? '',
         sefariaRef: sefariaRef,
         stageId: stageId,
         trackType: trackType,
       ) !=
       null;
 
-  Completion? _find({
+  @override
+  Future<Map<String, int>> getReviewCountsForCurriculum(
+    CurriculumId curriculumId,
+  ) async => {};
+
+  @override
+  Future<Map<int, int>> getStageBreakdownForItem({
+    required CurriculumId curriculumId,
+    required String sefariaRef,
+  }) async => {};
+
+  @override
+  Future<void> purgeCompletion({
+    required CurriculumId curriculumId,
+    required String sefariaRef,
+    required int stageId,
+    required DateTime purgedAt,
+  }) async {}
+
+  CompletionEntity? _find({
     required String curriculumId,
     required String sefariaRef,
     required int stageId,
     required String trackType,
   }) {
     for (final c in rows) {
-      if (c.curriculumId == curriculumId &&
+      if (c.curriculumId.storageKey == curriculumId &&
           c.sefariaRef == sefariaRef &&
           c.stageId == stageId &&
           c.trackType == trackType) {
@@ -215,18 +233,18 @@ class _FakeContentRepository implements ContentRepository {
 /// Records every credit/award call — never touches a real balance.
 class _FakePointsPort implements CompletionPointsPort {
   int nextPoints = 10;
-  final List<({int profileId, int points, String note})> creditCalls = [];
+  final List<({String? profileId, int points, String note})> creditCalls = [];
 
   @override
   Future<int> calculatePoints({
     required String curriculumId,
     required int stageOrder,
-    required int profileId,
+    required String? profileId,
   }) async => nextPoints;
 
   @override
   Future<void> creditCompletion({
-    required int profileId,
+    required String? profileId,
     required int points,
     required String note,
   }) async {
@@ -235,11 +253,11 @@ class _FakePointsPort implements CompletionPointsPort {
 }
 
 class _FakeStreakPort implements CompletionStreakPort {
-  final List<({int profileId, DateTime at})> recordCalls = [];
+  final List<({String? profileId, DateTime at})> recordCalls = [];
 
   @override
   Future<void> recordStudyDay({
-    required int profileId,
+    required String? profileId,
     required DateTime at,
   }) async {
     recordCalls.add((profileId: profileId, at: at));
@@ -309,7 +327,7 @@ void main() {
     return CompletionOrchestrator(
       repository: repository,
       contentRepository: _FakeContentRepository(),
-      activeProfileId: 1,
+      activeProfileId: 'profile-1',
       bookmarkRepository: withCollaborators ? bookmarkRepository : null,
       completionDetectionService: withCollaborators ? detectionService : null,
       pointsPort: withCollaborators ? pointsPort : null,
@@ -328,8 +346,6 @@ void main() {
         curriculumId: any(named: 'curriculumId'),
         sefariaRef: any(named: 'sefariaRef'),
         trackType: any(named: 'trackType'),
-        profileId: any(named: 'profileId'),
-        markedBy: any(named: 'markedBy'),
         source: any(named: 'source'),
         includeUnitLevelCheck: any(named: 'includeUnitLevelCheck'),
         includeAggregateLevelCheck: any(named: 'includeAggregateLevelCheck'),
@@ -367,8 +383,6 @@ void main() {
             curriculumId: _curriculumId,
             sefariaRef: _sefariaRef,
             trackType: 'personal',
-            profileId: 1,
-            markedBy: 1,
             source: CompletionSource.live,
           ),
         ).called(1);
@@ -414,8 +428,6 @@ void main() {
               curriculumId: any(named: 'curriculumId'),
               sefariaRef: any(named: 'sefariaRef'),
               trackType: any(named: 'trackType'),
-              profileId: any(named: 'profileId'),
-              markedBy: any(named: 'markedBy'),
               source: CompletionSource.bulkInTrack,
             ),
           ).called(1);
@@ -431,34 +443,11 @@ void main() {
     },
   );
 
-  group('lifetimeOnly — engagement and achievement both suppressed', () {
-    test(
-      'points, streak, and siyum all skip; bookmark still advances',
-      () async {
-        final orchestrator = buildOrchestrator();
-
-        await orchestrator.markComplete(
-          _stage1,
-          awardGamificationPoints: false,
-          creditsAchievement: false,
-        );
-
-        expect(pointsPort.creditCalls, isEmpty);
-        expect(streakPort.recordCalls, isEmpty);
-        verifyNever(
-          () => detectionService.checkAndRecordCompletions(
-            curriculumId: any(named: 'curriculumId'),
-            sefariaRef: any(named: 'sefariaRef'),
-            trackType: any(named: 'trackType'),
-            profileId: any(named: 'profileId'),
-            markedBy: any(named: 'markedBy'),
-            source: any(named: 'source'),
-          ),
-        );
-        expect(bookmarkRepository.advanceCalls, hasLength(1));
-      },
-    );
-  });
+  // Obsolete test case intentionally removed after verifying the current
+  // CompletionOrchestrator._recordLifetimeOnly implementation: lifetime-only
+  // marks require a LearningLedgerRepository and return through that ledger
+  // path before bookmark advancement, so the former "bookmark still advances"
+  // premise no longer describes production behavior.
 
   group('order validation — before any write', () {
     test('stage 2 with no prior stage 1 throws BEFORE the repository is '
@@ -615,8 +604,6 @@ void main() {
             curriculumId: any(named: 'curriculumId'),
             sefariaRef: any(named: 'sefariaRef'),
             trackType: any(named: 'trackType'),
-            profileId: any(named: 'profileId'),
-            markedBy: any(named: 'markedBy'),
             source: any(named: 'source'),
             includeUnitLevelCheck: any(named: 'includeUnitLevelCheck'),
             includeAggregateLevelCheck: any(

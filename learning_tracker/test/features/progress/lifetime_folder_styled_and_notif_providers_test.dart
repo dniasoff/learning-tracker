@@ -1196,7 +1196,7 @@ void main() {
 
     test('default state is true', () async {
       final container = ProviderContainer(
-        overrides: [activeProfileIdProvider.overrideWithValue(1)],
+        overrides: [activeProfileIdProvider.overrideWithValue('1')],
       );
       addTearDown(container.dispose);
 
@@ -1205,11 +1205,11 @@ void main() {
 
     test('toggle() flips state to false', () async {
       SharedPreferences.setMockInitialValues({
-        NotificationPreferencesRepository.reminderEnabledKey(1): true,
+        NotificationPreferencesRepository.reminderEnabledKey('1'): true,
       });
 
       final container = ProviderContainer(
-        overrides: [activeProfileIdProvider.overrideWithValue(1)],
+        overrides: [activeProfileIdProvider.overrideWithValue('1')],
       );
       addTearDown(container.dispose);
 
@@ -1221,11 +1221,11 @@ void main() {
 
     test('toggle() persists false to SharedPreferences', () async {
       SharedPreferences.setMockInitialValues({
-        NotificationPreferencesRepository.reminderEnabledKey(1): true,
+        NotificationPreferencesRepository.reminderEnabledKey('1'): true,
       });
 
       final container = ProviderContainer(
-        overrides: [activeProfileIdProvider.overrideWithValue(1)],
+        overrides: [activeProfileIdProvider.overrideWithValue('1')],
       );
       addTearDown(container.dispose);
 
@@ -1234,18 +1234,18 @@ void main() {
 
       final prefs = await SharedPreferences.getInstance();
       expect(
-        prefs.getBool(NotificationPreferencesRepository.reminderEnabledKey(1)),
+        prefs.getBool(NotificationPreferencesRepository.reminderEnabledKey('1')),
         isFalse,
       );
     });
 
     test('toggle() from false flips state to true', () async {
       SharedPreferences.setMockInitialValues({
-        NotificationPreferencesRepository.reminderEnabledKey(2): false,
+        NotificationPreferencesRepository.reminderEnabledKey('2'): false,
       });
 
       final container = ProviderContainer(
-        overrides: [activeProfileIdProvider.overrideWithValue(2)],
+        overrides: [activeProfileIdProvider.overrideWithValue('2')],
       );
       addTearDown(container.dispose);
 
@@ -1270,7 +1270,7 @@ void main() {
       'default state matches ReminderPreferences.defaultReminderHour/Minute',
       () async {
         final container = ProviderContainer(
-          overrides: [activeProfileIdProvider.overrideWithValue(1)],
+          overrides: [activeProfileIdProvider.overrideWithValue('1')],
         );
         addTearDown(container.dispose);
 
@@ -1286,12 +1286,12 @@ void main() {
       // new-state race to seed prefs around — awaiting `.future` below is
       // enough to settle the initial load before setTime() mutates it.
       SharedPreferences.setMockInitialValues({
-        NotificationPreferencesRepository.reminderHourKey(1): 8,
-        NotificationPreferencesRepository.reminderMinuteKey(1): 30,
+        NotificationPreferencesRepository.reminderHourKey('1'): 8,
+        NotificationPreferencesRepository.reminderMinuteKey('1'): 30,
       });
 
       final container = ProviderContainer(
-        overrides: [activeProfileIdProvider.overrideWithValue(1)],
+        overrides: [activeProfileIdProvider.overrideWithValue('1')],
       );
       addTearDown(container.dispose);
 
@@ -1304,7 +1304,7 @@ void main() {
 
     test('setTime() persists hour and minute to SharedPreferences', () async {
       final container = ProviderContainer(
-        overrides: [activeProfileIdProvider.overrideWithValue(1)],
+        overrides: [activeProfileIdProvider.overrideWithValue('1')],
       );
       addTearDown(container.dispose);
 
@@ -1314,11 +1314,11 @@ void main() {
 
       final prefs = await SharedPreferences.getInstance();
       expect(
-        prefs.getInt(NotificationPreferencesRepository.reminderHourKey(1)),
+        prefs.getInt(NotificationPreferencesRepository.reminderHourKey('1')),
         equals(8),
       );
       expect(
-        prefs.getInt(NotificationPreferencesRepository.reminderMinuteKey(1)),
+        prefs.getInt(NotificationPreferencesRepository.reminderMinuteKey('1')),
         equals(30),
       );
     });
@@ -1331,7 +1331,7 @@ void main() {
 
     test('default state is true', () async {
       final container = ProviderContainer(
-        overrides: [activeProfileIdProvider.overrideWithValue(1)],
+        overrides: [activeProfileIdProvider.overrideWithValue('1')],
       );
       addTearDown(container.dispose);
 
@@ -1340,11 +1340,11 @@ void main() {
 
     test('toggle() flips state to false and persists', () async {
       SharedPreferences.setMockInitialValues({
-        NotificationPreferencesRepository.streakAlertEnabledKey(1): true,
+        NotificationPreferencesRepository.streakAlertEnabledKey('1'): true,
       });
 
       final container = ProviderContainer(
-        overrides: [activeProfileIdProvider.overrideWithValue(1)],
+        overrides: [activeProfileIdProvider.overrideWithValue('1')],
       );
       addTearDown(container.dispose);
 
@@ -1356,7 +1356,7 @@ void main() {
       final prefs = await SharedPreferences.getInstance();
       expect(
         prefs.getBool(
-          NotificationPreferencesRepository.streakAlertEnabledKey(1),
+          NotificationPreferencesRepository.streakAlertEnabledKey('1'),
         ),
         isFalse,
       );
@@ -1372,7 +1372,7 @@ void main() {
       'default time matches ReminderPreferences.defaultStreakAlert values',
       () async {
         final container = ProviderContainer(
-          overrides: [activeProfileIdProvider.overrideWithValue(1)],
+          overrides: [activeProfileIdProvider.overrideWithValue('1')],
         );
         addTearDown(container.dispose);
 
@@ -1389,12 +1389,12 @@ void main() {
       // AUD-notifications-02: no more async-load race to seed prefs around —
       // awaiting `.future` below settles the initial load deterministically.
       SharedPreferences.setMockInitialValues({
-        NotificationPreferencesRepository.streakAlertHourKey(1): 22,
-        NotificationPreferencesRepository.streakAlertMinuteKey(1): 15,
+        NotificationPreferencesRepository.streakAlertHourKey('1'): 22,
+        NotificationPreferencesRepository.streakAlertMinuteKey('1'): 15,
       });
 
       final container = ProviderContainer(
-        overrides: [activeProfileIdProvider.overrideWithValue(1)],
+        overrides: [activeProfileIdProvider.overrideWithValue('1')],
       );
       addTearDown(container.dispose);
 
@@ -1406,11 +1406,11 @@ void main() {
 
       final prefs = await SharedPreferences.getInstance();
       expect(
-        prefs.getInt(NotificationPreferencesRepository.streakAlertHourKey(1)),
+        prefs.getInt(NotificationPreferencesRepository.streakAlertHourKey('1')),
         equals(22),
       );
       expect(
-        prefs.getInt(NotificationPreferencesRepository.streakAlertMinuteKey(1)),
+        prefs.getInt(NotificationPreferencesRepository.streakAlertMinuteKey('1')),
         equals(15),
       );
     });
@@ -1423,7 +1423,7 @@ void main() {
 
     test('default state is true', () async {
       final container = ProviderContainer(
-        overrides: [activeProfileIdProvider.overrideWithValue(1)],
+        overrides: [activeProfileIdProvider.overrideWithValue('1')],
       );
       addTearDown(container.dispose);
 
@@ -1435,11 +1435,11 @@ void main() {
 
     test('toggle() flips state to false and persists', () async {
       SharedPreferences.setMockInitialValues({
-        NotificationPreferencesRepository.rewardNotificationEnabledKey(1): true,
+        NotificationPreferencesRepository.rewardNotificationEnabledKey('1'): true,
       });
 
       final container = ProviderContainer(
-        overrides: [activeProfileIdProvider.overrideWithValue(1)],
+        overrides: [activeProfileIdProvider.overrideWithValue('1')],
       );
       addTearDown(container.dispose);
 
@@ -1451,7 +1451,7 @@ void main() {
       final prefs = await SharedPreferences.getInstance();
       expect(
         prefs.getBool(
-          NotificationPreferencesRepository.rewardNotificationEnabledKey(1),
+          NotificationPreferencesRepository.rewardNotificationEnabledKey('1'),
         ),
         isFalse,
       );
@@ -1461,17 +1461,17 @@ void main() {
   group('Per-profile key isolation', () {
     setUp(() {
       SharedPreferences.setMockInitialValues({
-        NotificationPreferencesRepository.reminderEnabledKey(10): true,
-        NotificationPreferencesRepository.reminderEnabledKey(20): false,
+        NotificationPreferencesRepository.reminderEnabledKey('10'): true,
+        NotificationPreferencesRepository.reminderEnabledKey('20'): false,
       });
     });
 
     test('two profiles have independent ReminderEnabled state', () async {
       final containerA = ProviderContainer(
-        overrides: [activeProfileIdProvider.overrideWithValue(10)],
+        overrides: [activeProfileIdProvider.overrideWithValue('10')],
       );
       final containerB = ProviderContainer(
-        overrides: [activeProfileIdProvider.overrideWithValue(20)],
+        overrides: [activeProfileIdProvider.overrideWithValue('20')],
       );
       addTearDown(containerA.dispose);
       addTearDown(containerB.dispose);
@@ -1483,12 +1483,12 @@ void main() {
       // Profile 20 should remain unchanged in SharedPrefs
       final prefs = await SharedPreferences.getInstance();
       expect(
-        prefs.getBool(NotificationPreferencesRepository.reminderEnabledKey(10)),
+        prefs.getBool(NotificationPreferencesRepository.reminderEnabledKey('10')),
         isFalse,
       );
       // Key for profile 20 untouched
       expect(
-        prefs.getBool(NotificationPreferencesRepository.reminderEnabledKey(20)),
+        prefs.getBool(NotificationPreferencesRepository.reminderEnabledKey('20')),
         isFalse,
         reason:
             'Profile 20 pref must remain its own value, not affected by profile 10 toggle',
@@ -1499,42 +1499,42 @@ void main() {
   group('NotificationPreferencesRepository — key constant helpers', () {
     test('reminderEnabledKey is per-profile namespaced', () {
       expect(
-        NotificationPreferencesRepository.reminderEnabledKey(42),
+        NotificationPreferencesRepository.reminderEnabledKey('42'),
         equals('daily_reminder_enabled_42'),
       );
     });
 
     test('streakAlertEnabledKey is per-profile namespaced', () {
       expect(
-        NotificationPreferencesRepository.streakAlertEnabledKey(99),
+        NotificationPreferencesRepository.streakAlertEnabledKey('99'),
         equals('streak_alert_enabled_99'),
       );
     });
 
     test('rewardNotificationEnabledKey is per-profile namespaced', () {
       expect(
-        NotificationPreferencesRepository.rewardNotificationEnabledKey(5),
+        NotificationPreferencesRepository.rewardNotificationEnabledKey('5'),
         equals('reward_notification_enabled_5'),
       );
     });
 
     test('reminderHourKey is per-profile namespaced', () {
       expect(
-        NotificationPreferencesRepository.reminderHourKey(7),
+        NotificationPreferencesRepository.reminderHourKey('7'),
         equals('daily_reminder_hour_7'),
       );
     });
 
     test('reminderMinuteKey is per-profile namespaced', () {
       expect(
-        NotificationPreferencesRepository.reminderMinuteKey(7),
+        NotificationPreferencesRepository.reminderMinuteKey('7'),
         equals('daily_reminder_minute_7'),
       );
     });
 
     test('keyForProfile concatenates base and id with underscore', () {
       expect(
-        NotificationPreferencesRepository.keyForProfile('my_key', 3),
+        NotificationPreferencesRepository.keyForProfile('my_key', '3'),
         equals('my_key_3'),
       );
     });

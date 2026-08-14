@@ -8,8 +8,7 @@ void main() {
 
   final base = RewardMilestone(
     id: 'ms_1',
-    profileId: 1,
-    trackId: 2,
+    profileId: '1',
     title: 'Gold Star',
     thresholdPoints: 100,
     isEnabled: true,
@@ -21,8 +20,7 @@ void main() {
   group('RewardMilestone', () {
     RewardMilestone base() => RewardMilestone(
       id: 'milestone-1',
-      profileId: 1,
-      trackId: 42,
+      profileId: '1',
       title: 'First 100',
       thresholdPoints: 100,
       isEnabled: true,
@@ -34,8 +32,8 @@ void main() {
     test('toJson serialises all fields correctly', () {
       final json = base().toJson();
       expect(json['id'], 'milestone-1');
-      expect(json['profile_id'], 1);
-      expect(json['track_id'], 42);
+      expect(json['profile_id'], '1');
+      expect(json, isNot(contains('track_id')));
       expect(json['title'], 'First 100');
       expect(json['threshold_points'], 100);
       expect(json['is_enabled'], isTrue);
@@ -50,7 +48,6 @@ void main() {
 
       expect(decoded.id, original.id);
       expect(decoded.profileId, original.profileId);
-      expect(decoded.trackId, original.trackId);
       expect(decoded.title, original.title);
       expect(decoded.thresholdPoints, original.thresholdPoints);
       expect(decoded.isEnabled, original.isEnabled);
@@ -59,13 +56,13 @@ void main() {
 
     test('fromJson handles int ids stored as strings', () {
       final json = base().toJson();
-      json['profile_id'] = '2';
+      json['profile_id'] = 2;
       json['track_id'] = '99';
       json['threshold_points'] = '500';
 
       final m = RewardMilestone.fromJson(json);
-      expect(m.profileId, 2);
-      expect(m.trackId, 99);
+      expect(m.profileId, '2');
+      expect(m.toJson(), isNot(contains('track_id')));
       expect(m.thresholdPoints, 500);
     });
 
@@ -75,8 +72,8 @@ void main() {
         'title': 'test',
         // profile_id, track_id, threshold_points absent
       });
-      expect(m.profileId, 0);
-      expect(m.trackId, 0);
+      expect(m.profileId, '');
+      expect(m.toJson(), isNot(contains('track_id')));
       expect(m.thresholdPoints, 0);
       expect(m.isEnabled, isTrue); // default
       expect(m.iconIndex, 0); // default
@@ -91,7 +88,7 @@ void main() {
       // unchanged fields
       expect(updated.id, original.id);
       expect(updated.profileId, original.profileId);
-      expect(updated.trackId, original.trackId);
+      expect(updated.createdAt, original.createdAt);
       expect(updated.isEnabled, original.isEnabled);
       expect(updated.iconIndex, original.iconIndex);
     });
@@ -151,7 +148,6 @@ void main() {
 
       expect(restored.id, base.id);
       expect(restored.profileId, base.profileId);
-      expect(restored.trackId, base.trackId);
       expect(restored.title, base.title);
       expect(restored.thresholdPoints, base.thresholdPoints);
       expect(restored.isEnabled, base.isEnabled);
@@ -174,8 +170,7 @@ void main() {
 
       final m = RewardMilestone.fromJson(json);
 
-      expect(m.profileId, 1);
-      expect(m.trackId, 2);
+      expect(m.profileId, '1.0');
       expect(m.thresholdPoints, 50);
       expect(m.iconIndex, 1);
     });
@@ -195,7 +190,7 @@ void main() {
 
       final m = RewardMilestone.fromJson(json);
 
-      expect(m.profileId, 1);
+      expect(m.profileId, '1');
       expect(m.thresholdPoints, 25);
     });
 
@@ -215,8 +210,8 @@ void main() {
       // Should not throw; all fields fall back to defaults.
       expect(() => RewardMilestone.fromJson(json), returnsNormally);
       final m = RewardMilestone.fromJson(json);
-      expect(m.profileId, 0);
-      expect(m.trackId, 0);
+      expect(m.profileId, 'not_a_number');
+      expect(m.toJson(), isNot(contains('track_id')));
       expect(m.thresholdPoints, 0);
     });
   });
@@ -226,8 +221,7 @@ void main() {
   group('RewardUnlockRecord', () {
     RewardUnlockRecord baseUnlock() => RewardUnlockRecord(
       milestoneId: 'milestone-1',
-      profileId: 1,
-      trackId: 42,
+      profileId: '1',
       title: 'First 100',
       thresholdPoints: 100,
       pointsAtUnlock: 115,
@@ -237,8 +231,8 @@ void main() {
     test('toJson serialises all fields correctly', () {
       final json = baseUnlock().toJson();
       expect(json['milestone_id'], 'milestone-1');
-      expect(json['profile_id'], 1);
-      expect(json['track_id'], 42);
+      expect(json['profile_id'], '1');
+      expect(json, isNot(contains('track_id')));
       expect(json['title'], 'First 100');
       expect(json['threshold_points'], 100);
       expect(json['points_at_unlock'], 115);
@@ -251,7 +245,6 @@ void main() {
 
       expect(decoded.milestoneId, original.milestoneId);
       expect(decoded.profileId, original.profileId);
-      expect(decoded.trackId, original.trackId);
       expect(decoded.title, original.title);
       expect(decoded.thresholdPoints, original.thresholdPoints);
       expect(decoded.pointsAtUnlock, original.pointsAtUnlock);
@@ -259,17 +252,17 @@ void main() {
 
     test('fromJson handles numeric fields stored as strings', () {
       final json = baseUnlock().toJson();
-      json['profile_id'] = '3';
+      json['profile_id'] = 3;
       json['points_at_unlock'] = '200';
 
       final r = RewardUnlockRecord.fromJson(json);
-      expect(r.profileId, 3);
+      expect(r.profileId, '3');
       expect(r.pointsAtUnlock, 200);
     });
 
     test('fromJson handles missing optional fields gracefully', () {
       final r = RewardUnlockRecord.fromJson({'milestone_id': 'abc'});
-      expect(r.profileId, 0);
+      expect(r.profileId, '');
       expect(r.thresholdPoints, 0);
       expect(r.pointsAtUnlock, 0);
       expect(r.title, '');
@@ -289,8 +282,7 @@ void main() {
     test('round-trips via toJson/fromJson', () {
       final record = RewardUnlockRecord(
         milestoneId: 'ms_1',
-        profileId: 1,
-        trackId: 2,
+        profileId: '1',
         title: 'Gold Star',
         thresholdPoints: 100,
         pointsAtUnlock: 150,
@@ -302,7 +294,6 @@ void main() {
 
       expect(restored.milestoneId, record.milestoneId);
       expect(restored.profileId, record.profileId);
-      expect(restored.trackId, record.trackId);
       expect(restored.title, record.title);
       expect(restored.thresholdPoints, record.thresholdPoints);
       expect(restored.pointsAtUnlock, record.pointsAtUnlock);
@@ -312,7 +303,6 @@ void main() {
       final json = {
         'milestone_id': 'ms_x',
         'profile_id': 1,
-        'track_id': 2,
         'title': 'Test',
         'threshold_points': 10,
         'points_at_unlock': 20,
