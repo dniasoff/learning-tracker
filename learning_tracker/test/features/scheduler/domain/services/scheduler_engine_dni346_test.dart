@@ -59,15 +59,13 @@ List<SchedulerContentItem> makeItems(int count) => List.generate(
 );
 
 List<SchedulerStage> threeStages() => [
-  const SchedulerStage(id: 1, stageOrder: 1, stageName: 'Learn', delayDays: 0),
+  const SchedulerStage(stageOrder: 1, stageName: 'Learn', delayDays: 0),
   const SchedulerStage(
-    id: 2,
     stageOrder: 2,
     stageName: 'Chazara 1',
     delayDays: 1,
   ),
   const SchedulerStage(
-    id: 3,
     stageOrder: 3,
     stageName: 'Chazara 2',
     delayDays: 7,
@@ -127,7 +125,6 @@ void main() {
       // 500 remaining new items, 100 study days to deadline.
       final config = ScheduleConfig(
         curriculumId: curriculum,
-        trackId: 1,
         trackLabel: 'Test Track',
         goalDeadline: now.add(const Duration(days: 100)),
         currentDate: now,
@@ -159,7 +156,6 @@ void main() {
 
         final config = ScheduleConfig(
           curriculumId: curriculum,
-          trackId: 1,
           trackLabel: 'Test Track',
           goalDeadline: now.add(const Duration(days: 100)),
           currentDate: now,
@@ -195,7 +191,6 @@ void main() {
 
       final config = ScheduleConfig(
         curriculumId: curriculum,
-        trackId: 1,
         trackLabel: 'Test Track',
         currentDate: now,
       );
@@ -219,7 +214,6 @@ void main() {
       contentRepo.items = makeItems(5);
       stageRepo.stages = [
         const SchedulerStage(
-          id: 1,
           stageOrder: 1,
           stageName: 'Learn',
           delayDays: 0,
@@ -233,7 +227,6 @@ void main() {
 
       final config = ScheduleConfig(
         curriculumId: curriculum,
-        trackId: 1,
         trackLabel: 'Test Track',
         currentDate: now,
         pacePerDay: 2.0,
@@ -277,7 +270,6 @@ void main() {
       contentRepo.items = makeItems(5);
       stageRepo.stages = [
         const SchedulerStage(
-          id: 1,
           stageOrder: 1,
           stageName: 'Learn',
           delayDays: 0,
@@ -300,7 +292,6 @@ void main() {
       // For this single-stage test: done at stage 1 → skip (already complete).
       final config = ScheduleConfig(
         curriculumId: curriculum,
-        trackId: 1,
         trackLabel: 'Test Track',
         currentDate: now,
         pacePerDay: 2.0,
@@ -330,7 +321,6 @@ void main() {
       contentRepo.items = makeItems(10);
       stageRepo.stages = [
         const SchedulerStage(
-          id: 1,
           stageOrder: 1,
           stageName: 'Learn',
           delayDays: 0,
@@ -341,7 +331,6 @@ void main() {
       // isStudyDay = false → snapshot path must return empty.
       final config = ScheduleConfig(
         curriculumId: curriculum,
-        trackId: 1,
         trackLabel: 'Test Track',
         currentDate: now,
         pacePerDay: 2.0,
@@ -362,7 +351,6 @@ void main() {
       contentRepo.items = makeItems(10);
       stageRepo.stages = [
         const SchedulerStage(
-          id: 1,
           stageOrder: 1,
           stageName: 'Learn',
           delayDays: 0,
@@ -373,7 +361,6 @@ void main() {
       // isStudyDay = true (default) → tasks are produced.
       final config = ScheduleConfig(
         curriculumId: curriculum,
-        trackId: 1,
         trackLabel: 'Test Track',
         currentDate: now,
         pacePerDay: 2.0,

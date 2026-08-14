@@ -56,19 +56,16 @@ void main() {
   // Helper: default 3-stage setup
   List<SchedulerStage> threeStages() => [
     const SchedulerStage(
-      id: 1,
       stageOrder: 1,
       stageName: 'Learn',
       delayDays: 0,
     ),
     const SchedulerStage(
-      id: 2,
       stageOrder: 2,
       stageName: 'Chazara 1',
       delayDays: 1,
     ),
     const SchedulerStage(
-      id: 3,
       stageOrder: 3,
       stageName: 'Chazara 2',
       delayDays: 7,
@@ -97,7 +94,6 @@ void main() {
 
         final config = ScheduleConfig(
           curriculumId: curriculum,
-          trackId: 1,
           trackLabel: 'Test Track',
           goalDeadline: now.add(const Duration(days: 10)),
           currentDate: now,
@@ -133,7 +129,6 @@ void main() {
 
         final config = ScheduleConfig(
           curriculumId: curriculum,
-          trackId: 1,
           trackLabel: 'Test Track',
           currentDate: now,
         );
@@ -172,7 +167,6 @@ void main() {
 
         final config = ScheduleConfig(
           curriculumId: curriculum,
-          trackId: 1,
           trackLabel: 'Test Track',
           currentDate: now,
         );
@@ -195,7 +189,6 @@ void main() {
         // Only 2 days left, 50 items remaining
         final config = ScheduleConfig(
           curriculumId: curriculum,
-          trackId: 1,
           trackLabel: 'Test Track',
           goalDeadline: now.add(const Duration(days: 2)),
           currentDate: now,
@@ -220,7 +213,6 @@ void main() {
         // 100 days left, only 5 items
         final config = ScheduleConfig(
           curriculumId: curriculum,
-          trackId: 1,
           trackLabel: 'Test Track',
           goalDeadline: now.add(const Duration(days: 100)),
           currentDate: now,
@@ -254,7 +246,6 @@ void main() {
 
         final config = ScheduleConfig(
           curriculumId: curriculum,
-          trackId: 1,
           trackLabel: 'Test Track',
           currentDate: now,
           defaultNewItemsPerDay: 3,
@@ -274,31 +265,26 @@ void main() {
       contentRepo.items = makeItems(10);
       stageRepo.stages = [
         const SchedulerStage(
-          id: 1,
           stageOrder: 1,
           stageName: 'Learn',
           delayDays: 0,
         ),
         const SchedulerStage(
-          id: 2,
           stageOrder: 2,
           stageName: 'Chazara 1',
           delayDays: 1,
         ),
         const SchedulerStage(
-          id: 3,
           stageOrder: 3,
           stageName: 'Chazara 2',
           delayDays: 7,
         ),
         const SchedulerStage(
-          id: 4,
           stageOrder: 4,
           stageName: 'Chazara 3',
           delayDays: 30,
         ),
         const SchedulerStage(
-          id: 5,
           stageOrder: 5,
           stageName: 'Chazara 4',
           delayDays: 90,
@@ -329,7 +315,6 @@ void main() {
 
       final config = ScheduleConfig(
         curriculumId: curriculum,
-        trackId: 1,
         trackLabel: 'Test Track',
         currentDate: now,
       );
@@ -368,7 +353,6 @@ void main() {
 
         final config = ScheduleConfig(
           curriculumId: curriculum,
-          trackId: 1,
           trackLabel: 'Test Track',
           currentDate: now,
         );
@@ -410,7 +394,6 @@ void main() {
 
         final config = ScheduleConfig(
           curriculumId: curriculum,
-          trackId: 1,
           trackLabel: 'Test Track',
           currentDate: now,
           defaultNewItemsPerDay: 2,
@@ -452,7 +435,6 @@ void main() {
 
         final config = ScheduleConfig(
           curriculumId: curriculum,
-          trackId: 1,
           trackLabel: 'Test Track',
           currentDate: now,
         );
@@ -489,7 +471,6 @@ void main() {
 
       final config = ScheduleConfig(
         curriculumId: curriculum,
-        trackId: 1,
         trackLabel: 'Test Track',
         currentDate: now,
       );
@@ -504,7 +485,6 @@ void main() {
 
       final config = ScheduleConfig(
         curriculumId: curriculum,
-        trackId: 1,
         trackLabel: 'Test Track',
         currentDate: now,
       );
