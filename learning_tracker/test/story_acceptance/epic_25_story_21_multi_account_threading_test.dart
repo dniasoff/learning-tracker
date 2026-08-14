@@ -1,8 +1,16 @@
 /// Story acceptance tests for Story 25.21 — Multi-account threading.
 ///
-/// Replaces 8+ hardcoded `currentAccountId = 1` sites with a provider
-/// backed by [authStateProvider] and the `DeviceAccounts` table. Also
-/// preserves Epic 19's tier-aware offline UX (offline banner).
+/// Story 25.21 acceptance coverage for the current multi-account seam and
+/// tier-aware offline UX.
+///
+/// RETIRED-API DISCLOSURE (2026-08-14): the auth-derived integer
+/// `currentAccountIdProvider` and the Drift `UserProfileDao` were removed.
+/// Current production uses the explicit String-valued
+/// `activeAccountIdProvider` in `lib/data/firestore/active_account_providers.dart`;
+/// the account picker sets it when the user selects an account. The first
+/// group below therefore migrates the same selection/clear assertions to that
+/// live provider. The source-scan and widget assertions remain unchanged.
+// ignore_for_file: deprecated_member_use
 @Tags(['epic_25', 'story_25_21'])
 library;
 
@@ -11,12 +19,10 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-// ignore: unused_import — UserTier alias is re-exported by auth_state.dart.
-import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
+import 'package:learning_tracker/data/firestore/active_account_providers.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/account/presentation/widgets/offline_top_banner.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 
 import '../helpers/pump_app.dart';
 
@@ -39,9 +45,9 @@ Iterable<File> _dartFiles(Directory dir) => dir
 
 /// A minimal [AuthState] override for widget tests — we don't need a real
 /// per-user database to assert tier-gated UI.
-AuthState _signedIn(int profileId, Tier tier) => AuthState.signedIn(
+AuthState _signedIn(String profileId, Tier tier) => AuthState.signedIn(
   user: AuthUser(
-    profileId: profileId,
+    uid: profileId,
     email: 'test@example.com',
     displayName: 'Test User',
   ),
@@ -49,8 +55,8 @@ AuthState _signedIn(int profileId, Tier tier) => AuthState.signedIn(
 );
 
 /// Forces [authStateProvider] into a fixed state without triggering its real
-/// `_init()` (which would open a Drift database). Bypasses code generation by
-/// extending the generated notifier directly via override.
+/// initialization. Bypasses code generation by extending the generated
+/// notifier directly via override.
 class _FakeAuthStateNotifier extends AuthStateNotifier {
   _FakeAuthStateNotifier(this._initial);
   final AuthState _initial;
@@ -60,70 +66,48 @@ class _FakeAuthStateNotifier extends AuthStateNotifier {
 }
 
 void main() {
-  // ── AC: provider exists and reads active account from auth state ──────
+  // ── AC: explicit active-account selection is String-valued ────────────
 
-  group('Story 25.21 — currentAccountIdProvider', () {
+  group('Story 25.21 — activeAccountIdProvider', () {
     test(
-      'returns AuthState.currentUser.profileId when signed-in (cloudBorn)',
+      'returns the selected account id for a cloud-born account',
       () async {
-        final container = ProviderContainer(
-          overrides: [
-            authStateProvider.overrideWith(
-              () => _FakeAuthStateNotifier(_signedIn(7, Tier.cloudBorn)),
-            ),
-          ],
-        );
+        final container = ProviderContainer();
         addTearDown(container.dispose);
 
-        expect(container.read(currentAccountIdProvider), 7);
+        container.read(activeAccountIdProvider.notifier).set('account-7');
+        expect(container.read(activeAccountIdProvider), 'account-7');
       },
     );
 
     test(
-      'returns AuthState.currentUser.profileId when signed-in (localBorn)',
+      'returns the selected account id for a local-born account',
       () async {
-        final container = ProviderContainer(
-          overrides: [
-            authStateProvider.overrideWith(
-              () => _FakeAuthStateNotifier(_signedIn(42, Tier.localBorn)),
-            ),
-          ],
-        );
+        final container = ProviderContainer();
         addTearDown(container.dispose);
 
-        expect(container.read(currentAccountIdProvider), 42);
+        container.read(activeAccountIdProvider.notifier).set('local-account-42');
+        expect(container.read(activeAccountIdProvider), 'local-account-42');
       },
     );
 
-    test('falls back to 1 when no user is signed in', () async {
-      // Backwards-compatible default for transient signed-out windows
-      // (signup → onboarding) so the provider never throws.
-      final container = ProviderContainer(
-        overrides: [
-          authStateProvider.overrideWith(
-            () => _FakeAuthStateNotifier(const AuthState.signedOut()),
-          ),
-        ],
-      );
+    test('is null until an account is selected', () async {
+      final container = ProviderContainer();
       addTearDown(container.dispose);
 
-      expect(container.read(currentAccountIdProvider), 1);
+      expect(container.read(activeAccountIdProvider), isNull);
     });
 
-    test('emits new value when auth state flips', () async {
-      final container = ProviderContainer(
-        overrides: [
-          authStateProvider.overrideWith(
-            () => _FakeAuthStateNotifier(_signedIn(3, Tier.cloudBorn)),
-          ),
-        ],
-      );
+    test('emits the newly selected value and clears on sign-out/removal', () async {
+      final container = ProviderContainer();
       addTearDown(container.dispose);
 
-      expect(container.read(currentAccountIdProvider), 3);
+      final notifier = container.read(activeAccountIdProvider.notifier);
+      notifier.set('account-3');
+      expect(container.read(activeAccountIdProvider), 'account-3');
 
-      container.read(authStateProvider.notifier).signOut();
-      expect(container.read(currentAccountIdProvider), 1);
+      notifier.set(null);
+      expect(container.read(activeAccountIdProvider), isNull);
     });
   });
 
@@ -237,7 +221,7 @@ void main() {
       // anyone except cloud-born offline users.
       await tester.pumpWidget(
         wrap(
-          authState: _signedIn(1, Tier.localBorn),
+          authState: _signedIn('local-account-1', Tier.local),
           child: const OfflineTopBanner(visible: false),
         ),
       );
