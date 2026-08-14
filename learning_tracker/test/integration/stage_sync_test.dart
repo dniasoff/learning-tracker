@@ -1,121 +1,77 @@
-import 'package:drift/drift.dart';
-import 'package:drift/native.dart';
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/utils/date_utils.dart';
-import 'package:learning_tracker/features/tracks/stages/data/repositories/stage_definition_repository_impl.dart';
+import 'package:learning_tracker/data/repositories/firestore_stage_definition_repository.dart';
+import 'package:learning_tracker/features/tracks/stages/domain/models/stage_definition.dart';
 
-import '../helpers/test_database.dart' show seedProfile;
-
-/// Creates a default curriculum track and returns its ID.
-Future<int> _insertTrack(UserDatabase db) async {
-  final row = await db
-      .into(db.curriculumTracks)
-      .insertReturning(
-        CurriculumTracksCompanion.insert(
-          profileId: 1,
-          curriculumId: 'mishnayos',
-          stateChangedAt: DateTimeFactory.nowUtc(),
-          activatedAt: DateTimeFactory.nowUtc(),
-        ),
-      );
-  return row.id;
-}
+import '../helpers/firestore_fake.dart';
+import '../helpers/firestore_fixtures.dart';
 
 void main() {
-  late UserDatabase database;
-  late int trackId;
-  late List<Map<String, dynamic>> pushedSettings;
-  late StageDefinitionRepositoryImpl repository;
+  late FakeFirebaseFirestore firestore;
+  late FirestoreStageDefinitionRepository repository;
 
+  const uid = 'stage-sync-test-user';
+  const profileId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
   const curriculum = CurriculumId.mishnayos;
 
   setUp(() async {
-    database = UserDatabase(NativeDatabase.memory());
-    await seedProfile(database);
-    trackId = await _insertTrack(database);
-    pushedSettings = [];
-    // Plan §F Phase 5 deliverable 6 — capture stage-definition push calls
-    // via the dedicated `pushStageDefinitions` path. Existing assertions
-    // on 'curriculum_id' / 'stages' continue to work against the
-    // captured snapshot map.
-    repository = StageDefinitionRepositoryImpl(
-      stageDao: database.stageDao,
-      completionDao: database.completionDao,
-      pushStageDefinitions:
-          ({
-            required int trackId,
-            required String curriculumId,
-            required List<Map<String, dynamic>> stages,
-            required DateTime updatedAt,
-          }) async {
-            pushedSettings.add({
-              'track_id': trackId,
-              'curriculum_id': curriculumId,
-              'stages': stages,
-              'updated_at': updatedAt.toIso8601String(),
-            });
-          },
+    firestore = createFakeFirestore(authenticatedUid: uid);
+    await seedAccount(firestore, uid: uid);
+    await seedProfile(firestore, uid: uid, profileId: profileId);
+    await seedTrack(
+      firestore,
+      uid: uid,
+      profileId: profileId,
+      curriculumId: curriculum,
     );
-  });
-
-  tearDown(() async {
-    await database.close();
+    repository = FirestoreStageDefinitionRepository(
+      firestore: firestore,
+      uid: uid,
+      profileId: profileId,
+    );
   });
 
   group('Stage sync integration', () {
     test(
       'replaceStagesForCurriculum restores stages from Firestore payload',
       () async {
-        await repository.initializeDefaults(
-          curriculum,
-          profileId: 1,
-          trackId: trackId,
-        );
+        await repository.initializeDefaults(curriculum);
 
-        // Simulate Firestore payload arriving with 4 stages
+        // Simulate Firestore payload arriving with 4 stages.
         final firestoreStages = [
-          StageDefinitionsCompanion.insert(
-            profileId: 1,
-            curriculumId: curriculum.storageKey,
-            trackId: trackId,
+          StageDefinition(
+            curriculumId: curriculum,
             stageOrder: 1,
             stageName: 'Learn',
-            schedule: const Value('{"type":"delay","delay_days":0}'),
-            isDefault: const Value(true),
+            delayDays: 0,
+            isDefault: true,
           ),
-          StageDefinitionsCompanion.insert(
-            profileId: 1,
-            curriculumId: curriculum.storageKey,
-            trackId: trackId,
+          StageDefinition(
+            curriculumId: curriculum,
             stageOrder: 2,
             stageName: 'Chazara 1',
-            schedule: const Value('{"type":"delay","delay_days":1}'),
-            isDefault: const Value(true),
+            delayDays: 1,
+            isDefault: true,
           ),
-          StageDefinitionsCompanion.insert(
-            profileId: 1,
-            curriculumId: curriculum.storageKey,
-            trackId: trackId,
+          StageDefinition(
+            curriculumId: curriculum,
             stageOrder: 3,
             stageName: 'Chazara 2',
-            schedule: const Value('{"type":"delay","delay_days":7}'),
-            isDefault: const Value(true),
+            delayDays: 7,
+            isDefault: true,
           ),
-          StageDefinitionsCompanion.insert(
-            profileId: 1,
-            curriculumId: curriculum.storageKey,
-            trackId: trackId,
+          StageDefinition(
+            curriculumId: curriculum,
             stageOrder: 4,
             stageName: 'Chazara 3',
-            schedule: const Value('{"type":"delay","delay_days":30}'),
-            isDefault: const Value(false),
+            delayDays: 30,
+            isDefault: false,
           ),
         ];
 
-        await database.stageDao.replaceStagesForCurriculum(
-          curriculum.storageKey,
+        await repository.replaceStagesForCurriculum(
+          curriculum,
           firestoreStages,
         );
 
@@ -128,43 +84,45 @@ void main() {
       },
     );
 
-    test('resetToDefaults restores exactly 3 stages and pushes', () async {
-      await repository.initializeDefaults(
-        curriculum,
-        profileId: 1,
-        trackId: trackId,
-      );
-      // Seed a 4th custom stage directly via the DAO (AUD-tracks-12: the
-      // repository's addStage was removed as dead code — zero UI callers —
-      // so test setup that merely needs an extra stage on disk now inserts
-      // through the DAO instead of the deleted repository method).
-      await database.stageDao.insertStageDefinition(
-        StageDefinitionsCompanion.insert(
-          profileId: 1,
-          curriculumId: curriculum.storageKey,
-          trackId: trackId,
-          stageOrder: 4,
-          stageName: 'Custom',
-          isDefault: const Value(false),
-          schedule: const Value('{"type":"delay","delay_days":60}'),
-        ),
-      );
+    test(
+      'resetToDefaults restores defaults while retaining a custom stage',
+      () async {
+        await seedStageDefinitions(
+          firestore,
+          uid: uid,
+          profileId: profileId,
+          curriculumId: curriculum,
+          stages: [
+            for (final stage in [
+              (1, 'Old Learn', 2, true),
+              (2, 'Old Chazara 1', 3, true),
+              (3, 'Old Chazara 2', 8, true),
+              (4, 'Custom', 60, false),
+            ])
+              StageDefinition(
+                curriculumId: curriculum,
+                stageOrder: stage.$1,
+                stageName: stage.$2,
+                delayDays: stage.$3,
+                isDefault: stage.$4,
+              ),
+          ],
+        );
 
-      pushedSettings.clear();
-      await repository.resetToDefaults(
-        curriculum,
-        profileId: 1,
-        trackId: trackId,
-      );
+        await repository.resetToDefaults(curriculum);
 
-      final stages = await repository.getStagesForCurriculum(curriculum);
-      expect(stages, hasLength(3));
-      expect(stages.map((s) => s.stageName).toList(), [
-        'לימוד',
-        'חזרה א׳',
-        'חזרה ב׳',
-      ]);
-      expect(pushedSettings, hasLength(1));
-    });
+        final stages = await repository.getStagesForCurriculum(curriculum);
+        expect(stages, hasLength(4));
+        expect(stages.take(3).map((s) => s.stageName).toList(), [
+          'לימוד',
+          'חזרה א׳',
+          'חזרה ב׳',
+        ]);
+        expect(stages.take(3).every((s) => s.isDefault), isTrue);
+        expect(stages.last.stageName, 'Custom');
+        expect(stages.last.delayDays, 60);
+        expect(stages.last.isDefault, false);
+      },
+    );
   });
 }

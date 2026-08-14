@@ -1,139 +1,121 @@
-import 'package:drift/drift.dart' hide isNotNull, isNull;
-import 'package:drift/native.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/sync/sync_write_facade.dart';
-import 'package:learning_tracker/features/learning/data/repositories/track_repository_impl.dart';
+import 'package:learning_tracker/data/firestore/repository_providers.dart';
+import 'package:learning_tracker/data/repositories/firestore_curriculum_track_repository.dart';
+import 'package:learning_tracker/data/repositories/firestore_study_day_config_repository.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
 import 'package:learning_tracker/features/settings/domain/exceptions/last_active_curriculum_exception.dart';
 import 'package:learning_tracker/features/tracks/domain/services/curriculum_activation_service.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 
-import '../../../../helpers/drift_memory.dart' as drift_helpers;
+import '../../../../helpers/firestore_fake.dart';
+import '../../../../helpers/firestore_fixtures.dart';
 
-Future<void> _dummyPushCurriculumTrack(Map<String, dynamic> data) async {}
+const _uid = 'curriculum-activation-test-user';
+const _profileId = '01J0000000000000000000000A';
 
-/// Recording [SyncWriteFacade] that captures [pushStudyDayConfig] calls.
-///
-/// All other methods are no-ops so the recording is focused on the push path
-/// under test (R3-5 regression).
-class _RecordingSyncFacade implements SyncWriteFacade {
-  final List<Map<String, dynamic>> studyDayConfigPushes = [];
-
-  @override
-  Future<void> pushStudyDayConfig(Map<String, dynamic> payload) async {
-    studyDayConfigPushes.add(Map<String, dynamic>.from(payload));
-  }
-
-  @override
-  Future<void> pushGamificationSettingsSnapshot() async {}
-  @override
-  Future<void> pushUiPreferencesSnapshot() async {}
-  @override
-  Future<void> pushBookmark(Map<String, dynamic> bookmark) async {}
-  @override
-  Future<void> pushSettings(Map<String, dynamic> settings) async {}
-  @override
-  Future<void> pushGoal(Map<String, dynamic> goal) async {}
-  @override
-  Future<void> deleteGoal(Map<String, dynamic> payload) async {}
-  @override
-  Future<void> pushCurriculumTrack(Map<String, dynamic> trackData) async {}
-  @override
-  Future<void> pushLearningOrder({
-    required int profileId,
-    required String curriculumId,
-    required List<Map<String, dynamic>> items,
-    required DateTime updatedAt,
-  }) async {}
-  @override
-  Future<void> pushLearnerProfile(Map<String, dynamic> profile) async {}
-  @override
-  Future<void> deleteLearnerProfile(String profileUlid) async {}
-  @override
-  Future<void> pushStageDefinitions({
-    required int trackId,
-    required String curriculumId,
-    required List<Map<String, dynamic>> stages,
-    required DateTime updatedAt,
-  }) async {}
-  @override
-  Future<void> deleteCompletion(String completionId) async {}
-  @override
-  Future<void> pushProfileProgram(Map<String, dynamic> payload) async {}
-}
+CollectionReference<Map<String, dynamic>> _profileCollection(
+  FakeFirebaseFirestore firestore,
+  String collection,
+) =>
+    firestore
+        .collection('users')
+        .doc(_uid)
+        .collection('learner_profiles')
+        .doc(_profileId)
+        .collection(collection);
 
 void main() {
-  late UserDatabase database;
+  late FakeFirebaseFirestore firestore;
+  late ProviderContainer container;
+  late FirestoreCurriculumTrackRepository trackRepository;
+  late FirestoreStudyDayConfigRepository studyDayConfigRepository;
   late CurriculumActivationService service;
 
   setUp(() async {
-    database = UserDatabase(NativeDatabase.memory());
-    service = CurriculumActivationService(
-      database: database,
-      pushCurriculumTrack: _dummyPushCurriculumTrack,
-      trackRepository: TrackRepositoryImpl(database: database),
+    firestore = createFakeFirestore(authenticatedUid: _uid);
+    await seedAccount(firestore, uid: _uid);
+    await seedProfile(firestore, uid: _uid, profileId: _profileId);
+
+    trackRepository = FirestoreCurriculumTrackRepository(
+      firestore: firestore,
+      uid: _uid,
+      profileId: _profileId,
     );
-
-    // Seed parent rows required by FK constraints.
-    await drift_helpers.seedProfile(database);
-    await drift_helpers.seedProfileZero(database);
+    studyDayConfigRepository = FirestoreStudyDayConfigRepository(
+      firestore: firestore,
+      uid: _uid,
+      profileId: _profileId,
+    );
+    container = ProviderContainer(
+      overrides: [
+        firestoreCurriculumTrackRepositoryProvider.overrideWith(
+          (ref) async => trackRepository,
+        ),
+        firestoreStudyDayConfigRepositoryProvider.overrideWith(
+          (ref) async => studyDayConfigRepository,
+        ),
+      ],
+    );
+    service = container.read(curriculumActivationServiceProvider);
   });
 
-  tearDown(() async {
-    await database.close();
+  tearDown(() {
+    container.dispose();
   });
 
-  Future<int> getTrackId(CurriculumId curriculum) async {
-    final tracks = await database.trackDao.getAllTracks(curriculum);
-    return tracks.first.id;
+  Future<List<Map<String, dynamic>>> getStudyDayConfigs() async {
+    final snapshot = await _profileCollection(
+      firestore,
+      'study_day_configs',
+    ).get();
+    return snapshot.docs.map((doc) => doc.data()).toList();
   }
 
   group('CurriculumActivationService', () {
-    test('activate adds curriculum to database', () async {
+    test('activate adds curriculum to Firestore', () async {
       await service.activate(CurriculumId.bavli);
 
-      final isActive = await database.activeCurriculumDao.isActive(
-        CurriculumId.bavli,
+      expect(
+        await trackRepository.isActive(CurriculumId.bavli),
+        isTrue,
       );
-      expect(isActive, isTrue);
     });
 
-    test('deactivate removes curriculum from database', () async {
-      // Activate two curricula
+    test('deactivate retires one of two curricula', () async {
       await service.activate(CurriculumId.bavli);
       await service.activate(CurriculumId.yerushalmi);
 
-      // Deactivate one
       await service.deactivate(CurriculumId.bavli);
 
-      final isActive = await database.activeCurriculumDao.isActive(
-        CurriculumId.bavli,
+      expect(
+        await trackRepository.isActive(CurriculumId.bavli),
+        isFalse,
       );
-      expect(isActive, isFalse);
     });
 
     test('toggle activates an inactive curriculum', () async {
       await service.toggle(CurriculumId.bavli);
 
-      final isActive = await database.activeCurriculumDao.isActive(
-        CurriculumId.bavli,
+      expect(
+        await trackRepository.isActive(CurriculumId.bavli),
+        isTrue,
       );
-      expect(isActive, isTrue);
     });
 
     test('toggle deactivates an active curriculum', () async {
-      // Activate two curricula
       await service.activate(CurriculumId.bavli);
       await service.activate(CurriculumId.yerushalmi);
 
-      // Toggle off Bavli
       await service.toggle(CurriculumId.bavli);
 
-      final isActive = await database.activeCurriculumDao.isActive(
-        CurriculumId.bavli,
+      expect(
+        await trackRepository.isActive(CurriculumId.bavli),
+        isFalse,
       );
-      expect(isActive, isFalse);
     });
 
     test(
@@ -153,25 +135,21 @@ void main() {
       () async {
         await service.initialize();
 
-        final activeCurricula = await database.activeCurriculumDao
-            .getActiveCurricula();
-        expect(activeCurricula, contains(CurriculumId.mishnayos.storageKey));
+        expect(
+          await trackRepository.getActiveCurriculumIds(),
+          contains(CurriculumId.mishnayos.storageKey),
+        );
       },
     );
 
     test('initialize does not override existing active curricula', () async {
-      // Pre-activate Bavli
-      await database.activeCurriculumDao.activate(CurriculumId.bavli);
+      await service.activate(CurriculumId.bavli);
 
       await service.initialize();
 
-      final activeCurricula = await database.activeCurriculumDao
-          .getActiveCurricula();
-      expect(activeCurricula, contains(CurriculumId.bavli.storageKey));
-      expect(
-        activeCurricula,
-        isNot(contains(CurriculumId.mishnayos.storageKey)),
-      );
+      final activeCurricula = await service.getActiveCurricula();
+      expect(activeCurricula, contains(CurriculumId.bavli));
+      expect(activeCurricula, isNot(contains(CurriculumId.mishnayos)));
     });
 
     test(
@@ -182,14 +160,12 @@ void main() {
         expect(
           stream,
           emitsInOrder([
-            <String>[], // Initial empty state
-            [CurriculumId.bavli.storageKey], // After activation
+            <String>[],
+            [CurriculumId.bavli.storageKey],
           ]),
         );
 
-        await Future<void>.delayed(
-          Duration.zero,
-        ); // Let stream emit initial value
+        await Future<void>.delayed(Duration.zero);
         await service.activate(CurriculumId.bavli);
       },
     );
@@ -198,9 +174,8 @@ void main() {
       await service.activate(CurriculumId.bavli);
       await service.activate(CurriculumId.yerushalmi);
 
-      final activeCurricula = await service.getActiveCurricula();
       expect(
-        activeCurricula,
+        await service.getActiveCurricula(),
         containsAll([CurriculumId.bavli, CurriculumId.yerushalmi]),
       );
     });
@@ -216,46 +191,33 @@ void main() {
     });
 
     test(
-      'deactivation soft-deletes the track and preserves completions (DNI-317)',
+      'deactivation retires the track and preserves completions (DNI-317)',
       () async {
-        // Activate two curricula
         await service.activate(CurriculumId.bavli);
         await service.activate(CurriculumId.mishnayos);
-
-        // Insert a completion for Bavli
-        final bavliTrackId = await getTrackId(CurriculumId.bavli);
-        await drift_helpers.seedCompletion(
-          database,
-          CompletionEventsCompanion.insert(
-            profileId: 1,
-            curriculumId: CurriculumId.bavli.storageKey,
-            sefariaRef: 'Berakhot.2a',
-            stageId: 1,
-            trackType: 'personal',
-            trackId: Value(bavliTrackId),
-            eventTimestamp: DateTime.now(),
-            points: const Value(10),
-          ),
+        final completionId = await seedCompletion(
+          firestore,
+          uid: _uid,
+          profileId: _profileId,
+          curriculumId: CurriculumId.bavli,
+          sefariaRef: 'Berakhot.2a',
+          stageId: 1,
+          points: 10,
         );
 
-        // Deactivate Bavli
         await service.deactivate(CurriculumId.bavli);
 
-        // The track row is soft-deleted (state == 'deleted'), not hard-deleted.
-        // W3.28/W3.29: isActive/deletedAt replaced by unified `state` column.
-        final allTracks = await database.trackDao.getAllTracks(
-          CurriculumId.bavli,
+        final bavliTrack = (await trackRepository.getAllTracks()).singleWhere(
+          (track) => track.curriculumId == CurriculumId.bavli,
         );
-        expect(allTracks, hasLength(1));
-        expect(allTracks.first.state, 'deleted');
+        expect(bavliTrack.state, CurriculumTrackState.retired.storageKey);
 
-        // Completion data is preserved — completions are append-only (FR5 / E24).
-        final completions = await database.completionDao
-            .internalGetCompletionsByCurriculumCrossProfile(
-              CurriculumId.bavli.storageKey,
-              scope: CrossProfileScope.dataExport,
-            );
-        expect(completions, hasLength(1));
+        final completion = await _profileCollection(
+          firestore,
+          'completions',
+        ).doc(completionId).get();
+        expect(completion.exists, isTrue);
+        expect(completion.data()!['sefaria_ref'], 'Berakhot.2a');
       },
     );
 
@@ -264,45 +226,36 @@ void main() {
       () async {
         await service.activate(CurriculumId.bavli);
         await service.activate(CurriculumId.mishnayos);
-
-        final bavliTrackId = await getTrackId(CurriculumId.bavli);
-
-        await database.bookmarkDao.upsertBookmark(
-          curriculumId: CurriculumId.bavli.storageKey,
-          trackId: bavliTrackId,
-          profileId: 0,
+        await seedBookmark(
+          firestore,
+          uid: _uid,
+          profileId: _profileId,
+          curriculumId: CurriculumId.bavli,
           sefariaRef: 'Berakhot.2a',
-          updatedAt: DateTime.now().toUtc(),
         );
 
         await service.deactivate(CurriculumId.bavli);
 
-        final bookmark = await database.bookmarkDao
-            .getBookmarkByCurriculumAndTrack(
-              CurriculumId.bavli.storageKey,
-              bavliTrackId,
-            );
-        expect(bookmark, isNotNull);
-        expect(bookmark!.sefariaRef, equals('Berakhot.2a'));
+        final bookmarks = await _profileCollection(firestore, 'bookmarks')
+            .get();
+        expect(bookmarks.docs, hasLength(1));
+        expect(bookmarks.docs.single.data()['sefaria_ref'], 'Berakhot.2a');
       },
     );
 
     test(
       'cannot deactivate all curricula via toggle (last-one-standing)',
       () async {
-        // Activate two, then deactivate down to one
         await service.activate(CurriculumId.bavli);
         await service.activate(CurriculumId.mishnayos);
 
         await service.toggle(CurriculumId.bavli);
 
-        // Mishnayos is the last one -- toggling should throw
         expect(
           () => service.toggle(CurriculumId.mishnayos),
           throwsA(isA<LastActiveCurriculumException>()),
         );
 
-        // Verify mishnayos is still active
         final active = await service.getActiveCurricula();
         expect(active, contains(CurriculumId.mishnayos));
         expect(active, hasLength(1));
@@ -310,89 +263,46 @@ void main() {
     );
   });
 
-  // R3-5 regression — study-day configs must be enqueued to the sync outbox
-  // on every activation path so a fresh-device restore receives the schedule.
-  group('R3-5 — study-day configs enqueued to outbox on activation', () {
-    late UserDatabase db;
-    late _RecordingSyncFacade facade;
-
-    setUp(() async {
-      db = UserDatabase(NativeDatabase.memory());
-      facade = _RecordingSyncFacade();
-      await drift_helpers.seedProfile(db);
-      await drift_helpers.seedProfileZero(db);
-    });
-
-    tearDown(() async => db.close());
-
-    CurriculumActivationService makeService({int profileId = 1}) =>
-        CurriculumActivationService(
-          database: db,
-          pushCurriculumTrack: _dummyPushCurriculumTrack,
-          trackRepository: TrackRepositoryImpl(database: db),
-          profileId: profileId,
-          syncFacade: facade,
-        );
-
+  // The old Drift test also asserted a local row plus a SyncWriteFacade
+  // outbox. The current service has neither surface: activation writes the
+  // Firestore study_day_configs collection directly, so these tests assert
+  // that real Firestore state instead.
+  group('study-day defaults on activation', () {
     test(
-      'activate() seeds 7 local rows AND enqueues 7 outbox pushes for profile+curriculum',
+      'activate() seeds 7 Firestore study-day configs for the profile',
       () async {
-        final svc = makeService();
-        await svc.activate(CurriculumId.bavli);
+        await service.activate(CurriculumId.bavli);
 
-        // Local rows: all 7 default study days.
-        final localRows = await db.studyDayConfigDao
-            .getConfigsByCurriculumAndProfile(CurriculumId.bavli.storageKey, 1);
+        final configs = await getStudyDayConfigs();
+        expect(configs, hasLength(7));
         expect(
-          localRows,
-          hasLength(7),
-          reason: 'seedDefaults must insert all 7 weekday rows',
-        );
-        expect(
-          localRows.every((r) => r.dayType == 'study'),
-          isTrue,
-          reason: 'all seeded days must be study days',
-        );
-
-        // Outbox / facade: 7 pushStudyDayConfig calls, correct curriculum.
-        expect(
-          facade.studyDayConfigPushes,
-          hasLength(7),
-          reason: '_pushStudyDaysCloud must enqueue all 7 days',
-        );
-        expect(
-          facade.studyDayConfigPushes.every(
-            (p) =>
-                p['curriculum_id'] == CurriculumId.bavli.storageKey &&
-                p['profile_id'] == 1,
+          configs.every(
+            (config) =>
+                config['curriculum_id'] == CurriculumId.bavli.storageKey &&
+                config['day_type'] == 'study',
           ),
           isTrue,
-          reason: 'every push must carry correct profile_id + curriculum_id',
         );
-        final pushedDays = facade.studyDayConfigPushes
-            .map((p) => p['day_of_week'] as int)
-            .toSet();
-        expect(pushedDays, equals({1, 2, 3, 4, 5, 6, 7}));
+        expect(
+          configs.map((config) => config['day_of_week']).toSet(),
+          equals({1, 2, 3, 4, 5, 6, 7}),
+        );
       },
     );
 
     test(
-      'activateForProfile() enqueues 7 outbox pushes for the given profile',
+      'activateForProfile() seeds configs for the already-scoped ULID profile',
       () async {
-        // activateForProfile uses an explicit profileId, not _profileId.
-        final svc = makeService(profileId: 1);
-        await svc.activateForProfile(CurriculumId.mishnayos, 1);
+        // The integer argument is retained for source compatibility but is
+        // intentionally ignored by the Firestore-native service.
+        await service.activateForProfile(CurriculumId.mishnayos, 1);
 
+        final configs = await getStudyDayConfigs();
+        expect(configs, hasLength(7));
         expect(
-          facade.studyDayConfigPushes,
-          hasLength(7),
-          reason: 'activateForProfile must enqueue all 7 days',
-        );
-        expect(
-          facade.studyDayConfigPushes.every(
-            (p) =>
-                p['profile_id'] == 1 &&
-                p['curriculum_id'] == CurriculumId.mishnayos.storageKey,
+          configs.every(
+            (config) => config['curriculum_id'] ==
+                CurriculumId.mishnayos.storageKey,
           ),
           isTrue,
         );
@@ -400,52 +310,17 @@ void main() {
     );
 
     test(
-      'initialize() enqueues 7 outbox pushes when no curricula are active',
+      'initialize() seeds 7 configs when no curricula are active',
       () async {
-        final svc = makeService();
-        await svc.initialize();
+        await service.initialize();
 
+        final configs = await getStudyDayConfigs();
+        expect(configs, hasLength(7));
         expect(
-          facade.studyDayConfigPushes,
-          hasLength(7),
-          reason: 'initialize must enqueue all 7 days for default Mishnayos',
-        );
-        expect(
-          facade.studyDayConfigPushes.every(
-            (p) =>
-                p['profile_id'] == 1 &&
-                p['curriculum_id'] == CurriculumId.mishnayos.storageKey,
-          ),
+          configs.every((config) => config['curriculum_id'] ==
+              CurriculumId.mishnayos.storageKey),
           isTrue,
         );
-      },
-    );
-
-    test(
-      'activate() with null syncFacade is a no-op for outbox but still seeds locally',
-      () async {
-        // Null facade = local-born account — no outbox needed.
-        final svc = CurriculumActivationService(
-          database: db,
-          pushCurriculumTrack: null,
-          trackRepository: TrackRepositoryImpl(database: db),
-          profileId: 1,
-          syncFacade: null,
-        );
-        await svc.activate(CurriculumId.yerushalmi);
-
-        final localRows = await db.studyDayConfigDao
-            .getConfigsByCurriculumAndProfile(
-              CurriculumId.yerushalmi.storageKey,
-              1,
-            );
-        expect(
-          localRows,
-          hasLength(7),
-          reason: 'seedDefaults still runs without a facade',
-        );
-        // Recording facade received nothing (different instance).
-        expect(facade.studyDayConfigPushes, isEmpty);
       },
     );
   });

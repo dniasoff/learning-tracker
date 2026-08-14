@@ -1,23 +1,15 @@
-// AUD-t-cross-08 — profiles _buildApp/_buildAppLoading/_buildAppError test
-// helpers must not leak the UserDatabase they create.
+// AUD-t-cross-08 — profiles _buildApp test
+// helpers must receive their Firestore backing store explicitly.
 //
-// drift_memory.dart's own contract says callers MUST `await db.close()` in
-// `tearDown` to free the native sqlite3 resources. In these 3 files,
-// _buildApp (and the db-parameter-less _buildAppLoading/_buildAppError in
-// parent_track_management_screen_l1_test.dart) construct a fresh
-// `inMemoryDb()` whenever the optional `db:` is omitted — and the caller has
-// no reference to that database, so nothing can ever close it.
+// The profile screen helpers now use a caller-owned FakeFirebaseFirestore.
+// Keeping that dependency explicit ensures each test can provide an isolated
+// Firestore fixture and prevents the helper from hiding a backing store.
 //
 // This is a source-level regression test rather than a runtime widget test:
-// "does this function register cleanup for the database it creates?" is a
-// structural property of the helper, not an externally observable
-// input/output difference of any single test run — the leaked native handle
-// is exactly the kind of defect that does NOT show up as a widget-test
-// assertion failure (that's the whole reason it shipped unnoticed across ~30
-// call sites). It fails red against the pre-fix source (none of these
-// _buildApp*/… variants required `db:` or called `addTearDown` to close a
-// database they created) and passes green once each variant does one or the
-// other, per the finding's acceptance criterion.
+// "does this function accept the backing store it uses?" is a structural
+// property of the helper, not an externally observable input/output
+// difference of any single test run. This source-level check keeps the
+// Firestore migration from regressing to hidden test state.
 
 @Tags(['profiles', 'aud_t_cross_08'])
 library;
@@ -26,7 +18,9 @@ import 'dart:io';
 
 import 'package:test/test.dart';
 
-/// (file, function name) pairs AUD-t-cross-08 named as leaking sites.
+/// Current profile builders covered by AUD-t-cross-08. The former
+/// `_buildAppLoading` and `_buildAppError` helpers no longer exist after the
+/// Firestore migration, so there is no live function to inspect for them.
 const _targets = [
   (
     file:
@@ -40,16 +34,6 @@ const _targets = [
   ),
   (
     file:
-        'test/features/profiles/presentation/screens/parent_track_management_screen_l1_test.dart',
-    function: '_buildAppLoading',
-  ),
-  (
-    file:
-        'test/features/profiles/presentation/screens/parent_track_management_screen_l1_test.dart',
-    function: '_buildAppError',
-  ),
-  (
-    file:
         'test/features/profiles/presentation/screens/ts14_parent_track_management_copy_test.dart',
     function: '_buildApp',
   ),
@@ -57,8 +41,8 @@ const _targets = [
 
 void main() {
   for (final target in _targets) {
-    test('AUD-t-cross-08: ${target.file} ${target.function}() requires db: or '
-        'closes the database it creates', () {
+    test('AUD-t-cross-08: ${target.file} ${target.function}() requires '
+        'explicit Firestore', () {
       final file = File(target.file);
       expect(
         file.existsSync(),
@@ -81,27 +65,17 @@ void main() {
             'it been renamed? Update this regression test.',
       );
 
-      final requiresDb = RegExp(
-        r'required\s+UserDatabase\s+db\s*,',
+      final requiresFirestore = RegExp(
+        r'required\s+FakeFirebaseFirestore\s+firestore\s*,',
       ).hasMatch(span!.signature);
 
-      // Any addTearDown(...) call whose argument chain reaches a .close —
-      // e.g. `addTearDown(resolvedDb.close);` or
-      // `addTearDown(() => database.close());`.
-      final registersCleanup = RegExp(
-        r'addTearDown\([^;]*\.close',
-      ).hasMatch(span.body);
-
       expect(
-        requiresDb || registersCleanup,
+        requiresFirestore,
         isTrue,
         reason:
             'AUD-t-cross-08: ${target.function} in ${target.file} must '
-            'either make db: a required parameter (forcing the caller to '
-            'own+close it) or call addTearDown to close the database it '
-            'creates when db: is omitted — otherwise every call site that '
-            'omits db: leaks a native Drift handle (drift_memory.dart: '
-            '"Callers MUST await db.close() in tearDown").',
+            'require the FakeFirebaseFirestore it uses so callers can provide '
+            'an isolated Firestore fixture.',
       );
     });
   }
