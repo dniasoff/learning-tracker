@@ -37,6 +37,7 @@ import 'package:learning_tracker/features/notifications/domain/repositories/noti
 import 'package:learning_tracker/features/notifications/domain/services/notification_gateway.dart';
 import 'package:learning_tracker/features/notifications/presentation/providers/notification_providers.dart';
 import 'package:learning_tracker/features/notifications/presentation/screens/notifications_screen.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -44,6 +45,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
 class _MockNotificationGateway extends Mock implements NotificationGateway {}
+
+const _profileId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
 
 // ── AUD-notifications-02: fixed-value AsyncNotifier overrides ──────────────
 //
@@ -103,6 +106,7 @@ Widget _buildApp({
     // Disable auto-retry so errored FutureProviders reach the error state in
     // tests (required by the L1 pattern for FutureProviders).
     overrides: [
+      selectedProfileIdProvider.overrideWithValue(_profileId),
       notificationServiceProvider.overrideWithValue(gateway),
       reminderEnabledProvider.overrideWith(
         () => _FixedReminderEnabled(reminderEnabled),
@@ -336,11 +340,12 @@ void main() {
       (tester) async {
         // Override with stateful notifier so the toggle can mutate state.
         SharedPreferences.setMockInitialValues({
-          NotificationPreferencesRepository.reminderEnabledKey(0): true,
+          NotificationPreferencesRepository.reminderEnabledKey(_profileId): true,
         });
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              selectedProfileIdProvider.overrideWithValue(_profileId),
               notificationServiceProvider.overrideWithValue(_gateway),
               reminderSyncEffectProvider.overrideWith((ref) async {}),
               streakAlertSyncEffectProvider.overrideWith((ref) async {}),
@@ -377,12 +382,13 @@ void main() {
     testWidgets('toggling reminder ON (from off) calls requestPermission', (
       tester,
     ) async {
-      SharedPreferences.setMockInitialValues({
-        NotificationPreferencesRepository.reminderEnabledKey(0): false,
+        SharedPreferences.setMockInitialValues({
+        NotificationPreferencesRepository.reminderEnabledKey(_profileId): false,
       });
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            selectedProfileIdProvider.overrideWithValue(_profileId),
             notificationServiceProvider.overrideWithValue(_gateway),
             reminderSyncEffectProvider.overrideWith((ref) async {}),
             streakAlertSyncEffectProvider.overrideWith((ref) async {}),
@@ -418,11 +424,12 @@ void main() {
       'toggling reminder persists enabled=false to SharedPreferences',
       (tester) async {
         SharedPreferences.setMockInitialValues({
-          NotificationPreferencesRepository.reminderEnabledKey(0): true,
+          NotificationPreferencesRepository.reminderEnabledKey(_profileId): true,
         });
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              selectedProfileIdProvider.overrideWithValue(_profileId),
               notificationServiceProvider.overrideWithValue(_gateway),
               reminderSyncEffectProvider.overrideWith((ref) async {}),
               streakAlertSyncEffectProvider.overrideWith((ref) async {}),
@@ -451,7 +458,7 @@ void main() {
 
         final prefs = await SharedPreferences.getInstance();
         final stored = prefs.getBool(
-          NotificationPreferencesRepository.reminderEnabledKey(0),
+          NotificationPreferencesRepository.reminderEnabledKey(_profileId),
         );
         expect(
           stored,
@@ -576,11 +583,12 @@ void main() {
       tester,
     ) async {
       SharedPreferences.setMockInitialValues({
-        NotificationPreferencesRepository.streakAlertEnabledKey(0): false,
+        NotificationPreferencesRepository.streakAlertEnabledKey(_profileId): false,
       });
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            selectedProfileIdProvider.overrideWithValue(_profileId),
             notificationServiceProvider.overrideWithValue(_gateway),
             reminderSyncEffectProvider.overrideWith((ref) async {}),
             streakAlertSyncEffectProvider.overrideWith((ref) async {}),
@@ -614,11 +622,12 @@ void main() {
       'toggling streak alert persists enabled=false to SharedPreferences',
       (tester) async {
         SharedPreferences.setMockInitialValues({
-          NotificationPreferencesRepository.streakAlertEnabledKey(0): true,
+          NotificationPreferencesRepository.streakAlertEnabledKey(_profileId): true,
         });
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              selectedProfileIdProvider.overrideWithValue(_profileId),
               notificationServiceProvider.overrideWithValue(_gateway),
               reminderSyncEffectProvider.overrideWith((ref) async {}),
               streakAlertSyncEffectProvider.overrideWith((ref) async {}),
@@ -647,7 +656,7 @@ void main() {
 
         final prefs = await SharedPreferences.getInstance();
         final stored = prefs.getBool(
-          NotificationPreferencesRepository.streakAlertEnabledKey(0),
+          NotificationPreferencesRepository.streakAlertEnabledKey(_profileId),
         );
         expect(stored, isFalse);
 
@@ -712,12 +721,13 @@ void main() {
       tester,
     ) async {
       SharedPreferences.setMockInitialValues({
-        NotificationPreferencesRepository.rewardNotificationEnabledKey(0):
+        NotificationPreferencesRepository.rewardNotificationEnabledKey(_profileId):
             false,
       });
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            selectedProfileIdProvider.overrideWithValue(_profileId),
             notificationServiceProvider.overrideWithValue(_gateway),
             reminderSyncEffectProvider.overrideWith((ref) async {}),
             streakAlertSyncEffectProvider.overrideWith((ref) async {}),
@@ -751,11 +761,12 @@ void main() {
       tester,
     ) async {
       SharedPreferences.setMockInitialValues({
-        NotificationPreferencesRepository.rewardNotificationEnabledKey(0): true,
+        NotificationPreferencesRepository.rewardNotificationEnabledKey(_profileId): true,
       });
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            selectedProfileIdProvider.overrideWithValue(_profileId),
             notificationServiceProvider.overrideWithValue(_gateway),
             reminderSyncEffectProvider.overrideWith((ref) async {}),
             streakAlertSyncEffectProvider.overrideWith((ref) async {}),
@@ -782,7 +793,7 @@ void main() {
 
       final prefs = await SharedPreferences.getInstance();
       final stored = prefs.getBool(
-        NotificationPreferencesRepository.rewardNotificationEnabledKey(0),
+        NotificationPreferencesRepository.rewardNotificationEnabledKey(_profileId),
       );
       expect(stored, isFalse);
 

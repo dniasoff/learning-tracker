@@ -6,20 +6,27 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/features/notifications/domain/repositories/notification_preferences_repository.dart';
 import 'package:learning_tracker/features/notifications/presentation/providers/notification_providers.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+const _testProfileId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+
+ProviderContainer _makeContainer() => ProviderContainer(
+  overrides: [
+    selectedProfileIdProvider.overrideWithValue(_testProfileId),
+  ],
+);
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  // The default activeProfileId is 0 (from activeProfileIdProvider.build → selectedProfileId null → 0).
-  // All per-profile keys are therefore suffixed with '_0' in unit-test containers
-  // unless activeProfileIdProvider is overridden.
-  const testProfileId = 0;
+  // All per-profile keys are explicitly scoped to this ULID in the test
+  // container, matching the production providers' selected-profile watch.
 
   group('ReminderTime', () {
     test('defaults to 7:00 PM', () async {
       SharedPreferences.setMockInitialValues({});
-      final container = ProviderContainer();
+      final container = _makeContainer();
       addTearDown(container.dispose);
 
       // AUD-notifications-02: reminderTimeProvider is an AsyncNotifier that
@@ -32,10 +39,10 @@ void main() {
 
     test('loads saved time from SharedPreferences (per-profile key)', () async {
       SharedPreferences.setMockInitialValues({
-        NotificationPreferencesRepository.reminderHourKey(testProfileId): 8,
-        NotificationPreferencesRepository.reminderMinuteKey(testProfileId): 30,
+        NotificationPreferencesRepository.reminderHourKey(_testProfileId): 8,
+        NotificationPreferencesRepository.reminderMinuteKey(_testProfileId): 30,
       });
-      final container = ProviderContainer();
+      final container = _makeContainer();
       addTearDown(container.dispose);
 
       final time = await container.read(reminderTimeProvider.future);
@@ -45,7 +52,7 @@ void main() {
 
     test('setTime persists to per-profile SharedPreferences key', () async {
       SharedPreferences.setMockInitialValues({});
-      final container = ProviderContainer();
+      final container = _makeContainer();
       addTearDown(container.dispose);
 
       await container
@@ -55,13 +62,13 @@ void main() {
       final prefs = await SharedPreferences.getInstance();
       expect(
         prefs.getInt(
-          NotificationPreferencesRepository.reminderHourKey(testProfileId),
+          NotificationPreferencesRepository.reminderHourKey(_testProfileId),
         ),
         6,
       );
       expect(
         prefs.getInt(
-          NotificationPreferencesRepository.reminderMinuteKey(testProfileId),
+          NotificationPreferencesRepository.reminderMinuteKey(_testProfileId),
         ),
         15,
       );
@@ -71,7 +78,7 @@ void main() {
   group('ReminderEnabled', () {
     test('defaults to true', () async {
       SharedPreferences.setMockInitialValues({});
-      final container = ProviderContainer();
+      final container = _makeContainer();
       addTearDown(container.dispose);
 
       expect(await container.read(reminderEnabledProvider.future), isTrue);
@@ -79,7 +86,7 @@ void main() {
 
     test('toggle switches state and persists to per-profile key', () async {
       SharedPreferences.setMockInitialValues({});
-      final container = ProviderContainer();
+      final container = _makeContainer();
       addTearDown(container.dispose);
 
       // Await the settled default before toggling (toggle() flips whatever
@@ -93,7 +100,7 @@ void main() {
       final prefs = await SharedPreferences.getInstance();
       expect(
         prefs.getBool(
-          NotificationPreferencesRepository.reminderEnabledKey(testProfileId),
+          NotificationPreferencesRepository.reminderEnabledKey(_testProfileId),
         ),
         isFalse,
       );
@@ -103,7 +110,7 @@ void main() {
   group('StreakAlertEnabled', () {
     test('defaults to true', () async {
       SharedPreferences.setMockInitialValues({});
-      final container = ProviderContainer();
+      final container = _makeContainer();
       addTearDown(container.dispose);
 
       expect(await container.read(streakAlertEnabledProvider.future), isTrue);
@@ -111,7 +118,7 @@ void main() {
 
     test('toggle switches state and persists to per-profile key', () async {
       SharedPreferences.setMockInitialValues({});
-      final container = ProviderContainer();
+      final container = _makeContainer();
       addTearDown(container.dispose);
 
       await container.read(streakAlertEnabledProvider.future);
@@ -123,7 +130,7 @@ void main() {
       expect(
         prefs.getBool(
           NotificationPreferencesRepository.streakAlertEnabledKey(
-            testProfileId,
+            _testProfileId,
           ),
         ),
         isFalse,
@@ -134,7 +141,7 @@ void main() {
   group('StreakAlertTime', () {
     test('defaults to 9:00 PM', () async {
       SharedPreferences.setMockInitialValues({});
-      final container = ProviderContainer();
+      final container = _makeContainer();
       addTearDown(container.dispose);
 
       final time = await container.read(streakAlertTimeProvider.future);
@@ -144,7 +151,7 @@ void main() {
 
     test('setTime persists to per-profile SharedPreferences key', () async {
       SharedPreferences.setMockInitialValues({});
-      final container = ProviderContainer();
+      final container = _makeContainer();
       addTearDown(container.dispose);
 
       await container
@@ -154,13 +161,13 @@ void main() {
       final prefs = await SharedPreferences.getInstance();
       expect(
         prefs.getInt(
-          NotificationPreferencesRepository.streakAlertHourKey(testProfileId),
+          NotificationPreferencesRepository.streakAlertHourKey(_testProfileId),
         ),
         22,
       );
       expect(
         prefs.getInt(
-          NotificationPreferencesRepository.streakAlertMinuteKey(testProfileId),
+          NotificationPreferencesRepository.streakAlertMinuteKey(_testProfileId),
         ),
         30,
       );
@@ -170,7 +177,7 @@ void main() {
   group('RewardNotificationEnabled', () {
     test('defaults to true', () async {
       SharedPreferences.setMockInitialValues({});
-      final container = ProviderContainer();
+      final container = _makeContainer();
       addTearDown(container.dispose);
 
       expect(
@@ -181,7 +188,7 @@ void main() {
 
     test('toggle switches state and persists to per-profile key', () async {
       SharedPreferences.setMockInitialValues({});
-      final container = ProviderContainer();
+      final container = _makeContainer();
       addTearDown(container.dispose);
 
       await container.read(rewardNotificationEnabledProvider.future);
@@ -193,7 +200,7 @@ void main() {
       expect(
         prefs.getBool(
           NotificationPreferencesRepository.rewardNotificationEnabledKey(
-            testProfileId,
+            _testProfileId,
           ),
         ),
         isFalse,
