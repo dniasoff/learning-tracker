@@ -114,9 +114,14 @@ class CurriculumTrackRepositoryNotReadyException implements Exception {
 /// method added to [FirestoreCurriculumTrackRepository] itself before this
 /// gap can close — flagged in the task report, not solved here.
 class FirestoreCurriculumTrackRepositoryAdapter {
-  FirestoreCurriculumTrackRepositoryAdapter({required Ref ref}) : _ref = ref;
+  FirestoreCurriculumTrackRepositoryAdapter({
+    required Ref ref,
+    FirebaseFunctions? functions,
+  }) : _ref = ref,
+       _functions = functions ?? FirebaseFunctions.instance;
 
   final Ref _ref;
+  final FirebaseFunctions _functions;
 
   /// Re-reads `firestoreCurriculumTrackRepositoryProvider`, resolving to
   /// `null` exactly when it does (no active account, or no active learner
@@ -271,7 +276,7 @@ class FirestoreCurriculumTrackRepositoryAdapter {
     if (profileUlid == null || profileUlid.isEmpty) {
       throw const CurriculumTrackRepositoryNotReadyException();
     }
-    await FirebaseFunctions.instance
+    await _functions
         .httpsCallable('deleteCurriculumTrack')
         .call<Map<String, dynamic>>({
           // Both are STRINGS on the function side (deletes.ts:214-219) — it

@@ -167,7 +167,7 @@ final _trackPaceCalcProvider = FutureProvider.autoDispose
 /// provider (`ref.read(...)`), never constructed directly inside a screen
 /// method (lesson from after_track_change_invalidation.dart, fixed earlier
 /// this session).
-final _curriculumTrackRepositoryProvider =
+final curriculumTrackDetailRepositoryProvider =
     Provider<FirestoreCurriculumTrackRepositoryAdapter>(
       (ref) => FirestoreCurriculumTrackRepositoryAdapter(ref: ref),
     );
@@ -222,7 +222,8 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     final dualMetric = (dualMetricMatches == null || dualMetricMatches.isEmpty)
         ? null
         : dualMetricMatches.first;
-    final dualMetricsError = dualMetricsAsync.error ??
+    final dualMetricsError =
+        dualMetricsAsync.error ??
         (dualMetricsAsync.hasValue && dualMetric == null
             ? StateError('Progress metrics did not include this track')
             : null);
@@ -1047,7 +1048,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     // delete completions/learning_ledger/streak_events/points_ledger/
     // preferences alongside the track doc itself, a superset of Drift's
     // purgeHistory, not a narrower stand-in.
-    final trackRepo = ref.read(_curriculumTrackRepositoryProvider);
+    final trackRepo = ref.read(curriculumTrackDetailRepositoryProvider);
     await trackRepo.deleteTrackPermanently(track.curriculumId);
     await onTrackChanged(ref);
     if (mounted) context.router.pop();

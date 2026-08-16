@@ -13,6 +13,7 @@
 @Tags(['e2e', 'journey'])
 library;
 
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
@@ -20,9 +21,12 @@ import 'package:learning_tracker/core/preferences/preference_providers.dart'
     show effectiveUseHebrewTermsProvider, useHebrewTermsProvider;
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
+import 'package:learning_tracker/features/tracks/setup/data/repositories/curriculum_track_repository_impl.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart'
     show activeTracksProvider;
+import 'package:learning_tracker/features/tracks/setup/presentation/screens/track_detail_screen.dart'
+    show curriculumTrackDetailRepositoryProvider;
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart'
     show activeTutorPermissionsProvider;
 
@@ -48,6 +52,32 @@ Future<void> _seedTrack(
     stateChangedAt: stub.stateChangedAt,
     paceResetDate: stub.paceResetDate,
   );
+}
+
+/// Test seam for the wipe path. The production adapter delegates this call to
+/// a Cloud Function; this fake applies the same observable document deletion
+/// directly to the harness's in-memory Firestore.
+class _FakeCurriculumTrackRepository extends Fake
+    implements FirestoreCurriculumTrackRepositoryAdapter {
+  _FakeCurriculumTrackRepository({
+    required this.firestore,
+    required this.identity,
+  });
+
+  final FakeFirebaseFirestore firestore;
+  final E2EIdentity identity;
+
+  @override
+  Future<void> deleteTrackPermanently(CurriculumId curriculumId) async {
+    await firestore
+        .collection('users')
+        .doc(identity.accountId)
+        .collection('learner_profiles')
+        .doc(identity.profileId)
+        .collection('curriculum_tracks')
+        .doc(curriculumId.storageKey)
+        .delete();
+  }
 }
 
 // ── Override factories ─────────────────────────────────────────────────────────
@@ -422,13 +452,8 @@ void main() {
     // Delete → dialog → Wipe → track row gone; completion records purged.
     //
     // R-TR1: wipe path via TrackDetailScreen._showDeleteDialog.
-    // BLOCKED: the migrated wipe path calls the Firebase callable
-    // `deleteCurriculumTrack`; the read-only E2E harness/fakes provide no
-    // Firebase Functions mock, so this case remains analyzer-valid but
-    // unexecutable until that shared seam exists.
     testWidgets(
       'wipe track from detail screen: track row purged from Firestore',
-      skip: true,
       (tester) async {
         final identity = E2EIdentity.localBorn(displayName: 'Frank');
         final h = E2EHarness(tester, identity: identity);
@@ -450,6 +475,15 @@ void main() {
           extraOverrides: [
             ..._trackHubOverrides(tracks: [stubMishnayos, stubBavli]),
             ..._trackDetailSilenceOverrides(),
+            dashboardActiveCurriculaProvider.overrideWith(
+              (ref) async => [CurriculumId.mishnayos, CurriculumId.bavli],
+            ),
+            curriculumTrackDetailRepositoryProvider.overrideWithValue(
+              _FakeCurriculumTrackRepository(
+                firestore: h.firestore,
+                identity: identity,
+              ),
+            ),
           ],
         );
         await tester.pump(const Duration(milliseconds: 300));
