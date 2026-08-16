@@ -974,9 +974,11 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
                     ),
                     TextButton(
                       onPressed: () {
-                        ref.invalidate(
-                          isStageCompletedProvider(completedByOrderParams),
-                        );
+                        // Reuse the single completion signal so the reader
+                        // stays a pure consumer of completion state.
+                        ref
+                            .read(completionCommittedProvider.notifier)
+                            .increment();
                       },
                       child: Text(AppLocalizations.of(context)!.actionRetry),
                     ),

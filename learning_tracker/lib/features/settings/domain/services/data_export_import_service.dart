@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/features/settings/domain/exceptions/import_validation_exception.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
@@ -216,8 +217,10 @@ class DataExportImportService {
     BackupFirestoreGateway? gateway,
     required String uid,
     Future<String> Function()? appVersionFetcher,
+    LocalDayClock? clock,
   }) : _gateway = gateway ?? _DynamicBackupFirestoreGateway(firestore!),
        _uid = uid,
+       _clock = clock ?? const SystemLocalDayClock(),
        _appVersionFetcher =
            appVersionFetcher ??
            (() async {
@@ -255,6 +258,7 @@ class DataExportImportService {
 
   final BackupFirestoreGateway _gateway;
   final String _uid;
+  final LocalDayClock _clock;
   final Future<String> Function() _appVersionFetcher;
 
   String get _accountPath => 'users/$_uid';
@@ -306,7 +310,7 @@ class DataExportImportService {
     final payload = <String, dynamic>{
       'version': formatVersion,
       'uid': _uid,
-      'exportedAt': DateTime.now().toUtc().toIso8601String(),
+      'exportedAt': _clock.nowUtc().toIso8601String(),
       'appVersion': await _appVersionFetcher(),
       'account': {'id': _uid, 'data': accountData},
       'profileSnapshot': profileSnapshot,

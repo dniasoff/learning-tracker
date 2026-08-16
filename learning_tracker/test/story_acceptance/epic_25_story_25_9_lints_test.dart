@@ -145,6 +145,9 @@ void main() {
       'lib/data/repositories/firestore_track_learning_order_repository.dart',
       // Progress domain service — builds bilingual tree nodes.
       'lib/features/progress/domain/services/lifetime_tree_builder.dart',
+      // Completion persistence writer — stores both raw bilingual fields in
+      // the learning ledger; this is not a user-facing label read.
+      'lib/features/learning/domain/services/completion_orchestrator.dart',
       // journey_view_model.dart and journey_providers.dart were removed from
       // this allow-list by DNI-362: UnitCompletion no longer carries
       // displayNameHe/displayNameEn; label resolution is deferred to

@@ -12,10 +12,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/calendar_program_service.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../helpers/pump_app.dart';
 
@@ -24,14 +24,12 @@ Widget _wrap(
   bool hebrewTermsScript = false,
   TextDirection ambient = TextDirection.ltr,
 }) {
-  SharedPreferences.setMockInitialValues({
-    'hebrew_terms_script_p0': hebrewTermsScript,
-  });
   return pumpApp(
     child: Directionality(
       textDirection: ambient,
       child: Scaffold(body: child),
     ),
+    overrides: [useHebrewTermsProvider.overrideWithValue(hebrewTermsScript)],
   );
 }
 
