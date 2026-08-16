@@ -11,7 +11,9 @@ import 'package:learning_tracker/core/constants/hebrew_terms.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/data/firestore/doc_ids.dart';
+import 'package:learning_tracker/data/repositories/points_ledger_entry.dart';
 import 'package:learning_tracker/features/account/domain/models/account_entity.dart';
+import 'package:learning_tracker/features/gamification/domain/models/reward_redemption.dart';
 import 'package:learning_tracker/features/learning/domain/entities/bookmark.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_entity.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
@@ -358,4 +360,85 @@ Future<void> seedStageDefinitions(
     );
   }
   await batch.commit();
+}
+
+/// Seeds one append-only points-ledger entry at
+/// `users/{uid}/learner_profiles/{profileId}/points_ledger/{ulid}`.
+///
+/// [ulid] is the entry's real identity and Firestore document id. [delta] is
+/// the signed amount applied to the derived balance; [entryKind] defaults to
+/// the parent adjustment kind used for a starting balance. Optional
+/// [note]/[redemptionUlid] values are encoded only when supplied, matching
+/// [PointsLedgerEntry.toFirestore].
+Future<void> seedPointsLedgerEntry(
+  FakeFirebaseFirestore firestore, {
+  required String uid,
+  required String profileId,
+  required String ulid,
+  String entryKind = 'parent_add',
+  required int delta,
+  String? note,
+  String? redemptionUlid,
+  DateTime? createdAt,
+  CompletionSource source = CompletionSource.live,
+}) async {
+  final entry = PointsLedgerEntry(
+    ulid: ulid,
+    entryKind: entryKind,
+    delta: delta,
+    note: note,
+    redemptionUlid: redemptionUlid,
+    createdAt: _fixtureTime(createdAt),
+    source: source,
+  );
+  final docId = DocIds.pointsLedgerDocId({'ulid': ulid})!;
+  await firestore
+      .collection('users')
+      .doc(uid)
+      .collection('learner_profiles')
+      .doc(profileId)
+      .collection('points_ledger')
+      .doc(docId)
+      .set(entry.toFirestore());
+}
+
+/// Seeds one reward-redemption request at
+/// `users/{uid}/learner_profiles/{profileId}/reward_redemptions/{ulid}`.
+///
+/// [status] uses the repository's state-machine values:
+/// [RewardRedemptionStatus.pendingFulfilment],
+/// [RewardRedemptionStatus.fulfilled], or
+/// [RewardRedemptionStatus.declined]. [resolvedAt] is optional so pending
+/// fixtures match the production create shape while resolved fixtures can
+/// mirror the parent's fulfil/decline update.
+Future<void> seedRewardRedemption(
+  FakeFirebaseFirestore firestore, {
+  required String uid,
+  required String profileId,
+  required String ulid,
+  String rewardTitle = 'Test Reward',
+  int iconIndex = 0,
+  int pointsCost = 10,
+  String status = RewardRedemptionStatus.pendingFulfilment,
+  DateTime? createdAt,
+  DateTime? resolvedAt,
+}) async {
+  final redemption = RewardRedemptionEntity(
+    ulid: ulid,
+    rewardTitle: rewardTitle,
+    iconIndex: iconIndex,
+    pointsCost: pointsCost,
+    status: status,
+    createdAt: _fixtureTime(createdAt),
+    resolvedAt: resolvedAt,
+  );
+  final docId = DocIds.rewardRedemptionDocId({'ulid': ulid})!;
+  await firestore
+      .collection('users')
+      .doc(uid)
+      .collection('learner_profiles')
+      .doc(profileId)
+      .collection('reward_redemptions')
+      .doc(docId)
+      .set(redemption.toFirestore());
 }
