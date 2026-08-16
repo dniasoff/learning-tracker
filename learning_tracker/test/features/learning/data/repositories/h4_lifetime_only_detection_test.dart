@@ -88,7 +88,6 @@ void main() {
       profileId: profileId,
     );
     const stage = StageDefinition(
-      id: kFirestoreUnmappedStageId,
       curriculumId: curriculum,
       stageOrder: 1,
       stageName: 'Stage 1',

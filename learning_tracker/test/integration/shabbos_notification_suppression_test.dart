@@ -24,6 +24,8 @@ import 'package:timezone/timezone.dart' as tz_lib;
 
 class MockNotificationGateway extends Mock implements NotificationGateway {}
 
+const _profileId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+
 void main() {
   // Lakewood, NJ: 40.0959° N, 74.2222° W — a common reference location.
   const lakewoodLat = 40.0959;
@@ -57,9 +59,7 @@ void main() {
         sacredWindowRepository: repository,
       );
 
-      // (AUD-notifications-04) scheduleReminder() now routes through the
-      // profile-0 block of the *ForProfile gateway API — the non-profile
-      // scheduleBatchReminders() it used to call was deleted as dead code.
+      // Scheduling is keyed by the active learner profile's stable ULID.
       when(
         () => mockService.scheduleBatchRemindersForProfile(
           profileId: any(named: 'profileId'),
@@ -210,7 +210,8 @@ void main() {
         fixedAt: DateTime.utc(2026, 5, 1),
       );
 
-      await scheduler.scheduleReminder(
+      await scheduler.scheduleReminderForProfile(
+        profileId: _profileId,
         time: const TimeOfDay(hour: 20, minute: 0),
         title: 'Learning Reminder',
         body: 'You have 3 tasks today',
@@ -220,7 +221,7 @@ void main() {
 
       final captured = verify(
         () => mockService.scheduleBatchRemindersForProfile(
-          profileId: 0,
+          profileId: _profileId,
           fireTimes: captureAny(named: 'fireTimes'),
           title: any(named: 'title'),
           body: any(named: 'body'),

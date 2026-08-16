@@ -9,10 +9,8 @@
 /// notification_gateway_test.dart's header comment for the full removal
 /// rationale.
 ///
-/// scheduleReminder() (the non-profile, locale-aware wrapper) is kept — it
-/// is not itself one of the removed methods — but now routes through the
-/// profile-0 block of the *ForProfile gateway API internally, since the
-/// scheduleBatchReminders() it used to call no longer exists.
+/// The canonical scheduling API is scheduleReminderForProfile(), keyed by the
+/// learner profile's stable ULID.
 library;
 
 import 'package:flutter/material.dart';
@@ -24,6 +22,8 @@ import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz_lib;
 
 class MockNotificationGateway extends Mock implements NotificationGateway {}
+
+const _profileId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
 
 void main() {
   setUpAll(() {
@@ -57,9 +57,10 @@ void main() {
   });
 
   group('NotificationScheduler', () {
-    test('scheduleReminder creates a 14-day batch notification for profile 0 '
-        'at the configured time', () async {
-      await scheduler.scheduleReminder(
+    test('scheduleReminderForProfile creates a 14-day batch notification for '
+        'the profile at the configured time', () async {
+      await scheduler.scheduleReminderForProfile(
+        profileId: _profileId,
         time: const TimeOfDay(hour: 19, minute: 0),
         title: 'Learning Reminder',
         body: 'You have 5 tasks across 2 curricula today',
@@ -67,7 +68,7 @@ void main() {
 
       verify(
         () => mockService.scheduleBatchRemindersForProfile(
-          profileId: 0,
+          profileId: _profileId,
           fireTimes: any(named: 'fireTimes'),
           title: 'Learning Reminder',
           body: 'You have 5 tasks across 2 curricula today',
@@ -77,14 +78,16 @@ void main() {
 
     test('rescheduling at a new time produces a second batch call', () async {
       // Schedule at 7 PM
-      await scheduler.scheduleReminder(
+      await scheduler.scheduleReminderForProfile(
+        profileId: _profileId,
         time: const TimeOfDay(hour: 19, minute: 0),
         title: 'Learning Reminder',
         body: 'You have 3 tasks across 2 curricula today',
       );
 
       // Reschedule at 8 AM
-      await scheduler.scheduleReminder(
+      await scheduler.scheduleReminderForProfile(
+        profileId: _profileId,
         time: const TimeOfDay(hour: 8, minute: 0),
         title: 'Learning Reminder',
         body: 'You have 3 tasks across 2 curricula today',
@@ -92,7 +95,7 @@ void main() {
 
       verify(
         () => mockService.scheduleBatchRemindersForProfile(
-          profileId: 0,
+          profileId: _profileId,
           fireTimes: any(named: 'fireTimes'),
           title: 'Learning Reminder',
           body: 'You have 3 tasks across 2 curricula today',

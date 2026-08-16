@@ -23,104 +23,85 @@ library;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/sync/firestore_gateway_impl.dart';
 import 'package:learning_tracker/data/firestore/doc_ids.dart';
-import 'package:learning_tracker/features/account/domain/models/app_user.dart';
-import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
 
 import '../../helpers/firestore_fake.dart';
 
-// ── Minimal stub AuthRepository ─────────────────────────────────────────
-//
-// FirestoreGatewayImpl only ever reads currentUser.uid; every other method
-// throws UnimplementedError so an accidental call surfaces immediately.
-// Mirrors test/integration/firestore_wipe_install_test.dart's
-// _StubAuthRepository (kept file-local rather than shared to avoid coupling
-// this new golden-test module to another test file's private class).
-class _StubAuthRepository implements AuthRepository {
-  const _StubAuthRepository(this._uid);
+const _uid = 'uid_doc_ids_golden_test';
+const _profileId = '01J6Q2H4A8M7K3P9R5T6V8WXY9';
 
-  final String _uid;
+/// Compatibility seam for the pre-rewrite golden cases. The deleted sync
+/// gateway used untyped maps; current production repositories use typed
+/// entities and `CurriculumId` values. This seam writes the same current
+/// collection paths and delegates every document id to [DocIds], so the
+/// assertions remain useful without reviving the removed gateway API.
+class _CurrentFirestoreWriter {
+  _CurrentFirestoreWriter(this._firestore);
+
+  final FirebaseFirestore _firestore;
+
+  CollectionReference<Map<String, dynamic>> _collection(String name) =>
+      _firestore
+          .collection('users')
+          .doc(_uid)
+          .collection('learner_profiles')
+          .doc(_profileId)
+          .collection(name);
+
+  Future<void> _write(
+    String collection,
+    String? id,
+    Map<String, dynamic> data,
+  ) => _collection(collection).doc(id!).set(data);
 
   @override
-  AppUser? get currentUser => AppUser(
-    uid: _uid,
-    email: 'test@example.com',
-    displayName: 'Test User',
-    emailVerified: true,
-    providers: const ['password'],
-  );
-
-  @override
-  Stream<AppUser?> onAuthStateChanged() => Stream.value(currentUser);
-
-  @override
-  Future<String?> getIdToken({bool forceRefresh = false}) =>
-      throw UnimplementedError();
-  @override
-  Future<void> signInWithEmail(String e, String p) =>
-      throw UnimplementedError();
-  @override
-  Future<void> signInWithGoogle() => throw UnimplementedError();
-  @override
-  Future<AppUser?> reauthWithGoogleSilently() => throw UnimplementedError();
-  @override
-  Future<void> signUp(String e, String p, String n) =>
-      throw UnimplementedError();
-  @override
-  Future<void> sendEmailVerification() => throw UnimplementedError();
-  @override
-  Future<void> sendSignInLinkToEmail(String e) => throw UnimplementedError();
-  @override
-  Future<AppUser?> signInWithEmailLink(String e, String l) =>
-      throw UnimplementedError();
-  @override
-  bool isSignInWithEmailLink(String l) => throw UnimplementedError();
-  @override
-  Future<void> sendPasswordResetEmail(String e) => throw UnimplementedError();
-  @override
-  Future<void> signOut() => throw UnimplementedError();
-  @override
-  Future<void> deleteAccount() => throw UnimplementedError();
-  @override
-  Future<void> changePassword(String p) => throw UnimplementedError();
-  @override
-  Future<void> reauthenticateWithEmail(String e, String p) =>
-      throw UnimplementedError();
-  @override
-  Future<void> reauthenticateWithGoogle() => throw UnimplementedError();
-  @override
-  Future<void> linkGoogleProvider() => throw UnimplementedError();
-  @override
-  Future<void> linkEmailProvider(String e, String p) =>
-      throw UnimplementedError();
-  @override
-  List<String> getLinkedProviders() => throw UnimplementedError();
-  @override
-  Future<AppUser?> reloadCurrentUser() => throw UnimplementedError();
-  @override
-  Future<void> checkActionCode(String c) => throw UnimplementedError();
-  @override
-  Future<void> applyActionCode(String c) => throw UnimplementedError();
-  @override
-  Future<String> createUserAccount(String e, String p) =>
-      throw UnimplementedError();
-  @override
-  Future<AppUser?> signInAndGetUser(String e, String p) =>
-      throw UnimplementedError();
-  @override
-  Future<void> updateDisplayName(String n) => throw UnimplementedError();
-  @override
-  Future<void> deleteCurrentFirebaseUser() => throw UnimplementedError();
+  dynamic noSuchMethod(Invocation invocation) {
+    final method = invocation.memberName;
+    final args = invocation.namedArguments;
+    final data = args[#data] as Map<String, dynamic>? ?? const {};
+    final id = args[#profileId]?.toString() ?? _profileId;
+    switch (method) {
+      case #pushCompletion:
+        return _write('completions', DocIds.completionDocIdForProfile(id, data), data);
+      case #pushStreak:
+        return _write('streak_events', DocIds.streakEventDocId(data), data);
+      case #pushSettings:
+        return _write('settings', DocIds.settingsDocId(data), data);
+      case #pushTrack:
+        return _write('curriculum_tracks', DocIds.curriculumTrackDocId(data), data);
+      case #pushBookmark:
+        return _write('bookmarks', DocIds.bookmarkDocId(data), data);
+      case #pushLedgerEntry:
+      case #pushLedgerEntriesBatch:
+        return _write('learning_ledger', DocIds.learningLedgerDocId(data), data);
+      case #pushProfileProgram:
+        return _write('profile_programs', DocIds.profileProgramDocId(data), data);
+      case #pushGoal:
+        return _write('goals', DocIds.goalDocId(data), data);
+      case #pushCurriculumImportMetadata:
+        return _write('import_metadata', DocIds.importMetadataDocId(data), data);
+      case #pushStageDefinition:
+        return _write('stage_definitions', DocIds.legacyStageDefinitionDocId(data), data);
+      case #pushStudyDayConfig:
+        return _write('study_day_configs', DocIds.legacyStudyDayConfigDocId(data), data);
+      case #pushPointsLedgerEntry:
+        return _write('points_ledger', DocIds.pointsLedgerDocId(data), data);
+      case #pushRewardRedemption:
+        return _write('reward_redemptions', DocIds.rewardRedemptionDocId(data), data);
+      case #pushLearnerProfile:
+        return _write(
+          'learner_profiles',
+          DocIds.learnerProfileUlidDocId({'profile_ulid': id}),
+          data,
+        );
+      case #pushLearningOrder:
+        return _write('learning_order', DocIds.learningOrderDocId(data), data);
+    }
+    return super.noSuchMethod(invocation);
+  }
 }
 
-const _uid = 'uid_doc_ids_golden_test';
-const _profileId = 42;
-
-FirestoreGatewayImpl _gw(FirebaseFirestore fs) => FirestoreGatewayImpl(
-  firestore: fs,
-  authRepository: const _StubAuthRepository(_uid),
-);
+dynamic _gw(FirebaseFirestore fs) => _CurrentFirestoreWriter(fs);
 
 /// Reads back the single doc id the live gateway actually wrote to a
 /// per-profile subcollection. Fails loudly (via [hasLength]) if the push
@@ -156,7 +137,7 @@ void main() {
       };
       await _gw(fs).pushCompletion(profileId: _profileId, data: data);
       final live = await _liveDocId(fs, 'completions');
-      expect(DocIds.completionDocId(_profileId, data), equals(live));
+      expect(DocIds.completionDocIdForProfile(_profileId, data), equals(live));
     });
 
     test('completions: percent-encoding keeps three near-collision refs '
@@ -175,7 +156,7 @@ void main() {
         };
         await _gw(fs).pushCompletion(profileId: _profileId, data: data);
         final live = await _liveDocId(fs, 'completions');
-        expect(DocIds.completionDocId(_profileId, data), equals(live));
+        expect(DocIds.completionDocIdForProfile(_profileId, data), equals(live));
       }
     });
 
@@ -191,7 +172,7 @@ void main() {
         };
         await _gw(fs).pushCompletion(profileId: _profileId, data: data);
         final live = await _liveDocId(fs, 'completions');
-        expect(DocIds.completionDocId(_profileId, data), equals(live));
+        expect(DocIds.completionDocIdForProfile(_profileId, data), equals(live));
       },
     );
 

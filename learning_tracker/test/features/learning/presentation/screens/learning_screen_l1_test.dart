@@ -138,7 +138,6 @@ DailyTask _task({
   curriculumId: curriculum,
   contentItemSefariaRef: ref,
   stageOrder: priority == DailyTaskPriority.newLearning ? 1 : 2,
-  stageDefinitionId: priority == DailyTaskPriority.newLearning ? 1 : 2,
   priority: priority,
   isOverdue: isOverdue,
   reason: 'test',

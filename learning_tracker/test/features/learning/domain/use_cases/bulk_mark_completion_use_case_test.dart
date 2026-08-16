@@ -9,7 +9,7 @@
 library;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/daos/completion_dao.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_entity.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 import 'package:learning_tracker/features/learning/domain/services/completion_orchestrator.dart';
@@ -57,7 +57,7 @@ void main() {
     // Stub bulkMarkComplete to capture the request passed to it.
     when(
       () => orchestrator.bulkMarkComplete(any()),
-    ).thenAnswer((_) async => const <Completion>[]);
+    ).thenAnswer((_) async => const <CompletionEntity>[]);
   });
 
   // ── C2: Default source is bulkInTrack — engagement NOT credited ─────────────

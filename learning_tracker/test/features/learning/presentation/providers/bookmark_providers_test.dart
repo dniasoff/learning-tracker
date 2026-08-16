@@ -39,8 +39,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/content/content_index.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
+import 'package:learning_tracker/data/repositories/firestore_bookmark_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
-import 'package:learning_tracker/features/learning/data/repositories/bookmark_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/bookmark_repository.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/bookmark_providers.dart';
 
@@ -70,7 +70,9 @@ void main() {
         final repo = container.read(bookmarkRepositoryProvider);
 
         expect(repo, isA<FirestoreBookmarkRepositoryAdapter>());
-        expect(repo, isNot(isA<BookmarkRepositoryImpl>()));
+        // The provider must expose the adapter, never bypass it with the
+        // concrete Firestore repository resolved inside the adapter.
+        expect(repo, isNot(isA<FirestoreBookmarkRepository>()));
       },
     );
 

@@ -26,6 +26,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/features/notifications/domain/repositories/notification_preferences_repository.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_gateway.dart';
 import 'package:learning_tracker/features/notifications/presentation/providers/notification_providers.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/notifications/presentation/screens/notifications_screen.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
@@ -35,7 +36,10 @@ class _MockNotificationGateway extends Mock implements NotificationGateway {}
 
 Widget _buildSubject({required NotificationGateway mockService}) {
   return ProviderScope(
-    overrides: [notificationServiceProvider.overrideWithValue(mockService)],
+    overrides: [
+      selectedProfileIdProvider.overrideWithValue(_testProfileId),
+      notificationServiceProvider.overrideWithValue(mockService),
+    ],
     child: const MaterialApp(
       localizationsDelegates: [
         AppLocalizations.delegate,
@@ -48,6 +52,8 @@ Widget _buildSubject({required NotificationGateway mockService}) {
     ),
   );
 }
+
+const _testProfileId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
 
 void main() {
   late _MockNotificationGateway mockService;
@@ -88,9 +94,10 @@ void main() {
   testWidgets(
     'S2. HOT STREAK badge is hidden when streak alert pref is stored as OFF',
     (tester) async {
-      // Profile 0 (default test container) has streak alert disabled.
+      // The active ULID profile has streak alert disabled.
       SharedPreferences.setMockInitialValues({
-        NotificationPreferencesRepository.streakAlertEnabledKey(0): false,
+        NotificationPreferencesRepository.streakAlertEnabledKey(_testProfileId):
+            false,
       });
 
       await tester.pumpWidget(_buildSubject(mockService: mockService));
