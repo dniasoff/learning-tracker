@@ -16,8 +16,8 @@
 ///   Seed content rows with [E2EHarness.seedContent] when a journey needs
 ///   content browsing or text display.
 /// - [authStateProvider] → caller-supplied [AuthState] (no Firebase)
-/// - [authRepositoryProvider] → [_StubAuthRepository] (returns null user,
-///   stream never fires)
+/// - [authRepositoryProvider] → [_StubAuthRepository] (returns the supplied
+///   identity as an [AppUser], or null without an identity; stream never fires)
 /// - [pinServiceProvider] → [_NullPinService] stub (no secure-storage;
 ///   hasParentPin returns false so PIN guard never activates)
 /// - [analyticsServiceProvider] → [NullAnalyticsService] (no-op events)
@@ -171,8 +171,30 @@ void e2eSetUpAll() {
 
 /// No-op [AuthRepository] that never touches Firebase Auth.
 class _StubAuthRepository extends Mock implements AuthRepository {
+  _StubAuthRepository({
+    required E2EIdentity? identity,
+    required String? accountId,
+  }) : _identity = identity,
+       _accountId = accountId;
+
+  final E2EIdentity? _identity;
+  final String? _accountId;
+
   @override
-  AppUser? get currentUser => null;
+  AppUser? get currentUser {
+    final identity = _identity;
+    final accountId = _accountId;
+    if (identity == null || accountId == null) return null;
+
+    final isCloudBorn = identity.tier == Tier.cloud;
+    return AppUser(
+      uid: accountId,
+      email: identity.email,
+      displayName: identity.displayName,
+      emailVerified: true,
+      providers: isCloudBorn ? const ['password'] : const [],
+    );
+  }
 
   @override
   Future<AppUser?> reloadCurrentUser() async => null;
@@ -628,7 +650,9 @@ class E2EHarness {
 
       // ── Auth ──────────────────────────────────────────────────────────────
       authStateProvider.overrideWithValue(authState),
-      authRepositoryProvider.overrideWithValue(_StubAuthRepository()),
+      authRepositoryProvider.overrideWithValue(
+        _StubAuthRepository(identity: identity, accountId: accountId),
+      ),
 
       // ── Firestore identity ───────────────────────────────────────────────
       if (identity != null && profileId != null && accountId != null) ...[

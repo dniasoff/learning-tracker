@@ -357,7 +357,7 @@ void main() {
   group('E2E-405 — Delete track: archive path (keep history)', () {
     // Journey: hub with 2 active tracks (so guard doesn't block) → tap 1st
     // track → TrackDetailScreen → Delete → dialog → Archive →
-    // track status = 'archived' in Drift; completions retained.
+    // track state = 'archived' in Firestore; completions retained.
     //
     // R-TR1: delete via TrackDetailScreen._showDeleteDialog (distinct code
     // path from hub long-press).
@@ -365,10 +365,11 @@ void main() {
     // Implementation note: [activeTracksProvider] is overridden with two stub
     // tracks to avoid the pending-Drift-timer issue.  The real DB is seeded
     // (after pumpApp) so [curriculumActivationServiceProvider.deactivate()]
-    // has the FK rows it needs.  After the archive action the DB row is
+    // has the related rows it needs. After the archive action the Firestore
+    // document is
     // asserted directly.
     testWidgets(
-      'archive track from detail screen: dialog appears; track archived in Drift',
+      'archive track from detail screen: dialog appears; track archived in Firestore',
       (tester) async {
         final identity = E2EIdentity.localBorn(displayName: 'Eve');
         final h = E2EHarness(tester, identity: identity);
@@ -403,6 +404,7 @@ void main() {
         // Navigate to detail for the Mishnayos track.
         await h.tapText('Mishnayos', settle: const Duration(milliseconds: 500));
         await tester.pump(const Duration(milliseconds: 300));
+        await tester.pumpAndSettle();
 
         h.expectOnScreen('Delete Track');
 
@@ -494,6 +496,7 @@ void main() {
 
         await h.tapText('Mishnayos', settle: const Duration(milliseconds: 500));
         await tester.pump(const Duration(milliseconds: 300));
+        await tester.pumpAndSettle();
 
         // Scroll to make 'Delete Track' tile fully visible before tapping.
         await tester.ensureVisible(find.text('Delete Track'));

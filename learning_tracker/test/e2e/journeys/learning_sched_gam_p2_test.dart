@@ -85,7 +85,14 @@ List<Override> _schedulerOverrides({
       const StreakRecoveryInfo(wasRecovered: false, currentStreak: 0),
     ),
   ),
-  allDailyTasksProvider.overrideWith((ref) => Future.value(tasks)),
+  // Keep the injected list reactive to skip state, matching the production
+  // provider so Dismissible is removed from the tree after a swipe.
+  allDailyTasksProvider.overrideWith((ref) async {
+    final skipped = ref.watch(skippedTasksProvider);
+    return tasks
+        .where((task) => !skipped.contains(task.contentItemSefariaRef))
+        .toList();
+  }),
   useHebrewTermsProvider.overrideWithValue(false),
   effectiveUseHebrewTermsProvider.overrideWithValue(false),
 ];
@@ -159,17 +166,12 @@ void main() {
       h.expectOnScreen('Undo');
 
       // Tap Undo — asserts the action is tappable without crash.
-      // NOTE: because allDailyTasksProvider is overridden with a static
-      // Future.value() that does not watch skippedTasksProvider, the
-      // Dismissible widget removes the item from the tree during the swipe
-      // animation. The undo calls skippedTasksProvider.undoSkip() (which
-      // updates in-memory state) but the overridden provider does not
-      // re-emit the list. Full restoration of the task in the list is
-      // tested end-to-end on device; here we assert no crash on undo tap.
+      // The test override watches skippedTasksProvider, so Undo re-emits the
+      // injected task just as the production provider does.
       await h.tapText('Undo', settle: const Duration(milliseconds: 400));
-      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pumpAndSettle(const Duration(milliseconds: 300));
 
-      // No crash — screen is still mounted.
+      h.expectOnScreen('Eruvin.312a');
       expect(tester.takeException(), isNull);
     });
   });
@@ -226,8 +228,9 @@ void main() {
         addTearDown(h.dispose);
 
         // Build a minimal AchievementsOverview so the screen has data to show.
-        // profileId=0 is a placeholder for the fake milestone (the overview is
-        // injected via achievementsOverviewProvider override — no DB access).
+        // A placeholder profile id is sufficient for the fake milestone (the
+        // overview is injected via achievementsOverviewProvider override — no
+        // DB access).
         const fakeFilterOption = AchievementTrackFilterVm(
           trackId: 42,
           curriculumId: CurriculumId.mishnayos,
@@ -236,7 +239,7 @@ void main() {
         final fakeMilestoneNow = DateTimeFactory.nowUtc();
         final fakeMilestone = RewardMilestone(
           id: 'rm_614_test',
-          profileId: identity.profileId,
+          profileId: 'profile-614-placeholder',
           title: 'Pull Test Reward',
           thresholdPoints: 100,
           isEnabled: true,

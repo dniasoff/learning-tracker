@@ -33,16 +33,15 @@ class SchedulerScreen extends ConsumerWidget {
     final theme = Theme.of(context);
 
     void skipTask(DailyTask task) {
-      ref.read(skippedTasksProvider.notifier).skip(task.contentItemSefariaRef);
+      final skippedTasks = ref.read(skippedTasksProvider.notifier);
+      skippedTasks.skip(task.contentItemSefariaRef);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(AppLocalizations.of(context)!.taskSkippedUntilTomorrow),
           action: SnackBarAction(
             label: AppLocalizations.of(context)!.undoLabel,
             onPressed: () {
-              ref
-                  .read(skippedTasksProvider.notifier)
-                  .undoSkip(task.contentItemSefariaRef);
+              skippedTasks.undoSkip(task.contentItemSefariaRef);
             },
           ),
         ),
@@ -178,6 +177,8 @@ class _TaskList extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final skippedTasks = ref.read(skippedTasksProvider.notifier);
+
     return ListView.builder(
       padding: const EdgeInsets.only(top: 4, bottom: 90),
       itemCount: tasks.length,
@@ -192,9 +193,7 @@ class _TaskList extends ConsumerWidget {
             ),
             task: task,
             onDismissed: () {
-              ref
-                  .read(skippedTasksProvider.notifier)
-                  .skip(task.contentItemSefariaRef);
+              skippedTasks.skip(task.contentItemSefariaRef);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(
@@ -203,9 +202,7 @@ class _TaskList extends ConsumerWidget {
                   action: SnackBarAction(
                     label: AppLocalizations.of(context)!.undoLabel,
                     onPressed: () {
-                      ref
-                          .read(skippedTasksProvider.notifier)
-                          .undoSkip(task.contentItemSefariaRef);
+                      skippedTasks.undoSkip(task.contentItemSefariaRef);
                     },
                   ),
                 ),

@@ -69,6 +69,32 @@ class _ThrowingCompletionRepository extends FakeCompletionRepository {
   }
 }
 
+class _DiagnosticCompletionRepository extends FakeCompletionRepository {
+  @override
+  Future<MarkCompletionResult> markComplete(
+    CompletionRequest request, {
+    bool awardGamificationPoints = true,
+    bool creditsAchievement = true,
+  }) async {
+    // ignore: avoid_print
+    print('DEBUG fake mark start ${request.curriculumId} ${request.trackType}');
+    try {
+      final result = await super.markComplete(
+        request,
+        awardGamificationPoints: awardGamificationPoints,
+        creditsAchievement: creditsAchievement,
+      );
+      // ignore: avoid_print
+      print('DEBUG fake mark returned');
+      return result;
+    } catch (error, stack) {
+      // ignore: avoid_print
+      print('DEBUG fake mark error=$error\n$stack');
+      rethrow;
+    }
+  }
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 /// Minimal [DailyTask] for a fine-paced (non-coarse) track.
@@ -271,14 +297,14 @@ void main() {
     );
 
     testWidgets('tapping Mark Complete increments completionCommittedProvider', (
-      tester,
-    ) async {
+    tester,
+  ) async {
       final identity = E2EIdentity.localBorn(displayName: 'Alice');
       final h = E2EHarness(tester, identity: identity);
       addTearDown(h.dispose);
 
       final task = _finePacedTask();
-      final fakeRepo = FakeCompletionRepository();
+      final fakeRepo = _DiagnosticCompletionRepository();
 
       await h.pumpApp(
         path: '/text/${task.contentItemSefariaRef}',
@@ -308,17 +334,49 @@ void main() {
       final container = ProviderScope.containerOf(
         tester.element(find.byType(MaterialApp).first),
       );
+      final counterSubscription = container.listen<int>(
+        completionCommittedProvider,
+        (previous, next) {
+          // ignore: avoid_print
+          print('DEBUG E2E-301 listener previous=$previous next=$next');
+        },
+      );
+      addTearDown(counterSubscription.close);
       final beforeCount = container.read(completionCommittedProvider);
+      final buttonContainer = ProviderScope.containerOf(
+        tester.element(find.text('Mark complete').first),
+      );
+      // ignore: avoid_print
+      print('DEBUG E2E-301 sameContainer=${identical(container, buttonContainer)}');
 
       // Tap the "Mark complete" button.
-      await h.tapText(
-        'Mark complete',
-        settle: const Duration(milliseconds: 500),
+      Object? debugError;
+      await runZonedGuarded(
+        () async {
+          await h.tapText(
+            'Mark complete',
+            settle: const Duration(milliseconds: 500),
+          );
+          await tester.pump(const Duration(milliseconds: 300));
+        },
+        (error, stack) => debugError = error,
       );
-      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pump(const Duration(seconds: 2));
+      // ignore: avoid_print
+      print(
+        'DEBUG E2E-301 saveTextCount=' +
+            find.textContaining('Could not save').evaluate().length.toString() +
+            ' error=$debugError',
+      );
 
       // Key assertion: completionCommittedProvider incremented.
       final afterCount = container.read(completionCommittedProvider);
+      // Temporary runtime diagnostic; remove after reproducing the provider state.
+      // ignore: avoid_print
+      print(
+        'DEBUG E2E-301 before=$beforeCount after=$afterCount '
+        'marked=${fakeRepo.markedRequests.length}',
+      );
       expect(
         afterCount,
         greaterThan(beforeCount),

@@ -26,24 +26,24 @@ import 'package:learning_tracker/features/gamification/domain/models/streak_reco
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart'
     show trackDualProgressMetricsProvider;
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
-import 'package:learning_tracker/features/tracks/stages/domain/models/stage_definition.dart'
-    show StageDefinition;
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/study_day_config_providers.dart'
     show studyDayConfigsProvider;
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart'
     show scopedItemCountProvider;
-import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart'
-    show activeTracksProvider;
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart'
     show CurriculumTrackEntity;
+import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart'
+    show activeTracksProvider;
+import 'package:learning_tracker/features/tracks/stages/domain/models/stage_definition.dart'
+    show StageDefinition;
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart'
     show activeTutorPermissionsProvider;
 
-import '../harness/e2e_common_overrides.dart';
-import '../harness/e2e_harness.dart';
 import '../../helpers/firestore_fixtures.dart'
     show seedStageDefinitions, seedTrack;
+import '../harness/e2e_common_overrides.dart';
+import '../harness/e2e_harness.dart';
 
 // ── Factories ──────────────────────────────────────────────────────────────────
 
@@ -89,8 +89,15 @@ List<Override> _schedulerOverrides({
       const StreakRecoveryInfo(wasRecovered: false, currentStreak: 0),
     ),
   ),
-  // Bypass the full projection engine — inject a fixed task list.
-  allDailyTasksProvider.overrideWith((ref) => Future.value(tasks)),
+  // Bypass the full projection engine — inject a fixed task list while still
+  // honoring skippedTasksProvider so Dismissible can be removed from the tree
+  // immediately after a swipe, just like the production provider does.
+  allDailyTasksProvider.overrideWith((ref) async {
+    final skipped = ref.watch(skippedTasksProvider);
+    return tasks
+        .where((task) => !skipped.contains(task.contentItemSefariaRef))
+        .toList();
+  }),
   // Force English labels so curriculum names are predictable in assertions.
   useHebrewTermsProvider.overrideWithValue(false),
   effectiveUseHebrewTermsProvider.overrideWithValue(false),

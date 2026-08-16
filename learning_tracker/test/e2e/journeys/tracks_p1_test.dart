@@ -524,6 +524,7 @@ void main() {
         unawaited(h.router.push(const ParentTrackManagementRoute()));
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 500));
+        await tester.pumpAndSettle();
 
         // Screen title should be "Tracks & Goals".
         h.expectOnScreen('Tracks & Goals');

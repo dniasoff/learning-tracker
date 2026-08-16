@@ -30,6 +30,8 @@ import 'package:learning_tracker/features/profiles/presentation/providers/parent
     show
         ParentPinAuthenticatedProfileId,
         parentPinAuthenticatedProfileIdProvider;
+import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart'
+    show activeProfileIdProvider;
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart'
     show DailyTask, DailyTaskPriority;
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart'
@@ -46,11 +48,8 @@ import '../harness/e2e_harness.dart';
 
 /// Parent-PIN-authenticated notifier that hard-codes a fixed profile id.
 class _PinAuthedForProfile extends ParentPinAuthenticatedProfileId {
-  _PinAuthedForProfile(this._id);
-  final String _id;
-
   @override
-  String? build() => _id;
+  String? build() => ref.watch(activeProfileIdProvider);
 }
 
 /// Tutored-profile-selection notifier that hard-codes a fixed selection.
@@ -372,13 +371,17 @@ void main() {
         extraOverrides: [
           ...h.dashboardSilenceOverrides,
           // PIN-authenticate parent mode for this profile.
-          // NOTE: identity.profileId is available only after pumpApp, but
-          // Drift auto-assigns id=1 for the first insert in the harness.
+          // Follow the active child profile's ULID instead of duplicating a
+          // fixture id here.
           parentPinAuthenticatedProfileIdProvider.overrideWith(
-            () => _PinAuthedForProfile('01J6Q2H4A8M7K3P9R5T6V8WXY'),
+            () => _PinAuthedForProfile(),
           ),
         ],
       );
+
+      // Allow the profile stream and AppShell's dependent rebuild to settle.
+      await h.pump(const Duration(milliseconds: 400));
+      await h.pump();
 
       // Key assertion (E2E-211): child-view banner text rendered.
       // l10n.viewingChildBanner('ChildLearner') → "Parent mode — viewing ChildLearner"

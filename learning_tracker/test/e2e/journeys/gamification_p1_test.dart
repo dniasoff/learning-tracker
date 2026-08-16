@@ -49,6 +49,8 @@ import 'package:learning_tracker/features/gamification/presentation/screens/gami
     show streakCalendarProvider;
 import 'package:learning_tracker/features/profiles/presentation/screens/parent_settings_screen.dart'
     show activeProfilePointsBalanceProvider;
+import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart'
+    show activeTracksProvider;
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
@@ -474,48 +476,52 @@ void main() {
           permissions: tutorPerms,
         );
 
+        const accountId = 'tutor608-account';
+        const profileId = '01J6Q2H4A8M7K3P9R5T6V8WXYA';
         final identity = E2EIdentity.localBorn(
           email: 'tutor608@test.com',
           displayName: 'Tutor608',
           profileMode: 'child',
+          accountId: accountId,
+          profileId: profileId,
         );
         final h = E2EHarness(tester, identity: identity);
         addTearDown(h.dispose);
+
+        // Seed before pumpApp: activeTracksOneShotOverride reads its
+        // Firestore snapshot once, during the initial dashboard build.
+        await seedTrack(
+          h.firestore,
+          uid: accountId,
+          profileId: profileId,
+          curriculumId: CurriculumId.mishnayos,
+        );
+        await seedStageDefinitions(
+          h.firestore,
+          uid: accountId,
+          profileId: profileId,
+          curriculumId: CurriculumId.mishnayos,
+        );
 
         await h.pumpApp(
           path: '/dashboard',
           extraOverrides: [
             ..._dashboardSilence(h),
-            activeTracksOneShotOverride(),
+            activeTracksProvider.overrideWith(
+              (ref) => Stream.value([
+                stubTrack(id: 1, profileId: profileId),
+              ]),
+            ),
             activeTutoredProfileSelectionProvider.overrideWith(
               () => _FixedTutoredSelection(tutoredSelection),
             ),
           ],
         );
 
-        final profileId = identity.profileId;
         await _seedMilestoneViaPrefs(
           profileId,
           title: 'Tutor Blocked Reward',
           thresholdPoints: 300,
-        );
-
-        // Seed one active track + stage definition so PointConfigScreen
-        // renders a real curriculum card with a live increment control
-        // (AUD-t-cross-07) instead of falling into the "no active tracks"
-        // empty state, where canEdit has nothing to gate and a regression
-        // could hide.
-        await seedTrack(
-          h.firestore,
-          uid: identity.accountId,
-          profileId: profileId,
-          curriculumId: CurriculumId.mishnayos,
-        );
-        await seedStageDefinitions(
-          h.firestore,
-          uid: identity.accountId,
-          profileId: profileId,
-          curriculumId: CurriculumId.mishnayos,
         );
 
         h.markPinAuthenticated();
