@@ -44,7 +44,6 @@ import 'package:learning_tracker/features/sacred_time/domain/models/location_err
 import 'package:learning_tracker/features/sacred_time/domain/models/location_fetch_result.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/sacred_location.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_location_provider.dart';
-import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -365,7 +364,6 @@ class _FakeGeocodingPlatform extends Fake
 ProviderContainer _makeContainer({LocationService? locationService}) {
   return ProviderContainer(
     overrides: [
-      syncWriteFacadeProvider.overrideWithValue(null),
       if (locationService != null)
         locationServiceProvider.overrideWithValue(locationService),
     ],

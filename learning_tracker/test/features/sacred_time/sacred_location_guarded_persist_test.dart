@@ -21,7 +21,6 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_location_provider.dart';
-import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 
@@ -50,7 +49,7 @@ void main() {
         'location and the returned Future never rejects unobserved',
         () async {
           final container = ProviderContainer(
-            overrides: [syncWriteFacadeProvider.overrideWithValue(null)],
+            overrides: [],
           );
           addTearDown(container.dispose);
 
@@ -96,7 +95,7 @@ void main() {
       test('a successful write still updates state normally (control case — '
           'the guard must not mask a genuine successful persist)', () async {
         final container = ProviderContainer(
-          overrides: [syncWriteFacadeProvider.overrideWithValue(null)],
+          overrides: [],
         );
         addTearDown(container.dispose);
 

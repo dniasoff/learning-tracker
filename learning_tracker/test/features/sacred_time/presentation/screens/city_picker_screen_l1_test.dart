@@ -44,7 +44,6 @@ import 'package:learning_tracker/features/sacred_time/domain/models/sacred_locat
 import 'package:learning_tracker/features/sacred_time/presentation/providers/cities_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_location_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/screens/city_picker_screen.dart';
-import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -130,7 +129,6 @@ Widget _buildApp({
 }) {
   final overrides = <Override>[
     sacredLocationProvider.overrideWith(() => locationNotifier),
-    syncWriteFacadeProvider.overrideWithValue(null),
     ...citySearchOverrides.entries.map(
       (e) => citySearchProvider(e.key).overrideWith(e.value),
     ),

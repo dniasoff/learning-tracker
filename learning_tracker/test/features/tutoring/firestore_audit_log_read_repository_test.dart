@@ -9,7 +9,7 @@
 @Tags(['tutoring', 'audit_log', 'unit'])
 library;
 
-import 'package:learning_tracker/core/sync/firestore_gateway.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/features/tutoring/data/repositories/firestore_audit_log_read_repository.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_audit_log_entry.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/audit_log_providers.dart';
@@ -36,7 +36,7 @@ void main() {
         // Removing `implements TutorAuditLogReadRepository` from the class
         // turns this into a compile error, failing this test file.
         const TutorAuditLogReadRepository Function({
-          required FirestoreGateway gateway,
+          required Ref ref,
         })
         ctor = FirestoreAuditLogReadRepository.new;
         expect(ctor, isNotNull);

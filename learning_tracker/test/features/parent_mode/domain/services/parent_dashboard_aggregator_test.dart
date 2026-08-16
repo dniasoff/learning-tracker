@@ -1,17 +1,22 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/daos/completion_dao.dart'
-    show Completion;
-import 'package:learning_tracker/features/dashboard/domain/services/parent_dashboard_aggregator.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/features/dashboard/domain/use_cases/compute_pace_status_use_case.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_entity.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 
 void main() {
-  group('ParentDashboardAggregator', () {
-    group('computeEngagement (static)', () {
+  group('ComputePaceStatusUseCase', () {
+    group('buildDailyCounts (static)', () {
       test('returns zero metrics for empty completions', () {
-        final now = DateTime(2026, 3, 17, 12); // Tuesday
-        final result = ParentDashboardAggregator.computeEngagement([], now);
+        final result = ComputePaceStatusUseCase.buildDailyCounts(
+          const <DateTime>[],
+        );
 
-        expect(result.daysActiveThisWeek, 0);
-        expect(result.averageDailyCompletions, 0.0);
+        expect(result.length, 0);
+        expect(
+          result.values.fold<int>(0, (sum, count) => sum + count),
+          0,
+        );
       });
 
       test('counts active days this week correctly', () {
@@ -23,12 +28,12 @@ void main() {
           _makeCompletion(DateTime(2026, 3, 17, 8)), // Tuesday
         ];
 
-        final result = ParentDashboardAggregator.computeEngagement(
-          completions,
-          now,
+        final result = ComputePaceStatusUseCase.buildDailyCounts(
+          completions.map((completion) => completion.completedAt),
         );
 
-        expect(result.daysActiveThisWeek, 2); // Mon + Tue
+        expect(result.length, 2); // Mon + Tue
+        expect(result.values.fold<int>(0, (sum, count) => sum + count), 3);
       });
 
       test('calculates average daily completions over last 7 days', () {
@@ -39,28 +44,24 @@ void main() {
           (i) => _makeCompletion(now.subtract(Duration(days: i, hours: 1))),
         );
 
-        final result = ParentDashboardAggregator.computeEngagement(
-          completions,
-          now,
+        final result = ComputePaceStatusUseCase.buildDailyCounts(
+          completions.map((completion) => completion.completedAt),
         );
 
-        expect(result.averageDailyCompletions, 1.0);
+        expect(result.length, 7);
+        expect(result.values.fold<int>(0, (sum, count) => sum + count), 7);
       });
     });
   });
 }
 
-Completion _makeCompletion(DateTime completedAt) {
-  return Completion(
-    id: 0,
-    profileId: 0,
-    curriculumId: 'mishnayos',
+CompletionEntity _makeCompletion(DateTime completedAt) {
+  return CompletionEntity(
+    curriculumId: CurriculumId.mishnayos,
     sefariaRef: 'ref_1',
     stageId: 1,
     trackType: 'personal',
-    trackId: 1,
+    source: CompletionSource.live,
     completedAt: completedAt,
-    points: 10,
-    derivedFromEvents: false,
   );
 }

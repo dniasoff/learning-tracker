@@ -41,7 +41,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
     show authRepositoryProvider;
-import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
+import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
@@ -76,15 +77,12 @@ class _FakeTutorGrant extends Fake implements TutorGrant {}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-ProfileModel _child() {
+LearnerProfileEntity _child() {
   final now = DateTime.utc(2026, 1, 1);
-  return ProfileModel(
-    id: 1,
-    ulid: 'ulid-1',
-    accountId: 1,
+  return LearnerProfileEntity(
+    profileId: 'ulid-1',
     displayName: 'LoopChild',
-    mode: 'child',
-    avatarIndex: 0,
+    mode: ProfileMode.child,
     createdAt: now,
     updatedAt: now,
   );

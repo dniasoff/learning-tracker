@@ -27,7 +27,6 @@ import 'package:learning_tracker/features/sacred_time/domain/models/location_fet
 import 'package:learning_tracker/features/sacred_time/domain/models/sacred_location.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_location_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/widgets/sacred_time_settings_card.dart';
-import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -59,7 +58,6 @@ Widget _buildCard({required bool pinGuardRequired, StackRouter? router}) {
     overrides: [
       sacredLocationProvider.overrideWith(_FakeSacredLocationNotifier.new),
       inIsraelProvider.overrideWith(_FakeInIsraelNotifier.new),
-      syncWriteFacadeProvider.overrideWithValue(null),
     ],
     child: StackRouterScope(
       controller: mockRouter,
@@ -67,7 +65,7 @@ Widget _buildCard({required bool pinGuardRequired, StackRouter? router}) {
       child: Scaffold(
         body: SacredTimeSettingsCard(
           pinGuardRequired: pinGuardRequired,
-          activeProfileId: 2,
+          activeProfileId: '01JQ3K5M8N2P4R6T7V9X0Z1AB',
         ),
       ),
     ),
