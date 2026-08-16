@@ -17,16 +17,13 @@
 @Tags(['e2e', 'journey'])
 library;
 
-import 'package:drift/drift.dart' show InsertMode, Value;
 import 'package:flutter/material.dart' show Locale, Offset, RefreshIndicator;
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart'
     show effectiveUseHebrewTermsProvider, useHebrewTermsProvider;
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
@@ -37,12 +34,13 @@ import 'package:learning_tracker/features/gamification/presentation/screens/chil
     show childRedemptionBalanceProvider, childRedemptionRewardsProvider;
 import 'package:learning_tracker/features/gamification/presentation/screens/gamification_screen.dart'
     show streakCalendarProvider;
-import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../helpers/firestore_fixtures.dart';
 import '../fakes/e2e_fakes.dart';
 import '../harness/e2e_common_overrides.dart';
 import '../harness/e2e_harness.dart';
@@ -50,7 +48,6 @@ import '../harness/e2e_harness.dart';
 // ── Factories ──────────────────────────────────────────────────────────────────
 
 DailyTask _makeTask({
-  int trackId = 1,
   String ref = 'Berakhot.2a',
   CurriculumId curriculum = CurriculumId.mishnayos,
   bool isOverdue = false,
@@ -59,12 +56,10 @@ DailyTask _makeTask({
   curriculumId: curriculum,
   contentItemSefariaRef: ref,
   stageOrder: 1,
-  stageDefinitionId: 1,
   priority: priority,
   isOverdue: isOverdue,
   reason: isOverdue ? 'Behind pace' : 'Due today',
   stageName: 'Learn',
-  trackId: trackId,
   trackLabel: 'Test Track',
   estimatedEffortMinutes: 5,
 );
@@ -74,7 +69,7 @@ DailyTask _makeTask({
 List<Override> _schedulerOverrides({
   required E2EHarness h,
   required List<DailyTask> tasks,
-  List<CurriculumTrack> tracks = const [],
+  List<CurriculumTrackEntity> tracks = const [],
 }) => [
   dashboardActiveCurriculaStreamProvider.overrideWith(
     (ref) => Stream.value(<CurriculumId>[]),
@@ -97,32 +92,9 @@ List<Override> _schedulerOverrides({
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-/// Seeds a points balance row.
-Future<void> _seedPoints(
-  UserDatabase db, {
-  required int profileId,
-  int balance = 200,
-}) async {
-  final now = DateTimeFactory.nowUtc();
-  await db
-      .into(db.pointsBalance)
-      .insert(
-        PointsBalanceCompanion.insert(
-          profileId: Value(profileId),
-          balance: Value(balance),
-          updatedAt: now,
-        ),
-        mode: InsertMode.insertOrIgnore,
-      );
-}
-
-/// One-shot override for [childRedemptionBalanceProvider] (StreamProvider).
+/// One-shot override for [childRedemptionBalanceProvider].
 Override _childRedemptionBalanceOneShotOverride() {
-  return childRedemptionBalanceProvider.overrideWith((ref) {
-    final db = ref.watch(userDatabaseProvider);
-    final profileId = ref.watch(activeProfileIdProvider);
-    return Stream.fromFuture(db.pointsBalanceDao.getBalance(profileId));
-  });
+  return childRedemptionBalanceProvider.overrideWith((ref) => Future.value(0));
 }
 
 // ── Tests ──────────────────────────────────────────────────────────────────────
@@ -156,7 +128,7 @@ void main() {
       final h = E2EHarness(tester, identity: identity);
       addTearDown(h.dispose);
 
-      final task = _makeTask(trackId: 1, ref: 'Eruvin.312a');
+      final task = _makeTask(ref: 'Eruvin.312a');
 
       await h.pumpApp(
         path: '/scheduler',
@@ -264,8 +236,7 @@ void main() {
         final fakeMilestoneNow = DateTimeFactory.nowUtc();
         final fakeMilestone = RewardMilestone(
           id: 'rm_614_test',
-          profileId: 0, // placeholder — not used by the overridden provider
-          trackId: 42,
+          profileId: identity.profileId,
           title: 'Pull Test Reward',
           thresholdPoints: 100,
           isEnabled: true,
@@ -308,10 +279,6 @@ void main() {
             ),
           ],
         );
-
-        // profileId is only available after pumpApp() seeds the identity.
-        final profileId = identity.profileId;
-        await _seedPoints(h.db, profileId: profileId, balance: 0);
 
         // Navigate to GamificationScreen.
         await navigateTo(h, const GamificationRoute());
@@ -411,8 +378,6 @@ void main() {
         final stockMilestone = RewardMilestone(
           id: 'rm_stock_615',
           profileId: profileId,
-          // Use a valid track sentinel so the milestone is registered globally.
-          trackId: RewardMilestone.kGlobalTrackSentinel,
           title: 'Bronze Star', // matches defaultMilestoneLadder
           thresholdPoints: 500, // matches defaultMilestoneLadder
           isEnabled: true,
@@ -427,31 +392,20 @@ void main() {
 
         // Also seed a track so achievementsOverviewProvider has something to
         // scan — without an active track it exits early without stripping.
-        final trackId = await h.db
-            .into(h.db.curriculumTracks)
-            .insert(
-              CurriculumTracksCompanion.insert(
-                profileId: profileId,
-                curriculumId: CurriculumId.mishnayos.storageKey,
-                stateChangedAt: now,
-                activatedAt: now,
-              ),
-            );
-        // Seed a stage so the track counts toward reward points.
-        await h.db
-            .into(h.db.stageDefinitions)
-            .insert(
-              StageDefinitionsCompanion.insert(
-                profileId: profileId,
-                curriculumId: CurriculumId.mishnayos.storageKey,
-                trackId: trackId,
-                stageOrder: 1,
-                stageName: 'Learn',
-              ),
-              mode: InsertMode.insertOrIgnore,
-            );
-
-        await _seedPoints(h.db, profileId: profileId, balance: 0);
+        await seedTrack(
+          h.firestore,
+          uid: identity.accountId,
+          profileId: profileId,
+          curriculumId: CurriculumId.mishnayos,
+          stateChangedAt: now,
+          activatedAt: now,
+        );
+        await seedStageDefinitions(
+          h.firestore,
+          uid: identity.accountId,
+          profileId: profileId,
+          curriculumId: CurriculumId.mishnayos,
+        );
 
         // Navigate to GamificationScreen.
         await navigateTo(h, const GamificationRoute());
@@ -532,10 +486,6 @@ void main() {
           ],
         );
 
-        // profileId is only available after pumpApp() seeds the identity.
-        final profileId = identity.profileId;
-        await _seedPoints(h.db, profileId: profileId, balance: 0);
-
         await navigateTo(h, const GamificationRoute());
         await tester.pump(const Duration(milliseconds: 500));
         await tester.pump();
@@ -581,10 +531,6 @@ void main() {
           ),
         ],
       );
-
-      // profileId is only available after pumpApp() seeds the identity.
-      final profileId = identity.profileId;
-      await _seedPoints(h.db, profileId: profileId, balance: 0);
 
       await navigateTo(h, const ChildRedemptionRoute());
       await tester.pump(const Duration(milliseconds: 500));

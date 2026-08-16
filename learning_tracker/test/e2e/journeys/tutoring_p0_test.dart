@@ -16,14 +16,13 @@ library;
 import 'dart:async';
 
 import 'package:auto_route/auto_route.dart';
-import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart'
@@ -68,6 +67,7 @@ import 'package:learning_tracker/features/tutoring/presentation/screens/tutor_pi
     show TutorPinEntryGate;
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
+import '../../helpers/firestore_fixtures.dart';
 import '../fakes/e2e_fakes.dart';
 import '../harness/e2e_common_overrides.dart';
 import '../harness/e2e_harness.dart';
@@ -158,11 +158,11 @@ class _NoPinTutorPinService extends Fake implements TutorPinService {
   final List<String> savedPins = [];
 
   @override
-  Future<bool> hasTutorPin(int profileId) async => false;
+  Future<bool> hasTutorPin(String profileId) async => false;
 
   @override
   Future<TutorPinResult> setTutorPin({
-    required int profileId,
+    required String profileId,
     required String rawPin,
   }) async {
     savedPins.add(rawPin);
@@ -171,33 +171,33 @@ class _NoPinTutorPinService extends Fake implements TutorPinService {
 
   @override
   Future<TutorPinResult> verifyTutorPin({
-    required int profileId,
+    required String profileId,
     required String rawPin,
   }) async => const TutorPinIncorrect();
 
   @override
-  Future<void> clearTutorPin(int profileId) async {}
+  Future<void> clearTutorPin(String profileId) async {}
 }
 
 /// [TutorPinService] stub: hasTutorPin always returns true (PIN already set).
 class _PinAlreadySetService extends Fake implements TutorPinService {
   @override
-  Future<bool> hasTutorPin(int profileId) async => true;
+  Future<bool> hasTutorPin(String profileId) async => true;
 
   @override
   Future<TutorPinResult> setTutorPin({
-    required int profileId,
+    required String profileId,
     required String rawPin,
   }) async => const TutorPinSuccess();
 
   @override
   Future<TutorPinResult> verifyTutorPin({
-    required int profileId,
+    required String profileId,
     required String rawPin,
   }) async => const TutorPinSuccess();
 
   @override
-  Future<void> clearTutorPin(int profileId) async {}
+  Future<void> clearTutorPin(String profileId) async {}
 }
 
 /// Fake [TutorNotificationGateway] that discards all fire-and-forget calls.
@@ -402,26 +402,14 @@ void main() {
           ],
         );
 
-        // Seed a child profile into the in-memory DB.
-        final childProfileId = await h.db
-            .into(h.db.learnerProfiles)
-            .insert(
-              LearnerProfilesCompanion.insert(
-                accountId: identity.accountId,
-                displayName: 'ChildToTutor',
-                mode: 'child',
-                createdAt: DateTimeFactory.nowUtc(),
-                updatedAt: DateTimeFactory.nowUtc(),
-              ),
-            );
-        // T-45/T-47 class (CI remediation round 4): same shape as the
-        // ChildForRevoke seeder below in this file — fixed alongside it for
-        // consistency, though this particular test did not fail (InviteTutorScreen's
-        // path here never routes through a FUTURE-based ProfileModel read).
-        await (h.db.update(
-          h.db.learnerProfiles,
-        )..where((t) => t.id.equals(childProfileId))).write(
-          LearnerProfilesCompanion(ulid: Value('ulid-$childProfileId')),
+        // Seed a child profile into Firestore using its ULID document identity.
+        const childProfileId = '01J6Q2H4A8M7K3P9R5T6V8WXYB';
+        await seedProfile(
+          h.firestore,
+          uid: identity.accountId,
+          profileId: childProfileId,
+          displayName: 'ChildToTutor',
+          mode: ProfileMode.child,
         );
 
         // Navigate to InviteTutorScreen with the child's profile id.
@@ -431,7 +419,7 @@ void main() {
         await _navigateToSettle(
           h,
           tester,
-          InviteTutorRoute(childProfileId: childProfileId.toString()),
+          InviteTutorRoute(childProfileId: childProfileId),
         );
 
         // InviteTutor screen heading should be visible.
@@ -690,13 +678,9 @@ void main() {
         displayName: 'Parent1007',
         profileMode: 'adult',
       );
-      // Use a placeholder childProfileId in the grant; the family override
-      // returns [activeGrant] for ANY childProfileId, so the exact value here
-      // only matters for the final assertion that the use-case received it.
-      // We set it to 'child-1007' (a stable string) and avoid DB seeding
-      // before pumpApp (which would violate the FK constraint because the
-      // account row does not exist until pumpApp → _seedIdentity runs).
-      final activeGrant = _activeGrant(childProfileId: 'child-1007');
+      // Use the same stable ULID for the seeded child and the grant row.
+      const childProfileId = '01J6Q2H4A8M7K3P9R5T6V8WXYC';
+      final activeGrant = _activeGrant(childProfileId: childProfileId);
 
       final fakeRevoke = _FakeRevokeTutorGrantUseCase(
         _FakeTutorGrantRepository(),
@@ -725,27 +709,13 @@ void main() {
         ],
       );
 
-      // Seed the child profile AFTER pumpApp so the account row (inserted by
-      // E2EHarness._seedIdentity) already exists — satisfying the FK constraint.
-      final childProfileId = await h.db
-          .into(h.db.learnerProfiles)
-          .insert(
-            LearnerProfilesCompanion.insert(
-              accountId: identity.accountId,
-              displayName: 'ChildForRevoke',
-              mode: 'child',
-              createdAt: DateTimeFactory.nowUtc(),
-              updatedAt: DateTimeFactory.nowUtc(),
-            ),
-          );
-      // T-45/T-47 class (CI remediation round 4): P2-2's eager-mint policy
-      // means a real seeded profile always has a ulid; a null one
-      // hard-throws out of `ProfileModel.fromDriftRow` (P2-3) the moment
-      // profileListProvider touches this row. A separate write because
-      // `childProfileId` is auto-generated by the insert itself.
-      await (h.db.update(h.db.learnerProfiles)
-            ..where((t) => t.id.equals(childProfileId)))
-          .write(LearnerProfilesCompanion(ulid: Value('ulid-$childProfileId')));
+      await seedProfile(
+        h.firestore,
+        uid: identity.accountId,
+        profileId: childProfileId,
+        displayName: 'ChildForRevoke',
+        mode: ProfileMode.child,
+      );
 
       await navigateTo(h, const ManageTutorsRoute());
       await tester.pump(const Duration(milliseconds: 300));
@@ -823,7 +793,7 @@ void main() {
                 supportedLocales: AppLocalizations.supportedLocales,
                 home: Scaffold(
                   body: TutorPinEntryGate(
-                    profileId: 1,
+                    profileId: '01J6Q2H4A8M7K3P9R5T6V8WXYD',
                     onPinVerified: () {},
                     onCancel: () {},
                   ),
@@ -907,12 +877,10 @@ void main() {
           curriculumId: CurriculumId.mishnayos,
           contentItemSefariaRef: sefariaRef,
           stageOrder: 1,
-          stageDefinitionId: 1,
           priority: DailyTaskPriority.newLearning,
           isOverdue: false,
           reason: 'test',
           stageName: 'Learn',
-          trackId: 1,
           trackLabel: 'Test Track',
         );
 
@@ -931,7 +899,7 @@ void main() {
             // Silence daily-task + coarse-paced providers.
             allDailyTasksProvider.overrideWith((ref) => Future.value([task])),
             coarsePacedTrackIdsProvider.overrideWith(
-              (ref) => Future.value(<int>{}),
+              (ref) => Future.value(<CurriculumId>{}),
             ),
             adjacentContentRefsProvider(
               sefariaRef,
@@ -957,7 +925,7 @@ void main() {
                   ownerUid: 'owner-uid-1012',
                   grantId: 'grant-1012',
                   permissions: TutorPermissions(),
-                  tutorOwnProfileId: 1,
+                  tutorOwnProfileId: '01J6Q2H4A8M7K3P9R5T6V8WXYD',
                 ),
               ),
             ),

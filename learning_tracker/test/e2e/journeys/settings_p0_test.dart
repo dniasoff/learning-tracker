@@ -28,9 +28,8 @@
 /// - [pendingTutorInvitesProvider]: _PendingInvitesSection watches this for
 ///   pending invitations. Override to empty list.
 ///
-/// - [syncOrchestratorProvider]: overridden to null by the harness default,
-///   which makes [syncStatusProvider] return [SyncStatusLocalOnly].  The
-///   BackupSyncSection reads this automatically — no extra override needed.
+/// - The harness supplies a local account, so [BackupSyncSection] renders its
+///   local-only Firestore backup card without additional overrides.
 ///
 /// ## Text-matching notes
 ///
@@ -233,7 +232,7 @@ void main() {
                 (ref) => Stream.value(0),
               ),
               activeProfilePointsBalanceProvider.overrideWith(
-                (ref) => Stream.value(0),
+                (ref) => Future.value(0),
               ),
             ],
           );
@@ -262,18 +261,15 @@ void main() {
   // ── E2E-907 ─────────────────────────────────────────────────────────────────
 
   group('E2E-907 — Local-born adult sees the LOCAL ONLY Backup+Sync card', () {
-    // BackupSyncSection renders a blue "LOCAL ONLY" card when syncStatus is
-    // SyncStatusLocalOnly and the user is local-born. The harness overrides
-    // syncOrchestratorProvider to null (default), so syncStatusProvider
-    // returns SyncStatusLocalOnly.
+    // BackupSyncSection renders a blue "LOCAL ONLY" card for a local-born
+    // account; cloud backup controls are only shown for cloud-born accounts.
     //
     // Text-matching note: the card body text is the full localisation string
     // "Your learning progress is currently LOCAL ONLY. Upgrade to sync across
     // all devices." — not just "LOCAL ONLY". Use find.textContaining to
     // assert the substring rather than an exact-match find.text.
     //
-    // R-ST4: BackupSyncSection.initState fires pullOnLaunch; the null
-    // orchestrator short-circuits that call safely.
+    // The local-only branch does not start the cloud backup service.
     testWidgets(
       'Settings BackupSyncSection shows "Backup & Sync" card title and '
       'LOCAL ONLY body for a local-born adult',
@@ -341,7 +337,7 @@ void main() {
             // Override lifetimeSummariesProvider (family: profileId) so the
             // screen renders without hitting the content database.
             lifetimeSummariesProvider.overrideWith(
-              (ref, profileId) => Future.value(<CurriculumLifetimeSummary>[]),
+              (ref) => Future.value(<CurriculumLifetimeSummary>[]),
             ),
           ],
         );
@@ -420,7 +416,7 @@ void main() {
               (ref) => Stream.value(0),
             ),
             activeProfilePointsBalanceProvider.overrideWith(
-              (ref) => Stream.value(0),
+              (ref) => Future.value(0),
             ),
           ],
         );
@@ -472,7 +468,7 @@ void main() {
               (ref) => Stream.value(0),
             ),
             activeProfilePointsBalanceProvider.overrideWith(
-              (ref) => Stream.value(0),
+              (ref) => Future.value(0),
             ),
           ],
         );
@@ -534,8 +530,8 @@ void main() {
     //
     // accountManagementServiceProvider calls Firebase signOut; _StubAuthRepository
     // signOut() is a no-op (Future.value(null)) so Firebase is never touched.
-    // TutoredMirrorWipeService reads userDatabaseProvider (in-memory) and
-    // currentAccountIdProvider (resolved from seeded profile) — both available.
+    // TutoredMirrorWipeService uses the active Firestore account/profile
+    // identity supplied by the harness.
     // E2E-916a: verify the AccountActionsSheet → confirmation dialog flow.
     // This part is testable headlessly.
     testWidgets(

@@ -38,9 +38,10 @@ library;
 
 import 'package:flutter/material.dart' show TextField;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart'
     show connectivityStreamProvider, debugSetLastKnownOnline;
-import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
+import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart'
     show profileListProvider;
 
@@ -298,13 +299,15 @@ void main() {
         ],
       );
 
-      // The identity was pre-seeded in Drift via _seedIdentity (offline-first).
-      // Assert the profile row is present in the in-memory DB.
-      final profiles = await h.db.profileDao.getProfilesByAccount(
-        identity.accountId,
-      );
-      expect(profiles, isNotEmpty, reason: 'profile row created locally');
-      expect(profiles.first.displayName, 'Offline Creator');
+      // The identity was pre-seeded in Firestore by the harness.
+      // Assert the profile document is present in the local fake store.
+      final profiles = await h.firestore
+          .collection('users')
+          .doc(identity.accountId)
+          .collection('learner_profiles')
+          .get();
+      expect(profiles.docs, isNotEmpty, reason: 'profile row created locally');
+      expect(profiles.docs.first.data()['display_name'], 'Offline Creator');
     });
   });
 
@@ -398,15 +401,17 @@ void main() {
         // Error shown — Create Profile button is disabled.
         h.expectOnScreen('A profile with this name already exists');
 
-        // DB must still have exactly 1 profile row (no second row created).
-        final profiles = await h.db.profileDao.getProfilesByAccount(
-          identity.accountId,
-        );
+        // Firestore must still have exactly 1 profile document (no second
+        // document created).
+        final profiles = await h.firestore
+            .collection('users')
+            .doc(identity.accountId)
+            .collection('learner_profiles')
+            .get();
         expect(
-          profiles.length,
+          profiles.docs.length,
           1,
-          reason:
-              'duplicate name must not create a second profile row in Drift',
+          reason: 'duplicate name must not create a second profile document',
         );
       },
     );
@@ -444,23 +449,17 @@ void main() {
         final h = E2EHarness(tester, identity: identity);
         addTearDown(h.dispose);
 
-        final profileAlice = ProfileModel(
-          id: 1,
-          ulid: 'ulid-1',
-          accountId: 1,
+        final profileAlice = LearnerProfileEntity(
+          profileId: '01J6Q2H4A8M7K3P9R5T6V8WXYE',
           displayName: 'Alice',
-          mode: 'adult',
-          avatarIndex: 0,
+          mode: ProfileMode.adult,
           createdAt: DateTime(2024),
           updatedAt: DateTime(2024),
         );
-        final profileBob = ProfileModel(
-          id: 2,
-          ulid: 'ulid-2',
-          accountId: 1,
+        final profileBob = LearnerProfileEntity(
+          profileId: '01J6Q2H4A8M7K3P9R5T6V8WXYF',
           displayName: 'Bob',
-          mode: 'adult',
-          avatarIndex: 0,
+          mode: ProfileMode.adult,
           createdAt: DateTime(2024),
           updatedAt: DateTime(2024),
         );

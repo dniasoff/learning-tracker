@@ -24,7 +24,6 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/app_router.dart'
     show ParentTrackManagementRoute;
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart'
     show
@@ -41,6 +40,7 @@ import 'package:learning_tracker/features/scheduler/presentation/providers/sched
     show allDailyTasksProvider, clockProvider;
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart'
     show scopedItemCountProvider;
+import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart'
     show activeTracksProvider;
 import 'package:learning_tracker/features/tracks/setup/presentation/screens/track_management_hub_screen.dart'
@@ -50,23 +50,26 @@ import 'package:learning_tracker/features/tracks/track_order/presentation/provid
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart'
     show activeTutorPermissionsProvider;
 
+import '../../helpers/firestore_fixtures.dart';
 import '../harness/e2e_common_overrides.dart';
 import '../harness/e2e_harness.dart';
 
 // ── Factories ──────────────────────────────────────────────────────────────────
 
-/// Inserts a [CurriculumTrack] row into [db] and returns the auto-generated id.
-Future<int> _insertTrack(UserDatabase db, CurriculumTrack stub) async {
-  return db
-      .into(db.curriculumTracks)
-      .insert(
-        CurriculumTracksCompanion.insert(
-          profileId: stub.profileId,
-          curriculumId: stub.curriculumId,
-          stateChangedAt: stub.stateChangedAt,
-          activatedAt: stub.activatedAt,
-        ),
-      );
+/// Seeds the Firestore track document keyed by the profile and curriculum.
+Future<void> _seedTrack(
+  E2EHarness h,
+  E2EIdentity identity,
+  CurriculumTrackEntity stub,
+) async {
+  await seedTrack(
+    h.firestore,
+    uid: identity.accountId,
+    profileId: identity.profileId,
+    curriculumId: stub.curriculumId,
+    stateChangedAt: stub.stateChangedAt,
+    activatedAt: stub.activatedAt,
+  );
 }
 
 // ── UseHebrewDate stub ────────────────────────────────────────────────────────
@@ -83,7 +86,9 @@ class _FalseUseHebrewDate extends UseHebrewDate {
 /// Standard overrides for the track hub + detail. Forces English labels and
 /// silences Drift stream providers that schedule zero-duration timers on
 /// dispose.
-List<Override> _trackHubOverrides({required List<CurriculumTrack> tracks}) => [
+List<Override> _trackHubOverrides({
+  required List<CurriculumTrackEntity> tracks,
+}) => [
   activeTracksProvider.overrideWith((ref) => Stream.value(tracks)),
   useHebrewTermsProvider.overrideWithValue(false),
   effectiveUseHebrewTermsProvider.overrideWithValue(false),
@@ -94,7 +99,7 @@ List<Override> _trackHubOverrides({required List<CurriculumTrack> tracks}) => [
 /// [isProgramTrack] controls dashboardHasProgramEnrollmentProvider — false
 /// for self-paced tracks (default), true for program tracks (E2E-410).
 List<Override> _trackDetailSilenceOverrides({bool isProgramTrack = false}) => [
-  trackDualProgressMetricsProvider.overrideWith((ref, pid) => Future.value([])),
+  trackDualProgressMetricsProvider.overrideWith((ref) => Future.value([])),
   dashboardHasProgramEnrollmentProvider.overrideWith(
     (ref, curriculum) => Future.value(isProgramTrack),
   ),
@@ -158,7 +163,7 @@ void main() {
         await tester.pump(const Duration(milliseconds: 300));
 
         // Seed real DB row so editTrack service can query the track.
-        await _insertTrack(h.db, stub);
+        await _seedTrack(h, identity, stub);
 
         // Navigate to TrackDetailScreen.
         await h.tapText('Mishnayos', settle: const Duration(milliseconds: 500));
@@ -219,12 +224,14 @@ void main() {
           ..._editTrackSilenceOverrides(),
           // overrideWithValue on the specific instance (id=1) so the async
           // build cycle is bypassed — state is AsyncData(true) synchronously.
-          trackHasChazaraProvider(1).overrideWithValue(const AsyncData(true)),
+          trackHasChazaraProvider(
+            CurriculumId.mishnayos,
+          ).overrideWithValue(const AsyncData(true)),
         ],
       );
       await tester.pump(const Duration(milliseconds: 300));
 
-      await _insertTrack(h.db, stub);
+      await _seedTrack(h, identity, stub);
 
       await h.tapText('Mishnayos', settle: const Duration(milliseconds: 500));
       await tester.pump(const Duration(milliseconds: 300));
@@ -292,12 +299,10 @@ void main() {
           curriculumId: CurriculumId.bavli,
           contentItemSefariaRef: 'Berakhot.2a',
           stageOrder: 1,
-          stageDefinitionId: 1,
           priority: DailyTaskPriority.overdueProgram,
           isOverdue: true,
           reason: 'overdue test',
           stageName: 'Learn',
-          trackId: trackId,
           trackLabel: 'Talmud Bavli',
         );
 
@@ -320,7 +325,7 @@ void main() {
         );
         await tester.pump(const Duration(milliseconds: 300));
 
-        await _insertTrack(h.db, stub);
+        await _seedTrack(h, identity, stub);
 
         await h.tapText(
           'Talmud Bavli',
@@ -388,7 +393,7 @@ void main() {
       );
       await tester.pump(const Duration(milliseconds: 300));
 
-      await _insertTrack(h.db, stub);
+      await _seedTrack(h, identity, stub);
 
       // Navigate to TrackDetailScreen.
       await h.tapText('Mishnayos', settle: const Duration(milliseconds: 500));
@@ -503,14 +508,14 @@ void main() {
               (ref) => Stream.value(0),
             ),
             activeProfilePointsBalanceProvider.overrideWith(
-              (ref) => Stream.value(0),
+              (ref) => Future.value(0),
             ),
           ],
         );
         await tester.pump(const Duration(milliseconds: 300));
 
         // Seed the real DB row so the guard's activeCurriculumDao query works.
-        await _insertTrack(h.db, stub);
+        await _seedTrack(h, identity, stub);
 
         // Prime the PIN guard AFTER pumpApp so _resolvedProfileId is set.
         h.markPinAuthenticated();
@@ -580,7 +585,7 @@ void main() {
         );
         await tester.pump(const Duration(milliseconds: 300));
 
-        await _insertTrack(h.db, stub);
+        await _seedTrack(h, identity, stub);
 
         await h.tapText('Mishnayos', settle: const Duration(milliseconds: 500));
         await tester.pump(const Duration(milliseconds: 300));
