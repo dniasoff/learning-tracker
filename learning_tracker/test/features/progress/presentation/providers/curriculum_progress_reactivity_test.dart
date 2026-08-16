@@ -173,7 +173,6 @@ void main() {
           final repo = _FakeContentRepository([leaf]);
           final stageRepo = _FakeStageDefinitionRepository([
             const domain_stage.StageDefinition(
-              id: _learnStageId,
               curriculumId: _curriculum,
               stageOrder: 1,
               stageName: 'Learned',

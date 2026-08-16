@@ -22,12 +22,10 @@ DailyTask _task({
     curriculumId: curriculum,
     contentItemSefariaRef: ref,
     stageOrder: stageOrder,
-    stageDefinitionId: stageOrder,
     priority: priority,
     isOverdue: isOverdue,
     reason: 'test reason',
     stageName: stageOrder == 1 ? 'Learn' : 'Chazara $stageOrder',
-    trackId: 1,
     trackLabel: 'Test Track',
     estimatedEffortMinutes: estimatedEffortMinutes,
   );
@@ -41,7 +39,9 @@ Widget _wrap(Widget child) {
       useHebrewTermsProvider.overrideWithValue(false),
       // No daf grouping in these card tests (and avoid the DB-backed lookup):
       // an empty set means the card never collapses the amud label to a daf.
-      coarsePacedTrackIdsProvider.overrideWith((ref) async => <int>{}),
+      coarsePacedTrackIdsProvider.overrideWith(
+        (ref) async => const <CurriculumId>{},
+      ),
     ],
     child: MaterialApp(
       theme: AppTheme.lightTheme(),

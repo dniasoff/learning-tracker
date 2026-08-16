@@ -295,7 +295,6 @@ void main() {
 
     stageRepo = _FakeStageDefinitionRepository([
       const domain_stage.StageDefinition(
-        id: learnStageId,
         curriculumId: _curriculum,
         stageOrder: 1,
         stageName: 'Learned',
@@ -303,7 +302,6 @@ void main() {
         isDefault: true,
       ),
       const domain_stage.StageDefinition(
-        id: chazara1StageId,
         curriculumId: _curriculum,
         stageOrder: 2,
         stageName: 'Chazara 1',

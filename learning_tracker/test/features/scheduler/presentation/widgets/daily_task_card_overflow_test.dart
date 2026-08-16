@@ -29,14 +29,12 @@ DailyTask _task({
     curriculumId: CurriculumId.mishnayos,
     contentItemSefariaRef: ref,
     stageOrder: stageOrder,
-    stageDefinitionId: stageOrder,
     priority: isOverdue
         ? DailyTaskPriority.overdueChazara
         : DailyTaskPriority.newLearning,
     isOverdue: isOverdue,
     reason: 'test reason',
     stageName: stageName,
-    trackId: 1,
     trackLabel: 'Test Track',
     estimatedEffortMinutes: 5,
   );

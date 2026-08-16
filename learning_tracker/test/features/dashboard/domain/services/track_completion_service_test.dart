@@ -1,13 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/daos/completion_dao.dart'
-    show Completion;
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/dashboard/domain/services/track_completion_service.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_entity.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 import 'package:learning_tracker/features/tracks/stages/domain/models/stage_definition.dart'
     as domain_stage;
 
 const _stageDefinition = domain_stage.StageDefinition(
-  id: 1,
   curriculumId: CurriculumId.mishnayos,
   stageOrder: 1, // learn stage
   stageName: 'Learn',
@@ -15,21 +14,17 @@ const _stageDefinition = domain_stage.StageDefinition(
   isDefault: true,
 );
 
-Completion _completion({
+CompletionEntity _completion({
   required String sefariaRef,
   int stageId = 1,
-  int trackId = 1,
-}) => Completion(
-  id: 1,
-  profileId: 1,
-  curriculumId: 'mishnayos',
+}) => CompletionEntity(
+  curriculumId: CurriculumId.mishnayos,
   sefariaRef: sefariaRef,
   stageId: stageId,
   trackType: 'personal',
-  trackId: trackId,
+  source: CompletionSource.live,
   completedAt: DateTime(2026, 5, 1),
   points: 10,
-  derivedFromEvents: true,
 );
 
 void main() {
@@ -96,7 +91,6 @@ void main() {
 
     test('item not done when missing one required stage', () {
       const learnStage = domain_stage.StageDefinition(
-        id: 1,
         curriculumId: CurriculumId.mishnayos,
         stageOrder: 1,
         stageName: 'Learn',
@@ -104,7 +98,6 @@ void main() {
         isDefault: true,
       );
       const chazaraStage = domain_stage.StageDefinition(
-        id: 2,
         curriculumId: CurriculumId.mishnayos,
         stageOrder: 2,
         stageName: 'Chazara',
@@ -122,7 +115,6 @@ void main() {
 
     test('item done when all required stages present', () {
       const learnStage = domain_stage.StageDefinition(
-        id: 1,
         curriculumId: CurriculumId.mishnayos,
         stageOrder: 1,
         stageName: 'Learn',
@@ -130,7 +122,6 @@ void main() {
         isDefault: true,
       );
       const chazaraStage = domain_stage.StageDefinition(
-        id: 2,
         curriculumId: CurriculumId.mishnayos,
         stageOrder: 2,
         stageName: 'Chazara',
@@ -180,7 +171,7 @@ void main() {
         byTrack: {
           0: TrackEntry(
             stages: [_stageDefinition],
-            completions: [_completion(sefariaRef: 'Berakhot 1:1', trackId: 0)],
+            completions: [_completion(sefariaRef: 'Berakhot 1:1')],
           ),
         },
         totalItems: 10,
@@ -208,13 +199,13 @@ void main() {
           1: TrackEntry(
             stages: [_stageDefinition],
             completions: [
-              _completion(sefariaRef: 'Berakhot 1:1', stageId: 1, trackId: 1),
+              _completion(sefariaRef: 'Berakhot 1:1', stageId: 1),
             ],
           ),
           2: TrackEntry(
             stages: [_stageDefinition],
             completions: [
-              _completion(sefariaRef: 'Berakhot 1:1', stageId: 1, trackId: 2),
+              _completion(sefariaRef: 'Berakhot 1:1', stageId: 1),
             ],
           ),
         },

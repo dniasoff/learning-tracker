@@ -19,7 +19,7 @@ import 'package:mocktail/mocktail.dart';
 
 class _MockPinService extends Mock implements PinService {}
 
-const _kProfileId = 7;
+const _kProfileId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
 
 Widget _harness({required PinService pinService, required Locale locale}) {
   return ProviderScope(
@@ -72,7 +72,7 @@ void main() {
       setViewSize(tester);
       final svc = _MockPinService();
       when(
-        () => svc.setProfilePin(any<int>(), any<String>()),
+        () => svc.setProfilePin(any<String>(), any<String>()),
       ).thenThrow(const InvalidPinFormatException());
 
       await tester.pumpWidget(
@@ -103,7 +103,7 @@ void main() {
       setViewSize(tester);
       final svc = _MockPinService();
       when(
-        () => svc.setProfilePin(any<int>(), any<String>()),
+        () => svc.setProfilePin(any<String>(), any<String>()),
       ).thenThrow(const InvalidPinFormatException());
 
       await tester.pumpWidget(
@@ -136,7 +136,7 @@ void main() {
 
       final l10n = await AppLocalizations.delegate.load(const Locale('en'));
       expect(find.text(l10n.pinsDoNotMatch), findsOneWidget);
-      verifyNever(() => svc.setProfilePin(any<int>(), any<String>()));
+      verifyNever(() => svc.setProfilePin(any<String>(), any<String>()));
     });
 
     testWidgets('he locale shows the Hebrew AppLocalizations text', (

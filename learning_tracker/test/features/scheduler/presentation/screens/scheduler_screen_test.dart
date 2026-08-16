@@ -78,12 +78,10 @@ DailyTask _task({
     curriculumId: curriculum,
     contentItemSefariaRef: ref,
     stageOrder: stageOrder,
-    stageDefinitionId: stageOrder,
     priority: priority,
     isOverdue: isOverdue,
     reason: 'test',
     stageName: stageName ?? (stageOrder == 1 ? 'Learn' : 'Chazara'),
-    trackId: 1,
     trackLabel: 'Test Track',
     estimatedEffortMinutes: 5,
   );

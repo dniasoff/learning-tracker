@@ -40,7 +40,6 @@ Future<bool> _gate({
 List<StageDefinition> _stages(CurriculumId curriculumId, int count) => [
   for (var i = 1; i <= count; i++)
     StageDefinition(
-      id: kFirestoreUnmappedStageId,
       curriculumId: curriculumId,
       stageOrder: i,
       stageName: 'Stage $i',

@@ -24,21 +24,15 @@ class _Stages implements SchedulerStageRepository {
   @override
   Future<List<SchedulerStage>> getStages(CurriculumId id) async =>
       const [
-        SchedulerStage(id: -1, stageOrder: 1, stageName: 'Learn', delayDays: 0),
+        SchedulerStage(stageOrder: 1, stageName: 'Learn', delayDays: 0),
         SchedulerStage(
-          id: -1,
           stageOrder: 2,
           stageName: 'Review',
           delayDays: 1,
         ),
       ].map((stage) {
         if (stage.stageOrder == 2) {
-          return SchedulerStage(
-            id: stage.id,
-            stageOrder: stage.stageOrder,
-            stageName: stage.stageName,
-            delayDays: reviewDelay,
-          );
+          return stage.copyWith(delayDays: reviewDelay);
         }
         return stage;
       }).toList();

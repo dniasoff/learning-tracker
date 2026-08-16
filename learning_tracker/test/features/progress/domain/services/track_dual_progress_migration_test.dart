@@ -34,7 +34,6 @@ class _Stages extends Fake implements StageDefinitionRepository {
     CurriculumId curriculum,
   ) async => [
     const StageDefinition(
-      id: 1,
       curriculumId: CurriculumId.mishnayos,
       stageOrder: 1,
       stageName: 'Learn',

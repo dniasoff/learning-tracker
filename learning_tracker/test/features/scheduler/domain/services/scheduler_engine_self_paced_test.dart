@@ -50,8 +50,8 @@ void main() {
   );
 
   const stages = [
-    SchedulerStage(id: 1, stageOrder: 1, stageName: 'Learn', delayDays: 0),
-    SchedulerStage(id: 2, stageOrder: 2, stageName: 'Chazara 1', delayDays: 1),
+    SchedulerStage(stageOrder: 1, stageName: 'Learn', delayDays: 0),
+    SchedulerStage(stageOrder: 2, stageName: 'Chazara 1', delayDays: 1),
   ];
 
   setUp(() {
@@ -75,7 +75,6 @@ void main() {
     String? paceGranularity,
   }) => ScheduleConfig(
     curriculumId: curriculum,
-    trackId: 1,
     trackLabel: 'personal',
     currentDate: now ?? today,
     pacePerDay: pace,
@@ -251,7 +250,6 @@ void main() {
         final tasks = await engine.generateDailyTasks(
           ScheduleConfig(
             curriculumId: curriculum,
-            trackId: 1,
             trackLabel: 'program',
             currentDate: today,
           ),
@@ -275,7 +273,6 @@ void main() {
         final tasks = await engine.generateDailyTasks(
           ScheduleConfig(
             curriculumId: curriculum,
-            trackId: 1,
             trackLabel: 'personal',
             currentDate: today,
             pacePerDay: 5,

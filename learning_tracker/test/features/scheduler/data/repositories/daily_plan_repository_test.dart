@@ -17,7 +17,6 @@ void main() {
     curriculumId: CurriculumId.mishnayos,
     contentItemSefariaRef: ref,
     stageOrder: stageOrder,
-    stageDefinitionId: 100 + stageOrder,
     priority: priority,
     isOverdue: isOverdue,
     reason: stageName,

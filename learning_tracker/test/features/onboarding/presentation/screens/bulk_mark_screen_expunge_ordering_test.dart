@@ -22,14 +22,14 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/daos/completion_dao.dart'
-    show Completion;
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/learning/completion_constants.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_entity.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
@@ -72,6 +72,7 @@ const _leafB = ContentItem(
   isLeaf: true,
 );
 const _twoLeaves = [_leafA, _leafB];
+const _profileId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
 
 void main() {
   setUpAll(() {
@@ -99,14 +100,12 @@ void main() {
       ).thenAnswer((_) async => <ContentItem>[]);
       when(() => completionRepo.getCompletionsByCurriculum(any())).thenAnswer(
         (_) async => [
-          Completion(
-            id: 1,
-            profileId: 1,
-            curriculumId: 'mishnayos',
+          CompletionEntity(
+            curriculumId: CurriculumId.mishnayos,
             sefariaRef: _leafA.sefariaRef,
             stageId: 1,
-            trackType: 'daily',
-            trackId: 1,
+            trackType: 'personal',
+            source: CompletionSource.bulkInTrack,
             completedAt: kBulkPriorSentinelDate,
             points: 0,
           ),
@@ -143,7 +142,7 @@ void main() {
             contentSearchProvider.overrideWith((ref, args) => Future.value([])),
             completionRepositoryProvider.overrideWithValue(completionRepo),
             bulkPriorCompletionServiceProvider.overrideWithValue(service),
-            activeProfileIdProvider.overrideWithValue(1),
+            activeProfileIdProvider.overrideWithValue(_profileId),
             // Mirrors the real dashboardCompletionPercentageProvider's own
             // `ref.watch<int>(completionCommittedProvider)` (dashboard_providers
             // .dart) — the bulk-mark staleness fix replaced this screen's

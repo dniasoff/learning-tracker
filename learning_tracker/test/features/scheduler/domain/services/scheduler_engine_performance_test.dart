@@ -63,19 +63,16 @@ void main() {
     // 3 stages
     stageRepo.stages = [
       const SchedulerStage(
-        id: 1,
         stageOrder: 1,
         stageName: 'Learn',
         delayDays: 0,
       ),
       const SchedulerStage(
-        id: 2,
         stageOrder: 2,
         stageName: 'Chazara 1',
         delayDays: 1,
       ),
       const SchedulerStage(
-        id: 3,
         stageOrder: 3,
         stageName: 'Chazara 2',
         delayDays: 7,
@@ -98,7 +95,6 @@ void main() {
 
     final config = ScheduleConfig(
       curriculumId: CurriculumId.mishnayos,
-      trackId: 1,
       trackLabel: 'Test Track',
       goalDeadline: now.add(const Duration(days: 60)),
       currentDate: now,

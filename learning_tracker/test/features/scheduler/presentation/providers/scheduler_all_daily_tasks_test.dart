@@ -140,7 +140,6 @@ Future<ProviderContainer> _container({
       curriculumId: curriculum,
       stages: [
         StageDefinition(
-          id: -1,
           curriculumId: curriculum,
           stageOrder: 1,
           stageName: 'Learn',

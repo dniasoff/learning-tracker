@@ -11,7 +11,6 @@ void main() {
     curriculumId: CurriculumId.mishnayos,
     contentItemSefariaRef: ref,
     stageOrder: 1,
-    stageDefinitionId: 101,
     priority: DailyTaskPriority.newLearning,
     isOverdue: false,
     reason: 'New learning',

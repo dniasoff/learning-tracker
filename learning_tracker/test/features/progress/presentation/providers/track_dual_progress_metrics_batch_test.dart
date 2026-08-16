@@ -47,7 +47,6 @@ final class _Stages implements StageDefinitionRepository {
     CurriculumId curriculumId,
   ) async => [
     StageDefinition(
-      id: -1,
       curriculumId: curriculumId,
       stageOrder: 1,
       stageName: 'Learn',
@@ -57,11 +56,8 @@ final class _Stages implements StageDefinitionRepository {
   ];
 
   @override
-  Future<void> initializeDefaults(
-    CurriculumId curriculumId, {
-    required int profileId,
-    required int trackId,
-  }) => throw UnimplementedError();
+  Future<void> initializeDefaults(CurriculumId curriculumId) =>
+      throw UnimplementedError();
 
   @override
   Future<void> replaceStagesForCurriculum(

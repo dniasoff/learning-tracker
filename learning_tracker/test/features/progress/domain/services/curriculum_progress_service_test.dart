@@ -72,7 +72,6 @@ void main() {
 
   domain_stage.StageDefinition stage(int order, String name) =>
       domain_stage.StageDefinition(
-        id: order,
         curriculumId: _curriculum,
         stageOrder: order,
         stageName: name,

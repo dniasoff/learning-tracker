@@ -57,7 +57,7 @@ class _Order implements SchedulerLearningOrderRepository {
 class _Stages implements SchedulerStageRepository {
   @override
   Future<List<SchedulerStage>> getStages(CurriculumId id) async => const [
-    SchedulerStage(id: -1, stageOrder: 1, stageName: 'Learn', delayDays: 0),
+    SchedulerStage(stageOrder: 1, stageName: 'Learn', delayDays: 0),
   ];
 }
 
@@ -67,7 +67,6 @@ class _StageDefinitions implements StageDefinitionRepository {
     CurriculumId curriculumId,
   ) async => [
     StageDefinition(
-      id: -1,
       curriculumId: curriculumId,
       stageOrder: 1,
       stageName: 'Learn',

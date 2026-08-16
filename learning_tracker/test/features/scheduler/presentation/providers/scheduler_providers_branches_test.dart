@@ -16,7 +16,6 @@ DailyTask _task({
   curriculumId: curriculum,
   contentItemSefariaRef: ref,
   stageOrder: 1,
-  stageDefinitionId: -1,
   priority: priority,
   isOverdue: overdue,
   reason: 'branch',

@@ -118,11 +118,11 @@ void main() {
             authStateProvider.overrideWithValue(
               const AuthState.signedIn(
                 user: AuthUser(
-                  profileId: 1,
+                  uid: '01ARZ3NDEKTSV4RRFFQ69G5FAV',
                   email: 'test@test.com',
                   displayName: 'Test',
                 ),
-                tier: Tier.localBorn,
+                tier: Tier.local,
               ),
             ),
             notificationServiceProvider.overrideWithValue(

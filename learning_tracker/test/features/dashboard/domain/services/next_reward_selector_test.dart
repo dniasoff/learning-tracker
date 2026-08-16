@@ -2,15 +2,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/features/dashboard/domain/services/next_reward_selector.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
 
+const _profileId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+
 RewardMilestone _milestone({
   required int threshold,
   required String title,
   bool isEnabled = true,
-  int trackId = 1,
 }) => RewardMilestone(
   id: 'm_$title',
-  profileId: 1,
-  trackId: trackId,
+  profileId: _profileId,
   title: title,
   thresholdPoints: threshold,
   isEnabled: isEnabled,
@@ -98,7 +98,6 @@ void main() {
           _milestone(
             threshold: 100,
             title: 'GlobalClose',
-            trackId: 0,
           ), // gap 10
         ],
       );

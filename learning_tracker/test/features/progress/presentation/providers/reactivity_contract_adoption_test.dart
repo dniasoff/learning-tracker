@@ -157,7 +157,6 @@ void main() {
         curriculumId: _curriculum,
         stages: [
           const StageDefinition(
-            id: kFirestoreUnmappedStageId,
             curriculumId: _curriculum,
             stageOrder: 1,
             stageName: 'Learned',

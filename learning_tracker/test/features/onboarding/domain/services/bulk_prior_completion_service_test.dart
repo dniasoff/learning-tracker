@@ -251,7 +251,6 @@ ContentItem _container({
 
 /// Minimal [stage_model.StageDefinition] for tests — only [stageOrder] matters.
 stage_model.StageDefinition _stageDef(int order) => stage_model.StageDefinition(
-  id: order,
   curriculumId: CurriculumId.mishnayos,
   stageOrder: order,
   stageName: order == 1 ? 'Learn' : 'Chazara $order',

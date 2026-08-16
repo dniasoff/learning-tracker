@@ -43,12 +43,10 @@ DailyTask _task({String ref = 'Mishnah_Berakhot_1.1'}) {
     curriculumId: CurriculumId.mishnayos,
     contentItemSefariaRef: ref,
     stageOrder: 1,
-    stageDefinitionId: 1,
     priority: DailyTaskPriority.newLearning,
     isOverdue: false,
     reason: 'test',
     stageName: 'Learn',
-    trackId: 1,
     trackLabel: 'Test Track',
     estimatedEffortMinutes: 5,
   );

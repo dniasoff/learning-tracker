@@ -77,8 +77,11 @@ void main() {
   });
 
   group('SchedulerStage value equality', () {
-    SchedulerStage build({int id = 1}) =>
-        SchedulerStage(id: id, stageOrder: 1, stageName: 'Learn', delayDays: 0);
+    SchedulerStage build({int stageOrder = 1}) => SchedulerStage(
+      stageOrder: stageOrder,
+      stageName: 'Learn',
+      delayDays: 0,
+    );
 
     test('two separately-built instances with identical fields are ==', () {
       final a = build();
@@ -89,13 +92,12 @@ void main() {
       expect(a.hashCode, equals(b.hashCode));
     });
 
-    test('instances differing by id are not ==', () {
-      expect(build(), isNot(equals(build(id: 2))));
+    test('instances differing by stageOrder are not ==', () {
+      expect(build(), isNot(equals(build(stageOrder: 2))));
     });
 
     test('scheduleType and daysOfWeek participate in equality', () {
       SchedulerStage buildWeekly(List<int> daysOfWeek) => SchedulerStage(
-        id: 3,
         stageOrder: 2,
         stageName: 'Weekly Review',
         delayDays: 0,

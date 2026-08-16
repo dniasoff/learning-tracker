@@ -110,7 +110,6 @@ Future<ProviderContainer> _container(DateTime now) async {
     curriculumId: CurriculumId.chumash,
     stages: [
       const StageDefinition(
-        id: -1,
         curriculumId: CurriculumId.chumash,
         stageOrder: 1,
         stageName: 'Learn',

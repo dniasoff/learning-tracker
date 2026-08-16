@@ -17,12 +17,11 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/daos/completion_dao.dart'
-    show Completion;
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_entity.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/bulk_mark_screen.dart';
@@ -33,6 +32,8 @@ import 'package:mocktail/mocktail.dart';
 class _MockCompletionRepository extends Mock implements CompletionRepository {}
 
 class _MockContentRepository extends Mock implements ContentRepository {}
+
+const _profileId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
 
 void main() {
   setUpAll(() {
@@ -57,7 +58,7 @@ void main() {
       ).thenAnswer((_) async => []);
       when(
         () => completionRepo.getCompletionsByCurriculum(any()),
-      ).thenAnswer((_) async => <Completion>[]);
+      ).thenAnswer((_) async => <CompletionEntity>[]);
 
       await tester.pumpWidget(
         ProviderScope(
@@ -69,7 +70,7 @@ void main() {
             ),
             contentSearchProvider.overrideWith((ref, args) => Future.value([])),
             completionRepositoryProvider.overrideWithValue(completionRepo),
-            activeProfileIdProvider.overrideWithValue(1),
+            activeProfileIdProvider.overrideWithValue(_profileId),
           ],
           child: const MaterialApp(
             localizationsDelegates: AppLocalizations.localizationsDelegates,
