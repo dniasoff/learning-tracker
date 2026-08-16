@@ -1,413 +1,514 @@
 ---
-superseded_by: docs/firestore-rewrite-map.md
-superseded_on: 2026-08-02
-superseded_note: "MIGRATION MACHINERY SUPERSEDED — owner scrapped the phased migration for a single-phase clean rewrite (greenfield, no users, no back-compat). The DESIGN invariants here are still good; the phasing, strangler waves, back-compat, shadow writes, rollback and feature flags are dead. See docs/firestore-rewrite-map.md."
-name: Drift→Firestore-Native Migration
+name: Learning Tracker — Current Architecture Spine
 type: architecture-spine
-purpose: build-substrate
-altitude: initiative
-paradigm: repository-gated Firestore-native with per-account FirebaseApp scoping
-scope: Retire the 12.2k-line custom Drift+outbox sync engine and per-account Drift user DBs; make Firestore (with offline persistence, N named FirebaseApp instances per owner) the data layer. Content DB and device registry stay local. Governs every synced entity, the write/merge/listener seams, identity/multi-account, and the cross-account defect cleanup.
-status: draft
-created: '2026-07-30'
-updated: '2026-07-30'
-binds: [MCF-1..MCF-35]
+purpose: current-state-reference
+altitude: system
+paradigm: Firestore-first user data with repository adapters and a per-account FirebaseApp subsystem
+scope: The architecture that is actually present in `learning_tracker/` at the checked-out commit. User data is being rewritten in one greenfield cut; content and device-account registry data remain local.
+status: active-partial
+updated: 'current as of commit 14b6fb63 (parent 0092b2a6)'
+binds: [Firestore data access, account identity, profile/track identity, local stores, sync status, tutor access]
 sources:
-  - docs/planning/drift-to-firestore-migration-baseline.md
-  - docs/reports/sync-reliability-efficiency-review-2026-07-29.md
-  - docs/planning/architecture/architecture-learning-tracker-2026-07-30/.memlog.md
-companions:
+  - docs/firestore-rewrite-map.md
+  - docs/architecture.md
+  - docs/planning/firestore-finish-line-plan.md
+  - firestore.rules
+  - lib/data/firestore/**
+  - lib/data/repositories/**
+historical_context:
   - migration-plan.md
+  - .memlog.md
 ---
 
-# Architecture Spine — Drift→Firestore-Native Migration
+# Architecture Spine — Current State
 
-## Design Paradigm
+## Reading this document
 
-**Repository-gated Firestore-native with per-account FirebaseApp scoping.**
+This is a current-state reference, not a migration plan. The old phased rollout,
+backfill, strangler waves, shadow writes, feature flags, rollback machinery, and
+back-compat contract are gone: the product is greenfield, has no supported users,
+and the Drift user database was removed. The code is nevertheless not finished.
+Every status below is based on the checked-out source, not on the intended target
+tree in an older planning document.
 
-The custom sync engine collapses into three durable ideas: (1) the SDK's offline cache is the local read model, (2) every account owns an isolated `FirebaseApp` (its own Auth + Firestore + cache file), and (3) the repository layer is the sole seam between features and Firestore. Conflict resolution, doc-id derivation, and write atomicity move from bespoke engine code into a thin, single-owned data-access ring around the SDK.
+The current implementation is a hybrid of the following shape:
 
-| Layer | Directory (target) | May depend on |
+| Area | Current implementation | Status |
 | --- | --- | --- |
-| Features (UI, controllers, services, providers) | `lib/features/**` | repositories, domain models |
-| Domain (models, derivation, invariant logic) | `lib/domain/**` (points/streak reducers move here) | — |
-| Repositories (the ONLY data seam) | `lib/data/repositories/**` | data-access ring, domain models |
-| Data-access ring (SDK-facing) | `lib/data/firestore/**` — codecs, doc-id formulas, canonical conflict predicate, `AccountFirebase` handle registry, write helpers | `cloud_firestore`, `firebase_core`, `firebase_auth` |
-| Local-only stores | `lib/data/local/**` — Content DB (Drift, bundled), Device Registry (Drift), SharedPreferences, SecureStorage | `drift`, `sqlite3` |
+| User data | Firestore repositories in `lib/data/repositories/`, with feature-local adapters still present | Partially rewired |
+| Account Firestore handles | `AccountFirebase` named-app registry, private Auth/Firestore/cache/App Check | Implemented as a subsystem; production sign-in is not fully wired to it |
+| Local data | Bundled Content DB and Device Registry DB only; both are Drift | Adopted |
+| Sync durability | Firestore SDK offline persistence and queued writes; no user-data Outbox or custom sync engine | Adopted in native repositories |
+| Identity | Profile ULIDs and `CurriculumId` are used by the new repositories; integer-shaped feature seams remain | Incomplete |
+| Listener recovery | Shared resilient stream wrappers in repository code; some UI listeners still use raw `snapshots()` | Partial |
 
-`cloud_firestore` is importable **only** under `lib/data/firestore/**` and `lib/data/repositories/**`.
+## Design paradigm
 
-**This is a deliberate reorganization, not a continuation of today's structure.** Today `lib/` is `app / core / features`, repositories live **feature-scoped** (`lib/features/*/data/repositories`), and today's layering **Rule 3** is *"Firebase symbols (`FirebaseAuth`/`FirebaseFirestore`/`FirebaseStorage`) are confined to `lib/core/sync/` + `lib/core/auth/`"* — enforced by the shipped `make audit` grep `no-firebase-outside-core` (DNI-387), a hard gate. This spine **retires and replaces** Rule 3: it moves repositories from feature-scoped vertical slices to a global-horizontal data ring (`lib/data/**` + `lib/domain/**`) and retargets the Firebase-confinement gate to the new allowed-dir list (`lib/data/firestore/**`, `lib/data/repositories/**`). AD-3/AD-23/AD-28 own that retire-and-replace; without it, every file AD-3 mandates would be flagged by the existing `no-firebase-outside-core` gate. The *intent* — a single narrow data seam, features never touching the SDK directly — is continuous with Rule 3's spirit; the directory list and enforcement target are not.
+The durable design is: Firestore owns cloud user data, one repository owns each
+entity, and each account's Firestore handle is intended to be isolated behind a
+named `FirebaseApp`. Firestore's offline persistence is the local cloud-data read
+model. Content and the device account registry are separate local stores.
 
-## Invariants & Rules
-
-### AD-1 — Per-account named FirebaseApp isolation `[ADOPTED]`
-- **Binds:** all; MCF-feasibility, MCF-collision, MCF-35, owner decision #1
-- **Prevents:** cache/identity bleed between the ≤5 device accounts; loss of instant offline account switching.
-- **Rule:** each **cloud-backed or Anonymous-Auth-backed** device account (`DeviceAccounts` row, ≤5) gets its own `Firebase.initializeApp(name:'account_<deviceRegistryAccountUuid>')` (app-name identity pinned by AD-24) with a private Auth + Firestore + persistent cache. Apps are created on first activation and torn down on account removal. A single `FirebaseFirestore.instance` is forbidden as the data path (see AD-2). The default app is reserved for pre-auth/registry concerns only.
-- **Topology — `[CONFIRMED]` empirically (Story 2.1, 2026-08-02).** The shape this rule relies on — N named apps against the **same** project/database, differing only by app name + Auth identity, each retaining a **fully independent persistent cache on Android** — was a `[ASSUMPTION]` (API-supported but not an officially blessed configuration; all official secondary-app docs are multi-project/flavor). Phase 0's mandated smoke test has now **run and passed** on real hardware: `integration_test/firestore_multi_app_isolation_test.dart` green on **API 34 and API 28 (oldest supported)**, with distinct on-disk persistence artifacts *directly observed* — `databases/firestore.account_A.<project>.%28default%29` vs `…account_B…`, app identity embedded in the filename — app A's write invisible to app B's cache, a red-demo proving the assertion is not vacuous, and no OOM/fd-exhaustion/crash (API 28: VmRSS 228→281 MB, fds 94→121). **The caveat is retired; the paradigm is settled and load-bearing.** Residual scope note: confirmed at the 2-app shape (the leading edge of the ≤5-account target) against the Firestore/Auth emulators — App Check attestation on secondary named apps in production is a Phase-1 integration concern, not a topology question.
-- **Crashlytics/Analytics/Performance are default-app-only** (Firebase documents Analytics/Crashlytics/Perf as attributed to the default app on Android/Apple). Because all per-account operation happens on secondary named apps, per-account crash attribution is **not** automatic. Decision: keep Crashlytics wired to the **default app only** and accept coarse (device-level, not per-account) crash attribution; do not attempt per-named-app Crashlytics. Flagged here as an accepted limitation.
-
-### AD-2 — Firestore handle resolution rule `[ADOPTED]`
-- **Binds:** all; MCF-orchestrator, MCF-singleton
-- **Prevents:** services reading/writing against the wrong account's cache; the historical uid-under-live-listeners `PERMISSION_DENIED` flood.
-- **Rule:** no service, repository, or feature may touch a bare `FirebaseFirestore.instance` / `FirebaseAuth.instance`. All access resolves through the active account's handle: `accountFirebase(activeAccountId).firestore`. Firestore paths are addressed from the **active-account record's** uid, never `currentUser`. Exactly one place (`AccountFirebase` registry) constructs and caches handles.
-
-### AD-3 — Repository layer is the only data seam `[ADOPTED]`
-- **Binds:** all; MCF-13-scaffold; today's layering Rule 3
-- **Prevents:** the current 27 direct-DAO bypasses re-forming as 27 direct-`cloud_firestore` bypasses.
-- **Rule:** feature/service/provider files MUST NOT import `cloud_firestore`. They depend on repository interfaces returning domain models or streams of domain models. An import-boundary lint (CI gate) enforces the allowed-directory list. The 10 empty `repositories/` scaffold dirs are filled or their features re-pointed at a real repository before that feature's collection is cut over.
-
-### AD-4 — Derived-not-counter for points and streak
-- **Binds:** points_ledger, points_balance, streak_events; MCF-2, MCF-24-streak
-- **Prevents:** the classic counter LWW lost-update and double-credit P0s that the ledger model specifically eliminated.
-- **Rule:** balances and streak state are NEVER stored as synced counters. `PointsBalance` is re-derived by summing the append-only `points_ledger` (clamped `[0,2^30)`); streak state is replayed from `streak_events`. No `FieldValue.increment` on a synced aggregate. Derivation is idempotency-gated on ULID-doc non-existence.
-- **Points vs streak are NOT the same shape — do not share one replay allowance.** `PointsBalance` is a **cumulative all-time sum**; it MUST sum the *full* ledger and is therefore backed by a **local denormalized cache rebuilt in full on a cold cache** — date-bounding a cumulative aggregate is **forbidden** (it silently drops pre-window credits → the lost-points class, and makes the same account show two different balances across two devices). The date-bounded (windowed) reducer is permitted **only** for streak state, which is provably reconstructable from a bounded recent window. Retire the unbounded full-history *replay-on-every-read*; the full sum lives in the rebuildable cache, not re-walked per read.
-
-### AD-5 — Deterministic doc-id; no autoincrement ids in payloads
-- **Binds:** all synced collections; MCF-3, MCF-4, MCF-5, MCF-8, MCF-11
-- **Prevents:** duplicate remote docs on retry; cross-device FK breakage from device-local ids; orphaned historical documents.
-- **Rule:** every document id is a deterministic function of a natural key or a ULID — never `collection.add()`, never a device-local Drift autoincrement id, and no autoincrement id may appear inside any payload. Doc-id formulas are reproduced **exactly** as today except where AD-25 mandates a one-time re-key (see AD-13, AD-25). The **`learner_profiles` doc-id is a profile-scoped stable key (ULID)** minted per profile — NOT the account/Firebase UID. (The uid addresses the *path* `users/{uid}/learner_profiles/{profileId}`; an account owns *many* profiles, so keying the profile doc-id by the uid would collide every child of an account onto one document. Path uid ≠ profile doc-id.) Track-scoped children carry the **single canonical stable track key defined in AD-25**, not the per-device `track_id`; the `resolveLocalTrackId` remap is retired by construction. An audit sweeps for autoincrement-id-in-payload landmines outside `merge/` (MCF-11 class) before cutover.
-
-### AD-6 — Append-only + tombstone semantics
-- **Binds:** completions, learning_ledger, streak_events, points_ledger, reward_redemptions; MCF-5, MCF-6, MCF-7
-- **Prevents:** hard-delete data loss; the completion tombstone-resurrection defect (H2/D11); wrong-stage resolution.
-- **Rule:** these collections are insert-only + tombstone (`purgedAt` field), never hard delete. Resurrection matches the natural-key doc WITHOUT a timestamp filter and clears the tombstone transactionally. The `stage_id_format` marker (v37) travels verbatim. SR-1 rules (deny delete; allow update only on identical replay) are preserved, so offline-queue retries collapse by doc-id.
-
-### AD-7 — Single canonical conflict-resolution predicate
-- **Binds:** every LWW collection; MCF-1, MCF-26
-- **Prevents:** the hand-copied test-double drift that already shipped a lost-update bug (AUD-t-cross-68).
-- **Rule:** the LWW decision (±5s clock-skew window → `synced_at` server-timestamp tie-break → D15 prefer-newer-un-pushed-local → remote-wins-on-true-tie) lives in **exactly one** module and is called by every reconciliation path. **Exactly one predicate governs every LWW collection — there is no per-merger exception.** The `SyncKv` watermark job is re-solved, not reused: fold last-applied markers into the same doc/transaction as the entity write. The FB-3 cache-echo guard (`hasPendingWrites`/`isFromCache`) is preserved. Bespoke per-merger predicates (RewardRedemption plain-isAfter, F3) are standardized onto the canonical predicate **unconditionally** — this standardization is NOT gated on AD-21. (AD-21 is `[ADOPTED]` for the *completions write-path* folding and `fulfilRedemption` transactionality; the RewardRedemption *conflict predicate* is settled here regardless of AD-21.)
-
-### AD-8 — Write atomicity replaces outbox pairing
-- **Binds:** CompletionWriter and every data+marker write; MCF-20, MCF-writer, MCF-25, MCF-8b, MCF-7-delete, MCF-cascade
-- **Prevents:** partial writes that leave a stale watermark or orphaned rows; the FK-drop-order rollback that silently fails profile deletion.
-- **Rule:** the SDK offline write queue replaces the Outbox; the Outbox table and OutboxProcessor are deleted. Multi-document atomic operations (completion + tombstone-resurrection + prior-import upgrade; ledger/points/reorder + amnesty stamp) use a Firestore `WriteBatch`/transaction, or fold co-written markers into a single document. Profile deletion and tutor-mirror-wipe delete the full set of per-profile collections defined by AD-26 — **NOT** the Drift-era "6 no-cascade tables" list, and **without** a "dependency order" (Firestore has neither cascade nor FK ordering; an ordering constraint here is a meaningless no-op). See AD-26 for the enumeration basis and the SR-1 append-only-history delete path (MCF-cascade, MCF-7-delete). The reorder-amnesty stamp (`lastReorderAt`) is written in the same atomic op as the ordering change.
-
-### AD-9 — Listener resubscribe-on-error and lifecycle parity
-- **Binds:** all `snapshots()` listeners; MCF-23, MCF-28; R-1, R-8, E-5
-- **Prevents:** dead channels staying dark for the session (the #1 fickleness, and the App-Check-recovery gap).
-- **Rule:** `snapshots()` streams are terminal-on-error, so every listener wraps a mark-dead + bounded-exponential-backoff resubscribe. Connectivity-online and resume paths trigger resubscribe of dead channels. Listener parking (own AND tutored — see AD-22) has parity. Recovery-pull at-limit loops are bounded by cursor-advance, not raw page fill.
-- **No permanent give-up while connectivity is up.** Backoff **caps** the retry interval; it never stops retrying a dead channel while the network is up. The terminal "backoff exhausted, connectivity up" condition therefore does not exist as a resting state — it degrades to "still retrying at the cap," surfaced as `syncing` (never falsely `synced`), per AD-11. A **write** that permanently fails (a genuine rules rejection, not an offline/backoff case) is a different class — its user-facing recovery is owned by AD-30.
-- **Resume network reset is gated, not unconditional (E-5).** Do NOT call a global `resetFirestoreNetwork` (disable/enable network, forcing a full listener teardown + re-handshake) on every app resume. Trigger a reset only on a real **network-identity change** (not a trivial few-second app-switch), restrict resume handling to the `paused`/`hidden` lifecycle states (never `inactive`), and debounce it. A healthy connection on a brief foreground bounce is left untouched.
-
-### AD-10 — Arrival-order tolerance (idempotent skip-and-re-merge)
-- **Binds:** track-scoped children; MCF-15
-- **Prevents:** FK breakage when independent listeners fire out of order (no pull-ordering guarantee natively).
-- **Rule:** there is no cross-collection ordering guarantee. Every reconciliation of a track-scoped child (settings/stage_definitions/goals/study_day_configs) tolerates a missing parent by skipping-and-re-merging idempotently, never inserting against an unresolved key. Correctness must not depend on `curriculum_tracks` arriving first.
-
-### AD-11 — Slim 3-state sync status from SDK signals `[ADOPTED]`
-- **Binds:** sync status UI; MCF-22, MCF-8-conn; owner decision #2; R-2, R-3, R-4
-- **Prevents:** reintroducing app-level outbox/queue accounting; error status masking real backlog.
-- **Rule:** status is exactly `synced | syncing | offline`, derived only from SDK signals (`hasPendingWrites`, `isFromCache`, connectivity) and per-account app state. No app-level "N pending / N stuck" bookkeeping, no dead-letter counter. Connectivity is sourced from the hardened `connectivityStreamProvider` / platform events (backed by the now-**direct** `connectivity_plus` dependency), never the raw 5-second demo-host poller (E-1). Cold launch of an existing session eagerly reconciles.
-- **Exhausted-dead channel maps to `syncing`, never `synced`.** A listener that has hit its backoff cap while connectivity is up (AD-9) is still trying; its data is stale, so it is surfaced as `syncing` (in-flight/unsettled), NOT `synced` (which would lie) and NOT `offline` (the network is fine). This is the explicit rule that keeps the 3-state model total without reviving an `error` state. A **permanently-rejected write** is not represented in this tri-state at all — it is surfaced through the AD-30 recovery affordance, out of band from the ambient status chip.
-
-### AD-12 — Security-rules-as-boundary + App Check posture
-- **Binds:** firestore.rules, all direct-SDK surface; MCF-5, MCF-10, MCF-appcheck, SR-1, SR-3
-- **Prevents:** widening the rules-only (no App Check) authorization surface as direct-SDK reads/writes expand.
-- **Rule:** security rules remain the authorization boundary: append-only SR-1 semantics and SR-3 real-`Timestamp ≤ request.time` fields are preserved (native SDK Timestamps satisfy SR-3 for free). App Check is currently CF-layer only; because the migration expands the direct-SDK surface, App Check enforcement MUST be extended to `firestore.rules` (`request.app`) before the strangler waves ship broadly. Client date fields are always real Timestamps, never JSON-bridged without coercion.
-
-### AD-13 — Cloud-schema continuity
-- **Binds:** all reused collections; MCF-3-continuity, MCF-16, MCF-17, MCF-19
-- **Prevents:** existing users' historical documents orphaning or ceasing to round-trip.
-- **Rule:** reproduce every doc-id formula byte-for-byte **except** the track-scoped children that AD-25 re-keys (where byte-for-byte reproduction is provably impossible because the old formula embeds the per-device track id AD-5 abolishes — AD-25 owns the one-time re-key + backfill), and keep decoding every legacy field alias (`sefaria_ref`??`content_item_id`; `state`/`is_active`; `pace_unit`/`pace_period`; ledger snake↔camel). The legacy `settings/{curriculumId}` `stages[]` shape stays READ-compatible; new writes never emit it. Tutor read continues to hinge on `tutor_active_access` `exists()` (one CF-maintained doc per active triple). `gamification_settings` embedded `points_config[]` is remodeled to a subcollection via a one-time fan-out that keeps the old array readable; the two-store fan-out (Firestore + SharedPreferences) gets a single owner and a rebuildable-projection rule per **AD-27** (not a co-equal second store).
-
-### AD-14 — Cross-account defect remediation in scope `[ADOPTED]`
-- **Binds:** identity/multi-account; MCF-blastradius, MCF-globalflags, MCF-collision; owner decision #3
-- **Prevents:** carrying the shipped cross-account data-loss defects into the new architecture.
-- **Rule:** the three cross-account defects are fixed as part of this migration, not deferred: (a) `deleteAccount()` must NOT `prefs.clear()`/`secureStorage.deleteAll()` device-wide — it deletes only the target account's namespaced keys; (b) `initial_sync_complete` / `device_restore_state` become per-account keys, not global write-once flags; (c) key namespacing per AD-15.
-
-### AD-15 — Key namespacing `(accountId, profileId)` `[ADOPTED]`
-- **Binds:** SharedPreferences, SecureStorage; MCF-collision; owner decision #3
-- **Prevents:** two accounts' first children both hitting `profileId==1` and sharing locale/font/PIN/notification keys.
-- **Rule:** every non-Firestore per-profile key is namespaced by `(accountId, profileId)`, never the bare Drift autoincrement `profileId`. A one-time on-device key-migration re-homes existing keys under the namespaced scheme.
-
-### AD-16 — Content DB and device registry stay local `[ADOPTED]`
-- **Binds:** Content DB, Device Registry; MCF-35; owner decision #4
-- **Prevents:** moving ~87K bundled read-only rows into the wrong-shape/wrong-cost store; breaking pre-auth first-launch.
-- **Rule:** the bundled Content DB (Drift, ~87K rows, `SeedManager` gzip + `.bak` self-heal) and the Device Registry (Drift, account picker, pre-auth) NEVER migrate to Firestore and remain fully offline-from-first-launch. `CitiesRepository` bundled sqlite is out of scope.
-
-### AD-17 — Routing parity preserved
-- **Binds:** entity/collection routing; MCF-30, MCF-32
-- **Prevents:** a future entity kind silently dropping because it was never registered.
-- **Rule:** every synced collection has an explicitly registered repository + codec; the parity invariant (kind ↔ collection ↔ registration ↔ codec) is enforced by an acceptance test. `tutor_grant` routing stays registered even though it is a live no-op read (MCF-30 is the template, see AD-18-slice in the plan).
-
-### AD-18 — Firestore persistence configured per named app
-- **Binds:** every `AccountFirebase` handle; MCF-feasibility; E-8
-- **Prevents:** silent reliance on platform-default cache behavior; unbounded cache growth.
-- **Rule:** each named app pins `Settings` with persistence enabled and a bounded `cacheSizeBytes` **immediately after obtaining the handle, before its first Firestore use** — via the `FirebaseFirestore.settings` setter, NOT a constructor parameter (`instanceFor(app:, databaseId:)` accepts no `settings` argument). The `AccountFirebase` registry (AD-2) is the single place this "set-before-first-use" ordering is enforced. Merge/read logic may assume persistence is on (the `isFromCache` guard depends on it). Web (persistence off by default) is an explicit non-target of the offline-switch guarantee unless separately funded.
-
-### AD-19 — Local-born account principal → Anonymous Auth `[ADOPTED]`
-- **Binds:** local-born tier, Upgrade-to-Cloud; MCF-localborn; §10 Q1-adjacent
-- **Prevents:** the credential-less offline tier having no Firebase principal to scope a named app + cache to.
-- **Rule:** each credential-less local-born account is backed by a Firebase **Anonymous Auth** user inside its own named app, giving it a real uid + private cache from creation. "Upgrade to Cloud" becomes account-**linking** (anonymous → permanent credential), preserving the three collision-merge options. **Anon-uid instability is handled explicitly (AD-24):** the anonymous uid is late-bound (does not exist until after `initializeApp` + `signInAnonymously`) and does NOT survive reinstall or an App-Check-debug-token wipe. Therefore the named app is keyed by the stable device-registry account UUID (never the anon uid), and the Firestore-path uid is a **persisted field** with an explicit **remap-on-anon-reset / relink** step: on a fresh anon uid for the same registry account, re-home `users/<oldUid>/…` to the new uid so the prior cache + document tree are not stranded.
-
-### AD-20 — `curriculum_scopes` becomes full bidirectional owner sync `[ADOPTED]`
-- **Binds:** curriculum_scopes; MCF-24-orphan; §10 Q5
-- **Prevents:** perpetuating a collection with no coherent owner round-trip and an orphan-on-delete gap.
-- **Rule:** treat `curriculum_scopes` like its 15 siblings — full bidirectional owner sync via its repository — and add it to the delete list to close the orphan gap. The tutor CF write path is unchanged. **MCF-24-orphan names *two* omitted collections, not one:** both `curriculum_scopes` **and** `import_metadata` are missing from today's `deleteUserData`. Both are added to the AD-26 delete set unconditionally; a delete path that closes only `curriculum_scopes` leaves MCF-24-orphan half-open.
-
-### AD-21 — Uniform write path; completions-facade asymmetry retired `[ADOPTED]`
-- **Binds:** all writes; MCF-1-facade, MCF-13; §10 Q6
-- **Prevents:** a highest-volume kind (completions) taking a different write path than everything else.
-- **Rule:** all writes go through the repository → `docRef.set(..., SetOptions(merge:true))` (or batch); there is no separate write-tee/facade tier and no completions bypass. `fulfilRedemption` becomes transactional to match `declineRedemption` (close the TOCTOU asymmetry). *(Note: the RewardRedemption LWW **predicate** is already standardized onto the canonical predicate unconditionally by AD-7 — that was never gated on this decision. What this AD covers is only the completions write-path folding and `fulfilRedemption` transactionality.)*
-
-### AD-22 — Tutored listener lifecycle + isolation parity `[ADOPTED]`
-- **Binds:** tutored listeners; MCF-28; E-3; §10 Q7
-- **Prevents:** 16 tutored gRPC streams staying live 24/7 when backgrounded; cross-context SDK misuse.
-- **Rule:** tutored-mirror listeners get park/unpark parity with own-account listeners and are re-scoped to genuinely collaborative data. Tutored context reads through the grant's own named-app handle and never issues writes; cross-account isolation is enforced by security rules + the handle-resolution rule (AD-2), not convention.
-
-### AD-23 — Dependency direction (this diagram is a rule)
-- **Binds:** all; enforces the paradigm's layer table.
-- **Prevents:** feature code reaching past repositories into the SDK; domain logic depending on data-access.
-- **Rule:** dependencies flow only downward. No edge may be added against the arrows.
-
-```mermaid
-graph TD
-  F[Features: UI / controllers / services / providers]
-  R[Repositories - the only data seam]
-  D[Domain: models + points/streak derivation]
-  A[Data-access ring: codecs, doc-id, canonical LWW predicate, AccountFirebase registry, write helpers]
-  S[cloud_firestore / firebase_auth SDK]
-  L[Local stores: Content DB, Device Registry, Prefs, SecureStorage]
-  F --> R
-  F --> D
-  R --> A
-  R --> D
-  A --> S
-  F -.reads.-> L
-  A -.watermark/local marker.-> L
-```
-
-### AD-24 — Named-app identity and Firestore-path uid are pinned to distinct stable ids
-- **Binds:** `AccountFirebase` registry; AD-1, AD-2, AD-19; MCF-feasibility, MCF-orchestrator/singleton, MCF-collision
-- **Prevents:** two registries resolving the same account to different apps/caches/document trees (adversary Pair 1); cache + `users/{uid}/…` stranding on anon-uid reset.
-- **Rule:** two identifiers, never conflated:
-  1. **Named-app key = the stable device-registry account UUID** (`account_<deviceRegistryAccountUuid>`), known pre-auth, before any sign-in. NEVER the Firebase uid, NEVER `currentUser`. This resolves the bootstrap paradox (a local-born app must be named and created *before* `signInAnonymously`, so its name cannot depend on the not-yet-existing anon uid) and keeps the app + cache directory stable across anon-uid resets.
-  2. **Firestore-path uid = a persisted uid field** on the active-account record (the resolved cloud uid, or the anon uid after `signInAnonymously`), with an explicit **remap-on-anon-reset** step (AD-19). Neither identifier may be derived from the live auth uid at call time.
-- Exactly one place (the `AccountFirebase` registry) constructs, names, and caches handles and owns this pinning.
-
-### AD-25 — The canonical stable track key, and mandatory re-key of track-scoped history
-- **Binds:** `curriculum_tracks` and all track-scoped children (`stage_definitions`, `study_day_configs`, `goals`); AD-5, AD-13; MCF-4, MCF-15
-- **Prevents:** two doc-id modules choosing different "stable track keys" so cross-device docs stop matching (adversary Pair 2); the false promise that AD-13 byte-for-byte and AD-5 remap-retirement can both hold for track-embedded formulas.
-- **Rule:** the single canonical stable track key is **`curriculum_id`** (consistent with the live `curriculum_tracks/{curriculum_id}` doc-id). *Every* track-scoped child formula is re-expressed against it explicitly in `doc_ids.dart` (e.g. `stage_definitions/{curriculum_id}_{stageOrder}`) — a track ULID is NOT used as the track key. Because historical cloud docs were written as `{oldPerDeviceTrackId}_{…}`, byte-for-byte reproduction is **impossible** for these collections; AD-13's byte-for-byte rule is explicitly **superseded here** by a **one-time doc-id re-key + backfill** of the historical `{perDeviceTrackId}_*` docs to the `curriculum_id`-keyed form (Phase 3 Wave A, atomic across all track-scoped collections — see plan). This migration is mandatory, not optional.
-
-### AD-26 — Profile hard-delete: registry-derived set; append-only history via server path
-- **Binds:** profile deletion, tutor-mirror-wipe; AD-8, AD-12, AD-16, AD-17; MCF-cascade, MCF-7-delete, MCF-24-orphan, SR-1
-- **Prevents:** deleting the Drift-era "6 no-cascade" set and orphaning the other ~13 collections (adversary Pair 3); the client path being rejected by SR-1 `deny delete` on append-only history.
-- **Rule:** the delete set is derived from the **Firestore collection registry (AD-17 parity)** — every per-profile collection that actually exists in Firestore — NOT the Drift no-cascade list, and NOT any local-only (AD-16) or already-deleted (Outbox) table. It explicitly includes `curriculum_scopes` and `import_metadata` (AD-20). There is **no "dependency order"** (Firestore has no cascade and no FK ordering — an ordering constraint is a no-op). Append-only history (`completions`, `learning_ledger`, `streak_events`, `points_ledger`, `reward_redemptions`) carries SR-1 **`deny delete`**, so the client/repository seam **cannot** hard-delete it: a compliant profile hard-delete is **NOT a pure client operation** — it routes those collections through the **Admin-SDK / Cloud Function `recursiveDelete`** server path (the existing server route). Client-deletable collections go through the AD-8 batched delete; history goes through the CF path; the two together are the "cascade."
-
-### AD-27 — Cross-store fan-out: single owner, Firestore authoritative, prefs a rebuildable projection
-- **Binds:** `gamification_settings` and any entity spanning Firestore + a local store; AD-13, AD-8, AD-15; MCF-14, MCF-19, MCF-uiprefs-sor
-- **Prevents:** two owners applying the same source doc at different times, or a crash tearing a Firestore-write / SharedPreferences-write pair with no coordinating transaction (adversary Pair 6). AD-8 atomicity is structurally **Firestore-only** and cannot span SharedPreferences.
-- **Rule:** an entity whose data fans into Firestore **and** a local store has **exactly one repository owner**. **Firestore is authoritative**; the SharedPreferences copy is a **rebuildable projection re-derived on read from the Firestore doc**, never a co-equal store of record. A torn fan-out therefore self-heals on the next read (the projection is recomputed) rather than persisting split-brain. (This narrows MCF-uiprefs-sor "prefs store-of-record" to: prefs is the *cache/projection*, Firestore is the *record*, for fanned entities. Prefs-only keys with no Firestore counterpart — locale/font/PIN — remain prefs-owned per AD-15.)
-
-### AD-28 — Enforcement is bound to real `make audit` greps, not custom_lint
-- **Binds:** AD-1, AD-2, AD-3, AD-5, AD-23; today's Rule 3 (retired/retargeted)
-- **Prevents:** boundary rules with no mechanical gate drifting silently — exactly the AUD-t-cross-68 hand-copied-predicate class the spine keeps citing.
-- **Rule:** every mechanical boundary rule names a concrete `make audit` grep, because `dart run custom_lint` is **documented non-functional in this repo** (it reports "No issues found!" even on violations) and the greps are the only enforcement that actually runs. Bindings:
-  - **AD-3 import boundary:** retarget the shipped `no-firebase-outside-core` grep (DNI-387) from `lib/core/sync|auth` to the new allowed-dir list `lib/data/firestore/**`, `lib/data/repositories/**`; feature/service/provider files importing `cloud_firestore` fail the gate.
-  - **AD-2 bare-instance ban:** a grep for `FirebaseFirestore.instance` / `FirebaseAuth.instance` outside the `AccountFirebase` registry.
-  - **AD-5 autoincrement-in-payload:** the MCF-11 landmine sweep becomes a **standing** grep gate (not a one-time audit) for autoincrement-id-in-payload outside `merge/`.
-  - **AD-23 dependency direction:** a grep/analyzer check that no `lib/features/**` or `lib/domain/**` file imports the data-access ring past a repository interface.
-  - "lint (CI gate)" phrasing elsewhere in this spine means these greps, not custom_lint.
-
-### AD-29 — Verification strategy for SDK-signal and named-app invariants
-- **Binds:** AD-1, AD-7, AD-9, AD-11, AD-18; MCF-feasibility
-- **Prevents:** the load-bearing runtime-metadata invariants shipping untested because the chosen fake cannot model them.
-- **Rule:** `fake_cloud_firestore` does **not** model named multi-`FirebaseApp` instances, offline persistence, cache-vs-server emission, `isFromCache`/`hasPendingWrites`, or App Check — so a three-tier verification split is mandatory:
-  1. **Pure-unit (fake or plain Dart):** the canonical LWW predicate (AD-7) is unit-pinned so **no second copy can exist** (a grep-gated single-module test plus golden branch cases: ±5s / `synced_at` / D15 / true-tie); codec legacy-alias round-trips (AD-13); doc-id formulas (AD-5/AD-25).
-  2. **Firestore emulator / instrumented integration:** `isFromCache`/`hasPendingWrites`-dependent logic (AD-7 cache-echo, AD-11 status), resubscribe-on-error (AD-9), App-Check-in-rules (AD-12).
-  3. **On-device (emulator-5556 seeded multi-account, Parent PIN 2580):** the AD-1 named-app isolation smoke test, instant offline account switch, and per-account cache independence — the items no fake or emulator can certify.
-  The Phase 0 AD-1 topology smoke test (two named apps / one project / two anon users) is the first item in tier 3 and gates the paradigm.
-
-### AD-30 — Permanent-write-failure recovery affordance
-- **Binds:** all writes; AD-8, AD-9, AD-11; R-4, R-7
-- **Prevents:** the slim-status migration silently dropping the old design's only "stuck — here's how to get unstuck" user path when the `error` status and dead-letter bookkeeping are retired (reconcile: R-4/R-7 successor gap).
-- **Rule:** a write that **permanently** fails (a genuine `permission-denied` rules rejection or other non-retryable error the SDK will NOT drain on its own — distinct from offline/backoff cases it *will* retry) surfaces a **user-visible, out-of-band recovery affordance** (a tap-to-retry / surfaced failure on the affected item), separate from the ambient 3-state status chip (AD-11). This is a narrow, per-failed-write surface — NOT a revived dead-letter counter or app-level queue accounting (which AD-11 forbids). The SDK offline queue remains the sole durability owner (AD-8); this affordance only exposes the residual non-retryable class the queue cannot clear.
-
-## Consistency Conventions
-
-| Concern | Convention |
-| --- | --- |
-| Naming | Collections keep current Firestore names; repositories `<Entity>Repository`; codecs `<Entity>Codec`; account handle `AccountFirebase`. |
-| Doc ids | Deterministic natural-key formula (reproduced exactly) or ULID; never `collection.add`; never a device-local autoincrement id in a payload. |
-| Dates | Real Firestore `Timestamp`, `≤ request.time`; never a client int/string on the wire for `completed_at`/`created_at`/`synced_at`. |
-| Delete | Tombstone (`purgedAt`) for append-only kinds; profile hard-delete set is registry-derived (no "dependency order"); client-deletable via batch, SR-1 append-only history via CF `recursiveDelete` (AD-26). |
-| Identity | Named-app key = stable device-registry account UUID; Firestore-path uid = persisted field w/ remap-on-anon-reset; never the live auth uid at call time (AD-24). |
-| Enforcement | Mechanical boundary rules bind to `make audit` greps, never custom_lint (non-functional here); each boundary AD names its grep (AD-28). |
-| Writes | Repository → batch/transaction or `set(merge:true)`; co-written markers folded into the same atomic op. |
-| Conflict | One canonical LWW predicate module; no per-call-site re-implementation. |
-| Legacy | Always keep decoding legacy field aliases; never emit retired shapes (legacy `settings.stages[]`). |
-| Errors | Narrow `on Exception` (EH-4), never bare `catch`; listener errors → mark-dead + backoff resubscribe. |
-| Keys (local) | `(accountId, profileId)` namespace for every SharedPreferences/SecureStorage per-profile key. |
-| Handles | Resolve `accountFirebase(activeAccountId)`; bare `FirebaseFirestore.instance` is banned outside the registry. |
-
-## Stack
-
-Verified against `learning_tracker/pubspec.yaml` on 2026-07-30 (constraints, not locked resolutions).
-
-| Name | Version |
-| --- | --- |
-| Dart SDK | ^3.10.8 |
-| firebase_core | ^4.4.0 |
-| cloud_firestore | ^6.1.2 |
-| firebase_auth | ^6.1.4 |
-| firebase_app_check | ^0.4.4+1 |
-| cloud_functions | ^6.2.0 |
-| firebase_crashlytics | ^5.2.0 |
-| flutter_riverpod | ^3.3.1 |
-| riverpod_annotation | ^4.0.2 |
-| drift (Content DB + Device Registry only) | ^2.31.0 |
-| sqlite3 | ^2.9.4 (Content DB / Device Registry only, AD-16) — see note below |
-| fake_cloud_firestore (test) | ^4.1.0 — cannot model named apps / persistence / `isFromCache`; see AD-29 |
-| connectivity_plus (status source) | **promote to a direct dependency** (currently transitive-only in lock) before the status path relies on it (AD-11) |
-| internet_connection_checker (retire from status path) | ^3.0.1 |
-| ULID generator | **existing in-repo `lib/core/time/ulid.dart`** — standardize on it; no pub.dev package is added (the only viable one, `ulid: ^2.0.1`, is unneeded given the hand-rolled generator already ships). Confirm all emission routes through this one module before Phase 0. |
-
-- **`sqlite3` version note (out of scope):** the pin `^2.9.4` excludes the current `3.5.0`; the 2→3 jump is a real breaking major (build-hooks native loading replacing `DynamicLibrary`, `dispose()`→`close()`, WASM VFS changes). This touches only the local-only Content DB / Device Registry (AD-16) and is a **deliberately deferred, separate decision** — see Deferred. The pin is not raised as part of this migration.
-
-## Structural Seed
-
-### Target source tree
+The real source tree is not the original target tree from the 2026-07-30 draft:
 
 ```text
 learning_tracker/lib/
-  features/**                      # UI, controllers, services, providers — NO cloud_firestore import
-  domain/**                        # models; points/streak reducers (moved out of DAOs)
+  app/                         # bootstrap, routing, application composition
+  core/
+    auth/                      # current default-app Auth gateway
+    database/content/           # bundled read-only Drift DB
+    database/registry/          # device-account Drift DB
+    preferences/               # SharedPreferences/SecureStorage helpers
+    ...                        # shared domain and platform utilities
   data/
-    repositories/**                # the only data seam; interface + Firestore impl per entity
-    firestore/
-      account_firebase.dart        # named-app registry + handle resolution (AD-1/AD-2/AD-18)
-      doc_ids.dart                 # deterministic doc-id formulas (AD-5/AD-13)
-      conflict.dart                # single canonical LWW predicate (AD-7)
-      codecs/**                    # <Entity>Codec (legacy-alias tolerant, AD-13)
-      write.dart                   # batch/transaction helpers (AD-8)
-    local/
-      content_db/**                # Drift, bundled, read-only (AD-16)
-      device_registry/**           # Drift, pre-auth account picker (AD-16)
-      prefs/**                     # (accountId,profileId)-namespaced (AD-15)
-      connectivity/**              # cross-cutting status source; relocate connectivityStreamProvider here (out of lib/features/account/…) — direct connectivity_plus dep (AD-11)
-  migration/**                     # existing-user Drift→Firestore backfill + verifier (Phase 5)
-firestore.rules                    # SR-1/SR-3 preserved; App Check request.app added (AD-12)
-functions/**                       # tutor invite/accept/revoke unchanged (MCF-17)
+    firestore/                 # AccountFirebase, active-account bridge,
+                               # doc ids, stream recovery, repository providers
+    repositories/               # Firestore repositories and codecs/adapters
+  features/**                  # UI, services, domain models, and local adapters
 ```
 
-### Deployment / operational envelope
+There is no `lib/domain/`, no `lib/migration/`, and no `lib/core/sync/` in the
+current source tree. Feature-scoped repository directories still exist because
+they are the adapters used by the feature interfaces; the global data ring has
+not replaced every feature-local seam.
+
+`cloud_firestore` is intended to be confined to `lib/data/firestore/**` and
+`lib/data/repositories/**` (with the retained Auth boundary in `lib/core/auth/**`).
+That boundary is not yet clean: `features/settings/domain/services/data_export_import_service.dart`
+and `features/settings/presentation/providers/firestore_sync_status_providers.dart`
+still contain direct Firestore code, while `lib/core/providers/firebase_providers.dart`
+retains the documented Firebase Storage exception.
+
+## Invariants and rules
+
+### AD-1 — Per-account named FirebaseApp isolation `[PARTIAL — subsystem implemented, production wiring incomplete]`
+
+- **Binds:** account handles, Firestore cache isolation, multi-account operation.
+- **Prevents:** one account reading another account's cache or Auth identity.
+- **Rule:** `AccountFirebase` creates `account_<deviceRegistryAccountId>` named
+  apps, each with its own `FirebaseAuth`, `FirebaseFirestore`, App Check handle,
+  and bounded persistent cache. The registry enforces a five-account bound and
+  pins Firestore settings before first use. The default app is not returned as a
+  per-account Firestore data handle.
+- **Verification:** the implementation is in
+  `lib/data/firestore/account_firebase.dart`; `account_firebase_providers.dart`
+  keeps the registry alive. The production account sign-in and sign-up flows,
+  however, still use `FirebaseAuthGatewayImpl` and the default
+  `FirebaseAuth.instance`. No production call site currently invokes
+  `createAnonymousAccount`, `signInCloudAccount`, or `linkCredential`. Setting
+  `activeAccountIdProvider` therefore does not by itself establish a named-app
+  Auth session; a named-app repository resolution can still fail with
+  `AccountNotAuthenticatedException`.
+
+### AD-2 — Account-scoped handle and path resolution `[PARTIAL]`
+
+- **Binds:** every Firestore repository provider.
+- **Prevents:** using the wrong account's Firestore cache.
+- **Rule:** new repository providers resolve
+  `activeAccountFirebaseProvider` and pass `handles.firestore`, not a bare
+  Firestore singleton. Profile paths use the active handle's uid and a profile
+  ULID. Bare default Auth remains in the current pre-existing Auth gateway.
+- **Verification:** `lib/data/firestore/repository_providers.dart` funnels
+  profile-scoped repositories through one `(handles, ownerUid, profileId)`
+  resolution seam and validates tutor grants. `PathUidResolver` exists, but it
+  has no production callers; `AccountFirebaseHandles.uid` is still obtained
+  from the live named-app Auth user. The persisted-path-uid rule from the old
+  spine is therefore not yet enforced end to end.
+
+### AD-3 — Repository layer is the data seam `[PARTIAL]`
+
+- **Binds:** Firestore repositories and feature adapters.
+- **Prevents:** feature screens directly depending on Firestore.
+- **Rule:** new Firestore reads and writes belong in `lib/data/repositories/**`;
+  feature-local `data/repositories/` files may adapt those repositories to
+  feature interfaces. Presentation code should depend on those interfaces.
+- **Verification:** the global repository ring and its provider registry exist,
+  and `tool/check_dependency_direction.dart` gates imports of the data ring
+  from non-repository feature/domain files. The intended universal SDK boundary
+  is not complete: the two settings files named above still import or use
+  Firestore directly, and `lib/domain/**` does not yet exist.
+
+### AD-4 — Derived points and streak state `[ADOPTED, with a bounded reactive caveat]`
+
+- **Binds:** `points_ledger`, `streak_events`, reward and progress reads.
+- **Prevents:** a replicated counter diverging from its append-only history.
+- **Rule:** points balance is derived from the Firestore points ledger and clamped
+  as the domain rule requires; streak state is reduced from streak events. No
+  Firestore `PointsBalance` counter is used as the source of truth.
+- **Verification:** `FirestorePointsBalanceReaderAdapter` reads the native ledger
+  path and `FirestoreStreakStateRepository` reduces the event log. Its reactive
+  stream is limited to the repository's recent-event window; one-shot reads page
+  the full log. This is a known scalability caveat, not permission to add a
+  stored balance.
+
+### AD-5 — Deterministic document ids and storage identities `[PARTIAL]`
+
+- **Binds:** every new Firestore repository.
+- **Prevents:** retry duplicates and device-local integer identity leakage.
+- **Rule:** new writes use `DocIds`, natural keys, `CurriculumId` storage keys,
+  and profile ULIDs. `learner_profiles/{profileId}` is keyed by a profile ULID,
+  not the account uid. Stage definitions use
+  `{curriculum_id}_{stage_order}`; study-day configs use the curriculum and day
+  key; append-only entries use deterministic keys or ULIDs.
+- **Verification:** `lib/data/firestore/doc_ids.dart` contains the new formulas,
+  but also retains legacy integer and pre-AD-25 helpers. The remaining feature
+  graph still carries integer-shaped model fields and placeholder identities;
+  see AD-24/AD-25 and the open-work table below. This is not a back-compat
+  promise: the legacy helpers are residue awaiting deletion.
+
+### AD-6 — Append-only rules and tombstone semantics `[ADOPTED for current Firestore paths]`
+
+- **Binds:** completions, learning ledger, streak events, points ledger, and
+  other history-shaped collections.
+- **Prevents:** client-side deletion or mutation of immutable history.
+- **Rule:** Firestore rules enforce the collection-specific append-only policy;
+  repositories use deterministic ids and legal tombstone/update shapes. Where
+  rules deny document deletion, current code tombstones fields or routes a
+  destructive operation through an owner-scoped Cloud Function.
+- **Verification:** `firestore.rules` and the native repositories are the
+  authority. The old Drift cascade/order language is obsolete and is not part
+  of this rule.
+
+### AD-7 — Client LWW conflict predicate `[DORMANT — not a current data path]`
+
+- **Finding:** `lib/data/firestore/conflict.dart` exists, but no production file
+  imports it. It is a preserved pure helper with tests, not a governing merger.
+- **Current rule:** the deleted Drift merge engine and its client-side LWW
+  pipeline are not architectural dependencies. Firestore is the current write
+  authority; do not describe `conflict.dart` as a universal reconciliation
+  predicate unless a second writer is deliberately introduced.
+
+### AD-8 — SDK offline queue plus Firestore atomic writes `[ADOPTED in native repositories]`
+
+- **Binds:** multi-document native writes and offline durability.
+- **Prevents:** rebuilding the deleted Outbox/PushPipeline pair.
+- **Rule:** the Firestore SDK owns offline queued writes. Repository operations
+  use `WriteBatch` or transactions where several documents must change together;
+  co-written markers stay in the same batch. There is no user-domain Outbox,
+  SyncKv table, custom pull pipeline, or user Drift database in `lib/`.
+- **Verification:** `find lib` shows only Content DB and Device Registry Drift
+  definitions. Native order, stage, completion, ledger, and reward repositories
+  use batch/transaction seams. The account-removal path still contains vestigial
+  deletion of a `user_acc_*.db` file; that is cleanup residue, not a live data
+  store, and remains open work.
+
+### AD-9 — Listener recovery `[PARTIAL]`
+
+- **Binds:** native repository `snapshots()` listeners.
+- **Prevents:** a terminal Firestore stream error leaving a screen dark.
+- **Rule:** repository listeners use `resilientDocStream` or
+  `resilientQueryStream`, which resubscribe with capped jittered backoff and
+  cancel cleanly when the last subscriber leaves.
+- **Verification:** the wrappers are used throughout
+  `lib/data/repositories/**`. The settings sync-status provider still opens a
+  raw account-document `snapshots()` stream and exposes an explicit retry UI;
+  universal listener lifecycle parity is therefore not yet true.
+
+### AD-10 — Arrival-order tolerance `[REMOVED — no current cross-collection merge engine]`
+
+- **Binds:** formerly track-scoped child reconciliation.
+- **Finding:** the old skip-and-re-merge rule belonged to the deleted pull/merge
+  engine. Current repositories do not maintain cross-collection arrival-order
+  state or perform foreign-key re-merges.
+- **Current rule:** no separate AD-10 runtime contract remains. Atomic and
+  idempotent multi-document writes are covered by AD-8; independent stream
+  recovery and per-document decode isolation are covered by AD-9. Child reads
+  use their own current Firestore paths and do not wait for a parent listener.
+- **Verification:** there is no `lib/core/sync/`, `SyncKv`, or user-data merge
+  pipeline in the checked-out source. This identifier remains so the removal
+  of the former invariant is explicit.
+
+### AD-11 — SDK-derived sync status `[PARTIAL — current status has four states]`
+
+- **Binds:** settings backup/sync status UI.
+- **Prevents:** reviving queue counters or claiming a failed listener is synced.
+- **Rule:** the native status source uses `hasPendingWrites` and `isFromCache`.
+  The current enum is `unknown | synced | syncing | offline`; `unknown` is
+  intentional when no account is active or the listener has no settled value.
+  A listener error is surfaced with a retry affordance.
+- **Verification:** `firestore_sync_status_providers.dart` maps live snapshot
+  metadata and `backup_sync_section.dart` renders error/retry. The old exact
+  three-state claim is false for the current code and is retired here.
+
+### AD-12 — Firestore rules and App Check boundary `[PARTIAL]`
+
+- **Binds:** owner/tutor authorization and direct SDK access.
+- **Prevents:** client code bypassing Firestore authorization rules.
+- **Rule:** `firestore.rules` remains the authorization boundary; native SDK
+  writes use real Firestore timestamps and collection field whitelists. Default
+  and named apps attempt App Check activation.
+- **Verification:** `firebase_bootstrap.dart` and `AccountFirebase` contain the
+  activation paths, but `firestore.rules` has no `request.app` enforcement in
+  the checked-out source. App Check is therefore not a completed rules-side
+  invariant; do not claim the old “rules plus App Check” posture as done.
+
+### AD-13 — Schema continuity and migration compatibility `[REMOVED]`
+
+- **Finding:** byte-for-byte continuity, legacy aliases as a contract, existing-
+  user backfill, and migration rollback were requirements of the abandoned
+  user migration. The current product is greenfield and has no supported legacy
+  user data.
+- **Current rule:** keep only the fields and formulas required by the current
+  Firestore schema. Any legacy decoding that remains in a codec is implementation
+  residue, not a supported compatibility guarantee.
+
+### AD-14 — Account deletion and local-state isolation `[INCOMPLETE]`
+
+- **Binds:** account removal, profile/account-local preferences, Auth sessions.
+- **Prevents:** deleting one account's device state while leaving another's.
+- **Rule:** account teardown should be account-scoped and should dispose the
+  account's named app when that app is actually wired into production.
+- **Verification:** `AccountManagementService.clearLocalDeviceState()` still
+  calls `SharedPreferences.clear()` and `FlutterSecureStorage.deleteAll()`;
+  `AccountLifecycleService` still deletes the vestigial `dbFileName` and does
+  not dispose an `AccountFirebase` session. The old spine's claim that this
+  defect is adopted is false.
+
+### AD-15 — Local preference namespacing `[PARTIAL]`
+
+- **Binds:** SharedPreferences, SecureStorage, per-profile UI state.
+- **Prevents:** two profiles colliding on preference keys.
+- **Rule:** current profile-scoped keys use the profile ULID (`*_p<profileId>`)
+  and tutor/parent PIN namespaces are separate. Account identity must still be
+  considered when deleting or migrating device state.
+- **Verification:** `ProfileScopedPreferenceKeys` confirms profile scoping, but
+  the keys are not explicitly `(accountId, profileId)` tuples and legacy keys
+  remain readable. Global teardown in AD-14 means the stronger old invariant is
+  not adopted.
+
+### AD-16 — Content DB and Device Registry stay local `[ADOPTED]`
+
+- **Binds:** first launch, account picker, bundled content.
+- **Prevents:** moving device/workspace state into the Firestore user tree.
+- **Rule:** `ContentDatabase` is the bundled read-only Drift database and
+  `DeviceRegistryDatabase` is the pre-auth, device-level account registry.
+  Neither is part of the Firestore user-data rewrite.
+- **Verification:** these are the only current Drift database definitions under
+  `lib/core/database/`; the registry still has a five-account cap.
+
+### AD-17 — Repository/provider coverage `[PARTIAL]`
+
+- **Binds:** the Firestore collections currently cut into the new data ring.
+- **Prevents:** a newly-created repository being unreachable or a feature
+  silently continuing to use the deleted user database.
+- **Rule:** each migrated entity has a Firestore repository and a provider or
+  feature adapter. A collection is not “done” merely because its repository
+  file exists; its full feature read/write graph must use it.
+- **Verification:** the repository provider registry covers the current native
+  set, while many feature adapters still contain migration-era seams and
+  comments. Coverage is therefore a current inventory, not a completion claim.
+
+### AD-18 — Firestore persistence configured per named app `[ADOPTED in the registry]`
+
+- **Binds:** every `AccountFirebase` Firestore session.
+- **Prevents:** relying on an unbounded or platform-default cache.
+- **Rule:** `AccountFirebase._sessionFor` sets persistence enabled and a 20 MiB
+  cache limit immediately after resolving the Firestore handle and before Auth
+  or repository use. Web remains outside the offline-account guarantee.
+- **Verification:** the ordering and constant are in
+  `lib/data/firestore/account_firebase.dart`. This applies to sessions the
+  registry creates; AD-1 remains open until production account flows use them.
+
+### AD-19 — Anonymous Auth for local-born accounts `[PARTIAL — API exists, flow not wired]`
+
+- **Binds:** device-only account creation and upgrade to a cloud credential.
+- **Prevents:** an account with no Auth principal being unable to use rules-gated
+  Firestore.
+- **Rule:** `createAnonymousAccount` signs in on the account's named app;
+  `linkCredential` upgrades that same user without changing its uid.
+- **Verification:** both operations are implemented and unit-injectable in
+  `AccountFirebase`, but no production sign-up flow calls them. Current account
+  creation/sign-in remains on the default Auth gateway, so this is not an
+  adopted end-to-end behavior.
+
+### AD-20 — Curriculum-scope ownership `[ADOPTED in the native repository]`
+
+- **Binds:** `curriculum_scopes` owner reads/writes and delete coverage.
+- **Prevents:** leaving a schema collection without a coherent owner path.
+- **Rule:** `FirestoreCurriculumScopeRepository` is the owner-side Firestore
+  seam; tutor writes use the existing owner-scoped Cloud Function path.
+- **Verification:** the repository and provider exist in `lib/data/`. This does
+  not imply that every feature caller has completed the wider identity cleanup.
+
+### AD-21 — Native write paths `[PARTIAL]`
+
+- **Binds:** Firestore repository writes, completions, ledgers, and rewards.
+- **Prevents:** a second local write queue or an unowned write tee.
+- **Rule:** native writes go through the repository that owns the entity and use
+  `set`, batch, or transaction semantics appropriate to that entity. Tutor
+  writes to owner data use the Cloud Functions proxy.
+- **Verification:** the new repository layer follows this rule, but production
+  feature orchestration still includes adapters and unfinished identity seams;
+  the old “every write has completed the uniform cut” claim is not made here.
+
+### AD-22 — Tutor isolation and owner-path access `[PARTIAL]`
+
+- **Binds:** tutored reads and owner-scoped tutor writes.
+- **Prevents:** reading the tutor's own profile when the selected context is a
+  learner, or writing the owner's tree directly from the tutor client.
+- **Rule:** a tutored read resolves `(tutor-authenticated handle, owner uid,
+  learner profile ULID)` and validates the active grant. Tutor mutations route
+  through owner-scoped Cloud Functions; unsupported owner-only writes remain
+  disabled rather than pretending to succeed.
+- **Verification:** `repository_providers.dart` validates the grant and returns
+  the owner path; track/program writes use `TutorWriteService`. Point-config
+  editing is intentionally disabled in tutor mode because the available tutor
+  callable writes a different settings document. Tutor coverage is therefore
+  real but not universal.
+
+### AD-23 — Dependency direction `[INCOMPLETE]`
+
+- **Binds:** features, adapters, repositories, data-access ring.
+- **Prevents:** feature/domain code coupling directly to data-access details.
+- **Rule:** the intended direction is `features → feature repository interface →
+  data/repositories → data/firestore`, with local stores behind their own
+  boundaries.
+- **Verification:** `tool/check_dependency_direction.dart` exists as a hard
+  gate for imports of `data/firestore` outside repository implementation paths,
+  but the `lib/domain` target layer does not exist and the broader SDK boundary
+  still has the violations recorded under AD-3.
+
+### AD-24 — Distinct app identity, profile identity, and path uid `[INCOMPLETE]`
+
+- **Binds:** account registry and all profile-scoped paths.
+- **Prevents:** conflating a device account id, Firebase uid, profile ULID, and
+  retired Drift integer ids.
+- **Rule:** the named-app key is the stable device-registry account id; the
+  profile document key is a ULID; the Firestore path uid must be an explicitly
+  persisted account value and must not be inferred from a live user at each
+  call.
+- **Verification:** the named-app key and profile ULID portions are present.
+  `PathUidResolver` only defines the persisted-uid/remap mechanism and has no
+  callers; the current handle exposes the live named-app user's uid. The
+  anon-reset re-home half is not implemented.
+
+### AD-25 — CurriculumId is the track identity `[PARTIAL]`
+
+- **Binds:** tracks, stage definitions, study-day configs, goals, order, and
+  completion payloads.
+- **Prevents:** different devices choosing different local integer track ids.
+- **Rule:** new Firestore repositories and Cloud Functions use `CurriculumId`
+  storage keys and profile ULIDs. Stage/order APIs no longer require a local
+  track row id.
+- **Verification:** current native repository signatures and Cloud Functions
+  accept the new identities, but `RewardMilestone.kGlobalTrackSentinel`,
+  `profileId: 0`, `trackId: 0`, and other integer-shaped sites remain in `lib/`.
+  The identity refactor is still open.
+
+### AD-26 — Destructive operations use the rules-legal owner path `[PARTIAL]`
+
+- **Binds:** account/profile/track deletion and append-only history.
+- **Prevents:** a client claiming success after a rules-denied delete.
+- **Rule:** use client batches/tombstones only where the rules allow them; use
+  owner-scoped Cloud Functions/Admin SDK for recursive or append-only history
+  deletion.
+- **Verification:** current account and track deletion code invokes server paths,
+  and `stage_definitions`/`track_learning_order` use legal tombstones. The full
+  deletion surface is still coupled to the unfinished account-lifecycle and
+  identity work; no old Drift “dependency order” claim survives.
+
+### AD-27 — One owner for Firestore/local fan-out `[ADOPTED for reward settings]`
+
+- **Binds:** `preferences/gamification_settings` and other entities with a
+  Firestore plus local projection.
+- **Prevents:** two independent stores of record drifting apart.
+- **Rule:** Firestore owns the reward catalogue; local service state is a
+  rebuildable projection/cache. Prefs-only UI settings remain local-owned.
+- **Verification:** `FirestoreRewardSettingsRepository` is used by the reward
+  controller for hydrate and write. Do not generalize this one completed fan-out
+  to every preference until its caller graph is audited.
+
+### AD-28 — Mechanical boundary enforcement `[PARTIAL]`
+
+- **Binds:** AD-2, AD-3, AD-23, and future repository additions.
+- **Prevents:** new boundary violations silently accumulating.
+- **Rule:** the repository uses source-based checks for Firebase confinement,
+  bare-instance ratcheting, dependency direction, and profile-path keying.
+- **Verification:** the checkers and Make targets exist. The bare-instance
+  baseline is stale relative to the checked-out source (the source has one
+  non-comment default `FirebaseAuth.instance` site while the baseline records
+  two), and Firebase confinement retains a documented Storage exception plus
+  the two settings offenders. The gates are useful guardrails, not proof that
+  the target layering is complete.
+
+### AD-29 — Evidence must match the SDK signal being claimed `[PARTIAL]`
+
+- **Binds:** named apps, persistence metadata, pending writes, cache state, and
+  listener recovery.
+- **Prevents:** declaring an SDK invariant proven by a fake that cannot model it.
+- **Rule:** pure logic may use unit-level evidence; Firestore metadata requires
+  emulator/instrumented evidence; named-app cache isolation requires an actual
+  device/emulator run.
+- **Verification:** the repository contains the corresponding unit and
+  integration-test scaffolding, and the historical memlog records a successful
+  two-named-app topology run. This document does not claim a new test run for
+  this rewrite, and the production wiring gaps in AD-1/AD-24 remain.
+
+### AD-30 — Recovery for non-retryable writes `[INCOMPLETE]`
+
+- **Binds:** user-visible handling of permanent Firestore write rejection.
+- **Prevents:** a write disappearing behind an ambient sync chip.
+- **Rule:** a genuine non-retryable write failure needs a per-item or otherwise
+  explicit retry/recovery affordance; it must not recreate an app-level queue.
+- **Verification:** the settings listener has a retry affordance, but the source
+  audit did not find a general per-failed-write recovery surface. This remains
+  unfinished and is not represented as an `error` sync state.
+
+## Current data-flow shape
 
 ```mermaid
-graph LR
-  subgraph Device["One device (≤5 accounts)"]
-    DR[Device Registry DB - local]
-    CDB[Content DB - local, bundled]
-    subgraph AppN["Per-account named FirebaseApp x N"]
-      AU[Anonymous/Cloud Auth]
-      FS[Firestore + private offline cache]
-    end
-    PR[Prefs / SecureStorage - namespaced]
-  end
-  FS -->|snapshots + queued writes| CLOUD[(Firestore project torah-study-tracker)]
-  CLOUD --> RULES[Security rules + App Check]
-  CF[Cloud Functions - Admin SDK] --> CLOUD
-  AppTutor[Tutor grant handles] --> CLOUD
+flowchart TD
+  UI[Feature UI / controller] --> A[Feature repository adapter]
+  A --> R[lib/data/repositories]
+  R --> H[AccountFirebase handle]
+  H --> F[Firestore + SDK offline cache]
+  F --> C[(Firestore project)]
+  UI --> L[Content DB / Device Registry / prefs]
+  T[Tutor client] --> CF[Owner-scoped Cloud Functions]
+  CF --> C
 ```
 
-- **Environments:** existing Firebase project (`torah-study-tracker`); no new backend services introduced. App Check debug-token discipline preserved (wipes regenerate the token → 403).
-- **Rollout:** strangler per collection behind the repository seam; existing-user backfill is device-local and per-account; no server-side data migration except the `gamification_settings` fan-out (client-driven, idempotent).
+The default Auth gateway is still used by current sign-in flows. The named-app
+path is the intended Firestore path, but it is not yet the only end-to-end Auth
+path. Features should not infer readiness from a natural empty value when a
+write backend is unavailable; current adapters are mixed, so each call site must
+be reviewed before tightening that rule globally.
 
-### Core-entity map (names + relationships)
+## Current identity and collection conventions
 
-```mermaid
-erDiagram
-  ACCOUNT ||--o{ LEARNER_PROFILE : owns
-  LEARNER_PROFILE ||--o{ CURRICULUM_TRACK : has
-  CURRICULUM_TRACK ||--o{ STAGE_DEFINITION : contains
-  CURRICULUM_TRACK ||--o{ STUDY_DAY_CONFIG : schedules
-  CURRICULUM_TRACK ||--o{ GOAL : targets
-  LEARNER_PROFILE ||--o{ COMPLETION : records
-  LEARNER_PROFILE ||--o{ LEARNING_LEDGER : accrues
-  LEARNER_PROFILE ||--o{ POINTS_LEDGER : accrues
-  LEARNER_PROFILE ||--o{ STREAK_EVENT : accrues
-  LEARNER_PROFILE ||--o{ REWARD_REDEMPTION : spends
-  ACCOUNT ||--o{ TUTOR_GRANT : granted
-  TUTOR_GRANT ||--|| TUTOR_ACTIVE_ACCESS : gates
-```
-
-## Capability → Architecture Map
-
-Every MCF-1..35 (and suffixed variants) → target location + governing AD. This is the completeness contract.
-
-| MCF | Lives in (target) | Governed by |
-| --- | --- | --- |
-| MCF-1 LWW 5-step + SyncKv | `data/firestore/conflict.dart` (single owner) | AD-7 |
-| MCF-2 derived PointsBalance | `domain/**` reducer; full-ledger sum via rebuildable local cache (no date-bounding) | AD-4 |
-| MCF-3 deterministic doc-id + atomic entity+marker | `data/firestore/doc_ids.dart`, `write.dart` | AD-5, AD-8 |
-| MCF-3-continuity doc-id formulas + aliases | `doc_ids.dart`, `codecs/**` (byte-for-byte except track-scoped, re-keyed) | AD-13, AD-25 |
-| MCF-3-atomicity tx seam | `write.dart` batch/transaction | AD-8 |
-| MCF-4 track-id remap → stable key | `doc_ids.dart` — canonical track key = `curriculum_id`, remap retired | AD-5, AD-25 |
-| MCF-5 append-only + dedup + SR-1 | codecs + rules | AD-6, AD-12 |
-| MCF-6 tombstone resurrection | completion repository (tx) | AD-6, AD-8 |
-| MCF-7 stage_id_format marker | completion codec | AD-6 |
-| MCF-7-delete profile-delete collection set | delete helper (registry-derived, no ordering) | AD-8, AD-26 |
-| MCF-cascade 6-no-cascade tables / no Firestore cascade | `write.dart` batched delete (client-deletable) + CF `recursiveDelete` (SR-1 history) | AD-8, AD-26 |
-| MCF-8 double-credit uniqueness | doc-id=ULID | AD-5 |
-| MCF-8b prior-import upgrade | completion repository (tx) | AD-8 |
-| MCF-8-conn connectivity duplication | status source consolidation | AD-11 |
-| MCF-9 pre-v30 ledger never migrate | migration verifier gate | AD-4; Phase 5 |
-| MCF-9-prefs per-profile pref namespacing | `data/local/prefs/**` | AD-15 |
-| MCF-9-counter completionCommitted staleness | reactive streams from repository | AD-3 |
-| MCF-10 SR-3 real Timestamp | codecs emit Timestamp | AD-12 |
-| MCF-10-codegen Riverpod return types | hand-written StreamProvider fallback | AD-3 (convention) |
-| MCF-11 identity remap / autoincrement audit | UID-keyed profile; landmine sweep | AD-5 |
-| MCF-11-listeners subscription de-dup | shared repository streams | AD-3, AD-9 |
-| MCF-12 TrackLearningOrder profileId integrity | migration verifier | Phase 5 |
-| MCF-13 RewardRedemption bespoke LWW | standardized onto canonical predicate (unconditional) | AD-7 |
-| MCF-13-scaffold empty repo dirs | fill/re-point before cutover | AD-3 |
-| MCF-14 gamification two-store fan-out | single owner; Firestore authoritative, prefs a rebuildable projection | AD-13, AD-27 |
-| MCF-15 pull/merge ordering | idempotent skip-and-re-merge | AD-10 |
-| MCF-16 settings dual write path | read-compat only; single write shape | AD-13 |
-| MCF-17 tutor_active_access exists() | functions unchanged; repository reads gate | AD-13 |
-| MCF-19 gamification embedded array remodel | subcollection fan-out (single owner) | AD-13, AD-27 |
-| MCF-20 outbox atomicity boundary | SDK queue + batch/tx | AD-8 |
-| MCF-21 outbox no-UNIQUE dedup | doc-id dedup | AD-5 |
-| MCF-22 no native pending/dead-letter | slim 3-state; drop bookkeeping | AD-11 |
-| MCF-23 terminal-on-error listeners | resubscribe-on-error; gated resume reset (E-5); capped retry never lies-synced | AD-9, AD-11 |
-| MCF-24-orphan deleteUserData omissions | registry-derived delete set incl. `curriculum_scopes` **and** `import_metadata` | AD-8, AD-20, AD-26 |
-| MCF-24-streak unbounded replay | bounded/windowed streak reducer (points is NOT windowed) | AD-4 |
-| MCF-25 reorder-amnesty atomic stamp | same-op write | AD-8 |
-| MCF-26 FB-3 cache-echo guard | preserved in reconciliation | AD-7 |
-| MCF-27 GoalMerger F4 tie-break | targeted test then canonical predicate | AD-7; Phase 3 test gate |
-| MCF-28 tutored park/unpark | lifecycle parity | AD-9, AD-22 |
-| MCF-29 dead batch writer | moot (cost model corrected) | Deferred |
-| MCF-30 tutor_grant native precedent | vertical-slice template; routing kept | AD-17 |
-| MCF-31 stale docs | re-derive from code (method) | Phase 0 discipline |
-| MCF-32 4-way parity | parity acceptance test | AD-17 |
-| MCF-35 registry+content local | never migrate | AD-16 |
-| MCF-view completions_view purged_at filter | repository query re-implements filter | AD-6 |
-| MCF-writer CompletionWriter atomicity | completion repository tx | AD-8 |
-| MCF-collision unpartitioned prefs | (accountId,profileId) namespace; app keyed by registry UUID | AD-15, AD-24 |
-| MCF-blastradius deleteAccount wipe | scoped delete | AD-14 |
-| MCF-globalflags write-once flags | per-account keys | AD-14 |
-| MCF-localborn credential-less tier | Anonymous Auth principal; app keyed by registry UUID, uid remap-on-reset | AD-19, AD-24 |
-| MCF-uiprefs-sor prefs store-of-record | prefs-only keys prefs-owned; fanned entities → prefs is projection, Firestore is record | AD-15, AD-27 |
-| MCF-outbox-isolation don't destroy unsynced | SDK queue + removal guard | AD-8 |
-| MCF-feasibility N named apps | `account_firebase.dart`; Phase 0 topology smoke test + on-device verification | AD-1, AD-18, AD-29 |
-| MCF-orchestrator/singleton uid-from-record | handle resolution; app-name vs path-uid pinned | AD-2, AD-24 |
-| MCF-appcheck rules-only surface | add request.app to rules | AD-12 |
-| MCF-1-facade completions bypass | uniform write path | AD-21 |
-
-## Deferred
-
-| Deferred | Why it can wait |
+| Concern | Current convention |
 | --- | --- |
-| Delta pull with per-collection watermark + composite indexes (E-4 full, review item A) | Native listeners already replace pull; watermark is a cost optimization, not a correctness gate. Land dedup first, watermark after cutover. |
-| Real-time re-scope to only-collaborative data (review item B) | Correctness holds with full listeners; this is a standing-cost cut, safe post-migration. |
-| Metered/cellular-aware mode (review item C, E-8) | Orthogonal to the data layer; a UX/cost refinement layered after the seam stabilizes. |
-| Append-only batch-write wiring (E-6) | Correctness-neutral efficiency; the dead `pushLedgerEntriesBatch` cost model is corrected (MCF-29) — no urgency. |
-| CitiesRepository sqlite | Static reference data, out of migration scope. |
-| `sqlite3` 2.x→3.x upgrade (Content DB / Device Registry) | Live latest `3.5.0` is outside the `^2.9.4` pin and a real breaking major (build-hooks loading, `dispose()`→`close()`, WASM VFS). Touches only local-only AD-16 stores; a deliberate separate decision, not part of this migration. |
-| E-3.2 batch 3 single-doc preference listeners → 1 collection-level listener | A small standing-cost read-count cut, distinct from the bigger real-time re-scope (item B). Correctness-neutral; land after the seam stabilizes. |
-| E-9 park-delay tuning (60s) + early-out on empty-backlog throttled resume | Efficiency tuning of *how* parking behaves, not *whether* (AD-9 owns parity). Correctness-neutral; defer with its efficiency siblings. |
-| Web offline-switch parity | Web persistence differs; explicitly non-target unless separately funded (AD-18). |
-| Recovery of audit-code scenarios C3/H3/M1 (§10 Q13) | Investigation task; does not block the paradigm — mergers already tolerate the cases. |
+| Account app key | `account_<DeviceAccounts.accountId>` in `AccountFirebase` |
+| Firestore account path | `users/{uid}`; current repository providers use the resolved handle uid |
+| Profile path | `users/{uid}/learner_profiles/{profileUlid}` |
+| Track key | `CurriculumId.storageKey` in new repositories/functions |
+| Stage/order ids | Deterministic `DocIds` formulas; no new `collection.add()` for these entities |
+| Dates | Firestore timestamp-shaped values through `FirestoreCodec`/repository writes |
+| History | Append-only rules; legal tombstone or Cloud Function for deletion cases |
+| Offline durability | Firestore SDK persistence/queue; no custom user-data Outbox |
+| Local stores | Bundled Content DB, Device Registry DB, SharedPreferences, SecureStorage |
+| Auth | Default-app `FirebaseAuthGateway` still live; named-app Auth registry exists but is not fully wired |
+
+## Verified open work
+
+These are source-backed gaps, not inherited plan prose:
+
+| Finding | Current evidence / consequence |
+| --- | --- |
+| Integer sentinels remain | `RewardMilestone.kGlobalTrackSentinel` still equals `0`; `profileId: 0` and `trackId: 0` call sites remain; the planned identity cleanup is not complete. |
+| Path uid remap is only a registry mechanism | `PathUidResolver` and breadcrumb columns exist, but no production caller performs the Firestore tree re-home after an uid change. |
+| Named-app Auth is not the production sign-in path | `sign_in_controller.dart` and `signup_screen.dart` use the default Auth repository; the registry's account-creation methods have no production callers. |
+| SDK boundary still leaks | Settings data-export and sync-status files directly use Firestore; the confinement checker also documents a Firebase Storage exception. |
+| Old user-DB cleanup residue remains | No user DB/Outbox/SyncKv tables or custom sync engine files remain, but `DeviceAccounts.dbFileName`, `drift_db_file.dart`, `user_acc_*.db` cleanup, and many stale Drift-era comments remain. |
+| Listener policy is not universal | Native repositories use resilient wrappers; the sync-status UI uses a raw snapshot listener and retry UI. |
+| Finish-line throw items were repaired | Current `track_learning_order.resetToDefault`, stage completion checks, and stage deletion paths no longer contain `UnimplementedError`; platform-specific `UnsupportedError` guards in `firebase_options.dart` are unrelated. |
+| D-E/readiness behavior is mixed | Some adapters throw named not-ready exceptions for writes, while other feature adapters still return `null`/`[]` for unresolved providers. Each path needs a deliberate user-facing classification. |
+
+## Deliberately absent migration machinery
+
+There is no supported phased rollout, feature flag, shadow write, rollback-to-Drift
+path, existing-user backfill, legacy database reader, or byte-for-byte cloud
+continuity obligation. The SDK's offline queue is the durability mechanism. Any
+future work should extend the current repository/identity design or explicitly
+record a new decision; it must not revive the abandoned migration machinery by
+copying old phase language into this spine.
