@@ -17,12 +17,10 @@
 @Tags(['e2e', 'journey'])
 library;
 
-import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart'
     show Directionality, Icons, Locale, TextDirection, ValueKey;
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart'
     show
@@ -30,7 +28,6 @@ import 'package:learning_tracker/core/preferences/preference_providers.dart'
         effectiveUseHebrewTermsProvider,
         useHebrewDateProvider,
         useHebrewTermsProvider;
-import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/gamification/domain/models/streak_recovery_info.dart'
     show StreakRecoveryInfo;
@@ -46,6 +43,7 @@ import 'package:learning_tracker/features/scheduler/presentation/screens/schedul
     show SchedulerScreen;
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart'
     show scopedItemCountProvider;
+import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart'
     show activeTracksProvider;
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
@@ -53,6 +51,7 @@ import 'package:learning_tracker/features/tutoring/presentation/providers/active
     show activeTutorPermissionsProvider;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../helpers/firestore_fixtures.dart';
 import '../harness/e2e_common_overrides.dart';
 import '../harness/e2e_harness.dart';
 
@@ -60,7 +59,6 @@ import '../harness/e2e_harness.dart';
 
 /// Creates a minimal [DailyTask] for testing.
 DailyTask _makeTask({
-  int trackId = 1,
   String ref = 'Berakhot.2a',
   CurriculumId curriculum = CurriculumId.mishnayos,
   bool isOverdue = false,
@@ -69,12 +67,10 @@ DailyTask _makeTask({
   curriculumId: curriculum,
   contentItemSefariaRef: ref,
   stageOrder: 1,
-  stageDefinitionId: 1,
   priority: priority,
   isOverdue: isOverdue,
   reason: isOverdue ? 'Behind pace' : 'Due today',
   stageName: 'Learn',
-  trackId: trackId,
   trackLabel: 'Test Track',
   estimatedEffortMinutes: 5,
 );
@@ -84,7 +80,7 @@ DailyTask _makeTask({
 List<Override> _schedulerOverrides({
   required E2EHarness h,
   required List<DailyTask> tasks,
-  List<CurriculumTrack> tracks = const [],
+  List<CurriculumTrackEntity> tracks = const [],
 }) => [
   dashboardActiveCurriculaStreamProvider.overrideWith(
     (ref) => Stream.value(<CurriculumId>[]),
@@ -147,7 +143,7 @@ void main() {
         final h = E2EHarness(tester, identity: identity);
         addTearDown(h.dispose);
 
-        final task = _makeTask(trackId: 1, ref: 'Berakhot.2a');
+        final task = _makeTask(ref: 'Berakhot.2a');
 
         await h.pumpApp(
           path: '/scheduler',
@@ -222,7 +218,7 @@ void main() {
           useHebrewTermsProvider.overrideWithValue(false),
           effectiveUseHebrewTermsProvider.overrideWithValue(false),
           trackDualProgressMetricsProvider.overrideWith(
-            (ref, pid) => Future.value([]),
+            (ref) => Future.value([]),
           ),
           dashboardHasProgramEnrollmentProvider.overrideWith(
             (ref, curriculum) => Future.value(false),
@@ -240,29 +236,21 @@ void main() {
       );
       await tester.pump(const Duration(milliseconds: 300));
 
-      // Seed a real goal row so TrackDetailScreen shows "Edit Goal" path.
-      final trackId = await h.db
-          .into(h.db.curriculumTracks)
-          .insert(
-            CurriculumTracksCompanion.insert(
-              profileId: identity.profileId,
-              curriculumId: CurriculumId.mishnayos.storageKey,
-              stateChangedAt: DateTimeFactory.nowUtc(),
-              activatedAt: DateTimeFactory.nowUtc(),
-            ),
-          );
-      // Insert a goal row for the seeded track.
-      await h.db.goalDao.insertGoal(
-        GoalsCompanion.insert(
-          profileId: identity.profileId,
-          curriculumId: CurriculumId.mishnayos.storageKey,
-          trackId: trackId,
-          targetPercent: const Value(100.0),
-          goalType: const Value('deadline'),
-          targetDate: Value(DateTime.utc(2027, 1, 1)),
-          createdAt: DateTimeFactory.nowUtc(),
-          updatedAt: DateTimeFactory.nowUtc(),
-        ),
+      // Seed Firestore-native track and goal rows so TrackDetailScreen shows
+      // the existing-goal path.
+      await seedTrack(
+        h.firestore,
+        uid: identity.accountId,
+        profileId: identity.profileId,
+        curriculumId: CurriculumId.mishnayos,
+      );
+      await seedGoal(
+        h.firestore,
+        uid: identity.accountId,
+        profileId: identity.profileId,
+        curriculumId: CurriculumId.mishnayos,
+        goalType: 'deadline',
+        targetDate: DateTime.utc(2027, 1, 1),
       );
 
       // Navigate to TrackDetailScreen.
@@ -359,7 +347,7 @@ void main() {
             useHebrewTermsProvider.overrideWithValue(false),
             effectiveUseHebrewTermsProvider.overrideWithValue(false),
             trackDualProgressMetricsProvider.overrideWith(
-              (ref, pid) => Future.value([]),
+              (ref) => Future.value([]),
             ),
             dashboardHasProgramEnrollmentProvider.overrideWith(
               (ref, curriculum) => Future.value(false),
@@ -461,7 +449,7 @@ void main() {
             useHebrewTermsProvider.overrideWithValue(false),
             effectiveUseHebrewTermsProvider.overrideWithValue(false),
             trackDualProgressMetricsProvider.overrideWith(
-              (ref, pid) => Future.value([]),
+              (ref) => Future.value([]),
             ),
             dashboardHasProgramEnrollmentProvider.overrideWith(
               (ref, curriculum) => Future.value(false),
@@ -486,16 +474,12 @@ void main() {
 
         // Seed a track row WITHOUT any stages — track exists so the DB
         // query finds it, but countStagesForTrack returns 0 → hasChazara=false.
-        await h.db
-            .into(h.db.curriculumTracks)
-            .insert(
-              CurriculumTracksCompanion.insert(
-                profileId: identity.profileId,
-                curriculumId: CurriculumId.mishnayos.storageKey,
-                stateChangedAt: DateTimeFactory.nowUtc(),
-                activatedAt: DateTimeFactory.nowUtc(),
-              ),
-            );
+        await seedTrack(
+          h.firestore,
+          uid: identity.accountId,
+          profileId: identity.profileId,
+          curriculumId: CurriculumId.mishnayos,
+        );
 
         // Drain any Drift notification timer from the insert.
         await tester.pump(Duration.zero);
@@ -569,7 +553,7 @@ void main() {
             useHebrewTermsProvider.overrideWithValue(false),
             effectiveUseHebrewTermsProvider.overrideWithValue(false),
             trackDualProgressMetricsProvider.overrideWith(
-              (ref, pid) => Future.value([]),
+              (ref) => Future.value([]),
             ),
             dashboardHasProgramEnrollmentProvider.overrideWith(
               (ref, curriculum) => Future.value(false),
@@ -592,33 +576,17 @@ void main() {
         await tester.pump(const Duration(milliseconds: 300));
 
         // Seed track + 2 stages so the day-toggle grid is shown.
-        final trackId = await h.db
-            .into(h.db.curriculumTracks)
-            .insert(
-              CurriculumTracksCompanion.insert(
-                profileId: identity.profileId,
-                curriculumId: CurriculumId.mishnayos.storageKey,
-                stateChangedAt: DateTimeFactory.nowUtc(),
-                activatedAt: DateTimeFactory.nowUtc(),
-              ),
-            );
-        await h.db.stageDao.insertStageDefinition(
-          StageDefinitionsCompanion.insert(
-            profileId: identity.profileId,
-            curriculumId: CurriculumId.mishnayos.storageKey,
-            trackId: trackId,
-            stageOrder: 1,
-            stageName: 'Learn',
-          ),
+        await seedTrack(
+          h.firestore,
+          uid: identity.accountId,
+          profileId: identity.profileId,
+          curriculumId: CurriculumId.mishnayos,
         );
-        await h.db.stageDao.insertStageDefinition(
-          StageDefinitionsCompanion.insert(
-            profileId: identity.profileId,
-            curriculumId: CurriculumId.mishnayos.storageKey,
-            trackId: trackId,
-            stageOrder: 2,
-            stageName: 'Chazara',
-          ),
+        await seedStageDefinitions(
+          h.firestore,
+          uid: identity.accountId,
+          profileId: identity.profileId,
+          curriculumId: CurriculumId.mishnayos,
         );
         await tester.pump(Duration.zero);
 
@@ -700,7 +668,7 @@ void main() {
             useHebrewTermsProvider.overrideWithValue(false),
             effectiveUseHebrewTermsProvider.overrideWithValue(false),
             trackDualProgressMetricsProvider.overrideWith(
-              (ref, pid) => Future.value([]),
+              (ref) => Future.value([]),
             ),
             dashboardHasProgramEnrollmentProvider.overrideWith(
               (ref, curriculum) => Future.value(false),
@@ -722,33 +690,17 @@ void main() {
         await tester.pump(const Duration(milliseconds: 300));
 
         // Seed track + 2 stages so the chazara UI (not neutral message) renders.
-        final trackId = await h.db
-            .into(h.db.curriculumTracks)
-            .insert(
-              CurriculumTracksCompanion.insert(
-                profileId: identity.profileId,
-                curriculumId: CurriculumId.mishnayos.storageKey,
-                stateChangedAt: DateTimeFactory.nowUtc(),
-                activatedAt: DateTimeFactory.nowUtc(),
-              ),
-            );
-        await h.db.stageDao.insertStageDefinition(
-          StageDefinitionsCompanion.insert(
-            profileId: identity.profileId,
-            curriculumId: CurriculumId.mishnayos.storageKey,
-            trackId: trackId,
-            stageOrder: 1,
-            stageName: 'Learn',
-          ),
+        await seedTrack(
+          h.firestore,
+          uid: identity.accountId,
+          profileId: identity.profileId,
+          curriculumId: CurriculumId.mishnayos,
         );
-        await h.db.stageDao.insertStageDefinition(
-          StageDefinitionsCompanion.insert(
-            profileId: identity.profileId,
-            curriculumId: CurriculumId.mishnayos.storageKey,
-            trackId: trackId,
-            stageOrder: 2,
-            stageName: 'Chazara',
-          ),
+        await seedStageDefinitions(
+          h.firestore,
+          uid: identity.accountId,
+          profileId: identity.profileId,
+          curriculumId: CurriculumId.mishnayos,
         );
         await tester.pump(Duration.zero);
 
@@ -811,7 +763,7 @@ void main() {
               (ref) => Stream.value(<CurriculumId>[]),
             ),
             dashboardActiveTracksStreamProvider.overrideWith(
-              (ref) => Stream.value(<CurriculumTrack>[]),
+              (ref) => Stream.value(<CurriculumTrackEntity>[]),
             ),
             dashboardStreakProvider.overrideWith(
               (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
@@ -896,12 +848,10 @@ void main() {
           curriculumId: CurriculumId.mishnayos,
           contentItemSefariaRef: 'Shabbat.5a',
           stageOrder: 1,
-          stageDefinitionId: 1,
           priority: DailyTaskPriority.overdueChazara,
           isOverdue: false,
           reason: 'Due today (previously skipped)',
           stageName: 'Learn',
-          trackId: 1,
           trackLabel: 'Mishnayos',
           estimatedEffortMinutes: 5,
         );
@@ -949,7 +899,7 @@ void main() {
       final h = E2EHarness(tester, identity: identity);
       addTearDown(h.dispose);
 
-      final task = _makeTask(trackId: 1, ref: 'Berakhot.2a');
+      final task = _makeTask(ref: 'Berakhot.2a');
 
       // Build overrides manually (cannot use _schedulerOverrides here
       // because that helper forces useHebrewTermsProvider=false, which
@@ -962,7 +912,7 @@ void main() {
             (ref) => Stream.value(<CurriculumId>[]),
           ),
           dashboardActiveTracksStreamProvider.overrideWith(
-            (ref) => Stream.value(<CurriculumTrack>[]),
+            (ref) => Stream.value(<CurriculumTrackEntity>[]),
           ),
           dashboardStreakProvider.overrideWith(
             (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),

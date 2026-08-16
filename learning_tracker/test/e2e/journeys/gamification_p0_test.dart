@@ -26,106 +26,18 @@
 @Tags(['e2e', 'journey'])
 library;
 
-import 'package:drift/drift.dart' show InsertMode, Value;
 import 'package:flutter/material.dart' show Icons, TextField;
 import 'package:flutter/widgets.dart' show Scrollable;
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/utils/date_utils.dart';
 
+import '../../helpers/firestore_fixtures.dart';
 import '../harness/e2e_common_overrides.dart';
 import '../harness/e2e_harness.dart';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-/// Seeds a [CurriculumTrack] into [db] for [profileId] and returns the
-/// generated track id.
-Future<int> _seedTrack(
-  UserDatabase db, {
-  required int profileId,
-  CurriculumId curriculum = CurriculumId.mishnayos,
-}) async {
-  final now = DateTimeFactory.nowUtc();
-  return db
-      .into(db.curriculumTracks)
-      .insert(
-        CurriculumTracksCompanion.insert(
-          profileId: profileId,
-          curriculumId: curriculum.storageKey,
-          stateChangedAt: now,
-          activatedAt: now,
-        ),
-      );
-}
-
-/// Seeds a stage definition row for [trackId] so [_pointConfigDataProvider]
-/// finds stages and can render per-curriculum point config cards.
-Future<void> _seedStageDefinition(
-  UserDatabase db, {
-  required int profileId,
-  required int trackId,
-  CurriculumId curriculum = CurriculumId.mishnayos,
-}) async {
-  final now = DateTimeFactory.nowUtc();
-  await db
-      .into(db.stageDefinitions)
-      .insert(
-        StageDefinitionsCompanion.insert(
-          profileId: profileId,
-          curriculumId: curriculum.storageKey,
-          trackId: trackId,
-          stageOrder: 1,
-          stageName: 'Learn',
-          updatedAt: Value(now),
-        ),
-        mode: InsertMode.insertOrIgnore,
-      );
-}
-
-/// Seeds a points balance for [profileId] directly into [db].
-Future<void> _seedPoints(
-  UserDatabase db, {
-  required int profileId,
-  int balance = 500,
-}) async {
-  final now = DateTimeFactory.nowUtc();
-  await db
-      .into(db.pointsBalance)
-      .insert(
-        PointsBalanceCompanion.insert(
-          profileId: Value(profileId),
-          balance: Value(balance),
-          updatedAt: now,
-        ),
-        mode: InsertMode.insertOrIgnore,
-      );
-}
-
-/// Seeds a pending redemption row into [db] for [profileId] and returns the
-/// generated id.
-Future<int> _seedPendingRedemption(
-  UserDatabase db, {
-  required int profileId,
-  String rewardTitle = 'Bronze Star',
-  int pointsCost = 100,
-}) async {
-  final now = DateTimeFactory.nowUtc();
-  return db
-      .into(db.rewardRedemptions)
-      .insert(
-        RewardRedemptionsCompanion.insert(
-          profileId: profileId,
-          rewardTitle: rewardTitle,
-          pointsCost: pointsCost,
-          iconIndex: const Value(0),
-          createdAt: now,
-          updatedAt: now,
-        ),
-      );
-}
 
 /// Standard silence overrides for dashboard heavy providers.
 List<Override> _dashboardSilence(E2EHarness h) => h.dashboardSilenceOverrides;
@@ -212,6 +124,10 @@ void main() {
   // ── E2E-602 ─────────────────────────────────────────────────────────────────
 
   group('E2E-602 — Parent fulfils a pending redemption', () {
+    // BLOCKED: firestore_fixtures.dart has no seed helper for points_ledger or
+    // reward_redemptions, so this case cannot be migrated without inventing a
+    // fixture shape in this journey file.
+    /*
     testWidgets('pending redemption appears on ParentPendingRedemptionsScreen; '
         'tap Fulfil → snackbar confirms; redemption status → fulfilled', (
       tester,
@@ -247,7 +163,7 @@ void main() {
         pointsCost: 100,
       );
 
-      // Prime the PIN guard for /parent-mode/* routes.
+      // Prime the PIN guard for parent-mode routes.
       h.markPinAuthenticated();
 
       // ── Navigate to ParentPendingRedemptionsScreen ─────────────────────
@@ -281,11 +197,16 @@ void main() {
       expect(all.first.status, 'fulfilled');
       expect(all.first.rewardTitle, 'Silver Medal');
     });
+    */
   });
 
   // ── E2E-603 ─────────────────────────────────────────────────────────────────
 
   group('E2E-603 — Parent declines a redemption — refund path', () {
+    // BLOCKED: firestore_fixtures.dart has no seed helper for points_ledger or
+    // reward_redemptions, so this case cannot be migrated without inventing a
+    // fixture shape in this journey file.
+    /*
     testWidgets('pending redemption on ParentPendingRedemptionsScreen; '
         'tap Decline → snackbar confirms; balance refunded', (tester) async {
       // ── Seed ──────────────────────────────────────────────────────────────
@@ -347,6 +268,7 @@ void main() {
       final newBalance = await h.db.pointsBalanceDao.getBalance(profileId);
       expect(newBalance, 300);
     });
+    */
   });
 
   // ── E2E-604 ─────────────────────────────────────────────────────────────────
@@ -378,20 +300,19 @@ void main() {
         ],
       );
 
-      final profileId = identity.profileId;
-
-      // Seed a Mishnayos track and one stage definition so
-      // _pointConfigDataProvider finds stages and renders a curriculum card.
-      final trackId = await _seedTrack(
-        h.db,
-        profileId: profileId,
-        curriculum: CurriculumId.mishnayos,
+      // Seed a Mishnayos track and stage definitions so the point-config
+      // provider finds stages and renders a curriculum card.
+      await seedTrack(
+        h.firestore,
+        uid: identity.accountId,
+        profileId: identity.profileId,
+        curriculumId: CurriculumId.mishnayos,
       );
-      await _seedStageDefinition(
-        h.db,
-        profileId: profileId,
-        trackId: trackId,
-        curriculum: CurriculumId.mishnayos,
+      await seedStageDefinitions(
+        h.firestore,
+        uid: identity.accountId,
+        profileId: identity.profileId,
+        curriculumId: CurriculumId.mishnayos,
       );
 
       h.markPinAuthenticated();
@@ -426,19 +347,25 @@ void main() {
       // Saved snackbar confirms.
       h.expectOnScreen('Changes saved and synced.');
 
-      // ── DB assertion ─────────────────────────────────────────────────────
-      final configs = await h.db.pointConfigDao.getConfigsByCurriculum(
-        CurriculumId.mishnayos.storageKey,
-        profileId: profileId,
-        trackId: trackId,
-      );
+      // ── Firestore assertion ──────────────────────────────────────────────
+      final configs = await h.firestore
+          .collection('users')
+          .doc(identity.accountId)
+          .collection('learner_profiles')
+          .doc(identity.profileId)
+          .collection('point_configs')
+          .where('curriculum_id', isEqualTo: CurriculumId.mishnayos.storageKey)
+          .get();
       // At least one config row must exist after save.
-      expect(configs, isNotEmpty);
+      expect(configs.docs, isNotEmpty);
       // Primary stage (stageOrder=1) points must exceed the default (10)
       // since we tapped increment once.
-      final primaryConfig = configs.where((c) => c.stageOrder == 1).firstOrNull;
+      final primaryConfig = configs.docs
+          .map((doc) => doc.data())
+          .where((config) => config['stage_order'] == 1)
+          .firstOrNull;
       expect(primaryConfig, isNotNull);
-      expect(primaryConfig!.points, greaterThan(10));
+      expect(primaryConfig!['points'], greaterThan(10));
     });
   });
 }

@@ -17,15 +17,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart'
     show effectiveUseHebrewTermsProvider;
-import 'package:learning_tracker/core/sync/providers/sync_status_providers.dart'
-    as core_sync;
-import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart'
     show connectivityStreamProvider;
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
-import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
 
 import '../harness/e2e_common_overrides.dart';
 import '../harness/e2e_harness.dart';
@@ -34,7 +30,6 @@ import '../harness/e2e_harness.dart';
 
 /// Minimal [DailyTask] for a self-paced track.
 DailyTask _minimalTask({
-  required int trackId,
   String ref = 'Berakhot.2a',
   CurriculumId curriculum = CurriculumId.mishnayos,
   bool isOverdue = false,
@@ -43,14 +38,12 @@ DailyTask _minimalTask({
     curriculumId: curriculum,
     contentItemSefariaRef: ref,
     stageOrder: 1,
-    stageDefinitionId: 1,
     priority: isOverdue
         ? DailyTaskPriority.overdueNewLearning
         : DailyTaskPriority.newLearning,
     isOverdue: isOverdue,
     reason: 'test',
     stageName: 'Learn',
-    trackId: trackId,
     trackLabel: 'Test Track',
   );
 }
@@ -80,10 +73,7 @@ void main() {
           profileId: 1,
           curriculum: CurriculumId.mishnayos,
         );
-        final task = _minimalTask(
-          trackId: track.id,
-          curriculum: CurriculumId.mishnayos,
-        );
+        final task = _minimalTask(curriculum: CurriculumId.mishnayos);
 
         await h.pumpApp(
           path: '/dashboard',
@@ -125,7 +115,7 @@ void main() {
         profileId: 1,
         curriculum: CurriculumId.mishnayos,
       );
-      final task = _minimalTask(trackId: track.id);
+      final task = _minimalTask();
 
       await h.pumpApp(
         path: '/dashboard',
@@ -266,12 +256,8 @@ void main() {
           profileId: 1,
           curriculum: CurriculumId.chumash,
         );
-        final task1 = _minimalTask(
-          trackId: track1.id,
-          curriculum: CurriculumId.mishnayos,
-        );
+        final task1 = _minimalTask(curriculum: CurriculumId.mishnayos);
         final task2 = _minimalTask(
-          trackId: track2.id,
           curriculum: CurriculumId.chumash,
           ref: 'Genesis.1.1',
         );
@@ -327,76 +313,12 @@ void main() {
 
   // ── E2E-209 ──────────────────────────────────────────────────────────────
 
-  group('E2E-209 — Auto-refresh after SyncStatus.synced on cold start', () {
-    // The dashboard listens to syncStatusProvider via ref.listen and calls
-    // invalidateDashboardData when transitioning INTO SyncStatusSynced.
-    // In the headless harness the full re-fetch is short-circuited by the
-    // provider overrides, but the listener must not crash.
-
-    testWidgets(
-      'dashboard stays stable when syncStatus emits synced immediately',
-      (tester) async {
-        final identity = E2EIdentity.localBorn(displayName: 'Eve');
-        final h = E2EHarness(tester, identity: identity);
-        addTearDown(h.dispose);
-
-        // Override the core-layer syncStatusProvider (the one DashboardScreen
-        // imports from core/sync/providers/sync_status_providers.dart).
-        await h.pumpApp(
-          path: '/dashboard',
-          extraOverrides: [
-            ...h.dashboardSilenceOverrides,
-            core_sync.syncStatusProvider.overrideWithValue(
-              SyncStatus.synced(lastSyncedAt: DateTimeFactory.nowLocal()),
-            ),
-            core_sync.syncStatusStreamProvider.overrideWith(
-              (ref) => Stream.value(
-                SyncStatus.synced(lastSyncedAt: DateTimeFactory.nowLocal()),
-              ),
-            ),
-            allDailyTasksProvider.overrideWith(
-              (ref) => Future.value(const <DailyTask>[]),
-            ),
-          ],
-        );
-
-        // Dashboard renders (the ref.listen invalidate call does not crash)
-        // and shows the empty state because no tracks are seeded.
-        h.expectOnScreen('No tracks yet');
-        h.expectOnScreen('DASHBOARD');
-      },
-    );
-
-    testWidgets(
-      'dashboard renders correctly when syncStatus starts as localOnly',
-      (tester) async {
-        final identity = E2EIdentity.localBorn(displayName: 'Fiona');
-        final h = E2EHarness(tester, identity: identity);
-        addTearDown(h.dispose);
-
-        await h.pumpApp(
-          path: '/dashboard',
-          extraOverrides: [
-            ...h.dashboardSilenceOverrides,
-            core_sync.syncStatusProvider.overrideWithValue(
-              const SyncStatus.localOnly(),
-            ),
-            core_sync.syncStatusStreamProvider.overrideWith(
-              (ref) => Stream.value(const SyncStatus.localOnly()),
-            ),
-            allDailyTasksProvider.overrideWith(
-              (ref) => Future.value(const <DailyTask>[]),
-            ),
-          ],
-        );
-
-        // localOnly: the ref.listen condition (previous is! SyncStatusSynced)
-        // never fires; empty state renders without crash.
-        h.expectOnScreen('No tracks yet');
-        h.expectOnScreen('DASHBOARD');
-      },
-    );
-  });
+  group(
+    'E2E-209 — Auto-refresh after SyncStatus.synced on cold start',
+    skip:
+        'Retired: tests SyncStatus/sync-orchestrator auto-refresh, deleted in the Drift→Firestore migration (sync engine wholesale-archived). See commit 04897ebc.',
+    () {},
+  );
 
   // ── E2E-212 ──────────────────────────────────────────────────────────────
 
@@ -445,7 +367,7 @@ void main() {
           profileId: 1,
           curriculum: CurriculumId.mishnayos,
         );
-        final task = _minimalTask(trackId: track.id);
+        final task = _minimalTask();
 
         await h.pumpApp(
           path: '/dashboard',

@@ -98,10 +98,6 @@ import 'package:flutter/material.dart'
 import 'package:flutter_riverpod/flutter_riverpod.dart' show ProviderScope;
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/sync/providers/sync_status_providers.dart'
-    show syncStatusProvider;
-import 'package:learning_tracker/core/utils/date_utils.dart'
-    show DateTimeFactory;
 import 'package:learning_tracker/features/notifications/domain/repositories/notification_preferences_repository.dart'
     show NotificationPreferencesRepository;
 import 'package:learning_tracker/features/notifications/domain/services/notification_gateway.dart'
@@ -122,8 +118,6 @@ import 'package:learning_tracker/features/sacred_time/domain/models/sacred_locat
     show SacredLocation, SacredLocationSource;
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_location_provider.dart'
     show InIsraelNotifier, inIsraelProvider, locationServiceProvider;
-import 'package:learning_tracker/features/sync/domain/models/sync_status.dart'
-    show SyncStatus;
 import 'package:shared_preferences/shared_preferences.dart'
     show SharedPreferences;
 
@@ -145,7 +139,7 @@ class _FakeNotificationGateway extends Fake implements NotificationGateway {
   Future<bool> requestPermission() async => permissionGranted;
 
   @override
-  Future<void> cancelStreakAlertForProfile(int profileId) async {}
+  Future<void> cancelStreakAlertForProfile(String profileId) async {}
 }
 
 /// [LocationService] stub that returns a fixed GPS success result without
@@ -607,7 +601,7 @@ void main() {
           h.expectOnScreen('Notifications', routeName: 'NotificationsScreen');
 
           final profileAId = identity.profileId;
-          final profileBId = profileAId + 1;
+          final profileBId = '${profileAId}B';
 
           Switch reminderSwitch() => tester.widget<Switch>(
             find.descendant(
@@ -677,87 +671,12 @@ void main() {
 
   // ── E2E-1112 ─────────────────────────────────────────────────────────────────
 
-  group('E2E-1112 — Sync status indicator: online/offline transitions', () {
-    // Key assertions (catalog §2 Area 11):
-    //  • BackupSyncSection card title always "Backup & Sync"
-    //  • synced → no "LOCAL ONLY" text
-    //  • offline → "Offline" subtitle
-    //
-    // Each variant is a separate testWidgets call with its own pumpApp to
-    // avoid "provider overridden twice" errors.
-
-    testWidgets('synced status: BackupSyncSection shows "Backup & Sync" card '
-        'with no "LOCAL ONLY" text', (tester) async {
-      final identity = E2EIdentity.localBorn(
-        email: 'synced1112@test.com',
-        displayName: 'SyncedUser',
-      );
-      final h = E2EHarness(tester, identity: identity);
-      addTearDown(h.dispose);
-
-      final fakeGw = _FakeNotificationGateway();
-
-      await h.pumpApp(
-        path: '/dashboard',
-        extraOverrides: [
-          ..._infraSilences(h),
-          ..._notificationSilenceOverrides(fakeGw),
-          syncStatusProvider.overrideWithValue(
-            SyncStatus.synced(lastSyncedAt: DateTimeFactory.nowUtc()),
-          ),
-        ],
-      );
-
-      await _goToSettings(h);
-      await _scrollSettingsTo(tester, 'Backup & Sync');
-      await h.pump(const Duration(milliseconds: 300));
-
-      h.expectOnScreen('Backup & Sync', routeName: 'BackupSyncSection');
-
-      expect(
-        find.textContaining('LOCAL ONLY'),
-        findsNothing,
-        reason: 'BackupSyncSection must NOT show LOCAL ONLY card when synced',
-      );
-    });
-
-    testWidgets('offline status: BackupSyncSection shows "Offline" subtitle', (
-      tester,
-    ) async {
-      final identity = E2EIdentity.localBorn(
-        email: 'offline1112@test.com',
-        displayName: 'OfflineUser',
-      );
-      final h = E2EHarness(tester, identity: identity);
-      addTearDown(h.dispose);
-
-      final fakeGw = _FakeNotificationGateway();
-
-      await h.pumpApp(
-        path: '/dashboard',
-        extraOverrides: [
-          ..._infraSilences(h),
-          ..._notificationSilenceOverrides(fakeGw),
-          syncStatusProvider.overrideWithValue(const SyncStatus.offline()),
-        ],
-      );
-
-      await _goToSettings(h);
-      await _scrollSettingsTo(tester, 'Backup & Sync');
-      await h.pump(const Duration(milliseconds: 300));
-
-      // l10n.backupOffline = 'Offline'
-      h.expectOnScreen('Offline', routeName: 'BackupSyncSection');
-    });
-
-    // Story 1.5 / AD-11 (owner-ratified, 2026-08-02): the "degraded status"
-    // sub-journey (SyncStatus.degraded → "Sync paused" subtitle) was
-    // retired — SyncStatus collapsed to synced | syncing | offline (+
-    // localOnly), and a stuck/degraded outbox now surfaces as the same
-    // ambient `syncing` state covered by the `synced`/`offline` cases
-    // above (a `syncing` override would just show the ordinary l10n
-    // "Syncing..." subtitle already covered by backup_sync_section_l1_test.dart).
-  });
+  group(
+    'E2E-1112 — Sync status indicator: online/offline transitions',
+    skip:
+        'Retired: tests SyncStatus/sync-orchestrator state, deleted in the Drift→Firestore migration (sync engine wholesale-archived). See commit 04897ebc.',
+    () {},
+  );
 
   // ── E2E-1113 ─────────────────────────────────────────────────────────────────
   //
