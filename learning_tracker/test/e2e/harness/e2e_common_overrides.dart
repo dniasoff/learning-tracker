@@ -15,22 +15,23 @@ import 'dart:async' show unawaited;
 
 import 'package:auto_route/auto_route.dart' show PageRouteInfo;
 import 'package:flutter_riverpod/misc.dart' show Override;
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
+import 'package:learning_tracker/features/gamification/data/repositories/firestore_points_balance_reader_adapter.dart';
+import 'package:learning_tracker/features/gamification/data/repositories/reward_redemption_repository_impl.dart';
 import 'package:learning_tracker/features/gamification/domain/models/streak_recovery_info.dart';
 import 'package:learning_tracker/features/gamification/presentation/screens/child_redemption_screen.dart'
     show childRedemptionBalanceProvider;
 import 'package:learning_tracker/features/gamification/presentation/screens/parent_pending_redemptions_screen.dart'
     show pendingRedemptionsProvider;
-import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
+import 'package:learning_tracker/features/tracks/setup/data/repositories/curriculum_track_repository_impl.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart'
     show activeTracksProvider;
 import 'package:learning_tracker/features/tutoring/presentation/providers/manage_tutors_providers.dart';
@@ -73,20 +74,19 @@ Override pendingInvitesEmptyOverride() =>
 
 // ── Track stub / navigation ─────────────────────────────────────────────────
 
-/// Builds an in-memory (never persisted) active [CurriculumTrack] row for
+/// Builds an in-memory (never persisted) active [CurriculumTrackEntity] for
 /// tests that only need a valid track object to feed into an override —
-/// not an actual seeded DB row.
-CurriculumTrack stubTrack({
+/// not an actual seeded Firestore document. The legacy identity arguments are
+/// retained until journey helpers are migrated to document-shaped fixtures.
+CurriculumTrackEntity stubTrack({
   required int id,
-  required int profileId,
+  required Object profileId,
   CurriculumId curriculum = CurriculumId.mishnayos,
   DateTime? activatedAt,
 }) {
   final now = activatedAt ?? DateTimeFactory.nowUtc();
-  return CurriculumTrack(
-    id: id,
-    profileId: profileId,
-    curriculumId: curriculum.storageKey,
+  return CurriculumTrackEntity(
+    curriculumId: curriculum,
     state: 'active',
     stateChangedAt: now,
     activatedAt: now,
@@ -124,7 +124,7 @@ const zeroLifetimeTotals = LifetimeTotals(
 /// stream.
 List<Override> dashboardActiveTracksOverrides(
   E2EHarness h, {
-  required List<CurriculumTrack> tracks,
+  required List<CurriculumTrackEntity> tracks,
   required List<DailyTask> tasks,
   LifetimeTotals totals = zeroLifetimeTotals,
 }) {
@@ -145,52 +145,38 @@ List<Override> dashboardActiveTracksOverrides(
     ),
     allDailyTasksProvider.overrideWith((ref) => Future.value(tasks)),
     lifetimeTotalsAcrossAllCurriculaProvider.overrideWith(
-      (ref, profileId) => Future.value(totals),
+      (ref) => Future.value(totals),
     ),
-    lifetimeSummariesProvider.overrideWith(
-      (ref, profileId) => Future.value([]),
-    ),
-    trackDualProgressMetricsProvider.overrideWith(
-      (ref, profileId) => Future.value([]),
-    ),
+    lifetimeSummariesProvider.overrideWith((ref) => Future.value([])),
+    trackDualProgressMetricsProvider.overrideWith((ref) => Future.value([])),
   ];
 }
 
-// ── Drift-backed one-shot overrides (R-GA-stream) ───────────────────────────
+// ── Firestore-backed compatibility overrides ───────────────────────────────
 
-/// One-shot (non-reactive) override for [activeTracksProvider]. A reactive
-/// Drift `StreamProvider`'s cleanup timer fires outside the fake-async test
-/// window on disposal (`StreamQueryStore.markAsClosed`), tripping
-/// `_verifyInvariants`'s pending-timer assertion; a `Stream.fromFuture`
-/// one-shot query has no such cleanup timer.
+/// Retained for compatibility; the Drift-specific cleanup-timer bug no longer
+/// applies because [activeTracksProvider] is Firestore-backed.
 Override activeTracksOneShotOverride() {
   return activeTracksProvider.overrideWith((ref) {
-    final db = ref.watch(userDatabaseProvider);
-    final profileId = ref.watch(activeProfileIdProvider);
-    return Stream.fromFuture(db.trackDao.getActiveTracksForProfile(profileId));
+    final adapter = FirestoreCurriculumTrackRepositoryAdapter(ref: ref);
+    return Stream.fromFuture(adapter.getActiveTracks());
   });
 }
 
-/// One-shot (non-reactive) override for [pendingRedemptionsProvider] — same
-/// Drift cleanup-timer rationale as [activeTracksOneShotOverride].
+/// Retained for compatibility; the Drift-specific cleanup-timer bug no longer
+/// applies because [pendingRedemptionsProvider] is Firestore-backed.
 Override pendingRedemptionsOneShotOverride() {
   return pendingRedemptionsProvider.overrideWith((ref) {
-    final db = ref.watch(userDatabaseProvider);
-    final profileId = ref.watch(activeProfileIdProvider);
-    return Stream.fromFuture(
-      db.pointsBalanceDao.getPendingRedemptions(profileId),
-    );
+    final adapter = FirestoreRewardRedemptionRepositoryAdapter(ref: ref);
+    return Stream.fromFuture(adapter.watchPendingRedemptions().first);
   });
 }
 
-/// One-shot (non-reactive) override for [childRedemptionBalanceProvider] —
-/// same Drift cleanup-timer rationale as [activeTracksOneShotOverride].
-/// Needed by any journey that reaches `ChildRedemptionScreen`, which watches
-/// this provider (backed by `PointsBalanceDao.watchBalance`) via `_BalanceCard`.
+/// Retained for compatibility; the Drift-specific cleanup-timer bug no longer
+/// applies because [childRedemptionBalanceProvider] is Firestore-backed.
 Override childRedemptionBalanceOneShotOverride() {
   return childRedemptionBalanceProvider.overrideWith((ref) {
-    final db = ref.watch(userDatabaseProvider);
-    final profileId = ref.watch(activeProfileIdProvider);
-    return Stream.fromFuture(db.pointsBalanceDao.getBalance(profileId));
+    final adapter = FirestorePointsBalanceReaderAdapter(ref: ref);
+    return adapter.getBalance();
   });
 }

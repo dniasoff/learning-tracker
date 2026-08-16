@@ -4,8 +4,7 @@
 ///
 /// Boots the REAL router (AppRouter with its auth/profile guards), the
 /// REAL screens and the REAL Riverpod providers — but with a controllable
-/// in-memory Drift [UserDatabase] + [ContentDatabase] and a null / no-op
-/// Firebase back-end.
+/// [FakeFirebaseFirestore] + [ContentDatabase].
 ///
 /// ## What is real
 /// - AppRouter + all route guards (AuthGuard, ProfileGuard, …)
@@ -13,7 +12,6 @@
 /// - NavigationResolver / AutoRoute deep-link mechanics
 ///
 /// ## What is stubbed / overridden
-/// - [UserDatabase] → in-memory NativeDatabase (no file I/O)
 /// - [ContentDatabase] → in-memory NativeDatabase (no bundled seed file).
 ///   Seed content rows with [E2EHarness.seedContent] when a journey needs
 ///   content browsing or text display.
@@ -27,8 +25,6 @@
 ///   listening)
 /// - [streakMilestoneAnalyticsObserverProvider] → empty stream (no Drift streak
 ///   watch)
-/// - [syncWriteFacadeProvider] / [syncOrchestratorProvider] → null / localOnly
-///   (no Firestore)
 /// - SharedPreferences → in-memory mock (onboarding_complete = true so AuthGuard
 ///   passes through on the happy path)
 /// - path_provider → mocked to /tmp so Drift guards don't panic
@@ -84,8 +80,11 @@
 library;
 
 import 'package:auto_route/auto_route.dart';
-import 'package:drift/drift.dart' show Value, driftRuntimeOptions;
+import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:drift/native.dart';
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart' show FirebaseAuth;
+import 'package:firebase_core/firebase_core.dart' show FirebaseApp;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -101,7 +100,7 @@ import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/core/analytics/streak_milestone_analytics_observer.dart'
     show streakMilestoneAnalyticsObserverProvider;
 import 'package:learning_tracker/core/database/content/content_database.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/navigation/guards/child_mode_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/pin_guard.dart';
@@ -109,8 +108,11 @@ import 'package:learning_tracker/core/navigation/guards/profile_guard.dart';
 import 'package:learning_tracker/core/navigation/pin_scope.dart';
 import 'package:learning_tracker/core/navigation/root_scaffold_messenger.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
-import 'package:learning_tracker/core/sync/providers/sync_orchestrator_providers.dart';
-import 'package:learning_tracker/core/utils/date_utils.dart';
+import 'package:learning_tracker/data/firestore/account_firebase.dart';
+import 'package:learning_tracker/data/firestore/active_account_providers.dart';
+import 'package:learning_tracker/data/firestore/repository_providers.dart'
+    show ActiveProfileDocId, activeProfileDocIdProvider;
+import 'package:learning_tracker/data/repositories/firestore_learner_profile_repository.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
@@ -121,15 +123,17 @@ import 'package:learning_tracker/features/account/presentation/providers/magic_l
     show magicLinkInitializationProvider;
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/gamification/domain/models/streak_recovery_info.dart';
-import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
+import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
-import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart'
-    show syncWriteFacadeProvider;
+import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../helpers/firestore_fake.dart';
+import '../../helpers/firestore_fixtures.dart';
 
 // ── Global setup helper ─────────────────────────────────────────────────────
 
@@ -192,26 +196,46 @@ class _NullPinService extends Fake implements PinService {
   Future<bool> hasParentPin() async => false;
 
   @override
-  Future<bool> hasProfilePin(int profileId) async => false;
+  Future<bool> hasProfilePin(String profileId) async => false;
 
   @override
-  Future<bool> hasTutorPin(int profileId) async => false;
+  Future<bool> hasTutorPin(String profileId) async => false;
+}
+
+class _FakeFirebaseApp extends Mock implements FirebaseApp {}
+
+class _FakeFirebaseAuth extends Mock implements FirebaseAuth {}
+
+class _FixedActiveAccountId extends ActiveAccountId {
+  _FixedActiveAccountId(this._id);
+  final String _id;
+
+  @override
+  String? build() => _id;
+}
+
+class _FixedActiveProfileDocId extends ActiveProfileDocId {
+  _FixedActiveProfileDocId(this._id);
+  final String _id;
+
+  @override
+  String? build() => _id;
 }
 
 // ── Fixed-value notifier helpers ────────────────────────────────────────────
 
 class _FixedProfileId extends ActiveProfileId {
   _FixedProfileId(this._id);
-  final int _id;
+  final String _id;
   @override
-  int build() => _id;
+  String? build() => _id;
 }
 
 class _FixedSelectedProfile extends SelectedProfileId {
   _FixedSelectedProfile(this._id);
-  final int _id;
+  final String _id;
   @override
-  int? build() => _id;
+  String? build() => _id;
 }
 
 // ── E2EIdentity ─────────────────────────────────────────────────────────────
@@ -224,40 +248,48 @@ class E2EIdentity {
     required this.email,
     required this.displayName,
     required this.profileMode,
-  });
+    required String seedAccountId,
+    required String seedProfileId,
+  }) : _seedAccountId = seedAccountId,
+       _seedProfileId = seedProfileId;
 
   factory E2EIdentity.localBorn({
     String email = 'e2e@test.com',
     String displayName = 'E2E User',
     String profileMode = 'adult',
+    String accountId = 'e2e-account',
+    String profileId = '01J6Q2H4A8M7K3P9R5T6V8WXYA',
   }) => E2EIdentity._(
     email: email,
     displayName: displayName,
     profileMode: profileMode,
+    seedAccountId: accountId,
+    seedProfileId: profileId,
   );
 
   final String email;
   final String displayName;
   final String profileMode;
+  final String _seedAccountId;
+  final String _seedProfileId;
 
   // Resolved after [E2EHarness._seedIdentity] runs.
-  int? _resolvedProfileId;
-  int? _resolvedAccountId;
+  String? _resolvedProfileId;
+  String? _resolvedAccountId;
 
-  /// The Drift auto-assigned profile id (available after [E2EHarness.pumpApp]).
-  int get profileId => _resolvedProfileId!;
+  /// The Firestore ULID profile id (available after [E2EHarness.pumpApp]).
+  String get profileId => _resolvedProfileId!;
 
-  /// The Drift auto-assigned account id (available after [E2EHarness.pumpApp]).
-  int get accountId => _resolvedAccountId!;
+  /// The Firestore account uid (available after [E2EHarness.pumpApp]).
+  String get accountId => _resolvedAccountId!;
 }
 
 // ── E2EHarness ──────────────────────────────────────────────────────────────
 
 /// Full-app headless E2E harness.
 ///
-/// Constructs a real [AppRouter] wired to an in-memory [UserDatabase] with
-/// sensible guard stubs and Riverpod overrides that disable network-touching
-/// providers.
+/// Constructs a real [AppRouter] wired to fake Firestore with sensible guard
+/// stubs and Riverpod overrides that disable network-touching providers.
 ///
 /// Typical lifecycle in a [testWidgets] callback:
 /// ```dart
@@ -275,18 +307,20 @@ class E2EHarness {
     this._tester, {
 
     /// Optional initial auth identity.  When provided the harness pre-seeds a
-    /// matching account + profile row in the in-memory DB and overrides
+    /// matching account + profile document in fake Firestore and overrides
     /// [authStateProvider] so the AuthGuard passes straight through.
     E2EIdentity? identity,
   }) : _identity = identity {
-    _db = UserDatabase(NativeDatabase.memory());
+    _firestore = createFakeFirestore(
+      authenticatedUid: identity?._seedAccountId,
+    );
     _contentDb = ContentDatabase(NativeDatabase.memory());
   }
 
   final WidgetTester _tester;
   final E2EIdentity? _identity;
 
-  late UserDatabase _db;
+  late FakeFirebaseFirestore _firestore;
   late ContentDatabase _contentDb;
   late AppRouter _router;
   late PinGuard _pinGuard;
@@ -332,7 +366,7 @@ class E2EHarness {
     await pump();
   }
 
-  /// Disposes the in-memory databases and collapses the widget tree.
+  /// Disposes the fake Firestore-backed harness and collapses the widget tree.
   ///
   /// Register with [addTearDown] at the start of the test:
   /// ```dart
@@ -341,7 +375,6 @@ class E2EHarness {
   Future<void> dispose() async {
     await _tester.pumpWidget(const SizedBox.shrink());
     await _tester.pump(Duration.zero);
-    await _db.close();
     await _contentDb.close();
   }
 
@@ -400,8 +433,8 @@ class E2EHarness {
     expect(find.text(text), findsNothing);
   }
 
-  /// Returns the active [UserDatabase] for direct data assertions.
-  UserDatabase get db => _db;
+  /// Returns the fake Firestore instance for direct data assertions/seeding.
+  FakeFirebaseFirestore get firestore => _firestore;
 
   /// Returns the in-memory [ContentDatabase] for direct content assertions.
   ContentDatabase get contentDb => _contentDb;
@@ -469,7 +502,7 @@ class E2EHarness {
       (ref) => Stream.value(<CurriculumId>[]),
     ),
     dashboardActiveTracksStreamProvider.overrideWith(
-      (ref) => Stream.value(<CurriculumTrack>[]),
+      (ref) => Stream.value(<CurriculumTrackEntity>[]),
     ),
     dashboardStreakProvider.overrideWith(
       (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
@@ -479,66 +512,42 @@ class E2EHarness {
         const StreakRecoveryInfo(wasRecovered: false, currentStreak: 0),
       ),
     ),
-    // dashboardGlobalPointsProvider is a @riverpod (autoDispose) Stream<int>
-    // backed by PointsBalanceDao.watchBalance — a Drift reactive stream.
-    // For child-mode profiles the provider subscribes watchBalance which creates
-    // a StreamQueryStore cleanup timer when the provider auto-disposes. In
-    // testWidgets, _verifyInvariants runs before addTearDown, so the cleanup
-    // timer (created during h.dispose() → pumpWidget(SizedBox.shrink()) →
-    // ProviderScope.dispose) is visible to the invariant check and causes a
-    // false "pending timer" failure. Overriding with Stream.value(0) prevents
-    // any Drift reactive subscription.
-    dashboardGlobalPointsProvider.overrideWith((ref) => Stream.value(0)),
+    // The migrated provider is a Firestore-backed Future<int>, so this keeps
+    // the dashboard quiet without creating a live data subscription.
+    dashboardGlobalPointsProvider.overrideWith((ref) => Future.value(0)),
   ];
 
   // ── Private builders ───────────────────────────────────────────────────────
 
   Future<void> _seedIdentity(E2EIdentity identity) async {
-    final accountId = await _db
-        .into(_db.accounts)
-        .insert(
-          AccountsCompanion.insert(
-            email: identity.email,
-            tier: 'localBorn',
-            displayName: identity.displayName,
-            createdAt: DateTimeFactory.nowUtc(),
-            updatedAt: DateTimeFactory.nowUtc(),
-          ),
-        );
+    // The harness creates this authenticated fake before callers can seed
+    // additional documents through [firestore].
+    await seedAccount(
+      _firestore,
+      uid: identity._seedAccountId,
+      email: identity.email,
+      displayName: identity.displayName,
+    );
+    await seedProfile(
+      _firestore,
+      uid: identity._seedAccountId,
+      profileId: identity._seedProfileId,
+      displayName: identity.displayName,
+      mode:
+          ProfileMode.tryFromStorageKey(identity.profileMode) ??
+          ProfileMode.adult,
+    );
 
-    final profileId = await _db
-        .into(_db.learnerProfiles)
-        .insert(
-          LearnerProfilesCompanion.insert(
-            accountId: accountId,
-            displayName: identity.displayName,
-            mode: identity.profileMode,
-            createdAt: DateTimeFactory.nowUtc(),
-            updatedAt: DateTimeFactory.nowUtc(),
-          ),
-        );
-
-    // T-45/T-47 class, 4th/5th-instance recurrence found in CI remediation
-    // round 4: P2-2's eager-mint policy means a real seeded profile always
-    // has a ulid; a null one now hard-throws out of
-    // `ProfileModel.fromDriftRow` (P2-3) the moment any FUTURE-based read
-    // (ProfileRepositoryImpl.getProfilesByAccount, .updateProfile, etc —
-    // reached via profileListProvider) touches this row. Mirrors
-    // `test_database.dart`'s `seedProfileWithIds` fix (P2-19) and this same
-    // file's `_buildOverrides` in-memory ProfileModel a few lines below
-    // (`'ulid-$profileId'`), which already carried a ulid but did not cover
-    // this, the real Drift row — a separate write because `profileId` is
-    // auto-generated by the insert itself and not knowable inside it.
-    await (_db.update(_db.learnerProfiles)
-          ..where((t) => t.id.equals(profileId)))
-        .write(LearnerProfilesCompanion(ulid: Value('ulid-$profileId')));
-
-    identity._resolvedProfileId = profileId;
-    identity._resolvedAccountId = accountId;
+    identity._resolvedProfileId = identity._seedProfileId;
+    identity._resolvedAccountId = identity._seedAccountId;
   }
 
   AppRouter _buildRouter() {
     final profileId = _identity?._resolvedProfileId;
+    final profileRepository = FirestoreLearnerProfileRepository(
+      firestore: _firestore,
+      uid: _identity?._resolvedAccountId ?? 'e2e-signed-out',
+    );
 
     _pinGuard = PinGuard(
       pinService: _NullPinService(),
@@ -549,16 +558,14 @@ class E2EHarness {
     return AppRouter(
       authGuard: AuthGuard(),
       profileGuard: ProfileGuard(
-        getDatabase: () => _db,
+        getProfiles: () => profileRepository.watchProfiles().first,
         getSelectedProfileId: () => profileId,
-        setSelectedProfileId: (_, {String? ulid}) {},
-        getAccountId: () =>
-            profileId != null ? (_identity!._resolvedAccountId ?? 1) : 1,
+        setSelectedProfileId: (_) {},
         isTutoredSession: () => false,
         profilePickerRoute: () => const ProfilePickerRoute(),
       ),
       childModeGuard: ChildModeGuard(
-        getDatabase: () => _db,
+        getProfileById: (id) => profileRepository.getProfile(id),
         getSelectedProfileId: () => profileId,
       ),
       pinGuard: _pinGuard,
@@ -566,40 +573,36 @@ class E2EHarness {
   }
 
   List<Override> _buildOverrides(E2EIdentity? identity) {
-    final profileId = identity?._resolvedProfileId;
-    final accountId = identity?._resolvedAccountId ?? 1;
+    final profileId = identity?._resolvedProfileId ?? identity?._seedProfileId;
+    final accountId = identity?._resolvedAccountId ?? identity?._seedAccountId;
 
     final seededProfiles = identity != null && profileId != null
         ? [
-            ProfileModel(
-              id: profileId,
-              ulid: 'ulid-$profileId',
-              accountId: accountId,
+            LearnerProfileEntity(
+              profileId: profileId,
               displayName: identity.displayName,
-              mode: identity.profileMode,
-              avatarIndex: 0,
+              mode:
+                  ProfileMode.tryFromStorageKey(identity.profileMode) ??
+                  ProfileMode.adult,
+              avatar: '',
               createdAt: DateTime(2024),
               updatedAt: DateTime(2024),
             ),
           ]
-        : <ProfileModel>[];
+        : <LearnerProfileEntity>[];
 
     final authState = identity != null
         ? AuthState.signedIn(
             user: AuthUser(
-              profileId: accountId,
+              uid: accountId!,
               email: identity.email,
               displayName: identity.displayName,
             ),
-            tier: Tier.localBorn,
+            tier: Tier.local,
           )
         : const AuthState.signedOut();
 
     return [
-      // ── Database ──────────────────────────────────────────────────────────
-      userDatabaseProvider.overrideWithValue(_db),
-      // ignore: deprecated_member_use
-      appDatabaseProvider.overrideWithValue(_db),
       // Override the content database with an in-memory NativeDatabase so
       // content-browsing and text-display journeys work without the bundled
       // seed file.  Seed rows via [seedContent] when a journey needs them.
@@ -609,6 +612,24 @@ class E2EHarness {
       // ── Auth ──────────────────────────────────────────────────────────────
       authStateProvider.overrideWithValue(authState),
       authRepositoryProvider.overrideWithValue(_StubAuthRepository()),
+
+      // ── Firestore identity ───────────────────────────────────────────────
+      if (identity != null && profileId != null && accountId != null) ...[
+        activeAccountIdProvider.overrideWith(
+          () => _FixedActiveAccountId(accountId),
+        ),
+        activeAccountFirebaseProvider.overrideWith(
+          (ref) async => AccountFirebaseHandles(
+            app: _FakeFirebaseApp(),
+            firestore: _firestore,
+            auth: _FakeFirebaseAuth(),
+            uid: accountId,
+          ),
+        ),
+        activeProfileDocIdProvider.overrideWith(
+          () => _FixedActiveProfileDocId(profileId),
+        ),
+      ],
 
       // ── Profiles ─────────────────────────────────────────────────────────
       if (seededProfiles.isNotEmpty) ...[
@@ -637,14 +658,10 @@ class E2EHarness {
         (ref) => Future<void>.value(),
       ),
 
-      // ── Streak milestone observer (no Drift watch) ────────────────────────
+      // ── Streak milestone observer (no Firestore watch) ────────────────────
       streakMilestoneAnalyticsObserverProvider.overrideWith(
         (ref) => const Stream<void>.empty(),
       ),
-
-      // ── Sync (local-only; no Firestore) ───────────────────────────────────
-      syncWriteFacadeProvider.overrideWithValue(null),
-      syncOrchestratorProvider.overrideWithValue(null),
     ];
   }
 
