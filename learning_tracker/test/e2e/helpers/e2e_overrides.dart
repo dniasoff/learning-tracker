@@ -103,12 +103,11 @@ Override pendingRedemptionsZeroOverride() {
   return pendingRedemptionsCountProvider.overrideWith((ref) => Stream.value(0));
 }
 
-/// Overrides [activeProfilePointsBalanceProvider] (Drift stream) with a
-/// static zero-stream for the same reason as
-/// [pendingRedemptionsZeroOverride].
+/// Overrides [activeProfilePointsBalanceProvider] with a static zero-future
+/// so the provider does not perform a live data read in headless tests.
 Override pointsBalanceZeroOverride() {
   return activeProfilePointsBalanceProvider.overrideWith(
-    (ref) => Stream.value(0),
+    (ref) => Future.value(0),
   );
 }
 

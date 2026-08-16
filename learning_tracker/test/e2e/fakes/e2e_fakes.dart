@@ -16,15 +16,15 @@
 library;
 
 import 'package:flutter_test/flutter_test.dart' show Fake;
-import 'package:learning_tracker/core/database/daos/completion_dao.dart'
-    show Completion;
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_entity.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 import 'package:learning_tracker/features/learning/domain/entities/mark_completion_result.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart'
@@ -162,31 +162,29 @@ class FakeCompletionRepository extends Fake implements CompletionRepository {
   }) async => false;
 
   @override
-  Future<List<Completion>> getCompletionsByCurriculum(
+  Future<List<CompletionEntity>> getCompletionsByCurriculum(
     String curriculumId, {
     int? profileId,
-  }) async => const <Completion>[];
+  }) async => const <CompletionEntity>[];
 
   @override
-  Future<List<Completion>> getCompletionsForContentItem(
+  Future<List<CompletionEntity>> getCompletionsForContentItem(
     String sefariaRef,
-  ) async => const <Completion>[];
+  ) async => const <CompletionEntity>[];
 
   @override
-  Future<List<Completion>> bulkMarkComplete(
+  Future<List<CompletionEntity>> bulkMarkComplete(
     BulkCompletionRequest request,
-  ) async => const <Completion>[];
+  ) async => const <CompletionEntity>[];
 
-  Completion _stubCompletion(CompletionRequest req) {
+  CompletionEntity _stubCompletion(CompletionRequest req) {
     final now = DateTimeFactory.nowUtc();
-    return Completion(
-      id: markedRequests.length,
-      profileId: 1,
-      curriculumId: req.curriculumId,
+    return CompletionEntity(
+      curriculumId: CurriculumId.fromStorageKey(req.curriculumId)!,
       sefariaRef: req.sefariaRef,
       stageId: req.stageId,
       trackType: req.trackType,
-      trackId: 1,
+      source: CompletionSource.live,
       completedAt: now,
       points: 10,
     );
