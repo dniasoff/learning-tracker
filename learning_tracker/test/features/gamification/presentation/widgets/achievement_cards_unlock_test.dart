@@ -26,8 +26,7 @@ RewardMilestone _milestone({
 }) {
   return RewardMilestone(
     id: id,
-    profileId: 1,
-    trackId: RewardMilestone.kGlobalTrackSentinel,
+    profileId: '01J00000000000000000000002',
     title: title,
     thresholdPoints: threshold,
     isEnabled: true,

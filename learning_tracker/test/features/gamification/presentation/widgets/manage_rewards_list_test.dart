@@ -22,8 +22,7 @@ RewardMilestone _makeMilestone({
   int thresholdPoints = 250,
 }) => RewardMilestone(
   id: id,
-  profileId: 1,
-  trackId: RewardMilestone.kGlobalTrackSentinel,
+  profileId: '01J00000000000000000000003',
   title: title,
   thresholdPoints: thresholdPoints,
   isEnabled: true,

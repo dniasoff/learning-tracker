@@ -95,11 +95,7 @@ class _FakeStageRepository implements StageDefinitionRepository {
   // no longer needs stub implementations for them.
 
   @override
-  Future<void> initializeDefaults(
-    CurriculumId curriculumId, {
-    required int profileId,
-    required int trackId,
-  }) async {}
+  Future<void> initializeDefaults(CurriculumId curriculumId) async {}
 
   @override
   Future<void> replaceStagesForCurriculum(
@@ -120,12 +116,6 @@ class _FakeStageRepository implements StageDefinitionRepository {
 
   @override
   Future<void> deleteStagesForTrack(CurriculumId curriculumId) async {}
-
-  @override
-  Future<void> pushStagesForTrack({
-    required int trackId,
-    required CurriculumId curriculumId,
-  }) async {}
 
   @override
   Future<List<StageDefinition>> getAllStageDefinitions() async => [];

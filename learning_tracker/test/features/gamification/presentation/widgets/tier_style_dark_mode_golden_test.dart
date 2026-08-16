@@ -74,8 +74,7 @@ import '../../../../helpers/golden_font_loader.dart' show loadFonts;
 RewardMilestone _milestone(String title, int threshold) {
   return RewardMilestone(
     id: 'rm_$title',
-    profileId: 1,
-    trackId: 1,
+    profileId: '01J00000000000000000000004',
     title: title,
     thresholdPoints: threshold,
     isEnabled: true,

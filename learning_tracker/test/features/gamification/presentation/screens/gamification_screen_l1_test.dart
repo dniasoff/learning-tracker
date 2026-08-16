@@ -36,7 +36,6 @@ import 'package:learning_tracker/features/gamification/presentation/widgets/poin
 import 'package:learning_tracker/features/gamification/presentation/widgets/progress_summary_card.dart';
 import 'package:learning_tracker/features/gamification/presentation/widgets/streak_widget.dart';
 import 'package:learning_tracker/features/gamification/presentation/widgets/track_tag_chip.dart';
-import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -46,8 +45,7 @@ import '../../../../helpers/pump_app.dart';
 
 RewardMilestone _milestone({
   String id = 'ms1',
-  int profileId = 1,
-  int trackId = 1,
+  String profileId = '01J00000000000000000000001',
   String title = 'Bronze Star',
   int thresholdPoints = 100,
   bool isEnabled = true,
@@ -56,7 +54,6 @@ RewardMilestone _milestone({
   return RewardMilestone(
     id: id,
     profileId: profileId,
-    trackId: trackId,
     title: title,
     thresholdPoints: thresholdPoints,
     isEnabled: isEnabled,
@@ -77,7 +74,7 @@ AchievementRowVm _row({
     trackId: trackId,
     trackLabel: trackLabel,
     curriculumId: null,
-    milestone: _milestone(title: milestoneTitle, trackId: trackId),
+    milestone: _milestone(title: milestoneTitle),
     trackPoints: trackPoints,
     isUnlocked: isUnlocked,
     isNextUp: isNextUp,
@@ -151,12 +148,9 @@ Widget _buildApp({
       dashboardUserModeProvider.overrideWith((ref) => Future.value(userMode)),
       dashboardStreakProvider.overrideWith((ref) => Stream.value(streak)),
       streakCalendarProvider.overrideWith((ref) => Future.value(calendarDates)),
-      // syncWriteFacadeProvider returns null so migrateDoneKeysIfNeeded
-      // never tries to push to Firestore.
-      syncWriteFacadeProvider.overrideWithValue(null),
       // Points providers are needed by PointsDisplayWidget inside the
       // expansion tile. Override to avoid real DB calls.
-      globalPointsProvider.overrideWith((ref) => Stream.value(0)),
+      globalPointsProvider.overrideWith((ref) async => 0),
       curriculumBreakdownProvider.overrideWith((ref) async => {}),
     ],
     child: const Scaffold(body: GamificationScreen()),

@@ -102,7 +102,6 @@ DailyTask _task({required String ref, int stageOrder = 1}) => DailyTask(
   curriculumId: CurriculumId.mishnayos,
   contentItemSefariaRef: ref,
   stageOrder: stageOrder,
-  stageDefinitionId: stageOrder,
   priority: DailyTaskPriority.newLearning,
   isOverdue: false,
   reason: 'test',
@@ -235,7 +234,9 @@ Widget _buildApp({
         sefariaRef: _kRef,
         stageId: 1,
         trackType: 'personal',
-      )).overrideWithValue(completionStatus),
+      ),).overrideWithValue(
+        completionStatus,
+      ),
       completionCommittedProvider.overrideWith(
         () => _FakeCompletionCommitted(),
       ),
@@ -316,9 +317,17 @@ void main() {
         .map((t) => t.data ?? (t.textSpan?.toPlainText() ?? ''))
         .join();
     // Check no nikud marks in any rendered text node
-    final nikudPattern = RegExp('[֑-ׇֽֿׁׂׅׄ]');
+    final hasNikud = allTexts.runes.any(
+      (rune) =>
+          (rune >= 0x0591 && rune <= 0x05bd) ||
+          rune == 0x05bf ||
+          (rune >= 0x05c1 && rune <= 0x05c2) ||
+          rune == 0x05c4 ||
+          rune == 0x05c5 ||
+          rune == 0x05c7,
+    );
     expect(
-      nikudPattern.hasMatch(allTexts),
+      hasNikud,
       isFalse,
       reason: 'Nikud marks must be stripped when showNikud=false',
     );
@@ -461,7 +470,9 @@ void main() {
     // No single-char text that is a Hebrew letter used as a badge
     for (final t in allTexts) {
       expect(
-        RegExp(r'^[א-ת]$').hasMatch(t),
+        t.runes.length == 1 &&
+            t.runes.single >= 0x05d0 &&
+            t.runes.single <= 0x05ea,
         isFalse,
         reason: 'No gematriya badge should appear when all numbers are null',
       );

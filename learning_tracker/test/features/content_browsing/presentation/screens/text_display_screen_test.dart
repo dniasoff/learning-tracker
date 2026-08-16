@@ -72,12 +72,10 @@ DailyTask _task({required String ref, int stageOrder = 1}) => DailyTask(
   curriculumId: CurriculumId.mishnayos,
   contentItemSefariaRef: ref,
   stageOrder: stageOrder,
-  stageDefinitionId: stageOrder,
   priority: DailyTaskPriority.newLearning,
   isOverdue: false,
   reason: 'test',
   stageName: 'Learn',
-  trackId: 1,
   trackLabel: 'Test Track',
   estimatedEffortMinutes: 5,
 );

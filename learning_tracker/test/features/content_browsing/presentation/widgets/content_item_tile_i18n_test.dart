@@ -44,7 +44,6 @@ class _FakeStageRepository implements StageDefinitionRepository {
   ) async {
     return [
       const StageDefinition(
-        id: 1,
         curriculumId: _curriculum,
         stageOrder: 1,
         stageName: 'Learn',
@@ -66,7 +65,9 @@ Widget _host({required Locale locale, required Map<int, int> breakdown}) {
       itemStageBreakdownProvider((
         curriculumId: _curriculum.storageKey,
         sefariaRef: _item.sefariaRef,
-      )).overrideWith((ref) async => breakdown),
+      ),).overrideWith(
+        (ref) async => breakdown,
+      ),
       stageDefinitionRepositoryProvider(
         _curriculum,
       ).overrideWithValue(_FakeStageRepository()),

@@ -60,7 +60,6 @@ class _FakeStageRepository implements StageDefinitionRepository {
     return List.generate(
       8,
       (i) => StageDefinition(
-        id: i + 1,
         curriculumId: curriculumId,
         stageOrder: i + 1,
         stageName: i == 0
@@ -86,7 +85,9 @@ Widget _host() {
       itemStageBreakdownProvider((
         curriculumId: _curriculum.storageKey,
         sefariaRef: _item.sefariaRef,
-      )).overrideWith((ref) async => {for (var i = 1; i <= 8; i++) i: i * 2}),
+      ),).overrideWith(
+        (ref) async => {for (var i = 1; i <= 8; i++) i: i * 2},
+      ),
       stageDefinitionRepositoryProvider(
         _curriculum,
       ).overrideWithValue(_FakeStageRepository()),

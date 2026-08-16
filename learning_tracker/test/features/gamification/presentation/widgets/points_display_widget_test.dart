@@ -24,7 +24,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            globalPointsProvider.overrideWith((_) => Stream.value(25)),
+            globalPointsProvider.overrideWith((_) async => 25),
             curriculumBreakdownProvider.overrideWith(
               (_) async => {CurriculumId.mishnayos: 15, CurriculumId.bavli: 10},
             ),
@@ -51,7 +51,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            globalPointsProvider.overrideWith((_) => Stream.value(25)),
+            globalPointsProvider.overrideWith((_) async => 25),
             curriculumBreakdownProvider.overrideWith(
               (_) async => {CurriculumId.mishnayos: 25},
             ),

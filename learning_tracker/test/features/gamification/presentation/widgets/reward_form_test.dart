@@ -35,8 +35,6 @@ void main() {
           name: 'Gold Star',
           pointsText: '100',
           iconIndex: 3,
-          isGlobalReward: true,
-          selectedTrackId: 7,
           editingMilestoneId: 'ms-1',
           loading: false,
         );
@@ -70,11 +68,10 @@ void main() {
       expect(a, isNot(equals(b)));
     });
 
-    test('copyWith(selectedTrackId: null) actually clears the field (not '
-        'skipped) — preserves the pre-freezed sentinel-clearing semantics', () {
-      const withTrack = RewardForm(selectedTrackId: 5);
-      final cleared = withTrack.copyWith(selectedTrackId: null);
-      expect(cleared.selectedTrackId, isNull);
+    test('copyWith(editingMilestoneId: null) actually clears the field', () {
+      const withMilestone = RewardForm(editingMilestoneId: 'ms-5');
+      final cleared = withMilestone.copyWith(editingMilestoneId: null);
+      expect(cleared.editingMilestoneId, isNull);
       expect(cleared, equals(const RewardForm()));
     });
   });
