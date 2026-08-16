@@ -413,10 +413,12 @@ void main() {
       final h = E2EHarness(tester, identity: identity);
       addTearDown(h.dispose);
 
-      // profileId for the first Drift insert is always 1 (E2EHarness pattern).
+      // E2EHarness resolves its default Firestore profile ULID only after
+      // pumpApp; use the same deterministic fixture value here so the
+      // parent-mode flag is available while building the override list.
       // Override parentPinAuthenticatedProfileIdProvider to that id so
       // _ParentalControlsSection sees inParentMode = true.
-      final profileId = identity.profileId;
+      const profileId = '01J6Q2H4A8M7K3P9R5T6V8WXYA';
 
       await h.pumpApp(
         path: '/dashboard',

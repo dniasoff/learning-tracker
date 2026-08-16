@@ -120,6 +120,7 @@ void main() {
           contains(
             'allow update: if isOwner(uid) && request.resource.data == resource.data',
           ),
+          matches(RegExp(r'allow update:\s+if isOwner\(uid\)')),
         ),
         reason: 'completions update MUST be owner-only or explicitly denied.',
       );

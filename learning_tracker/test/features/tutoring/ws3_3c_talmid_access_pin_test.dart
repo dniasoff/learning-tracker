@@ -192,12 +192,12 @@ void main() {
     test('BUG-1: entry navigation dismisses the lingering switcher sheet', () {
       expect(
         sectionSrc,
-        contains('dismissSwitcherSheet'),
+        contains('navigatorKey.currentState'),
         reason:
             'On successful talmid entry the profile-switcher modal sheet must '
-            'be explicitly dismissed (replaceAll does not clear it), so the '
-            'tutor lands cleanly on the talmid dashboard with no leftover '
-            'sheet.',
+            'be explicitly dismissed through the stable root navigator '
+            '(replaceAll does not clear it), so the tutor lands cleanly on '
+            'the talmid dashboard with no leftover sheet.',
       );
     });
 

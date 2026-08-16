@@ -137,6 +137,11 @@ TutorGrant _makeActiveGrant({String grantId = 'active-grant-id'}) {
 
 // ── Harness ───────────────────────────────────────────────────────────────────
 
+// AD-24: the accept flow must resolve the tutor's own Firestore profile
+// before it can enter the ready state. Keep the default fixture ULID-shaped so
+// the widget tests exercise the migrated profile-keyed path.
+const _defaultTutorProfileId = '01J6Q2H4A8M7K3P9R5T6V8WXYA';
+
 const _signedInState = AuthState.signedIn(
   user: AuthUser(uid: 'tutor-account-id', email: 't@t.com', displayName: 'T'),
   tier: Tier.local,
@@ -152,7 +157,7 @@ Widget _buildHarness({
   AuthState authState = _signedInState,
   List<TutorGrant>? incomingGrants,
   bool incomingGrantsThrow = false,
-  String? selectedProfileId,
+  String? selectedProfileId = _defaultTutorProfileId,
   Locale locale = const Locale('en'),
 }) {
   return pumpApp(
@@ -244,7 +249,7 @@ void main() {
           overrides: [
             authStateProvider.overrideWithValue(_signedInState),
             selectedProfileIdProvider.overrideWith(
-              () => _FixedSelectedProfileId(null),
+              () => _FixedSelectedProfileId(_defaultTutorProfileId),
             ),
             acceptTutorInviteUseCaseProvider.overrideWithValue(mockUseCase),
             tutorPinServiceProvider.overrideWithValue(pinService),
