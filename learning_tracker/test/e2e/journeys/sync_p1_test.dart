@@ -107,13 +107,36 @@ void main() {
         );
       });
 
-      // BLOCKED: E2EHarness always overrides authStateProvider with Tier.local;
-      // the shared harness exposes no cloud-born auth override.
-      testWidgets(
-        'cloud-born user offline: OfflineTopBanner is visible',
-        skip: true,
-        (tester) async {},
-      );
+      testWidgets('cloud-born user offline: OfflineTopBanner is visible', (
+        tester,
+      ) async {
+        final identity = E2EIdentity.cloudBorn(
+          email: 'cloudoffline1306@test.com',
+          displayName: 'CloudOffline1306',
+          profileMode: 'adult',
+        );
+        final h = E2EHarness(tester, identity: identity);
+        addTearDown(h.dispose);
+
+        await h.pumpApp(
+          path: '/dashboard',
+          extraOverrides: [
+            ..._syncSilencesNoConnectivity(h),
+            _offlineOverride(),
+          ],
+        );
+
+        await h.pump(const Duration(milliseconds: 300));
+        await h.pump();
+
+        expect(
+          find.textContaining('Offline — changes will sync'),
+          findsWidgets,
+          reason:
+              'E2E-1306: cloud-born user must see the OfflineTopBanner '
+              'when offline (isCloudBorn && !isOnline is true)',
+        );
+      });
     },
   );
 
