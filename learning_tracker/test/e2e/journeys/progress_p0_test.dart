@@ -33,7 +33,6 @@ import 'package:flutter/material.dart'
     show AnimatedContainer, BoxDecoration, Color, Colors, Scrollable;
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
@@ -50,6 +49,8 @@ import 'package:learning_tracker/features/progress/presentation/providers/items_
 import 'package:learning_tracker/features/progress/presentation/providers/journey_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/progress_providers.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart'
+    show CurriculumTrackEntity;
 
 import '../harness/e2e_common_overrides.dart' show stubTrack;
 import '../harness/e2e_harness.dart';
@@ -126,7 +127,7 @@ List<Override> _progressEmptyStateOverrides(E2EHarness h) => [
     (ref) => Stream.value(<CurriculumId>[]),
   ),
   dashboardActiveTracksStreamProvider.overrideWith(
-    (ref) => Stream.value(<CurriculumTrack>[]),
+    (ref) => Stream.value(<CurriculumTrackEntity>[]),
   ),
   dashboardStreakProvider.overrideWith(
     (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
@@ -136,13 +137,13 @@ List<Override> _progressEmptyStateOverrides(E2EHarness h) => [
       const StreakRecoveryInfo(wasRecovered: false, currentStreak: 0),
     ),
   ),
-  dashboardGlobalPointsProvider.overrideWith((ref) => Stream.value(0)),
+  dashboardGlobalPointsProvider.overrideWith((ref) => Future.value(0)),
   // Lifetime / journey providers needed by ProgressTierCounterRow
   lifetimeTotalsAcrossAllCurriculaProvider.overrideWith(
-    (ref, profileId) => Future.value(_zeroLifetimeTotals),
+    (ref) => Future.value(_zeroLifetimeTotals),
   ),
   journeyViewModelProvider.overrideWith(
-    (ref, profileId) => Future.value(_emptyJourneyViewModel),
+    (ref) => Future.value(_emptyJourneyViewModel),
   ),
 ];
 
@@ -160,7 +161,7 @@ List<Override> _progressWithContentOverrides(E2EHarness h) => [
     (ref) => Stream.value(<CurriculumId>[CurriculumId.mishnayos]),
   ),
   dashboardActiveTracksStreamProvider.overrideWith(
-    (ref) => Stream.value(<CurriculumTrack>[
+    (ref) => Stream.value(<CurriculumTrackEntity>[
       stubTrack(id: 1, profileId: 1, curriculum: CurriculumId.mishnayos),
     ]),
   ),
@@ -172,13 +173,13 @@ List<Override> _progressWithContentOverrides(E2EHarness h) => [
       const StreakRecoveryInfo(wasRecovered: false, currentStreak: 3),
     ),
   ),
-  dashboardGlobalPointsProvider.overrideWith((ref) => Stream.value(0)),
+  dashboardGlobalPointsProvider.overrideWith((ref) => Future.value(0)),
   anyActiveTrackHasChazaraProvider.overrideWith((ref) => Future.value(false)),
   lifetimeTotalsAcrossAllCurriculaProvider.overrideWith(
-    (ref, pid) => Future.value(_zeroLifetimeTotals),
+    (ref) => Future.value(_zeroLifetimeTotals),
   ),
   lifetimeSummariesProvider.overrideWith(
-    (ref, pid) => Future.value(<CurriculumLifetimeSummary>[]),
+    (ref) => Future.value(<CurriculumLifetimeSummary>[]),
   ),
   // Content repository — no real asset files in headless env (R-PG8)
   contentRepositoryProvider.overrideWithValue(const EmptyContentRepository()),
@@ -192,10 +193,10 @@ List<Override> _progressWithContentOverrides(E2EHarness h) => [
 /// [trackDualProgressMetricsProvider] override.
 List<Override> _progressCounterSilenceOverrides() => [
   trackDualProgressMetricsProvider.overrideWith(
-    (ref, pid) => Future.value(<TrackDualProgressMetric>[]),
+    (ref) => Future.value(<TrackDualProgressMetric>[]),
   ),
   journeyViewModelProvider.overrideWith(
-    (ref, pid) => Future.value(_emptyJourneyViewModel),
+    (ref) => Future.value(_emptyJourneyViewModel),
   ),
 ];
 
@@ -392,10 +393,10 @@ void main() {
             // trackDualProgressMetrics needed by ProgressTierCounterRow
             // (journeyViewModelProvider is provided separately below).
             trackDualProgressMetricsProvider.overrideWith(
-              (ref, pid) => Future.value(<TrackDualProgressMetric>[]),
+              (ref) => Future.value(<TrackDualProgressMetric>[]),
             ),
             journeyViewModelProvider.overrideWith(
-              (ref, profileId) => Future.value(_emptyJourneyViewModel),
+              (ref) => Future.value(_emptyJourneyViewModel),
             ),
           ],
         );
@@ -420,10 +421,10 @@ void main() {
               // trackDualProgressMetrics needed by ProgressTierCounterRow
               // (journeyViewModelProvider is provided separately below).
               trackDualProgressMetricsProvider.overrideWith(
-                (ref, pid) => Future.value(<TrackDualProgressMetric>[]),
+                (ref) => Future.value(<TrackDualProgressMetric>[]),
               ),
               journeyViewModelProvider.overrideWith(
-                (ref, pid) => Future.value(_singleMilestoneJourneyViewModel),
+                (ref) => Future.value(_singleMilestoneJourneyViewModel),
               ),
             ],
           );
@@ -474,13 +475,13 @@ void main() {
               ..._progressCounterSilenceOverrides(),
               // Lifetime providers return empty so the empty-state branch runs.
               lifetimeViewSummariesProvider.overrideWith(
-                (ref, pid) => Future.value(<CurriculumCompletionSummary>[]),
+                (ref) => Future.value(<CurriculumCompletionSummary>[]),
               ),
               itemsLearnedSummariesProvider.overrideWith(
-                (ref, pid) => Future.value(<CurriculumCompletionSummary>[]),
+                (ref) => Future.value(<CurriculumCompletionSummary>[]),
               ),
               lifetimeHeaderCountersProvider.overrideWith(
-                (ref, pid) => Future.value(
+                (ref) => Future.value(
                   const LifetimeHeaderCounters(
                     itemsLearned: 0,
                     totalChazaros: 0,
@@ -488,7 +489,7 @@ void main() {
                 ),
               ),
               trackOnlyHeaderCountersProvider.overrideWith(
-                (ref, pid) => Future.value(
+                (ref) => Future.value(
                   const LifetimeHeaderCounters(
                     itemsLearned: 0,
                     totalChazaros: 0,
@@ -522,13 +523,13 @@ void main() {
               ..._progressWithContentOverrides(h),
               ..._progressCounterSilenceOverrides(),
               lifetimeViewSummariesProvider.overrideWith(
-                (ref, pid) => Future.value(<CurriculumCompletionSummary>[]),
+                (ref) => Future.value(<CurriculumCompletionSummary>[]),
               ),
               itemsLearnedSummariesProvider.overrideWith(
-                (ref, pid) => Future.value(<CurriculumCompletionSummary>[]),
+                (ref) => Future.value(<CurriculumCompletionSummary>[]),
               ),
               lifetimeHeaderCountersProvider.overrideWith(
-                (ref, pid) => Future.value(
+                (ref) => Future.value(
                   const LifetimeHeaderCounters(
                     itemsLearned: 0,
                     totalChazaros: 0,
@@ -536,7 +537,7 @@ void main() {
                 ),
               ),
               trackOnlyHeaderCountersProvider.overrideWith(
-                (ref, pid) => Future.value(
+                (ref) => Future.value(
                   const LifetimeHeaderCounters(
                     itemsLearned: 0,
                     totalChazaros: 0,
@@ -660,7 +661,7 @@ void main() {
             // Inject real-looking per-track metrics so the _PerTrackSection
             // renders a tappable row for mishnayos.
             trackDualProgressMetricsProvider.overrideWith(
-              (ref, pid) => Future.value(<TrackDualProgressMetric>[
+              (ref) => Future.value(<TrackDualProgressMetric>[
                 const TrackDualProgressMetric(
                   trackLabel: 'Mishnayos',
                   curriculumId: CurriculumId.mishnayos,
@@ -672,7 +673,7 @@ void main() {
             ),
             // Silence the journey counter row (not under test here).
             journeyViewModelProvider.overrideWith(
-              (ref, pid) => Future.value(_emptyJourneyViewModel),
+              (ref) => Future.value(_emptyJourneyViewModel),
             ),
             // Stub the curriculum progress data so the detail screen renders
             // without hitting the real content asset (R-PG8).

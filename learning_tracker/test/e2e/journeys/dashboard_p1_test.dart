@@ -47,10 +47,10 @@ import '../harness/e2e_harness.dart';
 /// Parent-PIN-authenticated notifier that hard-codes a fixed profile id.
 class _PinAuthedForProfile extends ParentPinAuthenticatedProfileId {
   _PinAuthedForProfile(this._id);
-  final int _id;
+  final String _id;
 
   @override
-  int? build() => _id;
+  String? build() => _id;
 }
 
 /// Tutored-profile-selection notifier that hard-codes a fixed selection.
@@ -229,12 +229,10 @@ void main() {
                 curriculumId: CurriculumId.mishnayos,
                 contentItemSefariaRef: 'Berakhot.2a',
                 stageOrder: 1,
-                stageDefinitionId: 1,
                 priority: DailyTaskPriority.newLearning,
                 isOverdue: false,
                 reason: 'test',
                 stageName: 'Learn',
-                trackId: 1,
                 trackLabel: 'Mishnayos',
               ),
             ],
@@ -377,7 +375,7 @@ void main() {
           // NOTE: identity.profileId is available only after pumpApp, but
           // Drift auto-assigns id=1 for the first insert in the harness.
           parentPinAuthenticatedProfileIdProvider.overrideWith(
-            () => _PinAuthedForProfile(1),
+            () => _PinAuthedForProfile('01J6Q2H4A8M7K3P9R5T6V8WXY'),
           ),
         ],
       );
@@ -492,12 +490,10 @@ void main() {
                     curriculumId: CurriculumId.mishnayos,
                     contentItemSefariaRef: 'Berakhot.2a',
                     stageOrder: 1,
-                    stageDefinitionId: 1,
                     priority: DailyTaskPriority.newLearning,
                     isOverdue: false,
                     reason: 'test',
                     stageName: 'Learn',
-                    trackId: 1,
                     trackLabel: 'Mishnayos',
                   ),
                 ],
@@ -565,12 +561,10 @@ void main() {
                   curriculumId: CurriculumId.mishnayos,
                   contentItemSefariaRef: 'Berakhot.2a',
                   stageOrder: 1,
-                  stageDefinitionId: 1,
                   priority: DailyTaskPriority.todayProgram,
                   isOverdue: false,
                   reason: 'test',
                   stageName: 'Learn',
-                  trackId: 1,
                   trackLabel: 'Mishnayos',
                   unitDisplayEn: 'Berakhot 2',
                   unitDisplayHe: 'ברכות ב',

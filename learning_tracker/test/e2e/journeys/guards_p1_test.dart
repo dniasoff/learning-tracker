@@ -297,7 +297,7 @@ void main() {
                 (ref) => Stream.value(0),
               ),
               activeProfilePointsBalanceProvider.overrideWith(
-                (ref) => Stream.value(0),
+                (ref) => Future.value(0),
               ),
               // No active tutored session (keeps test scenario clean).
               activeTutoredProfileSelectionProvider.overrideWith(

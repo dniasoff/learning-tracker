@@ -12,7 +12,7 @@
 ///
 /// What this proves about the harness:
 ///   - AppRouter boots with real guards under a headless [flutter test] run.
-///   - In-memory Drift DB is seeded and threaded through all guards correctly.
+///   - Fake Firestore is seeded and threaded through all guards correctly.
 ///   - `authStateProvider` override with a local-born [AuthState.signedIn]
 ///     bypasses Firebase entirely.
 ///   - Profile + active-profile providers resolve to the seeded row.
@@ -127,15 +127,18 @@ void main() {
         extraOverrides: h.dashboardSilenceOverrides,
       );
 
-      // Direct DB assertion: the seeded profile must exist with the
+      // Direct Firestore assertion: the seeded profile must exist with the
       // correct display name and mode.
-      final profiles = await h.db.profileDao.getProfilesByAccount(
-        identity.accountId,
-      );
-      expect(profiles, hasLength(1));
-      expect(profiles.first.displayName, 'Carol');
-      expect(profiles.first.mode, 'adult');
-      expect(profiles.first.id, identity.profileId);
+      final profile = await h.firestore
+          .collection('users')
+          .doc(identity.accountId)
+          .collection('learner_profiles')
+          .doc(identity.profileId)
+          .get();
+      expect(profile.exists, isTrue);
+      expect(profile.data()!['display_name'], 'Carol');
+      expect(profile.data()!['mode'], 'adult');
+      expect(profile.id, identity.profileId);
     });
   });
 }
