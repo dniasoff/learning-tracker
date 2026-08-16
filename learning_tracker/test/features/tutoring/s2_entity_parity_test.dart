@@ -7,7 +7,7 @@
 // For each entity kind:
 //   1. Build a representative payload (as goal_repository_impl / service code
 //      would supply it).
-//   2. Feed it through a tutored TutoredWriteRouter.
+//   2. Feed it through the current TutorWriteService callable seam.
 //   3. Assert the CF invoker received the expected field names + doc-id.
 //
 // R2-H1 fix: GoalEntity now has a trackId field and toFirestore() emits
@@ -18,12 +18,8 @@ library;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/sync/sync_write_facade.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
-import 'package:learning_tracker/features/tutoring/data/routers/tutored_write_router.dart';
 import 'package:learning_tracker/features/tutoring/data/services/tutor_write_service.dart';
-import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
-import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
 
 // ── Fake infra ────────────────────────────────────────────────────────────────
 
@@ -33,83 +29,27 @@ class _InvokerRecord {
       calls.add((fn: fn, args: Map<String, dynamic>.from(args)));
 }
 
-class _NoopDelegate implements SyncWriteFacade {
-  @override
-  Future<void> pushGoal(Map<String, dynamic> g) async {}
-  @override
-  Future<void> deleteGoal(Map<String, dynamic> p) async {}
-  @override
-  Future<void> pushCurriculumTrack(Map<String, dynamic> d) async {}
-  @override
-  Future<void> pushStageDefinitions({
-    required int trackId,
-    required String curriculumId,
-    required List<Map<String, dynamic>> stages,
-    required DateTime updatedAt,
-  }) async {}
-  @override
-  Future<void> pushStudyDayConfig(Map<String, dynamic> p) async {}
-  @override
-  Future<void> pushBookmark(Map<String, dynamic> b) async {}
-  @override
-  Future<void> pushSettings(Map<String, dynamic> s) async {}
-  @override
-  Future<void> pushGamificationSettingsSnapshot() async {}
-  @override
-  Future<void> pushUiPreferencesSnapshot() async {}
-  @override
-  Future<void> pushLearningOrder({
-    required int profileId,
-    required String curriculumId,
-    required List<Map<String, dynamic>> items,
-    required DateTime updatedAt,
-  }) async {}
-  @override
-  Future<void> pushLearnerProfile(Map<String, dynamic> p) async {}
-  @override
-  Future<void> deleteLearnerProfile(String profileUlid) async {}
-  @override
-  Future<void> deleteCompletion(String completionId) async {}
-  @override
-  Future<void> pushProfileProgram(Map<String, dynamic> payload) async {}
-}
+const _grantId = 'grant_001';
+const _ownerUid = 'parent_uid';
+const _profileId = '01JQ3K5M8N2P4R6T7V9X0Z1AB';
 
-const _sel = TutoredProfileSelection(
-  profileId: '99',
-  ownerUid: 'parent_uid',
-  grantId: 'grant_001',
-  permissions: TutorPermissions(
-    canViewProgress: true,
-    canViewContent: true,
-    canBulkPriorCompletion: true,
-    canResetCompletion: true,
-    canEditGoals: true,
-    canEditStages: true,
-    canEditRewards: true,
-    canEditStudyDays: true,
-    canEditPoints: true,
-  ),
-);
-
-TutoredWriteRouter _router(_InvokerRecord record) => TutoredWriteRouter(
-  delegate: _NoopDelegate(),
-  writeService: TutorWriteService(invoker: record.call),
-  selection: _sel,
-);
+TutorWriteService _service(_InvokerRecord record) =>
+    TutorWriteService(invoker: record.call);
 
 void main() {
   // ── Track parity ──────────────────────────────────────────────────────────────
   //
   // TrackConfigMerger reads via TrackCodec.decode:
   //   curriculum_id, state, activated_at, state_changed_at, pace_reset_date.
-  // Router passes TrackData through unchanged; doc-id = curriculum_id.
+  // TutorWriteService passes the typed track payload to the CF; doc-id is
+  // supplied as the callable's trackId argument.
 
   group('Track parity — tutorUpsertTrack payload matches TrackCodec', () {
     test(
       'track payload has snake_case fields merger reads; docId = curriculum_id',
       () async {
         final record = _InvokerRecord();
-        final router = _router(record);
+        final service = _service(record);
 
         final now = DateTime.utc(2026, 5, 28, 10, 0, 0);
         final payload = {
@@ -119,7 +59,13 @@ void main() {
           'state_changed_at': now.toIso8601String(),
         };
 
-        await router.pushCurriculumTrack(payload);
+        await service.upsertTrack(
+          grantId: _grantId,
+          ownerUid: _ownerUid,
+          profileId: _profileId,
+          trackId: 'mishnayos',
+          trackData: payload,
+        );
 
         expect(record.calls, hasLength(1));
         final call = record.calls.first;
@@ -148,12 +94,12 @@ void main() {
           reason: 'TrackCodec.decode reads state_changed_at (LWW timestamp)',
         );
 
-        // Doc-id derived by the router from curriculum_id.
+        // Doc-id supplied to the current callable seam.
         expect(
           args['trackId'],
           'mishnayos',
           reason:
-              'router uses curriculum_id as trackId, matching Firestore doc path',
+              'callable uses curriculum_id as trackId, matching Firestore doc path',
         );
       },
     );
@@ -164,8 +110,8 @@ void main() {
   // StageDefinitionMerger reads via StageDefinitionCodec.decode:
   //   curriculum_id, track_id, stage_order, stage_name, schedule, is_default,
   //   updated_at.
-  // Router enriches each stage with track_id + curriculum_id + updated_at before
-  // calling the CF; stageId = "{trackId}_{stageOrder}".
+  // The current callable seam receives the already-enriched stage data;
+  // stageId = "{trackId}_{stageOrder}".
 
   group(
     'Stage parity — tutorUpsertStageDefinition payload matches StageDefinitionCodec',
@@ -174,7 +120,7 @@ void main() {
         'enriched stage payload has all codec fields; stageId = trackId_stageOrder',
         () async {
           final record = _InvokerRecord();
-          final router = _router(record);
+          final service = _service(record);
 
           final now = DateTime.utc(2026, 5, 28, 10, 0, 0);
           final stage = {
@@ -184,11 +130,17 @@ void main() {
             'is_default': true,
           };
 
-          await router.pushStageDefinitions(
-            trackId: 7,
-            curriculumId: 'mishnayos',
-            stages: [stage],
-            updatedAt: now,
+          await service.upsertStageDefinition(
+            grantId: _grantId,
+            ownerUid: _ownerUid,
+            profileId: _profileId,
+            stageId: '7_1',
+            stageData: {
+              ...stage,
+              'curriculum_id': 'mishnayos',
+              'track_id': 7,
+              'updated_at': now.toIso8601String(),
+            },
           );
 
           expect(record.calls, hasLength(1));
@@ -249,7 +201,8 @@ void main() {
   //
   // StudyDayConfigMerger reads via StudyDayConfigCodec.decode:
   //   profile_id, curriculum_id, track_id, day_of_week, day_type, updated_at.
-  // Doc-id = "{curriculum_id}_{day_of_week}_{track_id}".
+  // Doc-id = "{curriculum_id}_{day_of_week}_{track_id}" and is supplied as
+  // the callable's configId argument.
 
   group(
     'StudyDay parity — tutorUpsertStudyDayConfig payload matches StudyDayConfigCodec',
@@ -258,11 +211,11 @@ void main() {
         'payload has all codec fields; configId = curriculum_day_track',
         () async {
           final record = _InvokerRecord();
-          final router = _router(record);
+          final service = _service(record);
 
           final now = DateTime.utc(2026, 5, 28, 10, 0, 0);
           final payload = {
-            'profile_id': 99,
+            'profile_id': _profileId,
             'curriculum_id': 'mishnayos',
             'track_id': 7,
             'day_of_week': 1,
@@ -270,7 +223,13 @@ void main() {
             'updated_at': now.toIso8601String(),
           };
 
-          await router.pushStudyDayConfig(payload);
+          await service.upsertStudyDayConfig(
+            grantId: _grantId,
+            ownerUid: _ownerUid,
+            profileId: _profileId,
+            configId: 'mishnayos_1_7',
+            configData: payload,
+          );
 
           expect(record.calls, hasLength(1));
           final call = record.calls.first;
@@ -309,7 +268,7 @@ void main() {
             args['configId'],
             'mishnayos_1_7',
             reason:
-                'configId = {curriculum}_{dow}_{track} matches outbox doc-id convention',
+                'configId = {curriculum}_{dow}_{track} matches callable doc-id convention',
           );
         },
       );
@@ -488,10 +447,10 @@ void main() {
       });
 
       test(
-        'router passes goal payload to CF with goalId from id key',
+        'callable receives goal payload with goalId from id key',
         () async {
           final record = _InvokerRecord();
-          final router = _router(record);
+          final service = _service(record);
 
           final now = DateTime.utc(2026, 5, 28, 10, 0, 0);
           final goal = GoalEntity(
@@ -506,7 +465,15 @@ void main() {
           final payload = goal.toFirestore();
           payload['id'] = goal.firestoreId;
 
-          await router.pushGoal(payload);
+          final goalDataPayload = Map<String, dynamic>.from(payload)
+            ..remove('id');
+          await service.upsertGoal(
+            grantId: _grantId,
+            ownerUid: _ownerUid,
+            profileId: _profileId,
+            goalId: goal.firestoreId,
+            goalData: goalDataPayload,
+          );
 
           expect(record.calls, hasLength(1));
           final call = record.calls.first;

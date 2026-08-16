@@ -358,8 +358,8 @@ class _FakeGeocodingPlatform extends Fake
 }
 
 // ── Helper: build a ProviderContainer with fakes ──────────────────────────────
-// Uses a real SacredLocationNotifier with syncWriteFacadeProvider overridden
-// to null so no sync I/O occurs in unit tests.
+// Uses a real SacredLocationNotifier; its current production persistence is
+// local SharedPreferences, so no sync-engine override is needed.
 
 ProviderContainer _makeContainer({LocationService? locationService}) {
   return ProviderContainer(

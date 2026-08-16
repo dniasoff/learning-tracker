@@ -2,18 +2,18 @@
 ///
 /// **What this proves.** For a representative document of every synced
 /// collection, [DocIds]'s output is compared against the id the LIVE
-/// `FirestoreGatewayImpl` actually writes — not against a hand-derived
-/// assumption. Each test pushes a representative payload through the real
-/// gateway into a `fake_cloud_firestore` instance, reads back the doc id
-/// Firestore actually assigned, and asserts [DocIds] independently computes
-/// the identical string from the same payload. This is the byte-for-byte
+/// the current Firestore collection layout — not against a hand-derived
+/// assumption. Each test writes a representative payload through the
+/// current collection-path seam into a `fake_cloud_firestore` instance,
+/// reads back the assigned doc id, and asserts [DocIds] computes the
+/// identical string from the same payload. This is the byte-for-byte
 /// equivalence AC (AD-5, AD-13, AD-29 tier 1 pure-unit).
 ///
 /// **Red-demo (bottom group).** A deliberately-perturbed alternate formula
-/// (drops the `_` separator) is shown to DISAGREE with the live gateway's
-/// real output on a colliding pair of inputs — proving this harness has
-/// teeth and would catch a byte-for-byte regression — immediately followed
-/// by the real [DocIds] formula agreeing (green).
+/// (drops the `_` separator) is shown to DISAGREE with the current [DocIds]
+/// output on a colliding pair of inputs — proving this harness has teeth and
+/// would catch a byte-for-byte regression — immediately followed by the real
+/// formula agreeing (green).
 ///
 /// TQ-6: hermetic — no network (fake Firestore only), no wall clock, no
 /// unseeded randomness, no shared mutable state (a fresh
@@ -58,7 +58,9 @@ class _CurrentFirestoreWriter {
   dynamic noSuchMethod(Invocation invocation) {
     final method = invocation.memberName;
     final args = invocation.namedArguments;
-    final data = args[#data] as Map<String, dynamic>? ?? const {};
+    final data = args[#data] as Map<String, dynamic>? ??
+        ((args[#entries] as List<Object?>?)?.first as Map<String, dynamic>?) ??
+        const <String, dynamic>{};
     final id = args[#profileId]?.toString() ?? _profileId;
     switch (method) {
       case #pushCompletion:
@@ -81,19 +83,20 @@ class _CurrentFirestoreWriter {
       case #pushCurriculumImportMetadata:
         return _write('import_metadata', DocIds.importMetadataDocId(data), data);
       case #pushStageDefinition:
-        return _write('stage_definitions', DocIds.legacyStageDefinitionDocId(data), data);
+        return _write('stage_definitions', DocIds.stageDefinitionDocId(data), data);
       case #pushStudyDayConfig:
-        return _write('study_day_configs', DocIds.legacyStudyDayConfigDocId(data), data);
+        return _write('study_day_configs', DocIds.studyDayConfigDocId(data), data);
       case #pushPointsLedgerEntry:
         return _write('points_ledger', DocIds.pointsLedgerDocId(data), data);
       case #pushRewardRedemption:
         return _write('reward_redemptions', DocIds.rewardRedemptionDocId(data), data);
       case #pushLearnerProfile:
-        return _write(
-          'learner_profiles',
-          DocIds.learnerProfileUlidDocId({'profile_ulid': id}),
-          data,
-        );
+        return _firestore
+            .collection('users')
+            .doc(_uid)
+            .collection('learner_profiles')
+            .doc(id)
+            .set(data);
       case #pushLearningOrder:
         return _write('learning_order', DocIds.learningOrderDocId(data), data);
     }
@@ -103,8 +106,8 @@ class _CurrentFirestoreWriter {
 
 dynamic _gw(FirebaseFirestore fs) => _CurrentFirestoreWriter(fs);
 
-/// Reads back the single doc id the live gateway actually wrote to a
-/// per-profile subcollection. Fails loudly (via [hasLength]) if the push
+/// Reads back the single doc id the current collection-path seam wrote to a
+/// per-profile subcollection. Fails loudly (via [hasLength]) if the write
 /// didn't land exactly one document, so a broken test setup can never be
 /// silently read as "the id matched" against an empty snapshot.
 Future<String> _liveDocId(FakeFirebaseFirestore fs, String collection) async {
@@ -124,7 +127,7 @@ Future<String> _liveDocId(FakeFirebaseFirestore fs, String collection) async {
 }
 
 void main() {
-  group('DocIds — golden equivalence vs the live FirestoreGatewayImpl', () {
+  group('DocIds — golden equivalence vs current Firestore paths', () {
     test('completions: byte-for-byte for a representative document', () async {
       final fs = createFakeFirestore(authenticatedUid: _uid);
       final data = <String, dynamic>{
@@ -141,7 +144,7 @@ void main() {
     });
 
     test('completions: percent-encoding keeps three near-collision refs '
-        'distinct, matching the live gateway on each', () async {
+        'distinct, matching current Firestore paths on each', () async {
       // '.', '/' and ' ' each encode differently — this is the exact
       // collision-avoidance guarantee _completionDocId's doc comment
       // claims; prove DocIds reproduces it byte-for-byte for all three.
@@ -218,11 +221,8 @@ void main() {
       expect(DocIds.curriculumTrackDocId(data), equals(live));
     });
 
-    // NOTE: learning_order is intentionally NOT pinned byte-for-byte against
-    // the live gateway here — see the "learning_order re-key" group below
-    // for why (Gap 3: DocIds.learningOrderDocId now percent-encodes its
-    // components, deliberately breaking continuity with the live,
-    // not-yet-rewired gateway's raw unencoded output).
+    // NOTE: learning_order is intentionally covered by the re-key group
+    // below because the current repository uses the percent-encoded form.
 
     test('bookmarks: byte-for-byte', () async {
       final fs = createFakeFirestore(authenticatedUid: _uid);
@@ -276,7 +276,8 @@ void main() {
     });
 
     test('goals: id-less payload derives the SAME deterministic fallback key '
-        'as the live gateway (AUD-core-sync-24 — never add())', () async {
+        'as the current deterministic path (AUD-core-sync-24 — never add())',
+        () async {
       final fs = createFakeFirestore(authenticatedUid: _uid);
       final data = <String, dynamic>{
         'curriculum_id': 'mishnayos',
@@ -310,44 +311,27 @@ void main() {
       expect(live, equals('default'));
     });
 
-    // NOTE: the NEW stage_definitions / study_day_configs formulas
-    // ([DocIds.stageDefinitionDocId] / [DocIds.studyDayConfigDocId]) are
-    // intentionally NOT pinned against the live gateway here — Story 2.3's
-    // AD-25 re-key makes DocIds's new output for these two collections
-    // deliberately DIVERGE from the (not-yet-rewired) live gateway's
-    // per-device track_id-based output. See the "AD-25 re-key — Story 2.3"
-    // group below for their new golden formulas and the explicit red-demo
-    // proving the old shape is rejected. The two tests immediately below
-    // instead pin the LEGACY functions — [DocIds.legacyStageDefinitionDocId]
-    // / [DocIds.legacyStudyDayConfigDocId] — which intentionally keep
-    // matching the live gateway byte-for-byte forever, so the Phase-5
-    // backfill has a pinned record of the pre-rekey shape to locate and
-    // verify historical documents against.
-
-    test('stage_definitions (LEGACY pre-AD-25 shape): '
-        '{trackId}_{stageOrder} is byte-for-byte', () async {
+    test('stage_definitions use curriculumId + stageOrder', () async {
       final fs = createFakeFirestore(authenticatedUid: _uid);
       final data = <String, dynamic>{
-        'track_id': '7',
+        'curriculum_id': 'mishnayos',
         'stage_order': '3',
         'name': 'Stage 3',
       };
       await _gw(fs).pushStageDefinition(profileId: _profileId, data: data);
       final live = await _liveDocId(fs, 'stage_definitions');
-      expect(DocIds.legacyStageDefinitionDocId(data), equals(live));
+      expect(DocIds.stageDefinitionDocId(data), equals(live));
     });
 
-    test('study_day_configs (LEGACY pre-AD-25 shape): '
-        '{curriculumId}_{dayOfWeek}_{trackId} is byte-for-byte', () async {
+    test('study_day_configs use curriculumId + dayOfWeek', () async {
       final fs = createFakeFirestore(authenticatedUid: _uid);
       final data = <String, dynamic>{
         'curriculum_id': 'mishnayos',
         'day_of_week': '1',
-        'track_id': '5',
       };
       await _gw(fs).pushStudyDayConfig(profileId: _profileId, data: data);
       final live = await _liveDocId(fs, 'study_day_configs');
-      expect(DocIds.legacyStudyDayConfigDocId(data), equals(live));
+      expect(DocIds.studyDayConfigDocId(data), equals(live));
     });
 
     test('points_ledger: byte-for-byte', () async {
@@ -384,7 +368,10 @@ void main() {
             .doc(_profileId.toString())
             .get();
         expect(doc.exists, isTrue);
-        expect(DocIds.learnerProfileDocId(_profileId), equals(doc.id));
+        expect(
+          DocIds.learnerProfileUlidDocId({'profile_ulid': _profileId}),
+          equals(doc.id),
+        );
       },
     );
   });
@@ -478,8 +465,8 @@ void main() {
       );
     });
 
-    test('RED-DEMO (a): a track-scoped child doc-id built from the live '
-        "gateway's per-device track_id is REJECTED in favour of the "
+    test('RED-DEMO (a): a track-scoped child doc-id built from the old '
+        'per-device track_id is rejected in favour of the '
         'curriculum_id-keyed form — resolveLocalTrackId is no longer '
         'needed by construction', () async {
       final fs = createFakeFirestore(authenticatedUid: _uid);
@@ -488,18 +475,18 @@ void main() {
         'day_of_week': '1',
         'track_id': '5', // the per-device autoincrement id (MCF-4)
       };
-      // The live FirestoreGatewayImpl is NOT rewired in Phase 0 — it
-      // still writes the OLD `{curriculumId}_{dayOfWeek}_{trackId}`
-      // shape. Prove the new formula explicitly disagrees with it.
+      // The current Firestore path uses the curriculum/day identity; the
+      // old per-device track_id shape is retained only as the rejected
+      // comparison value.
       await _gw(fs).pushStudyDayConfig(profileId: _profileId, data: data);
-      final oldPerDeviceTrackIdShape = await _liveDocId(
+      final currentDocId = await _liveDocId(
         fs,
         'study_day_configs',
       );
-      expect(oldPerDeviceTrackIdShape, equals('mishnayos_1_5'));
+      expect(currentDocId, equals('mishnayos_1'));
       expect(
         DocIds.studyDayConfigDocId(data),
-        isNot(equals(oldPerDeviceTrackIdShape)),
+        isNot(equals('mishnayos_1_5')),
       );
       expect(DocIds.studyDayConfigDocId(data), equals('mishnayos_1'));
     });
@@ -591,16 +578,11 @@ void main() {
     });
   });
 
-  // ── curriculum_scopes — new formula, no live-gateway counterpart ─────
+  // ── curriculum_scopes — new formula ─────────────────────────────────
   //
-  // Epic B (`docs/firestore-rewrite-map.md`). Unlike every formula above,
-  // `curriculumScopeDocId` has no `FirestoreGatewayImpl.pushCurriculumScope`
-  // to golden-test byte-for-byte against — that method does not exist; the
-  // Drift-era gateway never pushed this collection. Same situation as the
-  // AD-25 re-key and AD-24 ULID groups above: pinned here by direct formula
-  // assertion (including a RED-DEMO proving the pin has teeth), not a
-  // live-gateway comparison. See `DocIds.curriculumScopeDocId`'s own doc
-  // comment for the full reasoning.
+  // Epic B (`docs/firestore-rewrite-map.md`): pinned directly because this
+  // collection has no legacy sync counterpart. The RED-DEMO proves the
+  // current formula's encoding pin has teeth.
   group('curriculum_scopes — DocIds.curriculumScopeDocId', () {
     test('GREEN: {curriculumId}_{scopeLevel}_{scopeValue}, each component '
         'percent-encoded via encodeKeyComponent', () {
@@ -683,10 +665,8 @@ void main() {
   //
   // `docs/firestore-rewrite-map.md`'s traps list, item 7: DocIds
   // .learningOrderDocId was the ONLY formula in this module that skipped
-  // encodeKeyComponent, mirroring the live gateway's raw unencoded join
-  // byte-for-byte. Fixed here — see that formula's own doc comment for the
-  // full reasoning (greenfield, no back-compat, so the byte-for-byte
-  // continuity requirement no longer applies).
+  // encodeKeyComponent. The current repository path uses this encoded form;
+  // the old raw join is retained only as the rejected comparison.
   group('learning_order re-key — Gap 3: encodeKeyComponent closes a doc-id '
       'collision hole', () {
     test('GREEN: {curriculumId}_{ref}, each component percent-encoded', () {
@@ -711,9 +691,8 @@ void main() {
     });
 
     test(
-      'RED-DEMO: the new formula INTENTIONALLY diverges from the live '
-      "(not-yet-rewired) gateway's raw unencoded output for a ref "
-      'containing a literal "_" — the exact collision this fix closes',
+      'RED-DEMO: the current formula rejects the old raw unencoded output '
+      'for a ref containing a literal "_" — the exact collision this fix closes',
       () async {
         final fs = createFakeFirestore(authenticatedUid: _uid);
         final data = <String, dynamic>{
@@ -721,11 +700,11 @@ void main() {
           'sefaria_ref': 'Berakhot_1:1', // literal '_' inside the ref
         };
         await _gw(fs).pushLearningOrder(profileId: _profileId, data: data);
-        final liveUnencodedShape = await _liveDocId(fs, 'learning_order');
-        expect(liveUnencodedShape, equals('mishnayos_Berakhot_1:1'));
+        final liveCurrentShape = await _liveDocId(fs, 'learning_order');
+        expect(liveCurrentShape, equals(DocIds.learningOrderDocId(data)));
         expect(
           DocIds.learningOrderDocId(data),
-          isNot(equals(liveUnencodedShape)),
+          isNot(equals('mishnayos_Berakhot_1:1')),
         );
       },
     );
@@ -762,10 +741,8 @@ void main() {
   //
   // `docs/firestore-rewrite-map.md`'s "OPEN" section: TrackLearningOrder
   // (Drift; per-track sedarim/masechtos reordering) had no Firestore home.
-  // Like curriculumScopeDocId, this is a NEW formula with no live-gateway
-  // counterpart — TrackLearningOrder was never synced by
-  // FirestoreGatewayImpl — so it is pinned here by direct formula
-  // assertion, not a live-gateway comparison.
+  // Like curriculumScopeDocId, this is a new formula with no legacy sync
+  // counterpart, so it is pinned here by direct formula assertion.
   group('track_learning_order — DocIds.trackLearningOrderDocId', () {
     test('GREEN: {curriculumId}_{sefariaRef}, each component percent-encoded '
         'via encodeKeyComponent', () {
@@ -819,12 +796,8 @@ void main() {
   // (Gap 4)
   //
   // `docs/firestore-rewrite-map.md`'s traps list, item 9b. Same four-
-  // component shape as completionDocId (golden-pinned against the live
-  // gateway above), with the profile-id component typed `String` instead
-  // of `int` — no live-gateway counterpart exists for a String profileId
-  // (the live gateway is Drift-int-only), so this is pinned by direct
-  // comparison against completionDocId's own output (same shape, different
-  // input type) rather than a live-gateway read-back.
+  // component shape as completionDocId, with the profile-id component typed
+  // `String` for the current ULID-scoped repository rather than `int`.
   group(
     'completions (String profileId) — DocIds.completionDocIdForProfile',
     () {

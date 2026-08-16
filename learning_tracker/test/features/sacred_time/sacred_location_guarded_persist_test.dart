@@ -46,11 +46,9 @@ void main() {
 
       test(
         'a failing SharedPreferences write rolls back the optimistic '
-        'location and the returned Future never rejects unobserved',
+          'location and the returned Future never rejects unobserved',
         () async {
-          final container = ProviderContainer(
-            overrides: [],
-          );
+          final container = ProviderContainer();
           addTearDown(container.dispose);
 
           // Establish the null baseline first (no location set yet).
@@ -69,7 +67,7 @@ void main() {
                   cityLabel: 'Tel Aviv',
                   countryCode: 'IL',
                 );
-          }, (error, stack) => caughtError = error);
+          }, (error, stack) => caughtError = error,);
 
           expect(
             caughtError,
@@ -94,9 +92,7 @@ void main() {
 
       test('a successful write still updates state normally (control case — '
           'the guard must not mask a genuine successful persist)', () async {
-        final container = ProviderContainer(
-          overrides: [],
-        );
+        final container = ProviderContainer();
         addTearDown(container.dispose);
 
         await container

@@ -38,10 +38,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
     show authRepositoryProvider;
-import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';

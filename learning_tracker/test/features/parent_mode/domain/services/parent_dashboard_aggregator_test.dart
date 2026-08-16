@@ -14,8 +14,8 @@ void main() {
 
         expect(result.length, 0);
         expect(
-          result.values.fold<int>(0, (sum, count) => sum + count),
-          0,
+          result.values.fold<int>(0, (sum, count) => sum + count) / 7.0,
+          0.0,
         );
       });
 
@@ -49,7 +49,10 @@ void main() {
         );
 
         expect(result.length, 7);
-        expect(result.values.fold<int>(0, (sum, count) => sum + count), 7);
+        expect(
+          result.values.fold<int>(0, (sum, count) => sum + count) / 7.0,
+          1.0,
+        );
       });
     });
   });
