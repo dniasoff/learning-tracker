@@ -32,6 +32,10 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/features/gamification/domain/models/reward_redemption.dart'
+    show RewardRedemptionStatus, rewardRedemptionFromFirestore;
+import 'package:learning_tracker/features/gamification/presentation/screens/parent_pending_redemptions_screen.dart'
+    show pendingRedemptionsProvider;
 
 import '../../helpers/firestore_fixtures.dart';
 import '../harness/e2e_common_overrides.dart';
@@ -39,8 +43,36 @@ import '../harness/e2e_harness.dart';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+const _harnessAccountId = 'e2e-account';
+const _harnessProfileId = '01J6Q2H4A8M7K3P9R5T6V8WXYA';
+
 /// Standard silence overrides for dashboard heavy providers.
 List<Override> _dashboardSilence(E2EHarness h) => h.dashboardSilenceOverrides;
+
+/// Reads the seeded pending requests directly from this journey's fake
+/// Firestore. The shared adapter override is production-shaped, but its
+/// resilient stream can emit before a post-pump fixture write is observable
+/// in this headless harness; this one-shot query is re-run on invalidation.
+Override _pendingRedemptionsFromFirestore(
+  E2EHarness h, {
+  required String uid,
+  required String profileId,
+}) => pendingRedemptionsProvider.overrideWith((ref) {
+  final query = h.firestore
+      .collection('users')
+      .doc(uid)
+      .collection('learner_profiles')
+      .doc(profileId)
+      .collection('reward_redemptions')
+      .where('status', isEqualTo: RewardRedemptionStatus.pendingFulfilment);
+  return Stream.fromFuture(
+    query.get().then(
+      (snapshot) => snapshot.docs
+          .map((doc) => rewardRedemptionFromFirestore(doc.data()))
+          .toList(),
+    ),
+  );
+});
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
@@ -124,10 +156,6 @@ void main() {
   // ── E2E-602 ─────────────────────────────────────────────────────────────────
 
   group('E2E-602 — Parent fulfils a pending redemption', () {
-    // BLOCKED: firestore_fixtures.dart has no seed helper for points_ledger or
-    // reward_redemptions, so this case cannot be migrated without inventing a
-    // fixture shape in this journey file.
-    /*
     testWidgets('pending redemption appears on ParentPendingRedemptionsScreen; '
         'tap Fulfil → snackbar confirms; redemption status → fulfilled', (
       tester,
@@ -141,33 +169,47 @@ void main() {
       final h = E2EHarness(tester, identity: identity);
       addTearDown(h.dispose);
 
-      // Boot to dashboard so the DB and profile row are live. Include the
-      // one-shot pendingRedemptionsProvider override to avoid a Drift
-      // reactive-stream timer leak (R-GA-stream).
+      // Boot to dashboard so the Firestore account/profile rows are live.
+      // Include the one-shot pending-redemptions override so this journey
+      // reads the seeded Firestore request without a long-lived stream.
       await h.pumpApp(
         path: '/dashboard',
         extraOverrides: [
           ..._dashboardSilence(h),
-          pendingRedemptionsOneShotOverride(),
+          _pendingRedemptionsFromFirestore(
+            h,
+            uid: _harnessAccountId,
+            profileId: _harnessProfileId,
+          ),
         ],
       );
 
       // Seed a balance + a pre-created pending redemption to simulate the
       // child having already submitted a redemption request.
-      final profileId = identity.profileId;
-      await _seedPoints(h.db, profileId: profileId, balance: 200);
-      await _seedPendingRedemption(
-        h.db,
-        profileId: profileId,
+      await seedPointsLedgerEntry(
+        h.firestore,
+        uid: identity.accountId,
+        profileId: identity.profileId,
+        ulid: '01J6Q2H4A8M7K3P9R5T6V8WXY1',
+        delta: 200,
+      );
+      await seedRewardRedemption(
+        h.firestore,
+        uid: identity.accountId,
+        profileId: identity.profileId,
+        ulid: '01J6Q2H4A8M7K3P9R5T6V8WXY2',
         rewardTitle: 'Silver Medal',
         pointsCost: 100,
+        status: RewardRedemptionStatus.pendingFulfilment,
       );
+      await h.pump();
 
       // Prime the PIN guard for parent-mode routes.
       h.markPinAuthenticated();
 
       // ── Navigate to ParentPendingRedemptionsScreen ─────────────────────
       await navigateTo(h, const ParentPendingRedemptionsRoute());
+      await tester.pumpAndSettle();
 
       h.expectOnScreen(
         'Pending Prizes',
@@ -179,6 +221,7 @@ void main() {
       h.expectOnScreen('Fulfil');
 
       // ── Tap Fulfil ─────────────────────────────────────────────────────
+      await tester.ensureVisible(find.text('Fulfil'));
       await h.tapText('Fulfil');
       await h.pump(const Duration(milliseconds: 500));
       await h.pump();
@@ -191,22 +234,24 @@ void main() {
       await h.pump(const Duration(milliseconds: 300));
       h.expectNotOnScreen('Silver Medal');
 
-      // ── DB assertion ────────────────────────────────────────────────────
-      final all = await h.db.pointsBalanceDao.getAllRedemptions(profileId);
-      expect(all, hasLength(1));
-      expect(all.first.status, 'fulfilled');
-      expect(all.first.rewardTitle, 'Silver Medal');
+      // ── Firestore assertion ──────────────────────────────────────────────
+      final redemption = await h.firestore
+          .collection('users')
+          .doc(identity.accountId)
+          .collection('learner_profiles')
+          .doc(identity.profileId)
+          .collection('reward_redemptions')
+          .doc('01J6Q2H4A8M7K3P9R5T6V8WXY2')
+          .get();
+      expect(redemption.exists, isTrue);
+      expect(redemption.data()?['status'], 'fulfilled');
+      expect(redemption.data()?['reward_title'], 'Silver Medal');
     });
-    */
   });
 
   // ── E2E-603 ─────────────────────────────────────────────────────────────────
 
   group('E2E-603 — Parent declines a redemption — refund path', () {
-    // BLOCKED: firestore_fixtures.dart has no seed helper for points_ledger or
-    // reward_redemptions, so this case cannot be migrated without inventing a
-    // fixture shape in this journey file.
-    /*
     testWidgets('pending redemption on ParentPendingRedemptionsScreen; '
         'tap Decline → snackbar confirms; balance refunded', (tester) async {
       // ── Seed ──────────────────────────────────────────────────────────────
@@ -222,24 +267,38 @@ void main() {
         path: '/dashboard',
         extraOverrides: [
           ..._dashboardSilence(h),
-          pendingRedemptionsOneShotOverride(),
+          _pendingRedemptionsFromFirestore(
+            h,
+            uid: _harnessAccountId,
+            profileId: _harnessProfileId,
+          ),
         ],
       );
 
-      final profileId = identity.profileId;
       // Seed balance of 150 and a pending redemption that cost 150 points.
-      await _seedPoints(h.db, profileId: profileId, balance: 150);
-      await _seedPendingRedemption(
-        h.db,
-        profileId: profileId,
+      await seedPointsLedgerEntry(
+        h.firestore,
+        uid: identity.accountId,
+        profileId: identity.profileId,
+        ulid: '01J6Q2H4A8M7K3P9R5T6V8WXY3',
+        delta: 150,
+      );
+      await seedRewardRedemption(
+        h.firestore,
+        uid: identity.accountId,
+        profileId: identity.profileId,
+        ulid: '01J6Q2H4A8M7K3P9R5T6V8WXY4',
         rewardTitle: 'Bronze Coin',
         pointsCost: 150,
+        status: RewardRedemptionStatus.pendingFulfilment,
       );
+      await h.pump();
 
       h.markPinAuthenticated();
 
       // ── Navigate ───────────────────────────────────────────────────────
       await navigateTo(h, const ParentPendingRedemptionsRoute());
+      await tester.pumpAndSettle();
 
       h.expectOnScreen('Pending Prizes');
       h.expectOnScreen('Bronze Coin');
@@ -248,6 +307,7 @@ void main() {
       h.expectOnScreen('Decline');
 
       // ── Tap Decline ────────────────────────────────────────────────────
+      await tester.ensureVisible(find.text('Decline'));
       await h.tapText('Decline');
       await h.pump(const Duration(milliseconds: 500));
       await h.pump();
@@ -259,16 +319,32 @@ void main() {
       await h.pump(const Duration(milliseconds: 300));
       h.expectNotOnScreen('Bronze Coin');
 
-      // ── DB assertions ───────────────────────────────────────────────────
-      final all = await h.db.pointsBalanceDao.getAllRedemptions(profileId);
-      expect(all, hasLength(1));
-      expect(all.first.status, 'declined');
+      // ── Firestore assertions ─────────────────────────────────────────────
+      final redemption = await h.firestore
+          .collection('users')
+          .doc(identity.accountId)
+          .collection('learner_profiles')
+          .doc(identity.profileId)
+          .collection('reward_redemptions')
+          .doc('01J6Q2H4A8M7K3P9R5T6V8WXY4')
+          .get();
+      expect(redemption.exists, isTrue);
+      expect(redemption.data()?['status'], 'declined');
 
       // Balance refunded: seeded 150, decline refunds 150 → new balance 300.
-      final newBalance = await h.db.pointsBalanceDao.getBalance(profileId);
+      final ledger = await h.firestore
+          .collection('users')
+          .doc(identity.accountId)
+          .collection('learner_profiles')
+          .doc(identity.profileId)
+          .collection('points_ledger')
+          .get();
+      final newBalance = ledger.docs.fold<int>(
+        0,
+        (balance, doc) => balance + (doc.data()['delta'] as int),
+      );
       expect(newBalance, 300);
     });
-    */
   });
 
   // ── E2E-604 ─────────────────────────────────────────────────────────────────
