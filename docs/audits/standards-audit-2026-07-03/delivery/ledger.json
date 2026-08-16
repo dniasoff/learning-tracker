@@ -2292,7 +2292,7 @@
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": "refuted (wave-1 engine run, 2026-07-10, terminated at no-progress cap / loop end): reconciliation pass received only the engine's summary verdict, no rationale/evidence artifact found anywhere on disk for this id (searched _work/, delivery/, relaunch-wave1-args.json preApproved=[], and all sibling worktree branches for this run - none reference AUD-account-12, unlike its 4 sibling ids in the same manifest). Independently verified against the current tree: AC1 (account-exists-with-different-credential -> authErrExistingPasswordAccount) remains implemented+tested from the original pre-reopen merge (commit 70cc86f5, still an ancestor of this branch) - not new work from this run. AC2 (credential-already-in-use) remains unimplemented; consistent with, but not confirmed to be the basis of, the finding's own verify correction that its only call site (linkGoogleProvider()) is dead code with zero UI callers. See kill-log-addendum.md for the full evidence-gap note. Action required before wave-1 certification: closing-gate reviewer (opus) must independently confirm this refutation or reopen AC2."
+      "notes": "refuted (wave-1 engine run, 2026-07-10, terminated at no-progress cap / loop end): reconciliation pass received only the engine's summary verdict, no rationale/evidence artifact found anywhere on disk for this id (searched docs/_archive/superseded/standards-audit-2026-07-03-work/, delivery/, relaunch-wave1-args.json preApproved=[], and all sibling worktree branches for this run - none reference AUD-account-12, unlike its 4 sibling ids in the same manifest). Independently verified against the current tree: AC1 (account-exists-with-different-credential -> authErrExistingPasswordAccount) remains implemented+tested from the original pre-reopen merge (commit 70cc86f5, still an ancestor of this branch) - not new work from this run. AC2 (credential-already-in-use) remains unimplemented; consistent with, but not confirmed to be the basis of, the finding's own verify correction that its only call site (linkGoogleProvider()) is dead code with zero UI callers. See kill-log-addendum.md for the full evidence-gap note. Action required before wave-1 certification: closing-gate reviewer (opus) must independently confirm this refutation or reopen AC2."
     },
     {
       "id": "AUD-t-cross-27",
@@ -7941,7 +7941,7 @@
         "AUD-guardrails-21 AC1 OK: learning_tracker/tool/README.md:10-37 states the *.workflow.js retention rule (keep while unverified / delete once FIX#N landed+re-verified)",
         "AUD-guardrails-21 AC2 OK: all 6 run2_*/run3_*.workflow.js deleted (6 D entries in diff; ls learning_tracker/tool/*.workflow.js -> No such file)",
         "AUD-guardrails-21 AC2 rationale OK: README:39-46 records the decision; cited commits exist (6cdd919f, 7519a8bd, 5f182dd3, 9bfbbade, 25170b17, afa2b71a)",
-        "AUD-guardrails-21 links OK: tool/device_e2e/README.md, docs/planning/on-device-exhaustive-test-plan-2026-05-31.md, coding-standards anchor line 754 all resolve",
+        "AUD-guardrails-21 links OK: tool/device_e2e/README.md, docs/_archive/superseded/on-device-exhaustive-test-plan-2026-05-31.md, coding-standards anchor line 754 all resolve",
         "AUD-guardrails-21 scope OK: diff = 1 file added + 6 deleted; no .dart/test files touched, no TQ-7 surface",
         "AUD-guardrails-21 no dangling refs OK: dup_tool_basename_baseline.txt clean; audit 86/86 tool-collision ratchet passes"
       ],

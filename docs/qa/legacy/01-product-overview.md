@@ -193,7 +193,7 @@ The app serves two distinct audiences with different UX treatments:
 > local-born accounts are now **credential-less** -- no email, no password, no
 > account-level name; the account is a device-local container entered via the Account
 > Picker, not password sign-in. Cloud-born auth is unaffected. Current behavior:
-> `signup_screen.dart` (offline path). Design record: `../../planning/loop-progress.md`,
+> `signup_screen.dart` (offline path). Design record: `../../_archive/superseded/loop-progress.md`,
 > "ONBOARDING REWORK" entries (2026-06-14 to 2026-06-15).
 
 ### The Hard-Tier Model

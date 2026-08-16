@@ -6,7 +6,7 @@
 
 **Companion specs and memories:**
 - `docs/hebrew-terms.md` — full Hebrew Terms specification (referenced by Rule 1).
-- `docs/planning/tutor-mode-brief.md` — full tutor mode requirements (referenced by Rule 3).
+- `docs/_archive/superseded/tutor-mode-brief.md` — full tutor mode requirements (referenced by Rule 3).
 - `docs/planning/tech-debt-remediation-plan.md` — implementation backlog.
 - `_bmad/` and BMAD memory files — collaboration-style rules (how to work) live elsewhere; this doc is product/design rules (what to build).
 
@@ -16,7 +16,7 @@
 
 When implementing a screen, a widget, a copy change, a data model change, or a refactor — **read this document first**. If something you're about to write contradicts a rule, stop and revisit the design (or flag the rule for revision, with the owner's agreement).
 
-When reviewing code or copy, audit against this document. The 2026-05-20 audits (`ux-audit-2026-05-20-fix-plan.md`, `-hebrew-terms-findings.md`, `-copy-review.md`) are concrete examples of what an audit looks like and what it should catch.
+When reviewing code or copy, audit against this document. The 2026-05-20 audits (`docs/_archive/superseded/ux-audit-2026-05-20-fix-plan.md`, `docs/_archive/superseded/ux-audit-2026-05-20-hebrew-terms-findings.md`, `docs/_archive/superseded/ux-audit-2026-05-20-copy-review.md`) are concrete examples of what an audit looks like and what it should catch.
 
 ---
 
@@ -34,7 +34,7 @@ When reviewing code or copy, audit against this document. The 2026-05-20 audits 
 - A **third axis** exists: **Transliteration variant** (Ashkenazi / Sephardi), only meaningful and only visible when Hebrew Terms = English.
 - Stage names re-render **live** on setting change (not frozen at track creation).
 
-**Known drift to fix:** see `docs/hebrew-terms.md` §11 and the 14 audit violations in `docs/planning/ux-audit-2026-05-20-hebrew-terms-findings.md`.
+**Known drift to fix:** see `docs/hebrew-terms.md` §11 and the 14 audit violations in `docs/_archive/superseded/ux-audit-2026-05-20-hebrew-terms-findings.md`.
 
 **Memory link:** `[[reference-hebrew-terms-spec]]`, `[[project-language-support]]`.
 
@@ -62,7 +62,7 @@ When reviewing code or copy, audit against this document. The 2026-05-20 audits 
 - Tutor PIN, audit log, grant management, etc. are tutor-mode infrastructure but do not change the *view* a tutor sees while sitting in a tutored child's context.
 
 **Memory link:** `[[project-profile-model]]`, `[[tutor-mode-planned]]`.
-**Full spec:** `docs/planning/tutor-mode-brief.md`.
+**Full spec:** `docs/_archive/superseded/tutor-mode-brief.md`.
 
 ---
 
@@ -100,7 +100,7 @@ When reviewing code or copy, audit against this document. The 2026-05-20 audits 
 - The on-screen caption *"Pace tracks track learning only"* is correct and must stay.
 
 **Memory link:** `[[completion-credit-policy]]` (the underlying mechanism).
-**Active bug:** see `ux-audit-2026-05-20-fix-plan.md` Stream F.
+**Active bug:** see `docs/_archive/superseded/ux-audit-2026-05-20-fix-plan.md` Stream F.
 
 ---
 

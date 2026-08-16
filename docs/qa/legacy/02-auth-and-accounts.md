@@ -12,7 +12,7 @@
 > local-born scenario in this document that assumes a password (including AUTH-06,
 > AUTH-07, AUTH-08, AUTH-10, AUTH-15 through AUTH-18, AUTH-20, AUTH-24). Cloud-born
 > scenarios (Firebase email/password or Google) are unaffected. Current behavior:
-> `signup_screen.dart`. Design record: `../../planning/loop-progress.md`, "ONBOARDING
+> `signup_screen.dart`. Design record: `../../_archive/superseded/loop-progress.md`, "ONBOARDING
 > REWORK" entries (2026-06-14 to 2026-06-15).
 
 ---

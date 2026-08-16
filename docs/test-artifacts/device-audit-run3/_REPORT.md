@@ -80,7 +80,7 @@ Run 3 validates that all 32 prior fixes are present in the build and confirms br
 | ContentHierarchy AppBar "Browse Content" hardcoded | false_positive | `curriculum_list_screen.dart` is dead code; no call-site pushes `CurriculumListRoute`; on-device title comes from the correct `content_hierarchy_screen.dart` via l10n |
 | AddTrack wizard denominator jump 6→7 (second reporter) | false_positive | Same as TS-11 by_design entry above; regression test at `add_track_flow_ts11_test.dart` explicitly asserts this |
 | Taharos (6th seder) hidden behind action bar on small screen | false_positive | Action bar is in-flow Column child (not a Stack/overlay); item is below-fold in a bounded scrollable ListView, not occluded |
-| PointConfig empty-state lacks CTA to Manage Tracks | by_design | Acceptance criteria in `on-device-exhaustive-test-plan-2026-05-31.md` row 75 specifies centred text only; no button was ever designed or required |
+| PointConfig empty-state lacks CTA to Manage Tracks | by_design | Acceptance criteria in `docs/_archive/superseded/on-device-exhaustive-test-plan-2026-05-31.md` row 75 specifies centred text only; no button was ever designed or required |
 
 ---
 

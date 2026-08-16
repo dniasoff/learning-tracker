@@ -6,7 +6,7 @@
 | **Date** | 2026-05-19 |
 | **Owner** | Daniel |
 | **Scope** | The overdue computation — the "fickle" design, Bug 1, Bug 2, and the "Clear Overdue" feature |
-| **Diagnosis source** | `docs/sync-rework-exec-prompt-2026-05-18.md` (Addendum — Bug 1 / Bug 2, with file:line) |
+| **Diagnosis source** | `docs/_archive/superseded/sync-rework-exec-prompt-2026-05-18.md` (Addendum — Bug 1 / Bug 2, with file:line) |
 | **Supersedes** | The catch-up & amnesty design — `docs/planning/catchup-and-amnesty-scenarios.md` and `docs/scenarios/evolution/` (see §9) |
 
 ---
@@ -35,7 +35,7 @@ Because "overdue" is materialized at build time:
 
 ## 3. Root causes
 
-Full diagnosis with file:line is in the Addendum of `docs/sync-rework-exec-prompt-2026-05-18.md`. In brief:
+Full diagnosis with file:line is in the Addendum of `docs/_archive/superseded/sync-rework-exec-prompt-2026-05-18.md`. In brief:
 
 **Bug 1 — program tracks never go overdue.** `_applyProgramCalendarOverrides` (`scheduler_providers.dart:924-944`) treats a plain `tracking_start_ref` (e.g. the live value `"Chullin 18"`) as *today's* unit, then tries to fetch following days gated on `(today+1).isBefore(today)` — always false (`:935-936`). The program freezes on its start ref: it never advances and never accrues a backlog. A deterministic logic error.
 
@@ -149,4 +149,4 @@ Consistent with the project's "incremental over rewrites" rule:
 
 ## 12. Relationship to the Firebase sync rework
 
-Bug 2 is a sync-timing problem and overlaps the planned Firebase sync rework (`docs/sync-rework-exec-prompt-2026-05-18.md`). The projection model is the *scheduler-side* half of the fix: it makes the overdue computation immune to *when* sync runs. The sync rework is the *sync-side* half. The two must be coordinated — in particular, the §10.2 sync watermark is a shared dependency. Bug 1 is purely scheduler-side and independent of the sync rework.
+Bug 2 is a sync-timing problem and overlaps the planned Firebase sync rework (`docs/_archive/superseded/sync-rework-exec-prompt-2026-05-18.md`). The projection model is the *scheduler-side* half of the fix: it makes the overdue computation immune to *when* sync runs. The sync rework is the *sync-side* half. The two must be coordinated — in particular, the §10.2 sync watermark is a shared dependency. Bug 1 is purely scheduler-side and independent of the sync rework.

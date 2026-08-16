@@ -1,7 +1,7 @@
 # Test-and-fix bug log
 
 One line per defect: **symptom → cause → fix → test**. Newest first. Part of the exhaustive
-test-and-fix run (plan: `exhaustive-test-and-fix-plan-2026-05-29.md`).
+test-and-fix run (plan: `docs/_archive/superseded/exhaustive-test-and-fix-plan-2026-05-29.md`).
 
 > Production fixes are Opus-owned. Sonnet sub-agents only write/verify test files.
 
@@ -129,7 +129,7 @@ balance unchanged. `make ci` green (8945).
 
 A 26-agent find→adversarially-verify workflow over sync/gamification/tracks/tutoring/profiles/dashboard
 surfaced **16 confirmed defects** (of 20 reported) — full list with file:line + fix + verifier reasoning in
-`docs/planning/bug-hunt-findings-2026-05-31.md`. Fixing in priority order; B1 done below.
+`docs/_archive/superseded/bug-hunt-findings-2026-05-31.md`. Fixing in priority order; B1 done below.
 
 **D9 (MEDIUM, correctness — fixed; D2-class staleness):** The dashboard **lifetime-knowledge card**
 (cumulative %, "X / Y sections learned") did NOT update after a completion — only after a Progress-hub

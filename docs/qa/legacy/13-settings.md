@@ -14,7 +14,7 @@
 > SET-29); the "Local-born has no cloud operations" note above still holds
 > conceptually. Cloud-born scenarios (SET-21, SET-22, SET-24) are unaffected. Current
 > behavior: `signup_screen.dart` and `upgrade_to_cloud_service.dart`. Design record:
-> `../../planning/loop-progress.md`, "ONBOARDING REWORK" entries (2026-06-14 to
+> `../../_archive/superseded/loop-progress.md`, "ONBOARDING REWORK" entries (2026-06-14 to
 > 2026-06-15).
 
 ---

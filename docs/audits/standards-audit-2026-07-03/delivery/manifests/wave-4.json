@@ -60,7 +60,7 @@
     "effort": "S",
     "normArea": "docs",
     "files": [
-      "docs/planning/daf-unit-display-scope.md",
+      "docs/_archive/superseded/daf-unit-display-scope.md",
       "docs/planning/e2e-test-suite-plan.md",
       "docs/planning/epics.md",
       "docs/planning/on-device-preflight-cheatsheet.md",

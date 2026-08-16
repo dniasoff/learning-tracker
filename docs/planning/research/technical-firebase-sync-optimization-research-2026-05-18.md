@@ -1,10 +1,10 @@
 ---
 stepsCompleted: [1, 2, 3, 4, 5, 6]
 inputDocuments:
-  - docs/tracking-system-review-2026-05-17.md
+  - docs/_archive/superseded/tracking-system-review-2026-05-17.md
   - docs/planning/architecture-offline-v2.md
   - docs/planning/two-database-architecture.md
-  - docs/exec-prompt-2026-05-17.md
+  - docs/_archive/superseded/exec-prompt-2026-05-17.md
 workflowType: 'research'
 lastStep: 6
 research_type: 'technical'
@@ -31,7 +31,7 @@ This report investigates why bulk-marking a *seder* of 655 mishnayos freezes the
 
 The finding is unambiguous and consistent across every lens: **Firestore is not the bottleneck — the bespoke sync layer built on top of it is.** A 655-item bulk mark currently executes **655 separate database transactions on the UI thread**, enqueues every completion into **two independent sync queues** (~1,310 rows), and pushes them as **~1,310 individual, sequential, non-idempotent Firestore document writes**, while the device's own snapshot listeners re-process every one of those writes in an O(n²) self-echo storm. None of this is inherent to Firebase; all of it is fixable with established technique, incrementally, without a third rewrite.
 
-The full executive summary, the 10-point fix, the phased wave roadmap, and the cost/risk analysis follow below. The companion runnable artifact is **[`docs/sync-rework-exec-prompt-2026-05-18.md`](../../sync-rework-exec-prompt-2026-05-18.md)**.
+The full executive summary, the 10-point fix, the phased wave roadmap, and the cost/risk analysis follow below. The companion runnable artifact is **[`docs/_archive/superseded/sync-rework-exec-prompt-2026-05-18.md`](../../_archive/superseded/sync-rework-exec-prompt-2026-05-18.md)**.
 
 ---
 
@@ -96,7 +96,7 @@ This is not a cosmetic defect. It blocks onboarding, it erodes trust in the back
 ### 1.2 Technical Research Methodology
 
 - **Technical Scope:** the completion write path, the outbox/queue drain, the Firestore data model, snapshot listeners, conflict resolution, cost, and multi-device behavior.
-- **Data Sources:** (a) three parallel codebase-investigation agents over `learning_tracker/lib`; (b) first-hand verification of the load-bearing files (`completion_repository_impl.dart`, `completion_writer.dart`, `offline_queue.dart`, `outbox_processor.dart`, `firestore_gateway_impl.dart`); (c) the prior `tracking-system-review-2026-05-17.md` assessment; (d) canonical design docs (`architecture-offline-v2.md`, `two-database-architecture.md`); (e) current Firebase/Firestore/Flutter documentation and engineering sources, web-verified May 2026.
+- **Data Sources:** (a) three parallel codebase-investigation agents over `learning_tracker/lib`; (b) first-hand verification of the load-bearing files (`completion_repository_impl.dart`, `completion_writer.dart`, `offline_queue.dart`, `outbox_processor.dart`, `firestore_gateway_impl.dart`); (c) the prior `docs/_archive/superseded/tracking-system-review-2026-05-17.md` assessment; (d) canonical design docs (`architecture-offline-v2.md`, `two-database-architecture.md`); (e) current Firebase/Firestore/Flutter documentation and engineering sources, web-verified May 2026.
 - **Analysis Framework:** trace one concrete user action (655-item bulk mark) end-to-end; quantify every multiplier; verify each claim against at least two independent sources or against the source code directly.
 - **Time Period:** current — the defect dates entirely from the 2026-05-13→05-15 Epic 25/26/27 rebuild and the 2026-05-15 SyncEngine cutover.
 - **Technical Depth:** file-and-line precision, with quantified before/after for every fix.
@@ -358,7 +358,7 @@ Migrating to PowerSync/Supabase/ElectricSQL would be a **third ground-up rewrite
 
 ## 9. Implementation Roadmap and Risk Assessment
 
-This is the **plan**. Its runnable form is **[`docs/sync-rework-exec-prompt-2026-05-18.md`](../../sync-rework-exec-prompt-2026-05-18.md)**. Execution model: a parallel agent squad in waves, **all on `dev`, no worktrees**; strict disjoint-file ownership per wave; `make ci` + `make audit` gate between waves; `/bmad-code-review` after implementation with **every** finding (including medium and low) fixed.
+This is the **plan**. Its runnable form is **[`docs/_archive/superseded/sync-rework-exec-prompt-2026-05-18.md`](../../_archive/superseded/sync-rework-exec-prompt-2026-05-18.md)**. Execution model: a parallel agent squad in waves, **all on `dev`, no worktrees**; strict disjoint-file ownership per wave; `make ci` + `make audit` gate between waves; `/bmad-code-review` after implementation with **every** finding (including medium and low) fixed.
 
 ### 9.1 The Characterization Net (written first — Wave 0)
 
@@ -447,7 +447,7 @@ The **deployed** rules (`learning_tracker/firestore.rules`, 53 lines) grant `all
 - PowerSync + Supabase offline-first — https://www.powersync.com/blog/offline-first-apps-made-simple-supabase-powersync
 - CRDT vs last-write-wins — https://dzone.com/articles/conflict-resolution-using-last-write-wins-vs-crdts
 
-**Primary internal sources:** `docs/tracking-system-review-2026-05-17.md`; `docs/planning/architecture-offline-v2.md`; `docs/planning/two-database-architecture.md`; `docs/exec-prompt-2026-05-17.md`; first-hand reads of `completion_repository_impl.dart`, `completion_writer.dart`, `offline_queue.dart`, `outbox_processor.dart`, `firestore_gateway_impl.dart`.
+**Primary internal sources:** `docs/_archive/superseded/tracking-system-review-2026-05-17.md`; `docs/planning/architecture-offline-v2.md`; `docs/planning/two-database-architecture.md`; `docs/_archive/superseded/exec-prompt-2026-05-17.md`; first-hand reads of `completion_repository_impl.dart`, `completion_writer.dart`, `offline_queue.dart`, `outbox_processor.dart`, `firestore_gateway_impl.dart`.
 
 ### 12.2 Quality Assurance
 
@@ -484,7 +484,7 @@ The 10-point fix touches ~12 files, almost entirely within `lib/core/sync/`, and
 
 ### Next Steps
 
-1. Execute the wave roadmap via **[`docs/sync-rework-exec-prompt-2026-05-18.md`](../../sync-rework-exec-prompt-2026-05-18.md)** — parallel agent squad, waves, all on `dev`, no worktrees, `/bmad-code-review` with every finding fixed.
+1. Execute the wave roadmap via **[`docs/_archive/superseded/sync-rework-exec-prompt-2026-05-18.md`](../../_archive/superseded/sync-rework-exec-prompt-2026-05-18.md)** — parallel agent squad, waves, all on `dev`, no worktrees, `/bmad-code-review` with every finding fixed.
 2. Tighten and deploy `firestore.rules`; reconcile the duplicated layout/index artifacts.
 3. After the layer is stable, schedule the PowerSync evaluation as a future de-risking exercise.
 
@@ -494,4 +494,4 @@ The 10-point fix touches ~12 files, almost entirely within `lib/core/sync/`, and
 **Source Verification:** all claims cited to source code (file:line) or official documentation
 **Technical Confidence Level:** High — diagnosis verified by three independent investigations plus first-hand source reading
 
-_This document is the authoritative technical reference for the Learning Tracker sync rework. Its runnable companion is `docs/sync-rework-exec-prompt-2026-05-18.md`._
+_This document is the authoritative technical reference for the Learning Tracker sync rework. Its runnable companion is `docs/_archive/superseded/sync-rework-exec-prompt-2026-05-18.md`._

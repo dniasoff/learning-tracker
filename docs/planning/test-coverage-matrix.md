@@ -3,7 +3,7 @@
 Live grid of every routed `@RoutePage` screen (52 routes across ~46 files) + dialogs/sheets + backend
 surfaces. One row per surface; tick a cell when a test **asserts that behaviour** (not just renders).
 Worst-coverage features first (the work order). Part of the exhaustive test-and-fix run
-(plan: `exhaustive-test-and-fix-plan-2026-05-29.md`; bug log: `test-fix-bug-log.md`).
+(plan: `docs/_archive/superseded/exhaustive-test-and-fix-plan-2026-05-29.md`; bug log: `test-fix-bug-log.md`).
 
 **Legend:** `✓` behaviour asserted · `~` test exists but depth unverified / structural-only · `·` N/A for
 this surface · blank = TODO. **`cur`** = # of test files referencing the screen class today (auto-detected
@@ -15,7 +15,7 @@ this surface · blank = TODO. **`cur`** = # of test files referencing the screen
 
 ## On-device ADB sweep — session 2026-05-31 (real phone, `100.72.6.10:5555`)
 
-Drove the live app per `on-device-exhaustive-test-plan-2026-05-31.md`. **4 root-caused defects found + fixed +
+Drove the live app per `docs/_archive/superseded/on-device-exhaustive-test-plan-2026-05-31.md`. **4 root-caused defects found + fixed +
 regression-tested + committed green to `dev`** (`make ci` green throughout; details in `test-fix-bug-log.md`):
 - **D1** `fix(shell)` — §5 persistent profile/role switcher was **absent from default Dashboard/Learn/Progress**
   (only Settings had an entry). Added always-present `_ProfileSwitcherBar` → `showProfileSwitcherSheet`.
@@ -49,7 +49,7 @@ stages (was a dead/0-stage track + data-loss). **F7 PASS** on-device (child Sett
 correct PIN → Parent Settings with all surfaces; guard fix holds). B1's preset code-path verified on-device
 through the dirshu read-only chazara step.
 
-**Adversarial bug-hunt workflow → 16 confirmed bugs** (`bug-hunt-findings-2026-05-31.md`), of which B1 fixed.
+**Adversarial bug-hunt workflow → 16 confirmed bugs** (`docs/_archive/superseded/bug-hunt-findings-2026-05-31.md`), of which B1 fixed.
 **REMAINING QUEUE (after the 12-fix batch; all specs in the findings doc + bug-log):**
 - MED data-loss (sync, HIGH-VALUE NEXT, merge-engine — do with fresh context):
   • **ledger enqueue outside txn** (points_balance_dao:497) — points never reach Firestore / devices diverge.

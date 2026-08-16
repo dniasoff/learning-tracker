@@ -43,7 +43,6 @@ Active planning artifacts — the design intent and the rationale behind the cur
 - [Firestore Finish-Line Plan](planning/firestore-finish-line-plan.md) — live migration execution plan
 - [Overdue System — Refactor Architecture](planning/overdue-refactor-architecture.md) — target design for the overdue/scheduler refactor (2026-05-19)
 - [Epics](planning/epics.md) — detailed epic + story breakdowns
-- [v1 Developer Roadmap](planning/v1-developer-roadmap.md)
 - [Calendar Cycle Computation Analysis](planning/calendar-cycle-analysis.md)
 - [Catch-up & Amnesty Scenarios](planning/catchup-and-amnesty-scenarios.md) — **superseded 2026-05-19** by [Overdue System — Refactor Architecture](planning/overdue-refactor-architecture.md)
 - [Upgrade Flow — UX Spec](planning/ux-upgrade-flow-spec.md) — **partially superseded 2026-07-13** (local-born password-verify step; see in-file banner)

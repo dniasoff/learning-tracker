@@ -6401,7 +6401,7 @@
    "refutations": [],
    "corrections": [
     "Evidence citation \"learning_tracker/pubspec.yaml:1\" is imprecise \u2014 the actual analyzer/custom_lint incompatibility comment is at pubspec.yaml:145-160, and the \"exits 255\" detail comes from the baseline tooling run (digest.md), not from the pubspec.yaml file itself. The underlying claim is nonetheless independently confirmed by directly executing `dart run custom_lint`.",
-    "The cited evidence (pubspec.yaml:1, quote about \"custom_lint 0.8.1 vs analyzer 9.0.0...\") is a paraphrase, not a literal quote at that line \u2014 pubspec.yaml line 1 is actually `name: learning_tracker`. The real supporting evidence is: docs/audits/standards-audit-2026-07-03/_work/baseline/custom-lint.txt (the crash transcript, reproduced live), docs/coding-standards.md:762 and :766 (documents the conflict and the now-false \"real gate\" claim), and pubspec.yaml:145-149/156-160 (comments describing the intended-but-inoperative separation of analyzer environments). The finding's core claim is fully supported by these; only the file:line pointer in the evidence array is imprecise."
+    "The cited evidence (pubspec.yaml:1, quote about \"custom_lint 0.8.1 vs analyzer 9.0.0...\") is a paraphrase, not a literal quote at that line \u2014 pubspec.yaml line 1 is actually `name: learning_tracker`. The real supporting evidence is: docs/_archive/superseded/standards-audit-2026-07-03-work/baseline/custom-lint.txt (the crash transcript, reproduced live), docs/coding-standards.md:762 and :766 (documents the conflict and the now-false \"real gate\" claim), and pubspec.yaml:145-149/156-160 (comments describing the intended-but-inoperative separation of analyzer environments). The finding's core claim is fully supported by these; only the file:line pointer in the evidence array is imprecise."
    ]
   },
   "sourceBatch": "orchestrator",
@@ -7377,7 +7377,7 @@
    }
   ],
   "sites": 537,
-  "why": "Deterministic global scan; list: _work/global/ag5-unmirrored.txt. Rule as written is aspirational \u2014 checker should ratchet (new files hard-fail, backlog burn-down). Representative per-area consequences: A repo-wide grep for bootstrapAccount, bootstrapAnalytics, bootstrapCrashlyticsHandlers, bootstrapFirebase, bootstrapNot | Its sibling in the same directory, FirebaseAuthGatewayImpl, has a 496-line test suite covering every branch (test/core/a | git log shows commit ee270013 ('extract ContentBrowserTree widget; move HierarchySelection to core') relocated the class | Repo-wide grep for groupItemsByNextLevel(, collapseAmudLeaf(, itemDisplayName(, levelValueAt(, and HierarchyBrowser( ins",
+  "why": "Deterministic global scan; list: docs/_archive/superseded/standards-audit-2026-07-03-work/global/ag5-unmirrored.txt. Rule as written is aspirational \u2014 checker should ratchet (new files hard-fail, backlog burn-down). Representative per-area consequences: A repo-wide grep for bootstrapAccount, bootstrapAnalytics, bootstrapCrashlyticsHandlers, bootstrapFirebase, bootstrapNot | Its sibling in the same directory, FirebaseAuthGatewayImpl, has a 496-line test suite covering every branch (test/core/a | git log shows commit ee270013 ('extract ContentBrowserTree widget; move HierarchySelection to core') relocated the class | Repo-wide grep for groupItemsByNextLevel(, collapseAmudLeaf(, itemDisplayName(, levelValueAt(, and HierarchyBrowser( ins",
   "recommendation": "Pick test/core/sync/ as canonical (per AG-5's own 1:1 rule). For each duplicate pair, fold any scenario unique to the era-1 file (e.g. mergers_test.dart's fake-MergeStore isolation, if it adds value beyond the real-store versions) into the era-2 roundtrip test, then delete the superseded file. Update docs/test-options.md's test/sync/** references to match wherever coverage ends up.",
   "effort": "L",
   "acceptance_criteria": [
@@ -11866,7 +11866,7 @@
    }
   ],
   "sites": 327,
-  "why": "Deterministic global scan: 327 hand-written Dart files exceed 400 lines (top: epic_15_multi_profile_test.dart 3588). Per-file list: _work/global/ag3-over400.txt. Representative per-area consequences: app_shell.dart is 834 lines \u2014 more than double the 400-line cap \u2014 and its single build() method interleaves auth-state l | AG-3 caps hand-written Dart files at 400 lines (generated files exempt) to bound the size of any single reviewable unit; | AG-3's checker (`find lib test -name '*.dart' ! -name '*.g.dart' ! -name '*.freezed.dart' | xargs wc -l | awk '$1>400'`) | All four are more than 2x the 400-line hand-written-file cap. completion_dao.dart mixes cross-profile-scope-guarded read",
+  "why": "Deterministic global scan: 327 hand-written Dart files exceed 400 lines (top: epic_15_multi_profile_test.dart 3588). Per-file list: docs/_archive/superseded/standards-audit-2026-07-03-work/global/ag3-over400.txt. Representative per-area consequences: app_shell.dart is 834 lines \u2014 more than double the 400-line cap \u2014 and its single build() method interleaves auth-state l | AG-3 caps hand-written Dart files at 400 lines (generated files exempt) to bound the size of any single reviewable unit; | AG-3's checker (`find lib test -name '*.dart' ! -name '*.g.dart' ! -name '*.freezed.dart' | xargs wc -l | awk '$1>400'`) | All four are more than 2x the 400-line hand-written-file cap. completion_dao.dart mixes cross-profile-scope-guarded read",
   "recommendation": "Fold the '(F1 extra)'/'(F2 variant)' groups into their same-behavior originals, keeping only assertions that exercise a genuinely new path (the multi-level _mishnaItems() hierarchy is a legitimately different fixture \u2014 keep one representative test per method against it, not a full repeat of every scenario).",
   "effort": "S",
   "acceptance_criteria": [
@@ -18508,12 +18508,12 @@
     "quote": "Non-routed screens (Navigator push only) | **6** | `ScopeSelectionScreen`, `GoalSetupScreen`, `EditTrackScreen`..."
    },
    {
-    "file": "docs/planning/daf-unit-display-scope.md",
+    "file": "docs/_archive/superseded/daf-unit-display-scope.md",
     "line": 3,
     "quote": "**Status:** Scoped, product decisions made (2026-06-14). Phase 1 in progress."
    },
    {
-    "file": "docs/planning/daf-unit-display-scope.md",
+    "file": "docs/_archive/superseded/daf-unit-display-scope.md",
     "line": 146,
     "quote": "### FINAL STATUS (2026-06-14) \u2014 daf-unit work COMPLETE"
    },
@@ -18760,7 +18760,7 @@
    }
   ],
   "sites": 1,
-  "why": "docs/planning/bug-hunt-round5-findings-2026-05-31.md rates R5-6 'high': the browse tree showed 'No content' instead of the terminal chapter rows when a deep-link opened at max browse depth. That bug was fixed only in content_hierarchy_screen.dart's private, hand-duplicated `_groupItemsByNextLevel` (clamp to maxBrowseDepth-1, never return empty) \u2014 the fix was never ported back to the 'canonical' shared groupItemsByNextLevel this file exports, which still has the pre-fix `return const []` guard. Repo-wide grep confirms zero current callers pass maxBrowseDepth (Browse Content uses its own private copy instead, precisely because of this bug), so it's a dead branch today \u2014 but the doc comment explicitly invites a future caller to wire it up for exactly the Browse Content use case, which would resurrect the regression with zero warning.",
+  "why": "docs/_archive/superseded/bug-hunt-round5-findings-2026-05-31.md rates R5-6 'high': the browse tree showed 'No content' instead of the terminal chapter rows when a deep-link opened at max browse depth. That bug was fixed only in content_hierarchy_screen.dart's private, hand-duplicated `_groupItemsByNextLevel` (clamp to maxBrowseDepth-1, never return empty) \u2014 the fix was never ported back to the 'canonical' shared groupItemsByNextLevel this file exports, which still has the pre-fix `return const []` guard. Repo-wide grep confirms zero current callers pass maxBrowseDepth (Browse Content uses its own private copy instead, precisely because of this bug), so it's a dead branch today \u2014 but the doc comment explicitly invites a future caller to wire it up for exactly the Browse Content use case, which would resurrect the regression with zero warning.",
   "recommendation": "Either delete content_hierarchy_screen.dart's private duplicate and make it call this shared function (after porting the maxBrowseDepth-1 clamp fix here), or fix the clamp here to match and correct the doc comment so it doesn't claim Browse Content already caps through this parameter.",
   "effort": "M",
   "acceptance_criteria": [

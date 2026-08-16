@@ -23,7 +23,7 @@ This is *not* a pixel-polish deliverable. A visual designer still needs a pass f
 > `UpgradeToCloudService.upgradeWithNewCredentials()`
 > (`../../learning_tracker/lib/features/account/domain/services/upgrade_to_cloud_service.dart`).
 > Treat this doc as a historical wireframe record of the pre-credential-less design;
-> for the shipped design record see `loop-progress.md`, "ONBOARDING REWORK ... Phase
+> for the shipped design record see `docs/_archive/superseded/loop-progress.md`, "ONBOARDING REWORK ... Phase
 > 2b CONVERT-COMPLETION" (2026-06-15).
 
 ---

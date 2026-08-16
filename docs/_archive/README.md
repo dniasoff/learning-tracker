@@ -40,6 +40,16 @@ Docs replaced by newer canonical versions still present under `docs/planning/`.
 - `epic-15-stories/` — 14 story files from the original Multi-Profile epic. Work delivered under Epics 18 and 21.
 - [`19-8-syncengine-conditional-activation.md`](superseded/19-8-syncengine-conditional-activation.md) — Prescribed editing the deleted `SyncEngine`/`syncEngineProvider`. Superseded by the SyncOrchestrator+outbox architecture (`lib/core/sync/sync_orchestrator.dart`, `syncWriteFacadeProvider`); this story's own AC-3 goal (`SyncStatus.localOnly`) already ships there. Archived 2026-07-12 (AUD-docs-03).
 - [`19-9-multi-device-sync.md`](superseded/19-9-multi-device-sync.md) — Prescribed auditing `sync_engine.dart`/`firestore_data_source.dart`/`offline_queue.dart`, all deleted in the same rewrite. Superseded by `lib/core/sync/sync_orchestrator.dart`'s `pullOnLaunch`/foreground-listener merge path. Archived 2026-07-12 (AUD-docs-03).
+- `bug-hunt-findings-2026-05-31.md` and `bug-hunt-round{2-6}-findings-2026-05-31.md` — Completed bug-hunt rounds; implementation shipped. Archived 2026-08-16.
+- `entity-model-{audit-2026-05-24.md,remediation-plan-2026-05-24.md,remediation-log.md,remediation-orchestration-prompt.md,remediation-tracker.md}` — Completed entity-model audit and remediation workflow. Archived 2026-08-16.
+- `tutor-edit-propagation-{plan.md,log.md,orchestration-prompt.md,tracker.md}` and `tutor-mode-brief.md` — Completed tutor edit-propagation workflow. Archived 2026-08-16.
+- `tutor-talmid-view-{log.md,orchestration-prompt.md,plan-2026-05-26.md,tracker.md}` — Completed tutor talmid-view workflow. Archived 2026-08-16.
+- `ux-audit-2026-05-20-{copy-review.md,fix-plan.md,hebrew-terms-findings.md,orchestration-prompt.md}` — Completed UX audit and copy-fix workflow. Archived 2026-08-16.
+- `progress-ia-{execution-plan.md,final-report.md,redesign.md}` — Completed progress information-architecture redesign workflow. Archived 2026-08-16.
+- `tracks-and-completion-{bug-report.md,fix-plan.md}`, `b1-b11-review-fix-plan.md`, `track-detail-and-ordering-plan.md`, and `daf-unit-display-scope.md` — Completed track, completion, ordering, and DAF display workflows. Archived 2026-08-16.
+- `on-device-exhaustive-test-plan-2026-05-31.md`, `on-device-test-KICKOFF-PROMPT.md`, `exhaustive-test-and-fix-{KICKOFF-PROMPT.md,plan-2026-05-29.md}`, `self-resuming-test-fix-loop-KICKOFF-2026-06-09.md`, `loop-progress.md`, and `outstanding-bugs-handoff-2026-05-31.md` — Completed exhaustive on-device test-and-fix workflow. Archived 2026-08-16.
+- `refactor-orchestration-prompt.md`, the 2026-05-15 bug reports/fix plan/prompt, the 2026-05-17 issue/performance/tracking review/exec prompt, and the 2026-05-18/19 sync and overdue refactor prompts — Completed one-shot implementation workflows. Archived 2026-08-16.
+- `standards-audit-orchestrator-prompt-2026-07-03.md`, `standards-fix-orchestrator-prompt-2026-07-03.md`, and `standards-audit-2026-07-03-work/` — Completed standards audit/fix workflow and its intermediate scratch data. Archived 2026-08-16.
 
 ### epic-qa-reports/
 

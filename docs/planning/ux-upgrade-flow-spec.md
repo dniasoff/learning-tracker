@@ -14,7 +14,7 @@
 > step), per `UpgradeToCloudService.upgradeWithNewCredentials()`
 > (`../../learning_tracker/lib/features/account/domain/services/upgrade_to_cloud_service.dart`).
 > Treat this doc as a historical record of the pre-credential-less design; for the
-> shipped design record see `loop-progress.md`, "ONBOARDING REWORK ... Phase 2b
+> shipped design record see `docs/_archive/superseded/loop-progress.md`, "ONBOARDING REWORK ... Phase 2b
 > CONVERT-COMPLETION" (2026-06-15).
 
 ---

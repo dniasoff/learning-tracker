@@ -1854,9 +1854,9 @@ REGEN-CHECKED = covered by the Tier-3 regeneration diff (3 stale files found, fi
 | `V1_OUT_OF_SCOPE.md` | POINT-IN-TIME | t4-docs-canonical | Dated 2026-04-21 audit/recommendation snapshot; not presented as current state. |
 | `docs/api-contracts.md` | DEFECTIVE | t4-docs-canonical | Tutor Firestore/Functions surface entirely undocumented; indexes.json claimed empty (has 6). |
 | `docs/architecture.md` | DEFECTIVE | t4-docs-canonical | schemaVersion wrong (v14 vs 32); feature-module list and CI job count both stale. |
-| `docs/bug-fix-plan-2026-05-15.md` | POINT-IN-TIME | t4-docs-canonical | Dated one-time bug-fix plan for a past session; historical artifact. |
-| `docs/bug-fix-prompt-2026-05-15.md` | POINT-IN-TIME | t4-docs-canonical | Paste-into-session prompt for a past bug-fix run; historical artifact. |
-| `docs/bug-reports-2026-05-15.md` | POINT-IN-TIME | t4-docs-canonical | Dated manual-test bug reports from one session; historical artifact. |
+| `docs/_archive/superseded/bug-fix-plan-2026-05-15.md` | POINT-IN-TIME | t4-docs-canonical | Dated one-time bug-fix plan for a past session; historical artifact. |
+| `docs/_archive/superseded/bug-fix-prompt-2026-05-15.md` | POINT-IN-TIME | t4-docs-canonical | Paste-into-session prompt for a past bug-fix run; historical artifact. |
+| `docs/_archive/superseded/bug-reports-2026-05-15.md` | POINT-IN-TIME | t4-docs-canonical | Dated manual-test bug reports from one session; historical artifact. |
 | `docs/coding-standards.md` | ISSUES | t4-docs-canonical | 22 checks/9 lints/schemaVersion 32/CLAUDE.md sizes all verified correct; lint count (83) and appcheck-doc ref wrong. |
 | `docs/component-inventory.md` | DEFECTIVE | t4-docs-canonical | firebaseFirestoreProvider location stale; screen roster majority-mismatched post-rebuild (dated 2026-03-18). |
 | `docs/data-models.md` | DEFECTIVE | t4-docs-canonical | Self-contradictory schemaVersion (v4/v15 vs actual 32); describes extinct pre-rebuild schema. |
@@ -1864,7 +1864,7 @@ REGEN-CHECKED = covered by the Tier-3 regeneration diff (3 stale files found, fi
 | `docs/deployment-guide.md` | DEFECTIVE | t4-docs-canonical | CI job count wrong (8 vs actual 7); indexes.json-empty and golden-path claims stale. |
 | `docs/developer-handbook.md` | DEFECTIVE | t4-docs-canonical | schemaVersion badly stale (v4/v3 vs actual 32/5); rest of doc checked, accurate. |
 | `docs/development-guide.md` | DEFECTIVE | t4-docs-canonical | Audit-check, ARB-key, and test-file counts all stale (13/468/359 vs 22/1421/770). |
-| `docs/exec-prompt-2026-05-17.md` | POINT-IN-TIME | t4-docs-canonical | One-shot execution prompt referencing an external plan file; historical artifact. |
+| `docs/_archive/superseded/exec-prompt-2026-05-17.md` | POINT-IN-TIME | t4-docs-canonical | One-shot execution prompt referencing an external plan file; historical artifact. |
 | `docs/explainers/content-database.md` | ISSUES | t4-docs-triage | Code-map shows nonexistent content/tables/ dir; tables actually live in shared lib/core/database/tables/. |
 | `docs/explainers/data-model.md` | ISSUES | t4-docs-triage | Schema v23 / 22 tables / 13 audit-checks all stale; current code is v32 / 24 tables / 22 checks. |
 | `docs/explainers/sync-subsystem.md` | DEFECTIVE | t4-docs-triage | Core narrative (dual-stack SyncEngine, missing learning_order merger, merger count) all now false. |
@@ -1872,74 +1872,74 @@ REGEN-CHECKED = covered by the Tier-3 regeneration diff (3 stale files found, fi
 | `docs/flows/dashboard-redesign-analysis.md` | POINT-IN-TIME | t4-docs-canonical | Self-flags Epic 20 canceled/not-built; verified still accurate, correctly archival. |
 | `docs/hebrew-terms.md` | ISSUES | t4-docs-canonical | Well-maintained; one §11 drift item (audit-grep symbol) already fixed but unmarked. |
 | `docs/index.md` | ISSUES | t4-docs-canonical | All 30+ linked paths & Makefile targets resolve; DB table-count summary stale (F2). |
-| `docs/issues-2026-05-17.md` | POINT-IN-TIME | t4-docs-canonical | Dated review capture; I-5 tracked closed in open-items.md; not presented as current. |
+| `docs/_archive/superseded/issues-2026-05-17.md` | POINT-IN-TIME | t4-docs-canonical | Dated review capture; I-5 tracked closed in open-items.md; not presented as current. |
 | `docs/linear-status.md` | ISSUES | t4-docs-canonical | Epic table checked; Epics 25-27 'all Backlog' contradicted by populated non-skipped tests (F5). |
 | `docs/open-items.md` | ISSUES | t4-docs-canonical | C1/C2/C3/I-5 closure claims checked; C1's completions-table detail wrong (F6). |
-| `docs/overdue-refactor-exec-prompt-2026-05-19.md` | POINT-IN-TIME | t4-docs-canonical | Dated wave-execution script for one historical scheduler refactor run; not current-state doc. |
-| `docs/perf-findings-2026-05-17.md` | POINT-IN-TIME | t4-docs-canonical | Dated fix-log for specific provider rebuild bugs, described as already applied. |
+| `docs/_archive/superseded/overdue-refactor-exec-prompt-2026-05-19.md` | POINT-IN-TIME | t4-docs-canonical | Dated wave-execution script for one historical scheduler refactor run; not current-state doc. |
+| `docs/_archive/superseded/perf-findings-2026-05-17.md` | POINT-IN-TIME | t4-docs-canonical | Dated fix-log for specific provider rebuild bugs, described as already applied. |
 | `docs/planning/architecture-design.md` | SOUND | t4-docs-triage | Self-aware 2026-04-19 staleness banner checked accurate; no stale DB code samples found. |
 | `docs/planning/architecture-offline-v2.md` | ISSUES | t4-docs-triage | "Deliberate tech debt" box stale — the March-era auth symbols it cites are fully removed already. |
 | `docs/planning/architecture-quick-reference.md` | DEFECTIVE | t4-docs-triage | Bulk of doc (queries, models) is pre-3-DB-split single-database era; plus a dead link. |
-| `docs/planning/b1-b11-review-fix-plan.md` | POINT-IN-TIME | t4-docs-triage | Remediation prompt self-marked "complete (2026-05-19)"; historical execution record. |
-| `docs/planning/bug-hunt-findings-2026-05-31.md` | POINT-IN-TIME | t4-docs-triage | Dated, adversarially-verified bug-hunt report; self-contained historical artifact. |
-| `docs/planning/bug-hunt-round2-findings-2026-05-31.md` | POINT-IN-TIME | t4-docs-triage | Same series; dated verification report with reachability reasoning per finding. |
-| `docs/planning/bug-hunt-round3-findings-2026-05-31.md` | POINT-IN-TIME | t4-docs-triage | Dated report; includes a "Rejected" section from adversarial re-verification. |
-| `docs/planning/bug-hunt-round4-findings-2026-05-31.md` | POINT-IN-TIME | t4-docs-triage | Dated report; fixes and one rejected finding listed, closed-loop artifact. |
-| `docs/planning/bug-hunt-round5-findings-2026-05-31.md` | POINT-IN-TIME | t4-docs-triage | Dated report; fixes and two rejected findings listed, closed-loop artifact. |
-| `docs/planning/bug-hunt-round6-findings-2026-05-31.md` | POINT-IN-TIME | t4-docs-triage | Dated report; spot-checked entries read as genuine, closed findings. |
+| `docs/_archive/superseded/b1-b11-review-fix-plan.md` | POINT-IN-TIME | t4-docs-triage | Remediation prompt self-marked "complete (2026-05-19)"; historical execution record. |
+| `docs/_archive/superseded/bug-hunt-findings-2026-05-31.md` | POINT-IN-TIME | t4-docs-triage | Dated, adversarially-verified bug-hunt report; self-contained historical artifact. |
+| `docs/_archive/superseded/bug-hunt-round2-findings-2026-05-31.md` | POINT-IN-TIME | t4-docs-triage | Same series; dated verification report with reachability reasoning per finding. |
+| `docs/_archive/superseded/bug-hunt-round3-findings-2026-05-31.md` | POINT-IN-TIME | t4-docs-triage | Dated report; includes a "Rejected" section from adversarial re-verification. |
+| `docs/_archive/superseded/bug-hunt-round4-findings-2026-05-31.md` | POINT-IN-TIME | t4-docs-triage | Dated report; fixes and one rejected finding listed, closed-loop artifact. |
+| `docs/_archive/superseded/bug-hunt-round5-findings-2026-05-31.md` | POINT-IN-TIME | t4-docs-triage | Dated report; fixes and two rejected findings listed, closed-loop artifact. |
+| `docs/_archive/superseded/bug-hunt-round6-findings-2026-05-31.md` | POINT-IN-TIME | t4-docs-triage | Dated report; spot-checked entries read as genuine, closed findings. |
 | `docs/planning/calendar-cycle-analysis.md` | SOUND | t4-docs-triage | Verified D-CAL-3 (Nach Yomi->hebcal) and apiKey fixes are implemented in the current registry. |
 | `docs/planning/catchup-and-amnesty-scenarios.md` | POINT-IN-TIME | t4-docs-triage | Self-labeled OBSOLETE/superseded 2026-05-19; confirmed zero implementation exists in code. |
-| `docs/planning/daf-unit-display-scope.md` | ISSUES | t4-docs-triage | Header says "Phase 1 in progress" though body and 5 verified commits show all phases shipped. |
+| `docs/_archive/superseded/daf-unit-display-scope.md` | ISSUES | t4-docs-triage | Header says "Phase 1 in progress" though body and 5 verified commits show all phases shipped. |
 | `docs/planning/e2e-test-suite-plan.md` | ISSUES | t4-docs-triage | "Status: Planning" is stale; the harness and 35 P0-P2 journey test files already exist. |
-| `docs/planning/entity-model-audit-2026-05-24.md` | POINT-IN-TIME | t4-docs-triage | Explicitly self-labeled "point-in-time against the code on this date". |
-| `docs/planning/entity-model-remediation-log.md` | POINT-IN-TIME | t4-docs-triage | Append-only execution log; ends COMPLETE plus one resolved post-commit regression. |
-| `docs/planning/entity-model-remediation-orchestration-prompt.md` | POINT-IN-TIME | t4-docs-triage | One-shot orchestrator kickoff script, no ongoing-currency claims. |
-| `docs/planning/entity-model-remediation-plan-2026-05-24.md` | POINT-IN-TIME | t4-docs-triage | Dated plan; companion tracker confirms every workstream verified done. |
-| `docs/planning/entity-model-remediation-tracker.md` | POINT-IN-TIME | t4-docs-triage | All WS1-9 plus gates plus verification phase marked done/verified. |
+| `docs/_archive/superseded/entity-model-audit-2026-05-24.md` | POINT-IN-TIME | t4-docs-triage | Explicitly self-labeled "point-in-time against the code on this date". |
+| `docs/_archive/superseded/entity-model-remediation-log.md` | POINT-IN-TIME | t4-docs-triage | Append-only execution log; ends COMPLETE plus one resolved post-commit regression. |
+| `docs/_archive/superseded/entity-model-remediation-orchestration-prompt.md` | POINT-IN-TIME | t4-docs-triage | One-shot orchestrator kickoff script, no ongoing-currency claims. |
+| `docs/_archive/superseded/entity-model-remediation-plan-2026-05-24.md` | POINT-IN-TIME | t4-docs-triage | Dated plan; companion tracker confirms every workstream verified done. |
+| `docs/_archive/superseded/entity-model-remediation-tracker.md` | POINT-IN-TIME | t4-docs-triage | All WS1-9 plus gates plus verification phase marked done/verified. |
 | `docs/planning/epics-greenfield-rebuild.md` | POINT-IN-TIME | t4-docs-triage | Epics 24-27 breakdown; epics.md confirms every one of these stories shipped Done. |
 | `docs/planning/epics.md` | ISSUES | t4-docs-triage | Title says "Epic 19 Breakdown" but content runs through Epic 27, all marked Done. |
-| `docs/planning/exhaustive-test-and-fix-KICKOFF-PROMPT.md` | POINT-IN-TIME | t4-docs-triage | Reusable one-shot kickoff script; makes no current-state claims of its own. |
-| `docs/planning/exhaustive-test-and-fix-plan-2026-05-29.md` | POINT-IN-TIME | t4-docs-triage | Dated plan, superseded by the later on-device-exhaustive-test-plan and loop-progress docs. |
-| `docs/planning/loop-progress.md` | POINT-IN-TIME | t4-docs-triage | Heartbeat log for an autonomous test loop; entries stop 2026-06-15. |
-| `docs/planning/on-device-exhaustive-test-plan-2026-05-31.md` | POINT-IN-TIME | t4-docs-triage | 4708-line dated test script with an empty defect-log/checklist template; one-time artifact. |
+| `docs/_archive/superseded/exhaustive-test-and-fix-KICKOFF-PROMPT.md` | POINT-IN-TIME | t4-docs-triage | Reusable one-shot kickoff script; makes no current-state claims of its own. |
+| `docs/_archive/superseded/exhaustive-test-and-fix-plan-2026-05-29.md` | POINT-IN-TIME | t4-docs-triage | Dated plan, superseded by the later on-device-exhaustive-test-plan and loop-progress docs. |
+| `docs/_archive/superseded/loop-progress.md` | POINT-IN-TIME | t4-docs-triage | Heartbeat log for an autonomous test loop; entries stop 2026-06-15. |
+| `docs/_archive/superseded/on-device-exhaustive-test-plan-2026-05-31.md` | POINT-IN-TIME | t4-docs-triage | 4708-line dated test script with an empty defect-log/checklist template; one-time artifact. |
 | `docs/planning/on-device-preflight-cheatsheet.md` | DEFECTIVE | t4-docs-triage | GoalSetupScreen "provably-dead, delete" verdict is now contradicted by a live call site. |
-| `docs/planning/on-device-test-KICKOFF-PROMPT.md` | POINT-IN-TIME | t4-docs-triage | One-shot kickoff script referencing a dated companion plan. |
-| `docs/planning/outstanding-bugs-handoff-2026-05-31.md` | POINT-IN-TIME | t4-docs-triage | Dated bug list; spot-checked D20 and found its fix present in code (comment cites D20). |
+| `docs/_archive/superseded/on-device-test-KICKOFF-PROMPT.md` | POINT-IN-TIME | t4-docs-triage | One-shot kickoff script referencing a dated companion plan. |
+| `docs/_archive/superseded/outstanding-bugs-handoff-2026-05-31.md` | POINT-IN-TIME | t4-docs-triage | Dated bug list; spot-checked D20 and found its fix present in code (comment cites D20). |
 | `docs/planning/overdue-refactor-architecture.md` | ISSUES | t4-docs-triage | Header "Draft - for review" is stale; code comments show the design is substantially implemented. |
 | `docs/planning/prd.md` | POINT-IN-TIME | t4-docs-triage | Self-labeled "SUPERSEDED - 2026-04-19 review" banner is accurate; kept as historical original. |
-| `docs/planning/progress-ia-execution-plan.md` | POINT-IN-TIME | t4-docs-triage | Dated wave plan, superseded same-day by the final report's "Complete" status. |
-| `docs/planning/progress-ia-final-report.md` | POINT-IN-TIME | t4-docs-triage | "status: Complete", dated 2026-05-20, commit-by-commit historical record. |
-| `docs/planning/progress-ia-redesign.md` | POINT-IN-TIME | t4-docs-triage | Proposal superseded same-day by the final report showing it shipped. |
-| `docs/planning/refactor-orchestration-prompt.md` | POINT-IN-TIME | t4-docs-triage | One-shot orchestrator kickoff script for the v3.3 tech-debt remediation plan. |
+| `docs/_archive/superseded/progress-ia-execution-plan.md` | POINT-IN-TIME | t4-docs-triage | Dated wave plan, superseded same-day by the final report's "Complete" status. |
+| `docs/_archive/superseded/progress-ia-final-report.md` | POINT-IN-TIME | t4-docs-triage | "status: Complete", dated 2026-05-20, commit-by-commit historical record. |
+| `docs/_archive/superseded/progress-ia-redesign.md` | POINT-IN-TIME | t4-docs-triage | Proposal superseded same-day by the final report showing it shipped. |
+| `docs/_archive/superseded/refactor-orchestration-prompt.md` | POINT-IN-TIME | t4-docs-triage | One-shot orchestrator kickoff script for the v3.3 tech-debt remediation plan. |
 | `docs/planning/research/technical-firebase-sync-optimization-research-2026-05-18.md` | POINT-IN-TIME | t4-docs-triage | Dated research feeding a specific, since-executed exec prompt; correctly historical. |
 | `docs/planning/research/technical-torah-learning-app-competitors-research-2026-03-17.md` | POINT-IN-TIME | t4-docs-triage | Competitor market-snapshot research, inherently time-bound by nature. |
-| `docs/planning/self-resuming-test-fix-loop-KICKOFF-2026-06-09.md` | POINT-IN-TIME | t4-docs-triage | One-shot orchestrator kickoff script for the self-resuming test loop. |
+| `docs/_archive/superseded/self-resuming-test-fix-loop-KICKOFF-2026-06-09.md` | POINT-IN-TIME | t4-docs-triage | One-shot orchestrator kickoff script for the self-resuming test loop. |
 | `docs/planning/sync-architecture-plan.md` | ISSUES | t4-docs-triage | Current-state audit; outbox-drain headline finding now empirically false, no staleness marker. |
 | `docs/planning/tech-debt-remediation-plan.md` | POINT-IN-TIME | t4-docs-triage | Dated wave/stream refactor plan; consistent with shipped hotspot files, no drift found. |
 | `docs/planning/test-coverage-matrix.md` | ISSUES | t4-docs-triage | Point-in-time coverage log; ends with leaked stray `</content>` tool-tag. |
 | `docs/planning/test-fix-bug-log.md` | ISSUES | t4-docs-triage | Point-in-time bug log; ends with leaked `</content></invoke>` tool-tags. |
 | `docs/planning/testing-quick-reference.md` | DEFECTIVE | t4-docs-triage | Teaches banned mockito; cites nonexistent files and a wrong runtime-API architecture. |
-| `docs/planning/track-detail-and-ordering-plan.md` | POINT-IN-TIME | t4-docs-triage | Dated implementation plan; matches shipped bulk_mark/track_detail screens. |
-| `docs/planning/tracks-and-completion-bug-report.md` | POINT-IN-TIME | t4-docs-triage | Dated bug report; self-updates its own remediation-status table, all 11 fixed. |
-| `docs/planning/tracks-and-completion-fix-plan.md` | POINT-IN-TIME | t4-docs-triage | Orchestrator prompt companion to bug report; consistent, no drift found. |
-| `docs/planning/tutor-edit-propagation-log.md` | POINT-IN-TIME | t4-docs-triage | Append-only orchestration log dated 2026-05-28; internally consistent. |
-| `docs/planning/tutor-edit-propagation-orchestration-prompt.md` | POINT-IN-TIME | t4-docs-triage | Paste-into-fresh-session kickoff prompt; dated artifact, consistent with plan. |
-| `docs/planning/tutor-edit-propagation-plan.md` | POINT-IN-TIME | t4-docs-triage | Dated CF-routing plan; matches tracker's completed status. |
-| `docs/planning/tutor-edit-propagation-tracker.md` | POINT-IN-TIME | t4-docs-triage | Checkbox stream tracker; make ci GREEN recorded, consistent close-out. |
-| `docs/planning/tutor-mode-brief.md` | POINT-IN-TIME | t4-docs-triage | Draft requirements brief; accurately predicts the shipped tutoring/ feature. |
-| `docs/planning/tutor-talmid-view-log.md` | POINT-IN-TIME | t4-docs-triage | Append-only orchestration log dated 2026-05-26; internally consistent. |
-| `docs/planning/tutor-talmid-view-orchestration-prompt.md` | POINT-IN-TIME | t4-docs-triage | Paste-into-fresh-session kickoff prompt; dated artifact, consistent. |
-| `docs/planning/tutor-talmid-view-plan-2026-05-26.md` | POINT-IN-TIME | t4-docs-triage | Dated design doc; 'current state verified in code' section, superseded by trackers. |
-| `docs/planning/tutor-talmid-view-tracker.md` | POINT-IN-TIME | t4-docs-triage | Stream tracker; Wave 3 re-scoped inline, later completed per edit-propagation docs. |
+| `docs/_archive/superseded/track-detail-and-ordering-plan.md` | POINT-IN-TIME | t4-docs-triage | Dated implementation plan; matches shipped bulk_mark/track_detail screens. |
+| `docs/_archive/superseded/tracks-and-completion-bug-report.md` | POINT-IN-TIME | t4-docs-triage | Dated bug report; self-updates its own remediation-status table, all 11 fixed. |
+| `docs/_archive/superseded/tracks-and-completion-fix-plan.md` | POINT-IN-TIME | t4-docs-triage | Orchestrator prompt companion to bug report; consistent, no drift found. |
+| `docs/_archive/superseded/tutor-edit-propagation-log.md` | POINT-IN-TIME | t4-docs-triage | Append-only orchestration log dated 2026-05-28; internally consistent. |
+| `docs/_archive/superseded/tutor-edit-propagation-orchestration-prompt.md` | POINT-IN-TIME | t4-docs-triage | Paste-into-fresh-session kickoff prompt; dated artifact, consistent with plan. |
+| `docs/_archive/superseded/tutor-edit-propagation-plan.md` | POINT-IN-TIME | t4-docs-triage | Dated CF-routing plan; matches tracker's completed status. |
+| `docs/_archive/superseded/tutor-edit-propagation-tracker.md` | POINT-IN-TIME | t4-docs-triage | Checkbox stream tracker; make ci GREEN recorded, consistent close-out. |
+| `docs/_archive/superseded/tutor-mode-brief.md` | POINT-IN-TIME | t4-docs-triage | Draft requirements brief; accurately predicts the shipped tutoring/ feature. |
+| `docs/_archive/superseded/tutor-talmid-view-log.md` | POINT-IN-TIME | t4-docs-triage | Append-only orchestration log dated 2026-05-26; internally consistent. |
+| `docs/_archive/superseded/tutor-talmid-view-orchestration-prompt.md` | POINT-IN-TIME | t4-docs-triage | Paste-into-fresh-session kickoff prompt; dated artifact, consistent. |
+| `docs/_archive/superseded/tutor-talmid-view-plan-2026-05-26.md` | POINT-IN-TIME | t4-docs-triage | Dated design doc; 'current state verified in code' section, superseded by trackers. |
+| `docs/_archive/superseded/tutor-talmid-view-tracker.md` | POINT-IN-TIME | t4-docs-triage | Stream tracker; Wave 3 re-scoped inline, later completed per edit-propagation docs. |
 | `docs/planning/two-database-architecture.md` | POINT-IN-TIME | t4-docs-triage | Exemplary self-correcting evolution note; defers to current docs. Model example. |
-| `docs/planning/ux-audit-2026-05-20-copy-review.md` | POINT-IN-TIME | t4-docs-triage | Dated copy audit; companion to fix-plan/hebrew-terms-findings, self-consistent. |
-| `docs/planning/ux-audit-2026-05-20-fix-plan.md` | POINT-IN-TIME | t4-docs-triage | Draft fix plan, 10 lettered streams; internally consistent, no drift found. |
-| `docs/planning/ux-audit-2026-05-20-hebrew-terms-findings.md` | POINT-IN-TIME | t4-docs-triage | 14-violation audit; matches fix-plan/copy-review, consistent. |
-| `docs/planning/ux-audit-2026-05-20-orchestration-prompt.md` | POINT-IN-TIME | t4-docs-triage | Dated orchestration kickoff prompt; consistent with its 3 companion docs. |
+| `docs/_archive/superseded/ux-audit-2026-05-20-copy-review.md` | POINT-IN-TIME | t4-docs-triage | Dated copy audit; companion to fix-plan/hebrew-terms-findings, self-consistent. |
+| `docs/_archive/superseded/ux-audit-2026-05-20-fix-plan.md` | POINT-IN-TIME | t4-docs-triage | Draft fix plan, 10 lettered streams; internally consistent, no drift found. |
+| `docs/_archive/superseded/ux-audit-2026-05-20-hebrew-terms-findings.md` | POINT-IN-TIME | t4-docs-triage | 14-violation audit; matches fix-plan/copy-review, consistent. |
+| `docs/_archive/superseded/ux-audit-2026-05-20-orchestration-prompt.md` | POINT-IN-TIME | t4-docs-triage | Dated orchestration kickoff prompt; consistent with its 3 companion docs. |
 | `docs/planning/ux-patterns-quick-reference.md` | ISSUES | t4-docs-triage | Partial staleness note; stale TutorPinGuard reference + dead link to archived doc. |
 | `docs/planning/ux-upgrade-flow-spec.md` | ISSUES | t4-docs-triage | Password-verify upgrade UX now stale post credential-less redesign, no marker. |
 | `docs/planning/ux-upgrade-flow-visual.md` | ISSUES | t4-docs-triage | W-02 'Confirm password' wireframe stale post credential-less redesign. |
-| `docs/planning/v1-developer-roadmap.md` | POINT-IN-TIME | t4-docs-triage | Exemplary HISTORICAL banner; defers to linear-status.md/epics.md. Model example. |
+| `docs/_archive/superseded/v1-developer-roadmap.md` | POINT-IN-TIME | t4-docs-triage | Exemplary HISTORICAL banner; defers to linear-status.md/epics.md. Model example. |
 | `docs/privacy-policy.md` | DEFECTIVE | t4-docs-canonical | 'Data We Do NOT Collect' contradicted by live FirebaseAnalyticsService + unconditional Crashlytics (F1). |
 | `docs/product-rules.md` | ISSUES | t4-docs-canonical | 7 concrete code claims verified accurate; one open item (Q-Term) stale (F7). |
 | `docs/project-overview.md` | DEFECTIVE | t4-docs-canonical | Tech-stack/DB/feature/file-count inventory and Project-status table both stale post-rebuild (F2, F3). |
@@ -2011,7 +2011,7 @@ REGEN-CHECKED = covered by the Tier-3 regeneration diff (3 stale files found, fi
 | `docs/scenarios/stitch-prompts/README.md` | POINT-IN-TIME | t4-docs-triage | Self-dated Feb 2026; explicitly redirects readers to component-inventory.md/architecture.md for current state. |
 | `docs/seed-build.md` | ISSUES | t4-docs-canonical | Pipeline/prereqs/merger-file claims accurate; bundledSeedVersion off by one, 14 vs 15 (F9). |
 | `docs/source-tree-analysis.md` | DEFECTIVE | t4-docs-canonical | DB schema, DAO list, feature list, test-file counts all stale post-rebuild (F2). |
-| `docs/standards-audit-orchestrator-prompt-2026-07-03.md` | POINT-IN-TIME | t4-docs-canonical | Self-referential prompt for this audit run; not app documentation, nothing to drift-check. |
+| `docs/_archive/superseded/standards-audit-orchestrator-prompt-2026-07-03.md` | POINT-IN-TIME | t4-docs-canonical | Self-referential prompt for this audit run; not app documentation, nothing to drift-check. |
 | `docs/status/bmm-workflow-status.yaml` | POINT-IN-TIME | t4-docs-triage | One-time Jan-2026 BMM planning-gate checklist; gates don't change post-completion. |
 | `docs/status/linear-mapping.yaml` | ISSUES | t4-docs-triage | Presents as live sync cache but frozen since 2026-03-12; missing epics 18/19/21/25 (Finding 1). |
 | `docs/status/sprint-status.yaml` | DEFECTIVE | t4-docs-triage | Presents as source of truth; epic-18 stale post-cancellation, epic-19 'done' contradicted by own story files (Findings 1+2). |
@@ -2084,10 +2084,10 @@ REGEN-CHECKED = covered by the Tier-3 regeneration diff (3 stale files found, fi
 | `docs/stories/implementation/seed-database-build-tool-design.md` | POINT-IN-TIME | t4-docs-triage | Draft tool design (2026-03-29), feeds stories 19-2b/3/4/6/12; since implemented (tool/seed_content_db.dart exists). |
 | `docs/stories/implementation/tech-spec-learning-tracker-v1-complete.md` | POINT-IN-TIME | t4-docs-triage | Self-labeled 'historical — superseded by shipped v1' w/ 2026-04-19 banner to current docs; verified accurate. |
 | `docs/sync-conflict-resolution.md` | SOUND | t4-docs-canonical | All 10 named merger files + both integration test files verified to exist. |
-| `docs/sync-rework-exec-prompt-2026-05-18.md` | POINT-IN-TIME | t4-docs-canonical | Dated wave-execution script; its test/sync/sync_rework_* files confirmed to exist, run completed. |
+| `docs/_archive/superseded/sync-rework-exec-prompt-2026-05-18.md` | POINT-IN-TIME | t4-docs-canonical | Dated wave-execution script; its test/sync/sync_rework_* files confirmed to exist, run completed. |
 | `docs/test-options.md` | ISSUES | t4-docs-canonical | Layer table/CI list/~10k-test count/paths verified accurate; night_runner.py fabricated (F8). |
 | `docs/testing-guide.md` | DEFECTIVE | t4-docs-canonical | Every primary code example references DB/enum types deleted in schema-v1 rebuild (F4). |
-| `docs/tracking-system-review-2026-05-17.md` | POINT-IN-TIME | t4-docs-canonical | Dated bug-assessment; its C1/C2/C3 items correctly tracked forward and closed in open-items.md. |
+| `docs/_archive/superseded/tracking-system-review-2026-05-17.md` | POINT-IN-TIME | t4-docs-canonical | Dated bug-assessment; its C1/C2/C3 items correctly tracked forward and closed in open-items.md. |
 
 ## Tier 3 — Generated files (80 files)
 

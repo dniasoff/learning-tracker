@@ -19,7 +19,7 @@
 > with a credential-less offline-account creation (explicit "create an offline
 > account?" prompt, no email/password), not the old email/password local-born
 > signup. The onboarding flow itself (mode selection through dashboard) is
-> unaffected. Design record: `../../planning/loop-progress.md`, "ONBOARDING REWORK"
+> unaffected. Design record: `../../_archive/superseded/loop-progress.md`, "ONBOARDING REWORK"
 > entries (2026-06-14 to 2026-06-15).
 
 ---

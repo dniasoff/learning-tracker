@@ -287,7 +287,7 @@ Each scenario follows this structure:
 
 ### Tutor Track Lifecycle (P1)
 
-> ⚠️ **Superseded — 2026-07-13.** TRACK-10 through TRACK-12 describe the original self-service "Add Track → Tutor" flow, where the learner sets a device-local tutor PIN directly from track management. That flow — and the `TutorPinGuard` it relied on — no longer exists. It was replaced by a grant-based invite/accept/revoke model where a parent invites a tutor by email; the tutor accepts and authenticates via `PinGuard(PinScope.tutor(profileId))`. Kept for historical reference only; do not use to test current tutor-access behavior. See [`11-tutor-mode.md`](11-tutor-mode.md) and [`../../planning/tutor-mode-brief.md`](../../planning/tutor-mode-brief.md).
+> ⚠️ **Superseded — 2026-07-13.** TRACK-10 through TRACK-12 describe the original self-service "Add Track → Tutor" flow, where the learner sets a device-local tutor PIN directly from track management. That flow — and the `TutorPinGuard` it relied on — no longer exists. It was replaced by a grant-based invite/accept/revoke model where a parent invites a tutor by email; the tutor accepts and authenticates via `PinGuard(PinScope.tutor(profileId))`. Kept for historical reference only; do not use to test current tutor-access behavior. See [`11-tutor-mode.md`](11-tutor-mode.md) and [`../../_archive/superseded/tutor-mode-brief.md`](../../_archive/superseded/tutor-mode-brief.md).
 
 ---
 
