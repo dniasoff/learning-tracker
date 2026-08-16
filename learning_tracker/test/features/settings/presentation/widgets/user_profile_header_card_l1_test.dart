@@ -51,9 +51,7 @@ Widget _buildCardWidget({
     overrides: [
       authStateProvider.overrideWithValue(authState),
       authRepositoryProvider.overrideWithValue(auth),
-      activeProfileIdProvider.overrideWithValue(
-        '01ARZ3NDEKTSV4RRFFQ69G5FAV',
-      ),
+      activeProfileIdProvider.overrideWithValue('01ARZ3NDEKTSV4RRFFQ69G5FAV'),
       profileListStreamProvider.overrideWith((_) => Stream.value([])),
     ],
     child: MaterialApp(
@@ -110,10 +108,7 @@ void main() {
       );
       await tester.pumpWidget(
         _buildCardWidget(
-          authState: const AuthState.signedIn(
-            user: authUser,
-            tier: Tier.local,
-          ),
+          authState: const AuthState.signedIn(user: authUser, tier: Tier.local),
         ),
       );
       await tester.pump();
@@ -151,10 +146,7 @@ void main() {
       );
       await tester.pumpWidget(
         _buildCardWidget(
-          authState: const AuthState.signedIn(
-            user: authUser,
-            tier: Tier.cloud,
-          ),
+          authState: const AuthState.signedIn(user: authUser, tier: Tier.cloud),
           firebaseUser: null, // user param to widget is null (transient)
         ),
       );

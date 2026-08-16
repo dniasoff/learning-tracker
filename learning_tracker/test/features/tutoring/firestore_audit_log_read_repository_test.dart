@@ -35,10 +35,8 @@ void main() {
         // TutorAuditLogReadRepository with a matching constructor signature.
         // Removing `implements TutorAuditLogReadRepository` from the class
         // turns this into a compile error, failing this test file.
-        const TutorAuditLogReadRepository Function({
-          required Ref ref,
-        })
-        ctor = FirestoreAuditLogReadRepository.new;
+        const TutorAuditLogReadRepository Function({required Ref ref}) ctor =
+            FirestoreAuditLogReadRepository.new;
         expect(ctor, isNotNull);
       },
     );

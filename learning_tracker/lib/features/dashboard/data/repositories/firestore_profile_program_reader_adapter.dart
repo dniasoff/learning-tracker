@@ -17,7 +17,9 @@ class FirestoreProfileProgramReaderAdapter {
   final Ref _ref;
 
   Future<bool> hasProgram(CurriculumId curriculumId) async {
-    final repo = await _ref.read(firestoreProfileProgramRepositoryProvider.future);
+    final repo = await _ref.read(
+      firestoreProfileProgramRepositoryProvider.future,
+    );
     if (repo == null) {
       throw const ProfileProgramRepositoryNotReadyException();
     }

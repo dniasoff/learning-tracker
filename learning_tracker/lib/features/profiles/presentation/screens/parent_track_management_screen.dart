@@ -301,9 +301,7 @@ class _ParentTrackManagementScreenState
         // behave exactly like "Delete and wipe history". archive() still
         // enforces the last-curriculum invariant (throws
         // LastActiveCurriculumException).
-        await ref
-            .read(curriculumActivationServiceProvider)
-            .archive(curriculum);
+        await ref.read(curriculumActivationServiceProvider).archive(curriculum);
         await onTrackChanged(ref);
       } on LastActiveCurriculumException {
         if (!mounted) return;

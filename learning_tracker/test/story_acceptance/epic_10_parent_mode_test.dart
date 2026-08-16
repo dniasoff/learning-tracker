@@ -32,15 +32,26 @@ void main() {
     });
   });
 
-  group('Story 10.2 — parent dashboard', tags: ['story_10_2'], skip:
-      'Blocked: dashboard aggregation and points services in this acceptance flow still read Drift DAOs; the Firestore adapters are not wired into these services.',
-      () {
-    test('placeholder for the pending Firestore parent-dashboard seam', () {});
-  });
+  group(
+    'Story 10.2 — parent dashboard',
+    tags: ['story_10_2'],
+    skip:
+        'Blocked: dashboard aggregation and points services in this acceptance flow still read Drift DAOs; the Firestore adapters are not wired into these services.',
+    () {
+      test(
+        'placeholder for the pending Firestore parent-dashboard seam',
+        () {},
+      );
+    },
+  );
 
-  group('Story 10.4 — point configuration', tags: ['story_10_4'], skip:
-      'Blocked: point configuration screen tests still require the Drift userDatabaseProvider; Firestore point-config wiring is not exposed here.',
-      () {
-    test('placeholder for the pending Firestore point-config seam', () {});
-  });
+  group(
+    'Story 10.4 — point configuration',
+    tags: ['story_10_4'],
+    skip:
+        'Blocked: point configuration screen tests still require the Drift userDatabaseProvider; Firestore point-config wiring is not exposed here.',
+    () {
+      test('placeholder for the pending Firestore point-config seam', () {});
+    },
+  );
 }

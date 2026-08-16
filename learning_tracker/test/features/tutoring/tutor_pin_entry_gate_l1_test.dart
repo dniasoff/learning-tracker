@@ -1087,7 +1087,9 @@ void main() {
             rawPin: any(named: 'rawPin'),
           ),
         ).thenAnswer((invocation) async {
-          capturedProfileIds.add(invocation.namedArguments[#profileId] as String);
+          capturedProfileIds.add(
+            invocation.namedArguments[#profileId] as String,
+          );
           return const TutorPinSuccess();
         });
 
@@ -1425,7 +1427,8 @@ class _StatefulTutorPinStub implements TutorPinService {
   }
 
   @override
-  Future<bool> hasTutorPin(String profileId) async => _pins.containsKey(profileId);
+  Future<bool> hasTutorPin(String profileId) async =>
+      _pins.containsKey(profileId);
 
   @override
   Future<void> clearTutorPin(String profileId) async => _pins.remove(profileId);

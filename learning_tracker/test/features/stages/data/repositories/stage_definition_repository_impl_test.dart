@@ -65,32 +65,38 @@ void main() {
       expect(after, before);
     });
 
-    test('initializeDefaults writes three defaults when the curriculum is empty', () async {
-      await repository.initializeDefaults(curriculum);
+    test(
+      'initializeDefaults writes three defaults when the curriculum is empty',
+      () async {
+        await repository.initializeDefaults(curriculum);
 
-      final result = await repository.getStagesForCurriculum(curriculum);
+        final result = await repository.getStagesForCurriculum(curriculum);
 
-      expect(result, hasLength(3));
-      expect(result.map((stage) => stage.stageOrder), [1, 2, 3]);
-    });
+        expect(result, hasLength(3));
+        expect(result.map((stage) => stage.stageOrder), [1, 2, 3]);
+      },
+    );
 
-    test('resetToDefaults restores the three Firestore stage documents', () async {
-      await repository.replaceStagesForCurriculum(curriculum, [
-        const StageDefinition(
-          curriculumId: curriculum,
-          stageOrder: 1,
-          stageName: 'Custom',
-          delayDays: 4,
-          isDefault: false,
-        ),
-      ]);
+    test(
+      'resetToDefaults restores the three Firestore stage documents',
+      () async {
+        await repository.replaceStagesForCurriculum(curriculum, [
+          const StageDefinition(
+            curriculumId: curriculum,
+            stageOrder: 1,
+            stageName: 'Custom',
+            delayDays: 4,
+            isDefault: false,
+          ),
+        ]);
 
-      await repository.resetToDefaults(curriculum);
+        await repository.resetToDefaults(curriculum);
 
-      final result = await repository.getStagesForCurriculum(curriculum);
-      expect(result, hasLength(3));
-      expect(result.first.stageName, 'לימוד');
-      expect(result.first.isDefault, isTrue);
-    });
+        final result = await repository.getStagesForCurriculum(curriculum);
+        expect(result, hasLength(3));
+        expect(result.first.stageName, 'לימוד');
+        expect(result.first.isDefault, isTrue);
+      },
+    );
   });
 }

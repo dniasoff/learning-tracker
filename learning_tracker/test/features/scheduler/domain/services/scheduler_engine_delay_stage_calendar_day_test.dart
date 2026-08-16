@@ -85,11 +85,7 @@ void main() {
       // Stage 1: learn (delay 0). Stage 2: Chazara 1, due 1 day after
       // stage 1 completion.
       stageRepo.stages = [
-        const SchedulerStage(
-          stageOrder: 1,
-          stageName: 'Learn',
-          delayDays: 0,
-        ),
+        const SchedulerStage(stageOrder: 1, stageName: 'Learn', delayDays: 0),
         const SchedulerStage(
           stageOrder: 2,
           stageName: 'Chazara 1',

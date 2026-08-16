@@ -64,48 +64,52 @@ void main() {
         profileId: _profileId,
       );
 
-  test('resetToDefault clears custom order with rules-legal tombstones', () async {
-    final repository = orderRepository();
-    await repository.saveSedarimOrder(CurriculumId.mishnayos, [
-      _orderItem(naturalItems[1], 0),
-      _orderItem(naturalItems[0], 1),
-    ]);
+  test(
+    'resetToDefault clears custom order with rules-legal tombstones',
+    () async {
+      final repository = orderRepository();
+      await repository.saveSedarimOrder(CurriculumId.mishnayos, [
+        _orderItem(naturalItems[1], 0),
+        _orderItem(naturalItems[0], 1),
+      ]);
 
-    expect(
-      (await repository.getSedarimOrder(
+      expect(
+        (await repository.getSedarimOrder(
+          CurriculumId.mishnayos,
+          naturalItems,
+        )).map((item) => item.sefariaRef),
+        ['Seder B', 'Seder A'],
+      );
+
+      await repository.resetToDefault(CurriculumId.mishnayos);
+
+      final reset = await repository.getSedarimOrder(
         CurriculumId.mishnayos,
         naturalItems,
-      )).map((item) => item.sefariaRef),
-      ['Seder B', 'Seder A'],
-    );
+      );
+      expect(reset.map((item) => item.sefariaRef), ['Seder A', 'Seder B']);
+      expect(reset.every((item) => !item.isCustomOrdered), isTrue);
+      expect(
+        (await trackRepository().getTrack(
+          CurriculumId.mishnayos,
+        ))!.lastReorderAt,
+        DateTime.utc(2026, 5, 27, 15),
+      );
 
-    await repository.resetToDefault(CurriculumId.mishnayos);
-
-    final reset = await repository.getSedarimOrder(
-      CurriculumId.mishnayos,
-      naturalItems,
-    );
-    expect(reset.map((item) => item.sefariaRef), ['Seder A', 'Seder B']);
-    expect(reset.every((item) => !item.isCustomOrdered), isTrue);
-    expect(
-      (await trackRepository().getTrack(CurriculumId.mishnayos))!
-          .lastReorderAt,
-      DateTime.utc(2026, 5, 27, 15),
-    );
-
-    final rows = await firestore
-        .collection('users')
-        .doc(_uid)
-        .collection('learner_profiles')
-        .doc(_profileId)
-        .collection('track_learning_order')
-        .get();
-    expect(rows.docs, hasLength(2));
-    expect(
-      rows.docs.every((doc) => !doc.data().containsKey('user_sort_order')),
-      isTrue,
-    );
-  });
+      final rows = await firestore
+          .collection('users')
+          .doc(_uid)
+          .collection('learner_profiles')
+          .doc(_profileId)
+          .collection('track_learning_order')
+          .get();
+      expect(rows.docs, hasLength(2));
+      expect(
+        rows.docs.every((doc) => !doc.data().containsKey('user_sort_order')),
+        isTrue,
+      );
+    },
+  );
 
   test('resetToDefault is safe when no custom order exists', () async {
     final repository = orderRepository();
@@ -128,27 +132,30 @@ void main() {
     );
   });
 
-  test('reordering atomically stamps curriculum_tracks.last_reorder_at', () async {
-    final repository = orderRepository();
-    await repository.saveSedarimOrder(CurriculumId.mishnayos, [
-      _orderItem(naturalItems[1], 0),
-    ]);
+  test(
+    'reordering atomically stamps curriculum_tracks.last_reorder_at',
+    () async {
+      final repository = orderRepository();
+      await repository.saveSedarimOrder(CurriculumId.mishnayos, [
+        _orderItem(naturalItems[1], 0),
+      ]);
 
-    final track = await trackRepository().getTrack(CurriculumId.mishnayos);
-    expect(track!.lastReorderAt, DateTime.utc(2026, 5, 27, 15));
+      final track = await trackRepository().getTrack(CurriculumId.mishnayos);
+      expect(track!.lastReorderAt, DateTime.utc(2026, 5, 27, 15));
 
-    final rawTrack = await firestore
-        .collection('users')
-        .doc(_uid)
-        .collection('learner_profiles')
-        .doc(_profileId)
-        .collection('curriculum_tracks')
-        .doc(
-          DocIds.curriculumTrackDocId({
-            'curriculum_id': CurriculumId.mishnayos.storageKey,
-          }),
-        )
-        .get();
-    expect(rawTrack.data()!['last_reorder_at'], isNotNull);
-  });
+      final rawTrack = await firestore
+          .collection('users')
+          .doc(_uid)
+          .collection('learner_profiles')
+          .doc(_profileId)
+          .collection('curriculum_tracks')
+          .doc(
+            DocIds.curriculumTrackDocId({
+              'curriculum_id': CurriculumId.mishnayos.storageKey,
+            }),
+          )
+          .get();
+      expect(rawTrack.data()!['last_reorder_at'], isNotNull);
+    },
+  );
 }

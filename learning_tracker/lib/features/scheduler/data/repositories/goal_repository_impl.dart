@@ -5,7 +5,6 @@ import 'package:learning_tracker/data/repositories/firestore_goal_repository.dar
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/features/scheduler/domain/repositories/goal_repository.dart';
 
-
 /// Thrown by [FirestoreGoalRepositoryAdapter]'s write methods when
 /// `firestoreGoalRepositoryProvider` resolves to `null` — see
 /// `BookmarkRepositoryNotReadyException`'s doc comment

@@ -340,7 +340,8 @@ void main() {
       (tester) async {
         // Override with stateful notifier so the toggle can mutate state.
         SharedPreferences.setMockInitialValues({
-          NotificationPreferencesRepository.reminderEnabledKey(_profileId): true,
+          NotificationPreferencesRepository.reminderEnabledKey(_profileId):
+              true,
         });
         await tester.pumpWidget(
           ProviderScope(
@@ -382,7 +383,7 @@ void main() {
     testWidgets('toggling reminder ON (from off) calls requestPermission', (
       tester,
     ) async {
-        SharedPreferences.setMockInitialValues({
+      SharedPreferences.setMockInitialValues({
         NotificationPreferencesRepository.reminderEnabledKey(_profileId): false,
       });
       await tester.pumpWidget(
@@ -424,7 +425,8 @@ void main() {
       'toggling reminder persists enabled=false to SharedPreferences',
       (tester) async {
         SharedPreferences.setMockInitialValues({
-          NotificationPreferencesRepository.reminderEnabledKey(_profileId): true,
+          NotificationPreferencesRepository.reminderEnabledKey(_profileId):
+              true,
         });
         await tester.pumpWidget(
           ProviderScope(
@@ -583,7 +585,8 @@ void main() {
       tester,
     ) async {
       SharedPreferences.setMockInitialValues({
-        NotificationPreferencesRepository.streakAlertEnabledKey(_profileId): false,
+        NotificationPreferencesRepository.streakAlertEnabledKey(_profileId):
+            false,
       });
       await tester.pumpWidget(
         ProviderScope(
@@ -622,7 +625,8 @@ void main() {
       'toggling streak alert persists enabled=false to SharedPreferences',
       (tester) async {
         SharedPreferences.setMockInitialValues({
-          NotificationPreferencesRepository.streakAlertEnabledKey(_profileId): true,
+          NotificationPreferencesRepository.streakAlertEnabledKey(_profileId):
+              true,
         });
         await tester.pumpWidget(
           ProviderScope(
@@ -721,8 +725,9 @@ void main() {
       tester,
     ) async {
       SharedPreferences.setMockInitialValues({
-        NotificationPreferencesRepository.rewardNotificationEnabledKey(_profileId):
-            false,
+        NotificationPreferencesRepository.rewardNotificationEnabledKey(
+          _profileId,
+        ): false,
       });
       await tester.pumpWidget(
         ProviderScope(
@@ -761,7 +766,9 @@ void main() {
       tester,
     ) async {
       SharedPreferences.setMockInitialValues({
-        NotificationPreferencesRepository.rewardNotificationEnabledKey(_profileId): true,
+        NotificationPreferencesRepository.rewardNotificationEnabledKey(
+          _profileId,
+        ): true,
       });
       await tester.pumpWidget(
         ProviderScope(
@@ -793,7 +800,9 @@ void main() {
 
       final prefs = await SharedPreferences.getInstance();
       final stored = prefs.getBool(
-        NotificationPreferencesRepository.rewardNotificationEnabledKey(_profileId),
+        NotificationPreferencesRepository.rewardNotificationEnabledKey(
+          _profileId,
+        ),
       );
       expect(stored, isFalse);
 

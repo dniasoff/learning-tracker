@@ -92,26 +92,24 @@ void main() {
           ),
         ),
         firestoreGoalRepositoryProvider.overrideWith(
-          (ref) async =>
-              goalRepoNotReady
-                  ? null
-                  : goalRepo?.call() ??
-                      FirestoreGoalRepository(
-                        firestore: firestore,
-                        uid: _uid,
-                        profileId: _profileId,
-                      ),
+          (ref) async => goalRepoNotReady
+              ? null
+              : goalRepo?.call() ??
+                    FirestoreGoalRepository(
+                      firestore: firestore,
+                      uid: _uid,
+                      profileId: _profileId,
+                    ),
         ),
         firestorePointConfigRepositoryProvider.overrideWith(
-          (ref) async =>
-              pointConfigRepoNotReady
-                  ? null
-                  : pointConfigRepo?.call() ??
-                      FirestorePointConfigRepository(
-                        firestore: firestore,
-                        uid: _uid,
-                        profileId: _profileId,
-                      ),
+          (ref) async => pointConfigRepoNotReady
+              ? null
+              : pointConfigRepo?.call() ??
+                    FirestorePointConfigRepository(
+                      firestore: firestore,
+                      uid: _uid,
+                      profileId: _profileId,
+                    ),
         ),
       ],
     );
@@ -172,49 +170,49 @@ void main() {
       expect(points[4], 1, reason: 'any additional stage');
     });
 
-    test('returns the configured point_configs override, not the ladder', () async {
-      await seedProfile(mode: ProfileMode.child);
-      await seedGoal(CurriculumId.mishnayos);
-      await FirestorePointConfigRepository(
-        firestore: firestore,
-        uid: _uid,
-        profileId: _profileId,
-      ).upsertConfig(
-        curriculumId: CurriculumId.mishnayos,
-        stageOrder: 1,
-        points: 99,
-      );
-      final awarder = buildAwarder();
-
-      final points = await awarder.calculatePoints(
-        curriculumId: CurriculumId.mishnayos.storageKey,
-        stageOrder: 1,
-        profileId: _profileId,
-      );
-
-      expect(points, 99);
-    });
-
     test(
-      'Branch A: THROWS instead of silently falling back to the ladder '
-      'when the point_configs repository resolves to null — a not-ready '
-      'backend is contradictory here (an active account/profile is '
-      'provably present), not "no override configured"',
+      'returns the configured point_configs override, not the ladder',
       () async {
         await seedProfile(mode: ProfileMode.child);
         await seedGoal(CurriculumId.mishnayos);
-        final awarder = buildAwarder(pointConfigRepoNotReady: true);
-
-        expect(
-          () => awarder.calculatePoints(
-            curriculumId: CurriculumId.mishnayos.storageKey,
-            stageOrder: 1,
-            profileId: _profileId,
-          ),
-          throwsA(isA<UnsupportedError>()),
+        await FirestorePointConfigRepository(
+          firestore: firestore,
+          uid: _uid,
+          profileId: _profileId,
+        ).upsertConfig(
+          curriculumId: CurriculumId.mishnayos,
+          stageOrder: 1,
+          points: 99,
         );
+        final awarder = buildAwarder();
+
+        final points = await awarder.calculatePoints(
+          curriculumId: CurriculumId.mishnayos.storageKey,
+          stageOrder: 1,
+          profileId: _profileId,
+        );
+
+        expect(points, 99);
       },
     );
+
+    test('Branch A: THROWS instead of silently falling back to the ladder '
+        'when the point_configs repository resolves to null — a not-ready '
+        'backend is contradictory here (an active account/profile is '
+        'provably present), not "no override configured"', () async {
+      await seedProfile(mode: ProfileMode.child);
+      await seedGoal(CurriculumId.mishnayos);
+      final awarder = buildAwarder(pointConfigRepoNotReady: true);
+
+      expect(
+        () => awarder.calculatePoints(
+          curriculumId: CurriculumId.mishnayos.storageKey,
+          stageOrder: 1,
+          profileId: _profileId,
+        ),
+        throwsA(isA<UnsupportedError>()),
+      );
+    });
 
     test(
       'Branch A (goal repository): THROWS when the goal repository '

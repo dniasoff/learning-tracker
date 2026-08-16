@@ -76,9 +76,7 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
-            profileRepositoryProvider.overrideWithValue(repo),
-          ],
+          overrides: [profileRepositoryProvider.overrideWithValue(repo)],
           child: MaterialApp(
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,

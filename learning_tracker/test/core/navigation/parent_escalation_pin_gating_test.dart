@@ -74,8 +74,7 @@ AppRouter _buildRouterForInspection() {
     profileGuard: ProfileGuard(
       getProfiles: () => _never('ProfileGuard.getProfiles'),
       getSelectedProfileId: () => _never('ProfileGuard.getSelectedProfileId'),
-      setSelectedProfileId: (_) =>
-          _never('ProfileGuard.setSelectedProfileId'),
+      setSelectedProfileId: (_) => _never('ProfileGuard.setSelectedProfileId'),
       isTutoredSession: () => _never('ProfileGuard.isTutoredSession'),
       profilePickerRoute: () => _never('ProfileGuard.profilePickerRoute'),
     ),

@@ -20,13 +20,12 @@ const _profileId = '01J0000000000000000000000A';
 CollectionReference<Map<String, dynamic>> _profileCollection(
   FakeFirebaseFirestore firestore,
   String collection,
-) =>
-    firestore
-        .collection('users')
-        .doc(_uid)
-        .collection('learner_profiles')
-        .doc(_profileId)
-        .collection(collection);
+) => firestore
+    .collection('users')
+    .doc(_uid)
+    .collection('learner_profiles')
+    .doc(_profileId)
+    .collection(collection);
 
 void main() {
   late FakeFirebaseFirestore firestore;
@@ -79,10 +78,7 @@ void main() {
     test('activate adds curriculum to Firestore', () async {
       await service.activate(CurriculumId.bavli);
 
-      expect(
-        await trackRepository.isActive(CurriculumId.bavli),
-        isTrue,
-      );
+      expect(await trackRepository.isActive(CurriculumId.bavli), isTrue);
     });
 
     test('deactivate retires one of two curricula', () async {
@@ -91,19 +87,13 @@ void main() {
 
       await service.deactivate(CurriculumId.bavli);
 
-      expect(
-        await trackRepository.isActive(CurriculumId.bavli),
-        isFalse,
-      );
+      expect(await trackRepository.isActive(CurriculumId.bavli), isFalse);
     });
 
     test('toggle activates an inactive curriculum', () async {
       await service.toggle(CurriculumId.bavli);
 
-      expect(
-        await trackRepository.isActive(CurriculumId.bavli),
-        isTrue,
-      );
+      expect(await trackRepository.isActive(CurriculumId.bavli), isTrue);
     });
 
     test('toggle deactivates an active curriculum', () async {
@@ -112,10 +102,7 @@ void main() {
 
       await service.toggle(CurriculumId.bavli);
 
-      expect(
-        await trackRepository.isActive(CurriculumId.bavli),
-        isFalse,
-      );
+      expect(await trackRepository.isActive(CurriculumId.bavli), isFalse);
     });
 
     test(
@@ -236,8 +223,10 @@ void main() {
 
         await service.deactivate(CurriculumId.bavli);
 
-        final bookmarks = await _profileCollection(firestore, 'bookmarks')
-            .get();
+        final bookmarks = await _profileCollection(
+          firestore,
+          'bookmarks',
+        ).get();
         expect(bookmarks.docs, hasLength(1));
         expect(bookmarks.docs.single.data()['sefaria_ref'], 'Berakhot.2a');
       },
@@ -301,27 +290,26 @@ void main() {
         expect(configs, hasLength(7));
         expect(
           configs.every(
-            (config) => config['curriculum_id'] ==
-                CurriculumId.mishnayos.storageKey,
+            (config) =>
+                config['curriculum_id'] == CurriculumId.mishnayos.storageKey,
           ),
           isTrue,
         );
       },
     );
 
-    test(
-      'initialize() seeds 7 configs when no curricula are active',
-      () async {
-        await service.initialize();
+    test('initialize() seeds 7 configs when no curricula are active', () async {
+      await service.initialize();
 
-        final configs = await getStudyDayConfigs();
-        expect(configs, hasLength(7));
-        expect(
-          configs.every((config) => config['curriculum_id'] ==
-              CurriculumId.mishnayos.storageKey),
-          isTrue,
-        );
-      },
-    );
+      final configs = await getStudyDayConfigs();
+      expect(configs, hasLength(7));
+      expect(
+        configs.every(
+          (config) =>
+              config['curriculum_id'] == CurriculumId.mishnayos.storageKey,
+        ),
+        isTrue,
+      );
+    });
   });
 }

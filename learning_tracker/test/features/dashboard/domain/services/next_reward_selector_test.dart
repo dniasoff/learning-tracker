@@ -95,10 +95,7 @@ void main() {
         ],
         globalPoints: 90,
         globalMilestones: [
-          _milestone(
-            threshold: 100,
-            title: 'GlobalClose',
-          ), // gap 10
+          _milestone(threshold: 100, title: 'GlobalClose'), // gap 10
         ],
       );
       expect(result!.title, 'GlobalClose');

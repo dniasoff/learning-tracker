@@ -19,10 +19,7 @@ void main() {
   late ProviderContainer container;
 
   setUp(() {
-    final rig = activateAccountAndProfile(
-      uid: _uid,
-      profileId: _profileId,
-    );
+    final rig = activateAccountAndProfile(uid: _uid, profileId: _profileId);
     firestore = rig.firestore;
     container = rig.container;
   });
@@ -128,25 +125,28 @@ void main() {
         expect(snapshot.data()!['marked_by'], _profileId);
       });
 
-      test('allows manual completion for child when parent PIN session active',
-          () async {
-        final entry = await createRepo(
-          profileMode: ProfileMode.child,
-          parentPinSessionMatches: true,
-        ).recordCompletion(
-          curriculumId: CurriculumId.mishnayos,
-          entryScope: 'masechta',
-          unitIdentifier: 'Berakhot',
-          unitDisplayNameHe: 'ברכות',
-          unitDisplayNameEn: 'Berakhot',
-          trackType: 'personal',
-          markedBy: _profileId,
-          isManual: true,
-        );
+      test(
+        'allows manual completion for child when parent PIN session active',
+        () async {
+          final entry =
+              await createRepo(
+                profileMode: ProfileMode.child,
+                parentPinSessionMatches: true,
+              ).recordCompletion(
+                curriculumId: CurriculumId.mishnayos,
+                entryScope: 'masechta',
+                unitIdentifier: 'Berakhot',
+                unitDisplayNameHe: 'ברכות',
+                unitDisplayNameEn: 'Berakhot',
+                trackType: 'personal',
+                markedBy: _profileId,
+                isManual: true,
+              );
 
-        expect(entry.isManual, isTrue);
-        expect(entry.markedBy, _profileId);
-      });
+          expect(entry.isManual, isTrue);
+          expect(entry.markedBy, _profileId);
+        },
+      );
 
       test('rejects child self-mark for manual completions', () async {
         expect(
@@ -197,18 +197,20 @@ void main() {
     });
 
     group('recordCompletionsBatch', () {
-      test('inserts multiple Firestore documents with per-unit numbering',
-          () async {
-        final entries = await createRepo().recordCompletionsBatch([
-          draft(unitIdentifier: 'A'),
-          draft(unitIdentifier: 'B'),
-        ]);
+      test(
+        'inserts multiple Firestore documents with per-unit numbering',
+        () async {
+          final entries = await createRepo().recordCompletionsBatch([
+            draft(unitIdentifier: 'A'),
+            draft(unitIdentifier: 'B'),
+          ]);
 
-        expect(entries, hasLength(2));
-        expect(entries.map((e) => e.completionNumber), [1, 1]);
-        final ledger = await createRepo().getLifetimeLedger();
-        expect(ledger, hasLength(2));
-      });
+          expect(entries, hasLength(2));
+          expect(entries.map((e) => e.completionNumber), [1, 1]);
+          final ledger = await createRepo().getLifetimeLedger();
+          expect(ledger, hasLength(2));
+        },
+      );
 
       test('writes the sentinel date for lifetime-only marks', () async {
         final entries = await createRepo().recordCompletionsBatch([
@@ -221,19 +223,19 @@ void main() {
       });
 
       test('writes the sentinel date for bulk-in-track marks', () async {
-        final entries = await createRepo().recordCompletionsBatch(
-          [draft(unitIdentifier: 'A'), draft(unitIdentifier: 'B')],
-          source: CompletionSource.bulkInTrack,
-        );
+        final entries = await createRepo().recordCompletionsBatch([
+          draft(unitIdentifier: 'A'),
+          draft(unitIdentifier: 'B'),
+        ], source: CompletionSource.bulkInTrack);
 
         expect(entries.every((e) => e.completedAt.year == 2000), isTrue);
       });
 
       test('writes a real timestamp for live marks', () async {
-        final entries = await createRepo().recordCompletionsBatch(
-          [draft(unitIdentifier: 'A'), draft(unitIdentifier: 'B')],
-          source: CompletionSource.live,
-        );
+        final entries = await createRepo().recordCompletionsBatch([
+          draft(unitIdentifier: 'A'),
+          draft(unitIdentifier: 'B'),
+        ], source: CompletionSource.live);
 
         expect(entries.every((e) => e.completedAt.year != 2000), isTrue);
       });

@@ -348,7 +348,10 @@ class AchievementUnlockCard extends StatelessWidget {
               ),
               const SizedBox(height: 14),
               Text(
-                l10n.achievementsUnlockPartyMessage(displayName, milestoneTitle),
+                l10n.achievementsUnlockPartyMessage(
+                  displayName,
+                  milestoneTitle,
+                ),
                 textAlign: TextAlign.center,
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w600,

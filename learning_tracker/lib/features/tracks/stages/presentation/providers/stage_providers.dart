@@ -11,15 +11,17 @@ import 'package:learning_tracker/features/tracks/stages/domain/repositories/stag
 /// deprecated and will be removed in Phase 4.
 final stageDefinitionRepositoryProvider =
     Provider.family<StageDefinitionRepository, CurriculumId>((ref, curriculum) {
-  return FirestoreStageDefinitionRepositoryAdapter(ref: ref);
-});
+      return FirestoreStageDefinitionRepositoryAdapter(ref: ref);
+    });
 
 /// Global (non-curriculum-scoped) provider for [StageDefinitionRepository].
 ///
 /// **Firestore-backed** via [FirestoreStageDefinitionRepositoryAdapter] (wired
 /// Phase 3, T-20). The Drift-backed [StageDefinitionRepositoryImpl] is
 /// deprecated and will be removed in Phase 4.
-final globalStageRepositoryProvider = Provider<StageDefinitionRepository>((ref) {
+final globalStageRepositoryProvider = Provider<StageDefinitionRepository>((
+  ref,
+) {
   return FirestoreStageDefinitionRepositoryAdapter(ref: ref);
 });
 

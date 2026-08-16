@@ -60,9 +60,7 @@ Widget _buildApp({
   return pumpApp(
     retry: (_, __) => null,
     overrides: [
-      activeProfileIdProvider.overrideWithValue(
-        '01J6Q2H4A8M7K3P9R5T6V8WXY8',
-      ),
+      activeProfileIdProvider.overrideWithValue('01J6Q2H4A8M7K3P9R5T6V8WXY8'),
       activeTracksProvider.overrideWith((ref) => Stream.value(tracks)),
       dashboardHasProgramEnrollmentProvider(
         CurriculumId.mishnayos,

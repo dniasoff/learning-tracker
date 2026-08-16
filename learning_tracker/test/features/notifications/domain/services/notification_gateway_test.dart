@@ -523,7 +523,10 @@ void main() {
         ),
       ).captured;
 
-      expect(payloadsCaptured.single, equals('$dailyReminderPayload:$_profile7'));
+      expect(
+        payloadsCaptured.single,
+        equals('$dailyReminderPayload:$_profile7'),
+      );
     });
 
     test('different profiles produce different notification IDs', () async {
@@ -763,25 +766,31 @@ void main() {
   });
 
   group('cancelBatchRemindersForProfile', () {
-    test('cancels IDs in range batchBaseIdForProfile(_profile0)..+14', () async {
-      await gw.cancelBatchRemindersForProfile(_profile0);
+    test(
+      'cancels IDs in range batchBaseIdForProfile(_profile0)..+14',
+      () async {
+        await gw.cancelBatchRemindersForProfile(_profile0);
 
-      final base = batchBaseIdForProfile(_profile0);
-      for (var i = 0; i < 14; i++) {
-        verify(() => plugin.cancel(id: base + i)).called(1);
-      }
-    });
+        final base = batchBaseIdForProfile(_profile0);
+        for (var i = 0; i < 14; i++) {
+          verify(() => plugin.cancel(id: base + i)).called(1);
+        }
+      },
+    );
 
-    test('cancels IDs in range batchBaseIdForProfile(_profile1)..+14', () async {
-      await gw.cancelBatchRemindersForProfile(_profile1);
+    test(
+      'cancels IDs in range batchBaseIdForProfile(_profile1)..+14',
+      () async {
+        await gw.cancelBatchRemindersForProfile(_profile1);
 
-      final base = batchBaseIdForProfile(_profile1);
-      for (var i = 0; i < 14; i++) {
-        verify(() => plugin.cancel(id: base + i)).called(1);
-      }
-      // Profile 0 IDs untouched.
-      verifyNever(() => plugin.cancel(id: batchBaseIdForProfile(_profile0)));
-    });
+        final base = batchBaseIdForProfile(_profile1);
+        for (var i = 0; i < 14; i++) {
+          verify(() => plugin.cancel(id: base + i)).called(1);
+        }
+        // Profile 0 IDs untouched.
+        verifyNever(() => plugin.cancel(id: batchBaseIdForProfile(_profile0)));
+      },
+    );
   });
 
   // -------------------------------------------------------------------------
@@ -896,7 +905,13 @@ void main() {
     });
 
     test('no overlap between any two selected profile batch ranges', () {
-      const profileIds = [_profile0, _profile1, _profile2, _profile3, _profile4];
+      const profileIds = [
+        _profile0,
+        _profile1,
+        _profile2,
+        _profile3,
+        _profile4,
+      ];
       for (var p = 0; p < profileIds.length - 1; p++) {
         final baseA = batchBaseIdForProfile(profileIds[p]);
         final baseB = batchBaseIdForProfile(profileIds[p + 1]);
@@ -909,7 +924,13 @@ void main() {
     test(
       'streak ID does not overlap with daily or batch IDs for any profile',
       () {
-        const profileIds = [_profile0, _profile1, _profile2, _profile3, _profile4];
+        const profileIds = [
+          _profile0,
+          _profile1,
+          _profile2,
+          _profile3,
+          _profile4,
+        ];
         for (final profileId in profileIds) {
           final streakId = streakAlertIdForProfile(profileId);
           final dailyId = dailyReminderIdForProfile(profileId);

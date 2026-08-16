@@ -45,9 +45,7 @@ class SiyumimMilestonesScreen extends ConsumerWidget {
     final sortMode = ref.watch(journeySortModeProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: AppBarTitle(text: l10n.tierLensSiyumimMilestones),
-      ),
+      appBar: AppBar(title: AppBarTitle(text: l10n.tierLensSiyumimMilestones)),
       body: SafeArea(
         top: false,
         child: journeyAsync.when(

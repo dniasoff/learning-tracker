@@ -99,27 +99,30 @@ void main() {
       expect(debit.redemptionUlid, result.ulid);
     });
 
-    test('doc-id is the redemption ulid — DocIds.rewardRedemptionDocId', () async {
-      final repo = buildRepo();
-      await creditBalance(20, at: DateTime.utc(2026, 1, 1));
+    test(
+      'doc-id is the redemption ulid — DocIds.rewardRedemptionDocId',
+      () async {
+        final repo = buildRepo();
+        await creditBalance(20, at: DateTime.utc(2026, 1, 1));
 
-      final result = await repo.createRedemption(
-        rewardTitle: 'Ice cream',
-        iconIndex: 0,
-        pointsCost: 10,
-      );
+        final result = await repo.createRedemption(
+          rewardTitle: 'Ice cream',
+          iconIndex: 0,
+          pointsCost: 10,
+        );
 
-      final expectedId = DocIds.rewardRedemptionDocId({'ulid': result!.ulid});
-      final snapshot = await firestore
-          .collection('users')
-          .doc(_uid)
-          .collection('learner_profiles')
-          .doc(_profileId)
-          .collection('reward_redemptions')
-          .doc(expectedId)
-          .get();
-      expect(snapshot.exists, isTrue);
-    });
+        final expectedId = DocIds.rewardRedemptionDocId({'ulid': result!.ulid});
+        final snapshot = await firestore
+            .collection('users')
+            .doc(_uid)
+            .collection('learner_profiles')
+            .doc(_profileId)
+            .collection('reward_redemptions')
+            .doc(expectedId)
+            .get();
+        expect(snapshot.exists, isTrue);
+      },
+    );
   });
 
   group('getPendingRedemptions / watchPendingRedemptions', () {
@@ -144,71 +147,84 @@ void main() {
       expect(results.single.ulid, pending!.ulid);
     });
 
-    test('watchPendingRedemptions eventually emits a newly-created request', () async {
-      final repo = buildRepo();
-      await creditBalance(100, at: DateTime.utc(2026, 1, 1));
+    test(
+      'watchPendingRedemptions eventually emits a newly-created request',
+      () async {
+        final repo = buildRepo();
+        await creditBalance(100, at: DateTime.utc(2026, 1, 1));
 
-      final stream = repo
-          .watchPendingRedemptions()
-          .map((list) => list.length);
-      final done = expectLater(stream, emitsThrough(1));
+        final stream = repo.watchPendingRedemptions().map(
+          (list) => list.length,
+        );
+        final done = expectLater(stream, emitsThrough(1));
 
-      await repo.createRedemption(
-        rewardTitle: 'Toy',
-        iconIndex: 0,
-        pointsCost: 10,
-      );
+        await repo.createRedemption(
+          rewardTitle: 'Toy',
+          iconIndex: 0,
+          pointsCost: 10,
+        );
 
-      await done;
-    });
+        await done;
+      },
+    );
   });
 
   group('fulfilRedemption', () {
-    test('marks the redemption fulfilled without touching the balance', () async {
-      final repo = buildRepo();
-      await creditBalance(100, at: DateTime.utc(2026, 1, 1));
-      final created = await repo.createRedemption(
-        rewardTitle: 'Toy',
-        iconIndex: 0,
-        pointsCost: 30,
-      );
-      final balanceBefore = await buildLedger().getBalance();
+    test(
+      'marks the redemption fulfilled without touching the balance',
+      () async {
+        final repo = buildRepo();
+        await creditBalance(100, at: DateTime.utc(2026, 1, 1));
+        final created = await repo.createRedemption(
+          rewardTitle: 'Toy',
+          iconIndex: 0,
+          pointsCost: 30,
+        );
+        final balanceBefore = await buildLedger().getBalance();
 
-      await repo.fulfilRedemption(created!.ulid);
+        await repo.fulfilRedemption(created!.ulid);
 
-      final pending = await repo.getPendingRedemptions();
-      expect(pending, isEmpty);
-      final balanceAfter = await buildLedger().getBalance();
-      expect(balanceAfter, balanceBefore);
-    });
+        final pending = await repo.getPendingRedemptions();
+        expect(pending, isEmpty);
+        final balanceAfter = await buildLedger().getBalance();
+        expect(balanceAfter, balanceBefore);
+      },
+    );
   });
 
   group('declineRedemption', () {
-    test('refunds the points and clears the redemption from the pending list', () async {
-      final repo = buildRepo();
-      await creditBalance(100, at: DateTime.utc(2026, 1, 1));
-      final created = await repo.createRedemption(
-        rewardTitle: 'Toy',
-        iconIndex: 0,
-        pointsCost: 30,
-      );
-      final balanceAfterDebit = await buildLedger().getBalance();
-      expect(balanceAfterDebit, 70);
+    test(
+      'refunds the points and clears the redemption from the pending list',
+      () async {
+        final repo = buildRepo();
+        await creditBalance(100, at: DateTime.utc(2026, 1, 1));
+        final created = await repo.createRedemption(
+          rewardTitle: 'Toy',
+          iconIndex: 0,
+          pointsCost: 30,
+        );
+        final balanceAfterDebit = await buildLedger().getBalance();
+        expect(balanceAfterDebit, 70);
 
-      await repo.declineRedemption(created!.ulid);
+        await repo.declineRedemption(created!.ulid);
 
-      final balanceAfterRefund = await buildLedger().getBalance();
-      expect(balanceAfterRefund, 100, reason: 'the 30-point debit is refunded');
-      final pending = await repo.getPendingRedemptions();
-      expect(pending, isEmpty);
+        final balanceAfterRefund = await buildLedger().getBalance();
+        expect(
+          balanceAfterRefund,
+          100,
+          reason: 'the 30-point debit is refunded',
+        );
+        final pending = await repo.getPendingRedemptions();
+        expect(pending, isEmpty);
 
-      final ledger = await buildLedger().getLedger();
-      final refund = ledger.firstWhere(
-        (e) => e.entryKind == 'redemption_refund',
-      );
-      expect(refund.delta, 30);
-      expect(refund.redemptionUlid, created.ulid);
-    });
+        final ledger = await buildLedger().getLedger();
+        final refund = ledger.firstWhere(
+          (e) => e.entryKind == 'redemption_refund',
+        );
+        expect(refund.delta, 30);
+        expect(refund.redemptionUlid, created.ulid);
+      },
+    );
 
     test('throws StateError when the redemption document does not exist', () {
       final repo = buildRepo();

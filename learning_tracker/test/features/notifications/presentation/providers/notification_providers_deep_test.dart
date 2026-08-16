@@ -204,12 +204,16 @@ void main() {
       final prefs = await SharedPreferences.getInstance();
       // Profile 1 key must be written.
       expect(
-        prefs.getInt(NotificationPreferencesRepository.reminderHourKey(_profile1)),
+        prefs.getInt(
+          NotificationPreferencesRepository.reminderHourKey(_profile1),
+        ),
         6,
       );
       // Profile 2 key must remain absent.
       expect(
-        prefs.getInt(NotificationPreferencesRepository.reminderHourKey(_profile2)),
+        prefs.getInt(
+          NotificationPreferencesRepository.reminderHourKey(_profile2),
+        ),
         isNull,
       );
     });
@@ -240,7 +244,8 @@ void main() {
       'B1. profile 1 stored as disabled, profile 2 with no stored value defaults true',
       () async {
         SharedPreferences.setMockInitialValues({
-          NotificationPreferencesRepository.reminderEnabledKey(_profile1): false,
+          NotificationPreferencesRepository.reminderEnabledKey(_profile1):
+              false,
         });
 
         final c1 = _makeContainer(_ProfileId1.new);
@@ -267,12 +272,16 @@ void main() {
 
       final prefs = await SharedPreferences.getInstance();
       expect(
-        prefs.getBool(NotificationPreferencesRepository.reminderEnabledKey(_profile1)),
+        prefs.getBool(
+          NotificationPreferencesRepository.reminderEnabledKey(_profile1),
+        ),
         isFalse,
       );
       // Profile 2 key must not exist.
       expect(
-        prefs.getBool(NotificationPreferencesRepository.reminderEnabledKey(_profile2)),
+        prefs.getBool(
+          NotificationPreferencesRepository.reminderEnabledKey(_profile2),
+        ),
         isNull,
       );
     });
@@ -321,7 +330,8 @@ void main() {
       'D1. profile 4 stored disabled; fresh profile defaults to true',
       () async {
         SharedPreferences.setMockInitialValues({
-          NotificationPreferencesRepository.streakAlertEnabledKey(_profile4): false,
+          NotificationPreferencesRepository.streakAlertEnabledKey(_profile4):
+              false,
         });
 
         final c4 = _makeContainer(_ProfileId4.new);
@@ -390,14 +400,18 @@ void main() {
       final prefs = await SharedPreferences.getInstance();
       expect(
         prefs.getBool(
-          NotificationPreferencesRepository.rewardNotificationEnabledKey(_profile10),
+          NotificationPreferencesRepository.rewardNotificationEnabledKey(
+            _profile10,
+          ),
         ),
         isFalse,
       );
       // Adjacent profile key must not exist.
       expect(
         prefs.getBool(
-          NotificationPreferencesRepository.rewardNotificationEnabledKey(_profile1),
+          NotificationPreferencesRepository.rewardNotificationEnabledKey(
+            _profile1,
+          ),
         ),
         isNull,
       );
@@ -420,7 +434,9 @@ void main() {
       final prefs = await SharedPreferences.getInstance();
       expect(
         prefs.getBool(
-        NotificationPreferencesRepository.rewardNotificationEnabledKey(_profile0),
+          NotificationPreferencesRepository.rewardNotificationEnabledKey(
+            _profile0,
+          ),
         ),
         isTrue,
       );
@@ -546,9 +562,7 @@ void main() {
         // The current Firestore-native provider has no Drift outbox dependency;
         // this exercises its settled-preferences completion path directly.
         final container = ProviderContainer(
-          overrides: [
-            selectedProfileIdProvider.overrideWith(_ProfileId0.new),
-          ],
+          overrides: [selectedProfileIdProvider.overrideWith(_ProfileId0.new)],
         );
         addTearDown(container.dispose);
 
@@ -607,18 +621,24 @@ void main() {
 
   group('I. Per-profile key namespacing', () {
     test('I1. reminderEnabled key embeds profileId suffix', () {
-      final key = NotificationPreferencesRepository.reminderEnabledKey(_profile42);
+      final key = NotificationPreferencesRepository.reminderEnabledKey(
+        _profile42,
+      );
       expect(key, endsWith('_$_profile42'));
     });
 
     test('I2. streakAlertEnabled key embeds profileId suffix', () {
-      final key = NotificationPreferencesRepository.streakAlertEnabledKey(_profile7);
+      final key = NotificationPreferencesRepository.streakAlertEnabledKey(
+        _profile7,
+      );
       expect(key, endsWith('_$_profile7'));
     });
 
     test('I3. rewardNotification key embeds profileId suffix', () {
       final key =
-          NotificationPreferencesRepository.rewardNotificationEnabledKey(_profile0);
+          NotificationPreferencesRepository.rewardNotificationEnabledKey(
+            _profile0,
+          );
       expect(key, endsWith('_$_profile0'));
     });
 
@@ -631,7 +651,10 @@ void main() {
 
     test('I5. keyForProfile builds base_profileId format', () {
       const base = 'my_pref';
-      final key = NotificationPreferencesRepository.keyForProfile(base, _profile5);
+      final key = NotificationPreferencesRepository.keyForProfile(
+        base,
+        _profile5,
+      );
       expect(key, 'my_pref_$_profile5');
     });
   });
@@ -678,11 +701,15 @@ void main() {
       // SharedPreferences also reflects the last write.
       final prefs = await SharedPreferences.getInstance();
       expect(
-        prefs.getInt(NotificationPreferencesRepository.reminderHourKey(_profile0)),
+        prefs.getInt(
+          NotificationPreferencesRepository.reminderHourKey(_profile0),
+        ),
         9,
       );
       expect(
-        prefs.getInt(NotificationPreferencesRepository.reminderMinuteKey(_profile0)),
+        prefs.getInt(
+          NotificationPreferencesRepository.reminderMinuteKey(_profile0),
+        ),
         30,
       );
     });
@@ -702,7 +729,9 @@ void main() {
 
       final prefs = await SharedPreferences.getInstance();
       expect(
-        prefs.getInt(NotificationPreferencesRepository.streakAlertHourKey(_profile0)),
+        prefs.getInt(
+          NotificationPreferencesRepository.streakAlertHourKey(_profile0),
+        ),
         22,
       );
     });

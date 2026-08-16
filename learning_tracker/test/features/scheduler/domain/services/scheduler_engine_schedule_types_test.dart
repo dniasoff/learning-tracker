@@ -45,13 +45,12 @@ class FakeLearningOrderRepo implements SchedulerLearningOrderRepository {
 // Helpers
 // ---------------------------------------------------------------------------
 
-ScheduleConfig baseConfig({required DateTime currentDate}) =>
-    ScheduleConfig(
-      curriculumId: CurriculumId.mishnayos,
-      trackLabel: 'Personal',
-      currentDate: currentDate,
-      isStudyDay: true,
-    );
+ScheduleConfig baseConfig({required DateTime currentDate}) => ScheduleConfig(
+  curriculumId: CurriculumId.mishnayos,
+  trackLabel: 'Personal',
+  currentDate: currentDate,
+  isStudyDay: true,
+);
 
 SchedulerCompletion completion({
   required String ref,
@@ -99,11 +98,7 @@ void main() {
 
       // Stage 1: learn (delay). Stage 2: weekly on Mondays.
       stageRepo.stages = [
-        const SchedulerStage(
-          stageOrder: 1,
-          stageName: 'Learn',
-          delayDays: 0,
-        ),
+        const SchedulerStage(stageOrder: 1, stageName: 'Learn', delayDays: 0),
         const SchedulerStage(
           stageOrder: 2,
           stageName: 'Weekly Review',
@@ -142,11 +137,7 @@ void main() {
         ];
 
         stageRepo.stages = [
-          const SchedulerStage(
-            stageOrder: 1,
-            stageName: 'Learn',
-            delayDays: 0,
-          ),
+          const SchedulerStage(stageOrder: 1, stageName: 'Learn', delayDays: 0),
           const SchedulerStage(
             stageOrder: 2,
             stageName: 'Weekly Review',
@@ -181,11 +172,7 @@ void main() {
         ];
 
         stageRepo.stages = [
-          const SchedulerStage(
-            stageOrder: 1,
-            stageName: 'Learn',
-            delayDays: 0,
-          ),
+          const SchedulerStage(stageOrder: 1, stageName: 'Learn', delayDays: 0),
           const SchedulerStage(
             stageOrder: 2,
             stageName: 'Weekly Review',
@@ -225,11 +212,7 @@ void main() {
         ];
 
         stageRepo.stages = [
-          const SchedulerStage(
-            stageOrder: 1,
-            stageName: 'Learn',
-            delayDays: 0,
-          ),
+          const SchedulerStage(stageOrder: 1, stageName: 'Learn', delayDays: 0),
           const SchedulerStage(
             stageOrder: 2,
             stageName: 'Weekly Review',
@@ -271,11 +254,7 @@ void main() {
       );
 
       stageRepo.stages = [
-        const SchedulerStage(
-          stageOrder: 1,
-          stageName: 'Learn',
-          delayDays: 0,
-        ),
+        const SchedulerStage(stageOrder: 1, stageName: 'Learn', delayDays: 0),
         const SchedulerStage(
           stageOrder: 2,
           stageName: 'Rolling Review',
@@ -315,11 +294,7 @@ void main() {
         ];
 
         stageRepo.stages = [
-          const SchedulerStage(
-            stageOrder: 1,
-            stageName: 'Learn',
-            delayDays: 0,
-          ),
+          const SchedulerStage(stageOrder: 1, stageName: 'Learn', delayDays: 0),
           const SchedulerStage(
             stageOrder: 2,
             stageName: 'Rolling Review',
@@ -372,11 +347,7 @@ void main() {
         ];
 
         stageRepo.stages = [
-          const SchedulerStage(
-            stageOrder: 1,
-            stageName: 'Learn',
-            delayDays: 0,
-          ),
+          const SchedulerStage(stageOrder: 1, stageName: 'Learn', delayDays: 0),
           const SchedulerStage(
             stageOrder: 2,
             stageName: 'Rolling Review',
@@ -414,11 +385,7 @@ void main() {
         ];
 
         stageRepo.stages = [
-          const SchedulerStage(
-            stageOrder: 1,
-            stageName: 'Learn',
-            delayDays: 0,
-          ),
+          const SchedulerStage(stageOrder: 1, stageName: 'Learn', delayDays: 0),
           // Delay stage — due 1 day after stage 1.
           const SchedulerStage(
             stageOrder: 2,

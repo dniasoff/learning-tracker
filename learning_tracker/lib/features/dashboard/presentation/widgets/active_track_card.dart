@@ -55,7 +55,8 @@ class ActiveTrackCard extends ConsumerWidget {
     final dualMetric = (dualMetricMatches == null || dualMetricMatches.isEmpty)
         ? null
         : dualMetricMatches.first;
-    final dualMetricsError = dualMetricsAsync.error ??
+    final dualMetricsError =
+        dualMetricsAsync.error ??
         (dualMetricsAsync.hasValue && dualMetric == null
             ? StateError('Progress metrics did not include this track')
             : null);

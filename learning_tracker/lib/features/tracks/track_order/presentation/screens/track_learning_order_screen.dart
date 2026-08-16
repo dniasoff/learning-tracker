@@ -17,10 +17,7 @@ import 'package:learning_tracker/features/tracks/whole_curriculum_order/presenta
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 class TrackLearningOrderScreen extends ConsumerStatefulWidget {
-  const TrackLearningOrderScreen({
-    super.key,
-    required this.curriculumId,
-  });
+  const TrackLearningOrderScreen({super.key, required this.curriculumId});
 
   final CurriculumId curriculumId;
 
@@ -231,7 +228,8 @@ class _TrackLearningOrderScreenState
           .saveSedarimOrder(widget.curriculumId, items);
     } on Exception catch (e, st) {
       AppLogger.instance.error(
-        event: 'track_sedarim_order_save_failed: curriculumId=${widget.curriculumId}',
+        event:
+            'track_sedarim_order_save_failed: curriculumId=${widget.curriculumId}',
         exception: e,
         stackTrace: st,
       );
@@ -265,7 +263,8 @@ class _TrackLearningOrderScreenState
           .saveMasechtosOrder(widget.curriculumId, items);
     } on Exception catch (e, st) {
       AppLogger.instance.error(
-        event: 'track_masechtos_order_save_failed: curriculumId=${widget.curriculumId}',
+        event:
+            'track_masechtos_order_save_failed: curriculumId=${widget.curriculumId}',
         exception: e,
         stackTrace: st,
       );

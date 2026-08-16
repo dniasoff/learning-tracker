@@ -76,17 +76,23 @@ void main() {
       expect(await repo.getTrack(CurriculumId.bavli), isNull);
     });
 
-    test('default reward ladder is applied without point-config seeding', () async {
-      final repo = FirestorePointConfigRepository(
-        firestore: firestore,
-        uid: _uid,
-        profileId: _profileId,
-      );
-      expect(await repo.getConfigsForCurriculum(CurriculumId.mishnayos), isEmpty);
-      expect(defaultPointsForStage(1), 10);
-      expect(defaultPointsForStage(2), 5);
-      expect(defaultPointsForStage(3), 3);
-    });
+    test(
+      'default reward ladder is applied without point-config seeding',
+      () async {
+        final repo = FirestorePointConfigRepository(
+          firestore: firestore,
+          uid: _uid,
+          profileId: _profileId,
+        );
+        expect(
+          await repo.getConfigsForCurriculum(CurriculumId.mishnayos),
+          isEmpty,
+        );
+        expect(defaultPointsForStage(1), 10);
+        expect(defaultPointsForStage(2), 5);
+        expect(defaultPointsForStage(3), 3);
+      },
+    );
 
     test('childAwareText keeps adult and child handoff copy distinct', () {
       const adultText = "You're all set!";
@@ -116,9 +122,7 @@ void main() {
         uid: _uid,
         profileId: _profileId,
       );
-      final stages = await repo.getStagesForCurriculum(
-        CurriculumId.mishnayos,
-      );
+      final stages = await repo.getStagesForCurriculum(CurriculumId.mishnayos);
       expect(stages.map((stage) => stage.stageName), [
         'לימוד',
         'חזרה א׳',

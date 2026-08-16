@@ -159,10 +159,7 @@ void main() {
       // full guard dependency graph, disproportionate for this check).
       final content = File('lib/app/router/app_router.dart').readAsStringSync();
       expect(content, contains('class AppRouter extends RootStackRouter'));
-      expect(
-        content,
-        contains('guards: [authGuard, profileGuard]'),
-      );
+      expect(content, contains('guards: [authGuard, profileGuard]'));
     });
 
     test('AuthGuard is a real AutoRouteGuard implementation', () {

@@ -159,42 +159,39 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
 
     expect(find.text('Must be signed in to send logs'), findsOneWidget);
-    verifyNever(
-      () => repository.pushLog(any<Map<String, dynamic>>()),
-    );
+    verifyNever(() => repository.pushLog(any<Map<String, dynamic>>()));
 
     await _teardown(tester);
   });
 
   // ── S2: repository unavailable → SnackBar ─────────────────────────────────
 
-  testWidgets('S2: repository unavailable → SnackBar with errorSendLogsNoGateway', (
-    tester,
-  ) async {
-    when(() => auth.currentUser).thenReturn(_user());
-    final logger = _buildLogger([]);
+  testWidgets(
+    'S2: repository unavailable → SnackBar with errorSendLogsNoGateway',
+    (tester) async {
+      when(() => auth.currentUser).thenReturn(_user());
+      final logger = _buildLogger([]);
 
-    when(() => repository.pushLog(any<Map<String, dynamic>>())).thenThrow(
-      const DiagnosticLogRepositoryNotReadyException(),
-    );
-    await tester.pumpWidget(
-      _buildHost(
-        _SendLogsHost(logger: logger, repository: repository, auth: auth),
-      ),
-    );
-    await tester.pump();
-    await tester.tap(find.text('send'));
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
+      when(
+        () => repository.pushLog(any<Map<String, dynamic>>()),
+      ).thenThrow(const DiagnosticLogRepositoryNotReadyException());
+      await tester.pumpWidget(
+        _buildHost(
+          _SendLogsHost(logger: logger, repository: repository, auth: auth),
+        ),
+      );
+      await tester.pump();
+      await tester.tap(find.text('send'));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
 
-    // errorSendLogsNoGateway = 'Sync not available — account not linked to cloud'
-    expect(find.textContaining('Sync not available'), findsOneWidget);
-    verifyNever(
-      () => repository.pushLog(any<Map<String, dynamic>>()),
-    );
+      // errorSendLogsNoGateway = 'Sync not available — account not linked to cloud'
+      expect(find.textContaining('Sync not available'), findsOneWidget);
+      verifyNever(() => repository.pushLog(any<Map<String, dynamic>>()));
 
-    await _teardown(tester);
-  });
+      await _teardown(tester);
+    },
+  );
 
   // S3 was removed: the deleted FirestoreGateway accepted `uid` and `data`
   // as named arguments, while the current account-scoped adapter accepts only
@@ -217,7 +214,9 @@ void main() {
     final logger = _buildLogger(entries);
 
     await tester.pumpWidget(
-      _buildHost(_SendLogsHost(logger: logger, repository: repository, auth: auth)),
+      _buildHost(
+        _SendLogsHost(logger: logger, repository: repository, auth: auth),
+      ),
     );
     await tester.pump();
     await tester.tap(find.text('send'));
@@ -237,9 +236,9 @@ void main() {
     when(() => auth.currentUser).thenReturn(_user());
 
     Map<String, dynamic>? capturedData;
-    when(
-      () => repository.pushLog(any<Map<String, dynamic>>()),
-    ).thenAnswer((invocation) async {
+    when(() => repository.pushLog(any<Map<String, dynamic>>())).thenAnswer((
+      invocation,
+    ) async {
       capturedData =
           invocation.positionalArguments.single as Map<String, dynamic>;
     });
@@ -258,7 +257,9 @@ void main() {
     final logger = _buildLogger([recent, old]);
 
     await tester.pumpWidget(
-      _buildHost(_SendLogsHost(logger: logger, repository: repository, auth: auth)),
+      _buildHost(
+        _SendLogsHost(logger: logger, repository: repository, auth: auth),
+      ),
     );
     await tester.pump();
     await tester.tap(find.text('send'));
@@ -294,7 +295,9 @@ void main() {
       final logger = _buildLogger([]);
 
       await tester.pumpWidget(
-        _buildHost(_SendLogsHost(logger: logger, repository: repository, auth: auth)),
+        _buildHost(
+          _SendLogsHost(logger: logger, repository: repository, auth: auth),
+        ),
       );
       await tester.pump();
       await tester.tap(find.text('send'));
@@ -318,33 +321,34 @@ void main() {
     },
   );
 
-  testWidgets('S6b: repository throws under Hebrew locale → SnackBar shows only '
-      'ARB-sourced Hebrew text, never the raw exception (AUD-settings-07)', (
-    tester,
-  ) async {
-    when(() => auth.currentUser).thenReturn(_user());
-    when(
-      () => repository.pushLog(any<Map<String, dynamic>>()),
-    ).thenThrow(Exception('upload failed'));
+  testWidgets(
+    'S6b: repository throws under Hebrew locale → SnackBar shows only '
+    'ARB-sourced Hebrew text, never the raw exception (AUD-settings-07)',
+    (tester) async {
+      when(() => auth.currentUser).thenReturn(_user());
+      when(
+        () => repository.pushLog(any<Map<String, dynamic>>()),
+      ).thenThrow(Exception('upload failed'));
 
-    final logger = _buildLogger([]);
+      final logger = _buildLogger([]);
 
-    await tester.pumpWidget(
-      _buildHost(
-        _SendLogsHost(logger: logger, repository: repository, auth: auth),
-        locale: const Locale('he'),
-      ),
-    );
-    await tester.pump();
-    await tester.tap(find.text('send'));
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
+      await tester.pumpWidget(
+        _buildHost(
+          _SendLogsHost(logger: logger, repository: repository, auth: auth),
+          locale: const Locale('he'),
+        ),
+      );
+      await tester.pump();
+      await tester.tap(find.text('send'));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
 
-    expect(find.text('שליחת היומנים נכשלה. נסו שוב.'), findsOneWidget);
-    expect(find.textContaining('upload failed'), findsNothing);
+      expect(find.text('שליחת היומנים נכשלה. נסו שוב.'), findsOneWidget);
+      expect(find.textContaining('upload failed'), findsNothing);
 
-    await _teardown(tester);
-  });
+      await _teardown(tester);
+    },
+  );
 
   // ── S7: entry mapping — ts ISO-8601, lvl uppercase, msg present ──────────
 
@@ -354,11 +358,10 @@ void main() {
       when(() => auth.currentUser).thenReturn(_user());
 
       Map<String, dynamic>? capturedData;
-      when(
-        () => repository.pushLog(any<Map<String, dynamic>>()),
-      ).thenAnswer((inv) async {
-        capturedData =
-            inv.positionalArguments.single as Map<String, dynamic>;
+      when(() => repository.pushLog(any<Map<String, dynamic>>())).thenAnswer((
+        inv,
+      ) async {
+        capturedData = inv.positionalArguments.single as Map<String, dynamic>;
       });
 
       final now = DateTime.now().toUtc();
@@ -370,7 +373,9 @@ void main() {
       final logger = _buildLogger([entry]);
 
       await tester.pumpWidget(
-        _buildHost(_SendLogsHost(logger: logger, repository: repository, auth: auth)),
+        _buildHost(
+          _SendLogsHost(logger: logger, repository: repository, auth: auth),
+        ),
       );
       await tester.pump();
       await tester.tap(find.text('send'));
@@ -400,11 +405,10 @@ void main() {
     when(() => auth.currentUser).thenReturn(_user());
 
     Map<String, dynamic>? capturedData;
-    when(
-      () => repository.pushLog(any<Map<String, dynamic>>()),
-    ).thenAnswer((inv) async {
-      capturedData =
-          inv.positionalArguments.single as Map<String, dynamic>;
+    when(() => repository.pushLog(any<Map<String, dynamic>>())).thenAnswer((
+      inv,
+    ) async {
+      capturedData = inv.positionalArguments.single as Map<String, dynamic>;
     });
 
     final now = DateTime.now().toUtc();
@@ -417,7 +421,9 @@ void main() {
     final logger = _buildLogger([entry]);
 
     await tester.pumpWidget(
-      _buildHost(_SendLogsHost(logger: logger, repository: repository, auth: auth)),
+      _buildHost(
+        _SendLogsHost(logger: logger, repository: repository, auth: auth),
+      ),
     );
     await tester.pump();
     await tester.tap(find.text('send'));
@@ -442,11 +448,10 @@ void main() {
     when(() => auth.currentUser).thenReturn(_user());
 
     Map<String, dynamic>? capturedData;
-    when(
-      () => repository.pushLog(any<Map<String, dynamic>>()),
-    ).thenAnswer((inv) async {
-      capturedData =
-          inv.positionalArguments.single as Map<String, dynamic>;
+    when(() => repository.pushLog(any<Map<String, dynamic>>())).thenAnswer((
+      inv,
+    ) async {
+      capturedData = inv.positionalArguments.single as Map<String, dynamic>;
     });
 
     final now = DateTime.now().toUtc();
@@ -459,7 +464,9 @@ void main() {
     final logger = _buildLogger([entry]);
 
     await tester.pumpWidget(
-      _buildHost(_SendLogsHost(logger: logger, repository: repository, auth: auth)),
+      _buildHost(
+        _SendLogsHost(logger: logger, repository: repository, auth: auth),
+      ),
     );
     await tester.pump();
     await tester.tap(find.text('send'));
@@ -483,18 +490,19 @@ void main() {
     when(() => auth.currentUser).thenReturn(_user());
 
     Map<String, dynamic>? capturedData;
-    when(
-      () => repository.pushLog(any<Map<String, dynamic>>()),
-    ).thenAnswer((inv) async {
-      capturedData =
-          inv.positionalArguments.single as Map<String, dynamic>;
+    when(() => repository.pushLog(any<Map<String, dynamic>>())).thenAnswer((
+      inv,
+    ) async {
+      capturedData = inv.positionalArguments.single as Map<String, dynamic>;
     });
 
     final beforeCall = DateTime.now().toUtc();
     final logger = _buildLogger([]);
 
     await tester.pumpWidget(
-      _buildHost(_SendLogsHost(logger: logger, repository: repository, auth: auth)),
+      _buildHost(
+        _SendLogsHost(logger: logger, repository: repository, auth: auth),
+      ),
     );
     await tester.pump();
     await tester.tap(find.text('send'));
@@ -529,17 +537,18 @@ void main() {
     when(() => auth.currentUser).thenReturn(_user());
 
     Map<String, dynamic>? capturedData;
-    when(
-      () => repository.pushLog(any<Map<String, dynamic>>()),
-    ).thenAnswer((inv) async {
-      capturedData =
-          inv.positionalArguments.single as Map<String, dynamic>;
+    when(() => repository.pushLog(any<Map<String, dynamic>>())).thenAnswer((
+      inv,
+    ) async {
+      capturedData = inv.positionalArguments.single as Map<String, dynamic>;
     });
 
     final logger = _buildLogger([]);
 
     await tester.pumpWidget(
-      _buildHost(_SendLogsHost(logger: logger, repository: repository, auth: auth)),
+      _buildHost(
+        _SendLogsHost(logger: logger, repository: repository, auth: auth),
+      ),
     );
     await tester.pump();
     await tester.tap(find.text('send'));

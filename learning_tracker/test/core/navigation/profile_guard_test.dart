@@ -85,7 +85,10 @@ void main() {
 
     test('allows through when account has own profiles', () async {
       final profile = _ownProfile('profile-1');
-      final guard = makeGuard(selectedId: profile.profileId, profiles: [profile]);
+      final guard = makeGuard(
+        selectedId: profile.profileId,
+        profiles: [profile],
+      );
 
       await guard.onNavigation(resolver, router);
 

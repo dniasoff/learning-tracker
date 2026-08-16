@@ -64,37 +64,37 @@ class _LearningTrackerAppState extends ConsumerState<LearningTrackerApp>
         ProfileMode.child;
 
     return MaterialApp.router(
-        scaffoldMessengerKey: rootScaffoldMessengerKey,
-        onGenerateTitle: (context) =>
-            AppLocalizations.of(context)?.appTitle ?? 'Torah Learning Tracker',
-        theme: AppTheme.themeFor(
-          brightness: Brightness.light,
-          isChildMode: isChildMode,
-        ),
-        darkTheme: AppTheme.darkTheme(),
-        themeMode: ThemeMode.system,
-        debugShowCheckedModeBanner: false,
-        routerConfig: _routerConfig,
-        // The UI language follows the DEVICE language: a null locale lets Flutter
-        // resolve the device locale against [supportedLocales] (Hebrew device →
-        // he + RTL, otherwise English). There is intentionally no in-app language
-        // switcher — language is not user-configurable inside the app.
-        locale: null,
-        localizationsDelegates: const [
-          AppLocalizations.delegate,
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        supportedLocales: AppLocalizations.supportedLocales,
-        // Persistent profile/role switcher (feedback_profile_switcher_top):
-        // the tappable role label must sit at the TOP of EVERY context. The
-        // shell renders it for its tab views; this builder-slot layer renders
-        // the SAME bar above every PUSHED sub-route, which would otherwise lose
-        // it. Mounted here so it wraps the entire router output and survives all
-        // route pushes/pops.
-        builder: (context, child) =>
-            PersistentSwitcherScaffold(child: child ?? const SizedBox.shrink()),
+      scaffoldMessengerKey: rootScaffoldMessengerKey,
+      onGenerateTitle: (context) =>
+          AppLocalizations.of(context)?.appTitle ?? 'Torah Learning Tracker',
+      theme: AppTheme.themeFor(
+        brightness: Brightness.light,
+        isChildMode: isChildMode,
+      ),
+      darkTheme: AppTheme.darkTheme(),
+      themeMode: ThemeMode.system,
+      debugShowCheckedModeBanner: false,
+      routerConfig: _routerConfig,
+      // The UI language follows the DEVICE language: a null locale lets Flutter
+      // resolve the device locale against [supportedLocales] (Hebrew device →
+      // he + RTL, otherwise English). There is intentionally no in-app language
+      // switcher — language is not user-configurable inside the app.
+      locale: null,
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: AppLocalizations.supportedLocales,
+      // Persistent profile/role switcher (feedback_profile_switcher_top):
+      // the tappable role label must sit at the TOP of EVERY context. The
+      // shell renders it for its tab views; this builder-slot layer renders
+      // the SAME bar above every PUSHED sub-route, which would otherwise lose
+      // it. Mounted here so it wraps the entire router output and survives all
+      // route pushes/pops.
+      builder: (context, child) =>
+          PersistentSwitcherScaffold(child: child ?? const SizedBox.shrink()),
     );
   }
 }

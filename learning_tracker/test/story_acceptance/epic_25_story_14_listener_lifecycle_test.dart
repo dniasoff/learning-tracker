@@ -17,14 +17,17 @@ library;
 
 import 'package:test/test.dart';
 
-void _retired(String reason) => markTestSkipped('RETIRED-LISTENER-SEAM: $reason');
+void _retired(String reason) =>
+    markTestSkipped('RETIRED-LISTENER-SEAM: $reason');
 
 void main() {
   group('Story 25.14 — ListenerSupervisor + LifecycleObserver', tags: ['story_25_14'], () {
     group('ListenerSupervisor', () {
       test('start() subscribes to every listener exposed by the source', () {
         // Per-case disclosure: ListenerSupervisor and its source contract were deleted.
-        _retired('Current Firestore streams are owned by individual repositories.');
+        _retired(
+          'Current Firestore streams are owned by individual repositories.',
+        );
       });
       test('start() called twice without an intervening stop is idempotent', () {
         // Per-case disclosure: idempotent supervisor start is not a current API.
@@ -41,37 +44,60 @@ void main() {
     });
 
     group('ListenerSupervisor.restart()', () {
-      test('after restart, each upstream emit produces exactly one delivery (no duplicate firing)', () {
-        // Per-case disclosure: restart/deduplication was part of the deleted
-        // listener supervisor, not resilient_doc_stream's public contract.
-        _retired('No current restart method exposes the old delivery assertion.');
-      });
+      test(
+        'after restart, each upstream emit produces exactly one delivery (no duplicate firing)',
+        () {
+          // Per-case disclosure: restart/deduplication was part of the deleted
+          // listener supervisor, not resilient_doc_stream's public contract.
+          _retired(
+            'No current restart method exposes the old delivery assertion.',
+          );
+        },
+      );
     });
 
     group('LifecycleObserver', () {
       test('start() registers with WidgetsBinding; stop() unregisters', () {
         // Per-case disclosure: the old standalone LifecycleObserver was deleted.
-        _retired('Current registration is owned by _LearningTrackerAppState and widget state classes.');
+        _retired(
+          'Current registration is owned by _LearningTrackerAppState and widget state classes.',
+        );
       });
-      test('on AppLifecycleState.resumed, every injected hook fires exactly once and in order: timezone, sacredCache, pull', () {
-        // Per-case disclosure: current app lifecycle code has no injected
-        // timezone/cache/pull hook list, and no pull engine remains.
-        _retired('The injected three-hook contract has no current equivalent.');
-      });
-      test('lifecycle states other than resumed do not fire the resume hooks', () {
-        // Per-case disclosure: this asserted hooks on the deleted observer.
-        _retired('No current observer exposes those hooks.');
-      });
-      test('driving resumed through the real WidgetsBinding harness still fires the hooks (AC3 — the binding is wired, not just the method)', () {
-        // Per-case disclosure: the old harness test required the deleted
-        // observer's injected callbacks.
-        _retired('Current app lifecycle wiring requires a different integration fixture.');
-      });
-      test('stop() removes the observer — subsequent binding events are silent', () {
-        // Per-case disclosure: observer stop semantics belonged to the deleted
-        // standalone class.
-        _retired('No current standalone LifecycleObserver stop API exists.');
-      });
+      test(
+        'on AppLifecycleState.resumed, every injected hook fires exactly once and in order: timezone, sacredCache, pull',
+        () {
+          // Per-case disclosure: current app lifecycle code has no injected
+          // timezone/cache/pull hook list, and no pull engine remains.
+          _retired(
+            'The injected three-hook contract has no current equivalent.',
+          );
+        },
+      );
+      test(
+        'lifecycle states other than resumed do not fire the resume hooks',
+        () {
+          // Per-case disclosure: this asserted hooks on the deleted observer.
+          _retired('No current observer exposes those hooks.');
+        },
+      );
+      test(
+        'driving resumed through the real WidgetsBinding harness still fires the hooks (AC3 — the binding is wired, not just the method)',
+        () {
+          // Per-case disclosure: the old harness test required the deleted
+          // observer's injected callbacks.
+          _retired(
+            'Current app lifecycle wiring requires a different integration fixture.',
+          );
+        },
+      );
+      test(
+        'stop() removes the observer — subsequent binding events are silent',
+        () {
+          // Per-case disclosure: observer stop semantics belonged to the deleted
+          // standalone class.
+          _retired('No current standalone LifecycleObserver stop API exists.');
+        },
+      );
     });
   });
 }

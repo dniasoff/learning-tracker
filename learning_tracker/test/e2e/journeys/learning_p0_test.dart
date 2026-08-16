@@ -297,8 +297,8 @@ void main() {
     );
 
     testWidgets('tapping Mark Complete increments completionCommittedProvider', (
-    tester,
-  ) async {
+      tester,
+    ) async {
       final identity = E2EIdentity.localBorn(displayName: 'Alice');
       final h = E2EHarness(tester, identity: identity);
       addTearDown(h.dispose);
@@ -347,20 +347,19 @@ void main() {
         tester.element(find.text('Mark complete').first),
       );
       // ignore: avoid_print
-      print('DEBUG E2E-301 sameContainer=${identical(container, buttonContainer)}');
+      print(
+        'DEBUG E2E-301 sameContainer=${identical(container, buttonContainer)}',
+      );
 
       // Tap the "Mark complete" button.
       Object? debugError;
-      await runZonedGuarded(
-        () async {
-          await h.tapText(
-            'Mark complete',
-            settle: const Duration(milliseconds: 500),
-          );
-          await tester.pump(const Duration(milliseconds: 300));
-        },
-        (error, stack) => debugError = error,
-      );
+      await runZonedGuarded(() async {
+        await h.tapText(
+          'Mark complete',
+          settle: const Duration(milliseconds: 500),
+        );
+        await tester.pump(const Duration(milliseconds: 300));
+      }, (error, stack) => debugError = error);
       await tester.pump(const Duration(seconds: 2));
       // ignore: avoid_print
       print(

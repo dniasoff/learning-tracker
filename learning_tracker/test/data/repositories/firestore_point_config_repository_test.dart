@@ -59,31 +59,28 @@ void main() {
   }
 
   group('doc-id correctness', () {
-    test(
-      'upsertConfig writes to {curriculumId}_{stageOrder} — the '
-      'DocIds.pointConfigDocId formula',
-      () async {
-        final repo = buildRepo();
+    test('upsertConfig writes to {curriculumId}_{stageOrder} — the '
+        'DocIds.pointConfigDocId formula', () async {
+      final repo = buildRepo();
 
-        await repo.upsertConfig(
-          curriculumId: CurriculumId.mishnayos,
-          stageOrder: 1,
-          points: 12,
-        );
+      await repo.upsertConfig(
+        curriculumId: CurriculumId.mishnayos,
+        stageOrder: 1,
+        points: 12,
+      );
 
-        final expectedId = DocIds.pointConfigDocId({
-          'curriculum_id': CurriculumId.mishnayos.storageKey,
-          'stage_order': 1,
-        });
-        expect(expectedId, '${CurriculumId.mishnayos.storageKey}_1');
-        final snapshot = await rawDoc(
-          curriculumId: CurriculumId.mishnayos,
-          stageOrder: 1,
-        ).get();
-        expect(snapshot.exists, isTrue);
-        expect(snapshot.data()!['points'], 12);
-      },
-    );
+      final expectedId = DocIds.pointConfigDocId({
+        'curriculum_id': CurriculumId.mishnayos.storageKey,
+        'stage_order': 1,
+      });
+      expect(expectedId, '${CurriculumId.mishnayos.storageKey}_1');
+      final snapshot = await rawDoc(
+        curriculumId: CurriculumId.mishnayos,
+        stageOrder: 1,
+      ).get();
+      expect(snapshot.exists, isTrue);
+      expect(snapshot.data()!['points'], 12);
+    });
   });
 
   group('getConfigsForCurriculum — query', () {
@@ -174,26 +171,29 @@ void main() {
   });
 
   group('upsertConfig — update path', () {
-    test('overwrites an existing override rather than duplicating it', () async {
-      final repo = buildRepo();
-      await repo.upsertConfig(
-        curriculumId: CurriculumId.mishnayos,
-        stageOrder: 1,
-        points: 10,
-      );
+    test(
+      'overwrites an existing override rather than duplicating it',
+      () async {
+        final repo = buildRepo();
+        await repo.upsertConfig(
+          curriculumId: CurriculumId.mishnayos,
+          stageOrder: 1,
+          points: 10,
+        );
 
-      await repo.upsertConfig(
-        curriculumId: CurriculumId.mishnayos,
-        stageOrder: 1,
-        points: 25,
-      );
+        await repo.upsertConfig(
+          curriculumId: CurriculumId.mishnayos,
+          stageOrder: 1,
+          points: 25,
+        );
 
-      final configs = await repo.getConfigsForCurriculum(
-        CurriculumId.mishnayos,
-      );
-      expect(configs, hasLength(1));
-      expect(configs.single.points, 25);
-    });
+        final configs = await repo.getConfigsForCurriculum(
+          CurriculumId.mishnayos,
+        );
+        expect(configs, hasLength(1));
+        expect(configs.single.points, 25);
+      },
+    );
   });
 
   group('upsertConfig — range validation', () {
@@ -252,30 +252,33 @@ void main() {
   });
 
   group('clearOverride', () {
-    test('deletes the doc so getPointsForStage reports no override again', () async {
-      final repo = buildRepo();
-      await repo.upsertConfig(
-        curriculumId: CurriculumId.mishnayos,
-        stageOrder: 1,
-        points: 25,
-      );
+    test(
+      'deletes the doc so getPointsForStage reports no override again',
+      () async {
+        final repo = buildRepo();
+        await repo.upsertConfig(
+          curriculumId: CurriculumId.mishnayos,
+          stageOrder: 1,
+          points: 25,
+        );
 
-      await repo.clearOverride(
-        curriculumId: CurriculumId.mishnayos,
-        stageOrder: 1,
-      );
+        await repo.clearOverride(
+          curriculumId: CurriculumId.mishnayos,
+          stageOrder: 1,
+        );
 
-      final points = await repo.getPointsForStage(
-        curriculumId: CurriculumId.mishnayos,
-        stageOrder: 1,
-      );
-      expect(points, isNull);
-      final snapshot = await rawDoc(
-        curriculumId: CurriculumId.mishnayos,
-        stageOrder: 1,
-      ).get();
-      expect(snapshot.exists, isFalse);
-    });
+        final points = await repo.getPointsForStage(
+          curriculumId: CurriculumId.mishnayos,
+          stageOrder: 1,
+        );
+        expect(points, isNull);
+        final snapshot = await rawDoc(
+          curriculumId: CurriculumId.mishnayos,
+          stageOrder: 1,
+        ).get();
+        expect(snapshot.exists, isFalse);
+      },
+    );
 
     test('is a no-op when no override exists', () async {
       final repo = buildRepo();

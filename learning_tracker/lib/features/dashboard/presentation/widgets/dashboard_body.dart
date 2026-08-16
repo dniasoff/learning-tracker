@@ -119,9 +119,7 @@ class DashboardBody extends ConsumerWidget {
     // Adults do not have a points balance by product rule. Child points stay
     // nullable until the achievement read resolves so the child UI can show
     // its loading/error state instead of a fabricated zero.
-    final totalPoints = userMode == ProfileMode.child
-        ? pointsAsync.value
-        : 0;
+    final totalPoints = userMode == ProfileMode.child ? pointsAsync.value : 0;
     final lifetimeTotalsAsync = ref.watch(
       lifetimeTotalsAcrossAllCurriculaProvider,
     );

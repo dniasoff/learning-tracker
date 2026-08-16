@@ -79,6 +79,7 @@ class AccountRepositoryNotReadyException implements Exception {
   const AccountRepositoryNotReadyException();
 
   @override
-  String toString() => 'AccountRepositoryNotReadyException: no active device '
+  String toString() =>
+      'AccountRepositoryNotReadyException: no active device '
       'account — refusing to claim an account record exists.';
 }

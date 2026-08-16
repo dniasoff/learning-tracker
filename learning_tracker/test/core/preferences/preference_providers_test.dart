@@ -240,37 +240,40 @@ void main() {
       },
     );
 
-    test('UseHebrewTerms preserves real-profile state across a null-sentinel blip '
-        '(already-fixed baseline, kept alongside the other 4 for full '
-        'ProviderContainer coverage per AC-2)', () async {
-      SharedPreferences.setMockInitialValues({
-        ProfileScopedPreferenceKeys.hebrewTermsScript(realProfileId): false,
-      });
+    test(
+      'UseHebrewTerms preserves real-profile state across a null-sentinel blip '
+      '(already-fixed baseline, kept alongside the other 4 for full '
+      'ProviderContainer coverage per AC-2)',
+      () async {
+        SharedPreferences.setMockInitialValues({
+          ProfileScopedPreferenceKeys.hebrewTermsScript(realProfileId): false,
+        });
 
-      final (container, profileNotifier) = _makeContainer(
-        startId: realProfileId,
-      );
-      addTearDown(container.dispose);
+        final (container, profileNotifier) = _makeContainer(
+          startId: realProfileId,
+        );
+        addTearDown(container.dispose);
 
-      expect(
-        await _readSettled(() => container.read(useHebrewTermsProvider)),
-        isFalse,
-      );
+        expect(
+          await _readSettled(() => container.read(useHebrewTermsProvider)),
+          isFalse,
+        );
 
-      profileNotifier.set(null);
-      expect(
-        await _readSettled(() => container.read(useHebrewTermsProvider)),
-        isFalse,
-        reason:
-            'Sentinel-0 blip must NOT rebind onto profile 0\'s default '
-            '(true) — the guard must preserve the last real value',
-      );
+        profileNotifier.set(null);
+        expect(
+          await _readSettled(() => container.read(useHebrewTermsProvider)),
+          isFalse,
+          reason:
+              'Sentinel-0 blip must NOT rebind onto profile 0\'s default '
+              '(true) — the guard must preserve the last real value',
+        );
 
-      profileNotifier.set(realProfileId);
-      expect(
-        await _readSettled(() => container.read(useHebrewTermsProvider)),
-        isFalse,
-      );
-    });
+        profileNotifier.set(realProfileId);
+        expect(
+          await _readSettled(() => container.read(useHebrewTermsProvider)),
+          isFalse,
+        );
+      },
+    );
   });
 }

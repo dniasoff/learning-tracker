@@ -69,27 +69,21 @@ void main() {
   // ── AC: explicit active-account selection is String-valued ────────────
 
   group('Story 25.21 — activeAccountIdProvider', () {
-    test(
-      'returns the selected account id for a cloud-born account',
-      () async {
-        final container = ProviderContainer();
-        addTearDown(container.dispose);
+    test('returns the selected account id for a cloud-born account', () async {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
 
-        container.read(activeAccountIdProvider.notifier).set('account-7');
-        expect(container.read(activeAccountIdProvider), 'account-7');
-      },
-    );
+      container.read(activeAccountIdProvider.notifier).set('account-7');
+      expect(container.read(activeAccountIdProvider), 'account-7');
+    });
 
-    test(
-      'returns the selected account id for a local-born account',
-      () async {
-        final container = ProviderContainer();
-        addTearDown(container.dispose);
+    test('returns the selected account id for a local-born account', () async {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
 
-        container.read(activeAccountIdProvider.notifier).set('local-account-42');
-        expect(container.read(activeAccountIdProvider), 'local-account-42');
-      },
-    );
+      container.read(activeAccountIdProvider.notifier).set('local-account-42');
+      expect(container.read(activeAccountIdProvider), 'local-account-42');
+    });
 
     test('is null until an account is selected', () async {
       final container = ProviderContainer();
@@ -98,17 +92,20 @@ void main() {
       expect(container.read(activeAccountIdProvider), isNull);
     });
 
-    test('emits the newly selected value and clears on sign-out/removal', () async {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
+    test(
+      'emits the newly selected value and clears on sign-out/removal',
+      () async {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
 
-      final notifier = container.read(activeAccountIdProvider.notifier);
-      notifier.set('account-3');
-      expect(container.read(activeAccountIdProvider), 'account-3');
+        final notifier = container.read(activeAccountIdProvider.notifier);
+        notifier.set('account-3');
+        expect(container.read(activeAccountIdProvider), 'account-3');
 
-      notifier.set(null);
-      expect(container.read(activeAccountIdProvider), isNull);
-    });
+        notifier.set(null);
+        expect(container.read(activeAccountIdProvider), isNull);
+      },
+    );
   });
 
   // ── AC: grep -rn 'currentAccountId.*=.*1\b' lib/ returns zero hits ────

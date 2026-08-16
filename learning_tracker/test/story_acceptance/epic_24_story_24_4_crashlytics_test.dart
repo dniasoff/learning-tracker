@@ -79,17 +79,13 @@ void main() {
           realService = FirebaseCrashlyticsService(mockCrashlytics);
         });
 
-        test(
-          'AC3: setUserIdentifier sends the profileId ULID as-is',
-          () async {
-            await realService.setUserIdentifier('01ARZ3NDEKTSV4RRFFQ69G5FAV');
-            verify(
-              () => mockCrashlytics.setUserIdentifier(
-                '01ARZ3NDEKTSV4RRFFQ69G5FAV',
-              ),
-            ).called(1);
-          },
-        );
+        test('AC3: setUserIdentifier sends the profileId ULID as-is', () async {
+          await realService.setUserIdentifier('01ARZ3NDEKTSV4RRFFQ69G5FAV');
+          verify(
+            () =>
+                mockCrashlytics.setUserIdentifier('01ARZ3NDEKTSV4RRFFQ69G5FAV'),
+          ).called(1);
+        });
 
         test(
           'AC4: setUserIdentifier(null) clears identifier (no PII fallback)',

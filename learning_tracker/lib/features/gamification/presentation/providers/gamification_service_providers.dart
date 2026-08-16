@@ -48,5 +48,8 @@ final streakStateProvider = Provider<StreakStateService>((ref) {
 /// No `profileId` read here: [StreakService] resolves the active profile
 /// internally via `ref` — see its constructor doc comment.
 final streakServiceProvider = Provider<StreakService>((ref) {
-  return StreakService(ref, streakStateProvider: ref.watch(streakStateProvider));
+  return StreakService(
+    ref,
+    streakStateProvider: ref.watch(streakStateProvider),
+  );
 });

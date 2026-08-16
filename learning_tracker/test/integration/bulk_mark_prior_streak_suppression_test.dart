@@ -99,39 +99,36 @@ void main() {
         },
       );
 
-      test(
-        'regression: stage-2 bulk-mark-prior now yields currentStreak == 0 '
-        '(was broken before DNI-370)',
-        () async {
-          final refs = List.generate(5, (i) => 'Mishnah Berachot $i:1');
+      test('regression: stage-2 bulk-mark-prior now yields currentStreak == 0 '
+          '(was broken before DNI-370)', () async {
+        final refs = List.generate(5, (i) => 'Mishnah Berachot $i:1');
 
-          await repository.bulkMarkComplete(
-            BulkCompletionRequest(
-              curriculumId: 'mishnayos',
-              sefariaRefs: refs,
-              stageId: 1,
-              trackType: 'personal',
-              awardGamificationPoints: false,
-            ),
-          );
-          await repository.bulkMarkComplete(
-            BulkCompletionRequest(
-              curriculumId: 'mishnayos',
-              sefariaRefs: refs,
-              stageId: 2,
-              trackType: 'personal',
-              awardGamificationPoints: false,
-            ),
-          );
+        await repository.bulkMarkComplete(
+          BulkCompletionRequest(
+            curriculumId: 'mishnayos',
+            sefariaRefs: refs,
+            stageId: 1,
+            trackType: 'personal',
+            awardGamificationPoints: false,
+          ),
+        );
+        await repository.bulkMarkComplete(
+          BulkCompletionRequest(
+            curriculumId: 'mishnayos',
+            sefariaRefs: refs,
+            stageId: 2,
+            trackType: 'personal',
+            awardGamificationPoints: false,
+          ),
+        );
 
-          final state = await streakState.read();
-          expect(
-            state.currentStreak,
-            0,
-            reason: 'Stage-2 bulk-mark-prior must suppress streak (DNI-370)',
-          );
-        },
-      );
+        final state = await streakState.read();
+        expect(
+          state.currentStreak,
+          0,
+          reason: 'Stage-2 bulk-mark-prior must suppress streak (DNI-370)',
+        );
+      });
     },
   );
 }

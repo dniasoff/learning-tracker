@@ -238,7 +238,7 @@ void main() {
         authRepo: authRepo,
         service: service,
         connectivity: connectivity,
-       registry: registry,
+        registry: registry,
       ),
     );
     await tester.pump();
@@ -262,7 +262,7 @@ void main() {
         authRepo: authRepo,
         service: service,
         connectivity: connectivity,
-       registry: registry,
+        registry: registry,
       ),
     );
     await tester.pump();
@@ -288,7 +288,7 @@ void main() {
         authRepo: authRepo,
         service: service,
         connectivity: connectivity,
-       registry: registry,
+        registry: registry,
       ),
     );
     await tester.pump();
@@ -309,7 +309,7 @@ void main() {
         authRepo: authRepo,
         service: service,
         connectivity: connectivity,
-       registry: registry,
+        registry: registry,
       ),
     );
     await tester.pump();
@@ -334,7 +334,7 @@ void main() {
           authRepo: authRepo,
           service: service,
           connectivity: connectivity,
-       registry: registry,
+          registry: registry,
         ),
       );
       await tester.pump();
@@ -365,7 +365,7 @@ void main() {
           authRepo: authRepo,
           service: service,
           connectivity: connectivity,
-       registry: registry,
+          registry: registry,
         ),
       );
       await tester.pump();
@@ -396,7 +396,7 @@ void main() {
           authRepo: authRepo,
           service: service,
           connectivity: connectivity,
-       registry: registry,
+          registry: registry,
         ),
       );
       await tester.pump();
@@ -429,7 +429,7 @@ void main() {
         authRepo: authRepo,
         service: service,
         connectivity: connectivity,
-       registry: registry,
+        registry: registry,
       ),
     );
     await tester.pump();
@@ -462,7 +462,7 @@ void main() {
           authRepo: authRepo,
           service: service,
           connectivity: connectivity,
-       registry: registry,
+          registry: registry,
         ),
       );
       await tester.pump();
@@ -495,7 +495,7 @@ void main() {
         authRepo: authRepo,
         service: service,
         connectivity: connectivity,
-       registry: registry,
+        registry: registry,
         locale: const Locale('he'),
       ),
     );
@@ -521,7 +521,7 @@ void main() {
         authRepo: authRepo,
         service: service,
         connectivity: connectivity,
-       registry: registry,
+        registry: registry,
       ),
     );
     await tester.pump();
@@ -550,7 +550,7 @@ void main() {
         authRepo: authRepo,
         service: service,
         connectivity: connectivity,
-       registry: registry,
+        registry: registry,
       ),
     );
     await tester.pump();
@@ -580,7 +580,7 @@ void main() {
           authRepo: authRepo,
           service: service,
           connectivity: connectivity,
-         registry: registry,
+          registry: registry,
         ),
       );
       await tester.pump();
@@ -608,7 +608,7 @@ void main() {
           authRepo: authRepo,
           service: service,
           connectivity: connectivity,
-         registry: registry,
+          registry: registry,
         ),
       );
       await tester.pump();
@@ -643,7 +643,7 @@ void main() {
         authRepo: authRepo,
         service: service,
         connectivity: connectivity,
-         registry: registry,
+        registry: registry,
       ),
     );
     await tester.pump();
@@ -678,7 +678,7 @@ void main() {
         authRepo: authRepo,
         service: service,
         connectivity: connectivity,
-         registry: registry,
+        registry: registry,
       ),
     );
     await tester.pump();
@@ -714,7 +714,7 @@ void main() {
         authRepo: authRepo,
         service: service,
         connectivity: connectivity,
-         registry: registry,
+        registry: registry,
       ),
     );
     await tester.pump();
@@ -753,7 +753,7 @@ void main() {
           authRepo: authRepo,
           service: service,
           connectivity: connectivity,
-         registry: registry,
+          registry: registry,
         ),
       );
       await tester.pump();
@@ -790,7 +790,7 @@ void main() {
           authRepo: authRepo,
           service: service,
           connectivity: connectivity,
-         registry: registry,
+          registry: registry,
         ),
       );
       await tester.pump();
@@ -834,7 +834,7 @@ void main() {
           authRepo: authRepo,
           service: service,
           connectivity: connectivity,
-         registry: registry,
+          registry: registry,
         ),
       );
       await tester.pump();
@@ -874,7 +874,7 @@ void main() {
           authRepo: authRepo,
           service: service,
           connectivity: connectivity,
-         registry: registry,
+          registry: registry,
         ),
       );
       await tester.pump();
@@ -991,7 +991,7 @@ void main() {
           authRepo: authRepo,
           service: service,
           connectivity: connectivity,
-         registry: registry,
+          registry: registry,
         ),
       );
       await tester.pump();
@@ -1043,7 +1043,7 @@ void main() {
           authRepo: authRepo,
           service: service,
           connectivity: connectivity,
-         registry: registry,
+          registry: registry,
         ),
       );
       await tester.pump();
@@ -1103,7 +1103,7 @@ void main() {
         authRepo: authRepo,
         service: service,
         connectivity: connectivity,
-         registry: registry,
+        registry: registry,
         locale: const Locale('he'),
       ),
     );
@@ -1158,7 +1158,7 @@ void main() {
           authRepo: authRepo,
           service: service,
           connectivity: connectivity,
-         registry: registry,
+          registry: registry,
         ),
       );
       await tester.pump();
@@ -1204,7 +1204,7 @@ void main() {
           authRepo: authRepo,
           service: service,
           connectivity: connectivity,
-         registry: registry,
+          registry: registry,
         ),
       );
       await tester.pump();
@@ -1252,7 +1252,7 @@ void main() {
           authRepo: authRepo,
           service: service,
           connectivity: connectivity,
-         registry: registry,
+          registry: registry,
           locale: const Locale('he'),
         ),
       );

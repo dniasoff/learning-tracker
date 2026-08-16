@@ -38,11 +38,9 @@ void main() {
         sortOrder: 0,
         isLeaf: true,
       );
-      final mapped = CompositeCurriculumStrategy.forKey('tanach')!.remap(
-        item: source,
-        source: 'chumash',
-        offset: 10,
-      );
+      final mapped = CompositeCurriculumStrategy.forKey(
+        'tanach',
+      )!.remap(item: source, source: 'chumash', offset: 10);
       expect(mapped.curriculumId, 'tanach');
       expect(mapped.level1, 'Torah');
       expect(mapped.level2, 'Bereishit');
@@ -65,11 +63,9 @@ void main() {
         sortOrder: 5,
         isLeaf: true,
       );
-      final mapped = CompositeCurriculumStrategy.forKey('tanach')!.remap(
-        item: source,
-        source: 'nach',
-        offset: 20,
-      );
+      final mapped = CompositeCurriculumStrategy.forKey(
+        'tanach',
+      )!.remap(item: source, source: 'nach', offset: 20);
       expect(mapped.curriculumId, 'tanach');
       expect(mapped.level1, 'Neviim');
       expect(mapped.level2, 'Joshua');
@@ -79,21 +75,29 @@ void main() {
     });
   });
 
-  group('Story 26.15 — learning-order persistence', skip:
-      'Blocked: LearningOrderRepositoryImpl.saveOrder still writes through the Drift DAO; the Firestore order adapter is not wired into this feature seam.',
-      () {
-    test('placeholder for the pending Firestore order seam', () {});
-  });
+  group(
+    'Story 26.15 — learning-order persistence',
+    skip:
+        'Blocked: LearningOrderRepositoryImpl.saveOrder still writes through the Drift DAO; the Firestore order adapter is not wired into this feature seam.',
+    () {
+      test('placeholder for the pending Firestore order seam', () {});
+    },
+  );
 
-  group('Story 26.15 — parent restriction', skip:
-      'Blocked: the original restriction test exercises the Drift-backed repository mutation path.',
-      () {
-    test('placeholder for the pending Firestore restriction seam', () {});
-  });
+  group(
+    'Story 26.15 — parent restriction',
+    skip:
+        'Blocked: the original restriction test exercises the Drift-backed repository mutation path.',
+    () {
+      test('placeholder for the pending Firestore restriction seam', () {});
+    },
+  );
 
   test('removed curriculum-learning stub stays absent', () {
     expect(
-      File('lib/features/content_browsing/presentation/screens/curriculum_learning_screen.dart').existsSync(),
+      File(
+        'lib/features/content_browsing/presentation/screens/curriculum_learning_screen.dart',
+      ).existsSync(),
       isFalse,
     );
   });

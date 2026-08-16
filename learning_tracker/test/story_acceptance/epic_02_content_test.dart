@@ -13,7 +13,6 @@ import 'package:learning_tracker/features/content_browsing/data/repositories/con
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:test/test.dart';
 
-
 // The content fixtures are intentionally local to the acceptance suite: they
 // model the cloud-content contract without reintroducing a content SQLite DB.
 ContentItem _item(String ref, CurriculumId curriculum) => ContentItem(
@@ -83,11 +82,15 @@ void main() {
     });
   });
 
-  group('Story 2.4 — curriculum activation', tags: ['story_2_4'], skip:
-      'Blocked: CurriculumActivationService still depends on Drift track/active-curriculum DAOs; its Firestore adapter seam is not available.',
-      () {
-    test('placeholder for the pending Firestore activation seam', () {});
-  });
+  group(
+    'Story 2.4 — curriculum activation',
+    tags: ['story_2_4'],
+    skip:
+        'Blocked: CurriculumActivationService still depends on Drift track/active-curriculum DAOs; its Firestore adapter seam is not available.',
+    () {
+      test('placeholder for the pending Firestore activation seam', () {});
+    },
+  );
 
   group('Story 2.5 — bundled content assets', tags: ['story_2_5'], () {
     test('content hierarchy screen exists and is Riverpod-based', () {

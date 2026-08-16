@@ -12,7 +12,9 @@ void main() {
   group('Story 27.9 — lockout and redaction', tags: ['story_27_9'], () {
     test('PIN lockout implementation remains production-owned', () {
       expect(
-        File('lib/features/profiles/domain/services/pin_service.dart').existsSync(),
+        File(
+          'lib/features/profiles/domain/services/pin_service.dart',
+        ).existsSync(),
         isTrue,
       );
     });
@@ -28,11 +30,7 @@ void main() {
     test('preserves event names while redacting sensitive fields', () {
       logger.info(
         event: 'auth_login_attempt',
-        fields: {
-          'userEmail': 'user@example.com',
-          'count': 3,
-          'success': false,
-        },
+        fields: {'userEmail': 'user@example.com', 'count': 3, 'success': false},
       );
       final message = talker.history.last.generateTextMessage();
       expect(message, contains('auth_login_attempt'));
@@ -63,9 +61,16 @@ void main() {
     });
   });
 
-  group('Story 27.9 — atomic completion persistence', tags: ['story_27_9'], skip:
-      'Blocked: the original integration group wires CompletionOrchestrator to Drift completion_events and curriculum_tracks. The Firestore completion writer is not exposed as an equivalent orchestrator harness.',
-      () {
-    test('placeholder for the pending Firestore atomic-completion seam', () {});
-  });
+  group(
+    'Story 27.9 — atomic completion persistence',
+    tags: ['story_27_9'],
+    skip:
+        'Blocked: the original integration group wires CompletionOrchestrator to Drift completion_events and curriculum_tracks. The Firestore completion writer is not exposed as an equivalent orchestrator harness.',
+    () {
+      test(
+        'placeholder for the pending Firestore atomic-completion seam',
+        () {},
+      );
+    },
+  );
 }

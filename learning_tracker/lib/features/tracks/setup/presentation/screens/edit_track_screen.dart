@@ -51,9 +51,7 @@ final _editTrackGoalProvider = FutureProvider.autoDispose
       final repo = FirestoreGoalRepositoryAdapter(ref: ref);
       final goals = await repo.getGoals(curriculum);
       if (goals.isEmpty) return null;
-      return goals.reduce(
-        (a, b) => a.createdAt.isAfter(b.createdAt) ? a : b,
-      );
+      return goals.reduce((a, b) => a.createdAt.isAfter(b.createdAt) ? a : b);
     });
 
 /// See track_detail_screen.dart's identical `_curriculumTrackRepositoryProvider`
@@ -309,9 +307,9 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
           stackTrace: st,
         );
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(l10n.errorSaveTrackFailed)),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(l10n.errorSaveTrackFailed)));
         }
         return;
       }

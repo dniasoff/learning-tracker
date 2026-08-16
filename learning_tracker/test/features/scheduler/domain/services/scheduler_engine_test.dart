@@ -55,21 +55,9 @@ void main() {
 
   // Helper: default 3-stage setup
   List<SchedulerStage> threeStages() => [
-    const SchedulerStage(
-      stageOrder: 1,
-      stageName: 'Learn',
-      delayDays: 0,
-    ),
-    const SchedulerStage(
-      stageOrder: 2,
-      stageName: 'Chazara 1',
-      delayDays: 1,
-    ),
-    const SchedulerStage(
-      stageOrder: 3,
-      stageName: 'Chazara 2',
-      delayDays: 7,
-    ),
+    const SchedulerStage(stageOrder: 1, stageName: 'Learn', delayDays: 0),
+    const SchedulerStage(stageOrder: 2, stageName: 'Chazara 1', delayDays: 1),
+    const SchedulerStage(stageOrder: 3, stageName: 'Chazara 2', delayDays: 7),
   ];
 
   setUp(() {
@@ -264,11 +252,7 @@ void main() {
     test('correctly handles N arbitrary stages (5-stage cycle)', () async {
       contentRepo.items = makeItems(10);
       stageRepo.stages = [
-        const SchedulerStage(
-          stageOrder: 1,
-          stageName: 'Learn',
-          delayDays: 0,
-        ),
+        const SchedulerStage(stageOrder: 1, stageName: 'Learn', delayDays: 0),
         const SchedulerStage(
           stageOrder: 2,
           stageName: 'Chazara 1',

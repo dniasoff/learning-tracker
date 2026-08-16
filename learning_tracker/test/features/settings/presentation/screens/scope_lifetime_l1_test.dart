@@ -752,7 +752,7 @@ void main() {
           await _pump(
             tester,
             _buildScopeApp(
-                            contentRepo: repo,
+              contentRepo: repo,
               curriculum: CurriculumId.mishnaBerurah,
             ),
           );
@@ -1070,7 +1070,7 @@ void main() {
         await _pump(
           tester,
           _buildScopeApp(
-                        curriculum: CurriculumId.chumash,
+            curriculum: CurriculumId.chumash,
             contentRepo: _makeDefaultRepo(items: _kChumashItems),
           ),
         );
@@ -1083,7 +1083,7 @@ void main() {
         await _pump(
           tester,
           _buildScopeApp(
-                        curriculum: CurriculumId.chumash,
+            curriculum: CurriculumId.chumash,
             useHebrew: true,
             locale: const Locale('he'),
             contentRepo: _makeDefaultRepo(items: _kChumashItems),
@@ -1108,7 +1108,7 @@ void main() {
         await _pump(
           tester,
           _buildScopeApp(
-                        curriculum: CurriculumId.chumash,
+            curriculum: CurriculumId.chumash,
             useHebrew: true,
             locale: const Locale('he'),
             contentRepo: _makeDefaultRepo(items: _kChumashItems),
@@ -1135,7 +1135,7 @@ void main() {
         await _pump(
           tester,
           _buildScopeApp(
-                        curriculum: CurriculumId.chumash,
+            curriculum: CurriculumId.chumash,
             contentRepo: _makeDefaultRepo(items: _kChumashItems),
           ),
         );
@@ -1152,7 +1152,7 @@ void main() {
         await _pump(
           tester,
           _buildScopeApp(
-                        curriculum: CurriculumId.chumash,
+            curriculum: CurriculumId.chumash,
             variant: TransliterationVariant.sephardi,
             contentRepo: _makeDefaultRepo(items: _kChumashItems),
           ),
@@ -1434,10 +1434,7 @@ void main() {
           ),
         ).thenAnswer((_) async => []);
 
-        await _pump(
-          tester,
-          _buildCurriculumMarkingApp(ledgerRepo: mockRepo),
-        );
+        await _pump(tester, _buildCurriculumMarkingApp(ledgerRepo: mockRepo));
 
         // The HierarchySelectionPanel loads content from the mock repo.
         // We cannot drill into HierarchySelectionPanel in this L1 test
@@ -1496,10 +1493,7 @@ void main() {
           return [];
         });
 
-        await _pump(
-          tester,
-          _buildCurriculumMarkingApp(ledgerRepo: mockRepo),
-        );
+        await _pump(tester, _buildCurriculumMarkingApp(ledgerRepo: mockRepo));
 
         await tester.tap(find.text('Select all in this list'));
         await tester.pump();
@@ -1560,10 +1554,7 @@ void main() {
     testWidgets('renders under Hebrew locale without crash', (tester) async {
       await _pump(
         tester,
-        _buildCurriculumMarkingApp(
-                    useHebrew: true,
-          locale: const Locale('he'),
-        ),
+        _buildCurriculumMarkingApp(useHebrew: true, locale: const Locale('he')),
       );
 
       expect(find.byType(Scaffold), findsAtLeastNWidgets(1));
@@ -1574,10 +1565,7 @@ void main() {
     testWidgets('Hebrew locale sets RTL text direction', (tester) async {
       await _pump(
         tester,
-        _buildCurriculumMarkingApp(
-                    useHebrew: true,
-          locale: const Locale('he'),
-        ),
+        _buildCurriculumMarkingApp(useHebrew: true, locale: const Locale('he')),
       );
 
       final dirFinder = find.byType(Directionality);
@@ -1594,7 +1582,7 @@ void main() {
         await _pump(
           tester,
           _buildCurriculumMarkingApp(
-                        useHebrew: true,
+            useHebrew: true,
             locale: const Locale('he'),
           ),
         );

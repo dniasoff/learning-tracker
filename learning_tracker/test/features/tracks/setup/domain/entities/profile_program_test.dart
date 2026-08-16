@@ -108,9 +108,7 @@ void main() {
   group('field names match the firestore.rules `profile_programs` .hasOnly() '
       'whitelist', () {
     test('toFirestore emits exactly the expected snake_case keys', () {
-      final payload = base.toFirestore(
-        profileId: '01J6Q2H4A8M7K3P9R5T6V8WXYB',
-      );
+      final payload = base.toFirestore(profileId: '01J6Q2H4A8M7K3P9R5T6V8WXYB');
 
       expect(payload.keys.toSet(), <String>{
         'profile_id',
@@ -124,9 +122,7 @@ void main() {
 
     test('every key toFirestore can ever emit is inside the rules '
         '.hasOnly() whitelist', () {
-      final full = base.toFirestore(
-        profileId: '01J6Q2H4A8M7K3P9R5T6V8WXYB',
-      );
+      final full = base.toFirestore(profileId: '01J6Q2H4A8M7K3P9R5T6V8WXYB');
       final minimal = ProfileProgramEntity(
         curriculumId: CurriculumId.bavli,
         programId: 1,
@@ -139,9 +135,7 @@ void main() {
 
     test('profile_id is written as the String profileId param', () {
       expect(
-        base.toFirestore(
-          profileId: '01J6Q2H4A8M7K3P9R5T6V8WXYB',
-        )['profile_id'],
+        base.toFirestore(profileId: '01J6Q2H4A8M7K3P9R5T6V8WXYB')['profile_id'],
         '01J6Q2H4A8M7K3P9R5T6V8WXYB',
       );
     });
@@ -149,9 +143,7 @@ void main() {
 
   group('no forbidden fields (AD-25/MCF-11)', () {
     test('toFirestore never writes track_id or a Drift-style id', () {
-      final payload = base.toFirestore(
-        profileId: '01J6Q2H4A8M7K3P9R5T6V8WXYB',
-      );
+      final payload = base.toFirestore(profileId: '01J6Q2H4A8M7K3P9R5T6V8WXYB');
       expect(payload, isNot(contains('track_id')));
       expect(payload, isNot(contains('id')));
     });
@@ -160,9 +152,7 @@ void main() {
   group('tracking_start_date/updated_at are ISO-8601 Strings — documented-safe '
       'here: profile_programs has no is-timestamp rules guard at all', () {
     test('toFirestore encodes both date fields as String, not DateTime', () {
-      final payload = base.toFirestore(
-        profileId: '01J6Q2H4A8M7K3P9R5T6V8WXYB',
-      );
+      final payload = base.toFirestore(profileId: '01J6Q2H4A8M7K3P9R5T6V8WXYB');
       expect(payload['tracking_start_date'], isA<String>());
       expect(payload['updated_at'], isA<String>());
     });

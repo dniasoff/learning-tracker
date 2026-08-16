@@ -33,17 +33,18 @@ void main() {
     });
 
     test('dashboard breadcrumb trims the leading seder', () {
-      expect(
-        trimSederFromBreadcrumb('זרעים › ברכות › פרק א'),
-        'ברכות › פרק א',
-      );
+      expect(trimSederFromBreadcrumb('זרעים › ברכות › פרק א'), 'ברכות › פרק א');
       expect(trimSederFromBreadcrumb('ברכות'), 'ברכות');
     });
   });
 
-  group('Story 7.3 — progress charts', tags: ['story_7_3'], skip:
-      'Blocked: chart/progress assertions in the original suite read Drift completion and goal DAOs; Firestore progress adapters are not wired into this acceptance construction.',
-      () {
-    test('placeholder for the pending Firestore progress seam', () {});
-  });
+  group(
+    'Story 7.3 — progress charts',
+    tags: ['story_7_3'],
+    skip:
+        'Blocked: chart/progress assertions in the original suite read Drift completion and goal DAOs; Firestore progress adapters are not wired into this acceptance construction.',
+    () {
+      test('placeholder for the pending Firestore progress seam', () {});
+    },
+  );
 }

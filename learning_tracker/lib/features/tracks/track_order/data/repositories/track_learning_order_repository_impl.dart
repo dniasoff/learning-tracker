@@ -60,8 +60,7 @@ class TrackLearningOrderRepositoryNotReadyException implements Exception {
 /// the complete operation unchanged.
 class FirestoreTrackLearningOrderRepositoryAdapter
     implements TrackLearningOrderRepository {
-  FirestoreTrackLearningOrderRepositoryAdapter({required Ref ref})
-    : _ref = ref;
+  FirestoreTrackLearningOrderRepositoryAdapter({required Ref ref}) : _ref = ref;
 
   final Ref _ref;
 

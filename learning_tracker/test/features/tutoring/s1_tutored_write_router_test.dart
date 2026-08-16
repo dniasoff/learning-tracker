@@ -88,17 +88,14 @@ void main() {
       );
     });
 
-    test(
-      'pushStageDefinitions → one tutorUpsertStageDefinition per stage with '
-      '{trackId}_{stageOrder} as stageId',
-      () {
-        markTestSkipped(
-          'RETIRED: verified current TutorWriteService exposes only the '
-          'single-stage upsertStageDefinition callable; the former router '
-          'batch loop and its stage-ID generation no longer exist.',
-        );
-      },
-    );
+    test('pushStageDefinitions → one tutorUpsertStageDefinition per stage with '
+        '{trackId}_{stageOrder} as stageId', () {
+      markTestSkipped(
+        'RETIRED: verified current TutorWriteService exposes only the '
+        'single-stage upsertStageDefinition callable; the former router '
+        'batch loop and its stage-ID generation no longer exist.',
+      );
+    });
 
     test(
       'pushStudyDayConfig → tutorUpsertStudyDayConfig with composite configId',
@@ -124,54 +121,42 @@ void main() {
   });
 
   group('AUD-tutoring-07 — partial stage failure', () {
-    test(
-      'CF fails on 2nd of 3 stages → TutorWriteException carries the '
-      'stage IDs that already committed before the failure',
-      () {
-        markTestSkipped(
-          'RETIRED: verified the current service has no multi-stage router '
-          'loop, succeededStageIds field, or TutorWriteException contract; '
-          'each callable returns a TutorWriteResult independently.',
-        );
-      },
-    );
+    test('CF fails on 2nd of 3 stages → TutorWriteException carries the '
+        'stage IDs that already committed before the failure', () {
+      markTestSkipped(
+        'RETIRED: verified the current service has no multi-stage router '
+        'loop, succeededStageIds field, or TutorWriteException contract; '
+        'each callable returns a TutorWriteResult independently.',
+      );
+    });
 
-    test(
-      'all stages succeed → succeededStageIds is not consulted (no '
-      'exception thrown)',
-      () {
-        markTestSkipped(
-          'RETIRED: verified succeededStageIds belongs only to the deleted '
-          'router batch-loop abstraction; it is absent from TutorWriteService.',
-        );
-      },
-    );
+    test('all stages succeed → succeededStageIds is not consulted (no '
+        'exception thrown)', () {
+      markTestSkipped(
+        'RETIRED: verified succeededStageIds belongs only to the deleted '
+        'router batch-loop abstraction; it is absent from TutorWriteService.',
+      );
+    });
   });
 
   group('AUD-tutoring-17 — invalid profile ID', () {
-    test(
-      'pushGoal with empty profileId → TutorWriteException '
-      '(code: invalid-profile-id)',
-      () {
-        markTestSkipped(
-          'RETIRED: verified the current TutorWriteService does not validate '
-          'profile IDs or define invalid-profile-id/TutorWriteException; the '
-          'former router validation was deleted.',
-        );
-      },
-    );
+    test('pushGoal with empty profileId → TutorWriteException '
+        '(code: invalid-profile-id)', () {
+      markTestSkipped(
+        'RETIRED: verified the current TutorWriteService does not validate '
+        'profile IDs or define invalid-profile-id/TutorWriteException; the '
+        'former router validation was deleted.',
+      );
+    });
 
-    test(
-      'deleteCompletion with empty profileId → TutorWriteException '
-      '(code: invalid-profile-id)',
-      () {
-        markTestSkipped(
-          'RETIRED: verified the current TutorWriteService does not validate '
-          'profile IDs or define invalid-profile-id/TutorWriteException; the '
-          'former router validation was deleted.',
-        );
-      },
-    );
+    test('deleteCompletion with empty profileId → TutorWriteException '
+        '(code: invalid-profile-id)', () {
+      markTestSkipped(
+        'RETIRED: verified the current TutorWriteService does not validate '
+        'profile IDs or define invalid-profile-id/TutorWriteException; the '
+        'former router validation was deleted.',
+      );
+    });
   });
 
   group('AC2 — non-tutored session pass-through', () {
@@ -276,10 +261,7 @@ void main() {
         ownerUid: _ownerUid,
         profileId: _profileId,
         programId: 'daf_yomi',
-        programData: {
-          'curriculum_id': 'daf_yomi',
-          'program_id': 'prog_001',
-        },
+        programData: {'curriculum_id': 'daf_yomi', 'program_id': 'prog_001'},
       );
 
       expect(result, isA<TutorWriteSuccess>());
@@ -298,42 +280,45 @@ void main() {
       );
     });
 
-    test('tutored: pushProfileProgram CF failure → TutorWriteFailure', () async {
-      final service = TutorWriteService(
-        invoker: (_, __) async => throw Exception('network timeout'),
-      );
-
-      final result = await service.setProfileProgram(
-        grantId: _grantId,
-        ownerUid: _ownerUid,
-        profileId: _profileId,
-        programId: 'daf_yomi',
-        programData: {'program_id': 'prog_001'},
-      );
-
-      expect(result, isA<TutorWriteFailure>());
-    });
-
-    test('AC3 extended: pushProfileProgram in tutored mode: 0 outbox depth', () {
-      markTestSkipped(
-        'RETIRED: verified the deleted SyncWriteFacade outbox was the only '
-        'depth being measured; TutorWriteService has no outbox integration.',
-      );
-    });
-  });
-
-  group('S4-A — gamification settings', () {
     test(
-      'tutored + builder: calls tutorUpdateGamificationSettings twice '
-      '(once per permKey)',
+      'tutored: pushProfileProgram CF failure → TutorWriteFailure',
+      () async {
+        final service = TutorWriteService(
+          invoker: (_, __) async => throw Exception('network timeout'),
+        );
+
+        final result = await service.setProfileProgram(
+          grantId: _grantId,
+          ownerUid: _ownerUid,
+          profileId: _profileId,
+          programId: 'daf_yomi',
+          programData: {'program_id': 'prog_001'},
+        );
+
+        expect(result, isA<TutorWriteFailure>());
+      },
+    );
+
+    test(
+      'AC3 extended: pushProfileProgram in tutored mode: 0 outbox depth',
       () {
         markTestSkipped(
-          'RETIRED: verified the snapshot builder and two-call routing policy '
-          'belonged to the deleted router; current TutorWriteService accepts '
-          'one already-shaped settingsData call at a time.',
+          'RETIRED: verified the deleted SyncWriteFacade outbox was the only '
+          'depth being measured; TutorWriteService has no outbox integration.',
         );
       },
     );
+  });
+
+  group('S4-A — gamification settings', () {
+    test('tutored + builder: calls tutorUpdateGamificationSettings twice '
+        '(once per permKey)', () {
+      markTestSkipped(
+        'RETIRED: verified the snapshot builder and two-call routing policy '
+        'belonged to the deleted router; current TutorWriteService accepts '
+        'one already-shaped settingsData call at a time.',
+      );
+    });
 
     test(
       'tutored without builder: falls back to delegate (gamification passes through)',

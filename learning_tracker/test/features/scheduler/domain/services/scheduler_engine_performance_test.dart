@@ -62,21 +62,9 @@ void main() {
 
     // 3 stages
     stageRepo.stages = [
-      const SchedulerStage(
-        stageOrder: 1,
-        stageName: 'Learn',
-        delayDays: 0,
-      ),
-      const SchedulerStage(
-        stageOrder: 2,
-        stageName: 'Chazara 1',
-        delayDays: 1,
-      ),
-      const SchedulerStage(
-        stageOrder: 3,
-        stageName: 'Chazara 2',
-        delayDays: 7,
-      ),
+      const SchedulerStage(stageOrder: 1, stageName: 'Learn', delayDays: 0),
+      const SchedulerStage(stageOrder: 2, stageName: 'Chazara 1', delayDays: 1),
+      const SchedulerStage(stageOrder: 3, stageName: 'Chazara 2', delayDays: 7),
     ];
 
     final now = DateTime.utc(2026, 3, 15);

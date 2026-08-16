@@ -54,7 +54,9 @@ abstract class CompletionRepository {
   /// fails, the entire transaction is rolled back.
   ///
   /// Returns the list of created completions.
-  Future<List<CompletionEntity>> bulkMarkComplete(BulkCompletionRequest request);
+  Future<List<CompletionEntity>> bulkMarkComplete(
+    BulkCompletionRequest request,
+  );
 
   /// Get all completions for a specific curriculum.
   ///
@@ -65,7 +67,9 @@ abstract class CompletionRepository {
   });
 
   /// Get all completions for a specific content item by sefariaRef.
-  Future<List<CompletionEntity>> getCompletionsForContentItem(String sefariaRef);
+  Future<List<CompletionEntity>> getCompletionsForContentItem(
+    String sefariaRef,
+  );
 
   /// Total review count per sefariaRef within [curriculumId] (AC-3, AC-7).
   /// Achievement data — throws when the backend is not ready rather than

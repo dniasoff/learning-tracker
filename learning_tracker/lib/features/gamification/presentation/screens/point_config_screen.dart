@@ -86,47 +86,52 @@ _StagePointConfig _primaryStageRow(_TrackPointData data) {
 /// id, so editing a synthetic default round-trips correctly, and saving the
 /// ladder's own value back clears the (nonexistent) override instead of
 /// pinning it.
-final pointConfigDataProvider = FutureProvider.autoDispose<List<_TrackPointData>>(
-  (ref) async {
-    final activeTracks = await ref.watch(activeTracksProvider.future);
-    final pointConfigRepo = ref.watch(_pointConfigRepositoryProvider);
+final pointConfigDataProvider =
+    FutureProvider.autoDispose<List<_TrackPointData>>((ref) async {
+      final activeTracks = await ref.watch(activeTracksProvider.future);
+      final pointConfigRepo = ref.watch(_pointConfigRepositoryProvider);
 
-    final result = <_TrackPointData>[];
-    for (final track in activeTracks) {
-      final curriculum = track.curriculumId;
+      final result = <_TrackPointData>[];
+      for (final track in activeTracks) {
+        final curriculum = track.curriculumId;
 
-      final stageRepo = ref.read(stageDefinitionRepositoryProvider(curriculum));
-      final stages = await stageRepo.getStagesForCurriculum(curriculum);
-      // A track legitimately has no stage definitions yet only in the
-      // narrow window mid-creation before applyWizardResult lands -- skip
-      // it rather than fabricate rows for stages that do not exist.
-      if (stages.isEmpty) continue;
-
-      final configs = await pointConfigRepo.getConfigsForCurriculum(curriculum);
-
-      final stageConfigs = <_StagePointConfig>[];
-      for (final stage in stages) {
-        PointConfigEntity? config;
-        for (final c in configs) {
-          if (c.stageOrder == stage.stageOrder) {
-            config = c;
-            break;
-          }
-        }
-        // Unpersisted view-model default -- see doc comment above.
-        config ??= PointConfigEntity(
-          curriculumId: curriculum,
-          stageOrder: stage.stageOrder,
-          points: defaultPointsForStage(stage.stageOrder),
+        final stageRepo = ref.read(
+          stageDefinitionRepositoryProvider(curriculum),
         );
-        stageConfigs.add(_StagePointConfig(stage: stage, config: config));
-      }
+        final stages = await stageRepo.getStagesForCurriculum(curriculum);
+        // A track legitimately has no stage definitions yet only in the
+        // narrow window mid-creation before applyWizardResult lands -- skip
+        // it rather than fabricate rows for stages that do not exist.
+        if (stages.isEmpty) continue;
 
-      result.add(_TrackPointData(curriculum: curriculum, stages: stageConfigs));
-    }
-    return result;
-  },
-);
+        final configs = await pointConfigRepo.getConfigsForCurriculum(
+          curriculum,
+        );
+
+        final stageConfigs = <_StagePointConfig>[];
+        for (final stage in stages) {
+          PointConfigEntity? config;
+          for (final c in configs) {
+            if (c.stageOrder == stage.stageOrder) {
+              config = c;
+              break;
+            }
+          }
+          // Unpersisted view-model default -- see doc comment above.
+          config ??= PointConfigEntity(
+            curriculumId: curriculum,
+            stageOrder: stage.stageOrder,
+            points: defaultPointsForStage(stage.stageOrder),
+          );
+          stageConfigs.add(_StagePointConfig(stage: stage, config: config));
+        }
+
+        result.add(
+          _TrackPointData(curriculum: curriculum, stages: stageConfigs),
+        );
+      }
+      return result;
+    });
 
 @RoutePage()
 class PointConfigScreen extends ConsumerStatefulWidget {
@@ -193,7 +198,9 @@ class _PointConfigScreenState extends ConsumerState<PointConfigScreen> {
     } catch (e) {
       if (mounted) setState(() => _saving = false);
       if (mounted) {
-        final l10nMsg = AppLocalizations.of(context)!.errorGeneric(e.toString());
+        final l10nMsg = AppLocalizations.of(
+          context,
+        )!.errorGeneric(e.toString());
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(l10nMsg)));
@@ -221,8 +228,8 @@ class _PointConfigScreenState extends ConsumerState<PointConfigScreen> {
     // creates/updates/deletes. The existing tutor callable writes the separate
     // preferences/gamification_settings document, not point_configs, so this
     // screen must not advertise an edit that cannot legally land.
-    final canEdit = !isTutoredSession &&
-        (tutorPerms == null || tutorPerms.canEditPoints);
+    final canEdit =
+        !isTutoredSession && (tutorPerms == null || tutorPerms.canEditPoints);
 
     return Scaffold(
       backgroundColor: _kScreenBg(context),

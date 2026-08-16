@@ -148,9 +148,9 @@ class FirestoreLearnerProfileRepository {
   /// would let a fabricated zero through, which is the defect being closed.
   Future<bool> hasHydratedCache(String profileId) async {
     try {
-      final snapshot = await _doc(profileId).get().timeout(
-        kFirestoreWriteAckTimeout,
-      );
+      final snapshot = await _doc(
+        profileId,
+      ).get().timeout(kFirestoreWriteAckTimeout);
       return snapshot.exists;
     } on TimeoutException {
       return false;

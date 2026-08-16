@@ -91,7 +91,6 @@ void main() {
       expect(prefs.containsKey('onboarding_complete'), isFalse);
       expect(prefs.containsKey('add_track_step'), isFalse);
     });
-
   });
 
   group('deleteAccount', () {

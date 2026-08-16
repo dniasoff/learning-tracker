@@ -78,9 +78,7 @@ void main() {
       'bounded time instead of remaining initializing indefinitely',
       () async {
         final container = ProviderContainer(
-          overrides: [
-            authRepositoryProvider.overrideWithValue(auth),
-          ],
+          overrides: [authRepositoryProvider.overrideWithValue(auth)],
         );
         addTearDown(container.dispose);
 

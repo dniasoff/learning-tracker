@@ -199,10 +199,7 @@ Future<_SettingsFixture> _dbWithAdultProfile() async {
     profileId: _adultProfileId,
     mode: ProfileMode.adult,
   );
-  return _SettingsFixture(
-    firestore: firestore,
-    profile: _adultProfile(),
-  );
+  return _SettingsFixture(firestore: firestore, profile: _adultProfile());
 }
 
 Future<_SettingsFixture> _dbWithChildProfile() async {
@@ -215,10 +212,7 @@ Future<_SettingsFixture> _dbWithChildProfile() async {
     displayName: 'Child',
     mode: ProfileMode.child,
   );
-  return _SettingsFixture(
-    firestore: firestore,
-    profile: _childProfile(),
-  );
+  return _SettingsFixture(firestore: firestore, profile: _childProfile());
 }
 
 /// Seeds account + profile + one Firestore curriculum track and its stages.
@@ -338,9 +332,7 @@ Widget _buildPointConfig({
       activeProfileDocIdProvider.overrideWith(
         () => _FixedActiveProfileDocId(profileId),
       ),
-      activeTracksProvider.overrideWith(
-        (ref) => Stream.value(db.activeTracks),
-      ),
+      activeTracksProvider.overrideWith((ref) => Stream.value(db.activeTracks)),
       firestorePointConfigRepositoryProvider.overrideWith(
         (ref) async => FirestorePointConfigRepository(
           firestore: db.firestore,

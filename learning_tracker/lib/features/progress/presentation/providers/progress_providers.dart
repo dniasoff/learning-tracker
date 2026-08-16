@@ -178,7 +178,9 @@ Future<ProgressPaceCalculator?> curriculumPaceStatus(
   if (curriculumEnum == null) return null;
 
   // Get goals for this curriculum.
-  final goals = await ref.watch(goalRepositoryProvider).getGoals(curriculumEnum);
+  final goals = await ref
+      .watch(goalRepositoryProvider)
+      .getGoals(curriculumEnum);
   if (goals.isEmpty) return null;
 
   // Pick the most recently created goal — defends against stale rows.

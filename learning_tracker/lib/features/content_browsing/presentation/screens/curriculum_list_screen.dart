@@ -306,7 +306,9 @@ class _CurriculumCard extends ConsumerWidget {
                   ),
               ],
             ),
-            if (completionError == null && percentage != null && percentage > 0) ...[
+            if (completionError == null &&
+                percentage != null &&
+                percentage > 0) ...[
               const SizedBox(height: 16),
               ClipRRect(
                 borderRadius: BorderRadius.circular(4),

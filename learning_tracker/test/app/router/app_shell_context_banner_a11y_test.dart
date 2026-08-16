@@ -180,10 +180,7 @@ void main() {
                 ]),
               ),
               activeProfileProvider.overrideWith(
-                (ref) async => _profile(
-                  name: 'הורה',
-                  mode: ProfileMode.adult,
-                ),
+                (ref) async => _profile(name: 'הורה', mode: ProfileMode.adult),
               ),
               activeTutoredProfileSelectionProvider.overrideWith(
                 () => _StubActiveTutoredProfileSelection(null),
@@ -231,10 +228,8 @@ void main() {
             child: const TutorModeIndicatorBar(),
             overrides: [
               activeProfileProvider.overrideWith(
-                (ref) async => _profile(
-                  name: 'תלמיד ארוך מאוד',
-                  mode: ProfileMode.child,
-                ),
+                (ref) async =>
+                    _profile(name: 'תלמיד ארוך מאוד', mode: ProfileMode.child),
               ),
             ],
           ),

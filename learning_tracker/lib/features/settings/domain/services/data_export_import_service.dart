@@ -29,7 +29,7 @@ final class BackupDocumentWrite {
 
 final class _DynamicBackupFirestoreGateway implements BackupFirestoreGateway {
   _DynamicBackupFirestoreGateway(Object firestore)
-      : _firestore = firestore as FirebaseFirestore;
+    : _firestore = firestore as FirebaseFirestore;
 
   final FirebaseFirestore _firestore;
 
@@ -53,10 +53,7 @@ final class _DynamicBackupFirestoreGateway implements BackupFirestoreGateway {
       final snapshot = await query.get();
       result.addAll(
         snapshot.docs.map(
-          (doc) => {
-            'id': doc.id,
-            'data': _encodeMap(doc.data()),
-          },
+          (doc) => {'id': doc.id, 'data': _encodeMap(doc.data())},
         ),
       );
       if (snapshot.docs.length < DataExportImportService._pageSize) break;
@@ -121,9 +118,12 @@ final class _DynamicBackupFirestoreGateway implements BackupFirestoreGateway {
       final map = Map<String, dynamic>.from(value);
       final type = map[DataExportImportService._typeKey];
       if (type is String &&
-          const {'timestamp', 'geopoint', 'reference', 'bytes'}.contains(
-            type,
-          )) {
+          const {
+            'timestamp',
+            'geopoint',
+            'reference',
+            'bytes',
+          }.contains(type)) {
         return _restoreValue(map);
       }
       return _encodeMap(map);
@@ -137,10 +137,7 @@ final class _DynamicBackupFirestoreGateway implements BackupFirestoreGateway {
       for (final entry in data.entries) entry.key: decodeValue(entry.value),
     };
     if (encoded.containsKey(DataExportImportService._typeKey)) {
-      return {
-        DataExportImportService._typeKey: 'map',
-        'value': encoded,
-      };
+      return {DataExportImportService._typeKey: 'map', 'value': encoded};
     }
     return encoded;
   }
@@ -311,10 +308,7 @@ class DataExportImportService {
       'uid': _uid,
       'exportedAt': DateTime.now().toUtc().toIso8601String(),
       'appVersion': await _appVersionFetcher(),
-      'account': {
-        'id': _uid,
-        'data': accountData,
-      },
+      'account': {'id': _uid, 'data': accountData},
       'profileSnapshot': profileSnapshot,
       'diagnosticLogs': diagnosticLogs,
       'profiles': profilePayload,
@@ -440,7 +434,10 @@ class DataExportImportService {
     final accountData = account['data'];
     if (accountData != null) {
       writes.add(
-        BackupDocumentWrite(_accountPath, _decodeMapValue(accountData, 'account')),
+        BackupDocumentWrite(
+          _accountPath,
+          _decodeMapValue(accountData, 'account'),
+        ),
       );
     }
 

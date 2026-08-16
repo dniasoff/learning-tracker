@@ -201,7 +201,9 @@ class _ChildGrantsSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
-    final grantsAsync = ref.watch(outgoingTutorGrantsProvider(profile.profileId));
+    final grantsAsync = ref.watch(
+      outgoingTutorGrantsProvider(profile.profileId),
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

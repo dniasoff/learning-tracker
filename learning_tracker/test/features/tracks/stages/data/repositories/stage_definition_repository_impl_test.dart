@@ -170,9 +170,7 @@ void main() {
       test('initializeDefaults delegates to FirestoreStageDefinitionRepository '
           'and seeds 3 default stages reachable at the expected Firestore '
           'path', () async {
-        await adapter.initializeDefaults(
-          CurriculumId.mishnayos,
-        );
+        await adapter.initializeDefaults(CurriculumId.mishnayos);
 
         final stages = await adapter.getStagesForCurriculum(
           CurriculumId.mishnayos,
@@ -203,9 +201,7 @@ void main() {
       test(
         'resetToDefaults overwrites the 3 default doc-ids in place',
         () async {
-          await adapter.initializeDefaults(
-            CurriculumId.mishnayos,
-          );
+          await adapter.initializeDefaults(CurriculumId.mishnayos);
 
           await adapter.resetToDefaults(CurriculumId.mishnayos);
 
@@ -231,12 +227,8 @@ void main() {
       test(
         'getStagesByTrack uses CurriculumId and returns only its stages',
         () async {
-          await adapter.initializeDefaults(
-            CurriculumId.mishnayos,
-          );
-          await adapter.initializeDefaults(
-            CurriculumId.bavli,
-          );
+          await adapter.initializeDefaults(CurriculumId.mishnayos);
+          await adapter.initializeDefaults(CurriculumId.bavli);
 
           final stages = await adapter.getStagesByTrack(CurriculumId.mishnayos);
 
@@ -251,12 +243,8 @@ void main() {
       );
 
       test('deleteStagesForTrack tombstones only that curriculum', () async {
-        await adapter.initializeDefaults(
-          CurriculumId.mishnayos,
-        );
-        await adapter.initializeDefaults(
-          CurriculumId.bavli,
-        );
+        await adapter.initializeDefaults(CurriculumId.mishnayos);
+        await adapter.initializeDefaults(CurriculumId.bavli);
 
         await adapter.deleteStagesForTrack(CurriculumId.mishnayos);
 
@@ -284,9 +272,7 @@ void main() {
       // is also obsolete and this single test case is intentionally gone.
 
       test('getAllStageDefinitions returns every seeded stage', () async {
-        await adapter.initializeDefaults(
-          CurriculumId.mishnayos,
-        );
+        await adapter.initializeDefaults(CurriculumId.mishnayos);
 
         final all = await adapter.getAllStageDefinitions();
         expect(all, hasLength(3));

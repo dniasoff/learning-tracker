@@ -76,10 +76,7 @@ void main() {
             curriculum: CurriculumId.bavli,
             priority: DailyTaskPriority.newLearning,
           ),
-          _task(
-            ref: 'today_task',
-            priority: DailyTaskPriority.todayProgram,
-          ),
+          _task(ref: 'today_task', priority: DailyTaskPriority.todayProgram),
           _task(
             ref: 'chazara_task',
             priority: DailyTaskPriority.scheduledChazara,
@@ -98,7 +95,7 @@ void main() {
           task?.contentItemSefariaRef,
           'today_task',
           reason:
-          'must select the dueToday-bucket task for the mishnayos curriculum, '
+              'must select the dueToday-bucket task for the mishnayos curriculum, '
               'ignoring the review-bucket task on the same curriculum and the '
               'task belonging to a different curriculum',
         );

@@ -204,9 +204,7 @@ void main() {
       ).container;
 
       // The picker / sign-in flow already chose profile 8.
-      container
-          .read(selectedProfileIdProvider.notifier)
-          .select('ulid-8');
+      container.read(selectedProfileIdProvider.notifier).select('ulid-8');
 
       final selected = await container
           .read(autoSelectedProfileIdProvider.notifier)
@@ -275,9 +273,7 @@ void main() {
         final container = result.container;
 
         // Pre-condition: stale id ulid-42 is held from a previous account session.
-        container
-            .read(selectedProfileIdProvider.notifier)
-            .select('ulid-42');
+        container.read(selectedProfileIdProvider.notifier).select('ulid-42');
         expect(container.read(selectedProfileIdProvider), 'ulid-42');
 
         final selected = await container
@@ -317,9 +313,7 @@ void main() {
         ..gatedId = 'ulid-7'
         ..getProfileByIdGate = gate;
 
-      container
-          .read(selectedProfileIdProvider.notifier)
-          .select('ulid-7');
+      container.read(selectedProfileIdProvider.notifier).select('ulid-7');
       expect(container.read(activeProfileDocIdProvider), 'ulid-7');
 
       final ensureFuture = container
@@ -330,9 +324,7 @@ void main() {
       await pumpEventQueue();
 
       // Meanwhile a different profile becomes the one actually selected.
-      container
-          .read(selectedProfileIdProvider.notifier)
-          .select('ulid-8');
+      container.read(selectedProfileIdProvider.notifier).select('ulid-8');
       expect(
         container.read(activeProfileDocIdProvider),
         'ulid-8',

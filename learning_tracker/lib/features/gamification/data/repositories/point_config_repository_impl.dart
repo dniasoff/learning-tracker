@@ -65,6 +65,9 @@ class FirestorePointConfigRepositoryAdapter {
         'silently drop a parent-entered point-value edit.',
       );
     }
-    await repo.clearOverride(curriculumId: curriculumId, stageOrder: stageOrder);
+    await repo.clearOverride(
+      curriculumId: curriculumId,
+      stageOrder: stageOrder,
+    );
   }
 }

@@ -19,8 +19,12 @@ const _profileH = '01ARZ3NDEKTSV4RRFFQ69G5FC1';
 void main() {
   group('WS5.key-prefs — NotificationPreferencesRepository key namespacing', () {
     test('two profileIds produce different reminderEnabled keys', () {
-      final keyA = NotificationPreferencesRepository.reminderEnabledKey(_profileA);
-      final keyB = NotificationPreferencesRepository.reminderEnabledKey(_profileB);
+      final keyA = NotificationPreferencesRepository.reminderEnabledKey(
+        _profileA,
+      );
+      final keyB = NotificationPreferencesRepository.reminderEnabledKey(
+        _profileB,
+      );
       expect(keyA, isNot(equals(keyB)));
       expect(keyA, contains(_profileA));
       expect(keyB, contains(_profileB));
@@ -33,34 +37,54 @@ void main() {
     });
 
     test('two profileIds produce different reminderMinute keys', () {
-      final keyA = NotificationPreferencesRepository.reminderMinuteKey(_profileD);
-      final keyB = NotificationPreferencesRepository.reminderMinuteKey(_profileH);
+      final keyA = NotificationPreferencesRepository.reminderMinuteKey(
+        _profileD,
+      );
+      final keyB = NotificationPreferencesRepository.reminderMinuteKey(
+        _profileH,
+      );
       expect(keyA, isNot(equals(keyB)));
     });
 
     test('two profileIds produce different streakAlertEnabled keys', () {
-      final keyA = NotificationPreferencesRepository.streakAlertEnabledKey(_profileA);
-      final keyB = NotificationPreferencesRepository.streakAlertEnabledKey(_profileB);
+      final keyA = NotificationPreferencesRepository.streakAlertEnabledKey(
+        _profileA,
+      );
+      final keyB = NotificationPreferencesRepository.streakAlertEnabledKey(
+        _profileB,
+      );
       expect(keyA, isNot(equals(keyB)));
     });
 
     test('two profileIds produce different streakAlertHour keys', () {
-      final keyA = NotificationPreferencesRepository.streakAlertHourKey(_profileE);
-      final keyB = NotificationPreferencesRepository.streakAlertHourKey(_profileF);
+      final keyA = NotificationPreferencesRepository.streakAlertHourKey(
+        _profileE,
+      );
+      final keyB = NotificationPreferencesRepository.streakAlertHourKey(
+        _profileF,
+      );
       expect(keyA, isNot(equals(keyB)));
     });
 
     test('two profileIds produce different streakAlertMinute keys', () {
-      final keyA = NotificationPreferencesRepository.streakAlertMinuteKey(_profileE);
-      final keyB = NotificationPreferencesRepository.streakAlertMinuteKey(_profileF);
+      final keyA = NotificationPreferencesRepository.streakAlertMinuteKey(
+        _profileE,
+      );
+      final keyB = NotificationPreferencesRepository.streakAlertMinuteKey(
+        _profileF,
+      );
       expect(keyA, isNot(equals(keyB)));
     });
 
     test('two profileIds produce different rewardNotification keys', () {
       final keyA =
-          NotificationPreferencesRepository.rewardNotificationEnabledKey(_profileA);
+          NotificationPreferencesRepository.rewardNotificationEnabledKey(
+            _profileA,
+          );
       final keyB =
-          NotificationPreferencesRepository.rewardNotificationEnabledKey(_profileB);
+          NotificationPreferencesRepository.rewardNotificationEnabledKey(
+            _profileB,
+          );
       expect(keyA, isNot(equals(keyB)));
     });
 
@@ -88,8 +112,12 @@ void main() {
     });
 
     test('same profileId produces the same key (stability)', () {
-      final key1 = NotificationPreferencesRepository.reminderEnabledKey(_profileH);
-      final key2 = NotificationPreferencesRepository.reminderEnabledKey(_profileH);
+      final key1 = NotificationPreferencesRepository.reminderEnabledKey(
+        _profileH,
+      );
+      final key2 = NotificationPreferencesRepository.reminderEnabledKey(
+        _profileH,
+      );
       expect(key1, equals(key2));
     });
   });

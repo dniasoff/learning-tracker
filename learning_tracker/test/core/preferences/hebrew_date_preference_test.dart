@@ -75,21 +75,24 @@ void main() {
       },
     );
 
-    test('both codepaths agree for the null sentinel (legacy-key fallback path) '
-        'with no legacy key set', () async {
-      final prefs = await SharedPreferences.getInstance();
+    test(
+      'both codepaths agree for the null sentinel (legacy-key fallback path) '
+      'with no legacy key set',
+      () async {
+        final prefs = await SharedPreferences.getInstance();
 
-      final viaPreference = await HebrewDatePreference().read(
-        kNoProfilePreferenceSentinel,
-      );
-      final viaKeys = ProfileScopedPreferenceKeys.readUseHebrewCalendar(
-        prefs,
-        kNoProfilePreferenceSentinel,
-      );
+        final viaPreference = await HebrewDatePreference().read(
+          kNoProfilePreferenceSentinel,
+        );
+        final viaKeys = ProfileScopedPreferenceKeys.readUseHebrewCalendar(
+          prefs,
+          kNoProfilePreferenceSentinel,
+        );
 
-      expect(viaPreference, isTrue);
-      expect(viaKeys, isTrue);
-      expect(viaPreference, viaKeys);
-    });
+        expect(viaPreference, isTrue);
+        expect(viaKeys, isTrue);
+        expect(viaPreference, viaKeys);
+      },
+    );
   });
 }

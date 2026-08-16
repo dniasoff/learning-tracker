@@ -132,7 +132,8 @@ class TutorPinService {
   }
 
   /// Returns true if a tutor PIN is set for [profileId].
-  Future<bool> hasTutorPin(String profileId) => _pinService.hasTutorPin(profileId);
+  Future<bool> hasTutorPin(String profileId) =>
+      _pinService.hasTutorPin(profileId);
 
   /// Remove the tutor PIN and lockout state for [profileId].
   Future<void> clearTutorPin(String profileId) =>

@@ -247,7 +247,7 @@ void main() {
       (tester) async {
         await tester.pumpWidget(
           _buildSettings(
-                        auth: auth,
+            auth: auth,
             router: router,
             profile: _adultProfile(),
             pinService: pinService,
@@ -285,7 +285,7 @@ void main() {
       (tester) async {
         await tester.pumpWidget(
           _buildSettings(
-                        auth: auth,
+            auth: auth,
             router: router,
             profile: _adultProfile(),
             pinService: pinService,
@@ -311,7 +311,7 @@ void main() {
       (tester) async {
         await tester.pumpWidget(
           _buildSettings(
-                        auth: auth,
+            auth: auth,
             router: router,
             profile: _adultProfile(),
             pinService: pinService,
@@ -348,7 +348,7 @@ void main() {
       (tester) async {
         await tester.pumpWidget(
           _buildSettings(
-                        auth: auth,
+            auth: auth,
             router: router,
             profile: _adultProfile(),
             pinService: pinService,
@@ -387,7 +387,7 @@ void main() {
       (tester) async {
         await tester.pumpWidget(
           _buildSettings(
-                        auth: auth,
+            auth: auth,
             router: router,
             profile: _adultProfile(),
             pinService: pinService,
@@ -428,7 +428,7 @@ void main() {
       (tester) async {
         await tester.pumpWidget(
           _buildSettings(
-                        auth: auth,
+            auth: auth,
             router: router,
             profile: _childProfile(),
             pinService: pinService,
@@ -463,7 +463,7 @@ void main() {
       (tester) async {
         await tester.pumpWidget(
           _buildSettings(
-                        auth: auth,
+            auth: auth,
             router: router,
             profile: _childProfile(),
             pinService: pinService,
@@ -506,7 +506,7 @@ void main() {
       (tester) async {
         await tester.pumpWidget(
           _buildSettings(
-                        auth: auth,
+            auth: auth,
             router: router,
             profile: _adultProfile(),
             pinService: pinService,

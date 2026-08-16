@@ -508,9 +508,7 @@ void main() {
           extraOverrides: [
             ..._dashboardSilence(h),
             activeTracksProvider.overrideWith(
-              (ref) => Stream.value([
-                stubTrack(id: 1, profileId: profileId),
-              ]),
+              (ref) => Stream.value([stubTrack(id: 1, profileId: profileId)]),
             ),
             activeTutoredProfileSelectionProvider.overrideWith(
               () => _FixedTutoredSelection(tutoredSelection),

@@ -171,9 +171,7 @@ ProviderContainer _makeContainer(
         ),
     ],
   );
-  container
-      .read(selectedProfileIdProvider.notifier)
-      .select(_profileId);
+  container.read(selectedProfileIdProvider.notifier).select(_profileId);
   return container;
 }
 
@@ -215,7 +213,9 @@ void main() {
       addTearDown(container.dispose);
 
       final pct = await container.read(
-        dashboardTrackCompletionPercentageProvider(CurriculumId.mishnayos).future,
+        dashboardTrackCompletionPercentageProvider(
+          CurriculumId.mishnayos,
+        ).future,
       );
       expect(pct, 0.0, reason: 'no completions → 0.0');
     });
@@ -246,7 +246,9 @@ void main() {
       addTearDown(container.dispose);
 
       final pct = await container.read(
-        dashboardTrackCompletionPercentageProvider(CurriculumId.mishnayos).future,
+        dashboardTrackCompletionPercentageProvider(
+          CurriculumId.mishnayos,
+        ).future,
       );
       expect(pct, 0.0, reason: 'zero-item track must return 0.0');
     });
@@ -286,7 +288,9 @@ void main() {
         addTearDown(container.dispose);
 
         final pct = await container.read(
-          dashboardTrackCompletionPercentageProvider(CurriculumId.mishnayos).future,
+          dashboardTrackCompletionPercentageProvider(
+            CurriculumId.mishnayos,
+          ).future,
         );
         expect(
           pct,
@@ -368,7 +372,9 @@ void main() {
         addTearDown(container.dispose);
 
         final pct = await container.read(
-          dashboardTrackCompletionPercentageProvider(CurriculumId.mishnayos).future,
+          dashboardTrackCompletionPercentageProvider(
+            CurriculumId.mishnayos,
+          ).future,
         );
         // 1 done / 4 total = 0.25
         expect(
@@ -426,7 +432,9 @@ void main() {
 
         // Mishnayos track should see the completion (1/3).
         final mishPct = await container.read(
-          dashboardTrackCompletionPercentageProvider(CurriculumId.mishnayos).future,
+          dashboardTrackCompletionPercentageProvider(
+            CurriculumId.mishnayos,
+          ).future,
         );
         expect(
           mishPct,
@@ -495,7 +503,9 @@ void main() {
       addTearDown(container.dispose);
 
       final pct = await container.read(
-        dashboardTrackCompletionPercentageProvider(CurriculumId.mishnayos).future,
+        dashboardTrackCompletionPercentageProvider(
+          CurriculumId.mishnayos,
+        ).future,
       );
       // If provider used stage id (≥3) instead of stageOrder (1), pct = 0.0.
       expect(

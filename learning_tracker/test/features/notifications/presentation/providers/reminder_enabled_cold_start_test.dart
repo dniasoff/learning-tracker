@@ -121,30 +121,28 @@ void main() {
     // K2. StreakAlertEnabled cold-start race fix
     // -------------------------------------------------------------------------
 
-    test(
-      'K2. StreakAlertEnabled: value stored under real ULID is loaded after '
-      'profile resolves from null',
-      () async {
-        SharedPreferences.setMockInitialValues({
-          NotificationPreferencesRepository.streakAlertEnabledKey(_profile7): false,
-        });
+    test('K2. StreakAlertEnabled: value stored under real ULID is loaded after '
+        'profile resolves from null', () async {
+      SharedPreferences.setMockInitialValues({
+        NotificationPreferencesRepository.streakAlertEnabledKey(_profile7):
+            false,
+      });
 
-        final (container, notifier) = _makeContainer(startId: null);
-        addTearDown(container.dispose);
+      final (container, notifier) = _makeContainer(startId: null);
+      addTearDown(container.dispose);
 
-        expect(await container.read(streakAlertEnabledProvider.future), isTrue);
+      expect(await container.read(streakAlertEnabledProvider.future), isTrue);
 
-        notifier.set(_profile7);
+      notifier.set(_profile7);
 
-        expect(
-          await container.read(streakAlertEnabledProvider.future),
-          isFalse,
-          reason:
-              'StreakAlertEnabled should reload prefs under the real profile ULID '
-              'after selectedProfileIdProvider resolves from null',
-        );
-      },
-    );
+      expect(
+        await container.read(streakAlertEnabledProvider.future),
+        isFalse,
+        reason:
+            'StreakAlertEnabled should reload prefs under the real profile ULID '
+            'after selectedProfileIdProvider resolves from null',
+      );
+    });
 
     // -------------------------------------------------------------------------
     // K3. RewardNotificationEnabled cold-start race fix
@@ -191,7 +189,8 @@ void main() {
         // Profile 1: reminder enabled (no key = default true)
         // The new ULID: reminder disabled.
         SharedPreferences.setMockInitialValues({
-          NotificationPreferencesRepository.reminderEnabledKey(_profile42): false,
+          NotificationPreferencesRepository.reminderEnabledKey(_profile42):
+              false,
         });
 
         final (container, notifier) = _makeContainer(startId: _profile1);

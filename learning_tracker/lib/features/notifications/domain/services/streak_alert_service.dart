@@ -7,7 +7,6 @@ import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_state_service.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_gateway.dart';
 
-
 /// Service for managing streak protection alert notifications.
 ///
 /// Scoped to a single profile so each profile's alert reflects its own

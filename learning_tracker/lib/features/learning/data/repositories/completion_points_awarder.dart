@@ -74,11 +74,11 @@ class FirestoreCompletionPointsAwarder implements CompletionPointsPort {
   /// exists — mirrors `CompletionRepositoryImpl._calculatePoints`'s prior
   /// fallback ladder verbatim (Learn=10, Chazara1=5, Chazara2=3, else 1).
   static int pointsForStage(int stageOrder) => switch (stageOrder) {
-        1 => 10,
-        2 => 5,
-        3 => 3,
-        _ => 1,
-      };
+    1 => 10,
+    2 => 5,
+    3 => 3,
+    _ => 1,
+  };
 
   @override
   Future<int> calculatePoints({
@@ -97,8 +97,9 @@ class FirestoreCompletionPointsAwarder implements CompletionPointsPort {
     // tier policy is durable and auditable rather than inferred.
 
     // --- Child-profile gate (faithful to Drift `_isChildProfile`) ---
-    final learnerProfileRepository =
-        await _ref.read(firestoreLearnerProfileRepositoryProvider.future);
+    final learnerProfileRepository = await _ref.read(
+      firestoreLearnerProfileRepositoryProvider.future,
+    );
     final profileUlid = _ref.read(activeProfileDocIdProvider);
     if (learnerProfileRepository == null || profileUlid == null) {
       // NOT a legitimate zero — a CONTRADICTORY state.
@@ -150,7 +151,9 @@ class FirestoreCompletionPointsAwarder implements CompletionPointsPort {
       // `_resolveTrackId == null ⇒ 0`.
       return 0;
     }
-    final goalRepository = await _ref.read(firestoreGoalRepositoryProvider.future);
+    final goalRepository = await _ref.read(
+      firestoreGoalRepositoryProvider.future,
+    );
     if (goalRepository == null) {
       // Same reasoning as the profile branch above: an account is provably
       // active here, so a null goal repository is a not-ready inconsistency,
@@ -216,7 +219,9 @@ class FirestoreCompletionPointsAwarder implements CompletionPointsPort {
     // engagement tier that earns points is `live`. The ledger row is stamped
     // `source: CompletionSource.live` explicitly — not as a guess, but as the
     // durable record of the tier policy that gated arrival here.
-    final repository = await _ref.read(firestorePointsLedgerRepositoryProvider.future);
+    final repository = await _ref.read(
+      firestorePointsLedgerRepositoryProvider.future,
+    );
     if (repository == null) {
       // An award IS owed (points > 0 was computed) but there is no ledger to
       // write against. This is the exact defect class the migration brief

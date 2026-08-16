@@ -58,38 +58,71 @@ class _CurrentFirestoreWriter {
   dynamic noSuchMethod(Invocation invocation) {
     final method = invocation.memberName;
     final args = invocation.namedArguments;
-    final data = args[#data] as Map<String, dynamic>? ??
+    final data =
+        args[#data] as Map<String, dynamic>? ??
         ((args[#entries] as List<Object?>?)?.first as Map<String, dynamic>?) ??
         const <String, dynamic>{};
     final id = args[#profileId]?.toString() ?? _profileId;
     switch (method) {
       case #pushCompletion:
-        return _write('completions', DocIds.completionDocIdForProfile(id, data), data);
+        return _write(
+          'completions',
+          DocIds.completionDocIdForProfile(id, data),
+          data,
+        );
       case #pushStreak:
         return _write('streak_events', DocIds.streakEventDocId(data), data);
       case #pushSettings:
         return _write('settings', DocIds.settingsDocId(data), data);
       case #pushTrack:
-        return _write('curriculum_tracks', DocIds.curriculumTrackDocId(data), data);
+        return _write(
+          'curriculum_tracks',
+          DocIds.curriculumTrackDocId(data),
+          data,
+        );
       case #pushBookmark:
         return _write('bookmarks', DocIds.bookmarkDocId(data), data);
       case #pushLedgerEntry:
       case #pushLedgerEntriesBatch:
-        return _write('learning_ledger', DocIds.learningLedgerDocId(data), data);
+        return _write(
+          'learning_ledger',
+          DocIds.learningLedgerDocId(data),
+          data,
+        );
       case #pushProfileProgram:
-        return _write('profile_programs', DocIds.profileProgramDocId(data), data);
+        return _write(
+          'profile_programs',
+          DocIds.profileProgramDocId(data),
+          data,
+        );
       case #pushGoal:
         return _write('goals', DocIds.goalDocId(data), data);
       case #pushCurriculumImportMetadata:
-        return _write('import_metadata', DocIds.importMetadataDocId(data), data);
+        return _write(
+          'import_metadata',
+          DocIds.importMetadataDocId(data),
+          data,
+        );
       case #pushStageDefinition:
-        return _write('stage_definitions', DocIds.stageDefinitionDocId(data), data);
+        return _write(
+          'stage_definitions',
+          DocIds.stageDefinitionDocId(data),
+          data,
+        );
       case #pushStudyDayConfig:
-        return _write('study_day_configs', DocIds.studyDayConfigDocId(data), data);
+        return _write(
+          'study_day_configs',
+          DocIds.studyDayConfigDocId(data),
+          data,
+        );
       case #pushPointsLedgerEntry:
         return _write('points_ledger', DocIds.pointsLedgerDocId(data), data);
       case #pushRewardRedemption:
-        return _write('reward_redemptions', DocIds.rewardRedemptionDocId(data), data);
+        return _write(
+          'reward_redemptions',
+          DocIds.rewardRedemptionDocId(data),
+          data,
+        );
       case #pushLearnerProfile:
         return _firestore
             .collection('users')
@@ -159,7 +192,10 @@ void main() {
         };
         await _gw(fs).pushCompletion(profileId: _profileId, data: data);
         final live = await _liveDocId(fs, 'completions');
-        expect(DocIds.completionDocIdForProfile(_profileId, data), equals(live));
+        expect(
+          DocIds.completionDocIdForProfile(_profileId, data),
+          equals(live),
+        );
       }
     });
 
@@ -175,7 +211,10 @@ void main() {
         };
         await _gw(fs).pushCompletion(profileId: _profileId, data: data);
         final live = await _liveDocId(fs, 'completions');
-        expect(DocIds.completionDocIdForProfile(_profileId, data), equals(live));
+        expect(
+          DocIds.completionDocIdForProfile(_profileId, data),
+          equals(live),
+        );
       },
     );
 
@@ -275,19 +314,21 @@ void main() {
       expect(DocIds.goalDocId(data), equals(live));
     });
 
-    test('goals: id-less payload derives the SAME deterministic fallback key '
-        'as the current deterministic path (AUD-core-sync-24 — never add())',
-        () async {
-      final fs = createFakeFirestore(authenticatedUid: _uid);
-      final data = <String, dynamic>{
-        'curriculum_id': 'mishnayos',
-        'target_percent': 50,
-        'created_at': '2026-01-01T00:00:00.000Z',
-      };
-      await _gw(fs).pushGoal(profileId: _profileId, data: data);
-      final live = await _liveDocId(fs, 'goals');
-      expect(DocIds.goalDocId(data), equals(live));
-    });
+    test(
+      'goals: id-less payload derives the SAME deterministic fallback key '
+      'as the current deterministic path (AUD-core-sync-24 — never add())',
+      () async {
+        final fs = createFakeFirestore(authenticatedUid: _uid);
+        final data = <String, dynamic>{
+          'curriculum_id': 'mishnayos',
+          'target_percent': 50,
+          'created_at': '2026-01-01T00:00:00.000Z',
+        };
+        await _gw(fs).pushGoal(profileId: _profileId, data: data);
+        final live = await _liveDocId(fs, 'goals');
+        expect(DocIds.goalDocId(data), equals(live));
+      },
+    );
 
     test('import_metadata: curriculum_id payload is byte-for-byte', () async {
       final fs = createFakeFirestore(authenticatedUid: _uid);
@@ -479,15 +520,9 @@ void main() {
       // old per-device track_id shape is retained only as the rejected
       // comparison value.
       await _gw(fs).pushStudyDayConfig(profileId: _profileId, data: data);
-      final currentDocId = await _liveDocId(
-        fs,
-        'study_day_configs',
-      );
+      final currentDocId = await _liveDocId(fs, 'study_day_configs');
       expect(currentDocId, equals('mishnayos_1'));
-      expect(
-        DocIds.studyDayConfigDocId(data),
-        isNot(equals('mishnayos_1_5')),
-      );
+      expect(DocIds.studyDayConfigDocId(data), isNot(equals('mishnayos_1_5')));
       expect(DocIds.studyDayConfigDocId(data), equals('mishnayos_1'));
     });
 

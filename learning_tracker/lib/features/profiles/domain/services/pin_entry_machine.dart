@@ -316,7 +316,10 @@ class PinEntryMachine {
     }
   }
 
-  Future<void> _handleVerifyCurrentForChange(String pin, String profileId) async {
+  Future<void> _handleVerifyCurrentForChange(
+    String pin,
+    String profileId,
+  ) async {
     _emit(_state.copyWith(busy: true, error: null));
     try {
       final ok = await _pinService().verifyProfilePin(profileId, pin);

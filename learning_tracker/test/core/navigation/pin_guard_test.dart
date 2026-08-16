@@ -181,7 +181,9 @@ void main() {
         // app-layer route class directly). Prove the push route is now
         // fully caller-controlled by injecting a distinctive marker route
         // that the guard could not possibly have constructed on its own.
-        when(() => pinService.hasProfilePin('1')).thenAnswer((_) async => false);
+        when(
+          () => pinService.hasProfilePin('1'),
+        ).thenAnswer((_) async => false);
         _stubRouterPush(router, true);
 
         final guard = PinGuard(
@@ -215,7 +217,9 @@ void main() {
     test(
       'pushes setup route, does NOT cache scope, calls next(false)',
       () async {
-        when(() => pinService.hasProfilePin('1')).thenAnswer((_) async => false);
+        when(
+          () => pinService.hasProfilePin('1'),
+        ).thenAnswer((_) async => false);
         _stubRouterPush(router, false);
 
         final authenticated = <PinScope>[];

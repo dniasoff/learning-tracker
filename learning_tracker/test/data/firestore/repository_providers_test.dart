@@ -318,106 +318,115 @@ void main() {
       expect(secondProfileGoals.docs, hasLength(1));
     });
 
-    test('a valid tutor grant reads the child through the owner path', () async {
-      final firestore = FakeFirebaseFirestore();
-      await seedGoal(
-        firestore,
-        uid: 'parent-uid',
-        profileId: _profileId,
-        curriculumId: CurriculumId.chumash,
-        targetPercent: 50,
-      );
-      await firestore.collection('tutor_grants').doc('grant-1').set({
-        'state': 'active',
-        'tutor_uid': _uid,
-        'parent_uid': 'parent-uid',
-        'child_profile_id': _profileId,
-      });
-      final container = ProviderContainer(
-        retry: (_, __) => null,
-        overrides: [
-          activeAccountFirebaseProvider.overrideWith(
-            (ref) async => _handles(firestore),
-          ),
-        ],
-      );
-      addTearDown(container.dispose);
-      container.read(activeProfileDocIdProvider.notifier).set(_profileId);
-      final keepAlive = container.listen(
-        firestoreGoalRepositoryProvider,
-        (_, __) {},
-      );
-      addTearDown(keepAlive.close);
-      container
-          .read(activeTutoredProfileSelectionProvider.notifier)
-          .enter(
-            const TutoredProfileSelection(
-              profileId: _profileId,
-              ownerUid: 'parent-uid',
-              grantId: 'grant-1',
-              permissions: TutorPermissions(),
+    test(
+      'a valid tutor grant reads the child through the owner path',
+      () async {
+        final firestore = FakeFirebaseFirestore();
+        await seedGoal(
+          firestore,
+          uid: 'parent-uid',
+          profileId: _profileId,
+          curriculumId: CurriculumId.chumash,
+          targetPercent: 50,
+        );
+        await firestore.collection('tutor_grants').doc('grant-1').set({
+          'state': 'active',
+          'tutor_uid': _uid,
+          'parent_uid': 'parent-uid',
+          'child_profile_id': _profileId,
+        });
+        final container = ProviderContainer(
+          retry: (_, __) => null,
+          overrides: [
+            activeAccountFirebaseProvider.overrideWith(
+              (ref) async => _handles(firestore),
             ),
-          );
+          ],
+        );
+        addTearDown(container.dispose);
+        container.read(activeProfileDocIdProvider.notifier).set(_profileId);
+        final keepAlive = container.listen(
+          firestoreGoalRepositoryProvider,
+          (_, __) {},
+        );
+        addTearDown(keepAlive.close);
+        container
+            .read(activeTutoredProfileSelectionProvider.notifier)
+            .enter(
+              const TutoredProfileSelection(
+                profileId: _profileId,
+                ownerUid: 'parent-uid',
+                grantId: 'grant-1',
+                permissions: TutorPermissions(),
+              ),
+            );
 
-      final repo = await container.read(firestoreGoalRepositoryProvider.future);
+        final repo = await container.read(
+          firestoreGoalRepositoryProvider.future,
+        );
 
-      expect(repo, isA<FirestoreGoalRepository>());
-      final goals = await repo!.getGoals(CurriculumId.chumash);
-      expect(goals, hasLength(1));
-      expect(goals.single.targetPercent, 50);
-    });
+        expect(repo, isA<FirestoreGoalRepository>());
+        final goals = await repo!.getGoals(CurriculumId.chumash);
+        expect(goals, hasLength(1));
+        expect(goals.single.targetPercent, 50);
+      },
+    );
 
-    test('a tutor selection without its grant throws instead of returning null',
-        () async {
-      final firestore = FakeFirebaseFirestore();
-      final container = ProviderContainer(
-        retry: (_, __) => null,
-        overrides: [
-          activeAccountFirebaseProvider.overrideWith(
-            (ref) async => _handles(firestore),
-          ),
-        ],
-      );
-      addTearDown(container.dispose);
-      final keepAlive = container.listen(
-        firestoreGoalRepositoryProvider,
-        (_, __) {},
-      );
-      addTearDown(keepAlive.close);
-      container
-          .read(activeTutoredProfileSelectionProvider.notifier)
-          .enter(
-            const TutoredProfileSelection(
-              profileId: _profileId,
-              ownerUid: 'parent-uid',
-              grantId: 'missing-grant',
-              permissions: TutorPermissions(),
+    test(
+      'a tutor selection without its grant throws instead of returning null',
+      () async {
+        final firestore = FakeFirebaseFirestore();
+        final container = ProviderContainer(
+          retry: (_, __) => null,
+          overrides: [
+            activeAccountFirebaseProvider.overrideWith(
+              (ref) async => _handles(firestore),
             ),
-          );
+          ],
+        );
+        addTearDown(container.dispose);
+        final keepAlive = container.listen(
+          firestoreGoalRepositoryProvider,
+          (_, __) {},
+        );
+        addTearDown(keepAlive.close);
+        container
+            .read(activeTutoredProfileSelectionProvider.notifier)
+            .enter(
+              const TutoredProfileSelection(
+                profileId: _profileId,
+                ownerUid: 'parent-uid',
+                grantId: 'missing-grant',
+                permissions: TutorPermissions(),
+              ),
+            );
 
-      await expectLater(
-        container.read(firestoreGoalRepositoryProvider.future),
-        throwsA(isA<StateError>()),
-      );
-    });
+        await expectLater(
+          container.read(firestoreGoalRepositoryProvider.future),
+          throwsA(isA<StateError>()),
+        );
+      },
+    );
 
-    test('non-tutored selection still resolves the signed-in owner path',
-        () async {
-      final firestore = FakeFirebaseFirestore();
-      final container = ProviderContainer(
-        overrides: [
-          activeAccountFirebaseProvider.overrideWith(
-            (ref) async => _handles(firestore),
-          ),
-        ],
-      );
-      addTearDown(container.dispose);
-      container.read(activeProfileDocIdProvider.notifier).set(_profileId);
-      expect(
-        await container.read(firestoreGoalRepositoryProvider.future),
-        isA<FirestoreGoalRepository>(),
-      );
-    });
+    test(
+      'non-tutored selection still resolves the signed-in owner path',
+      () async {
+        final firestore = FakeFirebaseFirestore();
+        final container = ProviderContainer(
+          overrides: [
+            activeAccountFirebaseProvider.overrideWith(
+              (ref) async => _handles(firestore),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+        container.read(activeProfileDocIdProvider.notifier).set(_profileId);
+        expect(
+          await container.read(firestoreGoalRepositoryProvider.future),
+          isA<FirestoreGoalRepository>(),
+        );
+      },
+    );
   });
 
   group('firestoreBookmarkRepositoryProvider (family, parameterized on '

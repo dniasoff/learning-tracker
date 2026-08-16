@@ -12,9 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 const _testProfileId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
 
 ProviderContainer _makeContainer() => ProviderContainer(
-  overrides: [
-    selectedProfileIdProvider.overrideWithValue(_testProfileId),
-  ],
+  overrides: [selectedProfileIdProvider.overrideWithValue(_testProfileId)],
 );
 
 void main() {
@@ -167,7 +165,9 @@ void main() {
       );
       expect(
         prefs.getInt(
-          NotificationPreferencesRepository.streakAlertMinuteKey(_testProfileId),
+          NotificationPreferencesRepository.streakAlertMinuteKey(
+            _testProfileId,
+          ),
         ),
         30,
       );

@@ -342,7 +342,9 @@ class FirestoreProgressRepositoryAdapter implements ProgressRepository {
   /// Configuration-shaped read — returns an empty list when no profile is
   /// active yet (a curriculum with no scope override tracks the whole
   /// curriculum, a legitimate configuration).
-  Future<List<CurriculumScopeEntity>> getScopes(CurriculumId curriculumId) async {
+  Future<List<CurriculumScopeEntity>> getScopes(
+    CurriculumId curriculumId,
+  ) async {
     final repo = await _resolveScopesOrNull();
     if (repo == null) return const [];
     return repo.getScopes(curriculumId);

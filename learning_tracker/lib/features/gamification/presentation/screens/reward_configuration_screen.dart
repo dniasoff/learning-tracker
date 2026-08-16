@@ -183,7 +183,9 @@ class _RewardConfigurationScreenState
       ),
     );
     if (go != true || !mounted) return;
-    await ref.read(rewardConfigControllerProvider.notifier).deleteMilestone(milestone);
+    await ref
+        .read(rewardConfigControllerProvider.notifier)
+        .deleteMilestone(milestone);
     _refreshRewards();
   }
 

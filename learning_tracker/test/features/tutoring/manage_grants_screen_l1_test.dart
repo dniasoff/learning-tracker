@@ -43,7 +43,6 @@ import 'package:learning_tracker/features/tutoring/presentation/screens/manage_g
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 
-
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
 class _MockAuthRepository extends Mock implements AuthRepository {}

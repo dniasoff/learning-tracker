@@ -33,7 +33,9 @@ class FirestoreRewardRedemptionRepositoryAdapter {
     required int iconIndex,
     required int pointsCost,
   }) async {
-    final repo = await _ref.read(firestoreRewardRedemptionRepositoryProvider.future);
+    final repo = await _ref.read(
+      firestoreRewardRedemptionRepositoryProvider.future,
+    );
     if (repo == null) {
       throw const RewardRedemptionRepositoryNotReadyException();
     }
@@ -45,7 +47,9 @@ class FirestoreRewardRedemptionRepositoryAdapter {
   }
 
   Stream<List<RewardRedemptionEntity>> watchPendingRedemptions() async* {
-    final repo = await _ref.read(firestoreRewardRedemptionRepositoryProvider.future);
+    final repo = await _ref.read(
+      firestoreRewardRedemptionRepositoryProvider.future,
+    );
     if (repo == null) {
       // Pending redemptions are learner spend state, not configuration. An
       // empty stream here would claim that the learner has no pending
@@ -56,7 +60,9 @@ class FirestoreRewardRedemptionRepositoryAdapter {
   }
 
   Future<void> fulfilRedemption(String ulid) async {
-    final repo = await _ref.read(firestoreRewardRedemptionRepositoryProvider.future);
+    final repo = await _ref.read(
+      firestoreRewardRedemptionRepositoryProvider.future,
+    );
     if (repo == null) {
       throw const RewardRedemptionRepositoryNotReadyException();
     }
@@ -64,7 +70,9 @@ class FirestoreRewardRedemptionRepositoryAdapter {
   }
 
   Future<void> declineRedemption(String ulid) async {
-    final repo = await _ref.read(firestoreRewardRedemptionRepositoryProvider.future);
+    final repo = await _ref.read(
+      firestoreRewardRedemptionRepositoryProvider.future,
+    );
     if (repo == null) {
       throw const RewardRedemptionRepositoryNotReadyException();
     }

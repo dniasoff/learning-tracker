@@ -14,18 +14,16 @@ const _stageDefinition = domain_stage.StageDefinition(
   isDefault: true,
 );
 
-CompletionEntity _completion({
-  required String sefariaRef,
-  int stageId = 1,
-}) => CompletionEntity(
-  curriculumId: CurriculumId.mishnayos,
-  sefariaRef: sefariaRef,
-  stageId: stageId,
-  trackType: 'personal',
-  source: CompletionSource.live,
-  completedAt: DateTime(2026, 5, 1),
-  points: 10,
-);
+CompletionEntity _completion({required String sefariaRef, int stageId = 1}) =>
+    CompletionEntity(
+      curriculumId: CurriculumId.mishnayos,
+      sefariaRef: sefariaRef,
+      stageId: stageId,
+      trackType: 'personal',
+      source: CompletionSource.live,
+      completedAt: DateTime(2026, 5, 1),
+      points: 10,
+    );
 
 void main() {
   const service = TrackCompletionService();
@@ -198,15 +196,11 @@ void main() {
         byTrack: {
           1: TrackEntry(
             stages: [_stageDefinition],
-            completions: [
-              _completion(sefariaRef: 'Berakhot 1:1', stageId: 1),
-            ],
+            completions: [_completion(sefariaRef: 'Berakhot 1:1', stageId: 1)],
           ),
           2: TrackEntry(
             stages: [_stageDefinition],
-            completions: [
-              _completion(sefariaRef: 'Berakhot 1:1', stageId: 1),
-            ],
+            completions: [_completion(sefariaRef: 'Berakhot 1:1', stageId: 1)],
           ),
         },
         totalItems: 3,

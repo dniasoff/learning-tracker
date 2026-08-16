@@ -24,7 +24,9 @@ final trackCreationServiceProvider = Provider<TrackCreationService>((ref) {
     trackRepository: FirestoreCurriculumTrackRepositoryAdapter(ref: ref),
     studyDayRepository: FirestoreStudyDayWriteRepositoryAdapter(ref: ref),
     scopeRepository: FirestoreCurriculumScopeWriteRepositoryAdapter(ref: ref),
-    profileProgramRepository: FirestoreProfileProgramRepositoryAdapter(ref: ref),
+    profileProgramRepository: FirestoreProfileProgramRepositoryAdapter(
+      ref: ref,
+    ),
     bookmarkRepository: bookmarkRepository,
     analytics: analytics,
   );

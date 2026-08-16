@@ -482,5 +482,4 @@ void main() {
       expect(await repo.hasHydratedCache('ulid-added-elsewhere'), isFalse);
     });
   });
-
 }

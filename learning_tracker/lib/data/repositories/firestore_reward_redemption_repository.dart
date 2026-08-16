@@ -52,11 +52,12 @@ class FirestoreRewardRedemptionRepository {
   final String _profileId;
   final AppLogger _logger;
 
-  FirestorePointsLedgerRepository get _ledger => FirestorePointsLedgerRepository(
-    firestore: _firestore,
-    uid: _uid,
-    profileId: _profileId,
-  );
+  FirestorePointsLedgerRepository get _ledger =>
+      FirestorePointsLedgerRepository(
+        firestore: _firestore,
+        uid: _uid,
+        profileId: _profileId,
+      );
 
   CollectionReference<Map<String, dynamic>> get _redemptions => _firestore
       .collection('users')
@@ -97,8 +98,10 @@ class FirestoreRewardRedemptionRepository {
     return results;
   }
 
-  Query<Map<String, dynamic>> get _pendingQuery =>
-      _redemptions.where('status', isEqualTo: RewardRedemptionStatus.pendingFulfilment);
+  Query<Map<String, dynamic>> get _pendingQuery => _redemptions.where(
+    'status',
+    isEqualTo: RewardRedemptionStatus.pendingFulfilment,
+  );
 
   /// Creates a redemption request for [rewardTitle] (cost [pointsCost]) if
   /// the current balance covers it — debits the balance via a

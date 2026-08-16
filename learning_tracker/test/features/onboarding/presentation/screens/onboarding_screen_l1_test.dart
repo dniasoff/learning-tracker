@@ -610,7 +610,8 @@ void main() {
         when(() => repo.getProfiles()).thenAnswer(
           (_) async => [
             LearnerProfileEntity(
-              profileId: 'ulid-4', // matches onboarding_profile_id in this group's prefs
+              profileId:
+                  'ulid-4', // matches onboarding_profile_id in this group's prefs
               displayName: 'Yitzchak',
               mode: ProfileMode.child,
               createdAt: now,

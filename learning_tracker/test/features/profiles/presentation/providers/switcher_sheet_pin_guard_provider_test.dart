@@ -81,9 +81,7 @@ void main() {
 
   test('returns false when no profile matches the active profile id', () async {
     final container = await _makeContainer(
-      profiles: [
-        _profile(profileId: 'ulid-1', mode: ProfileMode.adult),
-      ],
+      profiles: [_profile(profileId: 'ulid-1', mode: ProfileMode.adult)],
       activeProfileId: 'ulid-999',
       pinService: pinService,
     );
@@ -98,9 +96,7 @@ void main() {
 
   test('returns false when the active profile is adult', () async {
     final container = await _makeContainer(
-      profiles: [
-        _profile(profileId: 'ulid-1', mode: ProfileMode.adult),
-      ],
+      profiles: [_profile(profileId: 'ulid-1', mode: ProfileMode.adult)],
       activeProfileId: 'ulid-1',
       pinService: pinService,
     );
@@ -121,9 +117,7 @@ void main() {
         () => pinService.hasProfilePin('ulid-2'),
       ).thenAnswer((_) async => true);
       final container = await _makeContainer(
-        profiles: [
-          _profile(profileId: 'ulid-2', mode: ProfileMode.child),
-        ],
+        profiles: [_profile(profileId: 'ulid-2', mode: ProfileMode.child)],
         activeProfileId: 'ulid-2',
         pinService: pinService,
       );
@@ -144,9 +138,7 @@ void main() {
         () => pinService.hasProfilePin('ulid-2'),
       ).thenAnswer((_) async => false);
       final container = await _makeContainer(
-        profiles: [
-          _profile(profileId: 'ulid-2', mode: ProfileMode.child),
-        ],
+        profiles: [_profile(profileId: 'ulid-2', mode: ProfileMode.child)],
         activeProfileId: 'ulid-2',
         pinService: pinService,
       );

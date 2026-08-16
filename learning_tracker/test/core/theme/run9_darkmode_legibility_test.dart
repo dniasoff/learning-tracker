@@ -138,9 +138,7 @@ void main() {
           child: Theme(
             data: AppTheme.darkTheme(),
             child: Scaffold(
-              body: LearningTrackCard(
-                track: _track(curriculumId: 'mishnayos'),
-              ),
+              body: LearningTrackCard(track: _track(curriculumId: 'mishnayos')),
             ),
           ),
           // Short-circuits the dashboard-providers -> sync -> auth chain
@@ -204,9 +202,7 @@ void main() {
         data: AppTheme.themeFor(brightness: brightness),
         child: const Scaffold(body: BackupSyncSection()),
       ),
-      overrides: [
-        authStateProvider.overrideWithValue(_kLocalUser),
-      ],
+      overrides: [authStateProvider.overrideWithValue(_kLocalUser)],
     );
 
     testWidgets('CTA foreground is peachDark (not the old fixed near-'

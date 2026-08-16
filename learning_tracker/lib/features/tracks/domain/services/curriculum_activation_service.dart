@@ -43,10 +43,9 @@ import 'package:learning_tracker/features/tracks/setup/data/repositories/curricu
 class CurriculumActivationService {
   CurriculumActivationService({
     required FirestoreCurriculumTrackRepositoryAdapter trackRepository,
-    required FirestoreStudyDayConfigRepositoryAdapter
-    studyDayConfigRepository,
-  })  : _trackRepository = trackRepository,
-        _studyDayConfigRepository = studyDayConfigRepository;
+    required FirestoreStudyDayConfigRepositoryAdapter studyDayConfigRepository,
+  }) : _trackRepository = trackRepository,
+       _studyDayConfigRepository = studyDayConfigRepository;
 
   final FirestoreCurriculumTrackRepositoryAdapter _trackRepository;
   final FirestoreStudyDayConfigRepositoryAdapter _studyDayConfigRepository;
@@ -94,10 +93,7 @@ class CurriculumActivationService {
   /// profile than the active one must re-scope to that profile's provider —
   /// there is no cross-profile write this service can perform without the
   /// owning repository instance, and inventing one would be a fabricated value.
-  Future<void> activateForProfile(
-    CurriculumId curriculum,
-    int profileId,
-  ) {
+  Future<void> activateForProfile(CurriculumId curriculum, int profileId) {
     // [profileId] is intentionally not used: there is no int profile id in the
     // Firestore model (it is a ULID carried by the adapter's path), so the only
     // honest behaviour is to activate for the already-scoped active profile.

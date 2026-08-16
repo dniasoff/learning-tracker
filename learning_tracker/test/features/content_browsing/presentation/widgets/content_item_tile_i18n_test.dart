@@ -65,9 +65,7 @@ Widget _host({required Locale locale, required Map<int, int> breakdown}) {
       itemStageBreakdownProvider((
         curriculumId: _curriculum.storageKey,
         sefariaRef: _item.sefariaRef,
-      ),).overrideWith(
-        (ref) async => breakdown,
-      ),
+      )).overrideWith((ref) async => breakdown),
       stageDefinitionRepositoryProvider(
         _curriculum,
       ).overrideWithValue(_FakeStageRepository()),

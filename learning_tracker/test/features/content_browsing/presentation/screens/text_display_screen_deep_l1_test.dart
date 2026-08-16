@@ -234,9 +234,7 @@ Widget _buildApp({
         sefariaRef: _kRef,
         stageId: 1,
         trackType: 'personal',
-      ),).overrideWithValue(
-        completionStatus,
-      ),
+      )).overrideWithValue(completionStatus),
       completionCommittedProvider.overrideWith(
         () => _FakeCompletionCommitted(),
       ),

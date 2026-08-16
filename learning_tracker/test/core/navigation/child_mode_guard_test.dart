@@ -212,15 +212,9 @@ void main() {
     test(
       'non-tutored session ignores getActiveProfileId, uses selectedProfileId',
       () async {
-        final child = _profile(
-          profileId: 'own-child',
-          mode: ProfileMode.child,
-        );
+        final child = _profile(profileId: 'own-child', mode: ProfileMode.child);
         // An adult profile id that must be IGNORED when not tutoring.
-        final adult = _profile(
-          profileId: 'own-adult',
-          mode: ProfileMode.adult,
-        );
+        final adult = _profile(profileId: 'own-adult', mode: ProfileMode.adult);
         final byId = {child.profileId: child, adult.profileId: adult};
 
         final guard = ChildModeGuard(

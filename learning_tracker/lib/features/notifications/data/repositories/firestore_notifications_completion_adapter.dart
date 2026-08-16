@@ -117,7 +117,10 @@ class FirestoreNotificationsCompletionAdapter {
   /// `hasCompletionsInRange` predicate.
   Future<bool> hasCompletionsInRange(DateTime start, DateTime end) async {
     final repo = await _resolve();
-    final inRange = await repo.hasCompletionsInDateRange(start: start, end: end);
+    final inRange = await repo.hasCompletionsInDateRange(
+      start: start,
+      end: end,
+    );
     if (!inRange) await _assertHydrated();
     return inRange;
   }

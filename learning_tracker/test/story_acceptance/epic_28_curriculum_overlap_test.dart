@@ -21,9 +21,12 @@ void main() {
     });
   });
 
-  group('I-4-B — Firestore overlap reads', skip:
-      'Blocked: the original overlap assertions call CompletionDao and lifetimeDataProvider over Drift completion/ledger tables. The Firestore progress provider is not wired to the overlap acceptance seam.',
-      () {
-    test('placeholder for the pending Firestore overlap provider', () {});
-  });
+  group(
+    'I-4-B — Firestore overlap reads',
+    skip:
+        'Blocked: the original overlap assertions call CompletionDao and lifetimeDataProvider over Drift completion/ledger tables. The Firestore progress provider is not wired to the overlap acceptance seam.',
+    () {
+      test('placeholder for the pending Firestore overlap provider', () {});
+    },
+  );
 }

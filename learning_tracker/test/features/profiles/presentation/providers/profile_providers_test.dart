@@ -24,9 +24,7 @@ void main() {
 
     test('select() with a known ulid activates it synchronously — no '
         'pumping/awaiting required', () {
-      container
-          .read(selectedProfileIdProvider.notifier)
-          .select('ulid-5');
+      container.read(selectedProfileIdProvider.notifier).select('ulid-5');
 
       expect(container.read(selectedProfileIdProvider), 'ulid-5');
       expect(container.read(activeProfileDocIdProvider), 'ulid-5');
@@ -34,9 +32,7 @@ void main() {
 
     test('clear() clears both selectedProfileIdProvider and '
         'activeProfileDocIdProvider', () {
-      container
-          .read(selectedProfileIdProvider.notifier)
-          .select('ulid-1');
+      container.read(selectedProfileIdProvider.notifier).select('ulid-1');
       expect(container.read(activeProfileDocIdProvider), 'ulid-1');
 
       container.read(selectedProfileIdProvider.notifier).clear();

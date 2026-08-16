@@ -14,7 +14,8 @@ library;
 
 import 'package:test/test.dart';
 
-void _retired(String reason) => markTestSkipped('RETIRED-SYNC-PIPELINE: $reason');
+void _retired(String reason) =>
+    markTestSkipped('RETIRED-SYNC-PIPELINE: $reason');
 
 void main() {
   group('Story 25.12 — SyncEngine decomp Part 1', tags: ['story_25_12'], () {
@@ -24,7 +25,9 @@ void main() {
         // Per-case disclosure: the canonical gateway file named by this test
         // is absent; current imports are intentionally distributed through
         // data/firestore and data/repositories.
-        _retired('The old importer-quarantine contract no longer describes the current repository architecture.');
+        _retired(
+          'The old importer-quarantine contract no longer describes the current repository architecture.',
+        );
       },
     );
 
@@ -32,26 +35,36 @@ void main() {
       test('overlapping calls for the same entity kind are serialized', () {
         // Per-case disclosure: the local outbox and its per-kind single-flight
         // pipeline were deleted; current writes go directly to Firestore.
-        _retired('No current OutboxPushPipeline or Firestore-native equivalent exists.');
+        _retired(
+          'No current OutboxPushPipeline or Firestore-native equivalent exists.',
+        );
       });
       test('different entity kinds may push concurrently', () {
         // Per-case disclosure: this asserted concurrency between deleted
         // outbox push lanes.
         _retired('No current push-lane abstraction remains to migrate.');
       });
-      test('failing push releases the single-flight slot for the next call', () {
-        // Per-case disclosure: retry-slot behavior belonged to the deleted
-        // outbox processor, not to a current Firestore repository method.
-        _retired('No current Firestore-native equivalent exposes this slot.');
-      });
+      test(
+        'failing push releases the single-flight slot for the next call',
+        () {
+          // Per-case disclosure: retry-slot behavior belonged to the deleted
+          // outbox processor, not to a current Firestore repository method.
+          _retired('No current Firestore-native equivalent exposes this slot.');
+        },
+      );
     });
 
     group('PullPipeline pagination + dispatch', () {
-      test('paginates through the gateway and dispatches each page to MergeDispatcher', () {
-        // Per-case disclosure: `PullPipeline`, `FirestorePage`, and
-        // `MergeDispatcher` were all deleted with the merge engine.
-        _retired('Current repositories own their Firestore reads; no shared pull/merge dispatcher exists.');
-      });
+      test(
+        'paginates through the gateway and dispatches each page to MergeDispatcher',
+        () {
+          // Per-case disclosure: `PullPipeline`, `FirestorePage`, and
+          // `MergeDispatcher` were all deleted with the merge engine.
+          _retired(
+            'Current repositories own their Firestore reads; no shared pull/merge dispatcher exists.',
+          );
+        },
+      );
       test('pull stops cleanly when the dispatcher signals halt', () {
         // Per-case disclosure: the halt signal was part of deleted pull/merge
         // orchestration.
@@ -63,7 +76,9 @@ void main() {
           // Per-case disclosure: `AnalyticsEvent.syncMergeRouterHalt` remains
           // catalogued, but no current producer named merge_router_halt exists
           // after the pull/merge engine removal.
-          _retired('The old analytics acceptance premise has no live producer to exercise.');
+          _retired(
+            'The old analytics acceptance premise has no live producer to exercise.',
+          );
         },
       );
     });

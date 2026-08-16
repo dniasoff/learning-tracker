@@ -30,9 +30,7 @@ void main() {
   // Valid 26-character Crockford ULID (AD-24).
   const profileDocId = '01J6Q2H4A8M7K3P9R5T6V8WXYB';
 
-  FirestoreTrackRepositoryAdapter buildAdapter(
-    ProviderContainer container,
-  ) {
+  FirestoreTrackRepositoryAdapter buildAdapter(ProviderContainer container) {
     final adapterProvider = Provider<FirestoreTrackRepositoryAdapter>(
       (ref) => FirestoreTrackRepositoryAdapter(ref: ref),
     );
@@ -77,10 +75,7 @@ void main() {
           .collection('curriculum_tracks')
           .doc(curriculumId.storageKey)
           .get();
-      return snapshot.exists &&
-              snapshot.data()?['state'] == 'active'
-          ? 1
-          : 0;
+      return snapshot.exists && snapshot.data()?['state'] == 'active' ? 1 : 0;
     }
 
     group('initializeDefaultTracks', () {

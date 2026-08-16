@@ -275,9 +275,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       // "Start Learning". Mirrors the account-picker / sign-in landing paths,
       // which all assert the active profile before replaceAll([AppShellRoute]).
       final landingProfile =
-          profiles
-              .where((p) => p.profileId == _createdProfileId)
-              .firstOrNull ??
+          profiles.where((p) => p.profileId == _createdProfileId).firstOrNull ??
           profiles.firstOrNull;
       if (landingProfile != null) {
         ref
@@ -320,9 +318,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       unawaited(context.router.replaceAll([const ProfilePickerRoute()]));
     } else {
       final landingProfile =
-          profiles
-              .where((p) => p.profileId == _createdProfileId)
-              .firstOrNull ??
+          profiles.where((p) => p.profileId == _createdProfileId).firstOrNull ??
           profiles.firstOrNull;
       if (landingProfile != null) {
         ref

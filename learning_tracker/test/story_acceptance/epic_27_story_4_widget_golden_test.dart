@@ -185,15 +185,11 @@ Widget _pumpHarness({
       dashboardTrackCompletionPercentageProvider(
         curriculumId,
       ).overrideWith((ref) async => 0.0),
-      trackHasChazaraProvider(
-        curriculumId,
-      ).overrideWith((ref) async => false),
+      trackHasChazaraProvider(curriculumId).overrideWith((ref) async => false),
       dashboardHasProgramEnrollmentProvider(
         curriculumId,
       ).overrideWith((ref) async => false),
-      trackCustomNameProvider(
-        curriculumId,
-      ).overrideWith((ref) async => null),
+      trackCustomNameProvider(curriculumId).overrideWith((ref) async => null),
     ],
     child: MaterialApp(
       debugShowCheckedModeBanner: false,
@@ -206,12 +202,13 @@ Widget _pumpHarness({
   );
 }
 
-CurriculumTrackEntity _track(CurriculumId curriculumId) => CurriculumTrackEntity(
-  curriculumId: curriculumId,
-  state: 'active',
-  stateChangedAt: DateTime.utc(2026, 1, 1),
-  activatedAt: DateTime.utc(2026, 1, 1),
-);
+CurriculumTrackEntity _track(CurriculumId curriculumId) =>
+    CurriculumTrackEntity(
+      curriculumId: curriculumId,
+      state: 'active',
+      stateChangedAt: DateTime.utc(2026, 1, 1),
+      activatedAt: DateTime.utc(2026, 1, 1),
+    );
 
 class _GoldenShape {
   const _GoldenShape({

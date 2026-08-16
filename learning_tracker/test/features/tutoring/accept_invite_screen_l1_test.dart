@@ -1222,7 +1222,7 @@ void main() {
             overrides: [
               authStateProvider.overrideWithValue(_signedInState),
               selectedProfileIdProvider.overrideWith(
-              () => _FixedSelectedProfileId('tutor-profile-id'),
+                () => _FixedSelectedProfileId('tutor-profile-id'),
               ),
               acceptTutorInviteUseCaseProvider.overrideWithValue(mockUseCase),
               tutorPinServiceProvider.overrideWithValue(pinService),

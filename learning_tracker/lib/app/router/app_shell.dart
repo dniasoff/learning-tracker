@@ -533,8 +533,7 @@ class ProfileSwitcherBar extends ConsumerWidget {
     final String roleBadge;
     if (isTutoredContext) {
       roleBadge = l10n.tutorContextBadge;
-    } else if (activeProfile?.mode == ProfileMode.child &&
-        isParentElevated) {
+    } else if (activeProfile?.mode == ProfileMode.child && isParentElevated) {
       roleBadge = l10n.profileBadgeParentMode;
     } else if (activeProfile?.mode == ProfileMode.child) {
       roleBadge = l10n.profileBadgeChildMode;

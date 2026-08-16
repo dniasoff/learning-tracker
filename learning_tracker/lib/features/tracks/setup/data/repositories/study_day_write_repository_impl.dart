@@ -33,7 +33,9 @@ class FirestoreStudyDayWriteRepositoryAdapter
     required CurriculumId curriculumId,
     required Map<int, DayType> studyDays,
   }) async {
-    final repo = await _ref.read(firestoreStudyDayConfigRepositoryProvider.future);
+    final repo = await _ref.read(
+      firestoreStudyDayConfigRepositoryProvider.future,
+    );
     if (repo == null) {
       throw const StudyDayWriteRepositoryNotReadyException();
     }

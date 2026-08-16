@@ -36,7 +36,9 @@ class FirestoreProfileProgramRepositoryAdapter
 
   @override
   Future<ProfileProgramEntity?> getProgram(CurriculumId curriculumId) async {
-    final repo = await _ref.read(firestoreProfileProgramRepositoryProvider.future);
+    final repo = await _ref.read(
+      firestoreProfileProgramRepositoryProvider.future,
+    );
     if (repo == null) return null;
     return repo.getProgram(curriculumId);
   }
@@ -48,7 +50,9 @@ class FirestoreProfileProgramRepositoryAdapter
     DateTime? trackingStartDate,
     String? trackingStartRef,
   }) async {
-    final repo = await _ref.read(firestoreProfileProgramRepositoryProvider.future);
+    final repo = await _ref.read(
+      firestoreProfileProgramRepositoryProvider.future,
+    );
     if (repo == null) {
       throw const ProfileProgramRepositoryNotReadyException();
     }
@@ -62,7 +66,9 @@ class FirestoreProfileProgramRepositoryAdapter
 
   @override
   Future<void> removeProgram(CurriculumId curriculumId) async {
-    final repo = await _ref.read(firestoreProfileProgramRepositoryProvider.future);
+    final repo = await _ref.read(
+      firestoreProfileProgramRepositoryProvider.future,
+    );
     if (repo == null) {
       throw const ProfileProgramRepositoryNotReadyException();
     }

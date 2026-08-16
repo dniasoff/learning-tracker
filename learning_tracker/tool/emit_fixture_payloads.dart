@@ -95,10 +95,7 @@ void main() {
   final studyDayConfigsOut = const StudyDayConfigEntry(
     dayOfWeek: 1,
     dayType: DayType.study,
-  ).toFirestore(
-    curriculumId: CurriculumId.mishnayos,
-    updatedAt: past,
-  );
+  ).toFirestore(curriculumId: CurriculumId.mishnayos, updatedAt: past);
 
   // goals — GoalCodec.encode() shape (the widest valid set for hasOnly).
   // Note: GoalRow.profileId is int; the test constant is string '5'. We emit
@@ -117,10 +114,7 @@ void main() {
   );
   // The current repository injects the stable entity identity as `id` before
   // writing; preserve that current write shape in the fixture.
-  final goals = {
-    'id': goal.firestoreId,
-    ...goal.toFirestore(),
-  };
+  final goals = {'id': goal.firestoreId, ...goal.toFirestore()};
 
   // learning_order — codec encode() shape.
   final learningOrder = <String, dynamic>{

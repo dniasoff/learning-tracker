@@ -169,9 +169,7 @@ void main() {
     testWidgets('offline stream shows local warning and offline CTA', (
       tester,
     ) async {
-      await tester.pumpWidget(
-        createTestWidgetWithRegistry(online: false),
-      );
+      await tester.pumpWidget(createTestWidgetWithRegistry(online: false));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
@@ -396,10 +394,7 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        createTestWidgetWithRegistry(
-          online: false,
-          locale: const Locale('he'),
-        ),
+        createTestWidgetWithRegistry(online: false, locale: const Locale('he')),
       );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));

@@ -15,15 +15,17 @@ import 'package:learning_tracker/features/tracks/setup/presentation/providers/tr
 /// engine is deleted and Firestore owns its own offline queueing.
 final curriculumActivationServiceProvider =
     Provider<CurriculumActivationService>((ref) {
-  final trackRepository = ref.watch(curriculumTrackRepositoryAdapterProvider);
-  final studyDayConfigRepository = ref.watch(
-    studyDayConfigRepositoryAdapterProvider,
-  );
-  return CurriculumActivationService(
-    trackRepository: trackRepository,
-    studyDayConfigRepository: studyDayConfigRepository,
-  );
-});
+      final trackRepository = ref.watch(
+        curriculumTrackRepositoryAdapterProvider,
+      );
+      final studyDayConfigRepository = ref.watch(
+        studyDayConfigRepositoryAdapterProvider,
+      );
+      return CurriculumActivationService(
+        trackRepository: trackRepository,
+        studyDayConfigRepository: studyDayConfigRepository,
+      );
+    });
 
 /// Provider for list of active curricula (as enums), scoped to active profile.
 final activeCurriculaProvider = FutureProvider<List<CurriculumId>>((ref) async {
@@ -38,9 +40,7 @@ final activeCurriculaProvider = FutureProvider<List<CurriculumId>>((ref) async {
 /// projects its `storageKey`s back onto the [CurriculumId] enum, mirroring
 /// [CurriculumActivationService.getActiveCurricula]'s resolution. The adapter is
 /// already profile-scoped, so no profile id or database handle is read here.
-final activeCurriculaStreamProvider = StreamProvider<List<CurriculumId>>((
-  ref,
-) {
+final activeCurriculaStreamProvider = StreamProvider<List<CurriculumId>>((ref) {
   final adapter = ref.watch(curriculumTrackRepositoryAdapterProvider);
   return adapter.watchActiveCurriculumIds().map((List<String> storageKeys) {
     return storageKeys

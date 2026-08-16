@@ -40,41 +40,50 @@ void main() {
       );
     });
 
-    test('getRecoveryInfo throws instead of reflecting an empty streak', () async {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-      final adapter = buildAdapter(container);
+    test(
+      'getRecoveryInfo throws instead of reflecting an empty streak',
+      () async {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        final adapter = buildAdapter(container);
 
-      await expectLater(
-        adapter.getRecoveryInfo(),
-        throwsA(isA<StreakStateRepositoryNotReadyException>()),
-      );
-    });
+        await expectLater(
+          adapter.getRecoveryInfo(),
+          throwsA(isA<StreakStateRepositoryNotReadyException>()),
+        );
+      },
+    );
 
-    test('getStreakCalendar throws instead of returning an empty set', () async {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-      final adapter = buildAdapter(container);
+    test(
+      'getStreakCalendar throws instead of returning an empty set',
+      () async {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        final adapter = buildAdapter(container);
 
-      await expectLater(
-        adapter.getStreakCalendar(
-          startUtc: DateTime.utc(2026, 5, 1),
-          endUtc: DateTime.utc(2026, 5, 31),
-        ),
-        throwsA(isA<StreakStateRepositoryNotReadyException>()),
-      );
-    });
+        await expectLater(
+          adapter.getStreakCalendar(
+            startUtc: DateTime.utc(2026, 5, 1),
+            endUtc: DateTime.utc(2026, 5, 31),
+          ),
+          throwsA(isA<StreakStateRepositoryNotReadyException>()),
+        );
+      },
+    );
 
-    test('watchStreak emits a not-ready error instead of a zero state', () async {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-      final adapter = buildAdapter(container);
+    test(
+      'watchStreak emits a not-ready error instead of a zero state',
+      () async {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        final adapter = buildAdapter(container);
 
-      await expectLater(
-        adapter.watchStreak().toList(),
-        throwsA(isA<StreakStateRepositoryNotReadyException>()),
-      );
-    });
+        await expectLater(
+          adapter.watchStreak().toList(),
+          throwsA(isA<StreakStateRepositoryNotReadyException>()),
+        );
+      },
+    );
   });
 
   group('ready (active account + profile)', () {

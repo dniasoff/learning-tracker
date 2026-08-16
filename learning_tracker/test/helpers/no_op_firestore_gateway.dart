@@ -17,6 +17,7 @@
 library;
 
 import 'package:flutter_test/flutter_test.dart';
+
 /// A generic fake whose methods throw `UnimplementedError` unless a subclass
 /// overrides them. The old sync gateway interface was removed; current
 /// Firestore behavior is exposed through the collection-specific repositories.

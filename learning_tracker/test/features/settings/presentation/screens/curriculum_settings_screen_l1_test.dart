@@ -72,7 +72,8 @@ class _ActiveTrackProbe extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tracks = ref.watch(activeTracksProvider);
-    final hasActiveMishnayosTrack = tracks.asData?.value.any(
+    final hasActiveMishnayosTrack =
+        tracks.asData?.value.any(
           (track) => track.curriculumId == _curriculum && track.isActive,
         ) ??
         false;
@@ -105,9 +106,7 @@ Widget _buildApp({
     overrides: [
       // Route the screen's profile-program, track, and goal reads through the
       // same real Firestore repositories backed by the test fake.
-      firestoreProfileProgramRepositoryProvider.overrideWith(
-        (ref) async => db,
-      ),
+      firestoreProfileProgramRepositoryProvider.overrideWith((ref) async => db),
       firestoreCurriculumTrackRepositoryProvider.overrideWith(
         (ref) async => _trackRepository,
       ),
@@ -655,10 +654,7 @@ void main() {
           curriculumId: _curriculum,
         );
 
-        await _pump(
-          tester,
-          _buildApp(db: _db, assertActiveTrackLoaded: true),
-        );
+        await _pump(tester, _buildApp(db: _db, assertActiveTrackLoaded: true));
 
         expect(
           find.byKey(_activeTrackLoadedKey),

@@ -35,7 +35,7 @@ void main() {
             ),
           ),
           dashboardActiveTracksStreamProvider.overrideWith(
-              (ref) => Stream.value(<CurriculumTrackEntity>[]),
+            (ref) => Stream.value(<CurriculumTrackEntity>[]),
           ),
         ],
         child: MaterialApp(

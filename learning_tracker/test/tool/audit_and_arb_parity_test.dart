@@ -142,11 +142,7 @@ void main() {
       timeout: const Timeout(Duration(minutes: 10)),
     );
 
-    test(
-      'exits 0 when codebase is fully clean',
-      () async {
-      },
-    );
+    test('exits 0 when codebase is fully clean', () async {});
 
     test(
       'check 25/26 asserts exactly one coding-standards.md outside '

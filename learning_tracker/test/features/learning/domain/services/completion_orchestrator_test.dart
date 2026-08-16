@@ -113,9 +113,8 @@ class _FakeCompletionRepository implements CompletionRepository {
   Future<List<CompletionEntity>> getCompletionsByCurriculum(
     String curriculumId, {
     int? profileId,
-  }) async => rows
-      .where((c) => c.curriculumId.storageKey == curriculumId)
-      .toList();
+  }) async =>
+      rows.where((c) => c.curriculumId.storageKey == curriculumId).toList();
 
   @override
   Future<List<CompletionEntity>> getCompletionsForContentItem(

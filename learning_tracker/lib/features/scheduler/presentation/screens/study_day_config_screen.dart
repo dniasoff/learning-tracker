@@ -304,9 +304,7 @@ class StudyDayConfigScreen extends ConsumerWidget {
 final curriculumTrackHasChazaraProvider = FutureProvider.autoDispose
     .family<bool, CurriculumId>((ref, curriculumId) async {
       final stageRepository = ref.watch(globalStageRepositoryProvider);
-      final stages = await stageRepository.getStagesForCurriculum(
-        curriculumId,
-      );
+      final stages = await stageRepository.getStagesForCurriculum(curriculumId);
       return stages.length > 1;
     });
 

@@ -264,7 +264,12 @@ void main() {
     when(() => auth.currentUser).thenReturn(null);
 
     await tester.pumpWidget(
-      _buildApp(registry: registry, firestore: firestore, auth: auth, router: router),
+      _buildApp(
+        registry: registry,
+        firestore: firestore,
+        auth: auth,
+        router: router,
+      ),
     );
     await tester.pump(); // resolve FutureBuilder
 

@@ -1234,7 +1234,9 @@ void main() {
 
       final prefs = await SharedPreferences.getInstance();
       expect(
-        prefs.getBool(NotificationPreferencesRepository.reminderEnabledKey('1')),
+        prefs.getBool(
+          NotificationPreferencesRepository.reminderEnabledKey('1'),
+        ),
         isFalse,
       );
     });
@@ -1410,7 +1412,9 @@ void main() {
         equals(22),
       );
       expect(
-        prefs.getInt(NotificationPreferencesRepository.streakAlertMinuteKey('1')),
+        prefs.getInt(
+          NotificationPreferencesRepository.streakAlertMinuteKey('1'),
+        ),
         equals(15),
       );
     });
@@ -1435,7 +1439,8 @@ void main() {
 
     test('toggle() flips state to false and persists', () async {
       SharedPreferences.setMockInitialValues({
-        NotificationPreferencesRepository.rewardNotificationEnabledKey('1'): true,
+        NotificationPreferencesRepository.rewardNotificationEnabledKey('1'):
+            true,
       });
 
       final container = ProviderContainer(
@@ -1483,12 +1488,16 @@ void main() {
       // Profile 20 should remain unchanged in SharedPrefs
       final prefs = await SharedPreferences.getInstance();
       expect(
-        prefs.getBool(NotificationPreferencesRepository.reminderEnabledKey('10')),
+        prefs.getBool(
+          NotificationPreferencesRepository.reminderEnabledKey('10'),
+        ),
         isFalse,
       );
       // Key for profile 20 untouched
       expect(
-        prefs.getBool(NotificationPreferencesRepository.reminderEnabledKey('20')),
+        prefs.getBool(
+          NotificationPreferencesRepository.reminderEnabledKey('20'),
+        ),
         isFalse,
         reason:
             'Profile 20 pref must remain its own value, not affected by profile 10 toggle',

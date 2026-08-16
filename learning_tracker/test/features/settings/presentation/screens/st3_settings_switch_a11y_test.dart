@@ -51,9 +51,7 @@ class _FakeActiveProfileId extends ActiveProfileId {
   String? build() => null; // signed-out test has no active profile
 }
 
-Widget _buildSettings({
-  required _MockAuthRepository authRepo,
-}) {
+Widget _buildSettings({required _MockAuthRepository authRepo}) {
   return pumpApp(
     overrides: [
       authRepositoryProvider.overrideWithValue(authRepo),

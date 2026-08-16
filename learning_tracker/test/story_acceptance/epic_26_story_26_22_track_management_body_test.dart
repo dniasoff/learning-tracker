@@ -19,7 +19,10 @@ void main() {
     });
 
     test('widget can be constructed with a back button and add mode', () {
-      const widget = TrackManagementBody(showBackButton: true, startAdding: true);
+      const widget = TrackManagementBody(
+        showBackButton: true,
+        startAdding: true,
+      );
       expect(widget.showBackButton, isTrue);
       expect(widget.startAdding, isTrue);
     });
@@ -30,9 +33,7 @@ void main() {
       await tester.pumpWidget(
         pumpApp(
           overrides: [
-            activeTracksProvider.overrideWith(
-              (ref) => Stream.value(const []),
-            ),
+            activeTracksProvider.overrideWith((ref) => Stream.value(const [])),
           ],
           child: const TrackManagementBody(showBackButton: true),
         ),
@@ -47,9 +48,15 @@ void main() {
     });
   });
 
-  group('Story 26.22 — Drift activation/deletion wiring', skip:
-      'Blocked: the original widget interaction and activation assertions still override userDatabaseProvider with a Drift database. Firestore track writes are not yet wired through this widget.',
-      () {
-    test('placeholder for the pending Firestore track-management seam', () {});
-  });
+  group(
+    'Story 26.22 — Drift activation/deletion wiring',
+    skip:
+        'Blocked: the original widget interaction and activation assertions still override userDatabaseProvider with a Drift database. Firestore track writes are not yet wired through this widget.',
+    () {
+      test(
+        'placeholder for the pending Firestore track-management seam',
+        () {},
+      );
+    },
+  );
 }

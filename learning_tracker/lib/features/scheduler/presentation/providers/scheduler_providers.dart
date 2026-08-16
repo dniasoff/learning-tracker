@@ -32,7 +32,8 @@ import 'package:learning_tracker/features/settings/presentation/providers/curric
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
 import 'package:learning_tracker/features/tracks/setup/data/repositories/profile_program_repository_impl.dart';
 import 'package:learning_tracker/features/tracks/stages/presentation/providers/stage_providers.dart';
-import 'package:learning_tracker/features/tracks/tracks.dart' show activeTracksProvider;
+import 'package:learning_tracker/features/tracks/tracks.dart'
+    show activeTracksProvider;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 

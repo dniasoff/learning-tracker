@@ -185,7 +185,9 @@ void main() {
         final formKey = await _buildValidFormKey(tester);
         final registry = _MockDeviceRegistryDatabase();
         final account = _cloudAccount();
-        when(() => registry.findByEmail(account.email)).thenAnswer((_) async => account);
+        when(
+          () => registry.findByEmail(account.email),
+        ).thenAnswer((_) async => account);
 
         final authRepo = MockAuthRepository();
         final checker = _MockInternetConnectionChecker();
@@ -269,7 +271,9 @@ void main() {
         final formKey = await _buildValidFormKey(tester);
         final registry = _MockDeviceRegistryDatabase();
         final account = _cloudAccount();
-        when(() => registry.findByEmail(account.email)).thenAnswer((_) async => account);
+        when(
+          () => registry.findByEmail(account.email),
+        ).thenAnswer((_) async => account);
 
         final authRepo = MockAuthRepository();
         final checker = _MockInternetConnectionChecker();
@@ -345,7 +349,9 @@ void main() {
         final formKey = await _buildValidFormKey(tester);
         final registry = _MockDeviceRegistryDatabase();
         final account = _cloudAccount();
-        when(() => registry.findByEmail(account.email)).thenAnswer((_) async => account);
+        when(
+          () => registry.findByEmail(account.email),
+        ).thenAnswer((_) async => account);
 
         final authRepo = MockAuthRepository();
         final checker = _MockInternetConnectionChecker();

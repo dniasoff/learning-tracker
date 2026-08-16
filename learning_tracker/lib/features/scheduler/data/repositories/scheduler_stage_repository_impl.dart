@@ -11,8 +11,9 @@ import 'package:learning_tracker/features/tracks/stages/domain/repositories/stag
 /// Drift-backed `StageDao` implementation the Drift user DB deletion removed
 /// (archived under `docs/_archive/drift-user-db/`).
 class SchedulerStageRepositoryImpl implements SchedulerStageRepository {
-  SchedulerStageRepositoryImpl({required StageDefinitionRepository stageRepository})
-    : _stageRepository = stageRepository;
+  SchedulerStageRepositoryImpl({
+    required StageDefinitionRepository stageRepository,
+  }) : _stageRepository = stageRepository;
 
   final StageDefinitionRepository _stageRepository;
 

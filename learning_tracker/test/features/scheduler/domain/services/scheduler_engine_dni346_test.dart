@@ -60,16 +60,8 @@ List<SchedulerContentItem> makeItems(int count) => List.generate(
 
 List<SchedulerStage> threeStages() => [
   const SchedulerStage(stageOrder: 1, stageName: 'Learn', delayDays: 0),
-  const SchedulerStage(
-    stageOrder: 2,
-    stageName: 'Chazara 1',
-    delayDays: 1,
-  ),
-  const SchedulerStage(
-    stageOrder: 3,
-    stageName: 'Chazara 2',
-    delayDays: 7,
-  ),
+  const SchedulerStage(stageOrder: 2, stageName: 'Chazara 1', delayDays: 1),
+  const SchedulerStage(stageOrder: 3, stageName: 'Chazara 2', delayDays: 7),
 ];
 
 // ---------------------------------------------------------------------------
@@ -213,11 +205,7 @@ void main() {
       // 5 items; none have any completions.
       contentRepo.items = makeItems(5);
       stageRepo.stages = [
-        const SchedulerStage(
-          stageOrder: 1,
-          stageName: 'Learn',
-          delayDays: 0,
-        ),
+        const SchedulerStage(stageOrder: 1, stageName: 'Learn', delayDays: 0),
       ];
       completionRepo.completions = [];
 
@@ -269,11 +257,7 @@ void main() {
         'classified as overdueChazara', () async {
       contentRepo.items = makeItems(5);
       stageRepo.stages = [
-        const SchedulerStage(
-          stageOrder: 1,
-          stageName: 'Learn',
-          delayDays: 0,
-        ),
+        const SchedulerStage(stageOrder: 1, stageName: 'Learn', delayDays: 0),
       ];
       // ref_0 has been completed at stage 1.
       completionRepo.completions = [
@@ -320,11 +304,7 @@ void main() {
     test('snapshot path emits empty task list on non-study days', () async {
       contentRepo.items = makeItems(10);
       stageRepo.stages = [
-        const SchedulerStage(
-          stageOrder: 1,
-          stageName: 'Learn',
-          delayDays: 0,
-        ),
+        const SchedulerStage(stageOrder: 1, stageName: 'Learn', delayDays: 0),
       ];
       completionRepo.completions = [];
 
@@ -350,11 +330,7 @@ void main() {
     test('snapshot path produces tasks on study days', () async {
       contentRepo.items = makeItems(10);
       stageRepo.stages = [
-        const SchedulerStage(
-          stageOrder: 1,
-          stageName: 'Learn',
-          delayDays: 0,
-        ),
+        const SchedulerStage(stageOrder: 1, stageName: 'Learn', delayDays: 0),
       ];
       completionRepo.completions = [];
 

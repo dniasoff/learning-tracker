@@ -73,9 +73,7 @@ void main() {
     // -----------------------------------------------------------------------
     // T1. ReminderTime: no selected profile → real ULID
     // -----------------------------------------------------------------------
-    test(
-      'T1. ReminderTime: loads stored time after profile resolves',
-      () async {
+    test('T1. ReminderTime: loads stored time after profile resolves', () async {
       // The real ULID has a custom reminder at 08:30; no-profile has nothing.
       SharedPreferences.setMockInitialValues({
         NotificationPreferencesRepository.reminderHourKey(_profile42): 8,
@@ -112,8 +110,7 @@ void main() {
             'ReminderTime must reload from the real profile prefs (xx:30) '
             'after selectedProfileIdProvider resolves from null to its ULID',
       );
-      },
-    );
+    });
 
     // -----------------------------------------------------------------------
     // T2. StreakAlertTime: no selected profile → real ULID

@@ -34,12 +34,12 @@ void main() {
           body: any(named: 'body'),
         ),
       ).thenAnswer((_) async {});
-      when(() => gateway.cancelDailyReminderForProfile(any())).thenAnswer(
-        (_) async {},
-      );
-      when(() => gateway.cancelBatchRemindersForProfile(any())).thenAnswer(
-        (_) async {},
-      );
+      when(
+        () => gateway.cancelDailyReminderForProfile(any()),
+      ).thenAnswer((_) async {});
+      when(
+        () => gateway.cancelBatchRemindersForProfile(any()),
+      ).thenAnswer((_) async {});
     });
 
     test('per-profile scheduling forwards the supplied content', () async {
@@ -59,30 +59,41 @@ void main() {
       ).called(1);
     });
 
-    test('cancelForProfile delegates to both cancellation operations', () async {
-      await scheduler.cancelForProfile('01J00000000000000000000007');
-      verify(
-        () => gateway.cancelDailyReminderForProfile(
-          '01J00000000000000000000007',
-        ),
-      ).called(1);
-      verify(
-        () => gateway.cancelBatchRemindersForProfile(
-          '01J00000000000000000000007',
-        ),
-      ).called(1);
-    });
+    test(
+      'cancelForProfile delegates to both cancellation operations',
+      () async {
+        await scheduler.cancelForProfile('01J00000000000000000000007');
+        verify(
+          () => gateway.cancelDailyReminderForProfile(
+            '01J00000000000000000000007',
+          ),
+        ).called(1);
+        verify(
+          () => gateway.cancelBatchRemindersForProfile(
+            '01J00000000000000000000007',
+          ),
+        ).called(1);
+      },
+    );
   });
 
-  group('Story 12.2 — streak protection alerts', tags: ['story_12_2'], skip:
-      'Blocked: this acceptance flow seeds and reads Drift streak_events; Firestore streak state is not wired into StreakAlertService here.',
-      () {
-    test('placeholder for the pending Firestore streak-alert seam', () {});
-  });
+  group(
+    'Story 12.2 — streak protection alerts',
+    tags: ['story_12_2'],
+    skip:
+        'Blocked: this acceptance flow seeds and reads Drift streak_events; Firestore streak state is not wired into StreakAlertService here.',
+    () {
+      test('placeholder for the pending Firestore streak-alert seam', () {});
+    },
+  );
 
-  group('Story 12.4 — notification preferences', tags: ['story_12_4'], skip:
-      'Blocked: preference integration tests in the original suite depend on the Drift-backed profile database.',
-      () {
-    test('placeholder for the pending Firestore preference seam', () {});
-  });
+  group(
+    'Story 12.4 — notification preferences',
+    tags: ['story_12_4'],
+    skip:
+        'Blocked: preference integration tests in the original suite depend on the Drift-backed profile database.',
+    () {
+      test('placeholder for the pending Firestore preference seam', () {});
+    },
+  );
 }

@@ -62,7 +62,9 @@ Future<void> onTrackChanged(WidgetRef ref) async {
   // Ref does — going through the already-built dashboardActiveCurriculaProvider
   // avoids that mismatch and reuses the same resolution dashboard_providers.dart
   // itself uses.
-  final activeCurricula = await ref.read(dashboardActiveCurriculaProvider.future);
+  final activeCurricula = await ref.read(
+    dashboardActiveCurriculaProvider.future,
+  );
   for (final c in activeCurricula) {
     ref.invalidate(dashboardTrackCompletionPercentageProvider(c));
     ref.invalidate(programCalendarPositionProvider(c));

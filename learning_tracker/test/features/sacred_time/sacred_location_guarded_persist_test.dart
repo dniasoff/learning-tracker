@@ -46,7 +46,7 @@ void main() {
 
       test(
         'a failing SharedPreferences write rolls back the optimistic '
-          'location and the returned Future never rejects unobserved',
+        'location and the returned Future never rejects unobserved',
         () async {
           final container = ProviderContainer();
           addTearDown(container.dispose);
@@ -67,7 +67,7 @@ void main() {
                   cityLabel: 'Tel Aviv',
                   countryCode: 'IL',
                 );
-          }, (error, stack) => caughtError = error,);
+          }, (error, stack) => caughtError = error);
 
           expect(
             caughtError,

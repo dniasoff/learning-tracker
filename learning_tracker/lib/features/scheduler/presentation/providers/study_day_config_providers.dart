@@ -10,7 +10,9 @@ part 'study_day_config_providers.g.dart';
 /// Firestore-backed adapter for study-day configs — **wired Phase 3, T-20**.
 /// The Drift DAO-backed providers below are deprecated and will be removed in Phase 4.
 @riverpod
-FirestoreStudyDayConfigRepositoryAdapter studyDayConfigRepositoryAdapter(Ref ref) {
+FirestoreStudyDayConfigRepositoryAdapter studyDayConfigRepositoryAdapter(
+  Ref ref,
+) {
   return FirestoreStudyDayConfigRepositoryAdapter(ref: ref);
 }
 
@@ -34,7 +36,9 @@ Future<bool> isStudyDay(Ref ref, CurriculumId curriculumId) async {
   final adapter = ref.watch(studyDayConfigRepositoryAdapterProvider);
   final configs = await adapter.getConfigsForCurriculum(curriculumId);
   final today = ref.watch(clockProvider);
-  return configs.any((c) => c.dayOfWeek == today.weekday && c.dayType == DayType.study);
+  return configs.any(
+    (c) => c.dayOfWeek == today.weekday && c.dayType == DayType.study,
+  );
 }
 
 /// Get count of study days per week for a curriculum.

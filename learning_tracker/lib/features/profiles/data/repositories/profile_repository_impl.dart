@@ -116,10 +116,7 @@ class FirestoreProfileRepositoryAdapter implements ProfileRepository {
   }
 
   @override
-  Future<void> deleteProfile(
-    String profileId, {
-    bool allowLast = false,
-  }) async {
+  Future<void> deleteProfile(String profileId, {bool allowLast = false}) async {
     if (!allowLast) {
       final count = await countProfiles();
       if (count <= 1) {

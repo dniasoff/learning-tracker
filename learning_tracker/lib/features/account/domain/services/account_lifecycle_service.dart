@@ -38,9 +38,7 @@ class AccountLifecycleService {
     final account = await _registry.findById(accountId);
     if (account == null) return;
     if (!account.accountTier.isCloud) {
-      throw StateError(
-        'removeCloudFromDevice requires a cloud-born account.',
-      );
+      throw StateError('removeCloudFromDevice requires a cloud-born account.');
     }
 
     // If we're removing the Firebase user whose token is currently

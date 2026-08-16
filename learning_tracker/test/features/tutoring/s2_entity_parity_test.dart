@@ -446,45 +446,42 @@ void main() {
         );
       });
 
-      test(
-        'callable receives goal payload with goalId from id key',
-        () async {
-          final record = _InvokerRecord();
-          final service = _service(record);
+      test('callable receives goal payload with goalId from id key', () async {
+        final record = _InvokerRecord();
+        final service = _service(record);
 
-          final now = DateTime.utc(2026, 5, 28, 10, 0, 0);
-          final goal = GoalEntity(
-            curriculumId: CurriculumId.mishnayos,
-            targetPercent: 100.0,
-            description: 'Test',
-            goalType: 'deadline',
-            targetDate: now,
-            createdAt: now,
-            updatedAt: now,
-          );
-          final payload = goal.toFirestore();
-          payload['id'] = goal.firestoreId;
+        final now = DateTime.utc(2026, 5, 28, 10, 0, 0);
+        final goal = GoalEntity(
+          curriculumId: CurriculumId.mishnayos,
+          targetPercent: 100.0,
+          description: 'Test',
+          goalType: 'deadline',
+          targetDate: now,
+          createdAt: now,
+          updatedAt: now,
+        );
+        final payload = goal.toFirestore();
+        payload['id'] = goal.firestoreId;
 
-          final goalDataPayload = Map<String, dynamic>.from(payload)
-            ..remove('id');
-          await service.upsertGoal(
-            grantId: _grantId,
-            ownerUid: _ownerUid,
-            profileId: _profileId,
-            goalId: goal.firestoreId,
-            goalData: goalDataPayload,
-          );
+        final goalDataPayload = Map<String, dynamic>.from(payload)
+          ..remove('id');
+        await service.upsertGoal(
+          grantId: _grantId,
+          ownerUid: _ownerUid,
+          profileId: _profileId,
+          goalId: goal.firestoreId,
+          goalData: goalDataPayload,
+        );
 
-          expect(record.calls, hasLength(1));
-          final call = record.calls.first;
-          expect(call.fn, 'tutorUpsertGoal');
-          final args = call.args;
-          expect(args['goalId'], goal.firestoreId);
-          final goalData = args['goalData'] as Map<String, dynamic>;
-          expect(goalData['curriculum_id'], CurriculumId.mishnayos.storageKey);
-          expect(goalData['updated_at'], now.toIso8601String());
-        },
-      );
+        expect(record.calls, hasLength(1));
+        final call = record.calls.first;
+        expect(call.fn, 'tutorUpsertGoal');
+        final args = call.args;
+        expect(args['goalId'], goal.firestoreId);
+        final goalData = args['goalData'] as Map<String, dynamic>;
+        expect(goalData['curriculum_id'], CurriculumId.mishnayos.storageKey);
+        expect(goalData['updated_at'], now.toIso8601String());
+      });
     },
   );
 } // end main

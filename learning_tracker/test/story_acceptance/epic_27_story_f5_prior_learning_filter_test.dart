@@ -44,11 +44,14 @@ void main() {
     expect(tasks.single.priority, DailyTaskPriority.newLearning);
   });
 
-  group('F5 — scheduler persistence regression', skip:
-      'Blocked: the original regression constructs Completion rows through Drift completion_events and calls CompletionDao. Firestore completion documents are not consumed by this scheduler path yet.',
-      () {
-    test('placeholder for the pending Firestore sentinel harness', () {});
-  });
+  group(
+    'F5 — scheduler persistence regression',
+    skip:
+        'Blocked: the original regression constructs Completion rows through Drift completion_events and calls CompletionDao. Firestore completion documents are not consumed by this scheduler path yet.',
+    () {
+      test('placeholder for the pending Firestore sentinel harness', () {});
+    },
+  );
 }
 
 class _ContentRepo implements SchedulerContentRepository {

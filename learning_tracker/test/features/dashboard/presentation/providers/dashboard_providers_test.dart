@@ -85,9 +85,9 @@ ProviderContainer _container(
         (ref) async => _handles(firestore),
       ),
       for (final curriculum in CurriculumId.values)
-        scopedItemCountProvider(curriculum).overrideWith(
-          (ref) => Future.value(0),
-        ),
+        scopedItemCountProvider(
+          curriculum,
+        ).overrideWith((ref) => Future.value(0)),
       ...extraOverrides,
     ],
   );
@@ -212,9 +212,7 @@ void main() {
         ],
       );
       addTearDown(container.dispose);
-      container
-          .read(activeProfileDocIdProvider.notifier)
-          .set(_childProfileId);
+      container.read(activeProfileDocIdProvider.notifier).set(_childProfileId);
 
       final mode = await container.read(dashboardUserModeProvider.future);
       expect(mode, ProfileMode.child);
@@ -249,10 +247,9 @@ void main() {
       final container = _container(firestore);
       addTearDown(container.dispose);
 
-      expect(
-        await container.read(dashboardActiveCurriculaProvider.future),
-        [CurriculumId.mishnayos],
-      );
+      expect(await container.read(dashboardActiveCurriculaProvider.future), [
+        CurriculumId.mishnayos,
+      ]);
     });
 
     test('returns multiple active curricula in Firestore order', () async {
@@ -273,10 +270,7 @@ void main() {
 
       expect(
         await container.read(dashboardActiveCurriculaProvider.future),
-        containsAll(<CurriculumId>[
-          CurriculumId.mishnayos,
-          CurriculumId.bavli,
-        ]),
+        containsAll(<CurriculumId>[CurriculumId.mishnayos, CurriculumId.bavli]),
       );
     });
   });
@@ -653,25 +647,25 @@ void main() {
       },
     );
 
-    test('returns null immediately for adult profile before the await gap',
-        () async {
-      final container = _container(firestore);
-      addTearDown(container.dispose);
+    test(
+      'returns null immediately for adult profile before the await gap',
+      () async {
+        final container = _container(firestore);
+        addTearDown(container.dispose);
 
-      expect(
-        await container.read(dashboardChildNextRewardProvider.future),
-        isNull,
-      );
-    });
+        expect(
+          await container.read(dashboardChildNextRewardProvider.future),
+          isNull,
+        );
+      },
+    );
 
     test(
       'stripStockMilestonesEffect: container disposed mid-strip — no leak/crash',
       () async {
         SharedPreferences.setMockInitialValues({});
         final container = _container(firestore);
-        final milestoneService = container.read(
-          rewardMilestoneServiceProvider,
-        );
+        final milestoneService = container.read(rewardMilestoneServiceProvider);
         for (final threshold in [50, 150, 300]) {
           await milestoneService.upsertMilestone(
             title: 'Stock $threshold',

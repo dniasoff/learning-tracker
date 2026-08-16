@@ -197,6 +197,8 @@ class FirestoreAccountRepository {
   /// shape; this method performs no validation beyond what
   /// `firestore.rules` itself enforces.
   Future<void> updateProfileSnapshot(Map<String, dynamic> data) async {
-    await _profileSnapshotDoc.set(data, SetOptions(merge: true)).orQueuedOffline;
+    await _profileSnapshotDoc
+        .set(data, SetOptions(merge: true))
+        .orQueuedOffline;
   }
 }

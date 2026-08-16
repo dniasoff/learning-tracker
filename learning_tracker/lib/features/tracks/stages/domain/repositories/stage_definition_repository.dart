@@ -17,9 +17,7 @@ abstract class StageDefinitionRepository {
   /// Seeds default stages (Learn, Chazara 1, Chazara 2) if none exist.
   ///
   /// Idempotent — no-op if stages already exist for this track.
-  Future<void> initializeDefaults(
-    CurriculumId curriculumId,
-  );
+  Future<void> initializeDefaults(CurriculumId curriculumId);
 
   /// Overwrites a curriculum's full stage set with [stages] (already
   /// ordered 1..N by the caller). See

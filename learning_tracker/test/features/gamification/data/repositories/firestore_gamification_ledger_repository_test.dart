@@ -42,16 +42,19 @@ void main() {
       },
     );
 
-    test('getCompletionStats throws instead of returning all-zero counts', () async {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-      final adapter = buildAdapter(container);
+    test(
+      'getCompletionStats throws instead of returning all-zero counts',
+      () async {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        final adapter = buildAdapter(container);
 
-      await expectLater(
-        adapter.getCompletionStats(CurriculumId.bavli),
-        throwsA(isA<GamificationLedgerNotReadyException>()),
-      );
-    });
+        await expectLater(
+          adapter.getCompletionStats(CurriculumId.bavli),
+          throwsA(isA<GamificationLedgerNotReadyException>()),
+        );
+      },
+    );
   });
 
   group('ready (active account + profile)', () {

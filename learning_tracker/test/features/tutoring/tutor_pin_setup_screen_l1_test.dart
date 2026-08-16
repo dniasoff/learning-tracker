@@ -37,7 +37,8 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 class _StubTutorPinService implements TutorPinService {
   _StubTutorPinService({required this.setResult});
 
-  final Future<TutorPinResult> Function(String profileId, String rawPin) setResult;
+  final Future<TutorPinResult> Function(String profileId, String rawPin)
+  setResult;
 
   @override
   Future<TutorPinResult> setTutorPin({

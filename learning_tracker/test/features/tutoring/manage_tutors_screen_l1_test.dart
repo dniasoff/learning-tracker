@@ -47,7 +47,6 @@ import 'package:learning_tracker/features/tutoring/presentation/screens/manage_t
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 
-
 // ─── Mocks ───────────────────────────────────────────────────────────────────
 
 class _MockStackRouter extends Mock implements StackRouter {}
@@ -90,7 +89,10 @@ LearnerProfileEntity _childProfile({int id = 1, String displayName = 'Moshe'}) {
 }
 
 /// An adult learner profile — must NOT appear in ManageTutors.
-LearnerProfileEntity _adultProfile({int id = 2, String displayName = 'Parent'}) {
+LearnerProfileEntity _adultProfile({
+  int id = 2,
+  String displayName = 'Parent',
+}) {
   final now = DateTime.utc(2026, 1, 1);
   return LearnerProfileEntity(
     profileId: _profileUlid(id),

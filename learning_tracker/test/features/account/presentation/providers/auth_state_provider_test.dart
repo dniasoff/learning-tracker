@@ -45,6 +45,7 @@ import '../../../../helpers/firestore_fixtures.dart';
 import '../../../../mocks/mock_repositories.dart';
 
 class _MockFirebaseApp extends Mock implements FirebaseApp {}
+
 class _MockFirebaseAuth extends Mock implements FirebaseAuth {}
 
 const _uid = 'fb-uid-live-session';
@@ -64,7 +65,12 @@ void main() {
 
   setUp(() async {
     firestore = createFakeFirestore(authenticatedUid: _uid);
-    await seedAccount(firestore, uid: _uid, email: 'live@example.test', displayName: 'Live Session');
+    await seedAccount(
+      firestore,
+      uid: _uid,
+      email: 'live@example.test',
+      displayName: 'Live Session',
+    );
 
     auth = MockAuthRepository();
     sessionController = StreamController<AppUser?>.broadcast();
@@ -97,10 +103,8 @@ void main() {
             ),
           ),
           firestoreAccountRepositoryProvider.overrideWith(
-            (ref) async => FirestoreAccountRepository(
-              firestore: firestore,
-              uid: _uid,
-            ),
+            (ref) async =>
+                FirestoreAccountRepository(firestore: firestore, uid: _uid),
           ),
         ],
       );
@@ -149,7 +153,7 @@ void main() {
       're-derivation of an already-active session)', () async {
     final container = ProviderContainer(
       overrides: [
-      authRepositoryProvider.overrideWithValue(auth),
+        authRepositoryProvider.overrideWithValue(auth),
         activeAccountFirebaseProvider.overrideWith(
           (ref) async => AccountFirebaseHandles(
             app: _MockFirebaseApp(),
@@ -159,10 +163,8 @@ void main() {
           ),
         ),
         firestoreAccountRepositoryProvider.overrideWith(
-          (ref) async => FirestoreAccountRepository(
-            firestore: firestore,
-            uid: _uid,
-          ),
+          (ref) async =>
+              FirestoreAccountRepository(firestore: firestore, uid: _uid),
         ),
       ],
     );

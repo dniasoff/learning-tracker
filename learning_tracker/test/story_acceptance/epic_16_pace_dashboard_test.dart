@@ -80,10 +80,7 @@ void main() {
           CurriculumId.mishnayos: 0.4,
           CurriculumId.bavli: 0.2,
         },
-        paceStatuses: {
-          CurriculumId.mishnayos: pace,
-          CurriculumId.bavli: null,
-        },
+        paceStatuses: {CurriculumId.mishnayos: pace, CurriculumId.bavli: null},
         todayTaskCounts: const {
           CurriculumId.mishnayos: 3,
           CurriculumId.bavli: 7,
@@ -163,14 +160,20 @@ void main() {
       expect(widget.duration, const Duration(milliseconds: 10));
       await tester.pumpAndSettle();
       expect(
-        tester.widget<FractionallySizedBox>(find.byType(FractionallySizedBox)).widthFactor,
+        tester
+            .widget<FractionallySizedBox>(find.byType(FractionallySizedBox))
+            .widthFactor,
         closeTo(0.5, 0.01),
       );
     });
   });
 
-  group('Story 16 — remaining Drift-only integration', skip:
-      'The remaining CRUD and provider-integration cases directly exercise Drift DAOs; no equivalent Firestore-native acceptance seam exists yet.', () {
-    test('placeholder for the pending Firestore integration seam', () {});
-  });
+  group(
+    'Story 16 — remaining Drift-only integration',
+    skip:
+        'The remaining CRUD and provider-integration cases directly exercise Drift DAOs; no equivalent Firestore-native acceptance seam exists yet.',
+    () {
+      test('placeholder for the pending Firestore integration seam', () {});
+    },
+  );
 }

@@ -174,9 +174,7 @@ Future<(AccountFirebaseHandles, String, String)?> _watchActiveAccountAndProfile(
         .get();
     final grant = grantSnapshot.data();
     if (!grantSnapshot.exists || grant == null) {
-      throw StateError(
-        'Active tutor grant not found: ' + tutored.grantId,
-      );
+      throw StateError('Active tutor grant not found: ' + tutored.grantId);
     }
     final ownerUid = grant['parent_uid'];
     final profileId = grant['child_profile_id']?.toString();
@@ -188,7 +186,9 @@ Future<(AccountFirebaseHandles, String, String)?> _watchActiveAccountAndProfile(
         ownerUid != tutored.ownerUid) {
       throw StateError(
         'Active tutor grant does not authorize ' +
-        tutored.ownerUid + '/' + tutored.profileId,
+            tutored.ownerUid +
+            '/' +
+            tutored.profileId,
       );
     }
     return (handles, ownerUid, profileId);

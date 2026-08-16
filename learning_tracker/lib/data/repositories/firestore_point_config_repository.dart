@@ -154,9 +154,10 @@ class FirestorePointConfigRepository {
       stageOrder: stageOrder,
       points: points,
     );
-    await _doc(curriculumId: curriculumId, stageOrder: stageOrder)
-        .set(entry.toFirestore(updatedAt: now))
-        .orQueuedOffline;
+    await _doc(
+      curriculumId: curriculumId,
+      stageOrder: stageOrder,
+    ).set(entry.toFirestore(updatedAt: now)).orQueuedOffline;
   }
 
   /// Removes a `(curriculumId, stageOrder)` override so

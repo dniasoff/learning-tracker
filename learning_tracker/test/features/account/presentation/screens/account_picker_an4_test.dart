@@ -164,10 +164,8 @@ Widget _buildApp({
       deviceRegistryProvider.overrideWithValue(registry),
       authRepositoryProvider.overrideWithValue(auth),
       firestoreAccountRepositoryProvider.overrideWith(
-        (ref) async => FirestoreAccountRepository(
-          firestore: firestore,
-          uid: 'fb-uid-1',
-        ),
+        (ref) async =>
+            FirestoreAccountRepository(firestore: firestore, uid: 'fb-uid-1'),
       ),
       activeAccountIdProvider.overrideWith(
         () => _StubActiveAccountId(activeAccountId),

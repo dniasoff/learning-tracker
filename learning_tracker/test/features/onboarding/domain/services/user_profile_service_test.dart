@@ -30,9 +30,7 @@ void main() {
     });
 
     test('updateAccount writes the account document to Firestore', () async {
-      final account = await repository.createAccount(
-        displayName: 'Test User',
-      );
+      final account = await repository.createAccount(displayName: 'Test User');
 
       final updated = await repository.updateAccount(
         account: account,
@@ -47,9 +45,7 @@ void main() {
     });
 
     test('updateAccount updates the existing account entry', () async {
-      final account = await repository.createAccount(
-        displayName: 'First Name',
-      );
+      final account = await repository.createAccount(displayName: 'First Name');
 
       await repository.updateAccount(
         account: account,

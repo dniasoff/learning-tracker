@@ -57,7 +57,8 @@ class TrackEditService {
       await _studyDayRepository.replaceAllForCurriculum(
         curriculumId: curriculum,
         studyDays: studyDays.map(
-          (day, type) => MapEntry(day, type == 'study' ? DayType.study : DayType.review),
+          (day, type) =>
+              MapEntry(day, type == 'study' ? DayType.study : DayType.review),
         ),
       );
     }

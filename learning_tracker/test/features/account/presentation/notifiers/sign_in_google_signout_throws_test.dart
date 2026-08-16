@@ -113,10 +113,12 @@ void main() {
       test('shows max-accounts error (not generic) and logs warning', () async {
         // Registry already full (kMaxDeviceAccounts = 5).
         final registry = _MockDeviceRegistryDatabase();
-        when(() => registry.findByFirebaseUid(_googleUser.uid))
-            .thenAnswer((_) async => null);
-        when(() => registry.getAllAccounts())
-            .thenAnswer((_) async => _seedAccounts(kMaxDeviceAccounts));
+        when(
+          () => registry.findByFirebaseUid(_googleUser.uid),
+        ).thenAnswer((_) async => null);
+        when(
+          () => registry.getAllAccounts(),
+        ).thenAnswer((_) async => _seedAccounts(kMaxDeviceAccounts));
 
         final mockAuth = MockAuthRepository();
         when(() => mockAuth.signInWithGoogle()).thenAnswer((_) async {});

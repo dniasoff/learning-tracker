@@ -90,7 +90,10 @@ void main() {
         email: 'test@test.local',
         displayName: 'Test User',
       );
-      final account = await firestore.collection('users').doc('test-user').get();
+      final account = await firestore
+          .collection('users')
+          .doc('test-user')
+          .get();
       expect(account.exists, isTrue);
       expect(account.data()!['email'], 'test@test.local');
     });
@@ -101,19 +104,21 @@ void main() {
       expect(programs, isList);
     });
 
-    test('account identity is the Firebase uid, not a local tier row', () async {
-      await firestore_fixtures.seedAccount(
-        firestore,
-        uid: 'localonly-user',
-        email: 'localonly@test.local',
-        displayName: 'Local User',
-      );
-      final account = await firestore
-          .collection('users')
-          .doc('localonly-user')
-          .get();
-      expect(account.id, 'localonly-user');
-      expect(account.data()!['display_name'], 'Local User');
+    test(
+      'account identity is the Firebase uid, not a local tier row',
+      () async {
+        await firestore_fixtures.seedAccount(
+          firestore,
+          uid: 'localonly-user',
+          email: 'localonly@test.local',
+          displayName: 'Local User',
+        );
+        final account = await firestore
+            .collection('users')
+            .doc('localonly-user')
+            .get();
+        expect(account.id, 'localonly-user');
+        expect(account.data()!['display_name'], 'Local User');
       },
     );
   });
@@ -613,5 +618,4 @@ void main() {
   // is test/features/auth/domain/models/auth_state_test.dart — see
   // 'isCloudBorn and isLocalBorn reflect tier' and
   // 'isSignedIn is true only when signedIn' in that file.
-
 }

@@ -599,55 +599,58 @@ void main() {
   // `didAddProvider`, rather than relying on Riverpod's optional debug names.
 
   group('F13 — N+1 perf assertion', () {
-    test('opening all 9 curricula in parallel resolves the batched '
-        'completions provider exactly once (shared across consumers)', () async {
-      // Make leaves available for every curriculum so the data path runs
-      // end-to-end (the legacy fixture only covered mishnayos).
-      final allCurriculumRepo = _AllCurriculumFakeRepo(leaves);
+    test(
+      'opening all 9 curricula in parallel resolves the batched '
+      'completions provider exactly once (shared across consumers)',
+      () async {
+        // Make leaves available for every curriculum so the data path runs
+        // end-to-end (the legacy fixture only covered mishnayos).
+        final allCurriculumRepo = _AllCurriculumFakeRepo(leaves);
 
-      // Seed minimal data so the provider returns non-null summaries.
-      await _seedLive(
-        firestore,
-        ref: leaves[0].sefariaRef,
-        stageId: 1,
-        at: DateTime.utc(2026, 5, 1, 10),
-      );
+        // Seed minimal data so the provider returns non-null summaries.
+        await _seedLive(
+          firestore,
+          ref: leaves[0].sefariaRef,
+          stageId: 1,
+          at: DateTime.utc(2026, 5, 1, 10),
+        );
 
-      final observer = _CountingObserver();
-      final container = ProviderContainer(
-        observers: [observer],
-        overrides: [
-          activeAccountFirebaseProvider.overrideWith(
-            (ref) async => _handles(firestore),
-          ),
-          activeProfileDocIdProvider.overrideWith(
-            () => _ActiveProfileDocIdOverride(),
-          ),
-          contentRepositoryProvider.overrideWithValue(allCurriculumRepo),
-          activeProfileIdProvider.overrideWith(() => _ProfileIdOverride()),
-          useHebrewTermsProvider.overrideWith(
-            () => _UseHebrewTermsOverride(useHebrew: false),
-          ),
-        ],
-      );
-      addTearDown(container.dispose);
+        final observer = _CountingObserver();
+        final container = ProviderContainer(
+          observers: [observer],
+          overrides: [
+            activeAccountFirebaseProvider.overrideWith(
+              (ref) async => _handles(firestore),
+            ),
+            activeProfileDocIdProvider.overrideWith(
+              () => _ActiveProfileDocIdOverride(),
+            ),
+            contentRepositoryProvider.overrideWithValue(allCurriculumRepo),
+            activeProfileIdProvider.overrideWith(() => _ProfileIdOverride()),
+            useHebrewTermsProvider.overrideWith(
+              () => _UseHebrewTermsOverride(useHebrew: false),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
 
-      // Drive the aggregated provider — it expands to all 9 curricula and
-      // each one calls lifetimeDataProvider which (post-fix) reads the
-      // batched providers.
-      await container.read(lifetimeSummariesProvider.future);
+        // Drive the aggregated provider — it expands to all 9 curricula and
+        // each one calls lifetimeDataProvider which (post-fix) reads the
+        // batched providers.
+        await container.read(lifetimeSummariesProvider.future);
 
-      // The batched completions provider must be built EXACTLY ONCE across
-      // all 9 curriculum resolutions. Before the fix, completions would be
-      // queried once per curriculum.
-      expect(
-        observer.batchedCompletionsBuilds,
-        1,
-        reason:
-            'completionsByProfileForLifetimeProvider must be shared across '
-            'the 9 lifetimeDataProvider consumers — N+1 fix',
-      );
-    });
+        // The batched completions provider must be built EXACTLY ONCE across
+        // all 9 curriculum resolutions. Before the fix, completions would be
+        // queried once per curriculum.
+        expect(
+          observer.batchedCompletionsBuilds,
+          1,
+          reason:
+              'completionsByProfileForLifetimeProvider must be shared across '
+              'the 9 lifetimeDataProvider consumers — N+1 fix',
+        );
+      },
+    );
   });
 
   // ─── Test 4 — CTA navigates to LifetimeMarkingRoute ───────────────────

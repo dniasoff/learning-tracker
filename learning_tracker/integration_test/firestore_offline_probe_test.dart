@@ -46,28 +46,33 @@ void main() {
     );
   });
 
-  test('Q1: get() on an UNCACHED doc while offline — throws or not-exists?',
-      () async {
-    // Never fetched on this device, so it cannot be in the cache.
-    final ref = db.collection('probe').doc('never-fetched-${DateTime.now().microsecondsSinceEpoch}');
+  test(
+    'Q1: get() on an UNCACHED doc while offline — throws or not-exists?',
+    () async {
+      // Never fetched on this device, so it cannot be in the cache.
+      final ref = db
+          .collection('probe')
+          .doc('never-fetched-${DateTime.now().microsecondsSinceEpoch}');
 
-    await db.disableNetwork();
-    String outcome;
-    try {
-      final snap = await ref.get();
-      outcome = 'RETURNED snapshot, exists=${snap.exists}, '
-          'isFromCache=${snap.metadata.isFromCache}';
-    } on FirebaseException catch (e) {
-      outcome = 'THREW FirebaseException code=${e.code}';
-    } catch (e) {
-      outcome = 'THREW ${e.runtimeType}: $e';
-    } finally {
-      await db.enableNetwork();
-    }
-    // Printed, not asserted — the POINT is to observe, not to confirm a bias.
-    // ignore: avoid_print
-    print('PROBE_Q1_UNCACHED_GET_OFFLINE :: $outcome');
-  });
+      await db.disableNetwork();
+      String outcome;
+      try {
+        final snap = await ref.get();
+        outcome =
+            'RETURNED snapshot, exists=${snap.exists}, '
+            'isFromCache=${snap.metadata.isFromCache}';
+      } on FirebaseException catch (e) {
+        outcome = 'THREW FirebaseException code=${e.code}';
+      } catch (e) {
+        outcome = 'THREW ${e.runtimeType}: $e';
+      } finally {
+        await db.enableNetwork();
+      }
+      // Printed, not asserted — the POINT is to observe, not to confirm a bias.
+      // ignore: avoid_print
+      print('PROBE_Q1_UNCACHED_GET_OFFLINE :: $outcome');
+    },
+  );
 
   test('Q2: set() while offline — queues, hangs, or throws?', () async {
     final ref = db.collection('probe').doc('queued-write');
@@ -92,40 +97,47 @@ void main() {
     await Future<void>.delayed(const Duration(seconds: 3));
     final server = await ref.get(const GetOptions(source: Source.server));
     // ignore: avoid_print
-    print('PROBE_Q2_AFTER_RECONNECT :: exists=${server.exists} '
-        'data=${server.data()}');
+    print(
+      'PROBE_Q2_AFTER_RECONNECT :: exists=${server.exists} '
+      'data=${server.data()}',
+    );
   });
 
-  test('Q3: the REAL shape — get() then set(), exactly as the app does',
-      () async {
-    // This mirrors recordCompletionIfAbsent verbatim: read to decide isNew,
-    // then write. If Q1 throws, this whole path fails offline and marking a
-    // completion on a bus is impossible.
-    final ref = db.collection('probe').doc('completion-shape');
+  test(
+    'Q3: the REAL shape — get() then set(), exactly as the app does',
+    () async {
+      // This mirrors recordCompletionIfAbsent verbatim: read to decide isNew,
+      // then write. If Q1 throws, this whole path fails offline and marking a
+      // completion on a bus is impossible.
+      final ref = db.collection('probe').doc('completion-shape');
 
-    await db.disableNetwork();
-    String outcome;
-    try {
-      final snap = await ref.get();
-      if (!snap.exists) {
-        await ref
-            .set({'marked': true}, SetOptions(merge: true))
-            .timeout(const Duration(seconds: 5));
-        outcome = 'FULL PATH SUCCEEDED offline (exists=false then set queued)';
-      } else {
-        outcome = 'doc already existed; inconclusive';
+      await db.disableNetwork();
+      String outcome;
+      try {
+        final snap = await ref.get();
+        if (!snap.exists) {
+          await ref
+              .set({'marked': true}, SetOptions(merge: true))
+              .timeout(const Duration(seconds: 5));
+          outcome =
+              'FULL PATH SUCCEEDED offline (exists=false then set queued)';
+        } else {
+          outcome = 'doc already existed; inconclusive';
+        }
+      } catch (e) {
+        outcome = 'FULL PATH FAILED offline: ${e.runtimeType}: $e';
+      } finally {
+        await db.enableNetwork();
       }
-    } catch (e) {
-      outcome = 'FULL PATH FAILED offline: ${e.runtimeType}: $e';
-    } finally {
-      await db.enableNetwork();
-    }
-    // ignore: avoid_print
-    print('PROBE_Q3_COMPLETION_PATH_OFFLINE :: $outcome');
-  });
-// Q4: the FIXED shape — unavailable-tolerant get, bounded set.
+      // ignore: avoid_print
+      print('PROBE_Q3_COMPLETION_PATH_OFFLINE :: $outcome');
+    },
+  );
+  // Q4: the FIXED shape — unavailable-tolerant get, bounded set.
   test('Q4: FIXED shape — tolerate unavailable, bounded set', () async {
-    final ref = db.collection('probe').doc('fixed-shape-${DateTime.now().microsecondsSinceEpoch}');
+    final ref = db
+        .collection('probe')
+        .doc('fixed-shape-${DateTime.now().microsecondsSinceEpoch}');
     await db.disableNetwork();
     String outcome;
     try {
@@ -152,6 +164,8 @@ void main() {
     await Future<void>.delayed(const Duration(seconds: 3));
     final server = await ref.get(const GetOptions(source: Source.server));
     // ignore: avoid_print
-    print('PROBE_Q4_LANDED_AFTER_RECONNECT :: exists=${server.exists} data=${server.data()}');
+    print(
+      'PROBE_Q4_LANDED_AFTER_RECONNECT :: exists=${server.exists} data=${server.data()}',
+    );
   });
 }

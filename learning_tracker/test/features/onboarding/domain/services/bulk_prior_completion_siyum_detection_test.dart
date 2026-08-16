@@ -252,12 +252,12 @@ void main() {
         activeCurriculaProvider.overrideWith(
           (ref) => Future.value([curriculum]),
         ),
-        curriculumContentProvider(curriculum).overrideWith(
-          (ref) => Future.value(items),
-        ),
-        siyumGranularityProvider(curriculum).overrideWithValue(
-          MilestoneLevel.unit,
-        ),
+        curriculumContentProvider(
+          curriculum,
+        ).overrideWith((ref) => Future.value(items)),
+        siyumGranularityProvider(
+          curriculum,
+        ).overrideWithValue(MilestoneLevel.unit),
       ],
     );
     container.read(activeProfileDocIdProvider.notifier).set(_adultProfileId);
@@ -354,8 +354,10 @@ void main() {
 
           final entries = await ledgerStore.getLifetimeLedger();
           expect(entries, hasLength(3));
-          expect(entries.map((entry) => entry.unitIdentifier).toSet(),
-              hasLength(3));
+          expect(
+            entries.map((entry) => entry.unitIdentifier).toSet(),
+            hasLength(3),
+          );
           expect(entries.every((entry) => entry.entryScope == 'sefer'), isTrue);
           expect(
             entries.any((entry) => entry.entryScope == 'masechta'),
@@ -379,8 +381,10 @@ void main() {
 
           final entries = await ledgerStore.getLifetimeLedger();
           expect(entries, hasLength(5));
-          expect(entries.map((entry) => entry.unitIdentifier).toSet(),
-              hasLength(5));
+          expect(
+            entries.map((entry) => entry.unitIdentifier).toSet(),
+            hasLength(5),
+          );
           expect(entries.every((entry) => entry.entryScope == 'sefer'), isTrue);
           expect(
             entries.any((entry) => entry.entryScope == 'masechta'),
