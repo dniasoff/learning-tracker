@@ -248,6 +248,7 @@ class E2EIdentity {
     required this.email,
     required this.displayName,
     required this.profileMode,
+    this.tier = Tier.local,
     required String seedAccountId,
     required String seedProfileId,
   }) : _seedAccountId = seedAccountId,
@@ -267,9 +268,25 @@ class E2EIdentity {
     seedProfileId: profileId,
   );
 
+  factory E2EIdentity.cloudBorn({
+    String email = 'e2e@test.com',
+    String displayName = 'E2E User',
+    String profileMode = 'adult',
+    String accountId = 'e2e-account',
+    String profileId = '01J6Q2H4A8M7K3P9R5T6V8WXYA',
+  }) => E2EIdentity._(
+    email: email,
+    displayName: displayName,
+    profileMode: profileMode,
+    tier: Tier.cloud,
+    seedAccountId: accountId,
+    seedProfileId: profileId,
+  );
+
   final String email;
   final String displayName;
   final String profileMode;
+  final Tier tier;
   final String _seedAccountId;
   final String _seedProfileId;
 
@@ -598,7 +615,7 @@ class E2EHarness {
               email: identity.email,
               displayName: identity.displayName,
             ),
-            tier: Tier.local,
+            tier: identity.tier,
           )
         : const AuthState.signedOut();
 
