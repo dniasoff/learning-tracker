@@ -18,6 +18,8 @@ import 'package:learning_tracker/features/tracks/whole_curriculum_order/domain/m
 import 'package:learning_tracker/features/tutoring/tutoring.dart';
 import 'package:mocktail/mocktail.dart';
 
+import '../../../../helpers/data_export_firestore_test_support.dart';
+
 import '../../../../helpers/firestore_fake.dart';
 
 class MockContentRepository extends Mock implements ContentRepository {}
@@ -27,7 +29,7 @@ class MockFirebaseApp extends Mock implements FirebaseApp {}
 class MockFirebaseAuthHandle extends Mock implements FirebaseAuth {}
 
 const _uid = 'bookmark-uid';
-const _profileId = 'bookmark-profile-ulid';
+const _profileId = testProfileId;
 const _ref1 = 'Mishnah Berachot 1:1';
 const _ref2 = 'Mishnah Berachot 1:2';
 const _ref3 = 'Mishnah Berachot 1:3';
@@ -453,7 +455,7 @@ void main() {
             .read(activeTutoredProfileSelectionProvider.notifier)
             .enter(
               const TutoredProfileSelection(
-                profileId: 'talmid-profile-ulid',
+                profileId: secondTestProfileId,
                 ownerUid: 'parent-uid',
                 grantId: 'grant-1',
                 permissions: TutorPermissions(),

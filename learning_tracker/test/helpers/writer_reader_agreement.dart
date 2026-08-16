@@ -97,6 +97,7 @@ import 'package:learning_tracker/data/firestore/repository_providers.dart'
 import 'package:mocktail/mocktail.dart';
 
 import 'firestore_fake.dart';
+import 'data_export_firestore_test_support.dart';
 
 class _MockFirebaseApp extends Mock implements FirebaseApp {}
 
@@ -135,7 +136,7 @@ class _MockFirebaseAuthHandle extends Mock implements FirebaseAuth {}
 ({FakeFirebaseFirestore firestore, ProviderContainer container})
 activateAccountAndProfile({
   String uid = 'uid-1',
-  String profileId = 'profile-ulid-1',
+  String profileId = testProfileId,
 }) {
   final firestore = createFakeFirestore(strictRules: false);
   final container = ProviderContainer(

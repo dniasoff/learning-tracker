@@ -28,6 +28,7 @@ import 'package:learning_tracker/features/scheduler/data/repositories/goal_repos
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:mocktail/mocktail.dart';
 
+import 'helpers/data_export_firestore_test_support.dart';
 import 'helpers/writer_reader_agreement.dart';
 
 class MockFirebaseApp extends Mock implements FirebaseApp {}
@@ -60,12 +61,12 @@ void main() {
         'between tests or between two rigs in the same test', () async {
       final rigA = activateAccountAndProfile(
         uid: 'uid-a',
-        profileId: 'profile-a',
+        profileId: testProfileId,
       );
       addTearDown(rigA.container.dispose);
       final rigB = activateAccountAndProfile(
         uid: 'uid-b',
-        profileId: 'profile-b',
+        profileId: secondTestProfileId,
       );
       addTearDown(rigB.container.dispose);
 
@@ -134,8 +135,8 @@ void main() {
         'disagreement rather than passing vacuously', () async {
       // The writer's rig: the one legitimate activateAccountAndProfile
       // call for this test (per the helper's "exactly one call" rule for
-      // a REAL agreement check). goal is created under 'profile-correct'.
-      final rig = activateAccountAndProfile(profileId: 'profile-correct');
+      // a REAL agreement check). The goal is created under [testProfileId].
+      final rig = activateAccountAndProfile(profileId: testProfileId);
       addTearDown(rig.container.dispose);
 
       // The deliberately mis-wired reader: a SEPARATE container sharing
@@ -164,7 +165,7 @@ void main() {
       addTearDown(misWiredContainer.dispose);
       misWiredContainer
           .read(activeProfileDocIdProvider.notifier)
-          .set('profile-WRONG');
+          .set(secondTestProfileId);
 
       await expectLater(
         expectWriterReaderAgree<List<GoalEntity>>(
@@ -172,10 +173,10 @@ void main() {
           collection: 'goals',
           writerDescription:
               'firestoreGoalRepositoryProvider.createGoal '
-              '(profile-correct)',
+              '($testProfileId)',
           readerDescription:
               'firestoreGoalRepositoryProvider.getGoals '
-              '(profile-WRONG, deliberately mis-wired)',
+              '($secondTestProfileId, deliberately mis-wired)',
           write: () async {
             final repo = await rig.container.read(
               firestoreGoalRepositoryProvider.future,

@@ -347,6 +347,13 @@ typedef BookmarkRepositoryDeps = ({
 final firestoreBookmarkRepositoryProvider =
     FutureProvider.family<FirestoreBookmarkRepository?, BookmarkRepositoryDeps>(
       (ref, deps) async {
+        // Bookmark writes are intentionally unavailable while a tutor is
+        // acting inside a talmid context. Do this at the provider boundary so
+        // the adapter receives the documented null/not-ready signal instead
+        // of resolving the generic profile tuple through the active grant.
+        if (ref.watch(activeTutoredProfileSelectionProvider) != null) {
+          return null;
+        }
         final resolved = await _watchActiveAccountAndProfile(ref);
         if (resolved == null) return null;
         final (handles, ownerUid, profileId) = resolved;

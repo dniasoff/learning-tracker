@@ -387,9 +387,19 @@ class E2EHarness {
 
     _router = _buildRouter();
 
+    final hasDashboardCurriculaOverride = extraOverrides.any(
+      (override) => override.origin == dashboardActiveCurriculaProvider,
+    );
+
     await _tester.pumpWidget(
       ProviderScope(
-        overrides: [..._buildOverrides(identity), ...extraOverrides],
+        overrides: [
+          ..._buildOverrides(
+            identity,
+            includeDashboardCurriculaOverride: !hasDashboardCurriculaOverride,
+          ),
+          ...extraOverrides,
+        ],
         child: _buildMaterialApp(
           path == '/'
               ? _router.config()
@@ -611,7 +621,10 @@ class E2EHarness {
     );
   }
 
-  List<Override> _buildOverrides(E2EIdentity? identity) {
+  List<Override> _buildOverrides(
+    E2EIdentity? identity, {
+    bool includeDashboardCurriculaOverride = true,
+  }) {
     final profileId = identity?._resolvedProfileId ?? identity?._seedProfileId;
     final accountId = identity?._resolvedAccountId ?? identity?._seedAccountId;
 
@@ -647,6 +660,14 @@ class E2EHarness {
       // seed file.  Seed rows via [seedContent] when a journey needs them.
       // contentDatabaseProvider is now a FutureProvider so use overrideWith.
       contentDatabaseProvider.overrideWith((ref) => Future.value(_contentDb)),
+
+      if (includeDashboardCurriculaOverride)
+        // Keep the dashboard's one-shot curriculum lookup deterministic for
+        // routes that only need dashboard-adjacent widgets. Individual
+        // journeys can replace this with their real expected curricula.
+        dashboardActiveCurriculaProvider.overrideWith(
+          (ref) async => <CurriculumId>[],
+        ),
 
       // ── Auth ──────────────────────────────────────────────────────────────
       authStateProvider.overrideWithValue(authState),

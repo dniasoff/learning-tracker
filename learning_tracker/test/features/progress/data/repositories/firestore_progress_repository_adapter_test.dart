@@ -13,6 +13,8 @@ import 'package:learning_tracker/features/learning/domain/entities/completion_so
 import 'package:learning_tracker/features/progress/data/repositories/firestore_progress_repository_adapter.dart';
 import 'package:mocktail/mocktail.dart';
 
+import '../../../../helpers/data_export_firestore_test_support.dart';
+
 class MockFirebaseApp extends Mock implements FirebaseApp {}
 
 class MockFirebaseAuthHandle extends Mock implements FirebaseAuth {}
@@ -83,7 +85,7 @@ void main() {
 
   group('ready (active account + profile)', () {
     const uid = 'uid-1';
-    const profileDocId = 'profile-ulid-1';
+    const profileDocId = testProfileId;
 
     late FakeFirebaseFirestore firestore;
     late ProviderContainer container;

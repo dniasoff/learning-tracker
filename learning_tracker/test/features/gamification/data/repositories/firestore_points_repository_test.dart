@@ -11,6 +11,8 @@ import 'package:learning_tracker/data/repositories/firestore_points_ledger_repos
 import 'package:learning_tracker/features/gamification/data/repositories/firestore_points_repository.dart';
 import 'package:mocktail/mocktail.dart';
 
+import '../../../../helpers/data_export_firestore_test_support.dart';
+
 class MockFirebaseApp extends Mock implements FirebaseApp {}
 
 class MockFirebaseAuthHandle extends Mock implements FirebaseAuth {}
@@ -71,7 +73,7 @@ void main() {
 
       group('ready (active account + profile)', () {
         const uid = 'uid-1';
-        const profileDocId = 'profile-ulid-1';
+        const profileDocId = testProfileId;
 
         late FakeFirebaseFirestore firestore;
         late ProviderContainer container;
@@ -186,7 +188,7 @@ void main() {
       'ready (active account + profile) — per-curriculum methods still throw',
       () {
         const uid = 'uid-1';
-        const profileDocId = 'profile-ulid-1';
+        const profileDocId = testProfileId;
 
         late ProviderContainer container;
         late FirestorePointsRepository adapter;
