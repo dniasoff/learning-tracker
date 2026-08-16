@@ -28,7 +28,10 @@ import '../../../../helpers/pump_app.dart';
 
 class _MockPinService extends Mock implements PinService {}
 
-Widget _buildHarness({required PinService pinService, int profileId = 42}) {
+Widget _buildHarness({
+  required PinService pinService,
+  String profileId = '01J6Q2H4A8M7K3P9R5T6V8WXY9',
+}) {
   return pumpApp(
     child: Builder(
       builder: (ctx) => Scaffold(

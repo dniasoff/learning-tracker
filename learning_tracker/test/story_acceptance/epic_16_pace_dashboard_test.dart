@@ -108,7 +108,6 @@ void main() {
         curriculumId: CurriculumId.mishnayos,
         contentItemSefariaRef: 'Berakhot.1.1',
         stageOrder: 1,
-        stageDefinitionId: 1,
         priority: DailyTaskPriority.newLearning,
         isOverdue: false,
         reason: 'New',

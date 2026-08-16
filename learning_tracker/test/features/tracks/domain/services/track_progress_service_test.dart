@@ -146,7 +146,6 @@ Future<void> seedStages(
     stages: [
       for (var i = 1; i <= stageCount; i++)
         StageDefinition(
-          id: kFirestoreUnmappedStageId,
           curriculumId: curriculum,
           stageOrder: i,
           stageName: i == 1 ? 'Learn' : 'Chazara $i',

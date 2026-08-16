@@ -114,7 +114,6 @@ Future<void> _seedLearnStage(
     curriculumId: curriculum,
     stages: [
       StageDefinition(
-        id: kFirestoreUnmappedStageId,
         curriculumId: curriculum,
         stageOrder: 1,
         stageName: 'Learn',
@@ -139,7 +138,6 @@ Future<void> _seedChazaraStages(
     stages: [
       for (final stage in [(1, 'Learn', 0), (2, 'Chazara 1', 1)])
         StageDefinition(
-          id: kFirestoreUnmappedStageId,
           curriculumId: curriculum,
           stageOrder: stage.$1,
           stageName: stage.$2,

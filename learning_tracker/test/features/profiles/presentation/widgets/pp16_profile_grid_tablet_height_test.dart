@@ -30,27 +30,25 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
+import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/profile_card.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/profile_grid.dart';
 
 import '../../../../helpers/pump_app.dart';
 
-List<ProfileModel> _profiles(int count) => List.generate(
+List<LearnerProfileEntity> _profiles(int count) => List.generate(
   count,
-  (i) => ProfileModel(
-    id: i + 1,
-    ulid: 'ulid-${i + 1}',
-    accountId: 1,
+  (i) => LearnerProfileEntity(
+    profileId: '01J6Q2H4A8M7K3P9R5T6V8W${i + 1}',
     displayName: 'Child ${i + 1}',
-    mode: 'child',
-    avatarIndex: 0,
+    mode: ProfileMode.child,
     createdAt: DateTime.utc(2026),
     updatedAt: DateTime.utc(2026),
   ),
 );
 
-Widget _buildGrid({required List<ProfileModel> profiles}) {
+Widget _buildGrid({required List<LearnerProfileEntity> profiles}) {
   return pumpApp(
     child: Scaffold(
       body: ProfileGrid(

@@ -26,9 +26,9 @@ void main() {
         'pumping/awaiting required', () {
       container
           .read(selectedProfileIdProvider.notifier)
-          .select(5, ulid: 'ulid-5');
+          .select('ulid-5');
 
-      expect(container.read(selectedProfileIdProvider), 5);
+      expect(container.read(selectedProfileIdProvider), 'ulid-5');
       expect(container.read(activeProfileDocIdProvider), 'ulid-5');
     });
 
@@ -36,7 +36,7 @@ void main() {
         'activeProfileDocIdProvider', () {
       container
           .read(selectedProfileIdProvider.notifier)
-          .select(1, ulid: 'ulid-1');
+          .select('ulid-1');
       expect(container.read(activeProfileDocIdProvider), 'ulid-1');
 
       container.read(selectedProfileIdProvider.notifier).clear();

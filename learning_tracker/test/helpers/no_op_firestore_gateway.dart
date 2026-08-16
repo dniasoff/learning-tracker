@@ -1,4 +1,4 @@
-/// Shared no-op [FirestoreGateway] test double (AUD-t-cross-19).
+/// Shared no-op Firestore test double (AUD-t-cross-19).
 ///
 /// Before this helper, `test/sync` files each hand-rolled the full ~46-method
 /// [FirestoreGateway] interface as `class _SomeGateway implements
@@ -17,10 +17,7 @@
 library;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/sync/firestore_gateway.dart';
-
-/// A [FirestoreGateway] fake whose methods throw `UnimplementedError` unless
-/// a subclass overrides them. Use this instead of `implements
-/// FirestoreGateway` so a test only has to stub the handful of methods it
-/// actually calls.
-class NoOpFirestoreGateway extends Fake implements FirestoreGateway {}
+/// A generic fake whose methods throw `UnimplementedError` unless a subclass
+/// overrides them. The old sync gateway interface was removed; current
+/// Firestore behavior is exposed through the collection-specific repositories.
+class NoOpFirestoreGateway extends Fake {}

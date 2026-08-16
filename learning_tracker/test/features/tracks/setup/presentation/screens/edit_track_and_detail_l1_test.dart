@@ -169,7 +169,6 @@ Future<void> _seedLearnStage(
   curriculumId: CurriculumId.fromStorageKey(curriculumId)!,
   stages: [
     StageDefinition(
-      id: kFirestoreUnmappedStageId,
       curriculumId: CurriculumId.fromStorageKey(curriculumId)!,
       stageOrder: 1,
       stageName: 'Learn',

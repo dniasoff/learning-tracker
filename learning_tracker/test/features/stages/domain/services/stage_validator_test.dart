@@ -24,7 +24,6 @@ void main() {
   group('StageValidator', () {
     test('returns null for delay schedule', () {
       const stage = StageDefinition(
-        id: 1,
         curriculumId: CurriculumId.mishnayos,
         stageOrder: 1,
         stageName: 'Learn',
@@ -37,7 +36,6 @@ void main() {
 
     test('returns error for weekly stage with out-of-range day', () {
       const stage = StageDefinition(
-        id: 2,
         curriculumId: CurriculumId.mishnayos,
         stageOrder: 2,
         stageName: 'Weekly',

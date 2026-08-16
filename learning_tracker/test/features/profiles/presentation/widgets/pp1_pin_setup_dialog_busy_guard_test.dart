@@ -26,7 +26,10 @@ import '../../../../helpers/pump_app.dart';
 
 class _MockPinService extends Mock implements PinService {}
 
-Widget _buildHarness({required PinService pinService, int profileId = 99}) {
+Widget _buildHarness({
+  required PinService pinService,
+  String profileId = '01J6Q2H4A8M7K3P9R5T6V8WXY9',
+}) {
   return pumpApp(
     retry: (_, __) => null,
     overrides: [pinServiceProvider.overrideWithValue(pinService)],
@@ -100,7 +103,9 @@ void main() {
         // PIN that would result if the busy guard was missing and a 5th tap
         // slipped into the confirm buffer as its first digit, causing '5123'
         // to be submitted on the 4th confirm tap).
-        verify(() => ps.setProfilePin(99, '1234')).called(1);
+        verify(
+          () => ps.setProfilePin('01J6Q2H4A8M7K3P9R5T6V8WXY9', '1234'),
+        ).called(1);
         expect(
           find.text('Set Parent PIN'),
           findsNothing,

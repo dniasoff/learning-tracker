@@ -30,7 +30,10 @@ import '../../../../helpers/pump_app.dart';
 
 class _MockPinService extends Mock implements PinService {}
 
-Widget _setupHarness({required PinService pinService, int profileId = 99}) {
+Widget _setupHarness({
+  required PinService pinService,
+  String profileId = '01J6Q2H4A8M7K3P9R5T6V8WXY9',
+}) {
   return pumpApp(
     overrides: [pinServiceProvider.overrideWithValue(pinService)],
     child: Consumer(
@@ -114,7 +117,9 @@ void main() {
         await tester.pump(const Duration(milliseconds: 300));
 
         // The full, correct PIN must have been saved — not a short/shifted one.
-        verify(() => ps.setProfilePin(99, '1234')).called(1);
+        verify(
+          () => ps.setProfilePin('01J6Q2H4A8M7K3P9R5T6V8WXY9', '1234'),
+        ).called(1);
         expect(
           find.textContaining('do not match'),
           findsNothing,
