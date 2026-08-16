@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
@@ -193,7 +192,7 @@ class LearningTrackCard extends ConsumerWidget {
                               child: ClipRRect(
                                 borderRadius: BorderRadius.circular(999),
                                 child: LinearProgressIndicator(
-                                  value: cycleFraction!,
+                                  value: cycleFraction,
                                   minHeight: 10,
                                   backgroundColor:
                                       context.colors.brandCreamSoft,

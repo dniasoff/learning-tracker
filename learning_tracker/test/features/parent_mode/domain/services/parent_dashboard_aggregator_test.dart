@@ -20,7 +20,6 @@ void main() {
       });
 
       test('counts active days this week correctly', () {
-        final now = DateTime(2026, 3, 17, 12); // Tuesday
         // Week starts Monday March 16
         final completions = [
           _makeCompletion(DateTime(2026, 3, 16, 10)), // Monday

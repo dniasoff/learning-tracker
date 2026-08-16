@@ -8,7 +8,6 @@ import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
     show authRepositoryProvider;
-import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/parent_pin_session_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
@@ -55,7 +54,6 @@ class _AccountActionsSheet extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
 
     final user = ref.watch(authRepositoryProvider).currentUser;
-    final authState = ref.watch(authStateProvider);
     final accountEmail = user?.email ?? '';
 
     final activeProfileId = ref.watch(activeProfileIdProvider);
@@ -260,9 +258,7 @@ class _AccountActionsSheet extends ConsumerWidget {
                     ),
                   ),
                   onTap: () => closeThen(() async {
-                    if (user != null) {
-                      await showDeleteAccountFlow(pageContext, pageRef, user);
-                    }
+                    await showDeleteAccountFlow(pageContext, pageRef, user);
                   }),
                 ),
             ],

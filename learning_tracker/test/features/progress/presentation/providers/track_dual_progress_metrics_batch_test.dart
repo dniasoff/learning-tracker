@@ -14,8 +14,8 @@ import 'package:learning_tracker/features/learning/presentation/providers/comple
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/progress/domain/services/chart_data_service.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
-import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
 import 'package:learning_tracker/features/tracks/domain/services/track_progress_service.dart';
 import 'package:learning_tracker/features/tracks/presentation/providers/track_progress_providers.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
@@ -80,12 +80,6 @@ final class _Stages implements StageDefinitionRepository {
   @override
   Future<void> deleteStagesForTrack(CurriculumId curriculumId) =>
       throw UnimplementedError();
-
-  @override
-  Future<void> pushStagesForTrack({
-    required int trackId,
-    required CurriculumId curriculumId,
-  }) => throw UnimplementedError();
 
   @override
   Future<List<StageDefinition>> getAllStageDefinitions() =>

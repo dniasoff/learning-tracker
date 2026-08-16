@@ -10,6 +10,8 @@ import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_entity.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_tier_filter.dart';
+import 'package:learning_tracker/features/learning/domain/entities/learning_ledger_entry.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/progress/domain/services/chart_data_service.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
@@ -21,8 +23,6 @@ import 'package:learning_tracker/features/tracks/setup/domain/entities/profile_p
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart';
 import 'package:learning_tracker/features/tracks/stages/domain/models/stage_definition.dart';
 import 'package:learning_tracker/features/tracks/stages/domain/repositories/stage_definition_repository.dart';
-import 'package:learning_tracker/features/learning/domain/entities/learning_ledger_entry.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 
 const _profileId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
 const _curriculum = CurriculumId.mishnayos;
@@ -76,12 +76,6 @@ final class _FakeStageRepository implements StageDefinitionRepository {
   @override
   Future<void> deleteStagesForTrack(CurriculumId curriculumId) =>
       throw UnimplementedError();
-
-  @override
-  Future<void> pushStagesForTrack({
-    required int trackId,
-    required CurriculumId curriculumId,
-  }) => throw UnimplementedError();
 
   @override
   Future<List<StageDefinition>> getAllStageDefinitions() =>
@@ -223,7 +217,7 @@ void main() {
   );
 
   test('a lifetime-only import for another curriculum does not leak', () async {
-    final other = CurriculumId.bavli;
+    const other = CurriculumId.bavli;
     final container = _container(
       tracks: [_track(_curriculum)],
       completions: const {},

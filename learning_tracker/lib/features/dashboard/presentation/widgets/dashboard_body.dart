@@ -10,6 +10,7 @@ import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
+import 'package:learning_tracker/core/widgets/inline_async_error.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/active_tracks_carousel_section.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/child_points_rewards_tab_card.dart';
@@ -21,7 +22,6 @@ import 'package:learning_tracker/features/dashboard/presentation/widgets/empty_d
 import 'package:learning_tracker/features/dashboard/presentation/widgets/main_focus_mission_card.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/skipped_onboarding_cta_banner.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/streak_recovery_banner.dart';
-import 'package:learning_tracker/core/widgets/inline_async_error.dart';
 import 'package:learning_tracker/features/gamification/presentation/widgets/gamification_route_push_guard.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
@@ -119,7 +119,7 @@ class DashboardBody extends ConsumerWidget {
     // Adults do not have a points balance by product rule. Child points stay
     // nullable until the achievement read resolves so the child UI can show
     // its loading/error state instead of a fabricated zero.
-    final int? totalPoints = userMode == ProfileMode.child
+    final totalPoints = userMode == ProfileMode.child
         ? pointsAsync.value
         : 0;
     final lifetimeTotalsAsync = ref.watch(
@@ -216,8 +216,6 @@ class DashboardBody extends ConsumerWidget {
     // in this gate.
     final tasksReady = dailyTasksAsync.hasValue;
     final lifetimeReady = lifetimeTotalsAsync.hasValue;
-    final tasksError = dailyTasksAsync.hasError;
-    final lifetimeError = lifetimeTotalsAsync.hasError;
     // "All caught up" is suppressed until tasks are ready: showing it before
     // sync completes would mislead the user into thinking there's nothing to do
     // when in fact the data hasn't arrived yet.

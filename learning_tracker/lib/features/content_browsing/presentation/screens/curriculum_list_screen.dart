@@ -311,7 +311,7 @@ class _CurriculumCard extends ConsumerWidget {
               ClipRRect(
                 borderRadius: BorderRadius.circular(4),
                 child: LinearProgressIndicator(
-                  value: percentage!,
+                  value: percentage,
                   minHeight: 4,
                   backgroundColor: context.colors.brandOutline.withValues(
                     alpha: 0.5,

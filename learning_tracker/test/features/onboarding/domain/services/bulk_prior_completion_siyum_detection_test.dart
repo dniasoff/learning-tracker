@@ -3,7 +3,6 @@ library;
 
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:test/test.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
@@ -13,7 +12,7 @@ import 'package:learning_tracker/data/repositories/firestore_completion_reposito
 import 'package:learning_tracker/data/repositories/firestore_learning_ledger_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_stage_definition_repository.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
-import 'package:learning_tracker/features/learning/data/repositories/completion_repository_impl.dart';
+import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/learning/data/repositories/learning_ledger_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/entities/bookmark.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/bookmark_repository.dart';
@@ -28,12 +27,12 @@ import 'package:learning_tracker/features/profiles/presentation/providers/active
 import 'package:learning_tracker/features/progress/domain/models/journey_view_model.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/journey_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
-import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/tracks/stages/data/repositories/stage_definition_repository_impl.dart';
 import 'package:learning_tracker/features/tracks/stages/domain/models/schedule_type.dart';
 import 'package:learning_tracker/features/tracks/stages/domain/models/stage_definition.dart';
 import 'package:learning_tracker/features/tracks/stages/domain/repositories/stage_definition_repository.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:test/test.dart';
 
 import '../../../../helpers/firestore_fake.dart';
 import '../../../../helpers/firestore_fixtures.dart';

@@ -79,7 +79,6 @@ class UserProfileHeaderCard extends ConsumerWidget {
       return const SizedBox.shrink();
     }
 
-    final authState = ref.watch(authStateProvider);
     final activeProfileId = ref.watch(activeProfileIdProvider);
     // `this.` disambiguates the field from the local `activeProfile` below
     // (same self-reference rule as `user` above).

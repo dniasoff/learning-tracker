@@ -787,7 +787,6 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
     AppLocalizations l10n,
   ) async {
     final curriculum = _curriculumId;
-    if (curriculum == null) return;
 
     final currentDelays = _pendingChazarah != null
         ? _pendingDelays()

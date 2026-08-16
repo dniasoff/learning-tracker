@@ -25,7 +25,6 @@ library;
 import 'dart:async';
 
 import 'package:auto_route/auto_route.dart';
-import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
@@ -48,9 +47,9 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../../../mocks/mock_repositories.dart';
 import '../../../../helpers/firestore_fake.dart';
 import '../../../../helpers/firestore_fixtures.dart';
+import '../../../../mocks/mock_repositories.dart';
 
 class _MockStackRouter extends Mock implements StackRouter {}
 

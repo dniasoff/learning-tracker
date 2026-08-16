@@ -8,7 +8,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart';
-import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/gamification/data/repositories/firestore_points_balance_reader_adapter.dart';
 import 'package:learning_tracker/features/gamification/data/repositories/firestore_points_ledger_write_adapter.dart';
 import 'package:learning_tracker/features/gamification/data/repositories/reward_redemption_repository_impl.dart';
@@ -83,7 +82,6 @@ class ParentSettingsScreen extends ConsumerWidget {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
     final user = ref.watch(authRepositoryProvider).currentUser;
-    final authState = ref.watch(authStateProvider);
     final activeProfileId = ref.watch(activeProfileIdProvider);
     final profilesAsync = ref.watch(profileListStreamProvider);
     final activeProfile = profilesAsync.asData?.value
@@ -411,9 +409,7 @@ class ParentSettingsScreen extends ConsumerWidget {
                   leadingSquare: true,
                   trailing: const SizedBox.shrink(),
                   onTap: () {
-                    if (user != null) {
-                      showDeleteAccountFlow(context, ref, user);
-                    }
+                    showDeleteAccountFlow(context, ref, user);
                   },
                 ),
               ),

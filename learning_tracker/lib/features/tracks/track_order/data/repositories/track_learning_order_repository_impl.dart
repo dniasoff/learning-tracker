@@ -4,7 +4,6 @@ import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
 import 'package:learning_tracker/data/repositories/firestore_track_learning_order_repository.dart';
 import 'package:learning_tracker/features/tracks/track_order/domain/repositories/track_learning_order_repository.dart';
-import 'package:learning_tracker/features/tracks/track_order/domain/services/masechta_ordering_policy.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/domain/models/learning_order_item.dart';
 
 /// AUD-tracks-15 (SM-8): this repository only talks to Firestore. It no

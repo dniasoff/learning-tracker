@@ -72,7 +72,6 @@ Future<CurriculumId> _insertTrack(
   FakeFirebaseFirestore firestore, {
   required String curriculumId,
   String profileId = _profileId,
-  Object? trackId,
 }) async {
   final curriculum = CurriculumId.fromStorageKey(curriculumId);
   if (curriculum == null) {
