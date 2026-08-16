@@ -28,27 +28,25 @@ library;
 
 import 'dart:convert';
 
-import 'package:drift/drift.dart' show InsertMode, Value;
 import 'package:flutter/material.dart'
     show Icons, InkWell, Offset, SingleChildScrollView, Switch, TextField;
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart'
     show effectiveUseHebrewTermsProvider, useHebrewTermsProvider;
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
+import 'package:learning_tracker/data/repositories/points_ledger_entry.dart';
 import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart'
     show connectivityStreamProvider;
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 import 'package:learning_tracker/features/gamification/presentation/providers/achievements_overview_provider.dart';
 import 'package:learning_tracker/features/gamification/presentation/screens/child_redemption_screen.dart'
     show childRedemptionBalanceProvider, childRedemptionRewardsProvider;
 import 'package:learning_tracker/features/gamification/presentation/screens/gamification_screen.dart'
     show streakCalendarProvider;
-import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/screens/parent_settings_screen.dart'
     show activeProfilePointsBalanceProvider;
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
@@ -59,26 +57,33 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../fakes/e2e_fakes.dart';
 import '../harness/e2e_common_overrides.dart';
 import '../harness/e2e_harness.dart';
+import '../../helpers/firestore_fixtures.dart';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-/// Seeds a points balance row.
+/// Seeds the append-only points ledger so the Firestore balance reader derives
+/// the requested balance.
 Future<void> _seedPoints(
-  UserDatabase db, {
-  required int profileId,
+  E2EHarness h, {
+  required String uid,
+  required String profileId,
   int balance = 200,
 }) async {
-  final now = DateTimeFactory.nowUtc();
-  await db
-      .into(db.pointsBalance)
-      .insert(
-        PointsBalanceCompanion.insert(
-          profileId: Value(profileId),
-          balance: Value(balance),
-          updatedAt: now,
-        ),
-        mode: InsertMode.insertOrIgnore,
-      );
+  final entry = PointsLedgerEntry(
+    ulid: '01J6Q2H4A8M7K3P9R5T6V8WXY',
+    entryKind: 'parent_add',
+    delta: balance,
+    createdAt: DateTimeFactory.nowUtc(),
+    source: CompletionSource.live,
+  );
+  await h.firestore
+      .collection('users')
+      .doc(uid)
+      .collection('learner_profiles')
+      .doc(profileId)
+      .collection('points_ledger')
+      .doc(entry.ulid)
+      .set(entry.toFirestore());
 }
 
 /// Seeds a milestone directly via raw SharedPreferences for [profileId].
@@ -86,11 +91,10 @@ Future<void> _seedPoints(
 /// Requires a [UserDatabase] for future point-total reads; the service only
 /// uses SharedPreferences for milestone CRUD.
 Future<RewardMilestone> _seedMilestoneViaPrefs(
-  int profileId, {
+  String profileId, {
   String title = 'Test Reward',
   int thresholdPoints = 100,
   bool isEnabled = true,
-  int trackId = RewardMilestone.kGlobalTrackSentinel,
 }) async {
   final prefs = await SharedPreferences.getInstance();
   final configKey = 'reward_milestones_config_v1_$profileId';
@@ -98,7 +102,6 @@ Future<RewardMilestone> _seedMilestoneViaPrefs(
   final milestone = RewardMilestone(
     id: 'rm_${profileId}_${now.millisecondsSinceEpoch}_${title.hashCode.abs()}',
     profileId: profileId,
-    trackId: trackId,
     title: title,
     thresholdPoints: thresholdPoints,
     isEnabled: isEnabled,
@@ -122,7 +125,7 @@ Future<RewardMilestone> _seedMilestoneViaPrefs(
 /// exception — e.g. a [RewardMilestone.fromJson] schema-mismatch bug — is a
 /// genuine defect and must propagate so the test fails loudly instead of
 /// silently reporting an empty milestone list (AUD-t-cross-77).
-Future<List<RewardMilestone>> _loadMilestones(int profileId) async {
+Future<List<RewardMilestone>> _loadMilestones(String profileId) async {
   final prefs = await SharedPreferences.getInstance();
   final configKey = 'reward_milestones_config_v1_$profileId';
   final raw = prefs.getString(configKey);
@@ -144,21 +147,35 @@ Future<List<RewardMilestone>> _loadMilestones(int profileId) async {
 List<Override> _dashboardSilence(E2EHarness h) => h.dashboardSilenceOverrides;
 
 /// One-shot override for [childRedemptionBalanceProvider] (StreamProvider).
-Override _childRedemptionBalanceOneShotOverride() {
-  return childRedemptionBalanceProvider.overrideWith((ref) {
-    final db = ref.watch(userDatabaseProvider);
-    final profileId = ref.watch(activeProfileIdProvider);
-    return Stream.fromFuture(db.pointsBalanceDao.getBalance(profileId));
-  });
+Override _childRedemptionBalanceOneShotOverride({int balance = 500}) {
+  return childRedemptionBalanceProvider.overrideWith(
+    (ref) => Future.value(balance),
+  );
 }
 
 /// One-shot override for [activeProfilePointsBalanceProvider] (StreamProvider).
-Override _activeProfileBalanceOneShotOverride() {
-  return activeProfilePointsBalanceProvider.overrideWith((ref) {
-    final db = ref.watch(userDatabaseProvider);
-    final profileId = ref.watch(activeProfileIdProvider);
-    return Stream.fromFuture(db.pointsBalanceDao.getBalance(profileId));
-  });
+Override _activeProfileBalanceOneShotOverride({int balance = 100}) {
+  return activeProfilePointsBalanceProvider.overrideWith(
+    (ref) => Future.value(balance),
+  );
+}
+
+Future<int> _readPointsBalance(
+  E2EHarness h,
+  String uid,
+  String profileId,
+) async {
+  final snapshot = await h.firestore
+      .collection('users')
+      .doc(uid)
+      .collection('learner_profiles')
+      .doc(profileId)
+      .collection('points_ledger')
+      .get();
+  return snapshot.docs.fold<int>(
+    0,
+    (total, doc) => total + (doc.data()['delta'] as num).toInt(),
+  );
 }
 
 /// Fixed-value notifier for [ActiveTutoredProfileSelection] — active session.
@@ -381,7 +398,12 @@ void main() {
         );
 
         final profileId = identity.profileId;
-        await _seedPoints(h.db, profileId: profileId, balance: 500);
+        await _seedPoints(
+          h,
+          uid: identity.accountId,
+          profileId: profileId,
+          balance: 500,
+        );
 
         // Seed an ENABLED reward.
         await _seedMilestoneViaPrefs(
@@ -483,29 +505,18 @@ void main() {
         // (AUD-t-cross-07) instead of falling into the "no active tracks"
         // empty state, where canEdit has nothing to gate and a regression
         // could hide.
-        final pointConfigTrackId = await h.db
-            .into(h.db.curriculumTracks)
-            .insert(
-              CurriculumTracksCompanion.insert(
-                profileId: profileId,
-                curriculumId: CurriculumId.mishnayos.storageKey,
-                stateChangedAt: DateTimeFactory.nowUtc(),
-                activatedAt: DateTimeFactory.nowUtc(),
-              ),
-            );
-        await h.db
-            .into(h.db.stageDefinitions)
-            .insert(
-              StageDefinitionsCompanion.insert(
-                profileId: profileId,
-                curriculumId: CurriculumId.mishnayos.storageKey,
-                trackId: pointConfigTrackId,
-                stageOrder: 1,
-                stageName: 'Learn',
-                updatedAt: Value(DateTimeFactory.nowUtc()),
-              ),
-              mode: InsertMode.insertOrIgnore,
-            );
+        await seedTrack(
+          h.firestore,
+          uid: identity.accountId,
+          profileId: profileId,
+          curriculumId: CurriculumId.mishnayos,
+        );
+        await seedStageDefinitions(
+          h.firestore,
+          uid: identity.accountId,
+          profileId: profileId,
+          curriculumId: CurriculumId.mishnayos,
+        );
 
         h.markPinAuthenticated();
 
@@ -627,7 +638,6 @@ void main() {
                 RewardMilestone(
                   id: 'rm_609_test',
                   profileId: identity.profileId,
-                  trackId: RewardMilestone.kGlobalTrackSentinel,
                   title: 'Shiny Trophy',
                   thresholdPoints: 50,
                   isEnabled: true,
@@ -641,7 +651,12 @@ void main() {
         );
 
         final profileId = identity.profileId;
-        await _seedPoints(h.db, profileId: profileId, balance: 500);
+        await _seedPoints(
+          h,
+          uid: identity.accountId,
+          profileId: profileId,
+          balance: 500,
+        );
 
         await navigateTo(h, const ChildRedemptionRoute());
         await h.pump(const Duration(milliseconds: 500));
@@ -693,7 +708,7 @@ void main() {
         // Use a constant placeholder profile id for seeding fake data.
         // The real profileId is not needed here — achievementsOverviewProvider
         // is fully overridden so no DB read happens with this id.
-        const fakeProfileId = 0;
+        const fakeProfileId = '01J6Q2H4A8M7K3P9R5T6V8WXY';
 
         // We need a non-empty achievementsOverviewProvider to render filter chips.
         // Build a fake overview with one track filter option.
@@ -706,7 +721,6 @@ void main() {
         final fakeMilestone = RewardMilestone(
           id: 'rm_611_test',
           profileId: fakeProfileId,
-          trackId: 42,
           title: 'Silver Trophy',
           thresholdPoints: 100,
           isEnabled: true,
@@ -819,7 +833,12 @@ void main() {
 
           final profileId = identity.profileId;
           // Seed an initial balance of 100 pts.
-          await _seedPoints(h.db, profileId: profileId, balance: 100);
+          await _seedPoints(
+            h,
+            uid: identity.accountId,
+            profileId: profileId,
+            balance: 100,
+          );
 
           h.markPinAuthenticated();
           await navigateTo(h, const ParentSettingsRoute());
@@ -852,7 +871,11 @@ void main() {
           await h.pump();
 
           // DB assertion: balance = 150.
-          final newBalance = await h.db.pointsBalanceDao.getBalance(profileId);
+          final newBalance = await _readPointsBalance(
+            h,
+            identity.accountId,
+            profileId,
+          );
           expect(newBalance, 150);
           h.expectOnScreen('Balance updated.');
         },
@@ -898,7 +921,12 @@ void main() {
         );
 
         final profileId = identity.profileId;
-        await _seedPoints(h.db, profileId: profileId, balance: 300);
+        await _seedPoints(
+          h,
+          uid: identity.accountId,
+          profileId: profileId,
+          balance: 300,
+        );
 
         // Seed a reward directly into SharedPreferences (simulating an earlier
         // config session that was stored offline).
@@ -940,11 +968,15 @@ void main() {
         );
 
         // DB assertion: one pending redemption created.
-        final redemptions = await h.db.pointsBalanceDao.getPendingRedemptions(
-          profileId,
-        );
-        expect(redemptions, hasLength(1));
-        expect(redemptions.first.rewardTitle, 'Offline Prize');
+        final redemptions = await h.firestore
+            .collection('users')
+            .doc(identity.accountId)
+            .collection('learner_profiles')
+            .doc(profileId)
+            .collection('reward_redemptions')
+            .get();
+        expect(redemptions.docs, hasLength(1));
+        expect(redemptions.docs.first.data()['reward_title'], 'Offline Prize');
 
         // Verify SharedPreferences reward config still intact (R-GA1).
         final milestones = await _loadMilestones(profileId);
@@ -961,7 +993,7 @@ void main() {
         'silently returning an empty list', (tester) async {
       SharedPreferences.setMockInitialValues({});
       final prefs = await SharedPreferences.getInstance();
-      const profileId = 9991;
+      const profileId = '9991';
 
       // Valid JSON syntax (jsonDecode succeeds) but `is_enabled` holds a
       // String instead of a bool, so RewardMilestone.fromJson's

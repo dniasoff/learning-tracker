@@ -17,17 +17,17 @@ import 'package:flutter/foundation.dart' show ValueKey;
 import 'package:flutter/material.dart' show SegmentedButton;
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart'
     show effectiveUseHebrewTermsProvider, useHebrewTermsProvider;
-import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/gamification/domain/models/streak_recovery_info.dart'
     show StreakRecoveryInfo;
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart'
     show trackDualProgressMetricsProvider;
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
+import 'package:learning_tracker/features/tracks/stages/domain/models/stage_definition.dart'
+    show StageDefinition;
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/study_day_config_providers.dart'
     show studyDayConfigsProvider;
@@ -35,17 +35,20 @@ import 'package:learning_tracker/features/settings/presentation/providers/curric
     show scopedItemCountProvider;
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart'
     show activeTracksProvider;
+import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart'
+    show CurriculumTrackEntity;
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart'
     show activeTutorPermissionsProvider;
 
 import '../harness/e2e_common_overrides.dart';
 import '../harness/e2e_harness.dart';
+import '../../helpers/firestore_fixtures.dart'
+    show seedStageDefinitions, seedTrack;
 
 // ── Factories ──────────────────────────────────────────────────────────────────
 
 /// Creates a minimal [DailyTask] for testing.
 DailyTask _makeTask({
-  int trackId = 1,
   String ref = 'Berakhot.2a',
   CurriculumId curriculum = CurriculumId.mishnayos,
   bool isOverdue = false,
@@ -54,12 +57,10 @@ DailyTask _makeTask({
   curriculumId: curriculum,
   contentItemSefariaRef: ref,
   stageOrder: 1,
-  stageDefinitionId: 1,
   priority: priority,
   isOverdue: isOverdue,
   reason: isOverdue ? 'Behind pace' : 'Due today',
   stageName: 'Learn',
-  trackId: trackId,
   trackLabel: 'Test Track',
   estimatedEffortMinutes: 5,
 );
@@ -70,7 +71,7 @@ DailyTask _makeTask({
 List<Override> _schedulerOverrides({
   required E2EHarness h,
   required List<DailyTask> tasks,
-  List<CurriculumTrack> tracks = const [],
+  List<CurriculumTrackEntity> tracks = const [],
 }) => [
   // Silence dashboard providers (required even when navigating to /scheduler
   // because the AppShell's sub-tree still reads them on first build).
@@ -134,7 +135,7 @@ void main() {
         final h = E2EHarness(tester, identity: identity);
         addTearDown(h.dispose);
 
-        final task = _makeTask(trackId: 1, ref: 'Berakhot.2a');
+        final task = _makeTask(ref: 'Berakhot.2a');
 
         await h.pumpApp(
           path: '/scheduler',
@@ -179,7 +180,6 @@ void main() {
       addTearDown(h.dispose);
 
       final overdueTask = _makeTask(
-        trackId: 1,
         ref: 'Shabbat.2a',
         isOverdue: true,
         priority: DailyTaskPriority.overdueNewLearning,
@@ -227,7 +227,7 @@ void main() {
         final h = E2EHarness(tester, identity: identity);
         addTearDown(h.dispose);
 
-        final task = _makeTask(trackId: 1, ref: 'Eruvin.2a');
+        final task = _makeTask(ref: 'Eruvin.2a');
 
         await h.pumpApp(
           path: '/scheduler',
@@ -298,7 +298,7 @@ void main() {
             effectiveUseHebrewTermsProvider.overrideWithValue(false),
             // Silence detail-screen providers.
             trackDualProgressMetricsProvider.overrideWith(
-              (ref, pid) => Future.value([]),
+              (ref) => Future.value([]),
             ),
             dashboardHasProgramEnrollmentProvider.overrideWith(
               (ref, curriculum) => Future.value(false),
@@ -374,7 +374,7 @@ void main() {
             useHebrewTermsProvider.overrideWithValue(false),
             effectiveUseHebrewTermsProvider.overrideWithValue(false),
             trackDualProgressMetricsProvider.overrideWith(
-              (ref, pid) => Future.value([]),
+              (ref) => Future.value([]),
             ),
             dashboardHasProgramEnrollmentProvider.overrideWith(
               (ref, curriculum) => Future.value(false),
@@ -500,7 +500,7 @@ void main() {
             effectiveUseHebrewTermsProvider.overrideWithValue(false),
             // Silence track-detail providers.
             trackDualProgressMetricsProvider.overrideWith(
-              (ref, pid) => Future.value([]),
+              (ref) => Future.value([]),
             ),
             dashboardHasProgramEnrollmentProvider.overrideWith(
               (ref, curriculum) => Future.value(false),
@@ -534,35 +534,35 @@ void main() {
         // Seed track + two stages NOW (before StudyDayConfigScreen mounts).
         // _curriculumTrackHasChazaraProvider is a FutureProvider that runs once
         // on mount — the rows must be in the DB at that point.
-        final trackId = await h.db
-            .into(h.db.curriculumTracks)
-            .insert(
-              CurriculumTracksCompanion.insert(
-                profileId: identity.profileId,
-                curriculumId: CurriculumId.mishnayos.storageKey,
-                stateChangedAt: DateTimeFactory.nowUtc(),
-                activatedAt: DateTimeFactory.nowUtc(),
-              ),
-            );
-
-        // Two stages → chazara is enabled (stageDao.countStagesForTrack > 1).
-        await h.db.stageDao.insertStageDefinition(
-          StageDefinitionsCompanion.insert(
-            profileId: identity.profileId,
-            curriculumId: CurriculumId.mishnayos.storageKey,
-            trackId: trackId,
-            stageOrder: 1,
-            stageName: 'Learn',
-          ),
+        await seedTrack(
+          h.firestore,
+          uid: identity.accountId,
+          profileId: identity.profileId,
+          curriculumId: CurriculumId.mishnayos,
         );
-        await h.db.stageDao.insertStageDefinition(
-          StageDefinitionsCompanion.insert(
-            profileId: identity.profileId,
-            curriculumId: CurriculumId.mishnayos.storageKey,
-            trackId: trackId,
-            stageOrder: 2,
-            stageName: 'Chazara',
-          ),
+
+        // Two stages → chazara is enabled (stage count > 1).
+        await seedStageDefinitions(
+          h.firestore,
+          uid: identity.accountId,
+          profileId: identity.profileId,
+          curriculumId: CurriculumId.mishnayos,
+          stages: const [
+            StageDefinition(
+              curriculumId: CurriculumId.mishnayos,
+              stageOrder: 1,
+              stageName: 'Learn',
+              delayDays: 0,
+              isDefault: false,
+            ),
+            StageDefinition(
+              curriculumId: CurriculumId.mishnayos,
+              stageOrder: 2,
+              stageName: 'Chazara',
+              delayDays: 1,
+              isDefault: false,
+            ),
+          ],
         );
 
         // Pump to drain the zero-duration Drift notification timer triggered by
@@ -628,12 +628,10 @@ void main() {
           curriculumId: CurriculumId.bavli,
           contentItemSefariaRef: 'Berakhot.2a',
           stageOrder: 1,
-          stageDefinitionId: 1,
           priority: DailyTaskPriority.overdueProgram,
           isOverdue: true,
           reason: 'Program day pending from previous days',
           stageName: 'Learn',
-          trackId: 1,
           trackLabel: 'Daf Yomi',
           estimatedEffortMinutes: 5,
           unitDisplayEn: 'Berakhot 2',
@@ -644,12 +642,10 @@ void main() {
           curriculumId: CurriculumId.bavli,
           contentItemSefariaRef: 'Berakhot.3a',
           stageOrder: 1,
-          stageDefinitionId: 1,
           priority: DailyTaskPriority.todayProgram,
           isOverdue: false,
           reason: 'Program assignment for today',
           stageName: 'Learn',
-          trackId: 1,
           trackLabel: 'Daf Yomi',
           estimatedEffortMinutes: 5,
           unitDisplayEn: 'Berakhot 3',

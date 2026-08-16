@@ -35,20 +35,19 @@ library;
 
 import 'dart:async' show unawaited;
 
-import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart' show Key, ListTile, TextField, ValueKey;
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart'
     show effectiveUseHebrewTermsProvider, useHebrewTermsProvider;
-import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart'
     show trackDualProgressMetricsProvider;
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart'
     show activeTracksProvider;
+import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart'
+    show CurriculumTrackEntity;
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart'
     show TutoredProfileSelection;
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
@@ -63,21 +62,27 @@ import '../fakes/e2e_fakes.dart';
 import '../harness/e2e_common_overrides.dart' show stubTrack;
 import '../harness/e2e_harness.dart';
 import '../helpers/e2e_overrides.dart';
+import '../../helpers/firestore_fixtures.dart';
 
 // ── Factories ──────────────────────────────────────────────────────────────────
 
-/// Inserts a [CurriculumTrack] row into [db].
-Future<void> _insertTrack(UserDatabase db, CurriculumTrack stub) async {
-  await db
-      .into(db.curriculumTracks)
-      .insert(
-        CurriculumTracksCompanion.insert(
-          profileId: stub.profileId,
-          curriculumId: stub.curriculumId,
-          stateChangedAt: stub.stateChangedAt,
-          activatedAt: stub.activatedAt,
-        ),
-      );
+/// Seeds a [CurriculumTrackEntity] into the profile's Firestore collection.
+Future<void> _insertTrack(
+  E2EHarness h, {
+  required String uid,
+  required String profileId,
+  required CurriculumTrackEntity track,
+}) async {
+  await seedTrack(
+    h.firestore,
+    uid: uid,
+    profileId: profileId,
+    curriculumId: track.curriculumId,
+    state: track.state,
+    activatedAt: track.activatedAt,
+    stateChangedAt: track.stateChangedAt,
+    paceResetDate: track.paceResetDate,
+  );
 }
 
 // ── Fixed tutored-session notifiers ───────────────────────────────────────────
@@ -99,7 +104,7 @@ class _FixedTutoredSelection extends ActiveTutoredProfileSelection {
 // via ../helpers/e2e_overrides.dart (AUD-t-cross-20).
 
 /// Standard track-hub overrides: stream of [tracks] + English labels.
-List<Override> _trackHubOverrides(List<CurriculumTrack> tracks) => [
+List<Override> _trackHubOverrides(List<CurriculumTrackEntity> tracks) => [
   activeTracksProvider.overrideWith((ref) => Stream.value(tracks)),
   useHebrewTermsProvider.overrideWithValue(false),
   effectiveUseHebrewTermsProvider.overrideWithValue(false),
@@ -107,7 +112,7 @@ List<Override> _trackHubOverrides(List<CurriculumTrack> tracks) => [
 
 /// Silences TrackDetailScreen future providers that are not under test.
 List<Override> _trackDetailSilenceOverrides() => [
-  trackDualProgressMetricsProvider.overrideWith((ref, pid) => Future.value([])),
+  trackDualProgressMetricsProvider.overrideWith((ref) => Future.value([])),
   dashboardHasProgramEnrollmentProvider.overrideWith(
     (ref, curriculum) => Future.value(false),
   ),
@@ -147,10 +152,9 @@ void main() {
       final h = E2EHarness(tester, identity: identity);
       addTearDown(h.dispose);
 
-      // Use profileId=1 — the harness always assigns the first seeded profile
-      // id=1 via auto-increment.  We cannot access identity.profileId before
-      // pumpApp resolves it (the DB seed happens inside _seedIdentity).
-      final stub = stubTrack(id: 1, profileId: 1);
+      // stubTrack retains the legacy argument for call-site compatibility but
+      // CurriculumTrackEntity has no profile identity; this value is ignored.
+      final stub = stubTrack(id: 1, profileId: 'placeholder-profile-417');
 
       // Fake tutored session so the amber bar renders.
       const tutoredSession = TutoredProfileSelection(
@@ -158,7 +162,7 @@ void main() {
         ownerUid: 'parent-uid-417',
         grantId: 'grant-417',
         permissions: TutorPermissions(),
-        tutorOwnProfileId: 0,
+        tutorOwnProfileId: 'tutor-own-profile-417',
       );
 
       await h.pumpApp(
@@ -187,8 +191,13 @@ void main() {
       await tester.pump(const Duration(milliseconds: 400));
       await tester.pump();
 
-      // Seed real DB row so TrackDetailScreen can resolve the track.
-      await _insertTrack(h.db, stub);
+      // Seed the Firestore track so TrackDetailScreen can resolve it.
+      await _insertTrack(
+        h,
+        uid: identity.accountId,
+        profileId: identity.profileId,
+        track: stub,
+      );
 
       // The amber tutor-mode bar is present on the dashboard shell.
       expect(
@@ -278,21 +287,22 @@ void main() {
 
   group('E2E-721 — Profile name duplicate validation in Add/Rename dialogs', () {
     // Catalog: Add profile with existing name; DuplicateProfileNameException
-    // caught; error label shown; no duplicate in Drift.
+    // caught; error label shown; no duplicate in Firestore.
     //
-    // The AddProfileDialog's StatefulBuilder calls [profileDao.profileExistsByName]
-    // on each keystroke to check for duplicates. When a match is found, it sets
+    // The AddProfileDialog checks for duplicates on each keystroke. When a
+    // match is found, it sets
     // `err = l10n.profileNameAlreadyExists` ("A profile with this name already
     // exists") and the Create Profile button is disabled (canSubmit = false).
     //
     // The validation fires on the 'onChanged' callback, so we seed 'Alice' in
-    // the DB, open the add-profile dialog from the switcher sheet, type 'Alice',
+    // the profile collection, open the add-profile dialog from the switcher
+    // sheet, type 'Alice',
     // and wait for the async check to complete.  The error text must appear and
-    // no second profile row must exist in Drift.
+    // no second profile row must exist in Firestore.
     testWidgets(
       'Seed profile Alice; open Add Profile dialog via switcher sheet; type '
       'Alice; async duplicate check fires; error label visible; Create Profile '
-      'button disabled; no duplicate in Drift',
+      'button disabled; no duplicate in Firestore',
       (tester) async {
         final identity = E2EIdentity.localBorn(
           email: 'adult721@test.com',
@@ -319,14 +329,16 @@ void main() {
           ],
         );
 
-        // Verify the initial profile 'Alice' is in Drift.
-        final initialProfiles = await h.db.profileDao.getProfilesByAccount(
-          identity.accountId,
-        );
+        // Verify the initial profile 'Alice' is in Firestore.
+        final initialProfiles = await h.firestore
+            .collection('users')
+            .doc(identity.accountId)
+            .collection('learner_profiles')
+            .get();
         expect(
-          initialProfiles.any((p) => p.displayName == 'Alice'),
+          initialProfiles.docs.any((p) => p.data()['display_name'] == 'Alice'),
           isTrue,
-          reason: 'Harness must seed the Alice profile in Drift',
+          reason: 'Harness must seed the Alice profile in Firestore',
         );
 
         // Open the ProfileSwitcherSheet via the bar key.
@@ -362,18 +374,22 @@ void main() {
         // The "Create Profile" button is disabled because canSubmit=false
         // (err != null → canSubmit = ctrl.text.trim().isNotEmpty && err == null = false).
         // FilledButton with onPressed=null renders as disabled.
-        // We assert by finding the button text and verifying no Drift row
+        // We assert by finding the button text and verifying no Firestore row
         // was created (which is the real behavioral check).
 
-        // ── DB assertion: no duplicate created ────────────────────────────────
-        final profilesAfter = await h.db.profileDao.getProfilesByAccount(
-          identity.accountId,
-        );
+        // ── Firestore assertion: no duplicate created ───────────────────────
+        final profilesAfter = await h.firestore
+            .collection('users')
+            .doc(identity.accountId)
+            .collection('learner_profiles')
+            .get();
         expect(
-          profilesAfter.where((p) => p.displayName == 'Alice').length,
+          profilesAfter.docs
+              .where((p) => p.data()['display_name'] == 'Alice')
+              .length,
           equals(1),
           reason:
-              'Only 1 Alice profile must exist; no duplicate must be in Drift',
+              'Only 1 Alice profile must exist; no duplicate must be in Firestore',
         );
       },
     );
@@ -411,28 +427,14 @@ void main() {
           ],
         );
 
-        // Seed a second profile 'Bob' directly into the user DB so the picker
-        // shows 2 profiles (profileListProvider reads the live Drift DB).
-        final now = DateTimeFactory.nowUtc();
-        final bobProfileId = await h.db
-            .into(h.db.learnerProfiles)
-            .insert(
-              LearnerProfilesCompanion.insert(
-                accountId: identity.accountId,
-                displayName: 'Bob',
-                mode: 'adult',
-                createdAt: now,
-                updatedAt: now,
-              ),
-            );
-        // T-45/T-47 class (CI remediation round 4): P2-2's eager-mint policy
-        // means a real seeded profile always has a ulid; a null one
-        // hard-throws out of `ProfileModel.fromDriftRow` (P2-3) the moment
-        // profileListProvider touches this row. A separate write because
-        // `bobProfileId` is auto-generated by the insert itself.
-        await (h.db.update(h.db.learnerProfiles)
-              ..where((t) => t.id.equals(bobProfileId)))
-            .write(LearnerProfilesCompanion(ulid: Value('ulid-$bobProfileId')));
+        // Seed a second profile 'Bob' directly into Firestore so the picker
+        // shows 2 profiles.
+        await seedProfile(
+          h.firestore,
+          uid: identity.accountId,
+          profileId: '01J6Q2H4A8M7K3P9R5T6V8WXX',
+          displayName: 'Bob',
+        );
 
         // Navigate to ProfilePickerScreen (which shows the rename flow).
         unawaited(h.router.push(const ProfilePickerRoute()));
@@ -500,12 +502,14 @@ void main() {
               'trying to rename Bob to Alice (duplicate)',
         );
 
-        // Bob's name must be unchanged in Drift.
-        final profiles = await h.db.profileDao.getProfilesByAccount(
-          identity.accountId,
-        );
+        // Bob's name must be unchanged in Firestore.
+        final profiles = await h.firestore
+            .collection('users')
+            .doc(identity.accountId)
+            .collection('learner_profiles')
+            .get();
         expect(
-          profiles.any((p) => p.displayName == 'Bob'),
+          profiles.docs.any((p) => p.data()['display_name'] == 'Bob'),
           isTrue,
           reason:
               'Bob must still exist with the original name after rename fails',

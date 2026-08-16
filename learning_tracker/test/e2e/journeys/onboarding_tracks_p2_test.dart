@@ -24,7 +24,6 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/app_router.dart'
     show CurriculumSettingsRoute, LearningOrderRoute;
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart'
     show effectiveUseHebrewTermsProvider, useHebrewTermsProvider;
@@ -38,6 +37,8 @@ import 'package:learning_tracker/features/scheduler/presentation/providers/sched
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/domain/models/learning_order_item.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/presentation/providers/learning_order_providers.dart'
     show learningOrderProvider, orderingRestrictedProvider;
+import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart'
+    show CurriculumTrackEntity;
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart'
     show activeTutorPermissionsProvider;
 
@@ -67,17 +68,17 @@ List<Override> _dashboardBaseOverrides(E2EHarness h) => [
 /// empty override (from h.dashboardSilenceOverrides) — callers supply [tracks].
 List<Override> _dashboardWithTracksOverrides(
   E2EHarness h, {
-  required List<CurriculumTrack> tracks,
+  required List<CurriculumTrackEntity> tracks,
   required List<DailyTask> tasks,
 }) => [
   ..._dashboardBaseOverrides(h),
   dashboardActiveTracksStreamProvider.overrideWith(
     (ref) => Stream.value(tracks),
   ),
-  dashboardGlobalPointsProvider.overrideWith((ref) => Stream.value(0)),
+  dashboardGlobalPointsProvider.overrideWith((ref) async => 0),
   allDailyTasksProvider.overrideWith((ref) => Future.value(tasks)),
   lifetimeTotalsAcrossAllCurriculaProvider.overrideWith(
-    (ref, profileId) => Future.value(
+    (ref) => Future.value(
       const LifetimeTotals(
         learnedSections: 0,
         totalSections: 0,
@@ -85,10 +86,8 @@ List<Override> _dashboardWithTracksOverrides(
       ),
     ),
   ),
-  lifetimeSummariesProvider.overrideWith((ref, profileId) => Future.value([])),
-  trackDualProgressMetricsProvider.overrideWith(
-    (ref, profileId) => Future.value([]),
-  ),
+  lifetimeSummariesProvider.overrideWith((ref) => Future.value([])),
+  trackDualProgressMetricsProvider.overrideWith((ref) => Future.value([])),
 ];
 
 // ── Tests ──────────────────────────────────────────────────────────────────────
@@ -185,12 +184,10 @@ void main() {
             curriculumId: CurriculumId.mishnayos,
             contentItemSefariaRef: 'Berakhot.2a',
             stageOrder: 1,
-            stageDefinitionId: 1,
             priority: DailyTaskPriority.newLearning,
             isOverdue: false,
             reason: 'test',
             stageName: 'Learn',
-            trackId: trackId,
             trackLabel: 'Mishnayos',
           );
 
@@ -269,12 +266,10 @@ void main() {
                   curriculumId: CurriculumId.mishnayos,
                   contentItemSefariaRef: 'Berakhot.3a',
                   stageOrder: 1,
-                  stageDefinitionId: 1,
                   priority: DailyTaskPriority.newLearning,
                   isOverdue: false,
                   reason: 'test',
                   stageName: 'Learn',
-                  trackId: trackId,
                   trackLabel: 'Mishnayos',
                 ),
               ],

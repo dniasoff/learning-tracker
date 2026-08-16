@@ -101,7 +101,7 @@ class _FakeNotificationGateway extends Fake implements NotificationGateway {
   Future<bool> requestPermission() async => true;
 
   @override
-  Future<void> cancelStreakAlertForProfile(int profileId) async {}
+  Future<void> cancelStreakAlertForProfile(String profileId) async {}
 }
 
 // ── Shared helpers ────────────────────────────────────────────────────────────

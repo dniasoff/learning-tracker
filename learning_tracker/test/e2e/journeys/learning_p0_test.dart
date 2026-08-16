@@ -13,17 +13,14 @@ library;
 
 import 'dart:async' show runZonedGuarded;
 
-import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart' show Key, MaterialApp;
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
-import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/content_browsing/data/repositories/text_cache_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/text_display_providers.dart';
@@ -34,9 +31,11 @@ import 'package:learning_tracker/features/learning/domain/entities/completion_re
 import 'package:learning_tracker/features/learning/domain/entities/mark_completion_result.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
-import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
+import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart'
+    show PaceGranularity;
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
@@ -44,6 +43,7 @@ import 'package:learning_tracker/features/tutoring/presentation/providers/active
 
 import '../fakes/e2e_fakes.dart';
 import '../harness/e2e_harness.dart';
+import '../../helpers/firestore_fixtures.dart' show seedGoal, seedTrack;
 
 // ── Stubs and fakes ──────────────────────────────────────────────────────────
 //
@@ -73,19 +73,16 @@ class _ThrowingCompletionRepository extends FakeCompletionRepository {
 
 /// Minimal [DailyTask] for a fine-paced (non-coarse) track.
 DailyTask _finePacedTask({
-  int trackId = 1,
   String sefariaRef = 'Mishnah_Berachot.1.1',
   CurriculumId curriculum = CurriculumId.mishnayos,
 }) => DailyTask(
   curriculumId: curriculum,
   contentItemSefariaRef: sefariaRef,
   stageOrder: 1,
-  stageDefinitionId: 1,
   priority: DailyTaskPriority.newLearning,
   isOverdue: false,
   reason: 'e2e-test',
   stageName: 'Learn',
-  trackId: trackId,
   trackLabel: 'Test Track',
 );
 
@@ -208,7 +205,7 @@ void main() {
         final h = E2EHarness(tester, identity: identity);
         addTearDown(h.dispose);
 
-        final task = _finePacedTask(trackId: 1);
+        final task = _finePacedTask();
 
         await h.pumpApp(
           path: '/learn',
@@ -237,7 +234,7 @@ void main() {
         final h = E2EHarness(tester, identity: identity);
         addTearDown(h.dispose);
 
-        final task = _finePacedTask(trackId: 1);
+        final task = _finePacedTask();
         final fakeRepo = FakeCompletionRepository();
 
         await h.pumpApp(
@@ -280,7 +277,7 @@ void main() {
       final h = E2EHarness(tester, identity: identity);
       addTearDown(h.dispose);
 
-      final task = _finePacedTask(trackId: 1);
+      final task = _finePacedTask();
       final fakeRepo = FakeCompletionRepository();
 
       await h.pumpApp(
@@ -358,7 +355,7 @@ void main() {
       final h = E2EHarness(tester, identity: identity);
       addTearDown(h.dispose);
 
-      final task = _finePacedTask(trackId: 1);
+      final task = _finePacedTask();
       final fakeRepo = FakeCompletionRepository();
 
       await h.pumpApp(
@@ -400,15 +397,14 @@ void main() {
         final h = E2EHarness(tester, identity: identity);
         addTearDown(h.dispose);
 
-        final task = _finePacedTask(trackId: 1);
-        final now = DateTimeFactory.nowUtc();
+        final task = _finePacedTask();
+        final now = DateTime.utc(2026, 1, 1);
         const milestoneTitle = 'Gold Star';
         final fakeRepo = FakeCompletionRepository(
           unlocks: [
             RewardUnlockRecord(
               milestoneId: 'milestone-1',
-              profileId: 1,
-              trackId: 1,
+              profileId: '01J6Q2H4A8M7K3P9R5T6V8WXYA',
               title: milestoneTitle,
               thresholdPoints: 100,
               pointsAtUnlock: 100,
@@ -443,13 +439,10 @@ void main() {
             // child profile without a DB round-trip through profileRepository.
             selectedProfileProvider.overrideWith(
               (ref) => Future.value(
-                ProfileModel(
-                  id: 1,
-                  ulid: 'ulid-1',
-                  accountId: 1,
+                LearnerProfileEntity(
+                  profileId: '01J6Q2H4A8M7K3P9R5T6V8WXYA',
                   displayName: 'Benny',
-                  mode: 'child',
-                  avatarIndex: 0,
+                  mode: ProfileMode.child,
                   createdAt: now,
                   updatedAt: now,
                 ),
@@ -527,7 +520,7 @@ void main() {
         final h = E2EHarness(tester, identity: identity);
         addTearDown(h.dispose);
 
-        final task = _finePacedTask(trackId: 1);
+        final task = _finePacedTask();
         const talmidProfileId = 'talmid-remote-id';
 
         await h.pumpApp(
@@ -585,128 +578,110 @@ void main() {
     //   • The fake repo receives 2 mark calls — one per amud.
     //   • Both amud refs appear in markedRequests.
 
-    testWidgets('marking a daf-paced task records completions for both amudim', (
-      tester,
-    ) async {
-      final identity = E2EIdentity.localBorn(displayName: 'Dovid');
-      final h = E2EHarness(tester, identity: identity);
-      addTearDown(h.dispose);
+    testWidgets(
+      'marking a daf-paced task records completions for both amudim',
+      (tester) async {
+        final identity = E2EIdentity.localBorn(displayName: 'Dovid');
+        final h = E2EHarness(tester, identity: identity);
+        addTearDown(h.dispose);
 
-      const sefariaRef2a = 'Berakhot.2a';
-      const sefariaRef2b = 'Berakhot.2b';
+        const sefariaRef2a = 'Berakhot.2a';
+        const sefariaRef2b = 'Berakhot.2b';
 
-      // The in-memory DB auto-assigns sequential IDs from 1.  The harness
-      // will seed the only account (id=1) and profile (id=1) inside pumpApp.
-      // The first row inserted into curriculumTracks will get id=1 — so we
-      // can safely use trackId=1 in the task override and then insert the
-      // real row AFTER pumpApp (once the FK-required profile row exists).
-      const expectedTrackDbId = 1;
+        final task = _finePacedTask(
+          sefariaRef: sefariaRef2a,
+          curriculum: CurriculumId.bavli,
+        );
 
-      final task = _finePacedTask(
-        trackId: expectedTrackDbId,
-        sefariaRef: sefariaRef2a,
-        curriculum: CurriculumId.bavli,
-      );
-
-      // Two leaf items for Daf Bet — same level1/level2 so they share the
-      // same coarseUnitKey and coarseUnitLeafRefs returns both.
-      final amud2a = ContentItem(
-        curriculumId: CurriculumId.bavli.storageKey,
-        level1: 'Berakhot',
-        level2: 'Daf 2',
-        displayNameHe: 'ברכות דף ב עמוד א',
-        displayNameEn: 'Berakhot 2a',
-        sefariaRef: sefariaRef2a,
-        sortOrder: 1,
-        isLeaf: true,
-      );
-      final amud2b = ContentItem(
-        curriculumId: CurriculumId.bavli.storageKey,
-        level1: 'Berakhot',
-        level2: 'Daf 2',
-        displayNameHe: 'ברכות דף ב עמוד ב',
-        displayNameEn: 'Berakhot 2b',
-        sefariaRef: sefariaRef2b,
-        sortOrder: 2,
-        isLeaf: true,
-      );
-
-      final fakeContentRepo = FakeContentRepository([amud2a, amud2b]);
-      final fakeCompletionRepo = FakeCompletionRepository();
-
-      await h.pumpApp(
-        path: '/text/$sefariaRef2a',
-        extraOverrides: [
-          ..._textDisplayBaseOverrides(),
-          allDailyTasksProvider.overrideWith((ref) => Future.value([task])),
-          // Mark this track as coarse-paced so the daf-grouping kicks in.
-          coarsePacedTrackIdsProvider.overrideWith(
-            (ref) => Future.value({expectedTrackDbId}),
-          ),
-          completionRepositoryProvider.overrideWithValue(fakeCompletionRepo),
-          contentRepositoryProvider.overrideWithValue(fakeContentRepo),
-          // Stub text content so reader view (with Mark Complete) renders.
-          ..._textContentOverrides(sefariaRef2a),
-          adjacentContentRefsProvider(
-            sefariaRef2a,
-          ).overrideWith((ref) => Future.value((prev: null, next: null))),
-        ],
-      );
-
-      // pumpApp calls _seedIdentity which inserts account(id=1) + profile(id=1).
-      // Now we can insert the track (FK: profile) → gets id=1 (first row).
-      final trackDbId = await h.db
-          .into(h.db.curriculumTracks)
-          .insert(
-            CurriculumTracksCompanion.insert(
-              profileId: identity.profileId,
-              curriculumId: CurriculumId.bavli.storageKey,
-              stateChangedAt: DateTimeFactory.nowUtc(),
-              activatedAt: DateTimeFactory.nowUtc(),
-            ),
-          );
-      // Verify the track got the expected id (sanity check for the strategy).
-      assert(
-        trackDbId == expectedTrackDbId,
-        'Track auto-id mismatch: expected $expectedTrackDbId, got $trackDbId',
-      );
-
-      // Insert goal with paceGranularity='daf' (FK: profile, track).
-      await h.db.goalDao.insertGoal(
-        GoalsCompanion.insert(
-          profileId: identity.profileId,
+        // Two leaf items for Daf Bet — same level1/level2 so they share the
+        // same coarseUnitKey and coarseUnitLeafRefs returns both.
+        final amud2a = ContentItem(
           curriculumId: CurriculumId.bavli.storageKey,
-          trackId: trackDbId,
-          paceGranularity: const Value('daf'),
-          createdAt: DateTimeFactory.nowUtc(),
-          updatedAt: DateTimeFactory.nowUtc(),
-        ),
-      );
+          level1: 'Berakhot',
+          level2: 'Daf 2',
+          displayNameHe: 'ברכות דף ב עמוד א',
+          displayNameEn: 'Berakhot 2a',
+          sefariaRef: sefariaRef2a,
+          sortOrder: 1,
+          isLeaf: true,
+        );
+        final amud2b = ContentItem(
+          curriculumId: CurriculumId.bavli.storageKey,
+          level1: 'Berakhot',
+          level2: 'Daf 2',
+          displayNameHe: 'ברכות דף ב עמוד ב',
+          displayNameEn: 'Berakhot 2b',
+          sefariaRef: sefariaRef2b,
+          sortOrder: 2,
+          isLeaf: true,
+        );
 
-      await tester.pump(const Duration(milliseconds: 400));
-      await tester.pump(const Duration(milliseconds: 200));
+        final fakeContentRepo = FakeContentRepository([amud2a, amud2b]);
+        final fakeCompletionRepo = FakeCompletionRepository();
 
-      // Mark Complete button visible (adult, not completed, not tutor).
-      h.expectOnScreen('Mark complete');
+        await h.pumpApp(
+          path: '/text/$sefariaRef2a',
+          extraOverrides: [
+            ..._textDisplayBaseOverrides(),
+            allDailyTasksProvider.overrideWith((ref) => Future.value([task])),
+            // Mark this track as coarse-paced so the daf-grouping kicks in.
+            coarsePacedTrackIdsProvider.overrideWith(
+              (ref) => Future.value({CurriculumId.bavli}),
+            ),
+            completionRepositoryProvider.overrideWithValue(fakeCompletionRepo),
+            contentRepositoryProvider.overrideWithValue(fakeContentRepo),
+            // Stub text content so reader view (with Mark Complete) renders.
+            ..._textContentOverrides(sefariaRef2a),
+            adjacentContentRefsProvider(
+              sefariaRef2a,
+            ).overrideWith((ref) => Future.value((prev: null, next: null))),
+          ],
+        );
 
-      // Tap the button.
-      await h.tapText(
-        'Mark complete',
-        settle: const Duration(milliseconds: 500),
-      );
-      await tester.pump(const Duration(milliseconds: 300));
+        // Seed the Firestore-native track and pace goal. Track identity is the
+        // curriculum document key; there is no local integer track row.
+        await seedTrack(
+          h.firestore,
+          uid: identity.accountId,
+          profileId: identity.profileId,
+          curriculumId: CurriculumId.bavli,
+        );
+        await seedGoal(
+          h.firestore,
+          uid: identity.accountId,
+          profileId: identity.profileId,
+          curriculumId: CurriculumId.bavli,
+          goalType: 'pace',
+          paceValue: 1,
+          pacePeriod: 'per_day',
+          paceGranularity: PaceGranularity.daf,
+        );
 
-      // Key assertion: BOTH amudim were marked.
-      expect(
-        fakeCompletionRepo.markedRequests.length,
-        2,
-        reason: 'daf-paced mark must record completions for both amudim',
-      );
-      final refs = fakeCompletionRepo.markedRequests
-          .map((r) => r.sefariaRef)
-          .toSet();
-      expect(refs, containsAll([sefariaRef2a, sefariaRef2b]));
-    });
+        await tester.pump(const Duration(milliseconds: 400));
+        await tester.pump(const Duration(milliseconds: 200));
+
+        // Mark Complete button visible (adult, not completed, not tutor).
+        h.expectOnScreen('Mark complete');
+
+        // Tap the button.
+        await h.tapText(
+          'Mark complete',
+          settle: const Duration(milliseconds: 500),
+        );
+        await tester.pump(const Duration(milliseconds: 300));
+
+        // Key assertion: BOTH amudim were marked.
+        expect(
+          fakeCompletionRepo.markedRequests.length,
+          2,
+          reason: 'daf-paced mark must record completions for both amudim',
+        );
+        final refs = fakeCompletionRepo.markedRequests
+            .map((r) => r.sefariaRef)
+            .toSet();
+        expect(refs, containsAll([sefariaRef2a, sefariaRef2b]));
+      },
+    );
   });
 
   // ── E2E-305 ──────────────────────────────────────────────────────────────
@@ -864,7 +839,7 @@ void main() {
         final h = E2EHarness(tester, identity: identity);
         addTearDown(h.dispose);
 
-        final task = _finePacedTask(trackId: 1);
+        final task = _finePacedTask();
         final throwingRepo = _ThrowingCompletionRepository(
           StateError('boom: markComplete bug'),
         );

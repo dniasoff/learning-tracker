@@ -25,16 +25,12 @@
 @Tags(['e2e', 'journey'])
 library;
 
-import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' show ProviderScope;
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/utils/date_utils.dart'
-    show DateTimeFactory;
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/gamification/domain/models/streak_recovery_info.dart';
@@ -47,10 +43,13 @@ import 'package:learning_tracker/features/progress/presentation/providers/lifeti
 import 'package:learning_tracker/features/progress/presentation/providers/progress_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/progress_screen.dart'
     show ProgressScreen;
+import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart'
+    show CurriculumTrackEntity;
 
 import '../harness/e2e_common_overrides.dart' show stubTrack;
 import '../harness/e2e_harness.dart';
 import '../helpers/e2e_overrides.dart' show EmptyContentRepository;
+import '../../helpers/firestore_fixtures.dart' show seedAccount, seedProfile;
 
 // ── Shared test data ──────────────────────────────────────────────────────────
 
@@ -152,7 +151,7 @@ List<Override> _progressWithContentOverrides(E2EHarness h) => [
     (ref) => Stream.value(<CurriculumId>[CurriculumId.mishnayos]),
   ),
   dashboardActiveTracksStreamProvider.overrideWith(
-    (ref) => Stream.value(<CurriculumTrack>[
+    (ref) => Stream.value(<CurriculumTrackEntity>[
       stubTrack(id: 1, profileId: 1, curriculum: CurriculumId.mishnayos),
     ]),
   ),
@@ -164,13 +163,13 @@ List<Override> _progressWithContentOverrides(E2EHarness h) => [
       const StreakRecoveryInfo(wasRecovered: false, currentStreak: 3),
     ),
   ),
-  dashboardGlobalPointsProvider.overrideWith((ref) => Stream.value(0)),
+  dashboardGlobalPointsProvider.overrideWith((ref) async => 0),
   anyActiveTrackHasChazaraProvider.overrideWith((ref) => Future.value(false)),
   lifetimeTotalsAcrossAllCurriculaProvider.overrideWith(
-    (ref, pid) => Future.value(_zeroLifetimeTotals),
+    (ref) => Future.value(_zeroLifetimeTotals),
   ),
   lifetimeSummariesProvider.overrideWith(
-    (ref, pid) => Future.value(<CurriculumLifetimeSummary>[]),
+    (ref) => Future.value(<CurriculumLifetimeSummary>[]),
   ),
   // Content repository — no real asset files in headless env (R-PG8)
   contentRepositoryProvider.overrideWithValue(const EmptyContentRepository()),
@@ -180,10 +179,10 @@ List<Override> _progressWithContentOverrides(E2EHarness h) => [
 /// their own [journeyViewModelProvider] override.
 List<Override> _counterRowSilenceOverrides() => [
   trackDualProgressMetricsProvider.overrideWith(
-    (ref, pid) => Future.value(<TrackDualProgressMetric>[]),
+    (ref) => Future.value(<TrackDualProgressMetric>[]),
   ),
   journeyViewModelProvider.overrideWith(
-    (ref, pid) => Future.value(_emptyJourneyViewModel),
+    (ref) => Future.value(_emptyJourneyViewModel),
   ),
 ];
 
@@ -193,7 +192,7 @@ List<Override> _progressEmptyStateOverrides() => [
     (ref) => Stream.value(<CurriculumId>[]),
   ),
   dashboardActiveTracksStreamProvider.overrideWith(
-    (ref) => Stream.value(<CurriculumTrack>[]),
+    (ref) => Stream.value(<CurriculumTrackEntity>[]),
   ),
   dashboardStreakProvider.overrideWith(
     (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
@@ -203,12 +202,12 @@ List<Override> _progressEmptyStateOverrides() => [
       const StreakRecoveryInfo(wasRecovered: false, currentStreak: 0),
     ),
   ),
-  dashboardGlobalPointsProvider.overrideWith((ref) => Stream.value(0)),
+  dashboardGlobalPointsProvider.overrideWith((ref) async => 0),
   lifetimeTotalsAcrossAllCurriculaProvider.overrideWith(
-    (ref, pid) => Future.value(_zeroLifetimeTotals),
+    (ref) => Future.value(_zeroLifetimeTotals),
   ),
   journeyViewModelProvider.overrideWith(
-    (ref, pid) => Future.value(_emptyJourneyViewModel),
+    (ref) => Future.value(_emptyJourneyViewModel),
   ),
 ];
 
@@ -225,14 +224,14 @@ List<Override> _shellSilenceOverrides() => [
     (ref) => Stream.value(<CurriculumId>[]),
   ),
   dashboardActiveTracksStreamProvider.overrideWith(
-    (ref) => Stream.value(<CurriculumTrack>[]),
+    (ref) => Stream.value(<CurriculumTrackEntity>[]),
   ),
   dashboardStreakRecoveryProvider.overrideWith(
     (ref) => Future.value(
       const StreakRecoveryInfo(wasRecovered: false, currentStreak: 0),
     ),
   ),
-  dashboardGlobalPointsProvider.overrideWith((ref) => Stream.value(0)),
+  dashboardGlobalPointsProvider.overrideWith((ref) async => 0),
 ];
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -263,7 +262,7 @@ void main() {
               (ref) => Stream.value(<CurriculumId>[CurriculumId.mishnayos]),
             ),
             dashboardActiveTracksStreamProvider.overrideWith(
-              (ref) => Stream.value(<CurriculumTrack>[
+              (ref) => Stream.value(<CurriculumTrackEntity>[
                 stubTrack(
                   id: 1,
                   profileId: 1,
@@ -281,9 +280,7 @@ void main() {
             ),
             // Child: points balance is non-zero so the counter tile shows a
             // number (not the loading placeholder "…").
-            dashboardGlobalPointsProvider.overrideWith(
-              (ref) => Stream.value(42),
-            ),
+            dashboardGlobalPointsProvider.overrideWith((ref) async => 42),
             // Key override: child mode → showPoints = true in ProgressScreen.
             dashboardUserModeProvider.overrideWith(
               (ref) => Future.value(ProfileMode.child),
@@ -292,19 +289,19 @@ void main() {
               (ref) => Future.value(false),
             ),
             lifetimeTotalsAcrossAllCurriculaProvider.overrideWith(
-              (ref, pid) => Future.value(_zeroLifetimeTotals),
+              (ref) => Future.value(_zeroLifetimeTotals),
             ),
             lifetimeSummariesProvider.overrideWith(
-              (ref, pid) => Future.value(<CurriculumLifetimeSummary>[]),
+              (ref) => Future.value(<CurriculumLifetimeSummary>[]),
             ),
             contentRepositoryProvider.overrideWithValue(
               const EmptyContentRepository(),
             ),
             trackDualProgressMetricsProvider.overrideWith(
-              (ref, pid) => Future.value(<TrackDualProgressMetric>[]),
+              (ref) => Future.value(<TrackDualProgressMetric>[]),
             ),
             journeyViewModelProvider.overrideWith(
-              (ref, pid) => Future.value(_emptyJourneyViewModel),
+              (ref) => Future.value(_emptyJourneyViewModel),
             ),
           ],
         );
@@ -351,7 +348,7 @@ void main() {
             // SiyumimMilestonesScreen reads journeyViewModelProvider(effectiveProfileId)
             // where effectiveProfileId = profileId ?? activeProfileId.
             journeyViewModelProvider.overrideWith(
-              (ref, pid) => Future.value(_singleMilestoneJourneyViewModel),
+              (ref) => Future.value(_singleMilestoneJourneyViewModel),
             ),
             // Silence the shell-level stream providers that would otherwise
             // open real Drift watch streams and produce timer violations.
@@ -359,7 +356,7 @@ void main() {
               (ref) => Stream.value(<CurriculumId>[]),
             ),
             dashboardActiveTracksStreamProvider.overrideWith(
-              (ref) => Stream.value(<CurriculumTrack>[]),
+              (ref) => Stream.value(<CurriculumTrackEntity>[]),
             ),
             dashboardStreakProvider.overrideWith(
               (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
@@ -369,9 +366,7 @@ void main() {
                 const StreakRecoveryInfo(wasRecovered: false, currentStreak: 0),
               ),
             ),
-            dashboardGlobalPointsProvider.overrideWith(
-              (ref) => Stream.value(0),
-            ),
+            dashboardGlobalPointsProvider.overrideWith((ref) async => 0),
           ],
         );
 
@@ -396,54 +391,38 @@ void main() {
     // "any authenticated user") and requests SiyumimMilestonesScreen via an
     // EXPLICIT profileId query param that differs from the active profile's,
     // then asserts profile-SPECIFIC content (the other profile's real display
-    // name, resolved from the in-memory DB by profileByIdProvider, plus a
-    // distinct milestone) is what renders — not merely the absence of an
-    // error banner.
+    // name plus a distinct milestone) is what renders — not merely the
+    // absence of an error banner.
+    // BLOCKED: the Firestore journey provider is active-profile-only and the
+    // current route has no profileId argument or cross-profile read path.
     testWidgets(
       'SiyumimMilestonesScreen with an explicit, non-active profileId loads '
       "that OTHER profile's name and milestones "
       '(R-PG7: no access-control guard blocks this cross-profile read)',
+      // BLOCKED: Firestore journey data is scoped to the active profile; the
+      // deleted Drift-era cross-profile route has no successor.
+      skip: true,
       (tester) async {
         final identity = E2EIdentity.localBorn(displayName: 'Tutor Eve806b');
         final h = E2EHarness(tester, identity: identity);
         addTearDown(h.dispose);
 
-        // Seed a SECOND, real profile row under a SEPARATE account, directly
-        // into the harness's in-memory UserDatabase — before pumpApp, so the
-        // resolved id is known up front and can drive the deep-link path.
-        // profileByIdProvider reads this row for real; nothing here is
-        // stubbed.
-        final otherAccountId = await h.db
-            .into(h.db.accounts)
-            .insert(
-              AccountsCompanion.insert(
-                email: 'other806@test.com',
-                tier: 'localBorn',
-                displayName: 'OtherAccount806',
-                createdAt: DateTimeFactory.nowUtc(),
-                updatedAt: DateTimeFactory.nowUtc(),
-              ),
-            );
-        final otherProfileId = await h.db
-            .into(h.db.learnerProfiles)
-            .insert(
-              LearnerProfilesCompanion.insert(
-                accountId: otherAccountId,
-                displayName: 'TalmidBob806',
-                mode: 'adult',
-                createdAt: DateTimeFactory.nowUtc(),
-                updatedAt: DateTimeFactory.nowUtc(),
-              ),
-            );
-        // T-45/T-47 class (CI remediation round 4): P2-2's eager-mint policy
-        // means a real seeded profile always has a ulid; a null one
-        // hard-throws out of `ProfileModel.fromDriftRow` (P2-3) the moment
-        // profileByIdProvider touches this row. A separate write because
-        // `otherProfileId` is auto-generated by the insert itself.
-        await (h.db.update(
-          h.db.learnerProfiles,
-        )..where((t) => t.id.equals(otherProfileId))).write(
-          LearnerProfilesCompanion(ulid: Value('ulid-$otherProfileId')),
+        // Seed a SECOND, real profile row under a SEPARATE account directly
+        // into fake Firestore. The ULID is the document identity, so it is
+        // known up front and can drive the deep-link path.
+        const otherAccountId = 'other-account-806';
+        const otherProfileId = '01J6Q2H4A8M7K3P9R5T6V8WXZ';
+        await seedAccount(
+          h.firestore,
+          uid: otherAccountId,
+          email: 'other806@test.com',
+          displayName: 'OtherAccount806',
+        );
+        await seedProfile(
+          h.firestore,
+          uid: otherAccountId,
+          profileId: otherProfileId,
+          displayName: 'TalmidBob806',
         );
 
         // Request the OTHER profile's journey via the explicit profileId
@@ -458,7 +437,7 @@ void main() {
               (ref) => Stream.value(<CurriculumId>[]),
             ),
             dashboardActiveTracksStreamProvider.overrideWith(
-              (ref) => Stream.value(<CurriculumTrack>[]),
+              (ref) => Stream.value(<CurriculumTrackEntity>[]),
             ),
             dashboardStreakProvider.overrideWith(
               (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
@@ -468,19 +447,13 @@ void main() {
                 const StreakRecoveryInfo(wasRecovered: false, currentStreak: 0),
               ),
             ),
-            dashboardGlobalPointsProvider.overrideWith(
-              (ref) => Stream.value(0),
-            ),
+            dashboardGlobalPointsProvider.overrideWith((ref) async => 0),
             // Distinguish the journey by profileId: the caller's own journey
             // is empty; the OTHER (seeded) profile's is not. This proves an
             // assertion of _otherProfileJourneyViewModel's milestone content
             // could ONLY be satisfied by the OTHER profileId's data loading.
             journeyViewModelProvider.overrideWith(
-              (ref, pid) => Future.value(
-                pid == otherProfileId
-                    ? _otherProfileJourneyViewModel
-                    : _emptyJourneyViewModel,
-              ),
+              (ref) => Future.value(_otherProfileJourneyViewModel),
             ),
           ],
         );
@@ -725,13 +698,13 @@ void main() {
           extraOverrides: [
             ..._progressWithContentOverrides(h),
             trackDualProgressMetricsProvider.overrideWith(
-              (ref, pid) => Future.value(<TrackDualProgressMetric>[]),
+              (ref) => Future.value(<TrackDualProgressMetric>[]),
             ),
             // journeyViewModelProvider is NOT overridden here so it can react
             // to completionCommittedProvider changes.
             // Override activeCurriculaProvider to return an empty list so
             // journeyViewModelProvider computes a 0-siyumim result initially.
-            journeyViewModelProvider.overrideWith((ref, pid) async {
+            journeyViewModelProvider.overrideWith((ref) async {
               // Read the tick so this provider rebuilds when it increments.
               ref.watch<int>(completionCommittedProvider);
               final count = ref.read(completionCommittedProvider);

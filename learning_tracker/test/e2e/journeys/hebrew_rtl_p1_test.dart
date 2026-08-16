@@ -56,7 +56,6 @@ import 'package:learning_tracker/app/router/app_router.dart'
         ManageTutorsRoute,
         ProfilePickerRoute,
         SettingsRoute;
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart'
     show ProfileMode;
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
@@ -103,6 +102,8 @@ import 'package:learning_tracker/features/settings/presentation/screens/settings
     show SettingsScreen;
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart'
     show activeTracksProvider;
+import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart'
+    show CurriculumTrackEntity;
 import 'package:learning_tracker/features/tracks/setup/presentation/screens/add_track_flow_screen.dart'
     show AddTrackFlow;
 import 'package:learning_tracker/features/tracks/setup/presentation/screens/track_management_hub_screen.dart'
@@ -134,19 +135,16 @@ void _expectRtl(WidgetTester tester, Finder screen) {
 }
 
 DailyTask _stubTask({
-  int trackId = 1,
   String ref = 'Berakhot.2a',
   CurriculumId curriculum = CurriculumId.mishnayos,
 }) => DailyTask(
   curriculumId: curriculum,
   contentItemSefariaRef: ref,
   stageOrder: 1,
-  stageDefinitionId: 1,
   priority: DailyTaskPriority.newLearning,
   isOverdue: false,
   reason: 'e2e-rtl',
   stageName: 'Learn',
-  trackId: trackId,
   trackLabel: 'Mishnayos',
 );
 
@@ -160,7 +158,7 @@ List<Override> _taskScreenSilences({
     (ref) => Stream.value(curricula),
   ),
   dashboardActiveTracksStreamProvider.overrideWith(
-    (ref) => Stream.value(const <CurriculumTrack>[]),
+    (ref) => Stream.value(const <CurriculumTrackEntity>[]),
   ),
   dashboardStreakProvider.overrideWith(
     (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
@@ -171,7 +169,9 @@ List<Override> _taskScreenSilences({
     ),
   ),
   allDailyTasksProvider.overrideWith((ref) => Future.value(tasks)),
-  coarsePacedTrackIdsProvider.overrideWith((ref) => Future.value(<int>{})),
+  coarsePacedTrackIdsProvider.overrideWith(
+    (ref) => Future.value(<CurriculumId>{}),
+  ),
 ];
 
 const _zeroLifetimeTotals = LifetimeTotals(
@@ -212,7 +212,7 @@ List<Override> _progressSilences() => [
     (ref) => Stream.value(<CurriculumId>[]),
   ),
   dashboardActiveTracksStreamProvider.overrideWith(
-    (ref) => Stream.value(<CurriculumTrack>[]),
+    (ref) => Stream.value(<CurriculumTrackEntity>[]),
   ),
   dashboardStreakProvider.overrideWith(
     (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
@@ -222,19 +222,17 @@ List<Override> _progressSilences() => [
       const StreakRecoveryInfo(wasRecovered: false, currentStreak: 0),
     ),
   ),
-  dashboardGlobalPointsProvider.overrideWith((ref) => Stream.value(0)),
+  dashboardGlobalPointsProvider.overrideWith((ref) => Future.value(0)),
   dashboardUserModeProvider.overrideWith(
     (ref) => Future.value(ProfileMode.adult),
   ),
   anyActiveTrackHasChazaraProvider.overrideWith((ref) => Future.value(false)),
   lifetimeTotalsAcrossAllCurriculaProvider.overrideWith(
-    (ref, profileId) => Future.value(_zeroLifetimeTotals),
+    (ref) => Future.value(_zeroLifetimeTotals),
   ),
-  trackDualProgressMetricsProvider.overrideWith(
-    (ref, profileId) => Future.value([]),
-  ),
+  trackDualProgressMetricsProvider.overrideWith((ref) => Future.value([])),
   journeyViewModelProvider.overrideWith(
-    (ref, profileId) => Future.value(_emptyJourneyViewModel),
+    (ref) => Future.value(_emptyJourneyViewModel),
   ),
 ];
 
