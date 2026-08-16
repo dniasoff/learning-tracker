@@ -43,33 +43,6 @@ import 'package:learning_tracker/features/learning/domain/repositories/completio
 /// [BulkCompletionRequest.points] are the points value to persist — already
 /// computed by the orchestrator before this repository is ever called.
 
-/// Sentinel value for [Completion.id] / [Completion.profileId] /
-/// [Completion.trackId] on completions synthesized by
-/// [FirestoreCompletionRepositoryAdapter] from a Firestore [CompletionEntity].
-///
-/// Mirrors `kFirestoreUnmappedStageId`'s reasoning
-/// (`lib/features/tracks/stages/domain/models/stage_definition.dart`): Drift
-/// autoincrement primary keys are always positive, so a negative sentinel
-/// can never collide with a real Drift-sourced value. See
-/// [FirestoreCompletionRepositoryAdapter]'s class doc comment ("`id` /
-/// `profileId` / `trackId` are sentinel, not real") for why there is no real
-/// value to put here: a Firestore [CompletionEntity] has no autoincrement
-/// id, no Drift-local `int profileId` (the profile is a ULID `String` — see
-/// `repository_providers.dart`'s library doc comment), and no `trackId`
-/// (AD-25 retired the per-device track id; `curriculumId` is the sole
-/// canonical stable track key, per `docs/firestore-rewrite-map.md`).
-///
-/// **Never pass one of these three fields from a Firestore-sourced
-/// [Completion] into a method that expects a real Drift row/profile/track
-/// id.** Audited (2026-08-03): none of [CompletionRepository]'s current
-/// callers read `.id`, `.profileId`, or `.trackId` off the objects it
-/// returns — they only read `.sefariaRef`, `.completedAt`, `.curriculumId`,
-/// `.trackType`, and list `.length` (see the class doc comment for the
-/// callers audited). A new caller that starts reading one of those three
-/// fields off a completion returned through this adapter would silently get
-/// -1 instead of a real id.
-const int kFirestoreUnmappedCompletionRowId = -1;
-
 /// Thrown by [FirestoreCompletionRepositoryAdapter]'s write methods
 /// (`markComplete`, `bulkMarkComplete`) when
 /// `firestoreCompletionRepositoryProvider` resolves to `null` — i.e. no
@@ -215,10 +188,6 @@ class CompletionRepositoryDelegatedProfileUnsupportedException
 /// repositories are separate, not-yet-landed work). Wiring
 /// `completionRepositoryProvider` to construct this class is therefore
 /// still gated on that separate work landing, not on this file.
-///
-/// ## `id` / `profileId` / `trackId` are sentinel, not real
-///
-/// See [kFirestoreUnmappedCompletionRowId]'s doc comment.
 ///
 /// ## `getCompletionsByCurriculum`/`getCompletionsForContentItem` are
 /// faithful reads; `isStageCompleted` is simpler than Drift's, not weaker

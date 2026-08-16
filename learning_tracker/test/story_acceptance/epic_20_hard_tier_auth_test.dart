@@ -52,19 +52,16 @@ void main() {
         // Device B: 1/3 (while A was offline)
         final union = [
           StreakLogEvent(
-            profileId: 1,
             eventType: 'completion',
             eventTimestamp: DateTime.utc(2026, 1, 1),
             clientDeviceId: 'A',
           ),
           StreakLogEvent(
-            profileId: 1,
             eventType: 'completion',
             eventTimestamp: DateTime.utc(2026, 1, 3),
             clientDeviceId: 'B',
           ),
           StreakLogEvent(
-            profileId: 1,
             eventType: 'completion',
             eventTimestamp: DateTime.utc(2026, 1, 2),
             clientDeviceId: 'A',

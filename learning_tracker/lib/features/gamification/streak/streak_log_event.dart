@@ -9,13 +9,10 @@ library;
 
 class StreakLogEvent {
   const StreakLogEvent({
-    required this.profileId,
     required this.eventType,
     required this.eventTimestamp,
     this.clientDeviceId,
   });
-
-  final int profileId;
 
   /// `completion` | `day_boundary` | `manual_adjust`.
   final String eventType;
@@ -26,12 +23,10 @@ class StreakLogEvent {
   final String? clientDeviceId;
 
   StreakLogEvent copyWith({
-    int? profileId,
     String? eventType,
     DateTime? eventTimestamp,
     String? clientDeviceId,
   }) => StreakLogEvent(
-    profileId: profileId ?? this.profileId,
     eventType: eventType ?? this.eventType,
     eventTimestamp: eventTimestamp ?? this.eventTimestamp,
     clientDeviceId: clientDeviceId ?? this.clientDeviceId,

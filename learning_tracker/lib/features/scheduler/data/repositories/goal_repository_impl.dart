@@ -44,15 +44,6 @@ class GoalRepositoryNotReadyException implements Exception {
 /// [FirestoreGoalRepository]'s own entity-keyed shapes — nothing to change
 /// there but the `@override` annotation.
 ///
-/// [createGoal] still carries `profileId`/`trackId` `int` parameters (the
-/// interface's shape, unchanged by owner decision 4) that are structurally
-/// meaningless here: this instance's Firestore profile identity is already
-/// fixed at construction (path-scoped, via the resolved
-/// [FirestoreGoalRepository]), and there is no Drift `int` to bridge it
-/// against; `trackId` is the Drift-era per-device value AD-25 retired. Both
-/// are accepted (to satisfy the interface) and ignored — see [createGoal]'s
-/// own doc comment.
-///
 /// ## Not-ready semantics
 ///
 /// All operations throw [GoalRepositoryNotReadyException] when the backend is
@@ -103,14 +94,6 @@ class FirestoreGoalRepositoryAdapter implements GoalRepository {
   /// Creates a new goal for [curriculumId]. Throws
   /// [GoalRepositoryNotReadyException] when not ready.
   ///
-  /// [profileId] and [trackId] exist only to satisfy [GoalRepository]'s
-  /// signature — see the class doc comment. This instance's Firestore
-  /// profile identity is already fixed at construction, and there is no
-  /// Drift `int` to bridge it against; `trackId` is the Drift-era
-  /// per-device value AD-25 retired. Both are accepted and ignored, exactly
-  /// like [FirestoreGoalRepository] itself already documents for its own
-  /// (parameter-less) `createGoal`.
-  ///
   /// [paceGranularity] is the interface's raw storage-key string (unlike
   /// [updateGoal]'s typed [PaceGranularity] param — an existing asymmetry in
   /// [GoalRepository] itself, not introduced here). Resolved to the typed
@@ -119,9 +102,7 @@ class FirestoreGoalRepositoryAdapter implements GoalRepository {
   /// fallback [GoalEntity.paceGranularityKey] documents.
   @override
   Future<GoalEntity> createGoal({
-    required int profileId,
     required CurriculumId curriculumId,
-    required int trackId,
     required double targetPercent,
     PaceTarget? paceTarget,
     String description = '',

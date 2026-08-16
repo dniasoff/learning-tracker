@@ -52,8 +52,7 @@ class TrackCompletionService {
   /// Computes item-based completion percentage for a curriculum across all tracks.
   ///
   /// [byTrack] — map of `trackId → (stageDefinitions, completionRows)` for each
-  ///   track that has completions in this curriculum. Track 0 (bulk-mark sentinel)
-  ///   is silently skipped.
+  ///   track that has completions in this curriculum.
   /// [totalItems] — total leaf items in scope (denominator).
   ///
   /// Returns 0.0 when [totalItems] is zero.
@@ -65,9 +64,6 @@ class TrackCompletionService {
 
     final doneRefs = <String>{};
     for (final entry in byTrack.entries) {
-      final trackId = entry.key;
-      if (trackId == 0) continue; // bulk-mark sentinel — skip
-
       final stages = entry.value.stages;
       final completions = entry.value.completions;
       if (stages.isEmpty) continue;

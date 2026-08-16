@@ -200,13 +200,7 @@ class TrackCreationService {
         ? goal.description
         : result.label;
     await _goalRepository.createGoal(
-      // profileId/trackId are both provably unused by the underlying
-      // implementation (confirmed this session, track_detail_screen.dart's
-      // identical call) — passed as 0, not invented from a value that no
-      // longer exists.
-      profileId: 0,
       curriculumId: curriculum,
-      trackId: 0,
       targetPercent: goal.targetPercent,
       paceTarget: goal.paceTarget,
       description: description,

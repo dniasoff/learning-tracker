@@ -10,15 +10,8 @@ abstract class GoalRepository {
   /// - [PacePeriodTarget] for pace-based goals (rate + period inside)
   /// - `null` for "no goal" / goalType='none'
   ///
-  /// [profileId] is the learner profile that owns the goal (must match the
-  /// track's profile when creating from add-track / onboarding). It must
-  /// also match the profile the repository instance itself was constructed
-  /// for — implementations throw `GoalProfileMismatchException`
-  /// (AUD-scheduler-03) otherwise.
   Future<GoalEntity> createGoal({
-    required int profileId,
     required CurriculumId curriculumId,
-    required int trackId,
     required double targetPercent,
     PaceTarget? paceTarget,
     String description,

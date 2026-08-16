@@ -27,8 +27,6 @@ class TrackRepositoryNotReadyException implements Exception {
 /// - Takes a [Ref] and re-resolves the provider on every call
 /// - Construction stays synchronous; the provider is an async nullable FutureProvider
 /// - Write methods throw [TrackRepositoryNotReadyException] when not ready
-/// - The legacy `profileId` parameter (Drift int) is ignored — Firestore repos
-///   are profile-scoped by ULID via the provider.
 class FirestoreTrackRepositoryAdapter implements TrackRepository {
   FirestoreTrackRepositoryAdapter({required Ref ref}) : _ref = ref;
 
@@ -54,10 +52,7 @@ class FirestoreTrackRepositoryAdapter implements TrackRepository {
   }
 
   @override
-  Future<void> initializeDefaultTracks(
-    CurriculumId curriculumId, {
-    int profileId = 0,
-  }) async {
+  Future<void> initializeDefaultTracks(CurriculumId curriculumId) async {
     final repo = await _resolve();
     await repo.activateTrack(curriculumId);
   }

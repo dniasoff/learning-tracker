@@ -10,16 +10,9 @@ import 'package:timezone/timezone.dart' as tz;
 /// Number of days in the rolling one-shot batch (DNI-367, Story 26.24).
 const int kBatchDays = 14;
 
-/// Fixed placeholder profile id used only by the profile-less
-/// [NotificationScheduler.scheduleReminder] (zero production callers — kept
-/// for its existing test coverage). AD-24 retired the old "profile 0" int
-/// identity this used to route through; this string plays the same "always
-/// the same stable ID block" role for [stableProfileHash] instead.
-const String _legacyProfileId = 'legacy';
-
 /// Orchestrates scheduling/cancelling the daily reminder notification.
 ///
-/// DNI-367 (Story 26.24): scheduleReminder() replaces the old repeating
+/// DNI-367 (Story 26.24): scheduleReminderForProfile() replaces the old repeating
 /// schedule with a rolling 14-day batch of pre-filtered one-shots. Each
 /// fire-time is checked against [SacredWindowRepository.isWindowActive] and
 /// suppressed if it falls inside a Sacred Time block.
@@ -69,7 +62,7 @@ class NotificationScheduler {
     // are the sole production call sites; see scheduleReminderForProfile
     // below).
     await service.scheduleBatchRemindersForProfile(
-      profileId: _legacyProfileId,
+      profileId: 'legacy',
       fireTimes: fireTimes,
       title: title,
       body: body,

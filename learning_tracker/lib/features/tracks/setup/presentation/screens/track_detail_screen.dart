@@ -909,13 +909,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
 
     if (existingEntity == null) {
       await repo.createGoal(
-        // profileId/trackId are both provably unused by the underlying
-        // implementation (FirestoreGoalRepositoryAdapter.createGoal never
-        // forwards either) -- passed as 0, not invented from a
-        // CurriculumTrackEntity field that doesn't exist.
-        profileId: 0,
         curriculumId: curriculum,
-        trackId: 0,
         targetPercent: result.targetPercent,
         paceTarget: paceTarget,
         description: result.description,

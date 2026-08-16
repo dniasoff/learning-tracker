@@ -47,23 +47,6 @@ import 'package:learning_tracker/features/gamification/streak/streak_reducer.dar
 /// here. This class only derives read state from the log, mirroring
 /// [StreakStateService]'s own read-only responsibility.
 ///
-/// ## `StreakLogEvent.profileId` is a placeholder, and never leaves this file
-///
-/// [StreakReducer.reduce] takes `Iterable<StreakLogEvent>` — the Drift-era
-/// value type, which carries an `int profileId` [StreakEventEntry]
-/// (Firestore-shaped — see its own class doc comment) deliberately does not
-/// have, because the profile is already the collection path segment above
-/// `streak_events`. [_asLogEvents] maps [StreakEventEntry] → [StreakLogEvent]
-/// with `profileId: 0` — verified by reading [StreakReducer.reduce] that
-/// `profileId` is never actually read inside the reduce (only `eventType`
-/// and `eventTimestamp` are), so the placeholder never influences the
-/// computed [StreakState]. No method on this class returns a
-/// [StreakLogEvent] to a caller, so that placeholder never leaks past this
-/// file — unlike the `Completion.id`/`profileId`/`trackId` gap
-/// `FirestoreProgressRepositoryAdapter` flags, where the same trick would
-/// leak fabricated data to a caller and was rejected for exactly that
-/// reason.
-///
 /// ## Full history, not the 500-most-recent — and the flagged exception
 ///
 /// [getStreak], [getRecoveryInfo], and [getStreakCalendar] all read through
@@ -141,9 +124,6 @@ class FirestoreStreakStateRepository {
   }
 
   StreakLogEvent _asLogEvent(StreakEventEntry entry) => StreakLogEvent(
-    // Placeholder — see the class doc comment's "StreakLogEvent.profileId
-    // is a placeholder" section for why this is safe here specifically.
-    profileId: 0,
     eventType: entry.eventType,
     eventTimestamp: entry.eventTimestamp,
     clientDeviceId: entry.clientDeviceId,
