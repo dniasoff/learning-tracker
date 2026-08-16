@@ -33,6 +33,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
+import 'package:learning_tracker/features/learning/domain/entities/learning_ledger_entry.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_ledger_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/lifetime_marking_screen.dart';
@@ -102,7 +103,7 @@ Widget _buildScreen(List<ContentItem> content) {
       activeProfileIdProvider.overrideWith(() => _FakeActiveProfileId()),
       useHebrewTermsProvider.overrideWith(() => _FakeUseHebrewTerms()),
       curriculumLedgerProvider.overrideWith(
-        (ref, id) async => const <LearningLedgerData>[],
+        (ref, id) async => const <LearningLedgerEntry>[],
       ),
       curriculumContentProvider.overrideWith((ref, curriculumId) async {
         return content;

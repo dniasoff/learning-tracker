@@ -30,7 +30,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            lifetimeSummariesProvider.overrideWith((ref, profileId) async {
+            lifetimeSummariesProvider.overrideWith((ref) async {
               return const [];
             }),
           ],
@@ -93,7 +93,7 @@ void main() {
         pumpApp(
           locale: const Locale('he'),
           overrides: [
-            lifetimeSummariesProvider.overrideWith((ref, profileId) async {
+            lifetimeSummariesProvider.overrideWith((ref) async {
               return const [];
             }),
           ],

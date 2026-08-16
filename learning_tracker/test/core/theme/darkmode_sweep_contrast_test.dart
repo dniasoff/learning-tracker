@@ -124,14 +124,14 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
+import 'package:learning_tracker/features/learning/domain/entities/learning_ledger_entry.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_ledger_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/widgets/glowing_cta_button.dart';
 import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
@@ -846,7 +846,7 @@ void main() {
               activeProfileIdProvider.overrideWith(() => _FakeProfileId()),
               useHebrewTermsProvider.overrideWith(() => _FakeUseHebrewTerms()),
               curriculumLedgerProvider.overrideWith(
-                (ref, id) async => const <LearningLedgerData>[],
+                (ref, id) async => const <LearningLedgerEntry>[],
               ),
               curriculumContentProvider.overrideWith(
                 (ref, curriculumId) async => const <ContentItem>[],
@@ -881,7 +881,7 @@ void main() {
             activeProfileIdProvider.overrideWith(() => _FakeProfileId()),
             useHebrewTermsProvider.overrideWith(() => _FakeUseHebrewTerms()),
             curriculumLedgerProvider.overrideWith(
-              (ref, id) async => const <LearningLedgerData>[],
+              (ref, id) async => const <LearningLedgerEntry>[],
             ),
             curriculumContentProvider.overrideWith(
               (ref, curriculumId) async => const <ContentItem>[],

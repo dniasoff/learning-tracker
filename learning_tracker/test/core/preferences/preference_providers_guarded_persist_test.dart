@@ -22,7 +22,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
-import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 
@@ -47,10 +46,9 @@ void main() {
       SharedPreferences.setMockInitialValues({});
       final container = ProviderContainer(
         overrides: [
-          activeProfileIdProvider.overrideWithValue(1),
-          // Isolate the test to the SharedPreferences write path — no
-          // Firebase/sync I/O involved either way.
-          syncWriteFacadeProvider.overrideWithValue(null),
+          activeProfileIdProvider.overrideWithValue(
+            '01J6Q2H4A8M7K3P9R5T6V8WXY7',
+          ),
         ],
       );
       addTearDown(container.dispose);
@@ -94,10 +92,9 @@ void main() {
       SharedPreferences.setMockInitialValues({});
       final container = ProviderContainer(
         overrides: [
-          activeProfileIdProvider.overrideWithValue(1),
-          // Isolate the test to the SharedPreferences write path — no
-          // Firebase/sync I/O involved either way.
-          syncWriteFacadeProvider.overrideWithValue(null),
+          activeProfileIdProvider.overrideWithValue(
+            '01J6Q2H4A8M7K3P9R5T6V8WXY7',
+          ),
         ],
       );
       addTearDown(container.dispose);

@@ -35,7 +35,7 @@ class _GatedHebrewDatePreference extends HebrewDatePreference {
   final Completer<bool> _gate;
 
   @override
-  Future<bool> read(int profileId) => _gate.future;
+  Future<bool> read(String profileId) => _gate.future;
 }
 
 void main() {
@@ -49,7 +49,7 @@ void main() {
 
     final container = ProviderContainer(
       overrides: [
-        activeProfileIdProvider.overrideWithValue(1),
+        activeProfileIdProvider.overrideWithValue('01J6Q2H4A8M7K3P9R5T6V8WXY7'),
         hebrewDatePreferenceProvider.overrideWithValue(
           _GatedHebrewDatePreference(gate),
         ),

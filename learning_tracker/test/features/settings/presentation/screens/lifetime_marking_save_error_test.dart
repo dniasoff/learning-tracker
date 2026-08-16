@@ -31,11 +31,11 @@ import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
+import 'package:learning_tracker/features/learning/domain/entities/learning_ledger_entry.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/learning_ledger_repository.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_ledger_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/lifetime_marking_screen.dart';
-import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../../../helpers/pump_app.dart';
@@ -134,11 +134,9 @@ Widget _buildScreen({
     locale: locale,
     overrides: [
       activeProfileIdProvider.overrideWith(() => _FakeActiveProfileId()),
-      syncWriteFacadeProvider.overrideWithValue(null),
-      outboxSyncWriteFacadeProvider.overrideWithValue(null),
       contentRepositoryProvider.overrideWithValue(_makeFakeContentRepo()),
       curriculumLedgerProvider.overrideWith(
-        (ref, id) async => const <LearningLedgerData>[],
+        (ref, id) async => const <LearningLedgerEntry>[],
       ),
       useHebrewTermsProvider.overrideWith(() => _FakeUseHebrewTerms()),
       learningLedgerRepositoryProvider.overrideWithValue(ledgerRepository),
@@ -187,7 +185,7 @@ Future<void> _teardown(WidgetTester tester) async {
 void main() {
   setUpAll(() {
     registerFallbackValue(CurriculumId.mishnayos);
-    registerFallbackValue(<LedgerManualBatchItem>[]);
+    registerFallbackValue(<LedgerEntryDraft>[]);
     registerFallbackValue(CompletionSource.lifetimeOnly);
     registerFallbackValue(0); // scopeLevel
     registerFallbackValue(<String>[]); // scopeValues
@@ -200,7 +198,7 @@ void main() {
     ledgerRepository = _MockLearningLedgerRepository();
     when(
       () => ledgerRepository.recordCompletionsBatch(
-        any<List<LedgerManualBatchItem>>(),
+        any<List<LedgerEntryDraft>>(),
         source: any<CompletionSource>(named: 'source'),
       ),
     ).thenThrow(Exception('test-forced ledger write failure'));
@@ -210,9 +208,7 @@ void main() {
     'save failure -> SnackBar shows the fixed localized fallback, never the '
     'raw exception (AUD-settings-07, EH-5/ST-4)',
     (tester) async {
-      await tester.pumpWidget(
-        _buildScreen(ledgerRepository: ledgerRepository),
-      );
+      await tester.pumpWidget(_buildScreen(ledgerRepository: ledgerRepository));
       await _selectAllAndSave(tester);
 
       expect(

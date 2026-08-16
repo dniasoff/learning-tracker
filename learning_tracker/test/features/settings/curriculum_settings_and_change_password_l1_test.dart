@@ -61,11 +61,10 @@ import 'package:learning_tracker/features/account/domain/services/account_manage
 import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/curriculum_settings_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/change_password_dialog.dart';
-import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 
-import '../../../helpers/firestore_fake.dart';
+import '../../helpers/firestore_fake.dart';
 
 // ── Mocks ──────────────────────────────────────────────────────────────────────
 

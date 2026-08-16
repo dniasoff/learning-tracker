@@ -84,8 +84,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/app/router/router_provider.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
-import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/navigation/guards/pin_guard.dart';
 import 'package:learning_tracker/core/network/connectivity_gateway.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
@@ -102,6 +102,7 @@ import 'package:learning_tracker/features/account/presentation/providers/auth_pr
     show authRepositoryProvider;
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
+import 'package:learning_tracker/features/learning/domain/entities/learning_ledger_entry.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_ledger_providers.dart';
 import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
@@ -532,7 +533,7 @@ void main() {
                   (ref, curriculumId) async => const <ContentItem>[],
                 ),
                 curriculumLedgerProvider.overrideWith(
-                  (ref, id) async => const <LearningLedgerData>[],
+                  (ref, id) async => const <LearningLedgerEntry>[],
                 ),
               ],
               child: const LifetimeMarkingScreen(),
@@ -563,7 +564,7 @@ void main() {
                 (ref, curriculumId) async => const <ContentItem>[],
               ),
               curriculumLedgerProvider.overrideWith(
-                (ref, id) async => const <LearningLedgerData>[],
+                (ref, id) async => const <LearningLedgerEntry>[],
               ),
             ],
             child: const LifetimeMarkingScreen(),
@@ -605,7 +606,7 @@ void main() {
             activeProfileIdProvider.overrideWith(() => _FakeProfileId()),
             useHebrewTermsProvider.overrideWith(() => _FakeUseHebrewTerms()),
             curriculumLedgerProvider.overrideWith(
-              (ref, id) async => const <LearningLedgerData>[],
+              (ref, id) async => const <LearningLedgerEntry>[],
             ),
             curriculumContentProvider.overrideWith(
               (ref, curriculumId) async => const <ContentItem>[],
@@ -636,7 +637,7 @@ void main() {
             activeProfileIdProvider.overrideWith(() => _FakeProfileId()),
             useHebrewTermsProvider.overrideWith(() => _FakeUseHebrewTerms()),
             curriculumLedgerProvider.overrideWith(
-              (ref, id) async => const <LearningLedgerData>[],
+              (ref, id) async => const <LearningLedgerEntry>[],
             ),
             curriculumContentProvider.overrideWith(
               (ref, curriculumId) async => const <ContentItem>[],
@@ -687,8 +688,7 @@ void main() {
       when(() => connectivity.isOnline).thenAnswer((_) async => true);
     });
 
-    tearDown(() async {
-    });
+    tearDown(() async {});
 
     testWidgets('the real Sign Out button + "?" badge read theme.colorScheme'
         '.onPrimary (not Colors.white) in dark mode', (tester) async {
@@ -699,7 +699,7 @@ void main() {
           service: service,
           connectivity: connectivity,
           registry: registry,
-                    theme: AppTheme.darkTheme(),
+          theme: AppTheme.darkTheme(),
         ),
       );
       await tester.pump();
@@ -758,8 +758,7 @@ void main() {
       when(() => connectivity.isOnline).thenAnswer((_) async => true);
     });
 
-    tearDown(() async {
-    });
+    tearDown(() async {});
 
     testWidgets(
       'the real Cancel button reads brandCreamSoft (not the hardcoded '
@@ -772,7 +771,7 @@ void main() {
             service: service,
             connectivity: connectivity,
             registry: registry,
-                        theme: AppTheme.darkTheme(),
+            theme: AppTheme.darkTheme(),
           ),
         );
         await tester.pump();
@@ -811,7 +810,7 @@ void main() {
             theme: AppTheme.darkTheme(),
             overrides: [
               authStateProvider.overrideWith(() => _StubAuthStateNotifier()),
-              activeProfileIdProvider.overrideWithValue(1),
+              activeProfileIdProvider.overrideWithValue('ulid-1'),
               profileListStreamProvider.overrideWith(
                 (_) => Stream.value(const []),
               ),
@@ -868,18 +867,14 @@ void main() {
       when(() => authRepo.currentUser).thenReturn(null);
     });
 
-    tearDown(() async {
-    });
+    tearDown(() async {});
 
     testWidgets(
       'the real Send Diagnostic Logs icon-pill reads brandCreamSoft (not '
       'the hardcoded 0xFFF0F1F5 literal) in dark mode',
       (tester) async {
         await tester.pumpWidget(
-          _buildSettingsScreen(
-                        authRepo: authRepo,
-            theme: AppTheme.darkTheme(),
-          ),
+          _buildSettingsScreen(authRepo: authRepo, theme: AppTheme.darkTheme()),
         );
         await tester.pump();
         await tester.pump(const Duration(seconds: 1));
@@ -912,9 +907,7 @@ void main() {
       'the real Send Diagnostic Logs icon-pill resolves brandCreamSoft in '
       'light mode too (no regression)',
       (tester) async {
-        await tester.pumpWidget(
-          _buildSettingsScreen( authRepo: authRepo),
-        );
+        await tester.pumpWidget(_buildSettingsScreen(authRepo: authRepo));
         await tester.pump();
         await tester.pump(const Duration(seconds: 1));
 
@@ -952,14 +945,13 @@ void main() {
       when(() => authRepo.currentUser).thenReturn(null);
     });
 
-    tearDown(() async {
-    });
+    tearDown(() async {});
 
     testWidgets('the real Parent Mode icon-pill reads brandCoralSoft (not the '
         'hardcoded 0xFFF8E3E7 literal) in dark mode', (tester) async {
       await tester.pumpWidget(
         _buildSettingsScreen(
-                    authRepo: authRepo,
+          authRepo: authRepo,
           theme: AppTheme.darkTheme(),
           extraOverrides: [
             activeProfileIdProvider.overrideWith(_FakeChildProfileId.new),
@@ -1001,7 +993,7 @@ void main() {
       (tester) async {
         await tester.pumpWidget(
           _buildSettingsScreen(
-                        authRepo: authRepo,
+            authRepo: authRepo,
             extraOverrides: [
               activeProfileIdProvider.overrideWith(_FakeChildProfileId.new),
               profileListStreamProvider.overrideWith(
@@ -1047,8 +1039,7 @@ void main() {
       when(() => authRepo.currentUser).thenReturn(null);
     });
 
-    tearDown(() async {
-    });
+    tearDown(() async {});
 
     testWidgets(
       'the real pending/active tutor-grant tiles read statusWarningSoft/'
@@ -1056,7 +1047,7 @@ void main() {
       (tester) async {
         await tester.pumpWidget(
           _buildSettingsScreen(
-                        authRepo: authRepo,
+            authRepo: authRepo,
             theme: AppTheme.darkTheme(),
             extraOverrides: [
               incomingTutorGrantsProvider.overrideWith(
@@ -1106,7 +1097,7 @@ void main() {
       (tester) async {
         await tester.pumpWidget(
           _buildSettingsScreen(
-                        authRepo: authRepo,
+            authRepo: authRepo,
             extraOverrides: [
               incomingTutorGrantsProvider.overrideWith(
                 (ref) => Future.value([_activeGrantFixture()]),
@@ -1186,8 +1177,7 @@ void main() {
       when(() => connectivity.isOnline).thenAnswer((_) async => true);
     });
 
-    tearDown(() async {
-    });
+    tearDown(() async {});
 
     testWidgets(
       'the real sign-out-failure SnackBar reads theme.colorScheme.error/'
@@ -1201,7 +1191,7 @@ void main() {
             service: service,
             connectivity: connectivity,
             registry: registry,
-                        theme: darkTheme,
+            theme: darkTheme,
           ),
         );
         await tester.pump();
@@ -1236,7 +1226,7 @@ void main() {
             service: service,
             connectivity: connectivity,
             registry: registry,
-                        theme: lightTheme,
+            theme: lightTheme,
           ),
         );
         await tester.pump();
