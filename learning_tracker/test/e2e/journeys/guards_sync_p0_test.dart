@@ -38,8 +38,8 @@
 /// _initialize() postFrameCallback detects !isSignedIn and pushes SignInRoute.
 ///
 /// ## E2E-1301 — Offline-first render
-/// connectivityStreamProvider=false; syncWriteFacadeProvider=null (harness
-/// default). All Drift providers read from the in-memory DB. Four tab
+/// connectivityStreamProvider=false. Firestore-backed providers read from the
+/// harness fake. Four tab
 /// navigations asserted to render without hang.
 ///
 /// Catalog: docs/planning/e2e-test-suite-plan.md §2 Area 13 + Area 14 / §7
@@ -117,7 +117,7 @@ List<Override> _nonShellStreakSilences() => [
   dashboardActiveCurriculaStreamProvider.overrideWith(
     (ref) => Stream.value(const <CurriculumId>[]),
   ),
-  dashboardGlobalPointsProvider.overrideWith((ref) => Stream.value(0)),
+  dashboardGlobalPointsProvider.overrideWith((ref) => Future.value(0)),
 ];
 
 // ── Tests ──────────────────────────────────────────────────────────────────────
@@ -136,8 +136,8 @@ void main() {
     //  • Settings tab renders (SETTINGS label visible after tap)
     //  • No spinner hang — pumps resolve without timeout
     //
-    // All Drift-backed providers read from the in-memory DB. syncWriteFacadeProvider
-    // and syncOrchestratorProvider are null by harness default.
+    // Firestore-backed providers read from the harness fake; no sync engine is
+    // involved in this navigation/offline shell coverage.
 
     testWidgets('all four shell tabs render from Drift without network; '
         'tab labels visible after each navigation', (tester) async {

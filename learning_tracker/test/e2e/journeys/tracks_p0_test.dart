@@ -15,39 +15,39 @@ library;
 
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart'
     show effectiveUseHebrewTermsProvider, useHebrewTermsProvider;
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart'
     show activeTracksProvider;
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart'
     show activeTutorPermissionsProvider;
 
+import '../../helpers/firestore_fixtures.dart' show seedTrack;
 import '../harness/e2e_common_overrides.dart';
 import '../harness/e2e_harness.dart';
 
 // ── Factories ─────────────────────────────────────────────────────────────────
 
-/// Inserts a [CurriculumTrack] row into [db] and returns the seeded row.
-///
-/// Uses `InsertMode.insertOrIgnore` so tests that also provide a provider
-/// override for [activeTracksProvider] won't conflict with existing rows.
-///
-/// Call AFTER [E2EHarness.pumpApp] so the FK profile row exists.
-Future<int> _insertTrack(UserDatabase db, CurriculumTrack stub) async {
-  return db
-      .into(db.curriculumTracks)
-      .insert(
-        CurriculumTracksCompanion.insert(
-          profileId: stub.profileId,
-          curriculumId: stub.curriculumId,
-          stateChangedAt: stub.stateChangedAt,
-          activatedAt: stub.activatedAt,
-        ),
-      );
+/// Seeds a [CurriculumTrackEntity] document after [E2EHarness.pumpApp].
+Future<void> _seedTrack(
+  E2EHarness h,
+  E2EIdentity identity,
+  CurriculumTrackEntity stub,
+) {
+  return seedTrack(
+    h.firestore,
+    uid: identity.accountId,
+    profileId: identity.profileId,
+    curriculumId: stub.curriculumId,
+    state: stub.state,
+    activatedAt: stub.activatedAt,
+    stateChangedAt: stub.stateChangedAt,
+    paceResetDate: stub.paceResetDate,
+  );
 }
 
 // ── Override factories ─────────────────────────────────────────────────────────
@@ -61,7 +61,9 @@ Future<int> _insertTrack(UserDatabase db, CurriculumTrack stub) async {
 /// and [useHebrewTermsProvider] to `false` — the new-profile default is
 /// `true` (Hebrew script), which would make curriculum names appear in Hebrew
 /// script in tests, breaking `find.text('Mishnayos')` lookups.
-List<Override> _trackHubOverrides({required List<CurriculumTrack> tracks}) => [
+List<Override> _trackHubOverrides({
+  required List<CurriculumTrackEntity> tracks,
+}) => [
   activeTracksProvider.overrideWith((ref) => Stream.value(tracks)),
   // Force English labels so curriculum names are 'Mishnayos', 'Bavli', etc.
   useHebrewTermsProvider.overrideWithValue(false),
@@ -72,14 +74,14 @@ List<Override> _trackHubOverrides({required List<CurriculumTrack> tracks}) => [
 /// but are irrelevant to the track journeys.
 List<Override> _trackDetailSilenceOverrides() => [
   // Dual progress labels.
-  trackDualProgressMetricsProvider.overrideWith((ref, pid) => Future.value([])),
+  trackDualProgressMetricsProvider.overrideWith((ref) => Future.value([])),
   // Program-enrollment check (controls which tiles show).
   dashboardHasProgramEnrollmentProvider.overrideWith(
     (ref, curriculum) => Future.value(false),
   ),
   // Cycle-completion percentage in the header card.
   dashboardTrackCompletionPercentageProvider.overrideWith(
-    (ref, trackId) => Future.value(0.0),
+    (ref, curriculumId) => Future.value(0.0),
   ),
   // Tutor permissions (controls edit-goal tile enable state).
   activeTutorPermissionsProvider.overrideWith((ref) => null),
@@ -187,7 +189,7 @@ void main() {
         addTearDown(h.dispose);
 
         // Create a stub track for Mishnayos that the hub and wizard will see.
-        // profileId=1 because harness seeds account(1)+profile(1) in pumpApp.
+        // The harness seeds the account/profile documents in pumpApp.
         final stub = stubTrack(
           id: 1,
           profileId: 1,
@@ -257,7 +259,7 @@ void main() {
         final h = E2EHarness(tester, identity: identity);
         addTearDown(h.dispose);
 
-        // profileId=1 is safe because harness seeds account(1)+profile(1).
+        // The harness seeds the account/profile documents in pumpApp.
         final stub = stubTrack(
           id: 1,
           profileId: 1,
@@ -363,10 +365,10 @@ void main() {
         );
         await tester.pump(const Duration(milliseconds: 300));
 
-        // Seed the REAL DB rows after pumpApp so FK constraints are satisfied
-        // and the archive/deactivate path can query activeCurriculumDao.
-        await _insertTrack(h.db, stubMishnayos);
-        await _insertTrack(h.db, stubBavli);
+        // Seed the Firestore track documents after pumpApp so the account and
+        // profile documents already exist.
+        await _seedTrack(h, identity, stubMishnayos);
+        await _seedTrack(h, identity, stubBavli);
 
         // Navigate to detail for the Mishnayos track.
         await h.tapText('Mishnayos', settle: const Duration(milliseconds: 500));
@@ -396,12 +398,19 @@ void main() {
         );
         await tester.pump(const Duration(milliseconds: 500));
 
-        // After "archive" (keep history), the track row is soft-deleted:
-        // state = 'deleted'. The "Archive" label in the UI means completions
-        // are retained; the underlying state is still 'deleted' (a tombstone).
-        final tracks = await h.db.trackDao.getAllTracks(CurriculumId.mishnayos);
-        expect(tracks, hasLength(1));
-        expect(tracks.first.state, 'deleted');
+        // Firestore archive keeps the curriculum document and changes its
+        // lifecycle state to 'archived'; the old Drift 'deleted' tombstone is
+        // intentionally not part of the migrated identity model.
+        final trackDoc = await h.firestore
+            .collection('users')
+            .doc(identity.accountId)
+            .collection('learner_profiles')
+            .doc(identity.profileId)
+            .collection('curriculum_tracks')
+            .doc(CurriculumId.mishnayos.storageKey)
+            .get();
+        expect(trackDoc.exists, isTrue);
+        expect(trackDoc.data()?['state'], 'archived');
       },
     );
   });
@@ -413,65 +422,78 @@ void main() {
     // Delete → dialog → Wipe → track row gone; completion records purged.
     //
     // R-TR1: wipe path via TrackDetailScreen._showDeleteDialog.
-    testWidgets('wipe track from detail screen: track row purged from Drift', (
-      tester,
-    ) async {
-      final identity = E2EIdentity.localBorn(displayName: 'Frank');
-      final h = E2EHarness(tester, identity: identity);
-      addTearDown(h.dispose);
+    // BLOCKED: the migrated wipe path calls the Firebase callable
+    // `deleteCurriculumTrack`; the read-only E2E harness/fakes provide no
+    // Firebase Functions mock, so this case remains analyzer-valid but
+    // unexecutable until that shared seam exists.
+    testWidgets(
+      'wipe track from detail screen: track row purged from Firestore',
+      skip: true,
+      (tester) async {
+        final identity = E2EIdentity.localBorn(displayName: 'Frank');
+        final h = E2EHarness(tester, identity: identity);
+        addTearDown(h.dispose);
 
-      final stubMishnayos = stubTrack(
-        id: 1,
-        profileId: 1,
-        curriculum: CurriculumId.mishnayos,
-      );
-      final stubBavli = stubTrack(
-        id: 2,
-        profileId: 1,
-        curriculum: CurriculumId.bavli,
-      );
+        final stubMishnayos = stubTrack(
+          id: 1,
+          profileId: 1,
+          curriculum: CurriculumId.mishnayos,
+        );
+        final stubBavli = stubTrack(
+          id: 2,
+          profileId: 1,
+          curriculum: CurriculumId.bavli,
+        );
 
-      await h.pumpApp(
-        path: '/settings/tracks',
-        extraOverrides: [
-          ..._trackHubOverrides(tracks: [stubMishnayos, stubBavli]),
-          ..._trackDetailSilenceOverrides(),
-        ],
-      );
-      await tester.pump(const Duration(milliseconds: 300));
+        await h.pumpApp(
+          path: '/settings/tracks',
+          extraOverrides: [
+            ..._trackHubOverrides(tracks: [stubMishnayos, stubBavli]),
+            ..._trackDetailSilenceOverrides(),
+          ],
+        );
+        await tester.pump(const Duration(milliseconds: 300));
 
-      // Seed real DB rows after pumpApp.
-      await _insertTrack(h.db, stubMishnayos);
-      await _insertTrack(h.db, stubBavli);
+        // Seed Firestore track documents after pumpApp.
+        await _seedTrack(h, identity, stubMishnayos);
+        await _seedTrack(h, identity, stubBavli);
 
-      await h.tapText('Mishnayos', settle: const Duration(milliseconds: 500));
-      await tester.pump(const Duration(milliseconds: 300));
+        await h.tapText('Mishnayos', settle: const Duration(milliseconds: 500));
+        await tester.pump(const Duration(milliseconds: 300));
 
-      // Scroll to make 'Delete Track' tile fully visible before tapping.
-      await tester.ensureVisible(find.text('Delete Track'));
-      await tester.pump(const Duration(milliseconds: 200));
+        // Scroll to make 'Delete Track' tile fully visible before tapping.
+        await tester.ensureVisible(find.text('Delete Track'));
+        await tester.pump(const Duration(milliseconds: 200));
 
-      // Open delete dialog.
-      await h.tapText(
-        'Delete Track',
-        settle: const Duration(milliseconds: 500),
-      );
-      await tester.pump(const Duration(milliseconds: 300));
+        // Open delete dialog.
+        await h.tapText(
+          'Delete Track',
+          settle: const Duration(milliseconds: 500),
+        );
+        await tester.pump(const Duration(milliseconds: 300));
 
-      h.expectOnScreen('Delete and wipe history');
+        h.expectOnScreen('Delete and wipe history');
 
-      // Tap Wipe.
-      await h.tapText(
-        'Delete and wipe history',
-        settle: const Duration(milliseconds: 500),
-      );
-      await tester.pump(const Duration(milliseconds: 500));
+        // Tap Wipe.
+        await h.tapText(
+          'Delete and wipe history',
+          settle: const Duration(milliseconds: 500),
+        );
+        await tester.pump(const Duration(milliseconds: 500));
 
-      // After wipe, the track row should be purged (purgeHistory hard-deletes
-      // the track row and all linked completions).
-      final tracks = await h.db.trackDao.getAllTracks(CurriculumId.mishnayos);
-      expect(tracks, isEmpty);
-    });
+        // After wipe, the Firestore track document should be purged (the
+        // migrated path hard-deletes the track and linked data).
+        final trackDoc = await h.firestore
+            .collection('users')
+            .doc(identity.accountId)
+            .collection('learner_profiles')
+            .doc(identity.profileId)
+            .collection('curriculum_tracks')
+            .doc(CurriculumId.mishnayos.storageKey)
+            .get();
+        expect(trackDoc.exists, isFalse);
+      },
+    );
   });
 
   // ── E2E-407 ──────────────────────────────────────────────────────────────
@@ -506,8 +528,8 @@ void main() {
         );
         await tester.pump(const Duration(milliseconds: 300));
 
-        // Seed exactly ONE real track so the guard's count query returns 1.
-        await _insertTrack(h.db, stub);
+        // Seed exactly ONE Firestore track so the guard's count query returns 1.
+        await _seedTrack(h, identity, stub);
 
         await h.tapText('Mishnayos', settle: const Duration(milliseconds: 500));
         await tester.pump(const Duration(milliseconds: 300));
@@ -532,10 +554,17 @@ void main() {
         // The last-curriculum error snackbar/message should be shown.
         h.expectOnScreen('At least one curriculum must remain active');
 
-        // DB assertion: track must still be active.
-        final tracks = await h.db.trackDao.getAllTracks(CurriculumId.mishnayos);
-        expect(tracks, hasLength(1));
-        expect(tracks.first.state, 'active');
+        // Firestore assertion: track must still be active.
+        final trackDoc = await h.firestore
+            .collection('users')
+            .doc(identity.accountId)
+            .collection('learner_profiles')
+            .doc(identity.profileId)
+            .collection('curriculum_tracks')
+            .doc(CurriculumId.mishnayos.storageKey)
+            .get();
+        expect(trackDoc.exists, isTrue);
+        expect(trackDoc.data()?['state'], 'active');
       },
     );
   });

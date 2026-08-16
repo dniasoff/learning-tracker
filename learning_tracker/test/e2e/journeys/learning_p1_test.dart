@@ -132,19 +132,16 @@ ContentIndex _fakeContentIndex(List<String> refsInOrder) {
 
 /// A minimal daily task on the fine-paced (non-coarse) Mishnayos curriculum.
 DailyTask _finePacedTask({
-  int trackId = 1,
   String sefariaRef = 'Mishnah_Berachot.1.1',
   CurriculumId curriculum = CurriculumId.mishnayos,
 }) => DailyTask(
   curriculumId: curriculum,
   contentItemSefariaRef: sefariaRef,
   stageOrder: 1,
-  stageDefinitionId: 1,
   priority: DailyTaskPriority.newLearning,
   isOverdue: false,
   reason: 'e2e-test',
   stageName: 'Learn',
-  trackId: trackId,
   trackLabel: 'Test Track',
 );
 

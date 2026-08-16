@@ -93,12 +93,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart'
     show effectiveUseHebrewTermsProvider;
-import 'package:learning_tracker/core/sync/providers/sync_status_providers.dart'
-    show syncStatusProvider;
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart'
     show connectivityStreamProvider;
@@ -110,6 +108,8 @@ import 'package:learning_tracker/features/dashboard/presentation/providers/dashb
         dashboardGlobalPointsProvider,
         dashboardStreakProvider,
         dashboardStreakRecoveryProvider;
+import 'package:learning_tracker/features/gamification/domain/models/reward_redemption.dart'
+    show RewardRedemptionEntity;
 import 'package:learning_tracker/features/gamification/domain/models/streak_recovery_info.dart'
     show StreakRecoveryInfo;
 import 'package:learning_tracker/features/gamification/presentation/providers/achievements_overview_provider.dart'
@@ -124,7 +124,7 @@ import 'package:learning_tracker/features/gamification/presentation/screens/gami
     show streakCalendarProvider;
 import 'package:learning_tracker/features/gamification/presentation/screens/parent_pending_redemptions_screen.dart'
     show pendingRedemptionsProvider;
-import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
+import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart'
     show profileListProvider;
 import 'package:learning_tracker/features/profiles/presentation/screens/parent_settings_screen.dart'
@@ -164,8 +164,7 @@ import 'package:learning_tracker/features/scheduler/presentation/providers/study
     show studyDayConfigsProvider;
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart'
     show scopedItemCountProvider;
-import 'package:learning_tracker/features/sync/domain/models/sync_status.dart'
-    show SyncStatus;
+import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart'
     show activeTracksProvider;
 import 'package:learning_tracker/features/tracks/track_order/presentation/providers/track_learning_order_providers.dart'
@@ -276,8 +275,6 @@ Override _englishTerms() =>
     effectiveUseHebrewTermsProvider.overrideWithValue(false);
 Override _noTutorPerms() =>
     activeTutorPermissionsProvider.overrideWith((ref) => null);
-Override _syncLocalOnly() =>
-    syncStatusProvider.overrideWith((ref) => const SyncStatus.localOnly());
 
 /// Common silence overrides for Settings-area screens.
 List<Override> _settingsSilence() => [
@@ -285,7 +282,6 @@ List<Override> _settingsSilence() => [
   _connectivity(),
   _noIncomingGrants(),
   _noPendingInvites(),
-  _syncLocalOnly(),
 ];
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -386,23 +382,19 @@ void main() {
     '320x568 — profile_card.dart content not constrained to card width',
     skip: true,
     (tester) async {
-      final alice = ProfileModel(
-        id: 1,
-        ulid: 'ulid-1',
-        accountId: 1,
+      final alice = LearnerProfileEntity(
+        profileId: '01J6Q2H4A8M7K3P9R5T6V8WXA',
         displayName: 'Alice',
-        mode: 'adult',
-        avatarIndex: 0,
+        mode: ProfileMode.adult,
+        avatar: '',
         createdAt: DateTime(2024),
         updatedAt: DateTime(2024),
       );
-      final bob = ProfileModel(
-        id: 2,
-        ulid: 'ulid-2',
-        accountId: 1,
+      final bob = LearnerProfileEntity(
+        profileId: '01J6Q2H4A8M7K3P9R5T6V8XB',
         displayName: 'Bob',
-        mode: 'child',
-        avatarIndex: 1,
+        mode: ProfileMode.child,
+        avatar: 'avatar-1',
         createdAt: DateTime(2024),
         updatedAt: DateTime(2024),
       );
@@ -516,7 +508,7 @@ void main() {
         (ref) => Stream.value(<CurriculumId>[]),
       ),
       allDailyTasksProvider.overrideWith((ref) async => <DailyTask>[]),
-      coarsePacedTrackIdsProvider.overrideWith((ref) async => <int>{}),
+      coarsePacedTrackIdsProvider.overrideWith((ref) async => <CurriculumId>{}),
       dashboardStreakProvider.overrideWith(
         (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
       ),
@@ -560,7 +552,7 @@ void main() {
         (ref) => Stream.value(<CurriculumId>[]),
       ),
       allDailyTasksProvider.overrideWith((ref) async => <DailyTask>[]),
-      coarsePacedTrackIdsProvider.overrideWith((ref) async => <int>{}),
+      coarsePacedTrackIdsProvider.overrideWith((ref) async => <CurriculumId>{}),
       dashboardStreakProvider.overrideWith(
         (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
       ),
@@ -608,19 +600,19 @@ void main() {
         dashboardStreakProvider.overrideWith(
           (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
         ),
-        dashboardGlobalPointsProvider.overrideWith((ref) => Stream.value(0)),
+        dashboardGlobalPointsProvider.overrideWith((ref) => Future.value(0)),
         trackDualProgressMetricsProvider.overrideWith(
-          (ref, _) async => <TrackDualProgressMetric>[],
+          (ref) async => <TrackDualProgressMetric>[],
         ),
         lifetimeTotalsAcrossAllCurriculaProvider.overrideWith(
-          (ref, _) async => const LifetimeTotals(
+          (ref) async => const LifetimeTotals(
             learnedSections: 0,
             totalSections: 0,
             totalCurricula: 9,
           ),
         ),
         journeyViewModelProvider.overrideWith(
-          (ref, _) async => const JourneyViewModel(
+          (ref) async => const JourneyViewModel(
             curricula: <CurriculumJourney>[],
             totalCompletions: 0,
             totalUniqueUnits: 0,
@@ -645,7 +637,7 @@ void main() {
         _englishTerms(),
         _noTutorPerms(),
         lifetimeSummariesProvider.overrideWith(
-          (ref, _) async => <CurriculumLifetimeSummary>[],
+          (ref) async => <CurriculumLifetimeSummary>[],
         ),
       ],
     );
@@ -664,16 +656,18 @@ void main() {
           (ref) => Stream.value(<CurriculumId>[]),
         ),
         dashboardActiveTracksStreamProvider.overrideWith(
-          (ref) => Stream.value(<CurriculumTrack>[]),
+          (ref) => Stream.value(<CurriculumTrackEntity>[]),
         ),
         dashboardStreakProvider.overrideWith(
           (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
         ),
         allDailyTasksProvider.overrideWith((ref) async => <DailyTask>[]),
         activeTracksProvider.overrideWith(
-          (ref) => Stream.value(<CurriculumTrack>[]),
+          (ref) => Stream.value(<CurriculumTrackEntity>[]),
         ),
-        coarsePacedTrackIdsProvider.overrideWith((ref) async => <int>{}),
+        coarsePacedTrackIdsProvider.overrideWith(
+          (ref) async => <CurriculumId>{},
+        ),
         anyActiveTrackHasChazaraProvider.overrideWith((ref) async => false),
         scopedItemCountProvider.overrideWith((ref, _) async => 0),
       ],
@@ -692,7 +686,7 @@ void main() {
           (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
         ),
         journeyViewModelProvider.overrideWith(
-          (ref, _) async => const JourneyViewModel(
+          (ref) async => const JourneyViewModel(
             curricula: <CurriculumJourney>[],
             totalCompletions: 0,
             totalUniqueUnits: 0,
@@ -734,17 +728,17 @@ void main() {
       path: '/progress/lifetime',
       extraOverrides: [
         lifetimeViewSummariesProvider.overrideWith(
-          (ref, _) async => <CurriculumCompletionSummary>[],
+          (ref) async => <CurriculumCompletionSummary>[],
         ),
         itemsLearnedSummariesProvider.overrideWith(
-          (ref, _) async => <CurriculumCompletionSummary>[],
+          (ref) async => <CurriculumCompletionSummary>[],
         ),
         lifetimeHeaderCountersProvider.overrideWith(
-          (ref, _) async =>
+          (ref) async =>
               const LifetimeHeaderCounters(itemsLearned: 0, totalChazaros: 0),
         ),
         trackOnlyHeaderCountersProvider.overrideWith(
-          (ref, _) async =>
+          (ref) async =>
               const LifetimeHeaderCounters(itemsLearned: 0, totalChazaros: 0),
         ),
       ],
@@ -805,7 +799,7 @@ void main() {
       identityFactory: () =>
           E2EIdentity.localBorn(displayName: 'RdmChild', profileMode: 'child'),
       extraOverrides: [
-        childRedemptionBalanceProvider.overrideWith((ref) => Stream.value(0)),
+        childRedemptionBalanceProvider.overrideWith((ref) => Future.value(0)),
         childRedemptionRewardsProvider.overrideWith((ref) async => []),
         dashboardStreakProvider.overrideWith(
           (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
@@ -835,16 +829,15 @@ void main() {
       identityFactory: () =>
           E2EIdentity.localBorn(displayName: 'PndParent', profileMode: 'child'),
       extraOverrides: [
-        // One-shot non-reactive to prevent Drift stream timer leaks.
         pendingRedemptionsProvider.overrideWith(
-          (ref) => Stream.fromFuture(Future.value(<RewardRedemption>[])),
+          (ref) => Stream.value(<RewardRedemptionEntity>[]),
         ),
         pendingRedemptionsCountProvider.overrideWith((ref) => Stream.value(0)),
         activeProfilePointsBalanceProvider.overrideWith(
-          (ref) => Stream.value(0),
+          (ref) => Future.value(0),
         ),
         activeTracksProvider.overrideWith(
-          (ref) => Stream.fromFuture(Future.value(<CurriculumTrack>[])),
+          (ref) => Stream.value(<CurriculumTrackEntity>[]),
         ),
         // Silence the 15-min periodic timer in StreakStateService.
         dashboardStreakProvider.overrideWith(
@@ -892,7 +885,7 @@ void main() {
       extraOverrides: [
         _englishTerms(),
         activeTracksProvider.overrideWith(
-          (ref) => Stream.value(<CurriculumTrack>[]),
+          (ref) => Stream.value(<CurriculumTrackEntity>[]),
         ),
         _noTutorPerms(),
         dashboardStreakProvider.overrideWith(
@@ -904,7 +897,8 @@ void main() {
 
   // ── 28: TrackDetailScreen ──────────────────────────────────────────────────
   //
-  // TrackDetailRoute requires a CurriculumTrack arg passed programmatically.
+  // TrackDetailRoute requires a CurriculumTrackEntity arg passed
+  // programmatically.
   // Sweeps the tightest matrix cell only (sufficient to catch structural overflow).
 
   testWidgets(
@@ -924,26 +918,14 @@ void main() {
           _englishTerms(),
           _noTutorPerms(),
           activeTracksProvider.overrideWith(
-            (ref) => Stream.value(<CurriculumTrack>[]),
+            (ref) => Stream.value(<CurriculumTrackEntity>[]),
           ),
         ],
       );
 
       final now = DateTimeFactory.nowUtc();
-      final trackId = await h.db
-          .into(h.db.curriculumTracks)
-          .insert(
-            CurriculumTracksCompanion.insert(
-              profileId: identity.profileId,
-              curriculumId: CurriculumId.mishnayos.storageKey,
-              stateChangedAt: now,
-              activatedAt: now,
-            ),
-          );
-      final track = CurriculumTrack(
-        id: trackId,
-        profileId: identity.profileId,
-        curriculumId: CurriculumId.mishnayos.storageKey,
+      final track = CurriculumTrackEntity(
+        curriculumId: CurriculumId.mishnayos,
         state: 'active',
         stateChangedAt: now,
         activatedAt: now,
@@ -981,7 +963,9 @@ void main() {
       label: 'ManageTutorsScreen',
       path: '/tutor/manage-tutors',
       extraOverrides: [
-        profileListProvider.overrideWith((ref) async => <ProfileModel>[]),
+        profileListProvider.overrideWith(
+          (ref) async => <LearnerProfileEntity>[],
+        ),
         outgoingTutorGrantsProvider.overrideWith(
           (ref, _) async => <TutorGrant>[],
         ),
@@ -1198,7 +1182,7 @@ void main() {
         extraOverrides: [
           ...h.dashboardSilenceOverrides,
           activeProfilePointsBalanceProvider.overrideWith(
-            (ref) => Stream.value(0),
+            (ref) => Future.value(0),
           ),
           pendingRedemptionsCountProvider.overrideWith(
             (ref) => Stream.value(0),
@@ -1239,7 +1223,7 @@ void main() {
         extraOverrides: [
           ...h.dashboardSilenceOverrides,
           activeTracksProvider.overrideWith(
-            (ref) => Stream.fromFuture(Future.value(<CurriculumTrack>[])),
+            (ref) => Stream.value(<CurriculumTrackEntity>[]),
           ),
           _noTutorPerms(),
         ],
@@ -1480,7 +1464,7 @@ void main() {
         extraOverrides: [
           ...h.dashboardSilenceOverrides,
           activeTracksProvider.overrideWith(
-            (ref) => Stream.fromFuture(Future.value(<CurriculumTrack>[])),
+            (ref) => Stream.value(<CurriculumTrackEntity>[]),
           ),
         ],
       );

@@ -37,12 +37,8 @@ import 'package:learning_tracker/core/preferences/preference_providers.dart'
         effectiveUseHebrewTermsProvider,
         useHebrewDateProvider,
         useHebrewTermsProvider;
-import 'package:learning_tracker/core/sync/providers/sync_status_providers.dart'
-    show syncStatusProvider;
 import 'package:learning_tracker/core/utils/date_utils.dart'
     show DateTimeFactory;
-import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart'
-    show connectivityStreamProvider;
 import 'package:learning_tracker/features/profiles/presentation/providers/parent_pin_session_provider.dart'
     show parentPinAuthenticatedProfileIdProvider;
 import 'package:learning_tracker/features/profiles/presentation/screens/parent_settings_screen.dart'
@@ -51,8 +47,6 @@ import 'package:learning_tracker/features/scheduler/presentation/providers/study
     show studyDayConfigsProvider;
 import 'package:learning_tracker/features/settings/presentation/screens/settings_screen.dart'
     show SettingsScreen;
-import 'package:learning_tracker/features/sync/domain/models/sync_status.dart'
-    show SyncStatus;
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart'
     show TutoredProfileSelection;
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart'
@@ -102,17 +96,6 @@ List<Override> _settingsSilencesNoPendingInvites(E2EHarness h) => [
   connectivityOnlineOverride(),
   incomingGrantsEmptyOverride(),
   // pendingTutorInvitesProvider is intentionally NOT overridden here.
-];
-
-/// Silence overrides for sync-status tests (E2E-923): omits the
-/// [connectivityStreamProvider] override so the test can supply its own
-/// offline connectivity override without a "provider overridden twice" error.
-List<Override> _settingsSilencesNoConnectivity(E2EHarness h) => [
-  ...h.dashboardSilenceOverrides,
-  sacredWindowNullOverride(),
-  incomingGrantsEmptyOverride(),
-  pendingInvitesEmptyOverride(),
-  // connectivityStreamProvider is intentionally NOT overridden here.
 ];
 
 /// Navigate to the Settings tab and let async providers settle.
@@ -178,7 +161,7 @@ void main() {
           canEditStudyDays: true,
           canEditPoints: true,
         ),
-        tutorOwnProfileId: 1,
+        tutorOwnProfileId: 'tutor-own-904',
       );
 
       await h.pumpApp(
@@ -374,64 +357,17 @@ void main() {
 
   // ── E2E-908 ─────────────────────────────────────────────────────────────────
 
-  group('E2E-908 — Cloud user sees "Synced" status in Backup+Sync section', () {
-    // BackupSyncSection renders the cloud status card when syncStatusProvider
-    // returns SyncStatusSynced. The card subtitle is
-    // l10n.backupLastSynced(timeAgo) — which resolves to "Just now" or a
-    // relative timestamp.
-    //
-    // Override syncStatusProvider directly. The harness already nulls
-    // syncOrchestratorProvider; BackupSyncSection.initState checks
-    // authState.isCloudBorn before calling pullOnLaunch and skips it for
-    // localBorn sessions — no pullOnLaunch fires, safe headlessly.
-    //
-    // R-ST4: BackupSyncSection renders the synced card for any non-LocalOnly
-    // SyncStatus, regardless of the auth tier.
-    testWidgets('BackupSyncSection shows cloud-sync "Backup & Sync" card with '
-        'a "Just now" or relative timestamp when syncStatus is Synced', (
-      tester,
-    ) async {
-      final identity = E2EIdentity.localBorn(
-        email: 'clouduser908@test.com',
-        displayName: 'CloudUser908',
-        profileMode: 'adult',
+  group(
+    'E2E-908 — Cloud user sees "Synced" status in Backup+Sync section',
+    skip:
+        'Retired: tests the deleted Drift→Firestore sync engine status card. See commit 04897ebc.',
+    () {
+      testWidgets(
+        'placeholder for retired sync-status coverage',
+        (tester) async {},
       );
-      final h = E2EHarness(tester, identity: identity);
-      addTearDown(h.dispose);
-
-      final lastSynced = DateTimeFactory.nowUtc();
-
-      // The harness already overrides syncOrchestratorProvider → null and
-      // authStateProvider → localBorn, so we do NOT re-override those here
-      // (would crash with "provider overridden twice").
-      // BackupSyncSection renders the cloud-status card whenever syncStatus is
-      // not SyncStatusLocalOnly, regardless of the auth tier.
-      await h.pumpApp(
-        path: '/dashboard',
-        extraOverrides: [
-          ..._settingsSilences(h),
-          syncStatusProvider.overrideWithValue(
-            SyncStatus.synced(lastSyncedAt: lastSynced),
-          ),
-        ],
-      );
-
-      await _goToSettings(h);
-      await _scrollSettingsToBottom(tester);
-      await h.pump(const Duration(milliseconds: 400));
-
-      // Card title always present.
-      h.expectOnScreen('Backup & Sync', routeName: 'BackupSyncSection');
-
-      // The synced subtitle contains "Just now" or a relative timestamp;
-      // check the card title is the cloud-sync variant (not "LOCAL ONLY").
-      expect(
-        find.textContaining('LOCAL ONLY'),
-        findsNothing,
-        reason: 'Cloud synced user must NOT see LOCAL ONLY card',
-      );
-    });
-  });
+    },
+  );
 
   // ── E2E-909 ─────────────────────────────────────────────────────────────────
   //
@@ -442,14 +378,17 @@ void main() {
   // regression (see backup_sync_section.dart's class-level doc comment); the
   // replacement is AD-30's per-item recovery affordance, landing in Phase 3.
 
-  group('E2E-909 — Sync error state: tap-to-retry triggers orchestrator', () {
-    testWidgets(
-      'SKIP retired (Story 1.5 / AD-11): the error card and its '
-      'tap-to-retry affordance were removed',
-      skip: true,
-      (tester) async {},
-    );
-  });
+  group(
+    'E2E-909 — Sync error state: tap-to-retry triggers orchestrator',
+    skip:
+        'Retired: tests the deleted Drift→Firestore sync engine orchestrator and error status. See commit 04897ebc.',
+    () {
+      testWidgets(
+        'placeholder for retired sync-status coverage',
+        (tester) async {},
+      );
+    },
+  );
 
   // ── E2E-915 ─────────────────────────────────────────────────────────────────
 
@@ -477,7 +416,7 @@ void main() {
       // profileId for the first Drift insert is always 1 (E2EHarness pattern).
       // Override parentPinAuthenticatedProfileIdProvider to that id so
       // _ParentalControlsSection sees inParentMode = true.
-      const profileId = 1;
+      final profileId = identity.profileId;
 
       await h.pumpApp(
         path: '/dashboard',
@@ -489,7 +428,7 @@ void main() {
             (ref) => Stream.value(0),
           ),
           activeProfilePointsBalanceProvider.overrideWith(
-            (ref) => Stream.value(0),
+            (ref) => Future.value(0),
           ),
           // Simulate parent mode already entered for this profile.
           parentPinAuthenticatedProfileIdProvider.overrideWithValue(profileId),
@@ -850,58 +789,13 @@ void main() {
 
   group(
     'E2E-923 — Offline state: Backup+Sync section shows "Offline" card',
+    skip:
+        'Retired: tests the deleted Drift→Firestore sync engine status card. See commit 04897ebc.',
     () {
-      // BackupSyncSection renders l10n.backupOffline = "Offline" when
-      // syncStatusProvider returns SyncStatusOffline.
-      //
-      // Also inject connectivityStreamProvider = false (offline) to simulate
-      // the network state the user would be in.
-      testWidgets('BackupSyncSection shows "Offline" status when syncStatus is '
-          'SyncStatusOffline', (tester) async {
-        final identity = E2EIdentity.localBorn(
-          email: 'offline923@test.com',
-          displayName: 'Offline923',
-          profileMode: 'adult',
-        );
-        final h = E2EHarness(tester, identity: identity);
-        addTearDown(h.dispose);
-
-        const offlineStatus = SyncStatus.offline();
-
-        // Use silences without connectivity override so we can set offline
-        // below. The harness already overrides syncOrchestratorProvider → null
-        // and authStateProvider → localBorn, so we do NOT re-override those.
-        await h.pumpApp(
-          path: '/dashboard',
-          extraOverrides: [
-            ..._settingsSilencesNoConnectivity(h),
-            // Override connectivity to offline.
-            connectivityStreamProvider.overrideWith(
-              (ref) => Stream.value(false),
-            ),
-            syncStatusProvider.overrideWithValue(offlineStatus),
-          ],
-        );
-
-        await _goToSettings(h);
-        await _scrollSettingsToBottom(tester);
-        await h.pump(const Duration(milliseconds: 400));
-
-        // Card title present.
-        h.expectOnScreen('Backup & Sync', routeName: 'BackupSyncSection');
-
-        // Offline subtitle — l10n.backupOffline = "Offline".
-        h.expectOnScreen('Offline');
-      });
-
-      // Story 1.5 / AD-11 (owner-ratified, 2026-08-02): `SyncStatus.offline`
-      // no longer carries a `pendingChanges` count — the union has no field
-      // for it. Queued-but-offline work now surfaces identically to any
-      // other offline state ("Offline", no count); once connectivity is
-      // fine again with rows still queued, it is covered by the `syncing`
-      // case (backup_sync_section_l1_test.dart), not a distinct offline
-      // variant. The former "pending-changes count while offline" sub-test
-      // was retired along with that field.
+      testWidgets(
+        'placeholder for retired sync-status coverage',
+        (tester) async {},
+      );
     },
   );
 }
