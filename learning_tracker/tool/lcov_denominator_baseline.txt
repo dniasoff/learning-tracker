@@ -15,13 +15,12 @@ lib/app/bootstrap/logger_bootstrap.dart
 lib/app/bootstrap/notifications_bootstrap.dart
 lib/app/learning_tracker_app.dart
 lib/app/router/app_router.gr.dart
-lib/app/sync_runtime/sync_lifecycle_observer.dart
 lib/core/auth/firebase_auth_gateway.dart
 lib/core/content/hierarchy_selection.dart
 lib/core/database/content_db_health_checker.dart
+lib/core/database/registry/path_uid_resolver.dart
 lib/core/database/seed/learning_program_seeds.dart
 lib/core/database/seed_version.dart
-lib/core/database/track_scope.dart
 lib/core/enums/cross_profile_scope.dart
 lib/core/exceptions/validation_exception.dart
 lib/core/ids/ids.dart
@@ -30,8 +29,6 @@ lib/core/network/sefaria/models/content_item.dart
 lib/core/providers/active_account_id_provider.dart
 lib/core/providers/active_profile_doc_id_provider.dart
 lib/core/providers/firebase_providers.dart
-lib/core/sync/outbox/push_pipeline.dart
-lib/core/sync/sync_write_facade.dart
 lib/features/account/account.dart
 lib/features/account/domain/repositories/auth_repository.dart
 lib/features/content_browsing/content_browsing.dart
@@ -49,7 +46,6 @@ lib/features/notifications/notifications.dart
 lib/features/notifications/presentation/widgets/timezone_lifecycle_observer.dart
 lib/features/onboarding/onboarding.dart
 lib/features/profiles/domain/services/pin_flow_machine.dart
-lib/features/profiles/presentation/providers/parent_dashboard_providers.dart
 lib/features/profiles/profiles.dart
 lib/features/progress/domain/repositories/progress_repository.dart
 lib/features/progress/domain/services/overlapping_curricula_deduplicator.dart
@@ -64,7 +60,6 @@ lib/features/scheduler/domain/models/pace_status.dart
 lib/features/scheduler/domain/models/schedule_config.dart
 lib/features/scheduler/domain/models/scheduler_analysis.dart
 lib/features/scheduler/domain/models/scheduler_input.dart
-lib/features/scheduler/domain/models/study_day_config.dart
 lib/features/scheduler/domain/models/task_assembly.dart
 lib/features/scheduler/domain/projection/projection.dart
 lib/features/scheduler/domain/repositories/goal_repository.dart
@@ -73,11 +68,10 @@ lib/features/scheduler/domain/repositories/scheduler_learning_order_repository.d
 lib/features/scheduler/domain/repositories/scheduler_stage_repository.dart
 lib/features/scheduler/scheduler.dart
 lib/features/settings/settings.dart
-lib/features/sync/domain/models/restore_phase.dart
-lib/features/sync/domain/models/restore_status.dart
-lib/features/sync/domain/models/sync_error_code.dart
-lib/features/sync/domain/models/sync_status.dart
 lib/features/tracks/setup/domain/entities/add_track_result.dart
+lib/features/tracks/setup/domain/repositories/curriculum_scope_write_repository.dart
+lib/features/tracks/setup/domain/repositories/profile_program_repository.dart
+lib/features/tracks/setup/domain/repositories/study_day_write_repository.dart
 lib/features/tracks/stages/domain/repositories/stage_definition_repository.dart
 lib/features/tracks/track_order/domain/repositories/track_learning_order_repository.dart
 lib/features/tracks/tracks.dart
