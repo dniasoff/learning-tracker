@@ -905,8 +905,10 @@ Status: ready-for-dev
     final bookmarkRepoFile = File(
       '$packageDir/lib/data/repositories/firestore_bookmark_repository.dart',
     );
-    final syncFixtureFile = File(
-      '$packageDir/lib/core/sync/_profile_path_keying_ac1_fixture.dart',
+    // The old INT bucket lived under lib/core/sync/, which was archived with
+    // the Drift sync engine. Cloud Functions is the live INT bucket now.
+    final functionsFixtureFile = File(
+      '$packageDir/functions/src/_profile_path_keying_ac1_fixture.ts',
     );
     const fixtureCollectionName = 'some_new_test_collection_xyz';
     const fixtureMarkerLine =
@@ -929,12 +931,16 @@ Status: ready-for-dev
 
     setUp(() {
       stripMarkerIfPresent();
-      if (syncFixtureFile.existsSync()) syncFixtureFile.deleteSync();
+      if (functionsFixtureFile.existsSync()) {
+        functionsFixtureFile.deleteSync();
+      }
     });
 
     tearDown(() {
       stripMarkerIfPresent();
-      if (syncFixtureFile.existsSync()) syncFixtureFile.deleteSync();
+      if (functionsFixtureFile.existsSync()) {
+        functionsFixtureFile.deleteSync();
+      }
     });
 
     test(
@@ -975,7 +981,7 @@ Status: ready-for-dev
     );
 
     test('AC1 (red-demo, "the grep must have teeth"): a throwaway '
-        'cross-tree touch for a brand-new collection — an INT (sync-engine) '
+        'cross-tree touch for a brand-new collection — an INT (Cloud Functions) '
         'literal plus a liveness-reachable ULID literal — flips the checker '
         'from clean to FAILED; removing both restores a clean pass', () async {
       final tempDir = await Directory.systemTemp.createTemp(
@@ -1001,7 +1007,7 @@ Status: ready-for-dev
           bookmarkRepoFile.writeAsStringSync(
             '$originalBookmarkContent\n$fixtureMarkerLine',
           );
-          syncFixtureFile.writeAsStringSync('''
+          functionsFixtureFile.writeAsStringSync('''
 /// AC1 red-demo fixture for tool/check_profile_path_keying.dart's
 /// meta-test (test/tool/audit_and_arb_parity_test.dart). Deleted by the
 /// test's tearDown/finally; must never be committed.
@@ -1022,7 +1028,9 @@ const someNewTestCollectionXyzIntTouch = '$fixtureCollectionName';
           expect(dirty.stderr.toString(), contains(fixtureCollectionName));
         } finally {
           bookmarkRepoFile.writeAsStringSync(originalBookmarkContent);
-          if (syncFixtureFile.existsSync()) syncFixtureFile.deleteSync();
+          if (functionsFixtureFile.existsSync()) {
+            functionsFixtureFile.deleteSync();
+          }
         }
 
         final clean = await runFixtureCheck();

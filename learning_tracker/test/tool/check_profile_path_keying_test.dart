@@ -53,7 +53,7 @@ void main() {
   group(
     'tool/check_profile_path_keying.dart — step 0 (registry self-check)',
     () {
-      // The real 17-name registry, mirrored here ONLY to build fixture
+      // The real 18-name registry, mirrored here ONLY to build fixture
       // firestore.rules snippets — never asserted as a magic count, always
       // spelled out so a reviewer can see exactly what's being checked.
       const realCollections = [
@@ -64,6 +64,7 @@ void main() {
         'reward_redemptions',
         'settings',
         'stage_definitions',
+        'point_configs',
         'curriculum_tracks',
         'bookmarks',
         'learning_order',
