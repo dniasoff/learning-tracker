@@ -739,9 +739,11 @@ void main() {
         '(replaces the previously swallowed empty catch)', () async {
       final container = ProviderContainer(
         overrides: [
-          firestoreAccountRepositoryProvider.overrideWith(
-            (ref) => throw const _StubDatabaseFailure('offline restore failed'),
-          ),
+          // A synchronous throw from a FutureProvider is retried by
+          // Riverpod's default retry policy and makes this catch-path test
+          // wait indefinitely. The migrated adapter turns a resolved null
+          // repository into the same failure synchronously, without retry.
+          firestoreAccountRepositoryProvider.overrideWith((ref) async => null),
         ],
       );
       addTearDown(container.dispose);
@@ -773,7 +775,7 @@ void main() {
             '${AppLogger.instance.talker.history.map((e) => e.generateTextMessage()).toList()}',
       );
       expect(
-        entries.any((m) => m.contains('offline db swap failed')),
+        entries.any((m) => m.contains('AccountRepositoryNotReadyException')),
         isTrue,
         reason:
             'Expected the underlying exception message to be attached. '

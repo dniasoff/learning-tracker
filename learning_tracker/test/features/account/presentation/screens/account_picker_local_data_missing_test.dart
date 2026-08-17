@@ -132,10 +132,11 @@ Widget _buildApp({
       deviceRegistryProvider.overrideWithValue(registry),
       authRepositoryProvider.overrideWithValue(auth),
       firestoreAccountRepositoryProvider.overrideWith(
-        (ref) async => FirestoreAccountRepository(
-          firestore: firestore,
-          uid: 'fb-uid-missing',
-        ),
+        // The migrated adapter creates a placeholder when the repository
+        // resolves successfully but its users/{uid} document is absent. To
+        // exercise the picker error contract, make the account-scoped seam
+        // unavailable as it is when the local Firestore path cannot resolve.
+        (ref) async => null,
       ),
       if (connectivity != null)
         internetConnectionCheckerProvider.overrideWithValue(connectivity),

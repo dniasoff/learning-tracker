@@ -400,7 +400,7 @@ void main() {
       // Save an "addTrack" phase snapshot so the screen resumes directly there.
       SharedPreferences.setMockInitialValues({
         'onboarding_phase': 'addTrack',
-        'onboarding_profile_id': 5,
+        'onboarding_profile_id': '01J9V8J5Q2K7M3N6P4R8T1WXYZ',
         'onboarding_profile_name': 'Avraham',
         'onboarding_profile_mode': 'adult',
         'onboarding_use_hebrew_calendar': true,
@@ -429,7 +429,7 @@ void main() {
     ) async {
       SharedPreferences.setMockInitialValues({
         'onboarding_phase': 'calendarPreference',
-        'onboarding_profile_id': 3,
+        'onboarding_profile_id': '01J9V8J5Q2K7M3N6P4R8T1WXYA',
         'onboarding_profile_name': 'Yosef',
         'onboarding_profile_mode': 'adult',
         'onboarding_use_hebrew_calendar': true,
@@ -459,7 +459,7 @@ void main() {
       // Pre-load the screen to intentChooser phase via saved state
       SharedPreferences.setMockInitialValues({
         'onboarding_phase': 'intentChooser',
-        'onboarding_profile_id': 2,
+        'onboarding_profile_id': '01J9V8J5Q2K7M3N6P4R8T1WXYB',
         'onboarding_profile_name': 'Moshe',
         'onboarding_profile_mode': 'adult',
         'onboarding_use_hebrew_calendar': true,
@@ -491,7 +491,7 @@ void main() {
     ) async {
       SharedPreferences.setMockInitialValues({
         'onboarding_phase': 'addAnotherPrompt',
-        'onboarding_profile_id': 2,
+        'onboarding_profile_id': '01J9V8J5Q2K7M3N6P4R8T1WXYC',
         'onboarding_profile_name': 'Moshe',
         'onboarding_profile_mode': 'adult',
         'onboarding_use_hebrew_calendar': true,
@@ -517,7 +517,7 @@ void main() {
     testWidgets('shows child name in heading', (tester) async {
       SharedPreferences.setMockInitialValues({
         'onboarding_phase': 'handoff',
-        'onboarding_profile_id': 4,
+        'onboarding_profile_id': '01J9V8J5Q2K7M3N6P4R8T1WXYD',
         'onboarding_profile_name': 'Yitzchak',
         'onboarding_profile_mode': 'child',
         'onboarding_use_hebrew_calendar': true,

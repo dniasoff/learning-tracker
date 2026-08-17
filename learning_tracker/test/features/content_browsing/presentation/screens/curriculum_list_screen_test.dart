@@ -4,8 +4,10 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
+import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/screens/curriculum_list_screen.dart';
@@ -40,6 +42,9 @@ void main() {
   Widget createTestWidget({
     required ContentRepository repository,
     _MockStackRouter? router,
+    bool useHebrewTerms = true,
+    TransliterationVariant transliterationVariant =
+        TransliterationVariant.ashkenazi,
   }) {
     final home = router == null
         ? const CurriculumListScreen()
@@ -54,6 +59,12 @@ void main() {
         // Override the completion percentage provider to avoid DB dependency
         dashboardCompletionPercentageProvider.overrideWith(
           (ref, curriculum) async => 0.0,
+        ),
+        // Preferences are now keyed by the selected profile's ULID; seed the
+        // providers directly instead of relying on the retired p0 keys.
+        useHebrewTermsProvider.overrideWithValue(useHebrewTerms),
+        currentTransliterationVariantProvider.overrideWithValue(
+          transliterationVariant,
         ),
       ],
       child: MaterialApp(
@@ -175,7 +186,13 @@ void main() {
           }
         }
 
-        await tester.pumpWidget(createTestWidget(repository: mockRepo));
+        await tester.pumpWidget(
+          createTestWidget(
+            repository: mockRepo,
+            useHebrewTerms: false,
+            transliterationVariant: TransliterationVariant.sephardi,
+          ),
+        );
         await tester.pumpAndSettle();
 
         // Count labels carry the Sephardi forms ("1 Masekhtot" container

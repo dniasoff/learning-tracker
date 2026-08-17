@@ -166,16 +166,16 @@ void main() {
       expect(find.text('OR'), findsOneWidget);
     });
 
-    testWidgets('offline stream shows local warning and offline CTA', (
+    testWidgets('offline stream shows no-connection warning and retry CTA', (
       tester,
     ) async {
       await tester.pumpWidget(createTestWidgetWithRegistry(online: false));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
-      expect(find.textContaining('no cloud backup'), findsOneWidget);
+      expect(find.textContaining('No connection'), findsOneWidget);
       expect(
-        find.widgetWithText(FilledButton, 'Create Offline Account'),
+        find.widgetWithText(TextButton, 'Retry connection'),
         findsOneWidget,
       );
     });
@@ -390,7 +390,7 @@ void main() {
       },
     );
 
-    testWidgets('Hebrew offline mode: local-only warning card renders in Hebrew', (
+    testWidgets('Hebrew offline mode: no-connection warning card renders in Hebrew', (
       tester,
     ) async {
       await tester.pumpWidget(
@@ -399,21 +399,21 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
-      // Hebrew for authModeLocalTitle (unique substring for the title card).
+      // Hebrew for appErrorViewNoConnectionTitle.
       expect(
-        find.textContaining('חשבון מקומי בלבד'),
+        find.textContaining('אין חיבור'),
         findsOneWidget,
         reason:
-            'iter9 l10n: authModeLocalTitle must render in Hebrew for offline mode',
+            'offline no-connection title must render in Hebrew',
       );
-      // Hebrew CTA for createOfflineAccount.
+      // Hebrew retry CTA.
       expect(
-        find.widgetWithText(FilledButton, 'צור חשבון לא מקוון'),
+        find.widgetWithText(TextButton, 'נסו להתחבר שוב'),
         findsOneWidget,
         reason:
-            'iter9 l10n: createOfflineAccount CTA must render in Hebrew for offline mode',
+            'offline retry CTA must render in Hebrew',
       );
-      // English literal must be absent.
+      // The old local-account copy must remain absent.
       expect(
         find.text('Local account only: no cloud backup and no device sync.'),
         findsNothing,

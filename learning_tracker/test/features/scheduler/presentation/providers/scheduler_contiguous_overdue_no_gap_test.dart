@@ -3,6 +3,7 @@ library;
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
@@ -16,6 +17,8 @@ import 'package:learning_tracker/features/scheduler/domain/services/calendar_pro
 import 'package:learning_tracker/features/scheduler/domain/services/local_calendar_engine.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
+import 'package:learning_tracker/features/tracks/setup/data/repositories/curriculum_track_repository_impl.dart';
+import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart';
 import 'package:learning_tracker/features/tracks/stages/domain/models/stage_definition.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -29,6 +32,8 @@ const _profileId = '01J9V8J5Q2K7M3N6P4R8T1WXYZ';
 class _FirebaseApp extends Mock implements FirebaseApp {}
 
 class _FirebaseAuth extends Mock implements FirebaseAuth {}
+
+class _MockFirebaseFunctions extends Mock implements FirebaseFunctions {}
 
 class _ProfileId extends ActiveProfileId {
   @override
@@ -130,6 +135,12 @@ Future<ProviderContainer> _container(DateTime now) async {
     retry: (_, __) => null,
     overrides: [
       activeAccountFirebaseProvider.overrideWith((ref) async => handles),
+      curriculumTrackRepositoryAdapterProvider.overrideWith(
+        (ref) => FirestoreCurriculumTrackRepositoryAdapter(
+          ref: ref,
+          functions: _MockFirebaseFunctions(),
+        ),
+      ),
       activeProfileIdProvider.overrideWith(_ProfileId.new),
       activeProfileDocIdProvider.overrideWith(_ProfileDocId.new),
       clockProvider.overrideWith((ref) => now),

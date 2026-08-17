@@ -105,7 +105,13 @@ Widget _buildScreen({
       locale.languageCode == 'he' ? _HebrewTermsOn.new : _HebrewTermsOff.new,
     ),
     allDailyTasksProvider.overrideWith(
-      (ref) => tasksFactory != null ? tasksFactory() : Future.value(tasks),
+      (ref) async {
+        final skipped = ref.watch(skippedTasksProvider);
+        final resolved = tasksFactory != null ? await tasksFactory() : tasks;
+        return resolved
+            .where((task) => !skipped.contains(task.contentItemSefariaRef))
+            .toList();
+      },
     ),
     schedulerTaskSectionProvider.overrideWith(() {
       final n = SchedulerTaskSectionNotifier();

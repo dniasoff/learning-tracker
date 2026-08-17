@@ -159,10 +159,17 @@ Widget _buildApp({
         () => _FakeTransliterationVariant(),
       ),
       allDailyTasksProvider.overrideWith((ref) => Future.value(tasks)),
-      trackStorageKeyForTrackIdProvider.overrideWith(
-        (ref, trackId) async => 'personal',
-      ),
-      isStageCompletedProvider.overrideWith((ref, params) async => isCompleted),
+      trackStorageKeyForTrackIdProvider(
+        CurriculumId.mishnayos,
+      ).overrideWithValue(const AsyncData<String>('personal')),
+      // Override the concrete family instance consumed by the footer. The
+      // migrated provider's family-wide override does not intercept this
+      // manually declared family in Riverpod 3.
+      isStageCompletedProvider((
+        sefariaRef: _kRef,
+        stageId: 1,
+        trackType: 'personal',
+      )).overrideWith((ref) async => isCompleted),
       completionCommittedProvider.overrideWith(
         () => _FakeCompletionCommitted(),
       ),
