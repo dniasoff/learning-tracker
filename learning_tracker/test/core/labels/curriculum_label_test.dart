@@ -23,6 +23,7 @@ void main() {
     });
     return ProviderScope(
       overrides: [
+        useHebrewTermsProvider.overrideWithValue(hebrewTermsScript),
         if (variant != null)
           currentTransliterationVariantProvider.overrideWithValue(variant),
         ...overrides,

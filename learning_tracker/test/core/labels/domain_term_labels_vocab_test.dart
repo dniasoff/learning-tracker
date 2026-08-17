@@ -18,6 +18,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Pumps a [ProviderScope] + [Consumer] and yields a [DomainTermLabels]-shaped
@@ -32,6 +33,7 @@ Future<T> _renderWithToggle<T>({
   T? captured;
   await tester.pumpWidget(
     ProviderScope(
+      overrides: [useHebrewTermsProvider.overrideWithValue(hebrewOn)],
       child: MaterialApp(
         home: Scaffold(
           body: Consumer(

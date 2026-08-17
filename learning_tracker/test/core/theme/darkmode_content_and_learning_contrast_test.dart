@@ -44,6 +44,7 @@ import 'dart:math' as math;
 
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
@@ -286,7 +287,9 @@ Widget _pumpTextDisplayScreen({
     trackStorageKeyForTrackIdProvider.overrideWith(
       (ref, trackId) async => 'personal',
     ),
-    isStageCompletedProvider.overrideWith((ref, params) async => false),
+    isStageCompletedProvider(
+      (sefariaRef: _kRef, stageId: 1, trackType: 'personal'),
+    ).overrideWithValue(const AsyncData(false)),
     completionCommittedProvider.overrideWith(_FakeCompletionCommitted.new),
     dashboardUserModeProvider.overrideWith((ref) async => ProfileMode.adult),
     activeTutoredProfileSelectionProvider.overrideWith(

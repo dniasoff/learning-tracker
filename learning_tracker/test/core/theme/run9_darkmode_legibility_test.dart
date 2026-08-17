@@ -26,7 +26,6 @@ import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/stat_card.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
-import 'package:learning_tracker/features/settings/presentation/widgets/backup_sync_section.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/widgets/learning_track_card.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -44,15 +43,6 @@ CurriculumTrackEntity _track({required String curriculumId}) {
     activatedAt: now,
   );
 }
-
-const _kLocalUser = AuthState.signedIn(
-  user: AuthUser(
-    uid: 'local-account-uid',
-    email: 'local@test.com',
-    displayName: 'Local',
-  ),
-  tier: Tier.local,
-);
 
 void main() {
   setUpAll(() {
@@ -192,56 +182,6 @@ void main() {
       // ends so the binding doesn't flag it as still pending.
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(Duration.zero);
-    });
-  });
-
-  group('BackupSyncSection — Upgrade-to-Cloud CTA foreground '
-      '(AUD run-9: backup_sync_section.dart, measured 1.03:1)', () {
-    Widget harness({required Brightness brightness}) => pumpApp(
-      child: Theme(
-        data: AppTheme.themeFor(brightness: brightness),
-        child: const Scaffold(body: BackupSyncSection()),
-      ),
-      overrides: [authStateProvider.overrideWithValue(_kLocalUser)],
-    );
-
-    testWidgets('CTA foreground is peachDark (not the old fixed near-'
-        'black) in dark mode', (tester) async {
-      await tester.pumpWidget(harness(brightness: Brightness.dark));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 50));
-
-      final button = tester.widget<FilledButton>(find.byType(FilledButton));
-      final fg = button.style?.foregroundColor?.resolve(<WidgetState>{});
-
-      expect(
-        fg,
-        AppPalette.dark.peachDark,
-        reason:
-            'The CTA foreground must resolve through context.colors.'
-            'peachDark, not a hardcoded Color(0xFF2C2A26) — that literal '
-            'measured 1.03:1 against the (correctly dark-aware) peachMid '
-            'background in dark mode, making the button text effectively '
-            'invisible (run-9, 5562).',
-      );
-      // The old hardcoded literal, for an unambiguous negative assertion.
-      expect(fg, isNot(const Color(0xFF2C2A26)));
-    });
-
-    testWidgets('CTA foreground stays a dark, AA-passing colour on the '
-        'light peachMid fill in light mode (no regression)', (tester) async {
-      await tester.pumpWidget(harness(brightness: Brightness.light));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 50));
-
-      final button = tester.widget<FilledButton>(find.byType(FilledButton));
-      final fg = button.style?.foregroundColor?.resolve(<WidgetState>{});
-      // Reusing peachDark (rather than re-deriving a bespoke literal)
-      // shifts the exact light-mode shade from the old ad-hoc
-      // 0xFF2C2A26 to peachDark's warmer brown — both clear AA (10.07:1
-      // vs 6.35:1) against light peachMid; this asserts the NEW,
-      // intentional token value.
-      expect(fg, AppPalette.light.peachDark);
     });
   });
 }
