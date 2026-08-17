@@ -38,7 +38,7 @@ import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/features/notifications/domain/models/reminder_preferences.dart';
 import 'package:learning_tracker/features/notifications/domain/repositories/notification_preferences_repository.dart';
 import 'package:learning_tracker/features/notifications/presentation/providers/notification_providers.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/progress/domain/models/lifetime_knowledge.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/lifetime_folder_styled_widgets.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart';
@@ -1196,7 +1196,7 @@ void main() {
 
     test('default state is true', () async {
       final container = ProviderContainer(
-        overrides: [activeProfileIdProvider.overrideWithValue('1')],
+        overrides: [selectedProfileIdProvider.overrideWithValue('1')],
       );
       addTearDown(container.dispose);
 
@@ -1209,7 +1209,7 @@ void main() {
       });
 
       final container = ProviderContainer(
-        overrides: [activeProfileIdProvider.overrideWithValue('1')],
+        overrides: [selectedProfileIdProvider.overrideWithValue('1')],
       );
       addTearDown(container.dispose);
 
@@ -1225,7 +1225,7 @@ void main() {
       });
 
       final container = ProviderContainer(
-        overrides: [activeProfileIdProvider.overrideWithValue('1')],
+        overrides: [selectedProfileIdProvider.overrideWithValue('1')],
       );
       addTearDown(container.dispose);
 
@@ -1247,7 +1247,7 @@ void main() {
       });
 
       final container = ProviderContainer(
-        overrides: [activeProfileIdProvider.overrideWithValue('2')],
+        overrides: [selectedProfileIdProvider.overrideWithValue('2')],
       );
       addTearDown(container.dispose);
 
@@ -1272,7 +1272,7 @@ void main() {
       'default state matches ReminderPreferences.defaultReminderHour/Minute',
       () async {
         final container = ProviderContainer(
-          overrides: [activeProfileIdProvider.overrideWithValue('1')],
+          overrides: [selectedProfileIdProvider.overrideWithValue('1')],
         );
         addTearDown(container.dispose);
 
@@ -1293,7 +1293,7 @@ void main() {
       });
 
       final container = ProviderContainer(
-        overrides: [activeProfileIdProvider.overrideWithValue('1')],
+        overrides: [selectedProfileIdProvider.overrideWithValue('1')],
       );
       addTearDown(container.dispose);
 
@@ -1306,7 +1306,7 @@ void main() {
 
     test('setTime() persists hour and minute to SharedPreferences', () async {
       final container = ProviderContainer(
-        overrides: [activeProfileIdProvider.overrideWithValue('1')],
+        overrides: [selectedProfileIdProvider.overrideWithValue('1')],
       );
       addTearDown(container.dispose);
 
@@ -1333,7 +1333,7 @@ void main() {
 
     test('default state is true', () async {
       final container = ProviderContainer(
-        overrides: [activeProfileIdProvider.overrideWithValue('1')],
+        overrides: [selectedProfileIdProvider.overrideWithValue('1')],
       );
       addTearDown(container.dispose);
 
@@ -1346,7 +1346,7 @@ void main() {
       });
 
       final container = ProviderContainer(
-        overrides: [activeProfileIdProvider.overrideWithValue('1')],
+        overrides: [selectedProfileIdProvider.overrideWithValue('1')],
       );
       addTearDown(container.dispose);
 
@@ -1374,7 +1374,7 @@ void main() {
       'default time matches ReminderPreferences.defaultStreakAlert values',
       () async {
         final container = ProviderContainer(
-          overrides: [activeProfileIdProvider.overrideWithValue('1')],
+          overrides: [selectedProfileIdProvider.overrideWithValue('1')],
         );
         addTearDown(container.dispose);
 
@@ -1396,7 +1396,7 @@ void main() {
       });
 
       final container = ProviderContainer(
-        overrides: [activeProfileIdProvider.overrideWithValue('1')],
+        overrides: [selectedProfileIdProvider.overrideWithValue('1')],
       );
       addTearDown(container.dispose);
 
@@ -1427,7 +1427,7 @@ void main() {
 
     test('default state is true', () async {
       final container = ProviderContainer(
-        overrides: [activeProfileIdProvider.overrideWithValue('1')],
+        overrides: [selectedProfileIdProvider.overrideWithValue('1')],
       );
       addTearDown(container.dispose);
 
@@ -1444,7 +1444,7 @@ void main() {
       });
 
       final container = ProviderContainer(
-        overrides: [activeProfileIdProvider.overrideWithValue('1')],
+        overrides: [selectedProfileIdProvider.overrideWithValue('1')],
       );
       addTearDown(container.dispose);
 
@@ -1473,10 +1473,10 @@ void main() {
 
     test('two profiles have independent ReminderEnabled state', () async {
       final containerA = ProviderContainer(
-        overrides: [activeProfileIdProvider.overrideWithValue('10')],
+        overrides: [selectedProfileIdProvider.overrideWithValue('10')],
       );
       final containerB = ProviderContainer(
-        overrides: [activeProfileIdProvider.overrideWithValue('20')],
+        overrides: [selectedProfileIdProvider.overrideWithValue('20')],
       );
       addTearDown(containerA.dispose);
       addTearDown(containerB.dispose);
