@@ -56,9 +56,9 @@ class UserProfileHeaderCard extends ConsumerWidget {
     // used to be a ConsumerStatefulWidget solely to re-derive this from
     // `widget.user` in initState/didUpdateWidget).
     final user = this.user;
+    final authState = ref.watch(authStateProvider);
 
     if (user == null) {
-      final authState = ref.watch(authStateProvider);
       // Show the "not signed in" placeholder only when there is no active
       // session. For signed-in users the placeholder text is misleading.
       if (!authState.isSignedIn) {
@@ -73,10 +73,13 @@ class UserProfileHeaderCard extends ConsumerWidget {
           ),
         );
       }
-      // A signed-in user with user==null is a transient loading state
-      // (Firebase user not yet resolved). Return an empty widget to avoid
-      // showing a misleading "Not signed in" label.
-      return const SizedBox.shrink();
+      // Local-born accounts have no Firebase AppUser, but AuthState still
+      // carries their account identity. Keep the account header visible for
+      // that supported signed-in state; cloud-born sessions with a transiently
+      // unavailable Firebase user remain empty until it resolves.
+      if (!authState.isLocalBorn || authState.currentUser == null) {
+        return const SizedBox.shrink();
+      }
     }
 
     final activeProfileId = ref.watch(activeProfileIdProvider);
@@ -84,11 +87,14 @@ class UserProfileHeaderCard extends ConsumerWidget {
     // (same self-reference rule as `user` above).
     final activeProfile =
         this.activeProfile ?? _watchActiveProfileFromList(ref, activeProfileId);
+    final localAuthUser = user == null ? authState.currentUser : null;
 
     final displayName =
         activeProfile?.displayName ??
-        user.displayName ??
-        user.email?.split('@').first ??
+        user?.displayName ??
+        localAuthUser?.displayName ??
+        user?.email?.split('@').first ??
+        localAuthUser?.email.split('@').first ??
         l10n.userFallbackDisplayName;
     final profileInitial = _profileInitial(displayName);
 
@@ -116,8 +122,8 @@ class UserProfileHeaderCard extends ConsumerWidget {
     // carry (…@offline.local must never be shown to users).
     final showEmail =
         contextRole == UserProfileContextRole.selfLearner &&
-        user.email != null &&
-        !user.email!.endsWith('@offline.local');
+        (user?.email ?? localAuthUser?.email) != null &&
+        !(user?.email ?? localAuthUser?.email)!.endsWith('@offline.local');
 
     return _wrapSurface(
       surface,
@@ -199,7 +205,7 @@ class UserProfileHeaderCard extends ConsumerWidget {
                   ),
                   if (showEmail)
                     Text(
-                      user.email!,
+                      (user?.email ?? localAuthUser!.email),
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: context.colors.inkMidGrey,
                         fontSize: 16,

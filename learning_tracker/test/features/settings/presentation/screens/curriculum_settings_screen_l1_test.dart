@@ -113,6 +113,9 @@ Widget _buildApp({
       firestoreGoalRepositoryProvider.overrideWith(
         (ref) async => _goalRepository,
       ),
+      activeTracksProvider.overrideWith(
+        (ref) => _trackRepository.watchActiveTracks(),
+      ),
       // Hebrew Terms toggle — controlled per test.
       if (useHebrew)
         useHebrewTermsProvider.overrideWith(() => _HebrewTermsOn())

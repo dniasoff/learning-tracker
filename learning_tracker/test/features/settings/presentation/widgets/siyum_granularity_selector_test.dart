@@ -23,6 +23,7 @@ import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/progress/domain/models/journey_view_model.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/siyum_granularity_selector.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -126,6 +127,7 @@ ProviderContainer _container({
       activeProfileIdProvider.overrideWith(
         () => _ProfileIdOverride(_profileId),
       ),
+      selectedProfileIdProvider.overrideWithValue(_profileId),
       useHebrewTermsProvider.overrideWith(_UseHebrewTermsOverride.new),
       currentTransliterationVariantProvider.overrideWith(_VariantOverride.new),
       curriculumContentProvider(

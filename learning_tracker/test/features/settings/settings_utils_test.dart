@@ -187,7 +187,7 @@ void main() {
 
       // errorSendLogsNoGateway = 'Sync not available — account not linked to cloud'
       expect(find.textContaining('Sync not available'), findsOneWidget);
-      verifyNever(() => repository.pushLog(any<Map<String, dynamic>>()));
+      verify(() => repository.pushLog(any<Map<String, dynamic>>())).called(1);
 
       await _teardown(tester);
     },

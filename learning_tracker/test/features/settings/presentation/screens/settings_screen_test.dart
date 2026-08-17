@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
+import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
@@ -68,7 +69,15 @@ void main() {
 
   setUp(() {
     mockAuth = MockAuthRepository();
-    when(() => mockAuth.currentUser).thenReturn(null);
+    when(() => mockAuth.currentUser).thenReturn(
+      const AppUser(
+        uid: _uid,
+        email: 'test@test.com',
+        displayName: 'Test',
+        emailVerified: true,
+        providers: ['password'],
+      ),
+    );
   });
 
   Widget createTestWidget({

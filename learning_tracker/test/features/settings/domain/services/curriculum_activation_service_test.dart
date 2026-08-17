@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -9,13 +10,18 @@ import 'package:learning_tracker/data/repositories/firestore_study_day_config_re
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
 import 'package:learning_tracker/features/settings/domain/exceptions/last_active_curriculum_exception.dart';
 import 'package:learning_tracker/features/tracks/domain/services/curriculum_activation_service.dart';
+import 'package:learning_tracker/features/tracks/setup/data/repositories/curriculum_track_repository_impl.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
+import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart';
+import 'package:mocktail/mocktail.dart';
 
 import '../../../../helpers/firestore_fake.dart';
 import '../../../../helpers/firestore_fixtures.dart';
 
 const _uid = 'curriculum-activation-test-user';
 const _profileId = '01J0000000000000000000000A';
+
+class _MockFirebaseFunctions extends Mock implements FirebaseFunctions {}
 
 CollectionReference<Map<String, dynamic>> _profileCollection(
   FakeFirebaseFirestore firestore,
@@ -56,6 +62,12 @@ void main() {
         ),
         firestoreStudyDayConfigRepositoryProvider.overrideWith(
           (ref) async => studyDayConfigRepository,
+        ),
+        curriculumTrackRepositoryAdapterProvider.overrideWith(
+          (ref) => FirestoreCurriculumTrackRepositoryAdapter(
+            ref: ref,
+            functions: _MockFirebaseFunctions(),
+          ),
         ),
       ],
     );

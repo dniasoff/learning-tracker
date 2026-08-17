@@ -393,13 +393,16 @@ Widget _buildCurriculumMarkingApp({
   String curriculumId = 'mishnayos',
 }) {
   final repo = contentRepo ?? _makeDefaultRepo();
+  final ledger = ledgerRepo ?? _MockLearningLedgerRepository();
+  when(
+    () => ledger.getLedgerByCurriculum(any<CurriculumId>()),
+  ).thenAnswer((_) async => []);
   return pumpApp(
     locale: locale,
     overrides: [
       activeProfileIdProvider.overrideWith(() => _ProfileId1()),
       contentRepositoryProvider.overrideWithValue(repo),
-      if (ledgerRepo != null)
-        learningLedgerRepositoryProvider.overrideWithValue(ledgerRepo),
+      learningLedgerRepositoryProvider.overrideWithValue(ledger),
       if (useHebrew)
         useHebrewTermsProvider.overrideWith(() => _HebrewTermsOn())
       else
