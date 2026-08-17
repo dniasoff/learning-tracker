@@ -96,7 +96,7 @@ int _lineNumber(String source, int index) =>
 /// with spaces so line numbers are preserved), leaving string literal
 /// contents untouched. Duplicated (rather than shared) to match this
 /// project's established single-file `dart run` checker convention — see
-/// `tool/check_eh4_typed_catches.dart`'s identical helper.
+/// the typed-catch checker's identical helper.
 String _stripComments(String source) {
   final buffer = StringBuffer();
   var i = 0;

@@ -105,7 +105,6 @@ bool _underAny(String path, List<String> prefixes) =>
 List<_Match> _findAuthMatches() {
   const allowed = [
     'lib/core/auth/',
-    'lib/core/sync/',
     'lib/features/auth/',
     'lib/data/firestore/',
     'lib/data/repositories/',
@@ -135,7 +134,6 @@ List<_Match> _findAuthMatches() {
 
 List<_Match> _findStorageMatches() {
   const allowed = [
-    'lib/core/sync/',
     'lib/core/auth/',
     'lib/data/firestore/',
     'lib/data/repositories/',
@@ -195,8 +193,8 @@ void main(List<String> args) {
     stderr.writeln(
       'Firebase-confinement check FAILED (AD-3, AD-28) — ${matches.length} '
       '$label site(s) found outside the allowed-dir list. Firebase symbols '
-      'are confined to lib/core/sync/, lib/core/auth/, lib/data/firestore/, '
-      'and lib/data/repositories/ — a feature/service/provider file must '
+      'are confined to lib/core/auth/, lib/data/firestore/, and '
+      'lib/data/repositories/ — a feature/service/provider file must '
       'depend on a repository interface instead of importing Firebase '
       'directly.',
     );

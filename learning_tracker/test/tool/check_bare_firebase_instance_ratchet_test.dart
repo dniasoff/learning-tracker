@@ -3,7 +3,7 @@
 // FirebaseFirestore.instance/FirebaseAuth.instance ban).
 //
 // Mirrors the fixture-based approach in
-// `check_mcf11_autoincrement_id_in_payload_ratchet_test.dart`: write a
+// the MCF-11 ratchet test: write a
 // disposable fixture file directly into the checker's scanned directory
 // (`lib/`, outside the not-yet-built AccountFirebase registry path — the
 // AC's exact "red-demo" requirement (b)), run the script as a subprocess,

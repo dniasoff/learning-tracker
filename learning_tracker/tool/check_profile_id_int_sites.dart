@@ -22,16 +22,15 @@
 /// - **cf-string-profileid-doc** — same file scope: a line containing
 ///   `.doc(String(profileId))` — the CF-side doc-id formula that stringifies
 ///   the int to address `learner_profiles/{profileId}`.
-/// - **dart-int-profileid-param** — exactly three files: `lib/features/
-///   tutoring/data/services/tutor_write_service.dart`, `lib/core/sync/
-///   firestore_gateway.dart`, `lib/core/sync/outbox/push_pipeline.dart`: a
-///   line matching `\bint\s+profileId\b` (covers both `required int
-///   profileId,` and a bare positional `int profileId)`). Deliberately NOT
-///   all `lib/core/sync/**` — that tree holds 179 raw `int profileId`
-///   occurrences across many implementation files that die wholesale when
-///   the old sync engine is deleted in Phase 4; scanning three named
-///   INTERFACE/service files (not their `_impl` siblings) is the seam
-///   Phase 3 actually edits, not a proxy for the whole condemned tree.
+/// - **dart-int-profileid-param** — one named file: `lib/features/
+///   tutoring/data/services/tutor_write_service.dart`: a line matching
+///   `\bint\s+profileId\b` (covers both `required int profileId,` and a
+///   bare positional `int profileId)`). Originally three named files —
+///   `lib/core/sync/firestore_gateway.dart` and `lib/core/sync/outbox/
+///   push_pipeline.dart` were the other two — but `lib/core/sync/` (and
+///   the 179 raw `int profileId` occurrences it held) died wholesale in
+///   Phase 3 P3-5, so this pattern's scope shrank to its one surviving
+///   named file rather than being deleted outright.
 /// - **dart-tutoring-int-parse** — every `*.dart` under `lib/features/
 ///   tutoring/**`: a line containing `int.tryParse`. Deliberately widened
 ///   past the narrower "just the router" pattern an earlier draft used, so
@@ -65,10 +64,8 @@
 /// 2. **A new entry fails (exit 1). A baseline entry absent from the current
 ///    scan ALSO fails (exit 1).** There is no "must shrink to empty"
 ///    requirement anywhere in this file, and there must never be one added:
-///    `lib/core/sync/firestore_gateway.dart` and `outbox/push_pipeline.dart`
-///    alone contribute dozens of legitimate, currently-correct interface
-///    sites (see pattern 3 above), and the old sync engine holds 179 more
-///    outside this gate's scope entirely — an "eventually empty" gate over
+///    a legitimate, currently-correct interface site is expected to persist
+///    indefinitely (see pattern 3 above) — an "eventually empty" gate over
 ///    that population is not a proving criterion, it is a lie waiting to be
 ///    told. What IS required: a fix that removes a violation must remove
 ///    that violation's baseline line in the SAME commit (STALE, not just
@@ -211,7 +208,7 @@
 ///   1 — a NEW entry, a STALE baseline entry, a CHANGED occurrence count, a
 ///       missing/sentinel-less baseline, a malformed baseline line, a
 ///       pattern-hash mismatch, a missing hardcoded scan file (pattern 3's
-///       three named files are asserted to exist; a silent rename there
+///       named file is asserted to exist; a silent rename there
 ///       would silently zero out that pattern), or a suspect (torn) read
 ///       detected mid-scan (printed as ABORTED, not FAILED — see the
 ///       "Suspect-read hardening" section above)
@@ -232,8 +229,6 @@ const _hashPrefix = '# pattern-hash: ';
 
 const _tutorWriteServicePath =
     'lib/features/tutoring/data/services/tutor_write_service.dart';
-const _firestoreGatewayPath = 'lib/core/sync/firestore_gateway.dart';
-const _pushPipelinePath = 'lib/core/sync/outbox/push_pipeline.dart';
 
 final _intProfileIdParamRe = RegExp(r'\bint\s+profileId\b');
 
@@ -347,16 +342,12 @@ List<_PatternDef> _patterns() => [
   _PatternDef(
     id: 'dart-int-profileid-param',
     description:
-        '$_tutorWriteServicePath, $_firestoreGatewayPath, '
-        '$_pushPipelinePath: int profileId parameter (interface/service '
-        'level only — not all 179 occurrences under lib/core/sync/**, '
-        'which dies wholesale in Phase 4)',
+        '$_tutorWriteServicePath: int profileId parameter (interface/'
+        'service level only — lib/core/sync/** and its firestore_gateway.'
+        'dart/outbox/push_pipeline.dart died wholesale in Phase 3 P3-5; '
+        'this pattern\'s scope shrank to its one surviving named file)',
     scopeKind: _ScopeKind.exactFiles,
-    scopeFiles: const [
-      _tutorWriteServicePath,
-      _firestoreGatewayPath,
-      _pushPipelinePath,
-    ],
+    scopeFiles: const [_tutorWriteServicePath],
     regex: _intProfileIdParamRe,
   ),
   _PatternDef(
@@ -417,22 +408,17 @@ List<String> _tsFilesUnder(String dirPath) {
     ..sort();
 }
 
-/// Pattern 3's three files are named explicitly, not directory-scanned. A
-/// silent rename of any of them would silently zero out that pattern's
-/// contribution rather than failing loudly — so their existence is
-/// asserted up front, same spirit as check 103's step-0 registry
-/// self-check.
+/// Pattern 3's named file is not directory-scanned. A silent rename would
+/// silently zero out that pattern's contribution rather than failing
+/// loudly — so its existence is asserted up front, same spirit as check
+/// 103's step-0 registry self-check.
 void _assertHardcodedScanFilesExist(String root) {
-  for (final rel in [
-    _tutorWriteServicePath,
-    _firestoreGatewayPath,
-    _pushPipelinePath,
-  ]) {
+  for (final rel in [_tutorWriteServicePath]) {
     if (!File('$root/$rel').existsSync()) {
       stderr.writeln(
         'PROFILE-ID-INT-SITES ABORTED: hardcoded scan file missing: $rel. '
-        'This file is one of three named paths the dart-int-profileid-param '
-        'pattern scans explicitly (see the tool\'s doc comment) — a rename '
+        'This is the named path the dart-int-profileid-param pattern scans '
+        'explicitly (see the tool\'s doc comment) — a rename '
         'or deletion here must update _patterns() in the same commit, not '
         'silently drop this pattern\'s coverage.',
       );

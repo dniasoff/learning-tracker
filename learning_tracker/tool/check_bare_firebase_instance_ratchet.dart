@@ -33,7 +33,7 @@
 ///
 /// ## RATCHET, not a hard zero-tolerance gate
 ///
-/// Same shape as `check_mcf11_autoincrement_id_in_payload_ratchet.dart`,
+/// Same shape as `MCF-11 identity-safety ratchet`,
 /// `check_r7_source_text_assertion_ratchet.dart`, and
 /// `check_raw_color_literal_ratchet.dart`: today's tree already has 3
 /// legitimate bare-instance sites in the still-live pre-Phase-1 sync/auth

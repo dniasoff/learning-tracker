@@ -6,7 +6,7 @@
 /// propagates to the zone's uncaught-error handler instead of being folded
 /// into an ordinary "operation failed" branch and swallowed forever.
 ///
-/// Mirrors `tool/check_eh4_typed_catches.dart` (AUD-core-sync-26), scoped to
+/// Applies the same typed-catch rule as the retired core/sync check (AUD-core-sync-26), scoped to
 /// this finding's own 4 files rather than sharing that checker's target
 /// list — the project-wide `avoid_catches_without_on_clauses` /
 /// `avoid_catching_errors` analyzer lints still cannot be flipped on

@@ -539,18 +539,9 @@ void main() {
     // below instead key off the check's stable description text (the
     // "SM-7" / "AUD-sync-05" identifiers), which only changes if the
     // check's own scope or fix-site list changes.
-    // Wave-4 gate-repair follow-up: re-pinned after the AUD-core-navigation-04
-    // gate-repair broadened this check's own echo text into two clauses (the
-    // RewardMilestoneService fix-site clause below, plus a separate
-    // ParentAnalyticsRepositoryImpl-anywhere-in-lib clause) — the combined
-    // "ParentAnalyticsRepositoryImpl/RewardMilestoneService" phrase this
-    // constant previously expected no longer appears verbatim anywhere in
-    // the Makefile, so this test could never have matched a real clean run
-    // since that change landed. Keyed on the stable prefix both wordings
-    // have always shared.
     const smSevenDescription =
-        'SM-7: no ad-hoc RewardMilestoneService construction inside the '
-        'AUD-sync-05 fix sites';
+        'SM-7: no ad-hoc ParentAnalyticsRepositoryImpl construction ANYWHERE '
+        'in lib/ outside core/analytics/';
 
     test(
       'clean on the AUD-sync-05 fix sites (no ad-hoc Repository/Service '
@@ -595,7 +586,7 @@ void main() {
             shellResult.exitCode,
             0,
             reason:
-                'the three AUD-sync-05 fix sites must be clean.\n'
+                'the current SM-7 construction scope must be clean.\n'
                 'output=$output\nstderr=${shellResult.stderr}',
           );
         } finally {
@@ -607,13 +598,12 @@ void main() {
       timeout: const Timeout(Duration(minutes: 10)),
     );
 
-    test('AC1: reintroducing ad-hoc RewardMilestoneService construction in '
-        'outbox_sync_write_facade.dart flips the SM-7 check from clean to '
-        'FAIL and back', () async {
+    test('AC1: reintroducing ad-hoc ParentAnalyticsRepositoryImpl '
+        'construction flips the SM-7 check from clean to FAIL and back',
+        () async {
       final fixtureFile = File(
-        '$packageDir/lib/features/sync/data/outbox_sync_write_facade.dart',
+        '$packageDir/lib/zzz_audit_sm7_fixture_do_not_commit.dart',
       );
-      final original = fixtureFile.readAsStringSync();
 
       Future<ProcessResult> runAudit() =>
           Process.run('make', ['audit'], workingDirectory: packageDir);
@@ -625,23 +615,18 @@ void main() {
         // for a fresh instance instead of going through the injected
         // `_rewardMilestoneServiceFactory`.
         fixtureFile.writeAsStringSync(
-          '$original\n'
-          '// AUDIT FIXTURE - DO NOT COMMIT (AUD-sync-05 / SM-7 check test)\n'
-          'void zzzAuditFixtureDoNotCommit(UserDatabase database) {\n'
-          '  final rewardService = RewardMilestoneService(\n'
-          '    database,\n'
-          '    profileId: 1,\n'
-          '  );\n'
-          '  rewardService.exportCloudPayload();\n'
+          '// AUDIT FIXTURE - DO NOT COMMIT (SM-7 check test)\n'
+          'void zzzAuditFixtureDoNotCommit(Object database) {\n'
+          '  ParentAnalyticsRepositoryImpl(database);\n'
           '}\n',
         );
 
         final dirty = await runAudit();
         expect(
           dirty.stdout.toString(),
-          contains('outbox_sync_write_facade.dart'),
+          contains('zzz_audit_sm7_fixture_do_not_commit.dart'),
           reason:
-              'a reintroduced ad-hoc RewardMilestoneService construction '
+              'a reintroduced ad-hoc ParentAnalyticsRepositoryImpl construction '
               'must be caught by the SM-7 check, not silently swallowed.\n'
               'stdout=${dirty.stdout}',
         );
@@ -651,13 +636,13 @@ void main() {
           reason: 'the SM-7 check is a hard gate — it must fail the build.',
         );
       } finally {
-        fixtureFile.writeAsStringSync(original);
+        if (fixtureFile.existsSync()) fixtureFile.deleteSync();
       }
 
       final clean = await runAudit();
       expect(
         clean.stdout.toString(),
-        isNot(contains('zzzAuditFixtureDoNotCommit')),
+        isNot(contains('zzz_audit_sm7_fixture_do_not_commit.dart')),
         reason: 'removing the fixture restores a clean pass.',
       );
       expect(clean.exitCode, 0);

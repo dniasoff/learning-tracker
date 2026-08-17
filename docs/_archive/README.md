@@ -50,6 +50,8 @@ Docs replaced by newer canonical versions still present under `docs/planning/`.
 - `on-device-exhaustive-test-plan-2026-05-31.md`, `on-device-test-KICKOFF-PROMPT.md`, `exhaustive-test-and-fix-{KICKOFF-PROMPT.md,plan-2026-05-29.md}`, `self-resuming-test-fix-loop-KICKOFF-2026-06-09.md`, `loop-progress.md`, and `outstanding-bugs-handoff-2026-05-31.md` — Completed exhaustive on-device test-and-fix workflow. Archived 2026-08-16.
 - `refactor-orchestration-prompt.md`, the 2026-05-15 bug reports/fix plan/prompt, the 2026-05-17 issue/performance/tracking review/exec prompt, and the 2026-05-18/19 sync and overdue refactor prompts — Completed one-shot implementation workflows. Archived 2026-08-16.
 - `standards-audit-orchestrator-prompt-2026-07-03.md`, `standards-fix-orchestrator-prompt-2026-07-03.md`, and `standards-audit-2026-07-03-work/` — Completed standards audit/fix workflow and its intermediate scratch data. Archived 2026-08-16.
+- [`sync-subsystem.md`](superseded/sync-subsystem.md) — Explainer for the pre-migration Drift-primary/Firestore-optional sync model ("the app reads and writes a local SQLite database; cloud sync is an additive, optional layer"). Fully superseded by the Firestore-native architecture (`docs/firestore-rewrite-map.md`, `docs/planning/firestore-finish-line-plan.md`); its own supporting audit checker (`tool/check_sync_explainer_merger_count.dart`, AUD-docs-18) was retired in the same commit since the `EntityMerger`/`lib/core/sync/merge/` concept it verified no longer exists. Archived 2026-08-17.
+- `drift-to-firestore-migration-baseline.md` — Draft AS-IS inventory of the pre-migration Drift architecture, superseded by the same finish-line plan. Archived 2026-08-17.
 
 ### epic-qa-reports/
 

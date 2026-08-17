@@ -91,9 +91,6 @@ check-coverage-denominator: ## Fail if any lib/**.dart file has zero SF: entries
 check-profile-path-keying: ## Run the profile-scoped-collection keying-split gate standalone
 	dart run tool/check_profile_path_keying.dart
 
-check-profile-id-int-sites: ## Run the int-keyed profile-identity-sites named-entry ratchet standalone
-	dart run tool/check_profile_id_int_sites.dart
-
 test-functions: ## Run Cloud Functions tests (real handlers vs firestore emulator) (L5)
 	npm --prefix functions run build
 	firebase emulators:exec --only firestore,auth --project demo-cf "npm --prefix functions test"
@@ -356,10 +353,10 @@ lint-rules-test: ## Run packages/custom_lints unit tests (dart test) — AUD-gua
 	@echo "Running packages/custom_lints unit tests..."
 	@(cd ../packages/custom_lints && dart pub get && dart test) 1>&2
 
-audit: lint-rules-test ## Run all 68 enforcement greps (NFR19) — exits non-zero on any violation
+audit: lint-rules-test ## Run all 60 enforcement greps (NFR19) — exits non-zero on any violation
 	@echo "=== audit: enforcement greps ==="
 	@FAIL=0; \
-	echo "1/15 — No Firebase imports outside core/auth, core/sync, data/firestore, or data/repositories (Story 2.6: widened — legacy lib/core/sync|auth retained, lib/data/firestore/**+lib/data/repositories/** added per AD-3/AD-28)"; \
+	echo "1/15 — No Firebase imports outside core/auth, data/firestore, or data/repositories (Story 2.6: widened — lib/data/firestore/**+lib/data/repositories/** added per AD-3/AD-28)"; \
 	if ! dart run tool/check_firebase_confinement.dart --auth > /tmp/firebase_confinement_auth_check.$$$$.log 2>&1; then \
 	  cat /tmp/firebase_confinement_auth_check.$$$$.log; \
 	  rm -f /tmp/firebase_confinement_auth_check.$$$$.log; \
@@ -367,7 +364,7 @@ audit: lint-rules-test ## Run all 68 enforcement greps (NFR19) — exits non-zer
 	else \
 	  rm -f /tmp/firebase_confinement_auth_check.$$$$.log; \
 	fi; \
-	echo "2/15 — No FirebaseFirestore/FirebaseStorage/cloud_firestore outside core/sync, core/auth, data/firestore, or data/repositories (Story 2.6: widened — legacy lib/core/sync|auth retained, lib/data/firestore/**+lib/data/repositories/** added; the former lib/core/providers/ + lib/features/ blanket carve-outs are RETIRED so a feature/service/provider file importing cloud_firestore actually fails the gate, per AD-3/AD-28)"; \
+	echo "2/15 — No FirebaseFirestore/FirebaseStorage/cloud_firestore outside core/auth, data/firestore, or data/repositories (Story 2.6: lib/data/firestore/**+lib/data/repositories/** are the current Firebase boundary; former blanket carve-outs are retired per AD-3/AD-28)"; \
 	if ! dart run tool/check_firebase_confinement.dart --storage > /tmp/firebase_confinement_storage_check.$$$$.log 2>&1; then \
 	  cat /tmp/firebase_confinement_storage_check.$$$$.log; \
 	  rm -f /tmp/firebase_confinement_storage_check.$$$$.log; \
@@ -493,35 +490,6 @@ audit: lint-rules-test ## Run all 68 enforcement greps (NFR19) — exits non-zer
 	    | grep -v "lib/core/domain/value_objects/account_tier\.dart" \
 	    | grep -v "lib/core/database/daos/user_profile_dao\.dart" \
 	    | grep -v "lib/core/database/registry/device_registry_database\.dart"; \
-	  FAIL=1; \
-	fi; \
-	echo "18/18 — No direct FirestoreGateway.push* outside lib/core/sync/ (Plan §F Phase 5 deliverable 8 — no-direct-gateway-push)"; \
-	# Whitelist exclusions: \
-	#   * lib/features/sync/ — the OutboxSyncWriteFacade lives here. \
-	#   * send_logs_service.dart — pushDiagnosticLog is best-effort telemetry, \
-	#     intentionally direct (out of scope for Phase 5; revisit if logs start \
-	#     dropping offline). \
-	# Known offenders being converted by Squad ALPHA (Phase 1 cleanup): \
-	#   * notification_providers.dart  → outbox via OutboxSyncWriteFacade. \
-	#   * user_profile_service.dart    → outbox via OutboxSyncWriteFacade. \
-	# Whitelisted here so the audit gate doesn't block in-flight work; the grep \
-	# itself still catches NEW regressions (anything that isn't on the whitelist). \
-	if grep -rn "\(_firestoreGateway\|firestoreGateway\|gateway\|_gateway\)\.push" lib/features/ --include="*.dart" \
-	    | grep -v "\.g\.dart" | grep -v "\.freezed\.dart" \
-	    | grep -v "lib/features/sync/" \
-	    | grep -v "lib/features/settings/presentation/utils/send_logs_service\.dart" \
-	    | grep -v "lib/features/notifications/presentation/providers/notification_providers\.dart" \
-	    | grep -v "lib/features/onboarding/domain/services/user_profile_service\.dart" \
-	    | grep -v ":[[:space:]]*//" \
-	    | grep -q .; then \
-	  echo "  All cloud-bound writes must enqueue via OutboxSyncWriteFacade; the gateway is owned by lib/core/sync/ only:"; \
-	  grep -rn "\(_firestoreGateway\|firestoreGateway\|gateway\|_gateway\)\.push" lib/features/ --include="*.dart" \
-	    | grep -v "\.g\.dart" | grep -v "\.freezed\.dart" \
-	    | grep -v "lib/features/sync/" \
-	    | grep -v "lib/features/settings/presentation/utils/send_logs_service\.dart" \
-	    | grep -v "lib/features/notifications/presentation/providers/notification_providers\.dart" \
-	    | grep -v "lib/features/onboarding/domain/services/user_profile_service\.dart" \
-	    | grep -v ":[[:space:]]*//"; \
 	  FAIL=1; \
 	fi; \
 	echo "19/20 — No hardcoded Torah domain-term literals in presentation strings (Hebrew-terms consistency)"; \
@@ -691,23 +659,6 @@ audit: lint-rules-test ## Run all 68 enforcement greps (NFR19) — exits non-zer
 	    FAIL=1; \
 	  fi; \
 	done; \
-	echo "28/40 — pushTrack/pushSettings/pushBookmark/pushGoal overwrite their LWW ordering field with a server Timestamp, never the caller's client-clock value (FB-2, AUD-core-sync-13)"; \
-	GW=lib/core/sync/firestore_gateway_impl.dart; \
-	UPDATED_AT_COUNT=$$(grep -c "'updated_at': FieldValue.serverTimestamp()," "$$GW"); \
-	if [ "$$UPDATED_AT_COUNT" -lt 4 ]; then \
-	  echo "  Expected at least 4 \"'updated_at': FieldValue.serverTimestamp(),\" sites in $$GW"; \
-	  echo "  (pushLearnerProfile, pushSettings, pushBookmark, pushGoal — AUD-core-sync-24 collapsed pushGoal's"; \
-	  echo "  former if(docId!=null)/else(add()) branches into a single set(merge:true) path, so pushGoal now"; \
-	  echo "  contributes 1 site instead of 2 — see AUD-core-sync-24) — found $$UPDATED_AT_COUNT."; \
-	  echo "  A push* method may have regressed to passing the caller's client-clock updated_at straight through (FB-2)."; \
-	  FAIL=1; \
-	fi; \
-	if ! grep -q "'state_changed_at': FieldValue.serverTimestamp()," "$$GW"; then \
-	  echo "  pushTrack must overwrite 'state_changed_at' (the field TrackCodec/TrackConfigMerger"; \
-	  echo "  compare — see docs/sync-conflict-resolution.md) with FieldValue.serverTimestamp();"; \
-	  echo "  found no such site in $$GW (FB-2)."; \
-	  FAIL=1; \
-	fi; \
 	echo "29/40 — AG-5 test-mirroring ratchet: no NEW unmirrored lib/ file outside the tracked backlog (AUD-app-05)"; \
 	if ! dart run tool/check_test_mirroring.dart > /tmp/ag5_mirroring_check.$$$$.log 2>&1; then \
 	  cat /tmp/ag5_mirroring_check.$$$$.log; \
@@ -730,14 +681,6 @@ audit: lint-rules-test ## Run all 68 enforcement greps (NFR19) — exits non-zer
 	  grep -rn "stageName: 'לימוד'" lib/ --include="*.dart"; \
 	  FAIL=1; \
 	fi; \
-	echo "32/40 — EH-4: catch clauses in core/sync's periodic-drain / recovery-pull / listener-dispatch paths are typed (AUD-core-sync-26)"; \
-	if ! dart run tool/check_eh4_typed_catches.dart > /tmp/eh4_typed_catches_check.$$$$.log 2>&1; then \
-	  cat /tmp/eh4_typed_catches_check.$$$$.log; \
-	  rm -f /tmp/eh4_typed_catches_check.$$$$.log; \
-	  FAIL=1; \
-	else \
-	  rm -f /tmp/eh4_typed_catches_check.$$$$.log; \
-	fi; \
 	echo "33/40 — EH-5: sealed status/result types must carry a stable code, never a free-text 'message', and no raw error.toString()/e.toString() may flow into a 'message:' argument (AUD-sync-01)"; \
 	for f in $$(grep -rlE "@freezed" lib/ --include="*.dart" | grep -v "\.g\.dart" | grep -v "\.freezed\.dart"); do \
 	  if grep -qE "sealed class" "$$f" && grep -qE "required String message" "$$f"; then \
@@ -753,13 +696,13 @@ audit: lint-rules-test ## Run all 68 enforcement greps (NFR19) — exits non-zer
 	    | grep -v "\.g\.dart" | grep -v "\.freezed\.dart"; \
 	  FAIL=1; \
 	fi; \
-	echo "34/40 — No bare 'as int?'/'as num?'/'as double?'/'as bool?' casts in lib/core/sync/codec/*.dart (AUD-core-sync-05)"; \
-	if grep -rnE "as (int|num|double|bool)\?" lib/core/sync/codec/*.dart | grep -q .; then \
+	echo "34/40 — No bare 'as int?'/'as num?'/'as double?'/'as bool?' casts in lib/core/codec/*.dart (AUD-core-sync-05)"; \
+	if grep -rnE "as (int|num|double|bool)\?" lib/core/codec/*.dart | grep -q .; then \
 	  echo "  Bare nullable-numeric/bool cast in a codec decode() — use FirestoreCodec.parseInt/parseDouble/parseBool instead:"; \
-	  grep -rnE "as (int|num|double|bool)\?" lib/core/sync/codec/*.dart; \
+	  grep -rnE "as (int|num|double|bool)\?" lib/core/codec/*.dart; \
 	  FAIL=1; \
 	fi; \
-	echo "35/40 — EH-3: no log-less catch/catchError in the scoped sync-write-facade / content-db / seed-manager / device-registry files (AUD-sync-03, AUD-core-database-16)"; \
+	echo "35/40 — EH-3: no log-less catch/catchError in the scoped content-db / seed-manager / device-registry files (AUD-core-database-16)"; \
 	if ! dart run tool/check_eh3_log_less_catch.dart > /tmp/eh3_log_less_catch_check.$$$$.log 2>&1; then \
 	  cat /tmp/eh3_log_less_catch_check.$$$$.log; \
 	  rm -f /tmp/eh3_log_less_catch_check.$$$$.log; \
@@ -767,27 +710,7 @@ audit: lint-rules-test ## Run all 68 enforcement greps (NFR19) — exits non-zer
 	else \
 	  rm -f /tmp/eh3_log_less_catch_check.$$$$.log; \
 	fi; \
-	echo "36/40 — DB-3: no looped singular outbox push/enqueue calls in local_data_upload_service.dart (AUD-sync-02)"; \
-	if ! dart run tool/check_db3_batch_inserts.dart > /tmp/db3_batch_check.$$$$.log 2>&1; then \
-	  cat /tmp/db3_batch_check.$$$$.log; \
-	  rm -f /tmp/db3_batch_check.$$$$.log; \
-	  FAIL=1; \
-	else \
-	  rm -f /tmp/db3_batch_check.$$$$.log; \
-	fi; \
-	echo "37/40 — SM-7: no ad-hoc RewardMilestoneService construction inside the AUD-sync-05 fix sites (local_data_upload_service.dart, outbox_sync_write_facade.dart, reward_settings_merge_delegate.dart), and no ad-hoc ParentAnalyticsRepositoryImpl construction ANYWHERE in lib/ outside core/analytics/ (AUD-core-navigation-04 gate-repair: structural, not a 4-file allowlist)"; \
-	if grep -nE "final +[A-Za-z_][A-Za-z0-9_]* += +RewardMilestoneService\(" \
-	    lib/features/sync/data/local_data_upload_service.dart \
-	    lib/features/sync/data/outbox_sync_write_facade.dart \
-	    lib/features/sync/data/reward_settings_merge_delegate.dart \
-	    | grep -q .; then \
-	  echo "  Ad-hoc mid-method RewardMilestoneService construction reintroduced — inject via a constructor/factory parameter instead (AUD-sync-05, SM-7):"; \
-	  grep -nE "final +[A-Za-z_][A-Za-z0-9_]* += +RewardMilestoneService\(" \
-	    lib/features/sync/data/local_data_upload_service.dart \
-	    lib/features/sync/data/outbox_sync_write_facade.dart \
-	    lib/features/sync/data/reward_settings_merge_delegate.dart; \
-	  FAIL=1; \
-	fi; \
+	echo "37/40 — SM-7: no ad-hoc ParentAnalyticsRepositoryImpl construction ANYWHERE in lib/ outside core/analytics/ (AUD-core-navigation-04 gate-repair)"; \
 	if ! dart run tool/check_sm7_analytics_repository_construction.dart > /tmp/sm7_analytics_repo_check.$$$$.log 2>&1; then \
 	  cat /tmp/sm7_analytics_repo_check.$$$$.log; \
 	  rm -f /tmp/sm7_analytics_repo_check.$$$$.log; \
@@ -802,14 +725,6 @@ audit: lint-rules-test ## Run all 68 enforcement greps (NFR19) — exits non-zer
 	  FAIL=1; \
 	else \
 	  rm -f /tmp/db_dao_loop_writes_check.$$$$.log; \
-	fi; \
-	echo "39/40 — EH-5: the 4 AUD-core-database-14 DAO sites never regress to a raw pre-formatted StateError message"; \
-	if ! dart run tool/check_dao_stateerror_messages.dart > /tmp/dao_stateerror_messages_check.$$$$.log 2>&1; then \
-	  cat /tmp/dao_stateerror_messages_check.$$$$.log; \
-	  rm -f /tmp/dao_stateerror_messages_check.$$$$.log; \
-	  FAIL=1; \
-	else \
-	  rm -f /tmp/dao_stateerror_messages_check.$$$$.log; \
 	fi; \
 	echo "40/41 — AX-2: no hardcoded literal passed to Text()/TextSpan(text:) under lib/features/**/presentation/** (AUD-account-05)"; \
 	if ! dart run tool/check_hardcoded_presentation_text.dart > /tmp/ax2_hardcoded_text_check.$$$$.log 2>&1; then \
@@ -859,14 +774,6 @@ audit: lint-rules-test ## Run all 68 enforcement greps (NFR19) — exits non-zer
 	  FAIL=1; \
 	else \
 	  rm -f /tmp/story_dod_check.$$$$.log; \
-	fi; \
-	echo "46/49 — AG-8 doc-lint: docs/explainers/sync-subsystem.md's stated EntityMerger count matches lib/core/sync/merge/ (AUD-docs-18)"; \
-	if ! dart run tool/check_sync_explainer_merger_count.dart > /tmp/sync_explainer_merger_count_check.$$$$.log 2>&1; then \
-	  cat /tmp/sync_explainer_merger_count_check.$$$$.log; \
-	  rm -f /tmp/sync_explainer_merger_count_check.$$$$.log; \
-	  FAIL=1; \
-	else \
-	  rm -f /tmp/sync_explainer_merger_count_check.$$$$.log; \
 	fi; \
 	echo "47/49 — Rule-0 doc-lint: no NEW docs/stories/implementation/*.md Status header disagreeing with sprint-status.yaml's \"done\" for the same story key (AUD-docs-06)"; \
 	if ! dart run tool/check_story_status_reconciliation.dart > /tmp/story_status_reconciliation_check.$$$$.log 2>&1; then \
@@ -1329,15 +1236,7 @@ audit: lint-rules-test ## Run all 68 enforcement greps (NFR19) — exits non-zer
 	else \
 	  rm -f /tmp/raw_color_literal_ratchet_check.$$$$.log; \
 	fi; \
-	echo "100/100 — MCF-11/AD-5 (Story 2.4, docs/planning/drift-to-firestore-migration-baseline.md MCF-4/MCF-11; docs/test-artifacts/mcf11-autoincrement-id-in-payload-sweep.md): no NEW site outside lib/core/sync/merge/ feeds a track_id/account_id/child_profile_id payload key directly from the corresponding device-local Drift autoincrement field — RATCHET, only growth above the tracked baseline fails the gate (the baseline is today's already-load-bearing sync-engine design, pending the AD-25 canonical-stable-key redesign)"; \
-	if ! dart run tool/check_mcf11_autoincrement_id_in_payload_ratchet.dart > /tmp/mcf11_autoincrement_id_in_payload_check.$$$$.log 2>&1; then \
-	  cat /tmp/mcf11_autoincrement_id_in_payload_check.$$$$.log; \
-	  rm -f /tmp/mcf11_autoincrement_id_in_payload_check.$$$$.log; \
-	  FAIL=1; \
-	else \
-	  rm -f /tmp/mcf11_autoincrement_id_in_payload_check.$$$$.log; \
-	fi; \
-	echo "101/101 — AD-2/AD-28 (Story 2.6): no NEW bare FirebaseFirestore.instance/FirebaseAuth.instance site outside the (not-yet-built, Phase 1) AccountFirebase registry at lib/data/firestore/account_firebase.dart — RATCHET, only growth above the tracked baseline fails the gate (baseline is today's already-load-bearing lib/core/auth/ + lib/core/sync/ singleton usage, pending the Phase-1 registry cutover)"; \
+	echo "101/101 — AD-2/AD-28 (Story 2.6): no NEW bare FirebaseFirestore.instance/FirebaseAuth.instance site outside the AccountFirebase registry at lib/data/firestore/account_firebase.dart — RATCHET, only growth above the tracked baseline fails the gate"; \
 	if ! dart run tool/check_bare_firebase_instance_ratchet.dart > /tmp/bare_firebase_instance_check.$$$$.log 2>&1; then \
 	  cat /tmp/bare_firebase_instance_check.$$$$.log; \
 	  rm -f /tmp/bare_firebase_instance_check.$$$$.log; \
@@ -1362,18 +1261,9 @@ audit: lint-rules-test ## Run all 68 enforcement greps (NFR19) — exits non-zer
 	  cat /tmp/profile_path_keying_check.$$$$.log; \
 	  rm -f /tmp/profile_path_keying_check.$$$$.log; \
 	fi; \
-	echo "104/104 — PROFILE-ID-INT-SITES (docs/planning/firestore-phase2-plan.md §4 P2-1, hardened at P2-11): every known int-keyed profile-identity site (CF-side typeof/Number.isInteger guards + .doc(String(profileId)) doc-id formula in functions/src/**; int profileId params in the three named lib/core/sync interface/service files; int.tryParse and .id.toString() under lib/features/tutoring/**) is a NAMED entry (file:enclosing-symbol xN, N = occurrence count, never a line number) — RATCHET, a NEW entry fails, a STALE baseline entry (present in tool/profile_id_int_sites_baseline.txt but absent from the current scan) fails, and a baseline entry whose occurrence count N CHANGED (a site added or removed INSIDE an already-baselined symbol) ALSO fails, so a fix must remove/update its baseline line in the same commit; there is no requirement the set ever reach empty"; \
-	if ! dart run tool/check_profile_id_int_sites.dart > /tmp/profile_id_int_sites_check.$$$$.log 2>&1; then \
-	  cat /tmp/profile_id_int_sites_check.$$$$.log; \
-	  rm -f /tmp/profile_id_int_sites_check.$$$$.log; \
-	  FAIL=1; \
-	else \
-	  cat /tmp/profile_id_int_sites_check.$$$$.log; \
-	  rm -f /tmp/profile_id_int_sites_check.$$$$.log; \
-	fi; \
 	if [ "$$FAIL" -eq 1 ]; then \
 	  echo "=== audit FAILED — fix violations above ==="; \
 	  exit 1; \
 	else \
-	  echo "=== audit PASSED — all 68 greps clean ==="; \
+	  echo "=== audit PASSED — all 60 greps clean ==="; \
 	fi

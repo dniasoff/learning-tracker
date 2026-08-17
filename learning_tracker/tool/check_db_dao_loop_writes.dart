@@ -19,7 +19,7 @@
 ///
 /// **Scope (Rule 0 — start scoped, expand later; mirrors the DB-2/DB-3/EH-3/
 /// EH-4 scoped-checker precedent in this codebase — see
-/// `tool/check_db_transactions.dart`, `tool/check_db3_batch_inserts.dart`,
+/// `tool/check_db_transactions.dart`,
 /// `tool/check_eh3_log_less_catch.dart`):** only
 /// `lib/core/database/daos/track_learning_order_dao.dart`, the exact file
 /// this finding fixes. `point_config_dao.dart` and `study_day_config_dao.dart`

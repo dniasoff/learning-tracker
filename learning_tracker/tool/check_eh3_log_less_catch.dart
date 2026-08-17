@@ -44,7 +44,6 @@ import 'dart:io';
 /// pattern elsewhere — see the EH-4 check 27 precedent in
 /// docs/coding-standards.md for the established shape of this ratchet.
 const _scopedFiles = [
-  'lib/features/sync/data/outbox_sync_write_facade.dart',
   'lib/core/database/content/content_database.dart',
   'lib/core/database/seed_manager.dart',
   'lib/core/database/registry/device_registry_database.dart',
