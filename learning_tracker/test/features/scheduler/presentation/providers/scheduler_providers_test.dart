@@ -274,10 +274,11 @@ void main() {
           ],
         );
         final listener = container.listen(skippedTasksProvider, (_, __) {});
+        final notifier = container.read(skippedTasksProvider.notifier);
         final before = AppLogger.instance.talker.history.length;
         container.dispose();
         store.openGate();
-        await Future<void>.delayed(const Duration(milliseconds: 50));
+        await notifier.debugReadyForTest;
 
         final messages = AppLogger.instance.talker.history
             .skip(before)

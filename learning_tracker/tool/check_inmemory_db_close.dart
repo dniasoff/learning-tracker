@@ -213,8 +213,17 @@ const _baseline = <String, int>{
   'test/features/tracks/setup/edit_track_screen_l1_test.dart': 1,
   'test/features/tracks/setup/presentation/screens/add_track_flow_screen_l1_test.dart':
       2,
+  // Not real debt: this file's `UserDatabase`/`inMemoryDb()` are locally
+  // shadowed (see its own `typedef UserDatabase = FakeFirebaseFirestore;`
+  // and local `UserDatabase inMemoryDb() => createFakeFirestore(...);`)
+  // — an in-memory Firestore fake with no native resource and no `close()`
+  // member at all (`db2.close` does not compile). This checker's scan is
+  // text-only (RegExp on the bare call name) and cannot tell that apart
+  // from `test/helpers/drift_memory.dart`'s real, sqlite3-backed
+  // `inMemoryDb()`. Baselined at its full current count rather than 0 —
+  // it will never be burned down, because there is nothing to close.
   'test/features/tracks/setup/presentation/screens/edit_track_and_detail_l1_test.dart':
-      1,
+      19,
   'test/features/tracks/setup/presentation/screens/track_detail_goal_stale_test.dart':
       1,
   'test/features/tracks/setup/presentation/screens/track_detail_screen_test.dart':
