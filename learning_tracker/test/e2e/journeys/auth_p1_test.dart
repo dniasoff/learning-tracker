@@ -87,13 +87,13 @@ void main() {
     setUp(() async {
       registry = DeviceRegistryDatabase(NativeDatabase.memory());
 
-      // Seed two local-born accounts so both tiles appear.
+      // Seed two cloud-born accounts so both tiles appear.
       await registry.addAccount(
         DeviceAccountsCompanion.insert(
           accountId: 'acc-alice',
           email: 'alice@test.com',
           displayName: 'Alice',
-          tier: 'localBorn',
+          tier: 'cloudBorn',
           dbFileName: 'user_acc_alice.db',
           createdAt: DateTime.utc(2026, 1, 1),
           lastUsedAt: DateTime.utc(2026, 1, 1),
@@ -104,7 +104,7 @@ void main() {
           accountId: 'acc-bob',
           email: 'bob@test.com',
           displayName: 'Bob',
-          tier: 'localBorn',
+          tier: 'cloudBorn',
           dbFileName: 'user_acc_bob.db',
           createdAt: DateTime.utc(2026, 1, 2),
           lastUsedAt: DateTime.utc(2026, 1, 2),
@@ -120,7 +120,7 @@ void main() {
       'AccountPickerScreen shows "Choose an Account" heading and lists both '
       'seeded accounts',
       (tester) async {
-        final identity = E2EIdentity.localBorn(
+        final identity = E2EIdentity.cloudBorn(
           email: 'alice@test.com',
           displayName: 'Alice',
           profileMode: 'adult',
@@ -159,9 +159,10 @@ void main() {
     );
 
     testWidgets(
-      'AccountPickerScreen renders "LOCAL ACCOUNT" badge for local-born tiles',
+      'AccountPickerScreen renders "SIGN IN AGAIN" for accounts without '
+      'the active Firebase session',
       (tester) async {
-        final identity = E2EIdentity.localBorn(
+        final identity = E2EIdentity.cloudBorn(
           email: 'alice@test.com',
           displayName: 'Alice',
           profileMode: 'adult',
@@ -180,12 +181,14 @@ void main() {
         await h.pump(const Duration(milliseconds: 500));
         await h.pump();
 
-        // Each local-born tile shows the "LOCAL ACCOUNT" badge.
+        // The registry rows have no Firebase UID matching the harness session,
+        // so the current account-picker contract marks both as requiring sign-in.
         expect(
-          find.text('LOCAL ACCOUNT'),
+          find.text('SIGN IN AGAIN'),
           findsWidgets,
           reason:
-              'Both local-born accounts should show the LOCAL ACCOUNT badge',
+              'Accounts without the active Firebase session should show '
+              'the SIGN IN AGAIN badge',
         );
       },
     );

@@ -33,6 +33,8 @@ import 'package:learning_tracker/features/content_browsing/presentation/provider
     show adjacentContentRefsProvider;
 import 'package:learning_tracker/features/content_browsing/presentation/providers/text_display_providers.dart'
     show textContentProvider;
+import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart'
+    show isStageCompletedProvider, trackStorageKeyForTrackIdProvider;
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart'
     show
         dashboardActiveTracksStreamProvider,
@@ -347,35 +349,14 @@ void main() {
   group('E2E-1001 — Parent invites a tutor for a child', () {
     // Seed a child profile so InviteTutorScreen has a valid childProfileId.
     // Navigate directly to /tutor/invite?childProfileId=<id>.
-    //
-    // HARNESS LIMITATION (invite flow change):
-    //   The E2E harness always sets authStateProvider to Tier.localBorn.
-    //   Re-overriding authStateProvider in extraOverrides crashes ProviderScope
-    //   with "ProviderAlreadyOverriddenError" (same constraint as E2E-719,
-    //   E2E-1306 — documented in profiles_tutoring_p2_test.dart and
-    //   sync_p1_test.dart).
-    //
-    //   InviteTutorScreen._sendInvite now checks authState.isLocalBorn first:
-    //   if true it shows an account-level error banner ("Tutoring requires a
-    //   cloud account — upgrade to invite a tutor.") and returns without calling
-    //   inviteTutorUseCase. This is the INTENTIONAL behavior change.
-    //
-    //   The cloud-born happy path (where inviteTutor IS called) is fully covered
-    //   by invite_tutor_screen_l1_test.dart which overrides authStateProvider
-    //   with a cloudBorn tier directly (no harness constraint).
-    //
-    // This E2E test therefore asserts the local-born precondition behavior:
-    //   • The screen is reachable via /tutor/invite.
-    //   • Entering a valid email and tapping "Send invite" with a local-born
-    //     account shows the account-level cloud-required error banner.
-    //   • inviteTutorUseCase is NOT called (fakeRepo.invitedEmails is empty).
+    // The product no longer supports local-born sessions (91798ab8), so this
+    // journey exercises the current cloud-account invite path.
 
     testWidgets(
-      'local-born parent: tapping Send invite shows cloud-account-required '
-      'error banner; inviteTutorUseCase is NOT called '
-      '(cloud-born happy path covered by invite_tutor_screen_l1_test.dart)',
+      'cloud-born parent: tapping Send invite calls inviteTutorUseCase with '
+      'the entered email',
       (tester) async {
-        final identity = E2EIdentity.localBorn(
+        final identity = E2EIdentity.cloudBorn(
           email: 'parent1001@example.com',
           displayName: 'Parent1001',
           profileMode: 'adult',
@@ -435,21 +416,13 @@ void main() {
         await tester.pump(const Duration(milliseconds: 500));
         await tester.pumpAndSettle(const Duration(milliseconds: 500));
 
-        // For a local-born account, _sendInvite detects isLocalBorn=true and
-        // shows the account-level cloud-required error banner instead of calling
-        // inviteTutorUseCase.
-        h.expectOnScreen(
-          'Tutoring requires a cloud account — upgrade to invite a tutor.',
-        );
-
-        // The use case must NOT have been called (local-born guard blocks it).
+        // Current product behavior dispatches the invite for cloud accounts.
         expect(
           fakeRepo.invitedEmails,
-          isEmpty,
+          contains(tutorEmail),
           reason:
-              'Expected inviteTutorUseCase NOT to be called for a local-born '
-              'account — the screen must show the cloud-account-required error '
-              'banner and return before dispatching the invite.',
+              'Expected inviteTutorUseCase to be called with the entered '
+              'email for a cloud-born account.',
         );
       },
     );
@@ -861,7 +834,7 @@ void main() {
       'Mark Complete button shows tutor-unavailable label and is disabled '
       'when activeTutoredProfileSelectionProvider is non-null',
       (tester) async {
-        final identity = E2EIdentity.localBorn(
+        final identity = E2EIdentity.cloudBorn(
           email: 'tutor1012@example.com',
           displayName: 'Tutor1012',
           profileMode: 'adult',
@@ -901,6 +874,17 @@ void main() {
             coarsePacedTrackIdsProvider.overrideWith(
               (ref) => Future.value(<CurriculumId>{}),
             ),
+            // The completion footer now reads Firestore-backed completion
+            // state. Keep this journey focused on tutor-mode gating rather
+            // than waiting on the live completion query.
+            trackStorageKeyForTrackIdProvider(
+              CurriculumId.mishnayos,
+            ).overrideWithValue(const AsyncData<String>('personal')),
+            isStageCompletedProvider((
+              sefariaRef: sefariaRef,
+              stageId: 1,
+              trackType: 'personal',
+            )).overrideWithValue(const AsyncData<bool>(false)),
             adjacentContentRefsProvider(
               sefariaRef,
             ).overrideWith((ref) => Future.value((prev: null, next: null))),
