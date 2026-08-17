@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
-import 'package:learning_tracker/data/firestore/active_account_providers.dart';
+import 'package:learning_tracker/data/repositories/backup_firestore_gateway.dart';
 import 'package:learning_tracker/features/settings/domain/services/data_export_import_service.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -14,11 +14,11 @@ import 'package:share_plus/share_plus.dart';
 /// simple override seam for widget tests.
 final dataExportImportServiceProvider =
     FutureProvider<DataExportImportService?>((ref) async {
-      final handles = await ref.watch(activeAccountFirebaseProvider.future);
-      if (handles == null) return null;
+      final session = await ref.watch(backupFirestoreGatewayProvider.future);
+      if (session == null) return null;
       return DataExportImportService(
-        firestore: handles.firestore,
-        uid: handles.uid,
+        gateway: session.gateway,
+        uid: session.uid,
         clock: ref.read(localDayClockProvider),
       );
     });

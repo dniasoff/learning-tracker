@@ -1,6 +1,5 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/data/firestore/active_account_providers.dart';
+import 'package:learning_tracker/data/repositories/firestore_sync_status_repository.dart';
 
 /// The state exposed by the representative Firestore listener used by the
 /// settings backup card.
@@ -12,9 +11,11 @@ enum FirestoreSyncStatus { unknown, synced, syncing, offline }
 /// not been acknowledged is specifically a pending/syncing state, even when
 /// the SDK also reports that the snapshot is from cache.
 FirestoreSyncStatus firestoreSyncStatusFromSnapshot(
-  DocumentSnapshot<Map<String, dynamic>> snapshot,
+  Object snapshot,
 ) {
-  final metadata = snapshot.metadata;
+  final metadata = snapshot is FirestoreSyncSnapshot
+      ? snapshot
+      : firestoreSyncSnapshotFromSdk(snapshot);
   if (metadata.hasPendingWrites) return FirestoreSyncStatus.syncing;
   if (metadata.isFromCache) return FirestoreSyncStatus.offline;
   return FirestoreSyncStatus.synced;
@@ -27,15 +28,13 @@ FirestoreSyncStatus firestoreSyncStatusFromSnapshot(
 /// explicitly retry the listener.
 final firestoreSyncStatusProvider =
     StreamProvider.autoDispose<FirestoreSyncStatus>((ref) async* {
-      final handles = await ref.watch(activeAccountFirebaseProvider.future);
-      if (handles == null) {
+      final repository = await ref.watch(
+        firestoreSyncStatusRepositoryProvider.future,
+      );
+      if (repository == null) {
         yield FirestoreSyncStatus.unknown;
         return;
       }
 
-      yield* handles.firestore
-          .collection('users')
-          .doc(handles.uid)
-          .snapshots(includeMetadataChanges: true)
-          .map(firestoreSyncStatusFromSnapshot);
+      yield* repository.watchAccount().map(firestoreSyncStatusFromSnapshot);
     }, retry: (retryCount, error) => null);

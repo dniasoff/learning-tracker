@@ -1,174 +1,13 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
+import 'package:learning_tracker/data/repositories/backup_firestore_gateway.dart';
 import 'package:learning_tracker/features/settings/domain/exceptions/import_validation_exception.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
-/// Narrow persistence boundary used by the backup use case.
-///
-/// The domain service deals only in document paths and JSON-safe maps. The
-/// Firebase-specific adapter is kept behind this interface so this domain
-/// file does not depend on the Firebase SDK.
-abstract interface class BackupFirestoreGateway {
-  Future<Map<String, dynamic>?> readDocument(String path);
-
-  Future<List<Map<String, dynamic>>> readCollection(String path);
-
-  Future<void> writeBatch(List<BackupDocumentWrite> writes);
-
-  Object? decodeValue(Object? value);
-}
-
-final class BackupDocumentWrite {
-  const BackupDocumentWrite(this.path, this.data);
-
-  final String path;
-  final Map<String, dynamic> data;
-}
-
-final class _DynamicBackupFirestoreGateway implements BackupFirestoreGateway {
-  _DynamicBackupFirestoreGateway(Object firestore)
-    : _firestore = firestore as FirebaseFirestore;
-
-  final FirebaseFirestore _firestore;
-
-  @override
-  Future<Map<String, dynamic>?> readDocument(String path) async {
-    final snapshot = await _firestore.doc(path).get();
-    final data = snapshot.data();
-    return data == null ? null : _encodeMap(data);
-  }
-
-  @override
-  Future<List<Map<String, dynamic>>> readCollection(String path) async {
-    final result = <Map<String, dynamic>>[];
-    DocumentSnapshot<Map<String, dynamic>>? last;
-    while (true) {
-      var query = _firestore
-          .collection(path)
-          .orderBy(FieldPath.documentId)
-          .limit(DataExportImportService._pageSize);
-      if (last != null) query = query.startAfterDocument(last);
-      final snapshot = await query.get();
-      result.addAll(
-        snapshot.docs.map(
-          (doc) => {'id': doc.id, 'data': _encodeMap(doc.data())},
-        ),
-      );
-      if (snapshot.docs.length < DataExportImportService._pageSize) break;
-      last = snapshot.docs.last;
-    }
-    return result;
-  }
-
-  @override
-  Future<void> writeBatch(List<BackupDocumentWrite> writes) async {
-    final batch = _firestore.batch();
-    for (final write in writes) {
-      batch.set(_firestore.doc(write.path), write.data);
-    }
-    await batch.commit();
-  }
-
-  @override
-  Object? decodeValue(Object? value) {
-    if (value == null || value is String || value is num || value is bool) {
-      return value;
-    }
-    if (value is Timestamp) {
-      return {
-        DataExportImportService._typeKey: 'timestamp',
-        'value': value.toDate().toUtc().toIso8601String(),
-      };
-    }
-    if (value is DateTime) {
-      return {
-        DataExportImportService._typeKey: 'timestamp',
-        'value': value.toUtc().toIso8601String(),
-      };
-    }
-    if (value is GeoPoint) {
-      return {
-        DataExportImportService._typeKey: 'geopoint',
-        'latitude': value.latitude,
-        'longitude': value.longitude,
-      };
-    }
-    if (value is DocumentReference) {
-      return {
-        DataExportImportService._typeKey: 'reference',
-        'path': value.path,
-      };
-    }
-    if (value is Blob) {
-      return {
-        DataExportImportService._typeKey: 'bytes',
-        'value': base64Encode(value.bytes),
-      };
-    }
-    if (value is Uint8List) {
-      return {
-        DataExportImportService._typeKey: 'bytes',
-        'value': base64Encode(value),
-      };
-    }
-    if (value is List) return value.map(decodeValue).toList();
-    if (value is Map) {
-      final map = Map<String, dynamic>.from(value);
-      final type = map[DataExportImportService._typeKey];
-      if (type is String &&
-          const {
-            'timestamp',
-            'geopoint',
-            'reference',
-            'bytes',
-          }.contains(type)) {
-        return _restoreValue(map);
-      }
-      return _encodeMap(map);
-    }
-
-    throw FormatException('Unsupported Firestore value: ${value.runtimeType}');
-  }
-
-  Map<String, dynamic> _encodeMap(Map<String, dynamic> data) {
-    final encoded = <String, dynamic>{
-      for (final entry in data.entries) entry.key: decodeValue(entry.value),
-    };
-    if (encoded.containsKey(DataExportImportService._typeKey)) {
-      return {DataExportImportService._typeKey: 'map', 'value': encoded};
-    }
-    return encoded;
-  }
-
-  Object? _restoreValue(Map<String, dynamic> map) {
-    switch (map[DataExportImportService._typeKey]) {
-      case 'timestamp':
-        return Timestamp.fromDate(
-          DateTime.parse(map['value'] as String).toUtc(),
-        );
-      case 'geopoint':
-        return GeoPoint(
-          (map['latitude'] as num).toDouble(),
-          (map['longitude'] as num).toDouble(),
-        );
-      case 'reference':
-        final path = map['path'];
-        if (path is! String || path.isEmpty) {
-          throw const ImportValidationException('Invalid document reference');
-        }
-        return _firestore.doc(path);
-      case 'bytes':
-        return Blob(Uint8List.fromList(base64Decode(map['value'] as String)));
-      default:
-        throw ImportValidationException(
-          'Unknown Firestore value type: ${map[DataExportImportService._typeKey]}',
-        );
-    }
-  }
-}
+export 'package:learning_tracker/data/repositories/backup_firestore_gateway.dart'
+    show BackupDocumentWrite, BackupFirestoreGateway;
 
 /// Summary of a Firestore backup payload.
 class ImportPreview {
@@ -218,7 +57,7 @@ class DataExportImportService {
     required String uid,
     Future<String> Function()? appVersionFetcher,
     LocalDayClock? clock,
-  }) : _gateway = gateway ?? _DynamicBackupFirestoreGateway(firestore!),
+  }) : _gateway = gateway ?? backupFirestoreGatewayFor(firestore!),
        _uid = uid,
        _clock = clock ?? const SystemLocalDayClock(),
        _appVersionFetcher =
