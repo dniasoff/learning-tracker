@@ -13,7 +13,6 @@
 ///   02 SignInScreen (skip: BUG-NEW, separate fix)
 ///   03 SignupScreen
 ///   04 AccountPickerScreen
-///   05 UpgradeToCloudScreen
 ///   06 OnboardingScreen
 ///   07 EmptyLoginScreen
 ///   09 ProfilePickerScreen (skip: BUG-NEW, separate fix)
@@ -82,6 +81,9 @@
 /// parent_pin_keypad_dialog.dart, not a routed screen. Both routes and their
 /// PinFlowScreen wrappers were deleted; only PinFlowSetupRoute (#36) remains
 /// a real navigation target.
+///
+/// REMOVED (Phase 3): UpgradeToCloudScreen was retired with local-born account
+/// support; `/upgrade-to-cloud` is no longer a registered route.
 ///
 /// Catalog: docs/planning/e2e-test-suite-plan.md §2 / §7 (E2E-1512)
 @Tags(['e2e', 'overflow'])
@@ -349,17 +351,6 @@ void main() {
       label: 'AccountPickerScreen',
       path: '/account-picker',
       identityFactory: () => null,
-    );
-  });
-
-  // ── 05: UpgradeToCloudScreen ────────────────────────────────────────────────
-
-  testWidgets('05 UpgradeToCloudScreen — no overflow', (tester) async {
-    await _sweepPath(
-      tester,
-      label: 'UpgradeToCloudScreen',
-      path: '/upgrade-to-cloud',
-      extraOverrides: [_connectivity()],
     );
   });
 

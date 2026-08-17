@@ -63,18 +63,18 @@ class ProgressTierCounterRow extends ConsumerWidget {
     final locale = Localizations.localeOf(context).toString();
     final numberFormat = NumberFormat.decimalPattern(locale);
 
-    final streakValue = streakAsync.hasValue
-        ? numberFormat.format(currentStreak!)
-        : _loadingPlaceholder;
-    final siyumimValue = journeyAsync.hasValue
-        ? numberFormat.format(totalSiyumim!)
-        : _loadingPlaceholder;
-    final lifetimeValue = lifetimeTotalsAsync.hasValue
-        ? numberFormat.format(lifetimeItems!)
-        : _loadingPlaceholder;
-    final pointsValue = pointsAsync.hasValue
-        ? numberFormat.format(points!)
-        : _loadingPlaceholder;
+    final streakValue = currentStreak == null
+        ? _loadingPlaceholder
+        : numberFormat.format(currentStreak);
+    final siyumimValue = totalSiyumim == null
+        ? _loadingPlaceholder
+        : numberFormat.format(totalSiyumim);
+    final lifetimeValue = lifetimeItems == null
+        ? _loadingPlaceholder
+        : numberFormat.format(lifetimeItems);
+    final pointsValue = points == null
+        ? _loadingPlaceholder
+        : numberFormat.format(points);
 
     String semanticLabel(AsyncValue<dynamic> value, String dataLabel) {
       if (value.hasError) return l10n.errorWithMessage;

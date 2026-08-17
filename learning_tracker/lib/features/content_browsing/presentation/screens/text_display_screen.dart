@@ -320,10 +320,10 @@ class _TextContentView extends StatelessWidget {
     final showSegmentNumbers =
         segments.length > 1 && segments.any((s) => s.number != null);
 
-    return Column(
-      children: [
-        Expanded(
-          child: SingleChildScrollView(
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 18),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -401,21 +401,20 @@ class _TextContentView extends StatelessWidget {
               ],
             ),
           ),
-        ),
-
-        Container(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
-          decoration: BoxDecoration(
-            color: context.colors.surfaceF5,
-            border: Border(
-              top: BorderSide(
-                color: context.colors.brandOutline.withValues(alpha: 0.4),
+          Container(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+            decoration: BoxDecoration(
+              color: context.colors.surfaceF5,
+              border: Border(
+                top: BorderSide(
+                  color: context.colors.brandOutline.withValues(alpha: 0.4),
+                ),
               ),
             ),
+            child: _CompletionSection(sefariaRef: sefariaRef),
           ),
-          child: _CompletionSection(sefariaRef: sefariaRef),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
