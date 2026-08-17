@@ -40,9 +40,10 @@ import 'package:learning_tracker/features/scheduler/presentation/providers/sched
     show allDailyTasksProvider, clockProvider;
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart'
     show scopedItemCountProvider;
+import 'package:learning_tracker/features/tracks/setup/data/repositories/curriculum_track_repository_impl.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart'
-    show activeTracksProvider;
+    show activeTracksProvider, curriculumTrackRepositoryAdapterProvider;
 import 'package:learning_tracker/features/tracks/setup/presentation/screens/track_management_hub_screen.dart'
     show TrackManagementHubScreen;
 import 'package:learning_tracker/features/tracks/track_order/presentation/providers/track_learning_order_providers.dart'
@@ -70,6 +71,20 @@ Future<void> _seedTrack(
     stateChangedAt: stub.stateChangedAt,
     activatedAt: stub.activatedAt,
   );
+}
+
+/// E2E-414 only needs the active-curriculum query used by the last-track
+/// guard. The production adapter constructs [FirebaseFunctions] eagerly, so
+/// use the same small in-memory adapter seam as the passing track journeys.
+class _FakeCurriculumTrackRepository extends Fake
+    implements FirestoreCurriculumTrackRepositoryAdapter {
+  _FakeCurriculumTrackRepository(this._activeCurricula);
+
+  final List<CurriculumId> _activeCurricula;
+
+  @override
+  Future<List<String>> getActiveCurriculumIds() async =>
+      _activeCurricula.map((curriculum) => curriculum.storageKey).toList();
 }
 
 // ── UseHebrewDate stub ────────────────────────────────────────────────────────
@@ -501,6 +516,9 @@ void main() {
           extraOverrides: [
             ...h.dashboardSilenceOverrides,
             ..._trackHubOverrides(tracks: [stub]),
+            curriculumTrackRepositoryAdapterProvider.overrideWithValue(
+              _FakeCurriculumTrackRepository([CurriculumId.mishnayos]),
+            ),
             // ParentTrackManagementScreen uses pendingRedemptionsCountProvider
             // and activeProfilePointsBalanceProvider indirectly (via sibling
             // parent-mode screens); silence them to avoid Drift stream timers.

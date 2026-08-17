@@ -321,6 +321,10 @@ class E2EIdentity {
 
   /// The Firestore account uid (available after [E2EHarness.pumpApp]).
   String get accountId => _resolvedAccountId!;
+
+  /// The deterministic account uid supplied to [localBorn] or [cloudBorn].
+  /// Available while building pre-pump provider overrides.
+  String get seedAccountId => _seedAccountId;
 }
 
 // ── E2EHarness ──────────────────────────────────────────────────────────────

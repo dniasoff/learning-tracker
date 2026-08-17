@@ -37,6 +37,9 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart'
     show effectiveUseHebrewTermsProvider, useHebrewTermsProvider;
 import 'package:learning_tracker/core/utils/date_utils.dart';
+import 'package:learning_tracker/data/firestore/repository_providers.dart'
+    show firestorePointConfigRepositoryProvider;
+import 'package:learning_tracker/data/repositories/firestore_point_config_repository.dart';
 import 'package:learning_tracker/data/repositories/points_ledger_entry.dart';
 import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart'
     show connectivityStreamProvider;
@@ -51,6 +54,10 @@ import 'package:learning_tracker/features/profiles/presentation/screens/parent_s
     show activeProfilePointsBalanceProvider;
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart'
     show activeTracksProvider;
+import 'package:learning_tracker/features/tracks/stages/domain/models/stage_definition.dart';
+import 'package:learning_tracker/features/tracks/stages/domain/repositories/stage_definition_repository.dart';
+import 'package:learning_tracker/features/tracks/stages/presentation/providers/stage_providers.dart'
+    show stageDefinitionRepositoryProvider;
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
@@ -147,6 +154,30 @@ Future<List<RewardMilestone>> _loadMilestones(String profileId) async {
 
 /// Silence overrides required when landing on /dashboard.
 List<Override> _dashboardSilence(E2EHarness h) => h.dashboardSilenceOverrides;
+
+/// E2E-608 uses a synthetic tutored selection without a deployed tutor grant;
+/// keep PointConfigScreen focused on its permission UI by supplying the
+/// already-seeded stage shape directly.
+class _FakeStageDefinitionRepository extends Fake
+    implements StageDefinitionRepository {
+  @override
+  Future<List<StageDefinition>> getStagesForCurriculum(
+    CurriculumId curriculumId,
+  ) async => [
+    for (final stage in [
+      (1, 'Learn', 0),
+      (2, 'Chazara 1', 1),
+      (3, 'Chazara 2', 7),
+    ])
+      StageDefinition(
+        curriculumId: curriculumId,
+        stageOrder: stage.$1,
+        stageName: stage.$2,
+        delayDays: stage.$3,
+        isDefault: true,
+      ),
+  ];
+}
 
 /// One-shot override for [childRedemptionBalanceProvider] (StreamProvider).
 Override _childRedemptionBalanceOneShotOverride({int balance = 500}) {
@@ -509,6 +540,16 @@ void main() {
             ..._dashboardSilence(h),
             activeTracksProvider.overrideWith(
               (ref) => Stream.value([stubTrack(id: 1, profileId: profileId)]),
+            ),
+            stageDefinitionRepositoryProvider(
+              CurriculumId.mishnayos,
+            ).overrideWithValue(_FakeStageDefinitionRepository()),
+            firestorePointConfigRepositoryProvider.overrideWith(
+              (ref) async => FirestorePointConfigRepository(
+                firestore: h.firestore,
+                uid: accountId,
+                profileId: profileId,
+              ),
             ),
             activeTutoredProfileSelectionProvider.overrideWith(
               () => _FixedTutoredSelection(tutoredSelection),

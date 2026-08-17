@@ -48,13 +48,17 @@ library;
 
 import 'dart:async' show unawaited;
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter/material.dart' show Key, PopupMenuButton, TextField;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart'
     show activeProfileIdProvider;
+import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/parent_pin_session_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
+import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/switcher_sheet_pin_guard_provider.dart'
     show switcherSheetPinGuardRequiredProvider;
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
@@ -87,6 +91,41 @@ class _FixedTutoredSelection extends ActiveTutoredProfileSelection {
 
   @override
   TutoredProfileSelection? build() => _fixed;
+}
+
+/// Local Firestore double for the delete journeys. The production profile
+/// adapter delegates deletion to the `deleteLearnerProfile` callable, but the
+/// E2E harness intentionally has no Firebase Functions app. This preserves
+/// the observable local result without adding a second callable platform fake.
+class _FakeProfileRepository extends Fake implements ProfileRepository {
+  _FakeProfileRepository({required this.firestore, required this.accountId});
+
+  final FakeFirebaseFirestore firestore;
+  final String accountId;
+
+  CollectionReference<Map<String, dynamic>> get _profiles => firestore
+      .collection('users')
+      .doc(accountId)
+      .collection('learner_profiles');
+
+  @override
+  Future<int> countProfiles() async => (await _profiles.get()).docs.length;
+
+  @override
+  Future<List<LearnerProfileEntity>> getProfiles() async {
+    final snapshot = await _profiles.get();
+    return snapshot.docs
+        .map((doc) => LearnerProfileEntity.fromFirestore(doc.id, doc.data()))
+        .toList();
+  }
+
+  @override
+  Future<void> deleteProfile(String profileId, {bool allowLast = false}) async {
+    if (!allowLast && await countProfiles() <= 1) {
+      throw const LastProfileException();
+    }
+    await _profiles.doc(profileId).delete();
+  }
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -381,6 +420,12 @@ void main() {
             ...h.dashboardSilenceOverrides,
             incomingGrantsEmptyOverride(),
             pendingInvitesEmptyOverride(),
+            profileRepositoryProvider.overrideWithValue(
+              _FakeProfileRepository(
+                firestore: h.firestore,
+                accountId: identity.seedAccountId,
+              ),
+            ),
           ],
         );
 
@@ -474,6 +519,12 @@ void main() {
             ...h.dashboardSilenceOverrides,
             incomingGrantsEmptyOverride(),
             pendingInvitesEmptyOverride(),
+            profileRepositoryProvider.overrideWithValue(
+              _FakeProfileRepository(
+                firestore: h.firestore,
+                accountId: identity.seedAccountId,
+              ),
+            ),
           ],
         );
 

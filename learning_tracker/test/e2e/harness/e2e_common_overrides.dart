@@ -30,7 +30,7 @@ import 'package:learning_tracker/features/progress/presentation/providers/lifeti
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
-import 'package:learning_tracker/features/tracks/setup/data/repositories/curriculum_track_repository_impl.dart';
+import 'package:learning_tracker/data/firestore/repository_providers.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart'
     show activeTracksProvider;
@@ -154,12 +154,20 @@ List<Override> dashboardActiveTracksOverrides(
 
 // ── Firestore-backed compatibility overrides ───────────────────────────────
 
-/// Retained for compatibility; the Drift-specific cleanup-timer bug no longer
-/// applies because [activeTracksProvider] is Firestore-backed.
+/// Replaces the reactive active-track stream with a one-shot read from the
+/// existing Firestore repository provider. The provider resolves against the
+/// harness's in-memory Firestore, while avoiding construction of the feature
+/// adapter (whose constructor also resolves the real Firebase Functions
+/// singleton).
 Override activeTracksOneShotOverride() {
   return activeTracksProvider.overrideWith((ref) {
-    final adapter = FirestoreCurriculumTrackRepositoryAdapter(ref: ref);
-    return Stream.fromFuture(adapter.getActiveTracks());
+    final tracks = ref
+        .watch(firestoreCurriculumTrackRepositoryProvider.future)
+        .then<List<CurriculumTrackEntity>>(
+          (repository) =>
+              repository?.getActiveTracks() ?? const <CurriculumTrackEntity>[],
+        );
+    return Stream.fromFuture(tracks);
   });
 }
 
