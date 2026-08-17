@@ -3,6 +3,7 @@
 library;
 
 import 'package:auto_route/auto_route.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -21,7 +22,9 @@ import 'package:learning_tracker/features/gamification/domain/models/point_confi
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/screens/parent_track_management_screen.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
+import 'package:learning_tracker/features/tracks/setup/data/repositories/curriculum_track_repository_impl.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart';
+import 'package:learning_tracker/features/tracks/setup/presentation/widgets/learning_track_card.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../../../helpers/firestore_fake.dart';
@@ -35,6 +38,8 @@ class _FakePageRouteInfo extends Fake implements PageRouteInfo {}
 class _MockFirebaseApp extends Mock implements FirebaseApp {}
 
 class _MockFirebaseAuth extends Mock implements FirebaseAuth {}
+
+class _MockFirebaseFunctions extends Mock implements FirebaseFunctions {}
 
 class _HebrewTermsOff extends UseHebrewTerms {
   @override
@@ -50,7 +55,7 @@ class _FixedActiveProfileDocId extends ActiveProfileDocId {
 }
 
 const _uid = 'uid-ts3';
-const _profileId = '01HTS3PROFILE00000000000000';
+const _profileId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
 
 CurriculumTrackEntity _track(CurriculumId curriculumId) =>
     CurriculumTrackEntity(
@@ -61,6 +66,9 @@ CurriculumTrackEntity _track(CurriculumId curriculumId) =>
     );
 
 List<Override> _perTrackOverrides(List<CurriculumTrackEntity> tracks) => [
+  dashboardActiveCurriculaProvider.overrideWith(
+    (ref) async => tracks.map((track) => track.curriculumId).toList(),
+  ),
   for (final track in tracks) ...[
     dashboardTrackCompletionPercentageProvider(
       track.curriculumId,
@@ -91,6 +99,12 @@ Widget _buildApp({
           firestore: firestore,
           auth: _MockFirebaseAuth(),
           uid: _uid,
+        ),
+      ),
+      curriculumTrackRepositoryAdapterProvider.overrideWith(
+        (ref) => FirestoreCurriculumTrackRepositoryAdapter(
+          ref: ref,
+          functions: _MockFirebaseFunctions(),
         ),
       ),
       activeTracksProvider.overrideWith((ref) => Stream.value(tracks)),
@@ -200,7 +214,7 @@ void main() {
       ),
     );
     await _settle(tester);
-    await tester.longPress(find.byType(InkWell).first);
+    await tester.longPress(find.byType(LearningTrackCard).first);
     await tester.pump(const Duration(milliseconds: 100));
     expect(find.text('Archive (keep history)'), findsOneWidget);
 

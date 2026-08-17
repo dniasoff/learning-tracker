@@ -305,8 +305,9 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
     final authState = ref.watch(authStateProvider);
     final theme = Theme.of(context);
 
-    // No sign-out tile for unauthenticated / anonymous sessions.
-    if (!authState.isCloudBorn) {
+    // No sign-out tile for unauthenticated sessions. Both local-born and
+    // cloud-born signed-in accounts can leave the empty profile picker.
+    if (!authState.isSignedIn) {
       return const SizedBox.shrink();
     }
 

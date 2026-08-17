@@ -14,19 +14,18 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/switcher_sheet_pin_guard_provider.dart';
 import 'package:mocktail/mocktail.dart';
 
 class _MockPinService extends Mock implements PinService {}
 
-/// Fixes [activeProfileIdProvider] to a constant id for the container.
-class _FixedActiveProfileId extends ActiveProfileId {
-  _FixedActiveProfileId(this._id);
+/// Fixes [selectedProfileIdProvider] to a constant id for the container.
+class _FixedSelectedProfileId extends SelectedProfileId {
+  _FixedSelectedProfileId(this._id);
   final String _id;
   @override
-  String build() => _id;
+  String? build() => _id;
 }
 
 LearnerProfileEntity _profile({
@@ -54,8 +53,8 @@ Future<ProviderContainer> _makeContainer({
   final container = ProviderContainer(
     overrides: [
       profileListStreamProvider.overrideWith((ref) => Stream.value(profiles)),
-      activeProfileIdProvider.overrideWith(
-        () => _FixedActiveProfileId(activeProfileId),
+      selectedProfileIdProvider.overrideWith(
+        () => _FixedSelectedProfileId(activeProfileId),
       ),
       pinServiceProvider.overrideWithValue(pinService),
     ],
