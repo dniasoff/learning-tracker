@@ -21,10 +21,6 @@ import '../../helpers/lib_source.dart';
 
 const _conflictModule = 'lib/data/firestore/conflict.dart';
 
-/// The abstract `MergeStore` contract, not a merger — it names the LWW
-/// parameters but arbitrates nothing.
-const _mergeStoreInterface = 'lib/core/sync/merge/entity_merger.dart';
-
 /// Drops whole-line `//` and `///` comments so prose that *describes* the
 /// rule ("instead of the plain `remote.isAfter(local)` comparison") is not
 /// mistaken for a re-implementation of it.
@@ -155,68 +151,40 @@ void main() {
     });
   });
 
-  group('AD-7 — every reconciliation path calls the canonical module', () {
+  group('AD-7 — the module is dormant by design (no reconciliation path '
+      'exists)', () {
     late Map<String, String> sources;
 
     setUp(() {
       sources = _libSources();
     });
 
-    // Paths that own an ordering decision directly.
-    const directCallers = <String, String>{
-      // The MergeStore gate every LWW merger goes through.
-      'lib/core/sync/merge/drift_merge_store.dart': 'canonicalRemoteIsNewer(',
-      // MCF-13 / F3: RewardRedemption's formerly-bespoke plain-isAfter gate.
-      'lib/core/database/daos/points_balance_dao.dart':
-          'canonicalRemoteIsNewer(',
-      // MCF-26 / FB-3: the cache-echo guard.
-      'lib/core/sync/firestore_gateway_impl.dart':
-          'isUnresolvedSnapshotMetadata(',
-    };
-
-    directCallers.forEach((path, marker) {
-      test('$path calls $marker', () {
-        expect(sources[path], isNotNull, reason: '$path is expected to exist');
-        expect(
-          sources[path],
-          contains(marker),
-          reason:
-              '$path owns a reconciliation decision and must route it '
-              'through $_conflictModule (AD-7).',
-        );
-      });
-    });
-
-    // Every LWW merger arbitrates through the MergeStore gate, which is
-    // itself pinned above as a direct caller. Together the two checks make
-    // the chain merger → MergeStore → conflict.dart complete.
+    // Firestore resolves concurrent writes server-side ("one writer per
+    // account" — see the module doc comment), so nothing in lib/ currently
+    // calls the predicate. That is a deliberate, documented owner decision
+    // (docs/firestore-rewrite-map.md), not migration debt. If a genuine
+    // second-writer scenario reappears, wire a caller deliberately and
+    // update this test rather than leaving it stale.
     test(
-      'every merger that arbitrates LWW does so via _store.remoteIsNewer',
+      'no lib/ file outside $_conflictModule calls canonicalRemoteIsNewer '
+      'or isUnresolvedSnapshotMetadata',
       () {
-        final mergers = sources.entries.where(
-          (e) =>
-              e.key.startsWith('lib/core/sync/merge/') &&
-              e.key.endsWith('_merger.dart') &&
-              e.key != _mergeStoreInterface,
-        );
-        final offenders = <String>[];
-        for (final e in mergers) {
-          final src = _stripLineComments(e.value);
-          final arbitrates =
-              src.contains('currentUpdatedAt(') ||
-              src.contains('currentSyncedAt(');
-          if (arbitrates && !src.contains('_store.remoteIsNewer(')) {
-            offenders.add(e.key);
+        final callers = <String>[];
+        sources.forEach((path, src) {
+          if (path == _conflictModule) return;
+          if (src.contains('canonicalRemoteIsNewer(') ||
+              src.contains('isUnresolvedSnapshotMetadata(')) {
+            callers.add(path);
           }
-        }
-        offenders.sort();
+        });
+        callers.sort();
         expect(
-          offenders,
+          callers,
           isEmpty,
           reason:
-              'A merger that reads the LWW watermark must decide with '
-              '_store.remoteIsNewer, which delegates to $_conflictModule — no '
-              'per-merger exception (AD-7).',
+              '$_conflictModule is dormant by design — a caller appearing '
+              'here means a second-writer scenario has returned and this '
+              'test needs a deliberate update, not a silent pass.',
         );
       },
     );

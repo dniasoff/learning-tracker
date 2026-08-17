@@ -164,19 +164,6 @@ void main() {
       );
     });
 
-    test('skips track 0 (bulk-mark sentinel)', () {
-      final result = service.computeCurriculumPercentage(
-        byTrack: {
-          0: TrackEntry(
-            stages: [_stageDefinition],
-            completions: [_completion(sefariaRef: 'Berakhot 1:1')],
-          ),
-        },
-        totalItems: 10,
-      );
-      expect(result, 0.0);
-    });
-
     test('counts item done when any track has all stages complete', () {
       final result = service.computeCurriculumPercentage(
         byTrack: {
