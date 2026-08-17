@@ -2,7 +2,6 @@
 //
 // Verifies:
 //   1. Loading state shows CircularProgressIndicator while FutureBuilder resolves.
-//   2. Single local-born account renders display name, email, LOCAL ACCOUNT badge.
 //   3. Single cloud-born account with valid session renders CLOUD ACCOUNT badge +
 //      chevron icon.
 //   4. Cloud account with NO valid session renders SIGN IN AGAIN badge + warning icon.
@@ -13,11 +12,18 @@
 //      AppShellRoute (no-sign-out switch flow).
 //   9. Select cloud-born account with valid session — DEC-34: signOut NOT called;
 //      router pushes AppShellRoute.
-//  10. Swipe-to-remove (cloud): confirm dialog shows "Remove from device?" title.
-//  11. Swipe-to-remove (local): confirm dialog shows "Delete account?" title.
+//  10. Swipe-to-remove: confirm dialog shows "Remove from device?" title.
 //  12. Cancel dismiss dialog — item is still rendered (not removed).
 //  13. Privacy footer text is always rendered.
 //  14. Hebrew-locale smoke: screen renders without crashing, title in Hebrew.
+//
+// Items 2 and 11 (local-born-specific LOCAL ACCOUNT badge / "Delete account?"
+// dialog) were removed 2026-08-18: owner decision 91798ab8 deleted local-born
+// account support, and the screen no longer branches on DeviceAccount.tier at
+// all (badge/dialog choice is driven purely by hasValidSession now) — those
+// cases became exact duplicates of items 3 and 10. Item 8 still uses the
+// `_localAccount()` fixture as a plain "an account row" fixture (tier value
+// is inert), not to exercise tier-specific behavior.
 //
 // BUG LOG: None.
 
@@ -322,37 +328,6 @@ void main() {
     },
   );
 
-  // ── 2. Single local-born account ────────────────────────────────────────────
-
-  testWidgets(
-    '2. single local-born account shows display name, email, LOCAL ACCOUNT badge',
-    (tester) async {
-      final fixture = await _buildFixture();
-      addTearDown(() => _tearDown(tester, fixture));
-      await fixture.registry.addAccount(_localAccount());
-
-      await tester.pumpWidget(fixture.buildSubject());
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 1));
-
-      // Title and subtitle
-      expect(find.text('Choose an Account'), findsOneWidget);
-      expect(find.text('Select an account to continue'), findsOneWidget);
-
-      // Account tile content
-      expect(find.text('Local Learner'), findsOneWidget);
-      expect(find.text('local@example.test'), findsOneWidget);
-
-      // Tier badge for local-born
-      expect(find.text('LOCAL ACCOUNT'), findsOneWidget);
-
-      // run7 #12: local accounts open with no credential gate (like a valid
-      // cloud session), so the trailing affordance is a "tap to enter" chevron,
-      // not a misleading lock icon.
-      expect(find.byIcon(Icons.chevron_right_rounded), findsOneWidget);
-    },
-  );
-
   // ── 3. Cloud account with valid session ──────────────────────────────────────
 
   testWidgets(
@@ -435,9 +410,6 @@ void main() {
 
     expect(find.text('Alice'), findsOneWidget);
     expect(find.text('Bob'), findsOneWidget);
-
-    // Two LOCAL ACCOUNT badges
-    expect(find.text('LOCAL ACCOUNT'), findsNWidgets(2));
   });
 
   // ── 6. Add-account button visible when below kMaxDeviceAccounts ──────────────
@@ -640,32 +612,6 @@ void main() {
     );
   });
 
-  // ── 11. Swipe-to-remove local account — confirm dialog title ─────────────────
-
-  testWidgets('11. swiping local account shows "Delete account?" dialog', (
-    tester,
-  ) async {
-    final fixture = await _buildFixture();
-    addTearDown(() => _tearDown(tester, fixture));
-    await fixture.registry.addAccount(_localAccount());
-
-    await tester.pumpWidget(fixture.buildSubject());
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
-
-    await tester.drag(find.text('Local Learner'), const Offset(-400, 0));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 300));
-
-    expect(find.text('Delete account?'), findsOneWidget);
-    expect(
-      find.text(
-        'All learning data will be permanently lost. This cannot be undone.',
-      ),
-      findsOneWidget,
-    );
-  });
-
   // ── 12. Cancel dismiss — item stays ──────────────────────────────────────────
 
   testWidgets(
@@ -684,7 +630,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
-      expect(find.text('Delete account?'), findsOneWidget);
+      expect(find.text('Remove from device?'), findsOneWidget);
 
       // Tap "Cancel"
       await tester.tap(find.text('Cancel'));
@@ -731,8 +677,9 @@ void main() {
     // Hebrew title rendered
     expect(find.text('בחירת חשבון'), findsOneWidget);
 
-    // Hebrew badge for local-born
-    expect(find.text('חשבון מקומי'), findsOneWidget);
+    // Hebrew badge for a no-valid-session account (default: no currentUser
+    // stubbed, so hasValidSession is false — see badgeSignInAgain).
+    expect(find.text('התחברו שוב'), findsOneWidget);
 
     // Account name still shows
     expect(find.text('בני'), findsOneWidget);

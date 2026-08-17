@@ -136,6 +136,16 @@ void main() {
   testWidgets(
     'tapping a saved account switches to AppShell without signing out (DEC-34)',
     (tester) async {
+      // Local-born accounts no longer exist (91798ab8); every account is
+      // cloud-born now, so the no-reauth "instant switch" path requires the
+      // live Firebase session to already match this account's uid.
+      when(
+        () => auth.currentUser,
+      ).thenReturn(_user('fb-uid-local', 'local@test.local'));
+      when(
+        () => auth.reloadCurrentUser(),
+      ).thenAnswer((_) async => auth.currentUser);
+
       await tester.pumpWidget(buildApp());
       await tester.pump(); // resolve the getAllAccounts() FutureBuilder
       await tester.pump(const Duration(milliseconds: 200));
@@ -148,7 +158,7 @@ void main() {
 
       // THE invariant: switching never signs out.
       verifyNever(() => auth.signOut());
-      // Local-born accounts never touch Firebase — no re-auth on switch.
+      // Valid-session accounts never touch Firebase — no re-auth on switch.
       verifyNever(() => auth.signInWithGoogle());
 
       // It reloads into the app shell — not the sign-in screen.

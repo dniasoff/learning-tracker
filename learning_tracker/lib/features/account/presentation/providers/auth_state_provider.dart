@@ -46,6 +46,22 @@ class AuthStateNotifier extends _$AuthStateNotifier {
   }
 
   Future<void> _init() async {
+    // Force a genuine suspension before any `state = ...` write below.
+    // build() hasn't returned yet at the point _init() is called (see
+    // build()'s `_init();` fire-and-forget call), and
+    // NotifierProviderElement.handleCreate installs the initial value as
+    // `value = AsyncData(created())` — evaluated AFTER build() returns.
+    // When authRepo.currentUser is null (an ordinary signed-out cold
+    // start) or reloadCurrentUser() rejects synchronously, every statement
+    // below runs with zero real awaits, so this method would otherwise
+    // complete entirely inside build()'s own call stack: any `state = ...`
+    // it wrote gets silently overwritten the instant build() returns,
+    // stranding sessionStatus at `initializing` forever. `await` on a
+    // Future always defers to the next microtask — even one already
+    // complete — so this line guarantees build() has returned and
+    // installed its initial state before any code below can run.
+    await Future<void>.value();
+
     // AUD-account-03 / AUD-account-11: this whole body must never leave
     // `state` stuck at AuthState.initializing() — build() kicks this off
     // fire-and-forget, so an unhandled exception here is an unobserved

@@ -189,12 +189,13 @@ void main() {
 
   // ── Epic 21.7: registry-mode selection ───────────────────────────────────────
   //
-  // AUD-t-auth-02: `_effectiveSignInMode` / `_registrySubtitle` must react to
-  // the debounced device-registry lookup (`RegistryMatchKind`), not just to
-  // the raw connectivity flag. A reverted `_effectiveSignInMode` that ignores
-  // the registry match (falls back to `isOnline ? cloud : local`) makes the
-  // first test below fail: a localBorn match would render the cloud card
-  // while online instead of the local card.
+  // `RegistryMatchKind` only has none/cloudBorn/notOnDevice now — the
+  // localBorn variant, and the "local mode card" (warning_amber_rounded)
+  // it drove, were removed by 91798ab8 (local-born account support deleted
+  // entirely; every registry match is treated as cloudBorn or notOnDevice).
+  // `_effectiveSignInMode` itself no longer branches on the registry match
+  // at all — it is purely `isOnline ? cloud : cloudOffline` — so this group
+  // now only covers `_registrySubtitle`'s cloudBorn/notOnDevice branches.
   group('SignInScreen — registry-mode selection (Epic 21.7)', () {
     setUp(debugResetLastKnownOnline);
     tearDown(debugResetLastKnownOnline);
@@ -237,82 +238,6 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
     }
-
-    testWidgets(
-      'online + email matches a localBorn device account: shows the local '
-      'mode card, not the cloud card',
-      (tester) async {
-        await registry.addAccount(
-          DeviceAccountsCompanion.insert(
-            accountId: 'acc-local',
-            email: 'local@example.com',
-            displayName: 'Local User',
-            tier: 'localBorn',
-            dbFileName: 'user_acc_local.db',
-            createdAt: DateTime.utc(2026, 1, 1),
-            lastUsedAt: DateTime.utc(2026, 1, 1),
-          ),
-        );
-
-        await tester.pumpWidget(
-          buildRegistryTestWidget(connectivity: Stream.value(true)),
-        );
-        await tester.pump(const Duration(seconds: 1));
-
-        await enterEmailAndSettle(tester, 'local@example.com');
-
-        expect(
-          find.byIcon(Icons.warning_amber_rounded),
-          findsOneWidget,
-          reason:
-              'a localBorn registry match must force the local mode card '
-              'even while online — the account has no cloud backup',
-        );
-        expect(find.byIcon(Icons.cloud_done_rounded), findsNothing);
-
-        await tester.pumpWidget(const SizedBox.shrink());
-        await tester.pump(Duration.zero);
-      },
-    );
-
-    testWidgets(
-      'offline + email matches a localBorn device account: still shows the '
-      'local mode card (not the generic wifi-off hint)',
-      (tester) async {
-        await registry.addAccount(
-          DeviceAccountsCompanion.insert(
-            accountId: 'acc-local',
-            email: 'local@example.com',
-            displayName: 'Local User',
-            tier: 'localBorn',
-            dbFileName: 'user_acc_local.db',
-            createdAt: DateTime.utc(2026, 1, 1),
-            lastUsedAt: DateTime.utc(2026, 1, 1),
-          ),
-        );
-
-        await tester.pumpWidget(
-          buildRegistryTestWidget(connectivity: Stream.value(false)),
-        );
-        await tester.pump(const Duration(seconds: 1));
-
-        await enterEmailAndSettle(tester, 'local@example.com');
-
-        expect(
-          find.byIcon(Icons.warning_amber_rounded),
-          findsOneWidget,
-          reason:
-              'a confirmed localBorn match must keep showing the local mode '
-              'card while offline instead of the generic wifi-off hint '
-              '(Fix #13 only applies when the account is NOT a confirmed '
-              'local-born match)',
-        );
-        expect(find.byIcon(Icons.wifi_off_rounded), findsNothing);
-
-        await tester.pumpWidget(const SizedBox.shrink());
-        await tester.pump(Duration.zero);
-      },
-    );
 
     testWidgets(
       'online + email matches a cloudBorn device account: shows the cloud '
