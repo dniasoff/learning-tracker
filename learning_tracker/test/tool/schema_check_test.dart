@@ -10,7 +10,14 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  const dart = '/home/daniel/flutter/bin/dart';
+  // Resolved via FLUTTER_ROOT (set by `flutter test` for every child test
+  // process) instead of a path hardcoded to one developer's machine/FVM
+  // install (TQ-5) — see test/helpers/golden_font_loader.dart's
+  // materialFontsDir() for the same pattern.
+  final flutterRoot = Platform.environment['FLUTTER_ROOT'];
+  final dart = flutterRoot != null && flutterRoot.isNotEmpty
+      ? '$flutterRoot/bin/cache/dart-sdk/bin/dart'
+      : 'dart';
 
   // `flutter test` runs with cwd = the package dir (`learning_tracker/`).
   // The repo root is one level up; the tool lives there.
