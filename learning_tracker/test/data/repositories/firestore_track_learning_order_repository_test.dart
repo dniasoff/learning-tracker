@@ -518,14 +518,76 @@ void main() {
     );
   });
 
-  group('resetToDefault — flagged, not silently guessed at', () {
-    test('throws UnimplementedError (no rules-legal delete path exists)', () {
+  group('resetToDefault — field-tombstone, not a document delete', () {
+    // The rules deny document deletion (see the repository's class doc
+    // comment), so resetToDefault tombstones each row by removing its
+    // user_sort_order field rather than deleting the document.
+    test(
+      'clears the custom order — reads fall back to natural content order',
+      () async {
+        final repo = buildRepo();
+        await repo.saveSedarimOrder(CurriculumId.mishnayos, [
+          LearningOrderItem(
+            sefariaRef: moed.sefariaRef,
+            displayNameHe: '?',
+            displayNameEn: '?',
+            userSortOrder: 0,
+          ),
+          LearningOrderItem(
+            sefariaRef: zeraim.sefariaRef,
+            displayNameHe: '?',
+            displayNameEn: '?',
+            userSortOrder: 0,
+          ),
+        ]);
+
+        await repo.resetToDefault(CurriculumId.mishnayos);
+
+        final result = await repo.getSedarimOrder(
+          CurriculumId.mishnayos,
+          allItems,
+        );
+        expect(result.map((i) => i.sefariaRef), [
+          zeraim.sefariaRef,
+          moed.sefariaRef,
+        ]);
+        expect(result.every((i) => !i.isCustomOrdered), isTrue);
+      },
+    );
+
+    test(
+      'removes user_sort_order from the document instead of deleting it',
+      () async {
+        final repo = buildRepo();
+        await repo.saveSedarimOrder(CurriculumId.mishnayos, [
+          LearningOrderItem(
+            sefariaRef: zeraim.sefariaRef,
+            displayNameHe: '?',
+            displayNameEn: '?',
+            userSortOrder: 0,
+          ),
+        ]);
+        final docId = DocIds.trackLearningOrderDocId({
+          'curriculum_id': CurriculumId.mishnayos.storageKey,
+          'sefaria_ref': zeraim.sefariaRef,
+        });
+
+        await repo.resetToDefault(CurriculumId.mishnayos);
+
+        final snapshot = await rawDoc(docId).get();
+        expect(
+          snapshot.exists,
+          isTrue,
+          reason: 'rules deny document deletion — the row must still exist',
+        );
+        expect(snapshot.data(), isNot(contains('user_sort_order')));
+      },
+    );
+
+    test('is a no-op when no custom order was ever saved', () async {
       final repo = buildRepo();
 
-      expect(
-        () => repo.resetToDefault(CurriculumId.mishnayos),
-        throwsA(isA<UnimplementedError>()),
-      );
+      await expectLater(repo.resetToDefault(CurriculumId.mishnayos), completes);
     });
   });
 
