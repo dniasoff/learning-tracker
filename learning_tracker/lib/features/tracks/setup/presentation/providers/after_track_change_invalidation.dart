@@ -27,14 +27,14 @@ Future<void> onTrackChanged(WidgetRef ref) async {
   ref.invalidate(dashboardActiveTracksStreamProvider);
   ref.invalidate(activeTracksProvider);
 
-  // TODO(scheduler-daily-plan-cluster): db.dailyPlanDao.deletePlanForDay
-  // used to force the day's cached plan to rebuild here so a new/changed
-  // track shows up immediately instead of waiting for the next local day.
-  // scheduler_providers.dart's allDailyTasksProvider is itself still
-  // Drift-dependent (`ref.watch(userDatabaseProvider)`) and
-  // DailyPlanRepository.getOrSnapshotPlan/rebuildPlan both still require an
-  // `int profileId` this file has no live value for post-AD-24 — a
-  // separate, already-broken cluster, not fixed here.
+  // Discard DailyPlanRepository's in-memory (profileId, localDate) snapshot
+  // cache so a new/changed track shows up immediately instead of waiting for
+  // the next local day — the post-AD-24 replacement for the old
+  // db.dailyPlanDao.deletePlanForDay call. dailyPlanRepositoryProvider is a
+  // plain (non-keepAlive) @riverpod function returning a fresh
+  // DailyPlanRepository() with an empty cache, so invalidating it here is
+  // equivalent to clearing just the current profile/day's entry.
+  ref.invalidate(dailyPlanRepositoryProvider);
   ref.invalidate(allDailyTasksProvider);
   ref.invalidate(dashboardActiveCurriculaStreamProvider);
   ref.invalidate(trackDualProgressMetricsProvider);

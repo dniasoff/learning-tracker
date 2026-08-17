@@ -25,6 +25,8 @@ import 'package:learning_tracker/features/settings/presentation/providers/curric
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
 import 'package:learning_tracker/features/tracks/setup/data/repositories/curriculum_track_repository_impl.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/entities/add_track_result.dart'
+    show ScopeEntry;
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/after_track_change_invalidation.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/screens/edit_track_screen.dart';
@@ -943,20 +945,26 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     CurriculumId curriculum,
   ) async {
     final navigator = Navigator.of(context);
-    // TODO(curriculum-scope-write-adapter): no domain-legal seam exists
-    // yet for a presentation-layer read of a track's configured scope
-    // (FirestoreCurriculumScopeRepository is data-ring-only; AD-23 forbids
-    // presentation/** from reaching it directly, and building a new
-    // adapter just for this one lookup was judged out of proportion to
-    // this pass). scopeConstraints: null is an existing, legal code path
-    // (the old ternary already produced null when no scopes were set) --
-    // bulk-mark simply won't auto-narrow to the track's configured scope
-    // until that adapter is built. A real, disclosed gap, not a guess.
+    // The settings feature's adapter over FirestoreCurriculumScopeRepository
+    // (curriculumScopeSettingsAdapterProvider, already imported into this
+    // file for scopedItemCountProvider/scopedCoarseUnitCountProvider) is the
+    // presentation-legal read seam AD-23 requires — no new adapter needed.
+    final scopes = await ref
+        .read(curriculumScopeSettingsAdapterProvider)
+        .getScopes(curriculum);
+    final scopeConstraints = scopes.isEmpty
+        ? null
+        : [
+            for (final scope in scopes)
+              ScopeEntry(level: scope.scopeLevel, value: scope.scopeValue),
+          ];
     if (!mounted) return;
     await navigator.push<BulkMarkResult>(
       MaterialPageRoute(
-        builder: (_) =>
-            BulkMarkScreen(curriculumId: curriculum, scopeConstraints: null),
+        builder: (_) => BulkMarkScreen(
+          curriculumId: curriculum,
+          scopeConstraints: scopeConstraints,
+        ),
       ),
     );
   }
