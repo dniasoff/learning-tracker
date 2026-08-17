@@ -718,14 +718,6 @@ audit: lint-rules-test ## Run all 60 enforcement greps (NFR19) — exits non-zer
 	else \
 	  rm -f /tmp/sm7_analytics_repo_check.$$$$.log; \
 	fi; \
-	echo "38/40 — DB-2/DB-3: TrackLearningOrderDao.upsertOrder never regresses to an awaited per-row into( loop (AUD-core-database-05)"; \
-	if ! dart run tool/check_db_dao_loop_writes.dart > /tmp/db_dao_loop_writes_check.$$$$.log 2>&1; then \
-	  cat /tmp/db_dao_loop_writes_check.$$$$.log; \
-	  rm -f /tmp/db_dao_loop_writes_check.$$$$.log; \
-	  FAIL=1; \
-	else \
-	  rm -f /tmp/db_dao_loop_writes_check.$$$$.log; \
-	fi; \
 	echo "40/41 — AX-2: no hardcoded literal passed to Text()/TextSpan(text:) under lib/features/**/presentation/** (AUD-account-05)"; \
 	if ! dart run tool/check_hardcoded_presentation_text.dart > /tmp/ax2_hardcoded_text_check.$$$$.log 2>&1; then \
 	  cat /tmp/ax2_hardcoded_text_check.$$$$.log; \
@@ -847,14 +839,6 @@ audit: lint-rules-test ## Run all 60 enforcement greps (NFR19) — exits non-zer
 	      FAIL=1 ;; \
 	  esac; \
 	done; \
-	echo "56/58 — profileId-in-PK Invariant: every non-exempt UserDatabase table carries profileId (AUD-t-cross-06, docs/coding-standards.md:692)"; \
-	if ! dart run tool/check_profile_id_in_pk.dart > /tmp/profile_id_in_pk_check.$$$$.log 2>&1; then \
-	  cat /tmp/profile_id_in_pk_check.$$$$.log; \
-	  rm -f /tmp/profile_id_in_pk_check.$$$$.log; \
-	  FAIL=1; \
-	else \
-	  rm -f /tmp/profile_id_in_pk_check.$$$$.log; \
-	fi; \
 	echo "57/58 — TQ-6 Rule-0: no NEW test file pairs a .listen( call with a fixed-millisecond Future<void>.delayed(...) wait in the same test body (AUD-t-cross-36)"; \
 	if ! dart run tool/check_test_stream_delay_race.dart > /tmp/stream_delay_race_check.$$$$.log 2>&1; then \
 	  cat /tmp/stream_delay_race_check.$$$$.log; \

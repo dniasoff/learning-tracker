@@ -43,12 +43,6 @@ class _DbSpec {
 
 final _dbSpecs = [
   _DbSpec(
-    label: 'User DB',
-    databaseFile: 'lib/core/database/user/user_database.dart',
-    schemaVersionPattern: RegExp(r'int get schemaVersion\s*=>\s*(\d+);'),
-    tableSearchDirs: ['lib/core/database/tables'],
-  ),
-  _DbSpec(
     label: 'Content DB',
     databaseFile: 'lib/core/database/content/content_database.dart',
     schemaVersionPattern: RegExp(

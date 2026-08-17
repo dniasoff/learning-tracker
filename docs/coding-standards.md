@@ -649,12 +649,11 @@ lib/
     analytics/                       — Analytics events and repository
     constants/                       — App-wide constants (no logic)
     content/                         — Content index and curriculum content loading
-    database/                        — Drift database definitions, DAOs, migrations
-      daos/                          — One DAO per table group
-      tables/                        — Drift Table classes
-      user_database.dart             — User DB (schemaVersion managed here)
-      content_database.dart          — Content DB
-      device_registry_database.dart  — Device DB
+    database/                        — Drift databases: device-local only, never profile-scoped user data (that's Firestore now — see profileId-in-PK Invariant below)
+      content/                       — Content DB: on-device Torah-text cache, shared across profiles
+      registry/                      — Registry DB: device-account registry, PathUidResolver
+      daos/                          — Content DB's DAOs
+      tables/                        — Content DB's Drift Table classes
     enums/                           — Shared enums (CurriculumId, etc.)
     exceptions/                      — Typed exception classes
     labels/                          — CurriculumLabelRenderer + domain term labels
@@ -715,33 +714,11 @@ Presentation code (`features/*/presentation/**`) must not import from `features/
 
 ## profileId-in-PK Invariant
 
-Every user-data table in the user database MUST include `profileId` as part of its composite primary key. This is the enforcement of multi-profile isolation at the data layer.
+**[Retired — superseded by PROFILE-KEY-SPLIT]** This section originally required every user-data Drift table to carry `profileId` as part of its composite primary key, enforced by `tool/check_profile_id_in_pk.dart` introspecting `user_database.dart`'s `tables: [...]` list. `lib/core/database/user/user_database.dart` and every profile-scoped table it declared (Accounts, LearnerProfiles, CurriculumTracks, CompletionEvents, Goals, etc.) were archived wholesale in the Firestore-native rewrite (Phase 3 P3-5) — profile-scoped data is now a Firestore document tree, not a Drift table, so a Drift primary-key invariant no longer has a subject to apply to. The checker was retired in the same commit that removed it as a `make audit` step.
 
-**Rule:** No user-facing Drift table may use a single-column autoincrement primary key without also specifying `profileId` as part of a composite key override.
+The equivalent invariant today — every profile-scoped Firestore collection is actually keyed/split by profile — is enforced by `tool/check_profile_path_keying.dart` (`make audit` check 103, PROFILE-KEY-SPLIT) against `firestore.rules`'s `match /learner_profiles/{profileId}/...` structure, not by a table-column check. See that checker's doc comment for the current mechanism.
 
-**Correct pattern:**
-```dart
-class CompletionsTable extends Table {
-  TextColumn get profileId => text().references(ProfilesTable, #id)();
-  TextColumn get contentItemId => text()();
-  DateTimeColumn get completedAt => dateTime()();
-
-  @override
-  Set<Column> get primaryKey => {profileId, contentItemId, completedAt};
-}
-```
-
-**Wrong pattern (bare autoincrement — forbidden for user data):**
-```dart
-class CompletionsTable extends Table {
-  IntColumn get id => integer().autoIncrement()();  // WRONG — no profileId
-  ...
-}
-```
-
-Content tables (read-only, shared across profiles) are exempt. The invariant applies to all tables in `user_database.dart`.
-
-**Enforcement:** `make audit` flags any user-DB table without a `profileId` column.
+The two Drift databases that remain (`lib/core/database/content/`, `lib/core/database/registry/`) are genuinely device-local, not profile-scoped user data, and are out of this invariant's original scope regardless.
 
 ---
 

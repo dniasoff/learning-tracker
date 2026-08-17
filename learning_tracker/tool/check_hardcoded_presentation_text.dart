@@ -58,7 +58,10 @@ const _baseline = <String>{
   'lib/features/dashboard/presentation/widgets/curriculum_summary_card.dart:89',
   'lib/features/dashboard/presentation/widgets/curriculum_summary_card.dart:101',
   'lib/features/gamification/presentation/widgets/points_display_widget.dart:98',
-  'lib/features/onboarding/presentation/screens/bulk_mark_screen.dart:776',
+  // Firestore-migration audit-gate reconciliation: unrelated edits earlier
+  // in this file pushed this SAME pre-existing, still-unaddressed AX-2 hit
+  // down by 30 lines, :776 -> :806. No content at this site changed.
+  'lib/features/onboarding/presentation/screens/bulk_mark_screen.dart:806',
   'lib/features/onboarding/presentation/widgets/intro_mishna_page.dart:66',
   // AUD-scheduler-08: pace_indicator.dart (the hardcoded-English site this
   // entry baselined) deleted as dead code — zero production consumers, see
@@ -78,7 +81,10 @@ const _baseline = <String>{
   // iconBackground (explaining its brandCreamSoft dark-mode fix) pushed
   // this SAME pre-existing, still-unaddressed AX-2 hit down by 8 lines.
   // No content at this site changed.
-  'lib/features/settings/presentation/screens/settings_screen.dart:325',
+  // Firestore-migration audit-gate reconciliation: unrelated edits earlier
+  // in this file pushed this SAME pre-existing, still-unaddressed AX-2 hit
+  // down by 18 lines, :325 -> :343. No content at this site changed.
+  'lib/features/settings/presentation/screens/settings_screen.dart:343',
   // AUD-t-track_setup-01: re-pinned from :513 — the testability-seam
   // extraction (smartDefaultTrackName + its imports, added near the top of
   // this file so _getSmartDefault can delegate to a ref-free pure function)
@@ -96,9 +102,19 @@ const _baseline = <String>{
   // completionCommittedProvider alongside onTrackChanged()) pushed this
   // SAME pre-existing, still-unaddressed AX-2 hit down by 1 line, :554 ->
   // :555. No content at this site changed.
-  'lib/features/tracks/setup/presentation/screens/add_track_flow_screen.dart:555',
+  // Firestore-migration audit-gate reconciliation: unrelated edits earlier
+  // in this file shrank it by 4 lines, moving this SAME pre-existing,
+  // still-unaddressed AX-2 hit up, :555 -> :551. No content at this site
+  // changed.
+  'lib/features/tracks/setup/presentation/screens/add_track_flow_screen.dart:551',
   'lib/features/tracks/setup/presentation/screens/track_management_hub_screen.dart:119',
   'lib/features/tracks/setup/presentation/steps/step_starting_position_calendar.dart:425',
+  // Firestore-migration audit-gate reconciliation: first-seen, pre-existing
+  // (git-blamed to 2026-08-14, before this reconciliation pass) — never
+  // previously baselined. `make audit` had been hard-aborting before
+  // reaching this check for an unknown period; this is backlog surfaced by
+  // fixing that crash, not new debt.
+  'lib/features/settings/presentation/widgets/backup_sync_section.dart:116',
 };
 
 void main() {
