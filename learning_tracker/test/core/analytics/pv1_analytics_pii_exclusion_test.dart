@@ -59,7 +59,9 @@ import 'package:learning_tracker/features/learning/domain/entities/completion_en
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 import 'package:learning_tracker/features/learning/domain/entities/mark_completion_result.dart';
+import 'package:learning_tracker/features/learning/domain/entities/learning_ledger_entry.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
+import 'package:learning_tracker/features/learning/domain/repositories/learning_ledger_repository.dart';
 import 'package:learning_tracker/features/learning/domain/services/completion_orchestrator.dart';
 import 'package:learning_tracker/features/learning/domain/use_cases/mark_completion_use_case.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
@@ -364,7 +366,21 @@ void main() {
       });
 
       test('lifetime_achievement_skipped — no parameters at all', () async {
-        final useCase = _useCase(analytics);
+        final useCase = _useCase(
+          analytics,
+          contentRepository: const _FakeSingleItemContentRepository(
+            ContentItem(
+              curriculumId: 'mishnayos',
+              level1: 'Berakhot',
+              displayNameHe: 'ברכות ב.',
+              displayNameEn: 'Berakhot 2a',
+              sefariaRef: 'Berakhot.2a',
+              sortOrder: 1,
+              isLeaf: true,
+            ),
+          ),
+          learningLedgerRepository: _FakeLearningLedgerRepository(),
+        );
         await useCase.call(
           const CompletionRequest(
             curriculumId: 'mishnayos',
@@ -695,18 +711,141 @@ class _FakeContentRepository implements ContentRepository {
   }) async => null;
 }
 
+/// Resolves ONLY the one ref the `lifetime_achievement_skipped` test marks —
+/// [_recordLifetimeOnly] needs a real item to build the ledger entry from.
+class _FakeSingleItemContentRepository implements ContentRepository {
+  const _FakeSingleItemContentRepository(this._item);
+
+  final ContentItem _item;
+
+  @override
+  Future<ContentItem?> getContentByRef({
+    required CurriculumId curriculumId,
+    required String sefariaRef,
+  }) async => sefariaRef == _item.sefariaRef ? _item : null;
+
+  @override
+  Future<List<ContentItem>> getContentForCurriculum(
+    CurriculumId curriculumId,
+  ) async => const [];
+
+  @override
+  Future<CurriculumHierarchyConfig> getHierarchyConfig(
+    CurriculumId curriculumId,
+  ) async => const CurriculumHierarchyConfig(
+    curriculumId: 'mishnayos',
+    levelLabels: [],
+    totalItems: 0,
+  );
+
+  @override
+  Future<List<ContentItem>> filterByLevel({
+    required CurriculumId curriculumId,
+    String? level1,
+    String? level2,
+    String? level3,
+    String? level4,
+  }) async => const [];
+
+  @override
+  Future<List<ContentItem>> getScopedContent({
+    required CurriculumId curriculumId,
+    required int scopeLevel,
+    required List<String> scopeValues,
+  }) async => const [];
+
+  @override
+  Future<List<ContentItem>> search({
+    required CurriculumId curriculumId,
+    required String query,
+  }) async => const [];
+}
+
+/// Minimal [LearningLedgerRepository] stub — only [recordCompletion] is
+/// reached by [CompletionOrchestrator._recordLifetimeOnly]; every other
+/// method is unused by this suite.
+class _FakeLearningLedgerRepository implements LearningLedgerRepository {
+  @override
+  Future<LearningLedgerEntry> recordCompletion({
+    required CurriculumId curriculumId,
+    required String entryScope,
+    required String unitIdentifier,
+    required String unitDisplayNameHe,
+    required String unitDisplayNameEn,
+    required String trackType,
+    String? markedBy,
+    required bool isManual,
+    CompletionSource source = CompletionSource.live,
+    String? ulid,
+  }) async => LearningLedgerEntry(
+    ulid: ulid ?? 'fake-ledger-entry',
+    curriculumId: curriculumId,
+    entryScope: entryScope,
+    unitIdentifier: unitIdentifier,
+    unitDisplayNameHe: unitDisplayNameHe,
+    unitDisplayNameEn: unitDisplayNameEn,
+    trackType: trackType,
+    completedAt: DateTime.utc(2026, 5, 1),
+    completionNumber: 1,
+    markedBy: markedBy ?? 'fake-profile',
+    isManual: isManual,
+    source: source,
+  );
+
+  @override
+  Future<List<LearningLedgerEntry>> recordCompletionsBatch(
+    List<LedgerEntryDraft> items, {
+    CompletionSource source = CompletionSource.lifetimeOnly,
+  }) async => [];
+
+  @override
+  Future<List<LearningLedgerEntry>> getLifetimeLedger() async => [];
+
+  @override
+  Future<List<LearningLedgerEntry>> getLedgerByCurriculum(
+    CurriculumId curriculumId,
+  ) async => [];
+
+  @override
+  Future<List<LearningLedgerEntry>> getLedgerByCurriculumIncludingTombstoned(
+    CurriculumId curriculumId,
+  ) async => [];
+
+  @override
+  Future<Map<String, int>> getCompletionStats(
+    CurriculumId curriculumId,
+  ) async => {};
+
+  @override
+  Future<void> purgeEntry({
+    required String ulid,
+    required DateTime purgedAt,
+  }) async {}
+}
+
 /// Builds a [MarkCompletionUseCase] wired over [CompletionOrchestrator] for
 /// these PII-exclusion tests — the orchestrator's optional collaborators
 /// (bookmark repository, siyum detection, points, streak) are all omitted,
 /// which resolves every post-write side effect to a safe no-op (see
 /// [CompletionOrchestrator]'s class doc comment). Only order validation and
 /// the storage write itself run, both against [_FakeCompletionRepository].
-MarkCompletionUseCase _useCase(AnalyticsService analytics) =>
-    MarkCompletionUseCase(
-      CompletionOrchestrator(
-        repository: _FakeCompletionRepository(),
-        contentRepository: _FakeContentRepository(),
-        activeProfileId: '01J8M6H7QK2P4N9R5T6V8W0XYZ',
-      ),
-      analytics: analytics,
-    );
+///
+/// [contentRepository] / [learningLedgerRepository] are overridable because
+/// `CompletionSource.lifetimeOnly` routes through
+/// [CompletionOrchestrator._recordLifetimeOnly], which — unlike every other
+/// source — treats the content lookup and the ledger write as its PRIMARY
+/// write path, not an optional post-write side effect: it hard-requires a
+/// non-null ledger repository and a resolvable content item.
+MarkCompletionUseCase _useCase(
+  AnalyticsService analytics, {
+  ContentRepository? contentRepository,
+  LearningLedgerRepository? learningLedgerRepository,
+}) => MarkCompletionUseCase(
+  CompletionOrchestrator(
+    repository: _FakeCompletionRepository(),
+    contentRepository: contentRepository ?? _FakeContentRepository(),
+    activeProfileId: '01J8M6H7QK2P4N9R5T6V8W0XYZ',
+    learningLedgerRepository: learningLedgerRepository,
+  ),
+  analytics: analytics,
+);
