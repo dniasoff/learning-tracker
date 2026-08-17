@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/content_item_tile.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -20,6 +21,10 @@ void main() {
     });
     return ProviderScope(
       overrides: [
+        // The preference migrated from the retired p0 SharedPreferences
+        // bucket to the selected-profile provider; override the provider
+        // directly so the widget sees the requested mode.
+        useHebrewTermsProvider.overrideWithValue(hebrewTermsScript),
         completionCountProvider(
           curriculumId: item.curriculumId,
           sefariaRef: item.sefariaRef,
