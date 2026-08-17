@@ -91,13 +91,13 @@ class DashboardLevelPointsCard extends ConsumerWidget {
       (
         l10n.bubbleOverdue,
         overdueDisplay,
-        Colors.white,
+        context.colors.introCtaLabel,
         SchedulerTaskSection.overdue,
       ),
       (
         l10n.bubbleTodayDue,
         todayDisplay,
-        Colors.white,
+        context.colors.introCtaLabel,
         SchedulerTaskSection.today,
       ),
       if (chazaraLabel != null)
@@ -138,7 +138,7 @@ class DashboardLevelPointsCard extends ConsumerWidget {
               Text(
                 l10n.dashboardStats,
                 style: theme.textTheme.labelSmall?.copyWith(
-                  color: Colors.white.withValues(alpha: 0.85),
+                  color: context.colors.introCtaLabel.withValues(alpha: 0.85),
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.9,
                 ),
@@ -153,7 +153,7 @@ class DashboardLevelPointsCard extends ConsumerWidget {
                 Text(
                   l10n.pointsAbbrev(totalPoints),
                   style: theme.textTheme.titleSmall?.copyWith(
-                    color: Colors.white.withValues(alpha: 0.92),
+                    color: context.colors.introCtaLabel.withValues(alpha: 0.92),
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -195,7 +195,7 @@ class DashboardLevelPointsCard extends ConsumerWidget {
                 child: Text(
                   l10n.learningLifetimeAllCurricula,
                   style: theme.textTheme.labelMedium?.copyWith(
-                    color: Colors.white.withValues(alpha: 0.9),
+                    color: context.colors.introCtaLabel.withValues(alpha: 0.9),
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -210,7 +210,7 @@ class DashboardLevelPointsCard extends ConsumerWidget {
                 Text(
                   doneLabel,
                   style: theme.textTheme.titleSmall?.copyWith(
-                    color: Colors.white,
+                    color: context.colors.introCtaLabel,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -223,7 +223,7 @@ class DashboardLevelPointsCard extends ConsumerWidget {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: theme.textTheme.labelSmall?.copyWith(
-                color: Colors.white.withValues(alpha: 0.75),
+                color: context.colors.introCtaLabel.withValues(alpha: 0.75),
                 fontWeight: FontWeight.w500,
                 height: 1.25,
               ),
@@ -240,7 +240,9 @@ class DashboardLevelPointsCard extends ConsumerWidget {
                   child: AnimatedProgressBar(
                     value: cumulativeLifetime,
                     color: context.colors.goldOnColouredSurface,
-                    backgroundColor: Colors.white.withValues(alpha: 0.22),
+                    backgroundColor: context.colors.scrimLight.withValues(
+                      alpha: 0.22,
+                    ),
                     height: 12,
                     duration: const Duration(milliseconds: 700),
                     curve: Curves.easeOutCubic,

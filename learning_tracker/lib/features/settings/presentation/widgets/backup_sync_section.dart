@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/app_dialog.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
@@ -69,7 +70,7 @@ class _BackupSyncSectionState extends ConsumerState<BackupSyncSection> {
                   ? TextAlign.center
                   : TextAlign.start,
               style: theme.textTheme.titleLarge?.copyWith(
-                color: Colors.white,
+                color: context.colors.introCtaLabel,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -85,7 +86,9 @@ class _BackupSyncSectionState extends ConsumerState<BackupSyncSection> {
                       l10n.backupDataUnavailable,
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.9),
+                        color: context.colors.introCtaLabel.withValues(
+                          alpha: 0.9,
+                        ),
                       ),
                     )
                   : _buildActions(context, service),
@@ -108,12 +111,14 @@ class _BackupSyncSectionState extends ConsumerState<BackupSyncSection> {
       ),
       error: (error, stackTrace) => Row(
         children: [
-          const Icon(Icons.cloud_off_outlined, color: Colors.white),
+          Icon(Icons.cloud_off_outlined, color: context.colors.introCtaLabel),
           const SizedBox(width: 8),
           const Expanded(child: Text('Offline — sync listener stopped')),
           TextButton(
             onPressed: () => ref.refresh(firestoreSyncStatusProvider),
-            style: TextButton.styleFrom(foregroundColor: Colors.white),
+            style: TextButton.styleFrom(
+              foregroundColor: context.colors.introCtaLabel,
+            ),
             child: Text(l10n.actionRetry),
           ),
         ],
@@ -142,12 +147,14 @@ class _BackupSyncSectionState extends ConsumerState<BackupSyncSection> {
   Widget _buildStatusLine({required IconData icon, required String label}) {
     return Row(
       children: [
-        Icon(icon, color: Colors.white),
+        Icon(icon, color: context.colors.introCtaLabel),
         const SizedBox(width: 8),
         Expanded(
           child: Text(
             label,
-            style: TextStyle(color: Colors.white.withValues(alpha: 0.9)),
+            style: TextStyle(
+              color: context.colors.introCtaLabel.withValues(alpha: 0.9),
+            ),
           ),
         ),
       ],
@@ -158,16 +165,21 @@ class _BackupSyncSectionState extends ConsumerState<BackupSyncSection> {
     final l10n = AppLocalizations.of(context)!;
     return Column(
       children: [
-        const SizedBox(
+        SizedBox(
           width: 24,
           height: 24,
-          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: context.colors.introCtaLabel,
+          ),
         ),
         const SizedBox(height: 8),
         Text(
           l10n.backupDataLoading,
           textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.white.withValues(alpha: 0.9)),
+          style: TextStyle(
+            color: context.colors.introCtaLabel.withValues(alpha: 0.9),
+          ),
         ),
       ],
     );
@@ -211,19 +223,21 @@ class _BackupSyncSectionState extends ConsumerState<BackupSyncSection> {
         OutlinedButton.icon(
           onPressed: _busy ? null : () => _export(service),
           icon: _busy
-              ? const SizedBox(
+              ? SizedBox(
                   width: 18,
                   height: 18,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    color: Colors.white,
+                    color: context.colors.introCtaLabel,
                   ),
                 )
               : const Icon(Icons.ios_share_outlined),
           label: Text(l10n.backupExportAction),
           style: OutlinedButton.styleFrom(
-            foregroundColor: Colors.white,
-            side: const BorderSide(color: Colors.white70),
+            foregroundColor: context.colors.introCtaLabel,
+            side: BorderSide(
+              color: context.colors.introCtaLabel.withValues(alpha: 0.7),
+            ),
           ),
         ),
         FilledButton.icon(
@@ -231,7 +245,7 @@ class _BackupSyncSectionState extends ConsumerState<BackupSyncSection> {
           icon: const Icon(Icons.restore_outlined),
           label: Text(l10n.backupImportAction),
           style: FilledButton.styleFrom(
-            backgroundColor: Colors.white,
+            backgroundColor: context.colors.introCtaLabel,
             foregroundColor: const Color(0xFF0B3FB4),
           ),
         ),
@@ -320,8 +334,8 @@ class _BackupSyncSectionState extends ConsumerState<BackupSyncSection> {
     final l10n = AppLocalizations.of(context)!;
     final title = Text(
       l10n.backupSyncCardTitle,
-      style: const TextStyle(
-        color: Colors.white,
+      style: TextStyle(
+        color: context.colors.introCtaLabel,
         fontWeight: FontWeight.w700,
         fontSize: 22,
       ),
@@ -332,7 +346,7 @@ class _BackupSyncSectionState extends ConsumerState<BackupSyncSection> {
           ? TextAlign.center
           : TextAlign.start,
       style: TextStyle(
-        color: Colors.white.withValues(alpha: 0.88),
+        color: context.colors.introCtaLabel.withValues(alpha: 0.88),
         height: 1.35,
         fontWeight: FontWeight.w600,
         fontSize: 17,
@@ -360,9 +374,9 @@ class _BackupSyncSectionState extends ConsumerState<BackupSyncSection> {
             ? Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.cloud_upload_outlined,
-                    color: Colors.white,
+                    color: context.colors.introCtaLabel,
                     size: 36,
                   ),
                   const SizedBox(height: 12),
@@ -376,9 +390,9 @@ class _BackupSyncSectionState extends ConsumerState<BackupSyncSection> {
                 children: [
                   Row(
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.cloud_upload_outlined,
-                        color: Colors.white,
+                        color: context.colors.introCtaLabel,
                       ),
                       const SizedBox(width: 10),
                       Flexible(child: title),

@@ -373,16 +373,16 @@ class DashboardBody extends ConsumerWidget {
                     ),
                     child: Row(
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.local_fire_department_rounded,
-                          color: Colors.white,
+                          color: context.colors.introCtaLabel,
                           size: 18,
                         ),
                         const SizedBox(width: 4),
                         Text(
                           '${currentStreak ?? 0}',
                           style: theme.textTheme.titleMedium?.copyWith(
-                            color: Colors.white,
+                            color: context.colors.introCtaLabel,
                             fontWeight: FontWeight.w800,
                           ),
                         ),

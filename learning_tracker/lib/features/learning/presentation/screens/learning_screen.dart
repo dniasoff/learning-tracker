@@ -177,18 +177,20 @@ class _StreakHeroCard extends StatelessWidget {
                       Text(
                         l10n.learnStreakCurrentAchievement,
                         style: theme.textTheme.labelSmall?.copyWith(
-                          color: Colors.white.withValues(alpha: 0.78),
+                          color: context.colors.introCtaLabel.withValues(
+                            alpha: 0.78,
+                          ),
                           letterSpacing: 1,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
                       const SizedBox(height: 6),
                       streakAsync.when(
-                        loading: () => const SizedBox(
+                        loading: () => SizedBox(
                           height: 70,
                           child: Center(
                             child: CircularProgressIndicator(
-                              color: Colors.white,
+                              color: context.colors.introCtaLabel,
                             ),
                           ),
                         ),
@@ -196,9 +198,9 @@ class _StreakHeroCard extends StatelessWidget {
                           height: 110,
                           child: Row(
                             children: [
-                              const Icon(
+                              Icon(
                                 Icons.error_outline,
-                                color: Colors.white,
+                                color: context.colors.introCtaLabel,
                                 size: 28,
                               ),
                               const SizedBox(width: 8),
@@ -206,7 +208,7 @@ class _StreakHeroCard extends StatelessWidget {
                                 child: Text(
                                   l10n.errorGeneric(error.toString()),
                                   style: theme.textTheme.bodySmall?.copyWith(
-                                    color: Colors.white,
+                                    color: context.colors.introCtaLabel,
                                   ),
                                 ),
                               ),
@@ -214,7 +216,9 @@ class _StreakHeroCard extends StatelessWidget {
                                 onPressed: onRetry,
                                 child: Text(
                                   l10n.actionRetry,
-                                  style: const TextStyle(color: Colors.white),
+                                  style: TextStyle(
+                                    color: context.colors.introCtaLabel,
+                                  ),
                                 ),
                               ),
                             ],
@@ -226,7 +230,7 @@ class _StreakHeroCard extends StatelessWidget {
                             Text(
                               l10n.learnStreakDayStreak(streak.currentStreak),
                               style: theme.textTheme.titleLarge?.copyWith(
-                                color: Colors.white,
+                                color: context.colors.introCtaLabel,
                                 fontWeight: FontWeight.w800,
                                 fontSize: 38,
                                 height: 1.02,
@@ -239,13 +243,15 @@ class _StreakHeroCard extends StatelessWidget {
                                 vertical: 4,
                               ),
                               decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.16),
+                                color: context.colors.scrimLight.withValues(
+                                  alpha: 0.16,
+                                ),
                                 borderRadius: BorderRadius.circular(999),
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  const Icon(
+                                  Icon(
                                     Icons.workspace_premium_rounded,
                                     color: Color(0xFFF7E7AF),
                                     size: 14,
@@ -256,7 +262,7 @@ class _StreakHeroCard extends StatelessWidget {
                                       streak.maxStreak,
                                     ),
                                     style: theme.textTheme.labelSmall?.copyWith(
-                                      color: Colors.white,
+                                      color: context.colors.introCtaLabel,
                                       fontWeight: FontWeight.w700,
                                     ),
                                   ),
@@ -293,7 +299,7 @@ class _StreakHeroCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.12),
+                      color: context.colors.scrimDark.withValues(alpha: 0.12),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
@@ -450,7 +456,7 @@ class _LearnTaskCard extends ConsumerWidget {
             borderRadius: BorderRadius.circular(22),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
+                color: context.colors.scrimDark.withValues(alpha: 0.05),
                 blurRadius: 12,
                 offset: const Offset(0, 4),
               ),
@@ -633,7 +639,7 @@ class _CurriculumBrowseCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(18),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
+                color: context.colors.scrimDark.withValues(alpha: 0.05),
                 blurRadius: 10,
                 offset: const Offset(0, 3),
               ),

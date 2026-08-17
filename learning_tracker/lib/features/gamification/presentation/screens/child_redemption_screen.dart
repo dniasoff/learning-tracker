@@ -267,27 +267,30 @@ class _BalanceCard extends StatelessWidget {
           Text(
             l10n.redeemScreenBalance,
             style: theme.textTheme.labelSmall?.copyWith(
-              color: Colors.white.withValues(alpha: 0.88),
+              color: context.colors.introCtaLabel.withValues(alpha: 0.88),
               fontWeight: FontWeight.w800,
               letterSpacing: 1.1,
             ),
           ),
           const SizedBox(height: 4),
           balanceAsync.when(
-            loading: () => const SizedBox(
+            loading: () => SizedBox(
               height: 32,
               width: 32,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                color: Colors.white,
+                color: context.colors.introCtaLabel,
               ),
             ),
-            error: (_, __) =>
-                const Icon(Icons.error_outline, color: Colors.white, size: 28),
+            error: (_, __) => Icon(
+              Icons.error_outline,
+              color: context.colors.introCtaLabel,
+              size: 28,
+            ),
             data: (balance) => Text(
               l10n.dashboardPointsValue(balance.toString()),
               style: theme.textTheme.headlineSmall?.copyWith(
-                color: Colors.white,
+                color: context.colors.introCtaLabel,
                 fontWeight: FontWeight.w800,
                 fontSize: 28,
               ),
@@ -415,7 +418,7 @@ class _RewardCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.labelMedium?.copyWith(
                     color: buttonEnabled
-                        ? Colors.white
+                        ? context.colors.introCtaLabel
                         : context.colors.brandInkMuted,
                     fontWeight: FontWeight.w700,
                     fontSize: 13,
