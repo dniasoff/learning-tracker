@@ -235,7 +235,7 @@ lib/features/<feature>/
 
 ## Feature Dependency Graph
 
-> **AUD-docs-15 regenerated 2026-07-13** by `tool/gen_feature_graph.dart` (`make gen-feature-graph` to reprint; `make check-feature-graph` fails CI if this node set drifts from `ls lib/features/`). Nodes are exactly `ls lib/features/`; edges are derived from a real grep of `import 'package:learning_tracker/features/...'` across every file. The full cross-feature import graph is dense — **101 edges among 15 nodes** — so this diagram keeps only "significant" dependencies (an edge survives if ≥6 distinct files make that import) plus, for any node that would otherwise be edge-less at that threshold, its single heaviest real edge (this is how `sacred_time` stays visible). Run `dart run tool/gen_feature_graph.dart --full` for every edge, or `--min-weight=N` for a different cutoff. `core` is omitted as a node here — every feature module imports `core/` (databases, navigation, shared services); that edge is universal, not differentiating, and was true of the prior revision's `core` fan-out too.
+> **AUD-docs-15 regenerated 2026-08-17** by `tool/gen_feature_graph.dart` (`make gen-feature-graph` to reprint; `make check-feature-graph` fails CI if this node set drifts from `ls lib/features/`). Nodes are exactly `ls lib/features/`; edges are derived from a real grep of `import 'package:learning_tracker/features/...'` across every file. The full cross-feature import graph is dense — **89 edges among 14 nodes** — so this diagram keeps only "significant" dependencies (an edge survives if ≥6 distinct files make that import) plus, for any node that would otherwise be edge-less at that threshold, its single heaviest real edge. Run `dart run tool/gen_feature_graph.dart --full` for every edge, or `--min-weight=N` for a different cutoff. `core` is omitted as a node here — every feature module imports `core/` (databases, navigation, shared services); that edge is universal, not differentiating. `sync` dropped out as a node in this revision — `lib/features/sync/` was deleted wholesale in the Firestore-native rewrite (Phase 3 P3-5).
 
 ```mermaid
 graph TD
@@ -251,43 +251,32 @@ graph TD
     sacred_time["sacred_time"]
     scheduler["scheduler"]
     settings["settings"]
-    sync["sync"]
     tracks["tracks"]
     tutoring["tutoring"]
 
-    dashboard --> profiles
+    content_browsing --> dashboard
     dashboard --> scheduler
-    gamification --> profiles
-    learning --> sync
+    dashboard --> tracks
+    gamification --> learning
     notifications --> sacred_time
     onboarding --> tracks
-    profiles --> tutoring
     progress --> learning
-    progress --> profiles
+    progress --> tracks
+    scheduler --> tracks
     settings --> account
-    settings --> profiles
-    tracks --> content_browsing
     tracks --> onboarding
-    tracks --> profiles
     tracks --> scheduler
     tracks --> settings
     tutoring --> account
     tutoring --> profiles
-
-    style learning fill:#fff3e0
-    style sync fill:#fce4ec
-    style scheduler fill:#e8f5e9
-    style dashboard fill:#f3e5f5
-    style tracks fill:#e8eaf6
 ```
 
 ### Dependency Notes
 
-- **tracks** (67 files — the largest feature) is the hub of the current graph: it depends on `content_browsing`, `onboarding`, `profiles`, `scheduler`, and `settings`, reflecting the Epic 25/26 unification of the former `track_setup`/`stages`/`track_learning_order` features.
-- **progress --> learning** and **dashboard --> scheduler** (both corrected from the prior revision's reversed direction — the consumer imports the producer, not the reverse): `progress` reads completion data that `learning` produces; `dashboard` reads schedule state that `scheduler` produces.
-- **tutoring --> account** / **tutoring --> profiles**: the tutoring feature is a consumer of the account/profile domain models, not a producer other features depend on — see `docs/api-contracts.md` §1.3 for the Firestore-side (`tutor_grants`/`tutor_active_access`) picture, which is the inverse relationship (Cloud Functions writing into the owner's data on the tutor's behalf).
-- **settings --> account** / **settings --> profiles**: settings screens read and mutate account/profile state directly rather than through an abstraction layer.
-- **notifications --> sacred_time**: the Shabbos/Yom Tov quiet-mode check is notifications' only architecturally-real edge above the noise floor of one-off imports elsewhere in the codebase.
+- **tracks** sits at the center of the graph, with edges to and from `dashboard`, `onboarding`, `scheduler`, `settings`, and `progress` — `onboarding` and `scheduler` each show an edge in **both** directions at this weight threshold (real mutual imports between the two features, not a diagram artifact).
+- **notifications --> sacred_time**: the Shabbos/Yom Tov quiet-mode check remains notifications' only edge above the noise floor.
+- **settings --> account**, **tutoring --> account**, **tutoring --> profiles**: unchanged consumer relationships — settings and tutoring read account/profile domain state; see `docs/api-contracts.md` §1.3 for the Firestore-side (`tutor_grants`/`tutor_active_access`) inverse relationship (Cloud Functions writing into the owner's data on the tutor's behalf).
+- **content_browsing --> dashboard**, **gamification --> learning**: both new edges since the prior (2026-07-13) revision, reflecting import changes elsewhere in this session's Firestore-native rewrite rather than any deliberate restructuring of these two features.
 - Every feature module also imports `core/` for databases, navigation, and shared services — a universal edge omitted from the diagram above as non-differentiating (see the diagram's own caption).
 
 ---

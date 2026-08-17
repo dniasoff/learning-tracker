@@ -26,7 +26,6 @@ tags:
   account_switch:
   achievement_cards:
   achievement_unlock_celebration:
-  achievements:
   achievements_overview:
   add_profile_dialog:
   add_track_flow:
@@ -36,7 +35,6 @@ tags:
   an2:
   an3:
   an4:
-  an5:
   an6:
   an7:
   an8:
@@ -75,7 +73,6 @@ tags:
   child_redemption:
   cities:
   city_picker:
-  completion_dao:
   connectivity:
   content:
   content_browsing:
@@ -87,20 +84,17 @@ tags:
   dashboard:
   decline_invite:
   deep:
-  device_restore:
   e2e:
   edit_track:
   email_verification:
   epic_1:
   epic_10:
   epic_12:
-  epic_13:
   epic_14:
   epic_15:
   epic_16:
   epic_18:
   epic_2:
-  epic_20:
   epic_21:
   epic_24:
   epic_25:
@@ -132,10 +126,8 @@ tags:
   hebrew_terms:
   hierarchy_panel:
   i18n:
-  i5:
   il7:
   il9:
-  integration:
   intro:
   invariant:
   invariants:
@@ -173,12 +165,10 @@ tags:
   overflow:
   overflow_filter:
   pace:
-  parent_mode:
   parent_pin_keypad:
   parent_settings:
   parent_track_management:
   parity:
-  pending_signup:
   permission_gating:
   permission_prompt:
   pin:
@@ -205,8 +195,6 @@ tags:
   progress_hub:
   quarantine:
   r2:
-  r3_10:
-  r3_revocation:
   r7:
   r_ga2:
   r_pr2:
@@ -214,7 +202,6 @@ tags:
   recent_activity:
   regression:
   repository:
-  restore:
   reward_config:
   reward_config_controller:
   reward_form:
@@ -253,77 +240,38 @@ tags:
   story_10_1:
   story_10_2:
   story_10_4:
-  story_10_6:
   story_12_1:
   story_12_2:
   story_12_4:
-  story_13_1:
-  story_13_2:
-  story_13_3:
-  story_13_4:
   story_14_1:
   story_14_2:
   story_14_3:
-  story_14_4:
-  story_15_1:
-  story_15_11:
+  story_15:
   story_15_13:
-  story_15_15:
-  story_15_16:
-  story_15_17:
-  story_15_2:
-  story_15_4:
-  story_15_5:
-  story_15_6:
-  story_15_7:
-  story_15_8:
-  story_15_9:
-  story_16_1:
-  story_16_2:
-  story_16_3:
-  story_16_4:
-  story_16_5:
-  story_16_6:
-  story_18_1:
-  story_18_4:
-  story_18_6:
-  story_18_x:
+  story_18x:
   story_1_1:
   story_1_10:
   story_1_11:
   story_1_12:
-  story_1_2:
   story_1_3:
   story_1_4:
   story_1_5:
   story_1_6:
   story_1_7:
   story_1_8:
-  story_1_9:
-  story_20_2:
   story_21_1:
   story_21_10:
   story_21_11:
-  story_21_12:
   story_21_13:
-  story_21_14:
-  story_21_15:
-  story_21_2:
   story_21_3:
   story_21_4:
-  story_21_5:
-  story_21_7:
   story_21_9:
   story_24_1:
   story_24_4:
-  story_24_7:
-  story_24_8:
   story_25_10:
   story_25_11:
   story_25_12:
-  story_25_13:
   story_25_14:
-  story_25_15:
   story_25_16:
   story_25_17:
   story_25_18:
@@ -332,8 +280,6 @@ tags:
   story_25_20:
   story_25_21:
   story_25_22:
-  story_25_3:
-  story_25_5:
   story_25_7:
   story_25_8:
   story_25_9:
@@ -350,15 +296,12 @@ tags:
   story_26_6:
   story_26_7:
   story_27_14:
-  story_27_1_drift:
   story_27_1_firestore:
   story_27_1_golden:
-  story_27_3:
   story_27_4:
   story_27_5:
   story_27_6:
   story_27_7:
-  story_27_8_offline:
   story_27_8_rules:
   story_27_9:
   story_2_1:
@@ -395,25 +338,21 @@ tags:
   studyday_chazara_gate_12:
   studyday_companion_10:
   studyday_toggle_write_09:
-  sy2:
-  sy3:
   sync:
-  sync_kv_dao:
   t3:
   text_display:
   tier_counter:
   tier_counter_plural_r2:
-  tier_filter:
   tier_style:
   tool:
   track_detail:
   track_learning_order:
   track_lifecycle:
-  track_management_body:
+  track_management:
   track_management_hub:
+  track_order:
   track_progress_service:
   tracks:
-  trk_hub_04:
   ts12:
   ts13:
   ts14:
@@ -426,14 +365,11 @@ tags:
   tutor_pin_entry_gate:
   tutored_children:
   tutoring:
-  two_device_sync:
   ui_gating:
   unit:
-  upgrade_to_cloud:
   utils:
   v2_r3_c3:
   v3c:
-  vision-fix:
   w3_41:
   widget:
   wizard:

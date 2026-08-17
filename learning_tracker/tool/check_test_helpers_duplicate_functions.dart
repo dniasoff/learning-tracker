@@ -18,7 +18,12 @@
 /// helper is library-scoped and can never collide across files, so it is
 /// excluded. A `export '...' show name;` re-export (the finding's own
 /// recommended fix shape) is not a redeclaration and does not trip this
-/// check — only a second `ReturnType name(` definition does.
+/// check — only a second `ReturnType name(` definition does. `main` is
+/// also excluded: every standalone `*_test.dart` file under test/helpers/
+/// declares its own `void main()` entry point by Dart-test convention —
+/// each is invoked independently by the test runner, never imported, so
+/// it can never produce the ambiguous-name collision this check exists
+/// to catch.
 ///
 /// Usage:
 ///   dart run tool/check_test_helpers_duplicate_functions.dart
@@ -66,6 +71,9 @@ void main() {
       if (match == null) continue;
       final name = match.group(1)!;
       if (name.startsWith('_')) continue; // private — no cross-file conflict
+      if (name == 'main') {
+        continue; // each *_test.dart's own entry point — never collides
+      }
       sitesByName.putIfAbsent(name, () => []).add('${file.path}:${i + 1}');
     }
   }
