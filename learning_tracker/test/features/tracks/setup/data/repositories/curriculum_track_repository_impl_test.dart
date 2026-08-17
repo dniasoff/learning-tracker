@@ -30,6 +30,7 @@ library;
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
@@ -43,6 +44,8 @@ import 'package:mocktail/mocktail.dart';
 class MockFirebaseApp extends Mock implements FirebaseApp {}
 
 class MockFirebaseAuthHandle extends Mock implements FirebaseAuth {}
+
+class MockFirebaseFunctions extends Mock implements FirebaseFunctions {}
 
 void main() {
   group('FirestoreCurriculumTrackRepositoryAdapter', () {
@@ -69,7 +72,10 @@ void main() {
     ) {
       final adapterProvider =
           Provider<FirestoreCurriculumTrackRepositoryAdapter>(
-            (ref) => FirestoreCurriculumTrackRepositoryAdapter(ref: ref),
+            (ref) => FirestoreCurriculumTrackRepositoryAdapter(
+              ref: ref,
+              functions: MockFirebaseFunctions(),
+            ),
           );
       return container.read(adapterProvider);
     }

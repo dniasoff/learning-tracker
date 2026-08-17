@@ -194,6 +194,9 @@ Widget _buildApp({
       dashboardHasProgramEnrollmentProvider(
         CurriculumId.values.where((c) => c == track.curriculumId).first,
       ).overrideWithValue(const AsyncData(false)),
+      dashboardActiveCurriculaProvider.overrideWith(
+        (ref) => Future.value([track.curriculumId]),
+      ),
       allDailyTasksProvider.overrideWith((ref) => Future.value(dailyTasks)),
       useHebrewTermsProvider.overrideWith(() => _FakeUseHebrewTerms(useHebrew)),
       if (variant != null)

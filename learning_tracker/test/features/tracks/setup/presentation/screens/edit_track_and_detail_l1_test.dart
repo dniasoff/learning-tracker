@@ -264,6 +264,12 @@ Widget _buildEditApp({
         dashboardHasProgramEnrollmentProvider(
           curriculum,
         ).overrideWith((ref) async => hasProgramEnrollment),
+      // The post-save invalidation bridge now resolves the active curriculum
+      // list before returning. Keep this edit-screen harness independent of
+      // the live Firestore curriculum-track adapter.
+      dashboardActiveCurriculaProvider.overrideWith(
+        (ref) async => [track.curriculumId],
+      ),
       allDailyTasksProvider.overrideWith((ref) => Future.value(dailyTasks)),
       useHebrewTermsProvider.overrideWith(() => _FakeUseHebrewTerms()),
     ],

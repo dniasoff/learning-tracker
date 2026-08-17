@@ -4,6 +4,7 @@ library;
 // ignore_for_file: directives_ordering, unused_element_parameter, prefer_const_constructors
 
 import 'package:auto_route/auto_route.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -15,6 +16,7 @@ import 'package:learning_tracker/data/repositories/firestore_study_day_config_re
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/tracks/setup/data/repositories/curriculum_track_repository_impl.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/screens/track_management_hub_screen.dart';
@@ -32,6 +34,8 @@ class _HebrewOff extends UseHebrewTerms {
   @override
   bool build() => false;
 }
+
+class _MockFirebaseFunctions extends Mock implements FirebaseFunctions {}
 
 const _uid = 'track-hub-test-uid';
 const _profileId = '01J6Q2H4A8M7K3P9R5T6V8WXY7';
@@ -70,12 +74,21 @@ Widget _app({
         profileId: _profileId,
       ),
     ),
+    curriculumTrackRepositoryAdapterProvider.overrideWith(
+      (ref) => FirestoreCurriculumTrackRepositoryAdapter(
+        ref: ref,
+        functions: _MockFirebaseFunctions(),
+      ),
+    ),
     firestoreStudyDayConfigRepositoryProvider.overrideWith(
       (ref) async => FirestoreStudyDayConfigRepository(
         firestore: firestore,
         uid: _uid,
         profileId: _profileId,
       ),
+    ),
+    dashboardActiveCurriculaProvider.overrideWith(
+      (ref) => Future.value(tracks.map((track) => track.curriculumId).toList()),
     ),
     for (final track in tracks) ...[
       dashboardTrackCompletionPercentageProvider(
