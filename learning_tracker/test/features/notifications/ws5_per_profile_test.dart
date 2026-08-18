@@ -98,9 +98,13 @@ void main() {
       () {
         final baseA = batchBaseIdForProfile(_profile0);
         final baseB = batchBaseIdForProfile(_profile1);
+        // stableProfileHash is a hash (FNV-1a), not a sequence — two
+        // profiles' blocks carry no guaranteed relative ORDER, only that
+        // they differ and (per the "no overlap" test below) their 14-slot
+        // ranges never collide. An earlier version of this assertion
+        // additionally required baseA + 13 < baseB, which only held by
+        // coincidence for these two particular ULID literals.
         expect(baseA, isNot(equals(baseB)));
-        // Batch base + 13 (last slot) must still be < next profile's base.
-        expect(baseA + 13, lessThan(baseB));
       },
     );
 
