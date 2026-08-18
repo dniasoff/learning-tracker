@@ -59,6 +59,7 @@ void main() {
                 stageId: entry.stageId,
                 trackType: trackType,
                 awardGamificationPoints: false,
+                creditsAchievement: true,
               ),
             );
           }
@@ -91,6 +92,7 @@ void main() {
               stageId: 1,
               trackType: 'personal',
               awardGamificationPoints: false,
+              creditsAchievement: true,
             ),
           );
 
@@ -110,6 +112,7 @@ void main() {
             stageId: 1,
             trackType: 'personal',
             awardGamificationPoints: false,
+            creditsAchievement: true,
           ),
         );
         await repository.bulkMarkComplete(
@@ -119,6 +122,7 @@ void main() {
             stageId: 2,
             trackType: 'personal',
             awardGamificationPoints: false,
+            creditsAchievement: true,
           ),
         );
 
