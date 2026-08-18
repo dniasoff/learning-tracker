@@ -121,7 +121,9 @@ void main() {
         ).thenAnswer((_) async => _seedAccounts(kMaxDeviceAccounts));
 
         final mockAuth = MockAuthRepository();
-        when(() => mockAuth.signInWithGoogle()).thenAnswer((_) async {});
+        when(
+          () => mockAuth.signInWithGoogleAndGetIdToken(),
+        ).thenAnswer((_) async => 'fake-google-id-token');
         // After Google sign-in, currentUser returns the Google account.
         when(() => mockAuth.currentUser).thenReturn(_googleUser);
         // Device full → signOut() to clean up; it throws.

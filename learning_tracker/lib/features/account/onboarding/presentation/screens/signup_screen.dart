@@ -9,6 +9,7 @@ import 'package:google_sign_in/google_sign_in.dart'
 import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
+import 'package:learning_tracker/core/providers/account_firebase_registry_provider.dart';
 import 'package:learning_tracker/core/providers/active_account_id_provider.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
@@ -169,11 +170,15 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     setState(() => _isLoading = true);
     try {
       final authRepo = ref.read(authRepositoryProvider);
-      await authRepo.signInWithGoogle();
+      final idToken = await authRepo.signInWithGoogleAndGetIdToken();
       if (!mounted) return;
 
       final googleUser = ref.read(authRepositoryProvider).currentUser;
-      if (googleUser == null) return;
+      // A null idToken alongside a signed-in user means the AccountFirebase
+      // session below (Root Cause A) cannot be established — treat the same
+      // as the pre-existing null-user bail-out rather than proceeding half-
+      // signed-in.
+      if (googleUser == null || idToken == null) return;
 
       // Epic 21.6: check 5-account cap before adding
       final registry = ref.read(deviceRegistryProvider);
@@ -203,6 +208,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         // AccountLifecycleService can defensively delete a stale on-disk
         // .sqlite file left over from before the archival.
         final dbFileName = 'user_acc_$accountId.db';
+        await ref
+            .read(accountFirebaseRegistryProvider)
+            .signInCloudAccountWithGoogleIdToken(accountId, idToken: idToken);
         ref.read(activeAccountIdProvider.notifier).set(accountId);
 
         await ref
@@ -225,6 +233,12 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       } else {
         // Existing account on this device — refresh lastUsedAt so session
         // persistence stays coherent.
+        await ref
+            .read(accountFirebaseRegistryProvider)
+            .signInCloudAccountWithGoogleIdToken(
+              existingEntry.accountId,
+              idToken: idToken,
+            );
         ref.read(activeAccountIdProvider.notifier).set(existingEntry.accountId);
         await ref
             .read(authStateProvider.notifier)

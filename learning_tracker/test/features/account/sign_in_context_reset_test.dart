@@ -27,8 +27,11 @@
 library;
 
 import 'package:auto_route/auto_route.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -40,6 +43,8 @@ import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/navigation/guards/pin_guard.dart';
 import 'package:learning_tracker/core/navigation/pin_scope.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
+import 'package:learning_tracker/data/firestore/account_firebase.dart';
+import 'package:learning_tracker/data/firestore/account_firebase_providers.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
 import 'package:learning_tracker/data/repositories/firestore_account_repository.dart';
 import 'package:learning_tracker/features/account/domain/models/account_entity.dart';
@@ -92,6 +97,27 @@ class _FakePageRouteInfo extends Fake implements PageRouteInfo<Object?> {}
 /// short-circuits before `createAccount`.
 class _MockFirestoreAccountRepository extends Mock
     implements FirestoreAccountRepository {}
+
+/// Stands in for [AccountFirebase] (Root Cause A, run12 device audit) — both
+/// wiring tests below now also establish the account's named-app Firebase
+/// session mid-funnel (`signInCloudAccountWithEmail`), which must not reach
+/// live Firebase in a test. The returned [AccountFirebaseHandles] is never
+/// inspected by these tests, only that establishing it completes.
+class _MockAccountFirebase extends Mock implements AccountFirebase {}
+
+class _FakeFirebaseApp extends Mock implements FirebaseApp {}
+
+class _FakeFirebaseFirestore extends Mock implements FirebaseFirestore {}
+
+class _FakeFirebaseAuth extends Mock implements FirebaseAuth {}
+
+AccountFirebaseHandles _fakeAccountFirebaseHandles({required String uid}) =>
+    AccountFirebaseHandles(
+      app: _FakeFirebaseApp(),
+      firestore: _FakeFirebaseFirestore(),
+      auth: _FakeFirebaseAuth(),
+      uid: uid,
+    );
 
 /// The profile list the sign-in funnel routes on. Replaces the old in-memory
 /// Firestore account/profile fixtures: post-P3-5 `_navigateAfterSignIn` reads
@@ -390,6 +416,16 @@ void main() {
         when(
           () => tutorGrantRepo.listIncomingGrants(),
         ).thenAnswer((_) async => []);
+        final accountFirebase = _MockAccountFirebase();
+        when(
+          () => accountFirebase.signInCloudAccountWithEmail(
+            any<String>(),
+            email: any<String>(named: 'email'),
+            password: any<String>(named: 'password'),
+          ),
+        ).thenAnswer(
+          (_) async => _fakeAccountFirebaseHandles(uid: 'fb-uid-reset-1'),
+        );
 
         final container = ProviderContainer(
           overrides: [
@@ -397,6 +433,7 @@ void main() {
             deviceRegistryProvider.overrideWithValue(registry),
             internetConnectionCheckerProvider.overrideWithValue(checker),
             tutorGrantRepositoryProvider.overrideWithValue(tutorGrantRepo),
+            accountFirebaseRegistryProvider.overrideWithValue(accountFirebase),
             // The funnel establishes the session through
             // FirestoreAccountRepositoryAdapter and then routes on the
             // Firestore profile list — both are faked so the chain resolves

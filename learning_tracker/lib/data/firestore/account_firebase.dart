@@ -512,6 +512,33 @@ class AccountFirebase {
     });
   }
 
+  /// Convenience wrapper for [signInCloudAccount] with an email/password
+  /// pair — constructs the [EmailAuthProvider] credential internally so
+  /// callers outside `lib/data/firestore/` and `lib/core/auth/` never need
+  /// to import `firebase_auth` themselves (layering Rule 3).
+  Future<AccountFirebaseHandles> signInCloudAccountWithEmail(
+    String accountId, {
+    required String email,
+    required String password,
+  }) {
+    return signInCloudAccount(
+      accountId,
+      EmailAuthProvider.credential(email: email, password: password),
+    );
+  }
+
+  /// Convenience wrapper for [signInCloudAccount] with a Google [idToken] —
+  /// same rationale as [signInCloudAccountWithEmail].
+  Future<AccountFirebaseHandles> signInCloudAccountWithGoogleIdToken(
+    String accountId, {
+    required String idToken,
+  }) {
+    return signInCloudAccount(
+      accountId,
+      GoogleAuthProvider.credential(idToken: idToken),
+    );
+  }
+
   /// Upgrade-to-Cloud: links [credential] onto [accountId]'s **currently
   /// signed-in** user via `User.linkWithCredential`.
   ///

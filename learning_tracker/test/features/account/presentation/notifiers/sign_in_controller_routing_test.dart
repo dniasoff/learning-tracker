@@ -30,8 +30,11 @@
 library;
 
 import 'package:auto_route/auto_route.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -39,6 +42,8 @@ import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
+import 'package:learning_tracker/data/firestore/account_firebase.dart';
+import 'package:learning_tracker/data/firestore/account_firebase_providers.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
 import 'package:learning_tracker/data/repositories/firestore_account_repository.dart';
 import 'package:learning_tracker/features/account/domain/models/account_entity.dart';
@@ -71,6 +76,25 @@ class _MockProfileRepository extends Mock implements ProfileRepository {}
 
 class _MockFirestoreAccountRepository extends Mock
     implements FirestoreAccountRepository {}
+
+/// Stands in for [AccountFirebase] (Root Cause A, run12 device audit) —
+/// every Branch A/F test now also establishes the account's named-app
+/// Firebase session mid-funnel, which must not reach live Firebase.
+class _MockAccountFirebase extends Mock implements AccountFirebase {}
+
+class _FakeFirebaseApp extends Mock implements FirebaseApp {}
+
+class _FakeFirebaseFirestore extends Mock implements FirebaseFirestore {}
+
+class _FakeFirebaseAuth extends Mock implements FirebaseAuth {}
+
+AccountFirebaseHandles _fakeAccountFirebaseHandles({required String uid}) =>
+    AccountFirebaseHandles(
+      app: _FakeFirebaseApp(),
+      firestore: _FakeFirebaseFirestore(),
+      auth: _FakeFirebaseAuth(),
+      uid: uid,
+    );
 
 // ── Stub AuthStateNotifier ────────────────────────────────────────────────────
 
@@ -196,6 +220,18 @@ ProviderContainer _makeContainer({
 }) {
   final profileRepo = _MockProfileRepository();
   when(profileRepo.getProfiles).thenAnswer((_) async => profiles);
+  final accountFirebase = _MockAccountFirebase();
+  when(
+    () => accountFirebase.signInCloudAccountWithEmail(
+      any<String>(),
+      email: any<String>(named: 'email'),
+      password: any<String>(named: 'password'),
+    ),
+  ).thenAnswer(
+    (invocation) async => _fakeAccountFirebaseHandles(
+      uid: invocation.positionalArguments.first as String,
+    ),
+  );
   return ProviderContainer(
     overrides: [
       authRepositoryProvider.overrideWithValue(authRepo),
@@ -207,6 +243,7 @@ ProviderContainer _makeContainer({
         (ref) async => accountRepo,
       ),
       authStateProvider.overrideWith(_NoInitAuthStateNotifier.new),
+      accountFirebaseRegistryProvider.overrideWithValue(accountFirebase),
     ],
   );
 }

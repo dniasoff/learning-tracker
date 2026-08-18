@@ -9,6 +9,7 @@ import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/app/router/router_provider.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
+import 'package:learning_tracker/core/providers/account_firebase_registry_provider.dart';
 import 'package:learning_tracker/core/providers/active_account_id_provider.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/core/utils/firebase_error_code.dart';
@@ -346,7 +347,18 @@ class SignInController extends Notifier<SignInState> {
     _ref.read(routerProvider).pinGuard.lock();
   }
 
-  Future<void> _navigateAfterSignIn(StackRouter router) async {
+  /// Establishes [accountId]'s [AccountFirebase] session (the named-app,
+  /// authenticated Firestore/Auth handle every downstream repository
+  /// resolves through) with the SAME credential that just authenticated the
+  /// default app. Root Cause A (run12 device audit): nothing previously
+  /// called this before [activeAccountIdProvider]/`resolve()` were reached,
+  /// so every cloud sign-in threw [AccountNotAuthenticatedException] the
+  /// instant anything tried to read Firestore.
+  Future<void> _navigateAfterSignIn(
+    StackRouter router, {
+    required Future<void> Function(String accountId)
+    establishAccountFirebaseSession,
+  }) async {
     _resetSessionContextForFreshSignIn();
 
     final user = _ref.read(authRepositoryProvider).currentUser;
@@ -386,6 +398,7 @@ class SignInController extends Notifier<SignInState> {
     final session = SessionPersistenceService(prefs: prefs, registry: registry);
 
     if (existingEntry != null) {
+      await establishAccountFirebaseSession(existingEntry.accountId);
       _ref.read(activeAccountIdProvider.notifier).set(existingEntry.accountId);
       await _ref
           .read(authStateProvider.notifier)
@@ -403,6 +416,7 @@ class SignInController extends Notifier<SignInState> {
       // AccountLifecycleService can defensively delete a stale on-disk
       // .sqlite file left over from before the archival.
       final dbFileName = 'user_acc_$accountId.db';
+      await establishAccountFirebaseSession(accountId);
       _ref.read(activeAccountIdProvider.notifier).set(accountId);
 
       await _ref
@@ -596,7 +610,16 @@ class SignInController extends Notifier<SignInState> {
             );
         final verified = await _ensureCloudEmailVerified(email, l10n);
         if (verified) {
-          await _navigateAfterSignIn(router);
+          await _navigateAfterSignIn(
+            router,
+            establishAccountFirebaseSession: (accountId) => _ref
+                .read(accountFirebaseRegistryProvider)
+                .signInCloudAccountWithEmail(
+                  accountId,
+                  email: email,
+                  password: password,
+                ),
+          );
         }
       } else {
         final restored = await _tryOfflineCloudRestore(account, router);
@@ -618,7 +641,16 @@ class SignInController extends Notifier<SignInState> {
             );
         final verified = await _ensureCloudEmailVerified(email, l10n);
         if (verified) {
-          await _navigateAfterSignIn(router);
+          await _navigateAfterSignIn(
+            router,
+            establishAccountFirebaseSession: (accountId) => _ref
+                .read(accountFirebaseRegistryProvider)
+                .signInCloudAccountWithEmail(
+                  accountId,
+                  email: email,
+                  password: password,
+                ),
+          );
         }
       } else {
         throw _SignInFailure(l10n.authEmailOfflineUnreachable);
@@ -688,16 +720,19 @@ class SignInController extends Notifier<SignInState> {
     required AppLocalizations l10n,
   }) async {
     final authRepo = _ref.read(authRepositoryProvider);
-    await authRepo.signInWithGoogle();
+    final idToken = await authRepo.signInWithGoogleAndGetIdToken();
 
     final googleUser = _ref.read(authRepositoryProvider).currentUser;
-    if (googleUser == null) {
+    if (googleUser == null || idToken == null) {
       // DG-GAUTH-01: signInWithGoogle() returned without throwing (no
       // user-cancel / interrupt) but left currentUser null — a silent JWT
       // exchange failure or GMS returning without a live Firebase session.
       // Previously we returned SignInIdle with zero feedback; throwing here
       // routes through the guard so this always surfaces as SignInError,
-      // never a silent Idle.
+      // never a silent Idle. A null idToken alongside a non-null user is the
+      // same failure class — Root Cause A's AccountFirebase session cannot
+      // be established without it, so treat it identically rather than
+      // silently skipping that step.
       throw _SignInFailure(l10n.authGoogleSignInFailed);
     }
 
@@ -722,7 +757,12 @@ class SignInController extends Notifier<SignInState> {
       }
     }
 
-    await _navigateAfterSignIn(router);
+    await _navigateAfterSignIn(
+      router,
+      establishAccountFirebaseSession: (accountId) => _ref
+          .read(accountFirebaseRegistryProvider)
+          .signInCloudAccountWithGoogleIdToken(accountId, idToken: idToken),
+    );
   }
 
   /// Re-sends the email-verification message, swallowing failures into a

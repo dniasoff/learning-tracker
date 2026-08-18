@@ -14,6 +14,17 @@ abstract class AuthRepository {
   /// Signs in with Google Sign-In.
   Future<void> signInWithGoogle();
 
+  /// Signs in with Google Sign-In, returning the Google ID token used.
+  ///
+  /// Same interactive flow as [signInWithGoogle], but also hands the caller
+  /// the raw ID token so it can authenticate a SECOND `FirebaseApp` instance
+  /// with the identical credential (`AccountFirebase.signInCloudAccountWithGoogleIdToken`)
+  /// without re-triggering the account picker. Returns `null` if the picker
+  /// yielded no token (mirrors [signInWithGoogle]'s cancel/interrupt
+  /// handling — the caller distinguishes cancellation the same way it
+  /// already does via the thrown [GoogleSignInException]).
+  Future<String?> signInWithGoogleAndGetIdToken();
+
   /// Attempts a SILENT (no-UI) Google re-authentication into Firebase.
   ///
   /// Resolves the last-authorized Google session without showing the account

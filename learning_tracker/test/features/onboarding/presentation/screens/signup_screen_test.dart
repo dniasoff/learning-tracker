@@ -190,7 +190,9 @@ void main() {
         emailVerified: true,
         providers: ['google.com'],
       );
-      when(() => mockAuthRepo.signInWithGoogle()).thenAnswer((_) async {});
+      when(
+        () => mockAuthRepo.signInWithGoogleAndGetIdToken(),
+      ).thenAnswer((_) async => 'fake-google-id-token');
       when(() => mockAuthRepo.currentUser).thenReturn(mockUser);
 
       // Suppress provider exceptions from auth state notifier
@@ -217,7 +219,7 @@ void main() {
       await tester.pump(const Duration(seconds: 2));
 
       // Verify the sign-in was at least attempted
-      verify(() => mockAuthRepo.signInWithGoogle()).called(1);
+      verify(() => mockAuthRepo.signInWithGoogleAndGetIdToken()).called(1);
     });
   });
 

@@ -49,6 +49,13 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
+  Future<String?> signInWithGoogleAndGetIdToken() async {
+    final result = await _google.authenticate();
+    await _auth.signInWithGoogleIdToken(idToken: result.idToken);
+    return result.idToken;
+  }
+
+  @override
   Future<AppUser?> reauthWithGoogleSilently() async {
     // No-UI silent path: resolve the cached Google session, exchange its
     // idToken into Firebase, and return the resulting user. Returns null when
