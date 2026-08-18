@@ -23,7 +23,6 @@ import 'package:learning_tracker/features/account/domain/models/auth_state.dart'
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/switcher_sheet_pin_guard_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/profile_switcher_sheet.dart';
@@ -39,15 +38,6 @@ class _FakePageRouteInfo extends Fake implements PageRouteInfo {}
 /// [switcherSheetPinGuardRequiredProvider] runs UNSTUBBED and its actual call
 /// into [PinService.hasProfilePin] can be observed.
 class _MockPinService extends Mock implements PinService {}
-
-/// Fixes [activeProfileIdProvider] to a constant id for the container —
-/// mirrors `switcher_sheet_pin_guard_provider_test.dart`'s identical helper.
-class _FixedActiveProfileId extends ActiveProfileId {
-  _FixedActiveProfileId(this._id);
-  final String _id;
-  @override
-  String build() => _id;
-}
 
 LearnerProfileEntity _profile({
   required String profileId,
@@ -342,7 +332,7 @@ void main() {
     ///
     /// Rewritten to build a REAL [ProviderContainer] with ONLY the guard's
     /// true upstream dependencies overridden ([profileListStreamProvider],
-    /// [activeProfileIdProvider], [pinServiceProvider]) and read
+    /// [selectedProfileIdProvider], [pinServiceProvider]) and read
     /// [switcherSheetPinGuardRequiredProvider] completely unstubbed — the
     /// actual production function body runs and its actual decision is
     /// asserted, including verifying [PinService.hasProfilePin] is (or is
@@ -365,8 +355,8 @@ void main() {
             profileListStreamProvider.overrideWith(
               (ref) => Stream.value(profiles),
             ),
-            activeProfileIdProvider.overrideWith(
-              () => _FixedActiveProfileId(activeProfileId),
+            selectedProfileIdProvider.overrideWith(
+              () => _FixedSelectedProfileId(activeProfileId),
             ),
             pinServiceProvider.overrideWithValue(pinService),
           ],
