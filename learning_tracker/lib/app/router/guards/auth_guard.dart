@@ -9,6 +9,8 @@ import 'package:learning_tracker/features/onboarding/presentation/screens/app_in
     show kIntroSeen;
 import 'package:learning_tracker/features/onboarding/presentation/screens/onboarding_screen.dart'
     show kOnboardingComplete;
+import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart'
+    show ProfileRepositoryNotReadyException;
 import 'package:shared_preferences/shared_preferences.dart';
 
 final _log = AppLogger.instance;
@@ -84,10 +86,23 @@ class AuthGuard extends AutoRouteGuard {
       // a hang, never a lockout. We only read (a COUNT), never write the flag:
       // a device-global write here would risk a genuinely-new 0-profile account
       // later skipping onboarding.
+      // Root Cause B (run12 device audit): ProfileRepositoryNotReadyException
+      // ("no active account") is the NORMAL signal on a genuinely fresh,
+      // zero-account device — not an error. Left uncaught here it fell
+      // through to the outer fail-safe catch below, which unconditionally
+      // routes to SignInRoute, skipping the introSeen/AppIntro check just
+      // below and the AccountPicker path entirely. Caught locally instead:
+      // treat it as "0 profiles" and continue the normal decision tree.
       final countProfiles = _activeAccountProfileCount;
-      if (countProfiles != null && (await countProfiles()) > 0) {
-        resolver.next();
-        return;
+      if (countProfiles != null) {
+        try {
+          if ((await countProfiles()) > 0) {
+            resolver.next();
+            return;
+          }
+        } on ProfileRepositoryNotReadyException {
+          _log.debug(event: 'auth_guard_no_active_account_yet');
+        }
       }
 
       final introSeen = prefs.getBool(kIntroSeen) ?? false;
