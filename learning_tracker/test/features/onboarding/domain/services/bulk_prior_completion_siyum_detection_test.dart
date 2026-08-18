@@ -32,6 +32,7 @@ import 'package:learning_tracker/features/tracks/stages/domain/models/schedule_t
 import 'package:learning_tracker/features/tracks/stages/domain/models/stage_definition.dart';
 import 'package:learning_tracker/features/tracks/stages/domain/repositories/stage_definition_repository.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:test/test.dart';
 
 import '../../../../helpers/firestore_fake.dart';
@@ -183,6 +184,13 @@ void main() {
   late StageDefinitionRepository stageRepository;
 
   setUp(() async {
+    // The positive-control siyum path reads effectiveUseHebrewTermsProvider
+    // (-> ProfileScopedPreference -> SharedPreferences.getInstance()). This
+    // file uses package:test, not flutter_test, so there is no
+    // TestWidgetsFlutterBinding to auto-mock the platform channel;
+    // setMockInitialValues swaps in an in-memory implementation instead,
+    // which needs no Flutter binding at all.
+    SharedPreferences.setMockInitialValues({});
     firestore = createFakeFirestore(authenticatedUid: _uid);
     await seedAccount(firestore, uid: _uid);
     await seedProfile(
