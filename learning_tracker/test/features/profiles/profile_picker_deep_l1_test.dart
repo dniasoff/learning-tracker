@@ -744,7 +744,7 @@ void main() {
       );
       expect(
         container.read(selectedProfileIdProvider),
-        2,
+        'ulid-2',
         reason:
             "deleting the currently-selected profile via the Picker's "
             'long-press menu must auto-switch to a remaining profile, not '
