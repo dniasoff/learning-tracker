@@ -20,8 +20,7 @@ import 'package:learning_tracker/features/learning/domain/entities/completion_so
 /// **`stageId` is expected to hold a `stage_order` value, not a Drift
 /// row id.** Mirrors the AD-25 re-key `stage_definitions` already went
 /// through (`{curriculumId}_{stageOrder}` doc-ids) — a real Firestore stage
-/// has no integer row id (see `kFirestoreUnmappedStageId`'s doc comment in
-/// `stage_definition.dart`). The field keeps the name `stageId` only
+/// has no integer row id. The field keeps the name `stageId` only
 /// because that is what `firestore.rules`, `doc_ids.dart`, and every
 /// existing production document already call it — renaming the wire field
 /// would be an unrelated schema change.
