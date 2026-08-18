@@ -4,6 +4,7 @@ library;
 // ignore_for_file: directives_ordering, unused_element_parameter, prefer_const_constructors
 
 import 'package:auto_route/auto_route.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -19,6 +20,7 @@ import 'package:learning_tracker/features/dashboard/presentation/providers/dashb
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
+import 'package:learning_tracker/features/tracks/setup/data/repositories/curriculum_track_repository_impl.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/widgets/track_management_body.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/widgets/learning_track_card.dart';
@@ -36,6 +38,8 @@ import '../../helpers/firestore_fixtures.dart';
 class _Router extends Mock implements StackRouter {}
 
 class _OrderRepo extends Mock implements TrackLearningOrderRepository {}
+
+class _MockFirebaseFunctions extends Mock implements FirebaseFunctions {}
 
 const _profileId = '01J6Q2H4A8M7K3P9R5T6V8WXY9';
 
@@ -57,6 +61,12 @@ Widget _body(
   retry: (_, __) => null,
   overrides: [
     activeProfileIdProvider.overrideWithValue(_profileId),
+    curriculumTrackRepositoryAdapterProvider.overrideWith(
+      (ref) => FirestoreCurriculumTrackRepositoryAdapter(
+        ref: ref,
+        functions: _MockFirebaseFunctions(),
+      ),
+    ),
     firestoreCurriculumTrackRepositoryProvider.overrideWith(
       (ref) async => FirestoreCurriculumTrackRepository(
         firestore: firestore,
@@ -81,6 +91,9 @@ Widget _body(
           profileId: _profileId,
         ).watchActiveTracks(),
       ),
+    dashboardActiveCurriculaProvider.overrideWith(
+      (ref) async => tracks.map((track) => track.curriculumId).toList(),
+    ),
     dashboardTrackCompletionPercentageProvider(
       CurriculumId.mishnayos,
     ).overrideWith((ref) async => 0),
