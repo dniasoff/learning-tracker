@@ -33,7 +33,7 @@ import 'package:learning_tracker/features/notifications/domain/repositories/noti
 import 'package:learning_tracker/features/notifications/domain/services/notification_gateway.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_scheduler.dart';
 import 'package:learning_tracker/features/notifications/presentation/providers/notification_providers.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -109,7 +109,7 @@ class _RecordingNotificationGateway implements NotificationGateway {
 // Active-profile + locale overrides.
 // ---------------------------------------------------------------------------
 
-class _ProfileId1 extends ActiveProfileId {
+class _ProfileId1 extends SelectedProfileId {
   @override
   String? build() => 'profile-1';
 }
@@ -146,7 +146,7 @@ void main() {
     final scheduler = NotificationScheduler(service: gateway);
     return ProviderContainer(
       overrides: [
-        activeProfileIdProvider.overrideWith(_ProfileId1.new),
+        selectedProfileIdProvider.overrideWith(_ProfileId1.new),
         currentAppLocaleProvider.overrideWithValue(const Locale('en')),
         notificationSchedulerProvider.overrideWithValue(scheduler),
         isSacredTimeActiveProvider.overrideWithValue(sacredTimeActive),
