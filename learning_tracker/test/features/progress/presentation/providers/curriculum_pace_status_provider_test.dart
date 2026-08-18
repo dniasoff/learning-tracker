@@ -2,6 +2,7 @@
 @Tags(['progress', 'pace', 'f4_regression'])
 library;
 
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -20,6 +21,8 @@ import 'package:learning_tracker/features/profiles/presentation/providers/active
 import 'package:learning_tracker/features/progress/domain/services/pace_calculator.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/progress_providers.dart';
 import 'package:learning_tracker/features/scheduler/scheduler.dart';
+import 'package:learning_tracker/features/tracks/setup/data/repositories/curriculum_track_repository_impl.dart';
+import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../../../helpers/firestore_fake.dart';
@@ -28,6 +31,8 @@ import '../../../../helpers/firestore_fixtures.dart';
 class _MockFirebaseApp extends Mock implements FirebaseApp {}
 
 class _MockFirebaseAuth extends Mock implements FirebaseAuth {}
+
+class _MockFirebaseFunctions extends Mock implements FirebaseFunctions {}
 
 class _ActiveProfile extends ActiveProfileId {
   @override
@@ -91,6 +96,19 @@ void main() {
           _ContentRepository(leafCount),
         ),
         clockProvider.overrideWith((ref) => _today),
+        // curriculumPaceStatus watches curriculumTrackRepositoryAdapterProvider
+        // to read the track's activatedAt. That adapter's constructor eagerly
+        // resolves FirebaseFunctions.instance (for the unrelated
+        // deleteCurriculumTrack Cloud Function wiring), which needs a real
+        // Firebase app under `flutter test` — inject a mock instead, the same
+        // pattern scheduler_all_daily_tasks_test.dart and the
+        // parent-track-management screen tests already use.
+        curriculumTrackRepositoryAdapterProvider.overrideWith(
+          (ref) => FirestoreCurriculumTrackRepositoryAdapter(
+            ref: ref,
+            functions: _MockFirebaseFunctions(),
+          ),
+        ),
       ],
     );
     container.read(activeProfileDocIdProvider.notifier).set(_profileId);

@@ -270,13 +270,21 @@ void main() {
       );
     });
 
-    // F17 partial-loading — when one provider has resolved but others are
-    // still loading, every counter VALUE must stay on the placeholder. The
-    // visual sin we're guarding against: a flashy big "7" rendered next to
-    // two stale zeros, suggesting "7 streak · 0 siyumim · 0 items" while
-    // the real data is still en route.
+    // Per-counter loading gate (commit 197c073c, "Stop 15 UI call sites from
+    // rendering a not-ready backend as confident wrong data") supersedes the
+    // F17 shared-gate design above: F17's `allReady` gate tied EVERY
+    // counter's placeholder to ALL FOUR providers, which meant a single
+    // provider erroring froze the whole row on "…" forever, with no retry.
+    // 197c073c deliberately decoupled each counter's placeholder from its
+    // OWN provider only (`streakAsync.hasValue`, `journeyAsync.hasValue`,
+    // etc., each gating its own value) — see the class doc comment and
+    // `_Counter`'s error/onRetry fields. A resolved counter now renders its
+    // real value immediately instead of waiting on its siblings; this still
+    // satisfies F17's actual goal (never show a fabricated zero) because an
+    // unresolved counter still shows "…", never "0".
     testWidgets(
-      'placeholder is shown even when only ONE provider is still loading',
+      'only the still-loading counter shows the placeholder; resolved '
+      'counters render their real values',
       (tester) async {
         await tester.pumpWidget(
           ProviderScope(
@@ -287,8 +295,9 @@ void main() {
               useHebrewTermsProvider.overrideWith(
                 () => _UseHebrewTermsOverride(useHebrew: false),
               ),
-              // Three providers ready, one still loading. The row must
-              // remain in loading mode rather than rendering "7 · 0 · 0".
+              // Three providers ready, one still loading. Only the
+              // still-loading counter (lifetime) stays on the placeholder;
+              // the three resolved counters render their real values.
               dashboardStreakProvider.overrideWith(
                 (ref) => Stream.value((currentStreak: 7, maxStreak: 7)),
               ),
@@ -324,13 +333,13 @@ void main() {
         await tester.pump();
         await tester.pump();
 
-        // No counter VALUE should render as a real number yet — the lifetime
-        // provider is still loading, so the gate stays closed for all four
-        // slots. All four numeric slots show the placeholder. The descriptive
-        // labels (e.g. "7-day streak") may still embed the resolved count
-        // for plural-form purposes; that's tiny text, the visual gate is on
-        // the big value.
-        expect(find.text('…'), findsNWidgets(4));
+        // Only the lifetime counter's provider is still loading, so only its
+        // slot shows the placeholder; the three resolved counters render
+        // their real values instead of also waiting.
+        expect(find.text('…'), findsOneWidget);
+        expect(find.text('7'), findsOneWidget); // streak value
+        expect(find.text('3'), findsOneWidget); // siyumim value (unit: 3)
+        expect(find.text('42'), findsOneWidget); // points value
       },
     );
   });

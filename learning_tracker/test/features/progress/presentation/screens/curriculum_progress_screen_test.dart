@@ -15,6 +15,7 @@
 library;
 
 import 'package:auto_route/auto_route.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -37,6 +38,8 @@ import 'package:learning_tracker/features/profiles/presentation/providers/active
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/curriculum_progress_screen.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/overall_stats_card.dart';
+import 'package:learning_tracker/features/tracks/setup/data/repositories/curriculum_track_repository_impl.dart';
+import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart';
 import 'package:learning_tracker/features/tracks/stages/domain/models/stage_definition.dart'
     as domain_stage;
 import 'package:learning_tracker/features/tracks/stages/domain/repositories/stage_definition_repository.dart';
@@ -56,6 +59,8 @@ const CurriculumId _curriculum = CurriculumId.mishnayos;
 class _MockFirebaseApp extends Mock implements FirebaseApp {}
 
 class _MockFirebaseAuth extends Mock implements FirebaseAuth {}
+
+class _MockFirebaseFunctions extends Mock implements FirebaseFunctions {}
 
 AccountFirebaseHandles _handles(FakeFirebaseFirestore firestore) =>
     AccountFirebaseHandles(
@@ -248,6 +253,21 @@ Widget _pump({
         () => _UseHebrewTermsOverride(useHebrew: useHebrew),
       ),
       stageDefinitionRepositoryProvider.overrideWith((ref, c) => stageRepo),
+      // curriculumPaceStatusProvider (watched by the PaceIndicator) reads a
+      // track's activatedAt via curriculumTrackRepositoryAdapterProvider.
+      // That adapter's constructor eagerly resolves FirebaseFunctions.instance
+      // (for the unrelated deleteCurriculumTrack Cloud Function wiring),
+      // which needs a real Firebase app under `flutter test` — inject a mock
+      // instead, the same pattern scheduler_all_daily_tasks_test.dart and the
+      // parent-track-management screen tests already use. Harmless for tests
+      // that never seed a track: getTrack then returns null and pace stays
+      // null, same as before this override existed.
+      curriculumTrackRepositoryAdapterProvider.overrideWith(
+        (ref) => FirestoreCurriculumTrackRepositoryAdapter(
+          ref: ref,
+          functions: _MockFirebaseFunctions(),
+        ),
+      ),
       // Data-consistency fix (run-9 audit): CurriculumProgressScreen now
       // watches trackDualProgressMetricsProvider so its "Track progress" row
       // agrees with the Progress hub / Track Detail. Overriding it directly

@@ -14,6 +14,7 @@ import 'package:learning_tracker/features/progress/data/repositories/firestore_p
 import 'package:mocktail/mocktail.dart';
 
 import '../../../../helpers/data_export_firestore_test_support.dart';
+import '../../../../helpers/firestore_fixtures.dart' show seedProfile;
 
 class MockFirebaseApp extends Mock implements FirebaseApp {}
 
@@ -33,52 +34,64 @@ void main() {
   }
 
   group('not ready (no active account/profile)', () {
+    // Owner ruling D-E (commit cc987cb2): achievement-shaped reads THROW
+    // ProgressRepositoryNotReadyException when no account/profile is active
+    // yet, rather than fabricating an empty/zero result that would be
+    // indistinguishable from a learner who has genuinely achieved nothing.
+    // See FirestoreProgressRepositoryAdapter's class doc comment.
     test(
-      'getTrackBreakdown returns an empty map instead of throwing',
+      'getTrackBreakdown throws ProgressRepositoryNotReadyException',
       () async {
         final container = ProviderContainer();
         addTearDown(container.dispose);
         final adapter = buildAdapter(container);
 
-        final result = await adapter.getTrackBreakdown('bavli');
-
-        expect(result, isEmpty);
-      },
-    );
-
-    test('getAggregateCount returns 0 instead of throwing', () async {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-      final adapter = buildAdapter(container);
-
-      final result = await adapter.getAggregateCount('bavli');
-
-      expect(result, 0);
-    });
-
-    test(
-      'getCompletionsByCurriculum returns an empty list instead of throwing',
-      () async {
-        final container = ProviderContainer();
-        addTearDown(container.dispose);
-        final adapter = buildAdapter(container);
-
-        final result = await adapter.getCompletionsByCurriculum('bavli');
-
-        expect(result, isEmpty);
+        await expectLater(
+          adapter.getTrackBreakdown('bavli'),
+          throwsA(isA<ProgressRepositoryNotReadyException>()),
+        );
       },
     );
 
     test(
-      'getAllCompletions returns an empty list instead of throwing',
+      'getAggregateCount throws ProgressRepositoryNotReadyException',
       () async {
         final container = ProviderContainer();
         addTearDown(container.dispose);
         final adapter = buildAdapter(container);
 
-        final result = await adapter.getAllCompletions();
+        await expectLater(
+          adapter.getAggregateCount('bavli'),
+          throwsA(isA<ProgressRepositoryNotReadyException>()),
+        );
+      },
+    );
 
-        expect(result, isEmpty);
+    test(
+      'getCompletionsByCurriculum throws ProgressRepositoryNotReadyException',
+      () async {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        final adapter = buildAdapter(container);
+
+        await expectLater(
+          adapter.getCompletionsByCurriculum('bavli'),
+          throwsA(isA<ProgressRepositoryNotReadyException>()),
+        );
+      },
+    );
+
+    test(
+      'getAllCompletions throws ProgressRepositoryNotReadyException',
+      () async {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        final adapter = buildAdapter(container);
+
+        await expectLater(
+          adapter.getAllCompletions(),
+          throwsA(isA<ProgressRepositoryNotReadyException>()),
+        );
       },
     );
   });
@@ -100,8 +113,17 @@ void main() {
       );
     }
 
-    setUp(() {
+    setUp(() async {
       firestore = FakeFirebaseFirestore();
+      // The profile document's mere existence is what `_assertHydrated`
+      // (via FirestoreLearnerProfileRepository.hasHydratedCache) uses to
+      // distinguish a genuinely-empty hydrated cache from a cold,
+      // never-synced one — see ProgressDataNotHydratedException's doc
+      // comment. Writing only to the `completions` subcollection (as
+      // `writeCompletion` below does) never creates this parent document in
+      // fake_cloud_firestore, so every "ready" test needs it seeded
+      // explicitly, not just the ones that also write completions.
+      await seedProfile(firestore, uid: uid, profileId: profileDocId);
       container = ProviderContainer(
         overrides: [
           activeAccountFirebaseProvider.overrideWith((ref) async => handles()),
