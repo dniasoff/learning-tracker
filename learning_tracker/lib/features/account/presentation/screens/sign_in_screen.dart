@@ -400,7 +400,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                                 onGoogleSignIn: () =>
                                     _handleSignInWithGoogle(l10n),
                                 onRegister: () =>
-                                    context.router.replace(SignupRoute()),
+                                    context.router.push(SignupRoute()),
                               ),
                             ],
                           ),

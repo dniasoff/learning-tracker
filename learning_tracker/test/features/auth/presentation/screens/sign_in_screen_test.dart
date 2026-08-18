@@ -16,12 +16,14 @@
 //   • AN-11 forgot-password anti-enumeration: `_handleForgotPassword` must
 //     show byte-identical snackbar copy whether the reset email send
 //     succeeds or throws.
+import 'package:auto_route/auto_route.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart';
@@ -32,19 +34,30 @@ import 'package:mocktail/mocktail.dart';
 
 import '../../../../mocks/mock_repositories.dart';
 
+class _MockStackRouter extends Mock implements StackRouter {}
+
+class _FakePageRouteInfo extends Fake implements PageRouteInfo {}
+
 void main() {
+  setUpAll(() {
+    registerFallbackValue(_FakePageRouteInfo());
+  });
+
   group('SignInScreen', () {
     setUp(debugResetLastKnownOnline);
     tearDown(debugResetLastKnownOnline);
 
-    Widget buildTestWidget({Stream<bool>? connectivity}) {
+    Widget buildTestWidget({
+      Stream<bool>? connectivity,
+      _MockStackRouter? router,
+    }) {
       return ProviderScope(
         retry: (_, __) => null,
         overrides: [
           if (connectivity != null)
             connectivityStreamProvider.overrideWith((ref) => connectivity),
         ],
-        child: const MaterialApp(
+        child: MaterialApp(
           localizationsDelegates: [
             AppLocalizations.delegate,
             GlobalMaterialLocalizations.delegate,
@@ -52,10 +65,48 @@ void main() {
             GlobalCupertinoLocalizations.delegate,
           ],
           supportedLocales: AppLocalizations.supportedLocales,
-          home: SignInScreen(),
+          home: router == null
+              ? const SignInScreen()
+              : StackRouterScope(
+                  controller: router,
+                  stateHash: 0,
+                  child: const SignInScreen(),
+                ),
         ),
       );
     }
+
+    testWidgets('Register Here pushes SignupRoute', (tester) async {
+      final router = _MockStackRouter();
+      final pushedRoutes = <PageRouteInfo>[];
+
+      when(
+        () => router.push<Object?>(any(), onFailure: any(named: 'onFailure')),
+      ).thenAnswer((invocation) async {
+        pushedRoutes.add(invocation.positionalArguments.first as PageRouteInfo);
+        return null;
+      });
+
+      await tester.pumpWidget(
+        buildTestWidget(connectivity: Stream.value(true), router: router),
+      );
+      await tester.pump(const Duration(seconds: 2));
+
+      final registerCta = find.textContaining(
+        'Register Here',
+        findRichText: true,
+      );
+      await tester.ensureVisible(registerCta);
+      await tester.tapOnText(find.textRange.ofSubstring('Register Here'));
+      await tester.pump();
+
+      expect(pushedRoutes, hasLength(1));
+      expect(pushedRoutes.single, isA<SignupRoute>());
+      verifyNever(() => router.replace(any()));
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+    });
 
     testWidgets('renders without error', (tester) async {
       await tester.pumpWidget(
