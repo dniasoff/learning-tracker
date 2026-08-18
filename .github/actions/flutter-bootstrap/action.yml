@@ -58,10 +58,16 @@ runs:
       with:
         fetch-depth: ${{ inputs.fetch-depth }}
 
+    - name: Read pinned Flutter version
+      id: flutter-version
+      shell: bash
+      run: echo "version=$(cat .flutter-version)" >> "$GITHUB_OUTPUT"
+
     - name: Setup Flutter
       uses: subosito/flutter-action@v2
       with:
         channel: 'stable'
+        flutter-version: ${{ steps.flutter-version.outputs.version }}
         cache: true
 
     - name: Setup Java

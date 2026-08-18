@@ -181,8 +181,19 @@ All writes hit local SQLite immediately. Offline writes queue for sync; the app 
 
 ### Prerequisites
 
-- **Flutter SDK** 3.38.6+ (stable channel)
-- **Dart** 3.10.8+
+- **Flutter SDK** — the exact version pinned in `.flutter-version` at the repo
+  root (currently 3.47.0). CI reads the same file (`.github/actions/flutter-bootstrap/action.yml`),
+  so local and CI stay in lockstep by construction — install whatever that
+  file says, not just "any recent stable". (An earlier open-ended "3.38.6+"
+  floor let local dev drift 3 minor versions behind CI's then-unpinned
+  `channel: stable`, silently failing every CI run on `format-check`/`analyze`
+  for weeks before anyone noticed — see git history on `.flutter-version`
+  for context.) To pick up a new Flutter release deliberately: bump
+  `.flutter-version`, run `flutter upgrade` locally (or `flutter version <N>`
+  if using a git-checkout install), regenerate codegen + l10n, reformat, fix
+  any new lints, verify, then commit everything together in one PR — never
+  let the pin and an actual local/CI Flutter version disagree for long.
+- **Dart** 3.10.8+ (bundled with the pinned Flutter SDK — no separate install)
 - **Android SDK** (API 21+, Android 5.0+)
 - **Git**
 - **FlutterFire CLI** (only if regenerating Firebase config)
