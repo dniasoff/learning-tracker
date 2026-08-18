@@ -118,10 +118,19 @@ class FirestoreCurriculumTrackRepositoryAdapter {
     required Ref ref,
     FirebaseFunctions? functions,
   }) : _ref = ref,
-       _functions = functions ?? FirebaseFunctions.instance;
+       _functionsOverride = functions;
 
   final Ref _ref;
-  final FirebaseFunctions _functions;
+  final FirebaseFunctions? _functionsOverride;
+
+  // Lazy: only deleteTrackPermanently below needs Cloud Functions at all —
+  // every other method here (retire/archive/reactivate/query) is a pure
+  // Firestore operation. Resolving FirebaseFunctions.instance eagerly in the
+  // constructor made every construction of this adapter require a live
+  // default Firebase app, even for callers that only ever retire or archive
+  // a track — `late` defers that resolution to first actual access.
+  late final FirebaseFunctions _functions =
+      _functionsOverride ?? FirebaseFunctions.instance;
 
   /// Re-reads `firestoreCurriculumTrackRepositoryProvider`, resolving to
   /// `null` exactly when it does (no active account, or no active learner

@@ -69,32 +69,6 @@ class _ThrowingCompletionRepository extends FakeCompletionRepository {
   }
 }
 
-class _DiagnosticCompletionRepository extends FakeCompletionRepository {
-  @override
-  Future<MarkCompletionResult> markComplete(
-    CompletionRequest request, {
-    bool awardGamificationPoints = true,
-    bool creditsAchievement = true,
-  }) async {
-    // ignore: avoid_print
-    print('DEBUG fake mark start ${request.curriculumId} ${request.trackType}');
-    try {
-      final result = await super.markComplete(
-        request,
-        awardGamificationPoints: awardGamificationPoints,
-        creditsAchievement: creditsAchievement,
-      );
-      // ignore: avoid_print
-      print('DEBUG fake mark returned');
-      return result;
-    } catch (error, stack) {
-      // ignore: avoid_print
-      print('DEBUG fake mark error=$error\n$stack');
-      rethrow;
-    }
-  }
-}
-
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 /// Minimal [DailyTask] for a fine-paced (non-coarse) track.
@@ -304,7 +278,7 @@ void main() {
       addTearDown(h.dispose);
 
       final task = _finePacedTask();
-      final fakeRepo = _DiagnosticCompletionRepository();
+      final fakeRepo = FakeCompletionRepository();
 
       await h.pumpApp(
         path: '/text/${task.contentItemSefariaRef}',
@@ -322,6 +296,28 @@ void main() {
           adjacentContentRefsProvider(
             task.contentItemSefariaRef,
           ).overrideWith((ref) => Future.value((prev: null, next: null))),
+          // CompletionOrchestrator's post-write bookmark advance
+          // (`_advanceBookmark` → `_getNextItemId`) falls back to
+          // contentRepositoryProvider when there is no custom learning order.
+          // The real ContentRepositoryImpl loads bundled Sefaria JSON assets
+          // via rootBundle, which never resolves in the widget-test sandbox
+          // (no asset bundle — see that class's `loadRawContentJson` doc
+          // comment) — Riverpod's default retry then turns that into a
+          // ~30s+ stall instead of a fast error, so completionCommittedProvider
+          // never gets a chance to increment. Same fix E2E-304 already uses.
+          contentRepositoryProvider.overrideWithValue(
+            FakeContentRepository([
+              ContentItem(
+                curriculumId: task.curriculumId.storageKey,
+                level1: 'Berachot',
+                displayNameHe: 'משנה ברכות א:א',
+                displayNameEn: 'Mishnah Berachot 1:1',
+                sefariaRef: task.contentItemSefariaRef,
+                sortOrder: 1,
+                isLeaf: true,
+              ),
+            ]),
+          ),
         ],
       );
 
@@ -334,48 +330,17 @@ void main() {
       final container = ProviderScope.containerOf(
         tester.element(find.byType(MaterialApp).first),
       );
-      final counterSubscription = container.listen<int>(
-        completionCommittedProvider,
-        (previous, next) {
-          // ignore: avoid_print
-          print('DEBUG E2E-301 listener previous=$previous next=$next');
-        },
-      );
-      addTearDown(counterSubscription.close);
       final beforeCount = container.read(completionCommittedProvider);
-      final buttonContainer = ProviderScope.containerOf(
-        tester.element(find.text('Mark complete').first),
-      );
-      // ignore: avoid_print
-      print(
-        'DEBUG E2E-301 sameContainer=${identical(container, buttonContainer)}',
-      );
 
       // Tap the "Mark complete" button.
-      Object? debugError;
-      await runZonedGuarded(() async {
-        await h.tapText(
-          'Mark complete',
-          settle: const Duration(milliseconds: 500),
-        );
-        await tester.pump(const Duration(milliseconds: 300));
-      }, (error, stack) => debugError = error);
-      await tester.pump(const Duration(seconds: 2));
-      // ignore: avoid_print
-      print(
-        'DEBUG E2E-301 saveTextCount=' +
-            find.textContaining('Could not save').evaluate().length.toString() +
-            ' error=$debugError',
+      await h.tapText(
+        'Mark complete',
+        settle: const Duration(milliseconds: 500),
       );
+      await tester.pump(const Duration(milliseconds: 300));
 
       // Key assertion: completionCommittedProvider incremented.
       final afterCount = container.read(completionCommittedProvider);
-      // Temporary runtime diagnostic; remove after reproducing the provider state.
-      // ignore: avoid_print
-      print(
-        'DEBUG E2E-301 before=$beforeCount after=$afterCount '
-        'marked=${fakeRepo.markedRequests.length}',
-      );
       expect(
         afterCount,
         greaterThan(beforeCount),
@@ -505,6 +470,27 @@ void main() {
                 ),
               ),
             ),
+            // See the E2E-301 "tapping Mark Complete" test for why this is
+            // required: CompletionOrchestrator's post-write bookmark advance
+            // falls back to contentRepositoryProvider, and the real
+            // ContentRepositoryImpl loads bundled Sefaria JSON assets via
+            // rootBundle, which never resolves in the widget-test sandbox —
+            // that stalls _handleComplete well past this test's pump budget,
+            // so the celebration (which only shows after the mark completes)
+            // never appears.
+            contentRepositoryProvider.overrideWithValue(
+              FakeContentRepository([
+                ContentItem(
+                  curriculumId: task.curriculumId.storageKey,
+                  level1: 'Berachot',
+                  displayNameHe: 'משנה ברכות א:א',
+                  displayNameEn: 'Mishnah Berachot 1:1',
+                  sefariaRef: task.contentItemSefariaRef,
+                  sortOrder: 1,
+                  isLeaf: true,
+                ),
+              ]),
+            ),
           ],
         );
 
@@ -591,6 +577,31 @@ void main() {
             adjacentContentRefsProvider(
               task.contentItemSefariaRef,
             ).overrideWith((ref) => Future.value((prev: null, next: null))),
+            // trackStorageKeyForTrackIdProvider/isStageCompletedProvider now
+            // read the Firestore-backed completion stack. That stack routes
+            // through `_watchActiveAccountAndProfile`
+            // (lib/data/firestore/repository_providers.dart), which requires
+            // `talmidProfileId` to be a valid 26-char ULID before it will even
+            // attempt the tutor-grant lookup — a synthetic id like this one
+            // fails that check with a FormatException, and Riverpod 3's
+            // default provider retry (see that file's `firestoreProfileList
+            // RepositoryProvider` doc comment, "T-43") turns the resulting
+            // fast error into a 30s+ stall instead of surfacing it, so
+            // isStageCompletedProvider never leaves AsyncLoading within this
+            // test's pump budget. This journey is about tutor-mode gating,
+            // not the live completion query, so bypass that stack directly —
+            // the exact pattern already used by the sibling assertion in
+            // tutoring_p0_test.dart ("Mark Complete button shows
+            // tutor-unavailable label ... same invariant covered by E2E-303
+            // in learning area").
+            trackStorageKeyForTrackIdProvider(
+              task.curriculumId,
+            ).overrideWithValue(const AsyncData<String>('personal')),
+            isStageCompletedProvider((
+              sefariaRef: task.contentItemSefariaRef,
+              stageId: task.stageOrder,
+              trackType: 'personal',
+            )).overrideWithValue(const AsyncData<bool>(false)),
             // Enter a tutored session — this is what _isTutorSession() checks.
             activeTutoredProfileSelectionProvider.overrideWith(
               () => _FixedTutoredSelection(

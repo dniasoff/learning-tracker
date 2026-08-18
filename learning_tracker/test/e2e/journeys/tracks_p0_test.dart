@@ -357,7 +357,9 @@ void main() {
   group('E2E-405 — Delete track: archive path (keep history)', () {
     // Journey: hub with 2 active tracks (so guard doesn't block) → tap 1st
     // track → TrackDetailScreen → Delete → dialog → Archive →
-    // track state = 'archived' in Firestore; completions retained.
+    // track state = 'retired' in Firestore (this screen's Archive choice
+    // routes through deactivate()/retireTrack — see the assertion below for
+    // why); completions retained.
     //
     // R-TR1: delete via TrackDetailScreen._showDeleteDialog (distinct code
     // path from hub long-press).
@@ -392,6 +394,19 @@ void main() {
           extraOverrides: [
             ..._trackHubOverrides(tracks: [stubMishnayos, stubBavli]),
             ..._trackDetailSilenceOverrides(),
+            // _showDeleteDialog's last-curriculum pre-check (TRK-HUB-04) now
+            // reads dashboardActiveCurriculaProvider directly (post-Drift
+            // migration; see track_detail_screen.dart's "Active-curricula
+            // guards reuse dashboardActiveCurriculaProvider" note), not the
+            // hub's stubbed track stream above. Without this override the
+            // harness default (empty list) makes the guard think there is
+            // <=1 active curriculum and it short-circuits into the
+            // last-curriculum error instead of ever opening the
+            // Archive/Wipe dialog. Same override E2E-406 already applies for
+            // the sibling wipe-path test.
+            dashboardActiveCurriculaProvider.overrideWith(
+              (ref) async => [CurriculumId.mishnayos, CurriculumId.bavli],
+            ),
           ],
         );
         await tester.pump(const Duration(milliseconds: 300));
@@ -424,15 +439,46 @@ void main() {
         h.expectOnScreen('Archive (keep history)');
 
         // Tap Archive.
+        //
+        // This exercises curriculumActivationServiceProvider's REAL
+        // (non-faked) path end-to-end — the sibling wipe-path test (E2E-406)
+        // avoids it via a fake curriculumTrackDetailRepositoryProvider
+        // instead. That was only possible after fixing a real lib/ defect:
+        // FirestoreCurriculumTrackRepositoryAdapter's constructor used to
+        // eagerly evaluate `FirebaseFunctions.instance` in its field
+        // initializer, even though retire/archive never touch Cloud
+        // Functions (only the wipe/delete path does). With no
+        // Firebase.initializeApp() call in this fake-Firestore/fake-Auth
+        // harness (by design — fakes are injected via provider overrides),
+        // that eager access threw `[core/no-app]` the instant anything
+        // resolved curriculumTrackRepositoryAdapterProvider, uncaught from
+        // the button's fire-and-forget onTap. Fixed by making `_functions`
+        // a `late final` field, so it resolves lazily on first actual use
+        // (deleteTrackPermanently only) instead of at construction time.
         await h.tapText(
           'Archive (keep history)',
           settle: const Duration(milliseconds: 500),
         );
         await tester.pump(const Duration(milliseconds: 500));
 
-        // Firestore archive keeps the curriculum document and changes its
-        // lifecycle state to 'archived'; the old Drift 'deleted' tombstone is
-        // intentionally not part of the migrated identity model.
+        // Firestore archive keeps the curriculum document but changes its
+        // lifecycle state to 'retired', NOT 'archived' — the old Drift
+        // 'deleted' tombstone is intentionally not part of the migrated
+        // identity model, and 'retired'/'archived' are two deliberately
+        // distinct verbs post-migration (Phase 3 P3-36, commit 02b33ffb):
+        // TrackDetailScreen._showDeleteDialog's "Archive (keep history)"
+        // choice routes through CurriculumActivationService.deactivate() ->
+        // FirestoreCurriculumTrackRepository.retireTrack() -> state
+        // 'retired'. The separate .archive() -> archiveTrack() -> state
+        // 'archived' path is only used by ParentTrackManagementScreen (a
+        // different screen). Both are independently covered by passing
+        // tests: track_management_hub_screen_l1_test.dart and
+        // curriculum_activation_service_test.dart assert 'retired' for this
+        // exact deactivate() call; parent_track_management_screen_l1_test.dart
+        // and ts3_parent_track_archive_test.dart assert 'archived' for the
+        // separate .archive() call. This test previously asserted 'archived'
+        // here, which never matched what TrackDetailScreen's Archive button
+        // actually writes.
         final trackDoc = await h.firestore
             .collection('users')
             .doc(identity.accountId)
@@ -442,7 +488,7 @@ void main() {
             .doc(CurriculumId.mishnayos.storageKey)
             .get();
         expect(trackDoc.exists, isTrue);
-        expect(trackDoc.data()?['state'], 'archived');
+        expect(trackDoc.data()?['state'], 'retired');
       },
     );
   });
