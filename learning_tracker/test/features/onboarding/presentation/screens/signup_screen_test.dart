@@ -390,38 +390,40 @@ void main() {
       },
     );
 
-    testWidgets('Hebrew offline mode: no-connection warning card renders in Hebrew', (
-      tester,
-    ) async {
-      await tester.pumpWidget(
-        createTestWidgetWithRegistry(online: false, locale: const Locale('he')),
-      );
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
+    testWidgets(
+      'Hebrew offline mode: no-connection warning card renders in Hebrew',
+      (tester) async {
+        await tester.pumpWidget(
+          createTestWidgetWithRegistry(
+            online: false,
+            locale: const Locale('he'),
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
 
-      // Hebrew for appErrorViewNoConnectionTitle.
-      expect(
-        find.textContaining('אין חיבור'),
-        findsOneWidget,
-        reason:
-            'offline no-connection title must render in Hebrew',
-      );
-      // Hebrew retry CTA.
-      expect(
-        find.widgetWithText(TextButton, 'נסו להתחבר שוב'),
-        findsOneWidget,
-        reason:
-            'offline retry CTA must render in Hebrew',
-      );
-      // The old local-account copy must remain absent.
-      expect(
-        find.text('Local account only: no cloud backup and no device sync.'),
-        findsNothing,
-        reason:
-            'iter9 l10n: hardcoded English local-only warning must be absent in Hebrew',
-      );
+        // Hebrew for appErrorViewNoConnectionTitle.
+        expect(
+          find.textContaining('אין חיבור'),
+          findsOneWidget,
+          reason: 'offline no-connection title must render in Hebrew',
+        );
+        // Hebrew retry CTA.
+        expect(
+          find.widgetWithText(TextButton, 'נסו להתחבר שוב'),
+          findsOneWidget,
+          reason: 'offline retry CTA must render in Hebrew',
+        );
+        // The old local-account copy must remain absent.
+        expect(
+          find.text('Local account only: no cloud backup and no device sync.'),
+          findsNothing,
+          reason:
+              'iter9 l10n: hardcoded English local-only warning must be absent in Hebrew',
+        );
 
-      await tester.pumpWidget(const SizedBox.shrink());
-    });
+        await tester.pumpWidget(const SizedBox.shrink());
+      },
+    );
   });
 }

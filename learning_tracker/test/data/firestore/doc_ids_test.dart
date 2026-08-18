@@ -18,6 +18,9 @@
 /// TQ-6: hermetic — no network (fake Firestore only), no wall clock, no
 /// unseeded randomness, no shared mutable state (a fresh
 /// `createFakeFirestore()` per test).
+// ignore_for_file: avoid_dynamic_calls -- _CurrentFirestoreWriter deliberately
+// dispatches through noSuchMethod (see its doc comment); every call on it is
+// necessarily dynamic.
 library;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -52,7 +55,7 @@ class _CurrentFirestoreWriter {
     String collection,
     String? id,
     Map<String, dynamic> data,
-  ) => _collection(collection).doc(id!).set(data);
+  ) => _collection(collection).doc(id).set(data);
 
   @override
   dynamic noSuchMethod(Invocation invocation) {
@@ -148,7 +151,7 @@ Future<String> _liveDocId(FakeFirebaseFirestore fs, String collection) async {
       .collection('users')
       .doc(_uid)
       .collection('learner_profiles')
-      .doc(_profileId.toString())
+      .doc(_profileId)
       .collection(collection)
       .get();
   expect(
@@ -406,7 +409,7 @@ void main() {
             .collection('users')
             .doc(_uid)
             .collection('learner_profiles')
-            .doc(_profileId.toString())
+            .doc(_profileId)
             .get();
         expect(doc.exists, isTrue);
         expect(

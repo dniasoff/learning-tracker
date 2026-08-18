@@ -16,8 +16,7 @@ final class FirestoreSyncSnapshot {
 /// Converts an SDK snapshot at the repository boundary into the metadata
 /// value consumed by feature code.
 FirestoreSyncSnapshot firestoreSyncSnapshotFromSdk(Object snapshot) {
-  final documentSnapshot =
-      snapshot as DocumentSnapshot<Map<String, dynamic>>;
+  final documentSnapshot = snapshot as DocumentSnapshot<Map<String, dynamic>>;
   return FirestoreSyncSnapshot(
     hasPendingWrites: documentSnapshot.metadata.hasPendingWrites,
     isFromCache: documentSnapshot.metadata.isFromCache,
@@ -55,7 +54,5 @@ final class _FirestoreSyncStatusRepository
       .collection('users')
       .doc(_uid)
       .snapshots(includeMetadataChanges: true)
-      .map(
-        firestoreSyncSnapshotFromSdk,
-      );
+      .map(firestoreSyncSnapshotFromSdk);
 }

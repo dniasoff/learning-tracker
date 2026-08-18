@@ -100,10 +100,10 @@ import 'package:learning_tracker/features/scheduler/presentation/screens/schedul
     show SchedulerScreen;
 import 'package:learning_tracker/features/settings/presentation/screens/settings_screen.dart'
     show SettingsScreen;
-import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart'
-    show activeTracksProvider;
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart'
     show CurriculumTrackEntity;
+import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart'
+    show activeTracksProvider;
 import 'package:learning_tracker/features/tracks/setup/presentation/screens/add_track_flow_screen.dart'
     show AddTrackFlow;
 import 'package:learning_tracker/features/tracks/setup/presentation/screens/track_management_hub_screen.dart'

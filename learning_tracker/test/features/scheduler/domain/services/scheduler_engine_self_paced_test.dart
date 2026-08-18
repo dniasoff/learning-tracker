@@ -134,11 +134,13 @@ void main() {
               'All previously-shown items missing first-stage completion '
               'must show as overdue today',
         );
-        expect(
-          newToday.map((t) => t.contentItemSefariaRef).toList(),
-          ['ref_5', 'ref_6', 'ref_7', 'ref_8', 'ref_9'],
-          reason: 'Today batch must skip everything already in priorlyShown',
-        );
+        expect(newToday.map((t) => t.contentItemSefariaRef).toList(), [
+          'ref_5',
+          'ref_6',
+          'ref_7',
+          'ref_8',
+          'ref_9',
+        ], reason: 'Today batch must skip everything already in priorlyShown');
       },
     );
 

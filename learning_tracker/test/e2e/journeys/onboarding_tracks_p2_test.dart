@@ -34,11 +34,11 @@ import 'package:learning_tracker/features/progress/presentation/providers/lifeti
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart'
     show allDailyTasksProvider, overdueCountForCurriculumProvider;
+import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart'
+    show CurriculumTrackEntity;
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/domain/models/learning_order_item.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/presentation/providers/learning_order_providers.dart'
     show learningOrderProvider, orderingRestrictedProvider;
-import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart'
-    show CurriculumTrackEntity;
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart'
     show activeTutorPermissionsProvider;
 

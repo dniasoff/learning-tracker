@@ -26,12 +26,12 @@ import 'package:learning_tracker/features/dashboard/presentation/providers/dashb
         trackHasChazaraProvider;
 import 'package:learning_tracker/features/dashboard/presentation/widgets/skipped_onboarding_cta_banner.dart'
     show onboardingSkipStateProvider;
+import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart'
+    show activeProfileIdProvider;
 import 'package:learning_tracker/features/profiles/presentation/providers/parent_pin_session_provider.dart'
     show
         ParentPinAuthenticatedProfileId,
         parentPinAuthenticatedProfileIdProvider;
-import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart'
-    show activeProfileIdProvider;
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart'
     show DailyTask, DailyTaskPriority;
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart'

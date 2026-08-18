@@ -46,10 +46,10 @@ import 'package:learning_tracker/features/progress/presentation/screens/progress
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart'
     show CurriculumTrackEntity;
 
+import '../../helpers/firestore_fixtures.dart' show seedAccount, seedProfile;
 import '../harness/e2e_common_overrides.dart' show stubTrack;
 import '../harness/e2e_harness.dart';
 import '../helpers/e2e_overrides.dart' show EmptyContentRepository;
-import '../../helpers/firestore_fixtures.dart' show seedAccount, seedProfile;
 
 // ── Shared test data ──────────────────────────────────────────────────────────
 

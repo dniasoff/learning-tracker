@@ -96,8 +96,8 @@ import 'package:learning_tracker/data/firestore/repository_providers.dart'
     show activeProfileDocIdProvider;
 import 'package:mocktail/mocktail.dart';
 
-import 'firestore_fake.dart';
 import 'data_export_firestore_test_support.dart';
+import 'firestore_fake.dart';
 
 class _MockFirebaseApp extends Mock implements FirebaseApp {}
 

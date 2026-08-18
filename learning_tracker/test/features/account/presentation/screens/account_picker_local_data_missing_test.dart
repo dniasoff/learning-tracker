@@ -23,9 +23,9 @@
 library;
 
 import 'package:auto_route/auto_route.dart';
-import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -34,7 +34,6 @@ import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
-import 'package:learning_tracker/data/repositories/firestore_account_repository.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
     show authRepositoryProvider;
@@ -47,8 +46,8 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../../../mocks/mock_repositories.dart';
 import '../../../../helpers/firestore_fake.dart';
+import '../../../../mocks/mock_repositories.dart';
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 

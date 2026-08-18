@@ -26,14 +26,14 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/data/firestore/account_firebase.dart';
 import 'package:learning_tracker/data/firestore/active_account_providers.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart'
     show ActiveProfileDocId, activeProfileDocIdProvider;
-import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
-import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/curriculum_progress_screen.dart';
@@ -380,7 +380,7 @@ void main() {
           stageRepo: stageRepo,
           router: router,
           dualMetrics: [
-            TrackDualProgressMetric(
+            const TrackDualProgressMetric(
               trackLabel: 'Mishnayos',
               curriculumId: CurriculumId.mishnayos,
               currentCyclePercentage: 0.25,
@@ -480,7 +480,7 @@ void main() {
           stageRepo: stageRepo,
           router: router,
           dualMetrics: [
-            TrackDualProgressMetric(
+            const TrackDualProgressMetric(
               trackLabel: 'Mishnayos',
               curriculumId: CurriculumId.mishnayos,
               currentCyclePercentage: 0.10,
@@ -870,7 +870,7 @@ void main() {
             stageRepo: stageRepo,
             router: router,
             dualMetrics: [
-              TrackDualProgressMetric(
+              const TrackDualProgressMetric(
                 trackLabel: 'Mishnayos',
                 curriculumId: CurriculumId.mishnayos,
                 currentCyclePercentage: 0.25,
@@ -915,7 +915,7 @@ void main() {
             stageRepo: stageRepo,
             router: router,
             dualMetrics: [
-              TrackDualProgressMetric(
+              const TrackDualProgressMetric(
                 trackLabel: 'Mishnayos',
                 curriculumId: CurriculumId.mishnayos,
                 currentCyclePercentage: 0.25,

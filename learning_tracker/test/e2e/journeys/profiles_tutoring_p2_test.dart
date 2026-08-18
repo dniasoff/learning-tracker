@@ -44,15 +44,16 @@ import 'package:learning_tracker/core/preferences/preference_providers.dart'
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart'
     show trackDualProgressMetricsProvider;
-import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart'
-    show activeTracksProvider;
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart'
     show CurriculumTrackEntity;
+import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart'
+    show activeTracksProvider;
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart'
     show TutoredProfileSelection;
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 
+import '../../helpers/firestore_fixtures.dart';
 import '../fakes/e2e_fakes.dart';
 // AUD-t-cross-20's ../helpers/e2e_overrides.dart already shares
 // sacredWindowNullOverride/connectivitySilenceOverride/incomingGrantsEmptyOverride/
@@ -62,7 +63,6 @@ import '../fakes/e2e_fakes.dart';
 import '../harness/e2e_common_overrides.dart' show stubTrack;
 import '../harness/e2e_harness.dart';
 import '../helpers/e2e_overrides.dart';
-import '../../helpers/firestore_fixtures.dart';
 
 // ── Factories ──────────────────────────────────────────────────────────────────
 

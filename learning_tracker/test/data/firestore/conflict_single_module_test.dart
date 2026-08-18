@@ -165,29 +165,26 @@ void main() {
     // (docs/firestore-rewrite-map.md), not migration debt. If a genuine
     // second-writer scenario reappears, wire a caller deliberately and
     // update this test rather than leaving it stale.
-    test(
-      'no lib/ file outside $_conflictModule calls canonicalRemoteIsNewer '
-      'or isUnresolvedSnapshotMetadata',
-      () {
-        final callers = <String>[];
-        sources.forEach((path, src) {
-          if (path == _conflictModule) return;
-          if (src.contains('canonicalRemoteIsNewer(') ||
-              src.contains('isUnresolvedSnapshotMetadata(')) {
-            callers.add(path);
-          }
-        });
-        callers.sort();
-        expect(
-          callers,
-          isEmpty,
-          reason:
-              '$_conflictModule is dormant by design — a caller appearing '
-              'here means a second-writer scenario has returned and this '
-              'test needs a deliberate update, not a silent pass.',
-        );
-      },
-    );
+    test('no lib/ file outside $_conflictModule calls canonicalRemoteIsNewer '
+        'or isUnresolvedSnapshotMetadata', () {
+      final callers = <String>[];
+      sources.forEach((path, src) {
+        if (path == _conflictModule) return;
+        if (src.contains('canonicalRemoteIsNewer(') ||
+            src.contains('isUnresolvedSnapshotMetadata(')) {
+          callers.add(path);
+        }
+      });
+      callers.sort();
+      expect(
+        callers,
+        isEmpty,
+        reason:
+            '$_conflictModule is dormant by design — a caller appearing '
+            'here means a second-writer scenario has returned and this '
+            'test needs a deliberate update, not a silent pass.',
+      );
+    });
 
     test('the superseded merge_rules.dart predicate is gone', () {
       expect(

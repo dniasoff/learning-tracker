@@ -44,9 +44,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 
+import '../../helpers/firestore_fixtures.dart';
 import '../harness/e2e_harness.dart';
 import '../helpers/e2e_overrides.dart';
-import '../../helpers/firestore_fixtures.dart';
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 

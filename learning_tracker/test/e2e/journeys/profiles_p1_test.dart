@@ -53,12 +53,12 @@ import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter/material.dart' show Key, PopupMenuButton, TextField;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
+import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
+import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart'
     show activeProfileIdProvider;
-import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/parent_pin_session_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
-import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/switcher_sheet_pin_guard_provider.dart'
     show switcherSheetPinGuardRequiredProvider;
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';

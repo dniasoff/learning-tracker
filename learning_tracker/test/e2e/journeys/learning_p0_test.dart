@@ -41,9 +41,9 @@ import 'package:learning_tracker/features/tutoring/domain/models/session_role.da
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 
+import '../../helpers/firestore_fixtures.dart' show seedGoal, seedTrack;
 import '../fakes/e2e_fakes.dart';
 import '../harness/e2e_harness.dart';
-import '../../helpers/firestore_fixtures.dart' show seedGoal, seedTrack;
 
 // ── Stubs and fakes ──────────────────────────────────────────────────────────
 //

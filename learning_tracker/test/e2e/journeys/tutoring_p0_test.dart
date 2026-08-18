@@ -33,8 +33,6 @@ import 'package:learning_tracker/features/content_browsing/presentation/provider
     show adjacentContentRefsProvider;
 import 'package:learning_tracker/features/content_browsing/presentation/providers/text_display_providers.dart'
     show textContentProvider;
-import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart'
-    show isStageCompletedProvider, trackStorageKeyForTrackIdProvider;
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart'
     show
         dashboardActiveTracksStreamProvider,
@@ -42,6 +40,8 @@ import 'package:learning_tracker/features/dashboard/presentation/providers/dashb
         dashboardStreakRecoveryProvider;
 import 'package:learning_tracker/features/gamification/domain/models/streak_recovery_info.dart'
     show StreakRecoveryInfo;
+import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart'
+    show isStageCompletedProvider, trackStorageKeyForTrackIdProvider;
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart'
     show currentSacredWindowProvider;
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';

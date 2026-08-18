@@ -598,55 +598,58 @@ void main() {
       timeout: const Timeout(Duration(minutes: 10)),
     );
 
-    test('AC1: reintroducing ad-hoc ParentAnalyticsRepositoryImpl '
-        'construction flips the SM-7 check from clean to FAIL and back',
-        () async {
-      final fixtureFile = File(
-        '$packageDir/lib/zzz_audit_sm7_fixture_do_not_commit.dart',
-      );
-
-      Future<ProcessResult> runAudit() =>
-          Process.run('make', ['audit'], workingDirectory: packageDir);
-
-      try {
-        // Append a syntactically-valid, unmistakable-as-debris top-level
-        // function reproducing the exact violation shape the SM-7 check
-        // greps for: a `final x = RewardMilestoneService(...)` reaching
-        // for a fresh instance instead of going through the injected
-        // `_rewardMilestoneServiceFactory`.
-        fixtureFile.writeAsStringSync(
-          '// AUDIT FIXTURE - DO NOT COMMIT (SM-7 check test)\n'
-          'void zzzAuditFixtureDoNotCommit(Object database) {\n'
-          '  ParentAnalyticsRepositoryImpl(database);\n'
-          '}\n',
+    test(
+      'AC1: reintroducing ad-hoc ParentAnalyticsRepositoryImpl '
+      'construction flips the SM-7 check from clean to FAIL and back',
+      () async {
+        final fixtureFile = File(
+          '$packageDir/lib/zzz_audit_sm7_fixture_do_not_commit.dart',
         );
 
-        final dirty = await runAudit();
+        Future<ProcessResult> runAudit() =>
+            Process.run('make', ['audit'], workingDirectory: packageDir);
+
+        try {
+          // Append a syntactically-valid, unmistakable-as-debris top-level
+          // function reproducing the exact violation shape the SM-7 check
+          // greps for: a `final x = RewardMilestoneService(...)` reaching
+          // for a fresh instance instead of going through the injected
+          // `_rewardMilestoneServiceFactory`.
+          fixtureFile.writeAsStringSync(
+            '// AUDIT FIXTURE - DO NOT COMMIT (SM-7 check test)\n'
+            'void zzzAuditFixtureDoNotCommit(Object database) {\n'
+            '  ParentAnalyticsRepositoryImpl(database);\n'
+            '}\n',
+          );
+
+          final dirty = await runAudit();
+          expect(
+            dirty.stdout.toString(),
+            contains('zzz_audit_sm7_fixture_do_not_commit.dart'),
+            reason:
+                'a reintroduced ad-hoc ParentAnalyticsRepositoryImpl construction '
+                'must be caught by the SM-7 check, not silently swallowed.\n'
+                'stdout=${dirty.stdout}',
+          );
+          expect(
+            dirty.exitCode,
+            isNot(0),
+            reason: 'the SM-7 check is a hard gate — it must fail the build.',
+          );
+        } finally {
+          if (fixtureFile.existsSync()) fixtureFile.deleteSync();
+        }
+
+        final clean = await runAudit();
         expect(
-          dirty.stdout.toString(),
-          contains('zzz_audit_sm7_fixture_do_not_commit.dart'),
-          reason:
-              'a reintroduced ad-hoc ParentAnalyticsRepositoryImpl construction '
-              'must be caught by the SM-7 check, not silently swallowed.\n'
-              'stdout=${dirty.stdout}',
+          clean.stdout.toString(),
+          isNot(contains('zzz_audit_sm7_fixture_do_not_commit.dart')),
+          reason: 'removing the fixture restores a clean pass.',
         );
-        expect(
-          dirty.exitCode,
-          isNot(0),
-          reason: 'the SM-7 check is a hard gate — it must fail the build.',
-        );
-      } finally {
-        if (fixtureFile.existsSync()) fixtureFile.deleteSync();
-      }
-
-      final clean = await runAudit();
-      expect(
-        clean.stdout.toString(),
-        isNot(contains('zzz_audit_sm7_fixture_do_not_commit.dart')),
-        reason: 'removing the fixture restores a clean pass.',
-      );
-      expect(clean.exitCode, 0);
-    }, timeout: const Timeout(Duration(minutes: 15)));
+        expect(clean.exitCode, 0);
+      },
+      timeout: const Timeout(Duration(minutes: 15)),
+    );
   });
 
   group('make audit check 44/44 — stale story file targets (AUD-docs-03)', () {

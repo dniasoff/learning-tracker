@@ -12,7 +12,6 @@ import 'package:learning_tracker/features/learning/domain/entities/completion_ti
 import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
-import 'package:learning_tracker/features/scheduler/scheduler.dart';
 // Cross-feature deep import (Rule 2, DNI-386) — warn-only per
 // learning_tracker/CLAUDE.md ("pending legacy cleanup"), and progress.dart's
 // own barrel doc comment restricts its exports to types already demonstrably
@@ -21,9 +20,9 @@ import 'package:learning_tracker/features/scheduler/scheduler.dart';
 // (features/tracks/presentation/providers/track_progress_providers.dart),
 // which reaches them the same deep way.
 import 'package:learning_tracker/features/progress/data/repositories/firestore_chart_data_repository_adapter.dart';
+import 'package:learning_tracker/features/scheduler/scheduler.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
 import 'package:learning_tracker/features/tracks/presentation/providers/track_progress_providers.dart';
-import 'package:learning_tracker/features/tracks/stages/presentation/providers/stage_providers.dart';
 import 'package:learning_tracker/features/tracks/tracks.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 

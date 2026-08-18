@@ -104,15 +104,13 @@ Widget _buildScreen({
     useHebrewTermsProvider.overrideWith(
       locale.languageCode == 'he' ? _HebrewTermsOn.new : _HebrewTermsOff.new,
     ),
-    allDailyTasksProvider.overrideWith(
-      (ref) async {
-        final skipped = ref.watch(skippedTasksProvider);
-        final resolved = tasksFactory != null ? await tasksFactory() : tasks;
-        return resolved
-            .where((task) => !skipped.contains(task.contentItemSefariaRef))
-            .toList();
-      },
-    ),
+    allDailyTasksProvider.overrideWith((ref) async {
+      final skipped = ref.watch(skippedTasksProvider);
+      final resolved = tasksFactory != null ? await tasksFactory() : tasks;
+      return resolved
+          .where((task) => !skipped.contains(task.contentItemSefariaRef))
+          .toList();
+    }),
     schedulerTaskSectionProvider.overrideWith(() {
       final n = SchedulerTaskSectionNotifier();
       // post-init hook — set section after build() returns default

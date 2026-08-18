@@ -15,8 +15,8 @@ import 'package:learning_tracker/features/dashboard/presentation/widgets/active_
 import 'package:learning_tracker/features/dashboard/presentation/widgets/arrow_button.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
-import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

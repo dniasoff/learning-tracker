@@ -6,6 +6,7 @@
 /// whose LocalCalendarEngine is backed by the local content database rather
 /// than a Firestore calendar seam.
 library;
+
 // ignore_for_file: directives_ordering, unused_element_parameter, prefer_const_constructors
 
 import 'package:flutter_test/flutter_test.dart';

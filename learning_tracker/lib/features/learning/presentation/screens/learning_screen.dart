@@ -251,7 +251,7 @@ class _StreakHeroCard extends StatelessWidget {
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(
+                                  const Icon(
                                     Icons.workspace_premium_rounded,
                                     color: Color(0xFFF7E7AF),
                                     size: 14,

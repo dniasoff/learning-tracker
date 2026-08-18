@@ -1,6 +1,7 @@
 /// Firestore-native L1 coverage for track management and content ordering.
 @Tags(['tracks', 'track_management', 'track_order'])
 library;
+
 // ignore_for_file: directives_ordering, unused_element_parameter, prefer_const_constructors
 
 import 'package:auto_route/auto_route.dart';

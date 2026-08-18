@@ -205,7 +205,7 @@ class UserProfileHeaderCard extends ConsumerWidget {
                   ),
                   if (showEmail)
                     Text(
-                      (user?.email ?? localAuthUser!.email),
+                      user?.email ?? localAuthUser!.email,
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: context.colors.inkMidGrey,
                         fontSize: 16,

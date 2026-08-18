@@ -282,11 +282,10 @@ class CompletionOrchestrator {
       );
     }
 
-    await _safeStep(
-      'completion_points_credit_failed',
-      {'profileId': _activeProfileId, 'sefariaRef': completion.sefariaRef},
-      () => _creditPointsIfAny(profileId: _activeProfileId, points: points),
-    );
+    await _safeStep('completion_points_credit_failed', {
+      'profileId': _activeProfileId,
+      'sefariaRef': completion.sefariaRef,
+    }, () => _creditPointsIfAny(profileId: _activeProfileId, points: points));
 
     if (awardGamificationPoints) {
       await _safeStep(

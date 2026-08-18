@@ -287,9 +287,11 @@ Widget _pumpTextDisplayScreen({
     trackStorageKeyForTrackIdProvider.overrideWith(
       (ref, trackId) async => 'personal',
     ),
-    isStageCompletedProvider(
-      (sefariaRef: _kRef, stageId: 1, trackType: 'personal'),
-    ).overrideWithValue(const AsyncData(false)),
+    isStageCompletedProvider((
+      sefariaRef: _kRef,
+      stageId: 1,
+      trackType: 'personal',
+    )).overrideWithValue(const AsyncData(false)),
     completionCommittedProvider.overrideWith(_FakeCompletionCommitted.new),
     dashboardUserModeProvider.overrideWith((ref) async => ProfileMode.adult),
     activeTutoredProfileSelectionProvider.overrideWith(

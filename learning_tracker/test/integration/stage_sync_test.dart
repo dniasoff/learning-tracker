@@ -40,28 +40,28 @@ void main() {
 
         // Simulate Firestore payload arriving with 4 stages.
         final firestoreStages = [
-          StageDefinition(
+          const StageDefinition(
             curriculumId: curriculum,
             stageOrder: 1,
             stageName: 'Learn',
             delayDays: 0,
             isDefault: true,
           ),
-          StageDefinition(
+          const StageDefinition(
             curriculumId: curriculum,
             stageOrder: 2,
             stageName: 'Chazara 1',
             delayDays: 1,
             isDefault: true,
           ),
-          StageDefinition(
+          const StageDefinition(
             curriculumId: curriculum,
             stageOrder: 3,
             stageName: 'Chazara 2',
             delayDays: 7,
             isDefault: true,
           ),
-          StageDefinition(
+          const StageDefinition(
             curriculumId: curriculum,
             stageOrder: 4,
             stageName: 'Chazara 3',

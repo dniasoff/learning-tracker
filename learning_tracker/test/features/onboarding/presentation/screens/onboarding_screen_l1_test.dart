@@ -31,8 +31,8 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
-import 'package:learning_tracker/core/providers/active_account_id_provider.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
+import 'package:learning_tracker/core/providers/active_account_id_provider.dart';
 import 'package:learning_tracker/data/firestore/active_account_providers.dart'
     show ActiveAccountId;
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';

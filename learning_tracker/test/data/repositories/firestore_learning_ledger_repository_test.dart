@@ -361,11 +361,11 @@ void main() {
 
       final includingTombstoned = await repo
           .getLedgerForCurriculumIncludingTombstoned(CurriculumId.mishnayos);
-      expect(
-        includingTombstoned.map((e) => e.ulid).toSet(),
-        {ulidLow, ulidHigh, ulidOther},
-        reason: 'must include the tombstoned entry, not silently drop it',
-      );
+      expect(includingTombstoned.map((e) => e.ulid).toSet(), {
+        ulidLow,
+        ulidHigh,
+        ulidOther,
+      }, reason: 'must include the tombstoned entry, not silently drop it');
       final highReloaded = includingTombstoned.firstWhere(
         (e) => e.ulid == ulidHigh,
       );

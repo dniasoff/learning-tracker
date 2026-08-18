@@ -19,6 +19,7 @@ import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/domain/strategies/composite_curriculum_strategy.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
+import 'package:learning_tracker/features/dashboard/presentation/providers/calendar_position_providers.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_entity.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_tier_filter.dart';
@@ -31,7 +32,6 @@ import 'package:learning_tracker/features/progress/domain/models/lifetime_knowle
 import 'package:learning_tracker/features/progress/domain/services/lifetime_tree_builder.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/progress_lens_refresh_tick_provider.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
-import 'package:learning_tracker/features/dashboard/presentation/providers/calendar_position_providers.dart';
 import 'package:learning_tracker/features/tracks/domain/services/track_progress_service.dart';
 import 'package:learning_tracker/features/tracks/presentation/providers/track_progress_providers.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';

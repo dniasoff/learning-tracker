@@ -269,11 +269,10 @@ void main() {
 
         final active = await repo.getActiveTracks();
 
-        expect(
-          active.map((t) => t.curriculumId.storageKey),
-          ['bavli', 'mishnayos'],
-          reason: 'alphabetical by storageKey, excluding the retired one',
-        );
+        expect(active.map((t) => t.curriculumId.storageKey), [
+          'bavli',
+          'mishnayos',
+        ], reason: 'alphabetical by storageKey, excluding the retired one');
       },
     );
 

@@ -1,4 +1,3 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/features/progress/data/repositories/firestore_chart_data_repository_adapter.dart';
 import 'package:learning_tracker/features/tracks/domain/services/track_progress_service.dart';
 import 'package:learning_tracker/features/tracks/stages/presentation/providers/stage_providers.dart';

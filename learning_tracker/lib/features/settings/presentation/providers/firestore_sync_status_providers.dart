@@ -10,9 +10,7 @@ enum FirestoreSyncStatus { unknown, synced, syncing, offline }
 /// Pending writes take precedence over cache state: a local write that has
 /// not been acknowledged is specifically a pending/syncing state, even when
 /// the SDK also reports that the snapshot is from cache.
-FirestoreSyncStatus firestoreSyncStatusFromSnapshot(
-  Object snapshot,
-) {
+FirestoreSyncStatus firestoreSyncStatusFromSnapshot(Object snapshot) {
   final metadata = snapshot is FirestoreSyncSnapshot
       ? snapshot
       : firestoreSyncSnapshotFromSdk(snapshot);

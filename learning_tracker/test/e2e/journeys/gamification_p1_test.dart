@@ -44,12 +44,12 @@ import 'package:learning_tracker/data/repositories/points_ledger_entry.dart';
 import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart'
     show connectivityStreamProvider;
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
-import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 import 'package:learning_tracker/features/gamification/presentation/providers/achievements_overview_provider.dart';
 import 'package:learning_tracker/features/gamification/presentation/screens/child_redemption_screen.dart'
     show childRedemptionBalanceProvider, childRedemptionRewardsProvider;
 import 'package:learning_tracker/features/gamification/presentation/screens/gamification_screen.dart'
     show streakCalendarProvider;
+import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 import 'package:learning_tracker/features/profiles/presentation/screens/parent_settings_screen.dart'
     show activeProfilePointsBalanceProvider;
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart'
@@ -63,10 +63,10 @@ import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissio
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../helpers/firestore_fixtures.dart';
 import '../fakes/e2e_fakes.dart';
 import '../harness/e2e_common_overrides.dart';
 import '../harness/e2e_harness.dart';
-import '../../helpers/firestore_fixtures.dart';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
