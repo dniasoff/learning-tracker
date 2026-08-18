@@ -47,6 +47,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _scrollController = ScrollController();
   bool _isLoading = false;
   bool _obscurePassword = true;
 
@@ -66,6 +67,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -121,7 +123,11 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       if (mounted) {
         final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.signUpVerificationEmailSent)),
+          SnackBar(
+            content: Text(l10n.signUpVerificationEmailSent),
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.fromLTRB(16, 0, 16, 80),
+          ),
         );
         unawaited(context.router.replace(const SignInRoute()));
       }
@@ -356,302 +362,323 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       backgroundColor: context.colors.surfaceF3,
       body: SafeArea(
         child: LayoutBuilder(
-          builder: (context, constraints) => SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                minHeight: constraints.maxHeight - 28,
-              ),
-              child: Column(
-                children: [
-                  const SizedBox(height: 10),
-                  // AN-10: Center the card horizontally on wide (tablet)
-                  // viewports. On a narrow phone the card fills the column
-                  // naturally; on a wide viewport Center + maxWidth stops
-                  // it left-anchoring as a narrow column on the left edge.
-                  Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 430),
-                      child: Stack(
-                        children: [
-                          Positioned(
-                            top: -50,
-                            right: -58,
-                            child: Container(
-                              width: 170,
-                              height: 170,
-                              decoration: const BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: Color(0xFFE9EAF2),
+          builder: (context, constraints) => Scrollbar(
+            controller: _scrollController,
+            thumbVisibility: true,
+            child: SingleChildScrollView(
+              controller: _scrollController,
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 40),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight: constraints.maxHeight - 54,
+                ),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 10),
+                    // AN-10: Center the card horizontally on wide (tablet)
+                    // viewports. On a narrow phone the card fills the column
+                    // naturally; on a wide viewport Center + maxWidth stops
+                    // it left-anchoring as a narrow column on the left edge.
+                    Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 430),
+                        child: Stack(
+                          children: [
+                            Positioned(
+                              top: -50,
+                              right: -58,
+                              child: Container(
+                                width: 170,
+                                height: 170,
+                                decoration: const BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Color(0xFFE9EAF2),
+                                ),
                               ),
                             ),
-                          ),
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.fromLTRB(24, 26, 24, 26),
-                            decoration: BoxDecoration(
-                              color: context.colors.brandCreamCard,
-                              borderRadius: BorderRadius.circular(34),
-                            ),
-                            child: Form(
-                              key: _formKey,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  Text(
-                                    l10n.signUpTitle,
-                                    style: theme.textTheme.headlineMedium
-                                        ?.copyWith(fontWeight: FontWeight.w800),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    l10n.signUpSubtitle,
-                                    style: theme.textTheme.bodyLarge?.copyWith(
-                                      color: context.colors.brandInkMuted,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  _buildAccountModeCard(
-                                    theme: theme,
-                                    isOnline: isOnline,
-                                  ),
-                                  const SizedBox(height: 22),
-                                  if (isOnline) ...[
-                                    _buildLabel(l10n.displayName),
-                                    const SizedBox(height: 8),
-                                    _buildAuthField(
-                                      controller: _nameController,
-                                      hintText: l10n.signUpScholarNameHint,
-                                      suffixIcon: Icon(
-                                        Icons.face_outlined,
-                                        color: context.colors.brandInkMuted,
-                                      ),
-                                      textInputAction: TextInputAction.next,
-                                      validator: (v) =>
-                                          _validateDisplayName(v, l10n),
-                                    ),
-                                    const SizedBox(height: 16),
-                                    _buildLabel(l10n.signUpEmailAddressLabel),
-                                    const SizedBox(height: 8),
-                                    _buildAuthField(
-                                      controller: _emailController,
-                                      hintText: 'you@quest.com',
-                                      suffixIcon: Icon(
-                                        Icons.email_rounded,
-                                        color: context.colors.brandInkMuted,
-                                      ),
-                                      keyboardType: TextInputType.emailAddress,
-                                      textInputAction: TextInputAction.next,
-                                      validator: (v) => _validateEmail(v, l10n),
-                                    ),
-                                    const SizedBox(height: 16),
-                                    _buildLabel(l10n.signUpPasswordLabel),
-                                    const SizedBox(height: 8),
-                                    _buildAuthField(
-                                      controller: _passwordController,
-                                      hintText: l10n.signUpPasswordHint,
-                                      obscureText: _obscurePassword,
-                                      textInputAction: TextInputAction.done,
-                                      validator: (v) =>
-                                          _validatePassword(v, l10n),
-                                      onFieldSubmitted: (_) =>
-                                          _signUpWithEmail(),
-                                      suffixIcon: IconButton(
-                                        tooltip: _obscurePassword
-                                            ? l10n.showPassword
-                                            : l10n.hidePassword,
-                                        icon: Icon(
-                                          _obscurePassword
-                                              ? Icons.lock_rounded
-                                              : Icons.visibility_rounded,
-                                          color: context.colors.brandInkMuted,
-                                        ),
-                                        onPressed: () => setState(
-                                          () => _obscurePassword =
-                                              !_obscurePassword,
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 24),
-                                    SizedBox(
-                                      height: 58,
-                                      child: DecoratedBox(
-                                        decoration: BoxDecoration(
-                                          gradient: LinearGradient(
-                                            colors: [
-                                              context.colors.brandBlue,
-                                              context.colors.brandBlueBright,
-                                            ],
-                                          ),
-                                          borderRadius: BorderRadius.circular(
-                                            30,
-                                          ),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: context
-                                                  .colors
-                                                  .brandBlueBright
-                                                  .withValues(alpha: 0.32),
-                                              blurRadius: 18,
-                                              offset: const Offset(0, 8),
-                                            ),
-                                          ],
-                                        ),
-                                        child: FilledButton(
-                                          onPressed: _isLoading
-                                              ? null
-                                              : _signUpWithEmail,
-                                          style: FilledButton.styleFrom(
-                                            backgroundColor:
-                                                context.colors.transparent,
-                                            shadowColor:
-                                                context.colors.transparent,
-                                            foregroundColor: Colors.white,
-                                          ),
-                                          child: _isLoading
-                                              ? const SizedBox(
-                                                  height: 20,
-                                                  width: 20,
-                                                  child:
-                                                      CircularProgressIndicator(
-                                                        strokeWidth: 2,
-                                                        color: Colors.white,
-                                                      ),
-                                                )
-                                              : Text(
-                                                  l10n.signUpCta,
-                                                  style: const TextStyle(
-                                                    fontSize: 16,
-                                                    fontWeight: FontWeight.w700,
-                                                  ),
-                                                ),
-                                        ),
-                                      ),
-                                    ),
-                                  ] else ...[
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.fromLTRB(
+                                24,
+                                26,
+                                24,
+                                26,
+                              ),
+                              decoration: BoxDecoration(
+                                color: context.colors.brandCreamCard,
+                                borderRadius: BorderRadius.circular(34),
+                              ),
+                              child: Form(
+                                key: _formKey,
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
                                     Text(
-                                      l10n.appErrorViewNoConnectionBody,
-                                      style: theme.textTheme.bodyMedium
+                                      l10n.signUpTitle,
+                                      style: theme.textTheme.headlineMedium
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      l10n.signUpSubtitle,
+                                      style: theme.textTheme.bodyLarge
                                           ?.copyWith(
                                             color: context.colors.brandInkMuted,
                                           ),
                                     ),
-                                    const SizedBox(height: 8),
-                                    Center(
-                                      child: TextButton(
+                                    const SizedBox(height: 16),
+                                    _buildAccountModeCard(
+                                      theme: theme,
+                                      isOnline: isOnline,
+                                    ),
+                                    const SizedBox(height: 22),
+                                    if (isOnline) ...[
+                                      _buildLabel(l10n.displayName),
+                                      const SizedBox(height: 8),
+                                      _buildAuthField(
+                                        controller: _nameController,
+                                        hintText: l10n.signUpScholarNameHint,
+                                        suffixIcon: Icon(
+                                          Icons.face_outlined,
+                                          color: context.colors.brandInkMuted,
+                                        ),
+                                        textInputAction: TextInputAction.next,
+                                        validator: (v) =>
+                                            _validateDisplayName(v, l10n),
+                                      ),
+                                      const SizedBox(height: 16),
+                                      _buildLabel(l10n.signUpEmailAddressLabel),
+                                      const SizedBox(height: 8),
+                                      _buildAuthField(
+                                        controller: _emailController,
+                                        hintText: 'you@quest.com',
+                                        suffixIcon: Icon(
+                                          Icons.email_rounded,
+                                          color: context.colors.brandInkMuted,
+                                        ),
+                                        keyboardType:
+                                            TextInputType.emailAddress,
+                                        textInputAction: TextInputAction.next,
+                                        validator: (v) =>
+                                            _validateEmail(v, l10n),
+                                      ),
+                                      const SizedBox(height: 16),
+                                      _buildLabel(l10n.signUpPasswordLabel),
+                                      const SizedBox(height: 8),
+                                      _buildAuthField(
+                                        controller: _passwordController,
+                                        hintText: l10n.signUpPasswordHint,
+                                        obscureText: _obscurePassword,
+                                        textInputAction: TextInputAction.done,
+                                        validator: (v) =>
+                                            _validatePassword(v, l10n),
+                                        onFieldSubmitted: (_) =>
+                                            _signUpWithEmail(),
+                                        suffixIcon: IconButton(
+                                          tooltip: _obscurePassword
+                                              ? l10n.showPassword
+                                              : l10n.hidePassword,
+                                          icon: Icon(
+                                            _obscurePassword
+                                                ? Icons.visibility_off_rounded
+                                                : Icons.visibility_rounded,
+                                            color: context.colors.brandInkMuted,
+                                          ),
+                                          onPressed: () => setState(
+                                            () => _obscurePassword =
+                                                !_obscurePassword,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 24),
+                                      SizedBox(
+                                        height: 58,
+                                        child: DecoratedBox(
+                                          decoration: BoxDecoration(
+                                            gradient: LinearGradient(
+                                              colors: [
+                                                context.colors.brandBlue,
+                                                context.colors.brandBlueBright,
+                                              ],
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              30,
+                                            ),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: context
+                                                    .colors
+                                                    .brandBlueBright
+                                                    .withValues(alpha: 0.32),
+                                                blurRadius: 18,
+                                                offset: const Offset(0, 8),
+                                              ),
+                                            ],
+                                          ),
+                                          child: FilledButton(
+                                            onPressed: _isLoading
+                                                ? null
+                                                : _signUpWithEmail,
+                                            style: FilledButton.styleFrom(
+                                              backgroundColor:
+                                                  context.colors.transparent,
+                                              shadowColor:
+                                                  context.colors.transparent,
+                                              foregroundColor: Colors.white,
+                                            ),
+                                            child: _isLoading
+                                                ? const SizedBox(
+                                                    height: 20,
+                                                    width: 20,
+                                                    child:
+                                                        CircularProgressIndicator(
+                                                          strokeWidth: 2,
+                                                          color: Colors.white,
+                                                        ),
+                                                  )
+                                                : Text(
+                                                    l10n.signUpCta,
+                                                    style: const TextStyle(
+                                                      fontSize: 16,
+                                                      fontWeight:
+                                                          FontWeight.w700,
+                                                    ),
+                                                  ),
+                                          ),
+                                        ),
+                                      ),
+                                    ] else ...[
+                                      Text(
+                                        l10n.appErrorViewNoConnectionBody,
+                                        style: theme.textTheme.bodyMedium
+                                            ?.copyWith(
+                                              color:
+                                                  context.colors.brandInkMuted,
+                                            ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Center(
+                                        child: TextButton(
+                                          onPressed: _isLoading
+                                              ? null
+                                              : _retryConnection,
+                                          child: Text(
+                                            l10n.signUpRetryConnection,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                    if (isOnline) ...[
+                                      const SizedBox(height: 18),
+                                      Row(
+                                        children: [
+                                          const Expanded(child: Divider()),
+                                          Padding(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 14,
+                                            ),
+                                            child: Text(
+                                              l10n.signUpOrDivider,
+                                              style: theme.textTheme.bodyMedium
+                                                  ?.copyWith(
+                                                    color: context
+                                                        .colors
+                                                        .brandInkMuted,
+                                                    fontWeight: FontWeight.w700,
+                                                    letterSpacing: 0.8,
+                                                  ),
+                                            ),
+                                          ),
+                                          const Expanded(child: Divider()),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 18),
+                                      OutlinedButton(
                                         onPressed: _isLoading
                                             ? null
-                                            : _retryConnection,
-                                        child: Text(l10n.signUpRetryConnection),
-                                      ),
-                                    ),
-                                  ],
-                                  if (isOnline) ...[
-                                    const SizedBox(height: 18),
-                                    Row(
-                                      children: [
-                                        const Expanded(child: Divider()),
-                                        Padding(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 14,
+                                            : _signUpWithGoogle,
+                                        style: OutlinedButton.styleFrom(
+                                          foregroundColor:
+                                              context.colors.brandInk,
+                                          side: BorderSide(
+                                            color: context.colors.brandInkSoft,
                                           ),
-                                          child: Text(
-                                            l10n.signUpOrDivider,
-                                            style: theme.textTheme.bodyMedium
-                                                ?.copyWith(
-                                                  color: context
-                                                      .colors
-                                                      .brandInkMuted,
-                                                  fontWeight: FontWeight.w700,
-                                                  letterSpacing: 0.8,
-                                                ),
-                                          ),
-                                        ),
-                                        const Expanded(child: Divider()),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 18),
-                                    OutlinedButton(
-                                      onPressed: _isLoading
-                                          ? null
-                                          : _signUpWithGoogle,
-                                      style: OutlinedButton.styleFrom(
-                                        foregroundColor:
-                                            context.colors.brandInk,
-                                        side: BorderSide(
-                                          color: context.colors.brandInkSoft,
-                                        ),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            28,
-                                          ),
-                                        ),
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 14,
-                                        ),
-                                      ),
-                                      child: FittedBox(
-                                        fit: BoxFit.scaleDown,
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            const Icon(
-                                              Icons.g_mobiledata_rounded,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              28,
                                             ),
-                                            const SizedBox(width: 8),
-                                            Text(
-                                              l10n.signUpGoogleCta,
-                                              style: const TextStyle(
-                                                fontSize: 18,
-                                                fontWeight: FontWeight.w600,
+                                          ),
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: 14,
+                                          ),
+                                        ),
+                                        child: FittedBox(
+                                          fit: BoxFit.scaleDown,
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              const Icon(
+                                                Icons.g_mobiledata_rounded,
                                               ),
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                l10n.signUpGoogleCta,
+                                                style: const TextStyle(
+                                                  fontSize: 18,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                    const SizedBox(height: 18),
+                                    Center(
+                                      child: RichText(
+                                        text: TextSpan(
+                                          style: theme.textTheme.bodyLarge
+                                              ?.copyWith(
+                                                color: context
+                                                    .colors
+                                                    .brandInkMuted,
+                                              ),
+                                          children: [
+                                            TextSpan(
+                                              text: l10n.signUpAlreadyExploring,
+                                            ),
+                                            TextSpan(
+                                              text: l10n.signUpLogIn,
+                                              style: TextStyle(
+                                                color: context.colors.brandBlue,
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                              recognizer: TapGestureRecognizer()
+                                                ..onTap = () {
+                                                  if (!_isLoading) {
+                                                    context.router.replace(
+                                                      const SignInRoute(),
+                                                    );
+                                                  }
+                                                },
                                             ),
                                           ],
                                         ),
                                       ),
                                     ),
                                   ],
-                                  const SizedBox(height: 18),
-                                  Center(
-                                    child: RichText(
-                                      text: TextSpan(
-                                        style: theme.textTheme.bodyLarge
-                                            ?.copyWith(
-                                              color:
-                                                  context.colors.brandInkMuted,
-                                            ),
-                                        children: [
-                                          TextSpan(
-                                            text: l10n.signUpAlreadyExploring,
-                                          ),
-                                          TextSpan(
-                                            text: l10n.signUpLogIn,
-                                            style: TextStyle(
-                                              color: context.colors.brandBlue,
-                                              fontWeight: FontWeight.w700,
-                                            ),
-                                            recognizer: TapGestureRecognizer()
-                                              ..onTap = () {
-                                                if (!_isLoading) {
-                                                  context.router.replace(
-                                                    const SignInRoute(),
-                                                  );
-                                                }
-                                              },
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                                ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                  ), // Center
-                ],
+                    ), // Center
+                  ],
+                ),
               ),
             ),
           ),

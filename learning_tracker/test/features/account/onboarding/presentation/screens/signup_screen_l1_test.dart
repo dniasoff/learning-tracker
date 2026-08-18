@@ -211,6 +211,30 @@ void main() {
     await tester.pump(Duration.zero);
   });
 
+  testWidgets('online signup shows a persistent scroll affordance', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 500);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(_buildApp(online: true));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(find.byType(SingleChildScrollView), findsOneWidget);
+    final scrollbar = tester.widget<Scrollbar>(find.byType(Scrollbar));
+    expect(scrollbar.thumbVisibility, isTrue);
+
+    final googleButton = find.text('Sign Up with Google');
+    await tester.ensureVisible(googleButton);
+    await tester.pump();
+    expect(tester.getRect(googleButton).bottom, lessThanOrEqualTo(500));
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(Duration.zero);
+  });
+
   testWidgets('online: shows "Already exploring?" rich-text with Log In span', (
     tester,
   ) async {
@@ -485,18 +509,18 @@ void main() {
   // ── Password visibility toggle ─────────────────────────────────────────────
 
   testWidgets(
-    'password field starts with lock icon and toggle shows visibility icon',
+    'password field starts with crossed-eye icon and toggle shows visibility icon',
     (tester) async {
       await tester.pumpWidget(_buildApp());
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
 
-      // Initially the lock icon is shown (password obscured)
-      expect(find.byIcon(Icons.lock_rounded), findsOneWidget);
+      // Initially the crossed-eye icon is shown (password obscured)
+      expect(find.byIcon(Icons.visibility_off_rounded), findsOneWidget);
       expect(find.byIcon(Icons.visibility_rounded), findsNothing);
 
-      // Tap the lock icon to reveal
-      await tester.tap(find.byIcon(Icons.lock_rounded));
+      // Tap the crossed-eye icon to reveal
+      await tester.tap(find.byIcon(Icons.visibility_off_rounded));
       await tester.pump();
 
       // After toggle, the visibility icon appears
@@ -507,25 +531,26 @@ void main() {
     },
   );
 
-  testWidgets('visibility icon changes from lock to visibility after toggle', (
-    tester,
-  ) async {
-    await tester.pumpWidget(_buildApp());
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
+  testWidgets(
+    'visibility icon changes from crossed-eye to visibility after toggle',
+    (tester) async {
+      await tester.pumpWidget(_buildApp());
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
 
-    expect(find.byIcon(Icons.lock_rounded), findsOneWidget);
-    expect(find.byIcon(Icons.visibility_rounded), findsNothing);
+      expect(find.byIcon(Icons.visibility_off_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.visibility_rounded), findsNothing);
 
-    await tester.tap(find.byIcon(Icons.lock_rounded));
-    await tester.pump();
+      await tester.tap(find.byIcon(Icons.visibility_off_rounded));
+      await tester.pump();
 
-    expect(find.byIcon(Icons.visibility_rounded), findsOneWidget);
-    expect(find.byIcon(Icons.lock_rounded), findsNothing);
+      expect(find.byIcon(Icons.visibility_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.visibility_off_rounded), findsNothing);
 
-    await tester.pumpWidget(const SizedBox.shrink());
-    await tester.pump(Duration.zero);
-  });
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+    },
+  );
 
   // ── Submit → loading state ─────────────────────────────────────────────────
 
@@ -683,6 +708,9 @@ void main() {
 
     // Snackbar with verification message
     expect(find.textContaining('Verification email sent'), findsOneWidget);
+    final snackBar = tester.widget<SnackBar>(find.byType(SnackBar));
+    expect(snackBar.behavior, SnackBarBehavior.floating);
+    expect(snackBar.margin, const EdgeInsets.fromLTRB(16, 0, 16, 80));
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(Duration.zero);
