@@ -155,6 +155,11 @@ Future<(AccountFirebaseHandles, String, String)?> _watchActiveAccountAndProfile(
   final handles = await ref.watch(activeAccountFirebaseProvider.future);
   if (handles == null) return null;
 
+  // Guard: this autoDispose provider may have been disposed during the async
+  // gap above (e.g. the container/screen was torn down mid-load) — see
+  // dashboardChildNextReward's identical guard (SM-4, AUD-dashboard-06).
+  if (!ref.mounted) return null;
+
   final tutored = ref.watch(activeTutoredProfileSelectionProvider);
   if (tutored != null) {
     _assertValidProfileUlid(tutored.profileId);

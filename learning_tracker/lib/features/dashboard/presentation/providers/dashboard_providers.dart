@@ -358,7 +358,17 @@ Future<PaceStatus?> dashboardPaceStatus(
   final now = ref.watch(clockProvider);
 
   final goalRepo = FirestoreGoalRepositoryAdapter(ref: ref);
-  final goals = await goalRepo.getGoals(curriculum);
+  final List<GoalEntity> goals;
+  try {
+    goals = await goalRepo.getGoals(curriculum);
+  } on GoalRepositoryNotReadyException {
+    // Not-ready is not an error for this best-effort display projection —
+    // treat it the same as every other "nothing to show yet" branch below,
+    // including the ordinary case where this happens because the autoDispose
+    // provider was torn down mid-read (SM-4, AUD-dashboard-06 — see the
+    // ref.mounted guard further down in this same function).
+    return null;
+  }
   if (goals.isEmpty) return null;
 
   // Pick the most recently created goal — defends against a stale row from

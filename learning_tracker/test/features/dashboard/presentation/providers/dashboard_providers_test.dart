@@ -5,9 +5,17 @@
 /// not part of the dashboard architecture anymore.
 library;
 
+// ignore_for_file: depend_on_referenced_packages
+// setupFirebaseCoreMocks lives in firebase_core_platform_interface/test.dart,
+// which is not re-exported by any direct dependency. It is test-only
+// infrastructure; using the transitive package directly is the standard
+// pattern for platform-interface test seams (see
+// test/features/tutoring/data/repositories/firestore_tutor_grant_repository_test.dart).
+
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_core_platform_interface/test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
@@ -80,6 +88,7 @@ ProviderContainer _container(
   List<Override> extraOverrides = const [],
 }) {
   final container = ProviderContainer(
+    retry: (_, __) => null,
     overrides: [
       activeAccountFirebaseProvider.overrideWith(
         (ref) async => _handles(firestore),
@@ -153,6 +162,22 @@ Ref _captureRef(ProviderContainer container) {
 void main() {
   late FakeFirebaseFirestore firestore;
 
+  setUpAll(() async {
+    // FirestoreCurriculumTrackRepositoryAdapter's constructor (used by
+    // dashboardActiveCurricula, dashboardActiveCurriculaStream, and
+    // anyActiveTrackHasChazaraProvider) falls back to FirebaseFunctions
+    // .instance when no functions override is supplied, which requires a
+    // registered default Firebase app — this test's other Firebase surfaces
+    // (_MockFirebaseApp, _MockFirebaseAuth, FakeFirebaseFirestore) are all
+    // mocked, but never register one. None of the providers under test here
+    // actually invoke a callable, so registering a Core app is enough; no
+    // FirebaseFunctionsPlatform fake is needed (contrast
+    // firestore_tutor_grant_repository_test.dart, which does call callables).
+    TestWidgetsFlutterBinding.ensureInitialized();
+    setupFirebaseCoreMocks();
+    await Firebase.initializeApp();
+  });
+
   setUp(() async {
     firestore = createFakeFirestore(authenticatedUid: _uid);
     await _seedBase(firestore);
@@ -224,6 +249,18 @@ void main() {
       final container = _container(firestore);
       addTearDown(container.dispose);
 
+      // Keep a listener so the autoDispose provider is not torn down mid-load
+      // — reading `.future` without one races Riverpod's autoDispose
+      // scheduler, which can dispose the provider while its async chain
+      // (account -> profile -> Firestore track repo) is still in flight,
+      // surfacing as "disposed during loading state" (see the analogous
+      // container.listen(dashboardStreakProvider, ...) calls below).
+      final sub = container.listen(
+        dashboardActiveCurriculaProvider,
+        (_, __) {},
+      );
+      addTearDown(sub.close);
+
       expect(
         await container.read(dashboardActiveCurriculaProvider.future),
         isEmpty,
@@ -247,6 +284,12 @@ void main() {
       final container = _container(firestore);
       addTearDown(container.dispose);
 
+      final sub = container.listen(
+        dashboardActiveCurriculaProvider,
+        (_, __) {},
+      );
+      addTearDown(sub.close);
+
       expect(await container.read(dashboardActiveCurriculaProvider.future), [
         CurriculumId.mishnayos,
       ]);
@@ -268,6 +311,12 @@ void main() {
       final container = _container(firestore);
       addTearDown(container.dispose);
 
+      final sub = container.listen(
+        dashboardActiveCurriculaProvider,
+        (_, __) {},
+      );
+      addTearDown(sub.close);
+
       expect(
         await container.read(dashboardActiveCurriculaProvider.future),
         containsAll(<CurriculumId>[CurriculumId.mishnayos, CurriculumId.bavli]),
@@ -279,6 +328,14 @@ void main() {
     test('emits empty when no active tracks exist', () async {
       final container = _container(firestore);
       addTearDown(container.dispose);
+
+      // Keep a listener so the autoDispose provider is not torn down mid-load
+      // — see the identical guard on dashboardActiveCurriculaProvider above.
+      final sub = container.listen(
+        dashboardActiveCurriculaStreamProvider,
+        (_, __) {},
+      );
+      addTearDown(sub.close);
 
       expect(
         await container.read(dashboardActiveCurriculaStreamProvider.future),
@@ -295,6 +352,12 @@ void main() {
       );
       final container = _container(firestore);
       addTearDown(container.dispose);
+
+      final sub = container.listen(
+        dashboardActiveCurriculaStreamProvider,
+        (_, __) {},
+      );
+      addTearDown(sub.close);
 
       expect(
         await container.read(dashboardActiveCurriculaStreamProvider.future),
@@ -360,6 +423,14 @@ void main() {
       final container = _container(firestore);
       addTearDown(container.dispose);
 
+      // Keep a listener so the autoDispose provider is not torn down mid-load
+      // — see the identical guard on dashboardActiveCurriculaProvider above.
+      final sub = container.listen(
+        dashboardActiveTracksStreamProvider,
+        (_, __) {},
+      );
+      addTearDown(sub.close);
+
       expect(
         await container.read(dashboardActiveTracksStreamProvider.future),
         isEmpty,
@@ -382,6 +453,12 @@ void main() {
       );
       final container = _container(firestore);
       addTearDown(container.dispose);
+
+      final sub = container.listen(
+        dashboardActiveTracksStreamProvider,
+        (_, __) {},
+      );
+      addTearDown(sub.close);
 
       final tracks = await container.read(
         dashboardActiveTracksStreamProvider.future,
@@ -407,6 +484,20 @@ void main() {
       );
       final container = _container(firestore);
       addTearDown(container.dispose);
+
+      // Keep a listener on each autoDispose provider under test so it is
+      // not torn down mid-load — see the identical guard on
+      // dashboardActiveCurriculaProvider above.
+      final trackSub = container.listen(
+        trackHasChazaraProvider(CurriculumId.mishnayos),
+        (_, __) {},
+      );
+      addTearDown(trackSub.close);
+      final anySub = container.listen(
+        anyActiveTrackHasChazaraProvider,
+        (_, __) {},
+      );
+      addTearDown(anySub.close);
 
       expect(
         await container.read(
@@ -436,6 +527,17 @@ void main() {
       final container = _container(firestore);
       addTearDown(container.dispose);
 
+      final trackSub = container.listen(
+        trackHasChazaraProvider(CurriculumId.mishnayos),
+        (_, __) {},
+      );
+      addTearDown(trackSub.close);
+      final anySub = container.listen(
+        anyActiveTrackHasChazaraProvider,
+        (_, __) {},
+      );
+      addTearDown(anySub.close);
+
       expect(
         await container.read(
           trackHasChazaraProvider(CurriculumId.mishnayos).future,
@@ -464,6 +566,12 @@ void main() {
       );
       final container = _container(firestore);
       addTearDown(container.dispose);
+
+      final anySub = container.listen(
+        anyActiveTrackHasChazaraProvider,
+        (_, __) {},
+      );
+      addTearDown(anySub.close);
 
       expect(
         await container.read(anyActiveTrackHasChazaraProvider.future),
