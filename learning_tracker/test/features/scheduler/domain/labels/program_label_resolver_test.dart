@@ -25,6 +25,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
+import 'package:learning_tracker/core/preferences/profile_scoped_preference.dart';
+import 'package:learning_tracker/core/preferences/profile_scoped_preference_keys.dart';
 import 'package:learning_tracker/features/scheduler/domain/labels/program_label_resolver.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/calendar_program_service.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
@@ -176,7 +178,11 @@ void main() {
 
   group('scheduler service wrappers route through ProgramLabelResolver', () {
     testWidgets('learningProgramLabelText Hebrew ON → Hebrew', (tester) async {
-      SharedPreferences.setMockInitialValues({'hebrew_terms_script_p0': true});
+      SharedPreferences.setMockInitialValues({
+        ProfileScopedPreferenceKeys.hebrewTermsScript(
+          kNoProfilePreferenceSentinel,
+        ): true,
+      });
       String? rendered;
       await tester.pumpWidget(
         ProviderScope(
@@ -199,7 +205,11 @@ void main() {
     });
 
     testWidgets('calendarEntryLabelText Hebrew OFF → English', (tester) async {
-      SharedPreferences.setMockInitialValues({'hebrew_terms_script_p0': false});
+      SharedPreferences.setMockInitialValues({
+        ProfileScopedPreferenceKeys.hebrewTermsScript(
+          kNoProfilePreferenceSentinel,
+        ): false,
+      });
       const entry = CalendarProgramEntry(
         programId: 'daf_yomi',
         displayNameEn: 'Daf Yomi',
@@ -230,7 +240,11 @@ void main() {
     testWidgets('calendarEntryTodayRefText Hebrew ON → Hebrew ref', (
       tester,
     ) async {
-      SharedPreferences.setMockInitialValues({'hebrew_terms_script_p0': true});
+      SharedPreferences.setMockInitialValues({
+        ProfileScopedPreferenceKeys.hebrewTermsScript(
+          kNoProfilePreferenceSentinel,
+        ): true,
+      });
       const entry = CalendarProgramEntry(
         programId: 'daf_yomi',
         displayNameEn: 'Daf Yomi',

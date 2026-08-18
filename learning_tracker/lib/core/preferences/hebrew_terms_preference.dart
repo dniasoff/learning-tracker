@@ -1,4 +1,5 @@
-import 'package:learning_tracker/core/preferences/profile_scoped_preference.dart';
+import 'package:learning_tracker/core/preferences/profile_scoped_preference.dart'
+    show ProfileScopedPreference, kNoProfilePreferenceSentinel;
 import 'package:learning_tracker/core/preferences/profile_scoped_preference_keys.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -20,7 +21,7 @@ class HebrewTermsPreference extends ProfileScopedPreference<bool> {
       ProfileScopedPreferenceKeys.hebrewTermsScript(profileId),
     );
     if (scoped != null) return scoped;
-    if (profileId == 0) {
+    if (profileId == kNoProfilePreferenceSentinel) {
       return prefs.getBool(
             ProfileScopedPreferenceKeys.legacyHebrewTermsScriptKey,
           ) ??
