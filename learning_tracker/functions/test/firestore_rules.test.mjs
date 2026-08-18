@@ -982,6 +982,46 @@ describe('study_day_configs — owner write+delete with key whitelist, tutor rea
   });
 });
 
+// ── Path 22b: point_configs (with hasOnly whitelist + points range; owner DELETE allowed) ─
+describe('point_configs — owner write+delete with key whitelist, tutor read', () => {
+  const validConfig = { ...PAYLOADS.point_configs };
+
+  test('owner-write + tutor-read + stranger-deny matrix (owner can delete)', async () => {
+    await expectOwnerWriteTutorRead(`${LP}/point_configs/cfg1`, validConfig, {
+      ownerCanDelete: true,
+    });
+  });
+  test('owner write with unknown field is rejected (whitelist)', async () => {
+    await assertFails(
+      setDoc(doc(owner(), `${LP}/point_configs/cfg1`), {
+        ...validConfig,
+        bad_field: 'x',
+      }),
+    );
+  });
+  test('owner write with points outside 1..100 is rejected (range)', async () => {
+    await assertFails(
+      setDoc(doc(owner(), `${LP}/point_configs/cfg1`), {
+        ...validConfig,
+        points: 0,
+      }),
+    );
+    await assertFails(
+      setDoc(doc(owner(), `${LP}/point_configs/cfg1`), {
+        ...validConfig,
+        points: 101,
+      }),
+    );
+  });
+  test('tutor cannot write or delete point_configs', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), `${LP}/point_configs/cfg1`), validConfig);
+    });
+    await assertFails(setDoc(doc(tutor(), `${LP}/point_configs/cfg1`), validConfig));
+    await assertFails(deleteDoc(doc(tutor(), `${LP}/point_configs/cfg1`)));
+  });
+});
+
 // ── Path 23: tutor_grants & tutor_grants/audit_log ────────────────────────────
 describe('tutor_grants & tutor_active_access — Admin-SDK only', () => {
   test('tutor reads grant where tutor_uid matches; parent where parent_uid matches', async () => {

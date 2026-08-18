@@ -23,6 +23,7 @@ library;
 import 'dart:convert';
 
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/features/gamification/domain/models/point_config.dart';
 import 'package:learning_tracker/features/learning/domain/entities/bookmark.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_entity.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
@@ -96,6 +97,13 @@ void main() {
     dayOfWeek: 1,
     dayType: DayType.study,
   ).toFirestore(curriculumId: CurriculumId.mishnayos, updatedAt: past);
+
+  // point_configs — codec encode() shape.
+  final pointConfigs = const PointConfigEntity(
+    curriculumId: CurriculumId.mishnayos,
+    stageOrder: 1,
+    points: 20,
+  ).toFirestore(updatedAt: past);
 
   // goals — GoalCodec.encode() shape (the widest valid set for hasOnly).
   // Note: GoalRow.profileId is int; the test constant is string '5'. We emit
@@ -215,6 +223,7 @@ void main() {
     'curriculum_tracks': curriculumTracks,
     'stage_definitions': stageDefinitions,
     'study_day_configs': studyDayConfigsOut,
+    'point_configs': pointConfigs,
     'goals': goals,
     'learning_order': learningOrder,
     'profile_programs': profileProgramsOut,

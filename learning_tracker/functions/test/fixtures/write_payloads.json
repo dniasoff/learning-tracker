@@ -43,6 +43,12 @@
     "day_type": "study",
     "updated_at": "2020-01-01T00:00:00.000Z"
   },
+  "point_configs": {
+    "curriculum_id": "c1",
+    "stage_order": 1,
+    "points": 20,
+    "updated_at": "2020-01-01T00:00:00.000Z"
+  },
   "goals": {
     "id": "g1",
     "profile_id": "5",
