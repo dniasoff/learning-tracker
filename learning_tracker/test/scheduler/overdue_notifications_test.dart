@@ -60,7 +60,7 @@ import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_gateway.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_scheduler.dart';
 import 'package:learning_tracker/features/notifications/presentation/providers/notification_providers.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -136,10 +136,10 @@ class _RecordingNotificationGateway implements NotificationGateway {
   Future<void> cancelStreakAlertForProfile(String profileId) async {}
 }
 
-/// Fixes the active profile to 0 — the profile-0 block the doc comment above
-/// (AUD-notifications-04) documents `reminderSyncEffect`'s D2 guard as
+/// Fixes the selected profile to 0 — the profile-0 block the doc comment
+/// above (AUD-notifications-04) documents `reminderSyncEffect`'s D2 guard as
 /// driving in production.
-class _ProfileId0 extends ActiveProfileId {
+class _ProfileId0 extends SelectedProfileId {
   @override
   String? build() => 'legacy';
 }
@@ -196,7 +196,7 @@ ProviderContainer _makeContainer(
   final scheduler = NotificationScheduler(service: gateway);
   return ProviderContainer(
     overrides: [
-      activeProfileIdProvider.overrideWith(_ProfileId0.new),
+      selectedProfileIdProvider.overrideWith(_ProfileId0.new),
       currentAppLocaleProvider.overrideWithValue(const Locale('en')),
       notificationSchedulerProvider.overrideWithValue(scheduler),
       isSacredTimeActiveProvider.overrideWithValue(false),
