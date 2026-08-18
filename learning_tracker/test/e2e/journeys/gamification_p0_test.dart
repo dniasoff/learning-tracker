@@ -355,40 +355,41 @@ void main() {
       tester,
     ) async {
       // ── Seed ──────────────────────────────────────────────────────────────
+      const accountId = 'parent604-account';
+      const profileId = '01J6Q2H4A8M7K3P9R5T6V8WXYA';
       final identity = E2EIdentity.localBorn(
         email: 'parent604@test.com',
         displayName: 'Parent604',
         profileMode: 'child',
+        accountId: accountId,
+        profileId: profileId,
       );
       final h = E2EHarness(tester, identity: identity);
       addTearDown(h.dispose);
 
-      // Include the one-shot activeTracksProvider override in pumpApp to
-      // avoid a Drift reactive-stream timer (R-GA-stream). The factory runs
-      // lazily — only when PointConfigScreen (via _pointConfigDataProvider)
-      // first watches activeTracksProvider — so the track seeded below will
-      // be visible when the factory runs.
+      // Seed before pumpApp: activeTracksOneShotOverride reads its Firestore
+      // snapshot once, during the initial dashboard build (R-GA-stream) —
+      // some dashboard-phase provider already watches activeTracksProvider,
+      // so seeding after pumpApp risks the one-shot freezing an empty result.
+      await seedTrack(
+        h.firestore,
+        uid: accountId,
+        profileId: profileId,
+        curriculumId: CurriculumId.mishnayos,
+      );
+      await seedStageDefinitions(
+        h.firestore,
+        uid: accountId,
+        profileId: profileId,
+        curriculumId: CurriculumId.mishnayos,
+      );
+
       await h.pumpApp(
         path: '/dashboard',
         extraOverrides: [
           ..._dashboardSilence(h),
           activeTracksOneShotOverride(),
         ],
-      );
-
-      // Seed a Mishnayos track and stage definitions so the point-config
-      // provider finds stages and renders a curriculum card.
-      await seedTrack(
-        h.firestore,
-        uid: identity.accountId,
-        profileId: identity.profileId,
-        curriculumId: CurriculumId.mishnayos,
-      );
-      await seedStageDefinitions(
-        h.firestore,
-        uid: identity.accountId,
-        profileId: identity.profileId,
-        curriculumId: CurriculumId.mishnayos,
       );
 
       h.markPinAuthenticated();
@@ -426,9 +427,9 @@ void main() {
       // ── Firestore assertion ──────────────────────────────────────────────
       final configs = await h.firestore
           .collection('users')
-          .doc(identity.accountId)
+          .doc(accountId)
           .collection('learner_profiles')
-          .doc(identity.profileId)
+          .doc(profileId)
           .collection('point_configs')
           .where('curriculum_id', isEqualTo: CurriculumId.mishnayos.storageKey)
           .get();
