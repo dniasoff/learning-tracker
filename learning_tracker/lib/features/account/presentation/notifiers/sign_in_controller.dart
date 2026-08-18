@@ -89,6 +89,7 @@ class SignInController extends Notifier<SignInState> {
   // Callbacks injected by the screen.
   Future<bool> Function(String email, AppLocalizations l10n)? _showVerification;
   void Function(String message)? _showError;
+  bool _emailVerificationDialogOpen = false;
 
   void setCallbacks({
     required Future<bool> Function(String email, AppLocalizations l10n)
@@ -136,7 +137,13 @@ class SignInController extends Notifier<SignInState> {
   String _mapAuthErrorFromException(Object e, AppLocalizations l10n) {
     final code = extractFirebaseCode(e);
     if (code != null) return _mapAuthError(code, l10n);
-    return l10n.authErrSignInGeneric;
+    // The base Exception type adds no useful diagnostic detail; preserve the
+    // established generic copy for it. Concrete internal exception types do
+    // provide a safe, non-sensitive diagnostic without exposing the message.
+    if (e.runtimeType == Exception().runtimeType) {
+      return l10n.authErrSignInGeneric;
+    }
+    return '${l10n.authErrSignInGeneric} (${e.runtimeType})';
   }
 
   /// AUD-account-14: single point that turns whatever [AsyncValue.guard]
@@ -227,9 +234,15 @@ class SignInController extends Notifier<SignInState> {
     if (reloadedUser == null) return false;
 
     final resolvedEmail = reloadedUser.email ?? email;
-    final verifiedAfterPrompt =
-        await (_showVerification?.call(resolvedEmail, l10n) ??
+    final verifiedAfterPrompt = await (() async {
+      _emailVerificationDialogOpen = true;
+      try {
+        return await (_showVerification?.call(resolvedEmail, l10n) ??
             Future.value(false));
+      } finally {
+        _emailVerificationDialogOpen = false;
+      }
+    })();
     if (verifiedAfterPrompt) return true;
 
     // SI-VERIFY-01: signOut() can throw PlatformException(clearCredentialStateAsync…)
@@ -543,7 +556,7 @@ class SignInController extends Notifier<SignInState> {
     // (guarded by the `is SignInSubmitting` race check, unchanged from
     // before this refactor).
     final watchdog = Timer(const Duration(seconds: 15), () {
-      if (state is SignInSubmitting) {
+      if (state is SignInSubmitting && !_emailVerificationDialogOpen) {
         state = SignInError(l10n.authSignInTimeout);
         _showError?.call(l10n.authSignInTimeout);
       }

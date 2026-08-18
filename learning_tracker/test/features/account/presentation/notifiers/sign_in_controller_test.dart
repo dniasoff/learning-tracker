@@ -2,11 +2,13 @@ import 'dart:async';
 
 import 'package:auto_route/auto_route.dart';
 import 'package:drift/native.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_sign_in/google_sign_in.dart'
     show GoogleSignInException, GoogleSignInExceptionCode;
+import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
@@ -15,8 +17,10 @@ import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/account/presentation/notifiers/sign_in_controller.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart';
+import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../mocks/mock_repositories.dart';
 
@@ -27,6 +31,9 @@ import '../../../../mocks/mock_repositories.dart';
 /// try/catch of its own.
 class _MockDeviceRegistryDatabase extends Mock
     implements DeviceRegistryDatabase {}
+
+class _MockInternetConnectionChecker extends Mock
+    implements InternetConnectionChecker {}
 
 // ── Hand-rolled fakes ─────────────────────────────────────────────────────────
 
@@ -237,6 +244,90 @@ void main() {
   //   test/features/auth/presentation/screens/sign_in_screen_test.dart
   // The initial-state test above already proves the controller doesn't
   // spontaneously leave SignInIdle without being called.
+
+  // ── Email verification watchdog ──────────────────────────────────────────
+
+  testWidgets(
+    'does not fire the 15s watchdog while email verification is pending',
+    (tester) async {
+      final formKey = GlobalKey<FormState>();
+      await tester.pumpWidget(
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: Form(key: formKey, child: const SizedBox()),
+        ),
+      );
+
+      SharedPreferences.setMockInitialValues({});
+      final authRepo = MockAuthRepository();
+      final registry = _MockDeviceRegistryDatabase();
+      final checker = _MockInternetConnectionChecker();
+      const unverifiedUser = AppUser(
+        uid: 'fb-uid-unverified',
+        email: 'unverified@example.com',
+        displayName: 'Unverified',
+        emailVerified: false,
+        providers: ['password'],
+      );
+      when(
+        () => registry.findByEmail(any<String>()),
+      ).thenAnswer((_) async => null);
+      when(() => checker.hasConnection).thenAnswer((_) async => true);
+      when(
+        () => authRepo.signInWithEmail(any<String>(), any<String>()),
+      ).thenAnswer((_) async {});
+      when(() => authRepo.currentUser).thenReturn(unverifiedUser);
+      when(
+        () => authRepo.reloadCurrentUser(),
+      ).thenAnswer((_) async => unverifiedUser);
+      when(() => authRepo.signOut()).thenAnswer((_) async {});
+
+      final container = ProviderContainer(
+        overrides: [
+          authRepositoryProvider.overrideWithValue(authRepo),
+          deviceRegistryProvider.overrideWithValue(registry),
+          internetConnectionCheckerProvider.overrideWithValue(checker),
+        ],
+      );
+      addTearDown(container.dispose);
+      final subscription = container.listen(
+        signInControllerProvider,
+        (_, __) {},
+      );
+      addTearDown(subscription.close);
+
+      final verificationPending = Completer<bool>();
+      final errors = <String>[];
+      final l10n = await _stubL10n();
+      final controller = container.read(signInControllerProvider.notifier);
+      controller.setCallbacks(
+        showVerificationDialog: (_, __) => verificationPending.future,
+        showError: errors.add,
+      );
+
+      fakeAsync((async) {
+        unawaited(
+          controller.signInWithEmail(
+            email: 'unverified@example.com',
+            password: 'p@ssword1',
+            router: _StubRouter(),
+            l10n: l10n,
+            formKey: formKey,
+          ),
+        );
+        async.flushMicrotasks();
+        async.elapse(const Duration(milliseconds: 1100));
+        async.flushMicrotasks();
+
+        expect(controller.state, isA<SignInSubmitting>());
+        async.elapse(const Duration(seconds: 15));
+        async.flushMicrotasks();
+
+        expect(controller.state, isA<SignInSubmitting>());
+        expect(errors, isEmpty);
+      });
+    },
+  );
 
   // ── Google sign-in — state transitions ────────────────────────────────────
 
