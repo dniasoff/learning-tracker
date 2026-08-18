@@ -16,6 +16,7 @@
 // with the Firestore emulator reachable at the host below.
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
@@ -23,14 +24,26 @@ import 'package:integration_test/integration_test.dart';
 // 10.0.2.2 is the Android emulator's alias for the host loopback.
 const String kEmulatorHost = '10.0.2.2';
 const int kFirestorePort = 8080;
+const int kAuthPort = 9099;
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   late FirebaseFirestore db;
+  // firestore.rules default-denies any path outside the app's real schema
+  // (no `probe` collection exists), so the server-side reconnect checks in
+  // Q2/Q4 need a rules-legal, owned path: users/{uid}/profile/{docId} allows
+  // arbitrary docIds under an authenticated owner (rules.dart:185-189).
+  late CollectionReference<Map<String, dynamic>> probeCollection;
 
   setUpAll(() async {
-    await Firebase.initializeApp(
+    // A NAMED app, not the default one: this app ships
+    // android/app/google-services.json, so Android's native
+    // FirebaseInitProvider auto-registers the "[DEFAULT]" app from the
+    // real project config before any Dart code runs. Re-initializing
+    // "[DEFAULT]" here would throw [core/duplicate-app] on every run.
+    final probeApp = await Firebase.initializeApp(
+      name: 'offline-probe',
       options: const FirebaseOptions(
         apiKey: 'fake-api-key',
         appId: '1:1:android:1',
@@ -38,21 +51,27 @@ void main() {
         projectId: 'demo-offline-probe',
       ),
     );
-    db = FirebaseFirestore.instance;
+    db = FirebaseFirestore.instanceFor(app: probeApp);
     db.useFirestoreEmulator(kEmulatorHost, kFirestorePort);
     db.settings = const Settings(
       persistenceEnabled: true,
       cacheSizeBytes: 20 * 1024 * 1024,
     );
+
+    final auth = FirebaseAuth.instanceFor(app: probeApp);
+    await auth.useAuthEmulator(kEmulatorHost, kAuthPort);
+    final credential = await auth.signInAnonymously();
+    final uid = credential.user!.uid;
+    probeCollection = db.collection('users').doc(uid).collection('profile');
   });
 
   test(
     'Q1: get() on an UNCACHED doc while offline — throws or not-exists?',
     () async {
       // Never fetched on this device, so it cannot be in the cache.
-      final ref = db
-          .collection('probe')
-          .doc('never-fetched-${DateTime.now().microsecondsSinceEpoch}');
+      final ref = probeCollection.doc(
+        'never-fetched-${DateTime.now().microsecondsSinceEpoch}',
+      );
 
       await db.disableNetwork();
       String outcome;
@@ -75,7 +94,7 @@ void main() {
   );
 
   test('Q2: set() while offline — queues, hangs, or throws?', () async {
-    final ref = db.collection('probe').doc('queued-write');
+    final ref = probeCollection.doc('queued-write');
 
     await db.disableNetwork();
     String outcome;
@@ -109,7 +128,7 @@ void main() {
       // This mirrors recordCompletionIfAbsent verbatim: read to decide isNew,
       // then write. If Q1 throws, this whole path fails offline and marking a
       // completion on a bus is impossible.
-      final ref = db.collection('probe').doc('completion-shape');
+      final ref = probeCollection.doc('completion-shape');
 
       await db.disableNetwork();
       String outcome;
@@ -135,9 +154,9 @@ void main() {
   );
   // Q4: the FIXED shape — unavailable-tolerant get, bounded set.
   test('Q4: FIXED shape — tolerate unavailable, bounded set', () async {
-    final ref = db
-        .collection('probe')
-        .doc('fixed-shape-${DateTime.now().microsecondsSinceEpoch}');
+    final ref = probeCollection.doc(
+      'fixed-shape-${DateTime.now().microsecondsSinceEpoch}',
+    );
     await db.disableNetwork();
     String outcome;
     try {

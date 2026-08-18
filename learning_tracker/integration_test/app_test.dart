@@ -16,6 +16,17 @@ void main() {
       app.main();
       await tester.pumpAndSettle();
 
+      // The local-first boot sequence resolves through async I/O (Drift DB
+      // open, SharedPreferences, Firebase App Check) that doesn't keep the
+      // frame scheduler "dirty" the way an animation would, so
+      // pumpAndSettle can return before the boot splash is replaced by the
+      // real tree. Poll until it settles, or time out.
+      final deadline = DateTime.now().add(const Duration(seconds: 30));
+      while (find.byType(LearningTrackerApp).evaluate().isEmpty &&
+          DateTime.now().isBefore(deadline)) {
+        await tester.pump(const Duration(milliseconds: 500));
+      }
+
       // Verify app loaded successfully
       // Note: This will evolve as we implement the actual UI
       expect(find.byType(LearningTrackerApp), findsOneWidget);
