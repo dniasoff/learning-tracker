@@ -86,11 +86,21 @@ String _$completionRepositoryHash() =>
     r'50a66b9ac044d5347a9d015c7b7c346fff3a641b';
 
 /// Firestore-backed [CompletionPointsPort] — see that class's doc comment.
+///
+/// This provider participates in a completion write that awaits an async
+/// Firestore gap before using the port again. It must survive when the last
+/// listener drops to zero; autoDispose would tear down its [Ref] during that
+/// gap and make the later points lookup fail.
 
 @ProviderFor(completionPointsPort)
 final completionPointsPortProvider = CompletionPointsPortProvider._();
 
 /// Firestore-backed [CompletionPointsPort] — see that class's doc comment.
+///
+/// This provider participates in a completion write that awaits an async
+/// Firestore gap before using the port again. It must survive when the last
+/// listener drops to zero; autoDispose would tear down its [Ref] during that
+/// gap and make the later points lookup fail.
 
 final class CompletionPointsPortProvider
     extends
@@ -101,13 +111,18 @@ final class CompletionPointsPortProvider
         >
     with $Provider<CompletionPointsPort> {
   /// Firestore-backed [CompletionPointsPort] — see that class's doc comment.
+  ///
+  /// This provider participates in a completion write that awaits an async
+  /// Firestore gap before using the port again. It must survive when the last
+  /// listener drops to zero; autoDispose would tear down its [Ref] during that
+  /// gap and make the later points lookup fail.
   CompletionPointsPortProvider._()
     : super(
         from: null,
         argument: null,
         retry: null,
         name: r'completionPointsPortProvider',
-        isAutoDispose: true,
+        isAutoDispose: false,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
@@ -136,12 +151,17 @@ final class CompletionPointsPortProvider
 }
 
 String _$completionPointsPortHash() =>
-    r'5ccae26b938ad8047ef7713bde888bb21c9e3930';
+    r'bab952a3e0313b372613166e4375f4c3953f70ae';
 
 /// Firestore-backed [CompletionStreakPort] — see that class's doc comment.
 ///
 /// The recorder resolves its own repository from `ref`, so this presentation
 /// provider never names a data-access-ring type (AD-23/AD-28).
+///
+/// This provider participates in a completion write that awaits an async
+/// Firestore gap before using the port again. It must survive when the last
+/// listener drops to zero; autoDispose would tear down its [Ref] during that
+/// gap and make the later streak write fail.
 
 @ProviderFor(completionStreakPort)
 final completionStreakPortProvider = CompletionStreakPortProvider._();
@@ -150,6 +170,11 @@ final completionStreakPortProvider = CompletionStreakPortProvider._();
 ///
 /// The recorder resolves its own repository from `ref`, so this presentation
 /// provider never names a data-access-ring type (AD-23/AD-28).
+///
+/// This provider participates in a completion write that awaits an async
+/// Firestore gap before using the port again. It must survive when the last
+/// listener drops to zero; autoDispose would tear down its [Ref] during that
+/// gap and make the later streak write fail.
 
 final class CompletionStreakPortProvider
     extends
@@ -163,13 +188,18 @@ final class CompletionStreakPortProvider
   ///
   /// The recorder resolves its own repository from `ref`, so this presentation
   /// provider never names a data-access-ring type (AD-23/AD-28).
+  ///
+  /// This provider participates in a completion write that awaits an async
+  /// Firestore gap before using the port again. It must survive when the last
+  /// listener drops to zero; autoDispose would tear down its [Ref] during that
+  /// gap and make the later streak write fail.
   CompletionStreakPortProvider._()
     : super(
         from: null,
         argument: null,
         retry: null,
         name: r'completionStreakPortProvider',
-        isAutoDispose: true,
+        isAutoDispose: false,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
@@ -198,13 +228,18 @@ final class CompletionStreakPortProvider
 }
 
 String _$completionStreakPortHash() =>
-    r'12e5cdb6ffc62d66c38c1e50146daeeb46be6ad3';
+    r'01dbd72ead497b624ba81ba69a4ecf3a2fbf562c';
 
 /// Provides the [CompletionDetectionService] — the single "is this unit
 /// covered" + siyum-crediting service, shared (Riverpod-cached) between
 /// [completionOrchestratorProvider] and (via `onboarding_providers.dart`)
 /// `BulkPriorCompletionService`'s D-M retraction path, rather than each
 /// constructing its own instance.
+///
+/// This provider participates in a completion write that awaits an async
+/// Firestore gap before using the service again. It must survive when the last
+/// listener drops to zero; autoDispose would tear down its [Ref] during that
+/// gap and make later detection work fail.
 
 @ProviderFor(completionDetectionService)
 final completionDetectionServiceProvider =
@@ -215,6 +250,11 @@ final completionDetectionServiceProvider =
 /// [completionOrchestratorProvider] and (via `onboarding_providers.dart`)
 /// `BulkPriorCompletionService`'s D-M retraction path, rather than each
 /// constructing its own instance.
+///
+/// This provider participates in a completion write that awaits an async
+/// Firestore gap before using the service again. It must survive when the last
+/// listener drops to zero; autoDispose would tear down its [Ref] during that
+/// gap and make later detection work fail.
 
 final class CompletionDetectionServiceProvider
     extends
@@ -229,13 +269,18 @@ final class CompletionDetectionServiceProvider
   /// [completionOrchestratorProvider] and (via `onboarding_providers.dart`)
   /// `BulkPriorCompletionService`'s D-M retraction path, rather than each
   /// constructing its own instance.
+  ///
+  /// This provider participates in a completion write that awaits an async
+  /// Firestore gap before using the service again. It must survive when the last
+  /// listener drops to zero; autoDispose would tear down its [Ref] during that
+  /// gap and make later detection work fail.
   CompletionDetectionServiceProvider._()
     : super(
         from: null,
         argument: null,
         retry: null,
         name: r'completionDetectionServiceProvider',
-        isAutoDispose: true,
+        isAutoDispose: false,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
@@ -264,13 +309,18 @@ final class CompletionDetectionServiceProvider
 }
 
 String _$completionDetectionServiceHash() =>
-    r'53888901b8dcd407eb4cc94299e93d384b84cd53';
+    r'29b67f8038110470ee0efef9499c10525d252d23';
 
 /// Provides the [CompletionOrchestrator] — the single place the five
 /// completion side effects live (`docs/firestore-rewrite-map.md`, owner
 /// decision 1). [MarkCompletionUseCase], [BulkMarkCompletionUseCase], and
 /// (via `onboarding_providers.dart`) `BulkPriorCompletionService` all go
 /// through this, not [completionRepositoryProvider] directly.
+///
+/// This provider owns a completion write that awaits an async Firestore gap
+/// before running its remaining side effects. It must survive when the last
+/// listener drops to zero; autoDispose would tear down the dependency chain's
+/// [Ref] during that gap and make the write fail.
 
 @ProviderFor(completionOrchestrator)
 final completionOrchestratorProvider = CompletionOrchestratorProvider._();
@@ -280,6 +330,11 @@ final completionOrchestratorProvider = CompletionOrchestratorProvider._();
 /// decision 1). [MarkCompletionUseCase], [BulkMarkCompletionUseCase], and
 /// (via `onboarding_providers.dart`) `BulkPriorCompletionService` all go
 /// through this, not [completionRepositoryProvider] directly.
+///
+/// This provider owns a completion write that awaits an async Firestore gap
+/// before running its remaining side effects. It must survive when the last
+/// listener drops to zero; autoDispose would tear down the dependency chain's
+/// [Ref] during that gap and make the write fail.
 
 final class CompletionOrchestratorProvider
     extends
@@ -294,13 +349,18 @@ final class CompletionOrchestratorProvider
   /// decision 1). [MarkCompletionUseCase], [BulkMarkCompletionUseCase], and
   /// (via `onboarding_providers.dart`) `BulkPriorCompletionService` all go
   /// through this, not [completionRepositoryProvider] directly.
+  ///
+  /// This provider owns a completion write that awaits an async Firestore gap
+  /// before running its remaining side effects. It must survive when the last
+  /// listener drops to zero; autoDispose would tear down the dependency chain's
+  /// [Ref] during that gap and make the write fail.
   CompletionOrchestratorProvider._()
     : super(
         from: null,
         argument: null,
         retry: null,
         name: r'completionOrchestratorProvider',
-        isAutoDispose: true,
+        isAutoDispose: false,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
@@ -329,14 +389,22 @@ final class CompletionOrchestratorProvider
 }
 
 String _$completionOrchestratorHash() =>
-    r'c079e80f6c3df54608070d65cc43dfb90e91ea30';
+    r'c86d918e29e5e52c6192e89392c715973d565d5e';
 
 /// Provides the mark completion use case.
+///
+/// This use case is reached by a one-shot read and then awaits an async
+/// Firestore gap. It must survive when the last listener drops to zero;
+/// autoDispose would tear down the completion chain before the write resumes.
 
 @ProviderFor(markCompletionUseCase)
 final markCompletionUseCaseProvider = MarkCompletionUseCaseProvider._();
 
 /// Provides the mark completion use case.
+///
+/// This use case is reached by a one-shot read and then awaits an async
+/// Firestore gap. It must survive when the last listener drops to zero;
+/// autoDispose would tear down the completion chain before the write resumes.
 
 final class MarkCompletionUseCaseProvider
     extends
@@ -347,13 +415,17 @@ final class MarkCompletionUseCaseProvider
         >
     with $Provider<MarkCompletionUseCase> {
   /// Provides the mark completion use case.
+  ///
+  /// This use case is reached by a one-shot read and then awaits an async
+  /// Firestore gap. It must survive when the last listener drops to zero;
+  /// autoDispose would tear down the completion chain before the write resumes.
   MarkCompletionUseCaseProvider._()
     : super(
         from: null,
         argument: null,
         retry: null,
         name: r'markCompletionUseCaseProvider',
-        isAutoDispose: true,
+        isAutoDispose: false,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
@@ -382,14 +454,24 @@ final class MarkCompletionUseCaseProvider
 }
 
 String _$markCompletionUseCaseHash() =>
-    r'9672ee564915bfbac34fd030d7e25a34459ffb76';
+    r'59e04d8acd937835b69bee2a6df945a22c99adc9';
 
 /// Provides the bulk mark completion use case.
+///
+/// This use case is reached by a one-shot read and then awaits an async
+/// Firestore gap. It must survive when the last listener drops to zero;
+/// autoDispose would tear down the completion chain before the bulk write
+/// resumes.
 
 @ProviderFor(bulkMarkCompletionUseCase)
 final bulkMarkCompletionUseCaseProvider = BulkMarkCompletionUseCaseProvider._();
 
 /// Provides the bulk mark completion use case.
+///
+/// This use case is reached by a one-shot read and then awaits an async
+/// Firestore gap. It must survive when the last listener drops to zero;
+/// autoDispose would tear down the completion chain before the bulk write
+/// resumes.
 
 final class BulkMarkCompletionUseCaseProvider
     extends
@@ -400,13 +482,18 @@ final class BulkMarkCompletionUseCaseProvider
         >
     with $Provider<BulkMarkCompletionUseCase> {
   /// Provides the bulk mark completion use case.
+  ///
+  /// This use case is reached by a one-shot read and then awaits an async
+  /// Firestore gap. It must survive when the last listener drops to zero;
+  /// autoDispose would tear down the completion chain before the bulk write
+  /// resumes.
   BulkMarkCompletionUseCaseProvider._()
     : super(
         from: null,
         argument: null,
         retry: null,
         name: r'bulkMarkCompletionUseCaseProvider',
-        isAutoDispose: true,
+        isAutoDispose: false,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
@@ -435,7 +522,7 @@ final class BulkMarkCompletionUseCaseProvider
 }
 
 String _$bulkMarkCompletionUseCaseHash() =>
-    r'fa9117793175193b748541130a08347b70cc7084';
+    r'2be1d6bc1dc3c2bfdf44c298332a250d3ad831e0';
 
 /// Provides the number of completions for a specific content item,
 /// scoped to the active profile.

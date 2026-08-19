@@ -71,7 +71,12 @@ CompletionRepository completionRepository(Ref ref) {
 }
 
 /// Firestore-backed [CompletionPointsPort] — see that class's doc comment.
-@riverpod
+///
+/// This provider participates in a completion write that awaits an async
+/// Firestore gap before using the port again. It must survive when the last
+/// listener drops to zero; autoDispose would tear down its [Ref] during that
+/// gap and make the later points lookup fail.
+@Riverpod(keepAlive: true)
 CompletionPointsPort completionPointsPort(Ref ref) {
   return FirestoreCompletionPointsAwarder(ref: ref);
 }
@@ -80,7 +85,12 @@ CompletionPointsPort completionPointsPort(Ref ref) {
 ///
 /// The recorder resolves its own repository from `ref`, so this presentation
 /// provider never names a data-access-ring type (AD-23/AD-28).
-@riverpod
+///
+/// This provider participates in a completion write that awaits an async
+/// Firestore gap before using the port again. It must survive when the last
+/// listener drops to zero; autoDispose would tear down its [Ref] during that
+/// gap and make the later streak write fail.
+@Riverpod(keepAlive: true)
 CompletionStreakPort completionStreakPort(Ref ref) {
   return FirestoreCompletionStreakRecorder(ref: ref);
 }
@@ -90,7 +100,12 @@ CompletionStreakPort completionStreakPort(Ref ref) {
 /// [completionOrchestratorProvider] and (via `onboarding_providers.dart`)
 /// `BulkPriorCompletionService`'s D-M retraction path, rather than each
 /// constructing its own instance.
-@riverpod
+///
+/// This provider participates in a completion write that awaits an async
+/// Firestore gap before using the service again. It must survive when the last
+/// listener drops to zero; autoDispose would tear down its [Ref] during that
+/// gap and make later detection work fail.
+@Riverpod(keepAlive: true)
 CompletionDetectionService completionDetectionService(Ref ref) {
   final contentRepository = ref.watch(contentRepositoryProvider);
   final stageRepository = ref.watch(globalStageRepositoryProvider);
@@ -110,7 +125,12 @@ CompletionDetectionService completionDetectionService(Ref ref) {
 /// decision 1). [MarkCompletionUseCase], [BulkMarkCompletionUseCase], and
 /// (via `onboarding_providers.dart`) `BulkPriorCompletionService` all go
 /// through this, not [completionRepositoryProvider] directly.
-@riverpod
+///
+/// This provider owns a completion write that awaits an async Firestore gap
+/// before running its remaining side effects. It must survive when the last
+/// listener drops to zero; autoDispose would tear down the dependency chain's
+/// [Ref] during that gap and make the write fail.
+@Riverpod(keepAlive: true)
 CompletionOrchestrator completionOrchestrator(Ref ref) {
   final contentRepository = ref.watch(contentRepositoryProvider);
   final profileId = ref.watch(activeProfileIdProvider);
@@ -132,7 +152,11 @@ CompletionOrchestrator completionOrchestrator(Ref ref) {
 }
 
 /// Provides the mark completion use case.
-@riverpod
+///
+/// This use case is reached by a one-shot read and then awaits an async
+/// Firestore gap. It must survive when the last listener drops to zero;
+/// autoDispose would tear down the completion chain before the write resumes.
+@Riverpod(keepAlive: true)
 MarkCompletionUseCase markCompletionUseCase(Ref ref) {
   final orchestrator = ref.watch(completionOrchestratorProvider);
   final analytics = ref.watch(analyticsServiceProvider);
@@ -140,7 +164,12 @@ MarkCompletionUseCase markCompletionUseCase(Ref ref) {
 }
 
 /// Provides the bulk mark completion use case.
-@riverpod
+///
+/// This use case is reached by a one-shot read and then awaits an async
+/// Firestore gap. It must survive when the last listener drops to zero;
+/// autoDispose would tear down the completion chain before the bulk write
+/// resumes.
+@Riverpod(keepAlive: true)
 BulkMarkCompletionUseCase bulkMarkCompletionUseCase(Ref ref) {
   final orchestrator = ref.watch(completionOrchestratorProvider);
   return BulkMarkCompletionUseCase(orchestrator);
