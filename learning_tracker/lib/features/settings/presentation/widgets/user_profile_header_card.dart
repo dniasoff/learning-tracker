@@ -1,5 +1,9 @@
+import 'dart:async';
+
+import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 // AUD-settings-09: route cross-feature references through the account/
 // profiles barrels (Rule 2) instead of 6 deep imports into their domain
@@ -62,14 +66,19 @@ class UserProfileHeaderCard extends ConsumerWidget {
       // Show the "not signed in" placeholder only when there is no active
       // session. For signed-in users the placeholder text is misleading.
       if (!authState.isSignedIn) {
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          child: Row(
-            children: [
-              const Icon(Icons.person_outline, size: 48),
-              const SizedBox(width: 16),
-              Text(l10n.notSignedIn),
-            ],
+        return _wrapSurface(
+          surface,
+          onTap: () => unawaited(context.router.replace(const SignInRoute())),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Row(
+              children: [
+                const Icon(Icons.person_outline, size: 48),
+                const SizedBox(width: 16),
+                Expanded(child: Text(l10n.notSignedIn)),
+                const Icon(Icons.chevron_right_rounded),
+              ],
+            ),
           ),
         );
       }

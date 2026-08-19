@@ -8,12 +8,16 @@ import 'package:google_sign_in/google_sign_in.dart'
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/app/router/router_provider.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
+import 'package:learning_tracker/core/domain/value_objects/account_tier.dart';
+import 'package:learning_tracker/core/providers/account_firebase_registry_provider.dart';
 import 'package:learning_tracker/core/providers/active_account_id_provider.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/account/data/repositories/account_repository_adapter.dart';
+import 'package:learning_tracker/features/account/domain/models/account_auth_provider.dart';
 import 'package:learning_tracker/features/account/domain/models/account_entity.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
+import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/account/domain/services/account_lifecycle_service.dart';
 import 'package:learning_tracker/features/account/domain/services/session_persistence_service.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart';
@@ -466,6 +470,17 @@ class _AccountTileState extends ConsumerState<_AccountTile> {
 
       await _activateCloudAccountFromLocalData(context, ref);
     } else {
+      // Local-only accounts have no cloud identity to re-authenticate. Older
+      // registry rows may still carry the anonymous Firebase path uid, so the
+      // tier is part of this guard as well. Always activate local data
+      // directly, even when the device is online.
+      if (account.firebaseUid == null ||
+          account.accountTier == AccountTier.local) {
+        if (!context.mounted) return;
+        await _activateCloudAccountFromLocalData(context, ref);
+        return;
+      }
+
       // Use the same configured/overridable checker the rest of the app reads
       // (the provider instance), NOT the package's static singleton — the
       // singleton is unconfigured and untestable, and on an offline device it
@@ -516,9 +531,8 @@ class _AccountTileState extends ConsumerState<_AccountTile> {
   ///      `authStateProvider` rebuild flips `syncIdentityStatusProvider` back to
   ///      `matched` and the orchestrator/listeners re-resolve; we also kick a
   ///      best-effort launch pull so sync drains for the new identity.
-  ///   4. On user-cancel / re-auth failure: fall back GRACEFULLY to local
-  ///      activation (offline-first) and let the identity guard show the
-  ///      "sign in to back up" state — never crash, never half-switch.
+  ///   4. On user-cancel / re-auth failure: leave the picker unchanged. No
+  ///      local activation is attempted until the target identity is verified.
   Future<void> _reauthAndActivateCloudAccount(
     BuildContext context,
     WidgetRef ref,
@@ -541,46 +555,66 @@ class _AccountTileState extends ConsumerState<_AccountTile> {
     // own dependency graph cancels the old subscriptions and opens fresh ones
     // scoped to the new account id, no manual stop/restart needed (P3-5).
 
-    // SILENT-FIRST: attempt a no-UI re-auth to the cached Google session. If it
-    // resolves the TARGET account's uid, activate with no picker. A null result
-    // (no cached session) or a uid mismatch (silent resolved a different cached
-    // account) falls through to the interactive picker below — unchanged
-    // behaviour. Silent only ever surfaces the last-authorized Google account,
-    // so cross-account switches to a not-cached account still need the picker.
-    if (targetUid != null) {
-      try {
-        final silentUser = await authRepo.reauthWithGoogleSilently();
-        if (silentUser != null && silentUser.uid == targetUid) {
-          if (!context.mounted) return;
-          await _activateCloudAccountFromLocalData(context, ref);
-          return;
-        }
-      } catch (_) {
-        // Silent attempt failed (never shows UI) → fall through to interactive.
-      }
-    }
+    final prefs = await SharedPreferences.getInstance();
+    final provider = await _accountAuthProvider(ref, authRepo, prefs);
 
-    try {
-      await authRepo.signInWithGoogle();
-    } on GoogleSignInException catch (e) {
-      // User cancelled or interrupted the native picker → fall back to local
-      // activation (current offline-first behaviour); no error toast.
-      if (e.code == GoogleSignInExceptionCode.canceled ||
-          e.code == GoogleSignInExceptionCode.interrupted) {
-        if (!context.mounted) return;
-        await _activateCloudAccountFromLocalData(context, ref);
+    // A missing marker is a legacy account. Preserve its Google flow for
+    // backwards compatibility; new accounts are written below whenever their
+    // live provider is known. Email/password accounts must never be sent to a
+    // Google picker because that can authenticate a different identity.
+    if (provider == AccountAuthProvider.emailPassword) {
+      if (!context.mounted) return;
+      final password = await _promptForPassword(context);
+      if (password == null || password.isEmpty || !context.mounted) return;
+      try {
+        await authRepo.signInWithEmail(account.email, password);
+      } catch (_) {
+        if (context.mounted) {
+          messenger
+            ..hideCurrentSnackBar()
+            ..showSnackBar(SnackBar(content: Text(l10n.errorReauthFailed)));
+        }
         return;
       }
-      // Any other Google failure → graceful local fallback; the identity guard
-      // will surface the "sign in to back up" state in Settings.
-      if (!context.mounted) return;
-      await _activateCloudAccountFromLocalData(context, ref);
-      return;
-    } catch (_) {
-      // Firebase token exchange / network failure → graceful local fallback.
-      if (!context.mounted) return;
-      await _activateCloudAccountFromLocalData(context, ref);
-      return;
+    } else {
+      // SILENT-FIRST: attempt a no-UI re-auth to the cached Google session. If
+      // it resolves the TARGET account's uid, activate with no picker.
+      if (targetUid != null) {
+        try {
+          final silentUser = await authRepo.reauthWithGoogleSilently();
+          if (silentUser != null && silentUser.uid == targetUid) {
+            if (!context.mounted) return;
+            await _activateCloudAccountFromLocalData(context, ref);
+            return;
+          }
+        } catch (_) {
+          // Silent attempt failed (never shows UI) → use the interactive flow.
+        }
+      }
+
+      try {
+        await authRepo.signInWithGoogle();
+      } on GoogleSignInException catch (e) {
+        // Cancellation is a clean no-op. In particular, do not activate local
+        // state after the credential flow was abandoned.
+        if (e.code == GoogleSignInExceptionCode.canceled ||
+            e.code == GoogleSignInExceptionCode.interrupted) {
+          return;
+        }
+        if (context.mounted) {
+          messenger
+            ..hideCurrentSnackBar()
+            ..showSnackBar(SnackBar(content: Text(l10n.errorReauthFailed)));
+        }
+        return;
+      } catch (_) {
+        if (context.mounted) {
+          messenger
+            ..hideCurrentSnackBar()
+            ..showSnackBar(SnackBar(content: Text(l10n.errorReauthFailed)));
+        }
+        return;
+      }
     }
 
     // Verify the re-authed identity matches the account the user tapped.
@@ -605,6 +639,77 @@ class _AccountTileState extends ConsumerState<_AccountTile> {
     // Identity matched — activate the account locally + restart sync.
     if (!context.mounted) return;
     await _activateCloudAccountFromLocalData(context, ref);
+  }
+
+  Future<String?> _promptForPassword(BuildContext context) {
+    final controller = TextEditingController();
+    final l10n = AppLocalizations.of(context)!;
+    return showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.reauthDialogTitle),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          obscureText: true,
+          decoration: InputDecoration(
+            labelText: l10n.currentPasswordLabel,
+            hintText: l10n.reauthDialogBody,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(l10n.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(controller.text),
+            child: Text(l10n.reauthVerify),
+          ),
+        ],
+      ),
+    ).whenComplete(controller.dispose);
+  }
+
+  Future<AccountAuthProvider?> _accountAuthProvider(
+    WidgetRef ref,
+    AuthRepository authRepo,
+    SharedPreferences prefs,
+  ) async {
+    final store = AccountAuthProviderStore(prefs);
+    final persisted = store.read(account.accountId);
+    if (persisted != null) return persisted;
+
+    final liveUser = authRepo.currentUser;
+    if (liveUser?.uid == account.firebaseUid) {
+      final liveProvider = AccountAuthProviderId.fromProviderIds(
+        liveUser!.providers,
+      );
+      if (liveProvider != null) {
+        await store.write(account.accountId, liveProvider);
+        return liveProvider;
+      }
+    }
+
+    // Each saved account has a named FirebaseAuth session. It is the only
+    // reliable provider source when the global auth slot belongs to another
+    // account (the exact state that brought the user here).
+    try {
+      final handles = await ref
+          .read(accountFirebaseRegistryProvider)
+          .resolve(account.accountId);
+      final provider = AccountAuthProviderId.fromProviderIds(
+        handles.auth.currentUser?.providerData.map((info) => info.providerId) ??
+            const <String>[],
+      );
+      if (provider != null) await store.write(account.accountId, provider);
+      return provider;
+    } catch (_) {
+      // Legacy accounts may have no named session. Keep the historical Google
+      // fallback rather than blocking the picker; a successful switch stores
+      // the live provider for the next visit.
+      return null;
+    }
   }
 
   Future<void> _activateCloudAccountFromLocalData(
@@ -653,6 +758,17 @@ class _AccountTileState extends ConsumerState<_AccountTile> {
     if (!context.mounted) return;
 
     final prefs = await SharedPreferences.getInstance();
+    final liveProvider = AccountAuthProviderId.fromProviderIds(
+      ref.read(authRepositoryProvider).currentUser?.providers ??
+          const <String>[],
+    );
+    if (liveProvider != null &&
+        ref.read(authRepositoryProvider).currentUser?.uid ==
+            account.firebaseUid) {
+      await AccountAuthProviderStore(
+        prefs,
+      ).write(account.accountId, liveProvider);
+    }
     final session = SessionPersistenceService(
       prefs: prefs,
       registry: ref.read(deviceRegistryProvider),

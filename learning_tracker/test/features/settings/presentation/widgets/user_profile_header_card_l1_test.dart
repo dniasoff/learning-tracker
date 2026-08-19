@@ -18,6 +18,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
@@ -36,6 +37,8 @@ class _MockStackRouter extends Mock implements StackRouter {}
 
 class _FakePageRouteInfo extends Fake implements PageRouteInfo {}
 
+late _MockStackRouter _lastRouter;
+
 Widget _buildCardWidget({
   required AuthState authState,
   AppUser? firebaseUser,
@@ -44,8 +47,10 @@ Widget _buildCardWidget({
   final auth = _MockAuthRepository();
   when(() => auth.currentUser).thenReturn(firebaseUser);
   final router = _MockStackRouter();
+  _lastRouter = router;
   when(() => router.canPop()).thenReturn(false);
   when(() => router.currentPath).thenReturn('/settings');
+  when(() => router.replace(any())).thenAnswer((_) async => null);
 
   return ProviderScope(
     overrides: [
@@ -91,6 +96,12 @@ void main() {
       findsOneWidget,
       reason: 'signed-out state must render the notSignedIn placeholder label',
     );
+
+    await tester.tap(find.text('Not signed in'));
+    final replaced =
+        verify(() => _lastRouter.replace(captureAny())).captured.single
+            as PageRouteInfo;
+    expect(replaced, isA<SignInRoute>());
 
     await tester.pumpWidget(const SizedBox.shrink());
   });

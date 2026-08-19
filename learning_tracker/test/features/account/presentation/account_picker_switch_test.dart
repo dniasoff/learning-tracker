@@ -24,6 +24,7 @@ import 'package:learning_tracker/core/database/registry/device_registry_database
 import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
 import 'package:learning_tracker/data/repositories/firestore_account_repository.dart';
+import 'package:learning_tracker/features/account/domain/models/account_auth_provider.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
     show authRepositoryProvider;
@@ -217,6 +218,11 @@ void main() {
           createdAt: DateTime.utc(2026, 1, 2),
           lastUsedAt: DateTime.utc(2026, 1, 2),
         ),
+      );
+      await SharedPreferences.getInstance().then(
+        (prefs) => AccountAuthProviderStore(
+          prefs,
+        ).write('acc-cloud-a', AccountAuthProvider.google),
       );
       await seedAccount(
         firestore,
@@ -412,7 +418,7 @@ void main() {
       },
     );
 
-    testWidgets('re-auth user-cancel → graceful local fallback activation', (
+    testWidgets('re-auth user-cancel → clean no-op with no activation', (
       tester,
     ) async {
       await seedCloudAccount();
@@ -433,15 +439,55 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
 
       verify(() => auth.signInWithGoogle()).called(1);
-      // Cancel falls back to local activation (offline-first), still lands on
-      // the shell; the identity guard surfaces "sign in to back up".
-      final replaced = verify(() => router.replaceAll(captureAny())).captured;
-      final routes = (replaced.last as List).cast<PageRouteInfo>();
-      expect(routes.any((r) => r is AppShellRoute), isTrue);
+      // Cancellation must not activate the target's local session or navigate
+      // into the shell with a phantom/partial auth state.
+      verifyNever(() => router.replaceAll(any()));
+      verifyNever(() => auth.signOut());
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(Duration.zero);
     });
+
+    testWidgets(
+      'email/password account prompts for password and signs in with email',
+      (tester) async {
+        await seedCloudAccount();
+        final prefs = await SharedPreferences.getInstance();
+        await AccountAuthProviderStore(
+          prefs,
+        ).write('acc-cloud-a', AccountAuthProvider.emailPassword);
+        final online = _MockInternetConnectionChecker();
+        when(() => online.hasConnection).thenAnswer((_) async => true);
+        when(
+          () => auth.signInWithEmail(targetEmail, 'correct-password'),
+        ).thenAnswer((_) async {
+          when(() => auth.currentUser).thenReturn(
+            _user(
+              targetUid,
+              targetEmail,
+            ).copyWith(providers: const ['password']),
+          );
+        });
+
+        await tester.pumpWidget(buildApp(connectivity: online));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 200));
+        await tester.tap(find.text('Cloud A'));
+        await tester.pump();
+        await tester.enterText(find.byType(TextField), 'correct-password');
+        await tester.tap(find.text('Verify'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+
+        verify(
+          () => auth.signInWithEmail(targetEmail, 'correct-password'),
+        ).called(1);
+        verifyNever(() => auth.signInWithGoogle());
+        final replaced = verify(() => router.replaceAll(captureAny())).captured;
+        final routes = (replaced.last as List).cast<PageRouteInfo>();
+        expect(routes.any((r) => r is AppShellRoute), isTrue);
+      },
+    );
   });
 
   // ── Cloud account instant switch: valid session (hasValidSession = true) ───
