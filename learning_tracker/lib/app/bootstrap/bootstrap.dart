@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:drift_flutter/drift_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/app/bootstrap/account_bootstrap.dart';
 import 'package:learning_tracker/app/bootstrap/analytics_bootstrap.dart';
@@ -7,11 +8,13 @@ import 'package:learning_tracker/app/bootstrap/crashlytics_bootstrap.dart';
 import 'package:learning_tracker/app/bootstrap/firebase_bootstrap.dart';
 import 'package:learning_tracker/app/bootstrap/notifications_bootstrap.dart';
 import 'package:learning_tracker/core/analytics/analytics_provider.dart';
+import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
 import 'package:learning_tracker/core/logging/crashlytics_service.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/providers/crashlytics_provider.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/data/firestore/active_account_providers.dart';
+import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:talker_riverpod_logger/talker_riverpod_logger.dart';
@@ -21,6 +24,42 @@ typedef BootstrapResult = ({
   ProviderContainer container,
   CrashlyticsService crashlytics,
 });
+
+/// Seeds the restored account only when the live default-app Firebase session
+/// matches that account's persisted registry [firebaseUid].
+///
+/// The device registry is local persistence and can outlive Firebase Auth
+/// (for example after sign-out, reinstall, or an auth-session reset). Seeding
+/// an id in that state, or for a different account, poisons
+/// [activeAccountFirebaseProvider] with an [AccountNotAuthenticatedException]
+/// before the user has a chance to sign in again. A successful sign-in
+/// establishes the account session and calls [ActiveAccountId.set] through
+/// its normal flow instead.
+void seedRestoredActiveAccount({
+  required ProviderContainer container,
+  required String? accountId,
+  required String? authenticatedUserId,
+  required String? restoredFirebaseUid,
+}) {
+  if (accountId == null ||
+      authenticatedUserId == null ||
+      restoredFirebaseUid == null ||
+      authenticatedUserId != restoredFirebaseUid) {
+    return;
+  }
+  container.read(activeAccountIdProvider.notifier).set(accountId);
+}
+
+Future<String?> _readRestoredFirebaseUid(String accountId) async {
+  final registry = DeviceRegistryDatabase(
+    driftDatabase(name: 'device_registry'),
+  );
+  try {
+    return (await registry.findById(accountId))?.firebaseUid;
+  } finally {
+    await registry.close();
+  }
+}
 
 /// Orchestrates the full app bootstrap sequence.
 ///
@@ -93,9 +132,27 @@ Future<BootstrapResult> bootstrap() async {
   // bootstrapAccount completed before runApp so this is effectively
   // synchronous from the provider tree's perspective.
   if (accountBootstrap.accountId != null) {
-    container
-        .read(activeAccountIdProvider.notifier)
-        .set(accountBootstrap.accountId);
+    final bootstrapUser = container.read(authRepositoryProvider).currentUser;
+    String? restoredFirebaseUid;
+    if (bootstrapUser != null) {
+      try {
+        restoredFirebaseUid = await _readRestoredFirebaseUid(
+          accountBootstrap.accountId!,
+        );
+      } on Exception catch (error, stackTrace) {
+        log.warning(
+          event: 'active_account_session_match_failed',
+          exception: error,
+          stackTrace: stackTrace,
+        );
+      }
+    }
+    seedRestoredActiveAccount(
+      container: container,
+      accountId: accountBootstrap.accountId,
+      authenticatedUserId: bootstrapUser?.uid,
+      restoredFirebaseUid: restoredFirebaseUid,
+    );
   }
 
   container.listen<String?>(selectedProfileIdProvider, (_, id) {
