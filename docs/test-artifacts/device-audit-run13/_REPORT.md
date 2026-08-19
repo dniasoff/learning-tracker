@@ -139,7 +139,7 @@ Higher coverage is real progress, but the severity profile is not better than Ru
 | by_design | Recent Activity "Points Earned (All Time)" shows 0 while account balance elsewhere shows 10 | Intentional scoping: the chart is completions-only (`liveOnly` tier per the code's documented "three-tier credit policy"), the account balance legitimately includes non-completion `parent_add` ledger entries. A prior fix explicitly replaced a "misleading all-time label" with this range-accurate one. |
 | by_design | Add Track wizard Step 2 — "garbled" Hebrew pace title "דרשו עמוד היומי" | "דרשו" (Dirshu) is a real, branded Torah-study organization name, not a mistranslated verb — confirmed by three sibling `calendar_program_registry.dart` entries all sharing the same "Dirshu"-prefixed naming convention with matching English names. |
 
-**Needs-device / unresolved (1):** Add-Track wizard Step 3 (Select Scope) — a מועד list row's Seder subtitle text reported as hard-clipped without ellipsis. Not independently verifiable from static code/screenshot evidence this run; carry forward to the next device pass.
+**Needs-device / resolved (false positive):** Add-Track wizard Step 3 (Select Scope) — code inspection of `learning_tracker/lib/features/tracks/setup/presentation/steps/scope_tiles.dart` confirms that the מועד row's Seder subtitle `Text` uses `maxLines: 2` and `TextOverflow.ellipsis` inside `Expanded` → `Column` without a fixed-height constraint, so it ellipsizes rather than hard-clips. The fix was already present in `d541d4ae` (2026-06-14), predating run13; no device pass is needed and this item must not be carried forward.
 
 ---
 
@@ -189,7 +189,7 @@ Higher coverage is real progress, but the severity profile is not better than Ru
 1. **Coverage is still not complete.** 42/115 screens (36.5%) were not passed this run, concentrated on device 5560 (Learning and Content fully blocked, 0/4 each) by the Root Cause A regression. A full re-audit of those two areas is required once Root Cause A and Root Cause C both land.
 2. **Root Cause A's exact racing caller was not pinned at runtime** — static reading of `sign_in_controller.dart` shows correct establish-then-set ordering on its face, yet the exception still fires; the fix needs runtime tracing to confirm which ambient caller wins the race, not just a code-level patch.
 3. **Root Cause B's precise index shape needs a live capture before deploy** — two findings independently corrected the auditor's "collection-group query" framing to a plain single-collection query; deploying the wrong-scoped index (as literally decoded from the Console URL) may not resolve the failure.
-4. **One needs_device item remains open** (Add-Track wizard Step 3 מועד subtitle clipping) — carry to the next pass.
+4. **The sole needs_device item is closed as a false positive** (Add-Track wizard Step 3 מועד subtitle clipping) — code inspection confirms ellipsizing; no carry-forward device pass is needed.
 5. **This rung is still manual.** No CI harness drives these device flows; every finding is a one-shot observation from this session, not a repeatable automated check.
 
 ---
