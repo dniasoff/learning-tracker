@@ -30,6 +30,7 @@ class HebrewDatePicker extends StatefulWidget {
 }
 
 class _HebrewDatePickerState extends State<HebrewDatePicker> {
+  late JewishDate _minimumJewishDate;
   late int _hebrewYear;
   late int _hebrewMonth;
   late int _hebrewDay;
@@ -37,11 +38,14 @@ class _HebrewDatePickerState extends State<HebrewDatePicker> {
   @override
   void initState() {
     super.initState();
-    final initial = widget.initialDate ?? DateTimeFactory.nowLocal();
+    final today = DateTimeFactory.nowLocal();
+    _minimumJewishDate = HebrewCalendarUtils.gregorianToJewishDate(today);
+    final initial = widget.initialDate ?? today;
     final jewishDate = HebrewCalendarUtils.gregorianToJewishDate(initial);
     _hebrewYear = jewishDate.getJewishYear();
     _hebrewMonth = jewishDate.getJewishMonth();
     _hebrewDay = jewishDate.getJewishDayOfMonth();
+    _clampToMinimumDate();
   }
 
   List<int> _getMonths() {
@@ -58,12 +62,35 @@ class _HebrewDatePickerState extends State<HebrewDatePicker> {
   }
 
   int _daysInMonth() {
+    return _daysInMonthFor(_hebrewYear, _hebrewMonth);
+  }
+
+  int _daysInMonthFor(int year, int month) {
     final jewishDate = JewishDate.initDate(
-      jewishYear: _hebrewYear,
-      jewishMonth: _hebrewMonth,
+      jewishYear: year,
+      jewishMonth: month,
       jewishDayOfMonth: 1,
     );
     return jewishDate.getDaysInJewishMonth();
+  }
+
+  bool _isBeforeMinimum(int year, int month, int day) {
+    final candidate = JewishDate.initDate(
+      jewishYear: year,
+      jewishMonth: month,
+      jewishDayOfMonth: day,
+    );
+    return candidate.compareTo(_minimumJewishDate) < 0;
+  }
+
+  void _clampToMinimumDate() {
+    if (_isBeforeMinimum(_hebrewYear, _hebrewMonth, _hebrewDay)) {
+      _hebrewYear = _minimumJewishDate.getJewishYear();
+      _hebrewMonth = _minimumJewishDate.getJewishMonth();
+      _hebrewDay = _minimumJewishDate.getJewishDayOfMonth();
+    } else {
+      _clampDayToMonth();
+    }
   }
 
   void _clampDayToMonth() {
@@ -196,10 +223,13 @@ class _HebrewDatePickerState extends State<HebrewDatePicker> {
                       Material(
                         color: Colors.transparent,
                         child: IconButton(
-                          onPressed: () => setState(() {
-                            _hebrewYear--;
-                            _clampDayToMonth();
-                          }),
+                          onPressed:
+                              _hebrewYear > _minimumJewishDate.getJewishYear()
+                              ? () => setState(() {
+                                  _hebrewYear--;
+                                  _clampToMinimumDate();
+                                })
+                              : null,
                           icon: Icon(
                             Icons.remove_rounded,
                             color: context.colors.brandBlue,
@@ -254,6 +284,11 @@ class _HebrewDatePickerState extends State<HebrewDatePicker> {
                           );
                           return DropdownMenuItem(
                             value: m,
+                            enabled: !_isBeforeMinimum(
+                              _hebrewYear,
+                              m,
+                              _daysInMonthFor(_hebrewYear, m),
+                            ),
                             child: Text(
                               name,
                               overflow: TextOverflow.ellipsis,
@@ -283,6 +318,11 @@ class _HebrewDatePickerState extends State<HebrewDatePicker> {
                           maxDay,
                           (i) => DropdownMenuItem(
                             value: i + 1,
+                            enabled: !_isBeforeMinimum(
+                              _hebrewYear,
+                              _hebrewMonth,
+                              i + 1,
+                            ),
                             child: Text(
                               '${i + 1}',
                               style: TextStyle(

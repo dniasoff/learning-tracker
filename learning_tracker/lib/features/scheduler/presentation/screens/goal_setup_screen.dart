@@ -15,6 +15,10 @@ import 'package:learning_tracker/features/scheduler/presentation/widgets/hebrew_
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
+@visibleForTesting
+typedef HebrewDatePickerLauncher =
+    Future<DateTime?> Function(BuildContext context, {DateTime? initialDate});
+
 /// Screen for creating or editing a learning goal.
 ///
 /// Thin Scaffold wrapper around [GoalSetupForm]. The form is exposed
@@ -64,6 +68,8 @@ class GoalSetupForm extends ConsumerStatefulWidget {
   final int? totalItems;
   final ValueChanged<GoalEntity> onComplete;
   final String? submitLabel;
+  @visibleForTesting
+  final HebrewDatePickerLauncher? hebrewDatePickerLauncher;
 
   const GoalSetupForm({
     super.key,
@@ -72,6 +78,7 @@ class GoalSetupForm extends ConsumerStatefulWidget {
     this.existingGoal,
     this.totalItems,
     this.submitLabel,
+    this.hebrewDatePickerLauncher,
   });
 
   @override
@@ -82,6 +89,7 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
   late double _targetPercent;
   DateTime? _targetDate;
   late TextEditingController _descriptionController;
+  String? _deadlineError;
 
   // Pace mode fields
   late String _goalType;
@@ -258,18 +266,35 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
 
   Future<void> _pickHebrewDate() async {
     final now = _now();
-    final picked = await HebrewDatePicker.show(
+    final picked = await (widget.hebrewDatePickerLauncher ?? HebrewDatePicker.show)(
       context,
       // Seed with current value, or tomorrow as the minimum-reasonable default.
-      initialDate: (_targetDate != null && !_targetDate!.isBefore(now))
+      initialDate:
+          (_targetDate != null &&
+              !LocalDayUtils.extractLocalDate(
+                _targetDate!,
+              ).isBefore(LocalDayUtils.extractLocalDate(now)))
           ? _targetDate
           : now.add(const Duration(days: 1)),
     );
-    // Reject dates in the past — the submit guard also checks this, but
-    // storing a past date is confusing because the button stays disabled.
-    if (picked != null && !picked.isBefore(now)) {
-      setState(() => _targetDate = picked.toUtc());
+    if (picked == null) return;
+
+    // Compare Hebrew calendar dates rather than instants. The picker returns
+    // a UTC value representing the selected Hebrew day, so comparing it with
+    // the current time would incorrectly reject today's date after midnight.
+    final pickedHebrew = HebrewCalendarUtils.gregorianToJewishDate(picked);
+    final todayHebrew = HebrewCalendarUtils.gregorianToJewishDate(now);
+    if (pickedHebrew.compareTo(todayHebrew) < 0) {
+      setState(
+        () => _deadlineError = AppLocalizations.of(context)!.goalDeadlinePassed,
+      );
+      return;
     }
+
+    setState(() {
+      _targetDate = picked.toUtc();
+      _deadlineError = null;
+    });
   }
 
   /// Returns true when the form should not be submittable.
@@ -279,7 +304,11 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
   bool _isSubmitDisabled() {
     if (_goalType == 'deadline') {
       if (_targetDate == null) return true;
-      if (_targetDate!.isBefore(_now())) return true;
+      if (LocalDayUtils.extractLocalDate(
+        _targetDate!,
+      ).isBefore(LocalDayUtils.extractLocalDate(_now()))) {
+        return true;
+      }
     }
     if (_goalType == 'pace') {
       if (!_paceFieldValid) return true;
@@ -340,7 +369,10 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
                       tooltip: AppLocalizations.of(
                         context,
                       )!.goalClearDeadlineTooltip,
-                      onPressed: () => setState(() => _targetDate = null),
+                      onPressed: () => setState(() {
+                        _targetDate = null;
+                        _deadlineError = null;
+                      }),
                     )
                   else
                     Icon(
@@ -352,6 +384,15 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
             ),
           ),
         ),
+        if (_deadlineError != null) ...[
+          const SizedBox(height: 8),
+          Text(
+            _deadlineError!,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Theme.of(context).colorScheme.error,
+            ),
+          ),
+        ],
         const SizedBox(height: 16),
         // Optional occasion/label field
         TextField(

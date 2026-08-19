@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/time/local_day_clock.dart'
+    show FakeLocalDayClock, resetLocalDayClock, useLocalDayClock;
+import 'package:learning_tracker/core/utils/hebrew_calendar_utils.dart';
 import 'package:learning_tracker/features/scheduler/presentation/widgets/hebrew_date_picker.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 Widget _buildTestApp({
   required ValueChanged<DateTime?> onResult,
   Locale? locale,
+  DateTime? initialDate,
 }) {
   return MaterialApp(
     locale: locale,
@@ -15,7 +19,10 @@ Widget _buildTestApp({
       builder: (context) => Scaffold(
         body: ElevatedButton(
           onPressed: () async {
-            final result = await HebrewDatePicker.show(context);
+            final result = await HebrewDatePicker.show(
+              context,
+              initialDate: initialDate,
+            );
             onResult(result);
           },
           child: const Text('Open'),
@@ -27,6 +34,54 @@ Widget _buildTestApp({
 
 void main() {
   group('HebrewDatePicker', () {
+    testWidgets('floors an initial past date at today in the Hebrew calendar', (
+      tester,
+    ) async {
+      final clock = FakeLocalDayClock(DateTime.utc(2026, 8, 19, 12));
+      useLocalDayClock(clock);
+      addTearDown(resetLocalDayClock);
+
+      final today = HebrewCalendarUtils.gregorianToJewishDate(
+        clock.nowUtc().toLocal(),
+      );
+      DateTime? result;
+
+      await tester.pumpWidget(
+        _buildTestApp(
+          onResult: (value) => result = value,
+          initialDate: DateTime.utc(2020, 1, 1, 12),
+        ),
+      );
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('${today.getJewishYear()}'), findsOneWidget);
+      expect(
+        find.text(
+          HebrewCalendarUtils.getHebrewMonthName(
+            today.getJewishMonth(),
+            hebrewYear: today.getJewishYear(),
+          ),
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('${today.getJewishDayOfMonth()}'), findsOneWidget);
+      final minusButton = find.ancestor(
+        of: find.byIcon(Icons.remove_rounded),
+        matching: find.byType(IconButton),
+      );
+      expect(tester.widget<IconButton>(minusButton).onPressed, isNull);
+
+      await tester.tap(find.text('Select date'));
+      await tester.pumpAndSettle();
+
+      expect(result, isNotNull);
+      final selected = HebrewCalendarUtils.gregorianToJewishDate(result!);
+      expect(selected.getJewishYear(), today.getJewishYear());
+      expect(selected.getJewishMonth(), today.getJewishMonth());
+      expect(selected.getJewishDayOfMonth(), today.getJewishDayOfMonth());
+    });
+
     testWidgets('renders year, month, day selectors and action buttons', (
       tester,
     ) async {

@@ -92,6 +92,30 @@ void main() {
   });
 
   group('GoalSetupScreen', () {
+    testWidgets('surfaces feedback when Hebrew deadline selection is past', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _makeApp(
+          overrides: [useHebrewDateProvider.overrideWithValue(true)],
+          home: Scaffold(
+            body: GoalSetupForm(
+              curriculumId: CurriculumId.mishnayos,
+              totalItems: 100,
+              onComplete: (_) {},
+              hebrewDatePickerLauncher: (_, {initialDate}) async =>
+                  DateTime.utc(2020, 1, 1, 12),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Tap to choose a date'));
+      await tester.pump();
+
+      expect(find.text('Deadline has passed'), findsOneWidget);
+    });
+
     testWidgets('renders form with target percentage slider and date picker', (
       tester,
     ) async {
