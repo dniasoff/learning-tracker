@@ -53,6 +53,31 @@ which is why all on-device testing passed while production was broken.
 This is a manually-maintained record — **update the status line above the same day the Firebase
 console enforcement toggle changes** for any of Firestore, Functions, or Storage.
 
+## Debug-token operational procedure
+
+A fresh cloud sign-in requires **two** App Check debug tokens. The default `FirebaseApp` mints
+one token, and the app also creates a separate named, per-account `FirebaseApp`, which mints its
+own distinct token. Both tokens must be registered in the Firebase App Check debug-token registry;
+registering only the default app's token is the common mistake and makes sign-in fail with
+`permission-denied` / `403`, which can look like an authentication bug.
+
+The debug-token registry has a hard cap of **20 tokens per app registration**. Once the cap is
+full, new registrations fail until stale entries are pruned. Repeated device testing reaches this
+cap routinely because every fresh device state generates new tokens, so prune stale entries as part
+of test setup rather than waiting for registration to fail.
+
+Debug tokens are stored in the app's SharedPreferences at
+`shared_prefs/com.google.firebase.appcheck.debug.store*.xml` and are regenerated whenever that
+state is cleared, including `adb shell pm clear <pkg>`, an emulator `-wipe-data` boot, or any
+first-run reset. A token registered before such a reset is dead afterwards. Any test-harness seed
+flow that clears app data (for example, a launch-with-clear step) therefore invalidates a
+pre-registered token: register tokens **after** the clear, not before it.
+
+Do not try to determine whether a token is already registered by decoding registry resource IDs.
+Those IDs are opaque, server-assigned identifiers, not a base64 or otherwise reversible encoding
+of the raw token. There is no client-side way to map a local token to a registry entry;
+re-registering is safe and is the correct approach when in doubt.
+
 ## Gating criteria (all required before flipping enforcement on)
 
 1. **CI tokens registered** — every CI runner that exercises Firestore/Functions/Storage has a
