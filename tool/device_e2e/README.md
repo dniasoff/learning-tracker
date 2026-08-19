@@ -16,11 +16,13 @@ it asserts against the real backend.
 - Device reachable over ADB (Tailscale): `adb connect <ip:port>`.
 - The **debug** build installed (`flutter build apk --debug` → `adb install`).
   Release builds can't pass App Check (Play Integrity) when sideloaded.
-- The build's **App Check debug token registered** (Firestore enforces App Check):
-  1. `pm clear` + launch → grab the token from logcat
-     (`DebugAppCheckProvider: Enter this debug secret ... : <uuid>`),
-  2. register via the `firebaseappcheck` API
-     (`projects/<p>/apps/<appId>/debugTokens`).
+- Both **App Check debug tokens registered** (Firestore enforces App Check).
+  Run this after every `pm clear` or emulator/data wipe, because both the
+  default FirebaseApp and the named per-account FirebaseApp mint new secrets:
+  `python3 tool/device_e2e/appcheck.py --serial emulator-5560`.
+  The helper reads both SharedPreferences stores, checks registry capacity,
+  prunes the oldest entries when room is needed, registers missing tokens, and
+  independently verifies each secret through Firebase's token-exchange API.
 - `gcloud auth print-access-token` available (Firestore reads + admin email-verify).
 
 ## Layout
