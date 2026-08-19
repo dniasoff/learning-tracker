@@ -135,6 +135,22 @@ TutorGrant _pendingGrant({String tutorEmail = 'pending@example.com'}) {
   return TutorGrant.fromDoc(doc);
 }
 
+/// Construct a terminal grant that should not be shown in the active roster.
+TutorGrant _revokedGrant() {
+  final now = DateTime.utc(2026, 1, 1);
+  final doc = TutorGrantDoc(
+    grantId: 'grant_revoked_1',
+    parentUid: 'parent_uid',
+    childProfileId: _childUlid,
+    tutorEmail: 'revoked@example.com',
+    state: TutorGrantState.revokedByParent,
+    invitedAt: now,
+    updatedAt: now,
+    revokedAt: now,
+  );
+  return TutorGrant.fromDoc(doc);
+}
+
 /// Build the widget under test with a mocked router and provider overrides.
 ///
 /// [profiles] — what [profileListProvider] resolves to.
@@ -426,6 +442,30 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
 
     expect(find.text('No tutors invited.'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(Duration.zero);
+  });
+
+  testWidgets('renders "No tutors invited." when all grants are terminal', (
+    tester,
+  ) async {
+    final child = _childProfile(id: 1, displayName: 'Binyamin');
+
+    await tester.pumpWidget(
+      _buildApp(
+        router: router,
+        profilesState: AsyncData([child]),
+        grantsPerChild: {
+          _childUlid: AsyncData([_revokedGrant()]),
+        },
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(find.text('No tutors invited.'), findsOneWidget);
+    expect(find.text('revoked@example.com'), findsNothing);
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(Duration.zero);

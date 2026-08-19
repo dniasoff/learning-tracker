@@ -292,6 +292,12 @@ void main() {
       // readyToAccept renders the Accept button and heading.
       expect(find.text('Accept invite'), findsOneWidget);
       expect(find.text('Accept tutor invite'), findsWidgets);
+      expect(
+        find.text(
+          'You have been invited to tutor a child. By accepting, you will have access to view and manage their learning profile.',
+        ),
+        findsOneWidget,
+      );
 
       await _tearDown(tester);
     });
@@ -336,6 +342,37 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('Decline'), findsOneWidget);
+
+      await _tearDown(tester);
+    });
+
+    testWidgets('uses parent and child names when the grant is loaded', (
+      tester,
+    ) async {
+      final pinService = _StubTutorPinService(hasPinResult: true);
+      await tester.pumpWidget(
+        _buildHarness(
+          token: 'test-grant-id',
+          useCase: mockUseCase,
+          pinService: pinService,
+          router: mockRouter,
+          incomingGrants: [_makePendingGrant()],
+        ),
+      );
+      await _pump(tester);
+
+      expect(
+        find.text(
+          'Avi has invited you to tutor Beni. By accepting, you will have access to view and manage their learning profile.',
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.text(
+          'You have been invited to tutor a child. By accepting, you will have access to view and manage their learning profile.',
+        ),
+        findsNothing,
+      );
 
       await _tearDown(tester);
     });

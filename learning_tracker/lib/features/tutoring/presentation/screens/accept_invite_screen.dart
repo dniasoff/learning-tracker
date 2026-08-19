@@ -366,7 +366,12 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  l10n.acceptInviteBody,
+                  _loadedGrant == null
+                      ? l10n.acceptInviteBody
+                      : l10n.acceptInviteBodyFromParentForChild(
+                          _loadedGrant!.parentName ?? l10n.tutorFallbackParent,
+                          _loadedGrant!.childDisplayLabel,
+                        ),
                   textAlign: TextAlign.center,
                   style: theme.textTheme.bodyLarge?.copyWith(
                     color: context.colors.brandInkMuted,

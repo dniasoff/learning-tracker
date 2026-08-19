@@ -235,7 +235,14 @@ class _ChildGrantsSection extends ConsumerWidget {
             ),
           ),
           data: (grants) {
-            if (grants.isEmpty) {
+            final active = grants
+                .where((g) => g.grantState is ActiveGrant)
+                .toList();
+            final pending = grants
+                .where((g) => g.grantState is PendingGrant)
+                .toList();
+
+            if (active.isEmpty && pending.isEmpty) {
               return Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                 child: Text(
@@ -246,13 +253,6 @@ class _ChildGrantsSection extends ConsumerWidget {
                 ),
               );
             }
-
-            final active = grants
-                .where((g) => g.grantState is ActiveGrant)
-                .toList();
-            final pending = grants
-                .where((g) => g.grantState is PendingGrant)
-                .toList();
 
             // AUD-tutoring-08 (PF-2, verify-correction site): flatten
             // headers + rows and build via ListView.builder rather than
