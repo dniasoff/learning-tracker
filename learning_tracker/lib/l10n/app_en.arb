@@ -2011,6 +2011,7 @@
       }
     }
   },
+  "backupSynced": "Synced",
   "backupSyncing": "Syncing...",
   "backupConnecting": "Connecting…",
   "backupOffline": "Offline",

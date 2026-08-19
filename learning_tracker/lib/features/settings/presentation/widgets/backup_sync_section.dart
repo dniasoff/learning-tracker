@@ -130,7 +130,7 @@ class _BackupSyncSectionState extends ConsumerState<BackupSyncSection> {
         ),
         FirestoreSyncStatus.synced => _buildStatusLine(
           icon: Icons.cloud_done_outlined,
-          label: 'Synced',
+          label: l10n.backupSynced,
         ),
         FirestoreSyncStatus.syncing => _buildStatusLine(
           icon: Icons.sync,
@@ -416,6 +416,7 @@ class _BackupPasteDialogBody extends StatefulWidget {
 
 class _BackupPasteDialogBodyState extends State<_BackupPasteDialogBody> {
   late final TextEditingController _controller;
+  String? _validationError;
 
   @override
   void initState() {
@@ -454,6 +455,7 @@ class _BackupPasteDialogBodyState extends State<_BackupPasteDialogBody> {
             labelText: l10n.backupImportPasteLabel,
             hintText: l10n.backupImportPasteHint,
             border: const OutlineInputBorder(),
+            errorText: _validationError,
           ),
         ),
         const SizedBox(height: 16),
@@ -462,7 +464,14 @@ class _BackupPasteDialogBodyState extends State<_BackupPasteDialogBody> {
           child: Text(l10n.actionCancel),
         ),
         FilledButton(
-          onPressed: () => Navigator.of(context).pop(_controller.text.trim()),
+          onPressed: () {
+            final value = _controller.text.trim();
+            if (value.isEmpty) {
+              setState(() => _validationError = l10n.backupImportInvalid);
+              return;
+            }
+            Navigator.of(context).pop(value);
+          },
           child: Text(l10n.backupImportPreviewAction),
         ),
       ],

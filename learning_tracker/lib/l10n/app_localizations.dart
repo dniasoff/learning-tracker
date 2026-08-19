@@ -5795,6 +5795,12 @@ abstract class AppLocalizations {
   /// **'Last synced {timeAgo}'**
   String backupLastSynced(String timeAgo);
 
+  /// No description provided for @backupSynced.
+  ///
+  /// In en, this message translates to:
+  /// **'Synced'**
+  String get backupSynced;
+
   /// No description provided for @backupSyncing.
   ///
   /// In en, this message translates to:

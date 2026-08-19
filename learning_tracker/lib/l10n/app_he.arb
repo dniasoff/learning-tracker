@@ -1001,7 +1001,7 @@
   "journeyEmptyBody": "כשתסיימו מסכתא או ספר, הוא יירשם כאן כאבן דרך קבועה.",
   "chartCumulativeProgress": "התקדמות מצטברת",
   "chartCumulativeProgressSubtitle": "סה״כ השלמות לאורך זמן",
-  "chartPointsEarned": "נקודות שהורו",
+  "chartPointsEarned": "נקודות שנצברו",
   "chartTotalTorahPoints": "נק׳ תורה סה״כ",
   "chartPointsEarnedSubtitle": "נקודות שנצברו",
   "@chartPointsEarnedSubtitle": {
@@ -1719,6 +1719,7 @@
       }
     }
   },
+  "backupSynced": "מסונכרן",
   "backupSyncing": "מסנכרן...",
   "backupConnecting": "מתחבר…",
   "backupOffline": "לא מקוון",

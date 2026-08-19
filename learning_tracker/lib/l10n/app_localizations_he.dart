@@ -1880,7 +1880,7 @@ class AppLocalizationsHe extends AppLocalizations {
   String get chartCumulativeProgressSubtitle => 'סה״כ השלמות לאורך זמן';
 
   @override
-  String get chartPointsEarned => 'נקודות שהורו';
+  String get chartPointsEarned => 'נקודות שנצברו';
 
   @override
   String get chartTotalTorahPoints => 'נק׳ תורה סה״כ';
@@ -3281,6 +3281,9 @@ class AppLocalizationsHe extends AppLocalizations {
   String backupLastSynced(String timeAgo) {
     return 'סונכרן לאחרונה $timeAgo';
   }
+
+  @override
+  String get backupSynced => 'מסונכרן';
 
   @override
   String get backupSyncing => 'מסנכרן...';

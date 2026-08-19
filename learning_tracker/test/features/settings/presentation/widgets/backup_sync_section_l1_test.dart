@@ -201,6 +201,23 @@ void main() {
     expect(find.text('Syncing — pending changes'), findsNothing);
   });
 
+  testWidgets('Hebrew sync status uses the localized Synced label', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _buildHarness(
+        service: null,
+        locale: const Locale('he'),
+        syncStatusStreamFactory: (_) =>
+            Stream.value(FirestoreSyncStatus.synced),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('מסונכרן'), findsOneWidget);
+    expect(find.text('Synced'), findsNothing);
+  });
+
   testWidgets('Firestore metadata with pending writes shows Syncing', (
     tester,
   ) async {
@@ -282,5 +299,51 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('הדבקת גיבוי'), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('empty preview shows validation and keeps the dialog open', (
+    tester,
+  ) async {
+    final firestore = await _seedFirestore();
+    final service = DataExportImportService(firestore: firestore, uid: testUid);
+
+    await tester.pumpWidget(
+      _buildHarness(service: service, locale: const Locale('en')),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Import backup'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Preview backup'));
+    await tester.pump();
+
+    expect(
+      find.text('This backup is invalid or belongs to a different account.'),
+      findsOneWidget,
+    );
+    expect(find.text('Paste backup'), findsOneWidget);
+  });
+
+  testWidgets('Cancel closes the paste dialog without validation feedback', (
+    tester,
+  ) async {
+    final firestore = await _seedFirestore();
+    final service = DataExportImportService(firestore: firestore, uid: testUid);
+
+    await tester.pumpWidget(
+      _buildHarness(service: service, locale: const Locale('en')),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Import backup'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Paste backup'), findsNothing);
+    expect(
+      find.text('This backup is invalid or belongs to a different account.'),
+      findsNothing,
+    );
   });
 }

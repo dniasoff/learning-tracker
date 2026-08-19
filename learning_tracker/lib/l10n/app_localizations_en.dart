@@ -3325,6 +3325,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get backupSynced => 'Synced';
+
+  @override
   String get backupSyncing => 'Syncing...';
 
   @override
