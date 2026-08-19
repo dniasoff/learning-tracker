@@ -18,6 +18,8 @@
 /// [activeAccountFirebaseProvider] resolves its handles alongside it.
 library;
 
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/data/firestore/account_firebase.dart';
 import 'package:learning_tracker/data/firestore/account_firebase_providers.dart';
@@ -41,7 +43,17 @@ class ActiveAccountId extends Notifier<String?> {
 
   /// Sets the active account id, or clears it with `null` (e.g. on
   /// sign-out / account removal).
-  void set(String? accountId) => state = accountId;
+  void set(String? accountId) {
+    final isSameAccount = state == accountId;
+    state = accountId;
+    if (isSameAccount && accountId != null) {
+      // A prior cold-start resolve may have failed before authentication was
+      // established. Re-setting the same id after sign-in must clear that
+      // cached AsyncError so dependants retry against the now-authenticated
+      // AccountFirebase session.
+      scheduleMicrotask(() => ref.invalidate(activeAccountFirebaseProvider));
+    }
+  }
 }
 
 /// The active account id — `null` until some caller calls

@@ -335,16 +335,11 @@ class _AppSession {
 /// rules this class exists to enforce.
 ///
 /// **Concurrency-safe idempotent resolution.** Every method that can
-/// establish a NEW session for an account id shares one memoization path
-/// ([_obtain]): two overlapping callers acting on the same account id await
-/// the SAME in-flight attempt rather than racing a second one (which the
-/// SDK would reject with `[core/duplicate-app]` at the app-creation layer).
-/// This dedupes by account id only, not by which of [resolve]/
-/// [createAnonymousAccount]/[signInCloudAccount] issued the call — calling
-/// two different ones concurrently for the same brand-new id is not a
-/// supported shape (see "What your tests cannot see" in the story report;
-/// in practice each is called from a distinct, single flow: sign-up,
-/// sign-in, or re-attaching to an existing account).
+/// establish a NEW session for an account id shares the same native-app
+/// session, while [_obtain] deduplicates in-flight work by both account id
+/// and intent. Reattach-only [resolve] must not adopt an authenticating
+/// caller's work (or vice versa): the two operations have different
+/// authentication contracts, even though they share the app/session setup.
 ///
 /// **Bounded, not silently evicting.** Establishing a session for a NEW
 /// account id once [maxAccounts] accounts are already active throws
@@ -413,7 +408,10 @@ class AccountFirebase {
   final Map<String, AccountFirebaseHandles> _handles = {};
 
   /// In-flight first-time session establishments, keyed by account id.
-  final Map<String, Future<AccountFirebaseHandles>> _pending = {};
+  /// In-flight establishment keyed by account id and authentication intent.
+  /// A reattach-only resolve may fail because no user is signed in; that
+  /// failure must never be returned to a concurrent authenticating caller.
+  final Map<(String, bool), Future<AccountFirebaseHandles>> _pending = {};
 
   /// Accounts currently being torn down by [dispose] — recorded before the
   /// native `app.delete()` call starts and cleared once it (and the
@@ -438,7 +436,10 @@ class AccountFirebase {
   /// in-flight). Snapshot — mutating the returned set has no effect on the
   /// registry. Counts an account still active after [signOut] (its app is
   /// still alive, still occupying a slot) — only [dispose] frees one.
-  Set<String> get activeAccountIds => {..._sessions.keys, ..._pending.keys};
+  Set<String> get activeAccountIds => {
+    ..._sessions.keys,
+    ..._pending.keys.map((key) => key.$1),
+  };
 
   /// Whether [accountId] currently has an authenticated handle bundle
   /// cached (`false` immediately after [signOut], even though the
@@ -460,7 +461,7 @@ class AccountFirebase {
         throw AccountNotAuthenticatedException(accountId);
       }
       return user;
-    });
+    }, authenticating: false);
   }
 
   /// Creates (or re-attaches to) [accountId] as a device-only anonymous
@@ -490,7 +491,7 @@ class AccountFirebase {
         );
       }
       return user;
-    });
+    }, authenticating: true);
   }
 
   /// Signs in [accountId] with [credential] on **that account's own named
@@ -509,7 +510,7 @@ class AccountFirebase {
         );
       }
       return user;
-    });
+    }, authenticating: true);
   }
 
   /// Convenience wrapper for [signInCloudAccount] with an email/password
@@ -607,8 +608,9 @@ class AccountFirebase {
   /// must return its signed-in [User] or throw.
   Future<AccountFirebaseHandles> _obtain(
     String accountId,
-    Future<User> Function(FirebaseAuth auth) authenticate,
-  ) async {
+    Future<User> Function(FirebaseAuth auth) authenticate, {
+    required bool authenticating,
+  }) async {
     if (accountId.isEmpty) {
       throw ArgumentError.value(accountId, 'accountId', 'must not be empty');
     }
@@ -616,7 +618,8 @@ class AccountFirebase {
     final settled = _handles[accountId];
     if (settled != null) return settled;
 
-    final inFlight = _pending[accountId];
+    final pendingKey = (accountId, authenticating);
+    final inFlight = _pending[pendingKey];
     if (inFlight != null) return inFlight;
 
     final disposing = _disposing[accountId];
@@ -626,7 +629,7 @@ class AccountFirebase {
       // state — a concurrent caller may have already started a fresh
       // establishment/dispose for this same accountId while this call was
       // waiting.
-      return _obtain(accountId, authenticate);
+      return _obtain(accountId, authenticate, authenticating: authenticating);
     }
 
     // A session already exists for this account (e.g. re-authenticating
@@ -638,13 +641,13 @@ class AccountFirebase {
     }
 
     final future = _establish(accountId, authenticate);
-    _pending[accountId] = future;
+    _pending[pendingKey] = future;
     try {
       final handles = await future;
       _handles[accountId] = handles;
       return handles;
     } finally {
-      unawaited(_pending.remove(accountId));
+      unawaited(_pending.remove(pendingKey));
     }
   }
 
@@ -760,10 +763,13 @@ class AccountFirebase {
   /// itself failed, there may be nothing left to tear down beyond the
   /// locally-created app, which the code below still removes).
   Future<void> dispose(String accountId) async {
-    final inFlight = _pending[accountId];
-    if (inFlight != null) {
+    final inFlight = _pending.entries
+        .where((entry) => entry.key.$1 == accountId)
+        .map((entry) => entry.value)
+        .toList();
+    for (final future in inFlight) {
       try {
-        await inFlight;
+        await future;
       } catch (_) {
         // Establishment failed (e.g. no network for signInAnonymously);
         // fall through to clean up whatever it DID create locally.
@@ -803,7 +809,7 @@ class AccountFirebase {
   /// accounts (each is torn down independently); if one [dispose] throws,
   /// the remainder are still attempted.
   Future<void> disposeAll() async {
-    final ids = [..._sessions.keys, ..._pending.keys];
+    final ids = {..._sessions.keys, ..._pending.keys.map((key) => key.$1)};
     final errors = <Object>[];
     for (final id in ids) {
       try {

@@ -443,6 +443,52 @@ void main() {
       expect(handles.uid, 'uid-async-restored');
     });
 
+    test('a reattach failure cannot short-circuit a concurrent authenticating '
+        'call for the same account', () async {
+      final authState = StreamController<User?>();
+      final resolveStarted = Completer<void>();
+      final cloudUser = _mockUser('uid-cloud');
+      final auth = _AuthHarness()
+        ..willBuild('acc-race', () {
+          final mock = MockFirebaseAuthHandle();
+          User? currentUser;
+          when(() => mock.currentUser).thenAnswer((_) => currentUser);
+          when(() => mock.authStateChanges()).thenAnswer((_) {
+            if (!resolveStarted.isCompleted) resolveStarted.complete();
+            return authState.stream;
+          });
+          when(() => mock.signInWithCredential(any())).thenAnswer((_) async {
+            currentUser = cloudUser;
+            return _mockCredential(cloudUser);
+          });
+          return mock;
+        });
+      final registry = buildRegistry(authHarness: auth);
+
+      final reattach = registry.resolve('acc-race');
+      await resolveStarted.future;
+
+      final authenticate = registry.signInCloudAccount(
+        'acc-race',
+        FakeAuthCredential(),
+      );
+      final handles = await authenticate;
+
+      expect(handles.uid, 'uid-cloud');
+      verify(
+        () => auth.mockFor('acc-race').signInWithCredential(any()),
+      ).called(1);
+
+      // Let the intentionally unauthenticated reattach path settle after
+      // the authenticating path has independently succeeded.
+      authState.add(null);
+      await expectLater(
+        reattach,
+        throwsA(isA<AccountNotAuthenticatedException>()),
+      );
+      await authState.close();
+    });
+
     test('a second resolve() for the same already-resolved account does NOT '
         'call initializeApp again and returns the identical handles', () async {
       final auth = _AuthHarness()
