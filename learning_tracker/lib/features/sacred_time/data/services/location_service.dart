@@ -12,6 +12,16 @@ import 'package:learning_tracker/features/sacred_time/domain/models/sacred_locat
 class LocationService {
   const LocationService();
 
+  /// Returns whether the OS currently grants location access.
+  ///
+  /// This is intentionally separate from [detectCurrent]: reading the
+  /// permission must not start a GPS fix or prompt the user.
+  Future<bool> hasPermission() async {
+    final permission = await Geolocator.checkPermission();
+    return permission == LocationPermission.whileInUse ||
+        permission == LocationPermission.always;
+  }
+
   /// Request a fresh GPS fix and reverse-geocode the country code.
   /// Caller is responsible for persisting the returned [SacredLocation].
   Future<LocationFetchResult> detectCurrent() async {

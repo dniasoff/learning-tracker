@@ -28,6 +28,7 @@ import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_gateway.dart';
 import 'package:learning_tracker/features/notifications/presentation/providers/notification_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/permission_prompt_screen.dart';
+import 'package:learning_tracker/features/sacred_time/data/services/location_service.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/location_error_code.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/location_fetch_result.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/sacred_location.dart';
@@ -39,6 +40,15 @@ import '../../../../helpers/pump_app.dart';
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
 class _MockNotificationGateway extends Mock implements NotificationGateway {}
+
+class _FakeLocationService extends LocationService {
+  _FakeLocationService({required this.permissionGranted});
+
+  final bool permissionGranted;
+
+  @override
+  Future<bool> hasPermission() async => permissionGranted;
+}
 
 class _MockStackRouter extends Mock implements StackRouter {}
 
@@ -91,6 +101,7 @@ Widget _buildApp({
   required _MockNotificationGateway notifGateway,
   required _MockStackRouter router,
   required _FakeSacredLocationNotifier locationNotifier,
+  bool locationPermissionGranted = false,
   bool isOnboarding = false,
   Locale locale = const Locale('en'),
   bool useHebrewTerms = false,
@@ -100,6 +111,9 @@ Widget _buildApp({
     locale: locale,
     overrides: [
       notificationServiceProvider.overrideWithValue(notifGateway),
+      locationServiceProvider.overrideWithValue(
+        _FakeLocationService(permissionGranted: locationPermissionGranted),
+      ),
       sacredLocationProvider.overrideWith(() => locationNotifier),
       useHebrewTermsProvider.overrideWith(
         () => useHebrewTerms ? _TrueUseHebrewTerms() : _FalseUseHebrewTerms(),
@@ -140,9 +154,13 @@ _MockStackRouter _defaultRouter() {
   return router;
 }
 
-_MockNotificationGateway _defaultNotifGateway({bool granted = true}) {
+_MockNotificationGateway _defaultNotifGateway({
+  bool granted = true,
+  bool permissionGranted = false,
+}) {
   final gw = _MockNotificationGateway();
   when(() => gw.requestPermission()).thenAnswer((_) async => granted);
+  when(() => gw.hasPermission()).thenAnswer((_) async => permissionGranted);
   return gw;
 }
 
@@ -317,6 +335,50 @@ void main() {
 
       await _teardown(tester);
     });
+
+    testWidgets(
+      'hydrates notification and location cards from already-granted OS state',
+      (tester) async {
+        await tester.pumpWidget(
+          _buildApp(
+            notifGateway: _defaultNotifGateway(permissionGranted: true),
+            router: _defaultRouter(),
+            locationNotifier: _locationNotifier(
+              const LocationFetchPermissionDenied(permanentlyDenied: false),
+            ),
+            locationPermissionGranted: true,
+          ),
+        );
+        await _pump(tester);
+
+        expect(find.byIcon(Icons.check_circle_rounded), findsNWidgets(2));
+        expect(find.byIcon(Icons.cancel_outlined), findsNothing);
+        expect(find.text('Allow'), findsNothing);
+
+        await _teardown(tester);
+      },
+    );
+
+    testWidgets(
+      'keeps notification Allow action when OS permission is not granted',
+      (tester) async {
+        await tester.pumpWidget(
+          _buildApp(
+            notifGateway: _defaultNotifGateway(permissionGranted: false),
+            router: _defaultRouter(),
+            locationNotifier: _locationNotifier(
+              const LocationFetchPermissionDenied(permanentlyDenied: false),
+            ),
+          ),
+        );
+        await _pump(tester);
+
+        expect(find.text('Allow'), findsNWidgets(2));
+        expect(find.byIcon(Icons.check_circle_rounded), findsNothing);
+
+        await _teardown(tester);
+      },
+    );
   });
 
   // ── Notification permission ─────────────────────────────────────────────────
@@ -524,7 +586,7 @@ void main() {
     );
 
     testWidgets(
-      'LocationFetchServiceDisabled: cancel icon shown for location card',
+      'LocationFetchServiceDisabled: location card remains actionable',
       (tester) async {
         final locationNotif = _locationNotifier(
           const LocationFetchServiceDisabled(),
@@ -543,36 +605,42 @@ void main() {
         await tester.pump();
         await tester.pump(const Duration(seconds: 1));
 
-        expect(find.byIcon(Icons.cancel_outlined), findsOneWidget);
+        expect(find.text('Allow'), findsNWidgets(2));
+        expect(find.byIcon(Icons.cancel_outlined), findsNothing);
 
         await _teardown(tester);
       },
     );
 
-    testWidgets('LocationFetchError: cancel icon shown for location card', (
-      tester,
-    ) async {
-      final locationNotif = _locationNotifier(
-        const LocationFetchError(LocationErrorCode.timeout),
-      );
+    testWidgets(
+      'LocationFetchError(timeout): remains distinct from permission denial',
+      (tester) async {
+        final locationNotif = _locationNotifier(
+          const LocationFetchError(LocationErrorCode.timeout),
+        );
 
-      await tester.pumpWidget(
-        _buildApp(
-          notifGateway: _defaultNotifGateway(),
-          router: _defaultRouter(),
-          locationNotifier: locationNotif,
-        ),
-      );
-      await _pump(tester);
+        await tester.pumpWidget(
+          _buildApp(
+            notifGateway: _defaultNotifGateway(),
+            router: _defaultRouter(),
+            locationNotifier: locationNotif,
+          ),
+        );
+        await _pump(tester);
 
-      await tester.tap(find.text('Allow').last);
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 1));
+        await tester.tap(find.text('Allow').last);
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
 
-      expect(find.byIcon(Icons.cancel_outlined), findsOneWidget);
+        // A timeout means the GPS fix was slow; it is not evidence that the
+        // user denied OS permission. The card stays retryable instead of
+        // collapsing to the denied icon.
+        expect(find.text('Allow'), findsNWidgets(2));
+        expect(find.byIcon(Icons.cancel_outlined), findsNothing);
 
-      await _teardown(tester);
-    });
+        await _teardown(tester);
+      },
+    );
   });
 
   // ── Skip / CTA navigation ───────────────────────────────────────────────────

@@ -46,6 +46,36 @@ class _PermissionPromptScreenState
   _PermissionStatus _notifStatus = _PermissionStatus.idle;
   _PermissionStatus _locationStatus = _PermissionStatus.idle;
 
+  @override
+  void initState() {
+    super.initState();
+    _hydratePermissionStatuses();
+  }
+
+  Future<void> _hydratePermissionStatuses() async {
+    final statuses = await Future.wait([
+      ref.read(notificationServiceProvider).hasPermission(),
+      ref.read(locationServiceProvider).hasPermission(),
+    ]);
+
+    if (!mounted) return;
+    setState(() {
+      // Do not overwrite a user action that completed while the OS reads
+      // were in flight. A permission that is not currently granted remains
+      // actionable through this prompt.
+      if (_notifStatus == _PermissionStatus.idle) {
+        _notifStatus = statuses[0]
+            ? _PermissionStatus.granted
+            : _PermissionStatus.idle;
+      }
+      if (_locationStatus == _PermissionStatus.idle) {
+        _locationStatus = statuses[1]
+            ? _PermissionStatus.granted
+            : _PermissionStatus.idle;
+      }
+    });
+  }
+
   bool get _notifDone =>
       _notifStatus == _PermissionStatus.granted ||
       _notifStatus == _PermissionStatus.denied;
@@ -83,9 +113,15 @@ class _PermissionPromptScreenState
 
     if (!mounted) return;
     setState(() {
-      _locationStatus = result is LocationFetchSuccess
-          ? _PermissionStatus.granted
-          : _PermissionStatus.denied;
+      _locationStatus = switch (result) {
+        LocationFetchSuccess() => _PermissionStatus.granted,
+        LocationFetchPermissionDenied() => _PermissionStatus.denied,
+        // A slow GPS fix or a disabled location service is not a permission
+        // refusal. Keep the card actionable so the user can retry after the
+        // transient condition changes.
+        LocationFetchServiceDisabled() ||
+        LocationFetchError() => _PermissionStatus.idle,
+      };
     });
   }
 
