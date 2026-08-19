@@ -171,7 +171,7 @@ final class DashboardActiveCurriculaProvider
 }
 
 String _$dashboardActiveCurriculaHash() =>
-    r'f4b4821afef9d0aaa61ff607e12a586391fb8bd0';
+    r'541686cccc93e8cc82563ed93b7cd4101cc2ac15';
 
 /// Stream provider for watching active curricula changes, scoped to active profile.
 
@@ -219,7 +219,7 @@ final class DashboardActiveCurriculaStreamProvider
 }
 
 String _$dashboardActiveCurriculaStreamHash() =>
-    r'9380412258f124a96956febb02184384cd103822';
+    r'd9186fbbfa5c7e3bfe49620ba850a5517e217d91';
 
 /// Track completion percentage for the Manage Tracks card.
 ///
@@ -659,7 +659,7 @@ final class DashboardStreakProvider
   }
 }
 
-String _$dashboardStreakHash() => r'7dc0538d473290b65a2a7f9f8ed9373e53c3ad16';
+String _$dashboardStreakHash() => r'4a1e8fa5e4063ae523d79ab165930d5bf2ab1ea5';
 
 /// Stored debitable points balance, scoped to active child profile (WS7.balance).
 ///

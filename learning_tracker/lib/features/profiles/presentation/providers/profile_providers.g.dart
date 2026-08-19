@@ -268,7 +268,7 @@ final class ProfileListProvider
   }
 }
 
-String _$profileListHash() => r'2b464a9964d99a4b8a2793bd5be0cefa2fec5de0';
+String _$profileListHash() => r'4ed288ca44b328ec108e1832e6d4310ac377051f';
 
 /// Stream of profiles for the active account, for reactive UI.
 
@@ -314,7 +314,7 @@ final class ProfileListStreamProvider
   }
 }
 
-String _$profileListStreamHash() => r'aee5b5766ce3a8c977e97ab641ba6e8c39184e00';
+String _$profileListStreamHash() => r'41a3a2ca7c9307510e7a4b9dc74cb9d4eeb46866';
 
 /// The currently selected profile.
 
