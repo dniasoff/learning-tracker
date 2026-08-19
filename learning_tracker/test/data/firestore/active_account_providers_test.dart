@@ -55,6 +55,7 @@ class MockUser extends Mock implements User {}
 AccountFirebase _fakeRegistry({
   String uid = 'uid-1',
   bool authenticated = true,
+  bool Function()? isAuthenticated,
 }) {
   return AccountFirebase(
     options: const FirebaseOptions(
@@ -78,12 +79,12 @@ AccountFirebase _fakeRegistry({
     },
     resolveAuth: (app) {
       final mock = MockFirebaseAuthHandle();
-      if (authenticated) {
-        final user = MockUser();
-        when(() => user.uid).thenReturn(uid);
-        when(() => mock.currentUser).thenReturn(user);
-      } else {
-        when(() => mock.currentUser).thenReturn(null);
+      final user = MockUser();
+      when(() => user.uid).thenReturn(uid);
+      when(() => mock.currentUser).thenAnswer((_) {
+        return (isAuthenticated?.call() ?? authenticated) ? user : null;
+      });
+      if (!(isAuthenticated?.call() ?? authenticated)) {
         when(
           () => mock.authStateChanges(),
         ).thenAnswer((_) => Stream<User?>.value(null));
@@ -191,6 +192,36 @@ void main() {
       expect(value.hasError, isTrue, reason: value.toString());
       expect(value.error, isA<AccountNotAuthenticatedException>());
     });
+
+    test(
+      're-setting the same account id clears a prior error and re-resolves',
+      () async {
+        var authenticated = false;
+        final registry = _fakeRegistry(
+          uid: 'uid-recovered',
+          isAuthenticated: () => authenticated,
+        );
+        final container = ProviderContainer(
+          overrides: [
+            accountFirebaseRegistryProvider.overrideWithValue(registry),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        final notifier = container.read(activeAccountIdProvider.notifier);
+        notifier.set('acc-1');
+        final failed = await _readSettled(container);
+        expect(failed.error, isA<AccountNotAuthenticatedException>());
+
+        authenticated = true;
+        expect(() => notifier.set('acc-1'), returnsNormally);
+        await pumpEventQueue();
+
+        final recovered = await _readSettled(container);
+        expect(recovered.hasValue, isTrue, reason: recovered.toString());
+        expect(recovered.value!.uid, 'uid-recovered');
+      },
+    );
 
     test("switching the active account id re-resolves to the new account's "
         'handles', () async {

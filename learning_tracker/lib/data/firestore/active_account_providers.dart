@@ -18,8 +18,6 @@
 /// [activeAccountFirebaseProvider] resolves its handles alongside it.
 library;
 
-import 'dart:async';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/data/firestore/account_firebase.dart';
 import 'package:learning_tracker/data/firestore/account_firebase_providers.dart';
@@ -50,8 +48,10 @@ class ActiveAccountId extends Notifier<String?> {
       // A prior cold-start resolve may have failed before authentication was
       // established. Re-setting the same id after sign-in must clear that
       // cached AsyncError so dependants retry against the now-authenticated
-      // AccountFirebase session.
-      scheduleMicrotask(() => ref.invalidate(activeAccountFirebaseProvider));
+      // AccountFirebase session. Bump a separate provider rather than
+      // invalidating this notifier's dependent directly: invalidating
+      // activeAccountFirebaseProvider from here creates a Riverpod cycle.
+      ref.read(_activeAccountResolutionGenerationProvider.notifier).bump();
     }
   }
 }
@@ -62,6 +62,22 @@ class ActiveAccountId extends Notifier<String?> {
 final activeAccountIdProvider = NotifierProvider<ActiveAccountId, String?>(
   ActiveAccountId.new,
 );
+
+/// Generation used to refresh the active-account resolution after a caller
+/// re-establishes the same account session. This provider is deliberately
+/// independent of [activeAccountIdProvider], so changing it cannot create a
+/// dependency cycle while [ActiveAccountId.set] is running.
+class _ActiveAccountResolutionGeneration extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  void bump() => state++;
+}
+
+final _activeAccountResolutionGenerationProvider =
+    NotifierProvider<_ActiveAccountResolutionGeneration, int>(
+      _ActiveAccountResolutionGeneration.new,
+    );
 
 /// Resolves [activeAccountIdProvider] to its authenticated
 /// [AccountFirebaseHandles], or `null` when no account is active.
@@ -102,6 +118,7 @@ final activeAccountIdProvider = NotifierProvider<ActiveAccountId, String?>(
 final activeAccountFirebaseProvider = FutureProvider<AccountFirebaseHandles?>((
   ref,
 ) async {
+  ref.watch(_activeAccountResolutionGenerationProvider);
   final accountId = ref.watch(activeAccountIdProvider);
   if (accountId == null) return null;
   final registry = ref.watch(accountFirebaseRegistryProvider);
