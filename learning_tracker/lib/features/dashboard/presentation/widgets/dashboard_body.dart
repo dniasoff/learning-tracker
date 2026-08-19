@@ -214,6 +214,19 @@ class DashboardBody extends ConsumerWidget {
     // in this gate.
     final tasksReady = dailyTasksAsync.hasValue;
     final lifetimeReady = lifetimeTotalsAsync.hasValue;
+
+    void openGamification() {
+      if (userMode != ProfileMode.child) return;
+      final alreadyActive = context.router.isRouteActive(
+        const GamificationRoute().routeName,
+      );
+      if (GamificationRoutePushGuard.canPush(
+        isGamificationRouteActive: alreadyActive,
+      )) {
+        context.router.push(const GamificationRoute());
+      }
+    }
+
     // "All caught up" is suppressed until tasks are ready: showing it before
     // sync completes would mislead the user into thinking there's nothing to do
     // when in fact the data hasn't arrived yet.
@@ -304,11 +317,25 @@ class DashboardBody extends ConsumerWidget {
             // the inner Icon + Text from also being announced, which would
             // produce a redundant bare "3" after the meaningful label.
             if (streakError != null)
-              SizedBox(
-                width: 150,
-                child: InlineAsyncError(
-                  error: streakError!,
-                  onRetry: onRetryStreak,
+              Flexible(
+                child: Semantics(
+                  label: l10n.errorWithMessage,
+                  button: userMode == ProfileMode.child,
+                  child: GestureDetector(
+                    key: const Key('dashboardStreakErrorChip'),
+                    behavior: HitTestBehavior.opaque,
+                    onTap: userMode == ProfileMode.child
+                        ? openGamification
+                        : null,
+                    child: InlineAsyncError(
+                      error: streakError!,
+                      // The tier counter below owns the retry affordance for
+                      // this same streak provider. Keeping the header chip as
+                      // a navigation affordance avoids overlapping duplicates.
+                      onRetry: onRetryStreak,
+                      showRetry: false,
+                    ),
+                  ),
                 ),
               )
             else if (streakLoading)
@@ -342,16 +369,7 @@ class DashboardBody extends ConsumerWidget {
                   // router.current.name which throws when the stack is empty or
                   // the router is a partial mock.
                   onTap: userMode == ProfileMode.child
-                      ? () {
-                          final alreadyActive = context.router.isRouteActive(
-                            const GamificationRoute().routeName,
-                          );
-                          if (GamificationRoutePushGuard.canPush(
-                            isGamificationRouteActive: alreadyActive,
-                          )) {
-                            context.router.push(const GamificationRoute());
-                          }
-                        }
+                      ? openGamification
                       : null,
                   child: Container(
                     padding: const EdgeInsets.symmetric(

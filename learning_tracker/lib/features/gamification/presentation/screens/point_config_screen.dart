@@ -8,6 +8,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
+import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/core/widgets/empty_state.dart';
 import 'package:learning_tracker/data/repositories/firestore_point_config_repository.dart'
     show defaultPointsForStage, kMaxPointConfigPoints, kMinPointConfigPoints;
@@ -195,15 +196,14 @@ class _PointConfigScreenState extends ConsumerState<PointConfigScreen> {
           SnackBar(content: Text(l10n.pointSettingsSavedSnackbar)),
         );
       }
-    } catch (e) {
+    } catch (_) {
       if (mounted) setState(() => _saving = false);
       if (mounted) {
-        final l10nMsg = AppLocalizations.of(
-          context,
-        )!.errorGeneric(e.toString());
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(l10nMsg)));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.errorWithMessage),
+          ),
+        );
       }
     }
   }
@@ -253,10 +253,10 @@ class _PointConfigScreenState extends ConsumerState<PointConfigScreen> {
       ),
       body: pointsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(
-          child: Text(
-            AppLocalizations.of(context)!.errorGeneric(error.toString()),
-          ),
+        error: (error, stack) => AppErrorView(
+          error: error,
+          stackTrace: stack,
+          onRetry: () => ref.invalidate(pointConfigDataProvider),
         ),
         data: (pointData) {
           if (pointData.isEmpty) {

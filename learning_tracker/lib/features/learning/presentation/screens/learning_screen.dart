@@ -13,6 +13,7 @@ import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/core/widgets/empty_state.dart';
+import 'package:learning_tracker/core/widgets/inline_async_error.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/scheduler/scheduler.dart';
@@ -196,32 +197,9 @@ class _StreakHeroCard extends StatelessWidget {
                         ),
                         error: (error, _) => SizedBox(
                           height: 110,
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.error_outline,
-                                color: context.colors.introCtaLabel,
-                                size: 28,
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  l10n.errorGeneric(error.toString()),
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color: context.colors.introCtaLabel,
-                                  ),
-                                ),
-                              ),
-                              TextButton(
-                                onPressed: onRetry,
-                                child: Text(
-                                  l10n.actionRetry,
-                                  style: TextStyle(
-                                    color: context.colors.introCtaLabel,
-                                  ),
-                                ),
-                              ),
-                            ],
+                          child: InlineAsyncError(
+                            error: error,
+                            onRetry: onRetry,
                           ),
                         ),
                         data: (streak) => Column(

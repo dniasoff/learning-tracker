@@ -212,7 +212,10 @@ class _Counter extends StatelessWidget {
             // narrower Progress-hub tile width. The Dashboard tile is wider
             // and the value renders at its natural size there.
             if (error != null)
-              InlineAsyncError(error: error!, onRetry: onRetry)
+              SizedBox(
+                width: double.infinity,
+                child: InlineAsyncError(error: error!, onRetry: onRetry),
+              )
             else
               FittedBox(
                 fit: BoxFit.scaleDown,

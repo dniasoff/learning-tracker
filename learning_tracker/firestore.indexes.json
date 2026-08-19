@@ -103,6 +103,30 @@
       ]
     },
     {
+      "collectionGroup": "point_configs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "curriculum_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "stage_order",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "streak_events",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "study_day_configs",
       "queryScope": "COLLECTION",
       "fields": [

@@ -83,6 +83,7 @@ Widget _buildApp({
   required _MockStackRouter router,
   int currentStreak = 7,
   ProfileMode userMode = ProfileMode.child,
+  bool streakError = false,
 }) {
   final track = _track();
   return ProviderScope(
@@ -104,10 +105,18 @@ Widget _buildApp({
       ),
       dashboardUserModeProvider.overrideWith((ref) => Future.value(userMode)),
       dashboardStreakProvider.overrideWith(
-        (ref) => Stream.value((
-          currentStreak: currentStreak,
-          maxStreak: currentStreak,
-        )),
+        (ref) => streakError
+            ? Stream.error(
+                Exception(
+                  'cloud_firestore/failed-precondition: internal Firebase '
+                  'console URL must not appear in the UI',
+                ),
+                StackTrace.empty,
+              )
+            : Stream.value((
+                currentStreak: currentStreak,
+                maxStreak: currentStreak,
+              )),
       ),
       dashboardGlobalPointsProvider.overrideWith((ref) => Future.value(0)),
       dashboardStreakRecoveryProvider.overrideWith(
@@ -142,6 +151,12 @@ Widget _buildApp({
             activeTracks: [_track()],
             userMode: userMode,
             currentStreak: currentStreak,
+            streakError: streakError
+                ? Exception(
+                    'cloud_firestore/failed-precondition: internal Firebase '
+                    'console URL must not appear in the UI',
+                  )
+                : null,
           ),
         ),
       ),
@@ -236,6 +251,41 @@ void main() {
     // streak indicator, not a dead link into a guard that rejects it.
     verifyNever(
       () => router.push<Object?>(any(), onFailure: any(named: 'onFailure')),
+    );
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(Duration.zero);
+  });
+
+  testWidgets('error-state streak chip still navigates to GamificationRoute', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _buildApp(router: router, userMode: ProfileMode.child, streakError: true),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(find.byKey(const Key('dashboardStreakErrorChip')), findsOneWidget);
+    expect(
+      find.textContaining('cloud_firestore/failed-precondition'),
+      findsNothing,
+    );
+
+    await tester.tap(find.byKey(const Key('dashboardStreakErrorChip')));
+    await tester.pump();
+
+    final captured = verify(
+      () => router.push<Object?>(
+        captureAny(),
+        onFailure: any(named: 'onFailure'),
+      ),
+    ).captured;
+    expect(
+      captured.any(
+        (arg) => arg is PageRouteInfo && arg.routeName == 'GamificationRoute',
+      ),
+      isTrue,
     );
 
     await tester.pumpWidget(const SizedBox.shrink());

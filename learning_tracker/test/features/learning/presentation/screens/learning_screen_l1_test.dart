@@ -52,6 +52,7 @@ import 'package:learning_tracker/core/content/content_index.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
+import 'package:learning_tracker/core/widgets/inline_async_error.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/screens/learning_screen.dart';
 import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
@@ -182,6 +183,7 @@ Widget _buildScreen({
   Locale locale = const Locale('en'),
   bool disableRetry = false,
   Stream<({int currentStreak, int maxStreak})>? streakStream,
+  bool streakError = false,
   StackRouter? router,
 }) {
   final overrides = <Override>[
@@ -208,7 +210,15 @@ Widget _buildScreen({
     // Streak — defaults to an immediate zero-streak value; pass
     // [streakStream] for loading/error/custom-timing scenarios.
     dashboardStreakProvider.overrideWith(
-      (ref) => streakStream ?? Stream.value(_zeroStreak),
+      (ref) => streakError
+          ? Stream.error(
+              Exception(
+                'cloud_firestore/failed-precondition: internal Firebase '
+                'console URL must not appear in the UI',
+              ),
+              StackTrace.empty,
+            )
+          : streakStream ?? Stream.value(_zeroStreak),
     ),
     // Daily tasks — use factory to avoid pre-creating Future.error() in zone.
     allDailyTasksProvider.overrideWith(
@@ -526,6 +536,33 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(Duration.zero);
   });
+
+  testWidgets(
+    'streak error uses the friendly inline error instead of leaking details',
+    (tester) async {
+      const rawError =
+          'cloud_firestore/failed-precondition: internal Firebase console URL';
+      await tester.pumpWidget(
+        _buildScreen(
+          curricula: [CurriculumId.mishnayos],
+          streakError: true,
+          disableRetry: true,
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.byType(InlineAsyncError), findsOneWidget);
+      expect(
+        find.text('Something went wrong. Please try again.'),
+        findsOneWidget,
+      );
+      expect(find.textContaining(rawError), findsNothing);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+    },
+  );
 
   // ── 10. Daily tasks loading ─────────────────────────────────────────────────
 
