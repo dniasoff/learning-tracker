@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
@@ -32,6 +34,33 @@ class FirestoreProfileRepositoryAdapter implements ProfileRepository {
 
   static const maxProfilesPerAccount = 10;
 
+  /// Emits whether the account-scoped Firestore profile repository is ready.
+  ///
+  /// This is the feature-owned readiness seam for presentation providers.
+  /// Consumers must not depend on the raw repository-resolution provider in
+  /// `lib/data/firestore/`; this adapter is the boundary that owns that
+  /// dependency.
+  Stream<bool> watchReadiness() {
+    final controller = StreamController<bool>();
+    ProviderSubscription<AsyncValue<FirestoreLearnerProfileRepository?>>?
+    repositorySubscription;
+
+    controller.onListen = () {
+      repositorySubscription = _ref
+          .listen<AsyncValue<FirestoreLearnerProfileRepository?>>(
+            firestoreLearnerProfileRepositoryProvider,
+            (_, next) => controller.add(next.hasValue && next.value != null),
+            fireImmediately: true,
+          );
+    };
+    controller.onCancel = () async {
+      repositorySubscription?.close();
+      await controller.close();
+    };
+
+    return controller.stream;
+  }
+
   Future<FirestoreLearnerProfileRepository> _resolve() async {
     final repo = await _ref.read(
       firestoreLearnerProfileRepositoryProvider.future,
@@ -47,8 +76,50 @@ class FirestoreProfileRepositoryAdapter implements ProfileRepository {
       (await _resolve()).getProfiles();
 
   @override
-  Stream<List<LearnerProfileEntity>> watchProfiles() async* {
-    yield* (await _resolve()).watchProfiles();
+  Stream<List<LearnerProfileEntity>> watchProfiles() {
+    final controller = StreamController<List<LearnerProfileEntity>>();
+    StreamSubscription<List<LearnerProfileEntity>>? profilesSubscription;
+    ProviderSubscription<AsyncValue<FirestoreLearnerProfileRepository?>>?
+    repositorySubscription;
+    var bindGeneration = 0;
+    var isClosed = false;
+
+    Future<void> bind(
+      AsyncValue<FirestoreLearnerProfileRepository?> state,
+    ) async {
+      final generation = ++bindGeneration;
+      await profilesSubscription?.cancel();
+      profilesSubscription = null;
+      if (isClosed || generation != bindGeneration) return;
+
+      if (state.hasError) {
+        controller.addError(state.error!, state.stackTrace);
+        return;
+      }
+      if (!state.hasValue || state.value == null) return;
+
+      profilesSubscription = state.value!.watchProfiles().listen(
+        controller.add,
+        onError: controller.addError,
+      );
+    }
+
+    controller.onListen = () {
+      repositorySubscription = _ref
+          .listen<AsyncValue<FirestoreLearnerProfileRepository?>>(
+            firestoreLearnerProfileRepositoryProvider,
+            (_, next) => unawaited(bind(next)),
+            fireImmediately: true,
+          );
+    };
+    controller.onCancel = () async {
+      isClosed = true;
+      await profilesSubscription?.cancel();
+      repositorySubscription?.close();
+      await controller.close();
+    };
+
+    return controller.stream;
   }
 
   @override
@@ -135,3 +206,9 @@ class FirestoreProfileRepositoryAdapter implements ProfileRepository {
     });
   }
 }
+
+/// Feature-owned readiness signal for profile presentation consumers.
+final profileRepositoryReadinessProvider = StreamProvider<bool>((ref) {
+  final adapter = FirestoreProfileRepositoryAdapter(ref: ref);
+  return adapter.watchReadiness();
+});

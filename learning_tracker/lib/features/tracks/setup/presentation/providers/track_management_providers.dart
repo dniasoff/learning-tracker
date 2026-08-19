@@ -10,6 +10,7 @@ import 'package:learning_tracker/features/tracks/setup/domain/repositories/profi
 
 /// Stream provider for active tracks for the current profile.
 final activeTracksProvider = StreamProvider<List<CurriculumTrackEntity>>((ref) {
+  ref.watch(curriculumTrackRepositoryReadinessProvider);
   final adapter = ref.watch(curriculumTrackRepositoryAdapterProvider);
   return adapter.watchActiveTracks();
 });

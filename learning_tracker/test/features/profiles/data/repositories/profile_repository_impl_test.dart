@@ -9,6 +9,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/data/firestore/account_firebase.dart';
 import 'package:learning_tracker/data/firestore/active_account_providers.dart';
+import 'package:learning_tracker/data/firestore/repository_providers.dart';
+import 'package:learning_tracker/data/repositories/firestore_learner_profile_repository.dart';
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:mocktail/mocktail.dart';
@@ -19,6 +21,17 @@ import '../../../../helpers/firestore_fixtures.dart';
 class _MockFirebaseApp extends Mock implements FirebaseApp {}
 
 class _MockFirebaseAuth extends Mock implements FirebaseAuth {}
+
+class _ReadinessNotifier extends Notifier<bool> {
+  @override
+  bool build() => false;
+
+  void setReady() => state = true;
+}
+
+final _readinessProvider = NotifierProvider<_ReadinessNotifier, bool>(
+  _ReadinessNotifier.new,
+);
 
 AccountFirebaseHandles _handles(FakeFirebaseFirestore firestore, String uid) {
   return AccountFirebaseHandles(
@@ -193,6 +206,41 @@ void main() {
         () => container.read(profileRepositoryProvider).getProfiles(),
         throwsA(isA<ProfileRepositoryNotReadyException>()),
       );
+    });
+
+    test('watchProfiles recovers when the account becomes ready', () async {
+      const uid = 'uid-profile-watch-recovery';
+      const profileId = '01J6Q2H4A8M7K3P9R5T6V8WXYA';
+      final firestore = createFakeFirestore(authenticatedUid: uid);
+      await seedProfile(
+        firestore,
+        uid: uid,
+        profileId: profileId,
+        displayName: 'Ready Learner',
+      );
+      final container = ProviderContainer(
+        retry: (_, __) => null,
+        overrides: [
+          firestoreLearnerProfileRepositoryProvider.overrideWith((ref) async {
+            if (!ref.watch(_readinessProvider)) return null;
+            return FirestoreLearnerProfileRepository(
+              firestore: firestore,
+              uid: uid,
+            );
+          }),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final profilesFuture = container
+          .read(profileRepositoryProvider)
+          .watchProfiles()
+          .first;
+      await Future<void>.delayed(Duration.zero);
+      container.read(_readinessProvider.notifier).setReady();
+
+      final profiles = await profilesFuture.timeout(const Duration(seconds: 1));
+      expect(profiles.single.displayName, 'Ready Learner');
     });
   });
 }

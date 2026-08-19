@@ -10,6 +10,7 @@ import 'package:learning_tracker/features/dashboard/domain/use_cases/compute_pac
 import 'package:learning_tracker/features/gamification/gamification.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_tier_filter.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
+import 'package:learning_tracker/features/profiles/data/repositories/profile_repository_impl.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 // Cross-feature deep import (Rule 2, DNI-386) — warn-only per
@@ -85,6 +86,7 @@ Future<ProfileMode> dashboardUserMode(Ref ref) async {
 /// Provider for list of active curricula IDs, scoped to active profile.
 @riverpod
 Future<List<CurriculumId>> dashboardActiveCurricula(Ref ref) async {
+  ref.watch(curriculumTrackRepositoryReadinessProvider);
   final repo = FirestoreCurriculumTrackRepositoryAdapter(ref: ref);
   final storageKeys = await repo.getActiveCurriculumIds();
   return storageKeys
@@ -96,6 +98,7 @@ Future<List<CurriculumId>> dashboardActiveCurricula(Ref ref) async {
 /// Stream provider for watching active curricula changes, scoped to active profile.
 @riverpod
 Stream<List<CurriculumId>> dashboardActiveCurriculaStream(Ref ref) {
+  ref.watch(curriculumTrackRepositoryReadinessProvider);
   final repo = FirestoreCurriculumTrackRepositoryAdapter(ref: ref);
   return repo.watchActiveCurriculumIds().map(
     (storageKeys) => storageKeys
@@ -204,6 +207,9 @@ Future<DateTime?> dashboardLastCompletion(
 /// streak).
 @riverpod
 Stream<({int currentStreak, int maxStreak})> dashboardStreak(Ref ref) async* {
+  ref.watch(activeProfileIdProvider);
+  ref.watch(profileRepositoryReadinessProvider);
+
   final stateProvider = ref.watch(streakStateProvider);
   yield* stateProvider.watch().map(
     (state) => (currentStreak: state.currentStreak, maxStreak: state.maxStreak),
@@ -442,6 +448,7 @@ final dashboardHasProgramEnrollmentProvider = FutureProvider.autoDispose
 /// Active (non-archived) profile tracks for the dashboard carousel.
 final dashboardActiveTracksStreamProvider =
     StreamProvider.autoDispose<List<CurriculumTrackEntity>>((ref) {
+      ref.watch(curriculumTrackRepositoryReadinessProvider);
       final repo = FirestoreCurriculumTrackRepositoryAdapter(ref: ref);
       return repo.watchActiveTracks();
     });

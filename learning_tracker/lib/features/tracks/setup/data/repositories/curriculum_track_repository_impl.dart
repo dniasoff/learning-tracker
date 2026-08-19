@@ -6,6 +6,8 @@
 /// class doc comment for what THIS file wraps).
 library;
 
+import 'dart:async';
+
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
@@ -77,13 +79,9 @@ class CurriculumTrackRepositoryNotReadyException implements Exception {
 /// - [watchTrack] / [watchAllTracks] / [watchActiveTracks] /
 ///   [watchActiveCurriculumIds] — the underlying provider is itself a
 ///   `FutureProvider` (account/profile resolution is async), so each stream
-///   method resolves it once via [_resolveOrNull] and then either forwards
-///   to the resolved repository's own stream or falls back to a single
-///   not-ready emission (`null`/`[]`) — there is no re-subscription if the
-///   active account/profile changes AFTER the stream is opened. Bookmarks
-///   and the other adapters in this wave have no stream methods to set a
-///   precedent for; this is this wave's first, and the limitation is
-///   flagged here rather than solved silently.
+///   remains subscribed to that provider and forwards the resolved
+///   repository's stream whenever the account/profile becomes ready or
+///   changes. A not-ready state produces no fabricated empty emission.
 ///
 /// ## Reorder-amnesty (`last_reorder_at`) — NOT wired here, and cannot be
 /// from this file
@@ -132,6 +130,33 @@ class FirestoreCurriculumTrackRepositoryAdapter {
   late final FirebaseFunctions _functions =
       _functionsOverride ?? FirebaseFunctions.instance;
 
+  /// Emits whether the active profile's Firestore track repository is ready.
+  ///
+  /// This is the feature-owned readiness seam for presentation providers.
+  /// Consumers must not depend on the raw repository-resolution provider in
+  /// `lib/data/firestore/`; this adapter is the boundary that owns that
+  /// dependency.
+  Stream<bool> watchReadiness() {
+    final controller = StreamController<bool>();
+    ProviderSubscription<AsyncValue<FirestoreCurriculumTrackRepository?>>?
+    repositorySubscription;
+
+    controller.onListen = () {
+      repositorySubscription = _ref
+          .listen<AsyncValue<FirestoreCurriculumTrackRepository?>>(
+            firestoreCurriculumTrackRepositoryProvider,
+            (_, next) => controller.add(next.hasValue && next.value != null),
+            fireImmediately: true,
+          );
+    };
+    controller.onCancel = () async {
+      repositorySubscription?.close();
+      await controller.close();
+    };
+
+    return controller.stream;
+  }
+
   /// Re-reads `firestoreCurriculumTrackRepositoryProvider`, resolving to
   /// `null` exactly when it does (no active account, or no active learner
   /// profile). See `FirestoreBookmarkRepositoryAdapter._resolveOrNull`'s doc
@@ -163,16 +188,10 @@ class FirestoreCurriculumTrackRepositoryAdapter {
   }
 
   /// Live updates for [curriculumId]'s track. See the class doc comment's
-  /// "Not-ready semantics" section for the one-shot-resolve limitation of
-  /// every `watch*` method here.
-  Stream<CurriculumTrackEntity?> watchTrack(CurriculumId curriculumId) async* {
-    final repo = await _resolveOrNull();
-    if (repo == null) {
-      yield null;
-      return;
-    }
-    yield* repo.watchTrack(curriculumId);
-  }
+  /// "Not-ready semantics" section for the re-subscription behavior shared
+  /// by every `watch*` method here.
+  Stream<CurriculumTrackEntity?> watchTrack(CurriculumId curriculumId) =>
+      _watchResolved((repo) => repo.watchTrack(curriculumId));
 
   /// `false` when not ready — matches
   /// `FirestoreCurriculumTrackRepository.isActive`'s own null-collapse.
@@ -190,14 +209,8 @@ class FirestoreCurriculumTrackRepositoryAdapter {
   }
 
   /// Live updates for [getAllTracks].
-  Stream<List<CurriculumTrackEntity>> watchAllTracks() async* {
-    final repo = await _resolveOrNull();
-    if (repo == null) {
-      yield const [];
-      return;
-    }
-    yield* repo.watchAllTracks();
-  }
+  Stream<List<CurriculumTrackEntity>> watchAllTracks() =>
+      _watchResolved((repo) => repo.watchAllTracks());
 
   /// Every ACTIVE track for this profile, sorted by `curriculumId`. `[]`
   /// when not ready.
@@ -208,14 +221,8 @@ class FirestoreCurriculumTrackRepositoryAdapter {
   }
 
   /// Live updates for [getActiveTracks].
-  Stream<List<CurriculumTrackEntity>> watchActiveTracks() async* {
-    final repo = await _resolveOrNull();
-    if (repo == null) {
-      yield const [];
-      return;
-    }
-    yield* repo.watchActiveTracks();
-  }
+  Stream<List<CurriculumTrackEntity>> watchActiveTracks() =>
+      _watchResolved((repo) => repo.watchActiveTracks());
 
   /// Curriculum-id projection of [getActiveTracks]. `[]` when not ready.
   Future<List<String>> getActiveCurriculumIds() async {
@@ -225,13 +232,58 @@ class FirestoreCurriculumTrackRepositoryAdapter {
   }
 
   /// Live updates for [getActiveCurriculumIds].
-  Stream<List<String>> watchActiveCurriculumIds() async* {
-    final repo = await _resolveOrNull();
-    if (repo == null) {
-      yield const [];
-      return;
+  Stream<List<String>> watchActiveCurriculumIds() =>
+      _watchResolved((repo) => repo.watchActiveCurriculumIds());
+
+  /// Keeps a stream alive across the asynchronous account/profile resolution
+  /// that supplies the Firestore repository. The old async* implementation
+  /// resolved once before its first yield; a null or error at that moment
+  /// completed the stream and made later readiness invisible to consumers.
+  Stream<T> _watchResolved<T>(
+    Stream<T> Function(FirestoreCurriculumTrackRepository repo) open,
+  ) {
+    final controller = StreamController<T>();
+    StreamSubscription<T>? repositoryStream;
+    ProviderSubscription<AsyncValue<FirestoreCurriculumTrackRepository?>>?
+    repositorySubscription;
+    var bindGeneration = 0;
+    var isClosed = false;
+
+    Future<void> bind(
+      AsyncValue<FirestoreCurriculumTrackRepository?> state,
+    ) async {
+      final generation = ++bindGeneration;
+      await repositoryStream?.cancel();
+      repositoryStream = null;
+      if (isClosed || generation != bindGeneration) return;
+
+      if (state.hasError) {
+        controller.addError(state.error!, state.stackTrace);
+        return;
+      }
+      if (!state.hasValue || state.value == null) return;
+
+      repositoryStream = open(
+        state.value!,
+      ).listen(controller.add, onError: controller.addError);
     }
-    yield* repo.watchActiveCurriculumIds();
+
+    controller.onListen = () {
+      repositorySubscription = _ref
+          .listen<AsyncValue<FirestoreCurriculumTrackRepository?>>(
+            firestoreCurriculumTrackRepositoryProvider,
+            (_, next) => unawaited(bind(next)),
+            fireImmediately: true,
+          );
+    };
+    controller.onCancel = () async {
+      isClosed = true;
+      await repositoryStream?.cancel();
+      repositorySubscription?.close();
+      await controller.close();
+    };
+
+    return controller.stream;
   }
 
   /// `0` when not ready.
@@ -311,3 +363,9 @@ class FirestoreCurriculumTrackRepositoryAdapter {
     await repo.resetPace(curriculumId);
   }
 }
+
+/// Feature-owned readiness signal for track presentation consumers.
+final curriculumTrackRepositoryReadinessProvider = StreamProvider<bool>((ref) {
+  final adapter = FirestoreCurriculumTrackRepositoryAdapter(ref: ref);
+  return adapter.watchReadiness();
+});

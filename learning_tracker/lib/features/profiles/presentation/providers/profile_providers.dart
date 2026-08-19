@@ -129,6 +129,7 @@ class AutoSelectedProfileId extends _$AutoSelectedProfileId {
 /// Profiles for the active account.
 @riverpod
 Future<List<LearnerProfileEntity>> profileList(Ref ref) async {
+  ref.watch(profileRepositoryReadinessProvider);
   final repo = ref.watch(profileRepositoryProvider);
   return repo.getProfiles();
 }
@@ -136,6 +137,7 @@ Future<List<LearnerProfileEntity>> profileList(Ref ref) async {
 /// Stream of profiles for the active account, for reactive UI.
 @riverpod
 Stream<List<LearnerProfileEntity>> profileListStream(Ref ref) {
+  ref.watch(profileRepositoryReadinessProvider);
   final repo = ref.watch(profileRepositoryProvider);
   return repo.watchProfiles();
 }

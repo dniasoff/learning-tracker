@@ -13,18 +13,8 @@
 /// **What these tests cannot see**: `firestore_curriculum_track_repository_
 /// test.dart` already documents `fake_cloud_firestore`'s general
 /// limitations (no `resource.data` rules evaluation, no delete method to
-/// test). This file only proves the adapter DELEGATES correctly (including
-/// its not-ready fallback values) — it does not re-prove the underlying
-/// repository's own Firestore behavior. The `watch*` methods' one-shot
-/// provider-resolution limitation (no re-subscription if the active
-/// account/profile changes mid-stream) is documented in the class doc
-/// comment, not exercised here — proving it would require simulating a
-/// provider-state change after a stream is already open, which adds
-/// significant harness complexity. `activeProfileDocIdProvider` IS now set
-/// in production (see `repository_providers.dart`'s library doc comment for
-/// the call sites), so this "provider-state change mid-stream" scenario is
-/// reachable in the real app; it remains an untested gap here, not a moot
-/// one.
+/// test). This file proves the adapter delegates correctly and covers the
+/// readiness transition that used to terminate its watch streams.
 library;
 
 import 'package:cloud_functions/cloud_functions.dart';
@@ -36,9 +26,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/data/firestore/account_firebase.dart';
 import 'package:learning_tracker/data/firestore/active_account_providers.dart';
-import 'package:learning_tracker/data/firestore/repository_providers.dart'
-    show activeProfileDocIdProvider;
+import 'package:learning_tracker/data/firestore/repository_providers.dart';
+import 'package:learning_tracker/data/repositories/firestore_curriculum_track_repository.dart';
 import 'package:learning_tracker/features/tracks/setup/data/repositories/curriculum_track_repository_impl.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 import 'package:mocktail/mocktail.dart';
 
 class MockFirebaseApp extends Mock implements FirebaseApp {}
@@ -46,6 +37,17 @@ class MockFirebaseApp extends Mock implements FirebaseApp {}
 class MockFirebaseAuthHandle extends Mock implements FirebaseAuth {}
 
 class MockFirebaseFunctions extends Mock implements FirebaseFunctions {}
+
+class _ReadinessNotifier extends Notifier<bool> {
+  @override
+  bool build() => false;
+
+  void setReady() => state = true;
+}
+
+final _readinessProvider = NotifierProvider<_ReadinessNotifier, bool>(
+  _ReadinessNotifier.new,
+);
 
 void main() {
   group('FirestoreCurriculumTrackRepositoryAdapter', () {
@@ -120,20 +122,25 @@ void main() {
         expect(await adapter.countActiveTracks(), 0);
       });
 
-      test(
-        'watchTrack / watchAllTracks emit a single not-ready value',
-        () async {
-          final container = ProviderContainer();
-          addTearDown(container.dispose);
-          final adapter = buildAdapter(container);
+      test('watch streams wait while the repository is not ready', () async {
+        final container = ProviderContainer(retry: (_, __) => null);
+        addTearDown(container.dispose);
+        final adapter = buildAdapter(container);
+        final trackEvents = <CurriculumTrackEntity?>[];
+        final allTrackEvents = <List<CurriculumTrackEntity>>[];
+        final trackSubscription = adapter
+            .watchTrack(CurriculumId.mishnayos)
+            .listen(trackEvents.add);
+        final allTracksSubscription = adapter.watchAllTracks().listen(
+          allTrackEvents.add,
+        );
 
-          expect(
-            await adapter.watchTrack(CurriculumId.mishnayos).first,
-            isNull,
-          );
-          expect(await adapter.watchAllTracks().first, isEmpty);
-        },
-      );
+        await pumpEventQueue();
+        expect(trackEvents, isEmpty);
+        expect(allTrackEvents, isEmpty);
+        await trackSubscription.cancel();
+        await allTracksSubscription.cancel();
+      });
 
       test(
         'activateTrack throws CurriculumTrackRepositoryNotReadyException',
@@ -227,6 +234,45 @@ void main() {
             .get();
         expect(doc.exists, isTrue);
       });
+
+      test(
+        'watchActiveTracks recovers when the profile becomes ready',
+        () async {
+          final readyContainer = ProviderContainer(
+            retry: (_, __) => null,
+            overrides: [
+              firestoreCurriculumTrackRepositoryProvider.overrideWith((
+                ref,
+              ) async {
+                if (!ref.watch(_readinessProvider)) return null;
+                return FirestoreCurriculumTrackRepository(
+                  firestore: firestore,
+                  uid: uid,
+                  profileId: profileDocId,
+                );
+              }),
+            ],
+          );
+          addTearDown(readyContainer.dispose);
+          final repository = FirestoreCurriculumTrackRepository(
+            firestore: firestore,
+            uid: uid,
+            profileId: profileDocId,
+          );
+          await repository.activateTrack(CurriculumId.mishnayos);
+          final readyAdapter = buildAdapter(readyContainer);
+
+          final tracksFuture = readyAdapter.watchActiveTracks().first;
+          await Future<void>.delayed(Duration.zero);
+          readyContainer.read(_readinessProvider.notifier).setReady();
+
+          final tracks = await tracksFuture.timeout(const Duration(seconds: 1));
+          expect(
+            tracks.map((track) => track.curriculumId),
+            contains(CurriculumId.mishnayos),
+          );
+        },
+      );
 
       test(
         'activateTrack then getTrack round-trips through Firestore',

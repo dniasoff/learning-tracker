@@ -9,6 +9,7 @@ import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
@@ -24,6 +25,7 @@ import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
     show authRepositoryProvider;
+import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
@@ -81,6 +83,7 @@ Widget _buildApp({
   int pendingCount = 0,
   Stream<int>? pendingStream,
   int pointsBalance = 0,
+  ProviderContainer? container,
 }) {
   final auth = _MockAuthRepository();
   when(() => auth.currentUser).thenReturn(user);
@@ -88,35 +91,38 @@ Widget _buildApp({
   return pumpApp(
     locale: locale,
     theme: theme,
-    retry: (_, __) => null,
-    overrides: [
-      authRepositoryProvider.overrideWithValue(auth),
-      activeProfileIdProvider.overrideWithValue(_profileId),
-      activeProfileDocIdProvider.overrideWith(
-        () => _FixedActiveProfileDocId(_profileId),
-      ),
-      activeAccountFirebaseProvider.overrideWith(
-        (ref) async => AccountFirebaseHandles(
-          app: _MockFirebaseApp(),
-          firestore: firestore,
-          auth: _MockFirebaseAuth(),
-          uid: _uid,
-        ),
-      ),
-      profileListStreamProvider.overrideWith(
-        (ref) => Stream.value([_childProfile()]),
-      ),
-      activeTutorPermissionsProvider.overrideWithValue(tutorPerms),
-      pendingRedemptionsCountProvider.overrideWith(
-        (ref) => pendingStream ?? Stream.value(pendingCount),
-      ),
-      activeProfilePointsBalanceProvider.overrideWith(
-        (ref) async => pointsBalance,
-      ),
-      connectivityServiceProvider.overrideWithValue(
-        _OnlineConnectivityGateway(),
-      ),
-    ],
+    retry: container == null ? (_, __) => null : null,
+    container: container,
+    overrides: container == null
+        ? [
+            authRepositoryProvider.overrideWithValue(auth),
+            activeProfileIdProvider.overrideWithValue(_profileId),
+            activeProfileDocIdProvider.overrideWith(
+              () => _FixedActiveProfileDocId(_profileId),
+            ),
+            activeAccountFirebaseProvider.overrideWith(
+              (ref) async => AccountFirebaseHandles(
+                app: _MockFirebaseApp(),
+                firestore: firestore,
+                auth: _MockFirebaseAuth(),
+                uid: _uid,
+              ),
+            ),
+            profileListStreamProvider.overrideWith(
+              (ref) => Stream.value([_childProfile()]),
+            ),
+            activeTutorPermissionsProvider.overrideWithValue(tutorPerms),
+            pendingRedemptionsCountProvider.overrideWith(
+              (ref) => pendingStream ?? Stream.value(pendingCount),
+            ),
+            activeProfilePointsBalanceProvider.overrideWith(
+              (ref) async => pointsBalance,
+            ),
+            connectivityServiceProvider.overrideWithValue(
+              _OnlineConnectivityGateway(),
+            ),
+          ]
+        : const [],
     child: StackRouterScope(
       controller: router,
       stateHash: 0,
@@ -329,6 +335,65 @@ void main() {
     await tester.enterText(find.widgetWithText(TextField, 'Amount'), '0');
     await tester.pump();
     expect(tester.widget<FilledButton>(apply).onPressed, isNull);
+    await _teardown(tester);
+  });
+
+  testWidgets('Adjust Points invalidates the dashboard points balance', (
+    tester,
+  ) async {
+    final auth = _MockAuthRepository();
+    when(() => auth.currentUser).thenReturn(null);
+    when(() => auth.reloadCurrentUser()).thenAnswer((_) async => null);
+    var dashboardReads = 0;
+    final container = ProviderContainer(
+      retry: (_, __) => null,
+      overrides: [
+        authRepositoryProvider.overrideWithValue(auth),
+        activeProfileIdProvider.overrideWithValue(_profileId),
+        activeProfileDocIdProvider.overrideWith(
+          () => _FixedActiveProfileDocId(_profileId),
+        ),
+        activeAccountFirebaseProvider.overrideWith(
+          (ref) async => AccountFirebaseHandles(
+            app: _MockFirebaseApp(),
+            firestore: firestore,
+            auth: _MockFirebaseAuth(),
+            uid: _uid,
+          ),
+        ),
+        profileListStreamProvider.overrideWith(
+          (ref) => Stream.value([_childProfile()]),
+        ),
+        activeTutorPermissionsProvider.overrideWithValue(null),
+        pendingRedemptionsCountProvider.overrideWith((ref) => Stream.value(0)),
+        connectivityServiceProvider.overrideWithValue(
+          _OnlineConnectivityGateway(),
+        ),
+        dashboardGlobalPointsProvider.overrideWith((ref) async {
+          dashboardReads++;
+          return dashboardReads == 1 ? 0 : 7;
+        }),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final initialPoints = await container.read(
+      dashboardGlobalPointsProvider.future,
+    );
+    expect(initialPoints, 0);
+    await tester.pumpWidget(
+      _buildApp(router: router, firestore: firestore, container: container),
+    );
+    await _settle(tester);
+    await _reveal(tester, find.text('Adjust Points'));
+    await tester.tap(find.text('Adjust Points'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.widgetWithText(TextField, 'Amount'), '7');
+    await tester.tap(find.widgetWithText(FilledButton, 'Apply'));
+    await tester.pumpAndSettle();
+
+    expect(await container.read(dashboardGlobalPointsProvider.future), 7);
+    expect(dashboardReads, 2);
     await _teardown(tester);
   });
 

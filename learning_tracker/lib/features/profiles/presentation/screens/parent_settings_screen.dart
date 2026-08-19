@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart';
+import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/gamification/data/repositories/firestore_points_balance_reader_adapter.dart';
 import 'package:learning_tracker/features/gamification/data/repositories/firestore_points_ledger_write_adapter.dart';
 import 'package:learning_tracker/features/gamification/data/repositories/reward_redemption_repository_impl.dart';
@@ -544,6 +545,7 @@ Future<void> _showAdjustPointsDialog(
   await writer.appendParentAdjustment(delta: delta, note: note);
   ref.invalidate(activeProfilePointsBalanceProvider);
   ref.invalidate(globalPointsProvider);
+  ref.invalidate(dashboardGlobalPointsProvider);
 
   amountController.dispose();
   noteController.dispose();
