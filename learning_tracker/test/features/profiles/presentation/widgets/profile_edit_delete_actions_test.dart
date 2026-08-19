@@ -2,6 +2,8 @@
 @Tags(['l1', 'profiles', 'offline_first', 'r_pr4', 'aud_profiles_02'])
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -21,6 +23,34 @@ import '../../../../helpers/pump_app.dart';
 class _MockFlutterSecureStorage extends Mock implements FlutterSecureStorage {}
 
 class _MockProfileRepository extends Mock implements ProfileRepository {}
+
+class _MutableProfileRepository extends _MockProfileRepository {
+  _MutableProfileRepository(this.profiles);
+
+  final List<LearnerProfileEntity> profiles;
+  final _updates = StreamController<List<LearnerProfileEntity>>.broadcast();
+
+  @override
+  Future<int> countProfiles() async => profiles.length;
+
+  @override
+  Future<List<LearnerProfileEntity>> getProfiles() async =>
+      List.unmodifiable(profiles);
+
+  @override
+  Stream<List<LearnerProfileEntity>> watchProfiles() async* {
+    yield List.unmodifiable(profiles);
+    yield* _updates.stream;
+  }
+
+  @override
+  Future<void> deleteProfile(String profileId, {bool allowLast = false}) async {
+    profiles.removeWhere((profile) => profile.profileId == profileId);
+    _updates.add(List.unmodifiable(profiles));
+  }
+
+  Future<void> dispose() => _updates.close();
+}
 
 _MockFlutterSecureStorage _createMockStorage() {
   final mock = _MockFlutterSecureStorage();
@@ -169,6 +199,86 @@ void main() {
 
       verify(() => repo.deleteProfile(deletedId, allowLast: false)).called(1);
       expect(container.read(selectedProfileIdProvider), remainingId);
+    });
+
+    testWidgets('delete failure is surfaced instead of silently completing', (
+      tester,
+    ) async {
+      final profile = _profile(
+        id: '01HDELETEFAILURE000000000000',
+        name: 'DeleteFailure',
+        mode: ProfileMode.child,
+      );
+      final repo = _MockProfileRepository();
+      when(() => repo.countProfiles()).thenAnswer((_) async => 2);
+      when(
+        () => repo.deleteProfile(any(), allowLast: any(named: 'allowLast')),
+      ).thenThrow(StateError('callable failed'));
+
+      await tester.pumpWidget(
+        pumpApp(
+          overrides: [profileRepositoryProvider.overrideWithValue(repo)],
+          child: _ActionButton(
+            label: 'Delete',
+            onPressed: (context, ref) =>
+                deleteProfileFlow(context, ref, profile),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Delete'));
+      await tester.pump();
+      await tester.tap(find.widgetWithText(TextButton, 'Delete'));
+      await tester.pump();
+
+      final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+      expect(
+        find.text(l10n.errorDeleteProfileRequiresInternet),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('successful delete removes the profile from the list state', (
+      tester,
+    ) async {
+      final deleted = _profile(
+        id: '01HDELETEFROMLIST00000000000',
+        name: 'ToDelete',
+        mode: ProfileMode.child,
+      );
+      final remaining = _profile(
+        id: '01HREMAININGLIST000000000000',
+        name: 'Remaining',
+        mode: ProfileMode.adult,
+      );
+      final repo = _MutableProfileRepository([deleted, remaining]);
+      addTearDown(repo.dispose);
+
+      await tester.pumpWidget(
+        pumpApp(
+          overrides: [
+            profileRepositoryProvider.overrideWithValue(repo),
+            selectedProfileIdProvider.overrideWith(
+              () => _FixedSelectedProfileId(remaining.profileId),
+            ),
+          ],
+          child: _ProfileListProbe(
+            onDelete: (context, ref) =>
+                deleteProfileFlow(context, ref, deleted),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(find.text('ToDelete'), findsOneWidget);
+
+      await tester.tap(find.text('Delete'));
+      await tester.pump();
+      await tester.tap(find.widgetWithText(TextButton, 'Delete'));
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.text('ToDelete'), findsNothing);
+      expect(find.text('Remaining'), findsOneWidget);
     });
   });
 
@@ -345,6 +455,42 @@ class _ActionButton extends StatelessWidget {
             child: Text(label),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _ProfileListProbe extends StatelessWidget {
+  const _ProfileListProbe({required this.onDelete});
+
+  final Future<void> Function(BuildContext, WidgetRef) onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Column(
+        children: [
+          Consumer(
+            builder: (context, ref, _) {
+              final profiles = ref.watch(profileListStreamProvider);
+              return profiles.when(
+                loading: () => const CircularProgressIndicator(),
+                error: (error, stackTrace) => Text('$error'),
+                data: (value) => Column(
+                  children: [
+                    for (final profile in value) Text(profile.displayName),
+                  ],
+                ),
+              );
+            },
+          ),
+          Consumer(
+            builder: (context, ref, _) => ElevatedButton(
+              onPressed: () => onDelete(context, ref),
+              child: const Text('Delete'),
+            ),
+          ),
+        ],
       ),
     );
   }

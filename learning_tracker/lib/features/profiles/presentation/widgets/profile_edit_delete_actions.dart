@@ -85,11 +85,21 @@ Future<void> deleteProfileFlow(
   LearnerProfileEntity profile,
 ) async {
   final repo = ref.read(profileRepositoryProvider);
-  final remaining = await repo.countProfiles();
-  final isLast = remaining <= 1;
+  final l10n = AppLocalizations.of(context)!;
+  late final bool isLast;
+  try {
+    final remaining = await repo.countProfiles();
+    isLast = remaining <= 1;
+  } catch (_) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.errorDeleteProfileRequiresInternet)),
+      );
+    }
+    return;
+  }
   if (!context.mounted) return;
 
-  final l10n = AppLocalizations.of(context)!;
   final confirmed = await showDialog<bool>(
     context: context,
     builder: (ctx) => AlertDialog(
@@ -127,7 +137,23 @@ Future<void> deleteProfileFlow(
   // persistence is enabled, account_firebase.dart) retries the call once
   // connectivity returns; no separate outbox is involved any more.
   final selectedId = ref.read(selectedProfileIdProvider);
-  await repo.deleteProfile(profile.profileId, allowLast: isLast);
+  try {
+    await repo.deleteProfile(profile.profileId, allowLast: isLast);
+  } catch (_) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.errorDeleteProfileRequiresInternet)),
+      );
+    }
+    return;
+  }
+
+  if (!context.mounted) return;
+  // Refresh both profile-list consumers as soon as the backend confirms the
+  // deletion. This keeps the deleted row from lingering if active-profile
+  // selection needs a second repository read below.
+  ref.invalidate(profileListProvider);
+  ref.invalidate(profileListStreamProvider);
 
   if (selectedId == profile.profileId) {
     // Bug B: deleting the ACTIVE profile previously cleared the selection to
@@ -146,8 +172,6 @@ Future<void> deleteProfileFlow(
       ref.read(selectedProfileIdProvider.notifier).clear();
     }
   }
-  ref.invalidate(profileListProvider);
-  ref.invalidate(profileListStreamProvider);
   // The active profile changed identity (or was cleared): re-resolve the
   // display-name/greeting source so the dashboard greeting updates immediately.
   ref.invalidate(activeProfileProvider);

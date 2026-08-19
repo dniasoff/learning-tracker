@@ -152,7 +152,8 @@ class FirestoreTrackLearningOrderRepository {
   Query<Map<String, dynamic>> _queryForCurriculum(CurriculumId curriculumId) =>
       _orders
           .where('curriculum_id', isEqualTo: curriculumId.storageKey)
-          .orderBy('user_sort_order');
+          .orderBy('user_sort_order')
+          .limit(500);
 
   /// Decodes one `track_learning_order` document.
   _RawOrderRow _decodeRawRow(Map<String, dynamic> data) {

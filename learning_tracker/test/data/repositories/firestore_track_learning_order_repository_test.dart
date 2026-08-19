@@ -219,6 +219,36 @@ void main() {
   });
 
   group('getSedarimOrder — content-item enrichment round-trip', () {
+    test('bounds the Firestore read to 500 documents', () async {
+      final items = [
+        for (var i = 0; i < 501; i++)
+          _seder(
+            curriculumId: CurriculumId.mishnayos.storageKey,
+            level1: 'Seder $i',
+            sefariaRef: 'Seder $i',
+            he: 'עברית $i',
+            en: 'Seder $i',
+            sortOrder: i,
+          ),
+      ];
+      for (var i = 0; i < items.length; i++) {
+        await rawDoc('row-$i').set({
+          'curriculum_id': CurriculumId.mishnayos.storageKey,
+          'sefaria_ref': items[i].sefariaRef,
+          'user_sort_order': i,
+        });
+      }
+
+      final result = await buildRepo().getSedarimOrder(
+        CurriculumId.mishnayos,
+        items,
+      );
+
+      expect(result, hasLength(500));
+      expect(result.first.sefariaRef, 'Seder 0');
+      expect(result.last.sefariaRef, 'Seder 499');
+    });
+
     test(
       'falls back to natural content order when no custom order is saved',
       () async {

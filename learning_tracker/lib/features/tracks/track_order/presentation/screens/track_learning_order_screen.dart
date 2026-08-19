@@ -9,6 +9,7 @@ import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
+import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/features/tracks/track_order/presentation/providers/track_learning_order_providers.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/domain/models/learning_order_item.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/presentation/widgets/draggable_order_item.dart';
@@ -53,6 +54,11 @@ class _TrackLearningOrderScreenState
     final isLoading = sedarimAsync.isLoading || masechtosAsync.isLoading;
     final terms = domainTermLabels(ref);
     final variant = ref.watch(currentTransliterationVariantProvider);
+    final failedOrder = sedarimAsync.hasError
+        ? sedarimAsync
+        : masechtosAsync.hasError
+        ? masechtosAsync
+        : null;
 
     return Scaffold(
       appBar: AppBar(
@@ -71,6 +77,15 @@ class _TrackLearningOrderScreenState
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
+          : failedOrder != null
+          ? AppErrorView(
+              error: failedOrder.error!,
+              stackTrace: failedOrder.stackTrace,
+              onRetry: () {
+                ref.invalidate(trackSedarimOrderProvider(curriculumId));
+                ref.invalidate(trackMasechtosOrderProvider(curriculumId));
+              },
+            )
           : CustomScrollView(
               slivers: [
                 if (_localSedarim != null && _localSedarim!.isNotEmpty) ...[
