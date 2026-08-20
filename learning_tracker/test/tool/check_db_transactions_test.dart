@@ -8,6 +8,13 @@
 // broken fixture then passes clean" evidence, captured as a durable
 // regression test rather than a one-off manual run.
 
+@Tags(['serial-tools'])
+// serial-tools: this test writes/deletes a fixture under learning_tracker/lib/
+// while its checker recursively walks that same tree. It contends with the
+// other real-lib fixture tests under the parallel main lane; run it through
+// `make test-serial-tools` with --concurrency=1.
+library;
+
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';

@@ -20,6 +20,13 @@
 // (same crash-safety note the story flags for this exact fixture-in-lib/
 // pattern).
 
+@Tags(['serial-tools'])
+// serial-tools: this test writes/deletes a fixture under learning_tracker/lib/
+// while its checker recursively walks that same tree. It contends with the
+// other real-lib fixture tests under the parallel main lane; run it through
+// `make test-serial-tools` with --concurrency=1.
+library;
+
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
