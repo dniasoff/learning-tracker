@@ -1,0 +1,1763 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>One Corpus, Three Sources</title>
+<style>
+:root{
+  --bg:#f5efe3;
+  --bg-2:#fffdf8;
+  --bg-3:#ece3d2;
+  --bg-deep:#241d16;
+  --ink:#241d16;
+  --ink-2:#57493a;
+  --ink-3:#8a7a65;
+  --rule:#dcd0ba;
+  --rule-soft:#e8dfcd;
+  --wine:#7c2d3a;
+  --wine-bg:#f3e4e2;
+  --gold:#8f6b1f;
+  --gold-bg:#f4ead2;
+  --gold-line:#c9a44c;
+  --teal:#2c5b58;
+  --teal-bg:#e2ebe7;
+  --slate:#3f4a5a;
+  --shadow:0 1px 2px rgba(60,45,25,.06), 0 8px 24px -16px rgba(60,45,25,.30);
+  --shadow-lift:0 2px 4px rgba(60,45,25,.07), 0 18px 40px -22px rgba(60,45,25,.38);
+  --serif:"Iowan Old Style","Palatino Linotype","Book Antiqua",Palatino,Georgia,"Times New Roman",serif;
+  --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --deep-ink:#f0e7d6;
+  --deep-ink-2:#bcab90;
+  --deep-rule:#4a3f30;
+  --deep-gold:#dcb464;
+  --deep-wine:#e2a2aa;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#15120e;
+    --bg-2:#1d1913;
+    --bg-3:#252017;
+    --bg-deep:#0e0c09;
+    --ink:#ede3d1;
+    --ink-2:#bdae95;
+    --ink-3:#8d7e68;
+    --rule:#3a3227;
+    --rule-soft:#2c261d;
+    --wine:#e5a3ab;
+    --wine-bg:#33211f;
+    --gold:#dfb75f;
+    --gold-bg:#2e2617;
+    --gold-line:#8a6d2c;
+    --teal:#8bc4bb;
+    --teal-bg:#1b2926;
+    --slate:#9fb0c4;
+    --shadow:0 1px 2px rgba(0,0,0,.5), 0 10px 26px -18px rgba(0,0,0,.8);
+    --shadow-lift:0 2px 6px rgba(0,0,0,.55), 0 20px 44px -24px rgba(0,0,0,.9);
+    --deep-ink:#ede3d1;
+    --deep-ink-2:#b3a68d;
+    --deep-rule:#3a3227;
+    --deep-gold:#dfb75f;
+    --deep-wine:#e5a3ab;
+  }
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--ink);
+  font-family:var(--serif);
+  font-size:17px;
+  line-height:1.62;
+  overflow-x:hidden;
+}
+img,svg{max-width:100%}
+svg{display:block;height:auto}
+.wrap{max-width:66rem;margin:0 auto;padding:0 1.4rem}
+.narrow{max-width:44rem}
+section{padding:3.2rem 0}
+section + section{border-top:1px solid var(--rule-soft)}
+h1,h2,h3,h4{font-weight:600;line-height:1.2;margin:0}
+p{margin:0 0 1rem}
+a{color:var(--wine)}
+.kicker{
+  font-family:var(--sans);
+  font-size:.68rem;
+  letter-spacing:.16em;
+  text-transform:uppercase;
+  color:var(--ink-3);
+  margin:0 0 .7rem;
+}
+h2{font-size:clamp(1.5rem,3.4vw,2.05rem);letter-spacing:-.01em;margin-bottom:.5rem}
+h2 + .lede{color:var(--ink-2);font-size:1.05rem;max-width:44rem;margin-bottom:2rem}
+h3{font-size:1.12rem;margin-bottom:.4rem}
+.rule-gold{width:3.2rem;height:2px;background:var(--gold-line);margin:0 0 1.4rem}
+.small{font-size:.9rem}
+.muted{color:var(--ink-2)}
+.faint{color:var(--ink-3)}
+.sans{font-family:var(--sans)}
+.caption{font-family:var(--sans);font-size:.8rem;line-height:1.5;color:var(--ink-3);margin-top:.7rem}
+.scroll-x{overflow-x:auto;-webkit-overflow-scrolling:touch}
+
+/* ---------- header ---------- */
+header.hero{
+  padding:3.4rem 0 2.6rem;
+  background:
+    radial-gradient(120% 90% at 50% -20%, var(--gold-bg) 0%, transparent 62%);
+  border-bottom:1px solid var(--rule);
+}
+.bsd{font-family:var(--serif);font-size:.8rem;color:var(--ink-3);text-align:right;margin-bottom:1.6rem}
+h1{
+  font-size:clamp(2.1rem,6.4vw,3.5rem);
+  letter-spacing:-.02em;
+  line-height:1.06;
+  margin-bottom:.9rem;
+}
+h1 .and{color:var(--gold);font-style:italic}
+.hero .sub{font-size:1.12rem;color:var(--ink-2);max-width:40rem}
+.hero .meta{
+  font-family:var(--sans);font-size:.74rem;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--ink-3);margin-bottom:1.5rem;
+}
+.scale{
+  display:flex;flex-wrap:wrap;gap:1px;margin-top:2.2rem;
+  background:var(--rule);border:1px solid var(--rule);border-radius:3px;overflow:hidden;
+}
+.scale div{flex:1 1 8rem;background:var(--bg-2);padding:.85rem 1rem}
+.scale b{display:block;font-size:1.35rem;letter-spacing:-.01em}
+.scale span{font-family:var(--sans);font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3)}
+
+/* ---------- generic blocks ---------- */
+.card{
+  background:var(--bg-2);border:1px solid var(--rule);border-radius:4px;
+  padding:1.3rem 1.4rem;box-shadow:var(--shadow);
+}
+.grid{display:grid;gap:1.1rem}
+.g2{grid-template-columns:repeat(auto-fit,minmax(19rem,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(15rem,1fr))}
+.tag{
+  display:inline-block;font-family:var(--sans);font-size:.63rem;letter-spacing:.13em;
+  text-transform:uppercase;padding:.2rem .5rem;border-radius:2px;vertical-align:.12em;
+}
+.tag.user{background:var(--wine-bg);color:var(--wine)}
+.tag.coach{background:var(--teal-bg);color:var(--teal)}
+.tag.gold{background:var(--gold-bg);color:var(--gold)}
+blockquote{
+  margin:0 0 .8rem;padding:.1rem 0 .1rem 1rem;border-left:2px solid var(--wine);
+  font-style:italic;color:var(--ink);
+}
+blockquote.coach{border-left-color:var(--teal)}
+blockquote cite{
+  display:block;font-style:normal;font-family:var(--sans);font-size:.7rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);margin-top:.4rem;
+}
+
+/* ---------- timeline of the session ---------- */
+.beats{list-style:none;margin:0;padding:0;position:relative}
+.beats::before{content:"";position:absolute;left:.44rem;top:.6rem;bottom:.6rem;width:1px;background:var(--rule)}
+.beats li{position:relative;padding:0 0 1.35rem 2rem}
+.beats li::before{
+  content:"";position:absolute;left:0;top:.52rem;width:.9rem;height:.9rem;border-radius:50%;
+  background:var(--bg);border:2px solid var(--teal);
+}
+.beats li.u::before{border-color:var(--wine);background:var(--wine)}
+.beats li.u.hollow::before{background:var(--bg)}
+.beats h4{font-size:1rem;margin-bottom:.15rem}
+.beats p{margin:0;color:var(--ink-2);font-size:.95rem}
+
+/* ---------- reversals ---------- */
+.rev{display:grid;gap:0;border:1px solid var(--rule);border-radius:4px;overflow:hidden;background:var(--bg-2);box-shadow:var(--shadow)}
+.rev .row{display:grid;grid-template-columns:1fr;gap:0;border-bottom:1px solid var(--rule-soft)}
+.rev .row:last-child{border-bottom:0}
+@media(min-width:52rem){.rev .row{grid-template-columns:1.05fr 1.15fr .95fr}}
+.rev .cell{padding:1rem 1.15rem;border-bottom:1px dashed var(--rule-soft)}
+@media(min-width:52rem){.rev .cell{border-bottom:0;border-right:1px dashed var(--rule-soft)}
+.rev .cell:last-child{border-right:0}}
+.rev .cell:last-child{border-bottom:0}
+.rev .lab{font-family:var(--sans);font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);margin-bottom:.3rem;display:block}
+.rev .struck{color:var(--ink-3);text-decoration:line-through;text-decoration-thickness:1px}
+.rev .stands{color:var(--ink)}
+.rev .cell.out{background:var(--gold-bg)}
+
+/* ---------- equation ---------- */
+.eqwrap{background:var(--bg-2);border:1px solid var(--rule);border-radius:4px;box-shadow:var(--shadow-lift);padding:2rem 1.4rem 1.4rem}
+.eq{display:flex;align-items:center;justify-content:center;gap:1rem;min-width:34rem;padding:.4rem 0 1rem;font-size:clamp(.95rem,1.7vw,1.18rem)}
+.eq .lhs{font-style:italic;white-space:nowrap}
+.eq .op{color:var(--ink-3)}
+.frac{display:inline-flex;flex-direction:column;align-items:center;text-align:center}
+.frac .num{padding:0 .8rem .45rem;border-bottom:1.5px solid var(--ink);white-space:nowrap}
+.frac .den{padding:.45rem .8rem 0;white-space:nowrap}
+.t-rem{color:var(--wine)}
+.t-con{color:var(--gold)}
+.t-den{color:var(--teal)}
+.eqkey{display:grid;gap:.9rem;grid-template-columns:repeat(auto-fit,minmax(13rem,1fr));margin-top:.4rem;border-top:1px solid var(--rule-soft);padding-top:1.1rem}
+.eqkey div{font-size:.9rem;color:var(--ink-2)}
+.eqkey b{display:block;font-family:var(--sans);font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;margin-bottom:.2rem}
+.bar-demo{margin-top:1.4rem}
+.bar-row{display:flex;align-items:center;gap:.8rem;margin-bottom:.6rem;font-size:.92rem}
+.bar-row .lab{flex:0 0 11rem;color:var(--ink-2);font-family:var(--sans);font-size:.78rem}
+.bar-track{flex:1;height:1.5rem;background:var(--bg-3);border-radius:2px;position:relative;min-width:6rem}
+.bar-fill{position:absolute;inset:0 auto 0 0;border-radius:2px}
+.bar-fill.hi{background:var(--wine)}
+.bar-fill.lo{background:var(--teal)}
+.bar-row .val{flex:0 0 5.2rem;text-align:right;font-variant-numeric:tabular-nums}
+
+/* ---------- principles ---------- */
+.prin{display:grid;gap:1px;background:var(--rule);border:1px solid var(--rule);border-radius:4px;overflow:hidden;grid-template-columns:repeat(auto-fit,minmax(17rem,1fr))}
+.prin article{background:var(--bg-2);padding:1.2rem 1.25rem}
+.prin .n{font-family:var(--sans);font-size:.66rem;letter-spacing:.14em;color:var(--gold);margin-bottom:.45rem}
+.prin h3{font-size:1.02rem;margin-bottom:.35rem}
+.prin p{margin:0;font-size:.93rem;color:var(--ink-2)}
+
+/* ---------- ui sketches ---------- */
+.screen{
+  background:var(--bg-2);border:1px solid var(--rule);border-radius:10px;
+  box-shadow:var(--shadow-lift);overflow:hidden;font-family:var(--sans);
+}
+.screen .bar{
+  background:var(--bg-3);border-bottom:1px solid var(--rule);padding:.55rem .9rem;
+  font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);
+  display:flex;justify-content:space-between;align-items:center;
+}
+.screen .body{padding:1rem .95rem 1.1rem}
+.field{margin-bottom:.85rem}
+.field label{display:block;font-size:.68rem;letter-spacing:.11em;text-transform:uppercase;color:var(--ink-3);margin-bottom:.3rem}
+.input{
+  border:1px solid var(--rule);border-radius:3px;background:var(--bg);padding:.5rem .6rem;
+  font-size:.92rem;color:var(--ink);display:flex;justify-content:space-between;align-items:center;gap:.5rem;
+}
+.input.ghost{color:var(--ink-3)}
+.input .chev{color:var(--ink-3);font-size:.8rem}
+.hint{font-size:.72rem;color:var(--ink-3);margin-top:.28rem;font-style:italic}
+.checkline{display:flex;align-items:center;gap:.5rem;font-size:.9rem;margin:.1rem 0 .3rem}
+.cbox{width:.95rem;height:.95rem;border:1.5px solid var(--ink-3);border-radius:2px;display:inline-flex;align-items:center;justify-content:center;font-size:.7rem;color:var(--bg-2);flex:0 0 auto}
+.cbox.on{background:var(--wine);border-color:var(--wine);color:#fff}
+.picklist{border:1px solid var(--rule);border-radius:3px;overflow:hidden}
+.picklist div{padding:.44rem .6rem;font-size:.88rem;border-bottom:1px solid var(--rule-soft);display:flex;justify-content:space-between}
+.picklist div:last-child{border-bottom:0}
+.picklist .disabled{color:var(--ink-3);background:var(--bg-3)}
+.picklist .sel{background:var(--gold-bg);color:var(--ink)}
+.btnrow{display:flex;gap:.5rem;margin-top:.9rem}
+.btn{font-family:var(--sans);font-size:.8rem;padding:.42rem .8rem;border-radius:3px;border:1px solid var(--wine);color:var(--wine);background:transparent}
+.btn.solid{background:var(--wine);color:#fff8f4;border-color:var(--wine)}
+@media (prefers-color-scheme: dark){.btn.solid{color:#241014}}
+.btn.mini{font-size:.72rem;padding:.28rem .55rem}
+.btn.dead{border-color:var(--rule);color:var(--ink-3)}
+
+.tasklist{border:1px solid var(--rule-soft);border-radius:3px;overflow:hidden;margin-bottom:1.15rem}
+.tasklist .t{display:flex;align-items:center;gap:.6rem;padding:.55rem .7rem;border-bottom:1px solid var(--rule-soft);font-size:.9rem}
+.tasklist .t:last-child{border-bottom:0}
+.secthead{font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);margin:0 0 .45rem;display:flex;justify-content:space-between}
+.trow{border:1px solid var(--rule-soft);border-radius:3px;padding:.6rem .7rem;margin-bottom:.55rem;background:var(--bg)}
+.trow .top{display:flex;justify-content:space-between;align-items:baseline;gap:.6rem;font-size:.92rem}
+.trow .pos{color:var(--ink-2);font-size:.82rem}
+.mini-track{height:.34rem;background:var(--bg-3);border-radius:2px;margin:.45rem 0 .5rem;position:relative;overflow:hidden}
+.mini-fill{position:absolute;inset:0 auto 0 0;background:var(--teal)}
+.mini-fill.w{background:var(--gold-line)}
+
+/* ---------- shabbos ---------- */
+.deep{
+  background:var(--bg-deep);color:var(--deep-ink);
+  border-top:1px solid var(--deep-rule);border-bottom:1px solid var(--deep-rule);
+}
+.deep h2{color:var(--deep-ink)}
+.deep .lede,.deep p{color:var(--deep-ink-2)}
+.deep .kicker{color:var(--deep-gold)}
+.deep .rule-gold{background:var(--deep-gold)}
+.deep .card{background:rgba(255,255,255,.045);border-color:var(--deep-rule);box-shadow:none;color:var(--deep-ink)}
+.deep .card h3{color:var(--deep-ink)}
+.deep .card p{color:var(--deep-ink-2)}
+.deep blockquote{border-left-color:var(--deep-wine);color:var(--deep-ink)}
+.deep blockquote cite{color:var(--deep-ink-2)}
+.deep .caption{color:var(--deep-ink-2)}
+.deep .screen{background:rgba(255,255,255,.05);border-color:var(--deep-rule);color:var(--deep-ink)}
+.deep .screen .bar{background:rgba(255,255,255,.05);border-color:var(--deep-rule);color:var(--deep-ink-2)}
+.deep .screen .tasklist,.deep .screen .trow{border-color:var(--deep-rule);background:transparent}
+.deep .screen .tasklist .t{border-color:var(--deep-rule)}
+.deep .secthead{color:var(--deep-ink-2)}
+.deep .btn.dead{border-color:var(--deep-rule);color:var(--deep-ink-2)}
+.deep .btn.solid{background:var(--deep-gold);color:#241d16;border-color:var(--deep-gold)}
+.deep .hint{color:var(--deep-ink-2)}
+
+/* ---------- synthesis ---------- */
+.synth{display:grid;gap:1.1rem}
+.synth article{
+  display:grid;grid-template-columns:auto 1fr;gap:1.1rem;align-items:start;
+  background:var(--bg-2);border:1px solid var(--rule);border-left:3px solid var(--gold-line);
+  border-radius:4px;padding:1.35rem 1.4rem;box-shadow:var(--shadow);
+}
+.synth .num{
+  font-size:3.1rem;line-height:.8;color:var(--gold);font-variant-numeric:lining-nums;
+  opacity:.85;min-width:2rem;
+}
+.synth h3{font-size:1.16rem;margin-bottom:.4rem;letter-spacing:-.005em}
+.synth p{margin:0 0 .55rem;color:var(--ink-2)}
+.synth p:last-child{margin-bottom:0}
+
+/* ---------- lists ---------- */
+.checklist{list-style:none;margin:0;padding:0}
+.checklist li{position:relative;padding:0 0 .55rem 1.5rem;font-size:.95rem;color:var(--ink-2)}
+.checklist li::before{content:"";position:absolute;left:0;top:.55em;width:.42rem;height:.42rem;background:var(--gold-line);border-radius:1px}
+.checklist li b{color:var(--ink);font-weight:600}
+.qlist{list-style:none;margin:0;padding:0}
+.qlist li{padding:.85rem 0;border-bottom:1px solid var(--rule-soft);display:grid;grid-template-columns:auto 1fr;gap:.9rem;align-items:start}
+.qlist li:last-child{border-bottom:0}
+.qmark{font-size:1.3rem;color:var(--gold);line-height:1}
+.qlist p{margin:0;font-size:.95rem;color:var(--ink-2)}
+.qlist b{color:var(--ink)}
+
+/* ---------- attribution ---------- */
+.dots{display:flex;flex-wrap:wrap;gap:4px;margin:.4rem 0 1.1rem}
+.dots span{width:11px;height:11px;border-radius:2px;display:block}
+.dots .u{background:var(--wine)}
+.dots .c{background:var(--teal);opacity:.42}
+.dots .e{background:var(--gold-line)}
+.legend{display:flex;flex-wrap:wrap;gap:1.2rem;font-family:var(--sans);font-size:.76rem;color:var(--ink-2)}
+.legend i{width:10px;height:10px;border-radius:2px;display:inline-block;margin-right:.4rem;vertical-align:.02em}
+.ledger{border-top:1px solid var(--rule);margin-top:1.8rem}
+.ledger .item{border-bottom:1px solid var(--rule-soft);padding:1rem 0;display:grid;gap:.3rem}
+.ledger .what{font-family:var(--sans);font-size:.68rem;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-3)}
+.ledger .said{font-style:italic;border-left:2px solid var(--wine);padding-left:.85rem;color:var(--ink)}
+.ledger .eff{font-size:.9rem;color:var(--ink-2)}
+
+/* ---------- footer ---------- */
+footer{padding:3.4rem 0 4rem;text-align:center;border-top:1px solid var(--rule)}
+footer .he{font-size:1.5rem;color:var(--gold);margin-bottom:.6rem}
+footer p{color:var(--ink-2);max-width:34rem;margin:0 auto .7rem}
+footer .src{font-family:var(--sans);font-size:.72rem;color:var(--ink-3);margin-top:1.6rem}
+
+/* ---------- svg helpers ---------- */
+.figure{background:var(--bg-2);border:1px solid var(--rule);border-radius:4px;padding:1.3rem 1.2rem 1rem;box-shadow:var(--shadow)}
+.figure h3{margin-bottom:.2rem}
+.figure .sub{font-size:.92rem;color:var(--ink-2);margin-bottom:1rem}
+.svg-min{min-width:36rem}
+.svg-min-wide{min-width:44rem}
+text{font-family:var(--sans)}
+.sv-lab{font-size:11px;fill:var(--ink-2)}
+.sv-lab-s{font-size:9.5px;fill:var(--ink-3)}
+.sv-head{font-size:12px;fill:var(--ink);font-weight:600}
+.sv-num{font-size:11px;fill:var(--ink-2);font-variant-numeric:tabular-nums}
+
+/* ---------- deep-panel overrides ---------- */
+.deep .figure{background:rgba(255,255,255,.045);border-color:var(--deep-rule);box-shadow:none;color:var(--deep-ink)}
+.deep .figure h3{color:var(--deep-ink)}
+.deep .figure .sub{color:var(--deep-ink-2)}
+.deep .sv-lab,.deep .sv-lab-s{fill:var(--deep-ink-2)}
+.deep .sv-head{fill:var(--deep-ink)}
+.deep .tasklist .t{color:var(--deep-ink)}
+.deep .cbox{border-color:var(--deep-ink-2)}
+.deep .small{color:var(--deep-ink-2)}
+.deep .checklist li{color:var(--deep-ink-2)}
+.deep .checklist li b{color:var(--deep-ink)}
+.deep .checklist li::before{background:var(--deep-gold)}
+.deep .tag.gold{background:rgba(223,183,95,.16);color:var(--deep-gold)}
+.deep .btn{border-color:var(--deep-gold);color:var(--deep-gold)}
+.deep .secthead{color:var(--deep-ink-2)}
+.deep .trow{border-color:var(--deep-rule);background:transparent}
+.deep .narrow b{color:var(--deep-ink)}
+section.climax{background:linear-gradient(180deg,var(--gold-bg) 0%, transparent 60%)}
+
+@media (max-width:36rem){
+  .eq{min-width:0;flex-wrap:wrap;gap:.3rem .6rem;justify-content:flex-start}
+  .eq .frac{flex:1 1 100%}
+  .frac .num,.frac .den{white-space:normal}
+  .bar-row{flex-wrap:wrap;gap:.5rem}
+  .bar-row .lab{flex:1 1 100%}
+  .bar-row .val{flex:0 0 auto;text-align:left}
+  .eqkey{grid-template-columns:1fr}
+  .synth article{grid-template-columns:1fr;gap:.4rem}
+  .synth .num{font-size:2.2rem}
+  section{padding:2.4rem 0}
+}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="bsd" dir="rtl" lang="he">בס״ד</div>
+    <p class="meta">Learning Tracker &nbsp;·&nbsp; design session &nbsp;·&nbsp; 24 August 2026</p>
+    <h1>One corpus,<br><span class="and">three</span> sources.</h1>
+    <p class="sub">This morning Daniel set the app up for his son for the first time. The son is going for all of
+    Mishnayos by his bar mitzvah. By the evening it was obvious the app believed something about his life that
+    was not true — so we spent the evening designing the part that makes it true.</p>
+    <div class="scale">
+      <div><b>6</b><span>sedarim</span></div>
+      <div><b>63</b><span>masechtos</span></div>
+      <div><b>~4,192</b><span>mishnayos</span></div>
+      <div><b>3</b><span>sources feeding one goal</span></div>
+      <div><b>1</b><span>deadline</span></div>
+    </div>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <p class="kicker">Where it started</p>
+    <h2>The app assumed a straight line. His life is a confluence.</h2>
+    <div class="rule-gold"></div>
+    <div class="narrow">
+      <blockquote>
+        THE BIG ONE: app assumes one curriculum -&gt; one track -&gt; one plan -&gt; one goal. Reality is one corpus
+        (all Mishnayos) fed by three sources: Home (self-study, goal-bearing, scheduled), Rebbe (own masechta, no
+        goal, as-and-when), School (own set, no goal, as-and-when). All accumulate to the same completion.
+        <cite>Daniel — the session's first substantive entry</cite>
+      </blockquote>
+      <p>Everything that followed is a consequence of that one sentence. The corpus is shared; the goal is single;
+      the ways ground gets covered are three, and two of them nobody at home controls. The coach's first useful move
+      was to say what rebbe and school are <em>not</em>: they are not tracks, because a track implies a plan. They are
+      <b>attribution sources</b> posting completions against one shared corpus, and exactly one track carries the goal
+      and does the forecasting.</p>
+    </div>
+
+    <div class="figure" style="margin-top:1.8rem">
+      <div class="scroll-x">
+        <svg viewBox="0 0 920 320" role="img" aria-label="Left: a single chain of curriculum, track, plan, goal. Right: home, rebbe and school all feeding one corpus of all Mishnayos." class="svg-min-wide">
+          <defs>
+            <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--ink-3)"/>
+            </marker>
+            <marker id="arg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--gold-line)"/>
+            </marker>
+          </defs>
+
+          <text x="14" y="16" class="sv-head">What the app assumed</text>
+          <g fill="var(--bg-3)" stroke="var(--rule)">
+            <rect x="14" y="44" width="200" height="40" rx="3"/>
+            <rect x="14" y="112" width="200" height="40" rx="3"/>
+            <rect x="14" y="180" width="200" height="40" rx="3"/>
+            <rect x="14" y="248" width="200" height="40" rx="3"/>
+          </g>
+          <g class="sv-lab" text-anchor="middle" fill="var(--ink-2)">
+            <text x="114" y="69">one curriculum</text>
+            <text x="114" y="137">one track</text>
+            <text x="114" y="205">one plan</text>
+            <text x="114" y="273">one goal</text>
+          </g>
+          <g stroke="var(--ink-3)" stroke-width="1.2" marker-end="url(#ar)">
+            <line x1="114" y1="84" x2="114" y2="106"/>
+            <line x1="114" y1="152" x2="114" y2="174"/>
+            <line x1="114" y1="220" x2="114" y2="242"/>
+          </g>
+
+          <line x1="278" y1="10" x2="278" y2="310" stroke="var(--rule)" stroke-dasharray="3 5"/>
+
+          <text x="350" y="16" class="sv-head">What his life actually is</text>
+
+          <g>
+            <rect x="350" y="44" width="186" height="56" rx="3" fill="var(--wine-bg)" stroke="var(--wine)" stroke-opacity=".45"/>
+            <text x="364" y="66" class="sv-head" fill="var(--wine)">Home</text>
+            <text x="364" y="82" class="sv-lab-s">self-study · scheduled</text>
+            <text x="364" y="94" class="sv-lab-s">carries the goal</text>
+
+            <rect x="350" y="132" width="186" height="56" rx="3" fill="var(--gold-bg)" stroke="var(--gold-line)" stroke-opacity=".6"/>
+            <text x="364" y="154" class="sv-head" fill="var(--gold)">Rebbe</text>
+            <text x="364" y="170" class="sv-lab-s">own masechta · no goal</text>
+            <text x="364" y="182" class="sv-lab-s">as-and-when</text>
+
+            <rect x="350" y="220" width="186" height="56" rx="3" fill="var(--teal-bg)" stroke="var(--teal)" stroke-opacity=".45"/>
+            <text x="364" y="242" class="sv-head" fill="var(--teal)">School</text>
+            <text x="364" y="258" class="sv-lab-s">own set · no goal</text>
+            <text x="364" y="270" class="sv-lab-s">as-and-when</text>
+          </g>
+
+          <g fill="none" stroke-width="1.6">
+            <path d="M536,72 C 614,72 622,160 694,160" stroke="var(--wine)" stroke-opacity=".7" marker-end="url(#ar)"/>
+            <path d="M536,160 L694,160" stroke="var(--gold-line)" marker-end="url(#ar)"/>
+            <path d="M536,248 C 614,248 622,160 694,160" stroke="var(--teal)" stroke-opacity=".7" marker-end="url(#ar)"/>
+          </g>
+
+          <rect x="700" y="30" width="58" height="260" rx="3" fill="var(--bg)" stroke="var(--rule)"/>
+          <rect x="700" y="275" width="58" height="15" fill="var(--teal)" fill-opacity=".75"/>
+          <rect x="700" y="263" width="58" height="12" fill="var(--gold-line)" fill-opacity=".85"/>
+          <rect x="700" y="233" width="58" height="30" fill="var(--wine)" fill-opacity=".8"/>
+          <line x1="694" y1="233" x2="764" y2="233" stroke="var(--ink-3)" stroke-dasharray="2 3"/>
+          <line x1="694" y1="30" x2="790" y2="30" stroke="var(--gold-line)" stroke-dasharray="4 4"/>
+
+          <text x="772" y="26" class="sv-lab" fill="var(--gold)">siyum</text>
+          <text x="772" y="150" class="sv-head">one corpus</text>
+          <text x="772" y="168" class="sv-lab">all Mishnayos</text>
+          <text x="772" y="184" class="sv-lab-s">~4,192 · 63 masechtos</text>
+          <text x="772" y="230" class="sv-lab-s">learnt so far</text>
+          <text x="772" y="300" class="sv-lab-s">every source lands here</text>
+        </svg>
+      </div>
+      <p class="caption">Three inflows, one vessel, one waterline. The design problem is not that there are three
+      sources — it is that only one of them takes instructions.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <p class="kicker">How it went</p>
+    <h2>Not a technique. A conversation.</h2>
+    <p class="lede">No card decks, no six hats, no timed divergence. Daniel dumped straight into content and the
+    session ran as a live design dialogue for 161 logged entries — an idea, a consequence, a push back, a scope lock,
+    and round again. The good parts are the places where somebody was wrong.</p>
+
+    <ol class="beats">
+      <li class="u"><h4>Daniel names the big one — and three &ldquo;minor changes&rdquo;</h4>
+        <p>Grey box for partial completion; reordering must discard stale backlog; enter expected weekly output from
+        the other programs. Two of the three turn out to be the big one in disguise.</p></li>
+      <li><h4>The reframe: rebbe and school are not tracks</h4>
+        <p>A track implies a plan. They are attribution sources posting completions against one shared corpus.
+        Exactly one track carries the goal and does the forecasting.</p></li>
+      <li><h4>The spine: the plan is derived, the events are the facts</h4>
+        <p>Backlog and today's schedule are computed from corpus + sequence + completions + goal date, never stored.
+        Reorder, missed days and school coverage collapse into one trigger with three causes: inputs changed,
+        recompute.</p></li>
+      <li class="u"><h4>The calendar problem, already solved four messages earlier</h4>
+        <p>Schools do not follow bein hazmanim; every country differs; every school differs even within a country.
+        The coach circles inferred calendars and per-locale zmanim for three exchanges before noticing that
+        Daniel's &ldquo;40 weeks per year&rdquo; had already made the model calendar-free.</p></li>
+      <li><h4>The double-count landmine</h4>
+        <p>Carving out Masechta Berachos because school is doing it, <em>and</em> subtracting 10/week for school, are
+        two mechanisms for the same contribution. Do both naively and the home target comes out too low and he
+        silently falls behind.</p></li>
+      <li class="u"><h4>Three scope locks and a governing principle</h4>
+        <p>Yom tov and bein hazmanim exist only to make sub-track estimates honest. No sub-goals — the deadline is a
+        property of the one goal-bearing track. No deadline, no required rate. And: keep it as simple as possible,
+        applied retroactively to everything already generated.</p></li>
+      <li class="u"><h4>The throwaway that reorganised the schema</h4>
+        <p>The lifetime learning record arrives almost as an aside. The coach's &ldquo;completions are a set&rdquo;
+        dies on the spot, and with it the whole collision problem: school covering ground already learnt at home is
+        not a conflict, it is chazara.</p></li>
+      <li class="u"><h4>Shabbos stops being a scheduling detail</h4>
+        <p>He learns at home on shabbos, so the main track has no excluded days at all. But he cannot log. The coach
+        calls it self-healing; Daniel refuses the shrug; the app gets a shabbos mode.</p></li>
+      <li class="u"><h4>Sub-tracks harden</h4>
+        <p>Drag any masechta, perek or mishna in and it leaves the main track. Two types. One school sub-track per
+        academic year, five other ongoing ones. Each track has exactly one current position.</p></li>
+      <li class="u"><h4>The reversal that saved the codebase</h4>
+        <p>Two masechtos on the main track must be impossible. The existing planner, task generation and sequencing
+        are untouched; everything new lives in sub-tracks.</p></li>
+    </ol>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <p class="kicker">The dialogue, honestly</p>
+    <h2>Where the coach was wrong.</h2>
+    <p class="lede">Six times the analyst's own proposal was withdrawn or overruled. Each one is in the log with its
+    correction attached, because the reversals are where the design actually got made.</p>
+
+    <div class="rev">
+      <div class="row">
+        <div class="cell"><span class="lab">The coach proposed</span>
+          <p class="struck" style="margin:0">Completions are a <b>set</b>, not a list. Simplest possible model — one
+          mishna is either done or not.</p></div>
+        <div class="cell out"><span class="lab">Daniel <span class="tag user">overruled</span></span>
+          <p style="margin:0">Lifetime learning record: every learning event kept globally — tap a mishna and see how
+          many times he has learnt it and when, across his whole life. Plus a lifetime report.</p></div>
+        <div class="cell"><span class="lab">What stands</span>
+          <p class="stands" style="margin:0">An append-only event log — mishna, date, source. It cost nothing extra:
+          the per-source velocity report already needed timestamped, attributed events. One table yields goal
+          progress, times-learnt, history, velocity and attribution.</p></div>
+      </div>
+      <div class="row">
+        <div class="cell"><span class="lab">The coach proposed</span>
+          <p class="struck" style="margin:0">Avoid inventing two sub-track <b>types</b>. Keep one form and make the
+          exclusion line optional and collapsed.</p></div>
+        <div class="cell out"><span class="lab">Daniel <span class="tag user">overruled</span></span>
+          <p style="margin:0">There <b>are</b> two sub-track types. A school sub-track runs September to July and
+          lasts exactly one year. Not an arbitrary window.</p></div>
+        <div class="cell"><span class="lab">What stands</span>
+          <p class="stands" style="margin:0">Two types — and the type <em>is</em> the simplification. Because a school
+          year is a real fixed recurring structure, typing it lets the app fill the dates, offer &ldquo;add next
+          year&rdquo;, drop the exclusion fields entirely and refuse nonsense windows. Generic-and-flexible would have
+          made Daniel do all of that by hand.</p></div>
+      </div>
+      <div class="row">
+        <div class="cell"><span class="lab">The coach proposed</span>
+          <p class="struck" style="margin:0">A sub-track with several masechtos gets one row per masechta, each with
+          its own progress bar and its own next-mishna pointer.</p></div>
+        <div class="cell out"><span class="lab">Daniel <span class="tag user">overruled</span></span>
+          <p style="margin:0">Each track has exactly <b>one current position</b>. A sub-track holding several
+          masechtos needs an order, like the main track. Only one thing is being learnt at a time per track.</p></div>
+        <div class="cell"><span class="lab">What stands</span>
+          <p class="stands" style="margin:0">Every track is an ordered sequence over assigned ground with a single
+          current position. The home screen stays one row per track however much ground is assigned — and there is
+          exactly one &ldquo;next&rdquo;, so the +1 button never has to ask which masechta.</p></div>
+      </div>
+      <div class="row">
+        <div class="cell"><span class="lab">The coach proposed</span>
+          <p class="struck" style="margin:0">One kind of track, one kind of row. Main track and sub-tracks render
+          identically; the deadline is the only difference.</p></div>
+        <div class="cell out"><span class="lab">Daniel <span class="tag user">corrected</span></span>
+          <p style="margin:0">The personal main track keeps its <b>current</b> behaviour — it still generates tasks and
+          scheduled items exactly as it does today.</p></div>
+        <div class="cell"><span class="lab">What stands</span>
+          <p class="stands" style="margin:0">Withdrawn. A planned track produces <b>tasks</b>; an unplanned track
+          produces a <b>position</b>. The presence of a plan, not the presence of a deadline, is what splits the UI.
+          The home screen is mixed — and cheaper to build than the unified version.</p></div>
+      </div>
+      <div class="row">
+        <div class="cell"><span class="lab">The coach proposed</span>
+          <p class="struck" style="margin:0">Rate and active-weeks estimates belong in the main track's goal settings,
+          not on the sub-track — a sub-track has no goal of its own, so the numbers are not its property.</p></div>
+        <div class="cell out"><span class="lab">Daniel <span class="tag user">overruled</span></span>
+          <p style="margin:0">The whole form is: free-text name, mishnayos per week, exclusion checkboxes, adjustable
+          weeks per year. All of it at creation, in one place.</p></div>
+        <div class="cell"><span class="lab">What stands</span>
+          <p class="stands" style="margin:0">Withdrawn. Everything about a source lives where the source is created.
+          Model purity loses to user mental model.</p></div>
+      </div>
+      <div class="row">
+        <div class="cell"><span class="lab">The coach proposed</span>
+          <p class="struck" style="margin:0">Shabbos capture needs no special logic — with no streaks and a derived
+          plan, an unticked day nudges tomorrow's target up and motzei's ticks drop it straight back. Self-healing.</p></div>
+        <div class="cell out"><span class="lab">Daniel <span class="tag user">pushed back</span></span>
+          <p style="margin:0">If shabbos is ticked as a learning day, the inability to log on it must actually be
+          <b>dealt with</b>, not shrugged off.</p></div>
+        <div class="cell"><span class="lab">What stands</span>
+          <p class="stands" style="margin:0">Shabbos mode: capture locked from candle-lighting, a read-only view of
+          what is planned, a motzei catch-up card, and events dated to the day they were learnt. It became the most
+          distinctive feature in the whole design.</p></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:1.4rem;border-left:3px solid var(--gold-line)">
+      <h3>And once, Daniel overruled Daniel</h3>
+      <p class="muted" style="margin:0">Mid-session he confirmed that the main track could hold several masechtos at
+      once, the same as a sub-track. Later he reversed it outright — two masechtos on the main track must be
+      <b>impossible</b>. That single reversal deleted an open question the coach had just raised (if the main track
+      holds two masechtos, which one does today's task list draw from, and in what proportion?) and left the existing
+      planner completely untouched. The main track only ever sees its remaining pool shrink and its daily target
+      adjust — both already handled by the recompute engine.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <p class="kicker">The centre of the whole thing</p>
+    <h2>One equation.</h2>
+    <p class="lede">Somewhere in the middle of the session it became clear that every single thing being discussed
+    was either an input to the numerator or an input to the denominator. Nothing else was actually being designed.</p>
+
+    <div class="eqwrap">
+      <div class="scroll-x">
+        <div class="eq">
+          <span class="lhs">daily target</span>
+          <span class="op">=</span>
+          <span class="frac">
+            <span class="num"><span class="t-rem">remaining</span> &nbsp;&minus;&nbsp;
+              <span class="t-con">&Sigma; min( rate &times; weeks left in window , ground left )</span></span>
+            <span class="den t-den">days to deadline</span>
+          </span>
+        </div>
+      </div>
+      <div class="eqkey">
+        <div><b class="t-rem">remaining</b>The corpus minus every event logged to date — which already includes
+          everything school and rebbe have ticked. The past is counted as fact.</div>
+        <div><b class="t-con">&Sigma; min( … )</b>Forward-only, summed over every sub-track. Ground assigned to a
+          sub-track caps its contribution at that ground; a sub-track with no ground contributes pure quantity. One
+          formula, two modes, no mode switch — and no way to count a source twice.</div>
+        <div><b class="t-den">days to deadline</b>He learns at home on shabbos, so the main track has no excluded
+          days. Every calendar concept in this design lives in one place: the weeks-per-year count on a sub-track.</div>
+      </div>
+
+      <div class="bar-demo">
+        <p class="small muted" style="margin-bottom:.7rem"><b>Why the estimates earn their place</b> — illustrative,
+        as worked in the session: ~4,192 mishnayos with three years to the bar mitzvah.</p>
+        <div class="bar-row">
+          <span class="lab">ignoring school &amp; rebbe</span>
+          <span class="bar-track"><span class="bar-fill hi" style="width:100%"></span></span>
+          <span class="val">~3.8 / day</span>
+        </div>
+        <div class="bar-row">
+          <span class="lab">counting them honestly</span>
+          <span class="bar-track"><span class="bar-fill lo" style="width:58%"></span></span>
+          <span class="val">~2.2 / day</span>
+        </div>
+        <p class="caption">School at 10/wk &times; 39 weeks and rebbe at 5/wk &times; 44 weeks contribute roughly 1,830
+        mishnayos over the three years. The estimates roughly <b>halve</b> the apparent daily load. Without them the
+        app demands nearly double what he actually needs — and a boy who is told to do 3.8 when 2.2 is the truth is
+        being told, every day, that he is failing.</p>
+      </div>
+    </div>
+
+    <div class="grid g2" style="margin-top:1.3rem">
+      <div class="card">
+        <h3>Run it backwards and you get the free version</h3>
+        <p class="muted small" style="margin:0">Same machinery, both directions. Deadline set &rarr; solve for
+        <b>rate</b>: how much per day. No deadline &rarr; solve for <b>date</b>: at this pace you finish in March 2029.
+        And with no deadline you need no estimates at all, because actual observed velocity already contains school and
+        rebbe. That is the build order: attribution plus measured velocity ships with <b>zero configuration</b>; the
+        entire estimate apparatus unlocks only when a deadline exists.</p>
+      </div>
+      <div class="card">
+        <h3>The landmine it defuses</h3>
+        <p class="muted small" style="margin:0">Reserving ground (&ldquo;carve out Berachos, school is doing it&rdquo;)
+        and forecasting a rate (&ldquo;subtract 10/week for school&rdquo;) are two mechanisms for the same
+        contribution. Do both naively and school pays in twice, the home target comes out too low, and he falls behind
+        without the app ever saying so. The <b>min()</b> is what makes that impossible: with ground assigned, the rate
+        stops adding contribution and starts predicting <em>when</em> the assigned ground completes.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <p class="kicker">Settled</p>
+    <h2>The principles that survived the evening.</h2>
+    <div class="rule-gold"></div>
+    <div class="prin">
+      <article>
+        <div class="n">01</div>
+        <h3>The plan is derived. The events are the only stored facts.</h3>
+        <p>Backlog and today's schedule are computed from corpus + sequence + events + goal date, never stored.
+        Reordering, missed days and school coverage are one trigger with three causes. Learning out of order needs no
+        special case at all — it simply shrinks the remaining set and lowers tomorrow's target.</p>
+      </article>
+      <article>
+        <div class="n">02</div>
+        <h3>Exactly one deadline, on the main track.</h3>
+        <p>No sub-goals, ever. No &ldquo;finish Seder Moed before Pesach&rdquo;. A sub-track has no goal and no
+        required rate — but it does have progress. The equation is solved once, globally.</p>
+      </article>
+      <article>
+        <div class="n">03</div>
+        <h3>The main track never changes shape.</h3>
+        <p>One masechta at a time, one plan, one deadline, the sequencing and task generation exactly as they are
+        today. Everything new lives in sub-tracks. The main track only sees its remaining pool shrink.</p>
+      </article>
+      <article>
+        <div class="n">04</div>
+        <h3>Calendars touch nothing but a sub-track's weeks.</h3>
+        <p>Yom tov and bein hazmanim exist solely to make a sub-track's throughput estimate honest. No term imports,
+        no per-country school logic, no dates in the model at runtime — one rate and one week count each.</p>
+      </article>
+      <article>
+        <div class="n">05</div>
+        <h3>Chazara, not collision.</h3>
+        <p>School covering ground already learnt at home is not a conflict to resolve; it is a second learning event,
+        and a good one. Goal progress counts <b>distinct</b> mishnayos; the lifetime record counts <b>all</b> events.
+        Nothing to dedupe, no dialog, and nothing lost.</p>
+      </article>
+      <article>
+        <div class="n">06</div>
+        <h3>Build in the order that needs no configuration.</h3>
+        <p>Attribution and measured velocity work with zero setup and already project a finish date. Estimates,
+        active weeks and rates are progressively disclosed — hidden until a deadline exists, then shown exactly when
+        they start to mean something.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <p class="kicker">Mechanisms</p>
+    <h2>Four things the app has to be able to draw.</h2>
+    <p class="lede">Each of these started as a sentence in the conversation and only became real once it was drawn.
+    They are the load-bearing pictures of the design.</p>
+
+    <div class="figure" style="margin-bottom:1.4rem">
+      <h3>1 &nbsp;·&nbsp; The grey box, cascading</h3>
+      <p class="sub">Minor 1 in Daniel's list, and a prerequisite for everything else: completing one perek leaves the
+      whole masechta reading unticked. He wants a grey box. The coach's contribution was to notice that partiality
+      <em>cascades</em> — it is a rule for how any parent renders when its children disagree, at every level of the
+      hierarchy, not a masechta-level fix.</p>
+      <div class="scroll-x">
+        <svg viewBox="0 0 880 250" role="img" aria-label="A tree from seder down to mishna showing empty, grey and checked boxes, with partial states cascading upward." class="svg-min-wide">
+          <defs>
+            <g id="bx-e"><rect width="16" height="16" rx="2.5" fill="var(--bg-3)" stroke="var(--rule)"/></g>
+            <g id="bx-g"><rect width="16" height="16" rx="2.5" fill="var(--ink-3)" fill-opacity=".40" stroke="var(--ink-3)" stroke-opacity=".6"/><rect x="3.5" y="7" width="9" height="2" rx="1" fill="var(--bg-2)"/></g>
+            <g id="bx-c"><rect width="16" height="16" rx="2.5" fill="var(--wine)"/><path d="M4,8.4 L6.9,11.3 L12,5.5" fill="none" stroke="var(--bg-2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g>
+          </defs>
+
+          <g class="sv-lab-s" text-anchor="end" fill="var(--ink-3)">
+            <text x="72" y="42">seder</text>
+            <text x="72" y="104">masechta</text>
+            <text x="72" y="166">perek</text>
+            <text x="72" y="222">mishna</text>
+          </g>
+          <line x1="80" y1="16" x2="80" y2="236" stroke="var(--rule)"/>
+
+          <use href="#bx-g" x="100" y="28"/>
+          <text x="126" y="41" class="sv-lab">Seder Moed</text>
+
+          <use href="#bx-g" x="100" y="90"/><text x="126" y="103" class="sv-lab">Shabbos</text>
+          <use href="#bx-e" x="270" y="90"/><text x="296" y="103" class="sv-lab">Eruvin</text>
+          <use href="#bx-c" x="400" y="90"/><text x="426" y="103" class="sv-lab">Pesachim</text>
+
+          <use href="#bx-c" x="100" y="152"/>
+          <use href="#bx-c" x="140" y="152"/>
+          <use href="#bx-g" x="180" y="152"/>
+          <use href="#bx-e" x="220" y="152"/>
+          <use href="#bx-e" x="260" y="152"/>
+          <use href="#bx-e" x="300" y="152"/>
+          <text x="330" y="165" class="sv-lab-s">… perakim 7&ndash;24</text>
+
+          <use href="#bx-c" x="180" y="208"/>
+          <use href="#bx-c" x="212" y="208"/>
+          <use href="#bx-c" x="244" y="208"/>
+          <use href="#bx-c" x="276" y="208"/>
+          <use href="#bx-e" x="308" y="208"/>
+          <use href="#bx-e" x="340" y="208"/>
+          <text x="180" y="242" class="sv-lab-s">perek 3 &mdash; four of its six mishnayos learnt</text>
+
+          <g stroke="var(--rule)" fill="none">
+            <path d="M108,44 L108,90"/>
+            <path d="M108,70 L278,70 L278,90"/>
+            <path d="M108,70 L408,70 L408,90"/>
+            <path d="M108,106 L108,152"/>
+            <path d="M108,132 L308,132"/>
+            <path d="M148,132 L148,152"/><path d="M188,132 L188,152"/><path d="M228,132 L228,152"/>
+            <path d="M268,132 L268,152"/><path d="M308,132 L308,152"/>
+            <path d="M188,168 L188,208"/>
+            <path d="M188,190 L348,190"/>
+            <path d="M220,190 L220,208"/><path d="M252,190 L252,208"/><path d="M284,190 L284,208"/><path d="M316,190 L316,208"/><path d="M348,190 L348,208"/>
+          </g>
+
+          <g stroke="var(--gold-line)" stroke-width="1.4" fill="none" stroke-dasharray="3 3">
+            <path d="M470,206 L470,52" marker-end="url(#arg2)"/>
+          </g>
+          <defs>
+            <marker id="arg2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--gold-line)"/>
+            </marker>
+          </defs>
+          <text x="482" y="212" class="sv-lab-s" fill="var(--gold)">one partial mishna&hellip;</text>
+          <text x="482" y="60" class="sv-lab-s" fill="var(--gold)">&hellip;greys the seder</text>
+
+          <rect x="620" y="24" width="240" height="120" rx="3" fill="var(--bg-3)" stroke="var(--rule)"/>
+          <use href="#bx-e" x="638" y="42"/><text x="664" y="55" class="sv-lab">nothing learnt</text>
+          <use href="#bx-g" x="638" y="74"/><text x="664" y="87" class="sv-lab">children disagree</text>
+          <use href="#bx-c" x="638" y="106"/><text x="664" y="119" class="sv-lab">all children done</text>
+        </svg>
+      </div>
+      <p class="caption">Once school or rebbe cover part of a masechta, partial stops being an edge case and becomes
+      the normal state of the tree. The same tri-state rendering is then reused in four places: the main corpus, the
+      backfill browser, the drag-in-ground picker, and every sub-track's own progress view.</p>
+    </div>
+
+    <div class="figure" style="margin-bottom:1.4rem">
+      <h3>2 &nbsp;·&nbsp; The contribution timeline</h3>
+      <p class="sub">Once a sub-track can have a window, the forecast stops being a flat rate and becomes a timeline
+      of overlapping contribution windows — materially more accurate over a three-year horizon. School years chain
+      one after another; an ongoing track just runs. And the holes become visible.</p>
+      <div class="scroll-x">
+        <svg viewBox="0 0 900 300" role="img" aria-label="A timeline from today to the deadline showing two chained school-year sub-tracks, an uncovered gap year, and an ongoing rebbe track running throughout." class="svg-min-wide">
+          <defs>
+            <pattern id="hatch" width="7" height="7" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
+              <line x1="0" y1="0" x2="0" y2="7" stroke="var(--wine)" stroke-width="2.5" stroke-opacity=".35"/>
+            </pattern>
+            <marker id="ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--ink-3)"/>
+            </marker>
+          </defs>
+
+          <text x="8" y="76" class="sv-lab-s">school-year</text>
+          <text x="8" y="88" class="sv-lab-s">sub-tracks</text>
+          <text x="8" y="146" class="sv-lab-s">ongoing</text>
+          <text x="8" y="158" class="sv-lab-s">sub-track</text>
+
+          <line x1="90" y1="40" x2="90" y2="230" stroke="var(--ink-3)" stroke-dasharray="3 3"/>
+          <text x="90" y="32" class="sv-lab" text-anchor="middle" fill="var(--ink-2)">today</text>
+          <line x1="850" y1="40" x2="850" y2="230" stroke="var(--wine)" stroke-width="1.5"/>
+          <text x="850" y="32" class="sv-lab" text-anchor="middle" fill="var(--wine)">bar mitzvah</text>
+
+          <rect x="111" y="60" width="211" height="30" rx="3" fill="var(--teal)" fill-opacity=".22" stroke="var(--teal)" stroke-opacity=".55"/>
+          <text x="121" y="79" class="sv-lab-s" fill="var(--teal)">Sep 2026 &ndash; Jul 2027 · 10/wk × 39wk</text>
+
+          <rect x="364" y="60" width="211" height="30" rx="3" fill="var(--teal)" fill-opacity=".22" stroke="var(--teal)" stroke-opacity=".55"/>
+          <text x="374" y="79" class="sv-lab-s" fill="var(--teal)">Sep 2027 &ndash; Jul 2028 · 12/wk × 39wk</text>
+
+          <rect x="618" y="60" width="211" height="30" rx="3" fill="var(--bg-3)"/>
+          <rect x="618" y="60" width="211" height="30" rx="3" fill="url(#hatch)" stroke="var(--wine)" stroke-opacity=".5" stroke-dasharray="4 3"/>
+          <text x="628" y="79" class="sv-lab-s" fill="var(--wine)">Sep 2028 &ndash; Jul 2029 · nothing</text>
+
+          <path d="M322,52 C 340,34 348,34 364,52" fill="none" stroke="var(--ink-3)" stroke-dasharray="3 3" marker-end="url(#ar3)"/>
+          <text x="343" y="26" class="sv-lab-s" text-anchor="middle">add next year</text>
+
+          <rect x="90" y="130" width="760" height="30" rx="3" fill="var(--gold-line)" fill-opacity=".22" stroke="var(--gold-line)" stroke-opacity=".6"/>
+          <text x="100" y="149" class="sv-lab-s" fill="var(--gold)">Rebbe · 5/wk × 44wk · no end date</text>
+          <g fill="var(--bg-2)" stroke="var(--gold-line)" stroke-opacity=".5" stroke-dasharray="2 2">
+            <rect x="256" y="130" width="22" height="30"/>
+            <rect x="446" y="130" width="22" height="30"/>
+            <rect x="678" y="130" width="22" height="30"/>
+          </g>
+          <text x="468" y="176" class="sv-lab-s" text-anchor="middle">bein hazmanim — not weeks the app knows, just weeks it does not count</text>
+
+          <line x1="90" y1="205" x2="850" y2="205" stroke="var(--rule)"/>
+          <g stroke="var(--rule)">
+            <line x1="90" y1="205" x2="90" y2="212"/>
+            <line x1="343" y1="205" x2="343" y2="212"/>
+            <line x1="596" y1="205" x2="596" y2="212"/>
+            <line x1="850" y1="205" x2="850" y2="212"/>
+          </g>
+          <g class="sv-lab-s" text-anchor="middle">
+            <text x="90" y="226">Aug 2026</text>
+            <text x="343" y="226">Aug 2027</text>
+            <text x="596" y="226">Aug 2028</text>
+            <text x="846" y="226" text-anchor="end">Aug 2029</text>
+          </g>
+
+          <path d="M700,96 L700,250" stroke="var(--wine)" stroke-opacity=".6" stroke-dasharray="3 3" fill="none"/>
+          <rect x="470" y="252" width="420" height="36" rx="3" fill="var(--wine-bg)" stroke="var(--wine)" stroke-opacity=".4"/>
+          <text x="484" y="274" class="sv-lab-s" fill="var(--wine)">&ldquo;Sep 2028 - Jul 2029: no school sub-track. Finished, or not yet planned?&rdquo;</text>
+        </svg>
+      </div>
+      <p class="caption">A future sub-track is legal and useful: &ldquo;starts Sep 2027, 12/week&rdquo; contributes to
+      the forecast before it exists in reality and before it has a single tick. An uncovered stretch silently
+      forecasts zero help and inflates the daily target — so the app names it rather than letting it sit there.</p>
+    </div>
+
+    <div class="figure" style="margin-bottom:1.4rem">
+      <h3>3 &nbsp;·&nbsp; The two ways a forecast lies</h3>
+      <p class="sub">Both failure modes are quiet, both move the daily target, and they move it in opposite
+      directions. Both are cheap to detect from data the app already holds.</p>
+      <div class="scroll-x">
+        <svg viewBox="0 0 820 210" role="img" aria-label="A central daily-target gauge with over-commit pulling it down and under-commit pushing it up." class="svg-min">
+          <defs>
+            <marker id="ar4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--wine)"/>
+            </marker>
+          </defs>
+
+          <rect x="365" y="30" width="90" height="150" rx="4" fill="var(--bg-3)" stroke="var(--rule)"/>
+          <line x1="365" y1="105" x2="455" y2="105" stroke="var(--gold-line)" stroke-width="2.5"/>
+          <text x="410" y="22" class="sv-head" text-anchor="middle">daily target</text>
+          <text x="410" y="99" class="sv-lab-s" text-anchor="middle" fill="var(--gold)">honest</text>
+          <text x="410" y="46" class="sv-lab-s" text-anchor="middle">higher</text>
+          <text x="410" y="172" class="sv-lab-s" text-anchor="middle">lower</text>
+
+          <rect x="20" y="46" width="240" height="52" rx="3" fill="var(--wine-bg)" stroke="var(--wine)" stroke-opacity=".4"/>
+          <text x="34" y="68" class="sv-head" fill="var(--wine)">OVER-COMMIT</text>
+          <text x="34" y="86" class="sv-lab-s">ground carved out that the source cannot finish</text>
+          <path d="M262,80 C 310,86 320,120 361,140" fill="none" stroke="var(--wine)" stroke-width="1.6" marker-end="url(#ar4)"/>
+          <text x="300" y="118" class="sv-lab-s" fill="var(--wine)">target too low</text>
+          <text x="34" y="120" class="sv-lab-s" fill="var(--ink-2)">&rarr; he silently falls behind</text>
+
+          <rect x="560" y="112" width="240" height="52" rx="3" fill="var(--teal-bg)" stroke="var(--teal)" stroke-opacity=".4"/>
+          <text x="574" y="134" class="sv-head" fill="var(--teal)">UNDER-COMMIT</text>
+          <text x="574" y="152" class="sv-lab-s">a stretch of time with no sub-track covering it</text>
+          <path d="M558,130 C 512,124 500,90 459,70" fill="none" stroke="var(--teal)" stroke-width="1.6" marker-end="url(#ar4)"/>
+          <text x="470" y="112" class="sv-lab-s" fill="var(--teal)">target too high</text>
+          <text x="574" y="186" class="sv-lab-s" fill="var(--ink-2)">&rarr; the app demands work he does not need</text>
+        </svg>
+      </div>
+      <div class="grid g2" style="margin-top:1rem">
+        <div class="card" style="border-left:3px solid var(--wine)">
+          <h3 style="font-size:1rem">The rate validates the carve-out</h3>
+          <p class="small muted" style="margin:0">If a sub-track is assigned more ground than its rate can finish
+          before the deadline, the shortfall comes back to the main track with a warning:
+          <em>&ldquo;School will not finish Masechta Shabbos by 12 Sivan - 40 mishnayos come back to you.&rdquo;</em>
+          Carving out ground a source never completes is the quiet way to miss the bar mitzvah.</p>
+        </div>
+        <div class="card" style="border-left:3px solid var(--teal)">
+          <h3 style="font-size:1rem">Gap detection along the timeline</h3>
+          <p class="small muted" style="margin:0">Any period between now and the deadline with no covering sub-track
+          forecasts zero help. The app surfaces it as a question rather than an error — finished, or not yet
+          planned? Same family as the warning on the left: both are holes in the forecast, and both are visible
+          in data already held.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="figure">
+      <h3>4 &nbsp;·&nbsp; One mishna, a whole life</h3>
+      <p class="sub">The idea that arrived last and reorganised the storage model. Completions are not a set; they are
+      an append-only event log of mishna + date + source. Goal progress counts <b>distinct</b> mishnayos. The lifetime
+      record counts <b>all</b> events. A second learning never advances the bar mitzvah goal and always enriches the
+      record.</p>
+      <div class="scroll-x">
+        <svg viewBox="0 0 880 210" role="img" aria-label="A lifetime line for a single mishna showing repeated learning events by different sources, one distinct completion, and the record continuing past the siyum." class="svg-min-wide">
+          <text x="14" y="34" class="sv-head">Berachos 1:1</text>
+          <text x="14" y="50" class="sv-lab-s">illustrative</text>
+
+          <line x1="120" y1="96" x2="866" y2="96" stroke="var(--rule)" stroke-width="1.5"/>
+
+          <g>
+            <rect x="140" y="86" width="18" height="18" rx="2.5" fill="none" stroke="var(--ink-3)" stroke-dasharray="3 2"/>
+            <text x="149" y="76" class="sv-lab-s" text-anchor="middle" fill="var(--ink-3)">before tracking</text>
+            <text x="149" y="128" class="sv-lab-s" text-anchor="middle">counts to the goal,</text>
+            <text x="149" y="140" class="sv-lab-s" text-anchor="middle">never to velocity</text>
+          </g>
+
+          <circle cx="320" cy="96" r="9" fill="var(--wine)"/>
+          <text x="320" y="76" class="sv-lab-s" text-anchor="middle" fill="var(--wine)">home</text>
+          <text x="320" y="128" class="sv-lab-s" text-anchor="middle">first dated event</text>
+
+          <circle cx="500" cy="96" r="9" fill="var(--teal)"/>
+          <text x="500" y="76" class="sv-lab-s" text-anchor="middle" fill="var(--teal)">school</text>
+          <text x="500" y="128" class="sv-lab-s" text-anchor="middle">chazara</text>
+
+          <circle cx="660" cy="96" r="9" fill="var(--gold-line)"/>
+          <text x="660" y="76" class="sv-lab-s" text-anchor="middle" fill="var(--gold)">rebbe</text>
+          <text x="660" y="128" class="sv-lab-s" text-anchor="middle">chazara</text>
+
+          <line x1="760" y1="52" x2="760" y2="140" stroke="var(--gold-line)" stroke-dasharray="4 3"/>
+          <text x="760" y="46" class="sv-lab" text-anchor="middle" fill="var(--gold)">siyum</text>
+
+          <circle cx="830" cy="96" r="9" fill="var(--wine)" fill-opacity=".55"/>
+          <text x="830" y="76" class="sv-lab-s" text-anchor="middle">home</text>
+          <text x="830" y="128" class="sv-lab-s" text-anchor="middle">still counted</text>
+
+          <rect x="120" y="164" width="330" height="34" rx="3" fill="var(--bg-3)" stroke="var(--rule)"/>
+          <text x="136" y="185" class="sv-lab">goal progress &nbsp;·&nbsp; <tspan font-weight="600" fill="var(--ink)">1 distinct mishna</tspan></text>
+          <rect x="470" y="164" width="330" height="34" rx="3" fill="var(--gold-bg)" stroke="var(--gold-line)" stroke-opacity=".5"/>
+          <text x="486" y="185" class="sv-lab">lifetime record &nbsp;·&nbsp; <tspan font-weight="600" fill="var(--ink)">5 learning events</tspan></text>
+        </svg>
+      </div>
+      <p class="caption">Because the log carries dates, the corpus can also show what is warm and what is cold — a
+      chazara prompt driven by the same data, with no new storage. Flagged optional against the simplicity mandate.
+      And because the record is a lifetime record, the app outlives the goal: the bar mitzvah is one milestone in a
+      record that keeps going.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <p class="kicker">The screens that were agreed</p>
+    <h2>Three surfaces, and nothing else new.</h2>
+    <p class="lede">The sub-track forms went through five revisions in the log and ended smaller each time. What is
+    drawn here is the last version: every number visible, every number editable, and nothing hidden inside an
+    average that needs explaining.</p>
+
+    <div class="grid g2">
+      <div>
+        <div class="screen">
+          <div class="bar"><span>New sub-track</span><span class="tag gold">school year</span></div>
+          <div class="body">
+            <div class="field">
+              <label>Name</label>
+              <div class="input">School<span class="chev">&#9998;</span></div>
+            </div>
+            <div class="field">
+              <label>Academic year</label>
+              <div class="picklist">
+                <div class="disabled"><span>Sep 2026 &ndash; Jul 2027</span><span>already added</span></div>
+                <div class="sel"><span>Sep 2027 &ndash; Jul 2028</span><span>&#10003;</span></div>
+                <div><span>Sep 2028 &ndash; Jul 2029</span><span></span></div>
+              </div>
+              <p class="hint">Only years between today and the deadline are offered. One per year — the impossible
+              choice is simply not shown.</p>
+            </div>
+            <div class="field">
+              <label>Mishnayos per week</label>
+              <div class="input">12<span class="chev">&#9998;</span></div>
+            </div>
+            <div class="field">
+              <label>Weeks per year</label>
+              <div class="input">39<span class="chev">&#9998;</span></div>
+              <p class="hint">Pre-filled, always overridable.</p>
+            </div>
+            <div class="btnrow"><span class="btn solid">Add</span><span class="btn">Add next year</span></div>
+          </div>
+        </div>
+        <p class="caption"><b>No exclusion checkboxes.</b> A school-year figure already has the holidays inside it;
+        applying exclusions on top would discount the breaks twice and understate what school contributes.
+        &ldquo;Add next year&rdquo; clones this form and shifts the window, so programming four years costs one tap
+        each. No year numbering — numbering differs by country, so a school sub-track is identified by its academic
+        period.</p>
+      </div>
+
+      <div>
+        <div class="screen">
+          <div class="bar"><span>New sub-track</span><span class="tag gold">ongoing</span></div>
+          <div class="body">
+            <div class="field">
+              <label>Name</label>
+              <div class="input">Rebbe<span class="chev">&#9998;</span></div>
+            </div>
+            <div class="field">
+              <label>Mishnayos per week</label>
+              <div class="input">5<span class="chev">&#9998;</span></div>
+            </div>
+            <div class="field">
+              <label>Not learning during</label>
+              <div class="checkline"><span class="cbox on">&#10003;</span> Bein hazmanim</div>
+              <p class="hint">A convenience that pre-fills the number below — never a tick-box that traps an estimate
+              you disagree with.</p>
+            </div>
+            <div class="field">
+              <label>Weeks per year</label>
+              <div class="input">44<span class="chev">&#9998;</span></div>
+            </div>
+            <div class="field">
+              <label>End date <span style="text-transform:none;letter-spacing:0">(optional)</span></label>
+              <div class="input ghost">none<span class="chev">&#9998;</span></div>
+            </div>
+            <div class="btnrow"><span class="btn solid">Add</span></div>
+          </div>
+        </div>
+        <p class="caption"><b>Yom tov was deleted as a checkbox</b> late in the session — one exclusion survives, and
+        it is bein hazmanim. Up to five ongoing sub-tracks; one school sub-track per academic year from now to the
+        goal. Assigning ground is <b>phase two</b> and entirely optional: drag any masechta, perek or individual
+        mishna into a sub-track, whenever the school or rebbe announces what they are learning, and it disappears
+        from the main track.</p>
+      </div>
+    </div>
+
+    <div class="grid g2" style="margin-top:2rem;align-items:start">
+      <div class="screen" style="max-width:26rem">
+        <div class="bar"><span>Today</span><span>Mon 24 Aug</span></div>
+        <div class="body">
+          <p class="secthead"><span>Today &nbsp;·&nbsp; main track</span><span>2.2 / day</span></p>
+          <div class="tasklist">
+            <div class="t"><span class="cbox"></span> Shabbos 7:2</div>
+            <div class="t"><span class="cbox"></span> Shabbos 7:3</div>
+            <div class="t"><span class="cbox on">&#10003;</span> <span style="color:var(--ink-3);text-decoration:line-through">Shabbos 7:1</span></div>
+          </div>
+          <p class="secthead"><span>Sub-tracks</span><span>3</span></p>
+          <div class="trow">
+            <div class="top"><b>Rebbe</b><span class="pos">Beitzah 2:6</span></div>
+            <div class="mini-track"><span class="mini-fill" style="width:38%"></span></div>
+            <div class="btnrow" style="margin-top:.1rem"><span class="btn mini">+1</span><span class="btn mini">up to&hellip;</span></div>
+          </div>
+          <div class="trow">
+            <div class="top"><b>School</b><span class="pos">Berachos 4:1</span></div>
+            <div class="mini-track"><span class="mini-fill w" style="width:62%"></span></div>
+            <div class="btnrow" style="margin-top:.1rem"><span class="btn mini">+1</span><span class="btn mini">up to&hellip;</span></div>
+          </div>
+          <div class="trow">
+            <div class="top"><b>Summer shiur</b><span class="pos">Megillah 1:4</span></div>
+            <div class="mini-track"><span class="mini-fill" style="width:18%"></span></div>
+            <div class="btnrow" style="margin-top:.1rem"><span class="btn mini">+1</span><span class="btn mini">up to&hellip;</span></div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <h3>Every open front, in one place</h3>
+        <p class="muted">Daniel asked for easy capture of what he learnt with his rebbe or at school <b>three
+        separate times</b> across the session. It is clearly the thing that decides whether the app gets used at all,
+        so it got the top of the screen and no navigation.</p>
+        <p class="muted">The screen is deliberately <b>mixed</b>, not unified. Today's tasks render exactly as they do
+        now, because the main track has a plan and a plan produces tasks. Beneath them sit the sub-tracks, which have
+        no plan and therefore produce a <b>position</b> — one row each, however many masechtos are assigned, because
+        every track has exactly one current position.</p>
+        <ul class="checklist" style="margin-top:1rem">
+          <li><b>+1</b> for the single daily mishna.</li>
+          <li><b>Up to&hellip;</b> for everything else. People report learning by endpoint, not by count — &ldquo;we
+          finished perek 3&rdquo; — so tap where he got up to and everything before it fills in. One gesture for any
+          amount.</li>
+          <li><b>Tick-to-here also fixes this morning.</b> Backfilling hundreds of already-learnt mishnayos one tap at
+          a time becomes a single &ldquo;up to here&rdquo; per masechta.</li>
+          <li><b>The source is free.</b> It is implied by which row he ticked in — no dropdown, no question, no extra
+          taps — and that one column is what unlocks every report in the design.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="deep">
+  <div class="wrap">
+    <p class="kicker">Shabbos</p>
+    <h2>It came in as a scheduling exclusion. It left as the whole point.</h2>
+    <div class="rule-gold"></div>
+    <div class="narrow">
+      <p>It entered the session as a checkbox — exclude shabbos and yom tov from the schedule. Then Daniel answered
+      the open question about the denominator: <b>yes, he learns at home on shabbos</b>. Which removes the exclusion
+      entirely — the main track has no excluded days, and the denominator is simply every day from now to the
+      deadline — and replaces it with a much better problem. He learns, and he cannot log.</p>
+      <p>The coach's first answer was that this needs no special handling: with no streaks and a derived plan, an
+      unticked day nudges tomorrow's target up a fraction and motzei's ticks drop it straight back. Self-healing.
+      Daniel did not accept it.</p>
+      <blockquote>If shabbos is ticked as a learning day, the inability to log on it must actually be
+      <b>dealt with</b>, not shrugged off.<cite>Daniel</cite></blockquote>
+      <p>And then, when the coach offered the alternate reading — should the app <em>refuse</em> to be used on
+      shabbos rather than merely tolerate the gap? — he took it further than the coach had:</p>
+      <blockquote>The app must be <b>not clickable</b> on shabbos, and by extension yom tov. Capture is locked, no
+      writing. After shabbos he is expected to tick what he learnt.<cite>Daniel — shabbos mode confirmed</cite></blockquote>
+    </div>
+
+    <div class="figure" style="margin:1.8rem 0 1.4rem;background:rgba(255,255,255,.045);border-color:var(--deep-rule);box-shadow:none">
+      <div class="scroll-x">
+        <svg viewBox="0 0 880 170" role="img" aria-label="A time strip from Friday afternoon to motzei shabbos showing the capture lock starting before candle-lighting and ending after tzeis." class="svg-min-wide">
+          <rect x="60" y="52" width="240" height="40" rx="3" fill="rgba(255,255,255,.06)" stroke="var(--deep-rule)"/>
+          <rect x="300" y="52" width="470" height="40" rx="3" fill="var(--deep-wine)" fill-opacity=".16" stroke="var(--deep-wine)" stroke-opacity=".45"/>
+          <rect x="770" y="52" width="70" height="40" rx="3" fill="rgba(255,255,255,.06)" stroke="var(--deep-rule)"/>
+
+          <text x="180" y="77" class="sv-lab-s" text-anchor="middle" fill="var(--deep-ink-2)">capture open</text>
+          <text x="535" y="70" class="sv-head" text-anchor="middle" fill="var(--deep-wine)">CAPTURE LOCKED — read only</text>
+          <text x="535" y="86" class="sv-lab-s" text-anchor="middle" fill="var(--deep-ink-2)">the plan is visible, nothing can be written</text>
+          <text x="805" y="77" class="sv-lab-s" text-anchor="middle" fill="var(--deep-ink-2)">open</text>
+
+          <g stroke="var(--deep-gold)" stroke-width="1.3">
+            <line x1="322" y1="40" x2="322" y2="104"/>
+            <line x1="742" y1="40" x2="742" y2="104"/>
+          </g>
+          <text x="322" y="32" class="sv-lab-s" text-anchor="middle" fill="var(--deep-gold)">candle-lighting</text>
+          <text x="742" y="32" class="sv-lab-s" text-anchor="middle" fill="var(--deep-gold)">tzeis</text>
+
+          <g stroke="var(--deep-ink-2)" stroke-width="1" fill="none" stroke-dasharray="2 2">
+            <line x1="300" y1="118" x2="322" y2="118"/>
+            <line x1="742" y1="118" x2="770" y2="118"/>
+          </g>
+          <text x="290" y="122" class="sv-lab-s" text-anchor="end" fill="var(--deep-ink-2)">lock early</text>
+          <text x="780" y="122" class="sv-lab-s" fill="var(--deep-ink-2)">unlock late</text>
+
+          <text x="60" y="150" class="sv-lab-s" fill="var(--deep-ink-2)">Erev shabbos</text>
+          <text x="840" y="150" class="sv-lab-s" text-anchor="end" fill="var(--deep-ink-2)">Motzei shabbos</text>
+          <text x="440" y="150" class="sv-lab-s" text-anchor="middle" fill="var(--deep-ink-2)">a false lock is harmless — a false unlock is the failure that matters</text>
+        </svg>
+      </div>
+      <p class="caption" style="color:var(--deep-ink-2)">kosher_dart is already a dependency, and one setting held
+      once — location, and Israel or chutz la'aretz — drives the whole window. flutter_local_notifications is already
+      there too, so the motzei reminder fires off the same zmanim and lands exactly when the catch-up card becomes
+      tappable.</p>
+    </div>
+
+    <div class="grid g2" style="align-items:start">
+      <div class="screen">
+        <div class="bar"><span>Shabbos</span><span>locked</span></div>
+        <div class="body">
+          <p class="secthead"><span>Planned for shabbos</span><span>14 mishnayos</span></p>
+          <div class="tasklist">
+            <div class="t">Shabbos 7:2 &ndash; 7:4</div>
+            <div class="t">Shabbos 8:1 &ndash; 8:7</div>
+            <div class="t">Shabbos 9:1 &ndash; 9:4</div>
+          </div>
+          <p class="hint" style="margin-top:.2rem">On target. This reading will not change until motzei shabbos.</p>
+          <p class="hint" style="text-align:center;margin-top:.9rem;padding-top:.7rem;border-top:1px dashed var(--deep-rule)">nothing on this screen can be tapped</p>
+        </div>
+      </div>
+      <div class="screen">
+        <div class="bar"><span>Motzei shabbos</span><span class="tag gold">catch-up</span></div>
+        <div class="body">
+          <p class="secthead"><span>Shabbos &nbsp;·&nbsp; 14 mishnayos planned</span></p>
+          <p style="font-size:.95rem;margin:.2rem 0 .9rem">Learnt them all?</p>
+          <div class="btnrow"><span class="btn solid">Yes, all of it</span><span class="btn">Adjust&hellip;</span></div>
+          <p class="hint" style="margin-top:.8rem">Ticks are dated to shabbos, not to now.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid g2" style="margin-top:1.4rem;align-items:start">
+      <div class="card">
+        <h3>Four small pieces</h3>
+        <ul class="checklist">
+          <li><b>Show the target before it comes in.</b> The erev view says what there is to learn.</li>
+          <li><b>Freeze the on/off-target indicator</b> for the duration. Never render &ldquo;behind&rdquo; on a day he
+          cannot log.</li>
+          <li><b>A motzei catch-up card.</b> One tap to confirm the whole lot, or adjust. It generalises to yom tov —
+          up to three consecutive un-loggable days — with no extra design.</li>
+          <li><b>Date the events to the day learnt</b>, not to the moment they were tapped.</li>
+        </ul>
+        <p class="small" style="margin:.9rem 0 0">The locked screen and the &ldquo;show the target before
+        shabbos&rdquo; requirement turned out to be the <b>same screen</b>: a read-only view of what is planned, with
+        no buttons on it. One thing to build, and the most useful possible thing to show on a locked screen. The app
+        cannot stop a phone being used on shabbos — but it can refuse to record, which is the part it is responsible
+        for.</p>
+      </div>
+      <div class="card">
+        <h3>Why the dating is not cosmetic</h3>
+        <p class="small">Three days of yom tov learning, all stamped with the moment they were tapped:</p>
+        <div class="grid g2" style="gap:.9rem">
+          <div>
+            <svg viewBox="0 0 260 110" role="img" aria-label="A bar chart with three empty days and one enormous spike.">
+              <line x1="18" y1="86" x2="252" y2="86" stroke="var(--deep-rule)"/>
+              <g fill="var(--deep-wine)" fill-opacity=".8">
+                <rect x="24" y="62" width="22" height="24"/>
+                <rect x="56" y="56" width="22" height="30"/>
+                <rect x="88" y="66" width="22" height="20"/>
+                <rect x="216" y="14" width="22" height="72"/>
+              </g>
+              <g fill="var(--deep-ink-2)" fill-opacity=".25">
+                <rect x="120" y="84" width="22" height="2"/>
+                <rect x="152" y="84" width="22" height="2"/>
+                <rect x="184" y="84" width="22" height="2"/>
+              </g>
+              <text x="152" y="102" class="sv-lab-s" text-anchor="middle" fill="var(--deep-ink-2)">yom tov</text>
+              <text x="227" y="102" class="sv-lab-s" text-anchor="middle" fill="var(--deep-wine)">spike</text>
+            </svg>
+            <p class="hint" style="text-align:center">stamped when tapped</p>
+          </div>
+          <div>
+            <svg viewBox="0 0 260 110" role="img" aria-label="A bar chart with learning spread evenly, including across the three yom tov days.">
+              <line x1="18" y1="86" x2="252" y2="86" stroke="var(--deep-rule)"/>
+              <g fill="var(--deep-gold)" fill-opacity=".8">
+                <rect x="24" y="62" width="22" height="24"/>
+                <rect x="56" y="56" width="22" height="30"/>
+                <rect x="88" y="66" width="22" height="20"/>
+                <rect x="120" y="52" width="22" height="34"/>
+                <rect x="152" y="48" width="22" height="38"/>
+                <rect x="184" y="58" width="22" height="28"/>
+                <rect x="216" y="64" width="22" height="22"/>
+              </g>
+              <text x="152" y="102" class="sv-lab-s" text-anchor="middle" fill="var(--deep-ink-2)">yom tov</text>
+            </svg>
+            <p class="hint" style="text-align:center">dated to the day learnt</p>
+          </div>
+        </div>
+        <p class="small" style="margin:.6rem 0 0">The left-hand version reports a fake spike and zero yom tov
+        learning. The lifetime record would be telling a lie about his life — and the velocity figure that decides
+        whether he is on target would be built on it.</p>
+      </div>
+    </div>
+
+    <p class="small" style="margin-top:1.6rem;color:var(--deep-ink-2);max-width:44rem">The same dating rule catches a
+    bug that was already live: Daniel backfilled hundreds of already-learnt mishnayos on setup day. Stamped with the
+    tap date, the velocity report opens with a several-hundred-mishnayos spike on day one and a permanently distorted
+    baseline. So there are three date states — <b>dated</b>, <b>motzei-backdated</b>, and <b>learnt before tracking
+    started</b>. Backfill is an opening balance: it counts in the balance, never as this month's income.</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <p class="kicker">The deliverable</p>
+    <h2>What actually gets built, in order.</h2>
+    <p class="lede">The session was asked for a change list: minors first, then the big one. It ends with the minors
+    turning out to be most of the big one, and the big one turning out to touch the main track not at all.</p>
+
+    <div class="grid g3" style="align-items:start">
+      <div class="card">
+        <span class="tag gold">stage 1</span>
+        <h3 style="margin-top:.6rem">The minors</h3>
+        <ul class="checklist" style="margin-top:.6rem">
+          <li><b>Grey box tri-state</b> at every level of the hierarchy — seder, masechta, perek, mishna. Empty,
+          grey, checked.</li>
+          <li><b>Reorder &rarr; recompute.</b> Any change to the sequence discards whatever is sitting in backlog or
+          today's schedule and replaces it with today's freshly computed estimate.</li>
+          <li><b>Free tick, and tick-to-here.</b> Browse the corpus and tick anything at any level, for out-of-schedule
+          learning, for jumping ahead, and for backfill — which is the same screen used at a different moment.</li>
+          <li><b>Event dating.</b> Every event stores when it was <em>learnt</em>: dated, motzei-backdated, or
+          before-tracking. Before-tracking counts fully toward the goal and the lifetime record, and never toward
+          velocity.</li>
+        </ul>
+      </div>
+      <div class="card" style="border-left:3px solid var(--wine)">
+        <span class="tag user">stage 2 — the big one</span>
+        <h3 style="margin-top:.6rem">Sub-tracks</h3>
+        <ul class="checklist" style="margin-top:.6rem">
+          <li><b>Two types.</b> School year (year picker, rate, weeks) and ongoing (rate, bein hazmanim, weeks,
+          optional end date).</li>
+          <li><b>Ordered, with one current position</b> — structurally the main track minus the plan and the
+          deadline.</li>
+          <li><b>Drag in ground.</b> Any masechta, perek or mishna moves into a sub-track and out of the main
+          track. Optional, incremental, phase two of onboarding a source.</li>
+          <li><b>Contribution maths.</b> Forward-only: past counted as fact, future as estimate, never both.</li>
+          <li><b>Recompute engine</b> — the one from stage 1, now with sub-track contribution in the numerator.</li>
+          <li><b>Home screen:</b> today's tasks on top exactly as they render now, sub-track position rows beneath.</li>
+          <li><b>Add next year</b> — clone the previous year's sub-track and shift its window.</li>
+          <li><b>Forecast guards:</b> the over-commit warning and gap detection.</li>
+          <li><b>Reports:</b> per-source velocity since he started, on or off target, PDF export.</li>
+          <li><b>Lifetime record:</b> times learnt per mishna, with dates, and a lifetime report.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <span class="tag gold">stage 3</span>
+        <h3 style="margin-top:.6rem">Shabbos</h3>
+        <ul class="checklist" style="margin-top:.6rem">
+          <li><b>Shabbos-mode lock.</b> Capture closed from before candle-lighting until after tzeis, driven by
+          zmanim and one location setting. Read-only, not invisible.</li>
+          <li><b>Motzei catch-up</b> card and reminder, generalising to yom tov at no extra cost.</li>
+          <li><b>Events dated to the day learnt</b>, so the record and the velocity report stay honest.</li>
+        </ul>
+        <p class="small muted" style="margin-top:.9rem;padding-top:.9rem;border-top:1px solid var(--rule-soft)">
+        <b>Throughout:</b> the main track is structurally untouched. One masechta, one plan, one deadline, the same
+        planner and the same sequencing. It only ever sees its remaining pool shrink and its daily target adjust.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="climax">
+  <div class="wrap">
+    <p class="kicker">What the evening was actually about</p>
+    <h2>Five things worth keeping.</h2>
+    <div class="rule-gold"></div>
+    <div class="synth">
+      <article>
+        <div class="num">1</div>
+        <div>
+          <h3>The three &ldquo;minor changes&rdquo; were the big one.</h3>
+          <p>The grey box was its representation layer. Reorder-recompute was its engine. Once both existed, all that
+          remained of the hardest feature in the app was a <b>single column on the completion record</b> saying where
+          the learning came from.</p>
+          <p class="small faint" style="margin:0">Two thirds of it was specced while being called small.</p>
+        </div>
+      </article>
+      <article>
+        <div class="num">2</div>
+        <div>
+          <h3>The most throwaway idea solved the hardest problem.</h3>
+          <p>The session opened worried about duplication — school covering ground already learnt at home, and what to
+          do about it. Hours later Daniel offered the lifetime record almost as an aside. There was never a
+          duplication problem. There was <b>chazara</b>, and no schema could see that until the lifetime record named
+          it.</p>
+        </div>
+      </article>
+      <article>
+        <div class="num">3</div>
+        <div>
+          <h3>The hardest engineering problem was solved in the fourth message, and nobody noticed.</h3>
+          <p>Every country's school calendar differs; every school differs within a country; no calendar can be
+          imported, inferred or configured. The coach spent three exchanges circling it. Daniel had already ended it
+          with <b>&ldquo;40 weeks per year&rdquo;</b> — one integer that contains every yom tov, every term break and
+          every country, and needs no maintenance, ever.</p>
+        </div>
+      </article>
+      <article>
+        <div class="num">4</div>
+        <div>
+          <h3>The best design work was deletion.</h3>
+          <p>&ldquo;Only the main track has a deadline.&rdquo; &ldquo;This should be impossible — don't change main
+          track.&rdquo; &ldquo;One school per year, five others.&rdquo; &ldquo;Forget yom tov.&rdquo;</p>
+          <p style="margin:0">The feature got better every single time something was removed from it.</p>
+        </div>
+      </article>
+      <article>
+        <div class="num">5</div>
+        <div>
+          <h3>Shabbos changed genre.</h3>
+          <p>It came in as a scheduling exclusion — a checkbox next to yom tov and bein hazmanim. It left as the app's
+          most distinctive feature: the thing that shows a frum family built it.</p>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <p class="kicker">Left on the table</p>
+    <h2>Open, parked, and deliberately not built.</h2>
+    <div class="rule-gold"></div>
+    <div class="grid g2" style="align-items:start">
+      <div>
+        <h3 style="margin-bottom:.7rem">Still open</h3>
+        <ul class="qlist">
+          <li><span class="qmark">?</span><p><b>Fragmented history.</b> One school split across three year-sub-tracks
+          shows up as three rows in the lifetime report rather than one &ldquo;school&rdquo;. Acceptable, or does it
+          need grouping later?</p></li>
+          <li><span class="qmark">?</span><p><b>The rebbe's non-active weeks.</b> Does the son learn with his rebbe
+          through bein hazmanim and yom tov, or is that a different set of weeks again? The checkbox exists; the
+          answer does not.</p></li>
+        </ul>
+      </div>
+      <div>
+        <h3 style="margin-bottom:.7rem">Parked, not rejected</h3>
+        <ul class="qlist">
+          <li><span class="qmark">&#8226;</span><p><b>Letting the app learn the calendar.</b> If school posts nothing
+          for three weeks each spring, the app has discovered Pesach without knowing the word. Revisit only if the
+          manual estimate proves too inaccurate in practice.</p></li>
+          <li><span class="qmark">&#8226;</span><p><b>Confidence intervals</b> on the forecast, and
+          <b>streak-safety</b> logic — cut under the simplicity mandate along with per-scope deadlines and any
+          multi-option collision policy.</p></li>
+          <li><span class="qmark">&#8226;</span><p><b>Warm and cold.</b> Because the log carries dates, the corpus
+          could flag what was learnt recently and what was learnt once, years ago — a chazara prompt with no new
+          storage. Offered, flagged optional, not adopted.</p></li>
+          <li><span class="qmark">&#8226;</span><p><b>One number instead of two.</b> Stating a sub-track's estimate as
+          a total for the year rather than a weekly rate would delete both the rate and the weeks field. Offered late,
+          not taken.</p></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <p class="kicker">Whose session it was</p>
+    <h2>161 entries. Forty-four of them his.</h2>
+    <p class="lede">One square per logged entry, in the order they happened. Wine is Daniel; the pale ones are the
+    analyst. Hover any square to read it. Every structural decision in the design is a wine square.</p>
+    <div class="dots">
+      <span class="u" title="Daniel — Stance: Creative Partner (declared by behaviour - Daniel dumped straight into content; confirmed unless he says otherwise)"></span>
+      <span class="u" title="Daniel — Context: Daniel set the app up for his son today for the first time; goal is finishing all Mishnayos by his bar mitzvah. First run went well."></span>
+      <span class="u" title="Daniel — THE BIG ONE: app assumes one curriculum -&gt; one track -&gt; one plan -&gt; one goal. Reality is one corpus (all Mishnayos) fed by three sources: Home (self-study, goal-bearin…"></span>
+      <span class="c" title="Analyst — Req 1 RESERVATION: ground claimed by rebbe/school must be carved OUT of the home plan so he never schedules at home what he will cover elsewhere."></span>
+      <span class="c" title="Analyst — Req 2 COLLISION: school picks something already learnt at home; needs a resolution policy (re-learn / auto-credit / mark as review)."></span>
+      <span class="c" title="Analyst — Req 3 FRICTIONLESS CAPTURE: ad-hoc sources have no schedule to tick against, so &#x27;next mishna&#x27; must be one tap."></span>
+      <span class="c" title="Analyst — REFRAME: rebbe/school may not be &#x27;tracks&#x27; at all (a track implies a plan). They may be ATTRIBUTION SOURCES posting completions against one shared corpus; exactly one t…"></span>
+      <span class="u" title="Daniel — MINOR 1: no partial-completion symbol. Completing one perek leaves the whole masechta reading unticked. Wants a GREY box (indeterminate) - empty / grey / checked."></span>
+      <span class="c" title="Analyst — Partiality CASCADES up the hierarchy (seder -&gt; masechta -&gt; perek -&gt; mishna): the tri-state is a rule for how any parent renders when its children disagree, not a masec…"></span>
+      <span class="c" title="Analyst — Minor 1 is a PREREQUISITE for the big one - once school/rebbe cover part of a masechta, partial becomes the normal state, not an edge case."></span>
+      <span class="c" title="Analyst — PARKED: is bulk BACKFILL of already-learnt material its own flow, distinct from daily ticking? Different volume, different UI, different mistakes."></span>
+      <span class="u" title="Daniel — MINOR 2: reordering the sequence changes &#x27;next to learn&#x27;; any mishnayos sitting in backlog or today&#x27;s schedule must be discarded and replaced with today&#x27;s freshly-comp…"></span>
+      <span class="c" title="Analyst — SPINE: the plan is DERIVED state; completions are the durable facts. Backlog and today&#x27;s schedule are computed from (corpus + sequence + completions + goal date), neve…"></span>
+      <span class="c" title="Analyst — Minor 2 IS the recompute engine the big one needs; minor 1 is its representation layer. That leaves ATTRIBUTION (which source completed this + one-tap capture) as the …"></span>
+      <span class="u" title="Daniel — MINOR 3 / FORECAST INPUT: to estimate the daily home target, be able to enter expected weekly output from other programs - e.g. school 10 mishnayos/week, rebbe 5/week …"></span>
+      <span class="u" title="Daniel — REPORTING: a report from when he started showing measured velocity per source (school / rebbe / personal), so he can work out whether he is on target."></span>
+      <span class="u" title="Daniel — PRINTABLE PDF of how the track is going - progress, health - taking all sub-tracks into account."></span>
+      <span class="c" title="Analyst — This adds a SECOND class of durable input. Facts = completions (attributed). ASSUMPTIONS = external velocity estimates (rate x active weeks). Derived = today&#x27;s target,…"></span>
+      <span class="c" title="Analyst — DOUBLE-COUNT LANDMINE: reservation (carve out Masechta Berachos because school is doing it) and rate forecast (subtract 10/week for school) are two different mechanism…"></span>
+      <span class="c" title="Analyst — UNIFICATION: model an external source as (which ground) x (at what rate) -&gt; a projected completion curve. One construct delivers both the carve-out and the timeline, a…"></span>
+      <span class="c" title="Analyst — SELF-CORRECTING LOOP: the velocity report is the feedback that fixes the assumption. Start with a guess (10/wk x 40wk), and once actuals accumulate the app proposes &#x27;s…"></span>
+      <span class="c" title="Analyst — ATTRIBUTION is load-bearing twice over: without a source stamped on every completion there is no per-source velocity report AND no way to reconcile forecast against ac…"></span>
+      <span class="c" title="Analyst — kosher_dart is already a dependency - active weeks per year could be DERIVED from the Hebrew calendar (yom tov, bein hazmanim) instead of hand-entered as 40, with the …"></span>
+      <span class="u" title="Daniel — CALENDAR EXCLUSIONS: option to exclude shabbos / yom tov / bein hazmanim etc from the schedule, so non-learning days are not counted as available days in the daily-tar…"></span>
+      <span class="c" title="Analyst — Exclusions must be PER-SOURCE, not global: home may learn straight through bein hazmanim while school is off; rebbe may not meet Fridays. One global calendar cannot ex…"></span>
+      <span class="c" title="Analyst — SPLIT THE CALENDARS: the LEARNING calendar (when learning happens) is not the CAPTURE calendar (when he can physically tick). Shabbos and yom tov are often the HEAVIES…"></span>
+      <span class="c" title="Analyst — Consequence: backdated capture must be first-class (log Motzei Shabbos for what was learnt Shabbos), and any streak / missed-day / behind-schedule logic must never pen…"></span>
+      <span class="u" title="Daniel — Reality check: schools do NOT follow bein hazmanim (a yeshiva concept), and every country&#x27;s school calendar differs. No hardcoded calendar can work."></span>
+      <span class="c" title="Analyst — CLEAN DIVISION: shabbos and yom tov ARE derivable per locale (kosher_dart already knows Israel vs chutz la&#x27;aretz one/two-day yom tov). School terms, rebbe availability…"></span>
+      <span class="c" title="Analyst — Daniel already solved the calendar problem himself with &#x27;x weeks per year&#x27;: the rate x active-weeks model is CALENDAR-FREE. It never needs to know WHICH weeks, only ho…"></span>
+      <span class="c" title="Analyst — SPLIT BY HORIZON: statistical model (rate x active weeks) answers &#x27;will he finish by the bar mitzvah&#x27; over 2-3 years; actual completions answer &#x27;what do I learn today&#x27;…"></span>
+      <span class="u" title="Daniel — And each school is different - even within one country. So there is no shared or importable school calendar either. Configuration cannot solve this."></span>
+      <span class="c" title="Analyst — LET THE APP LEARN THE CALENDAR: every school being different is the reason to MEASURE rather than CONFIGURE. Observed velocity IS the calendar - if school posts nothin…"></span>
+      <span class="c" title="Analyst — This upgrades Daniel&#x27;s own &#x27;adjustable as we learn his pattern&#x27; from a manual settings screen to an inferred rhythm: the app proposes the corrected rate and the season…"></span>
+      <span class="u" title="Daniel — SCOPE LOCK: yom tov / bein hazmanim exist ONLY to estimate traction on the SUB-tracks (school, rebbe). Their sole purpose is to make the sub-track throughput estimate …"></span>
+      <span class="c" title="Analyst — THE WHOLE FEATURE IS ONE EQUATION: daily_main_target = (remaining_corpus - projected_sub_track_contribution) / remaining_main_learning_days. Everything discussed is ei…"></span>
+      <span class="c" title="Analyst — &#x27;40 weeks&#x27; ALREADY CONTAINS the yom tov. You never need a calendar to express a calendar&#x27;s effect - only its annual net. So no dates, no term imports, no per-country l…"></span>
+      <span class="c" title="Analyst — OPEN - the DENOMINATOR is still unspecified. Daniel scoped the calendar to sub-tracks only, but remaining_main_learning_days needs its own answer: does the son learn a…"></span>
+      <span class="c" title="Analyst — PARKED (not rejected): inferred calendars, confidence intervals, streak-safety. Out of scope for the equation; revisit only if the manual estimate proves too inaccurat…"></span>
+      <span class="u" title="Daniel — SCOPE LOCK 2: the whole daily-target computation is only relevant IF a deadline is set. No deadline, no required rate."></span>
+      <span class="c" title="Analyst — INVERSION: same machinery run both ways. Deadline set -&gt; solve for RATE (how much per day). No deadline -&gt; solve for DATE (at this pace you finish Mar 2029)."></span>
+      <span class="c" title="Analyst — BUILD-ORDER PAYOFF: without a deadline you need NO estimates at all - actual observed velocity already includes school and rebbe, so it projects a date with zero confi…"></span>
+      <span class="c" title="Analyst — PROGRESSIVE DISCLOSURE: keep the sub-track estimate inputs hidden until a deadline exists. Most users never see them; the one who sets a bar mitzvah date gets them exa…"></span>
+      <span class="u" title="Daniel — CLARIFIED: his son has no school during bein hazmanim or yom tov, so those days/weeks must be excluded from the SCHOOL contribution estimate. Reconciles with the earli…"></span>
+      <span class="c" title="Analyst — DERIVE THE COUNT, DON&#x27;T ASK FOR IT: yom tov is derivable from kosher_dart and bein hazmanim is tied to Nissan/Tishrei, so the app can COMPUTE the active-weeks number a…"></span>
+      <span class="c" title="Analyst — This keeps the model calendar-FREE at runtime (the equation still only consumes a rate and a week-count) while using the calendar once, at setup, purely to pre-fill th…"></span>
+      <span class="c" title="Analyst — OPEN: do the same exclusions apply to the REBBE source? Does he learn with his rebbe during bein hazmanim and yom tov, or is that a different set of non-active weeks?"></span>
+      <span class="u" title="Daniel — NO sub-goals: nothing other than the main track ever gets a deadline. No &#x27;finish Seder Moed before Pesach&#x27;. Deadline stays a property of the ONE goal-bearing track, ne…"></span>
+      <span class="c" title="Analyst — Big simplification: exactly one deadline per curriculum, so the equation is solved once, globally. No per-scope targets, no competing deadlines to reconcile, no nested…"></span>
+      <span class="u" title="Daniel — REAFFIRMED: the only deadline is on the main track. Treat as settled."></span>
+      <span class="c" title="Analyst — UI COROLLARY: because a sub-track has no goal of its own, its rate/active-weeks estimate is not a property of the sub-track - it is an input to the MAIN track&#x27;s goal. …"></span>
+      <span class="u" title="Daniel — APPROVED: derived active-weeks UI - &#x27;School: excludes yom tov / bein hazmanim -&gt; 39 active weeks. Change?&#x27; - pre-filled from the calendar, overridable."></span>
+      <span class="u" title="Daniel — GOVERNING PRINCIPLE: keep it as simple as possible. Applies retroactively - prune everything generated so far against it."></span>
+      <span class="c" title="Analyst — SIMPLEST VERSION (6 parts): (1) sub-track = name + its ground + a tick button, no plan/goal/schedule; (2) completion gains ONE field: source; (3) grey box tri-state at…"></span>
+      <span class="c" title="Analyst — CUT under the simplicity mandate: inferred calendars, confidence intervals / widening bands, streak-safety logic, per-scope or sub-track deadlines, and any multi-optio…"></span>
+      <span class="u" title="Daniel — UNPLANNED LEARNING: he must be able to mark stuff learnt out of schedule and out of sequence - e.g. a spare hour, learns something not in today&#x27;s plan. Ticking must no…"></span>
+      <span class="c" title="Analyst — This is FREE in the derived-plan model: completions are a set, the plan is recomputed from what remains, so learning out of order simply shrinks the remaining set and …"></span>
+      <span class="c" title="Analyst — UNIFICATION: unplanned learning and BACKFILL of previously-learnt material are the SAME screen - browse the corpus, tick anything, at any level. That closes the earlie…"></span>
+      <span class="c" title="Analyst — So the app needs exactly TWO capture surfaces: (a) the fast path - one tap on the next mishna, for daily and for ad-hoc sub-tracks; (b) the free path - browse the corp…"></span>
+      <span class="u" title="Daniel — LIFETIME LEARNING RECORD: every learning event is kept globally - tap a mishna and see how many times he has learnt it and when, across his whole life. Plus a lifetime…"></span>
+      <span class="c" title="Analyst — CORRECTION: completions are an append-only EVENT LOG (mishna + date + source), not a set. The coach&#x27;s &#x27;set, not a list&#x27; simplification was wrong and is withdrawn."></span>
+      <span class="c" title="Analyst — The event log COSTS NOTHING EXTRA - it was already required for the per-source velocity report Daniel asked for (that needs timestamped, attributed events). One table …"></span>
+      <span class="c" title="Analyst — REFRAME - what the coach called a COLLISION, the domain calls CHAZARA. School covering ground already learnt at home is not a conflict to resolve; it is a second learn…"></span>
+      <span class="c" title="Analyst — CLEAN SEPARATION: goal progress counts DISTINCT mishnayos; the lifetime record counts ALL events. A second learning never advances the bar-mitzvah goal but always enri…"></span>
+      <span class="c" title="Analyst — LIFESPAN: a lifetime record means the app outlives the goal. It does not end at the siyum - the bar mitzvah is one milestone in a record that keeps going."></span>
+      <span class="c" title="Analyst — OPTIONAL adjacent spark: because the log carries dates, the corpus can show what is WARM (recently learnt) vs COLD (learnt once, years ago) - a chazara prompt driven b…"></span>
+      <span class="u" title="Daniel — DENOMINATOR ANSWERED: yes, he learns at home on shabbos. So the main track has NO excluded days - the denominator is simply every day from now to the deadline. Calenda…"></span>
+      <span class="c" title="Analyst — The main track therefore needs no calendar at all. Every calendar concept in this session lives in one place: the sub-track active-weeks count."></span>
+      <span class="c" title="Analyst — SHABBOS CAPTURE, SIMPLEST FORM: he learns but cannot log, so ticks arrive motzei covering 1-3 days. No special logic needed - with no streaks and a derived plan, an un…"></span>
+      <span class="u" title="Daniel — PUSHBACK on the coach&#x27;s &#x27;self-healing, no special logic&#x27; answer: if shabbos is ticked as a learning day, the inability to log on it must actually be DEALT WITH, not sh…"></span>
+      <span class="c" title="Analyst — DEAL WITH IT - four small pieces: (1) show the shabbos/yom tov target BEFORE it comes in, on the erev view, so he knows what to learn; (2) freeze the on/off-target ind…"></span>
+      <span class="c" title="Analyst — Point (4) is not cosmetic: if a whole shabbos/yom tov of learning lands on motzei&#x27;s timestamp, the velocity report shows a fake spike and zero shabbos learning - the l…"></span>
+      <span class="c" title="Analyst — The same catch-up card generalises to yom tov (up to three consecutive un-loggable days) - the harder case - with no extra design."></span>
+      <span class="c" title="Analyst — OPEN (alternate reading): should the app REFUSE to be used on shabbos/yom tov - a shabbos mode that locks capture rather than merely tolerating the gap?"></span>
+      <span class="u" title="Daniel — SHABBOS MODE CONFIRMED: the app must be NOT CLICKABLE on shabbos (and by extension yom tov) - capture is locked, no writing. After shabbos he is expected to tick what …"></span>
+      <span class="c" title="Analyst — The locked state and the &#x27;show the target before shabbos&#x27; requirement are the SAME SCREEN: a read-only shabbos view listing what is planned, with no buttons. One thing…"></span>
+      <span class="c" title="Analyst — Zmanim mechanics: kosher_dart plus a one-time location/Israel-vs-chutz-laaretz setting drives the lock window. Lock from candle-lighting, unlock after tzeis with a mar…"></span>
+      <span class="c" title="Analyst — flutter_local_notifications is already a dependency, so a motzei shabbos catch-up reminder is cheap - fired off the same zmanim, landing exactly when the catch-up card…"></span>
+      <span class="c" title="Analyst — Read-only, not invisible: the app cannot stop a phone being used on shabbos, but it CAN refuse to record - which is the part it is responsible for. Locking capture whi…"></span>
+      <span class="u" title="Daniel — Asked what &#x27;completion date defaults to now, editable&#x27; actually means."></span>
+      <span class="c" title="Analyst — M4 explained: every completion event stores WHEN it was learnt, not when it was tapped. Normal case is invisible (tap today = learnt today). It only surfaces for motze…"></span>
+      <span class="c" title="Analyst — BACKFILL BUG THIS EXPOSES: Daniel backfilled hundreds of already-learnt mishnayos on setup day. If those are stamped with the tap date, the velocity report he asked fo…"></span>
+      <span class="c" title="Analyst — FIX: backfilled events carry &#x27;learnt before tracking started&#x27; (no date, or an approximate one) and are EXCLUDED from all velocity maths. They still count fully toward …"></span>
+      <span class="u" title="Daniel — Asked what &#x27;source on every completion&#x27; means."></span>
+      <span class="c" title="Analyst — B2 explained: one extra column on the completion record saying WHERE the learning came from - personal / rebbe / school. It is free at the point of capture because it …"></span>
+      <span class="c" title="Analyst — Without the source column: no per-source velocity report, no forecast-vs-actual check, and no way to tell whether the school estimate of 10/week is right. It is one co…"></span>
+      <span class="c" title="Analyst — OPEN: which source do free-tick and backfill events get? Default to personal, or ask once per batch?"></span>
+      <span class="u" title="Daniel — Asked what &#x27;contribution estimates in main-track goal settings&#x27; means."></span>
+      <span class="c" title="Analyst — B4 explained as a screen: under the main track&#x27;s goal (where the deadline lives) sits a small table, one row per contributing source, each with two numbers - mishnayos…"></span>
+      <span class="c" title="Analyst — WHY IT EARNS ITS PLACE (illustrative, ~4192 mishnayos, 3 years to the bar mitzvah): ignoring school and rebbe gives a target of ~3.8/day. Counting school at 10/wk x 39…"></span>
+      <span class="u" title="Daniel — SUB-TRACK SPEC (final, generic): add a sub-track = free-text name (rebbe / school / whatever) + mishnayos per week + exclusion checkboxes (bein hazmanim, yomim tovim, …"></span>
+      <span class="c" title="Analyst — WITHDRAWN: the coach&#x27;s earlier UI corollary that estimates belong in the main track&#x27;s goal settings rather than on the sub-track. Daniel&#x27;s version - everything about a…"></span>
+      <span class="c" title="Analyst — NO DOUBLE-COUNT, provided the projection is FORWARD-ONLY: remaining = corpus minus all events to date (which already includes past sub-track ticks), and projected cont…"></span>
+      <span class="c" title="Analyst — OPEN AND IMPORTANT: the simple sub-track form has NO ground/masechta field, which silently drops Daniel&#x27;s opening requirement that &#x27;anything scheduled in those tracks …"></span>
+      <span class="u" title="Daniel — CHOSE B, with a better mechanic: you can DRAG any masechta, perek or individual mishna into a sub-track and it disappears from the main track. This is PHASE 2 of onboa…"></span>
+      <span class="c" title="Analyst — Assigning ground revives the double-count landmine: carve out Masechta Shabbos AND subtract 10/week and school pays in twice. Resolved by making the rate mean somethin…"></span>
+      <span class="c" title="Analyst — ONE FORMULA FOR BOTH MODES: sub-track contribution by the deadline = min(rate x remaining active weeks, assigned ground remaining). Ground assigned -&gt; capped by the gr…"></span>
+      <span class="c" title="Analyst — THE RATE VALIDATES THE CARVE-OUT - a protective feature falls out free: if a sub-track is assigned more ground than its rate can finish before the deadline, the app wa…"></span>
+      <span class="c" title="Analyst — Reuse again: the drag source is the same browse-the-corpus screen already needed for backfill and free-ticking. Third use of one surface."></span>
+      <span class="u" title="Daniel — A sub-track can hold MULTIPLE masechtos - e.g. two masechtos with the rebbe - and he wants to see WHERE HE IS UP TO in each."></span>
+      <span class="c" title="Analyst — So a sub-track has no GOAL but it does have PROGRESS. No deadline, no required rate - but a real progress readout over its assigned ground."></span>
+      <span class="c" title="Analyst — MULTIPLE MASECHTOS BREAK A SINGLE &#x27;NEXT MISHNA&#x27; POINTER. Simplest resolution: no global next for the sub-track - render each assigned masechta as its own row with its …"></span>
+      <span class="c" title="Analyst — Reuse again: the sub-track progress rows are the same tree-with-grey-boxes rendering as the main track, scoped to assigned ground. The tri-state from minor 1 is doing …"></span>
+      <span class="u" title="Daniel — TIME-BOUNDED SUB-TRACKS: school may stop at year 11, and different school years run at different velocities - so he should be able to add each school year as its own s…"></span>
+      <span class="c" title="Analyst — Sub-track gains two optional fields: active FROM and active UNTIL. &#x27;School stops after year 11&#x27; is then just an end date, and differing year velocities are separate su…"></span>
+      <span class="c" title="Analyst — FUTURE SUB-TRACKS BECOME LEGAL: &#x27;Year 11, starts Sept 2027, 12/week&#x27; contributes to the forecast before it exists in reality and has no ticks yet. The forecast stops b…"></span>
+      <span class="c" title="Analyst — Equation updates to: contribution = min(rate x active weeks falling INSIDE the window AND before the deadline, assigned ground remaining). Summed across all sub-tracks."></span>
+      <span class="c" title="Analyst — TRADE-OFF to watch: one school split across three year-sub-tracks fragments its history, so the lifetime report shows three rows rather than one &#x27;school&#x27;. Acceptable, …"></span>
+      <span class="u" title="Daniel — YES - the main track can also hold multiple masechtos on the go, same as a sub-track. But there must be an EASY way to tick off what he learnt with his rebbe or at sch…"></span>
+      <span class="c" title="Analyst — ONE COMPONENT FOR EVERYTHING: main track and sub-tracks render identically as rows of (track, masechta, current position, tick control). No separate main-track and sub…"></span>
+      <span class="c" title="Analyst — TICK-TO-HERE is the right mechanic, not one-tap-per-mishna: with a rebbe or at school he learns several in one sitting, and people report learning by ENDPOINT not by c…"></span>
+      <span class="c" title="Analyst — Tick-to-here also fixes the pain Daniel felt THIS MORNING: backfilling hundreds of mishnayos one tap at a time becomes a single &#x27;up to here&#x27; tap per masechta. Fifth us…"></span>
+      <span class="c" title="Analyst — HOME SCREEN = ALL ACTIVE FRONTS IN ONE PLACE: every open masechta across main track and every sub-track, each with its position and its tick control, no navigation. Ti…"></span>
+      <span class="u" title="Daniel — CONFIRMED: he should be able to program next year&#x27;s school, and the year after, each as a SEPARATE sub-track, all the way out to the deadline."></span>
+      <span class="c" title="Analyst — CLONE-AND-SHIFT: &#x27;add next year&#x27; duplicates the previous year&#x27;s sub-track and advances its window, so programming three or four years costs one tap each instead of re-…"></span>
+      <span class="c" title="Analyst — GAP DETECTION on the contribution timeline: any period between now and the deadline with no covering sub-track silently forecasts zero help, inflating the daily target…"></span>
+      <span class="c" title="Analyst — The two forecast guards are now symmetrical: OVER-committing (ground carved out that a source cannot finish in time) and UNDER-committing (a year with no sub-track). B…"></span>
+      <span class="u" title="Daniel — CORRECTION: the personal MAIN track keeps its CURRENT behaviour - it still generates tasks / scheduled items as it does today. The position-row + &#x27;+1 / up to&#x27; model is…"></span>
+      <span class="c" title="Analyst — WITHDRAWN: the coach&#x27;s &#x27;one kind of track, one kind of row&#x27; unification. It was wrong. A planned track produces TASKS; an unplanned track produces a POSITION. The pres…"></span>
+      <span class="c" title="Analyst — Home screen is therefore MIXED and cheaper to build than the unified version: today&#x27;s tasks on top exactly as they render now, with sub-track position rows beneath. No…"></span>
+      <span class="c" title="Analyst — OPEN - the one thing &#x27;stays as it is&#x27; does not answer: if the main track can now hold two masechtos at home, does today&#x27;s task list draw from BOTH, and in what proport…"></span>
+      <span class="u" title="Daniel — SCHOOL SUB-TRACKS ARE SCOPED TO ONE SCHOOL YEAR AT A TIME: you select the school year rather than typing arbitrary dates, and add one sub-track per year."></span>
+      <span class="c" title="Analyst — So the window field becomes a school-year PICKER that auto-fills the dates (editable). Needs one setting held once - which school year he is in now and roughly when th…"></span>
+      <span class="c" title="Analyst — School-year boundaries are country-specific (Sep-Jul, Aug-Jun, Elul-Tammuz), but precision does not matter here: the value feeds a weeks-per-year estimate that is alre…"></span>
+      <span class="u" title="Daniel — REVERSAL - two masechtos on the MAIN track must be IMPOSSIBLE. The main track stays a single masechta sequence and is not to be changed. Supersedes the earlier &#x27;yes&#x27; t…"></span>
+      <span class="c" title="Analyst — Scope win: the existing planner, task generation and sequencing logic are untouched. Everything new lives in sub-tracks. The main track only ever sees its remaining po…"></span>
+      <span class="u" title="Daniel — SIMPLIFY SCHOOL SUB-TRACKS: for school, just estimate a school-year average globally - no yom tov / bein hazmanim checkboxes. Exclusions apply only to NON-school track…"></span>
+      <span class="c" title="Analyst — He is right on the maths too: an average stated ACROSS a school year already has the holidays baked in, so applying exclusions on top would discount the breaks twice a…"></span>
+      <span class="c" title="Analyst — Avoid inventing two sub-track TYPES for this: keep one form and make the exclusion line optional/collapsed. School = name + school year + average per week. Rebbe = the…"></span>
+      <span class="c" title="Analyst — Optional further trim (not adopted): stating the estimate as a TOTAL FOR THE YEAR rather than per-week would delete both the rate and the weeks/year field, since a yea…"></span>
+      <span class="u" title="Daniel — Asked whether free-tick means learning something out of schedule, and proposed a dedicated free-tick source."></span>
+      <span class="c" title="Analyst — Free-tick covers TWO different situations that want DIFFERENT answers: (a) out-of-schedule learning now - a spare hour at home - and (b) backfill of learning from befo…"></span>
+      <span class="c" title="Analyst — A source must describe WHO or WHERE, never HOW it was entered. &#x27;Free tick&#x27; is an entry method, so making it a source would strip real spare-hour learning out of his pe…"></span>
+      <span class="c" title="Analyst — RESOLUTION: out-of-schedule learning at home = source PERSONAL, no new source. Backfill = a genuine &#x27;before tracking / unknown&#x27; source, because the provenance really i…"></span>
+      <span class="u" title="Daniel — OVERRULED the coach: there ARE two sub-track types. A SCHOOL sub-track runs September to July and lasts exactly one year. Not an arbitrary window."></span>
+      <span class="c" title="Analyst — Coach&#x27;s &#x27;avoid two types&#x27; argument withdrawn. The type IS the simplification here: because a school year is a real fixed recurring structure, typing it lets the app fi…"></span>
+      <span class="c" title="Analyst — TWO TYPES: (1) SCHOOL YEAR - name + year picker (Sep-Jul, fixed 1 year) + average mishnayos per week; no exclusions, since a school-year average already contains the h…"></span>
+      <span class="c" title="Analyst — The type also scopes two features cleanly: &#x27;add next year&#x27; (clone + shift) and gap detection along the timeline are meaningful only for school-year sub-tracks, because…"></span>
+      <span class="u" title="Daniel — Asked what &#x27;before tracking - excluded from velocity, counts fully to goal and lifetime&#x27; actually means."></span>
+      <span class="c" title="Analyst — Explained with the opening-balance analogy: backfilled learning is like an opening bank balance. It counts in the BALANCE (remaining corpus shrinks, goal progress adva…"></span>
+      <span class="u" title="Daniel — EXCLUSIONS TRIMMED TO ONE: drop yom tov as a checkbox entirely; keep BEIN HAZMANIM only, on the ongoing (rebbe) type. Weeks per year must be overridable. And &#x27;average …"></span>
+      <span class="c" title="Analyst — FIX BY DELETING THE CONCEPT: replace the &#x27;average across the year&#x27; label with an explicit weeks-per-year field on the school type too. Both types then read identically…"></span>
+      <span class="c" title="Analyst — Final sub-track forms. SCHOOL YEAR: name + year picker + mishnayos/week + weeks/year (pre-filled ~39, editable), no checkboxes. ONGOING: name + mishnayos/week + bein h…"></span>
+      <span class="c" title="Analyst — The checkbox is now purely a convenience that pre-fills a number Daniel can always overwrite - so no estimate is ever trapped behind a tick-box he disagrees with."></span>
+      <span class="u" title="Daniel — UI: each sub-track is its OWN SECTION."></span>
+      <span class="u" title="Daniel — LIMITS: one school sub-track per academic year, from now until the goal; and up to FIVE other (ongoing) sub-tracks."></span>
+      <span class="u" title="Daniel — DROP &#x27;Year 11&#x27; NAMING - year numbering differs by country. Identify a school sub-track by its academic period (e.g. Sep 2027 - Jul 2028) instead."></span>
+      <span class="c" title="Analyst — Dropping the year number also deletes the &#x27;which school year is he in&#x27; setting the coach proposed earlier - one less thing to configure, and no country-specific number…"></span>
+      <span class="c" title="Analyst — THE PICKER ENFORCES THE LIMIT: list only academic years between today and the deadline, and grey out any already added. One-per-year needs no validation message, no er…"></span>
+      <span class="u" title="Daniel — EACH TRACK HAS EXACTLY ONE CURRENT POSITION: a sub-track holding several masechtos needs an ORDER, like the main track. Only one thing is being learnt at a time per tr…"></span>
+      <span class="c" title="Analyst — WITHDRAWN: the coach&#x27;s per-masechta rows with independent next-pointers. Sub-tracks are ordered with a single current position - structurally identical to the main tra…"></span>
+      <span class="c" title="Analyst — Home screen simplifies to ONE ROW PER TRACK rather than one per masechta, so it stays short however much ground is assigned. Opening a track&#x27;s section shows its ordere…"></span>
+      <span class="c" title="Analyst — ARCHITECTURE (Daniel&#x27;s, cleaner than the coach&#x27;s earlier attempt): every track is an ordered sequence over assigned ground with one current position. The ONLY differen…"></span>
+      <span class="c" title="Analyst — Also resolves the original &#x27;tick the next mishna easily&#x27; requirement unambiguously - with one current position per track there is exactly one &#x27;next&#x27;, so the +1 button …"></span>
+      <span class="c" title="Analyst — SYNTHESIS 1 - the three &#x27;minor changes&#x27; WERE the big one: grey box was its representation layer, reorder-recompute was its engine, and all that remained was a single s…"></span>
+      <span class="c" title="Analyst — SYNTHESIS 2 - the most throwaway idea solved the hardest problem: Daniel opened worried about handling duplication, then hours later offered the lifetime record almost…"></span>
+      <span class="c" title="Analyst — SYNTHESIS 3 - the hardest engineering problem was solved in the fourth message and went unnoticed: &#x27;40 weeks per year&#x27; collapsed every country, school, rebbe and calen…"></span>
+      <span class="c" title="Analyst — SYNTHESIS 4 - the best design work was DELETION: &#x27;only the main track has a deadline&#x27;, &#x27;this should be impossible - don&#x27;t change main track&#x27;, &#x27;one school per year, fiv…"></span>
+      <span class="c" title="Analyst — SYNTHESIS 5 - shabbos changed genre: it entered as a scheduling exclusion and left as the app&#x27;s most distinctive feature, the thing that shows a frum family built it."></span>
+      <span class="c" title="Analyst — CHOSEN DIRECTION: build in the stated order - minors (grey box, reorder-recompute, free-tick with tick-to-here, event dating) then sub-tracks (two types, ordered singl…"></span>
+      <span class="e" title="Session — session complete - synthesis delivered, HTML keepsake requested"></span>
+    </div>
+    <div class="legend">
+      <span><i style="background:var(--wine)"></i>Daniel &mdash; 44 <span class="faint">(23 decisions &middot; 11 ideas &middot; 5 questions &middot; 4 course corrections &middot; the opening context)</span></span>
+      <span><i style="background:var(--teal);opacity:.42"></i>Analyst &mdash; 116</span>
+    </div>
+    <p class="small muted" style="margin-top:1.2rem;max-width:44rem">Six of the analyst's squares are it withdrawing
+    or correcting its own proposal &mdash; every one of them after Daniel pushed. The ratio is the wrong way to read
+    this page: the analyst produced the volume, and Daniel produced the shape.</p>
+
+    <div class="ledger">
+      <div class="item">
+        <span class="what">The opening problem</span>
+        <p class="said">&ldquo;app assumes one curriculum -&gt; one track -&gt; one plan -&gt; one goal. Reality is one
+        corpus (all Mishnayos) fed by three sources&rdquo;</p>
+        <p class="eff">Everything else on this page is downstream of it.</p>
+      </div>
+      <div class="item">
+        <span class="what">Minor 1</span>
+        <p class="said">&ldquo;no partial-completion symbol. Completing one perek leaves the whole masechta reading
+        unticked. Wants a GREY box (indeterminate) - empty / grey / checked.&rdquo;</p>
+        <p class="eff">Became the representation layer of the entire feature and got reused in four places.</p>
+      </div>
+      <div class="item">
+        <span class="what">Minor 2</span>
+        <p class="said">&ldquo;reordering the sequence changes 'next to learn'; any mishnayos sitting in backlog or
+        today's schedule must be discarded and replaced with today's freshly-computed estimate.&rdquo;</p>
+        <p class="eff">Became the recompute engine, and forced the derived-plan spine that makes out-of-order
+        learning free.</p>
+      </div>
+      <div class="item">
+        <span class="what">Minor 3 — and the calendar problem, ended</span>
+        <p class="said">&ldquo;be able to enter expected weekly output from other programs - e.g. school 10
+        mishnayos/week, rebbe 5/week - plus active weeks per year (e.g. 40, since they break for holidays).
+        Adjustable as his real pattern becomes clearer.&rdquo;</p>
+        <p class="eff">One integer that contains every country, school, rebbe and yom tov. The model never needs to
+        know <em>which</em> weeks.</p>
+      </div>
+      <div class="item">
+        <span class="what">Scope lock</span>
+        <p class="said">&ldquo;yom tov / bein hazmanim exist ONLY to estimate traction on the SUB-tracks (school,
+        rebbe) … Not a scheduling feature.&rdquo;</p>
+        <p class="eff">Confined every calendar concept in the design to one number on one form.</p>
+      </div>
+      <div class="item">
+        <span class="what">Scope lock 2</span>
+        <p class="said">&ldquo;the whole daily-target computation is only relevant IF a deadline is set. No deadline,
+        no required rate.&rdquo;</p>
+        <p class="eff">Produced the build order: the zero-configuration version ships first and the estimates unlock
+        behind a deadline.</p>
+      </div>
+      <div class="item">
+        <span class="what">No sub-goals</span>
+        <p class="said">&ldquo;nothing other than the main track ever gets a deadline. No 'finish Seder Moed before
+        Pesach'.&rdquo;</p>
+        <p class="eff">One deadline per curriculum, so the equation is solved once, globally. No competing deadlines,
+        no nested progress maths.</p>
+      </div>
+      <div class="item">
+        <span class="what">The governing principle</span>
+        <p class="said">&ldquo;keep it as simple as possible&rdquo; — applied retroactively, pruning everything
+        generated so far against it.</p>
+        <p class="eff">Cut inferred calendars, confidence intervals, streak-safety logic and multi-option collision
+        policies in a single line.</p>
+      </div>
+      <div class="item">
+        <span class="what">The lifetime record</span>
+        <p class="said">&ldquo;every learning event is kept globally - tap a mishna and see how many times he has
+        learnt it and when, across his whole life. Plus a lifetime report.&rdquo;</p>
+        <p class="eff">Replaced the set with an event log, dissolved the duplication problem into chazara, and made
+        the app outlive the goal.</p>
+      </div>
+      <div class="item">
+        <span class="what">Shabbos</span>
+        <p class="said">&ldquo;the app must be NOT CLICKABLE on shabbos (and by extension yom tov) - capture is
+        locked, no writing. After shabbos he is expected to tick what he learnt.&rdquo;</p>
+        <p class="eff">The most distinctive thing in the design, and the one no generic tracker would ever have.</p>
+      </div>
+      <div class="item">
+        <span class="what">Reservation, solved by gesture</span>
+        <p class="said">&ldquo;you can DRAG any masechta, perek or individual mishna into a sub-track and it
+        disappears from the main track.&rdquo;</p>
+        <p class="eff">Delivered his opening carve-out requirement with no extra field on the form — and revived the
+        double-count landmine, which is what produced the min() in the equation.</p>
+      </div>
+      <div class="item">
+        <span class="what">Two types</span>
+        <p class="said">&ldquo;there ARE two sub-track types. A SCHOOL sub-track runs September to July and lasts
+        exactly one year. Not an arbitrary window.&rdquo;</p>
+        <p class="eff">Overruled the analyst. The type is what lets the app fill the dates, offer &ldquo;add next
+        year&rdquo;, drop the exclusions and refuse nonsense windows.</p>
+      </div>
+      <div class="item">
+        <span class="what">One position per track</span>
+        <p class="said">&ldquo;EACH TRACK HAS EXACTLY ONE CURRENT POSITION: a sub-track holding several masechtos
+        needs an ORDER, like the main track. Only one thing is being learnt at a time per track.&rdquo;</p>
+        <p class="eff">The cleanest piece of architecture in the session, and better than the analyst's. Every track
+        is an ordered sequence with one position; only the main track adds a plan and a deadline.</p>
+      </div>
+      <div class="item">
+        <span class="what">The reversal</span>
+        <p class="said">&ldquo;two masechtos on the MAIN track must be IMPOSSIBLE.&rdquo;</p>
+        <p class="eff">Left the planner, task generation and sequencing entirely untouched, and deleted an open
+        question in the same breath.</p>
+      </div>
+      <div class="item">
+        <span class="what">Limits</span>
+        <p class="said">&ldquo;one school sub-track per academic year, from now until the goal; and up to FIVE other
+        (ongoing) sub-tracks.&rdquo;</p>
+        <p class="eff">Turned validation into a picker: the impossible choice is simply not offered.</p>
+      </div>
+      <div class="item">
+        <span class="what">The last trim</span>
+        <p class="said">&ldquo;drop yom tov as a checkbox entirely; keep BEIN HAZMANIM only … And 'average across the
+        year' is confusing wording.&rdquo;</p>
+        <p class="eff">One checkbox left, and the word &ldquo;average&rdquo; deleted in favour of two visible numbers
+        that multiply.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p class="he" dir="rtl" lang="he">הדרן עלך</p>
+    <p>Six sedarim, sixty-three masechtos, about four thousand one hundred and ninety-two mishnayos, and a boy
+    learning them at home, with his rebbe, and at school — all of it landing in one place.</p>
+    <p>The record does not end at the siyum. The bar mitzvah is one milestone in a record that keeps going.</p>
+    <p class="src">Brainstorming session, 24 August 2026 &nbsp;·&nbsp; Learning Tracker &nbsp;·&nbsp; every word on
+    this page derives from the session log of 161 entries.</p>
+  </div>
+</footer>
+
+</body>
+</html>
