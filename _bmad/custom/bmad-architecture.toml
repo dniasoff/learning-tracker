@@ -1,0 +1,24 @@
+# Canonical bmad-architecture override for bmad-docmost.
+# Migrated from the deprecated bmad-create-architecture path because the canonical
+# skill exposes external_handoffs at Finalize and writes ARCHITECTURE-SPINE.md.
+# Sparse, append-only — copy to {project-root}/_bmad/custom/bmad-architecture.toml.
+
+[workflow]
+
+# Wiki-first activation — runs before local architecture-spine discovery.
+activation_steps_prepend = [
+  "WIKI-FIRST — this is a living-wiki project and the wiki manual OUTRANKS local files. Before any local-file discovery, resolve what the manual already holds: invoke skill:doc-read-first for doc_type=architecture (it runs `docmost-cli search '\"Architecture: {project_name}\"' --cached --content --space {docmost_space} --output json`, then `docmost-cli page get <slug> --output json`). Treat the wiki page — not the local architecture spine — as the source of truth and the PRIMARY existing input.",
+  "Report the WIKI status FIRST in your discovery summary (architecture page: exists or absent; if it exists, its status draft|canonical, slug, and a one-line content summary), then any local artifacts. NEVER conclude that no architecture exists from the local filesystem alone. If the living page EXISTS, amend it in place (current-state-only, P4); never spawn a dated or parallel sibling.",
+]
+
+# Canonical bmad-architecture consumes external_handoffs during Finalize step 6.
+# The local run folder may be dated, but that date never enters the living page.
+external_handoffs = [
+  "After finalize, route `{doc_workspace}/ARCHITECTURE-SPINE.md` into the project's living manual via skill:doc-amend (find-before-create for doc_type=architecture across drafts AND canonical → ASK one plain-English question on a fuzzy match → AMEND the existing architecture node in place as a DRAFT revision with `docmost-cli page patch <slug> --if-version <updated_at>` keeping the body current-state-only and preserving protected story, tldr, and how-this-manual-works zones → else CREATE `docmost-cli page create 'Architecture: {project_name}' --space {docmost_space} --parent <architecture-ia-node-slug> --doc-type architecture --status draft --content @{doc_workspace}/ARCHITECTURE-SPINE.md --output json`, NEVER --status canonical. Surface the url/slug; the page lands as DRAFT pending human ratification (doc-ratify) — AI never self-promotes. The wiki node is authoritative — the local architecture spine is a transient working draft. If docmost-cli is unavailable or exits non-zero, WARN the user and name `{doc_workspace}/ARCHITECTURE-SPINE.md` as the unsynced local draft; do not silently demote it to authoritative."
+]
+
+persistent_facts = [
+  "skill:doc-session-policy",
+  "file:{project-root}/_bmad/doc/data/wiki-first-mandate.md",
+  "file:{project-root}/_bmad/doc/data/decision-order.md",
+]

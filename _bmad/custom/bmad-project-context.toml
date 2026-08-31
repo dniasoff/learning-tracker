@@ -1,0 +1,25 @@
+# Canonical replacement for the deleted bmad-document-project override.
+# The upstream bmad-document-project ID is only a v6 shim: it has no customize.toml
+# or resolver call and forwards to bmad-project-context. Retaining a no-op shim file
+# would preserve dead, misleading configuration, so the live hook targets the
+# canonical skill directly.
+# Sparse, append-only — copy to {project-root}/_bmad/custom/bmad-project-context.toml.
+
+[workflow]
+
+# Wiki-first activation — resolve the living project-overview page before inspecting
+# the repository's AGENTS.md, which is the canonical skill's local output.
+activation_steps_prepend = [
+  "WIKI-FIRST — this is a living-wiki project and the wiki manual OUTRANKS local files. Before assessing or writing AGENTS.md, resolve what the manual already holds: invoke skill:doc-read-first for doc_type=project-overview (it runs `docmost-cli search '\"Project Overview: {project_name}\"' --cached --content --space {docmost_space} --output json`, then `docmost-cli page get <slug> --output json`). Treat the wiki page — not AGENTS.md — as the source of truth and the PRIMARY existing input.",
+  "Report the WIKI status FIRST (project-overview page: exists or absent; if it exists, its status draft|canonical, slug, and a one-line content summary), then any local AGENTS.md or other instruction files. NEVER conclude that no project documentation exists from the local filesystem alone. If the living page EXISTS, reconcile the approved current-state content in place; never spawn a dated or parallel sibling.",
+]
+
+# Route the canonical skill's approved AGENTS.md result into the one living
+# project-overview page. The local file remains a transient working draft.
+on_complete = "Route {project-root}/AGENTS.md into the project's living manual via skill:doc-amend (find-before-create for doc_type=project-overview across drafts AND canonical → ASK one plain-English question on a fuzzy match → AMEND the existing project-overview node in place as a DRAFT revision with `docmost-cli page patch <slug> --if-version <updated_at>` keeping the body current-state-only → else CREATE `docmost-cli page create 'Project Overview: {project_name}' --space {docmost_space} --parent <project-overview-ia-node-slug> --doc-type project-overview --status draft --content @{project-root}/AGENTS.md --output json`, NEVER --status canonical; the project-overview node is frequently the manual root, so preserve its protected story, tldr, and how-this-manual-works zones). Surface the url/slug; the page lands as DRAFT pending human ratification (doc-ratify) — AI never self-promotes. The wiki node is authoritative — AGENTS.md is a transient working draft. If docmost-cli is unavailable or exits non-zero, WARN the user and name {project-root}/AGENTS.md as the unsynced local draft; do not silently demote it to authoritative."
+
+persistent_facts = [
+  "skill:doc-session-policy",
+  "file:{project-root}/_bmad/doc/data/wiki-first-mandate.md",
+  "file:{project-root}/_bmad/doc/data/decision-order.md",
+]

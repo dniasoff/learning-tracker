@@ -1,5 +1,65 @@
 {
   "enabledPlugins": {
-    "flutter-mobile-design@ip-mobile-craft": true
+    "bmad-docmost@bmad-modules": true,
+    "bmad-flow@bmad-modules": true,
+    "bmad-linear@bmad-modules": true,
+    "flutter-mobile-design@ip-mobile-craft": true,
+    "orvex-orchestrator@orvex-skills": true
+  },
+  "extraKnownMarketplaces": {
+    "bmad-modules": {
+      "source": {
+        "source": "github",
+        "repo": "orvexai/bmad-modules"
+      }
+    },
+    "orvex-skills": {
+      "source": {
+        "source": "github",
+        "repo": "orvexai/orvex-skills"
+      }
+    }
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.bmad-loop/bmad_loop_hook.py SessionStart"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.bmad-loop/bmad_loop_hook.py Stop"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.bmad-loop/bmad_loop_hook.py SessionEnd"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.bmad-loop/bmad_loop_hook.py PreCompact"
+          }
+        ]
+      }
+    ]
   }
 }

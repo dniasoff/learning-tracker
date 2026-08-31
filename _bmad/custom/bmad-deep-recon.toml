@@ -1,0 +1,30 @@
+# Canonical bmad-deep-recon override for bmad-docmost.
+# The three deprecated market/domain/technical shims collapse here because they
+# all forward the same research.md artifact to one canonical skill. The handoff
+# discriminates on {research_type}; local folders may be dated, living wiki pages
+# may not be. The legacy files remain orientation-only for old invocations because
+# their activation_steps_prepend and persistent_facts are still forwarded.
+# Sparse, append-only — copy to {project-root}/_bmad/custom/bmad-deep-recon.toml.
+
+[workflow]
+
+# Wiki-first activation — resolve the living research page before local run-folder
+# discovery. {research_type} is supplied by the canonical skill or legacy shim.
+activation_steps_prepend = [
+  "WIKI-FIRST — this is a living-wiki project and the wiki manual OUTRANKS local files. Before any local-file discovery, resolve what the manual already holds for this research topic: invoke skill:doc-read-first for doc_type=research (`docmost-cli search '<research topic>' --cached --content --space {docmost_space} --output json`, then `docmost-cli page get <slug> --output json`); also try `docmost-cli ai ask '<the research question>' --output json` for a cited answer from existing canon. Treat the wiki page — not the local dated run folder — as the source of truth and the PRIMARY existing input.",
+  "Report the WIKI status FIRST (research page for this topic: exists or absent; status draft|canonical, slug, one-line summary), then local artifacts. A second input on the same topic updates the same living research page — never copy `{date}` or the dated run-folder name into a wiki title or slug, and never spawn a parallel sibling.",
+]
+
+# Canonical bmad-deep-recon consumes external_handoffs during Finalize. One
+# handoff covers all supported research types; taxonomy decides IA placement:
+# market/domain are Product-ish (domain may use a domain-facing node), technical
+# is Architecture-ish, and other types use the subject-facing derived IA node.
+external_handoffs = [
+  "After finalize, route `{doc_workspace}/research.md` into the project's living manual via skill:doc-research (find-before-create for doc_type=research on this topic across drafts AND canonical → ASK one plain-English question on a fuzzy match → AMEND the existing research node in place as a DRAFT revision with `docmost-cli page patch <slug> --if-version <updated_at>` keeping the body current-state-only → else CREATE `docmost-cli page create 'Research: {topic_slug}' --space {docmost_space} --parent <subject-facing-ia-node-slug> --doc-type research --status draft --content @{doc_workspace}/research.md --output json`, NEVER --status canonical; choose the parent from `{research_type}`: Product-ish for market, Product-ish or domain-facing for domain, Architecture-ish for technical, and the relevant subject-facing derived IA node for other supported types. The local `{research_type}-{topic_slug}-{date}` folder is transient and its date must never become a page title or slug. Surface the url/slug; the page lands as DRAFT pending human ratification (doc-ratify) — AI never self-promotes. The wiki node is authoritative — `research.md` is a transient working draft. If docmost-cli is unavailable or exits non-zero, WARN the user and name `{doc_workspace}/research.md` as the unsynced local draft; do not silently demote it to authoritative."
+]
+
+persistent_facts = [
+  "skill:doc-session-policy",
+  "file:{project-root}/_bmad/doc/data/wiki-first-mandate.md",
+  "file:{project-root}/_bmad/doc/data/decision-order.md",
+]

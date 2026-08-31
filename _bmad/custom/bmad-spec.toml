@@ -1,0 +1,34 @@
+# bmad-spec override for bmad-docmost.
+# Keep the kernel as technical-spec deliberately: the server owns the closed
+# doc_type allow-list, and this module's doc-spec-gate and doc-read-first already
+# define technical-spec as the pre-code intent node. Adding a coined intent-spec
+# type would be rejected by the server and would break the existing gate contract.
+#
+# Companions are handled by ownership, not by filename globbing: exact paths that
+# resolve inside the spec folder are spec-authored, but only a catalog type marked
+# many may become a typed child page. One-per-project content (such as glossary or
+# architecture) links to the existing project-level canonical node instead;
+# paths that resolve outside are adopted and are linked to their originating
+# canonical wiki nodes without copying or taking ownership.
+# stories.yaml is a separate optional story-breakdown artifact, not a companion.
+# Sparse, append-only — copy to {project-root}/_bmad/custom/bmad-spec.toml.
+
+[workflow]
+
+# Wiki-first activation — resolve the existing intent contract before reading the
+# local spec folder, so a repeat run amends the same living node.
+activation_steps_prepend = [
+  "WIKI-FIRST — this is a living-wiki project and the wiki manual OUTRANKS local files. Before reading `{output_folder}/specs/spec-{slug}/`, resolve what the manual already holds for this spec: invoke skill:doc-read-first for doc_type=technical-spec (`docmost-cli search '<spec topic / slug>' --cached --content --space {docmost_space} --output json`, then `docmost-cli page get <slug> --output json`); also try `docmost-cli ai ask '<the intent question this spec answers>' --output json` for a cited answer from existing canon. Treat the wiki pages — not the local filesystem — as the source of truth and the PRIMARY existing input.",
+  "Report the WIKI status FIRST (technical-spec intent node for this topic: exists or absent; status draft|canonical, slug, one-line summary, and any linked companion nodes), then local artifacts. A second run for the same `{slug}` updates the same living kernel and its owned child companions; never spawn a parallel `-v2`, dated, or otherwise duplicate sibling.",
+]
+
+# Route the five-field kernel and preserve companion ownership. The kernel remains
+# a many/living technical-spec because that is the module's established intent-node
+# type; companion doc-types are selected from the existing taxonomy per content.
+on_complete = "Route `{output_folder}/specs/spec-{slug}/SPEC.md` and only the exact paths listed in its `companions:` frontmatter into the project's living manual via skill:doc-amend. Treat SPEC.md as the technical-spec intent kernel carrying Why, Capabilities, Constraints, Non-goals, and Success signal: find-before-create across drafts AND canonical → ASK one plain-English question on a fuzzy match → AMEND the existing kernel page in place as a DRAFT revision with `docmost-cli page patch <slug> --if-version <updated_at>` keeping the body current-state-only → else CREATE `docmost-cli page create 'Spec: {slug}' --space {docmost_space} --parent <engineering-ia-node-slug> --doc-type technical-spec --status draft --content @{output_folder}/specs/spec-{slug}/SPEC.md --output json`, NEVER --status canonical. Resolve each `companions:` entry relative to the spec folder and canonicalize the path; do not glob or assume every companion is local. If the resolved path remains inside the spec folder, it is spec-authored: classify it from its content and the existing taxonomy/manual-outline, using only an existing catalog doc_type. A child page is legal only when that catalog row says many: public API material → api-reference, an inter-service or design contract → contract, an operational procedure → runbook, user instructions → user-guide, and subsystem schema/protocol/internal material → technical-spec. One-per-project content is never created as a kernel child: glossary content → find the project's existing canonical glossary node, and system architecture content (including architecture diagrams) → find the project's existing canonical architecture node; add or update a link from the kernel to that canonical node as a DRAFT revision. For any many-cardinality child, find-before-create among the kernel's child pages, ASK one plain-English question on a fuzzy match, and AMEND as a DRAFT revision or CREATE beneath the kernel with `--parent <kernel-slug> --doc-type <catalog-doc-type> --status draft --content @<exact-companion-path>`. If a one-per-project canonical node does not exist, or if the resolved path escapes the spec folder and is adopted, do not copy or republish it; find the originating or project-owned canonical wiki node by the companion topic/path and add or update a link from the kernel to that canonical node as a DRAFT revision. If no canonical node exists, WARN and name the unresolved local companion path, retain the reference as unresolved, and do not create a page owned by bmad-spec. Do not route `sources:`, `.memlog.md`, or the optional `stories.yaml`; `sources:` is absorbed input, not a downstream companion. Never put `{date}` or a dated run-folder name into a wiki title, slug, or sibling. Surface the kernel, owned-companion, and adopted-companion links; all AI-authored pages and link revisions remain DRAFT pending human ratification (doc-ratify) — AI never self-promotes. The wiki nodes are authoritative — local spec files are transient working drafts. If docmost-cli is unavailable or exits non-zero, WARN the user and name the unsynced SPEC.md plus every affected exact companion path; do not silently demote them to authoritative."
+
+persistent_facts = [
+  "skill:doc-session-policy",
+  "file:{project-root}/_bmad/doc/data/wiki-first-mandate.md",
+  "file:{project-root}/_bmad/doc/data/decision-order.md",
+]

@@ -33,3 +33,17 @@ firebase-debug.log
 
 # Generated Drift files inside the archived (non-building) snapshot
 docs/_archive/**/*.g.dart
+.bmad-loop/runs/
+.bmad-loop/cache/
+.bmad-loop/policy.toml
+_bmad/render/
+
+# orvex-installer: _bmad is generated; only configuration is tracked
+/_bmad/**
+!/_bmad/
+!/_bmad/*/
+!/_bmad/config.toml
+!/_bmad/config.user.toml
+!/_bmad/*/config.yaml
+!/_bmad/custom/
+!/_bmad/custom/*.toml
