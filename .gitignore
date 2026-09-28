@@ -47,3 +47,12 @@ _bmad/render/
 !/_bmad/*/config.yaml
 !/_bmad/custom/
 !/_bmad/custom/*.toml
+
+# Beads / Dolt files (added by bd init)
+.dolt/
+*.db
+.beads-credential-key
+.beads/proxieddb/
+*.gate.lock*
+
+learning_tracker/android/.kotlin/
