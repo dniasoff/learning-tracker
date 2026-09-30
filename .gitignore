@@ -39,14 +39,6 @@ docs/_archive/**/*.g.dart
 _bmad/render/
 
 # orvex-installer: _bmad is generated; only configuration is tracked
-/_bmad/**
-!/_bmad/
-!/_bmad/*/
-!/_bmad/config.toml
-!/_bmad/config.user.toml
-!/_bmad/*/config.yaml
-!/_bmad/custom/
-!/_bmad/custom/*.toml
 
 # Beads / Dolt files (added by bd init)
 .dolt/
@@ -56,3 +48,27 @@ _bmad/render/
 *.gate.lock*
 
 learning_tracker/android/.kotlin/
+
+# houston-installer: generated agent payload is not tracked
+/.claude/*
+!/.claude/settings.json
+/.codex/
+/.agents/
+/.cursor/
+/.grok/
+/.opencode/
+/.config/opencode/
+/.cache
+/_bmad/**
+/_bmad/scripts
+!/_bmad/
+!/_bmad/*/
+!/_bmad/config.toml
+!/_bmad/config.user.toml
+!/_bmad/*/config.yaml
+!/_bmad/custom/
+!/_bmad/custom/*.toml
+!/_bmad/custom/*.yaml
+/_bmad/render/
+.cache/linear/
+.cache/

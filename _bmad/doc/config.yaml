@@ -10,3 +10,4 @@ project_name: learning-tracker
 communication_language: English
 document_output_language: English
 output_folder: "{project-root}/docs"
+docmost_space: LT

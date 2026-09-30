@@ -1,0 +1,70 @@
+{
+  "schema": "houston-lock/v1",
+  "generated": "2026-09-30T22:29:44Z",
+  "installer": "dev",
+  "project": "learning-tracker",
+  "agents": [
+    "claude",
+    "codex"
+  ],
+  "sources": {
+    "beads": {
+      "kind": "github-release",
+      "authority": "authoritative",
+      "pin": "1.3.0",
+      "resolved": "",
+      "observed": "1.3.0+403e27c6d",
+      "floor": "1.2.2",
+      "ceiling": "2.0.0",
+      "provenance": "adopted",
+      "dependents": [
+        "beads"
+      ],
+      "repo": "gastownhall/beads",
+      "source": "internal/phases/beads/tested-build-manifest.json"
+    },
+    "bmad-method": {
+      "kind": "npm",
+      "authority": "authoritative",
+      "pin": "6.12.0",
+      "resolved": "6.12.0",
+      "observed": "6.12.0",
+      "floor": "6.8.0",
+      "ceiling": "6.13.0",
+      "provenance": "adopted",
+      "dependents": [
+        "bmad-foundation",
+        "overrides"
+      ],
+      "package": "bmad-method"
+    },
+    "houston-modules": {
+      "kind": "git-commit",
+      "authority": "authoritative",
+      "pin": "v0.3.15",
+      "resolved": "a19948e5b7de41a15654712a321f32b44efd4829",
+      "observed": "a19948e5b7de41a15654712a321f32b44efd4829",
+      "provenance": "adopted",
+      "dependents": [
+        "claude",
+        "houston-module-content"
+      ],
+      "repo": "orvexai/houston-modules",
+      "module_lock_commit": "a19948e5b7de41a15654712a321f32b44efd4829"
+    },
+    "ui-ux-pro-max": {
+      "kind": "git-tag",
+      "authority": "authoritative",
+      "pin": "v2.15.0",
+      "resolved": "a38d04c3d5c298c851dbe5e6ee1965ee3de42cb5",
+      "observed": "",
+      "provenance": "adopted",
+      "dependents": [
+        "uipro"
+      ],
+      "package": "ui-ux-pro-max-cli",
+      "repo": "nextlevelbuilder/ui-ux-pro-max-skill",
+      "source": "https://github.com/nextlevelbuilder/ui-ux-pro-max-skill.git"
+    }
+  }
+}
