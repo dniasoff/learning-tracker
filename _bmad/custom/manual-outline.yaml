@@ -8,9 +8,11 @@
 #
 # Existing pages NOT listed here (moved, not recreated, to avoid P1 duplicates):
 #   - "PRD: Sub-tracks" (oWEwMw7iGT) and "PRD: Sub-tracks — Addendum" (yBGcGFULnc)
-#     plus pre-existing "Spec: sub-tracks" (3FO5jrPw74, children kept), "Architecture: Sub-tracks and
-#     the learning-event stack" (8xemYfOaH2), "Architecture: Learning Tracker" (tu9NY8aMYS) — adopted 2026-10-01.
 #     → moved under Features › Sub-tracks.
+# Pre-existing pages adopted 2026-10-01 (listed below under their own titles):
+#   - "Spec: sub-tracks" (3FO5jrPw74, children kept) and "Architecture: Sub-tracks and the
+#     learning-event stack" (8xemYfOaH2) → Features › Sub-tracks
+#   - "Architecture: Learning Tracker" (tu9NY8aMYS) → Architecture
 
 manual:
   root:
