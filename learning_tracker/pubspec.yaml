@@ -5,7 +5,8 @@ publish_to: 'none'
 version: 1.0.73+1
 
 environment:
-  sdk: ^3.10.8
+  sdk: ^3.12.0
+  flutter: ">=3.41.6"
 
 dependencies:
   flutter:
@@ -46,12 +47,13 @@ dependencies:
   talker_riverpod_logger: ^5.1.13
 
   # Firebase
-  firebase_core: ^4.4.0
-  firebase_auth: ^6.1.4
-  cloud_firestore: ^6.1.2
+  firebase_core: ^4.15.0
+  firebase_auth: ^6.7.0
+  cloud_firestore: ^6.10.0
   firebase_storage: ^13.0.6
   firebase_crashlytics: ^5.2.0
-  firebase_analytics: ^12.3.0
+  firebase_analytics: ^12.6.0
+  firebase_messaging: ^16.7.0
 
   # Authentication
   google_sign_in: ^7.2.0
@@ -60,7 +62,7 @@ dependencies:
   fl_chart: ^1.2.0
 
   # Hebrew Calendar
-  kosher_dart: ^2.0.18
+  kosher_dart: ^2.0.20
 
   # Sacred Time (Shabbos / Yom Tov auto-lock)
   geolocator: ^14.0.2
@@ -70,7 +72,7 @@ dependencies:
   shared_preferences: ^2.3.0
 
   # Notifications
-  flutter_local_notifications: ^21.0.0
+  flutter_local_notifications: ^22.3.1
   timezone: ^0.11.0
   flutter_timezone: ^5.0.2
 
@@ -90,12 +92,14 @@ dependencies:
   uuid: ^4.5.0
 
   # Settings footer: version from pubspec (DNI-105)
-  package_info_plus: ^9.0.0
+  package_info_plus: ^10.2.1
 
   # Filesystem path resolution (app documents dir for SeedManager)
   path_provider: ^2.1.4
   # Settings backup export delivery
-  share_plus: ^12.0.2
+  share_plus: ^13.3.0
+  # PDF generation (sub-tracks stack, story 1.1)
+  pdf: ^3.13.1
 
   # HTTP client
   dio: ^5.9.1
@@ -111,7 +115,7 @@ dependencies:
   # Typography (Playfair Display headlines + Inter body for Mesorah Heritage theme)
   google_fonts: ^8.1.0
   confetti: ^0.8.0
-  cloud_functions: ^6.2.0
+  cloud_functions: ^6.5.0
   firebase_app_check: ^0.4.4+1
 
 dev_dependencies:
