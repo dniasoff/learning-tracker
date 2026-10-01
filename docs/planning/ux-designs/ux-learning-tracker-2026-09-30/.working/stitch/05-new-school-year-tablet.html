@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Mishnayos Tracker - New School-Year Sub-Track</title>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Google Fonts: Plus Jakarta Sans & Noto Sans Hebrew -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Hebrew:wght@400;600;700&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "surface-bright": "#f8f9fc",
+            "primary": "#002c8e",
+            "on-tertiary": "#ffffff",
+            "surface-dim": "#d9dadd",
+            "on-secondary-container": "#631700",
+            "surface-container-high": "#e7e8eb",
+            "surface-container": "#edeef1",
+            "background": "#f8f9fc",
+            "surface": "#f8f9fc",
+            "on-tertiary-container": "#9ccc70",
+            "tertiary-fixed-dim": "#a4d577",
+            "on-secondary-fixed": "#3a0a00",
+            "surface-container-highest": "#e1e2e5",
+            "secondary-container": "#fd6f43",
+            "on-secondary": "#ffffff",
+            "on-primary-fixed-variant": "#023ab1",
+            "on-surface-variant": "#444653",
+            "on-surface": "#191c1e",
+            "surface-tint": "#2e55ca",
+            "on-primary-fixed": "#001550",
+            "error-container": "#ffdad6",
+            "tertiary-container": "#2f5705",
+            "surface-container-low": "#f2f3f6",
+            "inverse-primary": "#b6c4ff",
+            "primary-fixed-dim": "#b6c4ff",
+            "tertiary": "#1e3e00",
+            "tertiary-fixed": "#bff190",
+            "secondary": "#ab350b",
+            "outline-variant": "#c4c5d6",
+            "on-background": "#191c1e",
+            "inverse-on-surface": "#f0f1f4",
+            "primary-container": "#1442b8",
+            "primary-fixed": "#dce1ff",
+            "on-tertiary-fixed-variant": "#295000",
+            "error": "#ba1a1a",
+            "on-tertiary-fixed": "#0d2000",
+            "on-primary": "#ffffff",
+            "on-secondary-fixed-variant": "#862300",
+            "on-error": "#ffffff",
+            "inverse-surface": "#2e3133",
+            "surface-variant": "#e1e2e5",
+            "secondary-fixed-dim": "#ffb59f",
+            "secondary-fixed": "#ffdbd1",
+            "on-error-container": "#93000a",
+            "on-primary-container": "#acbcff",
+            "outline": "#747685",
+            "surface-container-lowest": "#ffffff"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "fontFamily": {
+            "headline": ["Plus Jakarta Sans", "sans-serif"],
+            "display": ["Plus Jakarta Sans", "sans-serif"],
+            "body": ["Plus Jakarta Sans", "sans-serif"],
+            "label": ["Plus Jakarta Sans", "sans-serif"],
+            "hebrew": ["Noto Sans Hebrew", "sans-serif"]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      display: inline-block;
+      vertical-align: middle;
+      line-height: 1;
+    }
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: #f8f9fc;
+    }
+  </style>
+</head>
+<body class="bg-background text-on-surface antialiased min-h-screen flex flex-col justify-between overflow-x-hidden selection:bg-primary-fixed selection:text-primary">
+<div class="flex flex-1 w-full min-h-screen">
+<!-- Left Navigation Rail (Optimized for Tablet Landscape ~1280px) -->
+<aside class="w-64 bg-surface-container-lowest border-r border-outline-variant flex flex-col justify-between shrink-0 p-5 select-none">
+<div class="flex flex-col gap-6">
+<!-- Logo Brand Anchor -->
+<div class="flex items-center gap-3 px-2">
+<div class="w-10 h-10 rounded-xl bg-primary-container text-on-primary flex items-center justify-center font-bold text-lg shadow-sm">
+<span class="font-hebrew">מש</span>
+</div>
+<div>
+<h1 class="text-base font-extrabold text-on-surface leading-tight">Mishnayos Tracker</h1>
+<span class="text-xs font-medium text-on-surface-variant flex items-center gap-1 mt-0.5">
+<span class="w-2 h-2 rounded-full bg-tertiary-fixed-dim inline-block"></span>
+              Orthodox Family Edition
+            </span>
+</div>
+</div>
+<!-- Mode Badge / Context Bar: Parent Mode -->
+<div class="bg-surface-container-low rounded-xl p-3 border border-outline-variant flex items-center justify-between">
+<div class="flex items-center gap-2.5">
+<div class="w-8 h-8 rounded-full bg-primary-fixed text-primary flex items-center justify-center font-bold text-xs">
+              YP
+            </div>
+<div>
+<p class="text-xs font-bold text-on-surface">Yehuda's Profile</p>
+<p class="text-[11px] font-semibold text-secondary flex items-center gap-1">
+<span class="material-symbols-outlined text-[13px]" data-icon="supervisor_account">supervisor_account</span>
+                Parent mode
+              </p>
+</div>
+</div>
+<button class="text-on-surface-variant hover:text-primary transition-colors p-1" title="Switch Learner">
+<span class="material-symbols-outlined text-sm" data-icon="swap_horiz">swap_horiz</span>
+</button>
+</div>
+<!-- Nav Links (Reflecting Shared Components destination labels & exact casing) -->
+<nav class="flex flex-col gap-1.5 mt-2">
+<!-- Dashboard -->
+<a class="flex items-center gap-3 px-3.5 py-2.5 rounded-full text-on-surface-variant hover:bg-surface-container-high transition-colors font-semibold text-sm active:scale-95 duration-150" href="#">
+<span class="material-symbols-outlined text-xl" data-icon="dashboard">dashboard</span>
+<span>Dashboard</span>
+</a>
+<!-- Learn -->
+<a class="flex items-center gap-3 px-3.5 py-2.5 rounded-full text-on-surface-variant hover:bg-surface-container-high transition-colors font-semibold text-sm active:scale-95 duration-150" href="#">
+<span class="material-symbols-outlined text-xl" data-icon="menu_book">menu_book</span>
+<span>Learn</span>
+</a>
+<!-- Progress -->
+<a class="flex items-center gap-3 px-3.5 py-2.5 rounded-full text-on-surface-variant hover:bg-surface-container-high transition-colors font-semibold text-sm active:scale-95 duration-150" href="#">
+<span class="material-symbols-outlined text-xl" data-icon="monitoring">monitoring</span>
+<span>Progress</span>
+</a>
+<!-- Settings [ACTIVE] -->
+<a class="flex items-center gap-3 px-3.5 py-2.5 rounded-full bg-primary-fixed text-primary font-bold text-sm shadow-sm active:scale-95 duration-150" href="#">
+<span class="material-symbols-outlined text-xl" data-icon="settings" data-weight="fill" style="font-variation-settings: 'FILL' 1;">settings</span>
+<span>Settings</span>
+</a>
+</nav>
+</div>
+<!-- Rail Footer Profile / System State -->
+<div class="pt-4 border-t border-outline-variant flex items-center justify-between px-2">
+<div class="flex items-center gap-2 text-xs text-on-surface-variant font-medium">
+<span class="material-symbols-outlined text-base" data-icon="verified">verified</span>
+<span>Seder Kehillah v3.4</span>
+</div>
+<span class="text-xs px-2 py-0.5 rounded-full bg-surface-container font-semibold text-outline">5786</span>
+</div>
+</aside>
+<!-- Main Workspace (Tablet Landscape Split Canvas) -->
+<main class="flex-1 flex flex-col bg-background min-h-screen overflow-y-auto">
+<!-- Top Bar: Task Navigation & Contextual Breadcrumb -->
+<header class="h-16 px-8 flex items-center justify-between border-b border-outline-variant bg-surface-container-lowest shrink-0">
+<div class="flex items-center gap-3">
+<button class="flex items-center gap-1.5 text-xs font-bold text-primary hover:bg-surface-container px-3 py-1.5 rounded-full transition-all active:scale-95" onclick="history.back()">
+<span class="material-symbols-outlined text-base" data-icon="arrow_back">arrow_back</span>
+<span>School year</span>
+</button>
+<span class="text-outline-variant font-light">/</span>
+<span class="text-xs font-semibold text-on-surface-variant">New sub-track configuration</span>
+</div>
+<div class="flex items-center gap-3">
+<div class="flex items-center gap-1.5 px-3 py-1 bg-surface-container-low rounded-full border border-outline-variant">
+<span class="w-2 h-2 rounded-full bg-tertiary"></span>
+<span class="text-xs font-semibold text-on-surface-variant">Cheder Chaim Berlin</span>
+</div>
+<button class="p-2 text-on-surface-variant hover:text-on-surface rounded-full hover:bg-surface-container transition-colors" title="Settings Tune">
+<span class="material-symbols-outlined text-xl" data-icon="tune">tune</span>
+</button>
+</div>
+</header>
+<!-- Split Layout Area -->
+<div class="p-8 max-w-[1340px] w-full mx-auto grid grid-cols-12 gap-8 items-start">
+<!-- Left / Center Column: Form Card (Col 1-7, centered max-w ~600px feel) -->
+<div class="col-span-12 lg:col-span-7 flex flex-col gap-6">
+<div class="bg-surface-container-lowest rounded-[18px] border border-outline-variant p-7">
+<!-- Header Section -->
+<div class="mb-6 pb-4 border-b border-outline-variant flex items-start justify-between">
+<div>
+<h2 class="text-xl font-extrabold text-on-surface tracking-tight">Create School-Year Sub-Track</h2>
+<p class="text-xs text-on-surface-variant mt-1 font-medium">Establish a structured learning cadence aligned with yeshiva curriculum schedule.</p>
+</div>
+<span class="px-2.5 py-1 rounded-full bg-primary-fixed text-primary text-[11px] font-bold uppercase tracking-wider">Sub-Track</span>
+</div>
+<!-- Form Content -->
+<form class="space-y-6" onsubmit="event.preventDefault()">
+<!-- Sub-track name -->
+<div>
+<label class="block text-xs font-bold text-on-surface mb-1.5" for="subtrack-name">
+                  Sub-track name
+                </label>
+<div class="relative">
+<span class="absolute left-3.5 top-1/2 -translate-y-1/2 material-symbols-outlined text-outline text-lg" data-icon="school">school</span>
+<input class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-outline-variant bg-surface-container-lowest text-sm font-semibold text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition" id="subtrack-name" type="text" value="School"/>
+</div>
+<p class="text-[11px] text-on-surface-variant mt-1">Differentiates from home chavrusa, mishmar, or shabbos review tracks.</p>
+</div>
+<!-- Academic year selector pills -->
+<div>
+<div class="flex items-center justify-between mb-2">
+<label class="text-xs font-bold text-on-surface">Academic year</label>
+<span class="text-[11px] font-medium text-outline">Cycle 5786–5787</span>
+</div>
+<div class="grid grid-cols-4 gap-2">
+<!-- 2025–26 USED -->
+<button class="flex flex-col items-center justify-center p-2.5 rounded-xl border border-outline-variant bg-surface-container-high text-outline cursor-not-allowed opacity-75" disabled="" type="button">
+<span class="text-xs font-bold">2025–26</span>
+<span class="text-[10px] uppercase font-bold tracking-wider text-outline mt-0.5">USED</span>
+</button>
+<!-- 2026–27 ACTIVE -->
+<button class="flex flex-col items-center justify-center p-2.5 rounded-xl border-2 border-primary bg-primary-fixed text-primary ring-2 ring-primary-fixed-dim transition-all" type="button">
+<span class="text-xs font-extrabold">2026–27</span>
+<span class="text-[10px] uppercase font-bold tracking-wider text-primary mt-0.5">ACTIVE</span>
+</button>
+<!-- 2027–28 OPEN -->
+<button class="flex flex-col items-center justify-center p-2.5 rounded-xl border border-outline-variant bg-surface-container-lowest hover:border-primary text-on-surface transition-all" type="button">
+<span class="text-xs font-bold">2027–28</span>
+<span class="text-[10px] uppercase font-semibold tracking-wider text-tertiary mt-0.5">OPEN</span>
+</button>
+<!-- 2028–29 OPEN -->
+<button class="flex flex-col items-center justify-center p-2.5 rounded-xl border border-outline-variant bg-surface-container-lowest hover:border-primary text-on-surface transition-all" type="button">
+<span class="text-xs font-bold">2028–29</span>
+<span class="text-[10px] uppercase font-semibold tracking-wider text-tertiary mt-0.5">OPEN</span>
+</button>
+</div>
+</div>
+<!-- Track timeframe dropdowns -->
+<div class="grid grid-cols-2 gap-4">
+<div>
+<label class="block text-xs font-bold text-on-surface mb-1.5" for="start-month">Start month (Elul / Tishrei)</label>
+<div class="relative">
+<select class="w-full appearance-none px-3.5 py-2.5 rounded-xl border border-outline-variant bg-surface-container-lowest text-xs font-semibold text-on-surface focus:outline-none focus:ring-2 focus:ring-primary" id="start-month">
+<option selected="">September (Elul)</option>
+<option>August (Av)</option>
+<option>October (Cheshvan)</option>
+</select>
+<span class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none material-symbols-outlined text-outline text-lg" data-icon="expand_more">expand_more</span>
+</div>
+</div>
+<div>
+<label class="block text-xs font-bold text-on-surface mb-1.5" for="end-month">End month (Tammuz / Av)</label>
+<div class="relative">
+<select class="w-full appearance-none px-3.5 py-2.5 rounded-xl border border-outline-variant bg-surface-container-lowest text-xs font-semibold text-on-surface focus:outline-none focus:ring-2 focus:ring-primary" id="end-month">
+<option selected="">July (Tammuz)</option>
+<option>June (Sivan)</option>
+<option>August (Av)</option>
+</select>
+<span class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none material-symbols-outlined text-outline text-lg" data-icon="expand_more">expand_more</span>
+</div>
+</div>
+</div>
+<!-- Mishnayos per week stepper -->
+<div>
+<div class="flex items-center justify-between mb-1.5">
+<label class="text-xs font-bold text-on-surface">Mishnayos per week target</label>
+<span class="text-xs font-bold text-primary bg-primary-fixed px-2 py-0.5 rounded-full">~2 mishnayos / school day</span>
+</div>
+<div class="flex items-center justify-between bg-surface-container-low border border-outline-variant rounded-xl p-2.5">
+<button class="w-9 h-9 rounded-full bg-surface-container-lowest border border-outline-variant flex items-center justify-center text-on-surface hover:bg-surface-container-high transition active:scale-90" id="decrement-btn" type="button">
+<span class="material-symbols-outlined text-lg" data-icon="remove">remove</span>
+</button>
+<div class="flex items-baseline gap-1.5">
+<span class="text-2xl font-black text-on-surface" id="rate-value">10</span>
+<span class="text-xs font-semibold text-on-surface-variant">mishnayos / week</span>
+</div>
+<button class="w-9 h-9 rounded-full bg-surface-container-lowest border border-outline-variant flex items-center justify-center text-on-surface hover:bg-surface-container-high transition active:scale-90" id="increment-btn" type="button">
+<span class="material-symbols-outlined text-lg" data-icon="add">add</span>
+</button>
+</div>
+</div>
+<!-- Weeks per year input -->
+<div>
+<div class="flex items-center justify-between mb-1.5">
+<label class="text-xs font-bold text-on-surface" for="weeks-year">Weeks per year (excluding Pesach / Bein Hazmanim)</label>
+<span class="text-[11px] font-semibold text-outline">Standard school session</span>
+</div>
+<div class="relative">
+<input class="w-full px-3.5 py-2.5 rounded-xl border border-outline-variant bg-surface-container-lowest text-sm font-semibold text-on-surface focus:outline-none focus:ring-2 focus:ring-primary" id="weeks-year" max="52" min="10" type="number" value="39"/>
+<span class="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-outline pointer-events-none">weeks</span>
+</div>
+</div>
+<!-- Toggle: Learns on shabbos / yom tov -->
+<div class="flex items-center justify-between p-3.5 rounded-xl border border-outline-variant bg-surface-container-low">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-secondary-fixed text-secondary flex items-center justify-center">
+<span class="material-symbols-outlined text-base" data-icon="auto_stories">auto_stories</span>
+</div>
+<div>
+<p class="text-xs font-bold text-on-surface">Learns on Shabbos / Yom Tov</p>
+<p class="text-[11px] text-on-surface-variant font-medium">Includes dedicated Shabbos afternoon chazara slots</p>
+</div>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-outline-variant after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-container"></div>
+</label>
+</div>
+<!-- Info callout -->
+<div class="p-3.5 rounded-xl bg-surface-container-low border-l-4 border-primary flex items-start gap-3">
+<span class="material-symbols-outlined text-primary text-lg mt-0.5 shrink-0" data-icon="info">info</span>
+<p class="text-xs text-on-surface-variant leading-relaxed">
+<strong class="font-bold text-on-surface">Curriculum flexibility:</strong> You can add ground later, reallocate masechtos, or modify daily quotas at any point during the term without disrupting recorded siyum milestones.
+                </p>
+</div>
+<!-- CTA Button -->
+<div class="pt-2">
+<button class="w-full py-3.5 px-6 rounded-full bg-primary-container hover:bg-primary text-white font-bold text-sm tracking-wide shadow-sm hover:shadow-md transition active:scale-[0.98] flex items-center justify-center gap-2" type="submit">
+<span class="material-symbols-outlined text-lg" data-icon="save">save</span>
+<span>Save sub-track</span>
+</button>
+</div>
+</form>
+</div>
+</div>
+<!-- Right Column: Live Summary Panel (Col 8-12) -->
+<div class="col-span-12 lg:col-span-5 flex flex-col gap-6">
+<div class="bg-surface-container-lowest rounded-[18px] border border-outline-variant p-6 sticky top-6">
+<!-- Panel Header -->
+<div class="flex items-center justify-between pb-4 border-b border-outline-variant">
+<div>
+<h3 class="text-sm font-extrabold text-on-surface uppercase tracking-wider">Live Capacity &amp; Pacing Summary</h3>
+<p class="text-[11px] text-on-surface-variant font-medium mt-0.5">Calculated projections for 2026–27</p>
+</div>
+<span class="w-2.5 h-2.5 rounded-full bg-tertiary-fixed-dim animate-pulse" title="Live Sync"></span>
+</div>
+<!-- Highlight Stat Card -->
+<div class="mt-5 p-5 rounded-2xl bg-surface-container-low border border-outline-variant text-center relative overflow-hidden">
+<span class="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider block mb-1">Total Academic Capacity</span>
+<div class="flex items-baseline justify-center gap-1.5 my-1">
+<span class="text-4xl font-extrabold text-primary tracking-tight" id="capacity-total">390</span>
+<span class="text-sm font-bold text-on-surface">mishnayos</span>
+</div>
+<p class="text-xs font-semibold text-secondary-container mt-1">
+                (10 mishnayos/wk × 39 weeks)
+              </p>
+<div class="mt-3 pt-3 border-t border-outline-variant/60 flex items-center justify-center gap-4 text-[11px] font-medium text-on-surface-variant">
+<span>≈ 4.2 Perakim / Mo</span>
+<span>•</span>
+<span>~78 Chazara sessions</span>
+</div>
+</div>
+<!-- Breakdown Cards & Benchmarks -->
+<div class="mt-6 space-y-4">
+<h4 class="text-xs font-bold text-on-surface flex items-center gap-1.5">
+<span class="material-symbols-outlined text-sm text-primary" data-icon="analytics">analytics</span>
+                Estimated Seder Coverage Benchmarks
+              </h4>
+<!-- Seder Moed Benchmark -->
+<div class="p-3.5 rounded-xl border border-outline-variant bg-surface-container-lowest">
+<div class="flex items-center justify-between mb-1.5 text-xs">
+<div class="flex items-center gap-2">
+<span class="font-hebrew font-bold text-sm text-primary">סדר מועד</span>
+<span class="font-semibold text-on-surface">(Seder Moed)</span>
+</div>
+<span class="font-bold text-primary">56.5%</span>
+</div>
+<div class="w-full bg-surface-container h-2 rounded-full overflow-hidden">
+<div class="bg-primary h-full rounded-full transition-all duration-300" style="width: 56.5%"></div>
+</div>
+<div class="flex justify-between text-[11px] text-outline mt-1 font-medium">
+<span>390 / 690 total mishnayos</span>
+<span>~1.8 years to complete Seder</span>
+</div>
+</div>
+<!-- Seder Zeraim Benchmark -->
+<div class="p-3.5 rounded-xl border border-outline-variant bg-surface-container-lowest">
+<div class="flex items-center justify-between mb-1.5 text-xs">
+<div class="flex items-center gap-2">
+<span class="font-hebrew font-bold text-sm text-tertiary">סדר זרעים</span>
+<span class="font-semibold text-on-surface">(Seder Zeraim)</span>
+</div>
+<span class="font-bold text-tertiary">59.5%</span>
+</div>
+<div class="w-full bg-surface-container h-2 rounded-full overflow-hidden">
+<div class="bg-tertiary-fixed-dim h-full rounded-full transition-all duration-300" style="width: 59.5%"></div>
+</div>
+<div class="flex justify-between text-[11px] text-outline mt-1 font-medium">
+<span>390 / 655 total mishnayos</span>
+<span>Excl. Berachos (completes in 9 mos)</span>
+</div>
+</div>
+<!-- Schedule Pacing Visual Bar -->
+<div class="p-4 rounded-xl border border-outline-variant bg-surface-container-lowest">
+<div class="flex items-center justify-between text-xs font-bold text-on-surface mb-2">
+<span>Annual Schedule Pacing</span>
+<span class="text-[11px] font-semibold text-secondary">Balanced Load</span>
+</div>
+<!-- 3 Phase Progress Bar -->
+<div class="h-3 w-full rounded-full bg-surface-container flex overflow-hidden">
+<div class="bg-primary h-full" style="width: 40%" title="Winter Zman (40%)"></div>
+<div class="bg-secondary-container h-full" style="width: 35%" title="Summer Zman (35%)"></div>
+<div class="bg-surface-variant h-full" style="width: 25%" title="Chazara &amp; Reviews (25%)"></div>
+</div>
+<div class="grid grid-cols-3 gap-1 text-[10px] font-semibold text-on-surface-variant mt-2 text-center">
+<div class="flex items-center gap-1 justify-center">
+<span class="w-2 h-2 rounded-full bg-primary inline-block"></span>
+<span>Winter (156)</span>
+</div>
+<div class="flex items-center gap-1 justify-center">
+<span class="w-2 h-2 rounded-full bg-secondary-container inline-block"></span>
+<span>Summer (136)</span>
+</div>
+<div class="flex items-center gap-1 justify-center">
+<span class="w-2 h-2 rounded-full bg-surface-variant inline-block"></span>
+<span>Chazara (98)</span>
+</div>
+</div>
+</div>
+<!-- Home vs School Load Indicator -->
+<div class="p-3.5 rounded-xl border border-outline-variant bg-surface-container-low flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-container-lowest border border-outline-variant flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-base" data-icon="balance">balance</span>
+</div>
+<div>
+<span class="text-xs font-bold text-on-surface block">Home vs. School Daily Load</span>
+<span class="text-[11px] text-on-surface-variant font-medium">80% School classroom / 20% Home Chazara</span>
+</div>
+</div>
+<span class="px-2 py-1 rounded-md bg-surface-container-lowest text-[11px] font-extrabold text-on-surface border border-outline-variant">4 : 1 Ratio</span>
+</div>
+</div>
+<!-- Parent Advisory Hint -->
+<div class="mt-5 pt-4 border-t border-outline-variant flex items-center gap-2 text-xs text-on-surface-variant">
+<span class="material-symbols-outlined text-sm text-secondary" data-icon="lightbulb">lightbulb</span>
+<span>Rebbe typically assigns 2 mishnayos M-Th and review on Friday.</span>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+<!-- Interactive JavaScript for Live Stepper & Dynamic Calculation -->
+<script>
+    const rateValEl = document.getElementById('rate-value');
+    const weeksInputEl = document.getElementById('weeks-year');
+    const capacityTotalEl = document.getElementById('capacity-total');
+    const decrementBtn = document.getElementById('decrement-btn');
+    const incrementBtn = document.getElementById('increment-btn');
+
+    let currentRate = 10;
+
+    function updateCapacity() {
+      const weeks = parseInt(weeksInputEl.value, 10) || 39;
+      const total = currentRate * weeks;
+      rateValEl.textContent = currentRate;
+      capacityTotalEl.textContent = total;
+    }
+
+    decrementBtn.addEventListener('click', () => {
+      if (currentRate > 1) {
+        currentRate--;
+        updateCapacity();
+      }
+    });
+
+    incrementBtn.addEventListener('click', () => {
+      if (currentRate < 50) {
+        currentRate++;
+        updateCapacity();
+      }
+    });
+
+    weeksInputEl.addEventListener('input', () => {
+      updateCapacity();
+    });
+  </script>
+</body></html>

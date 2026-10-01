@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Change History — Yehuda (Tablet)</title>
+<!-- Google Fonts: Plus Jakarta Sans & Noto Sans Hebrew / Heebo -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Hebrew:wght@400;600;700;800&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS v3 -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            body: ['"Plus Jakarta Sans"', 'sans-serif'],
+            headline: ['"Plus Jakarta Sans"', 'sans-serif'],
+            hebrew: ['"Noto Sans Hebrew"', '"Plus Jakarta Sans"', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#EEF2FF',
+              100: '#E0E7FF',
+              200: '#C7D2FE',
+              500: '#1442B8',
+              600: '#103494',
+              700: '#0C266E',
+            },
+            surface: {
+              base: '#F8FAFC',
+              card: '#FFFFFF',
+              border: '#E2E8F0',
+              muted: '#64748B',
+            }
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      display: inline-block;
+      line-height: 1;
+      text-transform: none;
+      letter-spacing: normal;
+      word-wrap: normal;
+      white-space: nowrap;
+      direction: ltr;
+    }
+    .material-symbols-outlined.fill {
+      font-variation-settings: 'FILL' 1;
+    }
+    /* Hide scrollbar */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body class="bg-[#F8FAFC] text-slate-800 font-sans min-h-screen flex antialiased">
+<!-- Left Navigation Rail (matching Tablet Screen 2) -->
+<aside class="w-64 bg-white border-r border-slate-200 flex flex-col justify-between flex-shrink-0 min-h-screen z-20 sticky top-0 h-screen">
+<div>
+<!-- Brand & Mode -->
+<div class="p-6 border-b border-slate-100 flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-brand-50 border border-brand-100 flex items-center justify-center text-brand-600 font-bold text-sm shadow-sm">
+            YP
+          </div>
+<div>
+<div class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Parent Mode</div>
+<div class="text-sm font-bold text-slate-900 leading-tight">Mishnayos Tracker</div>
+</div>
+</div>
+<button class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors" title="Manage preferences">
+<span class="material-symbols-outlined text-[20px]">tune</span>
+</button>
+</div>
+<!-- Navigation Destinations -->
+<nav class="p-4 space-y-1.5">
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 hover:bg-slate-50 font-medium transition-all group" href="#dashboard">
+<span class="material-symbols-outlined text-[22px] text-slate-400 group-hover:text-slate-600">dashboard</span>
+<span>Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 hover:bg-slate-50 font-medium transition-all group" href="#learn">
+<span class="material-symbols-outlined text-[22px] text-slate-400 group-hover:text-slate-600">menu_book</span>
+<span>Learn</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 hover:bg-slate-50 font-medium transition-all group" href="#progress">
+<span class="material-symbols-outlined text-[22px] text-slate-400 group-hover:text-slate-600">monitoring</span>
+<span>Progress</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl bg-brand-50 text-brand-600 font-bold shadow-xs" href="#settings">
+<span class="material-symbols-outlined text-[22px] fill text-brand-600">settings</span>
+<span>Settings</span>
+</a>
+</nav>
+</div>
+<!-- Active Learner Context in Rail -->
+<div class="p-4 border-t border-slate-100">
+<div class="bg-slate-50 rounded-xl p-3 flex items-center justify-between border border-slate-200/60">
+<div class="flex items-center gap-2.5">
+<div class="w-8 h-8 rounded-full bg-brand-500 text-white font-bold text-xs flex items-center justify-center">
+            Y
+          </div>
+<div>
+<div class="text-xs font-bold text-slate-900">Yehuda K.</div>
+<div class="text-[11px] text-emerald-600 font-semibold flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Active child
+            </div>
+</div>
+</div>
+<button class="text-xs font-bold text-brand-600 hover:text-brand-700 px-2 py-1 rounded bg-white border border-slate-200 shadow-xs active:scale-95 transition-all">Switch</button>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col min-w-0 overflow-y-auto">
+<!-- Top Header -->
+<header class="bg-white border-b border-slate-200 px-8 py-4 sticky top-0 z-10">
+<div class="max-w-7xl mx-auto flex items-center justify-between">
+<div class="flex items-center gap-4">
+<button class="p-2 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors" title="Back">
+<span class="material-symbols-outlined text-[22px]">arrow_back</span>
+</button>
+<div>
+<div class="flex items-center gap-2.5">
+<h1 class="text-xl font-bold text-slate-900 tracking-tight">Change history</h1>
+<span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">Tablet view</span>
+</div>
+<p class="text-xs text-slate-500 font-medium">Viewing Yehuda · Parent mode audit timeline</p>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<!-- Filter chips in header -->
+<div class="flex items-center gap-1.5 bg-slate-50 p-1 rounded-xl border border-slate-200">
+<button class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-brand-500 text-white font-medium text-xs shadow-xs">
+<span class="material-symbols-outlined text-sm">check</span>
+<span>All</span>
+</button>
+<button class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-slate-600 hover:bg-white text-xs font-semibold transition-all">
+<span>Tutor</span>
+<span class="px-1.5 py-0.2 rounded-full bg-slate-200 text-slate-700 text-[10px] font-bold">4</span>
+</button>
+<button class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-slate-600 hover:bg-white text-xs font-semibold transition-all">
+<span>Parent</span>
+<span class="px-1.5 py-0.2 rounded-full bg-slate-200 text-slate-700 text-[10px] font-bold">2</span>
+</button>
+<button class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-slate-600 hover:bg-white text-xs font-semibold transition-all">
+<span>Learning</span>
+</button>
+</div>
+<button class="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors" title="Filter settings">
+<span class="material-symbols-outlined text-[22px]">tune</span>
+</button>
+</div>
+</div>
+</header>
+<!-- Content Workspace: 1280px wide container with 2-Column Split -->
+<div class="p-8 max-w-7xl w-full mx-auto space-y-6">
+<!-- Context Micro-Summary Card (Calm tone) -->
+<section class="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs flex items-center justify-between">
+<div class="flex items-center gap-3.5">
+<div class="w-10 h-10 rounded-xl bg-brand-50 border border-brand-100 flex items-center justify-center text-brand-600 shrink-0">
+<span class="material-symbols-outlined text-xl">history</span>
+</div>
+<div>
+<h2 class="text-sm font-bold text-slate-900">Track modifications</h2>
+<p class="text-xs text-slate-500 font-medium mt-0.5">
+              Review pacing adjustments and tractate reassignments made by Rav Cohen or yourself over the past 30 days.
+            </p>
+</div>
+</div>
+<div class="flex items-center gap-2 text-xs text-slate-400 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl font-medium shrink-0">
+<span class="material-symbols-outlined text-sm text-slate-500">lock_clock</span>
+<span>90-day retention log</span>
+</div>
+</section>
+<!-- Two-column split layout (50% / 50%) -->
+<div class="grid grid-cols-12 gap-8 items-start">
+<!-- LEFT COLUMN (~50% width): Timeline list -->
+<section class="col-span-12 lg:col-span-6 space-y-6">
+<!-- GROUP 1: TODAY -->
+<div class="space-y-3">
+<!-- Section Header -->
+<div class="flex items-center justify-between px-1">
+<div class="flex items-center gap-2">
+<span class="text-xs font-bold uppercase tracking-wider text-slate-400">TODAY</span>
+<span class="w-1 h-1 rounded-full bg-slate-300"></span>
+<span class="text-xs font-semibold text-slate-600">Thu, 20 Feb</span>
+</div>
+<span class="text-[11px] font-semibold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">4 updates</span>
+</div>
+<!-- Timeline Entries with connecting vertical rail -->
+<div class="relative pl-6 space-y-3 before:absolute before:left-2.5 before:top-4 before:bottom-4 before:w-[2px] before:bg-slate-200">
+<!-- Entry 1: Selected / Active Card -->
+<article class="relative bg-white rounded-2xl border-2 border-brand-500 shadow-sm p-4.5 cursor-pointer ring-4 ring-brand-50 transition-all">
+<!-- Timeline Marker Dot Active -->
+<span class="absolute -left-[1.8rem] top-5 w-3.5 h-3.5 rounded-full bg-brand-500 border-2 border-white ring-2 ring-brand-200"></span>
+<div class="flex items-start justify-between gap-3">
+<div class="flex items-start gap-3">
+<div aria-hidden="true" class="w-9 h-9 rounded-full bg-brand-50 text-brand-600 font-bold text-xs flex items-center justify-center shrink-0 border border-brand-100">
+                      RC
+                    </div>
+<div>
+<div class="flex items-center gap-1.5 flex-wrap">
+<span class="text-xs font-bold text-slate-900">Rav Cohen</span>
+<span class="px-2 py-0.5 rounded-full bg-slate-100 text-[10px] font-semibold text-slate-600 border border-slate-200">Rebbe</span>
+<span class="text-[11px] text-slate-400 font-medium">· 4:10 pm</span>
+</div>
+<p class="text-xs text-slate-700 mt-1 leading-normal">
+                        Added <strong class="font-bold text-slate-900 font-hebrew text-[13px]">ביצה פרק ד׳</strong> (Beitzah perek 4) to <span class="font-semibold text-brand-600">Rebbe track</span>
+</p>
+<div class="mt-2.5 flex items-center gap-2">
+<span class="inline-flex items-center gap-1 text-[11px] text-slate-600 bg-slate-50 border border-slate-200/80 px-2 py-0.5 rounded-md font-medium">
+<span class="material-symbols-outlined text-[14px] text-emerald-600">menu_book</span>
+                          6 mishnayos assigned
+                        </span>
+</div>
+</div>
+</div>
+<span class="shrink-0 px-2 py-0.5 rounded-full bg-brand-50 text-brand-600 text-[11px] font-bold border border-brand-100">
+                    Selected
+                  </span>
+</div>
+</article>
+<!-- Entry 2: Corrected Beitzah 3:2 -->
+<article class="relative bg-white rounded-2xl border border-slate-200 shadow-xs hover:border-slate-300 p-4.5 cursor-pointer transition-all">
+<!-- Timeline Marker Dot -->
+<span class="absolute -left-[1.8rem] top-5 w-2.5 h-2.5 rounded-full bg-slate-300 border-2 border-white"></span>
+<div class="flex items-start justify-between gap-3">
+<div class="flex items-start gap-3">
+<div aria-hidden="true" class="w-9 h-9 rounded-full bg-brand-50 text-brand-600 font-bold text-xs flex items-center justify-center shrink-0 border border-brand-100">
+                      RC
+                    </div>
+<div>
+<div class="flex items-center gap-1.5 flex-wrap">
+<span class="text-xs font-bold text-slate-900">Rav Cohen</span>
+<span class="px-2 py-0.5 rounded-full bg-slate-100 text-[10px] font-semibold text-slate-600 border border-slate-200">Rebbe</span>
+<span class="text-[11px] text-slate-400 font-medium">· 4:02 pm</span>
+</div>
+<p class="text-xs text-slate-700 mt-1 leading-normal">
+                        Corrected <strong class="font-bold text-slate-900 font-hebrew text-[13px]">ביצה ג:ב</strong> — moved from <span class="font-medium text-slate-500">Home</span> to <span class="font-semibold text-brand-600">Rebbe</span>
+</p>
+<p class="text-[11px] text-slate-500 mt-1">Reason: Reviewed in morning seder</p>
+</div>
+</div>
+<button aria-label="Undo moving Beitzah 3:2 to Rebbe" class="shrink-0 px-3 py-1 rounded-lg text-xs font-bold text-brand-600 bg-brand-50 hover:bg-brand-100 active:scale-95 transition-all" type="button">
+                    Undo
+                  </button>
+</div>
+</article>
+<!-- Entry 3: You undid deadline change (Undone) -->
+<article class="relative bg-slate-50/70 rounded-2xl border border-slate-200/80 p-4.5 opacity-90">
+<span class="absolute -left-[1.8rem] top-5 w-2.5 h-2.5 rounded-full bg-slate-300 border-2 border-white"></span>
+<div class="flex items-start justify-between gap-3">
+<div class="flex items-start gap-3">
+<div aria-hidden="true" class="w-9 h-9 rounded-full bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center shrink-0 border border-slate-300">
+                      You
+                    </div>
+<div>
+<div class="flex items-center gap-1.5 flex-wrap">
+<span class="text-xs font-bold text-slate-900">You</span>
+<span class="px-2 py-0.5 rounded-full bg-slate-100 text-[10px] font-semibold text-brand-700 border border-slate-200">Parent</span>
+<span class="text-[11px] text-slate-400 font-medium">· 3:55 pm</span>
+</div>
+<p class="text-xs text-slate-600 mt-1 leading-normal flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[15px] text-slate-400">undo</span>
+<span>Reverted change: <em class="not-italic text-slate-800 font-medium">Rav Cohen changed deadline</em></span>
+</p>
+<span class="inline-block mt-1 text-[11px] text-slate-400 italic">
+                        Restored original target date (Rosh Chodesh Tammuz)
+                      </span>
+</div>
+</div>
+<span class="shrink-0 px-2.5 py-0.5 rounded-full bg-slate-200 text-[11px] font-semibold text-slate-600">
+                    Undone
+                  </span>
+</div>
+</article>
+<!-- Entry 4: Rav Cohen changed the deadline -->
+<article class="relative bg-white rounded-2xl border border-slate-200 shadow-xs hover:border-slate-300 p-4.5 cursor-pointer transition-all">
+<span class="absolute -left-[1.8rem] top-5 w-2.5 h-2.5 rounded-full bg-slate-300 border-2 border-white"></span>
+<div class="flex items-start justify-between gap-3">
+<div class="flex items-start gap-3">
+<div aria-hidden="true" class="w-9 h-9 rounded-full bg-brand-50 text-brand-600 font-bold text-xs flex items-center justify-center shrink-0 border border-brand-100">
+                      RC
+                    </div>
+<div>
+<div class="flex items-center gap-1.5 flex-wrap">
+<span class="text-xs font-bold text-slate-900">Rav Cohen</span>
+<span class="px-2 py-0.5 rounded-full bg-slate-100 text-[10px] font-semibold text-slate-600 border border-slate-200">Rebbe</span>
+<span class="text-[11px] text-slate-400 font-medium">· 3:40 pm</span>
+</div>
+<p class="text-xs text-slate-700 mt-1 leading-normal">
+                        Changed target deadline to <span class="font-bold text-slate-900 font-hebrew">אלול תשפ״ט</span> (Elul 5789)
+                      </p>
+<div class="mt-2.5 flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-50 border border-slate-200 text-slate-600 text-[11px] font-medium w-fit">
+<span class="material-symbols-outlined text-[14px] text-brand-500">notifications_active</span>
+<span>You were notified via app ping</span>
+</div>
+</div>
+</div>
+<button aria-label="Undo deadline change to Elul 5789" class="shrink-0 px-3 py-1 rounded-lg text-xs font-bold text-brand-600 bg-brand-50 hover:bg-brand-100 active:scale-95 transition-all" type="button">
+                    Undo
+                  </button>
+</div>
+</article>
+</div>
+</div>
+<!-- GROUP 2: TUESDAY -->
+<div class="space-y-3 pt-2">
+<!-- Section Header -->
+<div class="flex items-center justify-between px-1">
+<div class="flex items-center gap-2">
+<span class="text-xs font-bold uppercase tracking-wider text-slate-400">TUESDAY</span>
+<span class="w-1 h-1 rounded-full bg-slate-300"></span>
+<span class="text-xs font-semibold text-slate-600">18 Feb</span>
+</div>
+<span class="text-[11px] font-semibold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">1 update</span>
+</div>
+<!-- Timeline Entries Container -->
+<div class="relative pl-6 space-y-3 before:absolute before:left-2.5 before:top-4 before:bottom-4 before:w-[2px] before:bg-slate-200">
+<!-- Entry 5: You created School 2026-27 -->
+<article class="relative bg-white rounded-2xl border border-slate-200 shadow-xs hover:border-slate-300 p-4.5 cursor-pointer transition-all">
+<span class="absolute -left-[1.8rem] top-5 w-2.5 h-2.5 rounded-full bg-brand-500 border-2 border-white ring-2 ring-brand-200"></span>
+<div class="flex items-start justify-between gap-3">
+<div class="flex items-start gap-3">
+<div aria-hidden="true" class="w-9 h-9 rounded-full bg-brand-50 text-brand-600 font-bold text-xs flex items-center justify-center shrink-0 border border-brand-100">
+                      You
+                    </div>
+<div>
+<div class="flex items-center gap-1.5 flex-wrap">
+<span class="text-xs font-bold text-slate-900">You</span>
+<span class="px-2 py-0.5 rounded-full bg-slate-100 text-[10px] font-semibold text-brand-700 border border-slate-200">Parent</span>
+<span class="text-[11px] text-slate-400 font-medium">· Tue 9:15 am</span>
+</div>
+<p class="text-xs text-slate-700 mt-1 leading-normal">
+                        Created track <strong class="font-bold text-slate-900">School 2026–27</strong> with Seder Moed curriculum
+                      </p>
+<div class="mt-2.5 flex items-center gap-2">
+<span class="inline-flex items-center gap-1 text-[11px] text-slate-600 bg-slate-50 border border-slate-200/80 px-2 py-0.5 rounded-md font-medium">
+<span class="material-symbols-outlined text-[14px] text-slate-500">playlist_add_check</span>
+                          Initial track baseline
+                        </span>
+</div>
+</div>
+</div>
+<button aria-label="Details for track creation" class="shrink-0 p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 active:scale-95 transition-all" type="button">
+<span class="material-symbols-outlined text-lg">info</span>
+</button>
+</div>
+</article>
+</div>
+</div>
+<!-- Bottom disclaimer note -->
+<div class="pt-2 text-center text-xs text-slate-400">
+            Track actions are retained for 90 days. Undoing an action immediately updates Yehuda’s learning checklist.
+          </div>
+</section>
+<!-- RIGHT COLUMN (~50% width): Detailed View Card for selected change -->
+<aside class="col-span-12 lg:col-span-6 space-y-6 sticky top-24">
+<div class="bg-white rounded-2xl border border-slate-200 p-7 shadow-xs space-y-6">
+<!-- Card Header -->
+<div class="flex items-center justify-between pb-4 border-b border-slate-100">
+<div>
+<span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Change Details</span>
+<h3 class="text-base font-bold text-slate-900 mt-0.5">Rav Cohen added Beitzah perek 4</h3>
+</div>
+<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-brand-50 text-brand-700 border border-brand-200">
+                Action pending review
+              </span>
+</div>
+<!-- Author & Track Meta Grid -->
+<div class="grid grid-cols-2 gap-4 bg-slate-50 border border-slate-200 rounded-xl p-4 text-xs">
+<div>
+<div class="text-slate-400 font-semibold mb-1">MODIFIED BY</div>
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-brand-500 text-white font-bold text-[10px] flex items-center justify-center">RC</div>
+<span class="font-bold text-slate-900">Rav Cohen (Rebbe)</span>
+</div>
+</div>
+<div>
+<div class="text-slate-400 font-semibold mb-1">DATE &amp; TIME</div>
+<div class="font-bold text-slate-900 flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px] text-slate-400">schedule</span>
+                  Today, 4:10 pm
+                </div>
+</div>
+<div>
+<div class="text-slate-400 font-semibold mb-1">TARGET TRACK</div>
+<div class="font-bold text-brand-600 flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px]">menu_book</span>
+                  Rebbe track
+                </div>
+</div>
+<div>
+<div class="text-slate-400 font-semibold mb-1">ASSIGNMENT SCOPE</div>
+<div class="font-bold text-slate-900">6 mishnayos total</div>
+</div>
+</div>
+<!-- Change Specification Box -->
+<div class="space-y-3">
+<label class="block text-xs font-bold text-slate-500 uppercase tracking-wider">Tractate Content Added</label>
+<div class="p-4 rounded-xl border border-slate-200 bg-white space-y-2">
+<div class="flex items-baseline justify-between">
+<span class="text-sm font-bold text-slate-900 font-hebrew">מסכת ביצה — פרק ד׳</span>
+<span class="text-xs font-semibold text-slate-500">Maseches Beitzah (4:1 – 4:6)</span>
+</div>
+<p class="text-xs text-slate-600 leading-relaxed">
+                  Added to Yehuda’s ongoing active Rebbe sub-track as part of the spring seder preparation. Covers handling vessels, spices, and pre-holiday preparations.
+                </p>
+</div>
+</div>
+<!-- Reason / Seder Note -->
+<div>
+<label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Context &amp; Teacher Note</label>
+<div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-700 italic flex items-start gap-2.5">
+<span class="material-symbols-outlined text-slate-400 text-base shrink-0 mt-0.5">chat</span>
+<span>“Yehuda demonstrated strong grasp of Perek 3 in class review. Advancing track schedule to include Perek 4 ahead of schedule.”</span>
+</div>
+</div>
+<!-- Primary Action with Reassurance Info -->
+<div class="pt-2 space-y-3">
+<button class="w-full py-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm shadow-xs flex items-center justify-center gap-2 transition-all active:scale-[0.99]" id="main-undo-btn">
+<span class="material-symbols-outlined text-[18px]">undo</span>
+                Undo this change
+              </button>
+<!-- Info note below button -->
+<div class="flex items-start gap-2 text-[11px] text-slate-500 bg-slate-50 rounded-xl p-3 border border-slate-200">
+<span class="material-symbols-outlined text-[16px] text-brand-500 shrink-0 mt-0.5">info</span>
+<span>
+                  Track actions are retained for 90 days. Undoing an action immediately updates Yehuda’s learning checklist and notifies Rav Cohen.
+                </span>
+</div>
+</div>
+</div>
+<!-- Audit Log Trail (Detailed View subcard) -->
+<div class="bg-gradient-to-br from-slate-50 to-slate-100 rounded-2xl border border-slate-200 p-5 text-xs text-slate-600 space-y-3">
+<div class="font-bold text-slate-900 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-brand-500 text-[18px]">verified_user</span>
+<span>Audit Trail Details</span>
+</div>
+<span class="text-[11px] text-slate-400 font-mono">ID: MOD-5784-0220</span>
+</div>
+<div class="space-y-2 text-[11px]">
+<div class="flex justify-between border-b border-slate-200 pb-1.5">
+<span class="text-slate-400">Sync Status</span>
+<span class="font-bold text-emerald-600 flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Synced across student &amp; parent app
+                </span>
+</div>
+<div class="flex justify-between border-b border-slate-200 pb-1.5">
+<span class="text-slate-400">Previous Track State</span>
+<span class="font-semibold text-slate-700">Beitzah Chapters 1–3</span>
+</div>
+<div class="flex justify-between">
+<span class="text-slate-400">Next Scheduled Review</span>
+<span class="font-semibold text-slate-700">Sunday morning seder</span>
+</div>
+</div>
+</div>
+</aside>
+</div>
+</div>
+</main>
+<!-- Interactive Demo Script -->
+<script>
+    const mainUndoBtn = document.getElementById('main-undo-btn');
+    if (mainUndoBtn) {
+      mainUndoBtn.addEventListener('click', function() {
+        if (confirm("Undo this modification? Yehuda's checklist will be restored to previous state.")) {
+          this.innerHTML = '<span class="material-symbols-outlined text-[18px]">check</span> Successfully Undone';
+          this.classList.remove('bg-slate-900', 'hover:bg-slate-800');
+          this.classList.add('bg-emerald-600', 'text-white', 'pointer-events-none');
+        }
+      });
+    }
+
+    document.querySelectorAll('button').forEach(btn => {
+      if (btn.innerText.trim() === 'Undo') {
+        btn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          this.innerText = 'Undone';
+          this.classList.remove('text-brand-600', 'bg-brand-50', 'hover:bg-brand-100');
+          this.classList.add('text-slate-400', 'bg-slate-100', 'pointer-events-none');
+        });
+      }
+    });
+  </script>
+</body></html>

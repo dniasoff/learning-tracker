@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Lifetime report · Yehuda (Tablet)</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Noto+Sans+Hebrew:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            hebrew: ['"Noto Sans Hebrew"', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#EEF2FF',
+              100: '#E0E7FF',
+              200: '#C7D2FE',
+              500: '#1442B8',
+              600: '#103494',
+              700: '#0C266E',
+            },
+            surface: {
+              base: '#F8FAFC',
+              card: '#FFFFFF',
+              border: '#E2E8F0',
+              muted: '#64748B',
+            }
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 500, 'GRAD' 0, 'opsz' 24;
+      line-height: 1;
+    }
+    .material-symbols-outlined.fill {
+      font-variation-settings: 'FILL' 1;
+    }
+    body {
+      -webkit-tap-highlight-color: transparent;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+  </style>
+</head>
+<body class="bg-[#F8FAFC] text-slate-800 font-sans min-h-screen flex antialiased">
+<!-- Left Navigation Rail -->
+<aside class="w-64 bg-white border-r border-slate-200 flex flex-col justify-between flex-shrink-0 min-h-screen z-20 sticky top-0 h-screen">
+<div>
+<!-- Brand & Mode -->
+<div class="p-6 border-b border-slate-100 flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-brand-50 border border-brand-100 flex items-center justify-center text-brand-600 font-bold text-sm shadow-sm">
+            YP
+          </div>
+<div>
+<div class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Parent Mode</div>
+<div class="text-sm font-bold text-slate-900 leading-tight">Mishnayos Tracker</div>
+</div>
+</div>
+<button class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors" title="Settings">
+<span class="material-symbols-outlined text-[20px]">tune</span>
+</button>
+</div>
+<!-- Navigation Destinations -->
+<nav class="p-4 space-y-1.5">
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 hover:bg-slate-50 font-medium transition-all group" href="#">
+<span class="material-symbols-outlined text-[22px] text-slate-400 group-hover:text-slate-600">dashboard</span>
+<span>Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 hover:bg-slate-50 font-medium transition-all group" href="#">
+<span class="material-symbols-outlined text-[22px] text-slate-400 group-hover:text-slate-600">menu_book</span>
+<span>Learn</span>
+</a>
+<!-- Active Tab: Progress -->
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl bg-brand-50 text-brand-600 font-bold shadow-xs" href="#">
+<span class="material-symbols-outlined text-[22px] fill text-brand-600">monitoring</span>
+<span>Progress</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 hover:bg-slate-50 font-medium transition-all group" href="#">
+<span class="material-symbols-outlined text-[22px] text-slate-400 group-hover:text-slate-600">settings</span>
+<span>Settings</span>
+</a>
+</nav>
+</div>
+<!-- Active Learner Context in Rail -->
+<div class="p-4 border-t border-slate-100">
+<div class="bg-slate-50 rounded-xl p-3 flex items-center justify-between border border-slate-200/60">
+<div class="flex items-center gap-2.5">
+<div class="w-8 h-8 rounded-full bg-brand-500 text-white font-bold text-xs flex items-center justify-center">
+            Y
+          </div>
+<div>
+<div class="text-xs font-bold text-slate-900">Yehuda K.</div>
+<div class="text-[11px] text-emerald-600 font-semibold flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Active child
+            </div>
+</div>
+</div>
+<button class="text-xs font-bold text-brand-600 hover:text-brand-700 px-2 py-1 rounded bg-white border border-slate-200 shadow-xs">Switch</button>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col min-w-0 overflow-y-auto">
+<!-- Top Header -->
+<header class="bg-white border-b border-slate-200 px-8 py-4 flex items-center justify-between sticky top-0 z-10">
+<div class="flex items-center gap-4">
+<button class="p-2 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[22px]">arrow_back</span>
+</button>
+<div class="flex items-center gap-3">
+<h1 class="text-xl font-bold text-slate-900">Lifetime report</h1>
+<div class="bg-slate-100 border border-slate-200/80 rounded-full px-3 py-1 flex items-center gap-2 text-xs">
+<span class="w-2 h-2 rounded-full bg-brand-500"></span>
+<span class="text-slate-600 font-medium">Viewing <strong class="font-semibold text-slate-900">Yehuda</strong></span>
+<span class="text-slate-300">·</span>
+<span class="bg-white text-slate-600 px-2 py-0.5 rounded-full font-semibold text-[11px] border border-slate-200/60 shadow-xs">
+              Parent mode
+            </span>
+</div>
+</div>
+</div>
+<!-- Top-right Export & Action -->
+<div class="flex items-center gap-3">
+<button class="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors" title="Share report">
+<span class="material-symbols-outlined text-[22px]">share</span>
+</button>
+<button class="bg-brand-500 hover:bg-brand-600 text-white font-bold text-sm py-2.5 px-5 rounded-xl flex items-center gap-2 shadow-xs transition-all active:scale-95" type="button">
+<span class="material-symbols-outlined text-[20px]">picture_as_pdf</span>
+<span>Export PDF</span>
+</button>
+</div>
+</header>
+<!-- Scrollable Content Canvas -->
+<div class="p-8 max-w-7xl w-full mx-auto space-y-6">
+<!-- Top Row: 3 Primary Stat Bento Cards across full width -->
+<section aria-label="Lifetime summary metrics" class="grid grid-cols-1 md:grid-cols-3 gap-5">
+<!-- Metric 1: Distinct -->
+<div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
+<div class="flex items-center justify-between text-slate-500 mb-2">
+<span class="text-xs font-bold uppercase tracking-wider text-slate-400">Distinct learned</span>
+<div class="w-8 h-8 rounded-lg bg-brand-50 flex items-center justify-center text-brand-600">
+<span class="material-symbols-outlined text-[20px]">menu_book</span>
+</div>
+</div>
+<div>
+<div class="text-3xl font-extrabold text-slate-900 tracking-tight">1,204</div>
+<div class="text-xs text-slate-500 font-medium mt-1">mishnayos mastered</div>
+</div>
+</div>
+<!-- Metric 2: Reviews -->
+<div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
+<div class="flex items-center justify-between text-slate-500 mb-2">
+<span class="text-xs font-bold uppercase tracking-wider text-slate-400">Reviews</span>
+<div class="w-8 h-8 rounded-lg bg-brand-50 flex items-center justify-center text-brand-600">
+<span class="material-symbols-outlined text-[20px]">repeat</span>
+</div>
+</div>
+<div>
+<div class="text-3xl font-extrabold text-slate-900 tracking-tight">1,876</div>
+<div class="text-xs text-slate-500 font-medium mt-1">events logged across sessions</div>
+</div>
+</div>
+<!-- Metric 3: Tracking duration -->
+<div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
+<div class="flex items-center justify-between text-slate-500 mb-2">
+<span class="text-xs font-bold uppercase tracking-wider text-slate-400">Tracking</span>
+<div class="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-600">
+<span class="material-symbols-outlined text-[20px]">calendar_month</span>
+</div>
+</div>
+<div>
+<div class="text-2xl font-extrabold text-slate-900 leading-tight">Since Sep 2024</div>
+<div class="text-xs text-slate-500 font-semibold mt-1">7 months continuous data</div>
+</div>
+</div>
+</section>
+<!-- Main Two-Column Side-by-Side Grid -->
+<div class="grid grid-cols-12 gap-8 items-start">
+<!-- Left Column: Source breakdown & Pace -->
+<div class="col-span-12 lg:col-span-6 space-y-6">
+<!-- Section: By Source -->
+<section class="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs">
+<div class="flex items-center justify-between pb-4 border-b border-slate-100">
+<div>
+<h2 class="text-base font-bold text-slate-900">By source</h2>
+<p class="text-xs text-slate-500">Breakdown of learning environments</p>
+</div>
+<span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+                1,876 total sessions
+              </span>
+</div>
+<div class="space-y-5 pt-4">
+<!-- Source 1: Home -->
+<div class="space-y-2">
+<div class="flex items-center justify-between text-sm">
+<div class="flex items-center gap-2.5">
+<div class="w-8 h-8 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-brand-600 font-bold">
+<span class="material-symbols-outlined text-[18px]">home</span>
+</div>
+<div>
+<span class="font-bold text-slate-900">Home</span>
+<span class="text-xs text-slate-400 block font-normal">Independent chazara &amp; review</span>
+</div>
+</div>
+<div class="text-right">
+<span class="font-extrabold text-slate-900">1,020</span>
+<span class="text-xs text-slate-500 font-medium ml-1">mishnayos (54%)</span>
+</div>
+</div>
+<div class="h-2.5 w-full bg-slate-100 rounded-full overflow-hidden">
+<div class="h-full bg-brand-500 rounded-full" style="width: 54%"></div>
+</div>
+</div>
+<!-- Source 2: School -->
+<div class="space-y-2">
+<div class="flex items-center justify-between text-sm">
+<div class="flex items-center gap-2.5">
+<div class="w-8 h-8 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-700 font-bold">
+<span class="material-symbols-outlined text-[18px]">school</span>
+</div>
+<div>
+<span class="font-bold text-slate-900">School</span>
+<span class="text-xs text-slate-400 block font-normal">Curriculum tracks &amp; classroom</span>
+</div>
+</div>
+<div class="text-right">
+<span class="font-extrabold text-slate-900">640</span>
+<span class="text-xs text-slate-500 font-medium ml-1">mishnayos (34%)</span>
+</div>
+</div>
+<div class="h-2.5 w-full bg-slate-100 rounded-full overflow-hidden">
+<div class="h-full bg-[#277B3C] rounded-full" style="width: 34%"></div>
+</div>
+</div>
+<!-- Source 3: Rebbe / Tutor -->
+<div class="space-y-2">
+<div class="flex items-center justify-between text-sm">
+<div class="flex items-center gap-2.5">
+<div class="w-8 h-8 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-700 font-bold">
+<span class="material-symbols-outlined text-[18px]">person_play</span>
+</div>
+<div>
+<span class="font-bold text-slate-900">Rebbe</span>
+<span class="text-xs text-slate-400 block font-normal">Private tutoring &amp; chavrusas</span>
+</div>
+</div>
+<div class="text-right">
+<span class="font-extrabold text-slate-900">216</span>
+<span class="text-xs text-slate-500 font-medium ml-1">mishnayos (12%)</span>
+</div>
+</div>
+<div class="h-2.5 w-full bg-slate-100 rounded-full overflow-hidden">
+<div class="h-full bg-[#E06D28] rounded-full" style="width: 12%"></div>
+</div>
+</div>
+</div>
+</section>
+<!-- Section: Per-source pace -->
+<section class="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs">
+<div class="flex items-center justify-between pb-4 border-b border-slate-100">
+<div>
+<h2 class="text-base font-bold text-slate-900">Per-source pace</h2>
+<p class="text-xs text-slate-500">Calculated velocity based on active recording</p>
+</div>
+<span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+                Last 30 days
+              </span>
+</div>
+<div class="divide-y divide-slate-100">
+<!-- Metric 1: School -->
+<div class="py-4 flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center">
+<span class="material-symbols-outlined text-[16px]">school</span>
+</div>
+<div class="space-y-0.5">
+<div class="text-sm font-bold text-slate-900">School</div>
+<div class="text-xs text-slate-500 font-medium">Weekly target pace</div>
+</div>
+</div>
+<div class="text-right">
+<div class="flex items-center justify-end space-x-1.5">
+<span class="text-base font-extrabold text-slate-900">9.6</span>
+<span class="text-xs text-slate-500 font-medium">/ week</span>
+<span class="inline-flex items-center text-xs font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full ml-1">
+                      On pace
+                    </span>
+</div>
+<div class="text-[11px] text-slate-400 font-medium mt-0.5">10 / week estimate</div>
+</div>
+</div>
+<!-- Metric 2: Rebbe -->
+<div class="py-4 flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="w-7 h-7 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center">
+<span class="material-symbols-outlined text-[16px]">person_play</span>
+</div>
+<div class="space-y-0.5">
+<div class="text-sm font-bold text-slate-900">Rebbe</div>
+<div class="text-xs text-slate-500 font-medium">Weekly target pace</div>
+</div>
+</div>
+<div class="text-right">
+<div class="flex items-center justify-end space-x-1.5">
+<span class="text-base font-extrabold text-slate-900">4.8</span>
+<span class="text-xs text-slate-500 font-medium">/ week</span>
+<span class="inline-flex items-center text-xs font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-full ml-1">
+                      Steady
+                    </span>
+</div>
+<div class="text-[11px] text-slate-400 font-medium mt-0.5">5 / week estimate</div>
+</div>
+</div>
+</div>
+<!-- Footnote with Info Icon -->
+<div class="mt-2 pt-3 border-t border-slate-100 flex items-center gap-2 text-xs text-slate-500 bg-slate-50 -mx-6 -mb-6 p-4 rounded-b-2xl">
+<span class="material-symbols-outlined text-[18px] text-slate-400 shrink-0">info</span>
+<span class="leading-relaxed">Before-tracking learning isn't counted in pace calculations. Only logs dated after activation apply.</span>
+</div>
+</section>
+</div>
+<!-- Right Column: School Years & Academic Timeline -->
+<div class="col-span-12 lg:col-span-6 space-y-6">
+<!-- Section: School Years -->
+<section class="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs overflow-hidden">
+<div class="flex items-center justify-between pb-4 border-b border-slate-100">
+<div>
+<h2 class="text-base font-bold text-slate-900">School years</h2>
+<p class="text-xs text-slate-500">Academic timeline and milestones</p>
+</div>
+<span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+                Academic timeline
+              </span>
+</div>
+<div class="mt-4 space-y-4">
+<!-- Expanded Group: School -->
+<div class="rounded-xl border border-slate-200 p-4 bg-slate-50/60">
+<div class="flex items-center justify-between mb-3.5 cursor-pointer">
+<div class="flex items-center space-x-2.5">
+<div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center">
+<span class="material-symbols-outlined text-[20px]">school</span>
+</div>
+<div>
+<span class="font-bold text-sm text-slate-900">School</span>
+<span class="text-xs text-slate-500 ml-2 font-medium">3 academic terms</span>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<span class="bg-white text-slate-700 text-xs font-bold px-2.5 py-1 rounded-full border border-slate-200 shadow-xs">
+                      640 mishnayos
+                    </span>
+<span class="material-symbols-outlined text-slate-400 text-[20px]">expand_less</span>
+</div>
+</div>
+<!-- Sub items timeline -->
+<div class="space-y-3 pl-6 border-l-2 border-emerald-300 ml-3 py-1">
+<div class="flex items-center justify-between text-xs bg-white p-2.5 rounded-lg border border-slate-200/70 shadow-xs">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+<span class="font-bold text-slate-700">2024–25</span>
+<span class="text-slate-400 text-[11px]">Completed</span>
+</div>
+<span class="font-bold text-slate-900">210 mishnayos</span>
+</div>
+<div class="flex items-center justify-between text-xs bg-white p-2.5 rounded-lg border border-slate-200/70 shadow-xs">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+<span class="font-bold text-slate-700">2025–26</span>
+<span class="text-slate-400 text-[11px]">Completed</span>
+</div>
+<span class="font-bold text-slate-900">250 mishnayos</span>
+</div>
+<div class="flex items-center justify-between text-xs bg-emerald-50/50 p-2.5 rounded-lg border border-emerald-200 shadow-xs">
+<div class="flex items-center space-x-2">
+<span class="w-2 h-2 rounded-full bg-emerald-600 animate-pulse"></span>
+<span class="font-bold text-slate-900">2026–27</span>
+<span class="bg-emerald-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">In progress</span>
+</div>
+<span class="font-extrabold text-emerald-900">180 mishnayos</span>
+</div>
+</div>
+</div>
+<!-- Collapsed Row: Rebbe -->
+<div class="rounded-xl border border-slate-200 p-4 flex items-center justify-between hover:bg-slate-50 cursor-pointer transition-colors bg-white shadow-xs">
+<div class="flex items-center space-x-3">
+<div class="w-8 h-8 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center">
+<span class="material-symbols-outlined text-[20px]">person_play</span>
+</div>
+<div>
+<div class="flex items-center gap-2">
+<span class="font-bold text-sm text-slate-900">Rebbe</span>
+<span class="text-xs text-amber-700 bg-amber-50 font-semibold px-2 py-0.5 rounded-full border border-amber-200">ongoing</span>
+</div>
+<span class="text-xs text-slate-500 font-medium">Independent tutorial curriculum</span>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-xs font-bold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-full">216 mishnayos</span>
+<span class="material-symbols-outlined text-slate-400 text-[20px]">expand_more</span>
+</div>
+</div>
+<!-- Milestone Completion & Projected Seder Progress Card -->
+<div class="bg-gradient-to-br from-brand-50/60 to-white rounded-xl border border-brand-100 p-4 space-y-3">
+<div class="flex items-center justify-between">
+<span class="text-xs font-bold uppercase tracking-wider text-brand-700">Projected Milestones</span>
+<span class="text-xs font-bold text-brand-600 flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">verified</span> On Track
+                  </span>
+</div>
+<p class="text-xs text-slate-600 leading-relaxed">
+                  At Yehuda's combined pace of <strong class="text-slate-900">14.4 mishnayos/wk</strong>, he is projected to finish Seder Moed by <span class="font-bold text-brand-700">Tammuz 5787 (July 2027)</span>.
+                </p>
+<div class="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+<div class="bg-brand-500 h-full rounded-full" style="width: 72%"></div>
+</div>
+<div class="flex justify-between items-center text-[11px] font-semibold text-slate-500">
+<span>Current Seder: 72% completed</span>
+<span>148 mishnayos remaining</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Report Export & Archival Note -->
+<div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600">
+<span class="material-symbols-outlined text-[22px]">history_edu</span>
+</div>
+<div>
+<div class="text-xs font-bold text-slate-900">Official Progress Records</div>
+<div class="text-xs text-slate-500">PDFs include rabbinic review verification signatures</div>
+</div>
+</div>
+<button class="text-xs font-bold text-brand-600 hover:text-brand-700 px-3 py-1.5 rounded-lg bg-brand-50 border border-brand-200">
+              View History
+            </button>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>

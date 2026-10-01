@@ -140,6 +140,13 @@ retains the documented Firebase Storage exception.
   stream is limited to the repository's recent-event window; one-shot reads page
   the full log. This is a known scalability caveat, not permission to add a
   stored balance.
+- **Amended 2026-09-30** by the feature spine `architecture-sub-tracks-2026-09-30`:
+  - **Streak half superseded (feature AD-40, AD-49):** streak is derived from
+    `learning_events`, kept per curriculum; `streak_events` is no longer written.
+  - **Points half amended (feature AD-50):** the balance is still derived from
+    `points_ledger`, but an entry tied to an event (`pts_{eventId}`) counts only
+    while its event is in the engine's `earningEventIds`. No reversal entries
+    are written.
 
 ### AD-5 — Deterministic document ids and storage identities `[PARTIAL]`
 
@@ -168,6 +175,9 @@ retains the documented Firebase Storage exception.
 - **Verification:** `firestore.rules` and the native repositories are the
   authority. The old Drift cascade/order language is obsolete and is not part
   of this rule.
+- **Amended 2026-10-01** by feature AD-49 (`architecture-sub-tracks-2026-09-30`):
+  after the learning-event cutover, Binds is `learning_events`, `change_log` and
+  `points_ledger`; `completions`, `learning_ledger` and `streak_events` are retired.
 
 ### AD-7 — Client LWW conflict predicate `[DORMANT — not a current data path]`
 
@@ -191,6 +201,14 @@ retains the documented Firebase Storage exception.
   use batch/transaction seams. The account-removal path still contains vestigial
   deletion of a `user_acc_*.db` file; that is cleanup residue, not a live data
   store, and remains open work.
+- **Amended 2026-10-01 — carve-out** by feature AD-54
+  (`architecture-sub-tracks-2026-09-30`): bulk learning captures and
+  multi-entity governed actions chunk across batches sized by the Firestore
+  Rules access-call budget (≤ 20 per batch, ≤ 10 per operation; ≤ 10 governed
+  docs per owner batch); each chunk is self-contained (an event and its `pts_`
+  entry, or an entity's docs and its `change_log` entry, together), so a partial
+  landing never splits them. Over-budget entity writes go through the
+  `writeWithChangeLog` callable.
 
 ### AD-9 — Listener recovery `[PARTIAL]`
 
@@ -241,6 +259,11 @@ retains the documented Firebase Storage exception.
   activation paths, but `firestore.rules` has no `request.app` enforcement in
   the checked-out source. App Check is therefore not a completed rules-side
   invariant; do not claim the old “rules plus App Check” posture as done.
+- **Amended 2026-10-01** by feature AD-54 (`architecture-sub-tracks-2026-09-30`):
+  SR-3 is relaxed for learning and governed batches — client timestamps
+  (`recorded_at`, `at`, `ended_at`, `points_ledger.created_at`) may be up to
+  `request.time + 10 min`. Callables using the Admin SDK bypass rules and carry
+  the feature AD-38 callable contract instead.
 
 ### AD-13 — Schema continuity and migration compatibility `[REMOVED]`
 
@@ -355,6 +378,11 @@ retains the documented Firebase Storage exception.
   editing is intentionally disabled in tutor mode because the available tutor
   callable writes a different settings document. Tutor coverage is therefore
   real but not universal.
+- **Amended 2026-09-30:** the W3.43 "tutors cannot mark live completions" policy
+  is superseded for `learning_events` by feature AD-53
+  (`architecture-sub-tracks-2026-09-30`): one `can_edit_learning` grant
+  permission, online-only tutor writes through the shared `writeWithChangeLog`
+  helper.
 
 ### AD-23 — Dependency direction `[INCOMPLETE]`
 

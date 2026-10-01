@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Mishnayos Tracker - Dashboard</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Hebrew:wght@400;600;700&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "on-secondary": "#ffffff",
+            "on-tertiary-container": "#9ccc70",
+            "on-secondary-fixed-variant": "#862300",
+            "error": "#ba1a1a",
+            "surface-dim": "#d9dadd",
+            "primary-fixed-dim": "#b6c4ff",
+            "on-surface-variant": "#444653",
+            "on-error-container": "#93000a",
+            "primary-container": "#1442b8",
+            "outline": "#747685",
+            "background": "#f8f9fc",
+            "tertiary-fixed": "#bff190",
+            "on-tertiary-fixed-variant": "#295000",
+            "on-surface": "#191c1e",
+            "inverse-primary": "#b6c4ff",
+            "primary": "#002c8e",
+            "on-secondary-fixed": "#3a0a00",
+            "on-error": "#ffffff",
+            "secondary": "#ab350b",
+            "on-primary-fixed-variant": "#023ab1",
+            "surface-tint": "#2e55ca",
+            "secondary-fixed-dim": "#ffb59f",
+            "secondary-container": "#fd6f43",
+            "surface-variant": "#e1e2e5",
+            "primary-fixed": "#dce1ff",
+            "on-primary": "#ffffff",
+            "on-tertiary": "#ffffff",
+            "surface-container-low": "#f2f3f6",
+            "surface-bright": "#f8f9fc",
+            "surface": "#f8f9fc",
+            "surface-container-highest": "#e1e2e5",
+            "tertiary-container": "#2f5705",
+            "surface-container": "#edeef1",
+            "secondary-fixed": "#ffdbd1",
+            "on-primary-fixed": "#001550",
+            "inverse-surface": "#2e3133",
+            "tertiary-fixed-dim": "#a4d577",
+            "error-container": "#ffdad6",
+            "inverse-on-surface": "#f0f1f4",
+            "outline-variant": "#c4c5d6",
+            "on-primary-container": "#acbcff",
+            "on-background": "#191c1e",
+            "on-secondary-container": "#631700",
+            "tertiary": "#1e3e00",
+            "surface-container-high": "#e7e8eb",
+            "on-tertiary-fixed": "#0d2000",
+            "surface-container-lowest": "#ffffff"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "2xl": "1.125rem",
+            "full": "9999px"
+          },
+          "fontFamily": {
+            "headline": ["Plus Jakarta Sans", "sans-serif"],
+            "display": ["Plus Jakarta Sans", "sans-serif"],
+            "body": ["Plus Jakarta Sans", "sans-serif"],
+            "label": ["Plus Jakarta Sans", "sans-serif"],
+            "hebrew": ["Noto Sans Hebrew", "Plus Jakarta Sans", "sans-serif"]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    .material-symbols-outlined.filled {
+      font-variation-settings: 'FILL' 1;
+    }
+    body {
+      background-color: #F7F8FB;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      color: #191c1e;
+      -webkit-font-smoothing: antialiased;
+    }
+    .hebrew-text {
+      font-family: 'Noto Sans Hebrew', 'Plus Jakarta Sans', sans-serif;
+      direction: rtl;
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-[#0B0F1A] min-h-screen text-[#EAEEF5] flex justify-center">
+<!-- Mobile Device Simulation Frame -->
+<div class="w-full max-w-md min-h-screen bg-[#0B0F1A] flex flex-col relative pb-24 shadow-none">
+<!-- Top App Bar (Shared Components standard: small_center_aligned) -->
+<header class="sticky top-0 z-40 bg-[#151A26] border-b border-[#263041] flex justify-between items-center w-full px-4 py-2.5">
+<!-- Leading: Profile Selector Button -->
+<button class="flex items-center gap-2 py-1 px-2.5 rounded-full hover:bg-[#1E2532] transition-colors active:scale-95 duration-150" type="button">
+<div class="w-7 h-7 rounded-full bg-[#16233F] border border-[#7CA0FF]/30 flex items-center justify-center text-[#7CA0FF] font-bold text-xs">
+          Y
+        </div>
+<div class="flex items-center gap-0.5">
+<span class="text-xs font-bold text-[#EAEEF5]">Yehuda</span>
+<span class="material-symbols-outlined text-[16px] text-[#98A2B3]">arrow_drop_down</span>
+</div>
+</button>
+<!-- Center Headline -->
+<h1 class="text-base font-bold font-headline text-[#EAEEF5] tracking-tight text-center">
+        Mishnayos Tracker
+      </h1>
+<!-- Trailing: Tune / Settings icon button -->
+<button aria-label="Settings and Filters" class="w-8 h-8 rounded-full flex items-center justify-center hover:bg-[#1E2532] text-[#98A2B3] transition-colors active:scale-95 duration-150" type="button">
+<span class="material-symbols-outlined text-[20px]">tune</span>
+</button>
+</header>
+<!-- Slim Parent Mode Context Banner -->
+<div class="bg-[#16233F]/80 px-4 py-1.5 flex items-center justify-between border-b border-[#263041]">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[15px] text-[#7CA0FF]">visibility</span>
+<span class="text-xs font-semibold text-[#7CA0FF] tracking-tight">Viewing Yehuda · Parent mode</span>
+</div>
+<span class="px-2 py-0.5 rounded-full bg-[#151A26] text-[10px] font-bold text-[#7CA0FF] uppercase tracking-wider border border-[#7CA0FF]/40">
+        Supervisor
+      </span>
+</div>
+<!-- Main Content Container -->
+<main class="flex-1 px-4 pt-3.5 space-y-3.5 overflow-y-auto"><!-- 1. On-Track Status Card -->
+<section class="bg-[#151A26] rounded-2xl border border-[#263041] p-4">
+<div class="flex items-start justify-between">
+<div class="flex items-center gap-2">
+<span class="w-6 h-6 rounded-full bg-[#72DEA4]/15 flex items-center justify-center text-[#72DEA4]">
+<span class="material-symbols-outlined filled text-[16px]">check_circle</span>
+</span>
+<h2 class="text-base font-bold text-[#EAEEF5] tracking-tight">On track</h2>
+</div>
+<span class="px-2.5 py-0.5 rounded-full bg-[#72DEA4]/15 text-[#72DEA4] text-xs font-bold border border-[#72DEA4]/30">
+            Pacing well
+          </span>
+</div>
+<div class="mt-2.5 space-y-1">
+<div class="flex items-center gap-1.5 text-xs text-[#C3CBD8] font-medium">
+<span class="material-symbols-outlined text-[15px] text-[#98A2B3]">event_available</span>
+<span>Projected finish: <strong class="text-[#EAEEF5] font-semibold">14 Mar 2029</strong> · deadline Elul 5789</span>
+</div>
+<div class="flex items-center gap-1.5 text-xs text-[#C3CBD8] font-medium">
+<span class="material-symbols-outlined text-[15px] text-[#98A2B3]">speed</span>
+<span>Daily target: <strong class="text-[#EAEEF5] font-semibold">3 mishnayos/day</strong></span>
+</div>
+</div>
+</section>
+<!-- 2. Shortfall Warning Card (Amber dark #2E220E, #E0A54A) -->
+<section class="bg-[#2E220E] border border-[#E0A54A]/30 rounded-2xl p-3.5">
+<div class="flex items-start gap-3">
+<div class="w-6 h-6 rounded-full bg-[#E0A54A]/20 flex-shrink-0 flex items-center justify-center text-[#E0A54A] mt-0.5">
+<span class="material-symbols-outlined filled text-[17px]">warning</span>
+</div>
+<div class="flex-1">
+<p class="text-xs text-[#E0A54A] leading-relaxed font-medium">
+              School may not reach Berachos perek 3 before July. About 40 mishnayos will return to home learning.
+            </p>
+<div class="mt-2 flex justify-end">
+<button class="text-xs font-bold text-[#E0A54A] hover:underline flex items-center gap-0.5 active:scale-95 transition-transform" type="button">
+                View School
+                <span class="material-symbols-outlined text-[14px]">arrow_forward</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+<!-- 4. Main-Track Section -->
+<section class="bg-[#151A26] rounded-2xl border border-[#263041] p-4">
+<div class="flex items-center justify-between mb-3">
+<div class="flex items-center gap-2">
+<div class="w-7 h-7 rounded-lg bg-[#16233F] border border-[#7CA0FF]/30 flex items-center justify-center text-[#7CA0FF]">
+<span class="material-symbols-outlined text-[18px]">menu_book</span>
+</div>
+<div>
+<div class="flex items-center gap-1.5">
+<span class="text-xs font-bold text-[#7CA0FF] tracking-wide uppercase">Main Track</span>
+<span class="text-xs font-bold text-[#98A2B3]">·</span>
+<span class="text-xs font-bold hebrew-text text-[#C3CBD8]">משניות</span>
+</div>
+<h3 class="text-sm font-bold text-[#EAEEF5] leading-tight">All Seder Nashim &amp; Moed</h3>
+</div>
+</div>
+<span class="text-xs font-bold text-[#7CA0FF] bg-[#16233F] px-2 py-0.5 rounded-full border border-[#7CA0FF]/30">
+            28.7%
+          </span>
+</div>
+<!-- Current Focus details -->
+<div class="bg-[#1E2532] rounded-xl p-3 mb-3 border border-[#263041] flex items-center justify-between">
+<div>
+<span class="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-wider block">Current Focus</span>
+<div class="text-sm font-bold text-[#EAEEF5] mt-0.5 flex items-center gap-1.5">
+<span>Beitzah 2:6</span>
+<span class="text-xs font-semibold hebrew-text text-[#C3CBD8]">(ביצה ב:ו)</span>
+</div>
+</div>
+<button class="px-3 py-1 rounded-full bg-[#7CA0FF] text-[#0B0F1A] text-xs font-bold hover:opacity-90 transition-opacity flex items-center gap-1 active:scale-95" type="button">
+<span>Learn</span>
+<span class="material-symbols-outlined text-[14px]">play_arrow</span>
+</button>
+</div>
+<!-- Progress Track -->
+<div>
+<div class="flex justify-between items-center text-xs mb-1.5 font-medium">
+<span class="text-[#C3CBD8]">Overall Completed</span>
+<span class="font-bold text-[#EAEEF5]">1,204 <span class="text-[#98A2B3] font-normal">of 4,192</span></span>
+</div>
+<div class="w-full bg-[#1E2532] rounded-full h-1.5 overflow-hidden">
+<div class="bg-[#7CA0FF] h-1.5 rounded-full" style="width: 28.7%"></div>
+</div>
+</div>
+<div class="mt-3.5 pt-3 border-t border-[#263041] flex items-center justify-between text-[11px] text-[#C3CBD8]">
+<span>Active Streak: <strong class="text-[#EAEEF5] font-bold">14 days 🔥</strong></span>
+<span>Last reviewed: <strong class="text-[#EAEEF5]">Yesterday</strong></span>
+</div>
+</section>
+<!-- 3. Sub-tracks Section -->
+<section class="space-y-2.5">
+<div class="flex items-center justify-between px-0.5">
+<h4 class="text-xs font-bold text-[#98A2B3] uppercase tracking-wider">Sub-Tracks (2)</h4>
+<span class="text-xs font-semibold text-[#7CA0FF] hover:underline cursor-pointer">Manage</span>
+</div>
+<!-- Sub-Track Card 1: School -->
+<div class="bg-[#151A26] rounded-2xl border border-[#263041] p-3.5 flex flex-col gap-2.5">
+<div class="flex items-start justify-between">
+<div class="flex items-center gap-2.5">
+<div class="w-8 h-8 rounded-full bg-[#16233F] border border-[#7CA0FF]/20 flex items-center justify-center text-[#7CA0FF]">
+<span class="material-symbols-outlined text-[18px]">school</span>
+</div>
+<div>
+<h5 class="text-sm font-bold text-[#EAEEF5] leading-snug">School 2026–27</h5>
+<p class="text-xs text-[#C3CBD8] flex items-center gap-1">
+<span>Next: Berachos 1:4</span>
+<span class="hebrew-text text-[11px] font-medium text-[#98A2B3]">(ברכות א:ד)</span>
+</p>
+</div>
+</div>
+<span class="text-xs font-bold text-[#EAEEF5] bg-[#1E2532] px-2 py-0.5 rounded-full border border-[#263041]">
+              38 / 350
+            </span>
+</div>
+<div class="space-y-1">
+<div class="w-full bg-[#1E2532] rounded-full h-1.5 overflow-hidden">
+<div class="bg-[#7CA0FF] h-1.5 rounded-full" style="width: 10.8%"></div>
+</div>
+<div class="flex justify-between text-[10px] text-[#98A2B3] font-medium">
+<span>Class 5B target</span>
+<span>11% completed</span>
+</div>
+</div>
+</div>
+<!-- Sub-Track Card 2: Rebbe / Tutor -->
+<div class="bg-[#151A26] rounded-2xl border border-[#263041] p-3.5 flex flex-col gap-2.5">
+<div class="flex items-start justify-between">
+<div class="flex items-center gap-2.5">
+<div class="w-8 h-8 rounded-full bg-[#2E220E] border border-[#E0A54A]/30 flex items-center justify-center text-[#E0A54A]">
+<span class="material-symbols-outlined text-[18px]">person_book</span>
+</div>
+<div>
+<h5 class="text-sm font-bold text-[#EAEEF5] leading-snug">Rebbe</h5>
+<p class="text-xs text-[#C3CBD8] flex items-center gap-1">
+<span>Next: Beitzah 3:1</span>
+<span class="hebrew-text text-[11px] font-medium text-[#98A2B3]">(ביצה ג:א)</span>
+</p>
+</div>
+</div>
+<span class="text-xs font-bold text-[#EAEEF5] bg-[#1E2532] px-2 py-0.5 rounded-full border border-[#263041]">
+              12 / 40
+            </span>
+</div>
+<div class="space-y-1">
+<div class="w-full bg-[#1E2532] rounded-full h-1.5 overflow-hidden">
+<div class="bg-[#E0A54A] h-1.5 rounded-full" style="width: 30%"></div>
+</div>
+<div class="flex justify-between text-[10px] text-[#98A2B3] font-medium">
+<span>Sunday review with Rabbi Stern</span>
+<span>30% completed</span>
+</div>
+</div>
+</div>
+</section></main>
+<!-- Bottom Navigation Bar (Mandated in Shared Components JSON: Dashboard active) -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 py-2 bg-[#151A26] border-t border-[#263041] rounded-t-[28px] max-w-md mx-auto right-0">
+<!-- Tab 1: Dashboard (ACTIVE MATCH) -->
+<a class="flex flex-col items-center justify-center bg-[#7CA0FF] text-[#0B0F1A] rounded-full px-5 py-1 font-bold" href="#">
+<span class="material-symbols-outlined filled text-[20px]">dashboard</span>
+<span class="text-xs font-bold font-label">Dashboard</span>
+</a>
+<!-- Tab 2: Learn (INACTIVE) -->
+<a class="flex flex-col items-center justify-center text-[#98A2B3] px-4 py-1 hover:bg-[#1E2532] transition-colors rounded-full active:scale-95 duration-150" href="#">
+<span class="material-symbols-outlined text-[20px]">menu_book</span>
+<span class="text-xs font-medium font-label">Learn</span>
+</a>
+<!-- Tab 3: Progress (INACTIVE) -->
+<a class="flex flex-col items-center justify-center text-[#98A2B3] px-4 py-1 hover:bg-[#1E2532] transition-colors rounded-full active:scale-95 duration-150" href="#">
+<span class="material-symbols-outlined text-[20px]">monitoring</span>
+<span class="text-xs font-medium font-label">Progress</span>
+</a>
+<!-- Tab 4: Settings (INACTIVE) -->
+<a class="flex flex-col items-center justify-center text-[#98A2B3] px-4 py-1 hover:bg-[#1E2532] transition-colors rounded-full active:scale-95 duration-150" href="#">
+<span class="material-symbols-outlined text-[20px]">settings</span>
+<span class="text-xs font-medium font-label">Settings</span>
+</a>
+</nav>
+</div>
+</body></html>

@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>School 2026–27 — Mishnayos Tracker</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Noto+Sans+Hebrew:wght@400;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "background": "#0B0F1A",
+            "surface": "#151A26",
+            "surface-card": "#151A26",
+            "surface-recessed": "#1E2532",
+            "primary": "#7CA0FF",
+            "primary-container": "#16233F",
+            "on-primary": "#0B0F1A",
+            "mishna-border": "#263041",
+            "mishna-ink": "#EAEEF5",
+            "mishna-body": "#C3CBD8",
+            "mishna-muted": "#98A2B3",
+            "mishna-green": "#72DEA4",
+            "mishna-green-bg": "#143525",
+            "amber-track-bg": "#2E220E",
+            "amber-track-text": "#E0A54A",
+            "error": "#ba1a1a",
+            "error-container": "#ffdad6"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "card": "18px",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "fontFamily": {
+            "headline": ["Plus Jakarta Sans", "sans-serif"],
+            "display": ["Plus Jakarta Sans", "sans-serif"],
+            "body": ["Plus Jakarta Sans", "sans-serif"],
+            "label": ["Plus Jakarta Sans", "sans-serif"],
+            "hebrew": ["Noto Sans Hebrew", "Plus Jakarta Sans", "sans-serif"]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    .font-hebrew {
+      font-family: 'Noto Sans Hebrew', sans-serif;
+    }
+    body {
+      min-height: max(884px, 100dvh);
+      background-color: #0B0F1A;
+    }
+  </style>
+</head>
+<body class="bg-background text-mishna-body font-body min-h-screen antialiased flex flex-col items-center">
+<!-- Main Mobile Shell Container -->
+<div class="w-full max-w-md min-h-screen flex flex-col bg-background pb-28 relative">
+<!-- Parent Mode Context Header Pill -->
+<div class="w-full bg-[#151A26] border-b border-mishna-border px-4 py-1.5 flex items-center justify-between text-xs text-mishna-muted font-medium">
+<div class="flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+<span>Viewing as <strong class="text-mishna-ink font-semibold">Parent</strong> (Yehuda)</span>
+</div>
+<span class="text-[11px] font-semibold tracking-wide text-primary uppercase">Sync active</span>
+</div>
+<!-- Top App Bar -->
+<header class="sticky top-0 z-30 bg-[#151A26] flex items-center justify-between px-4 py-3 border-b border-mishna-border">
+<button aria-label="Go back" class="w-9 h-9 rounded-full flex items-center justify-center text-mishna-ink hover:bg-surface-recessed transition-colors active:scale-95">
+<span class="material-symbols-outlined text-[22px]">arrow_back</span>
+</button>
+<div class="flex flex-col items-center">
+<h1 class="text-base font-bold font-headline text-mishna-ink tracking-tight">School 2026–27</h1>
+<span class="text-[11px] font-medium text-mishna-muted">Annual Curriculum Track</span>
+</div>
+<div class="relative">
+<button aria-label="More options" class="w-9 h-9 rounded-full flex items-center justify-center text-mishna-ink hover:bg-surface-recessed transition-colors active:scale-95" id="menu-btn" onclick="document.getElementById('menu-popover').classList.toggle('hidden')">
+<span class="material-symbols-outlined text-[22px]">more_vert</span>
+</button>
+<!-- Overflow Menu Popover -->
+<div class="hidden absolute right-0 mt-1 w-44 bg-[#151A26] rounded-xl shadow-lg border border-mishna-border py-1.5 z-50" id="menu-popover">
+<button class="w-full px-4 py-2 text-left text-sm text-mishna-ink hover:bg-surface-recessed flex items-center gap-2.5 transition-colors">
+<span class="material-symbols-outlined text-base text-mishna-muted">edit</span>
+<span>Edit track</span>
+</button>
+<button class="w-full px-4 py-2 text-left text-sm text-mishna-ink hover:bg-surface-recessed flex items-center gap-2.5 transition-colors">
+<span class="material-symbols-outlined text-base text-mishna-muted">tune</span>
+<span>Configure pace</span>
+</button>
+<div class="h-px bg-mishna-border my-1"></div>
+<button class="w-full px-4 py-2 text-left text-sm text-[#FF8A5C] hover:bg-surface-recessed flex items-center gap-2.5 transition-colors">
+<span class="material-symbols-outlined text-base text-[#FF8A5C]">delete</span>
+<span>Delete track</span>
+</button>
+</div>
+</div>
+</header>
+<!-- Scrollable Content -->
+<main class="flex-1 px-4 pt-4 space-y-4">
+<!-- 1. Header Card -->
+<section class="bg-surface-card rounded-[18px] p-5 border border-mishna-border shadow-none">
+<div class="flex items-start justify-between mb-3">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-xl bg-primary-container flex items-center justify-center text-primary border border-primary/20">
+<span class="material-symbols-outlined text-2xl">school</span>
+</div>
+<div>
+<span class="inline-block text-xs font-bold text-primary bg-primary-container px-2 py-0.5 rounded-full mb-0.5 border border-primary/20">Primary Target</span>
+<h2 class="text-lg font-extrabold text-mishna-ink tracking-tight">Yeshiva Darchei Torah</h2>
+</div>
+</div>
+<div class="flex items-center gap-1 text-xs font-semibold text-mishna-green bg-mishna-green-bg px-2.5 py-1 rounded-full border border-mishna-green/30">
+<span class="material-symbols-outlined text-sm font-bold">check_circle</span>
+<span>38 ticked</span>
+</div>
+</div>
+<p class="text-xs font-medium text-mishna-muted mb-4 flex items-center gap-1.5 flex-wrap">
+<span class="material-symbols-outlined text-xs">calendar_today</span>
+<span>School year</span>
+<span class="text-mishna-border">•</span>
+<span>Sep 2026 – Jul 2027</span>
+<span class="text-mishna-border">•</span>
+<span>10/wk × 39 wks</span>
+</p>
+<!-- Focus Next Banner -->
+<div class="bg-surface-recessed rounded-xl p-3.5 border border-mishna-border flex items-center justify-between">
+<div>
+<div class="text-[11px] font-bold text-mishna-muted uppercase tracking-wider mb-0.5">Up Next</div>
+<div class="flex items-baseline gap-2">
+<span class="text-base font-bold text-mishna-ink">Berachos 1:4</span>
+<span class="text-sm font-bold font-hebrew text-primary">ברכות פרק א׳ משנה ד׳</span>
+</div>
+</div>
+<button class="bg-primary hover:bg-primary/90 text-on-primary rounded-full px-4 py-1.5 text-xs font-bold transition-transform active:scale-95 flex items-center gap-1">
+<span>Learn</span>
+<span class="material-symbols-outlined text-xs">arrow_forward</span>
+</button>
+</div>
+</section>
+<!-- 2. Capacity vs Path Card -->
+<section class="bg-surface-card rounded-[18px] p-4 border border-mishna-border">
+<div class="flex items-center justify-between mb-2">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-primary text-base">speed</span>
+<h3 class="text-sm font-bold text-mishna-ink">Capacity vs Path</h3>
+</div>
+<span class="text-xs font-bold text-mishna-ink">350 / 390</span>
+</div>
+<!-- 6px progress bar -->
+<div class="w-full bg-[#121722] h-1.5 rounded-full overflow-hidden mb-2.5 border border-mishna-border/50">
+<div class="bg-primary h-full rounded-full transition-all duration-300" style="width: 89.7%;"></div>
+</div>
+<div class="flex items-center justify-between">
+<div class="text-[11px] text-mishna-muted font-medium">
+<span>Remaining path: <strong class="text-mishna-body">350</strong></span>
+<span class="mx-1">·</span>
+<span>Total capacity: <strong class="text-mishna-body">390</strong></span>
+</div>
+<div class="inline-flex items-center gap-1 text-[11px] font-semibold text-mishna-green bg-mishna-green-bg px-2 py-0.5 rounded-full border border-mishna-green/30">
+<span class="material-symbols-outlined text-xs">check</span>
+<span>No shortfall</span>
+</div>
+</div>
+</section>
+<!-- 3. Section "Ground (in order)" -->
+<section class="space-y-2.5">
+<div class="flex items-center justify-between px-1">
+<div class="flex items-baseline gap-2">
+<h3 class="text-sm font-bold font-headline text-mishna-ink">Ground (in order)</h3>
+<span class="text-xs text-mishna-muted">4 tractates/perakim</span>
+</div>
+<span class="text-[11px] font-medium text-mishna-muted flex items-center gap-0.5">
+<span class="material-symbols-outlined text-xs">drag_indicator</span>
+<span>Drag to order</span>
+</span>
+</div>
+<div class="space-y-2">
+<!-- Item a) Berachos perek 1 (Partial) -->
+<div class="bg-surface-card rounded-[18px] p-3.5 border border-mishna-border flex items-center gap-3 relative transition-all hover:border-mishna-muted/40">
+<span class="material-symbols-outlined text-mishna-muted/60 cursor-grab active:cursor-grabbing text-lg select-none">drag_indicator</span>
+<!-- Partial Status Icon: Amber dash -->
+<div class="w-8 h-8 rounded-lg bg-amber-track-bg text-[#E6B96A] border border-[#E6B96A]/60 flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-lg font-bold">remove</span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-baseline justify-between gap-1">
+<h4 class="text-sm font-bold text-mishna-ink truncate">Berachos perek 1</h4>
+<span class="text-xs font-bold font-hebrew text-mishna-muted shrink-0">ברכות פרק א׳</span>
+</div>
+<div class="flex items-center gap-2 mt-0.5 text-xs text-mishna-muted font-medium">
+<span class="text-[#E6B96A] font-semibold">3 of 5 learnt</span>
+<span class="text-mishna-border">•</span>
+<span>Mishnayos 1:1 – 1:5</span>
+</div>
+</div>
+<button class="text-mishna-muted hover:text-primary p-1">
+<span class="material-symbols-outlined text-lg">chevron_right</span>
+</button>
+</div>
+<!-- Item b) Berachos perek 2 (Empty) -->
+<div class="bg-surface-card rounded-[18px] p-3.5 border border-mishna-border flex items-center gap-3 relative transition-all hover:border-mishna-muted/40">
+<span class="material-symbols-outlined text-mishna-muted/60 cursor-grab active:cursor-grabbing text-lg select-none">drag_indicator</span>
+<!-- Empty Status Icon -->
+<div class="w-8 h-8 rounded-lg border-2 border-[#36425A] flex items-center justify-center shrink-0 bg-transparent">
+<span class="w-1.5 h-1.5 rounded-full bg-[#36425A]"></span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-baseline justify-between gap-1">
+<h4 class="text-sm font-semibold text-mishna-ink truncate">Berachos perek 2</h4>
+<span class="text-xs font-medium font-hebrew text-mishna-muted shrink-0">ברכות פרק ב׳</span>
+</div>
+<div class="flex items-center gap-2 mt-0.5 text-xs text-mishna-muted font-medium">
+<span class="text-mishna-muted">0 of 8 learnt</span>
+<span class="text-mishna-border">•</span>
+<span>Mishnayos 2:1 – 2:8</span>
+</div>
+</div>
+<button class="text-mishna-muted hover:text-primary p-1">
+<span class="material-symbols-outlined text-lg">chevron_right</span>
+</button>
+</div>
+<!-- Item c) Berachos perek 3 (Empty) -->
+<div class="bg-surface-card rounded-[18px] p-3.5 border border-mishna-border flex items-center gap-3 relative transition-all hover:border-mishna-muted/40">
+<span class="material-symbols-outlined text-mishna-muted/60 cursor-grab active:cursor-grabbing text-lg select-none">drag_indicator</span>
+<!-- Empty Status Icon -->
+<div class="w-8 h-8 rounded-lg border-2 border-[#36425A] flex items-center justify-center shrink-0 bg-transparent">
+<span class="w-1.5 h-1.5 rounded-full bg-[#36425A]"></span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-baseline justify-between gap-1">
+<h4 class="text-sm font-semibold text-mishna-ink truncate">Berachos perek 3</h4>
+<span class="text-xs font-medium font-hebrew text-mishna-muted shrink-0">ברכות פרק ג׳</span>
+</div>
+<div class="flex items-center gap-2 mt-0.5 text-xs text-mishna-muted font-medium">
+<span class="text-mishna-muted">0 of 6 learnt</span>
+<span class="text-mishna-border">•</span>
+<span>Mishnayos 3:1 – 3:6</span>
+</div>
+</div>
+<button class="text-mishna-muted hover:text-primary p-1">
+<span class="material-symbols-outlined text-lg">chevron_right</span>
+</button>
+</div>
+<!-- Item d) Peah perek 1 (Complete) -->
+<div class="bg-surface-card rounded-[18px] p-3.5 border border-mishna-border flex items-center gap-3 relative transition-all hover:border-mishna-muted/40">
+<span class="material-symbols-outlined text-mishna-muted/60 cursor-grab active:cursor-grabbing text-lg select-none">drag_indicator</span>
+<!-- Complete Status Icon: Soft Green Check -->
+<div class="w-8 h-8 rounded-lg bg-mishna-green-bg text-mishna-green border border-mishna-green/60 flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-lg font-bold">check</span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-baseline justify-between gap-1">
+<h4 class="text-sm font-bold text-mishna-ink truncate">Peah perek 1</h4>
+<span class="text-xs font-bold font-hebrew text-mishna-muted shrink-0">פאה פרק א׳</span>
+</div>
+<div class="flex items-center gap-2 mt-0.5 text-xs text-mishna-muted font-medium">
+<span class="text-mishna-green font-semibold">4 of 4</span>
+<span class="text-mishna-border">•</span>
+<span class="inline-flex items-center text-[11px] text-mishna-muted bg-surface-recessed border border-mishna-border px-1.5 py-0.2 rounded font-normal">learnt at home</span>
+</div>
+</div>
+<button class="text-mishna-muted hover:text-primary p-1">
+<span class="material-symbols-outlined text-lg">chevron_right</span>
+</button>
+</div>
+</div>
+</section>
+<!-- 4. Action Buttons -->
+<section class="pt-2 pb-6 space-y-2">
+<button class="w-full rounded-full border-2 border-primary text-primary font-bold py-3 text-center flex items-center justify-center gap-2 hover:bg-primary/10 active:scale-[0.99] transition-all text-sm">
+<span class="material-symbols-outlined text-lg font-bold">add</span>
+<span>+ Add ground</span>
+</button>
+<button class="w-full text-mishna-muted hover:text-primary font-medium text-xs text-center py-2 transition-colors">
+          Add next year (2027–28)
+        </button>
+</section>
+</main>
+<!-- 5. Bottom Navigation Bar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 py-2 bg-[#151A26] border-t border-mishna-border rounded-t-[28px] shadow-sm max-w-md mx-auto right-0">
+<!-- Dashboard (Inactive) -->
+<button class="flex flex-col items-center justify-center text-mishna-muted px-4 py-1 hover:bg-surface-recessed transition-colors rounded-full active:scale-95 duration-150">
+<span class="material-symbols-outlined text-xl">dashboard</span>
+<span class="text-xs font-semibold font-label">Dashboard</span>
+</button>
+<!-- Learn (Inactive) -->
+<button class="flex flex-col items-center justify-center text-mishna-muted px-4 py-1 hover:bg-surface-recessed transition-colors rounded-full active:scale-95 duration-150">
+<span class="material-symbols-outlined text-xl">menu_book</span>
+<span class="text-xs font-semibold font-label">Learn</span>
+</button>
+<!-- Progress (Active Track Context) -->
+<button class="flex flex-col items-center justify-center bg-primary-container text-primary rounded-full px-5 py-1 active:scale-95 duration-150 border border-primary/20">
+<span class="material-symbols-outlined text-xl" data-weight="fill">monitoring</span>
+<span class="text-xs font-semibold font-label">Progress</span>
+</button>
+<!-- Settings (Inactive) -->
+<button class="flex flex-col items-center justify-center text-mishna-muted px-4 py-1 hover:bg-surface-recessed transition-colors rounded-full active:scale-95 duration-150">
+<span class="material-symbols-outlined text-xl">settings</span>
+<span class="text-xs font-semibold font-label">Settings</span>
+</button>
+</nav>
+</div>
+<script>
+    // Micro-interactions: Click outside popover to close
+    document.addEventListener('click', function(event) {
+      const popover = document.getElementById('menu-popover');
+      const btn = document.getElementById('menu-btn');
+      if (popover && !popover.contains(event.target) && !btn.contains(event.target)) {
+        popover.classList.add('hidden');
+      }
+    });
+  </script>
+</body></html>

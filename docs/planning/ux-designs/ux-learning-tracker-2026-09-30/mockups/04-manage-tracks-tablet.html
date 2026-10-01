@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Manage Tracks - Mishnayos Tracker</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Hebrew:wght@400;600;700&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "surface-bright": "#f8f9fc",
+            "primary": "#002c8e",
+            "on-tertiary": "#ffffff",
+            "surface-dim": "#d9dadd",
+            "on-secondary-container": "#631700",
+            "surface-container-high": "#e7e8eb",
+            "surface-container": "#edeef1",
+            "background": "#f8f9fc",
+            "surface": "#f8f9fc",
+            "on-tertiary-container": "#9ccc70",
+            "tertiary-fixed-dim": "#a4d577",
+            "on-secondary-fixed": "#3a0a00",
+            "surface-container-highest": "#e1e2e5",
+            "secondary-container": "#fd6f43",
+            "on-secondary": "#ffffff",
+            "on-primary-fixed-variant": "#023ab1",
+            "on-surface-variant": "#444653",
+            "on-surface": "#191c1e",
+            "surface-tint": "#2e55ca",
+            "on-primary-fixed": "#001550",
+            "error-container": "#ffdad6",
+            "tertiary-container": "#2f5705",
+            "surface-container-low": "#f2f3f6",
+            "inverse-primary": "#b6c4ff",
+            "primary-fixed-dim": "#b6c4ff",
+            "tertiary": "#1e3e00",
+            "tertiary-fixed": "#bff190",
+            "secondary": "#ab350b",
+            "outline-variant": "#c4c5d6",
+            "on-background": "#191c1e",
+            "inverse-on-surface": "#f0f1f4",
+            "primary-container": "#1442b8",
+            "primary-fixed": "#dce1ff",
+            "on-tertiary-fixed-variant": "#295000",
+            "error": "#ba1a1a",
+            "on-tertiary-fixed": "#0d2000",
+            "on-primary": "#ffffff",
+            "on-secondary-fixed-variant": "#862300",
+            "on-error": "#ffffff",
+            "inverse-surface": "#2e3133",
+            "surface-variant": "#e1e2e5",
+            "secondary-fixed-dim": "#ffb59f",
+            "secondary-fixed": "#ffdbd1",
+            "on-error-container": "#93000a",
+            "on-primary-container": "#acbcff",
+            "outline": "#747685",
+            "surface-container-lowest": "#ffffff"
+          },
+          borderRadius: {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          fontFamily: {
+            headline: ["Plus Jakarta Sans", "Noto Sans Hebrew", "sans-serif"],
+            display: ["Plus Jakarta Sans", "Noto Sans Hebrew", "sans-serif"],
+            body: ["Plus Jakarta Sans", "Noto Sans Hebrew", "sans-serif"],
+            label: ["Plus Jakarta Sans", "Noto Sans Hebrew", "sans-serif"],
+            hebrew: ["Noto Sans Hebrew", "Plus Jakarta Sans", "sans-serif"]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 500, 'GRAD' 0, 'opsz' 24;
+    }
+    .font-hebrew {
+      font-family: 'Noto Sans Hebrew', sans-serif;
+    }
+  </style>
+</head>
+<body class="bg-surface text-on-surface font-body antialiased h-screen overflow-hidden flex flex-col">
+<!-- Top Context Header: Parent Mode Alert & Child Profile Indicator -->
+<header class="h-14 bg-surface-container-lowest border-b border-outline-variant flex items-center justify-between px-6 shrink-0 z-20">
+<div class="flex items-center gap-3">
+<!-- Leading: Yehuda Profile & Parent Context -->
+<div class="w-8 h-8 rounded-full bg-primary-fixed flex items-center justify-center text-primary font-bold text-xs ring-2 ring-primary/20">
+        Y
+      </div>
+<div>
+<div class="flex items-center gap-2">
+<span class="text-xs font-bold text-on-surface">Yehuda Klein</span>
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#FDE9E2] text-secondary">
+            Parent Mode
+          </span>
+</div>
+<p class="text-[11px] text-on-surface-variant">Active learner · 5th Grade</p>
+</div>
+</div>
+<!-- Center Brand Title -->
+<div class="text-base font-bold text-primary font-headline tracking-tight">
+      Mishnayos Tracker
+    </div>
+<!-- Trailing Actions -->
+<div class="flex items-center gap-2">
+<button class="p-2 rounded-full hover:bg-surface-container-low transition-colors text-on-surface-variant active:scale-95 duration-150" title="Settings &amp; Filters">
+<span class="material-symbols-outlined text-xl leading-none">tune</span>
+</button>
+<div class="h-5 w-[1px] bg-outline-variant mx-1"></div>
+<button class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-container-low hover:bg-surface-container text-xs font-semibold text-on-surface transition-colors active:scale-95 duration-150">
+<span class="material-symbols-outlined text-sm text-primary">swap_horiz</span>
+<span>Switch child</span>
+</button>
+</div>
+</header>
+<!-- Main Tablet Workspace -->
+<div class="flex flex-1 overflow-hidden">
+<!-- LEFT NAVIGATION RAIL (Tablet Landscape 1280px) -->
+<aside class="w-20 bg-surface-container-lowest border-r border-outline-variant flex flex-col items-center py-6 justify-between shrink-0 z-10">
+<div class="flex flex-col items-center gap-6 w-full">
+<!-- Logo Stamp -->
+<div class="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-on-primary shadow-none">
+<span class="material-symbols-outlined text-2xl font-bold">menu_book</span>
+</div>
+<!-- Navigation Cluster: Exact labels from JSON ("Dashboard", "Learn", "Progress", "Settings") -->
+<nav aria-label="Main Navigation" class="flex flex-col gap-2 w-full px-2">
+<!-- 1. Dashboard -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-container-low transition-colors rounded-xl py-2 px-1 text-center group active:scale-95 duration-150" href="#">
+<span class="material-symbols-outlined text-xl group-hover:text-primary">dashboard</span>
+<span class="text-[10px] font-semibold font-label mt-1 text-on-surface-variant">Dashboard</span>
+</a>
+<!-- 2. Learn -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-container-low transition-colors rounded-xl py-2 px-1 text-center group active:scale-95 duration-150" href="#">
+<span class="material-symbols-outlined text-xl group-hover:text-primary">menu_book</span>
+<span class="text-[10px] font-semibold font-label mt-1 text-on-surface-variant">Learn</span>
+</a>
+<!-- 3. Progress -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-container-low transition-colors rounded-xl py-2 px-1 text-center group active:scale-95 duration-150" href="#">
+<span class="material-symbols-outlined text-xl group-hover:text-primary">monitoring</span>
+<span class="text-[10px] font-semibold font-label mt-1 text-on-surface-variant">Progress</span>
+</a>
+<!-- 4. Settings (Active based on context: Manage Tracks / Curriculum Management) -->
+<a aria-current="page" class="flex flex-col items-center justify-center bg-primary-fixed text-primary rounded-xl py-2 px-1 text-center active:scale-95 duration-150" href="#">
+<span class="material-symbols-outlined text-xl text-primary" style="font-variation-settings: 'FILL' 1;">settings</span>
+<span class="text-[10px] font-bold font-label mt-1 text-primary">Settings</span>
+</a>
+</nav>
+</div>
+<!-- Bottom Rebbe / Tutor Support Badge -->
+<div class="flex flex-col items-center gap-2">
+<div class="w-8 h-8 rounded-full bg-[#FBF0DC] text-[#C77A12] flex items-center justify-center text-xs font-bold" title="Rebbe Mode Linked">
+<span class="material-symbols-outlined text-base">school</span>
+</div>
+<span class="text-[9px] font-semibold text-on-surface-variant">v2.4</span>
+</div>
+</aside>
+<!-- TWO-COLUMN MASTER-DETAIL CONTENT -->
+<div class="flex-1 flex overflow-hidden">
+<!-- LEFT COLUMN: Track List (~45% width, max-w-md to lg) -->
+<section aria-label="Curriculum Tracks" class="w-[45%] border-r border-outline-variant bg-surface flex flex-col overflow-y-auto p-6">
+<!-- Header -->
+<div class="flex items-center justify-between mb-5">
+<div>
+<h1 class="text-xl font-bold font-headline text-on-surface tracking-tight">Manage Tracks</h1>
+<p class="text-xs text-on-surface-variant">Curriculums, school paces &amp; chavrusas</p>
+</div>
+<button class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-primary text-primary hover:bg-primary/5 text-xs font-semibold active:scale-95 transition-all">
+<span class="material-symbols-outlined text-sm font-bold">add</span>
+<span>New track</span>
+</button>
+</div>
+<!-- Section: Primary Curriculum -->
+<div class="mb-6">
+<div class="flex items-center justify-between mb-2.5">
+<div class="flex items-center gap-1.5">
+<span class="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">Primary Curriculum</span>
+<span class="text-[11px] text-outline font-normal">·</span>
+<span class="text-xs font-semibold font-hebrew text-on-surface-variant" dir="rtl">מסלול ראשי</span>
+</div>
+<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#E3EDD3] text-[#4F7A28]">Active</span>
+</div>
+<!-- Main Track Card: Whole Shas Mishnayos -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-[18px] p-4 hover:border-primary/40 transition-colors cursor-pointer group">
+<div class="flex items-start justify-between">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-[#E4EBFA] text-primary flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-xl">auto_stories</span>
+</div>
+<div>
+<div class="flex items-center gap-2">
+<h2 class="text-sm font-bold text-on-surface group-hover:text-primary transition-colors">Whole Shas Mishnayos</h2>
+<span class="text-xs font-hebrew font-bold text-[#277B3C]" dir="rtl">ש״ס משניות</span>
+</div>
+<p class="text-xs text-on-surface-variant mt-0.5">Main Track · Complete 6 Sedarim</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-outline group-hover:text-primary transition-colors">chevron_right</span>
+</div>
+<!-- Track Progress Bar & Deadline -->
+<div class="mt-4 pt-3 border-t border-outline-variant/60 flex flex-col gap-2">
+<div class="flex items-center justify-between text-xs">
+<span class="text-on-surface-variant">Target: <strong class="text-on-surface">Deadline Elul 5789</strong></span>
+<span class="font-bold text-primary">1,124 / 4,192 Mishnayos (26%)</span>
+</div>
+<div class="w-full bg-surface-container rounded-full h-1.5 overflow-hidden">
+<div class="bg-primary h-1.5 rounded-full" style="width: 26%;"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Section: Sub-tracks · 2 active -->
+<div class="mb-6 flex-1">
+<div class="flex items-center justify-between mb-2.5">
+<div class="flex items-center gap-2">
+<span class="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">Sub-tracks</span>
+<span class="text-xs px-2 py-0.5 rounded-full bg-surface-container-high text-on-surface text-[11px] font-semibold">2 active</span>
+</div>
+<button class="text-xs font-semibold text-primary hover:underline flex items-center gap-1">
+<span>Reorder</span>
+</button>
+</div>
+<div class="space-y-3">
+<!-- Card 1 (Selected state): School 2026–27 -->
+<div class="bg-surface-container-lowest border-2 border-primary rounded-[18px] p-4 relative shadow-none cursor-pointer">
+<!-- Selected Badge Pill -->
+<div class="absolute -top-2.5 right-4 bg-primary text-on-primary text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                Selected
+              </div>
+<div class="flex items-start justify-between">
+<div class="flex items-start gap-3">
+<div class="w-10 h-10 rounded-full bg-primary text-on-primary flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-xl">account_balance</span>
+</div>
+<div>
+<div class="flex items-center gap-2">
+<h3 class="text-sm font-bold text-primary">School 2026–27</h3>
+<span class="text-xs font-hebrew font-bold text-on-surface-variant" dir="rtl">חדר / בית ספר</span>
+</div>
+<p class="text-xs text-on-surface-variant mt-0.5">Yeshiva Darchei Torah · Grade 5</p>
+<div class="flex items-center gap-2 mt-2">
+<span class="inline-flex items-center gap-1 text-[11px] text-on-surface bg-surface-container-low px-2 py-0.5 rounded-md font-medium">
+<span class="material-symbols-outlined text-xs text-outline">calendar_month</span>
+                        Sep–Jul
+                      </span>
+<span class="inline-flex items-center gap-1 text-[11px] text-on-surface bg-surface-container-low px-2 py-0.5 rounded-md font-medium">
+<span class="material-symbols-outlined text-xs text-outline">speed</span>
+                        10 / week
+                      </span>
+</div>
+</div>
+</div>
+<span class="material-symbols-outlined text-primary text-lg mt-1">check_circle</span>
+</div>
+<!-- Mini Progress -->
+<div class="mt-3 pt-2.5 border-t border-outline-variant/60 flex items-center justify-between text-[11px]">
+<span class="text-on-surface-variant">Pace on schedule</span>
+<span class="font-bold text-[#4F7A28]">350 / 390 Mishnayos (89%)</span>
+</div>
+</div>
+<!-- Card 2: Rebbe -->
+<div class="bg-surface-container-lowest border border-outline-variant hover:border-outline rounded-[18px] p-4 cursor-pointer transition-colors group">
+<div class="flex items-start justify-between">
+<div class="flex items-start gap-3">
+<div class="w-10 h-10 rounded-full bg-[#FBF0DC] text-[#C77A12] flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-xl">person_book</span>
+</div>
+<div>
+<div class="flex items-center gap-2">
+<h3 class="text-sm font-bold text-on-surface group-hover:text-primary transition-colors">Rebbe Track</h3>
+<span class="text-xs font-hebrew font-bold text-on-surface-variant" dir="rtl">רב / מלמד</span>
+</div>
+<p class="text-xs text-on-surface-variant mt-0.5">Rabbi M. Berkowitz · Chazarah focus</p>
+<div class="flex items-center gap-2 mt-2">
+<span class="inline-flex items-center gap-1 text-[11px] text-on-surface bg-surface-container-low px-2 py-0.5 rounded-md font-medium">
+<span class="material-symbols-outlined text-xs text-outline">sync</span>
+                        Ongoing
+                      </span>
+<span class="inline-flex items-center gap-1 text-[11px] text-on-surface bg-surface-container-low px-2 py-0.5 rounded-md font-medium">
+<span class="material-symbols-outlined text-xs text-outline">speed</span>
+                        5 / week
+                      </span>
+</div>
+</div>
+</div>
+<span class="material-symbols-outlined text-outline group-hover:text-primary transition-colors">chevron_right</span>
+</div>
+</div>
+</div>
+<!-- + Add Sub-track Outline Button -->
+<button class="mt-4 w-full py-2.5 border border-dashed border-outline-variant hover:border-primary hover:bg-surface-container-lowest rounded-[18px] text-xs font-semibold text-primary flex items-center justify-center gap-1.5 transition-all active:scale-[0.99]">
+<span class="material-symbols-outlined text-base">add_circle</span>
+<span>+ Add sub-track</span>
+</button>
+</div>
+<!-- Collapsible: Ended sub-tracks (1) -->
+<details class="group bg-surface-container-lowest border border-outline-variant rounded-[18px] p-3 cursor-pointer">
+<summary class="flex items-center justify-between list-none text-xs font-semibold text-on-surface-variant group-open:text-on-surface">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-sm text-outline group-open:rotate-90 transition-transform">chevron_right</span>
+<span>Ended sub-tracks (1)</span>
+</div>
+<span class="text-[10px] text-outline font-normal">Past years</span>
+</summary>
+<div class="mt-3 pt-3 border-t border-outline-variant/60 flex items-center justify-between text-xs pl-5">
+<div>
+<p class="font-bold text-on-surface text-xs">School 2025–26 (Grade 4)</p>
+<p class="text-[11px] text-outline">Completed July 2026 · Seder Moed</p>
+</div>
+<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-surface-container-high text-on-surface-variant">Archived</span>
+</div>
+</details>
+</section>
+<!-- RIGHT COLUMN: Selected Track Detail (~55% width) -->
+<main aria-label="Track Details" class="w-[55%] bg-surface-container-lowest flex flex-col overflow-y-auto">
+<!-- Header Banner: Track Title & Fast Actions -->
+<div class="p-6 border-b border-outline-variant bg-surface-container-lowest sticky top-0 z-10">
+<div class="flex items-start justify-between">
+<div>
+<div class="flex items-center gap-2 mb-1">
+<span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#E4EBFA] text-primary">
+                  Annual Curriculum Track
+                </span>
+<span class="text-xs text-outline font-hebrew" dir="rtl">שנת הלימודים תשפ״ז</span>
+</div>
+<h2 class="text-2xl font-bold font-headline text-on-surface">School 2026–27</h2>
+<p class="text-xs text-on-surface-variant mt-0.5">Yeshiva Darchei Torah · 5th Grade Curriculum</p>
+</div>
+<!-- Action Pill Buttons -->
+<div class="flex items-center gap-2">
+<button class="px-4 py-2 rounded-full border border-outline-variant hover:bg-surface-container-low text-xs font-semibold text-on-surface flex items-center gap-1.5 transition-colors active:scale-95 duration-150">
+<span class="material-symbols-outlined text-sm">edit</span>
+<span>Edit track</span>
+</button>
+<button class="px-4 py-2 rounded-full bg-primary hover:bg-primary-container text-on-primary text-xs font-semibold flex items-center gap-1.5 shadow-none transition-colors active:scale-95 duration-150">
+<span class="material-symbols-outlined text-sm">add</span>
+<span>Add ground</span>
+</button>
+</div>
+</div>
+<!-- Capacity vs Path Metrics Card (Flat, Material 3) -->
+<div class="mt-6 grid grid-cols-3 gap-3 bg-surface-bright border border-outline-variant rounded-[18px] p-4">
+<!-- Metric 1: Capacity vs Path -->
+<div class="flex flex-col">
+<span class="text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider">Capacity vs Path</span>
+<div class="flex items-baseline gap-1 mt-1">
+<span class="text-xl font-bold text-on-surface">350</span>
+<span class="text-xs text-on-surface-variant">/ 390 Mishnayos</span>
+</div>
+<div class="w-full bg-surface-container rounded-full h-1.5 mt-2">
+<div class="bg-[#3BDD87] h-1.5 rounded-full" style="width: 89%;"></div>
+</div>
+<span class="text-[10px] text-[#4F7A28] font-bold mt-1.5 flex items-center gap-1">
+<span class="material-symbols-outlined text-xs">trending_up</span> 40 Mishnayos remaining
+              </span>
+</div>
+<!-- Metric 2: Weekly Velocity -->
+<div class="flex flex-col border-l border-outline-variant pl-4">
+<span class="text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider">Current Pace</span>
+<div class="flex items-baseline gap-1 mt-1">
+<span class="text-xl font-bold text-primary">10.2</span>
+<span class="text-xs text-on-surface-variant">/ week</span>
+</div>
+<p class="text-[11px] text-on-surface-variant mt-2">Target pace: 10/wk</p>
+<span class="text-[10px] text-[#277B3C] font-semibold mt-1">+0.2 ahead of schedule</span>
+</div>
+<!-- Metric 3: Active Ground Sedarim -->
+<div class="flex flex-col border-l border-outline-variant pl-4">
+<span class="text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider">Scope</span>
+<div class="flex items-baseline gap-1 mt-1">
+<span class="text-xl font-bold text-on-surface">1 Seder</span>
+<span class="text-xs text-on-surface-variant">· 3 Masechtos</span>
+</div>
+<p class="text-[11px] text-on-surface-variant mt-2 font-hebrew text-xs" dir="rtl">סדר זרעים · מועד</p>
+<span class="text-[10px] text-outline mt-1">Sep 1, 2026 – Jul 15, 2027</span>
+</div>
+</div>
+</div>
+<!-- Ground List Preview Section -->
+<div class="p-6">
+<div class="flex items-center justify-between mb-4">
+<div>
+<h3 class="text-base font-bold font-headline text-on-surface">Curriculum Ground List</h3>
+<p class="text-xs text-on-surface-variant">Masechtos &amp; perakim assigned to this school year</p>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-xs font-semibold text-on-surface-variant">Filter:</span>
+<span class="px-2.5 py-1 rounded-full bg-surface-container text-xs font-semibold text-on-surface">All Masechtos</span>
+</div>
+</div>
+<!-- Ground Item 1: Maseches Berachos -->
+<div class="border border-outline-variant rounded-[18px] bg-surface-container-lowest overflow-hidden mb-4">
+<div class="bg-surface-bright px-4 py-3 border-b border-outline-variant flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="w-3 h-3 rounded-full bg-[#3BDD87]"></span>
+<span class="text-sm font-bold text-on-surface">Maseches Berachos</span>
+<span class="text-xs font-hebrew font-bold text-on-surface-variant" dir="rtl">מסכת ברכות</span>
+<span class="text-[11px] text-outline">· 9 Perakim</span>
+</div>
+<div class="flex items-center gap-3">
+<span class="text-xs font-bold text-[#4F7A28]">54 / 54 completed</span>
+<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#E3EDD3] text-[#4F7A28]">Complete</span>
+</div>
+</div>
+<!-- Perakim List inside Berachos -->
+<div class="divide-y divide-outline-variant/50">
+<!-- Perek 1 -->
+<div class="px-4 py-3 flex items-center justify-between hover:bg-surface-container-low transition-colors">
+<div class="flex items-center gap-3">
+<div class="w-6 h-6 rounded bg-[#3BDD87]/20 text-[#277B3C] flex items-center justify-center font-bold text-xs">
+<span class="material-symbols-outlined text-sm">check</span>
+</div>
+<div>
+<span class="text-xs font-bold text-on-surface">Perek 1: Me-Eimatai</span>
+<span class="text-xs font-hebrew text-on-surface-variant ml-2" dir="rtl">פרק א׳ · מאימתי</span>
+</div>
+</div>
+<div class="flex items-center gap-4 text-xs">
+<span class="text-on-surface-variant font-medium">5/5 Mishnayos</span>
+<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#E3EDD3] text-[#4F7A28]">100%</span>
+<button class="text-outline hover:text-primary">
+<span class="material-symbols-outlined text-base">more_vert</span>
+</button>
+</div>
+</div>
+<!-- Perek 2 -->
+<div class="px-4 py-3 flex items-center justify-between hover:bg-surface-container-low transition-colors">
+<div class="flex items-center gap-3">
+<div class="w-6 h-6 rounded bg-[#3BDD87]/20 text-[#277B3C] flex items-center justify-center font-bold text-xs">
+<span class="material-symbols-outlined text-sm">check</span>
+</div>
+<div>
+<span class="text-xs font-bold text-on-surface">Perek 2: Hayah Korei</span>
+<span class="text-xs font-hebrew text-on-surface-variant ml-2" dir="rtl">פרק ב׳ · היה קורא</span>
+</div>
+</div>
+<div class="flex items-center gap-4 text-xs">
+<span class="text-on-surface-variant font-medium">8/8 Mishnayos</span>
+<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#E3EDD3] text-[#4F7A28]">100%</span>
+<button class="text-outline hover:text-primary">
+<span class="material-symbols-outlined text-base">more_vert</span>
+</button>
+</div>
+</div>
+<!-- Perek 3 -->
+<div class="px-4 py-3 flex items-center justify-between hover:bg-surface-container-low transition-colors">
+<div class="flex items-center gap-3">
+<div class="w-6 h-6 rounded bg-[#3BDD87]/20 text-[#277B3C] flex items-center justify-center font-bold text-xs">
+<span class="material-symbols-outlined text-sm">check</span>
+</div>
+<div>
+<span class="text-xs font-bold text-on-surface">Perek 3: Mi She-Meiso</span>
+<span class="text-xs font-hebrew text-on-surface-variant ml-2" dir="rtl">פרק ג׳ · מי שמתו</span>
+</div>
+</div>
+<div class="flex items-center gap-4 text-xs">
+<span class="text-on-surface-variant font-medium">6/6 Mishnayos</span>
+<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#E3EDD3] text-[#4F7A28]">100%</span>
+<button class="text-outline hover:text-primary">
+<span class="material-symbols-outlined text-base">more_vert</span>
+</button>
+</div>
+</div>
+<!-- Perek 4 (In Progress / Indeterminate Dash) -->
+<div class="px-4 py-3 flex items-center justify-between bg-[#FFD26A]/10 hover:bg-[#FFD26A]/20 transition-colors">
+<div class="flex items-center gap-3">
+<div class="w-6 h-6 rounded bg-[#FFD26A] text-[#C77A12] flex items-center justify-center font-bold text-xs">
+<span class="material-symbols-outlined text-sm">horizontal_rule</span>
+</div>
+<div>
+<span class="text-xs font-bold text-on-surface">Perek 4: Tefillas HaShachar</span>
+<span class="text-xs font-hebrew text-on-surface-variant ml-2" dir="rtl">פרק ד׳ · תפלת השחר</span>
+</div>
+</div>
+<div class="flex items-center gap-4 text-xs">
+<span class="text-on-surface-variant font-medium">4/7 Mishnayos</span>
+<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#FBF0DC] text-[#C77A12]">In progress</span>
+<button class="text-outline hover:text-primary">
+<span class="material-symbols-outlined text-base">more_vert</span>
+</button>
+</div>
+</div>
+<!-- Perek 5 (Empty / Next Up) -->
+<div class="px-4 py-3 flex items-center justify-between hover:bg-surface-container-low transition-colors opacity-75">
+<div class="flex items-center gap-3">
+<div class="w-6 h-6 rounded border border-outline-variant bg-surface-container-low text-outline flex items-center justify-center text-xs">
+<span class="w-2 h-2 rounded-full bg-outline-variant"></span>
+</div>
+<div>
+<span class="text-xs font-medium text-on-surface">Perek 5: Ein Omdin</span>
+<span class="text-xs font-hebrew text-on-surface-variant ml-2" dir="rtl">פרק ה׳ · אין עומדין</span>
+</div>
+</div>
+<div class="flex items-center gap-4 text-xs">
+<span class="text-outline font-medium">0/5 Mishnayos</span>
+<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-surface-container text-on-surface-variant">Scheduled</span>
+<button class="text-outline hover:text-primary">
+<span class="material-symbols-outlined text-base">more_vert</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Ground Item 2: Maseches Peah (Next in path) -->
+<div class="border border-outline-variant rounded-[18px] bg-surface-container-lowest overflow-hidden">
+<div class="bg-surface-bright px-4 py-3 border-b border-outline-variant flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="w-3 h-3 rounded-full bg-[#FFD26A]"></span>
+<span class="text-sm font-bold text-on-surface">Maseches Peah</span>
+<span class="text-xs font-hebrew font-bold text-on-surface-variant" dir="rtl">מסכת פאה</span>
+<span class="text-[11px] text-outline">· 8 Perakim</span>
+</div>
+<div class="flex items-center gap-3">
+<span class="text-xs font-bold text-[#C77A12]">32 / 69 Mishnayos</span>
+<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#FBF0DC] text-[#C77A12]">Partial</span>
+</div>
+</div>
+<div class="p-3 text-center">
+<button class="text-xs font-semibold text-primary hover:underline py-1">
+                Expand 8 perakim for Peah
+              </button>
+</div>
+</div>
+</div>
+</main>
+</div>
+</div>
+</body></html>

@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>New School-Year Sub-Track — Mishnayos Tracker</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Noto+Sans+Hebrew:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "outline": "#747685",
+            "on-surface-variant": "#444653",
+            "surface": "#f8f9fc",
+            "primary-fixed": "#dce1ff",
+            "error-container": "#ffdad6",
+            "surface-container": "#edeef1",
+            "on-tertiary": "#ffffff",
+            "secondary-container": "#fd6f43",
+            "surface-container-highest": "#e1e2e5",
+            "inverse-surface": "#2e3133",
+            "surface-tint": "#2e55ca",
+            "secondary-fixed-dim": "#ffb59f",
+            "outline-variant": "#c4c5d6",
+            "tertiary-container": "#2f5705",
+            "on-tertiary-fixed": "#0d2000",
+            "on-secondary-fixed": "#3a0a00",
+            "on-error": "#ffffff",
+            "tertiary": "#1e3e00",
+            "surface-container-low": "#f2f3f6",
+            "surface-container-high": "#e7e8eb",
+            "on-secondary": "#ffffff",
+            "surface-container-lowest": "#ffffff",
+            "secondary": "#ab350b",
+            "primary-container": "#1442b8",
+            "on-tertiary-container": "#9ccc70",
+            "on-tertiary-fixed-variant": "#295000",
+            "surface-variant": "#e1e2e5",
+            "on-secondary-container": "#631700",
+            "on-secondary-fixed-variant": "#862300",
+            "primary-fixed-dim": "#b6c4ff",
+            "surface-dim": "#d9dadd",
+            "inverse-primary": "#b6c4ff",
+            "tertiary-fixed": "#bff190",
+            "tertiary-fixed-dim": "#a4d577",
+            "secondary-fixed": "#ffdbd1",
+            "on-error-container": "#93000a",
+            "background": "#f8f9fc",
+            "on-primary-fixed-variant": "#023ab1",
+            "primary": "#002c8e",
+            "error": "#ba1a1a",
+            "on-surface": "#191c1e",
+            "surface-bright": "#f8f9fc",
+            "on-background": "#191c1e",
+            "on-primary": "#ffffff",
+            "inverse-on-surface": "#f0f1f4",
+            "on-primary-fixed": "#001550",
+            "on-primary-container": "#acbcff"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "fontFamily": {
+            "headline": ["Plus Jakarta Sans", "sans-serif"],
+            "display": ["Plus Jakarta Sans", "sans-serif"],
+            "body": ["Plus Jakarta Sans", "sans-serif"],
+            "label": ["Plus Jakarta Sans", "sans-serif"],
+            "hebrew": ["Noto Sans Hebrew", "sans-serif"]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 450, 'GRAD' 0, 'opsz' 24;
+      line-height: 1;
+      display: inline-block;
+      vertical-align: middle;
+    }
+    input[type=number]::-webkit-inner-spin-button, 
+    input[type=number]::-webkit-outer-spin-button { 
+      -webkit-appearance: none; 
+      margin: 0; 
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-surface text-on-surface font-body min-h-screen flex flex-col antialiased selection:bg-primary-fixed selection:text-primary" style="background-color: #0B0F1A; color: #EAEEF5;">
+<!-- Parent Mode Context Header Banner -->
+<div class="bg-primary-container text-on-primary px-4 py-2 text-xs font-semibold flex items-center justify-between shadow-none z-30" style="background-color: #151A26; color: #EAEEF5; border-bottom: 1px solid #263041;">
+<div class="max-w-md mx-auto w-full flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">family_restroom</span>
+<span>Parent Mode: Managing Yehuda's Tracks</span>
+</div>
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-white/20 text-white tracking-wide uppercase" style="background-color: #16233F; color: #7CA0FF;">
+        Config
+      </span>
+</div>
+</div>
+<!-- App Bar -->
+<header class="sticky top-0 bg-surface-container-lowest z-20 transition-colors" style="background-color: #0B0F1A; border-bottom: 1px solid #263041;">
+<div class="max-w-md mx-auto px-4 py-3 flex items-center justify-between">
+<button aria-label="Go back" class="w-10 h-10 -ml-2 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container-low active:scale-95 transition-all" style="color: #EAEEF5;" type="button">
+<span class="material-symbols-outlined text-2xl" data-icon="chevron_left">chevron_left</span>
+</button>
+<h1 class="text-lg font-bold font-headline text-on-surface text-center tracking-tight" style="color: #EAEEF5;">
+        School year
+      </h1>
+<button aria-label="Help and Info" class="w-10 h-10 -mr-2 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container-low active:scale-95 transition-all" style="color: #EAEEF5;" type="button">
+<span class="material-symbols-outlined text-xl" data-icon="help_outline">help_outline</span>
+</button>
+</div>
+</header>
+<!-- Main Scrollable Content -->
+<main class="flex-1 w-full max-w-md mx-auto px-4 pt-4 pb-28">
+<!-- Form Main Card -->
+<div class="bg-surface-container-lowest rounded-[18px] border border-outline-variant/60 p-5 shadow-none space-y-6" style="background-color: #151A26; border-color: #263041;">
+<!-- 1. Name Field -->
+<div class="space-y-1.5">
+<label class="block text-xs font-bold font-label uppercase tracking-wider text-on-surface-variant" for="subtrack-name" style="color: #98A2B3;">
+          Sub-track name
+        </label>
+<div class="relative flex items-center">
+<span class="absolute left-3.5 text-on-surface-variant flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-xl" data-icon="school" style="color: #98A2B3;">school</span>
+</span>
+<input class="w-full bg-surface-container-low border border-outline-variant/70 text-on-surface font-semibold text-sm rounded-xl pl-11 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all" id="subtrack-name" placeholder="e.g. Yeshiva Ketana" style="background-color: #1E2532; border-color: #263041; color: #EAEEF5;" type="text" value="School"/>
+</div>
+</div>
+<!-- 2. Academic Year Selector -->
+<div class="space-y-2">
+<div class="flex items-center justify-between"><label class="block text-xs font-bold font-label uppercase tracking-wider" style="color: #98A2B3;">Academic year</label><span class="text-[11px] font-medium" style="color: #98A2B3;">Target term</span></div>
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-0.5"><!-- 2025-26 (Used/Disabled) -->
+<div class="flex flex-col items-center justify-center py-2.5 px-2 rounded-xl text-outline cursor-not-allowed opacity-75 relative" style="background-color: #263041; border: 1px solid #263041;">
+<span class="text-xs font-bold font-label tracking-tight" style="color: #98A2B3;">2025–26</span>
+<span class="text-[9px] font-bold uppercase tracking-wider mt-0.5" style="color: #98A2B3;">Used</span>
+</div>
+<!-- 2026-27 (Selected) -->
+<button class="flex flex-col items-center justify-center py-2.5 px-2 rounded-xl font-bold text-xs font-label shadow-sm active:scale-95 transition-all" style="background-color: #16233F; border: 1.5px solid #7CA0FF; color: #7CA0FF;" type="button">
+<span class="tracking-tight font-bold" style="color: #7CA0FF;">2026–27</span>
+<span class="text-[9px] font-semibold uppercase tracking-wider mt-0.5" style="color: #7CA0FF;">Active</span>
+</button>
+<!-- 2027-28 (Unselected) -->
+<button class="flex flex-col items-center justify-center py-2.5 px-2 rounded-xl font-semibold text-xs font-label active:scale-95 transition-all" style="background-color: #151A26; border: 1px solid #263041; color: #C3CBD8;" type="button">
+<span class="tracking-tight">2027–28</span>
+<span class="text-[9px] font-medium uppercase tracking-wider mt-0.5" style="color: #98A2B3;">Open</span>
+</button>
+<!-- 2028-29 (Unselected) -->
+<button class="flex flex-col items-center justify-center py-2.5 px-2 rounded-xl font-semibold text-xs font-label active:scale-95 transition-all" style="background-color: #151A26; border: 1px solid #263041; color: #C3CBD8;" type="button">
+<span class="tracking-tight">2028–29</span>
+<span class="text-[9px] font-medium uppercase tracking-wider mt-0.5" style="color: #98A2B3;">Open</span>
+</button></div>
+</div>
+<!-- 3. Months (Side-by-side dropdown selectors) -->
+<div class="space-y-1.5"><label class="block text-xs font-bold font-label uppercase tracking-wider" style="color: #98A2B3;">
+  Track timeframe
+</label>
+<div class="grid grid-cols-2 gap-3">
+<!-- Start Month -->
+<div class="space-y-1">
+<span class="text-[11px] font-medium" style="color: #98A2B3;">Start month</span>
+<div class="relative">
+<select class="w-full appearance-none text-sm font-semibold rounded-xl px-3.5 py-2.5 pr-8 focus:outline-none cursor-pointer transition-all" style="background-color: #1E2532; border: 1px solid #263041; color: #EAEEF5;">
+<option selected="" value="9">September</option>
+<option value="10">October (Cheshvan)</option>
+<option value="11">November</option>
+<option value="12">December</option>
+<option value="1">January</option>
+</select>
+<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5" style="color: #98A2B3;">
+<span class="material-symbols-outlined text-lg" data-icon="expand_more">expand_more</span>
+</div>
+</div>
+</div>
+<!-- End Month -->
+<div class="space-y-1">
+<span class="text-[11px] font-medium" style="color: #98A2B3;">End month</span>
+<div class="relative">
+<select class="w-full appearance-none text-sm font-semibold rounded-xl px-3.5 py-2.5 pr-8 focus:outline-none cursor-pointer transition-all" style="background-color: #1E2532; border: 1px solid #263041; color: #EAEEF5;">
+<option value="6">June</option>
+<option selected="" value="7">July</option>
+<option value="8">August</option>
+</select>
+<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5" style="color: #98A2B3;">
+<span class="material-symbols-outlined text-lg" data-icon="expand_more">expand_more</span>
+</div>
+</div>
+</div>
+</div></div>
+<div class="h-px bg-surface-container-high" style="background-color: #263041;"></div>
+<!-- 4. Mishnayos per week Stepper -->
+<div class="space-y-2"><div class="flex items-center justify-between">
+<label class="block text-xs font-bold font-label uppercase tracking-wider" style="color: #98A2B3;">
+    Mishnayos per week
+  </label>
+<span class="text-[11px] font-semibold flex items-center gap-1" style="color: #7CA0FF;">
+<span class="material-symbols-outlined text-sm font-semibold" data-icon="trending_up">trending_up</span>
+    Target pace
+  </span>
+</div>
+<div class="flex items-center justify-between rounded-xl p-2" style="background-color: #1E2532; border: 1px solid #263041;">
+<button aria-label="Decrease mishnayos per week" class="w-11 h-11 rounded-xl flex items-center justify-center font-bold text-lg active:scale-95 transition-all shadow-none" id="btn-decrement" style="background-color: #1E2532; border: 1px solid #263041; color: #EAEEF5;" type="button">
+<span class="material-symbols-outlined" data-icon="remove">remove</span>
+</button>
+<div class="text-center px-4">
+<div class="text-2xl font-black font-headline" id="mishnayos-count" style="color: #EAEEF5;">10</div>
+<div class="text-[11px] font-medium tracking-tight mt-0.5" style="color: #98A2B3;">
+      ~2 mishnayos / school day
+    </div>
+</div>
+<button aria-label="Increase mishnayos per week" class="w-11 h-11 rounded-xl flex items-center justify-center font-bold text-lg active:scale-95 transition-all shadow-none" id="btn-increment" style="background-color: #1E2532; border: 1px solid #263041; color: #EAEEF5;" type="button">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+</button>
+</div></div>
+<!-- 5. Weeks per year -->
+<div class="space-y-1.5"><label class="block text-xs font-bold font-label uppercase tracking-wider" for="weeks-input" style="color: #98A2B3;">
+  Weeks per year
+</label>
+<div class="relative">
+<input class="w-full font-semibold text-sm rounded-xl px-4 py-2.5 focus:outline-none transition-all" id="weeks-input" max="52" min="1" style="background-color: #1E2532; border: 1px solid #263041; color: #EAEEF5;" type="number" value="39"/>
+<span class="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-semibold" style="color: #98A2B3;">
+    weeks
+  </span>
+</div>
+<p class="text-[11px] font-medium pl-1" style="color: #98A2B3;">
+  Prefilled — edit if the school year is shorter
+</p></div>
+<div class="h-px bg-surface-container-high" style="background-color: #263041;"></div>
+<!-- 6. Toggle Switch: Shabbos / Yom Tov Learning -->
+<div class="pt-1"><div class="flex items-start justify-between gap-4">
+<div class="space-y-1">
+<label class="text-sm font-bold cursor-pointer select-none" for="shabbos-toggle" style="color: #EAEEF5;">
+      Learns on shabbos / yom tov
+    </label>
+<p class="text-[11px] leading-relaxed" style="color: #98A2B3;">
+      Include this source on the catch-up card after shabbos
+    </p>
+</div>
+<button aria-checked="false" class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none" id="shabbos-toggle" role="switch" style="background-color: #263041;" type="button">
+<span class="sr-only">Toggle Shabbos / Yom Tov learning</span>
+<span class="pointer-events-none inline-block h-5 w-5 transform rounded-full shadow ring-0 transition duration-200 ease-in-out translate-x-0" id="shabbos-thumb" style="background-color: #EAEEF5;"></span>
+</button>
+</div></div>
+</div>
+<!-- Muted Info Note Banner Under Card -->
+<div class="mt-4 px-3 py-3 rounded-xl bg-surface-container-low/70 border border-outline-variant/40 flex items-start gap-2.5" style="background-color: #151A26; border-color: #263041;"><span class="material-symbols-outlined text-lg shrink-0 mt-0.5" data-icon="info" style="color: #98A2B3;">info</span>
+<p class="text-xs font-medium leading-relaxed" style="color: #C3CBD8;">
+  You can add ground later — the school's masechtos don't need to be known yet.
+</p></div>
+</main>
+<!-- Sticky Docked Footer with Action Button -->
+<footer class="fixed bottom-0 inset-x-0 bg-surface-container-lowest/95 backdrop-blur-sm z-40 py-3 px-4 shadow-[0_-4px_12px_rgba(0,0,0,0.03)]" style="background-color: rgba(11, 15, 26, 0.95); border-top: 1px solid #263041;">
+<div class="max-w-md mx-auto">
+<button class="w-full bg-primary-container hover:bg-primary text-white font-semibold text-[15px] py-3.5 px-6 rounded-full shadow-none active:scale-[0.98] transition-all flex items-center justify-center gap-2" style="background-color: #7CA0FF; color: #0B0F1A; font-weight: 700;" type="button">
+<span class="material-symbols-outlined text-lg" data-icon="check">check</span>
+<span>Save sub-track</span>
+</button>
+</div>
+</footer>
+<script>
+    // Interactive micro-interactions
+    const decBtn = document.getElementById('btn-decrement');
+    const incBtn = document.getElementById('btn-increment');
+    const countDisplay = document.getElementById('mishnayos-count');
+    let count = 10;
+
+    decBtn.addEventListener('click', () => {
+      if (count > 1) {
+        count--;
+        countDisplay.textContent = count;
+      }
+    });
+
+    incBtn.addEventListener('click', () => {
+      if (count < 50) {
+        count++;
+        countDisplay.textContent = count;
+      }
+    });
+
+    const toggle = document.getElementById('shabbos-toggle');
+    const thumb = document.getElementById('shabbos-thumb');
+    let isChecked = false;
+
+    toggle.addEventListener('click', () => {
+      isChecked = !isChecked;
+      toggle.setAttribute('aria-checked', isChecked);
+      if (isChecked) {
+        toggle.classList.remove('bg-surface-variant');
+        toggle.classList.add('bg-primary-container');
+        thumb.classList.remove('translate-x-0');
+        thumb.classList.add('translate-x-5');
+      } else {
+        toggle.classList.remove('bg-primary-container');
+        toggle.classList.add('bg-surface-variant');
+        thumb.classList.remove('translate-x-5');
+        thumb.classList.add('translate-x-0');
+      }
+    });
+  </script>
+</body></html>

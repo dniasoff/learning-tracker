@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>School 2026–27 — Mishnayos Tracker</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Noto+Sans+Hebrew:wght@400;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "on-surface-variant": "#444653",
+            "secondary-fixed": "#ffdbd1",
+            "on-secondary-fixed": "#3a0a00",
+            "surface-container-high": "#e7e8eb",
+            "surface-tint": "#2e55ca",
+            "surface-bright": "#f8f9fc",
+            "on-tertiary": "#ffffff",
+            "secondary-container": "#fd6f43",
+            "surface-container": "#edeef1",
+            "on-primary-container": "#acbcff",
+            "error": "#ba1a1a",
+            "background": "#f8f9fc",
+            "inverse-on-surface": "#f0f1f4",
+            "error-container": "#ffdad6",
+            "outline-variant": "#c4c5d6",
+            "on-surface": "#191c1e",
+            "primary-fixed": "#dce1ff",
+            "tertiary-fixed-dim": "#a4d577",
+            "secondary-fixed-dim": "#ffb59f",
+            "tertiary": "#1e3e00",
+            "surface": "#f8f9fc",
+            "primary-container": "#1442b8",
+            "on-secondary": "#ffffff",
+            "inverse-surface": "#2e3133",
+            "on-primary-fixed": "#001550",
+            "primary": "#002c8e",
+            "on-secondary-fixed-variant": "#862300",
+            "secondary": "#ab350b",
+            "surface-variant": "#e1e2e5",
+            "surface-container-highest": "#e1e2e5",
+            "tertiary-container": "#2f5705",
+            "tertiary-fixed": "#bff190",
+            "on-primary": "#ffffff",
+            "surface-dim": "#d9dadd",
+            "on-background": "#191c1e",
+            "surface-container-low": "#f2f3f6",
+            "surface-container-lowest": "#ffffff",
+            "primary-fixed-dim": "#b6c4ff",
+            "on-secondary-container": "#631700",
+            "on-tertiary-fixed": "#0d2000",
+            "outline": "#747685",
+            "inverse-primary": "#b6c4ff",
+            "on-tertiary-container": "#9ccc70",
+            "on-primary-fixed-variant": "#023ab1",
+            "on-error": "#ffffff",
+            "on-tertiary-fixed-variant": "#295000",
+            "on-error-container": "#93000a"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "fontFamily": {
+            "headline": ["Plus Jakarta Sans", "sans-serif"],
+            "display": ["Plus Jakarta Sans", "sans-serif"],
+            "body": ["Plus Jakarta Sans", "sans-serif"],
+            "label": ["Plus Jakarta Sans", "sans-serif"],
+            "hebrew": ["Noto Sans Hebrew", "Plus Jakarta Sans", "sans-serif"]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    .font-hebrew {
+      font-family: 'Noto Sans Hebrew', sans-serif;
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface font-body min-h-screen antialiased flex flex-col items-center">
+<!-- Main Mobile Shell Container -->
+<div class="w-full max-w-md min-h-screen flex flex-col bg-background pb-28 relative">
+<!-- Parent Mode Context Header Pill -->
+<div class="w-full bg-surface-container-low px-4 py-1.5 flex items-center justify-between text-xs text-on-surface-variant font-medium">
+<div class="flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+<span>Viewing as <strong>Parent</strong> (Yehuda)</span>
+</div>
+<span class="text-[11px] font-semibold tracking-wide text-primary uppercase">Sync active</span>
+</div>
+<!-- Top App Bar -->
+<header class="sticky top-0 z-30 bg-surface-container-lowest flex items-center justify-between px-4 py-3 border-b border-outline-variant/40">
+<button aria-label="Go back" class="w-9 h-9 rounded-full flex items-center justify-center text-on-surface hover:bg-surface-container-low transition-colors active:scale-95">
+<span class="material-symbols-outlined text-[22px]">arrow_back</span>
+</button>
+<div class="flex flex-col items-center">
+<h1 class="text-base font-bold font-headline text-on-surface tracking-tight">School 2026–27</h1>
+<span class="text-[11px] font-medium text-on-surface-variant">Annual Curriculum Track</span>
+</div>
+<div class="relative">
+<button aria-label="More options" class="w-9 h-9 rounded-full flex items-center justify-center text-on-surface hover:bg-surface-container-low transition-colors active:scale-95" id="menu-btn" onclick="document.getElementById('menu-popover').classList.toggle('hidden')">
+<span class="material-symbols-outlined text-[22px]">more_vert</span>
+</button>
+<!-- Overflow Menu Popover -->
+<div class="hidden absolute right-0 mt-1 w-44 bg-surface-container-lowest rounded-xl shadow-lg border border-outline-variant/60 py-1.5 z-50" id="menu-popover">
+<button class="w-full px-4 py-2 text-left text-sm text-on-surface hover:bg-surface-container-low flex items-center gap-2.5 transition-colors">
+<span class="material-symbols-outlined text-base text-on-surface-variant">edit</span>
+<span>Edit track</span>
+</button>
+<button class="w-full px-4 py-2 text-left text-sm text-on-surface hover:bg-surface-container-low flex items-center gap-2.5 transition-colors">
+<span class="material-symbols-outlined text-base text-on-surface-variant">tune</span>
+<span>Configure pace</span>
+</button>
+<div class="h-px bg-outline-variant/40 my-1"></div>
+<button class="w-full px-4 py-2 text-left text-sm text-error hover:bg-error-container/20 flex items-center gap-2.5 transition-colors">
+<span class="material-symbols-outlined text-base text-error">delete</span>
+<span>Delete track</span>
+</button>
+</div>
+</div>
+</header>
+<!-- Scrollable Content -->
+<main class="flex-1 px-4 pt-4 space-y-4">
+<!-- 1. Header Card -->
+<section class="bg-surface-container-lowest rounded-[18px] p-5 border border-outline-variant/50 shadow-none">
+<div class="flex items-start justify-between mb-3">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-xl bg-primary-fixed flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-2xl" data-weight="fill">school</span>
+</div>
+<div>
+<span class="inline-block text-xs font-bold text-primary bg-primary-fixed/60 px-2 py-0.5 rounded-full mb-0.5">Primary Target</span>
+<h2 class="text-lg font-extrabold text-on-surface tracking-tight">Yeshiva Darchei Torah</h2>
+</div>
+</div>
+<div class="flex items-center gap-1 text-xs font-semibold text-tertiary-container bg-tertiary-fixed/40 px-2.5 py-1 rounded-full border border-tertiary-fixed-dim/40">
+<span class="material-symbols-outlined text-sm font-bold">check_circle</span>
+<span>38 ticked</span>
+</div>
+</div>
+<p class="text-xs font-medium text-on-surface-variant mb-4 flex items-center gap-1.5 flex-wrap">
+<span class="material-symbols-outlined text-xs">calendar_today</span>
+<span>School year</span>
+<span class="text-outline-variant">•</span>
+<span>Sep 2026 – Jul 2027</span>
+<span class="text-outline-variant">•</span>
+<span>10/wk × 39 wks</span>
+</p>
+<!-- Focus Next Banner -->
+<div class="bg-surface-container-low/70 rounded-xl p-3.5 border border-outline-variant/30 flex items-center justify-between">
+<div>
+<div class="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-0.5">Up Next</div>
+<div class="flex items-baseline gap-2">
+<span class="text-base font-bold text-on-surface">Berachos 1:4</span>
+<span class="text-sm font-bold font-hebrew text-primary">ברכות פרק א׳ משנה ד׳</span>
+</div>
+</div>
+<button class="bg-primary hover:bg-primary-container text-on-primary rounded-full px-4 py-1.5 text-xs font-bold transition-transform active:scale-95 flex items-center gap-1">
+<span>Learn</span>
+<span class="material-symbols-outlined text-xs">arrow_forward</span>
+</button>
+</div>
+</section>
+<!-- 2. Capacity vs Path Card -->
+<section class="bg-surface-container-lowest rounded-[18px] p-4 border border-outline-variant/50">
+<div class="flex items-center justify-between mb-2">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-primary text-base">speed</span>
+<h3 class="text-sm font-bold text-on-surface">Capacity vs Path</h3>
+</div>
+<span class="text-xs font-bold text-on-surface">350 / 390</span>
+</div>
+<!-- 6px progress bar -->
+<div class="w-full bg-surface-container-high h-1.5 rounded-full overflow-hidden mb-2.5">
+<div class="bg-primary h-full rounded-full transition-all duration-300" style="width: 89.7%;"></div>
+</div>
+<div class="flex items-center justify-between">
+<div class="text-[11px] text-on-surface-variant font-medium">
+<span>Remaining path: <strong>350</strong></span>
+<span class="mx-1">·</span>
+<span>Total capacity: <strong>390</strong></span>
+</div>
+<div class="inline-flex items-center gap-1 text-[11px] font-semibold text-tertiary-container bg-tertiary-fixed/50 px-2 py-0.5 rounded-full">
+<span class="material-symbols-outlined text-xs">check</span>
+<span>No shortfall</span>
+</div>
+</div>
+</section>
+<!-- 3. Section "Ground (in order)" -->
+<section class="space-y-2.5">
+<div class="flex items-center justify-between px-1">
+<div class="flex items-baseline gap-2">
+<h3 class="text-sm font-bold font-headline text-on-surface">Ground (in order)</h3>
+<span class="text-xs text-on-surface-variant">4 tractates/perakim</span>
+</div>
+<span class="text-[11px] font-medium text-outline flex items-center gap-0.5">
+<span class="material-symbols-outlined text-xs">drag_indicator</span>
+<span>Drag to order</span>
+</span>
+</div>
+<div class="space-y-2">
+<!-- Item a) Berachos perek 1 (Partial) -->
+<div class="bg-surface-container-lowest rounded-[18px] p-3.5 border border-outline-variant/60 flex items-center gap-3 relative transition-all hover:border-outline-variant">
+<span class="material-symbols-outlined text-outline-variant cursor-grab active:cursor-grabbing text-lg select-none">drag_indicator</span>
+<!-- Partial Status Icon: Amber dash -->
+<div class="w-8 h-8 rounded-lg bg-[#FFD26A]/20 text-[#C77A12] border border-[#FFD26A] flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-lg font-bold">remove</span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-baseline justify-between gap-1">
+<h4 class="text-sm font-bold text-on-surface truncate">Berachos perek 1</h4>
+<span class="text-xs font-bold font-hebrew text-on-surface-variant shrink-0">ברכות פרק א׳</span>
+</div>
+<div class="flex items-center gap-2 mt-0.5 text-xs text-on-surface-variant font-medium">
+<span class="text-[#C77A12] font-semibold">3 of 5 learnt</span>
+<span class="text-outline-variant">•</span>
+<span>Mishnayos 1:1 – 1:5</span>
+</div>
+</div>
+<button class="text-on-surface-variant hover:text-primary p-1">
+<span class="material-symbols-outlined text-lg">chevron_right</span>
+</button>
+</div>
+<!-- Item b) Berachos perek 2 (Empty) -->
+<div class="bg-surface-container-lowest rounded-[18px] p-3.5 border border-outline-variant/60 flex items-center gap-3 relative transition-all hover:border-outline-variant">
+<span class="material-symbols-outlined text-outline-variant cursor-grab active:cursor-grabbing text-lg select-none">drag_indicator</span>
+<!-- Empty Status Icon -->
+<div class="w-8 h-8 rounded-lg border-2 border-outline-variant/80 flex items-center justify-center shrink-0 bg-transparent">
+<span class="w-1.5 h-1.5 rounded-full bg-outline-variant/60"></span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-baseline justify-between gap-1">
+<h4 class="text-sm font-semibold text-on-surface truncate">Berachos perek 2</h4>
+<span class="text-xs font-medium font-hebrew text-on-surface-variant shrink-0">ברכות פרק ב׳</span>
+</div>
+<div class="flex items-center gap-2 mt-0.5 text-xs text-on-surface-variant font-medium">
+<span class="text-outline">0 of 8 learnt</span>
+<span class="text-outline-variant">•</span>
+<span>Mishnayos 2:1 – 2:8</span>
+</div>
+</div>
+<button class="text-on-surface-variant hover:text-primary p-1">
+<span class="material-symbols-outlined text-lg">chevron_right</span>
+</button>
+</div>
+<!-- Item c) Berachos perek 3 (Empty) -->
+<div class="bg-surface-container-lowest rounded-[18px] p-3.5 border border-outline-variant/60 flex items-center gap-3 relative transition-all hover:border-outline-variant">
+<span class="material-symbols-outlined text-outline-variant cursor-grab active:cursor-grabbing text-lg select-none">drag_indicator</span>
+<!-- Empty Status Icon -->
+<div class="w-8 h-8 rounded-lg border-2 border-outline-variant/80 flex items-center justify-center shrink-0 bg-transparent">
+<span class="w-1.5 h-1.5 rounded-full bg-outline-variant/60"></span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-baseline justify-between gap-1">
+<h4 class="text-sm font-semibold text-on-surface truncate">Berachos perek 3</h4>
+<span class="text-xs font-medium font-hebrew text-on-surface-variant shrink-0">ברכות פרק ג׳</span>
+</div>
+<div class="flex items-center gap-2 mt-0.5 text-xs text-on-surface-variant font-medium">
+<span class="text-outline">0 of 6 learnt</span>
+<span class="text-outline-variant">•</span>
+<span>Mishnayos 3:1 – 3:6</span>
+</div>
+</div>
+<button class="text-on-surface-variant hover:text-primary p-1">
+<span class="material-symbols-outlined text-lg">chevron_right</span>
+</button>
+</div>
+<!-- Item d) Peah perek 1 (Complete) -->
+<div class="bg-surface-container-lowest rounded-[18px] p-3.5 border border-outline-variant/60 flex items-center gap-3 relative transition-all hover:border-outline-variant">
+<span class="material-symbols-outlined text-outline-variant cursor-grab active:cursor-grabbing text-lg select-none">drag_indicator</span>
+<!-- Complete Status Icon: Soft Green Check -->
+<div class="w-8 h-8 rounded-lg bg-[#3BDD87]/20 text-[#4F7A28] border border-[#3BDD87] flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-lg font-bold">check</span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-baseline justify-between gap-1">
+<h4 class="text-sm font-bold text-on-surface truncate">Peah perek 1</h4>
+<span class="text-xs font-bold font-hebrew text-on-surface-variant shrink-0">פאה פרק א׳</span>
+</div>
+<div class="flex items-center gap-2 mt-0.5 text-xs text-on-surface-variant font-medium">
+<span class="text-tertiary-container font-semibold">4 of 4</span>
+<span class="text-outline-variant">•</span>
+<span class="inline-flex items-center text-[11px] text-on-surface-variant bg-surface-container-low px-1.5 py-0.2 rounded font-normal">learnt at home</span>
+</div>
+</div>
+<button class="text-on-surface-variant hover:text-primary p-1">
+<span class="material-symbols-outlined text-lg">chevron_right</span>
+</button>
+</div>
+</div>
+</section>
+<!-- 4. Action Buttons -->
+<section class="pt-2 pb-6 space-y-2">
+<button class="w-full rounded-full border-2 border-primary text-primary font-bold py-3 text-center flex items-center justify-center gap-2 hover:bg-primary-fixed/20 active:scale-[0.99] transition-all text-sm">
+<span class="material-symbols-outlined text-lg font-bold">add</span>
+<span>+ Add ground</span>
+</button>
+<button class="w-full text-on-surface-variant hover:text-primary font-medium text-xs text-center py-2 transition-colors">
+          Add next year (2027–28)
+        </button>
+</section>
+</main>
+<!-- 5. Bottom Navigation Bar (Execution from Shared Components JSON) -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 py-2 bg-surface-container-lowest dark:bg-surface border-t border-outline-variant/30 rounded-t-[28px] shadow-sm max-w-md mx-auto right-0">
+<!-- Dashboard (Inactive) -->
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline px-4 py-1 hover:bg-surface-container-high transition-colors rounded-full active:scale-95 duration-150">
+<span class="material-symbols-outlined text-xl">dashboard</span>
+<span class="text-xs font-semibold font-label">Dashboard</span>
+</button>
+<!-- Learn (Inactive) -->
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline px-4 py-1 hover:bg-surface-container-high transition-colors rounded-full active:scale-95 duration-150">
+<span class="material-symbols-outlined text-xl">menu_book</span>
+<span class="text-xs font-semibold font-label">Learn</span>
+</button>
+<!-- Progress (Active Track Context) -->
+<button class="flex flex-col items-center justify-center bg-primary-fixed dark:bg-primary-container text-primary dark:text-on-primary-container rounded-full px-5 py-1 active:scale-95 duration-150">
+<span class="material-symbols-outlined text-xl" data-weight="fill">monitoring</span>
+<span class="text-xs font-semibold font-label">Progress</span>
+</button>
+<!-- Settings (Inactive) -->
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline px-4 py-1 hover:bg-surface-container-high transition-colors rounded-full active:scale-95 duration-150">
+<span class="material-symbols-outlined text-xl">settings</span>
+<span class="text-xs font-semibold font-label">Settings</span>
+</button>
+</nav>
+</div>
+<script>
+    // Micro-interactions: Click outside popover to close
+    document.addEventListener('click', function(event) {
+      const popover = document.getElementById('menu-popover');
+      const btn = document.getElementById('menu-btn');
+      if (popover && !popover.contains(event.target) && !btn.contains(event.target)) {
+        popover.classList.add('hidden');
+      }
+    });
+  </script>
+</body></html>

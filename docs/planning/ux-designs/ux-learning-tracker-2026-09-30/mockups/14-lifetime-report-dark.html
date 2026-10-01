@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Lifetime report · Yehuda</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Hebrew:wght@400;600;700&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "surface-container-low": "#151A26",
+            "outline-variant": "#263041",
+            "on-tertiary": "#0B0F1A",
+            "error-container": "#2E1414",
+            "on-primary-container": "#7CA0FF",
+            "tertiary-container": "#142E23",
+            "surface-bright": "#1E2532",
+            "surface-container-highest": "#263041",
+            "on-primary-fixed-variant": "#0B0F1A",
+            "on-secondary-container": "#FF8A5C",
+            "on-surface": "#EAEEF5",
+            "background": "#0B0F1A",
+            "primary-fixed": "#16233F",
+            "primary": "#7CA0FF",
+            "secondary": "#FF8A5C",
+            "primary-container": "#7CA0FF",
+            "tertiary-fixed-dim": "#72DEA4",
+            "surface-container-high": "#1E2532",
+            "inverse-surface": "#EAEEF5",
+            "secondary-fixed": "#2E1C14",
+            "primary-fixed-dim": "#7CA0FF",
+            "outline": "#263041",
+            "on-secondary-fixed-variant": "#FF8A5C",
+            "on-primary": "#0B0F1A",
+            "on-error": "#0B0F1A",
+            "inverse-on-surface": "#0B0F1A",
+            "surface-tint": "#7CA0FF",
+            "on-tertiary-container": "#72DEA4",
+            "secondary-fixed-dim": "#FF8A5C",
+            "secondary-container": "#2E1C14",
+            "on-error-container": "#FF6B6B",
+            "inverse-primary": "#002c8e",
+            "on-surface-variant": "#98A2B3",
+            "surface-dim": "#151A26",
+            "surface-variant": "#1E2532",
+            "surface-container-lowest": "#151A26",
+            "surface": "#0B0F1A",
+            "on-tertiary-fixed": "#72DEA4",
+            "on-background": "#EAEEF5",
+            "on-tertiary-fixed-variant": "#72DEA4",
+            "on-primary-fixed": "#0B0F1A",
+            "error": "#FF6B6B",
+            "surface-container": "#151A26",
+            "tertiary": "#72DEA4",
+            "on-secondary": "#0B0F1A",
+            "tertiary-fixed": "#142E23",
+            "on-secondary-fixed": "#FF8A5C"
+          },
+          borderRadius: {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          fontFamily: {
+            headline: ["Plus Jakarta Sans", "sans-serif"],
+            display: ["Plus Jakarta Sans", "sans-serif"],
+            body: ["Plus Jakarta Sans", "sans-serif"],
+            label: ["Plus Jakarta Sans", "sans-serif"],
+            hebrew: ["Noto Sans Hebrew", "sans-serif"]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 500, 'GRAD' 0, 'opsz' 24;
+      line-height: 1;
+    }
+    .material-symbols-outlined.fill-icon {
+      font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24;
+    }
+    body {
+      -webkit-tap-highlight-color: transparent;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-[#0B0F1A] text-[#EAEEF5] min-h-screen flex flex-col justify-between antialiased selection:bg-[#7CA0FF]/20 selection:text-[#7CA0FF] pb-28">
+<!-- Main View Container -->
+<div class="w-full max-w-md mx-auto flex flex-col min-h-screen relative bg-[#0B0F1A]">
+<!-- Top App Bar -->
+<header class="sticky top-0 z-40 bg-[#151A26]/95 backdrop-blur-md px-4 py-3 flex items-center justify-between border-b border-[#263041]">
+<button aria-label="Go back" class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-[#1E2532] transition-colors text-[#EAEEF5] active:scale-95 duration-150" type="button">
+<span class="material-symbols-outlined text-[24px]" data-icon="arrow_back">arrow_back</span>
+</button>
+<h1 class="text-lg font-bold text-[#EAEEF5] font-headline tracking-tight text-center">
+        Lifetime report
+      </h1>
+<button aria-label="Share report" class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-[#1E2532] transition-colors text-[#EAEEF5] active:scale-95 duration-150" type="button">
+<span class="material-symbols-outlined text-[22px]" data-icon="share">share</span>
+</button>
+</header>
+<!-- Context Banner: Parent View Indicator -->
+<div class="px-4 pt-3 pb-3">
+<div class="bg-[#151A26] border border-[#263041] rounded-full px-3.5 py-1.5 flex items-center justify-between text-xs shadow-none">
+<div class="flex items-center space-x-2">
+<span class="inline-flex w-2 h-2 rounded-full bg-[#7CA0FF]"></span>
+<span class="font-medium text-[#98A2B3]">Viewing <strong class="font-semibold text-[#EAEEF5]">Yehuda</strong></span>
+</div>
+<span class="bg-[#1E2532] text-[#98A2B3] px-2 py-0.5 rounded-full font-semibold text-[11px] border border-[#263041]">
+          Parent mode
+        </span>
+</div>
+</div>
+<!-- Scrollable Content Canvas -->
+<main class="px-4 space-y-4 flex-1">
+<!-- Summary Row (3 Bento Metrics) -->
+<section aria-label="Lifetime summary metrics" class="grid grid-cols-3 gap-2.5">
+<!-- Card 1 -->
+<div class="bg-[#151A26] border border-[#263041] rounded-[18px] p-3 flex flex-col justify-between">
+<div class="flex items-center justify-between text-[#98A2B3] mb-1">
+<span class="text-[11px] font-semibold tracking-tight text-[#98A2B3]">Distinct</span>
+<span class="material-symbols-outlined text-[#7CA0FF] text-[18px]" data-icon="menu_book">menu_book</span>
+</div>
+<div>
+<div class="text-xl font-bold font-headline text-[#EAEEF5] tracking-tight">1,204</div>
+<div class="text-[11px] text-[#98A2B3] font-medium mt-0.5">mishnayos</div>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="bg-[#151A26] border border-[#263041] rounded-[18px] p-3 flex flex-col justify-between">
+<div class="flex items-center justify-between text-[#98A2B3] mb-1">
+<span class="text-[11px] font-semibold tracking-tight text-[#98A2B3]">Reviews</span>
+<span class="material-symbols-outlined text-[#7CA0FF] text-[18px]" data-icon="repeat">repeat</span>
+</div>
+<div>
+<div class="text-xl font-bold font-headline text-[#EAEEF5] tracking-tight">1,876</div>
+<div class="text-[11px] text-[#98A2B3] font-medium mt-0.5">events logged</div>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="bg-[#151A26] border border-[#263041] rounded-[18px] p-3 flex flex-col justify-between">
+<div class="flex items-center justify-between text-[#98A2B3] mb-1">
+<span class="text-[11px] font-semibold tracking-tight text-[#98A2B3]">Tracking</span>
+<span class="material-symbols-outlined text-[#98A2B3] text-[18px]" data-icon="calendar_month">calendar_month</span>
+</div>
+<div>
+<div class="text-sm font-bold font-headline text-[#EAEEF5] leading-tight">Since Sep</div>
+<div class="text-[11px] text-[#98A2B3] font-semibold mt-0.5">2024 · 7 mos</div>
+</div>
+</div>
+</section>
+<!-- Section: By Source -->
+<section class="bg-[#151A26] border border-[#263041] rounded-[18px] p-4">
+<div class="flex items-center justify-between pb-3.5 border-b border-[#263041]">
+<div class="flex items-center space-x-2">
+<span class="text-base font-bold font-headline text-[#EAEEF5]">By source</span>
+</div>
+<span class="text-xs text-[#98A2B3] font-medium">1,876 total sessions</span>
+</div>
+<div class="space-y-4 pt-3.5">
+<!-- Home -->
+<div class="space-y-1.5">
+<div class="flex items-center justify-between text-sm">
+<div class="flex items-center space-x-2">
+<div class="w-7 h-7 rounded-full bg-[#16233F] flex items-center justify-center text-[#7CA0FF]">
+<span class="material-symbols-outlined text-[16px]" data-icon="home">home</span>
+</div>
+<span class="font-semibold text-[#EAEEF5] text-sm">Home</span>
+</div>
+<div class="text-right">
+<span class="font-bold text-[#EAEEF5] text-sm">1,020</span>
+<span class="text-xs text-[#98A2B3] font-medium ml-1">mishnayos (54%)</span>
+</div>
+</div>
+<!-- Progress Bar -->
+<div class="h-2 w-full bg-[#1E2532] rounded-full overflow-hidden">
+<div class="h-full bg-[#7CA0FF] rounded-full" style="width: 54%"></div>
+</div>
+</div>
+<!-- School -->
+<div class="space-y-1.5">
+<div class="flex items-center justify-between text-sm">
+<div class="flex items-center space-x-2">
+<div class="w-7 h-7 rounded-full bg-[#142E23] flex items-center justify-center text-[#72DEA4]">
+<span class="material-symbols-outlined text-[16px]" data-icon="school">school</span>
+</div>
+<span class="font-semibold text-[#EAEEF5] text-sm">School</span>
+</div>
+<div class="text-right">
+<span class="font-bold text-[#EAEEF5] text-sm">640</span>
+<span class="text-xs text-[#98A2B3] font-medium ml-1">mishnayos (34%)</span>
+</div>
+</div>
+<!-- Progress Bar -->
+<div class="h-2 w-full bg-[#1E2532] rounded-full overflow-hidden">
+<div class="h-full bg-[#72DEA4] rounded-full" style="width: 34%"></div>
+</div>
+</div>
+<!-- Rebbe / Tutor -->
+<div class="space-y-1.5">
+<div class="flex items-center justify-between text-sm">
+<div class="flex items-center space-x-2">
+<div class="w-7 h-7 rounded-full bg-[#2E1C14] flex items-center justify-center text-[#FF8A5C]">
+<span class="material-symbols-outlined text-[16px]" data-icon="person_play">person_play</span>
+</div>
+<span class="font-semibold text-[#EAEEF5] text-sm">Rebbe</span>
+</div>
+<div class="text-right">
+<span class="font-bold text-[#EAEEF5] text-sm">216</span>
+<span class="text-xs text-[#98A2B3] font-medium ml-1">mishnayos (12%)</span>
+</div>
+</div>
+<!-- Progress Bar -->
+<div class="h-2 w-full bg-[#1E2532] rounded-full overflow-hidden">
+<div class="h-full bg-[#FF8A5C] rounded-full" style="width: 12%"></div>
+</div>
+</div>
+</div>
+</section>
+<!-- Section: School Years -->
+<section class="bg-[#151A26] border border-[#263041] rounded-[18px] p-4 overflow-hidden">
+<div class="flex items-center justify-between pb-3 border-b border-[#263041]">
+<span class="text-base font-bold font-headline text-[#EAEEF5]">School years</span>
+<span class="text-xs text-[#98A2B3] font-medium">Academic timeline</span>
+</div>
+<div class="mt-3 space-y-2">
+<!-- Expanded Group: School -->
+<div class="rounded-xl border border-[#263041] p-3 bg-[#1E2532]">
+<div class="flex items-center justify-between mb-3 cursor-pointer">
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-[#72DEA4] text-[20px]" data-icon="school">school</span>
+<span class="font-bold text-sm text-[#EAEEF5]">School</span>
+<span class="bg-[#151A26] border border-[#263041] text-[#98A2B3] text-[11px] font-semibold px-2 py-0.5 rounded-full">
+                  640 mishnayos
+                </span>
+</div>
+<span class="material-symbols-outlined text-[#98A2B3] text-[20px]" data-icon="expand_less">expand_less</span>
+</div>
+<!-- Sub items -->
+<div class="space-y-2.5 pl-6 border-l-2 border-[#263041] ml-2">
+<div class="flex items-center justify-between text-xs">
+<span class="font-medium text-[#98A2B3]">2024–25</span>
+<span class="font-semibold text-[#C3CBD8]">210 mishnayos</span>
+</div>
+<div class="flex items-center justify-between text-xs">
+<span class="font-medium text-[#98A2B3]">2025–26</span>
+<span class="font-semibold text-[#C3CBD8]">250 mishnayos</span>
+</div>
+<div class="flex items-center justify-between text-xs">
+<div class="flex items-center space-x-2">
+<span class="font-medium text-[#EAEEF5]">2026–27</span>
+<span class="bg-[#142E23] text-[#72DEA4] border border-[#72DEA4]/20 text-[10px] font-bold px-1.5 py-0.5 rounded">In progress</span>
+</div>
+<span class="font-bold text-[#EAEEF5]">180 mishnayos</span>
+</div>
+</div>
+</div>
+<!-- Collapsed Row: Rebbe -->
+<div class="rounded-xl border border-[#263041] p-3 flex items-center justify-between bg-[#151A26] hover:bg-[#1E2532] cursor-pointer transition-colors">
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-[#FF8A5C] text-[20px]" data-icon="person_play">person_play</span>
+<span class="font-semibold text-sm text-[#EAEEF5]">Rebbe</span>
+<span class="text-xs text-[#98A2B3] font-medium">· ongoing · 216 mishnayos</span>
+</div>
+<span class="material-symbols-outlined text-[#98A2B3] text-[20px]" data-icon="expand_more">expand_more</span>
+</div>
+</div>
+</section>
+<!-- Section: Per-source pace -->
+<section class="bg-[#151A26] border border-[#263041] rounded-[18px] p-4">
+<div class="flex items-center justify-between pb-3 border-b border-[#263041]">
+<span class="text-base font-bold font-headline text-[#EAEEF5]">Per-source pace</span>
+<span class="text-xs text-[#98A2B3] font-medium">Last 30 days</span>
+</div>
+<div class="divide-y divide-[#263041]">
+<!-- Metric 1: School -->
+<div class="py-3 flex items-center justify-between">
+<div class="space-y-0.5">
+<div class="text-sm font-semibold text-[#EAEEF5]">School</div>
+<div class="text-xs text-[#98A2B3] font-medium">Weekly target pace</div>
+</div>
+<div class="text-right">
+<div class="flex items-center justify-end space-x-1.5">
+<span class="text-sm font-bold text-[#EAEEF5]">9.6</span>
+<span class="text-xs text-[#98A2B3]">/ week</span>
+<span class="inline-flex items-center text-[11px] font-semibold text-[#72DEA4] bg-[#142E23] border border-[#72DEA4]/20 px-1.5 py-0.5 rounded ml-1">
+                  On pace
+                </span>
+</div>
+<div class="text-[11px] text-[#98A2B3] font-medium mt-0.5">10 / week estimate</div>
+</div>
+</div>
+<!-- Metric 2: Rebbe -->
+<div class="py-3 flex items-center justify-between">
+<div class="space-y-0.5">
+<div class="text-sm font-semibold text-[#EAEEF5]">Rebbe</div>
+<div class="text-xs text-[#98A2B3] font-medium">Weekly target pace</div>
+</div>
+<div class="text-right">
+<div class="flex items-center justify-end space-x-1.5">
+<span class="text-sm font-bold text-[#EAEEF5]">4.8</span>
+<span class="text-xs text-[#98A2B3]">/ week</span>
+<span class="inline-flex items-center text-[11px] font-semibold text-[#C3CBD8] bg-[#1E2532] border border-[#263041] px-1.5 py-0.5 rounded ml-1">
+                  Steady
+                </span>
+</div>
+<div class="text-[11px] text-[#98A2B3] font-medium mt-0.5">5 / week estimate</div>
+</div>
+</div>
+</div>
+<!-- Footnote with Info Icon -->
+<div class="mt-2 pt-2 border-t border-[#263041] flex items-start space-x-2 text-xs text-[#98A2B3]">
+<span class="material-symbols-outlined text-[16px] text-[#98A2B3] shrink-0 mt-0.5" data-icon="info">info</span>
+<span class="leading-relaxed">Before-tracking learning isn't counted in pace.</span>
+</div>
+</section>
+<!-- Bottom Primary Action (Export PDF) -->
+<section class="pt-2 pb-6">
+<button class="w-full bg-[#7CA0FF] text-[#0B0F1A] font-bold text-base py-3.5 px-6 rounded-full flex items-center justify-center space-x-2 active:scale-[0.98] transition-all hover:bg-[#6891ff] duration-150 shadow-sm" type="button">
+<span class="material-symbols-outlined text-[20px]" data-icon="picture_as_pdf">picture_as_pdf</span>
+<span>Export PDF</span>
+</button>
+</section>
+</main>
+<!-- Bottom Navigation Bar (Mandatory Shared Component Blueprint) -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 py-2 bg-[#151A26] rounded-t-[28px] border-t border-[#263041]">
+<!-- Tab 1: Dashboard -->
+<a class="flex flex-col items-center justify-center text-[#98A2B3] px-4 py-1 hover:bg-[#1E2532] transition-colors rounded-full active:scale-95 duration-150" href="#">
+<span class="material-symbols-outlined text-[22px]" data-icon="dashboard">dashboard</span>
+<span class="text-xs font-semibold font-label mt-0.5">Dashboard</span>
+</a>
+<!-- Tab 2: Learn -->
+<a class="flex flex-col items-center justify-center text-[#98A2B3] px-4 py-1 hover:bg-[#1E2532] transition-colors rounded-full active:scale-95 duration-150" href="#">
+<span class="material-symbols-outlined text-[22px]" data-icon="menu_book">menu_book</span>
+<span class="text-xs font-semibold font-label mt-0.5">Learn</span>
+</a>
+<!-- Tab 3: Progress (ACTIVE DESTINATION) -->
+<a class="flex flex-col items-center justify-center bg-[#16233F] text-[#7CA0FF] border border-[#7CA0FF]/30 rounded-full px-5 py-1 transition-all active:scale-95 duration-150" href="#">
+<span class="material-symbols-outlined text-[22px] fill-icon text-[#7CA0FF]" data-icon="monitoring">monitoring</span>
+<span class="text-xs font-semibold font-label mt-0.5">Progress</span>
+</a>
+<!-- Tab 4: Settings -->
+<a class="flex flex-col items-center justify-center text-[#98A2B3] px-4 py-1 hover:bg-[#1E2532] transition-colors rounded-full active:scale-95 duration-150" href="#">
+<span class="material-symbols-outlined text-[22px]" data-icon="settings">settings</span>
+<span class="text-xs font-semibold font-label mt-0.5">Settings</span>
+</a>
+</nav>
+</div>
+</body></html>

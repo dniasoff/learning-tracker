@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Mishnayos Tracker - Up to... Modal</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Hebrew:wght@400;500;600;700&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "surface-bright": "#f8f9fc",
+            "primary": "#002c8e",
+            "on-tertiary": "#ffffff",
+            "surface-dim": "#d9dadd",
+            "on-secondary-container": "#631700",
+            "surface-container-high": "#e7e8eb",
+            "surface-container": "#edeef1",
+            "background": "#f8f9fc",
+            "surface": "#f8f9fc",
+            "on-tertiary-container": "#9ccc70",
+            "tertiary-fixed-dim": "#a4d577",
+            "on-secondary-fixed": "#3a0a00",
+            "surface-container-highest": "#e1e2e5",
+            "secondary-container": "#fd6f43",
+            "on-secondary": "#ffffff",
+            "on-primary-fixed-variant": "#023ab1",
+            "on-surface-variant": "#444653",
+            "on-surface": "#191c1e",
+            "surface-tint": "#2e55ca",
+            "on-primary-fixed": "#001550",
+            "error-container": "#ffdad6",
+            "tertiary-container": "#2f5705",
+            "surface-container-low": "#f2f3f6",
+            "inverse-primary": "#b6c4ff",
+            "primary-fixed-dim": "#b6c4ff",
+            "tertiary": "#1e3e00",
+            "tertiary-fixed": "#bff190",
+            "secondary": "#ab350b",
+            "outline-variant": "#c4c5d6",
+            "on-background": "#191c1e",
+            "inverse-on-surface": "#f0f1f4",
+            "primary-container": "#1442b8",
+            "primary-fixed": "#dce1ff",
+            "on-tertiary-fixed-variant": "#295000",
+            "error": "#ba1a1a",
+            "on-tertiary-fixed": "#0d2000",
+            "on-primary": "#ffffff",
+            "on-secondary-fixed-variant": "#862300",
+            "on-error": "#ffffff",
+            "inverse-surface": "#2e3133",
+            "surface-variant": "#e1e2e5",
+            "secondary-fixed-dim": "#ffb59f",
+            "secondary-fixed": "#ffdbd1",
+            "on-error-container": "#93000a",
+            "on-primary-container": "#acbcff",
+            "outline": "#747685",
+            "surface-container-lowest": "#ffffff"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "2xl": "1.125rem",
+            "full": "9999px"
+          },
+          "fontFamily": {
+            "headline": ["Plus Jakarta Sans", "sans-serif"],
+            "display": ["Plus Jakarta Sans", "sans-serif"],
+            "body": ["Plus Jakarta Sans", "sans-serif"],
+            "label": ["Plus Jakarta Sans", "sans-serif"],
+            "hebrew": ["Noto Sans Hebrew", "sans-serif"]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .font-hebrew {
+      font-family: 'Noto Sans Hebrew', sans-serif;
+    }
+    .custom-scroll::-webkit-scrollbar {
+      width: 6px;
+    }
+    .custom-scroll::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: #c4c5d6;
+      border-radius: 9999px;
+    }
+  </style>
+</head>
+<body class="bg-background text-on-surface font-body antialiased selection:bg-primary-fixed selection:text-primary min-h-screen overflow-hidden flex justify-center">
+<!-- Tablet Landscape Shell (1280px viewport container) -->
+<div class="relative w-full max-w-[1280px] h-screen bg-background flex flex-col overflow-hidden shadow-2xl">
+<!-- BACKGROUND CANVAS: Dimmed Tablet Learn Tab Layout -->
+<div aria-hidden="true" class="flex-1 flex overflow-hidden filter blur-[1px] opacity-40 select-none pointer-events-none">
+<!-- Left Tablet Navigation Rail -->
+<aside class="w-24 bg-surface-container-lowest border-r border-outline-variant flex flex-col items-center py-6 justify-between shrink-0">
+<div class="flex flex-col items-center gap-8 w-full">
+<!-- Leading Avatar -->
+<div class="w-12 h-12 rounded-full bg-primary-fixed text-primary font-bold flex items-center justify-center text-sm border border-outline-variant">
+            Y
+          </div>
+<!-- Nav Destinations -->
+<nav class="flex flex-col items-center gap-5 w-full px-2">
+<!-- Dashboard -->
+<div class="flex flex-col items-center justify-center text-on-surface-variant w-full py-2">
+<span class="material-symbols-outlined text-2xl">dashboard</span>
+<span class="text-xs font-semibold mt-1">Dashboard</span>
+</div>
+<!-- Learn (Active) -->
+<div class="flex flex-col items-center justify-center bg-primary-fixed text-primary rounded-2xl w-full py-2.5 px-1 font-bold">
+<span class="material-symbols-outlined text-2xl" style="font-variation-settings: 'FILL' 1;">menu_book</span>
+<span class="text-xs font-semibold mt-1">Learn</span>
+</div>
+<!-- Progress -->
+<div class="flex flex-col items-center justify-center text-on-surface-variant w-full py-2">
+<span class="material-symbols-outlined text-2xl">monitoring</span>
+<span class="text-xs font-semibold mt-1">Progress</span>
+</div>
+<!-- Settings -->
+<div class="flex flex-col items-center justify-center text-on-surface-variant w-full py-2">
+<span class="material-symbols-outlined text-2xl">settings</span>
+<span class="text-xs font-semibold mt-1">Settings</span>
+</div>
+</nav>
+</div>
+<button class="p-2 text-on-surface-variant rounded-full">
+<span class="material-symbols-outlined text-2xl">tune</span>
+</button>
+</aside>
+<!-- Main Tablet App Canvas -->
+<main class="flex-1 flex flex-col bg-background overflow-hidden">
+<!-- Tablet Top Bar -->
+<header class="h-16 px-8 bg-surface-container-lowest border-b border-outline-variant flex items-center justify-between">
+<div class="flex items-center gap-3">
+<span class="text-lg font-bold text-on-surface">Mishnayos Tracker</span>
+<span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-surface-container text-on-surface-variant">Seder Zeraim</span>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2 bg-surface-container-low px-3 py-1.5 rounded-full border border-outline-variant">
+<span class="w-2.5 h-2.5 rounded-full bg-[#3BDD87]"></span>
+<span class="text-xs font-semibold text-on-surface">Yehuda · Grade 5 Cheder</span>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant">tune</span>
+</div>
+</header>
+<!-- Dummy Learn Page Content in Background -->
+<div class="p-8 grid grid-cols-12 gap-6 overflow-hidden">
+<div class="col-span-4 bg-surface-container-lowest border border-outline-variant rounded-[18px] p-6">
+<div class="flex items-center justify-between mb-4">
+<h3 class="font-bold text-base text-on-surface">Maseches Berachos</h3>
+<span class="font-hebrew text-lg font-bold text-primary">ברכות</span>
+</div>
+<div class="h-2 w-full bg-surface-container rounded-full overflow-hidden mb-6">
+<div class="w-2/3 h-full bg-[#3BDD87]"></div>
+</div>
+<div class="space-y-3">
+<div class="p-3 rounded-xl bg-surface-container-low border border-outline-variant">Perek 1: Me'eimatai (מאימתי)</div>
+<div class="p-3 rounded-xl bg-primary-fixed/30 border border-primary-container">Perek 2: Hayah Korei (היה קורא)</div>
+<div class="p-3 rounded-xl bg-surface-container-low border border-outline-variant">Perek 3: Mi Shemeiso (מי שמתו)</div>
+</div>
+</div>
+<div class="col-span-8 bg-surface-container-lowest border border-outline-variant rounded-[18px] p-6 space-y-4">
+<div class="flex items-center justify-between pb-3 border-b border-outline-variant">
+<h2 class="text-lg font-bold">Perek 2 · היה קורא</h2>
+<span class="text-xs font-semibold text-on-surface-variant">8 Mishnayos</span>
+</div>
+<div class="space-y-2">
+<div class="p-4 rounded-xl border border-outline-variant flex items-center justify-between bg-surface-bright">
+<span>Berachos 2:1</span>
+<span class="font-hebrew">ברכות ב:א</span>
+</div>
+<div class="p-4 rounded-xl border border-outline-variant flex items-center justify-between bg-surface-bright">
+<span>Berachos 2:2</span>
+<span class="font-hebrew">ברכות ב:ב</span>
+</div>
+<div class="p-4 rounded-xl border border-outline-variant flex items-center justify-between bg-surface-bright">
+<span>Berachos 2:3</span>
+<span class="font-hebrew">ברכות ב:ג</span>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+<!-- MODAL BACKDROP (Light Dim Overlay) -->
+<div class="absolute inset-0 bg-[#101828]/40 backdrop-blur-[2px] z-50 flex items-center justify-center p-4">
+<!-- MODAL DIALOG CONTAINER -->
+<section aria-labelledby="dialog-title" aria-modal="true" class="w-full max-w-[560px] bg-surface-container-lowest rounded-2xl border border-outline-variant shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200" role="dialog">
+<!-- Header -->
+<header class="px-6 pt-6 pb-4 border-b border-outline-variant/60 flex items-start justify-between bg-surface-container-lowest">
+<div class="space-y-1">
+<div class="flex items-center gap-2.5">
+<h2 class="text-lg font-bold tracking-tight text-on-surface font-headline" id="dialog-title">School · up to…</h2>
+<!-- Cheder Badge -->
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-[#E4EBFA] text-primary border border-outline-variant/40">
+                Cheder
+              </span>
+</div>
+<p class="text-xs font-medium text-on-surface-variant font-body">Tap the last mishna you learnt</p>
+</div>
+<!-- Close '×' button -->
+<button aria-label="Close dialog" class="w-8 h-8 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors active:scale-95 duration-150" type="button">
+<span class="material-symbols-outlined text-xl">close</span>
+</button>
+</header>
+<!-- Checklist Body -->
+<div class="px-6 py-4 max-h-[460px] overflow-y-auto custom-scroll space-y-2.5 bg-surface-bright/50">
+<!-- Item 1: Berachos 1:4 (Checked) -->
+<div class="group flex items-center justify-between p-3.5 rounded-xl border border-outline-variant bg-surface-container-lowest hover:border-primary-container transition-all cursor-pointer">
+<div class="flex items-center gap-3.5">
+<div class="w-6 h-6 rounded bg-[#3BDD87] text-on-surface flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-lg font-bold text-white" style="font-variation-settings: 'FILL' 1;">check</span>
+</div>
+<div class="flex flex-col">
+<span class="text-sm font-bold text-on-surface font-headline">Berachos 1:4</span>
+<span class="text-xs text-on-surface-variant font-medium">Included</span>
+</div>
+</div>
+<span class="font-hebrew text-sm font-semibold text-on-surface-variant group-hover:text-primary transition-colors">ברכות א:ד</span>
+</div>
+<!-- Item 2: Berachos 1:5 (Checked) -->
+<div class="group flex items-center justify-between p-3.5 rounded-xl border border-outline-variant bg-surface-container-lowest hover:border-primary-container transition-all cursor-pointer">
+<div class="flex items-center gap-3.5">
+<div class="w-6 h-6 rounded bg-[#3BDD87] text-on-surface flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-lg font-bold text-white" style="font-variation-settings: 'FILL' 1;">check</span>
+</div>
+<div class="flex flex-col">
+<span class="text-sm font-bold text-on-surface font-headline">Berachos 1:5</span>
+<span class="text-xs text-on-surface-variant font-medium">Included</span>
+</div>
+</div>
+<span class="font-hebrew text-sm font-semibold text-on-surface-variant group-hover:text-primary transition-colors">ברכות א:ה</span>
+</div>
+<!-- Item 3: Berachos 2:1 (Skipped / Unchecked) -->
+<div class="group flex items-center justify-between p-3.5 rounded-xl border border-dashed border-outline-variant bg-surface-container-low/60 opacity-80 hover:opacity-100 hover:border-outline transition-all cursor-pointer">
+<div class="flex items-center gap-3.5">
+<div class="w-6 h-6 rounded border-2 border-outline-variant bg-surface-container-lowest flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-base text-outline-variant">remove</span>
+</div>
+<div class="flex flex-col">
+<span class="text-sm font-medium text-on-surface-variant font-headline">Berachos 2:1</span>
+<span class="text-xs text-secondary font-medium">Skipped in Cheder</span>
+</div>
+</div>
+<span class="font-hebrew text-sm font-normal text-on-surface-variant">ברכות ב:א</span>
+</div>
+<!-- Item 4: Berachos 2:2 (Checked) -->
+<div class="group flex items-center justify-between p-3.5 rounded-xl border border-outline-variant bg-surface-container-lowest hover:border-primary-container transition-all cursor-pointer">
+<div class="flex items-center gap-3.5">
+<div class="w-6 h-6 rounded bg-[#3BDD87] text-on-surface flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-lg font-bold text-white" style="font-variation-settings: 'FILL' 1;">check</span>
+</div>
+<div class="flex flex-col">
+<span class="text-sm font-bold text-on-surface font-headline">Berachos 2:2</span>
+<span class="text-xs text-on-surface-variant font-medium">Included</span>
+</div>
+</div>
+<span class="font-hebrew text-sm font-semibold text-on-surface-variant group-hover:text-primary transition-colors">ברכות ב:ב</span>
+</div>
+<!-- Item 5: Berachos 2:3 (SELECTED TARGET BADGE, Checked) -->
+<div class="flex items-center justify-between p-3.5 rounded-xl border-2 border-primary bg-primary-fixed/25 relative transition-all cursor-pointer shadow-sm">
+<div class="flex items-center gap-3.5">
+<div class="w-6 h-6 rounded bg-primary text-white flex items-center justify-center shrink-0 shadow-xs">
+<span class="material-symbols-outlined text-lg font-bold" style="font-variation-settings: 'FILL' 1;">check</span>
+</div>
+<div class="flex flex-col">
+<div class="flex items-center gap-2">
+<span class="text-sm font-bold text-primary font-headline">Berachos 2:3</span>
+<!-- Selected Target Badge -->
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-primary text-white tracking-wide uppercase">
+<span class="material-symbols-outlined text-[12px]">flag</span>
+                    Target
+                  </span>
+</div>
+<span class="text-xs text-primary font-semibold">Current learned boundary</span>
+</div>
+</div>
+<span class="font-hebrew text-base font-bold text-primary">ברכות ב:ג</span>
+</div>
+<!-- Item 6: Berachos 2:4 (Next up / Unchecked) -->
+<div class="group flex items-center justify-between p-3.5 rounded-xl border border-outline-variant bg-surface-container-lowest hover:bg-surface-container-low transition-all cursor-pointer">
+<div class="flex items-center gap-3.5">
+<div class="w-6 h-6 rounded border border-outline-variant bg-surface-container-lowest flex items-center justify-center shrink-0 group-hover:border-primary transition-colors">
+</div>
+<div class="flex flex-col">
+<span class="text-sm font-semibold text-on-surface font-headline">Berachos 2:4</span>
+<span class="text-xs text-on-surface-variant font-medium">Next up</span>
+</div>
+</div>
+<span class="font-hebrew text-sm font-normal text-on-surface-variant">ברכות ב:ד</span>
+</div>
+</div>
+<!-- Footer Actions -->
+<footer class="px-6 py-4 border-t border-outline-variant/60 bg-surface-container-lowest flex items-center justify-between">
+<div class="text-xs font-semibold text-on-surface-variant">
+            4 of 5 selected
+          </div>
+<div class="flex items-center gap-3">
+<!-- Cancel Button -->
+<button class="px-4 py-2 rounded-full text-sm font-semibold text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors active:scale-95 duration-150" type="button">
+              Cancel
+            </button>
+<!-- Record Primary Action Button -->
+<button class="px-6 py-2.5 rounded-full bg-primary-container text-white text-sm font-semibold hover:bg-primary transition-colors shadow-sm active:scale-95 duration-150 flex items-center gap-2" type="button">
+<span class="material-symbols-outlined text-base">check_circle</span>
+<span>Record 4 mishnayos</span>
+</button>
+</div>
+</footer>
+</section>
+</div>
+</div>
+</body></html>

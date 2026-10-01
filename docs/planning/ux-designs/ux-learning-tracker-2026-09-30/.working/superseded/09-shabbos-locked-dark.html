@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Mishnayos Tracker - Learn (Shabbos Mode)</title>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Google Fonts: Plus Jakarta Sans & Noto Sans Hebrew -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Hebrew:wght@400;500;600;700&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS v3 with Plugins -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Theme Configuration -->
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "background": "#0B0F1A",
+            "surface": "#151A26",
+            "surface-card": "#151A26",
+            "surface-recessed": "#1E2532",
+            "surface-container": "#1E2532",
+            "surface-container-low": "#151A26",
+            "surface-container-high": "#263041",
+            "primary": "#7CA0FF",
+            "primary-container": "#16233F",
+            "on-primary": "#0B0F1A",
+            "mishna-border": "#263041",
+            "mishna-ink": "#EAEEF5",
+            "mishna-body": "#C3CBD8",
+            "mishna-muted": "#98A2B3",
+            "mishna-green": "#72DEA4",
+            "mishna-green-bg": "#173322",
+            "mishna-coral": "#FF8A5C",
+            "mishna-coral-bg": "#2E1C14",
+            "amber-track-bg": "#2E220E",
+            "amber-track-text": "#E0A54A"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "card": "18px",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "fontFamily": {
+            "headline": ["Plus Jakarta Sans", "sans-serif"],
+            "display": ["Plus Jakarta Sans", "sans-serif"],
+            "body": ["Plus Jakarta Sans", "sans-serif"],
+            "label": ["Plus Jakarta Sans", "sans-serif"],
+            "hebrew": ["Noto Sans Hebrew", "Plus Jakarta Sans", "sans-serif"]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    body {
+      background-color: #0B0F1A;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      -webkit-font-smoothing: antialiased;
+      user-select: none;
+    }
+    .hebrew-text {
+      font-family: 'Noto Sans Hebrew', 'Plus Jakarta Sans', sans-serif;
+      direction: rtl;
+    }
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      line-height: 1;
+    }
+    .material-symbols-outlined.fill-icon {
+      font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    .shabbos-card {
+      border: 1px solid #263041;
+      border-radius: 18px;
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-background text-mishna-body min-h-screen flex justify-center">
+<!-- Mobile/Tablet Screen Container Frame -->
+<div class="w-full max-w-md min-h-screen bg-background relative flex flex-col pb-24 shadow-sm">
+<!-- Top Status Bar & Context Switcher -->
+<header class="w-full bg-[#151A26] border-b border-mishna-border sticky top-0 z-30">
+<!-- Profile & State Bar -->
+<div class="px-4 py-2 flex items-center justify-between border-b border-mishna-border/50">
+<div class="flex items-center gap-2">
+<div class="w-7 h-7 rounded-full bg-primary-container border border-primary/30 flex items-center justify-center text-primary font-bold text-xs">
+            Y
+          </div>
+<div class="flex items-center gap-1 cursor-default text-xs font-semibold text-mishna-ink">
+<span>Yehuda</span>
+<span class="material-symbols-outlined text-[16px] text-mishna-muted">arrow_drop_down</span>
+</div>
+</div>
+<!-- Restful Shabbos Pill Indicator -->
+<div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary-container border border-primary/40 text-primary text-xs font-medium">
+<span class="material-symbols-outlined text-[14px] text-primary" data-weight="fill" style="font-variation-settings: 'FILL' 1;">bedtime</span>
+<span class="tracking-tight">Shabbos Mode</span>
+</div>
+</div>
+<!-- TopAppBar -->
+<div class="flex justify-between items-center w-full px-4 py-2.5 bg-[#151A26]">
+<!-- Leading Avatar -->
+<div class="flex items-center gap-2">
+<div class="w-8 h-8 rounded-full bg-primary-container border border-mishna-border flex items-center justify-center text-primary font-bold text-xs" title="Yehuda profile picture">
+            YP
+          </div>
+</div>
+<!-- Headline -->
+<h1 class="text-base font-bold font-headline text-mishna-ink text-center tracking-tight">
+          Mishnayos Tracker
+        </h1>
+<!-- Trailing Icon (Quiet/Disabled State) -->
+<div class="w-8 h-8 flex items-center justify-center text-mishna-muted cursor-default" title="Filter &amp; settings paused">
+<span class="material-symbols-outlined text-xl">tune</span>
+</div>
+</div>
+</header>
+<!-- Main Content Area (Strictly Read-Only Content Canvas) -->
+<main class="flex-1 px-4 pt-4 pb-6 space-y-4">
+<!-- 1. Top Shabbos Banner -->
+<section class="rounded-2xl p-4 bg-[#16233F] border border-mishna-border flex items-start gap-3.5 shadow-none transition-none">
+<div class="w-9 h-9 rounded-full bg-mishna-coral-bg border border-mishna-coral/30 flex items-center justify-center text-mishna-coral shrink-0 shadow-sm">
+<span class="material-symbols-outlined text-mishna-coral text-xl" data-weight="fill" style="font-variation-settings: 'FILL' 1;">wb_twilight</span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center justify-between gap-1 mb-0.5">
+<span class="text-xs font-bold text-primary tracking-wide uppercase font-headline">Shabbos Kodesh</span>
+<span class="hebrew-text text-xs font-bold text-primary">שבת קודש</span>
+</div>
+<p class="text-xs text-mishna-body leading-relaxed">
+            Capture opens after tzeis at <span class="font-bold text-mishna-ink">8:12 pm</span>. Enjoy your restful review with family.
+          </p>
+</div>
+</section>
+<!-- 2. On-Track / Encouragement Strip (Greeting Card) -->
+<section class="shabbos-card bg-surface-card p-4">
+<div class="flex items-start justify-between mb-2.5">
+<div>
+<div class="flex items-center gap-1.5">
+<h2 class="text-base font-bold text-mishna-ink font-headline">Shalom, Yehuda!</h2>
+<span class="text-base">🕯️</span>
+</div>
+<p class="text-xs text-mishna-muted font-medium mt-0.5">Restful learning on this holy day</p>
+</div>
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-surface-recessed text-mishna-muted border border-mishna-border">
+            Paused for Shabbos
+          </span>
+</div>
+<!-- 4 Planned Mishnayos Indicator Track -->
+<div class="mt-3">
+<div class="flex justify-between items-center text-[11px] font-medium text-mishna-muted mb-1.5">
+<span>4 Mishnayos ready to review</span>
+<span class="text-mishna-muted font-semibold">0 / 4 marked</span>
+</div>
+<!-- Progress Bar (6px pill track) -->
+<div class="w-full h-1.5 bg-[#121722] rounded-full overflow-hidden flex gap-0.5 p-0 border border-mishna-border/50">
+<div class="flex-1 bg-surface-recessed rounded-full h-full"></div>
+<div class="flex-1 bg-surface-recessed rounded-full h-full"></div>
+<div class="flex-1 bg-surface-recessed rounded-full h-full"></div>
+<div class="flex-1 bg-surface-recessed rounded-full h-full"></div>
+</div>
+</div>
+<div class="mt-3 pt-2.5 border-t border-mishna-border flex items-center gap-1.5 text-[11px] text-mishna-muted font-medium">
+<span class="material-symbols-outlined text-sm text-mishna-muted">hourglass_empty</span>
+<span>Tracking and completion streaks are paused until after Havdalah.</span>
+</div>
+</section>
+<!-- 3. Section "Planned for Shabbos" (Maseches Beitzah) -->
+<section class="space-y-2">
+<!-- Section Header -->
+<div class="flex items-baseline justify-between px-1">
+<div class="flex items-center gap-2">
+<span class="text-xs font-bold text-mishna-muted tracking-wider font-headline uppercase">PLANNED FOR SHABBOS</span>
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-surface-recessed text-mishna-muted border border-mishna-border font-medium">Read only</span>
+</div>
+<span class="hebrew-text text-xs text-primary font-medium">סדר מועד · מסכת ביצה</span>
+</div>
+<!-- Corpus Masechta Card -->
+<div class="shabbos-card bg-surface-card overflow-hidden">
+<!-- Card Sub-header -->
+<div class="px-4 py-3 bg-surface-recessed/60 border-b border-mishna-border flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="w-2.5 h-2.5 rounded-full bg-mishna-green" title="Mishnayos Green Identity"></span>
+<span class="text-sm font-bold text-mishna-ink font-headline">Beitzah ביצה</span>
+</div>
+<span class="text-xs font-semibold text-mishna-muted">Perek 2 פרק ב׳</span>
+</div>
+<!-- 4 Non-Interactive Mishnayos Rows -->
+<div class="divide-y divide-mishna-border">
+<!-- Row 1: Beitzah 2:7 -->
+<div class="px-4 py-3 flex items-center justify-between opacity-85 select-none cursor-default bg-surface-card">
+<div class="flex items-center gap-3">
+<!-- Greyed Disabled Checkbox (Reduced opacity, non-clickable) -->
+<div class="w-5 h-5 rounded-[4px] border-2 border-mishna-border flex items-center justify-center opacity-40 cursor-not-allowed bg-surface-recessed" title="Check-in closed for Shabbos">
+</div>
+<div>
+<div class="flex items-baseline gap-1.5">
+<span class="text-sm font-bold text-mishna-ink">Beitzah 2:7</span>
+<span class="hebrew-text text-xs font-semibold text-mishna-muted">ביצה ב:ז</span>
+</div>
+<p class="text-[11px] text-mishna-muted">Three things Rabban Gamliel was stringent</p>
+</div>
+</div>
+<span class="text-[11px] font-semibold text-mishna-muted tracking-tight px-2 py-0.5 bg-surface-recessed border border-mishna-border rounded-full">
+                Review
+              </span>
+</div>
+<!-- Row 2: Beitzah 2:8 -->
+<div class="px-4 py-3 flex items-center justify-between opacity-85 select-none cursor-default bg-surface-card">
+<div class="flex items-center gap-3">
+<div class="w-5 h-5 rounded-[4px] border-2 border-mishna-border flex items-center justify-center opacity-40 cursor-not-allowed bg-surface-recessed" title="Check-in closed for Shabbos">
+</div>
+<div>
+<div class="flex items-baseline gap-1.5">
+<span class="text-sm font-bold text-mishna-ink">Beitzah 2:8</span>
+<span class="hebrew-text text-xs font-semibold text-mishna-muted">ביצה ב:ח</span>
+</div>
+<p class="text-[11px] text-mishna-muted">Preparation of aromatic herbs &amp; spices</p>
+</div>
+</div>
+<span class="text-[11px] font-semibold text-mishna-muted tracking-tight px-2 py-0.5 bg-surface-recessed border border-mishna-border rounded-full">
+                Review
+              </span>
+</div>
+<!-- Row 3: Beitzah 2:9 -->
+<div class="px-4 py-3 flex items-center justify-between opacity-85 select-none cursor-default bg-surface-card">
+<div class="flex items-center gap-3">
+<div class="w-5 h-5 rounded-[4px] border-2 border-mishna-border flex items-center justify-center opacity-40 cursor-not-allowed bg-surface-recessed" title="Check-in closed for Shabbos">
+</div>
+<div>
+<div class="flex items-baseline gap-1.5">
+<span class="text-sm font-bold text-mishna-ink">Beitzah 2:9</span>
+<span class="hebrew-text text-xs font-semibold text-mishna-muted">ביצה ב:ט</span>
+</div>
+<p class="text-[11px] text-mishna-muted">Pepper mill and mustard grain handling</p>
+</div>
+</div>
+<span class="text-[11px] font-semibold text-mishna-muted tracking-tight px-2 py-0.5 bg-surface-recessed border border-mishna-border rounded-full">
+                Review
+              </span>
+</div>
+<!-- Row 4: Beitzah 2:10 -->
+<div class="px-4 py-3 flex items-center justify-between opacity-85 select-none cursor-default bg-surface-card">
+<div class="flex items-center gap-3">
+<div class="w-5 h-5 rounded-[4px] border-2 border-mishna-border flex items-center justify-center opacity-40 cursor-not-allowed bg-surface-recessed" title="Check-in closed for Shabbos">
+</div>
+<div>
+<div class="flex items-baseline gap-1.5">
+<span class="text-sm font-bold text-mishna-ink">Beitzah 2:10</span>
+<span class="hebrew-text text-xs font-semibold text-mishna-muted">ביצה ב:י</span>
+</div>
+<p class="text-[11px] text-mishna-muted">Roasting a kid whole on Yom Tov</p>
+</div>
+</div>
+<span class="text-[11px] font-semibold text-mishna-muted tracking-tight px-2 py-0.5 bg-surface-recessed border border-mishna-border rounded-full">
+                Review
+              </span>
+</div>
+</div>
+<!-- Quiet Informative Footer -->
+<div class="p-3 bg-surface-card border-t border-mishna-border flex items-center justify-center gap-1.5 text-xs text-mishna-muted font-medium">
+<span class="material-symbols-outlined text-sm">lock</span>
+<span>Check-in unlocks tonight at Motzei Shabbos</span>
+</div>
+</div>
+</section>
+<!-- 4. Section "ALSO LEARNING" (Sub-tracks - Non-interactive / Quiet) -->
+<section class="space-y-2 pt-1">
+<div class="flex items-center justify-between px-1">
+<span class="text-xs font-bold text-mishna-muted tracking-wider font-headline uppercase">ALSO LEARNING</span>
+<span class="text-[11px] font-medium text-mishna-muted">2 sub-tracks (quiet)</span>
+</div>
+<!-- Sub-track Card 1: Cheder Track -->
+<div class="shabbos-card bg-surface-card p-3.5 flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-primary-container border border-primary/20 flex items-center justify-center text-primary font-bold text-xs shrink-0">
+<span class="material-symbols-outlined text-base">school</span>
+</div>
+<div>
+<div class="flex items-center gap-2">
+<span class="text-xs font-bold text-mishna-ink">School (Cheder)</span>
+<span class="hebrew-text text-[11px] text-mishna-muted">חיידר</span>
+</div>
+<div class="flex items-baseline gap-1.5 text-xs text-mishna-muted mt-0.5">
+<span>Next: Berachos 1:4</span>
+<span class="hebrew-text text-[11px] text-primary">ברכות א:ד</span>
+</div>
+</div>
+</div>
+<!-- Clean status pill instead of action buttons (+1 or Up to...) -->
+<span class="px-2.5 py-1 text-[11px] font-semibold text-mishna-muted bg-surface-recessed rounded-full border border-mishna-border">
+            Paused
+          </span>
+</div>
+<!-- Sub-track Card 2: Rebbe Track -->
+<div class="shabbos-card bg-surface-card p-3.5 flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-amber-track-bg border border-amber-track-text/30 flex items-center justify-center text-amber-track-text font-bold text-xs shrink-0">
+<span class="material-symbols-outlined text-base" data-weight="fill" style="font-variation-settings: 'FILL' 1;">person</span>
+</div>
+<div>
+<div class="flex items-center gap-2">
+<span class="text-xs font-bold text-mishna-ink">Rebbe (Tutor)</span>
+<span class="hebrew-text text-[11px] text-mishna-muted">רבי</span>
+</div>
+<div class="flex items-baseline gap-1.5 text-xs text-mishna-muted mt-0.5">
+<span>Next: Beitzah 3:1</span>
+<span class="hebrew-text text-[11px] text-primary">ביצה ג:א</span>
+</div>
+</div>
+</div>
+<!-- Action buttons fully suppressed for Shabbos -->
+<span class="px-2.5 py-1 text-[11px] font-semibold text-mishna-muted bg-surface-recessed rounded-full border border-mishna-border">
+            Paused
+          </span>
+</div>
+</section>
+<!-- Sabbath Shalom Footnote -->
+<div class="text-center pt-2 pb-1">
+<p class="hebrew-text text-sm font-bold text-mishna-muted">שבת שלום ומבורך</p>
+<p class="text-[11px] text-mishna-muted/80 mt-0.5">Have a peaceful and meaningful Shabbos</p>
+</div>
+</main>
+<!-- BottomNavBar -->
+<!-- Destination 4: Dashboard, Learn, Progress, Settings -->
+<!-- Active State: 'Learn' selected with primary accent -->
+<nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto z-50 flex justify-around items-center px-4 py-2 bg-[#151A26] rounded-t-[28px] border-t border-mishna-border shadow-lg">
+<!-- Tab 1: Dashboard (Inactive) -->
+<button class="flex flex-col items-center justify-center text-mishna-muted px-4 py-1 hover:bg-surface-recessed transition-colors rounded-full active:scale-95 duration-150 focus:outline-none">
+<span class="material-symbols-outlined text-2xl">dashboard</span>
+<span class="text-xs font-semibold font-label mt-0.5">Dashboard</span>
+</button>
+<!-- Tab 2: Learn (ACTIVE) -->
+<button class="flex flex-col items-center justify-center bg-primary-container text-primary border border-primary/20 rounded-full px-5 py-1 active:scale-95 transition-transform duration-150 focus:outline-none">
+<span class="material-symbols-outlined text-2xl" data-weight="fill" style="font-variation-settings: 'FILL' 1;">menu_book</span>
+<span class="text-xs font-bold font-label mt-0.5">Learn</span>
+</button>
+<!-- Tab 3: Progress (Inactive) -->
+<button class="flex flex-col items-center justify-center text-mishna-muted px-4 py-1 hover:bg-surface-recessed transition-colors rounded-full active:scale-95 duration-150 focus:outline-none">
+<span class="material-symbols-outlined text-2xl">monitoring</span>
+<span class="text-xs font-semibold font-label mt-0.5">Progress</span>
+</button>
+<!-- Tab 4: Settings (Inactive) -->
+<button class="flex flex-col items-center justify-center text-mishna-muted px-4 py-1 hover:bg-surface-recessed transition-colors rounded-full active:scale-95 duration-150 focus:outline-none">
+<span class="material-symbols-outlined text-2xl">settings</span>
+<span class="text-xs font-semibold font-label mt-0.5">Settings</span>
+</button>
+</nav>
+</div>
+</body></html>

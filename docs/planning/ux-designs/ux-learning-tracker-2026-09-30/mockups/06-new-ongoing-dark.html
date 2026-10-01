@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Ongoing Sub-Track | Parent Mode</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Hebrew:wght@400;600;700&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "background": "#0B0F1A",
+            "surface": "#151A26",
+            "surface-card": "#151A26",
+            "surface-recessed": "#1E2532",
+            "surface-container": "#1E2532",
+            "surface-container-low": "#151A26",
+            "surface-container-high": "#263041",
+            "primary": "#7CA0FF",
+            "primary-container": "#16233F",
+            "on-primary": "#0B0F1A",
+            "mishna-border": "#263041",
+            "mishna-ink": "#EAEEF5",
+            "mishna-body": "#C3CBD8",
+            "mishna-muted": "#98A2B3",
+            "mishna-green": "#72DEA4",
+            "mishna-green-bg": "#173322",
+            "mishna-coral": "#FF8A5C",
+            "mishna-coral-bg": "#2E1C14",
+            "amber-track-bg": "#2E220E",
+            "amber-track-text": "#E0A54A"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "card": "18px",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "fontFamily": {
+            "headline": ["Plus Jakarta Sans"],
+            "display": ["Plus Jakarta Sans"],
+            "body": ["Plus Jakarta Sans"],
+            "label": ["Plus Jakarta Sans"],
+            "hebrew": ["Noto Sans Hebrew", "Plus Jakarta Sans"]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 500, 'GRAD' 0, 'opsz' 24;
+      line-height: 1;
+      display: inline-block;
+      vertical-align: middle;
+    }
+    .custom-card-outline {
+      border: 1px solid #263041;
+      border-radius: 18px;
+    }
+    .input-radius {
+      border-radius: 12px;
+    }
+    body {
+      min-height: max(884px, 100dvh);
+      background-color: #0B0F1A;
+    }
+  </style>
+</head>
+<body class="bg-background text-mishna-body font-body antialiased min-h-screen flex flex-col justify-between selection:bg-primary-container selection:text-primary">
+<!-- Top Context Indicator: Parent Mode -->
+<header class="w-full bg-[#151A26] sticky top-0 z-40 border-b border-mishna-border">
+<div class="bg-[#121722] border-b border-mishna-border/70 px-4 py-2 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[19px]">group</span>
+<span class="text-xs font-semibold text-mishna-ink font-label tracking-tight">Parent Mode: Managing Yehuda's Tracks</span>
+</div>
+<button class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-primary text-on-primary active:scale-95 transition-transform" type="button">
+        SWITCH
+      </button>
+</div>
+<!-- Navigation Bar -->
+<div class="flex items-center justify-between px-4 py-3 bg-[#151A26]">
+<button aria-label="Go back" class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-recessed active:scale-95 transition-all text-mishna-ink" type="button">
+<span class="material-symbols-outlined text-2xl">arrow_back</span>
+</button>
+<h1 class="text-lg font-bold font-headline text-mishna-ink tracking-tight">Ongoing sub-track</h1>
+<button aria-label="Help" class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-recessed active:scale-95 transition-all text-mishna-muted" type="button">
+<span class="material-symbols-outlined text-2xl">help</span>
+</button>
+</div>
+</header>
+<!-- Main Scrollable Content Canvas -->
+<main class="flex-1 w-full max-w-lg mx-auto px-4 pt-4 pb-28">
+<form class="space-y-4" id="subtrack-form">
+<!-- Primary Form Card with 18px Radius & Outline -->
+<section class="bg-surface-card custom-card-outline p-5 space-y-6">
+<!-- 1. Track Name Field -->
+<div class="space-y-1.5">
+<label class="block text-[11px] font-bold tracking-wider text-mishna-muted uppercase font-label" for="track-name">
+            SUB-TRACK NAME
+          </label>
+<div class="relative flex items-center">
+<span class="absolute left-3.5 text-mishna-muted pointer-events-none material-symbols-outlined text-[20px]">
+              menu_book
+            </span>
+<input class="w-full bg-surface-recessed border border-mishna-border text-mishna-ink font-semibold text-base pl-11 pr-4 py-3 input-radius focus:ring-2 focus:ring-primary focus:border-primary transition-all" id="track-name" name="track_name" required="" type="text" value="Rebbe"/>
+</div>
+</div>
+<!-- 2. Mishnayos Per Week -->
+<div class="space-y-2">
+<div class="flex items-center justify-between">
+<label class="block text-[11px] font-bold tracking-wider text-mishna-muted uppercase font-label">
+              MISHNAYOS PER WEEK
+            </label>
+<div class="flex items-center gap-1 text-primary text-xs font-semibold">
+<span class="material-symbols-outlined text-[15px]">trending_up</span>
+<span>Target pace</span>
+</div>
+</div>
+<div class="bg-surface-recessed p-2 input-radius border border-mishna-border flex items-center justify-between">
+<button aria-label="Decrease per week count" class="w-11 h-11 bg-surface-card rounded-lg border border-mishna-border flex items-center justify-center text-mishna-ink font-bold hover:bg-surface-container-high active:scale-95 transition-all" id="btn-decrement" type="button">
+<span class="material-symbols-outlined text-xl">remove</span>
+</button>
+<div class="text-center">
+<div class="text-2xl font-extrabold font-headline text-mishna-ink leading-tight" id="mishnayos-count">5</div>
+<div class="text-[12px] font-medium text-mishna-muted">~1 mishna / weekday</div>
+</div>
+<button aria-label="Increase per week count" class="w-11 h-11 bg-surface-card rounded-lg border border-mishna-border flex items-center justify-center text-mishna-ink font-bold hover:bg-surface-container-high active:scale-95 transition-all" id="btn-increment" type="button">
+<span class="material-symbols-outlined text-xl">add</span>
+</button>
+</div>
+</div>
+<!-- 3. Bein Hazmanim Toggle -->
+<div class="flex items-center justify-between pt-1">
+<div class="pr-3">
+<div class="text-sm font-bold text-mishna-ink">Not learning during bein hazmanim</div>
+<div class="text-xs text-mishna-muted mt-0.5">Lowers weeks per year</div>
+</div>
+<button aria-checked="true" class="relative inline-flex h-7 w-12 flex-shrink-0 cursor-pointer rounded-full bg-primary p-0.5 transition-colors duration-200 ease-in-out focus:outline-none" id="toggle-beinhazmanim" role="switch" type="button">
+<span class="translate-x-5 pointer-events-none inline-block h-6 w-6 transform rounded-full bg-surface-card transition duration-200 ease-in-out shadow-sm"></span>
+</button>
+</div>
+<!-- 4. Weeks Per Year Field -->
+<div class="space-y-1.5">
+<label class="block text-[11px] font-bold tracking-wider text-mishna-muted uppercase font-label" for="weeks-per-year">
+            WEEKS PER YEAR
+          </label>
+<div class="relative flex items-center">
+<input class="w-full bg-surface-recessed border border-mishna-border text-mishna-ink font-semibold text-base px-4 py-3 input-radius focus:ring-2 focus:ring-primary focus:border-primary transition-all" id="weeks-per-year" max="52" min="1" name="weeks_per_year" type="number" value="44"/>
+<span class="absolute right-4 text-xs font-semibold text-mishna-muted pointer-events-none">
+              weeks
+            </span>
+</div>
+<p class="text-[12px] text-mishna-muted pt-0.5">
+            Prefilled from bein hazmanim toggle — edit if needed
+          </p>
+</div>
+<!-- 5. Start Date & End Date Row -->
+<div class="grid grid-cols-2 gap-3 pt-1">
+<!-- Start Date -->
+<div class="space-y-1.5">
+<label class="block text-[11px] font-bold tracking-wider text-mishna-muted uppercase font-label truncate" for="start-date">
+              START DATE (OPTIONAL)
+            </label>
+<div class="relative flex items-center">
+<span class="absolute left-3 text-mishna-muted pointer-events-none material-symbols-outlined text-[18px]">
+                calendar_today
+              </span>
+<input class="w-full bg-surface-recessed border border-mishna-border text-mishna-ink font-semibold text-sm pl-9 pr-3 py-3 input-radius focus:ring-2 focus:ring-primary focus:border-primary transition-all" id="start-date" name="start_date" type="text" value="Today"/>
+</div>
+</div>
+<!-- End Date -->
+<div class="space-y-1.5">
+<label class="block text-[11px] font-bold tracking-wider text-mishna-muted uppercase font-label truncate" for="end-date">
+              END DATE (OPTIONAL)
+            </label>
+<div class="relative flex items-center">
+<span class="absolute left-3 text-mishna-muted pointer-events-none material-symbols-outlined text-[18px]">
+                event
+              </span>
+<input class="w-full bg-surface-recessed border border-mishna-border text-mishna-ink font-semibold text-sm pl-9 pr-3 py-3 input-radius placeholder:text-mishna-muted focus:ring-2 focus:ring-primary focus:border-primary transition-all" id="end-date" name="end_date" placeholder="No end date" type="text"/>
+</div>
+</div>
+</div>
+<!-- Divider -->
+<hr class="border-t border-mishna-border my-2"/>
+<!-- 6. Shabbos / Yom Tov Toggle -->
+<div class="flex items-center justify-between pt-1 pb-1">
+<div class="pr-3">
+<div class="text-sm font-bold text-mishna-ink">Learns on shabbos / yom tov</div>
+<div class="text-xs text-mishna-muted mt-0.5">Include this source on the catch-up card after shabbos</div>
+</div>
+<button aria-checked="false" class="relative inline-flex h-7 w-12 flex-shrink-0 cursor-pointer rounded-full bg-[#263041] p-0.5 transition-colors duration-200 ease-in-out focus:outline-none" id="toggle-shabbos" role="switch" type="button">
+<span class="translate-x-0 pointer-events-none inline-block h-6 w-6 transform rounded-full bg-surface-card transition duration-200 ease-in-out shadow-sm"></span>
+</button>
+</div>
+</section>
+<!-- Bottom Context Helper Note -->
+<div class="flex items-center gap-2 px-3 py-2 text-mishna-muted text-xs">
+<span class="material-symbols-outlined text-base text-mishna-muted">info</span>
+<span>You can have up to 5 ongoing sub-tracks. 1 in use.</span>
+</div>
+</form>
+</main>
+<!-- Sticky Bottom Footer Action Button -->
+<footer class="fixed bottom-0 left-0 w-full bg-[#151A26]/95 backdrop-blur-md px-4 py-3 z-50 border-t border-mishna-border">
+<div class="max-w-lg mx-auto">
+<button class="w-full bg-primary text-on-primary font-bold text-[15px] py-3.5 px-6 rounded-full flex items-center justify-center gap-2 hover:bg-primary/90 active:scale-[0.99] transition-all" form="subtrack-form" type="submit">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">check</span>
+<span>Save sub-track</span>
+</button>
+</div>
+</footer>
+<script>
+    // Micro-interactions for stepper and switches
+    const countEl = document.getElementById('mishnayos-count');
+    const btnDecrement = document.getElementById('btn-decrement');
+    const btnIncrement = document.getElementById('btn-increment');
+    const weeksInput = document.getElementById('weeks-per-year');
+    
+    let count = 5;
+
+    btnDecrement.addEventListener('click', () => {
+      if (count > 1) {
+        count--;
+        countEl.textContent = count;
+      }
+    });
+
+    btnIncrement.addEventListener('click', () => {
+      if (count < 30) {
+        count++;
+        countEl.textContent = count;
+      }
+    });
+
+    // Bein Hazmanim toggle logic
+    const toggleBeinHazmanim = document.getElementById('toggle-beinhazmanim');
+    let beinHazmanimActive = true;
+
+    toggleBeinHazmanim.addEventListener('click', () => {
+      beinHazmanimActive = !beinHazmanimActive;
+      toggleBeinHazmanim.setAttribute('aria-checked', String(beinHazmanimActive));
+      const thumb = toggleBeinHazmanim.querySelector('span');
+      if (beinHazmanimActive) {
+        toggleBeinHazmanim.classList.remove('bg-[#263041]');
+        toggleBeinHazmanim.classList.add('bg-primary');
+        thumb.classList.remove('translate-x-0');
+        thumb.classList.add('translate-x-5');
+        weeksInput.value = '44';
+      } else {
+        toggleBeinHazmanim.classList.remove('bg-primary');
+        toggleBeinHazmanim.classList.add('bg-[#263041]');
+        thumb.classList.remove('translate-x-5');
+        thumb.classList.add('translate-x-0');
+        weeksInput.value = '52';
+      }
+    });
+
+    // Shabbos toggle logic
+    const toggleShabbos = document.getElementById('toggle-shabbos');
+    let shabbosActive = false;
+
+    toggleShabbos.addEventListener('click', () => {
+      shabbosActive = !shabbosActive;
+      toggleShabbos.setAttribute('aria-checked', String(shabbosActive));
+      const thumb = toggleShabbos.querySelector('span');
+      if (shabbosActive) {
+        toggleShabbos.classList.remove('bg-[#263041]');
+        toggleShabbos.classList.add('bg-primary');
+        thumb.classList.remove('translate-x-0');
+        thumb.classList.add('translate-x-5');
+      } else {
+        toggleShabbos.classList.remove('bg-primary');
+        toggleShabbos.classList.add('bg-[#263041]');
+        thumb.classList.remove('translate-x-5');
+        thumb.classList.add('translate-x-0');
+      }
+    });
+
+    // Form submission feedback
+    document.getElementById('subtrack-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const saveBtn = document.querySelector('footer button');
+      saveBtn.innerHTML = `<span class="material-symbols-outlined text-[20px]">check_circle</span> Saved!`;
+      setTimeout(() => {
+        saveBtn.innerHTML = `<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">check</span> Save sub-track`;
+      }, 1500);
+    });
+  </script>
+</body></html>

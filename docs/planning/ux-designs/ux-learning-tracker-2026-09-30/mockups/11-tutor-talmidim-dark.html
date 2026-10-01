@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Tutor Dashboard - Mishnayos Tracker</title>
+<!-- Google Fonts: Plus Jakarta Sans & Noto Sans Hebrew -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Hebrew:wght@400;500;600;700&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "background": "#0B0F1A",
+            "surface": "#151A26",
+            "surface-container": "#1E2532",
+            "surface-container-low": "#151A26",
+            "surface-container-lowest": "#101420",
+            "surface-container-high": "#1E2532",
+            "surface-container-highest": "#263041",
+            "outline": "#98A2B3",
+            "outline-variant": "#263041",
+            "primary": "#7CA0FF",
+            "primary-container": "#16233F",
+            "on-primary": "#0B0F1A",
+            "on-primary-container": "#7CA0FF",
+            "on-surface": "#EAEEF5",
+            "on-surface-variant": "#C3CBD8",
+            "on-background": "#EAEEF5"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "fontFamily": {
+            "headline": ["Plus Jakarta Sans", "sans-serif"],
+            "display": ["Plus Jakarta Sans", "sans-serif"],
+            "body": ["Plus Jakarta Sans", "sans-serif"],
+            "label": ["Plus Jakarta Sans", "sans-serif"],
+            "hebrew": ["Noto Sans Hebrew", "sans-serif"]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      display: inline-block;
+      vertical-align: middle;
+      line-height: 1;
+    }
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-[#0B0F1A] text-[#EAEEF5] min-h-screen flex flex-col items-center justify-start antialiased selection:bg-[#16233F] selection:text-[#7CA0FF]">
+<!-- Mobile Device Shell / Viewport Frame -->
+<div class="w-full max-w-md min-h-screen flex flex-col bg-[#0B0F1A] relative pb-28">
+<!-- TopAppBar (from Shared Components JSON: docked top, flat, centered title) -->
+<header class="sticky top-0 z-40 bg-[#151A26] border-b border-[#263041] w-full flex justify-between items-center px-4 py-2.5 transition-colors">
+<!-- Leading: Rav Cohen avatar -->
+<div class="flex items-center gap-2">
+<div class="w-9 h-9 rounded-full bg-[#16233F] text-[#7CA0FF] border border-[#263041] flex items-center justify-center font-bold text-xs tracking-wider shadow-none select-none">
+          RC
+        </div>
+</div>
+<!-- Headline: Mishnayos Tracker -->
+<h1 class="text-lg font-bold font-headline text-[#EAEEF5] text-center tracking-tight">
+        Mishnayos Tracker
+      </h1>
+<!-- Trailing: Tune / Filter settings icon -->
+<button aria-label="Tune and Settings" class="w-9 h-9 flex items-center justify-center rounded-full text-[#98A2B3] hover:text-[#EAEEF5] hover:bg-[#1E2532] transition-colors active:scale-95 duration-150" type="button">
+<span class="material-symbols-outlined text-[22px]" data-icon="tune">tune</span>
+</button>
+</header>
+<!-- Context Banner: Tutor Mode Indicator -->
+<div class="w-full bg-[#2E220E] px-4 py-2 border-y border-[#3E2D13] flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span aria-hidden="true" class="text-sm select-none">👨‍🏫</span>
+<span class="text-xs font-semibold text-[#E9B67B] tracking-tight">
+          Tutor mode · <span class="font-bold">Rav Cohen</span>
+</span>
+</div>
+<button class="text-[11px] font-bold text-[#E9B67B] bg-[#1E2532] border border-[#3E2D13] hover:bg-[#263041] px-2.5 py-0.5 rounded-full transition-colors active:scale-95" type="button">
+        Switch
+      </button>
+</div>
+<!-- Main Content Canvas -->
+<main class="flex-1 px-4 pt-5 space-y-4">
+<!-- Section Title & Count -->
+<div class="flex items-end justify-between px-1">
+<div>
+<div class="flex items-center gap-2">
+<h2 class="text-xl font-extrabold text-[#EAEEF5] tracking-tight font-headline">My talmidim</h2>
+<span class="font-hebrew text-base font-semibold text-[#98A2B3] text-right">תלמידים</span>
+</div>
+<p class="text-xs font-medium text-[#98A2B3] mt-0.5">4 active learners assigned</p>
+</div>
+<button class="text-xs font-semibold text-[#7CA0FF] flex items-center gap-1 py-1 hover:underline" type="button">
+<span class="material-symbols-outlined text-[16px]" data-icon="person_add">person_add</span>
+          Invite
+        </button>
+</div>
+<!-- Quick Filter Pills -->
+<div class="flex items-center gap-2 pt-1 pb-1 overflow-x-auto no-scrollbar">
+<button class="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-[#7CA0FF] text-[#0B0F1A] shadow-none">
+          All (4)
+        </button>
+<button class="px-3.5 py-1.5 rounded-full text-xs font-medium bg-[#151A26] text-[#C3CBD8] border border-[#263041] hover:bg-[#1E2532] transition-colors">
+          Needs Attention (1)
+        </button>
+<button class="px-3.5 py-1.5 rounded-full text-xs font-medium bg-[#151A26] text-[#C3CBD8] border border-[#263041] hover:bg-[#1E2532] transition-colors">
+          On Track (1)
+        </button>
+</div>
+<!-- Talmidim Outlined Card Stack (Flat Material 3, 18px radius, 1px border) -->
+<div class="space-y-3">
+<!-- Card 1: Yehuda K. (On track) -->
+<div class="bg-[#151A26] rounded-[18px] border border-[#263041] p-4 flex items-center justify-between hover:bg-[#1E2532]/60 transition-colors active:scale-[0.99] duration-150 cursor-pointer">
+<div class="flex items-center gap-3.5 min-w-0">
+<!-- Calm Blue Avatar -->
+<div class="w-11 h-11 rounded-full bg-[#16233F] text-[#7CA0FF] flex items-center justify-center font-bold text-sm flex-shrink-0 select-none border border-[#263041]">
+              YK
+            </div>
+<!-- Details -->
+<div class="min-w-0 flex-1">
+<div class="flex items-center gap-2 flex-wrap">
+<span class="text-base font-bold text-[#EAEEF5] tracking-tight truncate">Yehuda K.</span>
+<span class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[#142E23] text-[#72DEA4] border border-[#72DEA4]/30 flex-shrink-0">
+                  On track
+                </span>
+</div>
+<p class="text-xs text-[#C3CBD8] font-medium mt-1 truncate">
+                Rebbe: next Beitzah 3:1 <span class="font-hebrew text-[#98A2B3] font-normal">(ביצה ג:א)</span>
+</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-[#98A2B3] ml-2 text-xl flex-shrink-0" data-icon="chevron_right">chevron_right</span>
+</div>
+<!-- Card 2: Moshe L. (Too early to tell) -->
+<div class="bg-[#151A26] rounded-[18px] border border-[#263041] p-4 flex items-center justify-between hover:bg-[#1E2532]/60 transition-colors active:scale-[0.99] duration-150 cursor-pointer">
+<div class="flex items-center gap-3.5 min-w-0">
+<!-- Neutral Slate Avatar -->
+<div class="w-11 h-11 rounded-full bg-[#1E2532] text-[#C3CBD8] flex items-center justify-center font-bold text-sm flex-shrink-0 select-none border border-[#263041]">
+              ML
+            </div>
+<!-- Details -->
+<div class="min-w-0 flex-1">
+<div class="flex items-center gap-2 flex-wrap">
+<span class="text-base font-bold text-[#EAEEF5] tracking-tight truncate">Moshe L.</span>
+<span class="text-[11px] font-medium px-2 py-0.5 rounded-full bg-[#1E2532] text-[#98A2B3] border border-[#263041] flex-shrink-0">
+                  Too early to tell
+                </span>
+</div>
+<p class="text-xs text-[#C3CBD8] font-medium mt-1 truncate">
+                Rebbe: next Berachos 2:4 <span class="font-hebrew text-[#98A2B3] font-normal">(ברכות ב:ד)</span>
+</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-[#98A2B3] ml-2 text-xl flex-shrink-0" data-icon="chevron_right">chevron_right</span>
+</div>
+<!-- Card 3: Avraham S. (Behind pace) -->
+<div class="bg-[#151A26] rounded-[18px] border border-[#263041] p-4 flex items-center justify-between hover:bg-[#1E2532]/60 transition-colors active:scale-[0.99] duration-150 cursor-pointer">
+<div class="flex items-center gap-3.5 min-w-0">
+<!-- Amber circle Avatar -->
+<div class="w-11 h-11 rounded-full bg-[#2E220E] text-[#E0A54A] flex items-center justify-center font-bold text-sm flex-shrink-0 select-none border border-[#3E2D13]">
+              AS
+            </div>
+<!-- Details -->
+<div class="min-w-0 flex-1">
+<div class="flex items-center gap-2 flex-wrap">
+<span class="text-base font-bold text-[#EAEEF5] tracking-tight truncate">Avraham S.</span>
+<span class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[#2E220E] text-[#E0A54A] border border-[#E0A54A]/30 flex-shrink-0">
+                  Behind pace
+                </span>
+</div>
+<p class="text-xs text-[#C3CBD8] font-medium mt-1 truncate">
+                Rebbe: next Shabbos 5:1 <span class="font-hebrew text-[#98A2B3] font-normal">(שבת ה:א)</span>
+</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-[#98A2B3] ml-2 text-xl flex-shrink-0" data-icon="chevron_right">chevron_right</span>
+</div>
+<!-- Card 4: Dovid R. (Action button Add ground) -->
+<div class="bg-[#151A26] rounded-[18px] border border-[#263041] p-4 flex items-center justify-between hover:bg-[#1E2532]/60 transition-colors active:scale-[0.99] duration-150 cursor-pointer">
+<div class="flex items-center gap-3.5 min-w-0">
+<!-- Neutral circle Avatar -->
+<div class="w-11 h-11 rounded-full bg-[#1E2532] text-[#C3CBD8] flex items-center justify-center font-bold text-sm flex-shrink-0 select-none border border-[#263041]">
+              DR
+            </div>
+<!-- Details -->
+<div class="min-w-0 flex-1">
+<div class="flex items-center gap-2 flex-wrap">
+<span class="text-base font-bold text-[#EAEEF5] tracking-tight truncate">Dovid R.</span>
+<button class="text-xs font-semibold px-3 py-0.5 rounded-full border border-[#7CA0FF] text-[#7CA0FF] hover:bg-[#16233F] transition-colors flex items-center gap-1 active:scale-95" type="button">
+<span class="material-symbols-outlined text-[13px]" data-icon="add">add</span>
+                  Add ground
+                </button>
+</div>
+<p class="text-xs text-[#C3CBD8] font-medium mt-1 truncate">
+                Rebbe: no ground yet
+              </p>
+</div>
+</div>
+<span class="material-symbols-outlined text-[#98A2B3] ml-2 text-xl flex-shrink-0" data-icon="chevron_right">chevron_right</span>
+</div>
+</div>
+<!-- Quick Summary / Rebbe Note Card -->
+<div class="bg-[#151A26] rounded-[18px] p-3.5 flex items-start gap-3 border border-[#263041]">
+<span class="material-symbols-outlined text-[#7CA0FF] text-xl mt-0.5 flex-shrink-0" data-icon="lightbulb">lightbulb</span>
+<div>
+<h3 class="text-xs font-bold text-[#EAEEF5]">Weekly Chazara Session</h3>
+<p class="text-[11px] text-[#C3CBD8] leading-relaxed mt-0.5">
+            Yehuda and Moshe have completed their Maseches goals this week. Prepare chazara checklists before Thursday.
+          </p>
+</div>
+</div>
+<!-- Footer Privacy Notice -->
+<div class="pt-4 pb-2 text-center">
+<p class="text-[11px] text-[#98A2B3] font-medium flex items-center justify-center gap-1">
+<span class="material-symbols-outlined text-[14px]" data-icon="lock">lock</span>
+          You see only learners whose parents gave you access.
+        </p>
+</div>
+</main>
+<!-- BottomNavBar (from Shared Components JSON: docked bottom, rounded-t-[28px], 4 tabs, Dashboard active) -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 py-2 bg-[#151A26] rounded-t-[28px] shadow-lg border-t border-[#263041] transition-colors">
+<!-- Tab 1: Dashboard (ACTIVE) -->
+<a class="flex flex-col items-center justify-center bg-[#16233F] text-[#7CA0FF] rounded-full px-5 py-1 transition-transform active:scale-95 duration-150" href="#dashboard">
+<span class="material-symbols-outlined text-xl" data-icon="dashboard" data-weight="fill" style="font-variation-settings: 'FILL' 1;">dashboard</span>
+<span class="text-xs font-semibold font-label">Dashboard</span>
+</a>
+<!-- Tab 2: Learn -->
+<a class="flex flex-col items-center justify-center text-[#98A2B3] hover:text-[#EAEEF5] px-4 py-1 hover:bg-[#1E2532] transition-colors rounded-full active:scale-95 duration-150" href="#learn">
+<span class="material-symbols-outlined text-xl" data-icon="menu_book">menu_book</span>
+<span class="text-xs font-semibold font-label">Learn</span>
+</a>
+<!-- Tab 3: Progress -->
+<a class="flex flex-col items-center justify-center text-[#98A2B3] hover:text-[#EAEEF5] px-4 py-1 hover:bg-[#1E2532] transition-colors rounded-full active:scale-95 duration-150" href="#progress">
+<span class="material-symbols-outlined text-xl" data-icon="monitoring">monitoring</span>
+<span class="text-xs font-semibold font-label">Progress</span>
+</a>
+<!-- Tab 4: Settings -->
+<a class="flex flex-col items-center justify-center text-[#98A2B3] hover:text-[#EAEEF5] px-4 py-1 hover:bg-[#1E2532] transition-colors rounded-full active:scale-95 duration-150" href="#settings">
+<span class="material-symbols-outlined text-xl" data-icon="settings">settings</span>
+<span class="text-xs font-semibold font-label">Settings</span>
+</a>
+</nav>
+</div>
+</body></html>
