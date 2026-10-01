@@ -214,6 +214,7 @@ These are binding and read-only, inherited from `architecture-learning-tracker-2
   - **Track lifecycle:** `curriculum_tracks.state` (`active` / `retired` / `archived`) is a `mainTrack` field. **Remove track** is one action: a `mainTrack` entry setting `ended_at` on the `curriculum_tracks` doc only, plus one `subTrack` tombstone entry per non-ended sub-track of that curriculum. While a track has `ended_at`, every reader treats its other governed docs as ended. **Re-add** clears the track's `ended_at` through a logged change and keeps the prior config. Neither touches `learning_events` or `points_ledger`. `ended_at` replaces `purged` / `purged_at`. No Admin hard delete of governed docs remains outside account or profile deletion.
   - **History:** `change_log` is the only change history; `tutor_grants/*/audit_log` stays security-audit only. History = `change_log ∪ learning_events`, both paged 100 at a time by time descending, merged client-side and grouped by `action_id`. `change_log` is kept for the profile's lifetime and deleted only with the profile or account (AD-26); no purge job touches it.
   - **Undo** is offered per `action_id` and writes one new action that undoes each member entry U: for each field whose current value still equals `U.after[f]`, write `U.before[f]`; other fields are listed as "changed since by <actor>".
+  - **An undo is final:** its entries carry `reverts_action_id` = the undone action's id; an action or void whose entries carry `reverts_action_id` offers no undo (voids written by an undo carry it too), and history marks the reverted action "Undone" on every device.
     - Undo of a create sets `ended_at` only if the doc's `last_change_id` still equals U's id; otherwise it is "changed since".
     - Undo of a learn event is a void. Undo of a void is a new learn copy carrying `original_recorded_at = effectiveAt(target)`.
 
@@ -428,6 +429,7 @@ Everything below is profile-scoped under `users/{uid}/learner_profiles/{profileI
 | | `learned_on` | date \| null (only `before_tracking`) | learn |
 | | `stage` | int (stage_order), `source = main` only | – |
 | | `target_id` | ULID of a learn event | void |
+| | `reverts_action_id` | id of the undone capture (first event id), only on voids written by an undo | – |
 | | `original_recorded_at` | timestamp (undo copies, un-learn re-issues, imports) | – |
 | | `recorded_at` | timestamp | ✓ |
 | | `actor` | `{uid, role: parent\|child\|tutor, display_name}` | ✓ |
@@ -442,6 +444,7 @@ Everything below is profile-scoped under `users/{uid}/learner_profiles/{profileI
 | `change_log/{ulid}` | `entity` | `subTrack`\|`goal`\|`mainTrack`\|`mainTrackOrder`\|`mainTrackProgram`\|`mainTrackStudyDays`\|`mainTrackStages`\|`mainTrackScope`\|`learnerSettings` | ✓ |
 | | `entity_id` | string (AD-38) | ✓ |
 | | `action_id` | ULID (first entry of the action) | ✓ |
+| | `reverts_action_id` | ULID of the action an undo reverts | – |
 | | `before`, `after` | map keyed `{collection}/{docId}.{field}` of changed fields (`null` per field = absent) | ✓ |
 | | `at`, `actor` | timestamp, actor map | ✓ |
 | | `original_at` | timestamp (import only) | – |
