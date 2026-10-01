@@ -4,78 +4,63 @@ import { logger } from "firebase-functions/v1";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 
 import { db, CALL_OPTS } from "./shared";
+import {
+  ENTITY_COLLECTION,
+  GovernedEntity,
+  TOMBSTONE,
+  ULID_RE,
+  isDocIdSafe,
+  removeTrackPlan,
+  runGoverned,
+  writeWithChangeLog,
+} from "./write_with_change_log";
 
 // ══════════════════════════════════════════════════════════════════════════════
 // Tutor write-path Cloud Functions — S4 (Talmid-View Squad)
 // ══════════════════════════════════════════════════════════════════════════════
 //
-// All functions below follow the same security contract:
-//   1. Caller must be authenticated.
-//   2. Grant must be active and grant.tutor_uid must equal the caller uid.
-//   3. grant.parent_uid must equal the supplied ownerUid.
-//   4. grant.child_profile_id must equal the supplied profileId.
-//   5. The specific TutorPermissions flag must be true (except tutorEditProfile
-//      which is always allowed for active tutors — parent-equivalent).
-//   6. Write targets ONLY users/{ownerUid}/learner_profiles/{profileId}/…
-//      — never the tutor's own namespace.
-//   7. An audit log entry is written to tutor_grants/{grantId}/audit_log/{autoId}.
+// Two families live here:
 //
-// Admin SDK bypasses Firestore Security Rules — the permission checks above are
-// the sole enforcement layer for these write paths.
-
-// ── AUD-firebase-10: field whitelists for tutor-write-path CFs ───────────────
+// A. GOVERNED callables (sub-tracks AD-38 / AD-53, Story 1.10 / DNI-472) —
+//    tutorUpsertGoal, tutorDeleteGoal, tutorUpsertTrack, tutorDeleteTrack,
+//    tutorUpsertStudyDayConfig, tutorDeleteStudyDayConfig,
+//    tutorUpsertStageDefinition, tutorUpsertCurriculumScope and
+//    tutorSetProfileProgram. Each one is a thin adapter: it maps its stable
+//    legacy request ({grantId, ownerUid, profileId, <id>, <data>} plus the
+//    optional client ULID `actionId`) onto storage-shaped patches and writes
+//    ONLY through `writeWithChangeLog`, which owns authentication, the single
+//    `can_edit_learning` grant check (re-read in the transaction, so a revoked
+//    grant stops the next call), the server-derived actor, AD-52 payload
+//    validation, field-level merges, the `change_log` entry, tombstones and
+//    idempotent replay. None of these callables checks a permission itself.
 //
-// Admin SDK writes bypass firestore.rules entirely, so for these CFs
-// `assertAllowedFields` below is the ONLY server-side gate on WHICH fields a
-// caller may write and how large they may be — the permission checks above
-// only gate WHO may write and WHICH collection. Each list mirrors the
-// corresponding firestore.rules `request.resource.data.keys().hasOnly([...])`
-// block for the owner's own direct client writes to the same collection, so
-// an invited tutor (a distinct, deliberately lower-trust principal) can never
-// write a field the owner is rules-blocked from writing directly.
+// B. LEGACY callables not governed by AD-38 — tutorResetCompletion,
+//    tutorUpdateGamificationSettings, tutorUpsertBookmark (retired at the
+//    cutover) and tutorEditProfile. They keep the per-call grant contract:
+//      1. Caller must be authenticated.
+//      2. Grant must be active and grant.tutor_uid must equal the caller uid.
+//      3. grant.parent_uid must equal the supplied ownerUid.
+//      4. grant.child_profile_id must equal the supplied profileId.
+//      5. The specific TutorPermissions flag must be true (except
+//         tutorEditProfile, which is always allowed for active tutors).
+//      6. Write targets ONLY users/{ownerUid}/learner_profiles/{profileId}/…
+//      7. An audit log entry is written to tutor_grants/{grantId}/audit_log/{autoId}.
 //
-// goals, curriculum_tracks, stage_definitions, study_day_configs, bookmarks
-// and profile_programs all have a rules `.hasOnly()` counterpart. preferences
-// (gamification_settings) and curriculum_scopes do NOT — those collections
-// are intentionally open-ended even for the owner's own direct writes, so
-// only the size cap (not a key whitelist) applies there; see the `null`
-// allowedKeys call sites below.
+// Admin SDK bypasses Firestore Security Rules — these checks are the sole
+// enforcement layer for these write paths.
 
-const GOAL_ALLOWED_FIELDS = [
-  "id", "goal_id", "profile_id", "track_id", "curriculum_id",
-  "curriculumId", "description", "target_percent", "targetPercent",
-  "target_date", "targetDate", "date_type", "dateType", "goal_type",
-  "goalType", "pace_value", "paceValue", "pace_unit", "pacePeriod",
-  "paceGranularity", "pace_granularity", "created_at", "createdAt",
-  "updated_at", "updatedAt", "synced_at",
-] as const;
-
-const CURRICULUM_TRACK_ALLOWED_FIELDS = [
-  "profile_id", "track_id", "curriculum_id", "state", "state_changed_at",
-  "activated_at", "pace_reset_date", "progress_schema_version",
-  "progress_computed_at", "progress_model", "program_progress",
-  "self_paced_progress", "synced_at", "last_reorder_at", "purged", "purged_at",
-] as const;
-
-const STAGE_DEFINITION_ALLOWED_FIELDS = [
-  "profile_id", "curriculum_id", "track_id", "stage_order", "stage_name",
-  "schedule", "delay_days", "schedule_type", "is_default", "days_of_week",
-  "rolling_window_size", "updated_at", "synced_at",
-] as const;
-
-const STUDY_DAY_CONFIG_ALLOWED_FIELDS = [
-  "profile_id", "curriculum_id", "track_id", "day_of_week", "day_type",
-  "updated_at", "synced_at",
-] as const;
+// ── AUD-firebase-10: field whitelist for the legacy bookmark CF ──────────────
+//
+// Admin SDK writes bypass firestore.rules entirely, so `assertAllowedFields`
+// below is the only server-side gate on WHICH fields a legacy caller may write
+// and how large they may be. The governed callables are validated against the
+// AD-52 storage schema by `writeWithChangeLog` instead. preferences
+// (gamification_settings) has no rules `.hasOnly()` counterpart, so only the
+// size cap applies there (the `null` allowedKeys call site below).
 
 const BOOKMARK_ALLOWED_FIELDS = [
   "profile_id", "curriculum_id", "content_item_id", "sefaria_ref",
   "stage_id", "updated_at", "synced_at",
-] as const;
-
-const PROFILE_PROGRAM_ALLOWED_FIELDS = [
-  "profile_id", "curriculum_id", "program_id", "tracking_start_date",
-  "tracking_start_ref", "synced_at", "updated_at",
 ] as const;
 
 /**
@@ -305,390 +290,198 @@ export const tutorResetCompletion = onCall(CALL_OPTS, async (request) => {
   return { success: true };
 });
 
-// ── tutorUpsertGoal ───────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+// A. Governed callables — rerouted through writeWithChangeLog (AD-38, AD-53)
+// ══════════════════════════════════════════════════════════════════════════════
 //
-// Creates or updates a goal document in the child's profile.
-// Requires canEditGoals permission.
+// Request (stable legacy shape + the optional client ULID):
+//   { grantId, ownerUid, profileId, <idParam>: string, <dataParam>: object,
+//     actionId?: ULID }
+// `actionId` is the Story 1.8 owner-port action id (B13 ruling): a retry with
+// the same actionId returns the stored result instead of writing again. When
+// it is omitted the server generates one (no cross-call replay protection).
 //
-// Expects:
-//   {
-//     grantId: string,
-//     ownerUid: string,
-//     profileId: string,   // ULID
-//     goalId: string,           // doc-id (matches goals/{goalId})
-//     goalData: object,         // merged into the goal document
-//   }
-//
-// Returns: { success: true }
+// Returns writeWithChangeLog's result: { success: true, action_id,
+// change_ids, at (server-stamped change_log.at, ISO-8601), ... }.
 
-export const tutorUpsertGoal = onCall(CALL_OPTS, async (request) => {
-  const callerUid = request.auth?.uid;
-  if (!callerUid) throw new HttpsError("unauthenticated", "Must be signed in");
+/**
+ * Bookkeeping keys that legacy clients still send but the server now owns or
+ * that AD-38 retired from governed docs (`last_change_id` replaces
+ * `updated_at` / `synced_at`). They are dropped — never written — so the
+ * published request payloads stay valid; every other key is validated
+ * against the AD-52 storage schema by writeWithChangeLog.
+ */
+const LEGACY_BOOKKEEPING_KEYS = new Set([
+  "id", "goal_id", "profile_id", "track_id", "created_at", "updated_at", "synced_at",
+]);
 
-  const { grantId, ownerUid, profileId, goalId, goalData } = request.data ?? {};
+/** Legacy clients send ISO datetimes for AD-52 `YYYY-MM-DD` date fields. */
+const LEGACY_DATE_FIELDS = new Set(["target_date", "tracking_start_date"]);
 
+function normalizeLegacyFields(data: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (LEGACY_BOOKKEEPING_KEYS.has(key)) continue;
+    if (LEGACY_DATE_FIELDS.has(key) && typeof value === "string" &&
+      /^\d{4}-\d{2}-\d{2}T/.test(value) && !Number.isNaN(Date.parse(value))) {
+      out[key] = new Date(value).toISOString().slice(0, 10);
+      continue;
+    }
+    out[key] = value;
+  }
+  if (Object.keys(out).length === 0) {
+    throw new HttpsError("invalid-argument", "No storage fields to write");
+  }
+  return out;
+}
+
+interface LegacyGovernedArgs {
+  grantId: string;
+  ownerUid: string;
+  profileId: string;
+  actionId?: string;
+  targetId: string;
+}
+
+function parseLegacyGovernedArgs(raw: unknown, idParam: string): LegacyGovernedArgs {
+  const data = (raw ?? {}) as Record<string, unknown>;
+  const { grantId, ownerUid, profileId, actionId } = data;
+  const targetId = data[idParam];
   if (typeof grantId !== "string" || !grantId)
     throw new HttpsError("invalid-argument", "grantId must be a non-empty string");
   if (typeof ownerUid !== "string" || !ownerUid)
     throw new HttpsError("invalid-argument", "ownerUid must be a non-empty string");
   if (typeof profileId !== "string" || !profileId)
     throw new HttpsError("invalid-argument", "profileId must be a non-empty string (ULID)");
-  if (typeof goalId !== "string" || !goalId)
-    throw new HttpsError("invalid-argument", "goalId must be a non-empty string");
-  if (!goalData || typeof goalData !== "object" || Array.isArray(goalData))
-    throw new HttpsError("invalid-argument", "goalData must be an object");
-  assertAllowedFields(goalData, "goalData", GOAL_ALLOWED_FIELDS);
+  if (!isDocIdSafe(targetId))
+    throw new HttpsError("invalid-argument", `${idParam} must be a non-empty string`);
+  if (actionId !== undefined && actionId !== null &&
+    (typeof actionId !== "string" || !ULID_RE.test(actionId)))
+    throw new HttpsError("invalid-argument", "actionId must be a ULID");
+  return { grantId, ownerUid, profileId, targetId, actionId: actionId ?? undefined };
+}
 
-  const { grant, profilePath, writtenAt } = await verifyTutorGrant(
-    callerUid, grantId, ownerUid, profileId, "can_edit_goals",
-  );
+function parseLegacyData(raw: unknown, dataParam: string): Record<string, unknown> {
+  const value = ((raw ?? {}) as Record<string, unknown>)[dataParam];
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new HttpsError("invalid-argument", `${dataParam} must be an object`);
+  return normalizeLegacyFields(value as Record<string, unknown>);
+}
 
-  const goalRef = profilePath.collection("goals").doc(goalId);
+interface LegacyGovernedSpec {
+  entity: GovernedEntity;
+  idParam: string;
+  auditAction: string;
+}
 
-  const beforeSnap = await goalRef.get();
-  const beforeValue = beforeSnap.exists ? beforeSnap.data() : null;
+/** Field-level upsert of one governed doc through writeWithChangeLog. */
+function governedUpsert(spec: LegacyGovernedSpec & { dataParam: string }) {
+  const collection = ENTITY_COLLECTION[spec.entity];
+  return onCall(CALL_OPTS, (request) => runGoverned(spec.entity, async () => {
+    const args = parseLegacyGovernedArgs(request.data, spec.idParam);
+    const fields = parseLegacyData(request.data, spec.dataParam);
+    // goal / mainTrack / mainTrackProgram: entity_id is the doc id. Other
+    // mainTrack* entities key on curriculum_id, derived in the transaction
+    // from the payload or the stored doc when the payload omits it.
+    const entityId = spec.entity === "goal" || spec.entity === "mainTrack" ||
+      spec.entity === "mainTrackProgram"
+      ? args.targetId
+      : typeof fields.curriculum_id === "string" ? fields.curriculum_id : undefined;
+    return writeWithChangeLog(request.auth, {
+      ownerUid: args.ownerUid,
+      profileId: args.profileId,
+      grantId: args.grantId,
+      actionId: args.actionId,
+      auditAction: spec.auditAction,
+      entries: [{ entity: spec.entity, entityId, docs: [{ collection, docId: args.targetId, fields }] }],
+    });
+  }));
+}
 
-  await goalRef.set(
-    { ...goalData, synced_at: writtenAt },
-    { merge: true },
-  );
+/** Tombstone (`ended_at`) of one governed doc — never a delete. */
+function governedTombstone(spec: LegacyGovernedSpec) {
+  const collection = ENTITY_COLLECTION[spec.entity];
+  return onCall(CALL_OPTS, (request) => runGoverned(spec.entity, async () => {
+    const args = parseLegacyGovernedArgs(request.data, spec.idParam);
+    return writeWithChangeLog(request.auth, {
+      ownerUid: args.ownerUid,
+      profileId: args.profileId,
+      grantId: args.grantId,
+      actionId: args.actionId,
+      auditAction: spec.auditAction,
+      entries: [{
+        entity: spec.entity,
+        entityId: spec.entity === "goal" ? args.targetId : undefined,
+        docs: [{ collection, docId: args.targetId, fields: { ended_at: TOMBSTONE } }],
+      }],
+    });
+  }));
+}
 
-  await writeAuditLog(
-    grantId, grant, callerUid,
-    "goal_upserted",
-    `profile/${profileId}/goals/${goalId}`,
-    beforeValue, goalData, writtenAt, request.data?.idempotencyKey,
-  );
-
-  logger.info(
-    `tutorUpsertGoal: tutor=${callerUid} grant=${grantId} ` +
-      `ownerUid=${ownerUid} profileId=${profileId} goalId=${goalId}`,
-  );
-
-  return { success: true };
+// tutorUpsertGoal — { goalId: "{curriculumId}_deadline" | "{curriculumId}_pace", goalData }
+// Rejected on a calendar-program curriculum (AD-43 / AD-45).
+export const tutorUpsertGoal = governedUpsert({
+  entity: "goal", idParam: "goalId", dataParam: "goalData", auditAction: "goal_upserted",
 });
 
-// ── tutorDeleteGoal ───────────────────────────────────────────────────────────
-//
-// Deletes a goal document from the child's profile.
-// Requires canEditGoals permission.
-//
-// Expects:
-//   { grantId, ownerUid, profileId, goalId }
-// Returns: { success: true }
-
-export const tutorDeleteGoal = onCall(CALL_OPTS, async (request) => {
-  const callerUid = request.auth?.uid;
-  if (!callerUid) throw new HttpsError("unauthenticated", "Must be signed in");
-
-  const { grantId, ownerUid, profileId, goalId } = request.data ?? {};
-
-  if (typeof grantId !== "string" || !grantId)
-    throw new HttpsError("invalid-argument", "grantId must be a non-empty string");
-  if (typeof ownerUid !== "string" || !ownerUid)
-    throw new HttpsError("invalid-argument", "ownerUid must be a non-empty string");
-  if (typeof profileId !== "string" || !profileId)
-    throw new HttpsError("invalid-argument", "profileId must be a non-empty string (ULID)");
-  if (typeof goalId !== "string" || !goalId)
-    throw new HttpsError("invalid-argument", "goalId must be a non-empty string");
-
-  const { grant, profilePath, writtenAt } = await verifyTutorGrant(
-    callerUid, grantId, ownerUid, profileId, "can_edit_goals",
-  );
-
-  const goalRef = profilePath.collection("goals").doc(goalId);
-  const beforeSnap = await goalRef.get();
-  const beforeValue = beforeSnap.exists ? beforeSnap.data() : null;
-
-  await goalRef.delete();
-
-  await writeAuditLog(
-    grantId, grant, callerUid,
-    "goal_deleted",
-    `profile/${profileId}/goals/${goalId}`,
-    beforeValue, null, writtenAt, request.data?.idempotencyKey,
-  );
-
-  logger.info(
-    `tutorDeleteGoal: tutor=${callerUid} grant=${grantId} ` +
-      `ownerUid=${ownerUid} profileId=${profileId} goalId=${goalId}`,
-  );
-
-  return { success: true };
+// tutorDeleteGoal — { goalId } → `ended_at` tombstone.
+export const tutorDeleteGoal = governedTombstone({
+  entity: "goal", idParam: "goalId", auditAction: "goal_deleted",
 });
 
-// ── tutorUpsertTrack ──────────────────────────────────────────────────────────
-//
-// Creates or updates a curriculum_tracks document in the child's profile.
-// Requires canEditStages permission (tracks include stage/track config).
-//
-// Expects:
-//   {
-//     grantId, ownerUid, profileId,
-//     trackId: string,          // curriculum_tracks doc-id
-//     trackData: object,
-//   }
-// Returns: { success: true }
-
-export const tutorUpsertTrack = onCall(CALL_OPTS, async (request) => {
-  const callerUid = request.auth?.uid;
-  if (!callerUid) throw new HttpsError("unauthenticated", "Must be signed in");
-
-  const { grantId, ownerUid, profileId, trackId, trackData } = request.data ?? {};
-
-  if (typeof grantId !== "string" || !grantId)
-    throw new HttpsError("invalid-argument", "grantId must be a non-empty string");
-  if (typeof ownerUid !== "string" || !ownerUid)
-    throw new HttpsError("invalid-argument", "ownerUid must be a non-empty string");
-  if (typeof profileId !== "string" || !profileId)
-    throw new HttpsError("invalid-argument", "profileId must be a non-empty string (ULID)");
-  if (typeof trackId !== "string" || !trackId)
-    throw new HttpsError("invalid-argument", "trackId must be a non-empty string");
-  if (!trackData || typeof trackData !== "object" || Array.isArray(trackData))
-    throw new HttpsError("invalid-argument", "trackData must be an object");
-  assertAllowedFields(trackData, "trackData", CURRICULUM_TRACK_ALLOWED_FIELDS);
-
-  const { grant, profilePath, writtenAt } = await verifyTutorGrant(
-    callerUid, grantId, ownerUid, profileId, "can_edit_stages",
-  );
-
-  const trackRef = profilePath.collection("curriculum_tracks").doc(trackId);
-  const beforeSnap = await trackRef.get();
-  const beforeValue = beforeSnap.exists ? beforeSnap.data() : null;
-
-  await trackRef.set(
-    { ...trackData, synced_at: writtenAt },
-    { merge: true },
-  );
-
-  await writeAuditLog(
-    grantId, grant, callerUid,
-    "track_upserted",
-    `profile/${profileId}/curriculum_tracks/${trackId}`,
-    beforeValue, trackData, writtenAt, request.data?.idempotencyKey,
-  );
-
-  logger.info(
-    `tutorUpsertTrack: tutor=${callerUid} grant=${grantId} ` +
-      `ownerUid=${ownerUid} profileId=${profileId} trackId=${trackId}`,
-  );
-
-  return { success: true };
+// tutorUpsertTrack — { trackId: curriculumId, trackData } (mainTrack).
+export const tutorUpsertTrack = governedUpsert({
+  entity: "mainTrack", idParam: "trackId", dataParam: "trackData", auditAction: "track_upserted",
 });
 
-// ── tutorDeleteTrack ──────────────────────────────────────────────────────────
-//
-// Deletes a curriculum_tracks document from the child's profile.
-// Requires canEditStages permission.
-//
-// Expects: { grantId, ownerUid, profileId, trackId }
-// Returns: { success: true }
+// tutorDeleteTrack — { trackId: curriculumId } → the AD-38 remove-track
+// action: one mainTrack `ended_at` entry + one subTrack tombstone per live
+// sub-track, shared action_id (same action as deleteCurriculumTrack).
+export const tutorDeleteTrack = onCall(CALL_OPTS, (request) => runGoverned("mainTrack", async () => {
+  const args = parseLegacyGovernedArgs(request.data, "trackId");
+  return writeWithChangeLog(request.auth, {
+    ownerUid: args.ownerUid,
+    profileId: args.profileId,
+    grantId: args.grantId,
+    actionId: args.actionId,
+    auditAction: "track_deleted",
+    plan: removeTrackPlan(args.targetId),
+    replayScope: [{ entity: "mainTrack", entityId: args.targetId }, { entity: "subTrack" }],
+  });
+}));
 
-export const tutorDeleteTrack = onCall(CALL_OPTS, async (request) => {
-  const callerUid = request.auth?.uid;
-  if (!callerUid) throw new HttpsError("unauthenticated", "Must be signed in");
-
-  const { grantId, ownerUid, profileId, trackId } = request.data ?? {};
-
-  if (typeof grantId !== "string" || !grantId)
-    throw new HttpsError("invalid-argument", "grantId must be a non-empty string");
-  if (typeof ownerUid !== "string" || !ownerUid)
-    throw new HttpsError("invalid-argument", "ownerUid must be a non-empty string");
-  if (typeof profileId !== "string" || !profileId)
-    throw new HttpsError("invalid-argument", "profileId must be a non-empty string (ULID)");
-  if (typeof trackId !== "string" || !trackId)
-    throw new HttpsError("invalid-argument", "trackId must be a non-empty string");
-
-  const { grant, profilePath, writtenAt } = await verifyTutorGrant(
-    callerUid, grantId, ownerUid, profileId, "can_edit_stages",
-  );
-
-  const trackRef = profilePath.collection("curriculum_tracks").doc(trackId);
-  const beforeSnap = await trackRef.get();
-  const beforeValue = beforeSnap.exists ? beforeSnap.data() : null;
-
-  await trackRef.delete();
-
-  await writeAuditLog(
-    grantId, grant, callerUid,
-    "track_deleted",
-    `profile/${profileId}/curriculum_tracks/${trackId}`,
-    beforeValue, null, writtenAt, request.data?.idempotencyKey,
-  );
-
-  logger.info(
-    `tutorDeleteTrack: tutor=${callerUid} grant=${grantId} ` +
-      `ownerUid=${ownerUid} profileId=${profileId} trackId=${trackId}`,
-  );
-
-  return { success: true };
+// tutorUpsertStageDefinition — { stageId, stageData } (mainTrackStages).
+export const tutorUpsertStageDefinition = governedUpsert({
+  entity: "mainTrackStages", idParam: "stageId", dataParam: "stageData",
+  auditAction: "stage_definition_upserted",
 });
 
-// ── tutorUpsertStageDefinition ────────────────────────────────────────────────
-//
-// Creates or updates a stage_definitions document in the child's profile.
-// Requires canEditStages permission.
-//
-// Expects:
-//   {
-//     grantId, ownerUid, profileId,
-//     stageId: string,          // stage_definitions doc-id ("{trackId}_{stageOrder}")
-//     stageData: object,
-//   }
-// Returns: { success: true }
-
-export const tutorUpsertStageDefinition = onCall(CALL_OPTS, async (request) => {
-  const callerUid = request.auth?.uid;
-  if (!callerUid) throw new HttpsError("unauthenticated", "Must be signed in");
-
-  const { grantId, ownerUid, profileId, stageId, stageData } = request.data ?? {};
-
-  if (typeof grantId !== "string" || !grantId)
-    throw new HttpsError("invalid-argument", "grantId must be a non-empty string");
-  if (typeof ownerUid !== "string" || !ownerUid)
-    throw new HttpsError("invalid-argument", "ownerUid must be a non-empty string");
-  if (typeof profileId !== "string" || !profileId)
-    throw new HttpsError("invalid-argument", "profileId must be a non-empty string (ULID)");
-  if (typeof stageId !== "string" || !stageId)
-    throw new HttpsError("invalid-argument", "stageId must be a non-empty string");
-  if (!stageData || typeof stageData !== "object" || Array.isArray(stageData))
-    throw new HttpsError("invalid-argument", "stageData must be an object");
-  assertAllowedFields(stageData, "stageData", STAGE_DEFINITION_ALLOWED_FIELDS);
-
-  const { grant, profilePath, writtenAt } = await verifyTutorGrant(
-    callerUid, grantId, ownerUid, profileId, "can_edit_stages",
-  );
-
-  const stageRef = profilePath.collection("stage_definitions").doc(stageId);
-  const beforeSnap = await stageRef.get();
-  const beforeValue = beforeSnap.exists ? beforeSnap.data() : null;
-
-  await stageRef.set(
-    { ...stageData, synced_at: writtenAt },
-    { merge: true },
-  );
-
-  await writeAuditLog(
-    grantId, grant, callerUid,
-    "stage_definition_upserted",
-    `profile/${profileId}/stage_definitions/${stageId}`,
-    beforeValue, stageData, writtenAt, request.data?.idempotencyKey,
-  );
-
-  logger.info(
-    `tutorUpsertStageDefinition: tutor=${callerUid} grant=${grantId} ` +
-      `ownerUid=${ownerUid} profileId=${profileId} stageId=${stageId}`,
-  );
-
-  return { success: true };
+// tutorUpsertStudyDayConfig — { configId, configData } (mainTrackStudyDays).
+export const tutorUpsertStudyDayConfig = governedUpsert({
+  entity: "mainTrackStudyDays", idParam: "configId", dataParam: "configData",
+  auditAction: "study_day_config_upserted",
 });
 
-// ── tutorUpsertStudyDayConfig ─────────────────────────────────────────────────
-//
-// Creates or updates a study_day_configs document in the child's profile.
-// Requires canEditStudyDays permission.
-//
-// Expects:
-//   {
-//     grantId, ownerUid, profileId,
-//     configId: string,         // study_day_configs doc-id
-//     configData: object,
-//   }
-// Returns: { success: true }
-
-export const tutorUpsertStudyDayConfig = onCall(CALL_OPTS, async (request) => {
-  const callerUid = request.auth?.uid;
-  if (!callerUid) throw new HttpsError("unauthenticated", "Must be signed in");
-
-  const { grantId, ownerUid, profileId, configId, configData } = request.data ?? {};
-
-  if (typeof grantId !== "string" || !grantId)
-    throw new HttpsError("invalid-argument", "grantId must be a non-empty string");
-  if (typeof ownerUid !== "string" || !ownerUid)
-    throw new HttpsError("invalid-argument", "ownerUid must be a non-empty string");
-  if (typeof profileId !== "string" || !profileId)
-    throw new HttpsError("invalid-argument", "profileId must be a non-empty string (ULID)");
-  if (typeof configId !== "string" || !configId)
-    throw new HttpsError("invalid-argument", "configId must be a non-empty string");
-  if (!configData || typeof configData !== "object" || Array.isArray(configData))
-    throw new HttpsError("invalid-argument", "configData must be an object");
-  assertAllowedFields(configData, "configData", STUDY_DAY_CONFIG_ALLOWED_FIELDS);
-
-  const { grant, profilePath, writtenAt } = await verifyTutorGrant(
-    callerUid, grantId, ownerUid, profileId, "can_edit_study_days",
-  );
-
-  const configRef = profilePath.collection("study_day_configs").doc(configId);
-  const beforeSnap = await configRef.get();
-  const beforeValue = beforeSnap.exists ? beforeSnap.data() : null;
-
-  await configRef.set(
-    { ...configData, synced_at: writtenAt },
-    { merge: true },
-  );
-
-  await writeAuditLog(
-    grantId, grant, callerUid,
-    "study_day_config_upserted",
-    `profile/${profileId}/study_day_configs/${configId}`,
-    beforeValue, configData, writtenAt, request.data?.idempotencyKey,
-  );
-
-  logger.info(
-    `tutorUpsertStudyDayConfig: tutor=${callerUid} grant=${grantId} ` +
-      `ownerUid=${ownerUid} profileId=${profileId} configId=${configId}`,
-  );
-
-  return { success: true };
+// tutorDeleteStudyDayConfig — { configId } → `ended_at` tombstone.
+export const tutorDeleteStudyDayConfig = governedTombstone({
+  entity: "mainTrackStudyDays", idParam: "configId", auditAction: "study_day_config_deleted",
 });
 
-// ── tutorDeleteStudyDayConfig ─────────────────────────────────────────────────
-//
-// Deletes a study_day_configs document from the child's profile.
-// Requires canEditStudyDays permission.
-//
-// Expects: { grantId, ownerUid, profileId, configId }
-// Returns: { success: true }
-
-export const tutorDeleteStudyDayConfig = onCall(CALL_OPTS, async (request) => {
-  const callerUid = request.auth?.uid;
-  if (!callerUid) throw new HttpsError("unauthenticated", "Must be signed in");
-
-  const { grantId, ownerUid, profileId, configId } = request.data ?? {};
-
-  if (typeof grantId !== "string" || !grantId)
-    throw new HttpsError("invalid-argument", "grantId must be a non-empty string");
-  if (typeof ownerUid !== "string" || !ownerUid)
-    throw new HttpsError("invalid-argument", "ownerUid must be a non-empty string");
-  if (typeof profileId !== "string" || !profileId)
-    throw new HttpsError("invalid-argument", "profileId must be a non-empty string (ULID)");
-  if (typeof configId !== "string" || !configId)
-    throw new HttpsError("invalid-argument", "configId must be a non-empty string");
-
-  const { grant, profilePath, writtenAt } = await verifyTutorGrant(
-    callerUid, grantId, ownerUid, profileId, "can_edit_study_days",
-  );
-
-  const configRef = profilePath.collection("study_day_configs").doc(configId);
-  const beforeSnap = await configRef.get();
-  const beforeValue = beforeSnap.exists ? beforeSnap.data() : null;
-
-  await configRef.delete();
-
-  await writeAuditLog(
-    grantId, grant, callerUid,
-    "study_day_config_deleted",
-    `profile/${profileId}/study_day_configs/${configId}`,
-    beforeValue, null, writtenAt, request.data?.idempotencyKey,
-  );
-
-  logger.info(
-    `tutorDeleteStudyDayConfig: tutor=${callerUid} grant=${grantId} ` +
-      `ownerUid=${ownerUid} profileId=${profileId} configId=${configId}`,
-  );
-
-  return { success: true };
+// tutorSetProfileProgram — { programId: curriculumId, programData } (mainTrackProgram).
+export const tutorSetProfileProgram = governedUpsert({
+  entity: "mainTrackProgram", idParam: "programId", dataParam: "programData",
+  auditAction: "profile_program_set",
 });
+
+// tutorUpsertCurriculumScope — { scopeId, scopeData } (mainTrackScope).
+export const tutorUpsertCurriculumScope = governedUpsert({
+  entity: "mainTrackScope", idParam: "scopeId", dataParam: "scopeData",
+  auditAction: "curriculum_scope_upserted",
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// B. Legacy (non-governed) callables
+// ══════════════════════════════════════════════════════════════════════════════
 
 // ── tutorUpdateGamificationSettings ──────────────────────────────────────────
 //
@@ -825,135 +618,13 @@ export const tutorUpsertBookmark = onCall(CALL_OPTS, async (request) => {
   return { success: true };
 });
 
-// ── tutorSetProfileProgram ────────────────────────────────────────────────────
-//
-// Creates or updates a profile_program document in the child's profile.
-// Requires canEditStages permission (programme assignment is part of the
-// enrolment path gated by can_edit_stages).
-//
-// Expects:
-//   {
-//     grantId, ownerUid, profileId,
-//     programId: string,         // profile_programs doc-id (curriculum_id)
-//     programData: object,
-//   }
-// Returns: { success: true }
-
-export const tutorSetProfileProgram = onCall(CALL_OPTS, async (request) => {
-  const callerUid = request.auth?.uid;
-  if (!callerUid) throw new HttpsError("unauthenticated", "Must be signed in");
-
-  const { grantId, ownerUid, profileId, programId, programData } = request.data ?? {};
-
-  if (typeof grantId !== "string" || !grantId)
-    throw new HttpsError("invalid-argument", "grantId must be a non-empty string");
-  if (typeof ownerUid !== "string" || !ownerUid)
-    throw new HttpsError("invalid-argument", "ownerUid must be a non-empty string");
-  if (typeof profileId !== "string" || !profileId)
-    throw new HttpsError("invalid-argument", "profileId must be a non-empty string (ULID)");
-  if (typeof programId !== "string" || !programId)
-    throw new HttpsError("invalid-argument", "programId must be a non-empty string");
-  if (!programData || typeof programData !== "object" || Array.isArray(programData))
-    throw new HttpsError("invalid-argument", "programData must be an object");
-  assertAllowedFields(programData, "programData", PROFILE_PROGRAM_ALLOWED_FIELDS);
-
-  const { grant, profilePath, writtenAt } = await verifyTutorGrant(
-    callerUid, grantId, ownerUid, profileId, "can_edit_stages",
-  );
-
-  const programRef = profilePath.collection("profile_programs").doc(programId);
-  const beforeSnap = await programRef.get();
-  const beforeValue = beforeSnap.exists ? beforeSnap.data() : null;
-
-  await programRef.set(
-    { ...programData, synced_at: writtenAt },
-    { merge: true },
-  );
-
-  await writeAuditLog(
-    grantId, grant, callerUid,
-    "profile_program_set",
-    `profile/${profileId}/profile_programs/${programId}`,
-    beforeValue, programData, writtenAt, request.data?.idempotencyKey,
-  );
-
-  logger.info(
-    `tutorSetProfileProgram: tutor=${callerUid} grant=${grantId} ` +
-      `ownerUid=${ownerUid} profileId=${profileId} programId=${programId}`,
-  );
-
-  return { success: true };
-});
-
-// ── tutorUpsertCurriculumScope ────────────────────────────────────────────────
-//
-// Creates or updates a curriculum_scope document in the child's profile.
-// Requires canEditStages permission (scope selection is part of the enrolment
-// path gated by can_edit_stages).
-//
-// Expects:
-//   {
-//     grantId, ownerUid, profileId,
-//     scopeId: string,           // curriculum_scopes doc-id
-//     scopeData: object,
-//   }
-// Returns: { success: true }
-
-export const tutorUpsertCurriculumScope = onCall(CALL_OPTS, async (request) => {
-  const callerUid = request.auth?.uid;
-  if (!callerUid) throw new HttpsError("unauthenticated", "Must be signed in");
-
-  const { grantId, ownerUid, profileId, scopeId, scopeData } = request.data ?? {};
-
-  if (typeof grantId !== "string" || !grantId)
-    throw new HttpsError("invalid-argument", "grantId must be a non-empty string");
-  if (typeof ownerUid !== "string" || !ownerUid)
-    throw new HttpsError("invalid-argument", "ownerUid must be a non-empty string");
-  if (typeof profileId !== "string" || !profileId)
-    throw new HttpsError("invalid-argument", "profileId must be a non-empty string (ULID)");
-  if (typeof scopeId !== "string" || !scopeId)
-    throw new HttpsError("invalid-argument", "scopeId must be a non-empty string");
-  if (!scopeData || typeof scopeData !== "object" || Array.isArray(scopeData))
-    throw new HttpsError("invalid-argument", "scopeData must be an object");
-  // No firestore.rules `.hasOnly()` counterpart for curriculum_scopes — it's
-  // intentionally open-ended even for the owner's own direct writes, so only
-  // the size cap applies here (null = no key whitelist).
-  assertAllowedFields(scopeData, "scopeData", null);
-
-  const { grant, profilePath, writtenAt } = await verifyTutorGrant(
-    callerUid, grantId, ownerUid, profileId, "can_edit_stages",
-  );
-
-  const scopeRef = profilePath.collection("curriculum_scopes").doc(scopeId);
-  const beforeSnap = await scopeRef.get();
-  const beforeValue = beforeSnap.exists ? beforeSnap.data() : null;
-
-  await scopeRef.set(
-    { ...scopeData, synced_at: writtenAt },
-    { merge: true },
-  );
-
-  await writeAuditLog(
-    grantId, grant, callerUid,
-    "curriculum_scope_upserted",
-    `profile/${profileId}/curriculum_scopes/${scopeId}`,
-    beforeValue, scopeData, writtenAt, request.data?.idempotencyKey,
-  );
-
-  logger.info(
-    `tutorUpsertCurriculumScope: tutor=${callerUid} grant=${grantId} ` +
-      `ownerUid=${ownerUid} profileId=${profileId} scopeId=${scopeId}`,
-  );
-
-  return { success: true };
-});
-
 // ── tutorEditProfile ──────────────────────────────────────────────────────────
 //
-// Updates permitted fields on the child's learner_profiles/{profileId} document.
-// Permitted fields: display_name, avatar, mode.
-// No additional permission flag — editing profile is parent-equivalent for any
-// active tutor (per FR-3 "Edit child profile: display name, avatar, mode").
+// Field-level merge of display_name, avatar and mode — and nothing else — on
+// the child's learner_profiles/{profileId} doc (AD-37: governed learner
+// settings and every other profile field are out of this callable's reach).
+// No additional permission flag — editing the profile is parent-equivalent
+// for any active tutor (FR-3 "Edit child profile: display name, avatar, mode").
 //
 // Expects:
 //   {
@@ -962,15 +633,24 @@ export const tutorUpsertCurriculumScope = onCall(CALL_OPTS, async (request) => {
 //     avatar?: string,        // new avatar identifier
 //     mode?: string,          // 'child' | 'adult'
 //   }
-// Returns: { success: true }
+// Any other request key is rejected. Returns: { success: true }
 
 const ALLOWED_PROFILE_MODES = new Set(["child", "adult"]);
+const EDIT_PROFILE_REQUEST_KEYS = new Set([
+  "grantId", "ownerUid", "profileId", "displayName", "avatar", "mode", "idempotencyKey",
+]);
 
 export const tutorEditProfile = onCall(CALL_OPTS, async (request) => {
   const callerUid = request.auth?.uid;
   if (!callerUid) throw new HttpsError("unauthenticated", "Must be signed in");
 
-  const { grantId, ownerUid, profileId, displayName, avatar, mode } = request.data ?? {};
+  const data = (request.data ?? {}) as Record<string, unknown>;
+  for (const key of Object.keys(data)) {
+    if (!EDIT_PROFILE_REQUEST_KEYS.has(key)) {
+      throw new HttpsError("invalid-argument", `Unexpected field: ${key}`);
+    }
+  }
+  const { grantId, ownerUid, profileId, displayName, avatar, mode } = data;
 
   if (typeof grantId !== "string" || !grantId)
     throw new HttpsError("invalid-argument", "grantId must be a non-empty string");
@@ -999,7 +679,7 @@ export const tutorEditProfile = onCall(CALL_OPTS, async (request) => {
   if (avatar !== undefined && (typeof avatar !== "string" || !avatar)) {
     throw new HttpsError("invalid-argument", "avatar must be a non-empty string");
   }
-  if (mode !== undefined && !ALLOWED_PROFILE_MODES.has(mode)) {
+  if (mode !== undefined && (typeof mode !== "string" || !ALLOWED_PROFILE_MODES.has(mode))) {
     throw new HttpsError(
       "invalid-argument",
       `mode must be one of: ${[...ALLOWED_PROFILE_MODES].join(", ")}`,
@@ -1011,46 +691,37 @@ export const tutorEditProfile = onCall(CALL_OPTS, async (request) => {
     callerUid, grantId, ownerUid, profileId, null,
   );
 
-  // Learner profile is at users/{ownerUid}/learner_profiles/{profileId} (the profilePath doc itself).
-  // H2 fix: read the full existing doc first, merge the edit fields on top, then
-  // write the complete doc so LearnerProfileCodec.decode() never sees a partial doc.
-  const updates: Record<string, unknown> = { updated_at: writtenAt };
-  if (displayName !== undefined) updates["display_name"] = displayName.trim();
-  if (avatar !== undefined) updates["avatar"] = avatar;
-  if (mode !== undefined) updates["mode"] = mode;
+  const updates: Record<string, unknown> = {};
+  if (typeof displayName === "string") updates["display_name"] = displayName.trim();
+  if (typeof avatar === "string") updates["avatar"] = avatar;
+  if (typeof mode === "string") updates["mode"] = mode;
 
-  // AUD-firebase-11: wrap the read+merge+write in a transaction, matching
-  // the runTransaction pattern already used by acceptTutorInvite /
-  // revokeTutorGrant / resignTutorGrant / expirePendingInvites in
-  // tutor_invites.ts. Without this, a concurrent writer (the owner's own
-  // device, or a second tutor) that changes an UNRELATED field on the same doc
-  // between the plain get() and the full-document set(merge:false) has its
-  // write silently clobbered — a lost-update race. A transaction detects
-  // that the doc changed after its read and automatically retries the
-  // callback with a fresh read, so the concurrent field survives.
-  const beforeValue = await db.runTransaction(async (txn) => {
-    const snap = await txn.get(profilePath);
-    const before = snap.exists ? snap.data()! : null;
-    const fullDoc = before ? { ...before, ...updates } : updates;
-    txn.set(profilePath, fullDoc, { merge: false });
-    return before;
-  });
+  // Field-level merge (AD-37 / AD-38): only the three fields are written, so a
+  // concurrent writer's unrelated fields (including governed learner settings
+  // and last_change_id) are never read-modify-written or clobbered. update()
+  // also refuses to conjure a profile doc that does not exist.
+  // The before-values are read only for the security audit entry; the write
+  // itself never depends on them.
+  const beforeSnap = await profilePath.get();
+  try {
+    await profilePath.update(updates);
+  } catch (err) {
+    if ((err as { code?: number }).code === 5) {
+      throw new HttpsError("not-found", "Learner profile not found");
+    }
+    throw err;
+  }
 
   await writeAuditLog(
     grantId, grant, callerUid,
     "profile_edited",
     `profile/${profileId}`,
-    beforeValue ? {
-      display_name: beforeValue["display_name"],
-      avatar: beforeValue["avatar"],
-      mode: beforeValue["mode"],
+    beforeSnap.exists ? {
+      display_name: beforeSnap.get("display_name"),
+      avatar: beforeSnap.get("avatar"),
+      mode: beforeSnap.get("mode"),
     } : null,
-    updates, writtenAt, request.data?.idempotencyKey,
-  );
-
-  logger.info(
-    `tutorEditProfile: tutor=${callerUid} grant=${grantId} ` +
-      `ownerUid=${ownerUid} profileId=${profileId}`,
+    updates, writtenAt, data.idempotencyKey as string | undefined,
   );
 
   return { success: true };

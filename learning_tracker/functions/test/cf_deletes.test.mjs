@@ -1,5 +1,6 @@
 // CF tests — owner self-service delete functions:
-//   deleteLearnerProfile, deleteCurriculumTrack, deleteBulkMarkedCompletions,
+//   deleteLearnerProfile, deleteCurriculumTrack (now the AD-38 remove-track
+//   action — tombstones, no deletes), deleteBulkMarkedCompletions,
 //   deleteAccountData
 // See _cf_helpers.mjs for the harness.
 
@@ -7,14 +8,20 @@ import assert from 'node:assert/strict';
 import { beforeEach, describe, test } from 'node:test';
 import {
   PARENT,
+  PARENT_NAME,
   PROFILE,
   STRANGER,
+  assertPrivacySafeRejectionLog,
   call,
+  captureLogs,
+  changeLog,
   clearFirestore,
   db,
   expectHttpsError,
   fns,
   parentAuth,
+  seedProfile,
+  ulid,
 } from './_cf_helpers.mjs';
 
 // ── deleteLearnerProfile ──────────────────────────────────────────────────────
@@ -113,355 +120,172 @@ describe('deleteLearnerProfile', () => {
   });
 });
 
-// ── deleteCurriculumTrack ─────────────────────────────────────────────────────
+// ── deleteCurriculumTrack — the AD-38 remove-track action ─────────────────────
+// Sub-tracks Story 1.10 / DNI-472 AC-3 / AC-6: rerouted through
+// writeWithChangeLog. No governed doc is hard-deleted any more: one mainTrack
+// entry sets `ended_at` on the track, one subTrack tombstone entry per live
+// sub-track, all under one action_id.
+
 describe('deleteCurriculumTrack', () => {
-  const goodArgs = { profileId: PROFILE, curriculumId: 'genesis' };
+  const C = 'genesis';
+  const goodArgs = { profileId: PROFILE, curriculumId: C };
+  const lp = (uid = PARENT, profileId = PROFILE) =>
+    db.collection('users').doc(uid).collection('learner_profiles').doc(String(profileId));
+  const trackRef = (uid, profileId) => lp(uid, profileId).collection('curriculum_tracks').doc(C);
 
   beforeEach(async () => {
     await clearFirestore();
+    await seedProfile();
   });
 
-  test('unauthenticated caller → unauthenticated', async () => {
-    await expectHttpsError(
-      call(fns.deleteCurriculumTrack, goodArgs, null),
-      'unauthenticated',
-    );
+  test('unauthenticated caller → unauthenticated, logged as {entity, code} only', async () => {
+    const { error, logs } = await captureLogs(() => call(fns.deleteCurriculumTrack, goodArgs, null));
+    await expectHttpsError(Promise.reject(error), 'unauthenticated');
+    assertPrivacySafeRejectionLog(logs, { entity: 'mainTrack', code: 'unauthenticated', secrets: [C] });
   });
 
-  test('profileId missing → invalid-argument', async () => {
-    await expectHttpsError(
-      call(fns.deleteCurriculumTrack, { curriculumId: 'genesis' }, parentAuth),
-      'invalid-argument',
-    );
-  });
+  for (const [label, args] of [
+    ['profileId missing', { curriculumId: C }],
+    ['profileId is a number', { profileId: 5, curriculumId: C }],
+    ['profileId is empty', { profileId: '', curriculumId: C }],
+    ['curriculumId missing', { profileId: PROFILE }],
+    ['curriculumId empty', { profileId: PROFILE, curriculumId: '' }],
+    ['curriculumId is a number', { profileId: PROFILE, curriculumId: 7 }],
+    ['curriculumId contains a path separator', { profileId: PROFILE, curriculumId: 'a/b' }],
+    ['malformed actionId', { ...goodArgs, actionId: 'nope' }],
+    ['actorRole tutor asserted by an owner', { ...goodArgs, actorRole: 'tutor' }],
+  ]) {
+    test(`${label} → invalid-argument`, async () => {
+      await trackRef().set({ state: 'active', curriculum_id: C });
+      await expectHttpsError(call(fns.deleteCurriculumTrack, args, parentAuth), 'invalid-argument');
+      assert.equal((await trackRef().get()).get('ended_at'), undefined);
+    });
+  }
 
-  test('profileId is a float → invalid-argument', async () => {
-    await expectHttpsError(
-      call(fns.deleteCurriculumTrack, { ...goodArgs, profileId: 2.5 }, parentAuth),
-      'invalid-argument',
-    );
-  });
-
-  test('profileId is zero → invalid-argument', async () => {
-    await expectHttpsError(
-      call(fns.deleteCurriculumTrack, { ...goodArgs, profileId: 0 }, parentAuth),
-      'invalid-argument',
-    );
-  });
-
-  test('profileId is negative → invalid-argument', async () => {
-    await expectHttpsError(
-      call(fns.deleteCurriculumTrack, { ...goodArgs, profileId: -3 }, parentAuth),
-      'invalid-argument',
-    );
-  });
-
-  test('curriculumId missing → invalid-argument', async () => {
-    await expectHttpsError(
-      call(fns.deleteCurriculumTrack, { profileId: PROFILE }, parentAuth),
-      'invalid-argument',
-    );
-  });
-
-  test('curriculumId empty string → invalid-argument', async () => {
-    await expectHttpsError(
-      call(fns.deleteCurriculumTrack, { profileId: PROFILE, curriculumId: '' }, parentAuth),
-      'invalid-argument',
-    );
-  });
-
-  test('curriculumId is a number → invalid-argument', async () => {
-    await expectHttpsError(
-      call(fns.deleteCurriculumTrack, { profileId: PROFILE, curriculumId: 42 }, parentAuth),
-      'invalid-argument',
-    );
-  });
-
-  test('happy path → returns success and track doc is gone', async () => {
-    const trackRef = db
-      .collection('users')
-      .doc(PARENT)
-      .collection('learner_profiles')
-      .doc(String(PROFILE))
-      .collection('curriculum_tracks')
-      .doc('genesis');
-    await trackRef.set({ curriculumId: 'genesis', enabled: true });
-
-    const res = await call(fns.deleteCurriculumTrack, goodArgs, parentAuth);
-
-    assert.equal(res.success, true);
-    const snap = await trackRef.get();
-    assert.equal(snap.exists, false, 'track doc should be deleted');
-  });
-
-  // ── CLIENT CONTRACT ────────────────────────────────────────────────────
-  // Pins the exact argument shape the Dart client sends from
-  // FirestoreCurriculumTrackRepositoryAdapter.deleteTrackPermanently:
+  // CLIENT CONTRACT — curriculum_track_repository_impl.dart's
+  // deleteTrackPermanently sends exactly
   //     { profileId: <profile ULID string>, curriculumId: <storageKey string> }
-  //
-  // This seam has broken TWICE — e2ab5aeb (CF wanted a ULID, Dart sent an int)
-  // and P3-17 (14 CF guards still demanded a number). Both times each side was
-  // internally consistent, so neither `dart analyze` nor these tests could see
-  // the disagreement: the fixture supplied whatever shape the bug expected.
-  // This fails if the client is ever changed to send an enum or a numeric id.
+  // This seam has broken TWICE (e2ab5aeb, P3-17); this fails if the client is
+  // ever changed to send an enum or a numeric id.
   test('CLIENT CONTRACT: the exact shape the Dart adapter sends is accepted', async () => {
-    const trackRef = db
-      .collection('users')
-      .doc(PARENT)
-      .collection('learner_profiles')
-      .doc(String(PROFILE))
-      .collection('curriculum_tracks')
-      .doc('genesis');
-    await trackRef.set({ curriculumId: 'genesis', enabled: true });
-
+    await trackRef().set({ state: 'active', curriculum_id: C });
     const res = await call(
       fns.deleteCurriculumTrack,
-      { profileId: String(PROFILE), curriculumId: 'genesis' },
+      { profileId: String(PROFILE), curriculumId: C },
       parentAuth,
     );
-
     assert.equal(res.success, true);
-    assert.equal((await trackRef.get()).exists, false);
+    assert.equal(res.change_ids.length, 1);
+    assert.ok(!Number.isNaN(Date.parse(res.at)), 'returns the server-stamped at');
   });
 
-  test('deleting non-existent track doc → still returns success (Firestore delete is idempotent)', async () => {
-    // Firestore .delete() on a non-existent doc does NOT throw; verify that.
-    const res = await call(fns.deleteCurriculumTrack, goodArgs, parentAuth);
-    assert.equal(res.success, true);
-  });
+  test('remove-track: tombstones the track and every live sub-track under one action_id', async () => {
+    await trackRef().set({ state: 'active', curriculum_id: C, last_change_id: ulid(0) });
+    const subs = lp().collection('sub_tracks');
+    const live1 = '01JSBTRACK0000000000000001';
+    const live2 = '01JSBTRACK0000000000000002';
+    const done = '01JSBTRACK0000000000000003';
+    await subs.doc(live1).set({ curriculum_id: C, name: 'one' });
+    await subs.doc(live2).set({ curriculum_id: C, name: 'two' });
+    await subs.doc(done).set({ curriculum_id: C, name: 'three', ended_at: new Date('2026-01-01'), end_reason: 'deleted' });
 
-  test('recursiveDelete → a nested track subcollection doc is also purged', async () => {
-    const trackRef = db
-      .collection('users')
-      .doc(PARENT)
-      .collection('learner_profiles')
-      .doc(String(PROFILE))
-      .collection('curriculum_tracks')
-      .doc('genesis');
-    await trackRef.set({ curriculumId: 'genesis' });
-    const nestedRef = trackRef.collection('history').doc('h1');
-    await nestedRef.set({ note: 'should not orphan' });
+    const res = await call(fns.deleteCurriculumTrack, { ...goodArgs, actionId: ulid(1) }, parentAuth);
+    assert.equal(res.action_id, ulid(1));
 
-    const res = await call(fns.deleteCurriculumTrack, goodArgs, parentAuth);
+    const entries = await changeLog();
+    assert.deepEqual(entries.map((e) => e.entity).sort(), ['mainTrack', 'subTrack', 'subTrack']);
+    assert.ok(entries.every((e) => e.action_id === ulid(1)));
+    assert.deepEqual(entries.find((e) => e.entity === 'mainTrack').actor,
+      { uid: PARENT, role: 'parent', display_name: PARENT_NAME });
+    assert.deepEqual(entries.filter((e) => e.entity === 'subTrack').map((e) => e.entity_id).sort(), [live1, live2]);
 
-    assert.equal(res.success, true);
-    assert.equal((await trackRef.get()).exists, false, 'track doc deleted');
-    assert.equal(
-      (await nestedRef.get()).exists,
-      false,
-      'nested subcollection doc must also be purged (recursiveDelete, not shallow)',
-    );
-  });
-});
-
-// ── deleteCurriculumTrack — sibling collection sweep ──────────────────────────
-//
-// curriculum_tracks/{curriculumId} itself is a doc-id-scoped recursiveDelete,
-// but track-scoped config lives in SIBLING collections under the *profile*
-// (not nested under the track doc), keyed by a `curriculum_id` field —
-// recursiveDelete(trackRef) never reaches them. profile_programs is the one
-// exception: its doc-id IS the curriculumId (a direct doc delete, not a
-// query). These tests prove every listed collection is actually swept, and —
-// the test that matters most — that a sweep never crosses a curriculum,
-// profile, or user boundary, and never touches append-only history.
-describe('deleteCurriculumTrack — sibling collection sweep', () => {
-  const CURRICULUM = 'genesis';
-  const OTHER_CURRICULUM = 'exodus';
-  const OTHER_PROFILE = PROFILE + 1;
-  const goodArgs = { profileId: PROFILE, curriculumId: CURRICULUM };
-
-  // Collections queried by a `curriculum_id` field (verified against
-  // firestore.rules .hasOnly() whitelists / firestore_rules.test.mjs fixtures
-  // — see the header comment on TRACK_SCOPED_QUERIED_COLLECTIONS in deletes.ts).
-  const QUERIED_COLLECTIONS = [
-    'goals',
-    'stage_definitions',
-    'study_day_configs',
-    'curriculum_scopes',
-    'learning_order',
-  ];
-
-  beforeEach(async () => {
-    await clearFirestore();
-  });
-
-  function pRefFor(uid, profileId) {
-    return db.collection('users').doc(uid).collection('learner_profiles').doc(String(profileId));
-  }
-
-  /** Seed one doc per queried collection under the given profile, keyed to `curriculumId`. */
-  async function seedQueriedDocs(uid, profileId, curriculumId, suffix) {
-    const pRef = pRefFor(uid, profileId);
-    const batch = db.batch();
-    for (const collectionName of QUERIED_COLLECTIONS) {
-      batch.set(pRef.collection(collectionName).doc(`doc_${suffix}`), {
-        curriculum_id: curriculumId,
-        marker: suffix,
-      });
+    const track = await trackRef().get();
+    assert.equal(track.exists, true, 'the track doc is tombstoned, never deleted');
+    assert.ok(track.get('ended_at'));
+    assert.equal(track.get('last_change_id'), ulid(1));
+    for (const id of [live1, live2]) {
+      const d = await subs.doc(id).get();
+      assert.ok(d.get('ended_at'));
+      assert.equal(d.get('end_reason'), 'track_deleted');
     }
-    await batch.commit();
-  }
-
-  test('sweeps every listed sibling collection for the target curriculum', async () => {
-    await seedQueriedDocs(PARENT, PROFILE, CURRICULUM, 'target');
-    const pRef = pRefFor(PARENT, PROFILE);
-    await pRef.collection('profile_programs').doc(CURRICULUM)
-      .set({ curriculum_id: CURRICULUM, program_id: 1 });
-    await pRef.collection('curriculum_tracks').doc(CURRICULUM)
-      .set({ curriculum_id: CURRICULUM, state: 'active' });
-
-    const res = await call(fns.deleteCurriculumTrack, goodArgs, parentAuth);
-
-    assert.equal(res.success, true);
-    for (const collectionName of QUERIED_COLLECTIONS) {
-      assert.equal(res.deleted[collectionName], 1, `${collectionName} deleted count`);
-      const snap = await pRef.collection(collectionName).doc('doc_target').get();
-      assert.equal(snap.exists, false, `${collectionName} doc should be gone`);
-    }
-    assert.equal(res.deleted.profile_programs, 1);
-    assert.equal((await pRef.collection('profile_programs').doc(CURRICULUM).get()).exists, false);
-    assert.equal(res.deleted.curriculum_tracks, 1);
-    assert.equal((await pRef.collection('curriculum_tracks').doc(CURRICULUM).get()).exists, false);
+    assert.equal((await subs.doc(done).get()).get('end_reason'), 'deleted', 'ended sub-tracks keep their tombstone');
   });
 
-  test('documents belonging to a different curriculum are untouched', async () => {
-    await seedQueriedDocs(PARENT, PROFILE, CURRICULUM, 'target');
-    await seedQueriedDocs(PARENT, PROFILE, OTHER_CURRICULUM, 'other');
-    const pRef = pRefFor(PARENT, PROFILE);
-    await pRef.collection('profile_programs').doc(CURRICULUM).set({ curriculum_id: CURRICULUM });
-    await pRef.collection('profile_programs').doc(OTHER_CURRICULUM)
-      .set({ curriculum_id: OTHER_CURRICULUM });
-
-    const res = await call(fns.deleteCurriculumTrack, goodArgs, parentAuth);
-
-    assert.equal(res.success, true);
-    for (const collectionName of QUERIED_COLLECTIONS) {
-      // Target curriculum's doc is really gone...
-      assert.equal(
-        (await pRef.collection(collectionName).doc('doc_target').get()).exists,
-        false,
-        `${collectionName} target-curriculum doc should be deleted`,
-      );
-      // ...but the other curriculum's doc survives.
-      const snap = await pRef.collection(collectionName).doc('doc_other').get();
-      assert.equal(snap.exists, true, `${collectionName} doc for other curriculum must survive`);
-      assert.equal(snap.data().curriculum_id, OTHER_CURRICULUM);
-    }
-    assert.equal((await pRef.collection('profile_programs').doc(CURRICULUM).get()).exists, false);
-    assert.equal((await pRef.collection('profile_programs').doc(OTHER_CURRICULUM).get()).exists, true);
-  });
-
-  test('documents belonging to a different profile are untouched', async () => {
-    await seedQueriedDocs(PARENT, PROFILE, CURRICULUM, 'target');
-    await seedQueriedDocs(PARENT, OTHER_PROFILE, CURRICULUM, 'other-profile');
-
-    const res = await call(fns.deleteCurriculumTrack, goodArgs, parentAuth);
-
-    assert.equal(res.success, true);
-    const targetPRef = pRefFor(PARENT, PROFILE);
-    const otherPRef = pRefFor(PARENT, OTHER_PROFILE);
-    for (const collectionName of QUERIED_COLLECTIONS) {
-      assert.equal(
-        (await targetPRef.collection(collectionName).doc('doc_target').get()).exists,
-        false,
-        `${collectionName} doc under target profile should be deleted`,
-      );
-      const snap = await otherPRef.collection(collectionName).doc('doc_other-profile').get();
-      assert.equal(snap.exists, true, `${collectionName} doc under other profile must survive`);
-    }
-  });
-
-  test('documents belonging to a different user are untouched', async () => {
-    await seedQueriedDocs(PARENT, PROFILE, CURRICULUM, 'target');
-    await seedQueriedDocs(STRANGER, PROFILE, CURRICULUM, 'other-user');
-
-    const res = await call(fns.deleteCurriculumTrack, goodArgs, parentAuth);
-
-    assert.equal(res.success, true);
-    const targetPRef = pRefFor(PARENT, PROFILE);
-    const strangerPRef = pRefFor(STRANGER, PROFILE);
-    for (const collectionName of QUERIED_COLLECTIONS) {
-      assert.equal(
-        (await targetPRef.collection(collectionName).doc('doc_target').get()).exists,
-        false,
-        `${collectionName} doc under target user should be deleted`,
-      );
-      const snap = await strangerPRef.collection(collectionName).doc('doc_other-user').get();
-      assert.equal(snap.exists, true, `${collectionName} doc under other user must survive`);
-    }
-  });
-
-  test('append-only history is never touched, even when it matches the target curriculum', async () => {
-    const pRef = pRefFor(PARENT, PROFILE);
-    // out of scope per the task spec: completions, learning_ledger,
-    // streak_events, points_ledger — a track delete must never touch the
-    // owner's lifetime learning record.
-    const appendOnly = {
-      completions: { profile_id: PROFILE, curriculum_id: CURRICULUM, points: 10 },
-      learning_ledger: { ulid: 'ULID0001', profile_id: String(PROFILE), curriculum_id: CURRICULUM },
-      streak_events: { ulid: 'ULID0002', profile_id: String(PROFILE) },
-      points_ledger: { ulid: 'ULID0003', profile_id: String(PROFILE), delta: -50 },
+  test('no governed or history doc is hard-deleted; other governed docs are left as-is', async () => {
+    await trackRef().set({ state: 'active', curriculum_id: C });
+    const seeds = {
+      goals: [`${C}_deadline`, { goal_type: 'deadline', target_date: '2027-01-01', curriculum_id: C }],
+      stage_definitions: [`${C}_1`, { curriculum_id: C, stage_order: 1 }],
+      study_day_configs: [`${C}_5`, { curriculum_id: C, day_of_week: 5 }],
+      curriculum_scopes: [`${C}_1_x`, { curriculum_id: C }],
+      track_learning_order: [`${C}_perek_1`, { curriculum_id: C, user_sort_order: 0 }],
+      profile_programs: [C, { curriculum_id: C, program_id: null }],
+      learning_events: [ulid(7), { kind: 'learn', curriculum_id: C }],
+      points_ledger: ['pts_x', { curriculum_id: C }],
+      completions: ['c1', { curriculum_id: C }],
+      streak_events: ['s1', { curriculum_id: C }],
     };
-    for (const [collectionName, payload] of Object.entries(appendOnly)) {
-      await pRef.collection(collectionName).doc('keep').set(payload);
+    for (const [collection, [id, data]] of Object.entries(seeds)) {
+      await lp().collection(collection).doc(id).set(data);
     }
-
-    const res = await call(fns.deleteCurriculumTrack, goodArgs, parentAuth);
-
-    assert.equal(res.success, true);
-    for (const collectionName of Object.keys(appendOnly)) {
-      const snap = await pRef.collection(collectionName).doc('keep').get();
-      assert.equal(snap.exists, true, `${collectionName} must survive a track delete (append-only)`);
+    await call(fns.deleteCurriculumTrack, goodArgs, parentAuth);
+    for (const [collection, [id, data]] of Object.entries(seeds)) {
+      const snap = await lp().collection(collection).doc(id).get();
+      assert.equal(snap.exists, true, `${collection}/${id} must survive`);
+      assert.deepEqual(snap.data(), data, `${collection}/${id} must be untouched`);
     }
   });
 
-  test('idempotent — running twice is safe and does not error or double-report', async () => {
-    await seedQueriedDocs(PARENT, PROFILE, CURRICULUM, 'target');
-    const pRef = pRefFor(PARENT, PROFILE);
-    await pRef.collection('profile_programs').doc(CURRICULUM).set({ curriculum_id: CURRICULUM });
-    await pRef.collection('curriculum_tracks').doc(CURRICULUM).set({ curriculum_id: CURRICULUM });
-
-    const first = await call(fns.deleteCurriculumTrack, goodArgs, parentAuth);
-    assert.equal(first.success, true);
-    assert.equal(first.deleted.goals, 1);
-    assert.equal(first.deleted.profile_programs, 1);
-    assert.equal(first.deleted.curriculum_tracks, 1);
-
-    const second = await call(fns.deleteCurriculumTrack, goodArgs, parentAuth);
-    assert.equal(second.success, true, 'rerun on already-deleted data must not error');
-    for (const collectionName of QUERIED_COLLECTIONS) {
-      assert.equal(second.deleted[collectionName], 0, `${collectionName} should already be empty on rerun`);
-    }
-    assert.equal(second.deleted.profile_programs, 0);
-    assert.equal(second.deleted.curriculum_tracks, 0);
+  test('other curricula, profiles and users are untouched', async () => {
+    await trackRef().set({ state: 'active', curriculum_id: C });
+    await lp().collection('curriculum_tracks').doc('exodus').set({ state: 'active', curriculum_id: 'exodus' });
+    await lp(PARENT, '01JOTHERPR0F11E00000000000').collection('curriculum_tracks').doc(C)
+      .set({ state: 'active', curriculum_id: C });
+    await lp(STRANGER).collection('curriculum_tracks').doc(C).set({ state: 'active', curriculum_id: C });
+    await call(fns.deleteCurriculumTrack, goodArgs, parentAuth);
+    assert.equal((await lp().collection('curriculum_tracks').doc('exodus').get()).get('ended_at'), undefined);
+    assert.equal((await trackRef(PARENT, '01JOTHERPR0F11E00000000000').get()).get('ended_at'), undefined);
+    assert.equal((await trackRef(STRANGER).get()).get('ended_at'), undefined);
   });
 
-  test('sweeps more than 500 documents in one collection (bulkWriter, not batch-capped)', async () => {
-    const pRef = pRefFor(PARENT, PROFILE);
-    const N = 550;
-    // Seed via chunked WriteBatches (500-op cap) — this is test setup, not the
-    // code under test, which must itself handle N > 500 via bulkWriter.
-    const chunks = [];
-    let batch = db.batch();
-    let opsInBatch = 0;
-    for (let i = 0; i < N; i++) {
-      batch.set(pRef.collection('goals').doc(`g${i}`), { curriculum_id: CURRICULUM, i });
-      opsInBatch++;
-      if (opsInBatch === 450) {
-        chunks.push(batch.commit());
-        batch = db.batch();
-        opsInBatch = 0;
-      }
-    }
-    if (opsInBatch > 0) chunks.push(batch.commit());
-    await Promise.all(chunks);
+  test('owner-only: a caller can only remove a track on their own profile path', async () => {
+    await trackRef().set({ state: 'active', curriculum_id: C });
+    // The stranger's own path has no such profile → not-found; PARENT's track is untouched.
+    await expectHttpsError(
+      call(fns.deleteCurriculumTrack, goodArgs, { uid: STRANGER, token: {} }),
+      'not-found',
+    );
+    assert.equal((await trackRef().get()).get('ended_at'), undefined);
+  });
 
-    const res = await call(fns.deleteCurriculumTrack, goodArgs, parentAuth);
+  test('idempotent: an absent or already-removed track is a no-op; a same-ULID retry replays', async () => {
+    const absent = await call(fns.deleteCurriculumTrack, goodArgs, parentAuth);
+    assert.equal(absent.noop, true);
+    await trackRef().set({ state: 'active', curriculum_id: C });
+    const first = await call(fns.deleteCurriculumTrack, { ...goodArgs, actionId: ulid(1) }, parentAuth);
+    const replay = await call(fns.deleteCurriculumTrack, { ...goodArgs, actionId: ulid(1) }, parentAuth);
+    assert.equal(replay.replayed, true);
+    assert.deepEqual(replay.change_ids, first.change_ids);
+    const again = await call(fns.deleteCurriculumTrack, { ...goodArgs, actionId: ulid(2) }, parentAuth);
+    assert.equal(again.noop, true, 'an already-ended track is not tombstoned twice');
+    assert.equal((await changeLog()).length, 1);
+  });
 
-    assert.equal(res.success, true);
-    assert.equal(res.deleted.goals, N);
-    const remaining = await pRef.collection('goals').where('curriculum_id', '==', CURRICULUM).get();
-    assert.equal(remaining.size, 0, 'all 550 goals docs should be deleted');
+  test('a ULID already used for a different track → already-exists', async () => {
+    await trackRef().set({ state: 'active', curriculum_id: C });
+    await lp().collection('curriculum_tracks').doc('exodus').set({ state: 'active', curriculum_id: 'exodus' });
+    await call(fns.deleteCurriculumTrack, { ...goodArgs, actionId: ulid(1) }, parentAuth);
+    await expectHttpsError(
+      call(fns.deleteCurriculumTrack, { profileId: PROFILE, curriculumId: 'exodus', actionId: ulid(1) }, parentAuth),
+      'already-exists',
+    );
+    assert.equal((await lp().collection('curriculum_tracks').doc('exodus').get()).get('ended_at'), undefined);
+  });
+
+  test('a child owner may assert role child', async () => {
+    await trackRef().set({ state: 'active', curriculum_id: C });
+    await call(fns.deleteCurriculumTrack, { ...goodArgs, actorRole: 'child' }, parentAuth);
+    assert.equal((await changeLog())[0].actor.role, 'child');
   });
 });
 

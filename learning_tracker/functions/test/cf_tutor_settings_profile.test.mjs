@@ -1,5 +1,7 @@
 // CF tests — tutor settings/profile mutations:
-//   tutorUpdateGamificationSettings, tutorEditProfile, tutorBulkPriorCompletions
+//   tutorUpdateGamificationSettings, tutorEditProfile (Story 1.10 / DNI-472
+//   AC-4: restricted display_name/avatar/mode field merge),
+//   tutorBulkPriorCompletions
 // See _cf_helpers.mjs for the harness.
 
 import assert from 'node:assert/strict';
@@ -399,6 +401,62 @@ describe('tutorEditProfile', () => {
       'the concurrent writer\'s field must survive tutorEditProfile\'s read-then-write',
     );
     assert.equal(after.display_name, 'New Name', 'tutorEditProfile\'s own edit must also land');
+  });
+
+  // ── Story 1.10 / DNI-472 AC-4: restricted three-field merge ────────────────
+
+  test('AC-4: writes only display_name, avatar and mode as a field-level merge', async () => {
+    await seedActiveGrant({});
+    const ref = profileRef();
+    await ref.set({
+      display_name: 'Old Name', avatar: 'av1', mode: 'child',
+      time_zone: 'Asia/Jerusalem', latitude: 31.7, last_change_id: '01JTEST0000000000000000000',
+      unrelated: 'keep',
+    });
+    const res = await call(fns.tutorEditProfile, {
+      grantId: GRANT, ownerUid: PARENT, profileId: PROFILE,
+      displayName: '  Yosef  ', avatar: 'av2', mode: 'adult',
+    });
+    assert.equal(res.success, true);
+    const doc = (await ref.get()).data();
+    assert.deepEqual(doc, {
+      display_name: 'Yosef', avatar: 'av2', mode: 'adult',
+      time_zone: 'Asia/Jerusalem', latitude: 31.7, last_change_id: '01JTEST0000000000000000000',
+      unrelated: 'keep',
+    }, 'no other field (not even updated_at) is written or removed');
+    const log = await ref.collection('change_log').get();
+    assert.equal(log.size, 0, 'profile display fields are not a governed entity');
+  });
+
+  for (const extra of [
+    { display_name: 'Sneaky' },
+    { time_zone: 'America/New_York' },
+    { in_israel: false },
+    { last_change_id: '01JTEST0000000000000000009' },
+    { updated_at: '2026-01-01' },
+  ]) {
+    test(`AC-4: extra/governed request field ${Object.keys(extra)[0]} → invalid-argument, nothing written`, async () => {
+      await seedActiveGrant({});
+      await profileRef().set({ display_name: 'Old Name', time_zone: 'Asia/Jerusalem' });
+      await expectHttpsError(
+        call(fns.tutorEditProfile, {
+          grantId: GRANT, ownerUid: PARENT, profileId: PROFILE, displayName: 'New', ...extra,
+        }),
+        'invalid-argument',
+      );
+      assert.deepEqual((await profileRef().get()).data(), {
+        display_name: 'Old Name', time_zone: 'Asia/Jerusalem',
+      });
+    });
+  }
+
+  test('AC-4: a missing profile → not-found (the merge never conjures a partial profile)', async () => {
+    await seedActiveGrant({});
+    await expectHttpsError(
+      call(fns.tutorEditProfile, { grantId: GRANT, ownerUid: PARENT, profileId: PROFILE, mode: 'adult' }),
+      'not-found',
+    );
+    assert.equal((await profileRef().get()).exists, false);
   });
 });
 
