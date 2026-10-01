@@ -205,6 +205,15 @@ Future<(AccountFirebaseHandles, String, String)?> _watchActiveAccountAndProfile(
   return (handles, handles.uid, profileId);
 }
 
+/// Public, read-only view of [_watchActiveAccountAndProfile] for provider
+/// files that live beside this one (Story 1.2 / DNI-464:
+/// `learner_state_repository_providers.dart`), so every profile-scoped
+/// provider keeps funnelling through the ONE seam that the named-app Auth
+/// wiring (bead gd7) owns. Returns the effective `(handles, ownerUid,
+/// profileId)` tuple, or null while no account/profile is active.
+Future<(AccountFirebaseHandles, String, String)?>
+resolveActiveAccountAndProfile(Ref ref) => _watchActiveAccountAndProfile(ref);
+
 final _profileUlidPattern = RegExp(
   r'^[0-9A-HJKMNP-TV-Z]{26}$',
   caseSensitive: false,
