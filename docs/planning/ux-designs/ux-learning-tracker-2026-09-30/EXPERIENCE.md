@@ -1,6 +1,6 @@
 ---
 name: Learning Tracker — Sub-tracks
-status: draft
+status: final
 updated: 2026-10-01
 sources:
   - docs/planning/prds/prd-sub-tracks-2026-09-30/prd.md  # wiki "PRD: Sub-tracks" (oWEwMw7iGT) — FR / UJ IDs

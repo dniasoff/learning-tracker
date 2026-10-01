@@ -1,0 +1,126 @@
+# manual-outline.yaml — Learning Tracker living manual (project-owned, generated)
+# Derived 2026-10-01 by manual-scaffold from docs/ planning artifacts
+# (project-overview, prd, product-rules, architecture, sub-tracks PRD/spec/UX,
+# research, brainstorm) and confirmed by Daniel ("yes").
+# Schema: houston-doc-librarian data/manual-outline.schema.yaml.
+# Re-derive + re-confirm before changing; titles are the idempotency match key
+# (page tree apply matches by title under parent) — keep them stable.
+#
+# Existing pages NOT listed here (moved, not recreated, to avoid P1 duplicates):
+#   - "PRD: Sub-tracks" (oWEwMw7iGT) and "PRD: Sub-tracks — Addendum" (yBGcGFULnc)
+#     plus pre-existing "Spec: sub-tracks" (3FO5jrPw74, children kept), "Architecture: Sub-tracks and
+#     the learning-event stack" (8xemYfOaH2), "Architecture: Learning Tracker" (tu9NY8aMYS) — adopted 2026-10-01.
+#     → moved under Features › Sub-tracks.
+
+manual:
+  root:
+    title: "The Learning Tracker Manual"
+    doc_type: project-overview
+    icon: "📖"
+    scaffold: manual-root
+    status: draft
+    cover: true
+
+  sections:
+    - key: product
+      title: "Product"
+      icon: "🎯"
+      importance: high
+      scaffold: section-landing
+      status: draft
+      children:
+        - { title: "Product Rules", doc_type: technical-spec, scaffold: reference, status: draft }
+        - { title: "Product Requirements", doc_type: prd, scaffold: concept, status: draft }
+        - { title: "Market & Competitor Research", doc_type: research, scaffold: concept, status: draft }
+        - { title: "Brainstorm: Multi-source Mishnayos Tracking", doc_type: brainstorm, scaffold: concept, status: draft }
+
+    - key: features
+      title: "Features"
+      icon: "🧩"
+      importance: high
+      scaffold: section-landing
+      status: draft
+      children:
+        - title: "Sub-tracks"
+          doc_type: feature-inventory
+          scaffold: index
+          status: draft
+          children:
+            - { title: "Spec: sub-tracks", doc_type: technical-spec, scaffold: concept, status: draft }
+            - { title: "UX Spec — Design: Sub-tracks", doc_type: ux-spec, scaffold: reference, status: draft }
+            - { title: "UX Spec — Experience: Sub-tracks", doc_type: ux-spec, scaffold: reference, status: draft }
+            - { title: "Architecture: Sub-tracks and the learning-event stack", doc_type: technical-spec, scaffold: concept, status: draft }
+        - title: "Tracks & Scheduling"
+          doc_type: feature-inventory
+          scaffold: index
+          status: draft
+          children:
+            - { title: "Add-Track Flow", doc_type: ux-spec, scaffold: how-to, status: draft }
+            - { title: "Dashboard Track Cards", doc_type: ux-spec, scaffold: concept, status: draft }
+            - { title: "Scheduler & Overdue", doc_type: technical-spec, scaffold: concept, status: draft }
+        - title: "Shabbos & Sacred Time"
+          doc_type: feature-inventory
+          scaffold: index
+          status: draft
+          children:
+            - { title: "Calendar Cycles", doc_type: technical-spec, scaffold: concept, status: draft }
+        - { title: "Parent & Tutor Access", doc_type: feature-inventory, scaffold: index, status: draft }
+        - { title: "Gamification & Rewards", doc_type: feature-inventory, scaffold: index, status: draft }
+        - title: "Accounts & Upgrade Flow"
+          doc_type: feature-inventory
+          scaffold: index
+          status: draft
+          children:
+            - { title: "Upgrade Flow", doc_type: ux-spec, scaffold: how-to, status: draft }
+
+    - key: architecture
+      title: "Architecture"
+      icon: "🏛"
+      importance: high
+      scaffold: section-landing
+      status: draft
+      children:
+        - { title: "Architecture: Learning Tracker", doc_type: architecture, scaffold: concept, status: draft }
+        - { title: "Architecture Decisions", doc_type: adr, scaffold: index, status: draft, dated: true }
+        - { title: "Data Model & Firestore Layout", doc_type: contract, scaffold: reference, status: draft }
+        - { title: "API Contracts", doc_type: api-reference, scaffold: reference, status: draft }
+        - { title: "Sync & Conflict Resolution", doc_type: technical-spec, scaffold: concept, status: draft }
+        - { title: "Content Database", doc_type: technical-spec, scaffold: concept, status: draft }
+        - { title: "Technical Research", doc_type: research, scaffold: concept, status: draft }
+
+    - key: engineering
+      title: "Engineering"
+      icon: "🛠"
+      importance: medium
+      scaffold: section-landing
+      status: draft
+      children:
+        - { title: "Developer Handbook", doc_type: user-guide, scaffold: how-to, status: draft }
+        - { title: "Coding Standards", doc_type: technical-spec, scaffold: reference, status: draft }
+        - { title: "Source Tree Guide", doc_type: technical-spec, scaffold: reference, status: draft }
+        - { title: "Component Inventory", doc_type: feature-inventory, scaffold: reference, status: draft }
+        - { title: "Delete Policy", doc_type: technical-spec, scaffold: reference, status: draft }
+        - { title: "App Check Enforcement", doc_type: technical-spec, scaffold: reference, status: draft }
+
+    - key: delivery-quality
+      title: "Delivery & Quality"
+      icon: "🚀"
+      importance: medium
+      scaffold: section-landing
+      status: draft
+      children:
+        - { title: "Deployment", doc_type: runbook, scaffold: how-to, status: draft }
+        - { title: "Content Seed Build", doc_type: runbook, scaffold: how-to, status: draft }
+        - { title: "Testing Guide", doc_type: runbook, scaffold: how-to, status: draft }
+        - { title: "Test Coverage Matrix", doc_type: runbook, scaffold: reference, status: draft }
+        - { title: "Release Notes", doc_type: release-notes, scaffold: index, status: draft, dated: true }
+
+    - key: reference
+      title: "Reference"
+      icon: "📚"
+      importance: low
+      scaffold: section-landing
+      status: draft
+      children:
+        - { title: "Hebrew Terms Glossary", doc_type: glossary, scaffold: reference, status: draft }
+        - { title: "Privacy Policy", doc_type: user-guide, scaffold: reference, status: draft }

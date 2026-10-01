@@ -3,3 +3,9 @@
 
 [modules.doc]
 docmost_space = "LT"
+
+[houston.doc]
+docmost_space = "LT"
+space = "LT"
+docmost_manual_outline = "_bmad/custom/manual-outline.yaml"
+docmost_manual_root_slug = "3XO54zXxxS"

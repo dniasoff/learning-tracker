@@ -1,7 +1,7 @@
 ---
 name: Learning Tracker — Sub-tracks
 description: Visual contract for the Sub-tracks feature inside the existing Learning Tracker Flutter app. Inherits Material 3 + AppTheme/AppPalette; specifies only what Sub-tracks uses or adds.
-status: draft
+status: final
 updated: 2026-10-01
 sources:
   - docs/planning/prds/prd-sub-tracks-2026-09-30/prd.md  # wiki "PRD: Sub-tracks" (oWEwMw7iGT)
