@@ -12,6 +12,8 @@ inputDocuments:
   - docs/planning/ux-designs/ux-learning-tracker-2026-09-30/EXPERIENCE.md
 ---
 
+> **Planning snapshot — 2026-10-01.** This is the record of how the sub-tracks epics and stories were planned. **Linear is the source of truth for story content from here on** (team DNI, project `learning-tracker`, milestones Epic 1–5, issues DNI-463–DNI-519; each issue carries the full dev context). Do not edit stories here; change them in Linear, or through `bmad-correct-course` for scope changes.
+
 # Learning Tracker — Sub-tracks and the learning-event stack - Epic Breakdown
 
 ## Overview
