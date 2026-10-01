@@ -75,6 +75,10 @@ void main() {
         'profile_programs',
         'curriculum_scopes',
         'study_day_configs',
+        // DNI-471 (sub-tracks AD-46).
+        'change_log',
+        'learning_events',
+        'sub_tracks',
       ];
 
       String rulesSnippet(List<String> collectionNames) {

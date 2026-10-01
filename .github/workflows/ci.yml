@@ -462,3 +462,105 @@ jobs:
 
       - name: Run ARB parity check (make arb-parity)
         run: make arb-parity
+
+  # ── 10. backend-deploy-gate (DNI-471 / AD-54) ──────────────────────────────
+  # AD-54: `firebase deploy --only firestore:rules,firestore:indexes,functions`
+  # is a gated step that must pass before the app release that depends on it.
+  # It `needs` the emulator rules suite (+ TQ-9 coverage) and the Cloud
+  # Functions suite, and it is BLOCKING: a ci.yml run is green only when it
+  # passes, and deploy-play-store.yml's gate-ci-status requires a green
+  # ci.yml run for the released SHA — so no app release can skip it.
+  #
+  # AD-49: nothing deploys to production before the cutover release. This job
+  # is DRY-RUN ONLY: no secret, no credential, no `firebase deploy`. It builds
+  # the functions artifact, validates the rules/indexes/functions deploy
+  # inputs and its own wiring (tool/check_backend_deploy_gate.mjs), and
+  # prints the command it would run. DNI-490 owns the production deploy
+  # (rulings B5); the checker refuses `--mode deploy` until then.
+  backend-deploy-gate:
+    name: backend-deploy-gate
+    needs: [firestore-rules, functions]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    env:
+      BACKEND_DEPLOY_MODE: dry-run
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: learning_tracker/functions/package-lock.json
+
+      - name: Run gate checker tests (Rule 0 — the checker's own correctness gate)
+        run: node --test tool/check_backend_deploy_gate.test.mjs
+
+      - name: Install functions dependencies
+        working-directory: learning_tracker/functions
+        run: npm ci
+
+      - name: Build the functions deploy artifact (tsc)
+        working-directory: learning_tracker/functions
+        run: npm run build
+
+      - name: Gated backend deploy (dry-run only until the AD-49 cutover)
+        run: node tool/check_backend_deploy_gate.mjs --mode "$BACKEND_DEPLOY_MODE"
+
+  # ── 11. offline-batch-instrumented (DNI-471 AC-5 / AD-29; rulings B12) ─────
+  # Instrumented evidence that an owner batch (learning events + pts_ entries
+  # + a governed doc + its change_log entry) queued OFFLINE lands atomically
+  # on reconnect, against the real cloud_firestore SDK on an Android emulator
+  # and the Firestore/Auth emulators running the repo's firestore.rules.
+  # NON-BLOCKING (continue-on-error) per rulings B12 so a flaky emulator never
+  # blocks merges; the authoritative device run is part of release
+  # verification.
+  offline-batch-instrumented:
+    name: offline-batch-instrumented (non-blocking)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    continue-on-error: true
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Flutter bootstrap (Java + Gradle + codegen + secrets)
+        uses: ./.github/actions/flutter-bootstrap
+        with:
+          setup-java: 'true'
+          cache-gradle: 'true'
+          run-codegen: 'true'
+          run-l10n: 'true'
+          decode-secrets: 'true'
+          google-services-json-base64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
+          firebase-options-dart: ${{ secrets.FIREBASE_OPTIONS_DART }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools
+
+      - name: Enable KVM for the Android emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Run the offline-batch integration test on an Android emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          disable-animations: true
+          working-directory: learning_tracker
+          script: firebase emulators:exec --only firestore,auth --project demo-offline-batch "flutter test integration_test/learning_event_offline_batch_test.dart -d emulator-5554"
