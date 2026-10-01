@@ -382,17 +382,47 @@ class StoryTwoSixDependencyDirectionFixture {
       expect(out, contains('--- 8 dependency-direction violation(s)'));
     });
 
-    test('edge: a commented-out forbidden import is not a directive and '
-        'passes', () async {
+    test('edge: commented-out forbidden imports (line, block, nested '
+        'block) are not directives and pass; a "/*" inside a string does not '
+        'swallow the allowed import after it', () async {
       plantDomainFixture(
         'commented.dart',
-        "// import 'package:flutter/foundation.dart';",
+        "// import 'package:flutter/foundation.dart';\n"
+            "/*\nimport 'package:cloud_firestore/cloud_firestore.dart';\n"
+            "/* nested */ import 'package:riverpod/riverpod.dart';\n*/\n"
+            "import 'dart:async'; // see lib/domain/**/*.dart\n"
+            "const glob = 'lib/domain/**';",
       );
       final result = await runCheck();
       expect(
         result.exitCode,
         0,
         reason: 'stdout=${result.stdout}\nstderr=${result.stderr}',
+      );
+    });
+
+    test('edge: an inline block comment before a forbidden import, or a '
+        '"/*" inside an earlier string, cannot hide it', () async {
+      plantDomainFixture(
+        'inline_comment.dart',
+        "/* pure? */ import 'package:flutter_riverpod/flutter_riverpod.dart';",
+      );
+      plantDomainFixture(
+        'string_then_import.dart',
+        "import 'dart:core' show String;\n"
+            "@Deprecated('unterminated /* inside a string')\n"
+            "import 'package:firebase_core/firebase_core.dart';",
+      );
+      final result = await runReport();
+      final out = result.stdout.toString();
+      expect(
+        out,
+        allOf(
+          contains('inline_comment.dart'),
+          contains('[AD-35 domain purity: flutter_riverpod]'),
+          contains('string_then_import.dart'),
+          contains('[AD-35 domain purity: firebase_*]'),
+        ),
       );
     });
   });

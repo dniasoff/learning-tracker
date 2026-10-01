@@ -155,7 +155,9 @@ dev_dependencies:
   shared_preferences_platform_interface: ^2.4.2
   # DNI-377 (27.1): Fake Firestore for unit/integration tests that exercise
   # the sync layer without spinning up the emulator.
-  fake_cloud_firestore: ^4.1.0
+  # DNI-463: >=4.2.0 matches cloud_firestore 6.7.1+'s generic
+  # WriteBatch.update<T> signature (4.1.x no longer compiles on 6.10).
+  fake_cloud_firestore: ^4.2.0
   # Was previously only a transitive dependency (pulled in by `test`);
   # `resilient_doc_stream_test.dart` imports it directly to deterministically
   # test Timer-based backoff/cancellation without racing a real sleep

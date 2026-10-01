@@ -75,7 +75,11 @@ const _repositoryDirSegment = '/data/repositories/';
 /// `package:flutter/` keeps its trailing slash so it cannot swallow
 /// `flutter_riverpod` (its own family) or unrelated `flutter_*` packages;
 /// `package:riverpod` and `package:firebase_` deliberately have none so the
-/// whole `riverpod*` / `firebase_*` package families match.
+/// whole `riverpod*` / `firebase_*` package families match. The
+/// `cloud_firestore` and `flutter_riverpod` prefixes are likewise
+/// unbounded on purpose: `cloud_firestore_platform_interface`,
+/// `cloud_firestore_web` and any `flutter_riverpod_*` add-on are the same
+/// Firestore / Riverpod dependency and must not slip into the domain.
 const domainForbiddenFamilies = <(String, String)>[
   ('cloud_firestore', 'package:cloud_firestore'),
   ('firebase_*', 'package:firebase_'),
@@ -98,8 +102,9 @@ String? domainForbiddenFamily(String uri) {
 /// An `import`/`export` directive, from the keyword up to its terminating
 /// `;` — spanning lines, so `import\n  'package:flutter/...';` and
 /// conditional imports (`import 'a.dart' if (dart.library.io) 'b.dart';`)
-/// are captured whole. Anchored at line start, so commented-out directives
-/// (`// import ...`) do not match.
+/// are captured whole. Matched against [_stripComments] output, so
+/// commented-out directives (`// import ...`, `/* import ... */`) never
+/// match and an inline comment before a directive cannot hide it.
 final _directive = RegExp(
   r'''^[ \t]*(?:import|export)\b([^;]*);''',
   multiLine: true,
@@ -170,12 +175,76 @@ String _canonicalUri(String filePath, String uri) {
   return uri;
 }
 
+/// Returns [source] with every comment blanked out (newlines kept, so line
+/// numbers are unchanged) while string literals — including triple-quoted
+/// and raw strings — are copied through intact. A small lexer rather than a
+/// regex: it drops `// import ...` lines and (nested) `/* ... */` blocks,
+/// sees through an inline comment placed before a directive, and is not
+/// fooled by `//` or `/*` appearing inside a string.
+String _stripComments(String source) {
+  final out = StringBuffer();
+  final n = source.length;
+  var i = 0;
+
+  void blank(int from, int to) {
+    for (var k = from; k < to; k++) {
+      out.write(source[k] == '\n' ? '\n' : ' ');
+    }
+  }
+
+  while (i < n) {
+    final c = source[i];
+    if (source.startsWith('//', i)) {
+      final eol = source.indexOf('\n', i);
+      final stop = eol == -1 ? n : eol;
+      blank(i, stop);
+      i = stop;
+    } else if (source.startsWith('/*', i)) {
+      var depth = 1;
+      var j = i + 2;
+      while (j < n && depth > 0) {
+        if (source.startsWith('/*', j)) {
+          depth++;
+          j += 2;
+        } else if (source.startsWith('*/', j)) {
+          depth--;
+          j += 2;
+        } else {
+          j++;
+        }
+      }
+      blank(i, j);
+      i = j;
+    } else if (c == "'" || c == '"') {
+      final raw = i > 0 && source[i - 1] == 'r';
+      final quote = source.startsWith(c * 3, i) ? c * 3 : c;
+      var j = i + quote.length;
+      while (j < n && !source.startsWith(quote, j)) {
+        if (!raw && source[j] == r'\' && j + 1 < n) {
+          j += 2;
+          continue;
+        }
+        if (quote.length == 1 && source[j] == '\n') break;
+        j++;
+      }
+      if (j < n && source.startsWith(quote, j)) j += quote.length;
+      out.write(source.substring(i, j));
+      i = j;
+    } else {
+      out.write(c);
+      i++;
+    }
+  }
+  return out.toString();
+}
+
 /// Yields `(1-based line, directive text, canonical URI)` for every URI in
 /// every import/export directive of [source].
 Iterable<(int, String, String)> _directiveUris(
   String filePath,
-  String source,
+  String rawSource,
 ) sync* {
+  final source = _stripComments(rawSource);
   for (final d in _directive.allMatches(source)) {
     final line = '\n'.allMatches(source.substring(0, d.start)).length + 1;
     final text = d.group(0)!.trim().replaceAll(RegExp(r'\s+'), ' ');
