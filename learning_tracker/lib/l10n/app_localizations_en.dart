@@ -652,10 +652,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get subTrackDetailEdit => 'Edit';
 
   @override
-  String get subTrackDetailSelectPrompt =>
-      'Select a sub-track to see its details';
-
-  @override
   String get subTrackDetailMoveUp => 'Move up';
 
   @override

@@ -7,6 +7,7 @@ import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/features/settings/domain/exceptions/last_active_curriculum_exception.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/sub_track_hub_section.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/widgets/sub_track_list_detail_layout.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/after_track_change_invalidation.dart';
@@ -61,12 +62,16 @@ class TrackManagementBody extends ConsumerStatefulWidget {
 class _TrackManagementBodyState extends ConsumerState<TrackManagementBody> {
   late bool _addingTrack = widget.startAdding;
 
+  /// Story 2.6 (DNI-497, AC-8): from 840dp a selected sub-track's detail
+  /// sits beside the hub, which keeps its selection.
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) =>
+      SubTrackListDetailLayout(list: _buildHub(context));
+
+  Widget _buildHub(BuildContext context) {
     // DNI-486: adding, archiving and deleting a track have no governed tutor
     // path (they would be client writes into the talmid's tree), so a tutor
-    // gets none of them here — not even through `startAdding`
-    // (learning-tracker-fyh.212 / fyh.227).
+    // gets none of them here — not even through `startAdding`.
     final tutored = ref.watch(activeTutoredProfileSelectionProvider) != null;
     if (_addingTrack && !tutored) {
       return Scaffold(
