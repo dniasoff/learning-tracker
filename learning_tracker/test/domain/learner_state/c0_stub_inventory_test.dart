@@ -21,7 +21,6 @@ const _inventory = <(String, String)>[
   ('DNI-467', 'holdsGround'),
   ('DNI-467', 'inForecast'),
   ('DNI-467', 'onHome'),
-  ('DNI-467', 'orderedLeaves'),
   // DNI-468 (1.6)
   ('DNI-468', 'newlyCrossedAchievements'),
   ('DNI-468', 'pointsTotals'),

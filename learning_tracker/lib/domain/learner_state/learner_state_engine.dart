@@ -222,17 +222,10 @@ final class LearnerStateEngine {
     List<LearningEvent> learns,
     int? firstStage,
   ) {
-    final liveOrder = [
-      for (final doc in intent.order)
-        if (doc.endedAt == null) doc,
-    ];
-    // With no live order doc, `orderedLeaves` is the ContentIndex order by
-    // definition (AD-33), so the corpus order is used directly.
+    // `O` (AD-33): the only order function, restricted to the learner's
+    // corpus. It ignores ended order docs itself.
     final order = [
-      for (final leaf
-          in liveOrder.isEmpty
-              ? corpus.leaves
-              : orderedLeaves(corpus, liveOrder))
+      for (final leaf in orderedLeaves(corpus, intent.order))
         if (learnt.inScope(leaf)) leaf,
     ];
     final program = intent.program;
