@@ -188,6 +188,9 @@ final class SubTrackState {
     this.capacity,
     this.expectedNewGround = 0,
     this.shortfall = 0,
+    this.shortfallLeaves = const [],
+    this.windowEnd,
+    this.lastShortfallNode,
   });
 
   /// The sub-track ULID.
@@ -239,6 +242,20 @@ final class SubTrackState {
   /// [capacity] is null.
   final int shortfall;
 
+  /// The [shortfall] leaves, in [remainingPath] order (DNI-494, FR-21):
+  /// exactly the leaves this sub-track adds to the FR-19 numerator, so
+  /// `shortfallLeaves.length == shortfall`. Empty when not computed.
+  final List<LeafRef> shortfallLeaves;
+
+  /// The sub-track's `window_end` (AD-41 civil date, inclusive); null for
+  /// an open ongoing window. FR-21 copy names it.
+  final CivilDate? windowEnd;
+
+  /// The last entry of the sub-track's `ground` (list order, as entered)
+  /// that contains one of [shortfallLeaves]; null with no shortfall. FR-21
+  /// copy names it ("…won't finish <node> by <windowEnd>").
+  final NodeEntry? lastShortfallNode;
+
   @override
   bool operator ==(Object other) =>
       other is SubTrackState &&
@@ -252,7 +269,10 @@ final class SubTrackState {
       _sameLeaves(other.remainingPath, remainingPath) &&
       other.capacity == capacity &&
       other.expectedNewGround == expectedNewGround &&
-      other.shortfall == shortfall;
+      other.shortfall == shortfall &&
+      _sameLeaves(other.shortfallLeaves, shortfallLeaves) &&
+      other.windowEnd == windowEnd &&
+      other.lastShortfallNode == lastShortfallNode;
 
   @override
   int get hashCode => Object.hash(
@@ -267,6 +287,9 @@ final class SubTrackState {
     capacity,
     expectedNewGround,
     shortfall,
+    Object.hashAll(shortfallLeaves),
+    windowEnd,
+    lastShortfallNode,
   );
 
   @override
