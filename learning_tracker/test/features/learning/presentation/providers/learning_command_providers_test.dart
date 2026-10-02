@@ -205,7 +205,8 @@ void main() {
       learningEventRepositoryProvider.overrideWith(
         (ref) async => InMemoryLearningEventRepository(),
       ),
-      subTrackRepositoryProvider.overrideWith((ref) async => subTracks),
+      subTrackRepo ??
+          subTrackRepositoryProvider.overrideWith((ref) async => subTracks),
       governedIntentRepositoryProvider.overrideWith((ref) async => intent),
       activeProfileProvider.overrideWith(
         (ref) async => _profile(ProfileMode.adult),
@@ -676,6 +677,49 @@ void main() {
       expect(entry.actor.uid, 'auth-uid');
       expect(entry.actor.role, ActorRole.parent);
     });
+
+    for (final (label, unavailable) in <(String, Override)>[
+      (
+        'not ready',
+        subTrackRepositoryProvider.overrideWith((ref) async => null),
+      ),
+      (
+        'failed',
+        subTrackRepositoryProvider.overrideWith(
+          (ref) async => throw StateError('sub-track repository down'),
+        ),
+      ),
+    ]) {
+      test('a sub-track repository that is $label leaves ordinary captures '
+          'working; only the sub-track commands answer onlineRequired '
+          '(DNI-497)', () async {
+        final container = ProviderContainer.test(
+          overrides: ready(subTrackRepo: unavailable),
+        );
+        final commands = (await settledAsync(
+          container,
+          learningCommandsProvider,
+        )).value;
+        expect(commands, isA<DefaultLearningCommands>());
+        expect(
+          await commands!.capture(
+            curriculumId: engineCurriculum,
+            refs: const ['Mishnah Berakhot 1:1'],
+            source: LearningEvent.sourceMain,
+            dateState: DateState.dated,
+          ),
+          isA<CaptureSuccess>(),
+        );
+        expect(port.commits, hasLength(1));
+        expect(
+          await commands.editSubTrack(
+            ulidD,
+            const SubTrackEdit(ground: [peah, berakhot1]),
+          ),
+          const CaptureResult.onlineRequired(),
+        );
+      });
+    }
   });
 }
 
