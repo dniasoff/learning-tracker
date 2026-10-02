@@ -162,8 +162,8 @@ void main() {
   });
 
   group('watchLearnerSettingsHistory', () {
-    test('emits only once both inputs delivered, ignores a loading history, '
-        'skips rejected rows and de-duplicates', () async {
+    test('emits only once both inputs delivered, ignores a loading history '
+        'and de-duplicates', () async {
       final settings = StreamController<LearnerSettings>();
       final history = StreamController<CompleteRead<ChangeLogEntry>>();
       addTearDown(settings.close);
@@ -180,12 +180,7 @@ void main() {
       await pumpEventQueue();
       expect(seen, isEmpty, reason: 'never a partial history');
 
-      history.add(
-        CompleteReadReady(
-          [seed, move],
-          rejected: [RejectedRow(ulidC, StateError('bad'))],
-        ),
-      );
+      history.add(CompleteReadReady([seed, move]));
       await pumpEventQueue();
       expect(seen, hasLength(1));
 
@@ -196,6 +191,51 @@ void main() {
       history.add(CompleteReadReady(const []));
       await pumpEventQueue();
       expect(seen.last, LearnerSettingsHistory.constant(_jerusalem));
+    });
+
+    test('a history with an undecodable row fails closed: an error, no '
+        'reconstructed settings, until a clean history arrives', () async {
+      final settings = StreamController<LearnerSettings>();
+      final history = StreamController<CompleteRead<ChangeLogEntry>>();
+      addTearDown(settings.close);
+      addTearDown(history.close);
+      final events = <Object>[];
+      final sub = watchLearnerSettingsHistory(
+        settings.stream,
+        history.stream,
+      ).listen(events.add, onError: events.add);
+      addTearDown(sub.cancel);
+
+      settings.add(_jerusalem);
+      history.add(
+        CompleteReadReady(
+          [seed, move],
+          rejected: [RejectedRow(ulidC, StateError('bad'))],
+        ),
+      );
+      await pumpEventQueue();
+      expect(events, [
+        isA<UnreadableSettingsHistoryException>().having(
+          (e) => e.rows.map((r) => r.docId),
+          'rows',
+          [ulidC],
+        ),
+      ]);
+
+      settings.add(
+        const LearnerSettings(
+          profileId: profileUlid,
+          timeZone: 'Asia/Jerusalem',
+          inIsrael: false,
+          lastChangeId: ulidC,
+        ),
+      );
+      await pumpEventQueue();
+      expect(events, hasLength(1), reason: 'nothing published meanwhile');
+
+      history.add(CompleteReadReady([seed, move]));
+      await pumpEventQueue();
+      expect(events.last, isA<LearnerSettingsHistory>());
     });
 
     test('forwards input and reconstruct errors, then recovers', () async {

@@ -35,14 +35,33 @@ final learnerLockSettingsProvider = StreamProvider.autoDispose
       );
     }, retry: (retryCount, error) => null);
 
+/// The learner's intent history holds rows that could not be decoded, so
+/// its settings chronology cannot be trusted (AC-7 fails closed).
+final class UnreadableSettingsHistoryException implements Exception {
+  /// Creates the exception for the [rows] that did not decode.
+  UnreadableSettingsHistoryException(List<RejectedRow> rows)
+    : rows = List.unmodifiable(rows);
+
+  /// The undecodable rows.
+  final List<RejectedRow> rows;
+
+  /// Only document ids, never row contents (PV-1).
+  @override
+  String toString() =>
+      'UnreadableSettingsHistoryException(${rows.map((r) => r.docId)})';
+}
+
 /// Combines the latest current [settings] and the latest COMPLETE intent
 /// [history] into a [LearnerSettingsHistory], emitting only once both have
 /// delivered and only when the result changes.
 ///
-/// Rows of the history that did not decode ([CompleteReadReady.rejected])
-/// are not settings evidence and are skipped. An error on either input, or
-/// a [LearnerSettingsHistory.reconstruct] failure, is forwarded as an error
-/// event.
+/// A complete history holding rows that did not decode
+/// ([CompleteReadReady.rejected]) fails closed (AC-7): a dropped row could
+/// be a `learnerSettings` entry, so no settings are reconstructed from it.
+/// It is forwarded as an [UnreadableSettingsHistoryException], and nothing
+/// is published until a clean complete history arrives. An error on either
+/// input, or a [LearnerSettingsHistory.reconstruct] failure, is forwarded
+/// as an error event too.
 Stream<LearnerSettingsHistory> watchLearnerSettingsHistory(
   Stream<LearnerSettings> settings,
   Stream<CompleteRead<ChangeLogEntry>> history,
@@ -81,10 +100,17 @@ Stream<LearnerSettingsHistory> watchLearnerSettingsHistory(
         publish();
       }, onError: forwardError);
       historySub = history.listen((read) {
-        if (read is CompleteReadReady<ChangeLogEntry>) {
-          entries = read.items;
-          publish();
+        if (read is! CompleteReadReady<ChangeLogEntry>) return;
+        if (!read.isClean) {
+          entries = null; // no reconstruction from an incomplete chronology
+          forwardError(
+            UnreadableSettingsHistoryException(read.rejected),
+            StackTrace.current,
+          );
+          return;
         }
+        entries = read.items;
+        publish();
       }, onError: forwardError);
     },
     onCancel: () async {
