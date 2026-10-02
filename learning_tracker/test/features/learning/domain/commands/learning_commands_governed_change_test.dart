@@ -576,7 +576,8 @@ void main() {
 
     test('an unknown callable outcome is pending with the same request; an '
         'offline retry is onlineRequired and stays pending', () async {
-      final port = _RejectingPort()..error = const _UnknownOutcome();
+      final port = _RejectingPort()
+        ..error = const GovernedWriteOutcomeUnknown('deadline-exceeded');
       final h = GovernedHarness(oversizedPort: port);
       await h.commands.applyGovernedChange(
         oneEntity(_order, _cid, _orderDocs(11)),
@@ -684,12 +685,6 @@ final class _RejectingPort implements OversizedGovernedWritePort {
       changeIds: [for (final e in request.entries) e.entryId],
     );
   }
-}
-
-/// A callable failure whose outcome is unknown (the server may have
-/// committed).
-final class _UnknownOutcome implements Exception {
-  const _UnknownOutcome();
 }
 
 /// Records every reported rejection.
