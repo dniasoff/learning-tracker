@@ -9,9 +9,11 @@
 ///
 /// Reached from any leaf in Browse or the lifetime tree; the route carries
 /// the curriculum storage key and leaf ref, so sub-track detail and ground
-/// rows can reuse it later. During the sacred-time lock the screen renders
-/// no event content at all (AD-36: history is unreadable under the lock;
-/// the app-wide overlay covers it).
+/// rows can reuse it later. During the sacred-time lock of the learner
+/// whose history it shows ([mishnaHistoryLockProvider]: that learner's lock
+/// settings, or the device lock) the screen renders no event content at
+/// all and closes any correction sheet or picker it opened (AD-36: history
+/// is unreadable and unusable under the lock).
 library;
 
 import 'package:auto_route/auto_route.dart';
@@ -26,7 +28,6 @@ import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
 import 'package:learning_tracker/features/learning/domain/models/mishna_history_item.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/mishna_history_provider.dart';
-import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// The history of one leaf ([leafRef]) of one curriculum ([curriculumId],
@@ -62,9 +63,36 @@ class MishnaHistoryScreen extends ConsumerWidget {
         );
       },
     );
-    // AD-36: nothing of the history is built while the lock is up.
-    if (ref.watch(currentSacredWindowProvider) != null) {
-      return const Scaffold(body: SizedBox.shrink());
+    // AD-36: when the learner's lock starts, close any correction sheet or
+    // picker this screen opened, so no control stays usable above it.
+    ref.listen(mishnaHistoryLockProvider, (previous, next) {
+      if (next.value != true || previous?.value == true) return;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (context.mounted) closeMishnaHistoryPopups(context);
+      });
+    });
+    // AD-36: nothing of the history is built while the learner's lock is
+    // up, or while it is still unknown (fail closed).
+    final lock = ref.watch(mishnaHistoryLockProvider);
+    if (lock case AsyncError(:final error, :final stackTrace)) {
+      return Scaffold(
+        backgroundColor: context.colors.surfaceF4,
+        body: SafeArea(
+          child: AppErrorView(
+            error: error,
+            stackTrace: stackTrace,
+            onRetry: () => retryMishnaHistory(ref),
+          ),
+        ),
+      );
+    }
+    if (lock.value != false) {
+      return Scaffold(
+        key: const Key('mishnaHistoryLocked'),
+        body: lock.hasValue
+            ? const SizedBox.shrink()
+            : const Center(child: CircularProgressIndicator()),
+      );
     }
     final viewer = ref.watch(mishnaHistoryViewerProvider);
     final history = ref.watch(mishnaHistoryViewProvider(_args));
@@ -517,6 +545,16 @@ class _Tag extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// Pops every popup (correction sheet, picker or dialog) above the history
+/// route, on its own navigator and on the root navigator that `showDialog`
+/// uses. Called when the learner's lock starts (AD-36).
+void closeMishnaHistoryPopups(BuildContext context) {
+  for (final root in [false, true]) {
+    final navigator = Navigator.maybeOf(context, rootNavigator: root);
+    navigator?.popUntil((route) => route is! PopupRoute);
   }
 }
 

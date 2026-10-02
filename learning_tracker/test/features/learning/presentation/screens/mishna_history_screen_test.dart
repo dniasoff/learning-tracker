@@ -16,19 +16,25 @@ import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
+import 'package:learning_tracker/domain/learner_state/lock_windows.dart';
 import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/content_item_tile.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
+import 'package:learning_tracker/features/learning/domain/commands/capture_gate.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
 import 'package:learning_tracker/features/learning/domain/models/mishna_history_item.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/mishna_history_provider.dart';
 import 'package:learning_tracker/features/learning/presentation/screens/mishna_history_screen.dart';
 import 'package:learning_tracker/features/progress/domain/models/lifetime_knowledge.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/curriculum_breakdown_list.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/sacred_window.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/providers/learner_lock_settings_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart';
 import 'package:mocktail/mocktail.dart';
 
+import '../../../../helpers/learner_state/c0_fixtures.dart';
 import '../../../../helpers/learner_state/fake_learning_commands.dart';
 import '../../../../helpers/learner_state/mishna_history_fixtures.dart';
 import '../../../../helpers/learner_state_fixtures.dart';
@@ -349,6 +355,75 @@ void main() {
       expect(find.text('Learnt'), findsNothing);
       expect(_row(1), findsNothing);
       expect(find.text('Mishna history'), findsNothing);
+    });
+
+    testWidgets("the target learner's lock hides the history with no device "
+        'lock (tutor or another profile on this device)', (tester) async {
+      _seedLearnt(ports);
+      final gate = FakeCaptureGate.locked(LockWindow(onDay(4), onDay(5)));
+      final settings = c0SettingsHistory();
+      await _pump(
+        tester,
+        historyOverrides(
+          ports,
+          state: _learntState(),
+          gate: gate,
+          lockSettings: settings,
+        ),
+      );
+
+      expect(find.byKey(const Key('mishnaHistoryLocked')), findsOneWidget);
+      expect(find.text('Learnt'), findsNothing);
+      expect(_row(1), findsNothing);
+      expect(find.text('Mishna history'), findsNothing);
+      // Judged on the active learner's own lock settings.
+      expect(gate.checks, isNotEmpty);
+      expect(gate.checks.last.$1, same(settings));
+    });
+
+    testWidgets('when the learner lock starts, the open correction sheet '
+        'closes and the rows disappear', (tester) async {
+      _seedLearnt(ports);
+      final gate = FakeCaptureGate.open();
+      await _pump(
+        tester,
+        historyOverrides(
+          ports,
+          state: _learntState(),
+          commands: FakeLearningCommands(),
+          gate: gate,
+        ),
+      );
+      await tester.tap(_row(5));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('mishnaHistoryAction-remove')),
+        findsOneWidget,
+      );
+
+      gate.decision = GateLocked(LockWindow(onDay(4), onDay(5)));
+      await tester.pump(mishnaHistoryLockRecheck);
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('mishnaHistoryAction-remove')), findsNothing);
+      expect(_row(5), findsNothing);
+      expect(find.text('Learnt'), findsNothing);
+    });
+
+    testWidgets('an unreadable learner lock shows AppErrorView, never the '
+        'rows (fail closed)', (tester) async {
+      _seedLearnt(ports);
+      await _pump(tester, [
+        ...historyOverrides(ports, state: _learntState(), withLock: false),
+        captureGateProvider.overrideWithValue(FakeCaptureGate.open()),
+        learnerLockSettingsProvider.overrideWith(
+          (ref, _) => Stream.error(StateError('settings unreadable')),
+        ),
+      ]);
+
+      expect(find.byType(AppErrorView), findsOneWidget);
+      expect(_row(1), findsNothing);
+      expect(find.text('Learnt'), findsNothing);
     });
   });
 

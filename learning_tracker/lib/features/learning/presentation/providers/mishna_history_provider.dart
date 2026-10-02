@@ -13,6 +13,10 @@
 ///   until the refreshed history confirms it; a queued (offline) write the
 ///   server later rejects (`watchPendingFailures`) rolls back then, counted
 ///   in [MishnaHistoryCorrectionsState.lateRollbacks] for the snackbar.
+/// - [mishnaHistoryLockProvider] is the AD-36 lock of the learner whose
+///   history is shown: that learner's [learnerLockSettingsProvider] judged
+///   by the shared [captureGateProvider], so a tutor or another profile on
+///   this device sees the target learner's lock, not only the device's.
 ///
 /// Plain Riverpod providers (no codegen), matching the C0 provider style.
 library;
@@ -21,15 +25,19 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/domain/learner_state/corpus.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 import 'package:learning_tracker/features/learning/data/repositories/profile_history_log_source.dart';
+import 'package:learning_tracker/features/learning/domain/commands/capture_gate.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
 import 'package:learning_tracker/features/learning/domain/models/mishna_history_item.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/providers/learner_lock_settings_provider.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 
 /// The history route's arguments: a curriculum storage key and leaf ref.
@@ -102,11 +110,58 @@ final mishnaHistoryProvider = Provider.autoDispose
       );
     });
 
+/// How often [mishnaHistoryLockProvider] re-judges the lock against the
+/// clock, so the history hides when the learner's lock starts and returns
+/// when it ends without any other input changing. Same resolution as the
+/// device lock (`CurrentSacredWindow`).
+const mishnaHistoryLockRecheck = Duration(seconds: 30);
+
+/// Whether the history must be unreadable now (AD-36): `AsyncData(true)`
+/// while the target learner is inside a lock window.
+///
+/// The lock is the active learner's, not the device's: it reads that
+/// learner's [learnerLockSettingsProvider] for the active
+/// `LearnerScope` (in a tutored session, the talmid's scope) and asks the
+/// shared [captureGateProvider] — the same judgement `LearningCommands`
+/// applies to writes, so no second lock-window calculation exists. The
+/// device lock ([currentSacredWindowProvider], the app-wide overlay) also
+/// locks it. It fails closed: while the learner's settings load the value
+/// is loading and the screen shows no event content; a read failure is an
+/// error the screen offers to retry.
+final mishnaHistoryLockProvider = Provider.autoDispose<AsyncValue<bool>>((ref) {
+  if (ref.watch(currentSacredWindowProvider) != null) {
+    return const AsyncData(true);
+  }
+  final scope = ref.watch(activeLearnerScopeProvider);
+  if (scope case AsyncError(:final error, :final stackTrace)) {
+    return AsyncError<bool>(error, stackTrace);
+  }
+  if (!scope.hasValue) return const AsyncLoading<bool>();
+  final active = scope.requireValue;
+  // No learner: the history itself reports NoActiveLearnerException and
+  // has no event content to hide.
+  if (active == null) return const AsyncData(false);
+
+  final settings = ref.watch(learnerLockSettingsProvider(active));
+  if (settings case AsyncError(:final error, :final stackTrace)) {
+    return AsyncError<bool>(error, stackTrace);
+  }
+  if (!settings.hasValue) return const AsyncLoading<bool>();
+
+  final timer = Timer(mishnaHistoryLockRecheck, ref.invalidateSelf);
+  ref.onDispose(timer.cancel);
+  final decision = ref
+      .watch(captureGateProvider)
+      .check(settings.requireValue, DateTimeFactory.nowUtc());
+  return AsyncData(decision is GateLocked);
+});
+
 /// Re-reads every input of the history (the AppErrorView retry). The
 /// learner and leaf are unchanged: the screen keeps its arguments.
 void retryMishnaHistory(WidgetRef ref) {
   ref
     ..invalidate(activeLearnerScopeProvider)
+    ..invalidate(learnerLockSettingsProvider)
     ..invalidate(profileHistoryLogProvider)
     ..invalidate(learnerStateProvider)
     ..invalidate(corporaProvider);
@@ -287,9 +342,7 @@ final class MishnaHistoryCorrections
   }
 
   void _onPendingFailures(List<PendingFailure> failures) {
-    final failed = {
-      for (final failure in failures) ...failure.eventIds,
-    };
+    final failed = {for (final failure in failures) ...failure.eventIds};
     final rolledBack = {
       for (final MapEntry(:key, :value) in _queued.entries)
         if (value.any(failed.contains)) key,

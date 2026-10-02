@@ -9,12 +9,14 @@ import 'package:learning_tracker/data/firestore/learner_state_repository_provide
 import 'package:learning_tracker/domain/learner_state/civil_date.dart';
 import 'package:learning_tracker/domain/learner_state/corpus.dart';
 import 'package:learning_tracker/domain/learner_state/governed_change.dart';
+import 'package:learning_tracker/domain/learner_state/learner_settings_history.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
+import 'package:learning_tracker/features/learning/domain/commands/capture_gate.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
 import 'package:learning_tracker/features/learning/domain/models/mishna_history_item.dart';
@@ -154,17 +156,26 @@ final class HistoryPorts {
 /// Overrides that wire [ports], [state], [commands], [viewer] and the
 /// corpus into the real Mishna-history providers. A null [state] leaves
 /// `learnerStateProvider` for the caller to override.
+///
+/// The learner's lock (AD-36) reads [lockSettings] (default
+/// [c0SettingsHistory]) through [gate] (default: always open). Pass
+/// `withLock: false` to leave both providers for the caller to override.
 List<Override> historyOverrides(
   HistoryPorts ports, {
   required LearnerState? state,
   LearningCommands? commands,
   MishnaHistoryViewer viewer = MishnaHistoryViewer.parent,
   Corpus? corpus,
+  CaptureGate? gate,
+  LearnerSettingsHistory? lockSettings,
+  bool withLock = true,
 }) => [
   ...learnerStateOverrides(
     scope: ports.scope,
     state: state,
     commands: commands,
+    gate: withLock ? gate ?? FakeCaptureGate.open() : null,
+    lockSettings: withLock ? lockSettings ?? c0SettingsHistory() : null,
   ),
   learningEventRepositoryProvider.overrideWith((ref) async => ports.events),
   subTrackRepositoryProvider.overrideWith((ref) async => ports.tracks),
