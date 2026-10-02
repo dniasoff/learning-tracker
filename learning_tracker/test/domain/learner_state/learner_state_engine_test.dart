@@ -1039,13 +1039,43 @@ void main() {
       );
     });
 
-    test('a catch_up review is judged on its learned_on day', () {
+    test('a catch_up review is judged on the civil date of effectiveAt, '
+        'not its learned_on', () {
+      // Stage 2 is due from the 3rd. A catch-up recorded on the 3rd for the
+      // 2nd is judged on the 3rd, so it is due and earns.
       expect(
-        earning([
-          review(1, 1, 1),
-          review(2, 2, 3, dateState: DateState.catchUp, learnedOn: sep(2)),
-        ]),
+        earning(
+          [
+            review(1, 1, 1),
+            review(2, 2, 3, dateState: DateState.catchUp, learnedOn: sep(2)),
+          ],
+          stages: [stageDoc(1), stageDoc(2, delay: 2)],
+        ),
         ids([1, 2]),
+      );
+      // Stage 2 is weekly on Wednesdays (the 2nd and the 9th). A catch-up
+      // recorded on Thursday the 3rd for Wednesday the 2nd is judged on the
+      // Thursday, so it is not due; the dated review on the 9th earns.
+      final weekly = MainTrackConfigDoc(
+        collection: MainTrackConfigDoc.stages,
+        docId: '${engineCurriculum}_2',
+        curriculumId: engineCurriculum,
+        fields: {
+          'stage_order': 2,
+          'schedule_type': 'weekly',
+          'days_of_week': [3],
+        },
+      );
+      expect(
+        earning(
+          [
+            review(1, 1, 1),
+            review(2, 2, 3, dateState: DateState.catchUp, learnedOn: sep(2)),
+            review(3, 2, 9),
+          ],
+          stages: [stageDoc(1), weekly],
+        ),
+        ids([1, 3]),
       );
     });
 

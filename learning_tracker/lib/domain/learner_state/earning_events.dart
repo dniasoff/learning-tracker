@@ -76,23 +76,20 @@ Set<String> firstLearningEarners(
 /// The first stage order in force at an instant, or null with no stage.
 typedef FirstStageAt = int? Function(DateTime instantUtc);
 
-/// The civil date a review event is judged on (AD-50 "reviewsDue(civilDate(
-/// effectiveAt(e)))").
+/// The civil date a review event is judged on: `civilDate(effectiveAt(e))`
+/// under the settings in force then (AD-50 "reviewsDue(civilDate(
+/// effectiveAt(e)))", AD-41).
 ///
-/// A `dated` event is judged on `civilDate(effectiveAt(e))`. A `catch_up`
-/// event is judged on its `learned_on`, the locked day it catches up and
-/// counts on (AD-40); judged on its recording day, the review it completes
-/// would already be closed and a caught-up review could never earn.
+/// This holds for every date state. A `catch_up` event's `learned_on` (the
+/// locked day it catches up, AD-40) decides its streak and day
+/// classification only, never its review earning; since an attempt is
+/// judged without the step's own completion marker
+/// ([ReviewSchedule.dueForAttempt]), a review caught up while still due
+/// earns on the day it is recorded.
 CivilDate reviewEarningDate(
   LearningEvent event,
   LearnerSettingsHistory settingsHistory,
-) {
-  final learnedOn = event.learnedOn;
-  if (event.dateState == DateState.catchUp && learnedOn != null) {
-    return learnedOn;
-  }
-  return civilDate(effectiveAt(event), settingsHistory);
-}
+) => civilDate(effectiveAt(event), settingsHistory);
 
 /// The counted learn events of one curriculum that earn review points
 /// (AD-50).

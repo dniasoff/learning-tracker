@@ -85,19 +85,20 @@ void main() {
       );
     });
 
-    test('a catch_up event uses its learned_on day', () {
+    test('a catch_up event also uses effectiveAt, not learned_on', () {
+      // Recorded 2026-09-03T10:00Z, catching up the 2nd.
       expect(
         reviewEarningDate(
           engineLearn(
             1,
             b11,
-            minutes: 2 * 1440,
+            minutes: 2 * 1440 + 600,
             dateState: DateState.catchUp,
             learnedOn: '2026-09-02',
           ),
           settings,
         ),
-        '2026-09-02',
+        '2026-09-03',
       );
     });
   });
