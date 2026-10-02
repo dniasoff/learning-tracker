@@ -15,6 +15,9 @@ import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/core/widgets/empty_state.dart';
 import 'package:learning_tracker/core/widgets/inline_async_error.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
+import 'package:learning_tracker/features/learning/presentation/widgets/learn_slots/also_learning_slot.dart';
+import 'package:learning_tracker/features/learning/presentation/widgets/learn_slots/catch_up_cards_slot.dart';
+import 'package:learning_tracker/features/learning/presentation/widgets/learn_slots/erev_planned_slot.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/scheduler/scheduler.dart';
 import 'package:learning_tracker/features/tutoring/tutoring.dart';
@@ -111,11 +114,17 @@ class LearningScreen extends ConsumerWidget {
                       onRetry: () => ref.invalidate(dashboardStreakProvider),
                     ),
                     const SizedBox(height: 36),
+                    // Named Learn sections (DNI-500): each slot is its own
+                    // widget file and takes no space while empty, so the
+                    // stories that fill them never edit this body.
+                    const CatchUpCardsSlot(),
                     _DailyTasksSection(
                       dailyTasksAsync: dailyTasksAsync,
                       onViewAll: () =>
                           context.router.push(const SchedulerRoute()),
                     ),
+                    const ErevPlannedSlot(),
+                    const AlsoLearningSlot(),
                     const SizedBox(height: 36),
                     const _BrowseSection(),
                   ],
