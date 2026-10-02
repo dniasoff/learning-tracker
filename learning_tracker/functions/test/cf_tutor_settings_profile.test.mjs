@@ -821,6 +821,55 @@ describe('tutorBulkPriorCompletions', () => {
     assert.equal((await completionDoc().get()).exists, false);
   });
 
+  test('more than 499 completions → invalid-argument (one write reserved for the audit entry)', async () => {
+    await seedActiveGrant({ can_edit_learning: true });
+    const completions = Array.from({ length: 500 }, (_, i) => ({
+      ...goodCompletion,
+      completionId: `c${i}`,
+    }));
+    await expectHttpsError(
+      call(fns.tutorBulkPriorCompletions, { ...goodArgs, completions }),
+      'invalid-argument',
+    );
+  });
+
+  // DNI-487 review: the audit entry commits in the same transaction as the
+  // completions. A failing audit write aborts the whole batch, so the
+  // identical retry writes the completions AND their audit record — the batch
+  // can never end up durable but unaudited.
+  test('audit write failure → nothing written; identical retry writes batch + one audit entry', async () => {
+    await seedActiveGrant({ can_edit_learning: true });
+    const proto = admin.firestore.Transaction.prototype;
+    const realCreate = proto.create;
+    proto.create = function (ref, data) {
+      if (ref.path.includes('/audit_log/')) {
+        throw new Error('injected audit write failure');
+      }
+      return realCreate.call(this, ref, data);
+    };
+    try {
+      await assert.rejects(
+        call(fns.tutorBulkPriorCompletions, goodArgs),
+        /injected audit write failure/,
+      );
+    } finally {
+      proto.create = realCreate;
+    }
+    const auditLog = () =>
+      db.collection('tutor_grants').doc(GRANT).collection('audit_log').get();
+    assert.equal((await completionDoc().get()).exists, false, 'no completion without its audit');
+    assert.equal((await auditLog()).size, 0);
+
+    const res = await call(fns.tutorBulkPriorCompletions, goodArgs);
+
+    assert.equal(res.written, 1);
+    assert.equal(res.replayed, 0);
+    assert.equal((await completionDoc().get()).exists, true);
+    const audit = await auditLog();
+    assert.equal(audit.size, 1, 'the retried batch carries exactly one audit entry');
+    assert.deepEqual(JSON.parse(audit.docs[0].data().after_value), { count: 1, replayed: 0 });
+  });
+
   test('completionId that is not a single safe path segment → invalid-argument', async () => {
     await seedActiveGrant({ can_edit_learning: true });
     for (const completionId of ['a/b', '..', '__x__.', 'x'.repeat(129)]) {

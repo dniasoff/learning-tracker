@@ -29,7 +29,7 @@ import { db, CALL_OPTS } from "./shared";
 //     grantId: string,                  // the active tutor grant doc ID
 //     ownerUid: string,                 // parent/owner uid (sanity check)
 //     profileId: string,                // learner profile ULID (AD-24)
-//     completions: Array<{              // 1-500 completion payloads
+//     completions: Array<{              // 1-499 completion payloads
 //       completionId: string,           // ULID — must be globally unique
 //       curriculumId: string,
 //       sefariaRef: string,
@@ -45,9 +45,17 @@ import { db, CALL_OPTS } from "./shared";
 //   `already-exists` (nothing written), unless it is an identical replay of
 //   this tutor's own earlier write under the same grant, which is skipped and
 //   counted in `replayed`.
+//   The audit-log entry is written in the SAME transaction as the completions
+//   (DNI-487 review): either both commit or neither does, so a failed audit
+//   can never leave durable completions that an identical retry would then
+//   treat as replays and skip auditing.
 // Throws: HttpsError on any validation failure.
 
-const MAX_BULK_COMPLETIONS = 500;
+/**
+ * Firestore caps one transaction at 500 writes; one is reserved for the
+ * audit-log entry committed alongside the completions.
+ */
+const MAX_BULK_COMPLETIONS = 499;
 
 interface CompletionPayload {
   completionId: string;
@@ -212,8 +220,9 @@ export const tutorBulkPriorCompletions = onCall(CALL_OPTS, async (request) => {
     .doc(String(profileId));
   const writtenAt = admin.firestore.Timestamp.now();
 
-  // Firestore allows 500 writes per transaction — the input cap matches.
-  const result = await db.runTransaction(async (txn) => {
+  // Firestore allows 500 writes per transaction: up to 499 completions plus
+  // the one audit-log entry.
+  const written = await db.runTransaction(async (txn) => {
     const grantSnap = await txn.get(grantRef);
 
     if (!grantSnap.exists) {
@@ -323,30 +332,30 @@ export const tutorBulkPriorCompletions = onCall(CALL_OPTS, async (request) => {
       });
     }
 
-    return { g, written: toWrite.length };
+    // ── Audit log entry, atomic with the completions (DNI-487 review) ────
+    // Written inside this transaction so the batch and its audit record
+    // commit together: an audit failure aborts the completions too, and the
+    // identical retry then writes both. A pure replay wrote nothing, so it
+    // records nothing either (the original commit already holds its audit).
+    const writtenCount = toWrite.length;
+    if (writtenCount > 0) {
+      const auditRef = grantRef.collection("audit_log").doc(); // auto-id
+      txn.create(auditRef, {
+        tutor_uid: callerUid,
+        tutor_name_snapshot: g.tutor_name_snapshot ?? "",
+        action: "completion_bulk_prior",
+        target: `profile/${profileId}/completions`,
+        after_value: JSON.stringify({
+          count: writtenCount,
+          replayed: items.length - writtenCount,
+        }),
+        timestamp: writtenAt.toDate().toISOString(),
+      });
+    }
+
+    return writtenCount;
   });
-  const grant = result.g;
-  const written = result.written;
   const replayed = completions.length - written;
-
-  // ── 4. Write audit log entry ───────────────────────────────────────────
-  // A pure replay wrote nothing, so it records nothing either (idempotent).
-  if (written > 0) {
-    const auditRef = db
-      .collection("tutor_grants")
-      .doc(grantId)
-      .collection("audit_log")
-      .doc(); // auto-id
-
-    await auditRef.set({
-      tutor_uid: callerUid,
-      tutor_name_snapshot: grant.tutor_name_snapshot ?? "",
-      action: "completion_bulk_prior",
-      target: `profile/${profileId}/completions`,
-      after_value: JSON.stringify({ count: written, replayed }),
-      timestamp: writtenAt.toDate().toISOString(),
-    });
-  }
 
   logger.info(
     `tutorBulkPriorCompletions: tutor=${callerUid} grant=${grantId} ` +
