@@ -102,8 +102,6 @@ import 'package:learning_tracker/features/account/presentation/providers/auth_pr
     show authRepositoryProvider;
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
-import 'package:learning_tracker/features/learning/domain/entities/learning_ledger_entry.dart';
-import 'package:learning_tracker/features/learning/presentation/providers/learning_ledger_providers.dart';
 import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
@@ -532,9 +530,6 @@ void main() {
                 curriculumContentProvider.overrideWith(
                   (ref, curriculumId) async => const <ContentItem>[],
                 ),
-                curriculumLedgerProvider.overrideWith(
-                  (ref, id) async => const <LearningLedgerEntry>[],
-                ),
               ],
               child: const LifetimeMarkingScreen(),
             ),
@@ -562,9 +557,6 @@ void main() {
               activeProfileIdProvider.overrideWith(() => _FakeProfileId()),
               curriculumContentProvider.overrideWith(
                 (ref, curriculumId) async => const <ContentItem>[],
-              ),
-              curriculumLedgerProvider.overrideWith(
-                (ref, id) async => const <LearningLedgerEntry>[],
               ),
             ],
             child: const LifetimeMarkingScreen(),
@@ -605,9 +597,6 @@ void main() {
           overrides: [
             activeProfileIdProvider.overrideWith(() => _FakeProfileId()),
             useHebrewTermsProvider.overrideWith(() => _FakeUseHebrewTerms()),
-            curriculumLedgerProvider.overrideWith(
-              (ref, id) async => const <LearningLedgerEntry>[],
-            ),
             curriculumContentProvider.overrideWith(
               (ref, curriculumId) async => const <ContentItem>[],
             ),
@@ -636,9 +625,6 @@ void main() {
           overrides: [
             activeProfileIdProvider.overrideWith(() => _FakeProfileId()),
             useHebrewTermsProvider.overrideWith(() => _FakeUseHebrewTerms()),
-            curriculumLedgerProvider.overrideWith(
-              (ref, id) async => const <LearningLedgerEntry>[],
-            ),
             curriculumContentProvider.overrideWith(
               (ref, curriculumId) async => const <ContentItem>[],
             ),

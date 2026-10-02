@@ -1,8 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/data/firestore/conflict.dart';
+import 'package:learning_tracker/domain/learner_state/learner_state.dart';
+import 'package:learning_tracker/domain/learner_state/learner_state_engine.dart';
+import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
-import 'package:learning_tracker/features/gamification/streak/streak_log_event.dart';
-import 'package:learning_tracker/features/gamification/streak/streak_reducer.dart';
+
+import '../helpers/learner_state/engine_fixtures.dart';
+import '../helpers/learner_state_fixtures.dart';
 
 /// End-to-end story acceptance tests for Epic 20 — v2 hard-tier
 /// auth refactor. Covers the contract promised by the v2 architecture
@@ -46,35 +50,38 @@ void main() {
     });
 
     // ─── Story 20.11: Event log + reducers ──────────────────────────
+    // DNI-479 (R6): the streak_events log and its reducer are retired; the
+    // streak is derived by the learner-state engine from `learning_events`
+    // (AD-40). The convergence promise carries over: any order of the same
+    // unioned events yields the same per-curriculum streak.
     group('Story 20.11 — event-log reducers converge', () {
       test('unioned logs from two devices yield identical state', () {
-        // Device A: 1/1, 1/2
-        // Device B: 1/3 (while A was offline)
-        final union = [
-          StreakLogEvent(
-            eventType: 'completion',
-            eventTimestamp: DateTime.utc(2026, 1, 1),
-            clientDeviceId: 'A',
-          ),
-          StreakLogEvent(
-            eventType: 'completion',
-            eventTimestamp: DateTime.utc(2026, 1, 3),
-            clientDeviceId: 'B',
-          ),
-          StreakLogEvent(
-            eventType: 'completion',
-            eventTimestamp: DateTime.utc(2026, 1, 2),
-            clientDeviceId: 'A',
-          ),
-        ];
-        final today = DateTime.utc(2026, 1, 3);
-        final fromA = const StreakReducer().reduce(union, today: today);
-        final fromB = const StreakReducer().reduce(
-          union.reversed,
-          today: today,
+        // Device A: Mon 1/5, Tue 1/6. Device B: Wed 1/7 (A was offline).
+        LearningEvent learn(int n, int day) => LearningEvent.learn(
+          id: engineUlid(n),
+          curriculumId: engineCurriculum,
+          ref: 'Mishnah Berakhot 1:$n',
+          source: LearningEvent.sourceMain,
+          dateState: DateState.dated,
+          learnedOn: '2026-01-0$day',
+          stage: 1,
+          recordedAt: DateTime.utc(2026, 1, day, 12),
+          actor: parentActor,
         );
-        expect(fromA.currentStreak, fromB.currentStreak);
-        expect(fromA.currentStreak, 3);
+        final union = [learn(1, 5), learn(3, 7), learn(2, 6)];
+        CurriculumStreak? streakOf(List<LearningEvent> events) =>
+            const LearnerStateEngine()
+                .run(
+                  engineInputs(
+                    events: events,
+                    nowUtc: DateTime.utc(2026, 1, 7, 18),
+                  ),
+                )[engineCurriculum]!
+                .streak;
+        final fromA = streakOf(union);
+        final fromB = streakOf(union.reversed.toList());
+        expect(fromA, fromB);
+        expect(fromA!.current, 3);
       });
     });
 
@@ -123,22 +130,9 @@ void main() {
 
     // ─── Story 20.11 completion-tee group removed (Phase 3) ────────
     // The old "idempotent tee: same completion twice → one event row"
-    // test pinned a property that was never application logic: it was the
-    // Drift `StreakEvents` table's `UNIQUE (profileId, dayUtc, eventType)`
-    // index combined with `InsertMode.insertOrIgnore`. The dedup WAS the
-    // index, so there is no pure function left to feed once the table is
-    // archived.
-    //
-    // More importantly the behaviour itself is deliberately gone, not
-    // merely relocated: `DocIds.streakEventDocId` keys `streak_events` by
-    // ULID alone, so two independently-triggered completions for the same
-    // day now write TWO documents and a caller needing "already logged
-    // today?" must check `FirestoreStreakEventRepository.getEventsForDay`
-    // first. That change is documented on [StreakEventEntry] in
-    // lib/features/gamification/streak/streak_event_entry.dart and pinned
-    // by test/data/repositories/firestore_streak_event_repository_test.dart
-    // ('two documents, not one' + the getEventsForDay group). Rewriting
-    // this assertion to expect two rows would leave a story banner
-    // promising an idempotency guarantee the system no longer makes.
+    // test pinned the Drift `StreakEvents` table's unique index. The
+    // completion-to-streak tee and `streak_events` are retired (DNI-479,
+    // R6); a learning event is written once by `LearningCommands`, and
+    // duplicate learning on one day counts as one streak day (streak_test).
   });
 }

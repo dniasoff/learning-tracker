@@ -3,7 +3,8 @@
 /// Characterization/invariant tests (N1–N8) documenting the correct system
 /// behaviour. Each becomes the regression anchor for a corresponding repair:
 ///
-///   N3 → —   fresh profile reports 0 completions and 0 streak (baseline)
+///   N3 → —   fresh profile reports 0 completions and a 0 streak per
+///            curriculum (baseline)
 ///   N4 → R3  delete+re-add track → completion %, count both 0
 ///   N5 → R4  restoreOrCreate resets activatedAt; lifetime preserved
 ///   N6 → R5  completion count and progress % share one "done" definition
@@ -17,14 +18,11 @@
 library;
 
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/data/firestore/repository_providers.dart';
 import 'package:learning_tracker/data/repositories/firestore_completion_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_curriculum_track_repository.dart';
-import 'package:learning_tracker/data/repositories/firestore_streak_event_repository.dart';
-import 'package:learning_tracker/features/gamification/presentation/providers/gamification_service_providers.dart';
-import 'package:learning_tracker/features/gamification/streak/streak_state_service.dart';
+import 'package:learning_tracker/domain/learner_state/learner_state.dart';
+import 'package:learning_tracker/domain/learner_state/learner_state_engine.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/screens/track_detail_screen.dart'
     show estimatedFinishDate;
@@ -33,6 +31,7 @@ import 'package:test/test.dart';
 import '../helpers/fake_clock.dart';
 import '../helpers/firestore_fixtures.dart';
 import '../helpers/firestore_governed_writer.dart';
+import '../helpers/learner_state/engine_fixtures.dart';
 
 void main() {
   group('Invariant net — 2026-05-17 quality crisis', tags: ['invariants'], () {
@@ -63,34 +62,17 @@ void main() {
         },
       );
 
-      test('streaks table has no row for a fresh profile', () async {
-        const uid = 'invariant-n3-streak-uid';
-        const profileId = '01JQ8M9Y7V3K2N6P4R5T8W0X1Z';
-        final firestore = FakeFirebaseFirestore();
-        final eventRepository = FirestoreStreakEventRepository(
-          firestore: firestore,
-          uid: uid,
-          profileId: profileId,
-        );
-        final container = ProviderContainer(
-          overrides: [
-            firestoreStreakEventRepositoryProvider.overrideWith(
-              (ref) async => eventRepository,
-            ),
-            streakStateProvider.overrideWith(
-              (ref) => StreakStateService(ref: ref),
-            ),
-          ],
-        );
-        addTearDown(container.dispose);
-        final state = await container.read(streakStateProvider).read();
-
+      test('a fresh profile has a zero streak in every curriculum', () {
+        // DNI-479 (R6): the streak is the per-curriculum LearnerState
+        // streak, derived from learning_events (AD-40); streak_events is
+        // retired.
+        final state = const LearnerStateEngine().run(engineInputs());
         expect(
-          state.currentStreak,
-          0,
+          state[engineCurriculum]!.streak,
+          const CurriculumStreak(current: 0, best: 0),
           reason:
-              'N3: a fresh Firestore profile must not manufacture a non-zero '
-              'streak from an empty streak_events collection',
+              'N3: a fresh profile must not manufacture a non-zero streak '
+              'from an empty learning-event log',
         );
       });
     });

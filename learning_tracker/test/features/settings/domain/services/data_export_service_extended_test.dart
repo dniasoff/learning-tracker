@@ -46,8 +46,6 @@ void main() {
 
       const expected = [
         'completions',
-        'streak_events',
-        'learning_ledger',
         'points_ledger',
         'reward_redemptions',
         'settings',

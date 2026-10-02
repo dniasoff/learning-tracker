@@ -89,13 +89,11 @@ import 'package:learning_tracker/data/repositories/firestore_curriculum_track_re
 import 'package:learning_tracker/data/repositories/firestore_diagnostic_log_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_goal_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_learner_profile_repository.dart';
-import 'package:learning_tracker/data/repositories/firestore_learning_ledger_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_point_config_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_points_ledger_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_profile_program_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_reward_redemption_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_stage_definition_repository.dart';
-import 'package:learning_tracker/data/repositories/firestore_streak_event_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_study_day_config_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_track_learning_order_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_tutor_audit_log_repository.dart';
@@ -380,19 +378,6 @@ final firestoreGoalRepositoryProvider =
       );
     });
 
-/// `.../learning_ledger/{entryId}`.
-final firestoreLearningLedgerRepositoryProvider =
-    FutureProvider<FirestoreLearningLedgerRepository?>((ref) async {
-      final resolved = await _watchActiveAccountAndProfile(ref);
-      if (resolved == null) return null;
-      final (handles, ownerUid, profileId) = resolved;
-      return FirestoreLearningLedgerRepository(
-        firestore: handles.firestore,
-        uid: ownerUid,
-        profileId: profileId,
-      );
-    });
-
 /// `.../point_configs/{configId}`.
 final firestorePointConfigRepositoryProvider =
     FutureProvider<FirestorePointConfigRepository?>((ref) async {
@@ -473,19 +458,6 @@ final firestoreTrackLearningOrderRepositoryProvider =
         uid: ownerUid,
         profileId: profileId,
         writer: ref.watch(ownerGovernedWriterProvider),
-      );
-    });
-
-/// `.../streak_events/{eventId}`.
-final firestoreStreakEventRepositoryProvider =
-    FutureProvider<FirestoreStreakEventRepository?>((ref) async {
-      final resolved = await _watchActiveAccountAndProfile(ref);
-      if (resolved == null) return null;
-      final (handles, ownerUid, profileId) = resolved;
-      return FirestoreStreakEventRepository(
-        firestore: handles.firestore,
-        uid: ownerUid,
-        profileId: profileId,
       );
     });
 

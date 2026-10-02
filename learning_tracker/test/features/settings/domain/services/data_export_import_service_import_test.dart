@@ -17,8 +17,6 @@ void main() {
         .doc(testProfileId);
     const collections = [
       'completions',
-      'streak_events',
-      'learning_ledger',
       'points_ledger',
       'reward_redemptions',
       'settings',

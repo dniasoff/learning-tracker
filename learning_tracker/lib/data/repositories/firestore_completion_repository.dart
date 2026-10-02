@@ -15,11 +15,9 @@ import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/data/firestore/doc_ids.dart';
 import 'package:learning_tracker/data/firestore/resilient_doc_stream.dart';
 import 'package:learning_tracker/data/firestore/write_ack.dart';
-import 'package:learning_tracker/data/repositories/firestore_learning_ledger_repository.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_entity.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_tier_filter.dart';
-import 'package:learning_tracker/features/learning/domain/entities/learning_ledger_entry.dart';
 
 /// Firestore-backed completions repository: `users/{uid}/learner_profiles/
 /// {profileId}/completions/{completionId}` — append-only, deterministic
@@ -260,18 +258,12 @@ class FirestoreCompletionRepository {
   }) : _firestore = firestore,
        _uid = uid,
        _profileId = profileId,
-       _logger = logger ?? AppLogger.instance,
-       _learningLedgerRepository = FirestoreLearningLedgerRepository(
-         firestore: firestore,
-         uid: uid,
-         profileId: profileId,
-       );
+       _logger = logger ?? AppLogger.instance;
 
   final FirebaseFirestore _firestore;
   final String _uid;
   final String _profileId;
   final AppLogger _logger;
-  final FirestoreLearningLedgerRepository _learningLedgerRepository;
 
   /// Firestore's hard per-`WriteBatch` operation cap, and also exactly
   /// `firestore.rules`' SR-4 `list()` cap for this collection
@@ -841,8 +833,9 @@ class FirestoreCompletionRepository {
   /// - [CompletionTierFilter.liveOnly] → `source == 'live'`.
   /// - [CompletionTierFilter.trackAchievement] → no source filter on this
   ///   collection, which contains only `live` and `bulkInTrack` rows.
-  /// - [CompletionTierFilter.lifetime] → those completion rows plus active
-  ///   `lifetimeOnly` entries projected from the learning ledger.
+  /// - [CompletionTierFilter.lifetime] → the same completion rows (the
+  ///   `learning_ledger` lifetime marks are retired, DNI-479 R5; lifetime
+  ///   knowledge is the engine's learnt set).
   ///
   /// Every filter combination here is equality/`whereIn` only — no
   /// composite index needed (see the class doc comment).
@@ -861,19 +854,6 @@ class FirestoreCompletionRepository {
     }
     final docs = await _fetchAllPagesByDocId(query);
     var entities = _decodeAll(docs);
-    if (tier == CompletionTierFilter.lifetime) {
-      final ledgerEntries = curriculumId == null
-          ? await _learningLedgerRepository.getLifetimeLedger()
-          : await _learningLedgerRepository.getLedgerForCurriculum(
-              curriculumId,
-            );
-      entities = [
-        ...entities,
-        for (final entry in ledgerEntries)
-          if (entry.source == CompletionSource.lifetimeOnly)
-            _completionFromLifetimeLedgerEntry(entry),
-      ];
-    }
     // Filtered client-side, not via a Firestore range query: this method
     // already mixes two equality filters (curriculum_id, source) that would
     // need a composite index to also range-filter completed_at server-side,
@@ -887,21 +867,6 @@ class FirestoreCompletionRepository {
     }
     return entities;
   }
-
-  /// Projects a leaf-level lifetime ledger mark into the completion-shaped
-  /// read contract used by progress services. Ledger entries do not carry a
-  /// stage: [TrackProgressService] treats this source as stage-independent,
-  /// while other tiers remain backed exclusively by real completion rows.
-  static CompletionEntity _completionFromLifetimeLedgerEntry(
-    LearningLedgerEntry entry,
-  ) => CompletionEntity(
-    curriculumId: entry.curriculumId,
-    sefariaRef: entry.unitIdentifier,
-    stageId: 1,
-    trackType: entry.trackType,
-    source: CompletionSource.lifetimeOnly,
-    completedAt: entry.completedAt,
-  );
 
   // ── Client-side aggregates ───────────────────────────────────────────
   //
