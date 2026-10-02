@@ -172,7 +172,8 @@ void main() {
     testWidgets('an unlearnt mishna says Not learnt yet with an empty list', (
       tester,
     ) async {
-      ports.events.seed(ports.scope, [historyLearn(1)]);
+      // Only a voided learn: nothing counts and nothing was lock-ignored.
+      ports.events.seed(ports.scope, [historyLearn(1), historyVoid(2, eid(1))]);
       await _pump(
         tester,
         historyOverrides(ports, state: historyState(learnt: false)),
@@ -180,6 +181,31 @@ void main() {
       expect(find.text('Not learnt yet'), findsOneWidget);
       expect(find.byKey(const Key('mishnaHistoryEventCount')), findsNothing);
       expect(_row(1), findsNothing);
+    });
+
+    testWidgets('a mishna whose only event was lock-ignored stays Not learnt '
+        'yet but shows the kept, not counted row and its event count', (
+      tester,
+    ) async {
+      ports.events.seed(ports.scope, [historyLearn(1)]);
+      await _pump(
+        tester,
+        historyOverrides(
+          ports,
+          state: historyState(learnt: false, lockIgnored: {eid(1)}),
+        ),
+      );
+      expect(find.text('Not learnt yet'), findsOneWidget);
+      expect(find.text('Learning events: 1'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: _row(1),
+          matching: find.text(
+            'kept, not counted — recorded during Shabbos/Yom Tov',
+          ),
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('a child sees no voided row; a parent sees it as Removed', (
@@ -550,10 +576,7 @@ void main() {
       _seedLearnt(ports);
       final fake = FakeLearningCommands();
       final voidId = fake.freshId();
-      fake.nextResult = CaptureResult.success(
-        eventIds: [voidId],
-        queued: true,
-      );
+      fake.nextResult = CaptureResult.success(eventIds: [voidId], queued: true);
       await _pump(
         tester,
         historyOverrides(ports, state: _learntState(), commands: fake),

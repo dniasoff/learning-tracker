@@ -299,10 +299,26 @@ final class MishnaHistory {
   /// Rows of the profile log that could not be decoded.
   final int unreadableRows;
 
-  /// The rows [viewer] sees: none while the leaf is not learnt (UX-DR-140),
-  /// and no voided row for a child (FR-30).
+  /// Whether the header shows the [eventCount]: always for a learnt leaf,
+  /// and for an unlearnt one whenever a non-voided (lock-ignored) event
+  /// exists — the count never depends on the Learnt state alone (FR-30).
+  bool get showsEventCount => learnt || eventCount > 0;
+
+  /// The rows [viewer] sees, newest first.
+  ///
+  /// A learnt leaf shows every row, except voided rows for a child (FR-30).
+  /// An unlearnt leaf shows only its lock-ignored rows — kept, not counted
+  /// (AD-36) — so a mishna ticked only during Shabbos/Yom Tov still
+  /// explains itself under "Not learnt yet"; with none, the list is empty
+  /// (UX-DR-140; story [ASSUMPTION]: voided-only stays the empty state for
+  /// every viewer).
   List<MishnaHistoryItem> visibleTo(MishnaHistoryViewer viewer) {
-    if (!learnt) return const [];
+    if (!learnt) {
+      return [
+        for (final item in items)
+          if (item.status == MishnaHistoryStatus.lockIgnored) item,
+      ];
+    }
     if (viewer != MishnaHistoryViewer.child) return items;
     return [
       for (final item in items)

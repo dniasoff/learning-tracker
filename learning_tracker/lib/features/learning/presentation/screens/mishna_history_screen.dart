@@ -249,7 +249,7 @@ class _HistoryHeader extends StatelessWidget {
                       color: context.colors.brandInk,
                     ),
                   ),
-                  if (learnt)
+                  if (history.showsEventCount)
                     Text(
                       l10n.mishnaHistoryEventCount(history.eventCount),
                       key: const Key('mishnaHistoryEventCount'),

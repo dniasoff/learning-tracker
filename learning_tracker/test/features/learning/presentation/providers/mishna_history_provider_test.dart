@@ -277,6 +277,38 @@ void main() {
       expect(history.eventCount, 1);
     });
 
+    test('with zero counted events, a lock-ignored event is still a row and '
+        'counts, under Not learnt (visibility is not the Learnt state)', () {
+      final history = _project(
+        [historyLearn(1), historyLearn(2, day: 4), historyVoid(3, eid(2))],
+        counted: const {},
+        lockIgnored: {eid(1)},
+        learnt: false,
+      );
+      expect(history.learnt, isFalse);
+      expect(history.eventCount, 1);
+      expect(history.showsEventCount, isTrue);
+      for (final viewer in MishnaHistoryViewer.values) {
+        final rows = history.visibleTo(viewer);
+        expect(rows.map((i) => i.eventId), [eid(1)], reason: viewer.name);
+        expect(rows.single.status, MishnaHistoryStatus.lockIgnored);
+        expect(allowedCorrections(rows.single, viewer), isEmpty);
+      }
+    });
+
+    test('an unlearnt leaf with only voided events is the empty state', () {
+      final history = _project(
+        [historyLearn(1), historyVoid(2, eid(1))],
+        counted: const {},
+        learnt: false,
+      );
+      expect(history.eventCount, 0);
+      expect(history.showsEventCount, isFalse);
+      for (final viewer in MishnaHistoryViewer.values) {
+        expect(history.visibleTo(viewer), isEmpty, reason: viewer.name);
+      }
+    });
+
     test('the engine lockIgnoredEventIds wins over a stale counted id', () {
       final history = _project(
         [historyLearn(1)],
@@ -474,24 +506,29 @@ void main() {
         expect(view.items.single.status, MishnaHistoryStatus.voided);
       });
 
-      test('rejected by the server before the history shows it: the overlay '
-          'goes, the original row is back and the rollback is counted', () async {
-        final (container, fake, voidId) = await queuedRemove(ports);
+      test(
+        'rejected by the server before the history shows it: the overlay '
+        'goes, the original row is back and the rollback is counted',
+        () async {
+          final (container, fake, voidId) = await queuedRemove(ports);
 
-        fake.pendingFailures.add([failureOf([voidId])]);
-        await pumpEventQueue();
+          fake.pendingFailures.add([
+            failureOf([voidId]),
+          ]);
+          await pumpEventQueue();
 
-        final corrections = container.read(
-          mishnaHistoryCorrectionsProvider(historyArgs),
-        );
-        expect(corrections.overlays, isEmpty);
-        expect(corrections.lateRollbacks, 1);
-        final view = container
-            .read(mishnaHistoryViewProvider(historyArgs))
-            .requireValue;
-        expect(view.items.single.status, MishnaHistoryStatus.counted);
-        expect(view.items.single.pending, isFalse);
-      });
+          final corrections = container.read(
+            mishnaHistoryCorrectionsProvider(historyArgs),
+          );
+          expect(corrections.overlays, isEmpty);
+          expect(corrections.lateRollbacks, 1);
+          final view = container
+              .read(mishnaHistoryViewProvider(historyArgs))
+              .requireValue;
+          expect(view.items.single.status, MishnaHistoryStatus.counted);
+          expect(view.items.single.pending, isFalse);
+        },
+      );
 
       test('rejected after the local write showed in the history: the '
           'rollback is still announced', () async {
@@ -505,7 +542,9 @@ void main() {
           isEmpty,
         );
 
-        fake.pendingFailures.add([failureOf([voidId])]);
+        fake.pendingFailures.add([
+          failureOf([voidId]),
+        ]);
         await pumpEventQueue();
         expect(
           container
