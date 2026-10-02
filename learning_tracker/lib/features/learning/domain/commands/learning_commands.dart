@@ -7,6 +7,8 @@
 /// `lib/domain/learner_state/**`, this directory and `dart:` (AC-1).
 library;
 
+import 'dart:async';
+
 import 'package:learning_tracker/domain/learner_state/actor.dart';
 import 'package:learning_tracker/domain/learner_state/civil_date.dart';
 import 'package:learning_tracker/domain/learner_state/corpus.dart';
@@ -170,6 +172,15 @@ abstract interface class GovernedLearningCommands {
 
   /// See [LearningCommands.undoAction].
   Future<CaptureResult> undoAction(String actionId);
+
+  /// The governed writes the server did not save, live (AD-54 Recovery);
+  /// [LearningCommands.watchPendingFailures] lists them after the event
+  /// failures.
+  Stream<List<PendingFailure>> watchPendingFailures();
+
+  /// Re-sends the governed pending failure [pendingFailureId] unchanged;
+  /// null when it is not a governed pending failure.
+  Future<CaptureResult?> retry(String pendingFailureId);
 }
 
 /// The owner-device [LearningCommands] (AD-31, AD-36, AD-50, AD-54), bound
@@ -569,6 +580,7 @@ final class DefaultLearningCommands implements LearningCommands {
     return _gated((_, _) => governed.undoAction(actionId));
   }
 
+  /// The event failures, then the governed ones (AD-54 Recovery).
   @override
   Future<CaptureResult> createSubTrack(
     SubTrackDraft draft, {
@@ -603,15 +615,21 @@ final class DefaultLearningCommands implements LearningCommands {
       });
 
   @override
-  Stream<List<PendingFailure>> watchPendingFailures() =>
-      _dispatcher.watchPendingFailures();
+  Stream<List<PendingFailure>> watchPendingFailures() {
+    final events = _dispatcher.watchPendingFailures();
+    final governed = _governed;
+    if (governed == null) return events;
+    return _concatLatest(events, governed.watchPendingFailures());
+  }
 
   @override
   Future<CaptureResult> retry(String pendingFailureId) =>
       _gated((stamp, history) async {
         final outcome = await _dispatcher.retry(pendingFailureId);
         if (outcome == null) {
-          return const CaptureResult.rejected(CaptureRejection.targetNotFound);
+          final governed = await _governed?.retry(pendingFailureId);
+          return governed ??
+              const CaptureResult.rejected(CaptureRejection.targetNotFound);
         }
         if (outcome.allRejected) {
           return const CaptureResult.rejected(CaptureRejection.notSaved);
@@ -624,6 +642,43 @@ final class DefaultLearningCommands implements LearningCommands {
 
   /// Closes the pending-failure stream.
   Future<void> dispose() => _dispatcher.dispose();
+
+  /// The latest list of [a] followed by the latest of [b], once both have
+  /// delivered.
+  static Stream<List<PendingFailure>> _concatLatest(
+    Stream<List<PendingFailure>> a,
+    Stream<List<PendingFailure>> b,
+  ) {
+    late final StreamController<List<PendingFailure>> out;
+    StreamSubscription<List<PendingFailure>>? subA;
+    StreamSubscription<List<PendingFailure>>? subB;
+    List<PendingFailure>? latestA;
+    List<PendingFailure>? latestB;
+    void publish() {
+      final x = latestA;
+      final y = latestB;
+      if (x != null && y != null) out.add(List.unmodifiable([...x, ...y]));
+    }
+
+    out = StreamController<List<PendingFailure>>(
+      onListen: () {
+        subA = a.listen((v) {
+          latestA = v;
+          publish();
+        }, onError: out.addError);
+        subB = b.listen((v) {
+          latestB = v;
+          publish();
+        }, onError: out.addError);
+      },
+      onCancel: () async {
+        await subA?.cancel();
+        await subB?.cancel();
+        await out.close();
+      },
+    );
+    return out.stream;
+  }
 
   /// Encodes every event once (AD-52 validation) before any write.
   static void _validate(List<WriteUnit> units) {

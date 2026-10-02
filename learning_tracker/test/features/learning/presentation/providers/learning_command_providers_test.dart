@@ -11,9 +11,13 @@ import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/logging/crashlytics_service.dart';
 import 'package:learning_tracker/core/providers/crashlytics_provider.dart';
 import 'package:learning_tracker/domain/learner_state/actor.dart';
+import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
 import 'package:learning_tracker/domain/learner_state/corpus.dart';
+import 'package:learning_tracker/domain/learner_state/governed_change.dart';
+import 'package:learning_tracker/domain/learner_state/learner_settings.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
+import 'package:learning_tracker/domain/learner_state/ports/learner_settings_reader.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learning_command_reads.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 import 'package:learning_tracker/features/learning/data/repositories/learning_command_sources.dart';
@@ -25,6 +29,7 @@ import 'package:learning_tracker/features/learning/domain/commands/learning_fail
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/sacred_time/data/repositories/learner_lock_settings_sources.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/learner_lock_settings_provider.dart';
 
 import '../../../../helpers/learner_state/c0_fixtures.dart';
@@ -154,12 +159,21 @@ void main() {
 
   group('learningCommandsProvider', () {
     late InMemoryLearningWritePort port;
+    late InMemoryChangeLogRepository changeLog;
 
     List<Override> ready({bool lockSettings = true}) => [
       learningCommandClockProvider.overrideWithValue(() => engineAt(600)),
       activeLearnerScopeProvider.overrideWith((ref) async => c0Scope()),
       activeAuthUidProvider.overrideWith((ref) async => 'auth-uid'),
       learningWritePortProvider.overrideWith((ref) async => port),
+      changeLogRepositoryProvider.overrideWith((ref) async => changeLog),
+      governedDocReaderProvider.overrideWith((ref) async => changeLog),
+      subTrackRepositoryProvider.overrideWith(
+        (ref) async => InMemorySubTrackRepository(),
+      ),
+      oversizedGovernedWritePortProvider.overrideWith(
+        (ref) async => FakeOversizedGovernedWritePort(),
+      ),
       pointsAmountReaderProvider.overrideWith((ref) async => _FixedPoints()),
       learningEventRepositoryProvider.overrideWith(
         (ref) async => InMemoryLearningEventRepository(),
@@ -176,7 +190,10 @@ void main() {
         ),
     ];
 
-    setUp(() => port = InMemoryLearningWritePort());
+    setUp(() {
+      port = InMemoryLearningWritePort();
+      changeLog = InMemoryChangeLogRepository();
+    });
 
     test('null while no learner is active', () async {
       final container = ProviderContainer.test(
@@ -212,6 +229,65 @@ void main() {
       expect(chunk.awards.single.amount, 7);
     });
 
+    test('wires the governed half (DNI-470): a governed change lands in '
+        'the change log as the session actor', () async {
+      final container = ProviderContainer.test(overrides: ready());
+      final commands = (await settledAsync(
+        container,
+        learningCommandsProvider,
+      )).value!;
+      final result = await commands.applyGovernedChange(
+        GovernedAction(const [
+          GovernedEntityChange(
+            entity: GovernedEntity.mainTrackProgram,
+            entityId: engineCurriculum,
+            docs: [
+              GovernedDocPatch(
+                collection: 'profile_programs',
+                docId: engineCurriculum,
+                fields: {
+                  'curriculum_id': engineCurriculum,
+                  'program_id': 'daf',
+                },
+              ),
+            ],
+          ),
+        ]),
+      );
+      expect(result, isA<CaptureSuccess>());
+      final (scope, batch) = changeLog.batches.single;
+      expect(scope, c0Scope());
+      expect(batch.entry.actor.uid, 'auth-uid');
+      expect(batch.entry.actor.role, ActorRole.parent);
+      expect(batch.entry.at, engineAt(600));
+    });
+
+    test('the gate reads learnerLockSettingsProvider: an unreadable '
+        'learner settings doc fails a capture closed (DNI-470 AC-7)', () async {
+      final container = ProviderContainer.test(
+        overrides: [
+          ...ready(lockSettings: false),
+          learnerSettingsReaderProvider.overrideWith(
+            (ref) async => _UnreadableSettings(),
+          ),
+        ],
+      );
+      final commands = (await settledAsync(
+        container,
+        learningCommandsProvider,
+      )).value!;
+      expect(
+        await commands.capture(
+          curriculumId: engineCurriculum,
+          refs: const ['Mishnah Berakhot 1:1'],
+          source: LearningEvent.sourceMain,
+          dateState: DateState.dated,
+        ),
+        isA<CaptureLocked>(),
+      );
+      expect(port.attempts, isEmpty);
+    });
+
     test('fails closed (locked, nothing written) while the settings '
         'history is unavailable', () async {
       final container = ProviderContainer.test(
@@ -238,4 +314,11 @@ void main() {
       expect(port.attempts, isEmpty);
     });
   });
+}
+
+/// A learner whose settings doc cannot be read.
+final class _UnreadableSettings implements LearnerSettingsReader {
+  @override
+  Stream<LearnerSettings> watch(LearnerScope scope) =>
+      Stream.error(const FormatException('no time_zone'));
 }

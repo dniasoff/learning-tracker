@@ -13,6 +13,8 @@ void main() {
       'replace',
       'unlearn',
       'undo',
+      'governed_change',
+      'undo_action',
       'retry',
     ]);
   });

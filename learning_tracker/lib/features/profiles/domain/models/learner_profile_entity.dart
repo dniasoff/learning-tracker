@@ -1,6 +1,8 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:learning_tracker/core/codec/firestore_codec.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
+import 'package:learning_tracker/domain/learner_state/learner_settings.dart';
+import 'package:learning_tracker/domain/learner_state/storage_codec.dart';
 
 part 'learner_profile_entity.freezed.dart';
 
@@ -59,17 +61,54 @@ abstract class LearnerProfileEntity with _$LearnerProfileEntity {
     @Default('') String avatar,
     required DateTime createdAt,
     required DateTime updatedAt,
+
+    /// The AD-37 governed `learnerSettings` fields of this profile doc
+    /// (`latitude`, `longitude`, `time_zone`, `in_israel`,
+    /// `last_change_id`), or null when the doc carries none or they do not
+    /// decode. **Read-only here**: [toFirestore] never emits them. They are
+    /// written only by a governed `learnerSettings` write (the creation
+    /// seed, `LearningCommands.applyGovernedChange`, or the tutor
+    /// `writeWithChangeLog` path) — DNI-470 AC-6.
+    LearnerSettings? settings,
   }) = _LearnerProfileEntity;
+
+  /// The ordinary (non-settings) profile keys this codec owns.
+  static const Set<String> ordinaryKeys = {
+    'display_name',
+    'mode',
+    'avatar',
+    'created_at',
+    'updated_at',
+  };
 
   /// Encodes this profile for a Firestore write. Field names match
   /// `tutorEditProfile`'s payload exactly (`display_name`, `avatar`, `mode`,
   /// plus `created_at`/`updated_at`) so an owner write and a tutor-proxy
   /// write land byte-compatible shapes.
+  ///
+  /// Emits exactly [ordinaryKeys] — never a [LearnerSettings.storageKeys]
+  /// key, so no ordinary profile write can touch the governed settings or
+  /// trip the AD-38 owner rule (AD-37).
   Map<String, dynamic> toFirestore() => {
     'display_name': displayName,
     'mode': mode.storageKey,
     'avatar': avatar,
     'created_at': FirestoreCodec.encodeDateTime(createdAt),
+    'updated_at': FirestoreCodec.encodeDateTime(updatedAt),
+  };
+
+  /// The field-level `update` payload of an ordinary profile edit: only
+  /// the supplied fields plus `updated_at` (AD-37: other profile writers
+  /// update their own fields only, never settings keys).
+  static Map<String, dynamic> ordinaryUpdate({
+    required DateTime updatedAt,
+    String? displayName,
+    ProfileMode? mode,
+    String? avatar,
+  }) => {
+    'display_name': ?displayName,
+    if (mode != null) 'mode': mode.storageKey,
+    'avatar': ?avatar,
     'updated_at': FirestoreCodec.encodeDateTime(updatedAt),
   };
 
@@ -104,6 +143,25 @@ abstract class LearnerProfileEntity with _$LearnerProfileEntity {
       avatar: data['avatar'] as String? ?? '',
       createdAt: createdAt,
       updatedAt: updatedAt,
+      settings: _decodeSettings(profileId, data),
     );
+  }
+
+  /// The settings projection of [data], or null when absent or malformed
+  /// (the governed readers decode strictly and fail closed on their own,
+  /// AD-36; an ordinary profile read must not fail on them).
+  static LearnerSettings? _decodeSettings(
+    String profileId,
+    Map<String, dynamic> data,
+  ) {
+    if (!data.containsKey(LearnerSettings.kTimeZone)) return null;
+    try {
+      return LearnerSettings.fromProfileDoc(
+        profileId,
+        Map<String, Object?>.from(data),
+      );
+    } on StorageFormatException {
+      return null;
+    }
   }
 }

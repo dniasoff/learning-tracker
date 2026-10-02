@@ -13,7 +13,6 @@ import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/data/firestore/learner_state_repository_providers.dart';
 import 'package:learning_tracker/domain/learner_state/actor.dart';
 import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
 import 'package:learning_tracker/domain/learner_state/corpus.dart';
@@ -717,8 +716,8 @@ void main() {
         const AsyncData<LearningCommands?>(null),
       );
       expect(
-        await settledAsync(container, changeLogRepositoryProvider),
-        isAsyncC0Stub('DNI-470', 'changeLogRepositoryProvider'),
+        await settledAsync(container, corporaProvider),
+        isAsyncC0Stub('DNI-474', 'corporaProvider'),
       );
       expect(container.read(learnerStateEngineProvider), isNotNull);
     });

@@ -99,10 +99,27 @@ final class OnlineRequiredException implements Exception {
   String toString() => 'OnlineRequiredException';
 }
 
+/// The callable failed without saying whether the server committed (for
+/// example `deadline-exceeded` or `internal`). Re-sending the IDENTICAL
+/// request is safe: the callable is idempotent on its `actionId`, so a
+/// committed request replays its stored result.
+final class GovernedWriteOutcomeUnknown implements Exception {
+  /// Creates the failure with the callable error [code].
+  const GovernedWriteOutcomeUnknown(this.code);
+
+  /// The callable error code.
+  final String code;
+
+  @override
+  String toString() => 'GovernedWriteOutcomeUnknown($code)';
+}
+
 /// Writes an oversized governed action through the callable.
 abstract interface class OversizedGovernedWritePort {
   /// Sends [request] for [scope]. Throws [OnlineRequiredException] when
-  /// offline.
+  /// offline (nothing was sent), a `PermanentWriteRejection` for a terminal
+  /// contract error, and [GovernedWriteOutcomeUnknown] when the server may
+  /// have committed.
   Future<GovernedWriteReceipt> write(
     LearnerScope scope,
     OversizedGovernedWrite request,
