@@ -557,7 +557,11 @@ final class DefaultLearningCommands implements LearningCommands {
   /// Undo of a capture, a void or an un-learn (AD-31, AD-38; DNI-514
   /// AC-6, AC-7).
   ///
-  /// Every target is validated before anything is written. A learn still
+  /// Every target is validated before anything is written. The targets
+  /// must all come from one command ([writtenByOneCommand]), else the call
+  /// is [CaptureRejection.invalid]. A non-parent session may only undo
+  /// learn events it recorded itself (the capture snackbar), else
+  /// [CaptureRejection.undoNotOffered]. A learn still
   /// counted is voided, each void carrying `reverts_action_id` = the
   /// capture's first (lowest) event id, so the capture reads *Undone*
   /// everywhere and is never undone twice ([CaptureRejection.undoNotOffered]).
@@ -579,14 +583,37 @@ final class DefaultLearningCommands implements LearningCommands {
     final log = await _log(stamp, history);
     final undoId = targets.reduce((a, b) => a.compareTo(b) <= 0 ? a : b);
     // Validate every target before writing anything.
-    final voids = <LearningEvent>[];
-    final copies = <LearningEvent>[];
-    var lockIgnored = 0;
+    final members = <LearningEvent>[];
     for (final id in targets) {
       final e = log.byId[id];
       if (e == null) {
         return const CaptureResult.rejected(CaptureRejection.targetNotFound);
       }
+      members.add(e);
+    }
+    // DNI-514 AC-1: undo from history is a parent action. Another session
+    // may only take back learn events it recorded itself (the capture
+    // snackbar's Undo, UX-DR-154).
+    if (_actor.role != ActorRole.parent &&
+        !members.every(
+          (e) =>
+              e.isLearn &&
+              e.actor.uid == _actor.uid &&
+              e.actor.role == _actor.role,
+        )) {
+      return const CaptureResult.rejected(CaptureRejection.undoNotOffered);
+    }
+    // One undo takes back exactly one capture (DNI-514 AC-6): events of
+    // two commands would void both under one `reverts_action_id` and leave
+    // the other capture's row offering Undo over voided events.
+    if (!members.every((e) => writtenByOneCommand(e, members.first))) {
+      return _invalid;
+    }
+    final voids = <LearningEvent>[];
+    final copies = <LearningEvent>[];
+    var lockIgnored = 0;
+    for (final e in members) {
+      final id = e.id;
       if (e.isVoid && e.revertsActionId != null) {
         return const CaptureResult.rejected(CaptureRejection.undoIsFinal);
       }

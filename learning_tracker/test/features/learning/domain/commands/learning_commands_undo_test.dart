@@ -151,6 +151,48 @@ final class _RacingReader implements GovernedDocReader {
       inner.entry(scope, entryId);
 }
 
+/// A child-session learn of [ref] at minute 0 (one capture).
+LearningEvent _childLearn(int id, String ref) => LearningEvent.learn(
+  id: engineUlid(id),
+  curriculumId: engineCurriculum,
+  ref: ref,
+  source: LearningEvent.sourceMain,
+  dateState: DateState.dated,
+  learnedOn: '2026-09-01',
+  recordedAt: engineAt(0),
+  actor: childActor,
+);
+
+/// [_Events] on a child session.
+final class _ChildEvents {
+  _ChildEvents(List<LearningEvent> log)
+    : reads = FakeLearningCommandReads(
+        history: c0SettingsHistory(),
+        log: log,
+        corpora: {engineCurriculum: mishnayosCorpus()},
+      ) {
+    commands = DefaultLearningCommands(
+      scope: c0Scope(),
+      actor: childActor,
+      reads: reads,
+      writePort: port,
+      gate: const LockWindowCaptureGate(),
+      analytics: RecordingLearningAnalytics(),
+      failureReporter: RecordingLearningFailureReporter(),
+      clock: () => engineAt(600),
+      newUlid: (_) => engineUlid(_seq++),
+      ackWait: const Duration(milliseconds: 40),
+      pointsWait: const Duration(milliseconds: 40),
+    );
+    addTearDown(commands.dispose);
+  }
+
+  final FakeLearningCommandReads reads;
+  final port = InMemoryLearningWritePort();
+  late final DefaultLearningCommands commands;
+  int _seq = 30000;
+}
+
 void main() {
   group('AC-4: field-level undo keeps concurrent edits', () {
     test('restores only the fields still equal to after; the others are '
@@ -726,9 +768,10 @@ void main() {
     test('voids each still-counted event under the first event id, once; '
         'the counts recompute and those voids are final', () async {
       final h = _Events([
+        // One capture: one command stamps one recorded_at.
         engineLearn(1, b11),
-        engineLearn(2, b12, minutes: 1),
-        engineLearn(3, b13, minutes: 2),
+        engineLearn(2, b12),
+        engineLearn(3, b13),
         engineVoid(4, 2, minutes: 3), // already voided before the undo
       ]);
       expect(h.distinctLearnt(), 2);
@@ -768,8 +811,10 @@ void main() {
     });
 
     test('a lock-ignored member is skipped, never voided or counted', () async {
+      // One command (an un-learn re-issue keeps its node's instant): both
+      // recorded together, one effective inside the Shabbos lock.
       final h = _Events([
-        engineLearn(1, b11),
+        engineLearn(1, b11, minutes: 6000, originalMinutes: 0),
         engineLearn(3, b13, minutes: 6000), // inside the Shabbos lock
       ], now: DateTime.utc(2026, 9, 7, 10));
       expect(h.distinctLearnt(), 1);
@@ -805,6 +850,160 @@ void main() {
       final again = UndoResult.of(await h.commands.undoEvents([engineUlid(2)]));
       expect(again, isA<UndoNothingToUndo>());
       expect(h.written, hasLength(1));
+    });
+  });
+
+  group('DNI-514 AC-1/AC-6: only a parent undoes, one capture at a time', () {
+    const b11 = 'Mishnah Berakhot 1:1';
+    const b12 = 'Mishnah Berakhot 1:2';
+    const b13 = 'Mishnah Berakhot 1:3';
+
+    test('a child session cannot undo a governed action: rejected before '
+        'any read or write, and the action stays undoable', () async {
+      final (parent, child) = _twoDevices();
+      parent.seedDoc('profile_programs', _cid, {'program_id': 'a'});
+      await parent.commands.applyGovernedChange(
+        _programChange({'program_id': 'b'}),
+      );
+      final reads = List.of(child.reader.reads);
+      final batches = List.of(child.batches); // the parent's, shared store
+
+      expect(
+        await child.commands.undoAction(engineUlid(100)),
+        const CaptureResult.rejected(CaptureRejection.undoNotOffered),
+      );
+      expect(child.reader.reads, reads, reason: 'rejected before any read');
+      expect(child.changeLog.issued, isEmpty);
+      expect(child.batches, batches);
+      expect(child.oversized.requests, isEmpty);
+      expect(
+        await parent.store.watchIsReverted(parent.scope, engineUlid(100)).first,
+        isFalse,
+      );
+    });
+
+    test('a child session cannot undo an oversized action either: nothing '
+        'reaches the online callable', () async {
+      final child = GovernedHarness(actor: childActor, firstId: 300);
+      for (var i = 0; i < 11; i++) {
+        child.seedDoc('track_learning_order', 'o$i', {'user_sort_order': i});
+      }
+      child.store.seed(child.scope, [
+        ChangeLogEntry(
+          id: ulidA,
+          entity: GovernedEntity.mainTrackOrder,
+          entityId: _cid,
+          actionId: ulidA,
+          before: {
+            for (var i = 0; i < 11; i++)
+              'track_learning_order/o$i.user_sort_order': i + 100,
+          },
+          after: {
+            for (var i = 0; i < 11; i++)
+              'track_learning_order/o$i.user_sort_order': i,
+          },
+          at: t0,
+          actor: parentActor,
+        ),
+      ]);
+      child.oversized.online = true;
+
+      expect(
+        await child.commands.undoAction(ulidA),
+        const CaptureResult.rejected(CaptureRejection.undoNotOffered),
+      );
+      expect(child.oversized.requests, isEmpty);
+      expect(child.batches, isEmpty);
+    });
+
+    test('a child may take back its own capture (the snackbar Undo) but '
+        'not a capture someone else recorded', () async {
+      final h = _ChildEvents([
+        engineLearn(1, b11), // the parent's capture
+        _childLearn(2, b12),
+        _childLearn(3, b13),
+      ]);
+
+      expect(
+        await h.commands.undoEvents([engineUlid(1)]),
+        const CaptureResult.rejected(CaptureRejection.undoNotOffered),
+      );
+      expect(h.port.chunks, isEmpty);
+
+      expect(
+        await h.commands.undoEvents([engineUlid(2), engineUlid(3)]),
+        isA<CaptureSuccess>(),
+      );
+      final voids = [for (final c in h.port.chunks) ...c.events];
+      expect(voids.map((e) => e.targetId).toSet(), {
+        engineUlid(2),
+        engineUlid(3),
+      });
+      expect(voids.every((e) => e.actor.role == ActorRole.child), isTrue);
+    });
+
+    test('a child session cannot undo a void or an un-learn', () async {
+      final h = _ChildEvents([
+        _childLearn(1, b11),
+        LearningEvent.voidOf(
+          id: engineUlid(2),
+          targetId: engineUlid(1),
+          recordedAt: engineAt(5),
+          actor: childActor,
+        ),
+      ]);
+
+      expect(
+        await h.commands.undoEvents([engineUlid(2)]),
+        const CaptureResult.rejected(CaptureRejection.undoNotOffered),
+      );
+      expect(h.port.chunks, isEmpty);
+    });
+
+    test('events of two captures are rejected as one undo: nothing is '
+        'written and both captures stay undoable', () async {
+      final h = _Events([
+        engineLearn(1, b11),
+        engineLearn(2, b12),
+        engineLearn(3, b13, minutes: 5), // a second capture
+      ]);
+
+      expect(
+        await h.commands.undoEvents([
+          engineUlid(1),
+          engineUlid(2),
+          engineUlid(3),
+        ]),
+        const CaptureResult.rejected(CaptureRejection.invalid),
+      );
+      expect(h.port.chunks, isEmpty);
+      expect(h.port.attempts, isEmpty);
+      expect(h.distinctLearnt(), 3);
+
+      expect(
+        await h.commands.undoEvents([engineUlid(3)]),
+        isA<CaptureSuccess>(),
+      );
+      expect(h.written.single.revertsActionId, engineUlid(3));
+      h.sync();
+      expect(
+        await h.commands.undoEvents([engineUlid(1), engineUlid(2)]),
+        isA<CaptureSuccess>(),
+      );
+      expect(h.written.skip(1).map((e) => e.revertsActionId).toSet(), {
+        engineUlid(1),
+      });
+    });
+
+    test('a parent capture and a child capture at the same instant are two '
+        'captures', () async {
+      final h = _Events([engineLearn(1, b11), _childLearn(2, b12)]);
+
+      expect(
+        await h.commands.undoEvents([engineUlid(1), engineUlid(2)]),
+        const CaptureResult.rejected(CaptureRejection.invalid),
+      );
+      expect(h.port.chunks, isEmpty);
     });
   });
 

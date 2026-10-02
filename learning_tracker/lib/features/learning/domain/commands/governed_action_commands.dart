@@ -68,6 +68,9 @@
 /// every later change of the doc has been undone and it is field for field
 /// as U created it (DNI-514 AC-5).
 ///
+/// Only a parent session may undo (DNI-514 AC-1): any other actor is
+/// rejected with [CaptureRejection.undoNotOffered] before anything is read.
+///
 /// An undo is final: an action whose entries carry `reverts_action_id` is
 /// rejected with [CaptureRejection.undoIsFinal] and nothing is written; an
 /// action already reverted, or holding a `learnerSettings` seed entry
@@ -186,6 +189,11 @@ final class DefaultGovernedLearningCommands
 
   @override
   Future<CaptureResult> undoAction(String actionId) async {
+    // DNI-514 AC-1: undo from Change history is a parent action. Any other
+    // session is turned away before anything is read or written.
+    if (_actor.role != ActorRole.parent) {
+      return const CaptureResult.rejected(CaptureRejection.undoNotOffered);
+    }
     if (!isUlid(actionId)) return _invalid;
     final now = _clock().toUtc();
     final List<ChangeLogEntry> members;
