@@ -560,6 +560,89 @@ void main() {
       await sub.cancel();
     });
 
+    // DNI-496 review: a retry the server refuses again must not lose the
+    // only "not saved — retry" handle of an unsaved batch.
+    test('a retry refused again at once keeps its retry entry and answers '
+        'notSaved; a later retry saves it', () async {
+      repo
+        ..offline = true
+        ..failNextWith(const PermanentWriteRejection('failed-precondition'));
+      final failures = <List<PendingFailure>>[];
+      final sub = commands.watchPendingFailures().listen(failures.add);
+      addTearDown(sub.cancel);
+      final result = await commands.createSubTrack(_draft(), subTrackId: ulidD);
+      final entryId = (result as CaptureSuccess).changeIds.single;
+      repo.settleHeld();
+      await Future<void>.delayed(Duration.zero);
+      final refused = PendingFailure(
+        id: entryId,
+        eventIds: const [],
+        changeIds: [entryId],
+        reason: PendingFailureReason.failedPrecondition,
+      );
+      expect(failures.last, [refused]);
+
+      // Online, the server refuses the retry again within the ack window.
+      repo
+        ..offline = false
+        ..failNextWith(const PermanentWriteRejection('permission-denied'));
+      expect(
+        await commands.retry(entryId),
+        const CaptureResult.rejected(CaptureRejection.notSaved),
+      );
+      await Future<void>.delayed(Duration.zero);
+      expect(failures.last, [
+        PendingFailure(
+          id: entryId,
+          eventIds: const [],
+          changeIds: [entryId],
+          reason: PendingFailureReason.permissionDenied,
+        ),
+      ], reason: 'the entry is offered for retry again');
+      expect(repo.tracksOf(scope), isEmpty);
+
+      // The next retry is acknowledged: the entry is settled.
+      expect(
+        await commands.retry(entryId),
+        CaptureResult.success(changeIds: [entryId], actionId: entryId),
+      );
+      await Future<void>.delayed(Duration.zero);
+      expect(failures.last, isEmpty);
+      expect(repo.tracksOf(scope).single.id, ulidD);
+    });
+
+    test('a retry queued offline is withheld while in flight, restored when '
+        'the server refuses it later, and a second retry in flight writes '
+        'nothing', () async {
+      repo
+        ..offline = true
+        ..failNextWith(const PermanentWriteRejection('failed-precondition'));
+      final failures = <List<PendingFailure>>[];
+      final sub = commands.watchPendingFailures().listen(failures.add);
+      addTearDown(sub.cancel);
+      final result = await commands.createSubTrack(_draft(), subTrackId: ulidD);
+      final entryId = (result as CaptureSuccess).changeIds.single;
+      repo.settleHeld();
+      await Future<void>.delayed(Duration.zero);
+      expect(failures.last.single.id, entryId);
+
+      // Still offline: the retry is queued and its entry withheld.
+      repo.failNextWith(const PermanentWriteRejection('failed-precondition'));
+      final queued = await commands.retry(entryId);
+      expect((queued as CaptureSuccess).queued, isTrue);
+      expect(failures.last, isEmpty);
+      final writes = repo.calls.length;
+      final again = await commands.retry(entryId);
+      expect((again as CaptureSuccess).queued, isTrue);
+      expect(repo.calls, hasLength(writes), reason: 'nothing re-sent');
+
+      // Reconnect: the server refuses it again; the entry is back.
+      repo.settleHeld();
+      await Future<void>.delayed(Duration.zero);
+      expect(failures.last.single.id, entryId);
+      expect(repo.tracksOf(scope), isEmpty);
+    });
+
     test(
       'an online refusal is returned at once, without a retry entry',
       () async {

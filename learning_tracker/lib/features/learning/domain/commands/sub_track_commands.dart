@@ -32,7 +32,8 @@
 ///   when the server has not acknowledged within [SubTrackCommands.ackTimeout]
 ///   the command returns `success(queued: true)`. A queued batch the server
 ///   later refuses for good becomes a [PendingFailure] ("not saved —
-///   retry"); [SubTrackCommands.retry] re-sends the identical batch.
+///   retry"); [SubTrackCommands.retry] re-sends the identical batch and
+///   keeps the entry until the server acknowledges it.
 ///
 /// Imports only `lib/domain/learner_state/**`, sibling command files and
 /// `dart:` (C0 AC-1).
@@ -209,6 +210,11 @@ final class SubTrackCommands {
   final LearningAnalytics? _analytics;
 
   final Map<String, (PendingFailure, SubTrackChange)> _pending = {};
+
+  /// Pending failures whose retry awaits the server. They stay tracked
+  /// (the entry is the only retry handle for an unsaved batch) but are
+  /// withheld from [watchPendingFailures] until the retry fails.
+  final Set<String> _inFlight = {};
   final _pendingController = StreamController<List<PendingFailure>>.broadcast(
     sync: true,
   );
@@ -317,7 +323,8 @@ final class SubTrackCommands {
   Future<CaptureResult> deleteSubTrack(String subTrackId) =>
       _tombstone(subTrackId, SubTrackEndReason.deleted);
 
-  /// Queued sub-track batches the server refused for good, live.
+  /// Queued sub-track batches the server refused for good, live; a batch
+  /// whose retry awaits the server is withheld until that retry fails.
   Stream<List<PendingFailure>> watchPendingFailures() async* {
     yield _pendingList();
     yield* _pendingController.stream;
@@ -325,14 +332,32 @@ final class SubTrackCommands {
 
   /// Re-sends the identical batch of pending failure [pendingFailureId]
   /// (AD-46: the retry payload carries no freshly stamped time).
+  ///
+  /// The failure stays tracked until the server acknowledges the retry
+  /// (as `LearningWriteDispatcher.retry` does for events): it is withheld
+  /// from [watchPendingFailures] while the retry is in flight and restored
+  /// on every outcome that is not an acknowledgement, in or after the ack
+  /// window. A retry refused within the window answers
+  /// `CaptureResult.rejected(CaptureRejection.notSaved)`; a second retry
+  /// while one is in flight writes nothing and reports it queued.
   Future<CaptureResult> retry(String pendingFailureId) async {
     final pending = _pending[pendingFailureId];
     if (pending == null) {
       return const CaptureResult.rejected(CaptureRejection.targetNotFound);
     }
-    _pending.remove(pendingFailureId);
+    final change = pending.$2;
+    if (!_inFlight.add(pendingFailureId)) {
+      return CaptureResult.success(
+        changeIds: [change.entry.id],
+        actionId: change.entry.actionId,
+        queued: true,
+      );
+    }
     _publishPending();
-    return _commit(pending.$2);
+    final result = await _commit(change);
+    return result is CaptureRejected
+        ? const CaptureResult.rejected(CaptureRejection.notSaved)
+        : result;
   }
 
   /// Closes the pending-failure feed.
@@ -502,14 +527,17 @@ final class SubTrackCommands {
           .applyGovernedChange(scope, change)
           .then(
             (_) {
+              _acknowledged(change.entry.id);
               if (!outcome.isCompleted) outcome.complete(null);
             },
             onError: (Object error, StackTrace stack) {
-              if (!outcome.isCompleted) {
-                outcome.complete(_Failed(error, stack));
-              } else {
+              // A refusal after the ack window, or any failure of a retry,
+              // is (again) a "not saved — retry" entry; a first write
+              // refused within the window is only returned to its caller.
+              if (outcome.isCompleted || _inFlight.contains(change.entry.id)) {
                 _recordPending(change, error);
               }
+              if (!outcome.isCompleted) outcome.complete(_Failed(error, stack));
             },
           ),
     );
@@ -555,12 +583,20 @@ final class SubTrackCommands {
         _ => PendingFailureReason.other,
       },
     );
+    _inFlight.remove(failure.id);
     _pending[failure.id] = (failure, change);
     _publishPending();
   }
 
+  /// The server acknowledged change [entryId]: a retry of it is settled.
+  void _acknowledged(String entryId) {
+    _inFlight.remove(entryId);
+    if (_pending.remove(entryId) != null) _publishPending();
+  }
+
   List<PendingFailure> _pendingList() => [
-    for (final (failure, _) in _pending.values) failure,
+    for (final MapEntry(:key, value: (failure, _)) in _pending.entries)
+      if (!_inFlight.contains(key)) failure,
   ];
 
   void _publishPending() {
