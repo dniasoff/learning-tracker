@@ -26,7 +26,6 @@ const _inventory = <(String, String)>[
   ('DNI-468', 'newlyCrossedAchievements'),
   ('DNI-468', 'pointsTotals'),
   // DNI-469 (1.7)
-  ('DNI-469', 'LockWindowCaptureGate.check'),
   ('DNI-469', 'learningAnalyticsProvider'),
   ('DNI-469', 'learningCommandsProvider'),
   ('DNI-469', 'learningWritePortProvider'),
