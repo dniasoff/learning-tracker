@@ -134,6 +134,46 @@ final class _StalledEventReads implements LearningCommandReads {
   ) => inner.pointsAmount(scope, curriculumId, stage);
 }
 
+/// Reads backed by the device's local cache: every write this device has
+/// issued (saved or still queued) is visible, as in the Firestore SDK; the
+/// snapshot is taken when the read starts and answers only after [delay],
+/// so two captures started together both pass the read before either
+/// writes unless they are serialized.
+final class _LocalCacheReads implements LearningCommandReads {
+  _LocalCacheReads(this.inner, this.port);
+
+  final FakeLearningCommandReads inner;
+  final InMemoryLearningWritePort Function() port;
+  static const delay = Duration(milliseconds: 5);
+  int eventReads = 0;
+
+  @override
+  Future<LearnerSettingsHistory> settingsHistory(LearnerScope scope) =>
+      inner.settingsHistory(scope);
+
+  @override
+  Future<List<LearningEvent>> events(LearnerScope scope) async {
+    eventReads++;
+    // The snapshot is taken when the read starts and answers later.
+    final snapshot = [
+      ...inner.eventLog,
+      for (final c in port().attempts) ...c.events,
+    ];
+    await Future<void>.delayed(delay);
+    return snapshot;
+  }
+
+  @override
+  Future<Corpus?> corpus(String curriculumId) => inner.corpus(curriculumId);
+
+  @override
+  Future<int> pointsAmount(
+    LearnerScope scope,
+    String curriculumId,
+    int? stage,
+  ) => inner.pointsAmount(scope, curriculumId, stage);
+}
+
 String? _streakDayOf(LearningEvent e) => streakDay(
   e,
   settingsHistory: c0SettingsHistory(),
@@ -436,6 +476,36 @@ void main() {
 
       expect(h.written.map((e) => e.ref), [_b11, _b12]);
       expect(result.alreadyRecordedRefs, isEmpty);
+    });
+
+    test('two captures of the same leaf started together on this device '
+        'write it once: the second re-reads after the first wrote, even '
+        'while that write is still queued offline', () async {
+      late _LocalCacheReads cache;
+      late _Harness h;
+      h = _Harness(
+        wrapReads: (inner) => cache = _LocalCacheReads(inner, () => h.port),
+      );
+      h.port.holdNext(); // the first write stays queued (offline)
+
+      final results = await Future.wait([
+        h.capture(refs: [_b11, _b12], source: school, skipRecorded: true),
+        h.capture(refs: [_b12, _b13], source: school, skipRecorded: true),
+      ]);
+      final first = results[0] as CaptureSuccess;
+      final second = results[1] as CaptureSuccess;
+
+      expect(
+        [
+          for (final c in h.port.attempts)
+            for (final e in c.events) e.ref,
+        ],
+        [_b11, _b12, _b13],
+      );
+      expect(first.alreadyRecordedRefs, isEmpty);
+      expect(second.alreadyRecordedRefs, [_b12]);
+      expect(cache.eventReads, 2);
+      h.port.release();
     });
 
     test('without skipRecorded the log is not read', () async {

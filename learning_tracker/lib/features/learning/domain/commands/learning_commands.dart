@@ -172,6 +172,12 @@ abstract interface class LearningCommands {
   /// and the plan then lines up with the remaining refs. A log that cannot
   /// be read in time (offline, uncached) leaves [refs] as given: the
   /// caller's snapshot already excluded what it knew was recorded.
+  /// [skipRecorded] captures of one learner run one at a time on this
+  /// device, so each re-read sees the previous one's write and two quick
+  /// captures of the same leaf never both pass the read. Across devices
+  /// the log is append-only and offline-first (AD-31, AD-54): a leaf both
+  /// record before either syncs is counted once by the engine and earns
+  /// once (AD-50 `earningEventIds`).
   Future<CaptureResult> capture({
     required String curriculumId,
     List<LeafRef> refs = const [],
@@ -466,85 +472,118 @@ final class DefaultLearningCommands implements LearningCommands {
     CivilDate? learnedOn,
     int? stage,
     bool skipRecorded = false,
-  }) => _gated((stamp, history) async {
-    if (curriculumId.isEmpty || !_validSource(source)) return _invalid;
-    if (!await _sourceAllowed(curriculumId, source)) return _invalid;
-    if (nodes.isNotEmpty && dateState != DateState.beforeTracking) {
-      return _invalid;
-    }
-    if (stage != null && (source != LearningEvent.sourceMain || stage < 0)) {
-      return _invalid;
-    }
-    var leaves = refs.where((r) => r.isNotEmpty).toSet().toList();
-    final nodeList = nodes.toSet().toList();
-    if (leaves.length != refs.toSet().length) return _invalid;
-    var alreadyRecorded = const <LeafRef>[];
-    if (skipRecorded && leaves.isNotEmpty) {
-      // AC-2: a leaf another device (or an earlier capture) recorded while
-      // the caller's picker was open is never written twice.
-      final recorded = await _recordedIn(curriculumId, source, stamp, history);
-      if (recorded != null && recorded.isNotEmpty) {
-        alreadyRecorded = [
-          for (final r in leaves)
-            if (recorded.contains(r)) r,
-        ];
-        leaves = [
-          for (final r in leaves)
-            if (!recorded.contains(r)) r,
-        ];
+  }) {
+    Future<CaptureResult> run() => _gated((stamp, history) async {
+      if (curriculumId.isEmpty || !_validSource(source)) return _invalid;
+      if (!await _sourceAllowed(curriculumId, source)) return _invalid;
+      if (nodes.isNotEmpty && dateState != DateState.beforeTracking) {
+        return _invalid;
+      }
+      if (stage != null && (source != LearningEvent.sourceMain || stage < 0)) {
+        return _invalid;
+      }
+      var leaves = refs.where((r) => r.isNotEmpty).toSet().toList();
+      final nodeList = nodes.toSet().toList();
+      if (leaves.length != refs.toSet().length) return _invalid;
+      var alreadyRecorded = const <LeafRef>[];
+      if (skipRecorded && leaves.isNotEmpty) {
+        // AC-2: a leaf another device (or an earlier capture) recorded while
+        // the caller's picker was open is never written twice.
+        final recorded = await _recordedIn(
+          curriculumId,
+          source,
+          stamp,
+          history,
+        );
+        if (recorded != null && recorded.isNotEmpty) {
+          alreadyRecorded = [
+            for (final r in leaves)
+              if (recorded.contains(r)) r,
+          ];
+          leaves = [
+            for (final r in leaves)
+              if (!recorded.contains(r)) r,
+          ];
+        }
+      }
+      if (leaves.isEmpty && nodeList.isEmpty) {
+        // Nothing to write.
+        return CaptureResult.success(alreadyRecordedRefs: alreadyRecorded);
+      }
+      CivilDate? day;
+      if (dateState != DateState.beforeTracking) {
+        day = learnedOn ?? civilDate(stamp.nowUtc, history);
+        if (!isCivilDate(day)) return _invalid;
+      }
+      final earns =
+          source == LearningEvent.sourceMain &&
+          dateState != DateState.beforeTracking;
+      final amount = earns ? await _pointsAmount(curriculumId, stage) : null;
+      final List<WriteUnit> units;
+      try {
+        units = planCapture(
+          stamp: stamp,
+          curriculumId: curriculumId,
+          leaves: leaves,
+          nodes: nodeList,
+          source: source,
+          dateState: dateState,
+          learnedOn: day,
+          stage: stage,
+          amount: amount,
+        );
+        _validate(units);
+      } on StorageFormatException {
+        return _invalid;
+      }
+      var result = await _write(LearningCommandKind.capture, units);
+      if (result is CaptureSuccess && alreadyRecorded.isNotEmpty) {
+        result = CaptureResult.success(
+          eventIds: result.eventIds,
+          queued: result.queued,
+          rejectedEventIds: result.rejectedEventIds,
+          alreadyRecordedRefs: alreadyRecorded,
+        );
+      }
+      if (result is CaptureSuccess) {
+        _analytics.capture(
+          curriculumId: curriculumId,
+          sourceKind: source == LearningEvent.sourceMain
+              ? CaptureSourceKind.main
+              : CaptureSourceKind.subTrack,
+          dateState: dateState,
+          count: result.eventIds.length,
+        );
+      }
+      return result;
+    });
+    return skipRecorded ? _oneRecordedCaptureAtATime(run) : run();
+  }
+
+  /// The last `skipRecorded` capture in flight per learner on this device.
+  /// Static because `learningCommandsProvider` rebuilds the commands on
+  /// unrelated changes while a capture may still be running.
+  static final Map<LearnerScope, Completer<void>> _recordedCaptureTails = {};
+
+  /// Runs [body] after every earlier `skipRecorded` capture of this
+  /// learner has written (or failed), so its log re-read sees their events
+  /// (AC-2: a leaf is never written twice by this device).
+  Future<CaptureResult> _oneRecordedCaptureAtATime(
+    Future<CaptureResult> Function() body,
+  ) async {
+    final previous = _recordedCaptureTails[_scope];
+    final done = Completer<void>();
+    _recordedCaptureTails[_scope] = done;
+    try {
+      if (previous != null) await previous.future;
+      return await body();
+    } finally {
+      done.complete();
+      if (identical(_recordedCaptureTails[_scope], done)) {
+        _recordedCaptureTails.remove(_scope);
       }
     }
-    if (leaves.isEmpty && nodeList.isEmpty) {
-      // Nothing to write.
-      return CaptureResult.success(alreadyRecordedRefs: alreadyRecorded);
-    }
-    CivilDate? day;
-    if (dateState != DateState.beforeTracking) {
-      day = learnedOn ?? civilDate(stamp.nowUtc, history);
-      if (!isCivilDate(day)) return _invalid;
-    }
-    final earns =
-        source == LearningEvent.sourceMain &&
-        dateState != DateState.beforeTracking;
-    final amount = earns ? await _pointsAmount(curriculumId, stage) : null;
-    final List<WriteUnit> units;
-    try {
-      units = planCapture(
-        stamp: stamp,
-        curriculumId: curriculumId,
-        leaves: leaves,
-        nodes: nodeList,
-        source: source,
-        dateState: dateState,
-        learnedOn: day,
-        stage: stage,
-        amount: amount,
-      );
-      _validate(units);
-    } on StorageFormatException {
-      return _invalid;
-    }
-    var result = await _write(LearningCommandKind.capture, units);
-    if (result is CaptureSuccess && alreadyRecorded.isNotEmpty) {
-      result = CaptureResult.success(
-        eventIds: result.eventIds,
-        queued: result.queued,
-        rejectedEventIds: result.rejectedEventIds,
-        alreadyRecordedRefs: alreadyRecorded,
-      );
-    }
-    if (result is CaptureSuccess) {
-      _analytics.capture(
-        curriculumId: curriculumId,
-        sourceKind: source == LearningEvent.sourceMain
-            ? CaptureSourceKind.main
-            : CaptureSourceKind.subTrack,
-        dateState: dateState,
-        count: result.eventIds.length,
-      );
-    }
-    return result;
-  });
+  }
 
   @override
   Future<CaptureResult> voidEvent(String targetId) => _gated((
