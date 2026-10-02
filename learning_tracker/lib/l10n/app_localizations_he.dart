@@ -2923,6 +2923,93 @@ class AppLocalizationsHe extends AppLocalizations {
   String get undoLabel => 'בטל';
 
   @override
+  String subTrackHomeSectionTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count תתי-מסלולים',
+      two: 'שני תתי-מסלולים',
+      one: 'תת-מסלול אחד',
+    );
+    return 'לומדים גם · $_temp0';
+  }
+
+  @override
+  String subTrackHomeNext(String position) {
+    return 'הבא: $position';
+  }
+
+  @override
+  String get subTrackHomeNoGround => 'עוד לא נקבע חומר';
+
+  @override
+  String get subTrackHomeAllRecorded => 'כל החומר נרשם';
+
+  @override
+  String get subTrackHomeUpTo => 'עד…';
+
+  @override
+  String get subTrackHomePlusOne => '+1';
+
+  @override
+  String get subTrackHomeAddGround => 'הוספת חומר';
+
+  @override
+  String subTrackHomeRowSemantics(String name, String position) {
+    return '$name, הבא $position';
+  }
+
+  @override
+  String subTrackHomeRowNoGroundSemantics(String name) {
+    return '$name, עוד לא נקבע חומר';
+  }
+
+  @override
+  String subTrackHomeRowAllRecordedSemantics(String name) {
+    return '$name, כל החומר נרשם';
+  }
+
+  @override
+  String subTrackHomePlusOneSemantics(String curriculum, String name) {
+    String _temp0 = intl.Intl.selectLogic(curriculum, {
+      'mishnayos': 'לרשום משנה אחת ב$name',
+      'other': 'לרשום אחת ב$name',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String subTrackHomeUpToSemantics(String name) {
+    return 'לרשום עד, $name';
+  }
+
+  @override
+  String get subTrackHomeRecorded => 'נרשם 1';
+
+  @override
+  String get subTrackHomeKeptNotCounted => 'נשמר, לא נספר — נרשם בשבת';
+
+  @override
+  String get subTrackHomeCaptureFailed => 'לא הצלחנו לרשום. נסו שוב.';
+
+  @override
+  String get subTrackTutorReadOnlyNote =>
+      'עריכת תתי-מסלולים ממכשיר מורה תתאפשר בקרוב';
+
+  @override
+  String subTrackDashboardTitle(int count) {
+    return 'תתי-מסלולים ($count)';
+  }
+
+  @override
+  String get subTrackDashboardManage => 'ניהול';
+
+  @override
+  String subTrackDashboardTicked(int count) {
+    return '$count סומנו';
+  }
+
+  @override
   String get searchTitle => 'חיפוש';
 
   @override

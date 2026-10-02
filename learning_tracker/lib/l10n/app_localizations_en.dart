@@ -2958,6 +2958,94 @@ class AppLocalizationsEn extends AppLocalizations {
   String get undoLabel => 'Undo';
 
   @override
+  String subTrackHomeSectionTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count sub-tracks',
+      one: '1 sub-track',
+    );
+    return 'Also learning · $_temp0';
+  }
+
+  @override
+  String subTrackHomeNext(String position) {
+    return 'Next: $position';
+  }
+
+  @override
+  String get subTrackHomeNoGround => 'No ground yet';
+
+  @override
+  String get subTrackHomeAllRecorded => 'All ground recorded';
+
+  @override
+  String get subTrackHomeUpTo => 'Up to…';
+
+  @override
+  String get subTrackHomePlusOne => '+1';
+
+  @override
+  String get subTrackHomeAddGround => 'Add ground';
+
+  @override
+  String subTrackHomeRowSemantics(String name, String position) {
+    return '$name, next $position';
+  }
+
+  @override
+  String subTrackHomeRowNoGroundSemantics(String name) {
+    return '$name, no ground yet';
+  }
+
+  @override
+  String subTrackHomeRowAllRecordedSemantics(String name) {
+    return '$name, all ground recorded';
+  }
+
+  @override
+  String subTrackHomePlusOneSemantics(String curriculum, String name) {
+    String _temp0 = intl.Intl.selectLogic(curriculum, {
+      'mishnayos': 'Record one mishna for $name',
+      'other': 'Record one for $name',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String subTrackHomeUpToSemantics(String name) {
+    return 'Record up to, $name';
+  }
+
+  @override
+  String get subTrackHomeRecorded => 'Recorded 1';
+
+  @override
+  String get subTrackHomeKeptNotCounted =>
+      'Kept, not counted — recorded during Shabbos';
+
+  @override
+  String get subTrackHomeCaptureFailed =>
+      'Couldn\'t record that. Please try again.';
+
+  @override
+  String get subTrackTutorReadOnlyNote =>
+      'Editing sub-tracks from a tutor device is coming soon';
+
+  @override
+  String subTrackDashboardTitle(int count) {
+    return 'Sub-tracks ($count)';
+  }
+
+  @override
+  String get subTrackDashboardManage => 'Manage';
+
+  @override
+  String subTrackDashboardTicked(int count) {
+    return '$count ticked';
+  }
+
+  @override
   String get searchTitle => 'Search';
 
   @override
