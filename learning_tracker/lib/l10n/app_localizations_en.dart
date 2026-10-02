@@ -2733,6 +2733,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get loadingText => 'Loading text...';
 
   @override
+  String get captureLockedNotice =>
+      'Not recorded — the app is closed for Shabbos and Yom Tov.';
+
+  @override
+  String get captureNotSaved => 'Not saved — your learning was not recorded.';
+
+  @override
   String get markedComplete => 'Marked complete';
 
   @override

@@ -179,7 +179,6 @@ lib/features/learning/data/repositories/completion_repository_impl.dart
 lib/features/learning/data/repositories/completion_streak_recorder.dart
 lib/features/learning/data/repositories/track_repository_impl.dart
 lib/features/learning/domain/entities/bookmark.dart
-lib/features/learning/domain/entities/completion_command.dart
 lib/features/learning/domain/entities/completion_request.dart
 lib/features/learning/domain/entities/completion_source.dart
 lib/features/learning/domain/entities/completion_tier_filter.dart
@@ -188,7 +187,6 @@ lib/features/learning/domain/repositories/bookmark_repository.dart
 lib/features/learning/domain/repositories/completion_repository.dart
 lib/features/learning/domain/repositories/learning_ledger_repository.dart
 lib/features/learning/domain/repositories/track_repository.dart
-lib/features/learning/domain/use_cases/manual_completion_use_case.dart
 lib/features/learning/domain/use_cases/mark_completion_use_case.dart
 lib/features/learning/learning.dart
 lib/features/learning/presentation/providers/completion_providers.dart

@@ -8,7 +8,6 @@ import 'package:learning_tracker/features/learning/data/repositories/completion_
 import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
 import 'package:learning_tracker/features/learning/domain/services/completion_detection_service.dart';
 import 'package:learning_tracker/features/learning/domain/services/completion_orchestrator.dart';
-import 'package:learning_tracker/features/learning/domain/use_cases/bulk_mark_completion_use_case.dart';
 import 'package:learning_tracker/features/learning/domain/use_cases/mark_completion_use_case.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/bookmark_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
@@ -122,7 +121,7 @@ CompletionDetectionService completionDetectionService(Ref ref) {
 
 /// Provides the [CompletionOrchestrator] — the single place the five
 /// completion side effects live (`docs/firestore-rewrite-map.md`, owner
-/// decision 1). [MarkCompletionUseCase], [BulkMarkCompletionUseCase], and
+/// decision 1). [MarkCompletionUseCase] and
 /// (via `onboarding_providers.dart`) `BulkPriorCompletionService` all go
 /// through this, not [completionRepositoryProvider] directly.
 ///
@@ -161,18 +160,6 @@ MarkCompletionUseCase markCompletionUseCase(Ref ref) {
   final orchestrator = ref.watch(completionOrchestratorProvider);
   final analytics = ref.watch(analyticsServiceProvider);
   return MarkCompletionUseCase(orchestrator, analytics: analytics);
-}
-
-/// Provides the bulk mark completion use case.
-///
-/// This use case is reached by a one-shot read and then awaits an async
-/// Firestore gap. It must survive when the last listener drops to zero;
-/// autoDispose would tear down the completion chain before the bulk write
-/// resumes.
-@Riverpod(keepAlive: true)
-BulkMarkCompletionUseCase bulkMarkCompletionUseCase(Ref ref) {
-  final orchestrator = ref.watch(completionOrchestratorProvider);
-  return BulkMarkCompletionUseCase(orchestrator);
 }
 
 /// Resolves a persisted curriculum-id storage key, throwing on an

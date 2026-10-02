@@ -1645,6 +1645,14 @@
   "searchTitle": "Search",
   "searchHintEnterTerm": "Enter a search term above",
   "loadingText": "Loading text...",
+  "captureLockedNotice": "Not recorded — the app is closed for Shabbos and Yom Tov.",
+  "@captureLockedNotice": {
+    "description": "Snackbar when a capture is refused because a Shabbos/Yom Tov lock is in force; nothing was written (AD-36). DRAFT copy, pending zc4."
+  },
+  "captureNotSaved": "Not saved — your learning was not recorded.",
+  "@captureNotSaved": {
+    "description": "Snackbar when a learning write was rejected for good and rolled back (UX-DR-107/147, AD-54 Recovery). Shown with a Retry action. DRAFT copy, pending zc4."
+  },
   "markedComplete": "Marked complete",
   "couldNotSave": "Couldn't save: {error}",
   "@couldNotSave": {

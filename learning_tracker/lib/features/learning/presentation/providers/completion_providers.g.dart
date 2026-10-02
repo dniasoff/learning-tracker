@@ -313,7 +313,7 @@ String _$completionDetectionServiceHash() =>
 
 /// Provides the [CompletionOrchestrator] — the single place the five
 /// completion side effects live (`docs/firestore-rewrite-map.md`, owner
-/// decision 1). [MarkCompletionUseCase], [BulkMarkCompletionUseCase], and
+/// decision 1). [MarkCompletionUseCase] and
 /// (via `onboarding_providers.dart`) `BulkPriorCompletionService` all go
 /// through this, not [completionRepositoryProvider] directly.
 ///
@@ -327,7 +327,7 @@ final completionOrchestratorProvider = CompletionOrchestratorProvider._();
 
 /// Provides the [CompletionOrchestrator] — the single place the five
 /// completion side effects live (`docs/firestore-rewrite-map.md`, owner
-/// decision 1). [MarkCompletionUseCase], [BulkMarkCompletionUseCase], and
+/// decision 1). [MarkCompletionUseCase] and
 /// (via `onboarding_providers.dart`) `BulkPriorCompletionService` all go
 /// through this, not [completionRepositoryProvider] directly.
 ///
@@ -346,7 +346,7 @@ final class CompletionOrchestratorProvider
     with $Provider<CompletionOrchestrator> {
   /// Provides the [CompletionOrchestrator] — the single place the five
   /// completion side effects live (`docs/firestore-rewrite-map.md`, owner
-  /// decision 1). [MarkCompletionUseCase], [BulkMarkCompletionUseCase], and
+  /// decision 1). [MarkCompletionUseCase] and
   /// (via `onboarding_providers.dart`) `BulkPriorCompletionService` all go
   /// through this, not [completionRepositoryProvider] directly.
   ///
@@ -455,74 +455,6 @@ final class MarkCompletionUseCaseProvider
 
 String _$markCompletionUseCaseHash() =>
     r'59e04d8acd937835b69bee2a6df945a22c99adc9';
-
-/// Provides the bulk mark completion use case.
-///
-/// This use case is reached by a one-shot read and then awaits an async
-/// Firestore gap. It must survive when the last listener drops to zero;
-/// autoDispose would tear down the completion chain before the bulk write
-/// resumes.
-
-@ProviderFor(bulkMarkCompletionUseCase)
-final bulkMarkCompletionUseCaseProvider = BulkMarkCompletionUseCaseProvider._();
-
-/// Provides the bulk mark completion use case.
-///
-/// This use case is reached by a one-shot read and then awaits an async
-/// Firestore gap. It must survive when the last listener drops to zero;
-/// autoDispose would tear down the completion chain before the bulk write
-/// resumes.
-
-final class BulkMarkCompletionUseCaseProvider
-    extends
-        $FunctionalProvider<
-          BulkMarkCompletionUseCase,
-          BulkMarkCompletionUseCase,
-          BulkMarkCompletionUseCase
-        >
-    with $Provider<BulkMarkCompletionUseCase> {
-  /// Provides the bulk mark completion use case.
-  ///
-  /// This use case is reached by a one-shot read and then awaits an async
-  /// Firestore gap. It must survive when the last listener drops to zero;
-  /// autoDispose would tear down the completion chain before the bulk write
-  /// resumes.
-  BulkMarkCompletionUseCaseProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'bulkMarkCompletionUseCaseProvider',
-        isAutoDispose: false,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
-
-  @override
-  String debugGetCreateSourceHash() => _$bulkMarkCompletionUseCaseHash();
-
-  @$internal
-  @override
-  $ProviderElement<BulkMarkCompletionUseCase> $createElement(
-    $ProviderPointer pointer,
-  ) => $ProviderElement(pointer);
-
-  @override
-  BulkMarkCompletionUseCase create(Ref ref) {
-    return bulkMarkCompletionUseCase(ref);
-  }
-
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(BulkMarkCompletionUseCase value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<BulkMarkCompletionUseCase>(value),
-    );
-  }
-}
-
-String _$bulkMarkCompletionUseCaseHash() =>
-    r'2be1d6bc1dc3c2bfdf44c298332a250d3ad831e0';
 
 /// Provides the number of completions for a specific content item,
 /// scoped to the active profile.
