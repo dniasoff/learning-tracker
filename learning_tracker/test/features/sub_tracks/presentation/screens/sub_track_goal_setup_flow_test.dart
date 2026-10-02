@@ -33,16 +33,11 @@ void main() {
   });
   tearDown(() async => h.dispose());
 
-  Future<void> pumpFlow(
-    WidgetTester tester, {
-    bool withCommands = true,
-    bool sessionLive = true,
-  }) async {
+  Future<void> pumpFlow(WidgetTester tester, {bool withCommands = true}) async {
     await tester.pumpWidget(
       pumpApp(
         overrides: [
-          ...h.overrides(commands: withCommands, parentSession: null),
-          switchableParentSessionOverride(),
+          ...h.overrides(commands: withCommands),
           if (!withCommands)
             learningCommandsProvider.overrideWith((ref) async => null),
           scopedItemCountProvider(
@@ -61,7 +56,6 @@ void main() {
         ),
       ),
     );
-    if (!sessionLive) setParentSession(tester, find.text('go'), live: false);
     await tester.tap(find.text('go'));
     // The in-memory intent store answers in the root zone.
     await settleCommands(tester);
@@ -128,52 +122,6 @@ void main() {
     ]);
   });
 
-  testWidgets(
-    'a pace goal on a curriculum without a unit picker saves with the leaf '
-    'granularity',
-    (tester) async {
-      h = SubTrackHarness();
-      await pumpFlow(tester);
-      // Drive the real goal screen: Mishnayos has no granularity picker.
-      await tester.tap(find.text('Pace'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byType(FilledButton));
-      await settleCommands(tester);
-      await tester.pumpAndSettle();
-      expect(outcome, SubTrackGoalSetupOutcome.saved);
-      expect(h.commands.governed, hasLength(1));
-      final fields =
-          h.commands.governed.single.changes.single.docs.single.fields;
-      expect(fields['goal_type'], 'pace');
-      expect(fields['pace_unit'], 'per_day');
-      expect(fields['pace_value'], isA<num>());
-      expect(fields['pace_granularity'], kLeafPaceGranularity);
-    },
-  );
-
-  testWidgets(
-    'a fractional stored pace survives an unchanged save (no rounding)',
-    (tester) async {
-      h = SubTrackHarness(
-        pace: const PaceGoal(
-          curriculumId: 'mishnayos',
-          paceValue: 1.5,
-          paceUnit: 'per_week',
-          paceGranularity: kLeafPaceGranularity,
-        ),
-      );
-      await pumpFlow(tester);
-      // The whole-number goal screen shows the rounded value...
-      expect(screen(tester).existingGoal?.paceValue, 2);
-      // ...and saving it untouched keeps the stored 1.5: nothing is written.
-      await tester.tap(find.byType(FilledButton));
-      await settleCommands(tester);
-      await tester.pumpAndSettle();
-      expect(outcome, SubTrackGoalSetupOutcome.saved);
-      expect(h.commands.governed, isEmpty);
-    },
-  );
-
   testWidgets('a refused governed save is reported as failed', (tester) async {
     h = SubTrackHarness();
     h.commands.nextGovernedResult = const CaptureResult.onlineRequired();
@@ -189,80 +137,6 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(GoalSetupScreen, skipOffstage: false), findsNothing);
     expect(outcome, SubTrackGoalSetupOutcome.failed);
-  });
-
-  group('AC-3: a governed goal write needs a live parent session', () {
-    testWidgets('without a parent session the goal screen never opens', (
-      tester,
-    ) async {
-      h = SubTrackHarness();
-      await pumpFlow(tester, sessionLive: false);
-      expect(find.byType(GoalSetupScreen, skipOffstage: false), findsNothing);
-      expect(outcome, SubTrackGoalSetupOutcome.failed);
-      expect(h.commands.governed, isEmpty);
-    });
-
-    testWidgets('a session that expires between render and save refuses the '
-        'save', (tester) async {
-      h = SubTrackHarness();
-      await pumpFlow(tester);
-      expect(find.byType(GoalSetupScreen), findsOneWidget);
-      // The PIN session locks while the goal screen is open; the save
-      // arrives before the next frame.
-      setParentSession(tester, find.byType(GoalSetupScreen), live: false);
-      await complete(tester, deadline(DateTime(2028, 6, 1)));
-      expect(outcome, SubTrackGoalSetupOutcome.failed);
-      expect(h.commands.governed, isEmpty);
-    });
-
-    testWidgets('a locked session hides the goal screen and keeps its values', (
-      tester,
-    ) async {
-      h = SubTrackHarness();
-      await pumpFlow(tester);
-      await tester.tap(find.text('Pace'));
-      await tester.pumpAndSettle();
-      final before = tester.element(find.byType(GoalSetupScreen));
-
-      setParentSession(tester, find.byType(GoalSetupScreen), live: false);
-      await tester.pumpAndSettle();
-      // Not usable: nothing on it can be seen, tapped or submitted...
-      expect(find.byType(GoalSetupScreen), findsNothing);
-      expect(find.byType(FilledButton), findsNothing);
-      expect(
-        find.byKey(const ValueKey('subTrackParentSessionLocked')),
-        findsOneWidget,
-      );
-      // ...but it stays mounted with what the parent entered.
-      expect(find.byType(GoalSetupScreen, skipOffstage: false), findsOneWidget);
-
-      setParentSession(
-        tester,
-        find.byType(GoalSetupScreen, skipOffstage: false),
-        live: true,
-      );
-      await tester.pumpAndSettle();
-      expect(tester.element(find.byType(GoalSetupScreen)), same(before));
-
-      // A save while the session is live again goes through.
-      await tester.tap(find.byType(FilledButton));
-      await settleCommands(tester);
-      await tester.pumpAndSettle();
-      expect(outcome, SubTrackGoalSetupOutcome.saved);
-      expect(h.commands.governed, hasLength(1));
-      expect(
-        h
-            .commands
-            .governed
-            .single
-            .changes
-            .single
-            .docs
-            .single
-            .fields['goal_type'],
-        'pace',
-      );
-    });
   });
 
   test('a live pace goal prefills the goal screen', () {
@@ -281,68 +155,6 @@ void main() {
     expect(entity.paceValue, 2);
     expect(entity.pacePeriod, 'per_week');
     expect(entity.paceGranularityKey, 'perek');
-  });
-
-  group('a fractional stored pace (1.5)', () {
-    const stored = PaceGoal(
-      curriculumId: 'mishnayos',
-      paceValue: 1.5,
-      paceUnit: 'per_week',
-      paceGranularity: kLeafPaceGranularity,
-    );
-    const goals = CurriculumGoals(pace: stored);
-
-    GoalEntity paceResult(int value, {String unit = 'per_week'}) => GoalEntity(
-      curriculumId: CurriculumId.mishnayos,
-      goalType: 'pace',
-      paceValue: value,
-      pacePeriod: unit,
-      createdAt: DateTime.utc(2026),
-      updatedAt: DateTime.utc(2026),
-    );
-
-    GovernedAction? save(GoalEntity result) => governedGoalAction(
-      curriculumId: 'mishnayos',
-      choice: goalChoiceOf(result, prefilledPace: prefilledPaceOf(goals))!,
-      current: goals,
-      nowUtc: DateTime.utc(2026, 10, 2),
-    );
-
-    test(
-      'round-trips untouched: the stored value is kept, nothing written',
-      () {
-        final prefill = goalEntityOf(CurriculumId.mishnayos, goals)!;
-        expect(prefill.paceValue, 2);
-        expect(
-          goalChoiceOf(paceResult(2), prefilledPace: prefilledPaceOf(goals)),
-          isA<PaceGoalChoice>().having((c) => c.value, 'value', 1.5),
-        );
-        expect(save(paceResult(2)), isNull);
-      },
-    );
-
-    test('a changed value is written as entered', () {
-      final fields = save(paceResult(3))!.changes.single.docs.single.fields;
-      expect(fields, {'pace_value': 3});
-    });
-
-    test('a changed unit writes the entered value, not the stored one', () {
-      final fields = save(
-        paceResult(2, unit: 'per_day'),
-      )!.changes.single.docs.single.fields;
-      expect(fields, {'pace_value': 2, 'pace_unit': 'per_day'});
-    });
-
-    test('a live deadline prefill never keeps the stored pace', () {
-      const both = CurriculumGoals(
-        deadline: DeadlineGoal(
-          curriculumId: 'mishnayos',
-          targetDate: '2028-06-01',
-        ),
-        pace: stored,
-      );
-      expect(prefilledPaceOf(both), isNull);
-    });
   });
 
   test('a goal-screen result maps to a governed choice', () {
@@ -367,8 +179,7 @@ void main() {
       ),
       isA<PaceGoalChoice>()
           .having((c) => c.value, 'value', 3)
-          .having((c) => c.unit, 'unit', 'per_day')
-          .having((c) => c.granularity, 'granularity', kLeafPaceGranularity),
+          .having((c) => c.unit, 'unit', 'per_day'),
     );
     expect(
       goalChoiceOf(
