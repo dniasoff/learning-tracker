@@ -81,7 +81,10 @@
 ///
 /// Exit codes: 0 pass, 1 retired symbol outside the allowlist (or, under
 /// `--enforce`, an inexact allowlist), 2 malformed inventory/allowlist,
-/// an unreadable scanned file or directory (fails closed), or bad usage.
+/// a missing, mistyped or symlinked scan root (`lib/`, `functions/src/`,
+/// `firestore.rules`, `firestore.indexes.json`), a symbolic link anywhere
+/// under `lib/` or `functions/src/`, an unreadable scanned file or
+/// directory (all fail closed), or bad usage.
 library;
 
 import 'dart:convert';
@@ -688,29 +691,66 @@ class _ScanFailure implements Exception {
   final Object error;
 }
 
+/// The scan roots AD-49 names. Every one must exist as a real (non-link)
+/// directory or file: a missing, mistyped or linked root would make the gate
+/// pass without reading the code it guards, so it fails closed instead.
+const _scanDirs = {'lib': '.dart', 'functions/src': '.ts'};
+const _scanFiles = ['firestore.rules', 'firestore.indexes.json'];
+
 List<String> _scanPaths(String root) {
   final out = <String>[];
-  void walk(String rel, String ext) {
-    final dir = Directory('$root/$rel');
-    if (!dir.existsSync()) return;
-    final List<FileSystemEntity> listing;
+
+  void requireType(String rel, FileSystemEntityType want) {
+    final FileSystemEntityType got;
     try {
-      listing = dir.listSync(recursive: true);
+      got = FileSystemEntity.typeSync('$root/$rel', followLinks: false);
     } on FileSystemException catch (e) {
       throw _ScanFailure(rel, e);
     }
-    for (final f in listing.whereType<File>()) {
-      final p = f.path.replaceAll(r'\', '/');
-      if (!p.endsWith(ext)) continue;
-      final relPath = p.substring(root.length + 1);
-      out.add(relPath);
-    }
+    if (got == want) return;
+    final what = want == FileSystemEntityType.directory ? 'directory' : 'file';
+    throw _ScanFailure(
+      rel,
+      got == FileSystemEntityType.notFound
+          ? 'required scan root is missing (expected a $what)'
+          : got == FileSystemEntityType.link
+          ? 'required scan root is a symbolic link (expected a real $what)'
+          : 'required scan root is not a $what ($got)',
+    );
   }
 
-  walk('lib', '.dart');
-  walk('functions/src', '.ts');
-  for (final f in const ['firestore.rules', 'firestore.indexes.json']) {
-    if (File('$root/$f').existsSync()) out.add(f);
+  _scanDirs.forEach((rel, ext) {
+    requireType(rel, FileSystemEntityType.directory);
+    final List<FileSystemEntity> listing;
+    try {
+      // Links are never followed: a followed link can point outside the
+      // root, loop, or dangle (and a dangling link would be skipped).
+      listing = Directory(
+        '$root/$rel',
+      ).listSync(recursive: true, followLinks: false);
+    } on FileSystemException catch (e) {
+      throw _ScanFailure(rel, e);
+    }
+    for (final f in listing) {
+      final p = f.path.replaceAll(r'\', '/');
+      final relPath = p.substring(root.length + 1);
+      if (f is Link) {
+        throw _ScanFailure(
+          relPath,
+          'symbolic links are not allowed under scanned roots (the gate '
+          'cannot vouch for what they point at)',
+        );
+      }
+      if (f is Directory) continue;
+      if (f is! File) {
+        throw _ScanFailure(relPath, 'unexpected file system entity $f');
+      }
+      if (p.endsWith(ext)) out.add(relPath);
+    }
+  });
+  for (final f in _scanFiles) {
+    requireType(f, FileSystemEntityType.file);
+    out.add(f);
   }
   out.sort();
   return out;
@@ -735,6 +775,9 @@ String _boundedPattern(String symbol) {
 /// Returns hits per entry index.
 Map<int, List<_Hit>> _scan(String root, List<_Entry> entries) {
   final hits = <int, List<_Hit>>{};
+  // Discover (and validate) the scan roots even with an empty inventory, so
+  // a wrong --root or a missing root never passes silently.
+  final paths = _scanPaths(root);
   if (entries.isEmpty) return hits;
   final bySymbol = <String, List<int>>{};
   for (var i = 0; i < entries.length; i++) {
@@ -756,7 +799,7 @@ Map<int, List<_Hit>> _scan(String root, List<_Entry> entries) {
     for (final s in multi) RegExp(_boundedPattern(s)),
   ];
 
-  for (final path in _scanPaths(root)) {
+  for (final path in paths) {
     final applicable = <int>[
       for (var i = 0; i < entries.length; i++)
         if (entries[i].appliesTo(path)) i,
@@ -901,7 +944,7 @@ void main(List<String> args) {
   } on _ScanFailure catch (f) {
     stderr.writeln(
       'Retired-symbols check FAILED (AD-49): could not read ${f.path} '
-      '(the gate fails closed on any unread file): ${f.error}',
+      '(the gate fails closed on any unread file or scan root): ${f.error}',
     );
     exit(2);
   }

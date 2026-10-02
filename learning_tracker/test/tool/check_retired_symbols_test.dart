@@ -81,8 +81,22 @@ void main() {
     List<Object?> allow = const [],
     String? rawAllowlist,
     Set<String> omitGroups = const {},
+    Set<String> omitRoots = const {},
   }) async {
     final root = await scratch.createTemp('root_');
+    // The four AD-49 scan roots must exist (the gate fails closed without
+    // them); [omitRoots] leaves some out.
+    for (final d in const ['lib', 'functions/src']) {
+      if (omitRoots.contains(d)) continue;
+      Directory('${root.path}/$d').createSync(recursive: true);
+    }
+    for (final f in const {
+      'firestore.rules': '',
+      'firestore.indexes.json': '{}\n',
+    }.entries) {
+      if (omitRoots.contains(f.key)) continue;
+      File('${root.path}/${f.key}').writeAsStringSync(f.value);
+    }
     final inv = Directory('${root.path}/tool/retired_symbols')
       ..createSync(recursive: true);
     for (var n = 1; n <= 16; n++) {
@@ -837,6 +851,148 @@ match /completions/{id} { allow write: if false; }
         result.stderr.toString(),
         contains('could not read functions/src/a.ts'),
       );
+    });
+
+    for (final missing in const [
+      'lib',
+      'functions/src',
+      'firestore.rules',
+      'firestore.indexes.json',
+    ]) {
+      test('a missing scan root ($missing) fails closed with exit 2', () async {
+        final root = await fixtureRoot(
+          omitRoots: {missing},
+          groups: {
+            'R1': [_entry('CompletionEntity')],
+          },
+        );
+        final result = await run(root);
+        expect(result.exitCode, 2, reason: out(result));
+        expect(
+          result.stderr.toString(),
+          allOf(
+            contains('could not read $missing'),
+            contains('required scan root is missing'),
+          ),
+        );
+      });
+    }
+
+    test('a missing scan root fails closed even with an empty inventory '
+        '(a wrong --root never passes)', () async {
+      final root = await fixtureRoot(omitRoots: {'lib'});
+      final result = await run(root);
+      expect(result.exitCode, 2, reason: out(result));
+      expect(result.stderr.toString(), contains('could not read lib'));
+    });
+
+    test('a scan root of the wrong type fails closed with exit 2', () async {
+      final root = await fixtureRoot(
+        omitRoots: {'lib', 'firestore.rules'},
+        groups: {
+          'R1': [_entry('CompletionEntity')],
+        },
+      );
+      File('$root/lib').writeAsStringSync('CompletionEntity\n');
+      Directory('$root/firestore.rules').createSync();
+      final result = await run(root);
+      expect(result.exitCode, 2, reason: out(result));
+      expect(
+        result.stderr.toString(),
+        allOf(contains('could not read lib'), contains('not a directory')),
+      );
+    });
+
+    test('a symlinked scan root fails closed with exit 2', () async {
+      final root = await fixtureRoot(
+        omitRoots: {'functions/src'},
+        files: {'elsewhere/a.ts': 'export const CompletionEntity = 1;\n'},
+        groups: {
+          'R1': [_entry('CompletionEntity')],
+        },
+      );
+      Link(
+        '$root/functions/src',
+      ).createSync('$root/elsewhere', recursive: true);
+      final result = await run(root);
+      expect(result.exitCode, 2, reason: out(result));
+      expect(
+        result.stderr.toString(),
+        allOf(
+          contains('could not read functions/src'),
+          contains('symbolic link'),
+        ),
+      );
+    });
+
+    test('a symlinked source file fails closed with exit 2 (never silently '
+        'skipped)', () async {
+      final root = await fixtureRoot(
+        files: {'outside/real.dart': 'CompletionEntity? x;\n'},
+        groups: {
+          'R1': [_entry('CompletionEntity')],
+        },
+      );
+      Link(
+        '$root/lib/feature/linked.dart',
+      ).createSync('$root/outside/real.dart', recursive: true);
+      final result = await run(root);
+      expect(result.exitCode, 2, reason: out(result));
+      expect(
+        result.stderr.toString(),
+        allOf(
+          contains('could not read lib/feature/linked.dart'),
+          contains('symbolic links are not allowed'),
+        ),
+      );
+    });
+
+    test('dangling and directory symlinks under a scan root fail closed '
+        'with exit 2', () async {
+      for (final make in <void Function(String)>[
+        (root) => Link('$root/functions/src/gone.ts').createSync('nowhere.ts'),
+        (root) => Link('$root/lib/loop').createSync('$root/lib'),
+      ]) {
+        final root = await fixtureRoot(
+          groups: {
+            'R1': [_entry('CompletionEntity')],
+          },
+        );
+        make(root);
+        final result = await run(root);
+        expect(result.exitCode, 2, reason: out(result));
+        expect(
+          result.stderr.toString(),
+          contains('symbolic links are not allowed'),
+        );
+      }
+    });
+
+    test('an unreadable scan directory fails closed with exit 2', () async {
+      final root = await fixtureRoot(
+        files: {'lib/feature/a.dart': 'CompletionEntity? x;\n'},
+        groups: {
+          'R1': [_entry('CompletionEntity')],
+        },
+      );
+      final dir = Directory('$root/lib/feature');
+      final chmod = await Process.run('chmod', ['000', dir.path]);
+      addTearDown(() => Process.runSync('chmod', ['755', dir.path]));
+      var listable = true;
+      try {
+        dir.listSync();
+      } on FileSystemException {
+        listable = false;
+      }
+      if (chmod.exitCode != 0 || listable) {
+        markTestSkipped(
+          'cannot make a directory unreadable here (root or no chmod)',
+        );
+        return;
+      }
+      final result = await run(root);
+      expect(result.exitCode, 2, reason: out(result));
+      expect(result.stderr.toString(), contains('could not read lib'));
     });
 
     test('unknown CLI argument is a usage error', () async {
