@@ -1293,6 +1293,48 @@ final class DefaultLearningCommands implements LearningCommands {
             e.stage == target.stage,
       );
 
+  /// The latest list of [first] followed by the latest of [second], once
+  /// both have delivered one.
+  static Stream<List<PendingFailure>> _latestOfBoth(
+    Stream<List<PendingFailure>> first,
+    Stream<List<PendingFailure>> second,
+  ) {
+    late final StreamController<List<PendingFailure>> out;
+    final subs = <StreamSubscription<List<PendingFailure>>>[];
+    List<PendingFailure>? a;
+    List<PendingFailure>? b;
+    void emit() {
+      final x = a;
+      final y = b;
+      if (x != null && y != null) out.add(List.unmodifiable([...x, ...y]));
+    }
+
+    out = StreamController<List<PendingFailure>>(
+      onListen: () {
+        subs
+          ..add(
+            first.listen((v) {
+              a = v;
+              emit();
+            }, onError: out.addError),
+          )
+          ..add(
+            second.listen((v) {
+              b = v;
+              emit();
+            }, onError: out.addError),
+          );
+      },
+      onCancel: () async {
+        for (final s in subs) {
+          await s.cancel();
+        }
+        unawaited(out.close());
+      },
+    );
+    return out.stream;
+  }
+
   /// Encodes every event once (AD-52 validation) before any write.
   static void _validate(List<WriteUnit> units) {
     for (final unit in units) {
